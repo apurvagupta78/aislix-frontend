@@ -26,7 +26,7 @@ export const Route = createFileRoute("/upload")({
       { property: "og:description", content: "Turn shelf photos into a full retail audit in seconds." },
     ],
   }),
-  component: UploadScan;
+  component: UploadScan,
 });
 
 function UploadScan() {
