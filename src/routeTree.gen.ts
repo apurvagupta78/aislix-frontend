@@ -14,6 +14,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ProcessingRouteImport } from './routes/processing'
+import { Route as ReportRouteImport } from './routes/report'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as UploadRouteImport } from './routes/upload'
@@ -43,6 +44,11 @@ const ProcessingRoute = ProcessingRouteImport.update({
   path: '/processing',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReportRoute = ReportRouteImport.update({
+  id: '/report',
+  path: '/report',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResultsRoute = ResultsRouteImport.update({
   id: '/results',
   path: '/results',
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
   '/processing': typeof ProcessingRoute
+  '/report': typeof ReportRoute
   '/results': typeof ResultsRoute
   '/signup': typeof SignupRoute
   '/upload': typeof UploadRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByTo {
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
   '/processing': typeof ProcessingRoute
+  '/report': typeof ReportRoute
   '/results': typeof ResultsRoute
   '/signup': typeof SignupRoute
   '/upload': typeof UploadRoute
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
   '/processing': typeof ProcessingRoute
+  '/report': typeof ReportRoute
   '/results': typeof ResultsRoute
   '/signup': typeof SignupRoute
   '/upload': typeof UploadRoute
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/login'
     | '/processing'
+    | '/report'
     | '/results'
     | '/signup'
     | '/upload'
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/login'
     | '/processing'
+    | '/report'
     | '/results'
     | '/signup'
     | '/upload'
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/login'
     | '/processing'
+    | '/report'
     | '/results'
     | '/signup'
     | '/upload'
@@ -129,6 +141,7 @@ export interface RootRouteChildren {
   HistoryRoute: typeof HistoryRoute
   LoginRoute: typeof LoginRoute
   ProcessingRoute: typeof ProcessingRoute
+  ReportRoute: typeof ReportRoute
   ResultsRoute: typeof ResultsRoute
   SignupRoute: typeof SignupRoute
   UploadRoute: typeof UploadRoute
@@ -171,6 +184,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProcessingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/report': {
+      id: '/report'
+      path: '/report'
+      fullPath: '/report'
+      preLoaderRoute: typeof ReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/results': {
       id: '/results'
       path: '/results'
@@ -201,6 +221,7 @@ const rootRouteChildren: RootRouteChildren = {
   HistoryRoute: HistoryRoute,
   LoginRoute: LoginRoute,
   ProcessingRoute: ProcessingRoute,
+  ReportRoute: ReportRoute,
   ResultsRoute: ResultsRoute,
   SignupRoute: SignupRoute,
   UploadRoute: UploadRoute,
