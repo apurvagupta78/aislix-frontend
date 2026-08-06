@@ -47,10 +47,10 @@ function Processing() {
   }, []);
 
   useEffect(() => {
-    if (progress >= 100) {
-      const t = setTimeout(() => navigate({ to: "/results" }), 900);
-      return () => clearTimeout(t);
-    }
+    if (progress < 100) return undefined;
+    const t = setTimeout(() => navigate({ to: "/results" }), 900);
+    return () => clearTimeout(t);
+
   }, [progress, navigate]);
 
   const activeStage = Math.min(stages.length - 1, Math.floor((progress / 100) * stages.length));
