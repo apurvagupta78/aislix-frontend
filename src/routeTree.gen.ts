@@ -18,6 +18,7 @@ import { Route as ProcessingRouteImport } from './routes/processing'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as ReportRouteImport } from './routes/report'
 import { Route as ResultsRouteImport } from './routes/results'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as UploadRouteImport } from './routes/upload'
 
@@ -66,6 +67,11 @@ const ResultsRoute = ResultsRouteImport.update({
   path: '/results',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/report': typeof ReportRoute
   '/results': typeof ResultsRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/upload': typeof UploadRoute
 }
@@ -100,6 +107,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/report': typeof ReportRoute
   '/results': typeof ResultsRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/upload': typeof UploadRoute
 }
@@ -114,6 +122,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/report': typeof ReportRoute
   '/results': typeof ResultsRoute
+  '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/upload': typeof UploadRoute
 }
@@ -129,6 +138,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/report'
     | '/results'
+    | '/settings'
     | '/signup'
     | '/upload'
   fileRoutesByTo: FileRoutesByTo
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/report'
     | '/results'
+    | '/settings'
     | '/signup'
     | '/upload'
   id:
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/report'
     | '/results'
+    | '/settings'
     | '/signup'
     | '/upload'
   fileRoutesById: FileRoutesById
@@ -169,6 +181,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   ReportRoute: typeof ReportRoute
   ResultsRoute: typeof ResultsRoute
+  SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
   UploadRoute: typeof UploadRoute
 }
@@ -238,6 +251,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResultsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -265,9 +285,20 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   ReportRoute: ReportRoute,
   ResultsRoute: ResultsRoute,
+  SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
   UploadRoute: UploadRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
