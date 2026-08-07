@@ -376,7 +376,7 @@ export function RecommendationsPanel({
 
 /* ------------------------------ inventory table --------------------------- */
 
-type SortKey = "brand" | "product" | "variant" | "quantity" | "confidence";
+type SortKey = "brand" | "product" | "variant" | "quantity" | "confidence" | "shelf_position";
 const PAGE_SIZE = 10;
 
 export function InventoryTable({
@@ -413,7 +413,13 @@ export function InventoryTable({
           .some((v) => v!.toLowerCase().includes(q));
       const matchesBrand = brand === "all" || r.brand === brand;
       const matchesStock =
-        stock === "all" || (stock === "low" ? !!r.low_stock : !r.low_stock);
+        stock === "all"
+          ? true
+          : stock === "low"
+            ? !!r.low_stock
+            : stock === "out"
+              ? !!r.out_of_stock
+              : !r.low_stock && !r.out_of_stock;
       return matchesQuery && matchesBrand && matchesStock;
     });
 
@@ -525,6 +531,7 @@ export function InventoryTable({
           <SelectContent>
             <SelectItem value="all">All stock</SelectItem>
             <SelectItem value="low">Low stock only</SelectItem>
+            <SelectItem value="out">Out of stock only</SelectItem>
             <SelectItem value="ok">In stock only</SelectItem>
           </SelectContent>
         </Select>
@@ -539,13 +546,18 @@ export function InventoryTable({
               <SortHeader label="Variant" sortKey="variant" className="hidden md:table-cell" />
               <SortHeader label="Qty" sortKey="quantity" numeric className="text-right" />
               <SortHeader label="Confidence" sortKey="confidence" numeric className="text-right" />
+              <SortHeader
+                label="Shelf position"
+                sortKey="shelf_position"
+                className="hidden lg:table-cell"
+              />
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 5 }).map((__, c) => (
+                  {Array.from({ length: 6 }).map((__, c) => (
                     <TableCell key={c}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -554,7 +566,7 @@ export function InventoryTable({
               ))
             ) : visible.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="p-4">
+                <TableCell colSpan={6} className="p-4">
                   <EmptyState
                     title={rows.length === 0 ? "No inventory yet" : "No matching products"}
                     description={
@@ -586,6 +598,9 @@ export function InventoryTable({
                   <TableCell className="text-right tabular-nums">{row.quantity}</TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatConfidence(row.confidence)}
+                  </TableCell>
+                  <TableCell className="hidden text-muted-foreground lg:table-cell">
+                    {row.shelf_position ?? "—"}
                   </TableCell>
                 </TableRow>
               ))
