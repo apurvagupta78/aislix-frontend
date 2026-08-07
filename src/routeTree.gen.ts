@@ -26,6 +26,7 @@ import { Route as ProcessingRouteImport } from './routes/processing'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as RefundsRouteImport } from './routes/refunds'
 import { Route as ReportRouteImport } from './routes/report'
+import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as ScanRouteImport } from './routes/scan'
@@ -125,6 +126,11 @@ const ReportRoute = ReportRouteImport.update({
   path: '/report',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -209,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/refunds': typeof RefundsRoute
   '/report': typeof ReportRoute
+  '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/results': typeof ResultsRoute
   '/scan': typeof ScanRoute
@@ -241,6 +248,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/refunds': typeof RefundsRoute
   '/report': typeof ReportRoute
+  '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/results': typeof ResultsRoute
   '/scan': typeof ScanRoute
@@ -274,6 +282,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/refunds': typeof RefundsRoute
   '/report': typeof ReportRoute
+  '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/results': typeof ResultsRoute
   '/scan': typeof ScanRoute
@@ -308,6 +317,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/refunds'
     | '/report'
+    | '/reports'
     | '/reset-password'
     | '/results'
     | '/scan'
@@ -340,6 +350,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/refunds'
     | '/report'
+    | '/reports'
     | '/reset-password'
     | '/results'
     | '/scan'
@@ -372,6 +383,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/refunds'
     | '/report'
+    | '/reports'
     | '/reset-password'
     | '/results'
     | '/scan'
@@ -405,6 +417,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   RefundsRoute: typeof RefundsRoute
   ReportRoute: typeof ReportRoute
+  ReportsRoute: typeof ReportsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ResultsRoute: typeof ResultsRoute
   ScanRoute: typeof ScanRoute
@@ -541,6 +554,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -653,6 +673,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   RefundsRoute: RefundsRoute,
   ReportRoute: ReportRoute,
+  ReportsRoute: ReportsRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ResultsRoute: ResultsRoute,
   ScanRoute: ScanRoute,
