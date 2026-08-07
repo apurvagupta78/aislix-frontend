@@ -12,6 +12,12 @@ export function SiteHeader() {
           <Logo />
         </Link>
         <nav className="ml-auto flex items-center gap-1 sm:gap-2">
+          <Button asChild variant="ghost" size="sm" className="hidden rounded-xl lg:inline-flex">
+            <Link to="/platform">Platform</Link>
+          </Button>
+          <Button asChild variant="ghost" size="sm" className="hidden rounded-xl lg:inline-flex">
+            <Link to="/how-it-works">How it works</Link>
+          </Button>
           <Button asChild variant="ghost" size="sm" className="hidden rounded-xl sm:inline-flex">
             <Link to="/pricing">Pricing</Link>
           </Button>
@@ -99,10 +105,13 @@ export function SiteFooter() {
             <ColumnTitle>Product</ColumnTitle>
             <ul className="space-y-2.5">
               <li>
-                <a href="/#platform" className={itemClass}>Platform</a>
+                <Link to="/platform" className={itemClass}>Platform</Link>
               </li>
               <li>
-                <a href="/#how" className={itemClass}>Features</a>
+                <Link to="/features" className={itemClass}>Features</Link>
+              </li>
+              <li>
+                <Link to="/how-it-works" className={itemClass}>How it works</Link>
               </li>
               <li>
                 <Link to="/pricing" className={itemClass}>Pricing</Link>
