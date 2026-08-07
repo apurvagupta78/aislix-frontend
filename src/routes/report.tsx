@@ -127,7 +127,7 @@ function ReportViewer() {
         <ErrorState
           title="Report unavailable"
           description={toUserMessage(query.error)}
-          onRetry={() => query.refetch()}
+          onRetry={() => void query.refetch()}
         />
       ) : !data ? (
         <EmptyState title="Report not found" description="This scan no longer exists." />
@@ -212,11 +212,13 @@ function ReportViewer() {
                   </thead>
                   <tbody>
                     {inventory.slice(0, 8).map((p, i) => (
-                      <tr key={`${p.name}-${i}`} className="border-b border-border/60">
-                        <td className="py-2">{p.name}</td>
-                        <td className="py-2 text-right">{p.quantity ?? "—"}</td>
+                      <tr key={p.id || `${p.product}-${i}`} className="border-b border-border/60">
+                        <td className="py-2">
+                          {[p.brand, p.product].filter(Boolean).join(" ")}
+                        </td>
+                        <td className="py-2 text-right">{p.quantity}</td>
                         <td className="py-2 text-right text-muted-foreground">
-                          {p.stock_status ?? "—"}
+                          {p.out_of_stock ? "Out of stock" : p.low_stock ? "Low stock" : "In stock"}
                         </td>
                       </tr>
                     ))}
