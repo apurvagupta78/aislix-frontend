@@ -148,7 +148,7 @@ function HistoryPage() {
                   <TableHead>Store</TableHead>
                   <TableHead className="hidden md:table-cell">Aisle</TableHead>
                   <TableHead className="hidden sm:table-cell">Date</TableHead>
-                  <TableHead className="text-right">Products</TableHead>
+                  <TableHead className="hidden text-right sm:table-cell">Products</TableHead>
                   <TableHead className="hidden text-right lg:table-cell">Brands</TableHead>
                   <TableHead className="hidden text-right lg:table-cell">Confidence</TableHead>
                   <TableHead className="text-right">Shelf health</TableHead>
@@ -174,7 +174,7 @@ function HistoryPage() {
                       {s.date}
                       <span className="ml-1 text-xs">{s.time}</span>
                     </TableCell>
-                    <TableCell className="text-right">{s.products || "—"}</TableCell>
+                    <TableCell className="hidden text-right sm:table-cell">{s.products || "—"}</TableCell>
                     <TableCell className="hidden text-right lg:table-cell">
                       {s.brands || "—"}
                     </TableCell>
