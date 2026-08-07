@@ -267,9 +267,9 @@ export function UserFormDialog({
   mode: "invite" | "edit";
   user?: OrgUser | null;
   stores: AssignedStore[];
-  storesLoading?: boolean;
-  submitting?: boolean;
-  error?: string | null;
+  storesLoading?: boolean | undefined;
+  submitting?: boolean | undefined;
+  error?: string | null | undefined;
   onSubmit: (values: UserFormValues) => void;
 }) {
   const [name, setName] = useState("");
@@ -427,9 +427,9 @@ export function ConfirmDialog({
   title: string;
   description: string;
   confirmLabel: string;
-  destructive?: boolean;
+  destructive?: boolean | undefined;
   onConfirm: () => void;
-  pending?: boolean;
+  pending?: boolean | undefined;
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -670,8 +670,8 @@ export function BulkActionsBar({
 }: {
   count: number;
   stores: AssignedStore[];
-  storesLoading?: boolean;
-  pending?: boolean;
+  storesLoading?: boolean | undefined;
+  pending?: boolean | undefined;
   onClear: () => void;
   onAssignStores: (storeIds: string[]) => void;
   onChangeRole: (role: UserRole) => void;
@@ -813,8 +813,8 @@ export function UserDetailDrawer({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   activity: ActivityEvent[];
-  activityLoading?: boolean;
-  activityError?: boolean;
+  activityLoading?: boolean | undefined;
+  activityError?: boolean | undefined;
   onAction: (action: MemberAction, user: OrgUser) => void;
 }) {
   return (
