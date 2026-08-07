@@ -134,7 +134,9 @@ function Results() {
               ? query.error.message
               : "The scan service did not return a result."
           }
-          onRetry={() => query.refetch()}
+          onRetry={() => {
+            void query.refetch();
+          }}
         />
       ) : (
         <div className="space-y-4">
