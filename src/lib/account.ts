@@ -184,20 +184,14 @@ export const changePassword = (input: { current_password: string; new_password: 
   request<{ ok: true }>("/account/password", { method: "POST", body: JSON.stringify(input) });
 
 /** POST /auth/password/forgot — emails a reset link (no session required). */
-export const requestPasswordReset = (input: { email: string }) =>
-  request<{ ok: true }>("/auth/password/forgot", { method: "POST", body: JSON.stringify(input) });
-
-/** POST /auth/password/reset — completes a reset with the emailed token. */
-export const resetPassword = (input: { token: string; new_password: string }) =>
-  request<{ ok: true }>("/auth/password/reset", { method: "POST", body: JSON.stringify(input) });
-
-/** POST /auth/email/verify — confirms an address with the emailed token. */
-export const verifyEmail = (input: { token: string }) =>
-  request<{ ok: true }>("/auth/email/verify", { method: "POST", body: JSON.stringify(input) });
-
-/** POST /auth/email/resend — resends the verification email. */
-export const resendVerificationEmail = (input: { email: string }) =>
-  request<{ ok: true }>("/auth/email/resend", { method: "POST", body: JSON.stringify(input) });
+// Auth flows live in the auth service (Supabase-bound later) and are re-exported
+// here so existing imports keep working.
+export {
+  requestPasswordReset,
+  resetPassword,
+  verifyEmail,
+  resendVerificationEmail,
+} from "./api/auth";
 
 /** GET /account/sessions */
 export const fetchSessions = (signal?: AbortSignal) =>
