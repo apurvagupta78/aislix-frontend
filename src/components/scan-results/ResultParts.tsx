@@ -61,14 +61,14 @@ export function ResultSection({
 }) {
   return (
     <section className={cn("card-surface p-5 sm:p-6", className)}>
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h2 className="truncate text-sm font-semibold tracking-tight">{title}</h2>
+          <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
           {description && (
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm">{description}</p>
           )}
         </div>
-        {actions}
+        {actions && <div className="min-w-0 shrink-0">{actions}</div>}
       </div>
       <div className="mt-5">{children}</div>
     </section>
