@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, Plus, Search, Store as StoreIcon } from "lucide-react";
+import { Plus, Search, Store as StoreIcon } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -98,7 +98,7 @@ function StoresPage() {
   const allSelected = stores.length > 0 && stores.every((s) => selected.includes(s.id));
 
   const setSearch = (next: { q?: string; filter?: StoreFilter; page?: number }) =>
-    navigate({ to: "/stores", search: (prev) => ({ ...prev, ...next }) });
+    navigate({ to: "/stores", search: { q, filter, page, ...next } });
 
   const bulkArchive = useMutation({
     mutationFn: () => bulkArchiveStores(selected),
@@ -357,9 +357,6 @@ function StoresPage() {
           })
         }
       />
-      <span className="hidden">
-        <Building2 className="size-4" />
-      </span>
     </AppShell>
   );
 }
