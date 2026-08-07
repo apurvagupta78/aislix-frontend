@@ -77,7 +77,7 @@ export async function fetchScanResult(
 ): Promise<ScanResult> {
   const response = await fetch(`${API_BASE}/scan/${encodeURIComponent(scanId)}`, {
     headers: { Accept: "application/json" },
-    signal,
+    signal: signal ?? null,
   });
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as { detail?: string } | null;
