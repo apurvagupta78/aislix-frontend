@@ -9,6 +9,7 @@ import {
   CreditCard,
   User,
   Settings,
+  Tag,
   Bell,
   Search,
   LogOut,
@@ -37,6 +38,7 @@ const nav = [
 
 const secondary = [
   { label: "Billing", to: "/billing", icon: CreditCard },
+  { label: "Pricing", to: "/pricing", icon: Tag },
   { label: "Profile", to: "/profile", icon: User },
   { label: "Settings", to: "/settings", icon: Settings },
 ] as const;

@@ -22,6 +22,7 @@ import {
   YAxis,
 } from "recharts";
 import { AppShell } from "@/components/AppShell";
+import { UsageOverviewCards } from "@/components/UsageOverviewCards";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -111,6 +112,23 @@ function Dashboard() {
           </div>
         ))}
       </div>
+
+      <section className="mt-8">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold tracking-tight">Usage this billing period</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Scan quota, report volume and detection quality for the current cycle.
+            </p>
+          </div>
+          <Button asChild variant="subtle" size="sm" className="rounded-xl">
+            <Link to="/billing">Manage plan</Link>
+          </Button>
+        </div>
+        <div className="mt-4">
+          <UsageOverviewCards />
+        </div>
+      </section>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Card

@@ -1,0 +1,192 @@
+import { useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowRight, HelpCircle, Mail, ShieldCheck, Zap } from "lucide-react";
+import { Logo } from "@/components/Logo";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { ComparisonTable, CycleToggle, PricingGrid } from "@/components/pricing/PricingPlans";
+import { addOns } from "@/lib/pricing";
+import type { BillingCycle, Plan } from "@/lib/pricing";
+
+export const Route = createFileRoute("/pricing")({
+  head: () => ({
+    meta: [
+      { title: "Pricing — Aislix AI Shelf Intelligence" },
+      {
+        name: "description",
+        content:
+          "Simple scan-based pricing for AI shelf audits. Start free, scale to unlimited scans on Professional, or talk to us about Enterprise.",
+      },
+      { property: "og:title", content: "Aislix pricing — pay by shelf scans" },
+      {
+        property: "og:description",
+        content: "Free, Starter ₹999, Professional ₹4,999 or Enterprise. Compare every feature.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
+  component: Pricing,
+});
+
+const faqs = [
+  {
+    q: "How is a scan counted?",
+    a: "One shelf image analysed end-to-end counts as one scan. Re-downloading an existing report or viewing past results never consumes a scan.",
+  },
+  {
+    q: "What happens when I hit my monthly limit?",
+    a: "Scanning pauses instead of silently charging you. You can upgrade instantly or add a scan pack from the billing page — usage resets on your next billing date.",
+  },
+  {
+    q: "Do you issue GST invoices?",
+    a: "Yes. Add your GSTIN and billing address in billing settings and every invoice is issued as a GST-compliant tax invoice, downloadable as PDF.",
+  },
+  {
+    q: "Can I change or cancel my plan later?",
+    a: "Upgrade, downgrade, cancel or resume at any time from the billing page. Downgrades and cancellations take effect at the end of the current billing period.",
+  },
+];
+
+function Pricing() {
+  const [cycle, setCycle] = useState<BillingCycle>("monthly");
+
+  const onSelect = (plan: Plan) => {
+    // Checkout is intentionally not wired yet: route to sign-up / sales instead.
+    const target = plan.contactSales ? "mailto:sales@aislix.com" : "/signup";
+    if (plan.contactSales) window.location.href = target;
+    else window.location.assign(target);
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-40 border-b border-border bg-card/85 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-5 sm:px-8">
+          <Logo />
+          <nav className="ml-auto flex items-center gap-2">
+            <Button asChild variant="ghost" size="sm" className="rounded-xl">
+              <Link to="/login">Sign in</Link>
+            </Button>
+            <Button asChild variant="brand" size="sm" className="rounded-xl">
+              <Link to="/signup">Start free</Link>
+            </Button>
+          </nav>
+        </div>
+      </header>
+
+      <main>
+        <section className="mx-auto max-w-7xl px-5 pb-4 pt-14 text-center sm:px-8 sm:pt-20">
+          <Badge className="rounded-full bg-brand-soft text-brand hover:bg-brand-soft">
+            Scan-based pricing
+          </Badge>
+          <h1 className="mx-auto mt-5 max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl">
+            Pay for the shelves you audit — nothing else
+          </h1>
+          <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+            Every plan includes AI product detection, annotated shelf images and PDF audit reports.
+            Move up only when your scan volume does.
+          </p>
+          <div className="mt-8 flex justify-center">
+            <CycleToggle cycle={cycle} onChange={setCycle} />
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Annual billing is charged for 10 months — two months free.
+          </p>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-5 pb-6 pt-8 sm:px-8">
+          <PricingGrid cycle={cycle} onSelect={onSelect} />
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5">
+              <ShieldCheck className="size-3.5 text-accent-green" /> GST invoices for Indian businesses
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <Zap className="size-3.5 text-accent-green" /> No setup fee, cancel anytime
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <HelpCircle className="size-3.5 text-accent-green" /> Prices exclusive of 18% GST
+            </span>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-5 py-12 sm:px-8">
+          <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">Compare every feature</h2>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            A full breakdown of scanning limits, analytics depth and support across plans.
+          </p>
+          <div className="mt-6">
+            <ComparisonTable />
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-5 pb-12 sm:px-8">
+          <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">Add-ons</h2>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Extend any paid plan without changing tiers.
+          </p>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {addOns.map((a) => (
+              <div key={a.id} className="card-surface card-hover p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="text-sm font-semibold">{a.name}</h3>
+                  {!a.available && (
+                    <Badge variant="secondary" className="rounded-full text-[0.65rem]">
+                      Coming soon
+                    </Badge>
+                  )}
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">{a.description}</p>
+                <p className="mt-4 text-sm font-medium">
+                  {a.price} <span className="text-xs text-muted-foreground">{a.unit}</span>
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-3xl px-5 pb-16 sm:px-8">
+          <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">Pricing FAQ</h2>
+          <Accordion type="single" collapsible className="mt-5">
+            {faqs.map((f) => (
+              <AccordionItem key={f.q} value={f.q}>
+                <AccordionTrigger className="text-left text-sm font-medium">{f.q}</AccordionTrigger>
+                <AccordionContent className="text-sm text-muted-foreground">{f.a}</AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </section>
+
+        <section className="border-t border-border bg-surface">
+          <div className="mx-auto flex max-w-7xl flex-col items-start gap-5 px-5 py-14 sm:flex-row sm:items-center sm:justify-between sm:px-8">
+            <div>
+              <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
+                Need a multi-location rollout?
+              </h2>
+              <p className="mt-1.5 text-sm text-muted-foreground">
+                Custom AI models, on-premise deployment and SLAs for national retail groups.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild variant="subtle" className="rounded-xl">
+                <a href="mailto:sales@aislix.com">
+                  <Mail className="size-4" /> Contact sales
+                </a>
+              </Button>
+              <Button asChild variant="brand" className="rounded-xl">
+                <Link to="/signup">
+                  Start free <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
