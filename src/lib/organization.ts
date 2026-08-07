@@ -135,6 +135,15 @@ export type StoreReport = {
   generated_at?: string;
 };
 
+
+function compact<T extends Record<string, unknown>>(obj: T): T {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) out[key] = value;
+  }
+  return out as T;
+}
+
 // ---------- role mapping (TeamRole <-> app_role) ----------
 // account.ts's TeamRole uses "manager" where the database's app_role enum
 // uses "store_manager". Map between the two at the boundary.
@@ -166,7 +175,7 @@ function mapStoreRow(row: {
   created_at: string;
 }): OrgStore {
   const address = [row.address_line1, row.address_line2].filter(Boolean).join(", ") || undefined;
-  return {
+  return compact({
     id: row.id,
     name: row.name,
     store_code: row.code ?? undefined,
@@ -178,7 +187,7 @@ function mapStoreRow(row: {
     contact_number: row.contact_phone ?? undefined,
     status: row.status === "inactive" ? "archived" : "active",
     created_at: row.created_at,
-  };
+  });
 }
 
 function storeInputToRow(input: StoreInput) {
@@ -222,13 +231,13 @@ async function attachStoreMetrics(stores: OrgStore[]): Promise<OrgStore[]> {
       scoreRows.length > 0
         ? scoreRows.reduce((sum, r) => sum + (r.shelf_health_score ?? 0), 0) / scoreRows.length
         : undefined;
-    const metrics: StoreMetrics = {
+    const metrics: StoreMetrics = compact({
       shelf_health_score: avgScore,
       last_scan_at: rows[0]?.created_at ?? null,
       total_scans: rows.length,
       low_stock_alerts: rows.reduce((sum, r) => sum + (r.low_stock_count ?? 0), 0),
       out_of_stock_alerts: rows.reduce((sum, r) => sum + (r.out_of_stock_count ?? 0), 0),
-    };
+    });
     return { ...store, metrics };
   });
 }
@@ -280,7 +289,7 @@ export async function fetchOrganization(_signal?: AbortSignal): Promise<Organiza
     | null
     | undefined;
 
-  return {
+  return compact({
     id: org.id,
     name: org.name,
     logo_url: org.logo_url,
@@ -301,7 +310,7 @@ export async function fetchOrganization(_signal?: AbortSignal): Promise<Organiza
           : undefined,
     billing_period_end: subscription?.current_period_end ?? null,
     gst_number: org.gstin ?? null,
-  };
+  });
 }
 
 // ---------- stores ----------
@@ -355,7 +364,7 @@ export async function fetchStore(id: string, _signal?: AbortSignal): Promise<Org
   if (error) dbError(error, "Could not load the store.");
   if (!data) notFound("Store not found.");
   const [store] = await attachStoreMetrics([mapStoreRow(data)]);
-  return store;
+  return store!;
 }
 
 export async function createOrgStore(input: StoreInput): Promise<OrgStore> {
@@ -431,7 +440,7 @@ export async function fetchStoreMetrics(
 
   const rows = data ?? [];
   const scoreRows = rows.filter((r) => typeof r.shelf_health_score === "number");
-  return {
+  return compact({
     shelf_health_score:
       scoreRows.length > 0
         ? scoreRows.reduce((sum, r) => sum + (r.shelf_health_score ?? 0), 0) / scoreRows.length
@@ -440,7 +449,7 @@ export async function fetchStoreMetrics(
     total_scans: rows.length,
     low_stock_alerts: rows.reduce((sum, r) => sum + (r.low_stock_count ?? 0), 0),
     out_of_stock_alerts: rows.reduce((sum, r) => sum + (r.out_of_stock_count ?? 0), 0),
-  };
+  });
 }
 
 export async function fetchStoreScans(
@@ -461,7 +470,7 @@ export async function fetchStoreScans(
     .limit(limit);
   if (error) dbError(error, "Could not load store scans.");
 
-  const items: StoreScan[] = (data ?? []).map((row) => ({
+  const items: StoreScan[] = (data ?? []).map((row) => compact({
     scan_id: row.id,
     captured_at: row.created_at,
     status: row.status as StoreScan["status"],
@@ -491,7 +500,7 @@ export async function fetchStoreHealthTrend(
     .order("period_date", { ascending: true });
   if (error) dbError(error, "Could not load the health trend.");
 
-  const points: HealthTrendPoint[] = (data ?? []).map((row) => ({
+  const points: HealthTrendPoint[] = (data ?? []).map((row) => compact({
     date: row.period_date,
     shelf_health_score: row.avg_shelf_health ?? undefined,
   }));
@@ -528,13 +537,13 @@ export async function fetchStoreRecommendations(
     for (const rec of recs) {
       if (rec && typeof rec === "object") {
         const r = rec as Record<string, unknown>;
-        items.push({
+        items.push(compact({
           id: `${result.id}-${items.length}`,
-          title: typeof r.title === "string" ? r.title : String(r.title ?? "Recommendation"),
-          detail: typeof r.detail === "string" ? r.detail : undefined,
-          impact: (r.impact as StoreRecommendation["impact"]) ?? undefined,
-          category: typeof r.category === "string" ? r.category : undefined,
-        });
+          title: typeof r["title"] === "string" ? (r["title"] as string) : String(r["title"] ?? "Recommendation"),
+          detail: typeof r["detail"] === "string" ? (r["detail"] as string) : undefined,
+          impact: (r["impact"] as StoreRecommendation["impact"]) ?? undefined,
+          category: typeof r["category"] === "string" ? (r["category"] as string) : undefined,
+        }));
       }
     }
   }
@@ -589,14 +598,14 @@ export async function fetchStoreTeam(
 
   const items: StoreTeamMember[] = rows.map((row) => {
     const profile = profileById.get(row.user_id);
-    return {
+    return compact({
       id: row.id,
       name: profile?.full_name ?? undefined,
       email: profile?.email ?? row.invited_email ?? "",
       role: toTeamRole(row.role as AppRole),
       status: row.status,
       added_at: row.created_at,
-    };
+    });
   });
 
   return { items };
@@ -727,7 +736,7 @@ export async function importStoresCsv(file: File): Promise<{ created: number; fa
   let failed = 0;
 
   for (const row of rows) {
-    const name = row.name || row.Name;
+    const name = row["name"] || row["Name"];
     if (!name) {
       failed += 1;
       continue;
@@ -735,13 +744,13 @@ export async function importStoresCsv(file: File): Promise<{ created: number; fa
     const { error } = await supabase.from("stores").insert({
       org_id: orgId,
       name,
-      code: row.store_code || row.code || null,
-      address_line1: row.address || null,
-      city: row.city || null,
-      state: row.state || null,
-      country: row.country || null,
-      contact_name: row.manager_name || null,
-      contact_phone: row.contact_number || null,
+      code: row["store_code"] || row["code"] || null,
+      address_line1: row["address"] || null,
+      city: row["city"] || null,
+      state: row["state"] || null,
+      country: row["country"] || null,
+      contact_name: row["manager_name"] || null,
+      contact_phone: row["contact_number"] || null,
     });
     if (error) failed += 1;
     else created += 1;
@@ -753,7 +762,7 @@ export async function importStoresCsv(file: File): Promise<{ created: number; fa
 export async function exportStoreList(
   filter?: StoreFilter,
 ): Promise<{ download_url?: string; status?: string }> {
-  const { items } = await fetchStoreList({ filter, page: 1, page_size: 1000 });
+  const { items } = await fetchStoreList(compact({ filter, page: 1, page_size: 1000 }));
   const headers = ["name", "store_code", "address", "city", "state", "country", "status"];
   const lines = [headers.join(",")];
   for (const store of items) {

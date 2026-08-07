@@ -1,10 +1,11 @@
-// Backend contract for billing. Bindings target the future FastAPI service on
-// Railway (subscription + usage) with Cashfree for checkout and Supabase for
-// auth/profiles. No dummy data and no payment processing is implemented here.
+// Live billing contract backed by Supabase. No payment provider is connected
+// yet, so checkout/promo/payment-method actions surface a clear error instead
+// of faking a result, and invoices always return an empty list.
 
+import { ApiError } from "@/lib/api/errors";
+import { dbError, requireOrgId } from "@/lib/db/context";
 import type { BillingCycle, PlanId } from "@/lib/pricing";
-
-import { api } from "./api/client";
+import { supabase } from "@/integrations/supabase/client";
 
 export type SubscriptionStatus = "active" | "trialing" | "past_due" | "cancelled" | "paused";
 
@@ -59,66 +60,168 @@ export type Invoice = {
 
 export type InvoiceListResponse = { items: Invoice[]; total: number; page: number; page_size: number };
 
-function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const method = (init?.method ?? "GET").toUpperCase();
-  const body = typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined;
-  const options = { signal: init?.signal ?? undefined };
-  if (method === "GET") return api.get<T>(path, options);
-  if (method === "DELETE") return api.delete<T>(path, options);
-  if (method === "POST") return api.post<T>(path, body, options);
-  if (method === "PUT") return api.put<T>(path, body, options);
-  return api.patch<T>(path, body, options);
+function mapStatus(status: string): SubscriptionStatus {
+  if (status === "canceled") return "cancelled";
+  if (
+    status === "active" ||
+    status === "trialing" ||
+    status === "past_due" ||
+    status === "cancelled" ||
+    status === "paused"
+  ) {
+    return status;
+  }
+  return "active";
 }
 
-/** GET /billing/overview — subscription, usage and payment method. */
-export function fetchBillingOverview(signal?: AbortSignal): Promise<BillingOverview> {
-  return request<BillingOverview>("/billing/overview", { signal: signal ?? null });
+function notConnected(action: string): never {
+  throw new ApiError({
+    message: `${action} isn't available yet — a payment provider hasn't been connected to Aislix.`,
+    kind: "not_configured",
+    status: 501,
+  });
 }
 
-/** GET /billing/invoices */
-export function fetchInvoices(
+async function getSubscriptionRow(orgId: string) {
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .select(
+      "id, status, cycle, current_period_start, current_period_end, cancel_at_period_end, scans_used, plan_id, subscription_plans(id, code, name, scan_quota, store_limit, seat_limit, price_monthly_inr, price_annual_inr)",
+    )
+    .eq("org_id", orgId)
+    .maybeSingle();
+  if (error) dbError(error, "Could not load your subscription.");
+  return data;
+}
+
+/** The org's subscription, plan and real usage counted from stores/members. */
+export async function fetchBillingOverview(signal?: AbortSignal): Promise<BillingOverview> {
+  void signal;
+  const orgId = await requireOrgId();
+  const sub = await getSubscriptionRow(orgId);
+  if (!sub) {
+    throw new ApiError({ message: "No subscription found for your workspace.", kind: "not_found", status: 404 });
+  }
+  const plan = sub.subscription_plans as {
+    id: string;
+    code: string;
+    name: string;
+    scan_quota: number | null;
+    store_limit: number | null;
+    seat_limit: number | null;
+    price_monthly_inr: number;
+    price_annual_inr: number;
+  } | null;
+
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("billing_email, name, gstin, address")
+    .eq("id", orgId)
+    .maybeSingle();
+
+  const amount = plan
+    ? sub.cycle === "annual"
+      ? plan.price_annual_inr
+      : plan.price_monthly_inr
+    : undefined;
+
+  const address = org?.address as Record<string, unknown> | null;
+  const addressLabel = address
+    ? [address.line1, address.city, address.state].filter(Boolean).join(", ") || undefined
+    : undefined;
+
+  return {
+    plan_id: (plan?.code as PlanId) ?? "free",
+    plan_name: plan?.name,
+    status: mapStatus(sub.status),
+    billing_cycle: sub.cycle as BillingCycle,
+    amount_due: amount,
+    next_billing_date: sub.current_period_end ?? undefined,
+    auto_renew: !sub.cancel_at_period_end,
+    cancel_at_period_end: sub.cancel_at_period_end,
+    currency: "INR",
+    usage: {
+      period_start: sub.current_period_start,
+      period_end: sub.current_period_end ?? undefined,
+      scans_used: sub.scans_used,
+      scans_included: plan?.scan_quota ?? null,
+    },
+    payment_method: undefined,
+    billing_contact: {
+      email: org?.billing_email ?? undefined,
+      company: org?.name,
+      gstin: org?.gstin ?? undefined,
+      address: addressLabel,
+    },
+    promo: null,
+    credits: undefined,
+  };
+}
+
+/** No invoices table exists yet; always returns an empty, correctly-shaped page. */
+export async function fetchInvoices(
   params: { page?: number; page_size?: number } = {},
   signal?: AbortSignal,
 ): Promise<InvoiceListResponse> {
-  const search = new URLSearchParams({
-    page: String(params.page ?? 1),
-    page_size: String(params.page_size ?? 10),
-  });
-  return request<InvoiceListResponse>(`/billing/invoices?${search.toString()}`, { signal: signal ?? null });
+  void signal;
+  await requireOrgId();
+  return { items: [], total: 0, page: params.page ?? 1, page_size: params.page_size ?? 10 };
 }
 
-/** POST /billing/checkout — returns a Cashfree hosted checkout session. */
-export function createCheckoutSession(input: {
+/** No payment provider is connected — checkout cannot be started yet. */
+export function createCheckoutSession(_input: {
   plan_id: PlanId;
   billing_cycle: BillingCycle;
   promo_code?: string;
 }): Promise<{ payment_session_id?: string; checkout_url?: string; order_id?: string }> {
-  return request("/billing/checkout", { method: "POST", body: JSON.stringify(input) });
+  notConnected("Checkout");
 }
 
-/** POST /billing/subscription/cancel */
-export function cancelSubscription(): Promise<BillingOverview> {
-  return request("/billing/subscription/cancel", { method: "POST" });
+/** Sets cancel_at_period_end on the org's live subscription row. */
+export async function cancelSubscription(): Promise<BillingOverview> {
+  const orgId = await requireOrgId();
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({ cancel_at_period_end: true })
+    .eq("org_id", orgId);
+  if (error) dbError(error, "Could not cancel your subscription.");
+  return fetchBillingOverview();
 }
 
-/** POST /billing/subscription/resume */
-export function resumeSubscription(): Promise<BillingOverview> {
-  return request("/billing/subscription/resume", { method: "POST" });
+/** Clears cancel_at_period_end on the org's live subscription row. */
+export async function resumeSubscription(): Promise<BillingOverview> {
+  const orgId = await requireOrgId();
+  const { error } = await supabase
+    .from("subscriptions")
+    .update({ cancel_at_period_end: false })
+    .eq("org_id", orgId);
+  if (error) dbError(error, "Could not resume your subscription.");
+  return fetchBillingOverview();
 }
 
-/** PATCH /billing/subscription — auto-renew and other toggles. */
-export function updateSubscription(input: { auto_renew?: boolean }): Promise<BillingOverview> {
-  return request("/billing/subscription", { method: "PATCH", body: JSON.stringify(input) });
+/** Updates auto-renew (mapped to cancel_at_period_end) on the subscription row. */
+export async function updateSubscription(input: { auto_renew?: boolean }): Promise<BillingOverview> {
+  const orgId = await requireOrgId();
+  if (typeof input.auto_renew === "boolean") {
+    const { error } = await supabase
+      .from("subscriptions")
+      .update({ cancel_at_period_end: !input.auto_renew })
+      .eq("org_id", orgId);
+    if (error) dbError(error, "Could not update your subscription.");
+  }
+  return fetchBillingOverview();
 }
 
-/** POST /billing/promo — validate and apply a coupon. */
-export function applyPromoCode(code: string): Promise<{ code: string; discount_label?: string; description?: string }> {
-  return request("/billing/promo", { method: "POST", body: JSON.stringify({ code }) });
+/** No payment provider is connected — promo codes cannot be validated yet. */
+export function applyPromoCode(
+  _code: string,
+): Promise<{ code: string; discount_label?: string; description?: string }> {
+  notConnected("Promo codes");
 }
 
-/** POST /billing/payment-method — starts a Cashfree mandate/card update flow. */
+/** No payment provider is connected — there is no payment method to update. */
 export function startPaymentMethodUpdate(): Promise<{ redirect_url?: string }> {
-  return request("/billing/payment-method", { method: "POST" });
+  notConnected("Updating your payment method");
 }
 
 // ---------- formatting helpers ----------
