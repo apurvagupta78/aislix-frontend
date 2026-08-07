@@ -269,17 +269,8 @@ function Landing() {
         </div>
       </section>
 
-      <footer className="border-t border-border py-10">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-6">
-          <Logo />
-          <p className="text-sm text-muted-foreground">© 2026 Aislix. Retail shelf intelligence.</p>
-          <div className="ml-auto flex gap-5 text-sm text-muted-foreground">
-            <Link to="/login" className="hover:text-foreground">Log in</Link>
-            <Link to="/signup" className="hover:text-foreground">Sign up</Link>
-            <Link to="/dashboard" className="hover:text-foreground">Dashboard</Link>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
+
     </div>
   );
 }
