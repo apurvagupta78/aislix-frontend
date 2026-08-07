@@ -38,9 +38,9 @@ export function EmptyState({
   icon,
 }: {
   title: string;
-  description?: string;
-  action?: ReactNode;
-  icon?: ReactNode;
+  description?: string | undefined;
+  action?: ReactNode | undefined;
+  icon?: ReactNode | undefined;
 }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface px-6 py-14 text-center">
@@ -61,9 +61,9 @@ export function ErrorState({
   description = "We couldn't load this data. Try again in a moment.",
   onRetry,
 }: {
-  title?: string;
-  description?: string;
-  onRetry?: () => void;
+  title?: string | undefined;
+  description?: string | undefined;
+  onRetry?: () => void | undefined;
 }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-2xl border border-destructive/25 bg-destructive/5 px-6 py-14 text-center">

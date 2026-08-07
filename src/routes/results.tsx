@@ -1,241 +1,316 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Download, FileText, MapPin, Calendar, Gauge, AlertTriangle } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Braces,
+  Download,
+  FileSpreadsheet,
+  FileText,
+  Image as ImageIcon,
+  ScanLine,
+} from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmptyState, ErrorState, Skeleton } from "@/components/States";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { detectedProducts, topBrands } from "@/lib/aislix-data";
+  AlertsPanel,
+  AnnotatedImageViewer,
+  InventoryTable,
+  RecommendationsPanel,
+  ResultSection,
+  SummaryCard,
+} from "@/components/scan-results/ResultParts";
+import {
+  CategoryDistributionChart,
+  ConfidenceDistributionChart,
+  TopBrandsChart,
+} from "@/components/scan-results/ResultCharts";
+import {
+  fetchScanResult,
+  formatConfidence,
+  formatDuration,
+  inventoryToCsv,
+  downloadBlob,
+  type ScanResult,
+} from "@/lib/scan-results";
 
 export const Route = createFileRoute("/results")({
+  validateSearch: (search: Record<string, unknown>): { scan?: string } => {
+    const scan = search['scan'];
+    return typeof scan === "string" && scan.length > 0 ? { scan } : {};
+  },
   head: () => ({
     meta: [
       { title: "Scan Results — Aislix Shelf Audit" },
       {
         name: "description",
         content:
-          "Detected products, brand share of shelf, out-of-stock gaps and planogram compliance for a single shelf scan.",
+          "Detected products, brand shelf share, low-stock alerts and AI recommendations for a single Aislix shelf scan.",
       },
       { property: "og:title", content: "Shelf scan results — Aislix" },
-      { property: "og:description", content: "Full AI breakdown of a single shelf audit." },
+      {
+        property: "og:description",
+        content: "Full AI breakdown of one shelf audit: inventory, alerts and recommendations.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Results,
 });
 
-const summary = [
-  { label: "Products detected", value: "218" },
-  { label: "Brands detected", value: "24" },
-  { label: "AI confidence", value: "96.4%" },
-  { label: "Empty facings", value: "4" },
-];
-
-const boxes = [
-  { top: "12%", left: "6%", w: "16%", h: "20%", label: "Amul Gold · 98%" },
-  { top: "12%", left: "26%", w: "14%", h: "20%", label: "Britannia · 97%" },
-  { top: "12%", left: "44%", w: "15%", h: "20%", label: "Parle-G · 95%" },
-  { top: "42%", left: "8%", w: "18%", h: "22%", label: "Nescafé · 94%" },
-  { top: "42%", left: "32%", w: "16%", h: "22%", label: "Coca-Cola · 92%" },
-  { top: "42%", left: "54%", w: "14%", h: "22%", label: "Empty · OOS" },
-  { top: "70%", left: "10%", w: "20%", h: "20%", label: "Dabur Honey · 92%" },
-  { top: "70%", left: "38%", w: "18%", h: "20%", label: "Maggi · 91%" },
-];
-
 function Results() {
+  const { scan } = Route.useSearch();
+  const navigate = useNavigate();
+
+  const query = useQuery({
+    queryKey: ["scan-result", scan],
+    queryFn: ({ signal }) => fetchScanResult(scan!, signal),
+    enabled: !!scan,
+    retry: false,
+  });
+
+  const data = query.data;
+  const loading = !!scan && query.isPending;
+  const summary = data?.summary;
+
+  const goToScan = (id?: string | null) => {
+    if (!id) return;
+    navigate({ to: "/results", search: { scan: id } });
+  };
+
   return (
     <AppShell
-      title="Scan SCN-10428"
-      description="MoreMart Superstore · Aisle 4 · Beverages"
+      title="Scan results"
+      description={
+        data
+          ? [data.scan_id, data.store, data.aisle].filter(Boolean).join(" · ")
+          : "AI breakdown of a single shelf scan."
+      }
       actions={
-        <>
-          <Button asChild variant="subtle" size="sm" className="rounded-xl">
-            <Link to="/history">All scans</Link>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="subtle"
+            size="sm"
+            className="rounded-xl"
+            disabled={!data?.navigation?.previous_scan_id}
+            onClick={() => goToScan(data?.navigation?.previous_scan_id)}
+          >
+            <ArrowLeft className="size-4" /> Previous
           </Button>
-          <Button asChild variant="brand" size="sm" className="rounded-xl">
-            <Link to="/report">
-              <FileText className="size-4" /> View PDF report
-            </Link>
+          <Button
+            variant="subtle"
+            size="sm"
+            className="rounded-xl"
+            disabled={!data?.navigation?.next_scan_id}
+            onClick={() => goToScan(data?.navigation?.next_scan_id)}
+          >
+            Next <ArrowRight className="size-4" />
           </Button>
-        </>
+        </div>
       }
     >
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-        <span className="inline-flex items-center gap-1.5">
-          <MapPin className="size-4 text-brand" /> Bengaluru, KA
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <Calendar className="size-4 text-brand" /> Aug 6, 2026 · 11:42
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <Gauge className="size-4 text-brand" /> Shelf health 92 / 100
-        </span>
-        <Badge className="rounded-full bg-accent-green/12 text-accent-green hover:bg-accent-green/12">Completed</Badge>
-      </div>
-
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {summary.map((s) => (
-          <div key={s.label} className="card-surface card-hover p-5">
-            <p className="text-xs text-muted-foreground">{s.label}</p>
-            <p className="mt-2 text-2xl font-semibold tracking-tight">{s.value}</p>
+      {!scan ? (
+        <EmptyState
+          icon={<ScanLine className="size-5" />}
+          title="No scan selected"
+          description="Open a scan from your history, or run a new shelf scan to see results here."
+          action={
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button asChild variant="brand" size="sm" className="rounded-xl">
+                <Link to="/scan">Start a new scan</Link>
+              </Button>
+              <Button asChild variant="subtle" size="sm" className="rounded-xl">
+                <Link to="/history">Browse scan history</Link>
+              </Button>
+            </div>
+          }
+        />
+      ) : query.isError ? (
+        <ErrorState
+          title="Couldn't load this scan"
+          description={
+            query.error instanceof Error
+              ? query.error.message
+              : "The scan service did not return a result."
+          }
+          onRetry={() => {
+            void query.refetch();
+          }}
+        />
+      ) : (
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <SummaryCard
+              label="Products detected"
+              value={summary?.total_products}
+              loading={loading}
+            />
+            <SummaryCard label="Unique SKUs" value={summary?.unique_skus} loading={loading} />
+            <SummaryCard label="Unique brands" value={summary?.unique_brands} loading={loading} />
+            <SummaryCard
+              label="Low stock"
+              value={summary?.low_stock_products}
+              loading={loading}
+              hint="Products below threshold"
+            />
+            <SummaryCard
+              label="Avg AI confidence"
+              value={
+                summary ? formatConfidence(summary.average_confidence) : undefined
+              }
+              loading={loading}
+              accent
+            />
+            <SummaryCard
+              label="Processing time"
+              value={summary ? formatDuration(summary.processing_time_ms) : undefined}
+              loading={loading}
+            />
           </div>
-        ))}
-      </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-5">
-        <div className="card-surface p-6 lg:col-span-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold tracking-tight">Annotated shelf</h2>
-            <Button variant="ghost" size="sm" className="rounded-xl">
-              <Download className="size-4" /> Export image
-            </Button>
-          </div>
-          <div className="relative mt-5 aspect-[4/3] overflow-hidden rounded-2xl border border-border bg-surface">
-            <div className="absolute inset-0 grid-lines opacity-60" />
-            {[24, 54, 84].map((t) => (
-              <div
-                key={t}
-                className="absolute left-0 right-0 h-px bg-border"
-                style={{ top: `${t}%` }}
-              />
-            ))}
-            {boxes.map((b) => (
-              <div
-                key={b.label}
-                className={`absolute rounded-lg border-2 ${
-                  b.label.includes("Empty")
-                    ? "border-destructive bg-destructive/10"
-                    : "border-brand bg-brand/10"
-                }`}
-                style={{ top: b.top, left: b.left, width: b.w, height: b.h }}
-              >
-                <span
-                  className={`absolute -top-2 left-1 rounded px-1.5 py-0.5 text-[0.6rem] font-medium ${
-                    b.label.includes("Empty")
-                      ? "bg-destructive text-brand-foreground"
-                      : "bg-brand text-brand-foreground"
-                  }`}
-                >
-                  {b.label}
-                </span>
+          <AnnotatedImageViewer
+            src={data?.annotated_image_url}
+            scanId={data?.scan_id}
+            loading={loading}
+          />
+
+          <ResultSection
+            title="Executive summary"
+            description="Narrative generated by the AI pipeline."
+          >
+            {loading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-11/12" />
+                <Skeleton className="h-4 w-9/12" />
               </div>
-            ))}
+            ) : data?.executive_summary ? (
+              <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                {data.executive_summary}
+              </p>
+            ) : (
+              <EmptyState
+                icon={<FileText className="size-5" />}
+                title="No summary yet"
+                description="The executive summary appears here once the scan service returns it."
+              />
+            )}
+          </ResultSection>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <AlertsPanel alerts={data?.alerts} loading={loading} />
+            <RecommendationsPanel recommendations={data?.recommendations} loading={loading} />
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            8 of 218 detections shown · green = identified SKU, red = empty facing
-          </p>
+
+          <div className="grid gap-4 xl:grid-cols-3">
+            <TopBrandsChart data={data?.charts?.top_brands} loading={loading} />
+            <ConfidenceDistributionChart
+              data={data?.charts?.confidence_distribution}
+              loading={loading}
+            />
+            <CategoryDistributionChart
+              data={data?.charts?.category_distribution}
+              loading={loading}
+            />
+          </div>
+
+          <InventoryTable items={data?.inventory} scanId={data?.scan_id} loading={loading} />
+
+          <DownloadsPanel data={data} loading={loading} />
         </div>
-
-        <div className="space-y-4 lg:col-span-2">
-          <div className="card-surface p-6">
-            <h2 className="text-sm font-semibold tracking-tight">Planogram compliance</h2>
-            <div className="mt-5 space-y-4">
-              {[
-                { l: "Correct placement", v: 92 },
-                { l: "Facing count match", v: 86 },
-                { l: "Sequence adherence", v: 78 },
-                { l: "Promo compliance", v: 65 },
-              ].map((r) => (
-                <div key={r.l}>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">{r.l}</span>
-                    <span className="font-medium">{r.v}%</span>
-                  </div>
-                  <Progress value={r.v} className="mt-2 h-1.5 rounded-full" />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="card-surface p-6">
-            <h2 className="inline-flex items-center gap-2 text-sm font-semibold tracking-tight">
-              <AlertTriangle className="size-4 text-warning" /> Action items
-            </h2>
-            <ul className="mt-4 space-y-3 text-sm">
-              {[
-                "Refill Maggi Masala 70g — 0 facings on middle shelf.",
-                "Coca-Cola 750ml down to 3 facings, below 6-facing planogram.",
-                "Parle-G Gold 1kg misplaced in Beverages row 2.",
-                "Promo end-cap missing Britannia festive pack.",
-              ].map((a) => (
-                <li key={a} className="flex gap-2.5 text-muted-foreground">
-                  <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-brand" />
-                  {a}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div className="card-surface mt-4 p-6">
-        <Tabs defaultValue="products">
-          <TabsList className="rounded-xl">
-            <TabsTrigger value="products" className="rounded-lg">Detected products</TabsTrigger>
-            <TabsTrigger value="brands" className="rounded-lg">Brand breakdown</TabsTrigger>
-          </TabsList>
-          <TabsContent value="products" className="mt-5">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Brand</TableHead>
-                  <TableHead className="text-right">Facings</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
-                  <TableHead className="text-right">Confidence</TableHead>
-                  <TableHead className="text-right">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {detectedProducts.map((p) => (
-                  <TableRow key={p.name}>
-                    <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{p.brand}</TableCell>
-                    <TableCell className="text-right">{p.facings}</TableCell>
-                    <TableCell className="text-right">{p.price}</TableCell>
-                    <TableCell className="text-right">{p.confidence}%</TableCell>
-                    <TableCell className="text-right">
-                      <Badge
-                        variant="secondary"
-                        className={`rounded-full ${
-                          p.status === "In stock"
-                            ? "bg-accent-green/12 text-accent-green hover:bg-accent-green/12"
-                            : p.status === "Low stock"
-                              ? "bg-warning/15 text-warning hover:bg-warning/15"
-                              : "bg-destructive/10 text-destructive hover:bg-destructive/10"
-                        }`}
-                      >
-                        {p.status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TabsContent>
-          <TabsContent value="brands" className="mt-5">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {topBrands.map((b) => (
-                <div key={b.brand} className="rounded-2xl border border-border bg-surface p-5">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">{b.brand}</p>
-                    <span className="text-sm text-brand">{b.share}%</span>
-                  </div>
-                  <Progress value={b.share * 4} className="mt-3 h-1.5 rounded-full" />
-                  <p className="mt-2 text-xs text-muted-foreground">{b.facings} facings detected</p>
-                </div>
-              ))}
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
+      )}
     </AppShell>
+  );
+}
+
+function DownloadsPanel({
+  data,
+  loading,
+}: {
+  data?: ScanResult | undefined;
+  loading?: boolean | undefined;
+}) {
+  const inventory = data?.inventory ?? [];
+  const imageUrl = data?.downloads?.annotated_image_url ?? data?.annotated_image_url;
+
+  const downloadCsv = () =>
+    downloadBlob(
+      inventoryToCsv(inventory),
+      `aislix-${data?.scan_id ?? "scan"}-inventory.csv`,
+      "text/csv;charset=utf-8",
+    );
+
+  const downloadJson = () =>
+    data &&
+    downloadBlob(
+      JSON.stringify(data, null, 2),
+      `aislix-${data.scan_id}-result.json`,
+      "application/json",
+    );
+
+  return (
+    <ResultSection title="Downloads" description="Export this scan for sharing or analysis.">
+      {loading ? (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-11 w-full" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {data?.downloads?.pdf_url ? (
+            <Button asChild variant="brand" size="lg" className="w-full rounded-xl">
+              <a href={data.downloads.pdf_url} target="_blank" rel="noreferrer">
+                <FileText className="size-4" /> PDF report
+              </a>
+            </Button>
+          ) : (
+            <Button variant="brand" size="lg" className="w-full rounded-xl" disabled>
+              <FileText className="size-4" /> PDF report
+            </Button>
+          )}
+
+          <Button
+            variant="subtle"
+            size="lg"
+            className="w-full rounded-xl"
+            onClick={downloadCsv}
+            disabled={inventory.length === 0}
+          >
+            <FileSpreadsheet className="size-4" /> CSV inventory
+          </Button>
+
+          {imageUrl ? (
+            <Button asChild variant="subtle" size="lg" className="w-full rounded-xl">
+              <a href={imageUrl} download={`aislix-${data?.scan_id ?? "scan"}-annotated.jpg`}>
+                <ImageIcon className="size-4" /> Annotated image
+              </a>
+            </Button>
+          ) : (
+            <Button variant="subtle" size="lg" className="w-full rounded-xl" disabled>
+              <ImageIcon className="size-4" /> Annotated image
+            </Button>
+          )}
+
+          <Button
+            variant="subtle"
+            size="lg"
+            className="w-full rounded-xl"
+            onClick={downloadJson}
+            disabled={!data}
+          >
+            <Braces className="size-4" /> JSON payload
+          </Button>
+        </div>
+      )}
+      {!loading && !data?.downloads?.pdf_url && (
+        <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+          <Download className="size-3.5" /> Export links activate when the scan service returns
+          them.
+        </p>
+      )}
+    </ResultSection>
   );
 }
