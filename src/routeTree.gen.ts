@@ -22,6 +22,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as OrganizationRouteImport } from './routes/organization'
 import { Route as PlatformRouteImport } from './routes/platform'
 import { Route as PricingRouteImport } from './routes/pricing'
@@ -108,6 +109,11 @@ const HowItWorksRoute = HowItWorksRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogoutRoute = LogoutRouteImport.update({
+  id: '/logout',
+  path: '/logout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrganizationRoute = OrganizationRouteImport.update({
@@ -235,6 +241,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof HistoryRoute
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
+  '/logout': typeof LogoutRoute
   '/organization': typeof OrganizationRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
@@ -272,6 +279,7 @@ export interface FileRoutesByTo {
   '/history': typeof HistoryRoute
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
+  '/logout': typeof LogoutRoute
   '/organization': typeof OrganizationRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
@@ -310,6 +318,7 @@ export interface FileRoutesById {
   '/history': typeof HistoryRoute
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
+  '/logout': typeof LogoutRoute
   '/organization': typeof OrganizationRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
@@ -349,6 +358,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/how-it-works'
     | '/login'
+    | '/logout'
     | '/organization'
     | '/platform'
     | '/pricing'
@@ -386,6 +396,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/how-it-works'
     | '/login'
+    | '/logout'
     | '/organization'
     | '/platform'
     | '/pricing'
@@ -423,6 +434,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/how-it-works'
     | '/login'
+    | '/logout'
     | '/organization'
     | '/platform'
     | '/pricing'
@@ -461,6 +473,7 @@ export interface RootRouteChildren {
   HistoryRoute: typeof HistoryRoute
   HowItWorksRoute: typeof HowItWorksRoute
   LoginRoute: typeof LoginRoute
+  LogoutRoute: typeof LogoutRoute
   OrganizationRoute: typeof OrganizationRoute
   PlatformRoute: typeof PlatformRoute
   PricingRoute: typeof PricingRoute
@@ -576,6 +589,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logout': {
+      id: '/logout'
+      path: '/logout'
+      fullPath: '/logout'
+      preLoaderRoute: typeof LogoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/organization': {
@@ -749,6 +769,7 @@ const rootRouteChildren: RootRouteChildren = {
   HistoryRoute: HistoryRoute,
   HowItWorksRoute: HowItWorksRoute,
   LoginRoute: LoginRoute,
+  LogoutRoute: LogoutRoute,
   OrganizationRoute: OrganizationRoute,
   PlatformRoute: PlatformRoute,
   PricingRoute: PricingRoute,

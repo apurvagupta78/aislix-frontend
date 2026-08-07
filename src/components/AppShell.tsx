@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import {
   LayoutDashboard,
@@ -10,6 +10,7 @@ import {
   User,
   Settings,
   Building2,
+  Store,
   Users,
   Tag,
   Bell,
@@ -36,7 +37,8 @@ const nav = [
   { label: "Upload Scan", to: "/upload", icon: UploadCloud },
   { label: "Scan History", to: "/history", icon: History },
   { label: "Reports", to: "/report", icon: FileText },
-  { label: "Stores", to: "/stores", icon: Building2 },
+  { label: "Organization", to: "/organization", icon: Building2 },
+  { label: "Stores", to: "/stores", icon: Store },
   { label: "Team", to: "/team", icon: Users },
 ] as const;
 
@@ -59,6 +61,7 @@ export function AppShell({
   children: ReactNode;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
 
   const item = (to: string, label: string, Icon: typeof Bell) => (
     <Link
@@ -110,19 +113,33 @@ export function AppShell({
             <div className="lg:hidden">
               <Logo compact />
             </div>
-            <div className="relative hidden max-w-sm flex-1 md:block">
+            <form
+              className="relative hidden max-w-sm flex-1 md:block"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const q = new FormData(e.currentTarget).get("q");
+                navigate({
+                  to: "/history",
+                  search: { ...(typeof q === "string" && q ? { q } : {}), page: 1 },
+                });
+              }}
+            >
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
+                name="q"
+                aria-label="Search scans, stores and SKUs"
                 placeholder="Search scans, stores, SKUs…"
                 className="h-9 rounded-xl border-border bg-surface pl-9"
               />
-            </div>
+            </form>
             <div className="ml-auto flex items-center gap-2">
               <Button asChild variant="brand" size="sm" className="rounded-xl">
                 <Link to="/upload">New scan</Link>
               </Button>
-              <Button variant="ghost" size="icon" className="rounded-xl">
-                <Bell className="size-4" />
+              <Button asChild variant="ghost" size="icon" className="rounded-xl" aria-label="Notifications">
+                <Link to="/dashboard" hash="notifications">
+                  <Bell className="size-4" />
+                </Link>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -151,7 +168,7 @@ export function AppShell({
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link to="/login">
+                    <Link to="/logout">
                       <LogOut className="mr-2 size-4" /> Sign out
                     </Link>
                   </DropdownMenuItem>
