@@ -83,7 +83,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Aislix audits retail shelves automatically with computer vision for supermarkets, FMCG brands, distributors and Kirana stores.",
+          "Aislix audits retail shelves automatically with computer vision for supermarkets, FMCG brands, distributors and local stores.",
       },
       { name: "author", content: "Aislix" },
       { property: "og:type", content: "website" },

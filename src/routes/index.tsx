@@ -30,7 +30,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "Automated shelf audits for supermarkets, FMCG brands, distributors and Kirana stores.",
+          "Automated shelf audits for supermarkets, FMCG brands, distributors and local stores.",
       },
     ],
   }),
@@ -105,7 +105,7 @@ function Landing() {
           <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
             Aislix turns a single shelf photo into a full retail audit — products detected, brands
             counted, out-of-stocks flagged and shelf health scored. Built for supermarkets, FMCG
-            teams, distributors and Kirana stores.
+            teams, distributors and local stores.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <Button asChild variant="hero" size="xl">
@@ -211,7 +211,7 @@ function Landing() {
         <div className="mx-auto max-w-7xl px-6">
           <p className="text-xs font-medium uppercase tracking-widest text-brand">Pricing</p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-            Plans that scale from one Kirana to a national chain.
+            Plans that scale from one local store to a national chain.
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Start free with 3 scans a day. Move to Starter at ₹999, unlimited scans on Professional

@@ -91,7 +91,7 @@ function UploadScan() {
                     <SelectItem value="moremart">MoreMart Superstore · Bengaluru</SelectItem>
                     <SelectItem value="freshpick">FreshPick Hypermarket · Pune</SelectItem>
                     <SelectItem value="metro">Metro Cash & Carry · Delhi NCR</SelectItem>
-                    <SelectItem value="kirana">Sri Balaji Kirana · Hyderabad</SelectItem>
+                    <SelectItem value="local">Sri Balaji Local Store · Hyderabad</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
