@@ -68,9 +68,7 @@ function Pricing() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b border-border bg-card/85 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-5 sm:px-8">
-          <Link to="/">
-            <Logo />
-          </Link>
+          <Logo />
           <nav className="ml-auto flex items-center gap-2">
             <Button asChild variant="ghost" size="sm" className="rounded-xl">
               <Link to="/login">Sign in</Link>
