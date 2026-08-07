@@ -142,7 +142,10 @@ function RowActions({
           <ImageDown className="size-4" /> Annotated image
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onSelect={() => onDelete(scan)}>
+        <DropdownMenuItem
+          className="text-destructive focus:text-destructive"
+          onSelect={() => onDelete(scan)}
+        >
           <Trash2 className="size-4" /> Delete scan
         </DropdownMenuItem>
       </DropdownMenuContent>
