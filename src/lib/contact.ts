@@ -1,8 +1,9 @@
-// Contact / enquiry backend contract. Enquiries will be persisted in Supabase
-// and emailed to hello@aislix.com by the FastAPI service on Railway. No email
-// sending happens client-side and nothing is faked here.
+// Contact / enquiry backend contract. Enquiries are persisted directly in
+// Supabase's contact_submissions table (anonymous inserts are allowed by RLS).
 
-import { api } from "./api/client";
+import { supabase } from "@/integrations/supabase/client";
+import { getUser } from "@/lib/db/context";
+import { ApiError } from "@/lib/api/errors";
 
 export const ENQUIRY_INBOX = "hello@aislix.com";
 export const SALES_INBOX = "sales@aislix.com";
@@ -35,16 +36,35 @@ export type EnquiryInput = {
 
 export type EnquiryResponse = { id: string; received_at?: string; delivered_to?: string };
 
-/** POST /contact/enquiries — stores the enquiry and emails {@link ENQUIRY_INBOX}. */
-export function submitEnquiry(input: EnquiryInput): Promise<EnquiryResponse> {
-  return api.post<EnquiryResponse>(
-    "/contact/enquiries",
-    { ...input, deliver_to: ENQUIRY_INBOX },
-    { anonymous: true },
+/** Inserts a real row into contact_submissions. */
+export async function submitEnquiry(input: EnquiryInput): Promise<EnquiryResponse> {
+  const user = await getUser().catch(() => null);
+  const messageParts = [input.message, input.country ? `Country: ${input.country}` : null, input.source ? `Source: ${input.source}` : null].filter(
+    Boolean,
   );
+
+  const { data, error } = await supabase
+    .from("contact_submissions")
+    .insert({
+      name: input.name,
+      email: input.email,
+      company: input.company || null,
+      phone: input.phone || null,
+      topic: input.subject,
+      message: messageParts.join("\n\n"),
+      user_id: user?.id ?? null,
+    })
+    .select("id, created_at")
+    .single();
+
+  if (error) {
+    throw new ApiError({ message: error.message || "Could not submit your enquiry.", kind: "server", status: 500 });
+  }
+
+  return { id: data.id, received_at: data.created_at, delivered_to: ENQUIRY_INBOX };
 }
 
-/** POST /contact/demo — books a demo slot request for the sales team. */
+/** Books a demo slot request for the sales team. */
 export function requestDemo(input: EnquiryInput): Promise<EnquiryResponse> {
   return submitEnquiry({ ...input, subject: "Book a demo" });
 }

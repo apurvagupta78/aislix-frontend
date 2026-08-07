@@ -1,9 +1,13 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { AuthLayout } from "@/components/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
+import { login } from "@/lib/api/auth";
+import { toUserMessage } from "@/lib/api/errors";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -12,12 +16,30 @@ export const Route = createFileRoute("/login")({
       { name: "description", content: "Log in to your Aislix workspace to run and review AI shelf audits." },
       { property: "og:title", content: "Log in — Aislix" },
       { property: "og:description", content: "Access your Aislix retail shelf intelligence workspace." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: LoginPage,
 });
 
 function LoginPage() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const signIn = useMutation({
+    mutationFn: () => login({ email, password }),
+    onSuccess: () => {
+      toast.success("Welcome back");
+      navigate({ to: "/dashboard" });
+    },
+    onError: (error: unknown) =>
+      toast.error("Could not sign in", { description: toUserMessage(error) }),
+  });
+
+  const disabled = signIn.isPending || email.trim().length === 0 || password.length === 0;
+
   return (
     <AuthLayout
       title="Welcome back"
@@ -33,41 +55,43 @@ function LoginPage() {
     >
       <form
         className="space-y-4"
-        onSubmit={(e) => e.preventDefault()}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!disabled) signIn.mutate();
+        }}
       >
         <div className="space-y-2">
           <Label htmlFor="email">Work email</Label>
-          <Input id="email" type="email" placeholder="you@company.com" className="h-11 rounded-xl" />
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@company.com"
+            className="h-11 rounded-xl"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" placeholder="••••••••" className="h-11 rounded-xl" />
+          <Input
+            id="password"
+            type="password"
+            autoComplete="current-password"
+            placeholder="••••••••"
+            className="h-11 rounded-xl"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
         </div>
-        <div className="flex items-center justify-between pt-1">
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Checkbox id="remember" /> Remember me
-          </label>
+        <div className="flex items-center justify-end pt-1">
           <Link to="/forgot-password" className="text-sm text-brand hover:underline">
             Forgot password?
           </Link>
         </div>
-        <Button asChild variant="brand" size="lg" className="w-full">
-          <Link to="/dashboard">Log in</Link>
+        <Button variant="brand" size="lg" className="w-full" type="submit" disabled={disabled}>
+          {signIn.isPending ? "Signing in…" : "Log in"}
         </Button>
-        <div className="relative py-2 text-center">
-          <span className="relative z-10 bg-background px-3 text-xs text-muted-foreground">
-            or continue with
-          </span>
-          <span className="absolute left-0 top-1/2 h-px w-full bg-border" />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Button variant="subtle" size="lg" type="button">
-            Google
-          </Button>
-          <Button variant="subtle" size="lg" type="button">
-            Microsoft
-          </Button>
-        </div>
       </form>
     </AuthLayout>
   );

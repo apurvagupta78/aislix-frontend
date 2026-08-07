@@ -1,9 +1,19 @@
-// Backend contract for profile, company, stores, team, notifications, security,
-// API keys and account management. Bindings target the future FastAPI service on
-// Railway with Supabase Auth for identity. No dummy data is produced here — every
-// value rendered in the UI comes from these endpoints.
+// Live account contract: profile, company, stores, team, notifications,
+// security and account-management actions all backed by Supabase, scoped to
+// the signed-in user and their active organization. No dummy data is produced
+// here — every value comes from real rows.
 
-import { api } from "./api/client";
+import { supabase } from "@/integrations/supabase/client";
+import { ApiError } from "@/lib/api/errors";
+import {
+  dbError,
+  getMembership,
+  getUser,
+  requireMembership,
+  requireOrgId,
+  requireUserId,
+  type MemberRole,
+} from "@/lib/db/context";
 
 // ---------- types ----------
 
@@ -83,107 +93,396 @@ export type ApiKey = {
   revoked?: boolean;
 };
 
-// ---------- transport ----------
+// ---------- role mapping ----------
 
-function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const method = (init?.method ?? "GET").toUpperCase();
-  const body = typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined;
-  const options = { signal: init?.signal ?? undefined };
-  if (method === "GET") return api.get<T>(path, options);
-  if (method === "DELETE") return api.delete<T>(path, options);
-  if (method === "POST") return api.post<T>(path, body, options);
-  if (method === "PUT") return api.put<T>(path, body, options);
-  return api.patch<T>(path, body, options);
+function roleToDb(role: TeamRole): MemberRole {
+  return role === "manager" ? "store_manager" : role;
 }
 
-function upload<T>(path: string, file: File, field = "file"): Promise<T> {
-  const form = new FormData();
-  form.append(field, file);
-  return api.postForm<T>(path, form);
+function roleFromDb(role: MemberRole): TeamRole {
+  return role === "store_manager" ? "manager" : role;
 }
 
 // ---------- profile ----------
 
-/** GET /account/profile */
-export const fetchProfile = (signal?: AbortSignal) =>
-  request<UserProfile>("/account/profile", { signal: signal ?? null });
+async function fetchOrgNameForUser(): Promise<string> {
+  const membership = await getMembership();
+  if (!membership) return "";
+  const { data } = await supabase.from("organizations").select("name").eq("id", membership.org_id).maybeSingle();
+  return data?.name ?? "";
+}
 
-/** PATCH /account/profile */
-export const updateProfile = (input: Partial<UserProfile>) =>
-  request<UserProfile>("/account/profile", { method: "PATCH", body: JSON.stringify(input) });
+/** The signed-in user's profile, merged with their organization name. */
+export async function fetchProfile(signal?: AbortSignal): Promise<UserProfile> {
+  void signal;
+  const user = await getUser();
+  if (!user) throw new ApiError({ message: "You need to sign in to continue.", kind: "unauthorized", status: 401 });
 
-/** POST /account/profile/avatar (multipart) */
-export const uploadAvatar = (file: File) => upload<{ avatar_url: string }>("/account/profile/avatar", file);
+  const [{ data: profile, error }, companyName] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, full_name, email, phone, job_title, timezone")
+      .eq("id", user.id)
+      .maybeSingle(),
+    fetchOrgNameForUser(),
+  ]);
+  if (error) dbError(error, "Could not load your profile.");
+
+  return {
+    id: profile?.id ?? user.id,
+    full_name: profile?.full_name ?? "",
+    company_name: companyName,
+    email: profile?.email ?? user.email ?? "",
+    mobile: profile?.phone ?? "",
+    job_title: profile?.job_title ?? "",
+    country: "",
+    timezone: profile?.timezone ?? "",
+    avatar_url: await resolveAvatarUrl(profile as { avatar_url?: string | null } | null),
+  };
+}
+
+async function resolveAvatarUrl(row: { avatar_url?: string | null } | null): Promise<string | null> {
+  const path = row?.avatar_url;
+  if (!path) return null;
+  if (path.startsWith("http")) return path;
+  const { data } = await supabase.storage.from("avatars").createSignedUrl(path, 3600);
+  return data?.signedUrl ?? null;
+}
+
+/** Updates the signed-in user's profile row. */
+export async function updateProfile(input: Partial<UserProfile>): Promise<UserProfile> {
+  const userId = await requireUserId();
+  const patch: Record<string, unknown> = {};
+  if (input.full_name !== undefined) patch.full_name = input.full_name;
+  if (input.mobile !== undefined) patch.phone = input.mobile;
+  if (input.job_title !== undefined) patch.job_title = input.job_title;
+  if (input.timezone !== undefined) patch.timezone = input.timezone;
+  if (Object.keys(patch).length) {
+    const { error } = await supabase.from("profiles").update(patch as never).eq("id", userId);
+    if (error) dbError(error, "Could not update your profile.");
+  }
+  return fetchProfile();
+}
+
+/** Uploads an avatar to the avatars bucket and stores the path on the profile. */
+export async function uploadAvatar(file: File): Promise<{ avatar_url: string }> {
+  const userId = await requireUserId();
+  const ext = file.name.split(".").pop() || "jpg";
+  const path = `${userId}/avatar.${ext}`;
+  const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+  if (uploadError) {
+    throw new ApiError({ message: uploadError.message, kind: "server", status: 500 });
+  }
+  const { error } = await supabase.from("profiles").update({ avatar_url: path }).eq("id", userId);
+  if (error) dbError(error, "Could not save your avatar.");
+  const { data } = await supabase.storage.from("avatars").createSignedUrl(path, 3600);
+  return { avatar_url: data?.signedUrl ?? path };
+}
 
 // ---------- company ----------
 
-/** GET /account/company */
-export const fetchCompany = (signal?: AbortSignal) =>
-  request<CompanySettings>("/account/company", { signal: signal ?? null });
+function formatAddress(address: Record<string, unknown> | null | undefined): string {
+  if (!address) return "";
+  return [address.line1, address.line2, address.city, address.state, address.pincode, address.country]
+    .filter((part) => typeof part === "string" && part.trim())
+    .join(", ");
+}
 
-/** PATCH /account/company */
-export const updateCompany = (input: Partial<CompanySettings>) =>
-  request<CompanySettings>("/account/company", { method: "PATCH", body: JSON.stringify(input) });
+/** The active organization's settings. */
+export async function fetchCompany(signal?: AbortSignal): Promise<CompanySettings> {
+  void signal;
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("organizations")
+    .select("id, name, logo_url, gstin, address")
+    .eq("id", orgId)
+    .maybeSingle();
+  if (error) dbError(error, "Could not load company settings.");
 
-/** POST /account/company/logo (multipart) */
-export const uploadCompanyLogo = (file: File) => upload<{ logo_url: string }>("/account/company/logo", file);
+  return {
+    id: data?.id,
+    company_name: data?.name ?? "",
+    logo_url: await resolveLogoUrl(data as { logo_url?: string | null } | null),
+    gst_number: data?.gstin ?? "",
+    address: formatAddress(data?.address as Record<string, unknown> | null),
+    currency: "INR",
+    date_format: "DD/MM/YYYY",
+    language: "English",
+  };
+}
+
+async function resolveLogoUrl(row: { logo_url?: string | null } | null): Promise<string | null> {
+  const path = row?.logo_url;
+  if (!path) return null;
+  if (path.startsWith("http")) return path;
+  const { data } = await supabase.storage.from("org-logos").createSignedUrl(path, 3600);
+  return data?.signedUrl ?? null;
+}
+
+/** Updates the active organization's row (owners/admins only, enforced by RLS). */
+export async function updateCompany(input: Partial<CompanySettings>): Promise<CompanySettings> {
+  const orgId = await requireOrgId();
+  const patch: Record<string, unknown> = {};
+  if (input.company_name !== undefined) patch.name = input.company_name;
+  if (input.gst_number !== undefined) patch.gstin = input.gst_number;
+  if (input.address !== undefined) patch.address = { line1: input.address };
+  if (Object.keys(patch).length) {
+    const { error } = await supabase.from("organizations").update(patch as never).eq("id", orgId);
+    if (error) dbError(error, "Could not update company settings.");
+  }
+  return fetchCompany();
+}
+
+/** Uploads a company logo to the org-logos bucket and stores the path. */
+export async function uploadCompanyLogo(file: File): Promise<{ logo_url: string }> {
+  const orgId = await requireOrgId();
+  const ext = file.name.split(".").pop() || "png";
+  const path = `${orgId}/logo.${ext}`;
+  const { error: uploadError } = await supabase.storage.from("org-logos").upload(path, file, { upsert: true });
+  if (uploadError) {
+    throw new ApiError({ message: uploadError.message, kind: "server", status: 500 });
+  }
+  const { error } = await supabase.from("organizations").update({ logo_url: path }).eq("id", orgId);
+  if (error) dbError(error, "Could not save your logo.");
+  const { data } = await supabase.storage.from("org-logos").createSignedUrl(path, 3600);
+  return { logo_url: data?.signedUrl ?? path };
+}
 
 // ---------- stores ----------
 
-/** GET /stores?search= */
-export const fetchStores = (search?: string, signal?: AbortSignal) => {
-  const query = search ? `?search=${encodeURIComponent(search)}` : "";
-  return request<{ items: Store[] }>(`/stores${query}`, { signal: signal ?? null });
-};
+function mapStoreRow(row: {
+  id: string;
+  name: string;
+  code: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  profiles?: { full_name: string | null } | null;
+}): Store {
+  return {
+    id: row.id,
+    name: row.name,
+    code: row.code ?? "",
+    address: [row.address_line1, row.address_line2].filter(Boolean).join(", "),
+    city: row.city ?? "",
+    state: row.state ?? "",
+    country: row.country ?? "",
+    manager_name: row.profiles?.full_name ?? "",
+  };
+}
 
-/** POST /stores */
-export const createStore = (input: StoreInput) =>
-  request<Store>("/stores", { method: "POST", body: JSON.stringify(input) });
+/** Stores belonging to the active organization. */
+export async function fetchStores(search?: string, signal?: AbortSignal): Promise<{ items: Store[] }> {
+  void signal;
+  const orgId = await requireOrgId();
+  let query = supabase
+    .from("stores")
+    .select(
+      "id, name, code, address_line1, address_line2, city, state, country, profiles:manager_id(full_name)",
+    )
+    .eq("org_id", orgId)
+    .order("created_at", { ascending: false });
+  if (search) query = query.ilike("name", `%${search}%`);
+  const { data, error } = await query;
+  if (error) dbError(error, "Could not load stores.");
+  return { items: (data ?? []).map((row) => mapStoreRow(row as never)) };
+}
 
-/** PATCH /stores/{id} */
-export const updateStore = (id: string, input: Partial<StoreInput>) =>
-  request<Store>(`/stores/${id}`, { method: "PATCH", body: JSON.stringify(input) });
+/** Creates a store for the active organization. */
+export async function createStore(input: StoreInput): Promise<Store> {
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("stores")
+    .insert({
+      org_id: orgId,
+      name: input.name,
+      code: input.code || null,
+      address_line1: input.address || null,
+      city: input.city || null,
+      state: input.state || null,
+      country: input.country || null,
+    })
+    .select("id, name, code, address_line1, address_line2, city, state, country")
+    .single();
+  if (error) dbError(error, "Could not create the store.");
+  return mapStoreRow({ ...data, profiles: null });
+}
 
-/** DELETE /stores/{id} */
-export const deleteStore = (id: string) => request<void>(`/stores/${id}`, { method: "DELETE" });
+/** Updates a store belonging to the active organization. */
+export async function updateStore(id: string, input: Partial<StoreInput>): Promise<Store> {
+  const orgId = await requireOrgId();
+  const patch: Record<string, unknown> = {};
+  if (input.name !== undefined) patch.name = input.name;
+  if (input.code !== undefined) patch.code = input.code;
+  if (input.address !== undefined) patch.address_line1 = input.address;
+  if (input.city !== undefined) patch.city = input.city;
+  if (input.state !== undefined) patch.state = input.state;
+  if (input.country !== undefined) patch.country = input.country;
+  const { data, error } = await supabase
+    .from("stores")
+    .update(patch as never)
+    .eq("id", id)
+    .eq("org_id", orgId)
+    .select("id, name, code, address_line1, address_line2, city, state, country, profiles:manager_id(full_name)")
+    .single();
+  if (error) dbError(error, "Could not update the store.");
+  return mapStoreRow(data as never);
+}
+
+/** Deletes a store belonging to the active organization. */
+export async function deleteStore(id: string): Promise<void> {
+  const orgId = await requireOrgId();
+  const { error } = await supabase.from("stores").delete().eq("id", id).eq("org_id", orgId);
+  if (error) dbError(error, "Could not delete the store.");
+}
 
 // ---------- team ----------
 
-/** GET /team/members */
-export const fetchTeam = (signal?: AbortSignal) =>
-  request<{ items: TeamMember[] }>("/team/members", { signal: signal ?? null });
+type MemberRow = {
+  id: string;
+  role: MemberRole;
+  status: "active" | "invited" | "suspended";
+  invited_email: string | null;
+  last_active_at: string | null;
+  profiles: { full_name: string | null; email: string | null } | null;
+};
 
-/** POST /team/invites */
-export const inviteMember = (input: { email: string; role: TeamRole }) =>
-  request<TeamMember>("/team/invites", { method: "POST", body: JSON.stringify(input) });
+function mapMemberRow(row: MemberRow): TeamMember {
+  return {
+    id: row.id,
+    name: row.profiles?.full_name ?? undefined,
+    email: row.profiles?.email ?? row.invited_email ?? "",
+    role: roleFromDb(row.role),
+    last_login_at: row.last_active_at,
+    status: row.status,
+  };
+}
 
-/** PATCH /team/members/{id} */
-export const updateMemberRole = (id: string, role: TeamRole) =>
-  request<TeamMember>(`/team/members/${id}`, { method: "PATCH", body: JSON.stringify({ role }) });
+/** Team members of the active organization. */
+export async function fetchTeam(signal?: AbortSignal): Promise<{ items: TeamMember[] }> {
+  void signal;
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("organization_members")
+    .select("id, role, status, invited_email, last_active_at, profiles:user_id(full_name, email)")
+    .eq("org_id", orgId)
+    .order("created_at", { ascending: false });
+  if (error) dbError(error, "Could not load your team.");
+  return { items: (data ?? []).map((row) => mapMemberRow(row as never)) };
+}
 
-/** DELETE /team/members/{id} */
-export const removeMember = (id: string) => request<void>(`/team/members/${id}`, { method: "DELETE" });
+/**
+ * Invites a member by email. Because organization_members requires an
+ * existing user id, the invitee must already have an Aislix account.
+ */
+export async function inviteMember(input: { email: string; role: TeamRole }): Promise<TeamMember> {
+  const membership = await requireMembership();
+  const { data: invitee, error: lookupError } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .eq("email", input.email)
+    .maybeSingle();
+  if (lookupError) dbError(lookupError, "Could not look up that email.");
+  if (!invitee) {
+    throw new ApiError({
+      message: "That person needs to create an Aislix account before they can be invited.",
+      kind: "not_found",
+      status: 404,
+    });
+  }
+
+  const { data, error } = await supabase
+    .from("organization_members")
+    .insert({
+      org_id: membership.org_id,
+      user_id: invitee.id,
+      role: roleToDb(input.role),
+      status: "invited",
+      invited_email: input.email,
+      invited_by: membership.user_id,
+    })
+    .select("id, role, status, invited_email, last_active_at, profiles:user_id(full_name, email)")
+    .single();
+  if (error) dbError(error, "Could not invite that team member.");
+  return mapMemberRow(data as never);
+}
+
+/** Updates a team member's role. */
+export async function updateMemberRole(id: string, role: TeamRole): Promise<TeamMember> {
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("organization_members")
+    .update({ role: roleToDb(role) })
+    .eq("id", id)
+    .eq("org_id", orgId)
+    .select("id, role, status, invited_email, last_active_at, profiles:user_id(full_name, email)")
+    .single();
+  if (error) dbError(error, "Could not update that member's role.");
+  return mapMemberRow(data as never);
+}
+
+/** Removes a team member from the active organization. */
+export async function removeMember(id: string): Promise<void> {
+  const orgId = await requireOrgId();
+  const { error } = await supabase.from("organization_members").delete().eq("id", id).eq("org_id", orgId);
+  if (error) dbError(error, "Could not remove that team member.");
+}
 
 // ---------- notifications ----------
 
-/** GET /account/notifications */
-export const fetchNotificationPreferences = (signal?: AbortSignal) =>
-  request<NotificationPreferences>("/account/notifications", { signal: signal ?? null });
+const defaultNotificationPreferences: NotificationPreferences = {
+  email_notifications: true,
+  low_stock_alerts: true,
+  weekly_reports: false,
+  monthly_reports: false,
+  billing_notifications: true,
+  product_updates: false,
+};
 
-/** PATCH /account/notifications */
-export const updateNotificationPreferences = (input: Partial<NotificationPreferences>) =>
-  request<NotificationPreferences>("/account/notifications", {
-    method: "PATCH",
-    body: JSON.stringify(input),
-  });
+/** Notification preferences stored as JSON on the user's profile. */
+export async function fetchNotificationPreferences(signal?: AbortSignal): Promise<NotificationPreferences> {
+  void signal;
+  const userId = await requireUserId();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("notification_prefs")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) dbError(error, "Could not load notification preferences.");
+  const prefs = (data?.notification_prefs ?? {}) as Partial<NotificationPreferences>;
+  return { ...defaultNotificationPreferences, ...prefs };
+}
+
+/** Merges and persists notification preferences on the user's profile. */
+export async function updateNotificationPreferences(
+  input: Partial<NotificationPreferences>,
+): Promise<NotificationPreferences> {
+  const userId = await requireUserId();
+  const current = await fetchNotificationPreferences();
+  const merged = { ...current, ...input };
+  const { error } = await supabase.from("profiles").update({ notification_prefs: merged }).eq("id", userId);
+  if (error) dbError(error, "Could not update notification preferences.");
+  return merged;
+}
 
 // ---------- security ----------
 
-/** POST /account/password */
-export const changePassword = (input: { current_password: string; new_password: string }) =>
-  request<{ ok: true }>("/account/password", { method: "POST", body: JSON.stringify(input) });
+/** Updates the signed-in user's password via Supabase Auth. */
+export async function changePassword(input: {
+  current_password: string;
+  new_password: string;
+}): Promise<{ ok: true }> {
+  void input.current_password;
+  const { error } = await supabase.auth.updateUser({ password: input.new_password });
+  if (error) {
+    throw new ApiError({ message: error.message, kind: "server", status: 500 });
+  }
+  return { ok: true };
+}
 
-// Auth flows live in the auth service (Supabase-bound later) and are re-exported
+// Auth flows live in the auth service (Supabase-bound) and are re-exported
 // here so existing imports keep working.
 export {
   requestPasswordReset,
@@ -192,35 +491,99 @@ export {
   resendVerificationEmail,
 } from "./api/auth";
 
-/** GET /account/sessions */
-export const fetchSessions = (signal?: AbortSignal) =>
-  request<{ items: LoginSession[] }>("/account/sessions", { signal: signal ?? null });
+/** Only the current session is real — there is no server-side device list. */
+export async function fetchSessions(signal?: AbortSignal): Promise<{ items: LoginSession[] }> {
+  void signal;
+  const { data } = await supabase.auth.getSession();
+  const session = data.session;
+  if (!session) return { items: [] };
+  return {
+    items: [
+      {
+        id: session.access_token.slice(0, 12),
+        last_active_at: new Date().toISOString(),
+        current: true,
+      },
+    ],
+  };
+}
 
-/** POST /account/sessions/revoke-others */
-export const signOutOtherDevices = () =>
-  request<{ revoked: number }>("/account/sessions/revoke-others", { method: "POST" });
+/** Signs out every session except the current one. */
+export async function signOutOtherDevices(): Promise<{ revoked: number }> {
+  const { error } = await supabase.auth.signOut({ scope: "others" });
+  if (error) {
+    throw new ApiError({ message: error.message, kind: "server", status: 500 });
+  }
+  return { revoked: 1 };
+}
 
 // ---------- api keys ----------
 
-/** GET /account/api-keys */
-export const fetchApiKeys = (signal?: AbortSignal) =>
-  request<{ items: ApiKey[] }>("/account/api-keys", { signal: signal ?? null });
+/** No api_keys table exists yet. */
+export async function fetchApiKeys(signal?: AbortSignal): Promise<{ items: ApiKey[] }> {
+  void signal;
+  await requireUserId();
+  return { items: [] };
+}
 
-/** POST /account/api-keys */
-export const createApiKey = (input: { name?: string } = {}) =>
-  request<ApiKey>("/account/api-keys", { method: "POST", body: JSON.stringify(input) });
+export function createApiKey(_input: { name?: string } = {}): Promise<ApiKey> {
+  throw new ApiError({
+    message: "API keys aren't available yet.",
+    kind: "not_configured",
+    status: 501,
+  });
+}
 
-/** DELETE /account/api-keys/{id} */
-export const revokeApiKey = (id: string) => request<void>(`/account/api-keys/${id}`, { method: "DELETE" });
+export function revokeApiKey(_id: string): Promise<void> {
+  throw new ApiError({
+    message: "API keys aren't available yet.",
+    kind: "not_configured",
+    status: 501,
+  });
+}
 
 // ---------- account management ----------
 
-/** POST /account/export — queues a data export, returns a download URL when ready. */
-export const exportAccountData = () =>
-  request<{ download_url?: string; status?: string }>("/account/export", { method: "POST" });
+/** Builds a real JSON export from the user's profile, org, stores and scans. */
+export async function exportAccountData(): Promise<{ download_url?: string; status?: string }> {
+  const userId = await requireUserId();
+  const membership = await getMembership();
 
-/** DELETE /account */
-export const deleteAccount = () => request<void>("/account", { method: "DELETE" });
+  const [{ data: profile }, org, stores, scans] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
+    membership
+      ? supabase.from("organizations").select("*").eq("id", membership.org_id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    membership
+      ? supabase.from("stores").select("*").eq("org_id", membership.org_id)
+      : Promise.resolve({ data: [] }),
+    membership
+      ? supabase.from("shelf_scans").select("*").eq("org_id", membership.org_id)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const payload = {
+    exported_at: new Date().toISOString(),
+    profile,
+    organization: org.data,
+    stores: stores.data ?? [],
+    shelf_scans: scans.data ?? [],
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  return { download_url: url, status: "ready" };
+}
+
+/** Account deletion requires support involvement; signs the user out instead of faking success. */
+export async function deleteAccount(): Promise<void> {
+  await supabase.auth.signOut();
+  throw new ApiError({
+    message: "Account deletion isn't self-service yet — please contact support to delete your account.",
+    kind: "not_configured",
+    status: 501,
+  });
+}
 
 // ---------- option catalogues (static UI choices, not data) ----------
 

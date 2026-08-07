@@ -1,4 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { AuthLayout } from "@/components/AuthLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { register } from "@/lib/api/auth";
+import { toUserMessage } from "@/lib/api/errors";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
@@ -23,12 +28,57 @@ export const Route = createFileRoute("/signup")({
       },
       { property: "og:title", content: "Create your Aislix workspace" },
       { property: "og:description", content: "Start auditing retail shelves with AI in minutes." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: SignupPage,
 });
 
 function SignupPage() {
+  const navigate = useNavigate();
+  const [form, setForm] = useState({
+    first: "",
+    last: "",
+    email: "",
+    company: "",
+    businessType: "",
+    password: "",
+  });
+  const [agreed, setAgreed] = useState(false);
+  const set = (key: keyof typeof form) => (value: string) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
+
+  const signUp = useMutation({
+    mutationFn: () =>
+      register({
+        email: form.email.trim(),
+        password: form.password,
+        full_name: `${form.first} ${form.last}`.trim(),
+        company_name: form.company.trim() || undefined,
+      }),
+    onSuccess: (session) => {
+      if (session.access_token) {
+        toast.success("Workspace created");
+        navigate({ to: "/dashboard" });
+      } else {
+        toast.success("Check your email", {
+          description: "Confirm your address to finish setting up your workspace.",
+        });
+        navigate({ to: "/verify-email" });
+      }
+    },
+    onError: (error: unknown) =>
+      toast.error("Could not create your workspace", { description: toUserMessage(error) }),
+  });
+
+  const disabled =
+    signUp.isPending ||
+    !agreed ||
+    form.first.trim().length === 0 ||
+    form.email.trim().length === 0 ||
+    form.password.length < 8;
+
   return (
     <AuthLayout
       title="Create your workspace"
@@ -42,28 +92,60 @@ function SignupPage() {
         </>
       }
     >
-      <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+      <form
+        className="space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!disabled) signUp.mutate();
+        }}
+      >
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label htmlFor="first">First name</Label>
-            <Input id="first" placeholder="Rahul" className="h-11 rounded-xl" />
+            <Input
+              id="first"
+              placeholder="Rahul"
+              className="h-11 rounded-xl"
+              value={form.first}
+              onChange={(e) => set("first")(e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="last">Last name</Label>
-            <Input id="last" placeholder="Kapoor" className="h-11 rounded-xl" />
+            <Input
+              id="last"
+              placeholder="Kapoor"
+              className="h-11 rounded-xl"
+              value={form.last}
+              onChange={(e) => set("last")(e.target.value)}
+            />
           </div>
         </div>
         <div className="space-y-2">
           <Label htmlFor="email">Work email</Label>
-          <Input id="email" type="email" placeholder="you@company.com" className="h-11 rounded-xl" />
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@company.com"
+            className="h-11 rounded-xl"
+            value={form.email}
+            onChange={(e) => set("email")(e.target.value)}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="company">Company</Label>
-          <Input id="company" placeholder="MoreMart Retail Pvt Ltd" className="h-11 rounded-xl" />
+          <Input
+            id="company"
+            placeholder="MoreMart Retail Pvt Ltd"
+            className="h-11 rounded-xl"
+            value={form.company}
+            onChange={(e) => set("company")(e.target.value)}
+          />
         </div>
         <div className="space-y-2">
           <Label htmlFor="type">Business type</Label>
-          <Select>
+          <Select value={form.businessType} onValueChange={set("businessType")}>
             <SelectTrigger id="type" className="h-11 rounded-xl">
               <SelectValue placeholder="Select business type" />
             </SelectTrigger>
@@ -77,14 +159,27 @@ function SignupPage() {
         </div>
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" placeholder="At least 8 characters" className="h-11 rounded-xl" />
+          <Input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            placeholder="At least 8 characters"
+            className="h-11 rounded-xl"
+            value={form.password}
+            onChange={(e) => set("password")(e.target.value)}
+          />
         </div>
         <label className="flex gap-2 pt-1 text-sm text-muted-foreground">
-          <Checkbox id="terms" className="mt-0.5" />
+          <Checkbox
+            id="terms"
+            className="mt-0.5"
+            checked={agreed}
+            onCheckedChange={(v) => setAgreed(v === true)}
+          />
           I agree to the Aislix Terms of Service and Privacy Policy.
         </label>
-        <Button asChild variant="brand" size="lg" className="w-full">
-          <Link to="/dashboard">Create workspace</Link>
+        <Button variant="brand" size="lg" className="w-full" type="submit" disabled={disabled}>
+          {signUp.isPending ? "Creating workspace…" : "Create workspace"}
         </Button>
       </form>
     </AuthLayout>

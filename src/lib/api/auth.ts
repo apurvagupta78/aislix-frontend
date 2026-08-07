@@ -1,19 +1,13 @@
 /**
- * Authentication service — interfaces only.
+ * Authentication service — backed by the live Lovable Cloud auth.
  *
- * Supabase Auth is NOT implemented yet. Every function here calls the
- * centralized client against its future endpoint, so switching to Supabase only
- * requires replacing these bodies (and registering the token provider in
- * `setAuthTokenProvider`) — no page or component changes.
- *
- *   POST /auth/login             POST /auth/logout
- *   POST /auth/register          POST /auth/refresh
- *   POST /auth/password/forgot   POST /auth/password/reset
- *   POST /auth/email/verify      POST /auth/email/resend
- *   GET  /auth/session
+ * Sessions are stored and refreshed by the Supabase client; every domain module
+ * reads identity through `@/lib/db/context`.
  */
 
-import { api } from "./client";
+import { supabase } from "@/integrations/supabase/client";
+import { ApiError } from "./errors";
+import { clearContextCache, createOrganizationForUser } from "@/lib/db/context";
 
 export type AuthUser = {
   id: string;
@@ -43,37 +37,174 @@ export type RegisterInput = {
   phone?: string;
 };
 
-/** POST /auth/login */
-export const login = (input: LoginInput) =>
-  api.post<AuthSession>("/auth/login", input, { anonymous: true });
+function authError(message: string, status = 400): never {
+  throw new ApiError({
+    message,
+    kind: status === 401 ? "unauthorized" : "bad_request",
+    status,
+  });
+}
 
-/** POST /auth/register */
-export const register = (input: RegisterInput) =>
-  api.post<AuthSession>("/auth/register", input, { anonymous: true });
+async function membershipFor(userId: string) {
+  const { data } = await supabase
+    .from("organization_members")
+    .select("org_id, role")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  return data ?? null;
+}
 
-/** POST /auth/logout */
-export const logout = () => api.post<{ ok: true }>("/auth/logout");
+async function toSession(session: {
+  access_token: string;
+  refresh_token?: string;
+  expires_in?: number;
+  expires_at?: number;
+  user: { id: string; email?: string; email_confirmed_at?: string | null };
+}): Promise<AuthSession> {
+  const userId = session.user.id;
+  const [{ data: profile }, membership] = await Promise.all([
+    supabase.from("profiles").select("full_name, avatar_url, email").eq("id", userId).maybeSingle(),
+    membershipFor(userId),
+  ]);
 
-/** POST /auth/refresh */
-export const refreshSession = (refresh_token: string) =>
-  api.post<AuthSession>("/auth/refresh", { refresh_token }, { anonymous: true });
+  return {
+    access_token: session.access_token,
+    ...(session.refresh_token ? { refresh_token: session.refresh_token } : {}),
+    ...(session.expires_in ? { expires_in: session.expires_in } : {}),
+    ...(session.expires_at
+      ? { expires_at: new Date(session.expires_at * 1000).toISOString() }
+      : {}),
+    user: {
+      id: userId,
+      email: session.user.email ?? profile?.email ?? "",
+      ...(profile?.full_name ? { full_name: profile.full_name } : {}),
+      ...(membership?.role ? { role: membership.role } : {}),
+      ...(membership?.org_id ? { organization_id: membership.org_id } : {}),
+      avatar_url: profile?.avatar_url ?? null,
+      email_verified: Boolean(session.user.email_confirmed_at),
+    },
+  };
+}
 
-/** GET /auth/session — current user for the stored token. */
-export const fetchSession = (signal?: AbortSignal) =>
-  api.get<AuthSession>("/auth/session", { signal });
+/** Email + password sign-in. */
+export async function login(input: LoginInput): Promise<AuthSession> {
+  clearContextCache();
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: input.email.trim(),
+    password: input.password,
+  });
+  if (error) authError(error.message, error.status === 400 ? 401 : (error.status ?? 400));
+  if (!data.session) authError("Sign-in did not return a session.", 401);
+  return toSession(data.session as never);
+}
 
-/** POST /auth/password/forgot — emails a reset link. */
-export const requestPasswordReset = (input: { email: string }) =>
-  api.post<{ ok: true }>("/auth/password/forgot", input, { anonymous: true });
+/** Creates the account, profile (via trigger) and the user's workspace. */
+export async function register(input: RegisterInput): Promise<AuthSession> {
+  clearContextCache();
+  const { data, error } = await supabase.auth.signUp({
+    email: input.email.trim(),
+    password: input.password,
+    options: {
+      emailRedirectTo: `${window.location.origin}/login`,
+      data: {
+        full_name: input.full_name,
+        ...(input.company_name ? { company_name: input.company_name } : {}),
+        ...(input.phone ? { phone: input.phone } : {}),
+      },
+    },
+  });
+  if (error) authError(error.message, error.status ?? 400);
 
-/** POST /auth/password/reset — completes a reset with the emailed token. */
-export const resetPassword = (input: { token: string; new_password: string }) =>
-  api.post<{ ok: true }>("/auth/password/reset", input, { anonymous: true });
+  if (!data.session) {
+    // Email confirmation is on: the user is not signed in yet.
+    throw new ApiError({
+      message: "Check your inbox to confirm your email, then log in.",
+      kind: "bad_request",
+      status: 202,
+    });
+  }
 
-/** POST /auth/email/verify */
-export const verifyEmail = (input: { token: string }) =>
-  api.post<{ ok: true }>("/auth/email/verify", input, { anonymous: true });
+  if (input.phone) {
+    await supabase.from("profiles").update({ phone: input.phone }).eq("id", data.user!.id);
+  }
+  await createOrganizationForUser(
+    data.user!.id,
+    input.company_name?.trim() || `${input.full_name}'s workspace`,
+  );
+  return toSession(data.session as never);
+}
 
-/** POST /auth/email/resend */
-export const resendVerificationEmail = (input: { email: string }) =>
-  api.post<{ ok: true }>("/auth/email/resend", input, { anonymous: true });
+export async function logout(): Promise<{ ok: true }> {
+  await supabase.auth.signOut();
+  clearContextCache();
+  return { ok: true };
+}
+
+export async function refreshSession(refresh_token: string): Promise<AuthSession> {
+  const { data, error } = await supabase.auth.refreshSession({ refresh_token });
+  if (error || !data.session) authError(error?.message ?? "Could not refresh session.", 401);
+  return toSession(data.session as never);
+}
+
+/** Current session for the signed-in user. */
+export async function fetchSession(_signal?: AbortSignal): Promise<AuthSession> {
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) authError("You are not signed in.", 401);
+  return toSession(data.session as never);
+}
+
+/** Emails a password reset link pointing at /reset-password. */
+export async function requestPasswordReset(input: { email: string }): Promise<{ ok: true }> {
+  const { error } = await supabase.auth.resetPasswordForEmail(input.email.trim(), {
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
+  if (error) authError(error.message, error.status ?? 400);
+  return { ok: true };
+}
+
+/**
+ * Completes a reset. The recovery link signs the user in, so the new password is
+ * written straight to the account; a pasted code is exchanged first.
+ */
+export async function resetPassword(input: {
+  token: string;
+  new_password: string;
+}): Promise<{ ok: true }> {
+  const { data } = await supabase.auth.getSession();
+  if (!data.session) {
+    if (!input.token) {
+      authError("This reset link has expired. Request a new one.", 401);
+    }
+    const { error: otpError } = await supabase.auth.verifyOtp({
+      token_hash: input.token,
+      type: "recovery",
+    });
+    if (otpError) authError(otpError.message, otpError.status ?? 400);
+  }
+  const { error } = await supabase.auth.updateUser({ password: input.new_password });
+  if (error) authError(error.message, error.status ?? 400);
+  return { ok: true };
+}
+
+/** Confirms an email address with the code from the verification link. */
+export async function verifyEmail(input: { token: string }): Promise<{ ok: true }> {
+  const { error } = await supabase.auth.verifyOtp({
+    token_hash: input.token,
+    type: "email",
+  });
+  if (error) authError(error.message, error.status ?? 400);
+  return { ok: true };
+}
+
+export async function resendVerificationEmail(input: { email: string }): Promise<{ ok: true }> {
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: input.email.trim(),
+    options: { emailRedirectTo: `${window.location.origin}/login` },
+  });
+  if (error) authError(error.message, error.status ?? 400);
+  return { ok: true };
+}
