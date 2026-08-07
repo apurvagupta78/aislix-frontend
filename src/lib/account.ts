@@ -183,7 +183,6 @@ export const updateNotificationPreferences = (input: Partial<NotificationPrefere
 export const changePassword = (input: { current_password: string; new_password: string }) =>
   request<{ ok: true }>("/account/password", { method: "POST", body: JSON.stringify(input) });
 
-/** POST /auth/password/forgot — emails a reset link (no session required). */
 // Auth flows live in the auth service (Supabase-bound later) and are re-exported
 // here so existing imports keep working.
 export {
