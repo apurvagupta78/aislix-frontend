@@ -47,7 +47,9 @@ function LoginPage() {
           <label className="flex items-center gap-2 text-sm text-muted-foreground">
             <Checkbox id="remember" /> Remember me
           </label>
-          <span className="cursor-pointer text-sm text-brand hover:underline">Forgot password?</span>
+          <Link to="/forgot-password" className="text-sm text-brand hover:underline">
+            Forgot password?
+          </Link>
         </div>
         <Button asChild variant="brand" size="lg" className="w-full">
           <Link to="/dashboard">Log in</Link>

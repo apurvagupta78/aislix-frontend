@@ -16,15 +16,23 @@ import { Route as CompareRouteImport } from './routes/compare'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as DemoRouteImport } from './routes/demo'
+import { Route as FeaturesRouteImport } from './routes/features'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as HistoryRouteImport } from './routes/history'
+import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as OrganizationRouteImport } from './routes/organization'
+import { Route as PlatformRouteImport } from './routes/platform'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProcessingRouteImport } from './routes/processing'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as RefundsRouteImport } from './routes/refunds'
 import { Route as ReportRouteImport } from './routes/report'
+import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as ScanRouteImport } from './routes/scan'
 import { Route as SecurityRouteImport } from './routes/security'
@@ -33,6 +41,8 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TeamRouteImport } from './routes/team'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as UploadRouteImport } from './routes/upload'
+import { Route as UsersRouteImport } from './routes/users'
+import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as StoresIndexRouteImport } from './routes/stores.index'
 import { Route as StoresStoreIdRouteImport } from './routes/stores.$storeId'
 
@@ -71,9 +81,29 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeaturesRoute = FeaturesRouteImport.update({
+  id: '/features',
+  path: '/features',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HistoryRoute = HistoryRouteImport.update({
   id: '/history',
   path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HowItWorksRoute = HowItWorksRouteImport.update({
+  id: '/how-it-works',
+  path: '/how-it-works',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -81,9 +111,19 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LogoutRoute = LogoutRouteImport.update({
+  id: '/logout',
+  path: '/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrganizationRoute = OrganizationRouteImport.update({
   id: '/organization',
   path: '/organization',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlatformRoute = PlatformRouteImport.update({
+  id: '/platform',
+  path: '/platform',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PricingRoute = PricingRouteImport.update({
@@ -114,6 +154,16 @@ const RefundsRoute = RefundsRouteImport.update({
 const ReportRoute = ReportRouteImport.update({
   id: '/report',
   path: '/report',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ResultsRoute = ResultsRouteImport.update({
@@ -156,6 +206,16 @@ const UploadRoute = UploadRouteImport.update({
   path: '/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UsersRoute = UsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyEmailRoute = VerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StoresIndexRoute = StoresIndexRouteImport.update({
   id: '/stores/',
   path: '/stores/',
@@ -175,15 +235,23 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
   '/dashboard': typeof DashboardRoute
+  '/demo': typeof DemoRoute
+  '/features': typeof FeaturesRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/history': typeof HistoryRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
+  '/logout': typeof LogoutRoute
   '/organization': typeof OrganizationRoute
+  '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/processing': typeof ProcessingRoute
   '/profile': typeof ProfileRoute
   '/refunds': typeof RefundsRoute
   '/report': typeof ReportRoute
+  '/reports': typeof ReportsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/results': typeof ResultsRoute
   '/scan': typeof ScanRoute
   '/security': typeof SecurityRoute
@@ -192,6 +260,8 @@ export interface FileRoutesByFullPath {
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/upload': typeof UploadRoute
+  '/users': typeof UsersRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
 }
@@ -203,15 +273,23 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
   '/dashboard': typeof DashboardRoute
+  '/demo': typeof DemoRoute
+  '/features': typeof FeaturesRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/history': typeof HistoryRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
+  '/logout': typeof LogoutRoute
   '/organization': typeof OrganizationRoute
+  '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/processing': typeof ProcessingRoute
   '/profile': typeof ProfileRoute
   '/refunds': typeof RefundsRoute
   '/report': typeof ReportRoute
+  '/reports': typeof ReportsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/results': typeof ResultsRoute
   '/scan': typeof ScanRoute
   '/security': typeof SecurityRoute
@@ -220,6 +298,8 @@ export interface FileRoutesByTo {
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/upload': typeof UploadRoute
+  '/users': typeof UsersRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores': typeof StoresIndexRoute
 }
@@ -232,15 +312,23 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
   '/dashboard': typeof DashboardRoute
+  '/demo': typeof DemoRoute
+  '/features': typeof FeaturesRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/history': typeof HistoryRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
+  '/logout': typeof LogoutRoute
   '/organization': typeof OrganizationRoute
+  '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/processing': typeof ProcessingRoute
   '/profile': typeof ProfileRoute
   '/refunds': typeof RefundsRoute
   '/report': typeof ReportRoute
+  '/reports': typeof ReportsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/results': typeof ResultsRoute
   '/scan': typeof ScanRoute
   '/security': typeof SecurityRoute
@@ -249,6 +337,8 @@ export interface FileRoutesById {
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/upload': typeof UploadRoute
+  '/users': typeof UsersRoute
+  '/verify-email': typeof VerifyEmailRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
 }
@@ -262,15 +352,23 @@ export interface FileRouteTypes {
     | '/contact'
     | '/cookies'
     | '/dashboard'
+    | '/demo'
+    | '/features'
+    | '/forgot-password'
     | '/history'
+    | '/how-it-works'
     | '/login'
+    | '/logout'
     | '/organization'
+    | '/platform'
     | '/pricing'
     | '/privacy'
     | '/processing'
     | '/profile'
     | '/refunds'
     | '/report'
+    | '/reports'
+    | '/reset-password'
     | '/results'
     | '/scan'
     | '/security'
@@ -279,6 +377,8 @@ export interface FileRouteTypes {
     | '/team'
     | '/terms'
     | '/upload'
+    | '/users'
+    | '/verify-email'
     | '/stores/$storeId'
     | '/stores/'
   fileRoutesByTo: FileRoutesByTo
@@ -290,15 +390,23 @@ export interface FileRouteTypes {
     | '/contact'
     | '/cookies'
     | '/dashboard'
+    | '/demo'
+    | '/features'
+    | '/forgot-password'
     | '/history'
+    | '/how-it-works'
     | '/login'
+    | '/logout'
     | '/organization'
+    | '/platform'
     | '/pricing'
     | '/privacy'
     | '/processing'
     | '/profile'
     | '/refunds'
     | '/report'
+    | '/reports'
+    | '/reset-password'
     | '/results'
     | '/scan'
     | '/security'
@@ -307,6 +415,8 @@ export interface FileRouteTypes {
     | '/team'
     | '/terms'
     | '/upload'
+    | '/users'
+    | '/verify-email'
     | '/stores/$storeId'
     | '/stores'
   id:
@@ -318,15 +428,23 @@ export interface FileRouteTypes {
     | '/contact'
     | '/cookies'
     | '/dashboard'
+    | '/demo'
+    | '/features'
+    | '/forgot-password'
     | '/history'
+    | '/how-it-works'
     | '/login'
+    | '/logout'
     | '/organization'
+    | '/platform'
     | '/pricing'
     | '/privacy'
     | '/processing'
     | '/profile'
     | '/refunds'
     | '/report'
+    | '/reports'
+    | '/reset-password'
     | '/results'
     | '/scan'
     | '/security'
@@ -335,6 +453,8 @@ export interface FileRouteTypes {
     | '/team'
     | '/terms'
     | '/upload'
+    | '/users'
+    | '/verify-email'
     | '/stores/$storeId'
     | '/stores/'
   fileRoutesById: FileRoutesById
@@ -347,15 +467,23 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   CookiesRoute: typeof CookiesRoute
   DashboardRoute: typeof DashboardRoute
+  DemoRoute: typeof DemoRoute
+  FeaturesRoute: typeof FeaturesRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   HistoryRoute: typeof HistoryRoute
+  HowItWorksRoute: typeof HowItWorksRoute
   LoginRoute: typeof LoginRoute
+  LogoutRoute: typeof LogoutRoute
   OrganizationRoute: typeof OrganizationRoute
+  PlatformRoute: typeof PlatformRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProcessingRoute: typeof ProcessingRoute
   ProfileRoute: typeof ProfileRoute
   RefundsRoute: typeof RefundsRoute
   ReportRoute: typeof ReportRoute
+  ReportsRoute: typeof ReportsRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   ResultsRoute: typeof ResultsRoute
   ScanRoute: typeof ScanRoute
   SecurityRoute: typeof SecurityRoute
@@ -364,6 +492,8 @@ export interface RootRouteChildren {
   TeamRoute: typeof TeamRoute
   TermsRoute: typeof TermsRoute
   UploadRoute: typeof UploadRoute
+  UsersRoute: typeof UsersRoute
+  VerifyEmailRoute: typeof VerifyEmailRoute
   StoresStoreIdRoute: typeof StoresStoreIdRoute
   StoresIndexRoute: typeof StoresIndexRoute
 }
@@ -419,11 +549,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/features': {
+      id: '/features'
+      path: '/features'
+      fullPath: '/features'
+      preLoaderRoute: typeof FeaturesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/history': {
       id: '/history'
       path: '/history'
       fullPath: '/history'
       preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/how-it-works': {
+      id: '/how-it-works'
+      path: '/how-it-works'
+      fullPath: '/how-it-works'
+      preLoaderRoute: typeof HowItWorksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -433,11 +591,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/logout': {
+      id: '/logout'
+      path: '/logout'
+      fullPath: '/logout'
+      preLoaderRoute: typeof LogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/organization': {
       id: '/organization'
       path: '/organization'
       fullPath: '/organization'
       preLoaderRoute: typeof OrganizationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/platform': {
+      id: '/platform'
+      path: '/platform'
+      fullPath: '/platform'
+      preLoaderRoute: typeof PlatformRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pricing': {
@@ -480,6 +652,20 @@ declare module '@tanstack/react-router' {
       path: '/report'
       fullPath: '/report'
       preLoaderRoute: typeof ReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/results': {
@@ -538,6 +724,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UploadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-email': {
+      id: '/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stores/': {
       id: '/stores/'
       path: '/stores'
@@ -563,15 +763,23 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   CookiesRoute: CookiesRoute,
   DashboardRoute: DashboardRoute,
+  DemoRoute: DemoRoute,
+  FeaturesRoute: FeaturesRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   HistoryRoute: HistoryRoute,
+  HowItWorksRoute: HowItWorksRoute,
   LoginRoute: LoginRoute,
+  LogoutRoute: LogoutRoute,
   OrganizationRoute: OrganizationRoute,
+  PlatformRoute: PlatformRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProcessingRoute: ProcessingRoute,
   ProfileRoute: ProfileRoute,
   RefundsRoute: RefundsRoute,
   ReportRoute: ReportRoute,
+  ReportsRoute: ReportsRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   ResultsRoute: ResultsRoute,
   ScanRoute: ScanRoute,
   SecurityRoute: SecurityRoute,
@@ -580,6 +788,8 @@ const rootRouteChildren: RootRouteChildren = {
   TeamRoute: TeamRoute,
   TermsRoute: TermsRoute,
   UploadRoute: UploadRoute,
+  UsersRoute: UsersRoute,
+  VerifyEmailRoute: VerifyEmailRoute,
   StoresStoreIdRoute: StoresStoreIdRoute,
   StoresIndexRoute: StoresIndexRoute,
 }

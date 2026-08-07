@@ -68,6 +68,10 @@ import { formatConfidence, formatDuration } from "@/lib/scan-results";
 const PAGE_SIZE = 10;
 
 export const Route = createFileRoute("/history")({
+  validateSearch: (search: Record<string, unknown>): { q?: string } => {
+    const q = search['q'];
+    return typeof q === "string" && q ? { q } : {};
+  },
   head: () => ({
     meta: [
       { title: "Scan History — Aislix Shelf Audits" },
@@ -157,9 +161,10 @@ function RowActions({
 
 function HistoryPage() {
   const navigate = useNavigate();
+  const { q: initialQuery } = Route.useSearch();
   const queryClient = useQueryClient();
 
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(initialQuery ?? "");
   const [store, setStore] = useState("all");
   const [date, setDate] = useState("");
   const [sort, setSort] = useState<NonNullable<ScanHistoryQuery["sort"]>>("newest");
