@@ -33,7 +33,9 @@ export type ScanResponse = {
   scan_id: string;
   status: string;
   report_url?: string;
+  error_message?: string;
 };
+
 
 export function validateScanFile(file: File): string | null {
   const type = file.type?.toLowerCase() ?? "";
