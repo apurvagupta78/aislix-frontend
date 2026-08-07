@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   Bell,
   Bug,
@@ -17,7 +17,6 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SettingsCard } from "@/components/settings/SettingsParts";
 import { CompanyPanel } from "@/components/settings/CompanyPanel";
-import { StoreManager } from "@/components/settings/StoreManager";
 import { TeamManager } from "@/components/settings/TeamManager";
 import { NotificationsPanel } from "@/components/settings/NotificationsPanel";
 import { SecurityPanel } from "@/components/settings/SecurityPanel";
@@ -78,7 +77,7 @@ function SettingsPage() {
           <CompanyPanel />
         </TabsContent>
         <TabsContent value="stores" className="mt-0">
-          <StoreManager />
+          <StoresRedirectCard />
         </TabsContent>
         <TabsContent value="team" className="mt-0">
           <TeamManager />
@@ -168,5 +167,22 @@ function SupportPanel() {
         </Button>
       </SettingsCard>
     </div>
+  );
+}
+
+function StoresRedirectCard() {
+  return (
+    <SettingsCard
+      title="Store management"
+      description="Stores, shelf health and per-store team access now live in the organization module."
+    >
+      <p className="text-sm text-muted-foreground">
+        Add, edit, archive and audit every retail location — including bulk upload and export — from
+        the organization dashboard.
+      </p>
+      <Button asChild variant="brand" size="sm" className="mt-4 rounded-xl">
+        <Link to="/stores">Open organization &amp; stores</Link>
+      </Button>
+    </SettingsCard>
   );
 }
