@@ -47,7 +47,7 @@ function ChartFrame({
 }: {
   title: string;
   description: string;
-  loading?: boolean;
+  loading?: boolean | undefined;
   empty: boolean;
   emptyText: string;
   children: React.ReactNode;
