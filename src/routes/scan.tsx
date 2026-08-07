@@ -1,13 +1,13 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   Camera,
   Check,
+  FileJson,
   ImageIcon,
   Loader2,
   Plus,
-  RefreshCw,
   ScanLine,
   Trash2,
   UploadCloud,
@@ -15,17 +15,8 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import {
-  MAX_SCAN_IMAGES,
-  SCAN_STAGES,
-  formatBytes,
-  retryScanAnalysis,
-  runScanAnalysis,
-  submitScanImages,
-  validateScanFile,
-} from "@/lib/scan-api";
+import { MAX_SCAN_IMAGES, formatBytes, validateScanFile } from "@/lib/scan-api";
 
 export const Route = createFileRoute("/scan")({
   head: () => ({
@@ -34,7 +25,7 @@ export const Route = createFileRoute("/scan")({
       {
         name: "description",
         content:
-          "Capture or upload shelf photos and run the Aislix AI pipeline to detect products, brands and inventory.",
+          "Capture or upload shelf photos and send them to the Aislix AI backend.",
       },
       { property: "og:title", content: "New shelf scan — Aislix" },
       {
@@ -48,42 +39,30 @@ export const Route = createFileRoute("/scan")({
   component: ScanPage,
 });
 
-type Phase = "idle" | "uploading" | "analyzing" | "error";
+type Phase = "idle" | "uploading" | "error";
 
 type Attachment = { id: string; file: File; url: string };
 
 function ScanPage() {
-  const navigate = useNavigate();
-
   const [items, setItems] = useState<Attachment[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
 
   const [phase, setPhase] = useState<Phase>("idle");
-  const [stageIndex, setStageIndex] = useState(0);
-  const [progress, setProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [scanId, setScanId] = useState<string | null>(null);
+  const [rawResponse, setRawResponse] = useState<string | null>(null);
+  const [responseStatus, setResponseStatus] = useState<number | null>(null);
 
   const cameraInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const stageTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const itemsRef = useRef<Attachment[]>([]);
 
   itemsRef.current = items;
 
-  const stopTimer = () => {
-    if (stageTimer.current) {
-      clearInterval(stageTimer.current);
-      stageTimer.current = null;
-    }
-  };
-
   useEffect(
     () => () => {
       abortRef.current?.abort();
-      stopTimer();
       for (const item of itemsRef.current) URL.revokeObjectURL(item.url);
     },
     [],
@@ -95,7 +74,8 @@ function ScanPage() {
 
     setFileError(null);
     setErrorMessage(null);
-    setScanId(null);
+    setRawResponse(null);
+    setResponseStatus(null);
     setPhase("idle");
 
     setItems((current) => {
@@ -130,121 +110,77 @@ function ScanPage() {
 
   const reset = useCallback(() => {
     abortRef.current?.abort();
-    stopTimer();
     setItems((current) => {
       for (const item of current) URL.revokeObjectURL(item.url);
       return [];
     });
     setFileError(null);
     setErrorMessage(null);
-    setScanId(null);
-    setProgress(0);
-    setStageIndex(0);
+    setRawResponse(null);
+    setResponseStatus(null);
     setPhase("idle");
   }, []);
 
-  /** Creeps the progress bar through the analysis stages while the API works. */
-  const startStageTicker = useCallback(() => {
-    stopTimer();
-    let p = 22;
-    setProgress(p);
-    setStageIndex(1);
-    stageTimer.current = setInterval(() => {
-      p = Math.min(94, p + 1.5);
-      setProgress(Math.round(p));
-      setStageIndex(Math.min(SCAN_STAGES.length - 1, Math.floor((p / 100) * SCAN_STAGES.length)));
-    }, 700);
-  }, []);
-
-  const finish = useCallback(
-    async (id: string) => {
-      stopTimer();
-      setStageIndex(SCAN_STAGES.length - 1);
-      setProgress(100);
-      await navigate({ to: "/results", search: { scan: id } });
-    },
-    [navigate],
-  );
-
   const startScan = useCallback(async () => {
-    if (!items.length || phase === "uploading" || phase === "analyzing") return;
+    if (!items.length || phase === "uploading") return;
 
     const controller = new AbortController();
     abortRef.current = controller;
     setErrorMessage(null);
-    setStageIndex(0);
-    setProgress(0);
+    setRawResponse(null);
+    setResponseStatus(null);
     setPhase("uploading");
 
-    let createdScanId: string | null = null;
     try {
-      const created = await submitScanImages(
-        items.map((item) => item.file),
-        {
-          signal: controller.signal,
-          onUploadProgress: (percent) => {
-            setStageIndex(0);
-            setProgress(Math.min(20, Math.round(percent * 0.2)));
-          },
-        },
-      );
-      createdScanId = created.scan_id;
-      setScanId(created.scan_id);
+      const body = new FormData();
+      // The Railway backend expects one file per request in the "file" field.
+      body.append("file", items[0]!.file);
 
-      setPhase("analyzing");
-      startStageTicker();
-      const analysis = await runScanAnalysis(created.scan_id);
-      await finish(analysis.scan_id);
+      const response = await fetch("/api/scan", {
+        method: "POST",
+        body,
+        signal: controller.signal,
+      });
+
+      const text = await response.text();
+      setResponseStatus(response.status);
+      setRawResponse(text);
+
+      if (!response.ok) {
+        let detail = text;
+        try {
+          const parsed = JSON.parse(text);
+          detail = parsed.error ?? text;
+        } catch {
+          // leave detail as raw text
+        }
+        throw new Error(detail || `Backend returned ${response.status}`);
+      }
+
+      setPhase("idle");
     } catch (error) {
-      stopTimer();
       if (error instanceof DOMException && error.name === "AbortError") {
         setPhase("idle");
-        setProgress(0);
         return;
       }
-      if (createdScanId) setScanId(createdScanId);
-      setErrorMessage(
-        error instanceof Error ? error.message : "The scan could not be completed.",
-      );
+      setErrorMessage(error instanceof Error ? error.message : "The scan could not be completed.");
       setPhase("error");
     } finally {
       abortRef.current = null;
     }
-  }, [items, phase, startStageTicker, finish]);
-
-  /** Retries analysis only — the images are already in storage. */
-  const retryScan = useCallback(async () => {
-    if (!scanId) {
-      void startScan();
-      return;
-    }
-    setErrorMessage(null);
-    setPhase("analyzing");
-    startStageTicker();
-    try {
-      const analysis = await retryScanAnalysis(scanId);
-      await finish(analysis.scan_id);
-    } catch (error) {
-      stopTimer();
-      setErrorMessage(error instanceof Error ? error.message : "The scan could not be completed.");
-      setPhase("error");
-    }
-  }, [scanId, startScan, startStageTicker, finish]);
+  }, [items, phase]);
 
   const cancelUpload = useCallback(() => {
     abortRef.current?.abort();
-    stopTimer();
     setPhase("idle");
-    setProgress(0);
-    setStageIndex(0);
   }, []);
 
-  const busy = phase === "uploading" || phase === "analyzing";
+  const busy = phase === "uploading";
 
   return (
     <AppShell
       title="New scan"
-      description="Capture shelves with your camera or upload images to run an AI audit."
+      description="Capture shelves with your camera or upload images to send to the AI backend."
       actions={
         items.length && !busy ? (
           <Button variant="subtle" size="sm" className="rounded-xl" onClick={reset}>
@@ -421,7 +357,12 @@ function ScanPage() {
                     onClick={startScan}
                     disabled={busy}
                   >
-                    <ScanLine className="size-4" /> Start scan
+                    {busy ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <ScanLine className="size-4" />
+                    )}
+                    {busy ? "Sending…" : "Send to backend"}
                   </Button>
                 </div>
               </div>
@@ -438,17 +379,12 @@ function ScanPage() {
                   <AlertTriangle className="size-5" />
                 </span>
                 <div>
-                  <p className="text-sm font-semibold">Scan failed</p>
+                  <p className="text-sm font-semibold">Backend request failed</p>
                   <p className="mt-1 text-sm text-muted-foreground">{errorMessage}</p>
-                  {scanId && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Your images are saved — retrying re-runs the analysis only.
-                    </p>
-                  )}
                 </div>
               </div>
-              <Button variant="brand" size="sm" className="rounded-xl" onClick={retryScan}>
-                <RefreshCw className="size-4" /> Retry scan
+              <Button variant="brand" size="sm" className="rounded-xl" onClick={startScan}>
+                <ScanLine className="size-4" /> Retry
               </Button>
             </div>
           )}
@@ -456,17 +392,35 @@ function ScanPage() {
 
         <aside className="space-y-4">
           <div className="card-surface p-5 sm:p-6">
-            <h2 className="text-sm font-semibold tracking-tight">What happens next</h2>
-            <ol className="mt-4 space-y-3">
-              {SCAN_STAGES.map((stage, i) => (
-                <li key={stage} className="flex items-start gap-3">
-                  <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-full bg-brand-soft text-xs font-semibold text-brand">
-                    {i + 1}
+            <div className="flex items-center gap-2">
+              <FileJson className="size-4 text-brand" />
+              <h2 className="text-sm font-semibold tracking-tight">Backend response</h2>
+            </div>
+            {rawResponse ? (
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Status</span>
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 font-medium",
+                      responseStatus && responseStatus >= 200 && responseStatus < 300
+                        ? "bg-accent-green-soft text-accent-green"
+                        : "bg-destructive/10 text-destructive",
+                    )}
+                  >
+                    {responseStatus ?? "—"}
                   </span>
-                  <span className="text-sm text-muted-foreground">{stage}</span>
-                </li>
-              ))}
-            </ol>
+                </div>
+                <pre className="max-h-[420px] overflow-auto rounded-xl border border-border bg-muted p-3 text-xs text-foreground">
+                  <code>{rawResponse}</code>
+                </pre>
+              </div>
+            ) : (
+              <p className="mt-4 text-sm text-muted-foreground">
+                Upload an image and click "Send to backend" to see the raw Railway API response
+                here.
+              </p>
+            )}
           </div>
 
           <div className="card-surface p-5 sm:p-6">
@@ -481,115 +435,34 @@ function ScanPage() {
       </div>
 
       {busy && (
-        <ProcessingOverlay
-          stageIndex={stageIndex}
-          progress={progress}
-          previewUrl={items[0]?.url ?? null}
-          imageCount={items.length}
-          canCancel={phase === "uploading"}
-          onCancel={cancelUpload}
-        />
-      )}
-    </AppShell>
-  );
-}
-
-function ProcessingOverlay({
-  stageIndex,
-  progress,
-  previewUrl,
-  imageCount,
-  canCancel,
-  onCancel,
-}: {
-  stageIndex: number;
-  progress: number;
-  previewUrl: string | null;
-  imageCount: number;
-  canCancel: boolean;
-  onCancel: () => void;
-}) {
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-busy="true"
-      aria-label="Scan in progress"
-      className="fixed inset-0 z-50 animate-fade-in overflow-y-auto bg-background/98 backdrop-blur-sm"
-    >
-      <div className="mx-auto flex min-h-full w-full max-w-xl flex-col justify-center px-5 py-10">
-        <div className="text-center">
-          <div className="relative mx-auto grid size-24 place-items-center">
-            <span className="absolute inset-0 animate-pulse rounded-full bg-brand-soft" />
-            {previewUrl ? (
-              <img
-                src={previewUrl}
-                alt=""
-                className="relative size-20 rounded-full object-cover shadow-card"
-              />
-            ) : (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-busy="true"
+          aria-label="Upload in progress"
+          className="fixed inset-0 z-50 animate-fade-in overflow-y-auto bg-background/98 backdrop-blur-sm"
+        >
+          <div className="mx-auto flex min-h-full w-full max-w-xl flex-col justify-center px-5 py-10 text-center">
+            <div className="relative mx-auto grid size-24 place-items-center">
+              <span className="absolute inset-0 animate-pulse rounded-full bg-brand-soft" />
               <span className="relative grid size-20 place-items-center rounded-full bg-gradient-brand">
                 <Loader2 className="size-7 animate-spin text-brand-foreground" />
               </span>
-            )}
+            </div>
+            <h2 className="mt-6 text-lg font-semibold tracking-tight sm:text-xl">
+              Sending image to backend
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Keep this page open — the raw response will appear on the right.
+            </p>
+            <div className="mt-9 flex justify-center">
+              <Button variant="subtle" size="sm" className="rounded-xl" onClick={cancelUpload}>
+                Cancel
+              </Button>
+            </div>
           </div>
-          <h2 className="mt-6 text-lg font-semibold tracking-tight sm:text-xl">
-            Analyzing {imageCount === 1 ? "your shelf" : `${imageCount} shelf images`}
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Keep this page open — you'll be taken to the results automatically.
-          </p>
         </div>
-
-        <div className="mt-8">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span className="truncate">{SCAN_STAGES[stageIndex]}</span>
-            <span className="shrink-0 tabular-nums">{progress}%</span>
-          </div>
-          <Progress value={progress} className="mt-2 h-2 rounded-full" />
-
-          <ul className="mt-7 space-y-3 text-left">
-            {SCAN_STAGES.map((stage, i) => {
-              const done = i < stageIndex || progress >= 100;
-              const active = i === stageIndex && progress < 100;
-              return (
-                <li key={stage} className="flex items-center gap-3">
-                  <span
-                    className={cn(
-                      "grid size-6 shrink-0 place-items-center rounded-full text-brand-foreground",
-                      done ? "bg-brand" : active ? "bg-brand/60" : "bg-muted",
-                    )}
-                  >
-                    {done ? (
-                      <Check className="size-3.5" />
-                    ) : active ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <span className="size-1.5 rounded-full bg-muted-foreground" />
-                    )}
-                  </span>
-                  <span
-                    className={cn(
-                      "text-sm",
-                      done || active ? "text-foreground" : "text-muted-foreground",
-                    )}
-                  >
-                    {stage}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-
-        {canCancel && (
-          <div className="mt-9 flex justify-center">
-            <Button variant="subtle" size="sm" className="rounded-xl" onClick={onCancel}>
-              Cancel upload
-            </Button>
-          </div>
-        )}
-      </div>
-    </div>
+      )}
+    </AppShell>
   );
 }
