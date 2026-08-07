@@ -91,7 +91,7 @@ export async function fetchScanHistory(
   const { data, error, count } = await query;
   if (error) return dbError(error, "Could not load scan history.");
 
-  let items: ScanHistoryItem[] = (data ?? []).map((row: any) => {
+  let items = (data ?? []).map((row: any): ScanHistoryItem => {
     const startedAt = row.processing_started_at ? new Date(row.processing_started_at).getTime() : undefined;
     const completedAt = row.processing_completed_at ? new Date(row.processing_completed_at).getTime() : undefined;
     const processingTimeMs =

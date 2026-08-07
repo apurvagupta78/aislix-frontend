@@ -104,7 +104,7 @@ export async function submitScan(
 
   const { error: uploadError } = await supabase.storage
     .from("scan-images")
-    .upload(storagePath, file, { contentType: file.type || undefined, upsert: false });
+    .upload(storagePath, file, { contentType: file.type || "application/octet-stream", upsert: false });
 
   if (uploadError) {
     await supabase.from("shelf_scans").update({ status: "failed", error_message: uploadError.message }).eq("id", scan.id);

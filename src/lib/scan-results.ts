@@ -247,9 +247,15 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     low_stock_products: scan.low_stock_count ?? inventory.filter((i) => i.low_stock).length,
     average_confidence: Number(avgConfidence) || 0,
     processing_time_ms: processingTimeMs,
-    out_of_stock_products: scan.out_of_stock_count ?? undefined,
-    shelf_compliance: scan.planogram_compliance_percent ?? undefined,
-    shelf_health_score: scan.shelf_health_score ?? undefined,
+    ...(scan.out_of_stock_count !== null && scan.out_of_stock_count !== undefined
+      ? { out_of_stock_products: scan.out_of_stock_count }
+      : {}),
+    ...(scan.planogram_compliance_percent !== null && scan.planogram_compliance_percent !== undefined
+      ? { shelf_compliance: scan.planogram_compliance_percent }
+      : {}),
+    ...(scan.shelf_health_score !== null && scan.shelf_health_score !== undefined
+      ? { shelf_health_score: scan.shelf_health_score }
+      : {}),
   };
 
   return {
@@ -270,9 +276,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
       quantity_distribution: quantityBuckets,
       low_stock_summary: lowStockSummary,
     },
-    downloads: {
-      annotated_image_url: annotatedUrl,
-    },
+    downloads: annotatedUrl ? { annotated_image_url: annotatedUrl } : {},
   };
 }
 

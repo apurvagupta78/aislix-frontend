@@ -208,9 +208,3 @@ export async function resendVerificationEmail(input: { email: string }): Promise
   if (error) authError(error.message, error.status ?? 400);
   return { ok: true };
 }
-
-/** Signs in with Google through the Lovable auth broker. */
-export async function signInWithGoogle(): Promise<void> {
-  const { lovable } = await import("@/integrations/lovable");
-  await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-}
