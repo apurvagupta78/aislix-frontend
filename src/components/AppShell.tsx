@@ -120,7 +120,7 @@ export function AppShell({
                 const q = new FormData(e.currentTarget).get("q");
                 navigate({
                   to: "/history",
-                  search: { ...(typeof q === "string" && q ? { q } : {}), page: 1 },
+                  search: typeof q === "string" && q ? { q } : {},
                 });
               }}
             >
