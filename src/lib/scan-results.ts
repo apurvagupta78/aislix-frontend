@@ -93,23 +93,11 @@ export type ScanResult = {
   };
 };
 
-import { API_BASE, assertApiConfigured } from "./api-config";
+import { api } from "./api/client";
 
 /** GET /scan/{scan_id} — full result payload for one scan. */
-export async function fetchScanResult(
-  scanId: string,
-  signal?: AbortSignal,
-): Promise<ScanResult> {
-  assertApiConfigured();
-  const response = await fetch(`${API_BASE}/scan/${encodeURIComponent(scanId)}`, {
-    headers: { Accept: "application/json" },
-    signal: signal ?? null,
-  });
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { detail?: string } | null;
-    throw new Error(body?.detail ?? `Could not load scan results (HTTP ${response.status}).`);
-  }
-  return (await response.json()) as ScanResult;
+export function fetchScanResult(scanId: string, signal?: AbortSignal): Promise<ScanResult> {
+  return api.get<ScanResult>(`/scan/${encodeURIComponent(scanId)}`, { signal });
 }
 
 export function normalizeConfidence(value: number): number {

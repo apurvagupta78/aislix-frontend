@@ -3,7 +3,7 @@
 // Railway with Supabase Auth for identity. No dummy data is produced here — every
 // value rendered in the UI comes from these endpoints.
 
-import { API_BASE, assertApiConfigured } from "./api-config";
+import { api } from "./api/client";
 
 // ---------- types ----------
 
@@ -85,30 +85,21 @@ export type ApiKey = {
 
 // ---------- transport ----------
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  assertApiConfigured();
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: { Accept: "application/json", "Content-Type": "application/json", ...(init?.headers ?? {}) },
-  });
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { detail?: string } | null;
-    throw new Error(body?.detail ?? `Request failed (HTTP ${response.status}).`);
-  }
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const method = (init?.method ?? "GET").toUpperCase();
+  const body = typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined;
+  const options = { signal: init?.signal ?? undefined };
+  if (method === "GET") return api.get<T>(path, options);
+  if (method === "DELETE") return api.delete<T>(path, options);
+  if (method === "POST") return api.post<T>(path, body, options);
+  if (method === "PUT") return api.put<T>(path, body, options);
+  return api.patch<T>(path, body, options);
 }
 
-async function upload<T>(path: string, file: File, field = "file"): Promise<T> {
-  assertApiConfigured();
+function upload<T>(path: string, file: File, field = "file"): Promise<T> {
   const form = new FormData();
   form.append(field, file);
-  const response = await fetch(`${API_BASE}${path}`, { method: "POST", body: form });
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { detail?: string } | null;
-    throw new Error(body?.detail ?? `Upload failed (HTTP ${response.status}).`);
-  }
-  return (await response.json()) as T;
+  return api.postForm<T>(path, form);
 }
 
 // ---------- profile ----------

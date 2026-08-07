@@ -4,7 +4,7 @@
 
 import type { BillingCycle, PlanId } from "@/lib/pricing";
 
-import { API_BASE, assertApiConfigured } from "./api-config";
+import { api } from "./api/client";
 
 export type SubscriptionStatus = "active" | "trialing" | "past_due" | "cancelled" | "paused";
 
@@ -59,17 +59,15 @@ export type Invoice = {
 
 export type InvoiceListResponse = { items: Invoice[]; total: number; page: number; page_size: number };
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  assertApiConfigured();
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: { Accept: "application/json", "Content-Type": "application/json", ...(init?.headers ?? {}) },
-  });
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { detail?: string } | null;
-    throw new Error(body?.detail ?? `Request failed (HTTP ${response.status}).`);
-  }
-  return (await response.json()) as T;
+function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const method = (init?.method ?? "GET").toUpperCase();
+  const body = typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined;
+  const options = { signal: init?.signal ?? undefined };
+  if (method === "GET") return api.get<T>(path, options);
+  if (method === "DELETE") return api.delete<T>(path, options);
+  if (method === "POST") return api.post<T>(path, body, options);
+  if (method === "PUT") return api.put<T>(path, body, options);
+  return api.patch<T>(path, body, options);
 }
 
 /** GET /billing/overview — subscription, usage and payment method. */

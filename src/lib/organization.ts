@@ -20,7 +20,7 @@
 
 import type { TeamRole } from "@/lib/account";
 
-import { API_BASE, assertApiConfigured } from "./api-config";
+import { api } from "./api/client";
 
 // ---------- types ----------
 
@@ -145,22 +145,15 @@ export type StoreReport = {
 
 // ---------- transport ----------
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  assertApiConfigured();
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...(init?.headers ?? {}),
-    },
-  });
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { detail?: string } | null;
-    throw new Error(body?.detail ?? `Request failed (HTTP ${response.status}).`);
-  }
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const method = (init?.method ?? "GET").toUpperCase();
+  const body = typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined;
+  const options = { signal: init?.signal ?? undefined };
+  if (method === "GET") return api.get<T>(path, options);
+  if (method === "DELETE") return api.delete<T>(path, options);
+  if (method === "POST") return api.post<T>(path, body, options);
+  if (method === "PUT") return api.put<T>(path, body, options);
+  return api.patch<T>(path, body, options);
 }
 
 function toQuery(params: Record<string, string | number | undefined>): string {
@@ -284,16 +277,10 @@ export const removeStoreMember = (id: string, memberId: string) =>
 // ---------- bulk operations (backend-bound, surfaced as coming soon in UI) ----------
 
 /** POST /stores/bulk/import — multipart CSV of stores. */
-export async function importStoresCsv(file: File): Promise<{ created: number; failed: number }> {
-  assertApiConfigured();
+export function importStoresCsv(file: File): Promise<{ created: number; failed: number }> {
   const form = new FormData();
   form.append("file", file);
-  const response = await fetch(`${API_BASE}/stores/bulk/import`, { method: "POST", body: form });
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { detail?: string } | null;
-    throw new Error(body?.detail ?? `Import failed (HTTP ${response.status}).`);
-  }
-  return (await response.json()) as { created: number; failed: number };
+  return api.postForm<{ created: number; failed: number }>("/stores/bulk/import", form);
 }
 
 /** GET /stores/bulk/export */
