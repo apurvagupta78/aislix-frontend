@@ -11,19 +11,20 @@ import { ApiError } from "@/lib/api/errors";
 export type MemberRole = "owner" | "admin" | "store_manager" | "viewer";
 
 export function dbError(error: { message: string; code?: string } | null, fallback: string): never {
-  throw new ApiError(error?.message || fallback, {
+  throw new ApiError({
+    message: error?.message || fallback,
     kind: "server",
     status: 500,
-    detail: error?.code,
+    body: error,
   });
 }
 
 export function unauthorized(message = "You need to sign in to continue."): never {
-  throw new ApiError(message, { kind: "unauthorized", status: 401 });
+  throw new ApiError({ message, kind: "unauthorized", status: 401 });
 }
 
 export function notFound(message = "Not found."): never {
-  throw new ApiError(message, { kind: "notFound", status: 404 });
+  throw new ApiError({ message, kind: "not_found", status: 404 });
 }
 
 /** Current auth user, or null when signed out. */
@@ -78,8 +79,9 @@ export function clearContextCache(): void {
 export async function requireOrgId(): Promise<string> {
   const membership = await getMembership();
   if (!membership) {
-    throw new ApiError("No workspace found for your account yet.", {
-      kind: "notFound",
+    throw new ApiError({
+      message: "No workspace found for your account yet.",
+      kind: "not_found",
       status: 404,
     });
   }
@@ -89,8 +91,9 @@ export async function requireOrgId(): Promise<string> {
 export async function requireMembership(): Promise<Membership> {
   const membership = await getMembership();
   if (!membership) {
-    throw new ApiError("No workspace found for your account yet.", {
-      kind: "notFound",
+    throw new ApiError({
+      message: "No workspace found for your account yet.",
+      kind: "not_found",
       status: 404,
     });
   }
