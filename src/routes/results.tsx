@@ -36,9 +36,10 @@ import {
 } from "@/lib/scan-results";
 
 export const Route = createFileRoute("/results")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    scan: typeof search['scan'] === "string" ? (search['scan'] as string) : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { scan?: string } => {
+    const scan = search['scan'];
+    return typeof scan === "string" && scan.length > 0 ? { scan } : {};
+  },
   head: () => ({
     meta: [
       { title: "Scan Results — Aislix Shelf Audit" },
