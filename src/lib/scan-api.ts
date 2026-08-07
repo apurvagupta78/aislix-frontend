@@ -4,6 +4,19 @@ export const SCAN_ENDPOINT = "/scan";
 
 export const ACCEPTED_TYPES = ["image/jpeg", "image/jpg", "image/png"] as const;
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
+/** Maximum shelf images allowed in a single scan. */
+export const MAX_SCAN_IMAGES = 5;
+
+export type ScanAnalysisResult = {
+  scan_id: string;
+  status: "completed";
+  total_products: number;
+  out_of_stock_count: number;
+  low_stock_count: number;
+  misplaced_count: number;
+  shelf_health_score: number | null;
+};
+
 
 export const SCAN_STAGES = [
   "Uploading Image",
@@ -20,7 +33,9 @@ export type ScanResponse = {
   scan_id: string;
   status: string;
   report_url?: string;
+  error_message?: string;
 };
+
 
 export function validateScanFile(file: File): string | null {
   const type = file.type?.toLowerCase() ?? "";
@@ -67,19 +82,28 @@ function readImageDimensions(file: File): Promise<{ width?: number; height?: num
 }
 
 /**
- * Creates a shelf_scans row, uploads the image to storage and records it as a
- * scan_images row. `onUploadProgress` reports 0-100 for the upload phase only.
+/**
+ * Step 1 + 2 of the pipeline: creates one `shelf_scans` row, uploads every
+ * image to the `scan-images` bucket and records each as a `scan_images` row.
+ * `onUploadProgress` reports 0-100 across all files.
  */
-export async function submitScan(
-  file: File,
+export async function submitScanImages(
+  files: File[],
   options: {
     signal?: AbortSignal;
     onUploadProgress?: (percent: number) => void;
     storeId?: string;
+    shelfLabel?: string;
   } = {},
 ): Promise<ScanResponse> {
-  const invalid = validateScanFile(file);
-  if (invalid) throw new Error(invalid);
+  if (!files.length) throw new Error("Add at least one shelf image to scan.");
+  if (files.length > MAX_SCAN_IMAGES) {
+    throw new Error(`You can scan up to ${MAX_SCAN_IMAGES} images at a time.`);
+  }
+  for (const file of files) {
+    const invalid = validateScanFile(file);
+    if (invalid) throw new Error(invalid);
+  }
 
   const userId = await requireUserId();
   const orgId = await requireOrgId();
@@ -90,7 +114,9 @@ export async function submitScan(
       org_id: orgId,
       store_id: options.storeId ?? null,
       created_by: userId,
-      status: "queued",
+      status: "processing",
+      shelf_label: options.shelfLabel ?? null,
+      processing_started_at: new Date().toISOString(),
     })
     .select("id, status")
     .single();
@@ -98,36 +124,101 @@ export async function submitScan(
 
   options.onUploadProgress?.(0);
 
-  const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
-  const filename = `${Date.now()}.${ext}`;
-  const storagePath = `${orgId}/${scan.id}/${filename}`;
+  for (let index = 0; index < files.length; index++) {
+    const file = files[index]!;
+    if (options.signal?.aborted) {
+      await supabase
+        .from("shelf_scans")
+        .update({ status: "failed", error_message: "Scan cancelled before analysis." })
+        .eq("id", scan.id);
+      throw new DOMException("Scan cancelled", "AbortError");
+    }
 
-  const { error: uploadError } = await supabase.storage
-    .from("scan-images")
-    .upload(storagePath, file, { contentType: file.type || "application/octet-stream", upsert: false });
+    const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
+    const storagePath = `${orgId}/${scan.id}/${Date.now()}-${index}.${ext}`;
 
-  if (uploadError) {
-    await supabase.from("shelf_scans").update({ status: "failed", error_message: uploadError.message }).eq("id", scan.id);
-    return dbError(uploadError, "Could not upload the shelf image.");
+    const { error: uploadError } = await supabase.storage
+      .from("scan-images")
+      .upload(storagePath, file, {
+        contentType: file.type || "application/octet-stream",
+        upsert: false,
+      });
+
+    if (uploadError) {
+      await supabase
+        .from("shelf_scans")
+        .update({ status: "failed", error_message: uploadError.message })
+        .eq("id", scan.id);
+      return dbError(uploadError, "Could not upload the shelf image.");
+    }
+
+    const dimensions = await readImageDimensions(file);
+    const { error: imageError } = await supabase.from("scan_images").insert({
+      scan_id: scan.id,
+      kind: "original",
+      storage_bucket: "scan-images",
+      storage_path: storagePath,
+      mime_type: file.type || null,
+      file_size_bytes: file.size,
+      width: dimensions.width ?? null,
+      height: dimensions.height ?? null,
+    });
+    if (imageError) {
+      await supabase
+        .from("shelf_scans")
+        .update({ status: "failed", error_message: imageError.message })
+        .eq("id", scan.id);
+      return dbError(imageError, "Could not record the uploaded image.");
+    }
+
+    options.onUploadProgress?.(Math.round(((index + 1) / files.length) * 100));
   }
 
-  options.onUploadProgress?.(100);
-
-  const dimensions = await readImageDimensions(file);
-
-  const { error: imageError } = await supabase.from("scan_images").insert({
-    scan_id: scan.id,
-    kind: "original",
-    storage_bucket: "scan-images",
-    storage_path: storagePath,
-    mime_type: file.type || null,
-    file_size_bytes: file.size,
-    width: dimensions.width ?? null,
-    height: dimensions.height ?? null,
-  });
-  if (imageError) return dbError(imageError, "Could not record the uploaded image.");
-
   return { scan_id: scan.id as string, status: scan.status as string };
+}
+
+/** Single-image convenience wrapper kept for existing callers. */
+export async function submitScan(
+  file: File,
+  options: {
+    signal?: AbortSignal;
+    onUploadProgress?: (percent: number) => void;
+    storeId?: string;
+  } = {},
+): Promise<ScanResponse> {
+  return submitScanImages([file], options);
+}
+
+/**
+ * Steps 3-6: hands the uploaded images to the Railway FastAPI vision backend
+ * and persists products, metrics and analytics. Resolves once the scan is
+ * `completed`; rejects (and leaves the scan `failed`) when the API fails.
+ */
+export async function runScanAnalysis(scanId: string): Promise<ScanAnalysisResult> {
+  const { processScan } = await import("@/lib/scan-pipeline.functions");
+  try {
+    return (await processScan({ data: { scanId } })) as ScanAnalysisResult;
+  } catch (error) {
+    throw new Error(cleanPipelineMessage(error));
+  }
+}
+
+/** Re-runs the pipeline for a scan that previously failed. */
+export async function retryScanAnalysis(scanId: string): Promise<ScanAnalysisResult> {
+  return runScanAnalysis(scanId);
+}
+
+function cleanPipelineMessage(error: unknown): string {
+  const raw =
+    error instanceof Error
+      ? error.message
+      : typeof error === "string"
+        ? error
+        : "The scan could not be completed.";
+  const message = raw.replace(/^Error:\s*/i, "").trim();
+  if (/unauthorized/i.test(message)) return "Your session expired. Please sign in again.";
+  if (!message) return "The scan could not be completed.";
+  return message;
 }
 
 /** Polls the current status of a shelf scan. */
@@ -135,11 +226,16 @@ export async function fetchScanStatus(scanId: string, _signal?: AbortSignal): Pr
   const orgId = await requireOrgId();
   const { data, error } = await supabase
     .from("shelf_scans")
-    .select("id, status")
+    .select("id, status, error_message")
     .eq("org_id", orgId)
     .eq("id", scanId)
     .maybeSingle();
   if (error) return dbError(error, "Could not load scan status.");
   if (!data) notFound("Scan not found.");
-  return { scan_id: data.id as string, status: data.status as string };
+  return {
+    scan_id: data.id as string,
+    status: data.status as string,
+    ...(data.error_message ? { error_message: data.error_message as string } : {}),
+  };
 }
+

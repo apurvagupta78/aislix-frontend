@@ -1,13 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
-  ArrowRight,
   Camera,
   Check,
-  FileText,
   ImageIcon,
   Loader2,
+  Plus,
   RefreshCw,
   ScanLine,
   Trash2,
@@ -19,11 +18,13 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import {
+  MAX_SCAN_IMAGES,
   SCAN_STAGES,
   formatBytes,
-  submitScan,
+  retryScanAnalysis,
+  runScanAnalysis,
+  submitScanImages,
   validateScanFile,
-  type ScanResponse,
 } from "@/lib/scan-api";
 
 export const Route = createFileRoute("/scan")({
@@ -33,12 +34,12 @@ export const Route = createFileRoute("/scan")({
       {
         name: "description",
         content:
-          "Capture or upload a shelf photo and run Aislix computer vision to detect products, brands and inventory.",
+          "Capture or upload shelf photos and run the Aislix AI pipeline to detect products, brands and inventory.",
       },
       { property: "og:title", content: "New shelf scan — Aislix" },
       {
         property: "og:description",
-        content: "Take a photo or upload a shelf image to start an AI retail audit.",
+        content: "Take photos or upload shelf images to start an AI retail audit.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -47,11 +48,14 @@ export const Route = createFileRoute("/scan")({
   component: ScanPage,
 });
 
-type Phase = "idle" | "processing" | "success" | "error";
+type Phase = "idle" | "uploading" | "analyzing" | "error";
+
+type Attachment = { id: string; file: File; url: string };
 
 function ScanPage() {
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const navigate = useNavigate();
+
+  const [items, setItems] = useState<Attachment[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
 
@@ -59,125 +63,190 @@ function ScanPage() {
   const [stageIndex, setStageIndex] = useState(0);
   const [progress, setProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [result, setResult] = useState<ScanResponse | null>(null);
+  const [scanId, setScanId] = useState<string | null>(null);
 
   const cameraInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const stageTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const itemsRef = useRef<Attachment[]>([]);
 
-  useEffect(() => {
-    if (!file) {
-      setPreviewUrl(null);
-      return;
+  itemsRef.current = items;
+
+  const stopTimer = () => {
+    if (stageTimer.current) {
+      clearInterval(stageTimer.current);
+      stageTimer.current = null;
     }
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+  };
 
   useEffect(
     () => () => {
       abortRef.current?.abort();
-      if (stageTimer.current) clearInterval(stageTimer.current);
+      stopTimer();
+      for (const item of itemsRef.current) URL.revokeObjectURL(item.url);
     },
     [],
   );
 
-  const acceptFile = useCallback((incoming: File | undefined | null) => {
-    if (!incoming) return;
-    const problem = validateScanFile(incoming);
-    if (problem) {
-      setFileError(problem);
-      return;
-    }
+  const acceptFiles = useCallback((incoming: FileList | File[] | null | undefined) => {
+    const files = Array.from(incoming ?? []);
+    if (!files.length) return;
+
     setFileError(null);
     setErrorMessage(null);
-    setResult(null);
+    setScanId(null);
     setPhase("idle");
-    setFile(incoming);
+
+    setItems((current) => {
+      const next = [...current];
+      for (const file of files) {
+        if (next.length >= MAX_SCAN_IMAGES) {
+          setFileError(`You can scan up to ${MAX_SCAN_IMAGES} images at a time.`);
+          break;
+        }
+        const problem = validateScanFile(file);
+        if (problem) {
+          setFileError(problem);
+          continue;
+        }
+        next.push({
+          id: `${file.name}-${file.size}-${Date.now()}-${next.length}`,
+          file,
+          url: URL.createObjectURL(file),
+        });
+      }
+      return next;
+    });
+  }, []);
+
+  const removeItem = useCallback((id: string) => {
+    setItems((current) => {
+      const target = current.find((item) => item.id === id);
+      if (target) URL.revokeObjectURL(target.url);
+      return current.filter((item) => item.id !== id);
+    });
   }, []);
 
   const reset = useCallback(() => {
     abortRef.current?.abort();
-    if (stageTimer.current) clearInterval(stageTimer.current);
-    setFile(null);
+    stopTimer();
+    setItems((current) => {
+      for (const item of current) URL.revokeObjectURL(item.url);
+      return [];
+    });
     setFileError(null);
     setErrorMessage(null);
-    setResult(null);
+    setScanId(null);
     setProgress(0);
     setStageIndex(0);
     setPhase("idle");
   }, []);
 
+  /** Creeps the progress bar through the analysis stages while the API works. */
+  const startStageTicker = useCallback(() => {
+    stopTimer();
+    let p = 22;
+    setProgress(p);
+    setStageIndex(1);
+    stageTimer.current = setInterval(() => {
+      p = Math.min(94, p + 1.5);
+      setProgress(Math.round(p));
+      setStageIndex(Math.min(SCAN_STAGES.length - 1, Math.floor((p / 100) * SCAN_STAGES.length)));
+    }, 700);
+  }, []);
+
+  const finish = useCallback(
+    async (id: string) => {
+      stopTimer();
+      setStageIndex(SCAN_STAGES.length - 1);
+      setProgress(100);
+      await navigate({ to: "/results", search: { scan: id } });
+    },
+    [navigate],
+  );
+
   const startScan = useCallback(async () => {
-    if (!file || phase === "processing") return; // guards duplicate submissions
+    if (!items.length || phase === "uploading" || phase === "analyzing") return;
 
     const controller = new AbortController();
     abortRef.current = controller;
-    setPhase("processing");
     setErrorMessage(null);
     setStageIndex(0);
     setProgress(0);
+    setPhase("uploading");
 
+    let createdScanId: string | null = null;
     try {
-      const response = await submitScan(file, {
-        signal: controller.signal,
-        onUploadProgress: (percent) => {
-          setStageIndex(0);
-          setProgress(Math.min(18, Math.round(percent * 0.18)));
+      const created = await submitScanImages(
+        items.map((item) => item.file),
+        {
+          signal: controller.signal,
+          onUploadProgress: (percent) => {
+            setStageIndex(0);
+            setProgress(Math.min(20, Math.round(percent * 0.2)));
+          },
         },
-      });
+      );
+      createdScanId = created.scan_id;
+      setScanId(created.scan_id);
 
-      // Upload finished; walk the remaining analysis stages until the
-      // response is rendered. Replace with backend-reported stages when
-      // POST /scan streams status.
-      setStageIndex(1);
-      setProgress(24);
-      await new Promise<void>((resolve) => {
-        let p = 24;
-        stageTimer.current = setInterval(() => {
-          p = Math.min(100, p + 4);
-          setProgress(p);
-          setStageIndex(
-            Math.min(SCAN_STAGES.length - 1, Math.floor((p / 100) * SCAN_STAGES.length)),
-          );
-          if (p >= 100) {
-            if (stageTimer.current) clearInterval(stageTimer.current);
-            resolve();
-          }
-        }, 90);
-      });
-
-      setResult(response);
-      setPhase("success");
+      setPhase("analyzing");
+      startStageTicker();
+      const analysis = await runScanAnalysis(created.scan_id);
+      await finish(analysis.scan_id);
     } catch (error) {
-      if (stageTimer.current) clearInterval(stageTimer.current);
+      stopTimer();
       if (error instanceof DOMException && error.name === "AbortError") {
         setPhase("idle");
+        setProgress(0);
         return;
       }
-      setErrorMessage(error instanceof Error ? error.message : "The scan could not be completed.");
+      if (createdScanId) setScanId(createdScanId);
+      setErrorMessage(
+        error instanceof Error ? error.message : "The scan could not be completed.",
+      );
       setPhase("error");
     } finally {
       abortRef.current = null;
     }
-  }, [file, phase]);
+  }, [items, phase, startStageTicker, finish]);
 
-  const cancel = useCallback(() => {
+  /** Retries analysis only — the images are already in storage. */
+  const retryScan = useCallback(async () => {
+    if (!scanId) {
+      void startScan();
+      return;
+    }
+    setErrorMessage(null);
+    setPhase("analyzing");
+    startStageTicker();
+    try {
+      const analysis = await retryScanAnalysis(scanId);
+      await finish(analysis.scan_id);
+    } catch (error) {
+      stopTimer();
+      setErrorMessage(error instanceof Error ? error.message : "The scan could not be completed.");
+      setPhase("error");
+    }
+  }, [scanId, startScan, startStageTicker, finish]);
+
+  const cancelUpload = useCallback(() => {
     abortRef.current?.abort();
-    if (stageTimer.current) clearInterval(stageTimer.current);
+    stopTimer();
     setPhase("idle");
     setProgress(0);
     setStageIndex(0);
   }, []);
 
+  const busy = phase === "uploading" || phase === "analyzing";
+
   return (
     <AppShell
       title="New scan"
-      description="Capture a shelf with your camera or upload an image to run an AI audit."
+      description="Capture shelves with your camera or upload images to run an AI audit."
       actions={
-        file ? (
+        items.length && !busy ? (
           <Button variant="subtle" size="sm" className="rounded-xl" onClick={reset}>
             <Trash2 className="size-4" /> Clear
           </Button>
@@ -191,59 +260,62 @@ function ScanPage() {
         capture="environment"
         className="sr-only"
         onChange={(e) => {
-          acceptFile(e.target.files?.[0]);
+          acceptFiles(e.target.files);
           e.currentTarget.value = "";
         }}
       />
       <input
         ref={fileInput}
         type="file"
+        multiple
         accept="image/jpeg,image/jpg,image/png"
         className="sr-only"
         onChange={(e) => {
-          acceptFile(e.target.files?.[0]);
+          acceptFiles(e.target.files);
           e.currentTarget.value = "";
         }}
       />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
-          {!file ? (
-            <div className="card-surface p-4 sm:p-6">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <button
-                  type="button"
-                  onClick={() => cameraInput.current?.click()}
-                  className="group flex flex-col items-start gap-3 rounded-2xl border border-border bg-surface p-5 text-left transition-all hover:border-brand/45 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <span className="grid size-11 place-items-center rounded-xl bg-gradient-brand text-brand-foreground transition-transform group-hover:scale-105">
-                    <Camera className="size-5" />
+          <div className="card-surface p-4 sm:p-6">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => cameraInput.current?.click()}
+                disabled={busy}
+                className="group flex flex-col items-start gap-3 rounded-2xl border border-border bg-surface p-5 text-left transition-all hover:border-brand/45 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+              >
+                <span className="grid size-11 place-items-center rounded-xl bg-gradient-brand text-brand-foreground transition-transform group-hover:scale-105">
+                  <Camera className="size-5" />
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold">Take photo</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    Opens the rear camera on mobile devices
                   </span>
-                  <span>
-                    <span className="block text-sm font-semibold">Take photo</span>
-                    <span className="mt-1 block text-xs text-muted-foreground">
-                      Opens the rear camera on mobile devices
-                    </span>
-                  </span>
-                </button>
+                </span>
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => fileInput.current?.click()}
-                  className="group flex flex-col items-start gap-3 rounded-2xl border border-border bg-surface p-5 text-left transition-all hover:border-brand/45 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <span className="grid size-11 place-items-center rounded-xl bg-brand-soft text-brand transition-transform group-hover:scale-105">
-                    <UploadCloud className="size-5" />
+              <button
+                type="button"
+                onClick={() => fileInput.current?.click()}
+                disabled={busy}
+                className="group flex flex-col items-start gap-3 rounded-2xl border border-border bg-surface p-5 text-left transition-all hover:border-brand/45 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+              >
+                <span className="grid size-11 place-items-center rounded-xl bg-brand-soft text-brand transition-transform group-hover:scale-105">
+                  <UploadCloud className="size-5" />
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold">Upload images</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    Select up to {MAX_SCAN_IMAGES} shelf photos
                   </span>
-                  <span>
-                    <span className="block text-sm font-semibold">Upload image</span>
-                    <span className="mt-1 block text-xs text-muted-foreground">
-                      Browse files or your photo gallery
-                    </span>
-                  </span>
-                </button>
-              </div>
+                </span>
+              </button>
+            </div>
 
+            {items.length === 0 && (
               <div
                 role="button"
                 tabIndex={0}
@@ -259,7 +331,7 @@ function ScanPage() {
                 onDrop={(e) => {
                   e.preventDefault();
                   setDragging(false);
-                  acceptFile(e.dataTransfer.files?.[0]);
+                  acceptFiles(e.dataTransfer.files);
                 }}
                 className={cn(
                   "mt-3 hidden cursor-pointer place-items-center rounded-2xl border-2 border-dashed px-6 py-14 text-center transition-colors sm:grid",
@@ -271,68 +343,87 @@ function ScanPage() {
                 <span className="grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand">
                   <ImageIcon className="size-5" />
                 </span>
-                <p className="mt-4 text-sm font-medium">Drag and drop a shelf image here</p>
+                <p className="mt-4 text-sm font-medium">Drag and drop shelf images here</p>
                 <p className="mt-1.5 text-xs text-muted-foreground">
-                  JPG, JPEG or PNG · up to 10 MB · one image per scan
+                  JPG, JPEG or PNG · up to 10 MB each · up to {MAX_SCAN_IMAGES} per scan
                 </p>
               </div>
+            )}
 
-              {fileError && (
-                <div
-                  role="alert"
-                  className="mt-3 flex items-start gap-2.5 rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3"
-                >
-                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
-                  <p className="text-sm text-destructive">{fileError}</p>
-                </div>
-              )}
-            </div>
-          ) : (
+            {fileError && (
+              <div
+                role="alert"
+                className="mt-3 flex items-start gap-2.5 rounded-xl border border-destructive/25 bg-destructive/5 px-4 py-3"
+              >
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
+                <p className="text-sm text-destructive">{fileError}</p>
+              </div>
+            )}
+          </div>
+
+          {items.length > 0 && (
             <div className="card-surface overflow-hidden">
-              <div className="relative bg-muted">
-                {previewUrl && (
-                  <img
-                    src={previewUrl}
-                    alt={`Preview of the shelf image ${file.name}`}
-                    className="max-h-[26rem] w-full animate-fade-in object-contain"
-                  />
-                )}
-                <div className="absolute right-3 top-3 flex gap-2">
+              <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5">
+                {items.map((item, index) => (
+                  <figure
+                    key={item.id}
+                    className="relative overflow-hidden rounded-2xl border border-border bg-muted"
+                  >
+                    <img
+                      src={item.url}
+                      alt={`Preview of shelf image ${index + 1}: ${item.file.name}`}
+                      className="h-44 w-full animate-fade-in object-cover"
+                    />
+                    {!busy && (
+                      <Button
+                        variant="subtle"
+                        size="icon"
+                        className="absolute right-2 top-2 rounded-xl"
+                        onClick={() => removeItem(item.id)}
+                      >
+                        <X className="size-4" />
+                        <span className="sr-only">Remove {item.file.name}</span>
+                      </Button>
+                    )}
+                    <figcaption className="flex items-center gap-2 border-t border-border bg-surface px-3 py-2">
+                      <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-accent-green-soft text-accent-green">
+                        <Check className="size-3.5" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-xs font-medium">{item.file.name}</span>
+                        <span className="block text-[11px] text-muted-foreground">
+                          {formatBytes(item.file.size)}
+                        </span>
+                      </span>
+                    </figcaption>
+                  </figure>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-3 border-t border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                <p className="text-sm text-muted-foreground">
+                  {items.length} of {MAX_SCAN_IMAGES} images ready to scan
+                </p>
+                <div className="flex gap-2">
                   <Button
                     variant="subtle"
                     size="sm"
                     className="rounded-xl"
+                    disabled={busy || items.length >= MAX_SCAN_IMAGES}
                     onClick={() => fileInput.current?.click()}
                   >
-                    <RefreshCw className="size-4" /> Replace
+                    <Plus className="size-4" /> Add image
                   </Button>
-                  <Button variant="subtle" size="icon" className="rounded-xl" onClick={reset}>
-                    <X className="size-4" />
-                    <span className="sr-only">Remove image</span>
+                  <Button
+                    variant="brand"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={startScan}
+                    disabled={busy}
+                  >
+                    <ScanLine className="size-4" /> Start scan
                   </Button>
                 </div>
-              </div>
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-border px-4 py-4 sm:px-6">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-green-soft text-accent-green">
-                    <Check className="size-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{file.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatBytes(file.size)} · ready to scan
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="brand"
-                  size="sm"
-                  className="rounded-xl"
-                  onClick={startScan}
-                  disabled={phase === "processing"}
-                >
-                  <ScanLine className="size-4" /> Start scan
-                </Button>
               </div>
             </div>
           )}
@@ -349,39 +440,16 @@ function ScanPage() {
                 <div>
                   <p className="text-sm font-semibold">Scan failed</p>
                   <p className="mt-1 text-sm text-muted-foreground">{errorMessage}</p>
+                  {scanId && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Your images are saved — retrying re-runs the analysis only.
+                    </p>
+                  )}
                 </div>
               </div>
-              <Button variant="brand" size="sm" className="rounded-xl" onClick={startScan}>
-                <RefreshCw className="size-4" /> Try again
+              <Button variant="brand" size="sm" className="rounded-xl" onClick={retryScan}>
+                <RefreshCw className="size-4" /> Retry scan
               </Button>
-            </div>
-          )}
-
-          {phase === "success" && (
-            <div className="card-surface flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3">
-                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-green-soft text-accent-green">
-                  <Check className="size-5" />
-                </span>
-                <div>
-                  <p className="text-sm font-semibold">Scan complete</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {result?.scan_id ? `Scan ${result.scan_id} is ready.` : "Your scan is ready."}
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                {result?.report_url && (
-                  <Button asChild variant="brand" size="sm" className="rounded-xl">
-                    <a href={result.report_url} target="_blank" rel="noreferrer">
-                      <FileText className="size-4" /> View report
-                    </a>
-                  </Button>
-                )}
-                <Button variant="subtle" size="sm" className="rounded-xl" onClick={reset}>
-                  New scan <ArrowRight className="size-4" />
-                </Button>
-              </div>
             </div>
           )}
         </div>
@@ -412,12 +480,14 @@ function ScanPage() {
         </aside>
       </div>
 
-      {phase === "processing" && (
+      {busy && (
         <ProcessingOverlay
           stageIndex={stageIndex}
           progress={progress}
-          previewUrl={previewUrl}
-          onCancel={cancel}
+          previewUrl={items[0]?.url ?? null}
+          imageCount={items.length}
+          canCancel={phase === "uploading"}
+          onCancel={cancelUpload}
         />
       )}
     </AppShell>
@@ -428,11 +498,15 @@ function ProcessingOverlay({
   stageIndex,
   progress,
   previewUrl,
+  imageCount,
+  canCancel,
   onCancel,
 }: {
   stageIndex: number;
   progress: number;
   previewUrl: string | null;
+  imageCount: number;
+  canCancel: boolean;
   onCancel: () => void;
 }) {
   return (
@@ -460,10 +534,10 @@ function ProcessingOverlay({
             )}
           </div>
           <h2 className="mt-6 text-lg font-semibold tracking-tight sm:text-xl">
-            Analyzing your shelf
+            Analyzing {imageCount === 1 ? "your shelf" : `${imageCount} shelf images`}
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Keep this page open — this usually takes under a minute.
+            Keep this page open — you'll be taken to the results automatically.
           </p>
         </div>
 
@@ -473,50 +547,48 @@ function ProcessingOverlay({
             <span className="shrink-0 tabular-nums">{progress}%</span>
           </div>
           <Progress value={progress} className="mt-2 h-2 rounded-full" />
+
+          <ul className="mt-7 space-y-3 text-left">
+            {SCAN_STAGES.map((stage, i) => {
+              const done = i < stageIndex || progress >= 100;
+              const active = i === stageIndex && progress < 100;
+              return (
+                <li key={stage} className="flex items-center gap-3">
+                  <span
+                    className={cn(
+                      "grid size-6 shrink-0 place-items-center rounded-full text-brand-foreground",
+                      done ? "bg-brand" : active ? "bg-brand/60" : "bg-muted",
+                    )}
+                  >
+                    {done ? (
+                      <Check className="size-3.5" />
+                    ) : active ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <span className="size-1.5 rounded-full bg-muted-foreground" />
+                    )}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-sm",
+                      done || active ? "text-foreground" : "text-muted-foreground",
+                    )}
+                  >
+                    {stage}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         </div>
 
-        <ul className="mt-8 space-y-3">
-          {SCAN_STAGES.map((stage, i) => {
-            const done = i < stageIndex || progress >= 100;
-            const active = i === stageIndex && progress < 100;
-            return (
-              <li key={stage} className="flex items-center gap-3">
-                <span
-                  className={cn(
-                    "grid size-6 shrink-0 place-items-center rounded-full",
-                    done
-                      ? "bg-accent-green text-brand-foreground"
-                      : active
-                        ? "bg-brand text-brand-foreground"
-                        : "bg-muted text-muted-foreground",
-                  )}
-                >
-                  {done ? (
-                    <Check className="size-3.5" />
-                  ) : active ? (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  ) : (
-                    <span className="size-1.5 rounded-full bg-current" />
-                  )}
-                </span>
-                <span
-                  className={cn(
-                    "text-sm",
-                    done || active ? "text-foreground" : "text-muted-foreground",
-                  )}
-                >
-                  {stage}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-
-        <div className="mt-9 flex justify-center">
-          <Button variant="ghost" size="sm" className="rounded-xl" onClick={onCancel}>
-            Cancel scan
-          </Button>
-        </div>
+        {canCancel && (
+          <div className="mt-9 flex justify-center">
+            <Button variant="subtle" size="sm" className="rounded-xl" onClick={onCancel}>
+              Cancel upload
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

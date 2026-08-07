@@ -1,8 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
+  Loader2,
+  RefreshCw,
   Braces,
   FileSpreadsheet,
   FileText,
@@ -43,6 +47,7 @@ import {
   downloadBlob,
   type ScanResult,
 } from "@/lib/scan-results";
+import { retryScanAnalysis } from "@/lib/scan-api";
 
 export const Route = createFileRoute("/results")({
   validateSearch: (search: Record<string, unknown>): { scan?: string } => {
@@ -168,10 +173,14 @@ function Results() {
         <div className="space-y-4">
           <ScanResultHeader data={data} loading={loading} />
 
-          {processing ? (
+          {data?.status === "failed" ? (
+            <FailedState scanId={data.scan_id} onRetried={() => void query.refetch()} />
+          ) : processing ? (
             <ProcessingState scanId={data?.scan_id} />
           ) : (
             <>
+
+
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <SummaryCard
                   label="Products detected"
@@ -387,5 +396,61 @@ function DownloadsPanel({
         </p>
       )}
     </ResultSection>
+  );
+}
+
+function FailedState({ scanId, onRetried }: { scanId: string; onRetried: () => void }) {
+  const [retrying, setRetrying] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const retry = async () => {
+    setRetrying(true);
+    setMessage(null);
+    try {
+      await retryScanAnalysis(scanId);
+      onRetried();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "The analysis failed again.");
+    } finally {
+      setRetrying(false);
+    }
+  };
+
+  return (
+    <div
+      role="alert"
+      className="card-surface flex flex-col items-center gap-4 px-6 py-14 text-center"
+    >
+      <span className="grid size-12 place-items-center rounded-2xl bg-destructive/10 text-destructive">
+        <AlertTriangle className="size-5" />
+      </span>
+      <div>
+        <h2 className="text-base font-semibold tracking-tight">This scan failed to process</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+          The uploaded images are safe in storage. Retrying re-runs the AI analysis without
+          re-uploading anything.
+        </p>
+        {message && <p className="mt-3 text-sm text-destructive">{message}</p>}
+      </div>
+      <div className="flex flex-wrap justify-center gap-2">
+        <Button
+          variant="brand"
+          size="sm"
+          className="rounded-xl"
+          onClick={() => void retry()}
+          disabled={retrying}
+        >
+          {retrying ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <RefreshCw className="size-4" />
+          )}
+          {retrying ? "Retrying analysis" : "Retry analysis"}
+        </Button>
+        <Button asChild variant="subtle" size="sm" className="rounded-xl">
+          <Link to="/scan">Start a new scan</Link>
+        </Button>
+      </div>
+    </div>
   );
 }
