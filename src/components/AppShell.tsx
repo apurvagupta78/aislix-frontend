@@ -9,6 +9,7 @@ import {
   CreditCard,
   User,
   Settings,
+  Building2,
   Tag,
   Bell,
   Search,
@@ -34,6 +35,7 @@ const nav = [
   { label: "Upload Scan", to: "/upload", icon: UploadCloud },
   { label: "Scan History", to: "/history", icon: History },
   { label: "Reports", to: "/report", icon: FileText },
+  { label: "Stores", to: "/stores", icon: Building2 },
 ] as const;
 
 const secondary = [
