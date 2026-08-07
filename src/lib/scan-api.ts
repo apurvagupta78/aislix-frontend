@@ -4,6 +4,19 @@ export const SCAN_ENDPOINT = "/scan";
 
 export const ACCEPTED_TYPES = ["image/jpeg", "image/jpg", "image/png"] as const;
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
+/** Maximum shelf images allowed in a single scan. */
+export const MAX_SCAN_IMAGES = 5;
+
+export type ScanAnalysisResult = {
+  scan_id: string;
+  status: "completed";
+  total_products: number;
+  out_of_stock_count: number;
+  low_stock_count: number;
+  misplaced_count: number;
+  shelf_health_score: number | null;
+};
+
 
 export const SCAN_STAGES = [
   "Uploading Image",
