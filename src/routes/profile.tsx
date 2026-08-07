@@ -296,7 +296,7 @@ function ProfilePage() {
                   />
                 </Field>
                 <Field label="Country">
-                  <Select value={form.country || undefined} onValueChange={(v) => set("country", v)}>
+                  <Select value={form.country} onValueChange={(v) => set("country", v)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select country" />
                     </SelectTrigger>
@@ -310,7 +310,7 @@ function ProfilePage() {
                   </Select>
                 </Field>
                 <Field label="Time zone" hint="Scan timestamps and scheduled reports use this zone.">
-                  <Select value={form.timezone || undefined} onValueChange={(v) => set("timezone", v)}>
+                  <Select value={form.timezone} onValueChange={(v) => set("timezone", v)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select time zone" />
                     </SelectTrigger>
