@@ -419,7 +419,7 @@ export function NotificationsPanel({
             {!n.read && <span className="mt-1 size-2 shrink-0 rounded-full bg-brand" />}
           </div>
         );
-        return <li key={n.id}>{n.href ? <Link to={n.href}>{body}</Link> : body}</li>;
+        return <li key={n.id}>{body}</li>;
       })}
     </ul>
   );
