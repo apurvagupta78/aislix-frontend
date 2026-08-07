@@ -36,44 +36,29 @@ export type ScanHistoryQuery = {
   page_size?: number;
 };
 
-import { API_BASE, assertApiConfigured } from "./api-config";
+import { api } from "./api/client";
 
 /** GET /scans — paginated history for the signed-in user. */
-export async function fetchScanHistory(
+export function fetchScanHistory(
   params: ScanHistoryQuery,
   signal?: AbortSignal,
 ): Promise<ScanHistoryResponse> {
-  assertApiConfigured();
-  const search = new URLSearchParams();
-  if (params.q) search.set("q", params.q);
-  if (params.store && params.store !== "all") search.set("store", params.store);
-  if (params.date) search.set("date", params.date);
-  if (params.sort) search.set("sort", params.sort);
-  search.set("page", String(params.page ?? 1));
-  search.set("page_size", String(params.page_size ?? 10));
-
-  const response = await fetch(`${API_BASE}/scans?${search.toString()}`, {
-    headers: { Accept: "application/json" },
-    signal: signal ?? null,
+  return api.get<ScanHistoryResponse>("/scans", {
+    signal,
+    query: {
+      q: params.q,
+      store: params.store,
+      date: params.date,
+      sort: params.sort,
+      page: params.page ?? 1,
+      page_size: params.page_size ?? 10,
+    },
   });
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { detail?: string } | null;
-    throw new Error(body?.detail ?? `Could not load scan history (HTTP ${response.status}).`);
-  }
-  return (await response.json()) as ScanHistoryResponse;
 }
 
 /** DELETE /scan/{scan_id} */
-export async function deleteScan(scanId: string): Promise<void> {
-  assertApiConfigured();
-  const response = await fetch(`${API_BASE}/scan/${encodeURIComponent(scanId)}`, {
-    method: "DELETE",
-    headers: { Accept: "application/json" },
-  });
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { detail?: string } | null;
-    throw new Error(body?.detail ?? `Could not delete this scan (HTTP ${response.status}).`);
-  }
+export function deleteScan(scanId: string): Promise<void> {
+  return api.delete<void>(`/scan/${encodeURIComponent(scanId)}`);
 }
 
 export function formatScanDate(iso?: string): string {

@@ -10,19 +10,10 @@
 //   GET /notifications    — alerts, warnings and announcements
 //   GET /analytics        — chart series (health, scans, brands, low stock)
 
-import { API_BASE, assertApiConfigured } from "./api-config";
+import { api } from "./api/client";
 
-async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
-  assertApiConfigured();
-  const response = await fetch(`${API_BASE}${path}`, {
-    headers: { Accept: "application/json" },
-    signal: signal ?? null,
-  });
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { detail?: string } | null;
-    throw new Error(body?.detail ?? `Request failed (HTTP ${response.status}).`);
-  }
-  return (await response.json()) as T;
+function get<T>(path: string, signal?: AbortSignal): Promise<T> {
+  return api.get<T>(path, { signal });
 }
 
 // ---------- KPIs / account ----------

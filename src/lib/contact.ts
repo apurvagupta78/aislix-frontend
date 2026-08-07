@@ -2,7 +2,7 @@
 // and emailed to hello@aislix.com by the FastAPI service on Railway. No email
 // sending happens client-side and nothing is faked here.
 
-import { API_BASE, assertApiConfigured } from "./api-config";
+import { api } from "./api/client";
 
 export const ENQUIRY_INBOX = "hello@aislix.com";
 export const SALES_INBOX = "sales@aislix.com";
@@ -36,23 +36,16 @@ export type EnquiryInput = {
 export type EnquiryResponse = { id: string; received_at?: string; delivered_to?: string };
 
 /** POST /contact/enquiries — stores the enquiry and emails {@link ENQUIRY_INBOX}. */
-export async function submitEnquiry(input: EnquiryInput): Promise<EnquiryResponse> {
-  assertApiConfigured();
-  const response = await fetch(`${API_BASE}/contact/enquiries`, {
-    method: "POST",
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
-    body: JSON.stringify({ ...input, deliver_to: ENQUIRY_INBOX }),
-  });
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { detail?: string } | null;
-    throw new Error(body?.detail ?? `Could not send your message (HTTP ${response.status}).`);
-  }
-  return (await response.json()) as EnquiryResponse;
+export function submitEnquiry(input: EnquiryInput): Promise<EnquiryResponse> {
+  return api.post<EnquiryResponse>(
+    "/contact/enquiries",
+    { ...input, deliver_to: ENQUIRY_INBOX },
+    { anonymous: true },
+  );
 }
 
 /** POST /contact/demo — books a demo slot request for the sales team. */
-export async function requestDemo(input: EnquiryInput): Promise<EnquiryResponse> {
-  assertApiConfigured();
+export function requestDemo(input: EnquiryInput): Promise<EnquiryResponse> {
   return submitEnquiry({ ...input, subject: "Book a demo" });
 }
 

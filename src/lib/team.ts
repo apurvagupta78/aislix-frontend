@@ -20,20 +20,17 @@
 //   POST   /users/bulk/disable
 //   POST   /users/bulk/delete
 
-import { API_BASE, assertApiConfigured } from "./api-config";
+import { api } from "./api/client";
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  assertApiConfigured();
-  const response = await fetch(`${API_BASE}${path}`, {
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
-    ...init,
-  });
-  if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { detail?: string } | null;
-    throw new Error(body?.detail ?? `Request failed (HTTP ${response.status}).`);
-  }
-  if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const method = (init?.method ?? "GET").toUpperCase();
+  const body = typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined;
+  const options = { signal: init?.signal ?? undefined };
+  if (method === "GET") return api.get<T>(path, options);
+  if (method === "DELETE") return api.delete<T>(path, options);
+  if (method === "POST") return api.post<T>(path, body, options);
+  if (method === "PUT") return api.put<T>(path, body, options);
+  return api.patch<T>(path, body, options);
 }
 
 // ---------- roles / RBAC ----------
