@@ -1,19 +1,25 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  Download,
-  Printer,
-  Share2,
-  ChevronLeft,
-  ChevronRight,
-  ZoomIn,
-  ZoomOut,
-} from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Download, Printer, Share2 } from "lucide-react";
+import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { detectedProducts, topBrands } from "@/lib/aislix-data";
+import { CardSkeleton, EmptyState, ErrorState } from "@/components/States";
+import {
+  fetchScanResult,
+  formatConfidence,
+  formatScanDate,
+  inventoryToCsv,
+  downloadBlob,
+} from "@/lib/scan-results";
+import { toUserMessage } from "@/lib/api/errors";
 
 export const Route = createFileRoute("/report")({
+  validateSearch: (search: Record<string, unknown>): { scan?: string } => {
+    const scan = search["scan"];
+    return typeof scan === "string" && scan.length > 0 ? { scan } : {};
+  },
   head: () => ({
     meta: [
       { title: "PDF Audit Report — Aislix" },
@@ -23,168 +29,222 @@ export const Route = createFileRoute("/report")({
       },
       { property: "og:title", content: "Shelf audit PDF report — Aislix" },
       { property: "og:description", content: "A shareable, print-ready retail shelf audit." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: ReportViewer,
 });
 
 function ReportViewer() {
+  const { scan } = Route.useSearch();
+  const navigate = useNavigate();
+
+  const query = useQuery({
+    queryKey: ["scan-result", scan],
+    queryFn: ({ signal }) => fetchScanResult(scan!, signal),
+    enabled: !!scan,
+    retry: false,
+  });
+
+  const data = query.data;
+  const summary = data?.summary;
+  const inventory = data?.inventory ?? [];
+  const brands = data?.charts?.top_brands ?? [];
+
+  const share = async () => {
+    const url = window.location.href;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Report link copied");
+    } catch {
+      toast.error("Could not copy the link");
+    }
+  };
+
   return (
     <AppShell
       title="Audit report"
-      description="AIS-RPT-10428 · MoreMart Superstore · Aisle 4 · Generated Aug 6, 2026"
+      description={
+        data
+          ? [data.store, data.aisle, formatScanDate(data.created_at)].filter(Boolean).join(" · ")
+          : "Print-ready shelf audit report"
+      }
       actions={
         <>
-          <Button variant="subtle" size="sm" className="rounded-xl">
+          <Button
+            variant="subtle"
+            size="sm"
+            className="rounded-xl"
+            onClick={share}
+            disabled={!data}
+          >
             <Share2 className="size-4" /> Share
           </Button>
-          <Button variant="subtle" size="sm" className="rounded-xl">
+          <Button
+            variant="subtle"
+            size="sm"
+            className="rounded-xl"
+            onClick={() => window.print()}
+            disabled={!data}
+          >
             <Printer className="size-4" /> Print
           </Button>
-          <Button variant="brand" size="sm" className="rounded-xl">
-            <Download className="size-4" /> Download PDF
+          <Button
+            variant="brand"
+            size="sm"
+            className="rounded-xl"
+            disabled={!data || inventory.length === 0}
+            onClick={() =>
+              downloadBlob(
+                inventoryToCsv(inventory),
+                `aislix-${data?.scan_id ?? "scan"}-report.csv`,
+                "text/csv",
+              )
+            }
+          >
+            <Download className="size-4" /> Download data
           </Button>
         </>
       }
     >
-      <div className="grid gap-4 lg:grid-cols-4">
-        <div className="card-surface order-2 h-fit p-5 lg:order-1">
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Pages
-          </p>
-          <div className="mt-4 space-y-3">
-            {["Summary", "Detections", "Compliance", "Actions"].map((p, i) => (
-              <div
-                key={p}
-                className={`cursor-pointer rounded-xl border p-3 transition-colors ${
-                  i === 0 ? "border-brand bg-brand-soft/50" : "border-border hover:border-brand/40"
-                }`}
-              >
-                <div className="aspect-[3/4] rounded-lg border border-border bg-surface" />
-                <p className="mt-2 text-xs font-medium">
-                  {i + 1}. {p}
+      {!scan ? (
+        <EmptyState
+          title="No scan selected"
+          description="Pick a scan from your history to generate its audit report."
+          action={
+            <Button asChild variant="brand" size="sm" className="rounded-xl">
+              <Link to="/history">Open scan history</Link>
+            </Button>
+          }
+        />
+      ) : query.isPending ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
+      ) : query.isError ? (
+        <ErrorState
+          title="Report unavailable"
+          description={toUserMessage(query.error)}
+          onRetry={() => query.refetch()}
+        />
+      ) : !data ? (
+        <EmptyState title="Report not found" description="This scan no longer exists." />
+      ) : (
+        <div className="bg-surface rounded-2xl p-4 sm:p-8">
+          <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-card p-8 shadow-card sm:p-12">
+            <div className="flex items-start justify-between gap-4 border-b border-border pb-6">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-widest text-brand">
+                  Aislix shelf audit
+                </p>
+                <h2 className="mt-2 text-xl font-semibold tracking-tight">
+                  {[data.store, data.aisle].filter(Boolean).join(" — ") || "Shelf scan"}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {formatScanDate(data.created_at) ?? "Date unavailable"}
                 </p>
               </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="order-1 lg:order-2 lg:col-span-3">
-          <div className="card-surface overflow-hidden">
-            <div className="flex items-center gap-2 border-b border-border px-5 py-3">
-              <Button variant="ghost" size="icon" className="rounded-lg">
-                <ChevronLeft className="size-4" />
-              </Button>
-              <span className="text-xs text-muted-foreground">Page 1 of 4</span>
-              <Button variant="ghost" size="icon" className="rounded-lg">
-                <ChevronRight className="size-4" />
-              </Button>
-              <div className="ml-auto flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="rounded-lg">
-                  <ZoomOut className="size-4" />
-                </Button>
-                <span className="text-xs text-muted-foreground">100%</span>
-                <Button variant="ghost" size="icon" className="rounded-lg">
-                  <ZoomIn className="size-4" />
-                </Button>
-              </div>
+              {summary?.shelf_health_score !== undefined && (
+                <Badge className="rounded-full bg-accent-green/12 text-accent-green hover:bg-accent-green/12">
+                  Health {Math.round(summary.shelf_health_score)}
+                </Badge>
+              )}
             </div>
 
-            <div className="bg-surface p-6 sm:p-10">
-              <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-card p-8 shadow-card sm:p-12">
-                <div className="flex items-start justify-between border-b border-border pb-6">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-widest text-brand">
-                      Aislix shelf audit
-                    </p>
-                    <h2 className="mt-2 text-xl font-semibold tracking-tight">
-                      MoreMart Superstore — Aisle 4
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Beverages · Bengaluru, KA · Aug 6, 2026 11:42
-                    </p>
-                  </div>
-                  <Badge className="rounded-full bg-accent-green/12 text-accent-green hover:bg-accent-green/12">
-                    Health 92
-                  </Badge>
+            <div className="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-4">
+              {[
+                { l: "Products", v: summary ? String(summary.total_products) : "—" },
+                { l: "Brands", v: summary ? String(summary.unique_brands) : "—" },
+                {
+                  l: "Confidence",
+                  v: summary ? formatConfidence(summary.average_confidence) : "—",
+                },
+                { l: "Low stock", v: summary ? String(summary.low_stock_products) : "—" },
+              ].map((k) => (
+                <div key={k.l} className="rounded-xl border border-border bg-surface p-3">
+                  <p className="text-lg font-semibold tracking-tight">{k.v}</p>
+                  <p className="text-[0.7rem] text-muted-foreground">{k.l}</p>
                 </div>
+              ))}
+            </div>
 
-                <div className="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                  {[
-                    { l: "Products", v: "218" },
-                    { l: "Brands", v: "24" },
-                    { l: "Confidence", v: "96.4%" },
-                    { l: "Empty facings", v: "4" },
-                  ].map((k) => (
-                    <div key={k.l} className="rounded-xl border border-border bg-surface p-3">
-                      <p className="text-lg font-semibold tracking-tight">{k.v}</p>
-                      <p className="text-[0.7rem] text-muted-foreground">{k.l}</p>
-                    </div>
-                  ))}
-                </div>
-
+            {data.executive_summary && (
+              <>
                 <h3 className="mt-8 text-sm font-semibold tracking-tight">Executive summary</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                  Shelf condition in Aisle 4 is healthy at 92/100, up 6 points week-on-week. 218
-                  facings were detected across 24 brands with 96.4% average model confidence. Four
-                  empty facings were identified, concentrated on the middle shelf. Promo compliance
-                  remains the weakest dimension at 65%, driven by a missing festive end-cap pack.
+                  {data.executive_summary}
                 </p>
+              </>
+            )}
 
+            {brands.length > 0 && (
+              <>
                 <h3 className="mt-7 text-sm font-semibold tracking-tight">Top brands by facings</h3>
                 <div className="mt-3 space-y-2">
-                  {topBrands.slice(0, 4).map((b) => (
+                  {brands.slice(0, 5).map((b) => (
                     <div key={b.brand} className="flex items-center gap-3">
-                      <span className="w-24 text-xs text-muted-foreground">{b.brand}</span>
+                      <span className="w-24 truncate text-xs text-muted-foreground">{b.brand}</span>
                       <div className="h-2 flex-1 overflow-hidden rounded-full bg-border">
                         <div
                           className="h-full rounded-full bg-gradient-brand"
-                          style={{ width: `${b.share * 4}%` }}
+                          style={{ width: `${Math.min(100, b.share)}%` }}
                         />
                       </div>
-                      <span className="w-10 text-right text-xs">{b.share}%</span>
+                      <span className="w-10 text-right text-xs">{Math.round(b.share)}%</span>
                     </div>
                   ))}
                 </div>
+              </>
+            )}
 
+            {inventory.length > 0 && (
+              <>
                 <h3 className="mt-7 text-sm font-semibold tracking-tight">Priority SKUs</h3>
                 <table className="mt-3 w-full text-sm">
                   <thead>
                     <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                      <th className="pb-2 font-medium">SKU</th>
-                      <th className="pb-2 text-right font-medium">Facings</th>
+                      <th className="pb-2 font-medium">Product</th>
+                      <th className="pb-2 text-right font-medium">Quantity</th>
                       <th className="pb-2 text-right font-medium">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {detectedProducts.slice(0, 5).map((p) => (
-                      <tr key={p.name} className="border-b border-border/60">
+                    {inventory.slice(0, 8).map((p, i) => (
+                      <tr key={`${p.name}-${i}`} className="border-b border-border/60">
                         <td className="py-2">{p.name}</td>
-                        <td className="py-2 text-right">{p.facings}</td>
-                        <td className="py-2 text-right text-muted-foreground">{p.status}</td>
+                        <td className="py-2 text-right">{p.quantity ?? "—"}</td>
+                        <td className="py-2 text-right text-muted-foreground">
+                          {p.stock_status ?? "—"}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </>
+            )}
 
-                <p className="mt-8 border-t border-border pt-4 text-[0.7rem] text-muted-foreground">
-                  Generated automatically by Aislix Retail Shelf Intelligence · Report
-                  AIS-RPT-10428 · Page 1 of 4
-                </p>
-              </div>
-            </div>
+            <p className="mt-8 border-t border-border pt-4 text-[0.7rem] text-muted-foreground">
+              Generated automatically by Aislix Retail Shelf Intelligence · Scan {data.scan_id}
+            </p>
           </div>
 
-          <div className="mt-4 flex justify-end gap-2">
-            <Button asChild variant="subtle" size="sm" className="rounded-xl">
-              <Link to="/results">Back to results</Link>
+          <div className="mx-auto mt-4 flex max-w-2xl justify-end gap-2">
+            <Button
+              variant="subtle"
+              size="sm"
+              className="rounded-xl"
+              onClick={() => navigate({ to: "/results", search: { scan: data.scan_id } })}
+            >
+              Back to results
             </Button>
             <Button asChild variant="brand" size="sm" className="rounded-xl">
               <Link to="/history">Scan history</Link>
             </Button>
           </div>
         </div>
-      </div>
+      )}
     </AppShell>
   );
 }
