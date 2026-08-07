@@ -10,7 +10,7 @@ export const Route = createFileRoute("/about")({
       {
         name: "description",
         content:
-          "Aislix Technologies builds computer-vision shelf auditing for supermarkets, FMCG brands, distributors and Kirana stores. Learn what we build and why.",
+          "Aislix Technologies builds computer-vision shelf auditing for supermarkets, FMCG brands, distributors and local stores. Learn what we build and why.",
       },
       { property: "og:title", content: "About Aislix Technologies" },
       {

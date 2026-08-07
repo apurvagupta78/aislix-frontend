@@ -34,7 +34,7 @@ export const scans: Scan[] = [
   },
   {
     id: "SCN-10427",
-    store: "Sri Balaji Kirana",
+    store: "Sri Balaji Local Store",
     aisle: "Rack 2 · Snacks",
     city: "Hyderabad",
     date: "Aug 6, 2026",
@@ -90,7 +90,7 @@ export const scans: Scan[] = [
   },
   {
     id: "SCN-10423",
-    store: "Daily Needs Kirana",
+    store: "Daily Needs Local Store",
     aisle: "Rack 5 · Staples",
     city: "Jaipur",
     date: "Aug 4, 2026",
@@ -160,7 +160,7 @@ export const scans: Scan[] = [
   },
   {
     id: "SCN-10418",
-    store: "Sri Balaji Kirana",
+    store: "Sri Balaji Local Store",
     aisle: "Rack 1 · Biscuits",
     city: "Hyderabad",
     date: "Aug 1, 2026",
@@ -216,7 +216,7 @@ export const scans: Scan[] = [
   },
   {
     id: "SCN-10414",
-    store: "Daily Needs Kirana",
+    store: "Daily Needs Local Store",
     aisle: "Rack 3 · Beverages",
     city: "Jaipur",
     date: "Jul 30, 2026",

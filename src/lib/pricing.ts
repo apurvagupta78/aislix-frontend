@@ -47,7 +47,7 @@ export const plans: Plan[] = [
   {
     id: "starter",
     name: "Starter",
-    tagline: "For Kirana stores and boutique retail chains",
+    tagline: "For local stores and boutique retail chains",
     monthlyPrice: 999,
     annualPrice: 999 * ANNUAL_MONTHS_BILLED,
     scanLimitLabel: "500 scans per month",

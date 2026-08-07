@@ -151,7 +151,7 @@ function Contact() {
             Talk to the team behind Aislix shelf intelligence
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Whether you run one Kirana store or a national FMCG portfolio, tell us what you need to
+            Whether you run one local store or a national FMCG portfolio, tell us what you need to
             see on your shelves and we will show you exactly how Aislix delivers it.
           </p>
         </div>

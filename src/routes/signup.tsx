@@ -19,7 +19,7 @@ export const Route = createFileRoute("/signup")({
       {
         name: "description",
         content:
-          "Sign up for Aislix and get 50 free AI shelf scans for your supermarket, distribution network or Kirana store.",
+          "Sign up for Aislix and get 50 free AI shelf scans for your supermarket, distribution network or local store.",
       },
       { property: "og:title", content: "Create your Aislix workspace" },
       { property: "og:description", content: "Start auditing retail shelves with AI in minutes." },
@@ -71,7 +71,7 @@ function SignupPage() {
               <SelectItem value="supermarket">Supermarket / Hypermarket</SelectItem>
               <SelectItem value="fmcg">FMCG brand</SelectItem>
               <SelectItem value="distributor">Distributor</SelectItem>
-              <SelectItem value="kirana">Kirana store</SelectItem>
+              <SelectItem value="local">local store</SelectItem>
             </SelectContent>
           </Select>
         </div>
