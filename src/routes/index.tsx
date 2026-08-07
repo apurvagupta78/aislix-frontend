@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ScanLine,
@@ -8,11 +9,13 @@ import {
   Camera,
   Cpu,
   FileText,
-  Check,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { plans } from "@/lib/aislix-data";
+import { SiteFooter } from "@/components/MarketingLayout";
+import { CycleToggle, PricingGrid } from "@/components/pricing/PricingPlans";
+import type { BillingCycle } from "@/lib/pricing";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -64,6 +67,8 @@ const steps = [
 ];
 
 function Landing() {
+  const [cycle, setCycle] = useState<BillingCycle>("monthly");
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-xl">
@@ -203,55 +208,34 @@ function Landing() {
       </section>
 
       <section id="pricing" className="border-t border-border py-24">
-        <div className="mx-auto max-w-6xl px-6">
+        <div className="mx-auto max-w-7xl px-6">
           <p className="text-xs font-medium uppercase tracking-widest text-brand">Pricing</p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
             Plans that scale from one Kirana to a national chain.
           </h2>
-          <div className="mt-12 grid gap-5 lg:grid-cols-3">
-            {plans.map((p) => (
-              <div
-                key={p.name}
-                className={
-                  p.popular
-                    ? "relative rounded-3xl border-2 border-brand bg-card p-7 shadow-lift"
-                    : "card-surface card-hover p-7"
-                }
-              >
-                {p.popular && (
-                  <span className="absolute -top-3 left-7 rounded-full bg-brand px-3 py-1 text-[0.7rem] font-medium text-brand-foreground">
-                    Most popular
-                  </span>
-                )}
-                <h3 className="text-base font-semibold">{p.name}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{p.tagline}</p>
-                <p className="mt-5 text-3xl font-semibold tracking-tight">
-                  {p.price}
-                  {p.price !== "Custom" && (
-                    <span className="text-sm font-normal text-muted-foreground"> /mo</span>
-                  )}
-                </p>
-                <p className="mt-1 text-sm text-brand">{p.scans}</p>
-                <ul className="mt-6 space-y-2.5">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex gap-2 text-sm text-muted-foreground">
-                      <Check className="mt-0.5 size-4 shrink-0 text-brand" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  asChild
-                  variant={p.popular ? "brand" : "subtle"}
-                  className="mt-7 w-full rounded-xl"
-                >
-                  <Link to="/signup">{p.price === "Custom" ? "Talk to sales" : "Get started"}</Link>
-                </Button>
-              </div>
-            ))}
+          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            Start free with 3 scans a day. Move to Starter at ₹999, unlimited scans on Professional
+            at ₹4,999, or talk to us about an Enterprise rollout.
+          </p>
+          <div className="mt-8">
+            <CycleToggle cycle={cycle} onChange={setCycle} />
+          </div>
+          <div className="mt-10">
+            <PricingGrid cycle={cycle} />
+          </div>
+          <div className="mt-8 flex flex-wrap gap-3">
+            <Button asChild variant="subtle" className="rounded-xl">
+              <Link to="/pricing">
+                Compare every feature <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+            <Button asChild variant="ghost" className="rounded-xl">
+              <Link to="/contact" search={{ subject: "Sales enquiry" }}>Talk to sales</Link>
+            </Button>
           </div>
         </div>
       </section>
+
 
       <section className="border-t border-border bg-surface py-20">
         <div className="mx-auto max-w-4xl px-6 text-center">
@@ -269,17 +253,8 @@ function Landing() {
         </div>
       </section>
 
-      <footer className="border-t border-border py-10">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-4 px-6">
-          <Logo />
-          <p className="text-sm text-muted-foreground">© 2026 Aislix. Retail shelf intelligence.</p>
-          <div className="ml-auto flex gap-5 text-sm text-muted-foreground">
-            <Link to="/login" className="hover:text-foreground">Log in</Link>
-            <Link to="/signup" className="hover:text-foreground">Sign up</Link>
-            <Link to="/dashboard" className="hover:text-foreground">Dashboard</Link>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
+
     </div>
   );
 }
