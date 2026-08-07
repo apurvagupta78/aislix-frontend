@@ -273,7 +273,7 @@ export async function fetchUser(id: string): Promise<OrgUser> {
   if (error) dbError(error, "Could not load the team member.");
   if (!data) notFound("Team member not found.");
   const [user] = await mapMembersToUsers([data as MemberRow]);
-  return user;
+  return user!;
 }
 
 /** Direct member creation is not supported without an existing account; use inviteUser instead. */
@@ -290,7 +290,7 @@ export async function updateUser(id: string, input: UserUpdateInput): Promise<Or
 
   const { data, error } = await supabase
     .from("organization_members")
-    .update(patch)
+    .update(patch as never)
     .eq("org_id", orgId)
     .eq("id", id)
     .select("id, user_id, role, status, store_ids, invited_email, created_at, last_active_at")
@@ -302,7 +302,7 @@ export async function updateUser(id: string, input: UserUpdateInput): Promise<Or
   }
 
   const [user] = await mapMembersToUsers([data as MemberRow]);
-  return user;
+  return user!;
 }
 
 export async function deleteUser(id: string): Promise<void> {
@@ -336,7 +336,7 @@ export async function inviteUser(input: UserInput): Promise<OrgUser> {
   if (error) dbError(error, "Could not invite the team member.");
 
   const [user] = await mapMembersToUsers([data as MemberRow]);
-  return user;
+  return user!;
 }
 
 /** No server-side email delivery exists; resending simply refreshes the invite timestamp. */
@@ -362,7 +362,7 @@ export async function setUserEnabled(id: string, enabled: boolean): Promise<OrgU
     .single();
   if (error) dbError(error, "Could not update the team member status.");
   const [user] = await mapMembersToUsers([data as MemberRow]);
-  return user;
+  return user!;
 }
 
 /** Password resets are handled by Supabase Auth directly, not this table. */
