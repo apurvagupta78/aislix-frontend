@@ -113,8 +113,10 @@ function TeamPage() {
   const [formUser, setFormUser] = useState<OrgUser | null>(null);
   const [drawerUser, setDrawerUser] = useState<OrgUser | null>(null);
   const [confirm, setConfirm] = useState<
-    | { kind: "toggle" | "delete"; user: OrgUser }
-    | { kind: "bulk-disable" | "bulk-delete" }
+    | { kind: "toggle"; user: OrgUser }
+    | { kind: "delete"; user: OrgUser }
+    | { kind: "bulk-disable"; user?: undefined }
+    | { kind: "bulk-delete"; user?: undefined }
     | null
   >(null);
 
