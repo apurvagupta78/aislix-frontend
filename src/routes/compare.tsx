@@ -46,6 +46,7 @@ type Metric = {
   value: (r: ScanResult) => string;
   raw: (r: ScanResult) => number | undefined;
   betterWhenHigher: boolean;
+  formatDelta?: (diff: number) => string;
 };
 
 const metrics: Metric[] = [
@@ -84,6 +85,7 @@ const metrics: Metric[] = [
     value: (r) => formatDuration(r.summary.processing_time_ms),
     raw: (r) => r.summary.processing_time_ms,
     betterWhenHigher: false,
+    formatDelta: (diff) => `${diff > 0 ? "+" : "-"}${formatDuration(Math.abs(diff))}`,
   },
 ];
 
@@ -91,10 +93,12 @@ function Delta({
   from,
   to,
   betterWhenHigher,
+  formatDelta,
 }: {
   from?: number | undefined;
   to?: number | undefined;
   betterWhenHigher: boolean;
+  formatDelta?: ((diff: number) => string) | undefined;
 }) {
   if (from === undefined || to === undefined || !Number.isFinite(from) || !Number.isFinite(to)) {
     return <span className="text-muted-foreground">—</span>;
@@ -115,8 +119,9 @@ function Delta({
       className={`inline-flex items-center gap-1 font-medium ${good ? "text-accent-green" : "text-destructive"}`}
     >
       <Icon className="size-3.5" />
-      {diff > 0 ? "+" : ""}
-      {Number.isInteger(diff) ? diff.toLocaleString() : diff.toFixed(1)}
+      {formatDelta
+        ? formatDelta(diff)
+        : `${diff > 0 ? "+" : ""}${Number.isInteger(diff) ? diff.toLocaleString() : diff.toFixed(1)}`}
       <span className="text-xs font-normal text-muted-foreground">{pct}</span>
     </span>
   );
@@ -222,6 +227,7 @@ function ComparePage() {
                           from={m.raw(left)}
                           to={m.raw(right)}
                           betterWhenHigher={m.betterWhenHigher}
+                          formatDelta={m.formatDelta}
                         />
                       </td>
                     </tr>
