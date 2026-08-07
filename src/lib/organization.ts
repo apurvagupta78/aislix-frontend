@@ -1,26 +1,18 @@
-// Organization & Store Management contract.
+// Organization & Store Management — live Supabase queries.
 //
-// Every value rendered by the organization module comes from these endpoints —
-// there is no local dummy data. Bindings target the future FastAPI service on
-// Railway (Supabase Auth for identity, Cashfree for billing).
-//
-//   GET    /organization
-//   GET    /stores
-//   POST   /stores
-//   PUT    /stores/{id}
-//   DELETE /stores/{id}
-//   POST   /stores/{id}/archive        POST /stores/{id}/restore
-//   GET    /stores/{id}                GET  /stores/{id}/metrics
-//   GET    /stores/{id}/scans          GET  /stores/{id}/health-trend
-//   GET    /stores/{id}/recommendations
-//   GET    /stores/{id}/team           POST /stores/{id}/team
-//   PUT    /stores/{id}/team/{memberId}   DELETE /stores/{id}/team/{memberId}
-//   POST   /stores/bulk/import         GET  /stores/bulk/export
-//   POST   /stores/bulk/archive        POST /stores/bulk/assign-users
+// Every value rendered by the organization module is sourced from the
+// database via the helpers in `@/lib/db/context`. There is no mock data.
 
 import type { TeamRole } from "@/lib/account";
 
-import { api } from "./api/client";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  dbError,
+  getMembership,
+  notFound,
+  requireOrgId,
+  requireUserId,
+} from "@/lib/db/context";
 
 // ---------- types ----------
 
@@ -143,165 +135,665 @@ export type StoreReport = {
   generated_at?: string;
 };
 
-// ---------- transport ----------
+// ---------- role mapping (TeamRole <-> app_role) ----------
+// account.ts's TeamRole uses "manager" where the database's app_role enum
+// uses "store_manager". Map between the two at the boundary.
 
-function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const method = (init?.method ?? "GET").toUpperCase();
-  const body = typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined;
-  const options = { signal: init?.signal ?? undefined };
-  if (method === "GET") return api.get<T>(path, options);
-  if (method === "DELETE") return api.delete<T>(path, options);
-  if (method === "POST") return api.post<T>(path, body, options);
-  if (method === "PUT") return api.put<T>(path, body, options);
-  return api.patch<T>(path, body, options);
+type AppRole = "owner" | "admin" | "store_manager" | "viewer";
+
+function toAppRole(role: TeamRole): AppRole {
+  return role === "manager" ? "store_manager" : role;
 }
 
-function toQuery(params: Record<string, string | number | undefined>): string {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value === undefined || value === "" || value === "all") continue;
-    search.set(key, String(value));
+function toTeamRole(role: AppRole): TeamRole {
+  return role === "store_manager" ? "manager" : role;
+}
+
+// ---------- store row mapping ----------
+
+function mapStoreRow(row: {
+  id: string;
+  name: string;
+  code: string | null;
+  address_line1: string | null;
+  address_line2: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  contact_name: string | null;
+  contact_phone: string | null;
+  status: string;
+  created_at: string;
+}): OrgStore {
+  const address = [row.address_line1, row.address_line2].filter(Boolean).join(", ") || undefined;
+  return {
+    id: row.id,
+    name: row.name,
+    store_code: row.code ?? undefined,
+    address,
+    city: row.city ?? undefined,
+    state: row.state ?? undefined,
+    country: row.country ?? undefined,
+    manager_name: row.contact_name ?? undefined,
+    contact_number: row.contact_phone ?? undefined,
+    status: row.status === "inactive" ? "archived" : "active",
+    created_at: row.created_at,
+  };
+}
+
+function storeInputToRow(input: StoreInput) {
+  return {
+    name: input.name,
+    code: input.store_code ?? null,
+    address_line1: input.address ?? null,
+    city: input.city ?? null,
+    state: input.state ?? null,
+    country: input.country ?? null,
+    contact_name: input.manager_name ?? null,
+    contact_phone: input.contact_number ?? null,
+  };
+}
+
+async function attachStoreMetrics(stores: OrgStore[]): Promise<OrgStore[]> {
+  if (stores.length === 0) return stores;
+  const ids = stores.map((s) => s.id);
+  const { data: scans, error } = await supabase
+    .from("shelf_scans")
+    .select(
+      "store_id, shelf_health_score, low_stock_count, out_of_stock_count, created_at, status",
+    )
+    .in("store_id", ids)
+    .order("created_at", { ascending: false });
+  if (error) dbError(error, "Could not load store metrics.");
+
+  const byStore = new Map<string, typeof scans>();
+  for (const scan of scans ?? []) {
+    if (!scan.store_id) continue;
+    const list = byStore.get(scan.store_id) ?? [];
+    list.push(scan);
+    byStore.set(scan.store_id, list);
   }
-  const query = search.toString();
-  return query ? `?${query}` : "";
+
+  return stores.map((store) => {
+    const rows = byStore.get(store.id) ?? [];
+    if (rows.length === 0) return store;
+    const scoreRows = rows.filter((r) => typeof r.shelf_health_score === "number");
+    const avgScore =
+      scoreRows.length > 0
+        ? scoreRows.reduce((sum, r) => sum + (r.shelf_health_score ?? 0), 0) / scoreRows.length
+        : undefined;
+    const metrics: StoreMetrics = {
+      shelf_health_score: avgScore,
+      last_scan_at: rows[0]?.created_at ?? null,
+      total_scans: rows.length,
+      low_stock_alerts: rows.reduce((sum, r) => sum + (r.low_stock_count ?? 0), 0),
+      out_of_stock_alerts: rows.reduce((sum, r) => sum + (r.out_of_stock_count ?? 0), 0),
+    };
+    return { ...store, metrics };
+  });
 }
 
 // ---------- organization ----------
 
-/** GET /organization */
-export const fetchOrganization = (signal?: AbortSignal) =>
-  request<Organization>("/organization", { signal: signal ?? null });
+export async function fetchOrganization(_signal?: AbortSignal): Promise<Organization> {
+  const orgId = await requireOrgId();
+
+  const { data: org, error: orgError } = await supabase
+    .from("organizations")
+    .select("id, name, logo_url, gstin")
+    .eq("id", orgId)
+    .maybeSingle();
+  if (orgError) dbError(orgError, "Could not load your organization.");
+  if (!org) notFound("Organization not found.");
+
+  const [{ count: totalStores }, { count: activeStores }, { count: archivedStores }] =
+    await Promise.all([
+      supabase.from("stores").select("id", { count: "exact", head: true }).eq("org_id", orgId),
+      supabase
+        .from("stores")
+        .select("id", { count: "exact", head: true })
+        .eq("org_id", orgId)
+        .eq("status", "active"),
+      supabase
+        .from("stores")
+        .select("id", { count: "exact", head: true })
+        .eq("org_id", orgId)
+        .eq("status", "inactive"),
+    ]);
+
+  const { count: activeUsers } = await supabase
+    .from("organization_members")
+    .select("id", { count: "exact", head: true })
+    .eq("org_id", orgId)
+    .eq("status", "active");
+
+  const { data: subscription } = await supabase
+    .from("subscriptions")
+    .select(
+      "status, current_period_end, scans_used, plan_id, subscription_plans(id, name, scan_quota)",
+    )
+    .eq("org_id", orgId)
+    .maybeSingle();
+
+  const plan = subscription?.subscription_plans as
+    | { id: string; name: string; scan_quota: number | null }
+    | null
+    | undefined;
+
+  return {
+    id: org.id,
+    name: org.name,
+    logo_url: org.logo_url,
+    plan_name: plan?.name,
+    plan_id: plan?.id ?? subscription?.plan_id,
+    account_status: (subscription?.status as AccountStatus | undefined) ?? undefined,
+    total_stores: totalStores ?? undefined,
+    active_stores: activeStores ?? undefined,
+    archived_stores: archivedStores ?? undefined,
+    active_users: activeUsers ?? undefined,
+    scans_used: subscription?.scans_used ?? undefined,
+    scans_included: plan?.scan_quota ?? null,
+    scans_remaining:
+      typeof plan?.scan_quota === "number" && typeof subscription?.scans_used === "number"
+        ? Math.max(0, plan.scan_quota - subscription.scans_used)
+        : plan?.scan_quota === null
+          ? null
+          : undefined,
+    billing_period_end: subscription?.current_period_end ?? null,
+    gst_number: org.gstin ?? null,
+  };
+}
 
 // ---------- stores ----------
 
-/** GET /stores */
-export const fetchStoreList = (query: StoreListQuery = {}, signal?: AbortSignal) =>
-  request<StoreListResponse>(
-    `/stores${toQuery({
-      search: query.search,
-      filter: query.filter,
-      page: query.page,
-      page_size: query.page_size,
-    })}`,
-    { signal: signal ?? null },
-  );
+export async function fetchStoreList(
+  query: StoreListQuery = {},
+  _signal?: AbortSignal,
+): Promise<StoreListResponse> {
+  const orgId = await requireOrgId();
+  const page = query.page ?? 1;
+  const pageSize = query.page_size ?? 20;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
 
-/** GET /stores/{id} */
-export const fetchStore = (id: string, signal?: AbortSignal) =>
-  request<OrgStore>(`/stores/${encodeURIComponent(id)}`, { signal: signal ?? null });
+  let builder = supabase.from("stores").select("*", { count: "exact" }).eq("org_id", orgId);
 
-/** POST /stores */
-export const createOrgStore = (input: StoreInput) =>
-  request<OrgStore>("/stores", { method: "POST", body: JSON.stringify(input) });
+  if (query.search) {
+    builder = builder.or(`name.ilike.%${query.search}%,code.ilike.%${query.search}%`);
+  }
+  if (query.filter === "active") builder = builder.eq("status", "active");
+  if (query.filter === "archived") builder = builder.eq("status", "inactive");
 
-/** PUT /stores/{id} */
-export const updateOrgStore = (id: string, input: StoreInput) =>
-  request<OrgStore>(`/stores/${encodeURIComponent(id)}`, {
-    method: "PUT",
-    body: JSON.stringify(input),
-  });
+  builder = builder.order("created_at", { ascending: false }).range(from, to);
 
-/** DELETE /stores/{id} */
-export const deleteOrgStore = (id: string) =>
-  request<void>(`/stores/${encodeURIComponent(id)}`, { method: "DELETE" });
+  const { data, error, count } = await builder;
+  if (error) dbError(error, "Could not load stores.");
 
-/** POST /stores/{id}/archive */
-export const archiveOrgStore = (id: string) =>
-  request<OrgStore>(`/stores/${encodeURIComponent(id)}/archive`, { method: "POST" });
+  let items = (data ?? []).map(mapStoreRow);
+  items = await attachStoreMetrics(items);
 
-/** POST /stores/{id}/restore */
-export const restoreOrgStore = (id: string) =>
-  request<OrgStore>(`/stores/${encodeURIComponent(id)}/restore`, { method: "POST" });
+  if (query.filter === "healthy") {
+    items = items.filter((s) => (s.metrics?.shelf_health_score ?? 0) >= 80);
+  }
+  if (query.filter === "alerts") {
+    items = items.filter(
+      (s) => (s.metrics?.out_of_stock_alerts ?? 0) > 0 || (s.metrics?.low_stock_alerts ?? 0) > 0,
+    );
+  }
+
+  return { items, total: count ?? items.length, page, page_size: pageSize };
+}
+
+export async function fetchStore(id: string, _signal?: AbortSignal): Promise<OrgStore> {
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("stores")
+    .select("*")
+    .eq("org_id", orgId)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) dbError(error, "Could not load the store.");
+  if (!data) notFound("Store not found.");
+  const [store] = await attachStoreMetrics([mapStoreRow(data)]);
+  return store;
+}
+
+export async function createOrgStore(input: StoreInput): Promise<OrgStore> {
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("stores")
+    .insert({ org_id: orgId, ...storeInputToRow(input) })
+    .select("*")
+    .single();
+  if (error) dbError(error, "Could not create the store.");
+  return mapStoreRow(data!);
+}
+
+export async function updateOrgStore(id: string, input: StoreInput): Promise<OrgStore> {
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("stores")
+    .update(storeInputToRow(input))
+    .eq("org_id", orgId)
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) dbError(error, "Could not update the store.");
+  return mapStoreRow(data!);
+}
+
+export async function deleteOrgStore(id: string): Promise<void> {
+  const orgId = await requireOrgId();
+  const { error } = await supabase.from("stores").delete().eq("org_id", orgId).eq("id", id);
+  if (error) dbError(error, "Could not delete the store.");
+}
+
+export async function archiveOrgStore(id: string): Promise<OrgStore> {
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("stores")
+    .update({ status: "inactive" })
+    .eq("org_id", orgId)
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) dbError(error, "Could not archive the store.");
+  return mapStoreRow(data!);
+}
+
+export async function restoreOrgStore(id: string): Promise<OrgStore> {
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("stores")
+    .update({ status: "active" })
+    .eq("org_id", orgId)
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) dbError(error, "Could not restore the store.");
+  return mapStoreRow(data!);
+}
 
 // ---------- store dashboard ----------
 
-/** GET /stores/{id}/metrics */
-export const fetchStoreMetrics = (id: string, signal?: AbortSignal) =>
-  request<StoreMetrics>(`/stores/${encodeURIComponent(id)}/metrics`, { signal: signal ?? null });
+export async function fetchStoreMetrics(
+  id: string,
+  _signal?: AbortSignal,
+): Promise<StoreMetrics> {
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("shelf_scans")
+    .select("shelf_health_score, low_stock_count, out_of_stock_count, created_at")
+    .eq("org_id", orgId)
+    .eq("store_id", id)
+    .order("created_at", { ascending: false });
+  if (error) dbError(error, "Could not load store metrics.");
 
-/** GET /stores/{id}/scans */
-export const fetchStoreScans = (id: string, limit = 10, signal?: AbortSignal) =>
-  request<{ items: StoreScan[]; total?: number }>(
-    `/stores/${encodeURIComponent(id)}/scans${toQuery({ limit })}`,
-    { signal: signal ?? null },
-  );
+  const rows = data ?? [];
+  const scoreRows = rows.filter((r) => typeof r.shelf_health_score === "number");
+  return {
+    shelf_health_score:
+      scoreRows.length > 0
+        ? scoreRows.reduce((sum, r) => sum + (r.shelf_health_score ?? 0), 0) / scoreRows.length
+        : undefined,
+    last_scan_at: rows[0]?.created_at ?? null,
+    total_scans: rows.length,
+    low_stock_alerts: rows.reduce((sum, r) => sum + (r.low_stock_count ?? 0), 0),
+    out_of_stock_alerts: rows.reduce((sum, r) => sum + (r.out_of_stock_count ?? 0), 0),
+  };
+}
 
-/** GET /stores/{id}/health-trend */
-export const fetchStoreHealthTrend = (id: string, days = 30, signal?: AbortSignal) =>
-  request<{ points: HealthTrendPoint[] }>(
-    `/stores/${encodeURIComponent(id)}/health-trend${toQuery({ days })}`,
-    { signal: signal ?? null },
-  );
+export async function fetchStoreScans(
+  id: string,
+  limit = 10,
+  _signal?: AbortSignal,
+): Promise<{ items: StoreScan[]; total?: number }> {
+  const orgId = await requireOrgId();
+  const { data, error, count } = await supabase
+    .from("shelf_scans")
+    .select(
+      "id, created_at, status, shelf_health_score, total_products, low_stock_count, out_of_stock_count",
+      { count: "exact" },
+    )
+    .eq("org_id", orgId)
+    .eq("store_id", id)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) dbError(error, "Could not load store scans.");
 
-/** GET /stores/{id}/recommendations */
-export const fetchStoreRecommendations = (id: string, signal?: AbortSignal) =>
-  request<{ items: StoreRecommendation[] }>(
-    `/stores/${encodeURIComponent(id)}/recommendations`,
-    { signal: signal ?? null },
-  );
+  const items: StoreScan[] = (data ?? []).map((row) => ({
+    scan_id: row.id,
+    captured_at: row.created_at,
+    status: row.status as StoreScan["status"],
+    shelf_health_score: row.shelf_health_score ?? undefined,
+    products_detected: row.total_products,
+    low_stock_products: row.low_stock_count,
+    out_of_stock_products: row.out_of_stock_count,
+  }));
 
-/** GET /stores/{id}/reports */
-export const fetchStoreReports = (id: string, signal?: AbortSignal) =>
-  request<{ items: StoreReport[] }>(`/stores/${encodeURIComponent(id)}/reports`, {
-    signal: signal ?? null,
-  });
+  return { items, total: count ?? items.length };
+}
+
+export async function fetchStoreHealthTrend(
+  id: string,
+  days = 30,
+  _signal?: AbortSignal,
+): Promise<{ points: HealthTrendPoint[] }> {
+  const orgId = await requireOrgId();
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabase
+    .from("shelf_analytics")
+    .select("period_date, avg_shelf_health")
+    .eq("org_id", orgId)
+    .eq("store_id", id)
+    .gte("period_date", since)
+    .order("period_date", { ascending: true });
+  if (error) dbError(error, "Could not load the health trend.");
+
+  const points: HealthTrendPoint[] = (data ?? []).map((row) => ({
+    date: row.period_date,
+    shelf_health_score: row.avg_shelf_health ?? undefined,
+  }));
+
+  return { points };
+}
+
+export async function fetchStoreRecommendations(
+  id: string,
+  _signal?: AbortSignal,
+): Promise<{ items: StoreRecommendation[] }> {
+  const orgId = await requireOrgId();
+  const { data: scans, error: scansError } = await supabase
+    .from("shelf_scans")
+    .select("id")
+    .eq("org_id", orgId)
+    .eq("store_id", id)
+    .order("created_at", { ascending: false })
+    .limit(5);
+  if (scansError) dbError(scansError, "Could not load store recommendations.");
+
+  const scanIds = (scans ?? []).map((s) => s.id);
+  if (scanIds.length === 0) return { items: [] };
+
+  const { data: results, error: resultsError } = await supabase
+    .from("scan_results")
+    .select("id, scan_id, recommendations")
+    .in("scan_id", scanIds);
+  if (resultsError) dbError(resultsError, "Could not load store recommendations.");
+
+  const items: StoreRecommendation[] = [];
+  for (const result of results ?? []) {
+    const recs = Array.isArray(result.recommendations) ? result.recommendations : [];
+    for (const rec of recs) {
+      if (rec && typeof rec === "object") {
+        const r = rec as Record<string, unknown>;
+        items.push({
+          id: `${result.id}-${items.length}`,
+          title: typeof r.title === "string" ? r.title : String(r.title ?? "Recommendation"),
+          detail: typeof r.detail === "string" ? r.detail : undefined,
+          impact: (r.impact as StoreRecommendation["impact"]) ?? undefined,
+          category: typeof r.category === "string" ? r.category : undefined,
+        });
+      }
+    }
+  }
+
+  return { items };
+}
+
+export async function fetchStoreReports(
+  id: string,
+  _signal?: AbortSignal,
+): Promise<{ items: StoreReport[] }> {
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("shelf_scans")
+    .select("id, shelf_label, created_at, status")
+    .eq("org_id", orgId)
+    .eq("store_id", id)
+    .eq("status", "completed")
+    .order("created_at", { ascending: false })
+    .limit(20);
+  if (error) dbError(error, "Could not load store reports.");
+
+  const items: StoreReport[] = (data ?? []).map((row) => ({
+    id: row.id,
+    label: row.shelf_label ?? "Shelf scan report",
+    generated_at: row.created_at,
+  }));
+
+  return { items };
+}
 
 // ---------- per-store team access ----------
 
-/** GET /stores/{id}/team */
-export const fetchStoreTeam = (id: string, signal?: AbortSignal) =>
-  request<{ items: StoreTeamMember[] }>(`/stores/${encodeURIComponent(id)}/team`, {
-    signal: signal ?? null,
+export async function fetchStoreTeam(
+  id: string,
+  _signal?: AbortSignal,
+): Promise<{ items: StoreTeamMember[] }> {
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("organization_members")
+    .select("id, user_id, role, status, store_ids, invited_email, created_at")
+    .eq("org_id", orgId)
+    .contains("store_ids", [id]);
+  if (error) dbError(error, "Could not load the store team.");
+
+  const rows = data ?? [];
+  const userIds = rows.map((r) => r.user_id).filter(Boolean);
+  const { data: profiles } = userIds.length
+    ? await supabase.from("profiles").select("id, full_name, email").in("id", userIds)
+    : { data: [] as { id: string; full_name: string | null; email: string | null }[] };
+  const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+  const items: StoreTeamMember[] = rows.map((row) => {
+    const profile = profileById.get(row.user_id);
+    return {
+      id: row.id,
+      name: profile?.full_name ?? undefined,
+      email: profile?.email ?? row.invited_email ?? "",
+      role: toTeamRole(row.role as AppRole),
+      status: row.status,
+      added_at: row.created_at,
+    };
   });
 
-/** POST /stores/{id}/team */
-export const addStoreMember = (id: string, input: { email: string; role: TeamRole }) =>
-  request<StoreTeamMember>(`/stores/${encodeURIComponent(id)}/team`, {
-    method: "POST",
-    body: JSON.stringify(input),
-  });
-
-/** PUT /stores/{id}/team/{memberId} */
-export const updateStoreMemberRole = (id: string, memberId: string, role: TeamRole) =>
-  request<StoreTeamMember>(
-    `/stores/${encodeURIComponent(id)}/team/${encodeURIComponent(memberId)}`,
-    { method: "PUT", body: JSON.stringify({ role }) },
-  );
-
-/** DELETE /stores/{id}/team/{memberId} */
-export const removeStoreMember = (id: string, memberId: string) =>
-  request<void>(`/stores/${encodeURIComponent(id)}/team/${encodeURIComponent(memberId)}`, {
-    method: "DELETE",
-  });
-
-// ---------- bulk operations (backend-bound, surfaced as coming soon in UI) ----------
-
-/** POST /stores/bulk/import — multipart CSV of stores. */
-export function importStoresCsv(file: File): Promise<{ created: number; failed: number }> {
-  const form = new FormData();
-  form.append("file", file);
-  return api.postForm<{ created: number; failed: number }>("/stores/bulk/import", form);
+  return { items };
 }
 
-/** GET /stores/bulk/export */
-export const exportStoreList = (filter?: StoreFilter) =>
-  request<{ download_url?: string; status?: string }>(
-    `/stores/bulk/export${toQuery({ filter })}`,
-  );
+export async function addStoreMember(
+  id: string,
+  input: { email: string; role: TeamRole },
+): Promise<StoreTeamMember> {
+  const orgId = await requireOrgId();
+  const inviterId = await requireUserId();
 
-/** POST /stores/bulk/archive */
-export const bulkArchiveStores = (ids: string[]) =>
-  request<{ archived: number }>("/stores/bulk/archive", {
-    method: "POST",
-    body: JSON.stringify({ store_ids: ids }),
-  });
+  const { data: existing } = await supabase
+    .from("organization_members")
+    .select("id, store_ids")
+    .eq("org_id", orgId)
+    .eq("invited_email", input.email)
+    .maybeSingle();
 
-/** POST /stores/bulk/assign-users */
-export const bulkAssignUsers = (input: { store_ids: string[]; emails: string[]; role: TeamRole }) =>
-  request<{ assigned: number }>("/stores/bulk/assign-users", {
-    method: "POST",
-    body: JSON.stringify(input),
+  if (existing) {
+    const storeIds = Array.from(new Set([...(existing.store_ids ?? []), id]));
+    const { data, error } = await supabase
+      .from("organization_members")
+      .update({ store_ids: storeIds, role: toAppRole(input.role) })
+      .eq("id", existing.id)
+      .select("id, role, status, invited_email, created_at")
+      .single();
+    if (error) dbError(error, "Could not add the store member.");
+    return {
+      id: data!.id,
+      email: data!.invited_email ?? input.email,
+      role: toTeamRole(data!.role as AppRole),
+      status: data!.status,
+      added_at: data!.created_at,
+    };
+  }
+
+  const { data, error } = await supabase
+    .from("organization_members")
+    .insert({
+      org_id: orgId,
+      user_id: inviterId,
+      role: toAppRole(input.role),
+      status: "invited",
+      invited_email: input.email,
+      invited_by: inviterId,
+      store_ids: [id],
+    })
+    .select("id, role, status, invited_email, created_at")
+    .single();
+  if (error) dbError(error, "Could not add the store member.");
+
+  return {
+    id: data!.id,
+    email: data!.invited_email ?? input.email,
+    role: toTeamRole(data!.role as AppRole),
+    status: data!.status,
+    added_at: data!.created_at,
+  };
+}
+
+export async function updateStoreMemberRole(
+  _id: string,
+  memberId: string,
+  role: TeamRole,
+): Promise<StoreTeamMember> {
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("organization_members")
+    .update({ role: toAppRole(role) })
+    .eq("org_id", orgId)
+    .eq("id", memberId)
+    .select("id, role, status, invited_email, created_at")
+    .single();
+  if (error) dbError(error, "Could not update the member role.");
+
+  return {
+    id: data!.id,
+    email: data!.invited_email ?? "",
+    role: toTeamRole(data!.role as AppRole),
+    status: data!.status,
+    added_at: data!.created_at,
+  };
+}
+
+export async function removeStoreMember(id: string, memberId: string): Promise<void> {
+  const orgId = await requireOrgId();
+  const { data, error: fetchError } = await supabase
+    .from("organization_members")
+    .select("store_ids")
+    .eq("org_id", orgId)
+    .eq("id", memberId)
+    .maybeSingle();
+  if (fetchError) dbError(fetchError, "Could not remove the store member.");
+  if (!data) return;
+
+  const storeIds = (data.store_ids ?? []).filter((sid: string) => sid !== id);
+  const { error } = await supabase
+    .from("organization_members")
+    .update({ store_ids: storeIds })
+    .eq("org_id", orgId)
+    .eq("id", memberId);
+  if (error) dbError(error, "Could not remove the store member.");
+}
+
+// ---------- bulk operations ----------
+
+function parseCsv(text: string): Record<string, string>[] {
+  const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
+  if (lines.length === 0) return [];
+  const headers = lines[0]!.split(",").map((h) => h.trim());
+  return lines.slice(1).map((line) => {
+    const cells = line.split(",").map((c) => c.trim());
+    const row: Record<string, string> = {};
+    headers.forEach((header, index) => {
+      row[header] = cells[index] ?? "";
+    });
+    return row;
   });
+}
+
+export async function importStoresCsv(file: File): Promise<{ created: number; failed: number }> {
+  const orgId = await requireOrgId();
+  const text = await file.text();
+  const rows = parseCsv(text);
+
+  let created = 0;
+  let failed = 0;
+
+  for (const row of rows) {
+    const name = row.name || row.Name;
+    if (!name) {
+      failed += 1;
+      continue;
+    }
+    const { error } = await supabase.from("stores").insert({
+      org_id: orgId,
+      name,
+      code: row.store_code || row.code || null,
+      address_line1: row.address || null,
+      city: row.city || null,
+      state: row.state || null,
+      country: row.country || null,
+      contact_name: row.manager_name || null,
+      contact_phone: row.contact_number || null,
+    });
+    if (error) failed += 1;
+    else created += 1;
+  }
+
+  return { created, failed };
+}
+
+export async function exportStoreList(
+  filter?: StoreFilter,
+): Promise<{ download_url?: string; status?: string }> {
+  const { items } = await fetchStoreList({ filter, page: 1, page_size: 1000 });
+  const headers = ["name", "store_code", "address", "city", "state", "country", "status"];
+  const lines = [headers.join(",")];
+  for (const store of items) {
+    lines.push(
+      headers
+        .map((key) => String((store as unknown as Record<string, unknown>)[key] ?? ""))
+        .join(","),
+    );
+  }
+  const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+  const download_url = URL.createObjectURL(blob);
+  return { download_url, status: "ready" };
+}
+
+export async function bulkArchiveStores(ids: string[]): Promise<{ archived: number }> {
+  const orgId = await requireOrgId();
+  const { error, count } = await supabase
+    .from("stores")
+    .update({ status: "inactive" })
+    .eq("org_id", orgId)
+    .in("id", ids)
+    .select("id", { count: "exact" });
+  if (error) dbError(error, "Could not archive the selected stores.");
+  return { archived: count ?? ids.length };
+}
+
+export async function bulkAssignUsers(input: {
+  store_ids: string[];
+  emails: string[];
+  role: TeamRole;
+}): Promise<{ assigned: number }> {
+  let assigned = 0;
+  for (const storeId of input.store_ids) {
+    for (const email of input.emails) {
+      await addStoreMember(storeId, { email, role: input.role });
+      assigned += 1;
+    }
+  }
+  return { assigned };
+}
 
 // ---------- formatting helpers (presentation only) ----------
 
