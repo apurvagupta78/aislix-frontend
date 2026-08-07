@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ScanLine,
@@ -8,11 +9,13 @@ import {
   Camera,
   Cpu,
   FileText,
-  Check,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
-import { plans } from "@/lib/aislix-data";
+import { SiteFooter } from "@/components/MarketingLayout";
+import { CycleToggle, PricingGrid } from "@/components/pricing/PricingPlans";
+import type { BillingCycle } from "@/lib/pricing";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({
