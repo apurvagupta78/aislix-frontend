@@ -100,6 +100,7 @@ export async function fetchScanResult(
   scanId: string,
   signal?: AbortSignal,
 ): Promise<ScanResult> {
+  assertApiConfigured();
   const response = await fetch(`${API_BASE}/scan/${encodeURIComponent(scanId)}`, {
     headers: { Accept: "application/json" },
     signal: signal ?? null,

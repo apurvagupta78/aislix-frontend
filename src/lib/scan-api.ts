@@ -58,6 +58,7 @@ export function submitScan(
     onUploadProgress?: (percent: number) => void;
   } = {},
 ): Promise<ScanResponse> {
+  assertApiConfigured();
   const { signal, onUploadProgress } = options;
   const url = `${API_BASE}${SCAN_ENDPOINT}`;
 

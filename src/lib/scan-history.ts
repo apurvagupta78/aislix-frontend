@@ -43,6 +43,7 @@ export async function fetchScanHistory(
   params: ScanHistoryQuery,
   signal?: AbortSignal,
 ): Promise<ScanHistoryResponse> {
+  assertApiConfigured();
   const search = new URLSearchParams();
   if (params.q) search.set("q", params.q);
   if (params.store && params.store !== "all") search.set("store", params.store);
