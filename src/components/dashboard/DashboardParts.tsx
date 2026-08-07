@@ -127,8 +127,8 @@ export function KpiCards({
 }: {
   kpis?: DashboardKpis | undefined;
   isLoading: boolean;
-  error?: Error | null;
-  onRetry?: () => void;
+  error?: Error | null | undefined;
+  onRetry?: (() => void) | undefined;
 }) {
   if (isLoading) {
     return (
@@ -281,8 +281,8 @@ export function ActivityTimeline({
 }: {
   items?: ActivityItem[] | undefined;
   isLoading: boolean;
-  error?: Error | null;
-  onRetry?: () => void;
+  error?: Error | null | undefined;
+  onRetry?: (() => void) | undefined;
 }) {
   if (isLoading) {
     return (
@@ -366,8 +366,8 @@ export function NotificationsPanel({
 }: {
   items?: DashboardNotification[] | undefined;
   isLoading: boolean;
-  error?: Error | null;
-  onRetry?: () => void;
+  error?: Error | null | undefined;
+  onRetry?: (() => void) | undefined;
 }) {
   if (isLoading) {
     return (
@@ -435,8 +435,8 @@ export function AccountSummaryPanel({
 }: {
   account?: AccountSummary | undefined;
   isLoading: boolean;
-  error?: Error | null;
-  onRetry?: () => void;
+  error?: Error | null | undefined;
+  onRetry?: (() => void) | undefined;
 }) {
   if (isLoading) {
     return (

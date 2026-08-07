@@ -50,8 +50,8 @@ function ChartFrame({
   action?: React.ReactNode;
   data?: SeriesPoint[] | undefined;
   isLoading: boolean;
-  error?: Error | null;
-  onRetry?: () => void;
+  error?: Error | null | undefined;
+  onRetry?: (() => void) | undefined;
   children: (rows: SeriesPoint[]) => React.ReactNode;
   className?: string;
 }) {
@@ -105,8 +105,8 @@ export function DashboardCharts({
 }: {
   analytics?: AnalyticsResponse | undefined;
   isLoading: boolean;
-  error?: Error | null;
-  onRetry?: () => void;
+  error?: Error | null | undefined;
+  onRetry?: (() => void) | undefined;
 }) {
   const [cadence, setCadence] = useState<"daily" | "weekly" | "monthly">("daily");
 
