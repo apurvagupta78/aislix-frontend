@@ -24,9 +24,13 @@
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-soft: var(--brand-soft);
   --color-brand-glow: var(--brand-glow);
+  --color-brand-muted: var(--brand-muted);
+  --color-accent-green: var(--accent-green);
+  --color-accent-green-soft: var(--accent-green-soft);
   --color-surface: var(--surface);
   --color-warning: var(--warning);
   --color-success: var(--success);
+
   --shadow-soft: var(--shadow-soft);
   --shadow-card: var(--shadow-card);
   --shadow-lift: var(--shadow-lift);
