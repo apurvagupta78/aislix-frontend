@@ -168,10 +168,12 @@ function Results() {
         <div className="space-y-4">
           <ScanResultHeader data={data} loading={loading} />
 
-          {processing ? (
+          {data?.status === "failed" ? (
+            <FailedState scanId={data.scan_id} onRetried={() => void query.refetch()} />
+          ) : processing ? (
             <ProcessingState scanId={data?.scan_id} />
           ) : (
-            <>
+
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <SummaryCard
                   label="Products detected"
