@@ -3,8 +3,12 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  Legend,
   Pie,
   PieChart,
+  PolarAngleAxis,
+  RadialBar,
+  RadialBarChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -13,7 +17,14 @@ import {
 import { BarChart3 } from "lucide-react";
 import { EmptyState, Skeleton } from "@/components/States";
 import { ResultSection } from "@/components/scan-results/ResultParts";
-import type { BrandShare, CategorySlice, ConfidenceBucket } from "@/lib/scan-results";
+import { normalizeConfidence } from "@/lib/scan-results";
+import type {
+  BrandShare,
+  CategorySlice,
+  ConfidenceBucket,
+  LowStockRow,
+  QuantityBucket,
+} from "@/lib/scan-results";
 
 const tooltipStyle = {
   borderRadius: 12,
@@ -156,6 +167,103 @@ export function CategoryDistributionChart({
         </Pie>
         <Tooltip contentStyle={tooltipStyle} />
       </PieChart>
+    </ChartFrame>
+  );
+}
+
+export function QuantityDistributionChart({
+  data,
+  loading,
+}: {
+  data?: QuantityBucket[] | undefined;
+  loading?: boolean | undefined;
+}) {
+  const rows = data ?? [];
+  return (
+    <ChartFrame
+      title="Product quantity distribution"
+      description="Detected facings grouped by quantity band."
+      loading={loading}
+      empty={rows.length === 0}
+      emptyText="Quantity bands appear here once the scan service returns inventory."
+    >
+      <BarChart data={rows} margin={{ left: -12, right: 8 }}>
+        <CartesianGrid vertical={false} stroke="var(--border)" />
+        <XAxis dataKey="bucket" {...axisProps} />
+        <YAxis allowDecimals={false} {...axisProps} />
+        <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [v, "Products"]} />
+        <Bar dataKey="count" fill="var(--chart-2)" radius={[8, 8, 0, 0]} />
+      </BarChart>
+    </ChartFrame>
+  );
+}
+
+export function LowStockSummaryChart({
+  data,
+  loading,
+}: {
+  data?: LowStockRow[] | undefined;
+  loading?: boolean | undefined;
+}) {
+  const rows = data ?? [];
+  return (
+    <ChartFrame
+      title="Low stock summary"
+      description="Low and out-of-stock facings by brand or category."
+      loading={loading}
+      empty={rows.length === 0}
+      emptyText="Low stock breakdown appears here once stock levels are returned."
+    >
+      <BarChart data={rows} margin={{ left: -12, right: 8 }}>
+        <CartesianGrid vertical={false} stroke="var(--border)" />
+        <XAxis dataKey="label" {...axisProps} />
+        <YAxis allowDecimals={false} {...axisProps} />
+        <Tooltip contentStyle={tooltipStyle} />
+        <Legend wrapperStyle={{ fontSize: 11 }} />
+        <Bar dataKey="low_stock" name="Low stock" stackId="s" fill="var(--chart-4)" radius={[0, 0, 0, 0]} />
+        <Bar dataKey="out_of_stock" name="Out of stock" stackId="s" fill="var(--destructive)" radius={[8, 8, 0, 0]} />
+      </BarChart>
+    </ChartFrame>
+  );
+}
+
+export function ShelfHealthChart({
+  score,
+  loading,
+}: {
+  score?: number | undefined;
+  loading?: boolean | undefined;
+}) {
+  const value = typeof score === "number" && Number.isFinite(score) ? normalizeConfidence(score) : undefined;
+  return (
+    <ChartFrame
+      title="Shelf health score"
+      description="Composite of availability, compliance and detection confidence."
+      loading={loading}
+      empty={value === undefined}
+      emptyText="The shelf health score appears here once the scan service returns it."
+    >
+      <RadialBarChart
+        data={[{ name: "Shelf health", value: Math.round(value ?? 0), fill: "var(--accent-green)" }]}
+        innerRadius="72%"
+        outerRadius="102%"
+        startAngle={210}
+        endAngle={-30}
+      >
+        <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+        <RadialBar dataKey="value" cornerRadius={12} background={{ fill: "var(--muted)" }} />
+        <text
+          x="50%"
+          y="52%"
+          textAnchor="middle"
+          className="fill-foreground text-3xl font-semibold tabular-nums"
+        >
+          {Math.round(value ?? 0)}
+        </text>
+        <text x="50%" y="66%" textAnchor="middle" className="fill-muted-foreground text-xs">
+          out of 100
+        </text>
+      </RadialBarChart>
     </ChartFrame>
   );
 }
