@@ -20,6 +20,7 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProcessingRouteImport } from './routes/processing'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as RefundsRouteImport } from './routes/refunds'
 import { Route as ReportRouteImport } from './routes/report'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as ScanRouteImport } from './routes/scan'
@@ -83,6 +84,11 @@ const ProfileRoute = ProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RefundsRoute = RefundsRouteImport.update({
+  id: '/refunds',
+  path: '/refunds',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReportRoute = ReportRouteImport.update({
   id: '/report',
   path: '/report',
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/processing': typeof ProcessingRoute
   '/profile': typeof ProfileRoute
+  '/refunds': typeof RefundsRoute
   '/report': typeof ReportRoute
   '/results': typeof ResultsRoute
   '/scan': typeof ScanRoute
@@ -151,6 +158,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/processing': typeof ProcessingRoute
   '/profile': typeof ProfileRoute
+  '/refunds': typeof RefundsRoute
   '/report': typeof ReportRoute
   '/results': typeof ResultsRoute
   '/scan': typeof ScanRoute
@@ -172,6 +180,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/processing': typeof ProcessingRoute
   '/profile': typeof ProfileRoute
+  '/refunds': typeof RefundsRoute
   '/report': typeof ReportRoute
   '/results': typeof ResultsRoute
   '/scan': typeof ScanRoute
@@ -194,6 +203,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/processing'
     | '/profile'
+    | '/refunds'
     | '/report'
     | '/results'
     | '/scan'
@@ -214,6 +224,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/processing'
     | '/profile'
+    | '/refunds'
     | '/report'
     | '/results'
     | '/scan'
@@ -234,6 +245,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/processing'
     | '/profile'
+    | '/refunds'
     | '/report'
     | '/results'
     | '/scan'
@@ -255,6 +267,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   ProcessingRoute: typeof ProcessingRoute
   ProfileRoute: typeof ProfileRoute
+  RefundsRoute: typeof RefundsRoute
   ReportRoute: typeof ReportRoute
   ResultsRoute: typeof ResultsRoute
   ScanRoute: typeof ScanRoute
@@ -343,6 +356,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/refunds': {
+      id: '/refunds'
+      path: '/refunds'
+      fullPath: '/refunds'
+      preLoaderRoute: typeof RefundsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/report': {
       id: '/report'
       path: '/report'
@@ -407,6 +427,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   ProcessingRoute: ProcessingRoute,
   ProfileRoute: ProfileRoute,
+  RefundsRoute: RefundsRoute,
   ReportRoute: ReportRoute,
   ResultsRoute: ResultsRoute,
   ScanRoute: ScanRoute,
