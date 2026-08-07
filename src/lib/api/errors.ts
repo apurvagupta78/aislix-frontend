@@ -80,10 +80,10 @@ export class ApiError extends Error {
   constructor(options: {
     message: string;
     kind: ApiErrorKind;
-    status?: number | null;
-    path?: string;
+    status?: number | null | undefined;
+    path?: string | undefined;
     body?: unknown;
-    fieldErrors?: Record<string, string>;
+    fieldErrors?: Record<string, string> | undefined;
   }) {
     super(options.message);
     this.name = "ApiError";
