@@ -1,0 +1,200 @@
+import type { ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
+import { Linkedin, Youtube } from "lucide-react";
+import { Logo } from "@/components/Logo";
+import { Button } from "@/components/ui/button";
+
+export function SiteHeader() {
+  return (
+    <header className="sticky top-0 z-40 border-b border-border bg-card/85 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-5 sm:px-8">
+        <Link to="/" aria-label="Aislix home">
+          <Logo />
+        </Link>
+        <nav className="ml-auto flex items-center gap-1 sm:gap-2">
+          <Button asChild variant="ghost" size="sm" className="hidden rounded-xl sm:inline-flex">
+            <Link to="/pricing">Pricing</Link>
+          </Button>
+          <Button asChild variant="ghost" size="sm" className="hidden rounded-xl sm:inline-flex">
+            <Link to="/contact">Contact</Link>
+          </Button>
+          <Button asChild variant="ghost" size="sm" className="rounded-xl">
+            <Link to="/login">Sign in</Link>
+          </Button>
+          <Button asChild variant="brand" size="sm" className="rounded-xl">
+            <Link to="/signup">Start free</Link>
+          </Button>
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+function ColumnTitle({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+      {children}
+    </p>
+  );
+}
+
+const itemClass = "text-sm text-muted-foreground transition-colors hover:text-foreground";
+
+function Soon({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-2 text-sm text-muted-foreground/70">
+      {label}
+      <span className="rounded-full bg-brand-soft px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-brand">
+        Soon
+      </span>
+    </span>
+  );
+}
+
+export function SiteFooter() {
+  return (
+    <footer className="border-t border-border bg-surface">
+      <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8">
+        <div className="grid gap-10 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
+          <div>
+            <Link to="/" aria-label="Aislix home">
+              <Logo />
+            </Link>
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
+              AI retail shelf intelligence for supermarkets, FMCG brands, distributors and Kirana
+              stores. Audit any shelf from a single photo.
+            </p>
+            <div className="mt-5 flex items-center gap-2">
+              <a
+                href="https://www.linkedin.com/company/aislix"
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label="Aislix on LinkedIn"
+                className="grid size-9 place-items-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:text-brand"
+              >
+                <Linkedin className="size-4" />
+              </a>
+              <a
+                href="https://x.com/aislix"
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label="Aislix on X (Twitter)"
+                className="grid size-9 place-items-center rounded-xl border border-border bg-card text-sm font-semibold text-muted-foreground transition-colors hover:text-brand"
+              >
+                X
+              </a>
+              <a
+                href="https://www.youtube.com/@aislix"
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label="Aislix on YouTube"
+                className="grid size-9 place-items-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:text-brand"
+              >
+                <Youtube className="size-4" />
+              </a>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <ColumnTitle>Product</ColumnTitle>
+            <ul className="space-y-2.5">
+              <li>
+                <a href="/#platform" className={itemClass}>Platform</a>
+              </li>
+              <li>
+                <a href="/#how" className={itemClass}>Features</a>
+              </li>
+              <li>
+                <Link to="/pricing" className={itemClass}>Pricing</Link>
+              </li>
+              <li>
+                <Link to="/contact" search={{ subject: "API access" }} className={itemClass}>
+                  API
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" search={{ subject: "Book a demo" }} className={itemClass}>
+                  Demo
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div className="space-y-3">
+            <ColumnTitle>Company</ColumnTitle>
+            <ul className="space-y-2.5">
+              <li>
+                <Link to="/about" className={itemClass}>About</Link>
+              </li>
+              <li>
+                <Link to="/contact" className={itemClass}>Contact</Link>
+              </li>
+              <li><Soon label="Careers" /></li>
+              <li><Soon label="Blog" /></li>
+            </ul>
+          </div>
+
+          <div className="space-y-3">
+            <ColumnTitle>Resources</ColumnTitle>
+            <ul className="space-y-2.5">
+              <li>
+                <Link to="/contact" search={{ subject: "Documentation" }} className={itemClass}>
+                  Documentation
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" search={{ subject: "Help & support" }} className={itemClass}>
+                  Help Center
+                </Link>
+              </li>
+              <li><Soon label="Status" /></li>
+              <li>
+                <Link to="/security" className={itemClass}>Security</Link>
+              </li>
+            </ul>
+          </div>
+
+          <div className="space-y-3">
+            <ColumnTitle>Legal</ColumnTitle>
+            <ul className="space-y-2.5">
+              <li>
+                <Link to="/privacy" className={itemClass}>Privacy Policy</Link>
+              </li>
+              <li>
+                <Link to="/terms" className={itemClass}>Terms of Service</Link>
+              </li>
+              <li>
+                <Link to="/cookies" className={itemClass}>Cookie Policy</Link>
+              </li>
+              <li>
+                <Link to="/refunds" className={itemClass}>Refund Policy</Link>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-12 flex flex-col gap-3 border-t border-border pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted-foreground">
+            © 2026 Aislix Technologies. All rights reserved.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Enquiries:{" "}
+            <a href="mailto:hello@aislix.com" className="text-brand hover:underline">
+              hello@aislix.com
+            </a>
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+export function MarketingPage({ children }: { children: ReactNode }) {
+  return (
+    <div className="min-h-screen bg-background">
+      <SiteHeader />
+      <main>{children}</main>
+      <SiteFooter />
+    </div>
+  );
+}
