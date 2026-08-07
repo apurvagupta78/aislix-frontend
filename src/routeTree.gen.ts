@@ -18,6 +18,7 @@ import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as OrganizationRouteImport } from './routes/organization'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProcessingRouteImport } from './routes/processing'
@@ -77,6 +78,11 @@ const HistoryRoute = HistoryRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrganizationRoute = OrganizationRouteImport.update({
+  id: '/organization',
+  path: '/organization',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PricingRoute = PricingRouteImport.update({
@@ -165,6 +171,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
+  '/organization': typeof OrganizationRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/processing': typeof ProcessingRoute
@@ -191,6 +198,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
+  '/organization': typeof OrganizationRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/processing': typeof ProcessingRoute
@@ -218,6 +226,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
+  '/organization': typeof OrganizationRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/processing': typeof ProcessingRoute
@@ -246,6 +255,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/history'
     | '/login'
+    | '/organization'
     | '/pricing'
     | '/privacy'
     | '/processing'
@@ -272,6 +282,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/history'
     | '/login'
+    | '/organization'
     | '/pricing'
     | '/privacy'
     | '/processing'
@@ -298,6 +309,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/history'
     | '/login'
+    | '/organization'
     | '/pricing'
     | '/privacy'
     | '/processing'
@@ -325,6 +337,7 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   HistoryRoute: typeof HistoryRoute
   LoginRoute: typeof LoginRoute
+  OrganizationRoute: typeof OrganizationRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProcessingRoute: typeof ProcessingRoute
@@ -405,6 +418,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/organization': {
+      id: '/organization'
+      path: '/organization'
+      fullPath: '/organization'
+      preLoaderRoute: typeof OrganizationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pricing': {
@@ -525,6 +545,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   HistoryRoute: HistoryRoute,
   LoginRoute: LoginRoute,
+  OrganizationRoute: OrganizationRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProcessingRoute: ProcessingRoute,
@@ -544,3 +565,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
