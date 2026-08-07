@@ -45,7 +45,8 @@ export function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-import { API_BASE, assertApiConfigured } from "./api-config";
+import { api } from "./api/client";
+import { uploadSingleImage } from "./api/uploads";
 
 /**
  * POST /scan — multipart upload of a single shelf image.
@@ -58,42 +59,13 @@ export function submitScan(
     onUploadProgress?: (percent: number) => void;
   } = {},
 ): Promise<ScanResponse> {
-  assertApiConfigured();
-  const { signal, onUploadProgress } = options;
-  const url = `${API_BASE}${SCAN_ENDPOINT}`;
-
-  return new Promise<ScanResponse>((resolve, reject) => {
-    const form = new FormData();
-    form.append("image", file, file.name);
-
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", url);
-    xhr.responseType = "json";
-
-    xhr.upload.onprogress = (event) => {
-      if (event.lengthComputable && onUploadProgress) {
-        onUploadProgress(Math.round((event.loaded / event.total) * 100));
-      }
-    };
-
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        resolve((xhr.response ?? { scan_id: "", status: "completed" }) as ScanResponse);
-      } else {
-        reject(new Error(readError(xhr) ?? `Scan failed (HTTP ${xhr.status}).`));
-      }
-    };
-    xhr.onerror = () => reject(new Error("Network error. Check your connection and try again."));
-    xhr.ontimeout = () => reject(new Error("The scan request timed out. Please try again."));
-    xhr.onabort = () => reject(new DOMException("Aborted", "AbortError"));
-
-    signal?.addEventListener("abort", () => xhr.abort(), { once: true });
-    xhr.send(form);
-  });
+  return uploadSingleImage<ScanResponse>(
+    file,
+    { signal: options.signal, onProgress: options.onUploadProgress },
+    SCAN_ENDPOINT,
+  );
 }
 
-function readError(xhr: XMLHttpRequest): string | null {
-  const body = xhr.response as { detail?: unknown; message?: unknown } | null;
-  const detail = body?.detail ?? body?.message;
-  return typeof detail === "string" ? detail : null;
-}
+/** GET /scan/{id}/status — polling hook for the processing screen. */
+export const fetchScanStatus = (scanId: string, signal?: AbortSignal) =>
+  api.get<ScanResponse>(`/scan/${encodeURIComponent(scanId)}/status`, { signal });

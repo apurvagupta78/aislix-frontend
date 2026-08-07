@@ -1,23 +1,16 @@
 /**
- * Shared configuration for the future FastAPI backend.
+ * Backwards-compatible shim.
  *
- * Until `VITE_SCAN_API_BASE` is set, every data module must fail fast with a
- * clear message instead of fetching a relative path — a relative fetch would
- * hit this app's own routes and return HTML, producing opaque 500s.
+ * The real configuration now lives in `src/lib/api/config.ts` and all requests
+ * go through `src/lib/api/client.ts`. This file only re-exports so existing
+ * imports keep working.
  */
-export const API_BASE = import.meta.env['VITE_SCAN_API_BASE'] ?? "";
+export { apiConfig } from "./api/config";
+export { ApiError, ApiNotConfiguredError, assertApiConfigured, toUserMessage } from "./api/errors";
 
-export const apiConfigured = API_BASE.length > 0;
+import { apiConfig } from "./api/config";
 
-export class ApiNotConfiguredError extends Error {
-  constructor() {
-    super(
-      "Backend not connected yet. Set VITE_SCAN_API_BASE to your Aislix API URL to load live data.",
-    );
-    this.name = "ApiNotConfiguredError";
-  }
-}
-
-export function assertApiConfigured(): void {
-  if (!apiConfigured) throw new ApiNotConfiguredError();
-}
+/** @deprecated use `apiConfig.baseUrl` */
+export const API_BASE = apiConfig.baseUrl;
+/** @deprecated use `apiConfig.configured` */
+export const apiConfigured = apiConfig.configured;
