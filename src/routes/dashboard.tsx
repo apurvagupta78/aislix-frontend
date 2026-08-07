@@ -68,12 +68,12 @@ function Card({
   className?: string;
 }) {
   return (
-    <section className={`card-surface p-6 ${className}`}>
+    <section className={`card-surface flex flex-col p-6 ${className}`}>
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
         {action}
       </div>
-      <div className="mt-5">{children}</div>
+      <div className="mt-5 flex-1">{children}</div>
     </section>
   );
 }
@@ -96,12 +96,12 @@ function Dashboard() {
     >
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((k) => (
-          <div key={k.label} className="card-surface p-5 transition-shadow hover:shadow-lift">
+          <div key={k.label} className="card-surface card-hover p-5">
             <div className="flex items-center justify-between">
               <span className="grid size-9 place-items-center rounded-xl bg-brand-soft text-brand">
                 <k.icon className="size-4" />
               </span>
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-brand">
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-accent-green">
                 <ArrowUpRight className="size-3" />
                 {k.delta}
               </span>
@@ -122,13 +122,13 @@ function Dashboard() {
             </span>
           }
         >
-          <div className="h-64">
+          <div className="h-72 min-h-64 sm:h-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={inventoryTrend}>
                 <defs>
                   <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--brand)" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="var(--brand)" stopOpacity={0} />
+                    <stop offset="0%" stopColor="var(--chart-2)" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="var(--chart-2)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -145,7 +145,7 @@ function Dashboard() {
                 <Area
                   type="monotone"
                   dataKey="products"
-                  stroke="var(--brand)"
+                  stroke="var(--chart-2)"
                   strokeWidth={2.5}
                   fill="url(#g1)"
                   name="Products detected"
@@ -160,7 +160,7 @@ function Dashboard() {
             <div
               className="grid size-40 place-items-center rounded-full"
               style={{
-                background: `conic-gradient(var(--brand) ${stats.shelfHealth}%, var(--border) 0)`,
+                background: `conic-gradient(var(--brand-glow) ${stats.shelfHealth}%, var(--border) 0)`,
               }}
             >
               <div className="grid size-32 place-items-center rounded-full bg-card">
@@ -170,7 +170,7 @@ function Dashboard() {
                 </div>
               </div>
             </div>
-            <Badge className="mt-5 rounded-full bg-brand-soft text-brand hover:bg-brand-soft">
+            <Badge className="mt-5 rounded-full bg-accent-green/12 text-accent-green hover:bg-accent-green/12">
               Healthy · +6 vs last week
             </Badge>
             <div className="mt-5 h-24 w-full">
@@ -179,7 +179,7 @@ function Dashboard() {
                   <Line
                     type="monotone"
                     dataKey="score"
-                    stroke="var(--brand)"
+                    stroke="var(--chart-2)"
                     strokeWidth={2.5}
                     dot={false}
                   />
@@ -231,7 +231,7 @@ function Dashboard() {
                 </div>
                 <Badge
                   variant="secondary"
-                  className="rounded-full bg-brand-soft text-brand hover:bg-brand-soft"
+                  className="rounded-full bg-accent-green/12 text-accent-green hover:bg-accent-green/12"
                 >
                   {s.confidence ? `${s.confidence}%` : "—"}
                 </Badge>
@@ -295,7 +295,7 @@ function Dashboard() {
                     fontSize: 12,
                   }}
                 />
-                <Bar dataKey="share" fill="var(--brand)" radius={[0, 8, 8, 0]} name="Share %" />
+                <Bar dataKey="share" fill="var(--chart-2)" radius={[0, 8, 8, 0]} name="Share %" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -319,7 +319,7 @@ function Dashboard() {
                 <Line
                   type="monotone"
                   dataKey="empty"
-                  stroke="var(--brand-glow)"
+                  stroke="var(--accent-green)"
                   strokeWidth={2.5}
                   dot={{ r: 3 }}
                   name="Empty facings"

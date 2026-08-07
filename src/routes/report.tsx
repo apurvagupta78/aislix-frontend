@@ -104,7 +104,7 @@ function ReportViewer() {
                       Beverages · Bengaluru, KA · Aug 6, 2026 11:42
                     </p>
                   </div>
-                  <Badge className="rounded-full bg-brand-soft text-brand hover:bg-brand-soft">
+                  <Badge className="rounded-full bg-accent-green/12 text-accent-green hover:bg-accent-green/12">
                     Health 92
                   </Badge>
                 </div>

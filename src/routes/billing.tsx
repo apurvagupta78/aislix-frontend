@@ -99,7 +99,7 @@ function Billing() {
             className={
               p.popular
                 ? "rounded-3xl border-2 border-brand bg-card p-6 shadow-card"
-                : "card-surface p-6"
+                : "card-surface card-hover p-6"
             }
           >
             <div className="flex items-center justify-between">
