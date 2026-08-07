@@ -97,11 +97,11 @@
   --border: oklch(0.929 0.013 255.508);
   --input: oklch(0.929 0.013 255.508);
   --ring: oklch(0.704 0.04 256.788);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --chart-1: oklch(0.395 0.088 245.2);
+  --chart-2: oklch(0.523 0.117 244.6);
+  --chart-3: oklch(0.625 0.131 243.1);
+  --chart-4: oklch(0.571 0.143 153.3);
+  --chart-5: oklch(0.782 0.068 238);
   --sidebar: oklch(0.984 0.003 247.858);
   --sidebar-foreground: oklch(0.129 0.042 264.695);
   --sidebar-primary: oklch(0.208 0.042 265.755);
@@ -111,18 +111,23 @@
   --sidebar-border: oklch(0.929 0.013 255.508);
   --sidebar-ring: oklch(0.704 0.04 256.788);
 
-  --brand: oklch(0.545 0.129 158.2);
-  --brand-foreground: oklch(0.99 0.005 150);
-  --brand-soft: oklch(0.965 0.03 158);
-  --brand-glow: oklch(0.68 0.13 160);
-  --surface: oklch(0.988 0.004 150);
-  --success: oklch(0.6 0.13 158);
+  /* Aislix brand: deep navy #09283e primary, logo green as accent only */
+  --brand: oklch(0.267 0.055 243.7);
+  --brand-foreground: oklch(0.985 0.004 240);
+  --brand-soft: oklch(0.951 0.013 244.3);
+  --brand-glow: oklch(0.395 0.088 245.2);
+  --brand-muted: oklch(0.523 0.117 244.6);
+  --accent-green: oklch(0.571 0.143 153.3);
+  --accent-green-soft: oklch(0.955 0.032 155);
+  --surface: oklch(0.98 0.006 240);
+  --success: oklch(0.571 0.143 153.3);
   --warning: oklch(0.75 0.15 70);
   --gradient-brand: linear-gradient(135deg, var(--brand), var(--brand-glow));
-  --gradient-hero: radial-gradient(1200px 600px at 50% -20%, color-mix(in oklab, var(--brand) 16%, transparent), transparent 70%);
-  --shadow-soft: 0 1px 2px 0 oklch(0.2 0.03 260 / 0.05);
-  --shadow-card: 0 1px 3px oklch(0.2 0.03 260 / 0.06), 0 8px 24px -12px oklch(0.2 0.03 260 / 0.12);
-  --shadow-lift: 0 2px 6px oklch(0.2 0.03 260 / 0.06), 0 24px 48px -20px oklch(0.2 0.03 260 / 0.22);
+  --gradient-hero: radial-gradient(1200px 600px at 50% -20%, color-mix(in oklab, var(--brand) 14%, transparent), transparent 70%);
+  --shadow-soft: 0 1px 2px 0 oklch(0.267 0.055 243.7 / 0.06);
+  --shadow-card: 0 1px 3px oklch(0.267 0.055 243.7 / 0.07), 0 8px 24px -12px oklch(0.267 0.055 243.7 / 0.14);
+  --shadow-lift: 0 2px 6px oklch(0.267 0.055 243.7 / 0.07), 0 24px 48px -20px oklch(0.267 0.055 243.7 / 0.24);
+
 }
 
 .dark {
