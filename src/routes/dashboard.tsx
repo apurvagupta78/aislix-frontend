@@ -68,12 +68,12 @@ function Card({
   className?: string;
 }) {
   return (
-    <section className={`card-surface p-6 ${className}`}>
+    <section className={`card-surface flex flex-col p-6 ${className}`}>
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
         {action}
       </div>
-      <div className="mt-5">{children}</div>
+      <div className="mt-5 flex-1">{children}</div>
     </section>
   );
 }
@@ -122,7 +122,7 @@ function Dashboard() {
             </span>
           }
         >
-          <div className="h-64">
+          <div className="h-72 min-h-64 sm:h-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={inventoryTrend}>
                 <defs>
