@@ -30,6 +30,7 @@ import { Route as ScanRouteImport } from './routes/scan'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as TeamRouteImport } from './routes/team'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as UploadRouteImport } from './routes/upload'
 import { Route as StoresIndexRouteImport } from './routes/stores.index'
@@ -140,6 +141,11 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TeamRoute = TeamRouteImport.update({
+  id: '/team',
+  path: '/team',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -183,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/upload': typeof UploadRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
@@ -210,6 +217,7 @@ export interface FileRoutesByTo {
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/upload': typeof UploadRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
@@ -238,6 +246,7 @@ export interface FileRoutesById {
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/upload': typeof UploadRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
@@ -267,6 +276,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/settings'
     | '/signup'
+    | '/team'
     | '/terms'
     | '/upload'
     | '/stores/$storeId'
@@ -294,6 +304,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/settings'
     | '/signup'
+    | '/team'
     | '/terms'
     | '/upload'
     | '/stores/$storeId'
@@ -321,6 +332,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/settings'
     | '/signup'
+    | '/team'
     | '/terms'
     | '/upload'
     | '/stores/$storeId'
@@ -349,6 +361,7 @@ export interface RootRouteChildren {
   SecurityRoute: typeof SecurityRoute
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
+  TeamRoute: typeof TeamRoute
   TermsRoute: typeof TermsRoute
   UploadRoute: typeof UploadRoute
   StoresStoreIdRoute: typeof StoresStoreIdRoute
@@ -504,6 +517,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/team': {
+      id: '/team'
+      path: '/team'
+      fullPath: '/team'
+      preLoaderRoute: typeof TeamRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -557,6 +577,7 @@ const rootRouteChildren: RootRouteChildren = {
   SecurityRoute: SecurityRoute,
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
+  TeamRoute: TeamRoute,
   TermsRoute: TermsRoute,
   UploadRoute: UploadRoute,
   StoresStoreIdRoute: StoresStoreIdRoute,

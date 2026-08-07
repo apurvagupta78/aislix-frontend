@@ -56,10 +56,10 @@ import {
 const PAGE_SIZE = 10;
 
 type Search = {
-  q?: string;
-  role?: UserRole | "all";
-  status?: UserStatus | "all";
-  page?: number;
+  q?: string | undefined;
+  role?: UserRole | "all" | undefined;
+  status?: UserStatus | "all" | undefined;
+  page?: number | undefined;
 };
 
 export const Route = createFileRoute("/team")({
@@ -119,7 +119,7 @@ function TeamPage() {
   >(null);
 
   const setSearch = (next: Partial<Search>) => {
-    void navigate({ to: "/team", search: (prev) => ({ ...prev, ...next }) });
+    void navigate({ to: "/team", search: (prev: Search) => ({ ...prev, ...next }) });
   };
 
   const usersQuery = useQuery({
@@ -483,7 +483,7 @@ function TeamPage() {
               ? `Delete ${selected.length} members?`
               : confirm?.kind === "bulk-disable"
                 ? `Disable ${selected.length} members?`
-                : confirm && "user" in confirm && confirm.user.status === "disabled"
+                : confirm?.kind === "toggle" && confirm.user.status === "disabled"
                   ? "Enable access?"
                   : "Disable access?"
         }
