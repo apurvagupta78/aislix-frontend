@@ -219,3 +219,16 @@
     linear-gradient(to bottom, color-mix(in oklab, var(--color-border) 70%, transparent) 1px, transparent 1px);
   background-size: 56px 56px;
 }
+
+@utility card-hover {
+  transition: box-shadow 220ms ease, transform 220ms ease, border-color 220ms ease;
+  &:hover {
+    box-shadow: var(--shadow-lift);
+    border-color: color-mix(in oklab, var(--color-brand) 22%, var(--color-border));
+    transform: translateY(-2px);
+  }
+}
+
+@utility bg-accent-tint {
+  background-color: color-mix(in oklab, var(--color-accent-green) 12%, transparent);
+}
