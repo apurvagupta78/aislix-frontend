@@ -20,6 +20,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OrganizationRouteImport } from './routes/organization'
+import { Route as PlatformRouteImport } from './routes/platform'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProcessingRouteImport } from './routes/processing'
@@ -94,6 +95,11 @@ const LoginRoute = LoginRouteImport.update({
 const OrganizationRoute = OrganizationRouteImport.update({
   id: '/organization',
   path: '/organization',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlatformRoute = PlatformRouteImport.update({
+  id: '/platform',
+  path: '/platform',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PricingRoute = PricingRouteImport.update({
@@ -209,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
   '/organization': typeof OrganizationRoute
+  '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/processing': typeof ProcessingRoute
@@ -242,6 +249,7 @@ export interface FileRoutesByTo {
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
   '/organization': typeof OrganizationRoute
+  '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/processing': typeof ProcessingRoute
@@ -276,6 +284,7 @@ export interface FileRoutesById {
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
   '/organization': typeof OrganizationRoute
+  '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/processing': typeof ProcessingRoute
@@ -311,6 +320,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/login'
     | '/organization'
+    | '/platform'
     | '/pricing'
     | '/privacy'
     | '/processing'
@@ -344,6 +354,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/login'
     | '/organization'
+    | '/platform'
     | '/pricing'
     | '/privacy'
     | '/processing'
@@ -377,6 +388,7 @@ export interface FileRouteTypes {
     | '/history'
     | '/login'
     | '/organization'
+    | '/platform'
     | '/pricing'
     | '/privacy'
     | '/processing'
@@ -411,6 +423,7 @@ export interface RootRouteChildren {
   HistoryRoute: typeof HistoryRoute
   LoginRoute: typeof LoginRoute
   OrganizationRoute: typeof OrganizationRoute
+  PlatformRoute: typeof PlatformRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   ProcessingRoute: typeof ProcessingRoute
@@ -510,6 +523,13 @@ declare module '@tanstack/react-router' {
       path: '/organization'
       fullPath: '/organization'
       preLoaderRoute: typeof OrganizationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/platform': {
+      id: '/platform'
+      path: '/platform'
+      fullPath: '/platform'
+      preLoaderRoute: typeof PlatformRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pricing': {
@@ -667,6 +687,7 @@ const rootRouteChildren: RootRouteChildren = {
   HistoryRoute: HistoryRoute,
   LoginRoute: LoginRoute,
   OrganizationRoute: OrganizationRoute,
+  PlatformRoute: PlatformRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   ProcessingRoute: ProcessingRoute,
