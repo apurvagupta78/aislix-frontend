@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, HelpCircle, Mail, ShieldCheck, Zap } from "lucide-react";
-import { Logo } from "@/components/Logo";
+import { SiteFooter, SiteHeader } from "@/components/MarketingLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -57,28 +57,17 @@ const faqs = [
 function Pricing() {
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
 
+  const navigate = Route.useNavigate();
+
   const onSelect = (plan: Plan) => {
-    // Checkout is intentionally not wired yet: route to sign-up / sales instead.
-    const target = plan.contactSales ? "mailto:sales@aislix.com" : "/signup";
-    if (plan.contactSales) window.location.href = target;
-    else window.location.assign(target);
+    // Checkout (Cashfree) is intentionally not wired yet: route to sales or sign-up.
+    if (plan.contactSales) void navigate({ to: "/contact", search: { subject: "Sales enquiry" } });
+    else void navigate({ to: "/signup" });
   };
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b border-border bg-card/85 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-5 sm:px-8">
-          <Logo />
-          <nav className="ml-auto flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm" className="rounded-xl">
-              <Link to="/login">Sign in</Link>
-            </Button>
-            <Button asChild variant="brand" size="sm" className="rounded-xl">
-              <Link to="/signup">Start free</Link>
-            </Button>
-          </nav>
-        </div>
-      </header>
+      <SiteHeader />
 
       <main>
         <section className="mx-auto max-w-7xl px-5 pb-4 pt-14 text-center sm:px-8 sm:pt-20">
@@ -174,9 +163,9 @@ function Pricing() {
             </div>
             <div className="flex flex-wrap gap-2">
               <Button asChild variant="subtle" className="rounded-xl">
-                <a href="mailto:sales@aislix.com">
+                <Link to="/contact" search={{ subject: "Sales enquiry" }}>
                   <Mail className="size-4" /> Contact sales
-                </a>
+                </Link>
               </Button>
               <Button asChild variant="brand" className="rounded-xl">
                 <Link to="/signup">
@@ -187,6 +176,7 @@ function Pricing() {
           </div>
         </section>
       </main>
+      <SiteFooter />
     </div>
   );
 }

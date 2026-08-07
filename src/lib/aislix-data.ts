@@ -284,43 +284,6 @@ export const invoices = [
   { id: "INV-2026-051", date: "May 1, 2026", amount: "₹9,999", plan: "Starter (Monthly)", status: "Paid" },
 ];
 
-export const plans = [
-  {
-    name: "Starter",
-    price: "₹9,999",
-    tagline: "For single-store Kirana and boutique retail",
-    scans: "250 shelf scans / month",
-    features: ["Shelf health scoring", "Out-of-stock alerts", "1 store, 3 users", "Email support"],
-  },
-  {
-    name: "Growth",
-    price: "₹24,999",
-    tagline: "For multi-store supermarkets and distributors",
-    scans: "2,000 shelf scans / month",
-    features: [
-      "Everything in Starter",
-      "Planogram compliance",
-      "Share-of-shelf analytics",
-      "Up to 25 stores, 20 users",
-      "PDF audit reports",
-    ],
-    popular: true,
-  },
-  {
-    name: "Enterprise",
-    price: "Custom",
-    tagline: "For FMCG brands and national retail chains",
-    scans: "Unlimited scans",
-    features: [
-      "Everything in Growth",
-      "Competitor benchmarking",
-      "API & ERP integrations",
-      "Dedicated success manager",
-      "SLA & on-prem options",
-    ],
-  },
-];
-
 export const stats = {
   totalScans: 1284,
   productsDetected: 74210,
