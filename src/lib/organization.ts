@@ -779,14 +779,14 @@ export async function exportStoreList(
 
 export async function bulkArchiveStores(ids: string[]): Promise<{ archived: number }> {
   const orgId = await requireOrgId();
-  const { error, count } = await supabase
+  const { error, data } = await supabase
     .from("stores")
     .update({ status: "inactive" })
     .eq("org_id", orgId)
     .in("id", ids)
-    .select("id", { count: "exact" });
+    .select("id");
   if (error) dbError(error, "Could not archive the selected stores.");
-  return { archived: count ?? ids.length };
+  return { archived: data?.length ?? ids.length };
 }
 
 export async function bulkAssignUsers(input: {
