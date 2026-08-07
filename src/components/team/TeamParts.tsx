@@ -90,7 +90,7 @@ const permissionOrder = Object.keys(permissionLabels) as PermissionKey[];
 
 // ---------- badges ----------
 
-export function RoleBadge({ role }: { role?: UserRole }) {
+export function RoleBadge({ role }: { role?: UserRole | undefined }) {
   if (!role) return <span className="text-sm text-muted-foreground">—</span>;
   const tone =
     role === "owner"
@@ -105,7 +105,7 @@ export function RoleBadge({ role }: { role?: UserRole }) {
   );
 }
 
-export function StatusBadge({ status }: { status?: UserStatus }) {
+export function StatusBadge({ status }: { status?: UserStatus | undefined }) {
   if (!status) return <span className="text-sm text-muted-foreground">—</span>;
   const tone: Record<UserStatus, string> = {
     active: "border-brand/30 bg-brand-soft text-brand",
@@ -180,8 +180,8 @@ function StorePicker({
   stores: AssignedStore[];
   selected: string[];
   onChange: (ids: string[]) => void;
-  loading?: boolean;
-  disabled?: boolean;
+  loading?: boolean | undefined;
+  disabled?: boolean | undefined;
 }) {
   const [filter, setFilter] = useState("");
   const visible = useMemo(
@@ -690,8 +690,8 @@ export function BulkActionsBar({
         <Button variant="subtle" size="sm" disabled={pending} onClick={() => setAssignOpen(true)}>
           <Store className="size-4" /> Assign stores
         </Button>
-        <Select disabled={pending} onValueChange={(value) => onChangeRole(value as UserRole)}>
-          <SelectTrigger size="sm" className="h-9 w-[150px]">
+        <Select disabled={pending ?? false} onValueChange={(value) => onChangeRole(value as UserRole)}>
+          <SelectTrigger className="h-9 w-[150px]">
             <SelectValue placeholder="Change role" />
           </SelectTrigger>
           <SelectContent>
