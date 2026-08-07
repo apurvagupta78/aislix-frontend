@@ -258,7 +258,13 @@ export function SeverityBadge({ severity }: { severity: Severity }) {
 
 const severityOrder: Record<Severity, number> = { high: 0, medium: 1, low: 2 };
 
-export function AlertsPanel({ alerts, loading }: { alerts?: ScanAlert[]; loading?: boolean }) {
+export function AlertsPanel({
+  alerts,
+  loading,
+}: {
+  alerts?: ScanAlert[] | undefined;
+  loading?: boolean | undefined;
+}) {
   const sorted = useMemo(
     () => [...(alerts ?? [])].sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity]),
     [alerts],
