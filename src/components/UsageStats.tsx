@@ -13,9 +13,9 @@ export function ProgressRing({
   value: number | null;
   size?: number;
   thickness?: number;
-  label?: string;
-  sublabel?: string;
-  tone?: "brand" | "green" | "warning";
+  label?: string | undefined;
+  sublabel?: string | undefined;
+  tone?: "brand" | "green" | "warning" | undefined;
 }) {
   const pct = value === null ? 100 : Math.max(0, Math.min(100, value));
   const color =
