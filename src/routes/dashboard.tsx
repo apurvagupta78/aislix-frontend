@@ -96,7 +96,7 @@ function Dashboard() {
     >
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((k) => (
-          <div key={k.label} className="card-surface p-5 transition-shadow hover:shadow-lift">
+          <div key={k.label} className="card-surface card-hover p-5">
             <div className="flex items-center justify-between">
               <span className="grid size-9 place-items-center rounded-xl bg-brand-soft text-brand">
                 <k.icon className="size-4" />
@@ -127,8 +127,8 @@ function Dashboard() {
               <AreaChart data={inventoryTrend}>
                 <defs>
                   <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--brand)" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="var(--brand)" stopOpacity={0} />
+                    <stop offset="0%" stopColor="var(--chart-2)" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="var(--chart-2)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -145,7 +145,7 @@ function Dashboard() {
                 <Area
                   type="monotone"
                   dataKey="products"
-                  stroke="var(--brand)"
+                  stroke="var(--chart-2)"
                   strokeWidth={2.5}
                   fill="url(#g1)"
                   name="Products detected"
@@ -160,7 +160,7 @@ function Dashboard() {
             <div
               className="grid size-40 place-items-center rounded-full"
               style={{
-                background: `conic-gradient(var(--brand) ${stats.shelfHealth}%, var(--border) 0)`,
+                background: `conic-gradient(var(--brand-glow) ${stats.shelfHealth}%, var(--border) 0)`,
               }}
             >
               <div className="grid size-32 place-items-center rounded-full bg-card">
@@ -179,7 +179,7 @@ function Dashboard() {
                   <Line
                     type="monotone"
                     dataKey="score"
-                    stroke="var(--brand)"
+                    stroke="var(--chart-2)"
                     strokeWidth={2.5}
                     dot={false}
                   />
@@ -295,7 +295,7 @@ function Dashboard() {
                     fontSize: 12,
                   }}
                 />
-                <Bar dataKey="share" fill="var(--brand)" radius={[0, 8, 8, 0]} name="Share %" />
+                <Bar dataKey="share" fill="var(--chart-2)" radius={[0, 8, 8, 0]} name="Share %" />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -319,7 +319,7 @@ function Dashboard() {
                 <Line
                   type="monotone"
                   dataKey="empty"
-                  stroke="var(--brand-glow)"
+                  stroke="var(--accent-green)"
                   strokeWidth={2.5}
                   dot={{ r: 3 }}
                   name="Empty facings"
