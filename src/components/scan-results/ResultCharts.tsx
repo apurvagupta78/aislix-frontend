@@ -147,6 +147,7 @@ export function CategoryDistributionChart({
           innerRadius={52}
           outerRadius={86}
           paddingAngle={2}
+          isAnimationActive={false}
           stroke="var(--card)"
         >
           {rows.map((row, i) => (
