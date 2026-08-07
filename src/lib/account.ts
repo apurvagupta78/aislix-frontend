@@ -158,7 +158,7 @@ export async function updateProfile(input: Partial<UserProfile>): Promise<UserPr
   if (input.job_title !== undefined) patch.job_title = input.job_title;
   if (input.timezone !== undefined) patch.timezone = input.timezone;
   if (Object.keys(patch).length) {
-    const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
+    const { error } = await supabase.from("profiles").update(patch as never).eq("id", userId);
     if (error) dbError(error, "Could not update your profile.");
   }
   return fetchProfile();
@@ -227,7 +227,7 @@ export async function updateCompany(input: Partial<CompanySettings>): Promise<Co
   if (input.gst_number !== undefined) patch.gstin = input.gst_number;
   if (input.address !== undefined) patch.address = { line1: input.address };
   if (Object.keys(patch).length) {
-    const { error } = await supabase.from("organizations").update(patch).eq("id", orgId);
+    const { error } = await supabase.from("organizations").update(patch as never).eq("id", orgId);
     if (error) dbError(error, "Could not update company settings.");
   }
   return fetchCompany();
@@ -322,7 +322,7 @@ export async function updateStore(id: string, input: Partial<StoreInput>): Promi
   if (input.country !== undefined) patch.country = input.country;
   const { data, error } = await supabase
     .from("stores")
-    .update(patch)
+    .update(patch as never)
     .eq("id", id)
     .eq("org_id", orgId)
     .select("id, name, code, address_line1, address_line2, city, state, country, profiles:manager_id(full_name)")
