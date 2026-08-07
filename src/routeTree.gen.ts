@@ -19,6 +19,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as HistoryRouteImport } from './routes/history'
+import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as OrganizationRouteImport } from './routes/organization'
 import { Route as PlatformRouteImport } from './routes/platform'
@@ -91,6 +92,11 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
 const HistoryRoute = HistoryRouteImport.update({
   id: '/history',
   path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HowItWorksRoute = HowItWorksRouteImport.update({
+  id: '/how-it-works',
+  path: '/how-it-works',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -220,6 +226,7 @@ export interface FileRoutesByFullPath {
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/history': typeof HistoryRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/organization': typeof OrganizationRoute
   '/platform': typeof PlatformRoute
@@ -255,6 +262,7 @@ export interface FileRoutesByTo {
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/history': typeof HistoryRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/organization': typeof OrganizationRoute
   '/platform': typeof PlatformRoute
@@ -291,6 +299,7 @@ export interface FileRoutesById {
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/history': typeof HistoryRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/organization': typeof OrganizationRoute
   '/platform': typeof PlatformRoute
@@ -328,6 +337,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/forgot-password'
     | '/history'
+    | '/how-it-works'
     | '/login'
     | '/organization'
     | '/platform'
@@ -363,6 +373,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/forgot-password'
     | '/history'
+    | '/how-it-works'
     | '/login'
     | '/organization'
     | '/platform'
@@ -398,6 +409,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/forgot-password'
     | '/history'
+    | '/how-it-works'
     | '/login'
     | '/organization'
     | '/platform'
@@ -434,6 +446,7 @@ export interface RootRouteChildren {
   FeaturesRoute: typeof FeaturesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   HistoryRoute: typeof HistoryRoute
+  HowItWorksRoute: typeof HowItWorksRoute
   LoginRoute: typeof LoginRoute
   OrganizationRoute: typeof OrganizationRoute
   PlatformRoute: typeof PlatformRoute
@@ -529,6 +542,13 @@ declare module '@tanstack/react-router' {
       path: '/history'
       fullPath: '/history'
       preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/how-it-works': {
+      id: '/how-it-works'
+      path: '/how-it-works'
+      fullPath: '/how-it-works'
+      preLoaderRoute: typeof HowItWorksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -706,6 +726,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeaturesRoute: FeaturesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   HistoryRoute: HistoryRoute,
+  HowItWorksRoute: HowItWorksRoute,
   LoginRoute: LoginRoute,
   OrganizationRoute: OrganizationRoute,
   PlatformRoute: PlatformRoute,
