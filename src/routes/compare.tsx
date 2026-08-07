@@ -92,8 +92,8 @@ function Delta({
   to,
   betterWhenHigher,
 }: {
-  from?: number;
-  to?: number;
+  from?: number | undefined;
+  to?: number | undefined;
   betterWhenHigher: boolean;
 }) {
   if (from === undefined || to === undefined || !Number.isFinite(from) || !Number.isFinite(to)) {
