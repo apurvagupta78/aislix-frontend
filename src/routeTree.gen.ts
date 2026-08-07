@@ -35,6 +35,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TeamRouteImport } from './routes/team'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as UploadRouteImport } from './routes/upload'
+import { Route as UsersRouteImport } from './routes/users'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as StoresIndexRouteImport } from './routes/stores.index'
 import { Route as StoresStoreIdRouteImport } from './routes/stores.$storeId'
@@ -169,6 +170,11 @@ const UploadRoute = UploadRouteImport.update({
   path: '/upload',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UsersRoute = UsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
@@ -212,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/upload': typeof UploadRoute
+  '/users': typeof UsersRoute
   '/verify-email': typeof VerifyEmailRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
@@ -243,6 +250,7 @@ export interface FileRoutesByTo {
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/upload': typeof UploadRoute
+  '/users': typeof UsersRoute
   '/verify-email': typeof VerifyEmailRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores': typeof StoresIndexRoute
@@ -275,6 +283,7 @@ export interface FileRoutesById {
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/upload': typeof UploadRoute
+  '/users': typeof UsersRoute
   '/verify-email': typeof VerifyEmailRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
@@ -308,6 +317,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/terms'
     | '/upload'
+    | '/users'
     | '/verify-email'
     | '/stores/$storeId'
     | '/stores/'
@@ -339,6 +349,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/terms'
     | '/upload'
+    | '/users'
     | '/verify-email'
     | '/stores/$storeId'
     | '/stores'
@@ -370,6 +381,7 @@ export interface FileRouteTypes {
     | '/team'
     | '/terms'
     | '/upload'
+    | '/users'
     | '/verify-email'
     | '/stores/$storeId'
     | '/stores/'
@@ -402,6 +414,7 @@ export interface RootRouteChildren {
   TeamRoute: typeof TeamRoute
   TermsRoute: typeof TermsRoute
   UploadRoute: typeof UploadRoute
+  UsersRoute: typeof UsersRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   StoresStoreIdRoute: typeof StoresStoreIdRoute
   StoresIndexRoute: typeof StoresIndexRoute
@@ -591,6 +604,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UploadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/verify-email': {
       id: '/verify-email'
       path: '/verify-email'
@@ -642,6 +662,7 @@ const rootRouteChildren: RootRouteChildren = {
   TeamRoute: TeamRoute,
   TermsRoute: TermsRoute,
   UploadRoute: UploadRoute,
+  UsersRoute: UsersRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   StoresStoreIdRoute: StoresStoreIdRoute,
   StoresIndexRoute: StoresIndexRoute,
