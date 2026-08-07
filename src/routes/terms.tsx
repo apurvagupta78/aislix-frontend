@@ -38,7 +38,7 @@ export const Route = createFileRoute("/terms")({
           bullets: [
             "Upload images you do not have the right to capture or process.",
             "Upload content containing identifiable individuals as the subject of the scan, or any unlawful material.",
-            "Reverse engineer, resell or白 relabel the platform without a written agreement.",
+            "Reverse engineer, resell or white-label the platform without a written agreement.",
             "Circumvent scan limits, rate limits or the fair usage policy through automation.",
             "Probe, scan or disrupt platform security or another customer's workspace.",
           ],
