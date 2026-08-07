@@ -93,13 +93,14 @@ export type ScanResult = {
   };
 };
 
-const API_BASE = import.meta.env['VITE_SCAN_API_BASE'] ?? "";
+import { API_BASE, assertApiConfigured } from "./api-config";
 
 /** GET /scan/{scan_id} — full result payload for one scan. */
 export async function fetchScanResult(
   scanId: string,
   signal?: AbortSignal,
 ): Promise<ScanResult> {
+  assertApiConfigured();
   const response = await fetch(`${API_BASE}/scan/${encodeURIComponent(scanId)}`, {
     headers: { Accept: "application/json" },
     signal: signal ?? null,

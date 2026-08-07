@@ -10,9 +10,10 @@
 //   GET /notifications    — alerts, warnings and announcements
 //   GET /analytics        — chart series (health, scans, brands, low stock)
 
-const API_BASE = import.meta.env['VITE_SCAN_API_BASE'] ?? "";
+import { API_BASE, assertApiConfigured } from "./api-config";
 
 async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
+  assertApiConfigured();
   const response = await fetch(`${API_BASE}${path}`, {
     headers: { Accept: "application/json" },
     signal: signal ?? null,

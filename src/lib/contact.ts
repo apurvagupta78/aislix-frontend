@@ -2,7 +2,7 @@
 // and emailed to hello@aislix.com by the FastAPI service on Railway. No email
 // sending happens client-side and nothing is faked here.
 
-const API_BASE = import.meta.env['VITE_SCAN_API_BASE'] ?? "";
+import { API_BASE, assertApiConfigured } from "./api-config";
 
 export const ENQUIRY_INBOX = "hello@aislix.com";
 export const SALES_INBOX = "sales@aislix.com";
@@ -37,6 +37,7 @@ export type EnquiryResponse = { id: string; received_at?: string; delivered_to?:
 
 /** POST /contact/enquiries — stores the enquiry and emails {@link ENQUIRY_INBOX}. */
 export async function submitEnquiry(input: EnquiryInput): Promise<EnquiryResponse> {
+  assertApiConfigured();
   const response = await fetch(`${API_BASE}/contact/enquiries`, {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
@@ -51,6 +52,7 @@ export async function submitEnquiry(input: EnquiryInput): Promise<EnquiryRespons
 
 /** POST /contact/demo — books a demo slot request for the sales team. */
 export async function requestDemo(input: EnquiryInput): Promise<EnquiryResponse> {
+  assertApiConfigured();
   return submitEnquiry({ ...input, subject: "Book a demo" });
 }
 
