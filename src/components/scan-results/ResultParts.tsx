@@ -54,10 +54,10 @@ export function ResultSection({
   className,
 }: {
   title: string;
-  description?: string;
-  actions?: React.ReactNode;
+  description?: string | undefined;
+  actions?: React.ReactNode | undefined;
   children: React.ReactNode;
-  className?: string;
+  className?: string | undefined;
 }) {
   return (
     <section className={cn("card-surface p-5 sm:p-6", className)}>
@@ -85,10 +85,10 @@ export function SummaryCard({
   accent,
 }: {
   label: string;
-  value?: string | number;
-  hint?: string;
-  loading?: boolean;
-  accent?: boolean;
+  value?: string | number | undefined;
+  hint?: string | undefined;
+  loading?: boolean | undefined;
+  accent?: boolean | undefined;
 }) {
   return (
     <div className="card-surface card-hover p-4 sm:p-5">
@@ -117,9 +117,9 @@ export function AnnotatedImageViewer({
   scanId,
   loading,
 }: {
-  src?: string;
-  scanId?: string;
-  loading?: boolean;
+  src?: string | undefined;
+  scanId?: string | undefined;
+  loading?: boolean | undefined;
 }) {
   const [zoom, setZoom] = useState(1);
   const [fullscreen, setFullscreen] = useState(false);
@@ -305,8 +305,8 @@ export function RecommendationsPanel({
   recommendations,
   loading,
 }: {
-  recommendations?: ScanRecommendation[];
-  loading?: boolean;
+  recommendations?: ScanRecommendation[] | undefined;
+  loading?: boolean | undefined;
 }) {
   return (
     <ResultSection
@@ -378,9 +378,9 @@ export function InventoryTable({
   scanId,
   loading,
 }: {
-  items?: InventoryItem[];
-  scanId?: string;
-  loading?: boolean;
+  items?: InventoryItem[] | undefined;
+  scanId?: string | undefined;
+  loading?: boolean | undefined;
 }) {
   const rows = items ?? [];
   const [query, setQuery] = useState("");
@@ -440,8 +440,8 @@ export function InventoryTable({
   }: {
     label: string;
     sortKey: SortKey;
-    className?: string;
-    numeric?: boolean;
+    className?: string | undefined;
+    numeric?: boolean | undefined;
   }) => {
     const active = sort.key === sortKey;
     const Icon = !active ? ArrowUpDown : sort.dir === "asc" ? ArrowUp : ArrowDown;

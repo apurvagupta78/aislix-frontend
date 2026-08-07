@@ -73,8 +73,8 @@ export function TopBrandsChart({
   data,
   loading,
 }: {
-  data?: BrandShare[];
-  loading?: boolean;
+  data?: BrandShare[] | undefined;
+  loading?: boolean | undefined;
 }) {
   const rows = data ?? [];
   return (
@@ -100,8 +100,8 @@ export function ConfidenceDistributionChart({
   data,
   loading,
 }: {
-  data?: ConfidenceBucket[];
-  loading?: boolean;
+  data?: ConfidenceBucket[] | undefined;
+  loading?: boolean | undefined;
 }) {
   const rows = data ?? [];
   return (
@@ -127,8 +127,8 @@ export function CategoryDistributionChart({
   data,
   loading,
 }: {
-  data?: CategorySlice[];
-  loading?: boolean;
+  data?: CategorySlice[] | undefined;
+  loading?: boolean | undefined;
 }) {
   const rows = data ?? [];
   return (

@@ -37,7 +37,7 @@ import {
 
 export const Route = createFileRoute("/results")({
   validateSearch: (search: Record<string, unknown>) => ({
-    scan: typeof search.scan === "string" ? search.scan : undefined,
+    scan: typeof search['scan'] === "string" ? (search['scan'] as string) : undefined,
   }),
   head: () => ({
     meta: [
@@ -222,7 +222,13 @@ function Results() {
   );
 }
 
-function DownloadsPanel({ data, loading }: { data?: ScanResult; loading?: boolean }) {
+function DownloadsPanel({
+  data,
+  loading,
+}: {
+  data?: ScanResult | undefined;
+  loading?: boolean | undefined;
+}) {
   const inventory = data?.inventory ?? [];
   const imageUrl = data?.downloads?.annotated_image_url ?? data?.annotated_image_url;
 
