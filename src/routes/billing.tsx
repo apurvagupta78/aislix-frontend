@@ -492,7 +492,7 @@ function Billing() {
             />
             <StatCard
               label="Remaining scans"
-              value={remaining === null ? "Unlimited" : formatNumber(remaining)}
+              value={!usage ? "—" : remaining === null ? "Unlimited" : formatNumber(remaining)}
               icon={<Package className="size-4" />}
               accent="green"
             />
