@@ -122,6 +122,17 @@ function Results() {
           >
             Next <ArrowRight className="size-4" />
           </Button>
+          <Button asChild variant="subtle" size="sm" className="rounded-xl">
+            <Link to="/compare" search={scan ? { a: scan } : {}}>
+              Compare
+            </Link>
+          </Button>
+          <Button asChild variant="subtle" size="sm" className="rounded-xl">
+            <Link to="/history">Scan history</Link>
+          </Button>
+          <Button asChild variant="ghost" size="sm" className="rounded-xl">
+            <Link to="/dashboard">Dashboard</Link>
+          </Button>
         </div>
       }
     >

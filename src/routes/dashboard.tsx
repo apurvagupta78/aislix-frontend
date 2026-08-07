@@ -109,7 +109,7 @@ function Dashboard() {
         <div className="lg:col-span-2">
           <RecentScansTable />
         </div>
-        <div className="space-y-4">
+        <div className="space-y-4" id="notifications">
           <Panel title="Account summary">
             <AccountSummaryPanel
               account={dashboard.data?.account}
