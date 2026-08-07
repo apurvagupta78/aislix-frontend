@@ -48,22 +48,19 @@ export const Route = createFileRoute("/scan")({
   component: ScanPage,
 });
 
-type Phase = "idle" | "uploading" | "analyzing" | "error";
+type Phase = "idle" | "uploading" | "error";
 
 type Attachment = { id: string; file: File; url: string };
 
 function ScanPage() {
-  const navigate = useNavigate();
-
   const [items, setItems] = useState<Attachment[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
 
   const [phase, setPhase] = useState<Phase>("idle");
-  const [stageIndex, setStageIndex] = useState(0);
-  const [progress, setProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [scanId, setScanId] = useState<string | null>(null);
+  const [rawResponse, setRawResponse] = useState<string | null>(null);
+  const [responseStatus, setResponseStatus] = useState<number | null>(null);
 
   const cameraInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
