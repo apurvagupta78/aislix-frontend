@@ -192,6 +192,22 @@ export const updateNotificationPreferences = (input: Partial<NotificationPrefere
 export const changePassword = (input: { current_password: string; new_password: string }) =>
   request<{ ok: true }>("/account/password", { method: "POST", body: JSON.stringify(input) });
 
+/** POST /auth/password/forgot — emails a reset link (no session required). */
+export const requestPasswordReset = (input: { email: string }) =>
+  request<{ ok: true }>("/auth/password/forgot", { method: "POST", body: JSON.stringify(input) });
+
+/** POST /auth/password/reset — completes a reset with the emailed token. */
+export const resetPassword = (input: { token: string; new_password: string }) =>
+  request<{ ok: true }>("/auth/password/reset", { method: "POST", body: JSON.stringify(input) });
+
+/** POST /auth/email/verify — confirms an address with the emailed token. */
+export const verifyEmail = (input: { token: string }) =>
+  request<{ ok: true }>("/auth/email/verify", { method: "POST", body: JSON.stringify(input) });
+
+/** POST /auth/email/resend — resends the verification email. */
+export const resendVerificationEmail = (input: { email: string }) =>
+  request<{ ok: true }>("/auth/email/resend", { method: "POST", body: JSON.stringify(input) });
+
 /** GET /account/sessions */
 export const fetchSessions = (signal?: AbortSignal) =>
   request<{ items: LoginSession[] }>("/account/sessions", { signal: signal ?? null });
