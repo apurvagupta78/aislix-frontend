@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as BillingRouteImport } from './routes/billing'
 import { Route as CompareRouteImport } from './routes/compare'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as LoginRouteImport } from './routes/login'
@@ -47,6 +48,11 @@ const CompareRoute = CompareRouteImport.update({
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CookiesRoute = CookiesRouteImport.update({
+  id: '/cookies',
+  path: '/cookies',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/billing': typeof BillingRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
+  '/cookies': typeof CookiesRoute
   '/dashboard': typeof DashboardRoute
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
@@ -151,6 +158,7 @@ export interface FileRoutesByTo {
   '/billing': typeof BillingRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
+  '/cookies': typeof CookiesRoute
   '/dashboard': typeof DashboardRoute
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/billing': typeof BillingRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
+  '/cookies': typeof CookiesRoute
   '/dashboard': typeof DashboardRoute
   '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
@@ -196,6 +205,7 @@ export interface FileRouteTypes {
     | '/billing'
     | '/compare'
     | '/contact'
+    | '/cookies'
     | '/dashboard'
     | '/history'
     | '/login'
@@ -217,6 +227,7 @@ export interface FileRouteTypes {
     | '/billing'
     | '/compare'
     | '/contact'
+    | '/cookies'
     | '/dashboard'
     | '/history'
     | '/login'
@@ -238,6 +249,7 @@ export interface FileRouteTypes {
     | '/billing'
     | '/compare'
     | '/contact'
+    | '/cookies'
     | '/dashboard'
     | '/history'
     | '/login'
@@ -260,6 +272,7 @@ export interface RootRouteChildren {
   BillingRoute: typeof BillingRoute
   CompareRoute: typeof CompareRoute
   ContactRoute: typeof ContactRoute
+  CookiesRoute: typeof CookiesRoute
   DashboardRoute: typeof DashboardRoute
   HistoryRoute: typeof HistoryRoute
   LoginRoute: typeof LoginRoute
@@ -305,6 +318,13 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cookies': {
+      id: '/cookies'
+      path: '/cookies'
+      fullPath: '/cookies'
+      preLoaderRoute: typeof CookiesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -420,6 +440,7 @@ const rootRouteChildren: RootRouteChildren = {
   BillingRoute: BillingRoute,
   CompareRoute: CompareRoute,
   ContactRoute: ContactRoute,
+  CookiesRoute: CookiesRoute,
   DashboardRoute: DashboardRoute,
   HistoryRoute: HistoryRoute,
   LoginRoute: LoginRoute,
