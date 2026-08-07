@@ -96,19 +96,22 @@ export async function fetchScanHistory(
     const completedAt = row.processing_completed_at ? new Date(row.processing_completed_at).getTime() : undefined;
     const processingTimeMs =
       startedAt !== undefined && completedAt !== undefined ? completedAt - startedAt : undefined;
-    return {
+    const item: ScanHistoryItem = {
       scan_id: row.id as string,
       store: (row.stores?.name as string | undefined) ?? "—",
       created_at: row.created_at as string,
-      products_detected: row.total_products ?? undefined,
-      low_stock_products:
-        row.low_stock_count !== null && row.out_of_stock_count !== null
-          ? (row.low_stock_count ?? 0) + (row.out_of_stock_count ?? 0)
-          : undefined,
-      average_confidence: undefined,
-      processing_time_ms: processingTimeMs,
       status: toApiStatus(row.status as string),
     };
+    if (row.total_products !== null && row.total_products !== undefined) {
+      item.products_detected = row.total_products;
+    }
+    if (row.low_stock_count !== null && row.out_of_stock_count !== null) {
+      item.low_stock_products = (row.low_stock_count ?? 0) + (row.out_of_stock_count ?? 0);
+    }
+    if (processingTimeMs !== undefined) {
+      item.processing_time_ms = processingTimeMs;
+    }
+    return item;
   });
 
   if (params.sort === "processing_time") {

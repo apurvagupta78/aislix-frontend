@@ -258,14 +258,13 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
       : {}),
   };
 
-  return {
+  const storeName = (scan as any).stores?.name as string | undefined;
+
+  const scanResult: ScanResult = {
     scan_id: scan.id as string,
     created_at: scan.created_at as string,
-    store: (scan as any).stores?.name ?? undefined,
     status: scan.status as ScanStatus,
     summary,
-    annotated_image_url: annotatedUrl,
-    executive_summary: result?.executive_summary ?? undefined,
     alerts: mapAlerts(result?.alerts),
     recommendations: mapRecommendations(result?.recommendations),
     inventory,
@@ -278,6 +277,10 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     },
     downloads: annotatedUrl ? { annotated_image_url: annotatedUrl } : {},
   };
+  if (storeName) scanResult.store = storeName;
+  if (annotatedUrl) scanResult.annotated_image_url = annotatedUrl;
+  if (result?.executive_summary) scanResult.executive_summary = result.executive_summary;
+  return scanResult;
 }
 
 export function normalizeConfidence(value: number): number {

@@ -1,37 +1,10 @@
-// Team & User Management contract.
+// Team & User Management — live Supabase queries.
 //
-// Every value rendered by the team module comes from these endpoints — there is
-// no local dummy data and no client-side business logic. Bindings target the
-// future FastAPI service on Railway (Supabase Auth for identity).
-//
-//   GET    /users                  — searchable, filterable, paginated list
-//   POST   /users                  — create a user directly (admin)
-//   PUT    /users/{id}             — update name, role, assigned stores, status
-//   DELETE /users/{id}             — remove a user from the organization
-//   POST   /users/invite           — send an invitation (server-side email)
-//   GET    /users/{id}             — single user detail (drawer)
-//   GET    /users/{id}/activity    — per-user activity log
-//   GET    /users/activity         — organization-wide activity log
-//   POST   /users/{id}/disable     POST /users/{id}/enable
-//   POST   /users/{id}/resend-invite
-//   POST   /users/{id}/reset-password
-//   POST   /users/bulk/assign-stores
-//   POST   /users/bulk/change-role
-//   POST   /users/bulk/disable
-//   POST   /users/bulk/delete
+// Every value rendered by the team module is sourced from the database via
+// the helpers in `@/lib/db/context`. There is no mock data.
 
-import { api } from "./api/client";
-
-function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const method = (init?.method ?? "GET").toUpperCase();
-  const body = typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined;
-  const options = { signal: init?.signal ?? undefined };
-  if (method === "GET") return api.get<T>(path, options);
-  if (method === "DELETE") return api.delete<T>(path, options);
-  if (method === "POST") return api.post<T>(path, body, options);
-  if (method === "PUT") return api.put<T>(path, body, options);
-  return api.patch<T>(path, body, options);
-}
+import { supabase } from "@/integrations/supabase/client";
+import { dbError, notFound, requireOrgId, requireUserId } from "@/lib/db/context";
 
 // ---------- roles / RBAC ----------
 
@@ -47,8 +20,8 @@ export const userRoleLabels: Record<UserRole, string> = {
 };
 
 /**
- * Permission keys mirror the future RBAC policy document served by the backend
- * (`GET /rbac/policy`). Until then these summaries are presentation-only.
+ * Permission keys mirror the app's RBAC policy. These summaries are
+ * presentation-only.
  */
 export type PermissionKey =
   | "billing"
@@ -161,76 +134,302 @@ export type UserUpdateInput = {
   status?: UserStatus;
 };
 
-function toQuery(query: UserListQuery): string {
-  const params = new URLSearchParams();
-  if (query.search) params.set("search", query.search);
-  if (query.role && query.role !== "all") params.set("role", query.role);
-  if (query.status && query.status !== "all") params.set("status", query.status);
-  if (query.page) params.set("page", String(query.page));
-  if (query.page_size) params.set("page_size", String(query.page_size));
-  const qs = params.toString();
-  return qs ? `?${qs}` : "";
+// ---------- status mapping (member_status <-> UserStatus) ----------
+
+type MemberStatus = "active" | "invited" | "suspended";
+
+function toUserStatus(status: MemberStatus): UserStatus {
+  if (status === "invited") return "pending";
+  if (status === "suspended") return "disabled";
+  return "active";
 }
 
-/** GET /users */
-export const fetchUsers = (query: UserListQuery = {}) =>
-  request<UserListResponse>(`/users${toQuery(query)}`);
+function toMemberStatus(status: UserStatus): MemberStatus {
+  if (status === "pending") return "invited";
+  if (status === "disabled") return "suspended";
+  return "active";
+}
 
-/** GET /users/{id} */
-export const fetchUser = (id: string) => request<OrgUser>(`/users/${id}`);
+// ---------- member row mapping ----------
 
-/** POST /users */
-export const createUser = (input: UserInput) =>
-  request<OrgUser>("/users", { method: "POST", body: JSON.stringify(input) });
+type MemberRow = {
+  id: string;
+  user_id: string;
+  role: UserRole;
+  status: MemberStatus;
+  store_ids: string[];
+  invited_email: string | null;
+  created_at: string;
+  last_active_at: string | null;
+};
 
-/** PUT /users/{id} */
-export const updateUser = (id: string, input: UserUpdateInput) =>
-  request<OrgUser>(`/users/${id}`, { method: "PUT", body: JSON.stringify(input) });
+type ProfileRow = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+};
 
-/** DELETE /users/{id} */
-export const deleteUser = (id: string) => request<void>(`/users/${id}`, { method: "DELETE" });
+async function mapMembersToUsers(rows: MemberRow[]): Promise<OrgUser[]> {
+  const userIds = rows.map((r) => r.user_id).filter(Boolean);
+  const storeIds = Array.from(new Set(rows.flatMap((r) => r.store_ids ?? [])));
 
-/** POST /users/invite — the backend owns email delivery. */
-export const inviteUser = (input: UserInput) =>
-  request<OrgUser>("/users/invite", { method: "POST", body: JSON.stringify(input) });
+  const [{ data: profiles }, { data: stores }, { data: scanCounts }] = await Promise.all([
+    userIds.length
+      ? supabase.from("profiles").select("id, full_name, email, avatar_url").in("id", userIds)
+      : Promise.resolve({ data: [] as ProfileRow[] }),
+    storeIds.length
+      ? supabase.from("stores").select("id, name").in("id", storeIds)
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    userIds.length
+      ? supabase.from("shelf_scans").select("created_by, created_at").in("created_by", userIds)
+      : Promise.resolve({ data: [] as { created_by: string | null; created_at: string }[] }),
+  ]);
 
-/** POST /users/{id}/resend-invite */
-export const resendInvite = (id: string) =>
-  request<void>(`/users/${id}/resend-invite`, { method: "POST" });
+  const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+  const storeById = new Map((stores ?? []).map((s) => [s.id, s]));
+  const since30 = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
-/** POST /users/{id}/disable | /enable */
-export const setUserEnabled = (id: string, enabled: boolean) =>
-  request<OrgUser>(`/users/${id}/${enabled ? "enable" : "disable"}`, { method: "POST" });
+  const scansByUser = new Map<string, { total: number; last30: number; lastAt: string | null }>();
+  for (const scan of scanCounts ?? []) {
+    if (!scan.created_by) continue;
+    const entry = scansByUser.get(scan.created_by) ?? { total: 0, last30: 0, lastAt: null };
+    entry.total += 1;
+    if (new Date(scan.created_at).getTime() >= since30) entry.last30 += 1;
+    if (!entry.lastAt || scan.created_at > entry.lastAt) entry.lastAt = scan.created_at;
+    scansByUser.set(scan.created_by, entry);
+  }
 
-/** POST /users/{id}/reset-password */
-export const sendPasswordReset = (id: string) =>
-  request<void>(`/users/${id}/reset-password`, { method: "POST" });
+  return rows.map((row) => {
+    const profile = profileById.get(row.user_id);
+    const scans = scansByUser.get(row.user_id);
+    const assigned_stores = (row.store_ids ?? [])
+      .map((id) => storeById.get(id))
+      .filter((s): s is { id: string; name: string } => Boolean(s));
+
+    return {
+      id: row.id,
+      name: profile?.full_name ?? undefined,
+      email: profile?.email ?? row.invited_email ?? "",
+      role: row.role,
+      status: toUserStatus(row.status),
+      avatar_url: profile?.avatar_url ?? null,
+      assigned_stores,
+      all_stores_access: roleScope[row.role] === "organization",
+      created_at: row.created_at,
+      last_login_at: row.last_active_at,
+      invited_at: row.status === "invited" ? row.created_at : undefined,
+      scans_total: scans?.total,
+      scans_last_30_days: scans?.last30,
+      last_scan_at: scans?.lastAt ?? null,
+    };
+  });
+}
+
+/** List org members joined with their profile, searchable/filterable. */
+export async function fetchUsers(query: UserListQuery = {}): Promise<UserListResponse> {
+  const orgId = await requireOrgId();
+  const page = query.page ?? 1;
+  const pageSize = query.page_size ?? 20;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let builder = supabase
+    .from("organization_members")
+    .select(
+      "id, user_id, role, status, store_ids, invited_email, created_at, last_active_at",
+      { count: "exact" },
+    )
+    .eq("org_id", orgId);
+
+  if (query.role && query.role !== "all") builder = builder.eq("role", query.role);
+  if (query.status && query.status !== "all") builder = builder.eq("status", toMemberStatus(query.status));
+
+  builder = builder.order("created_at", { ascending: false }).range(from, to);
+
+  const { data, error, count } = await builder;
+  if (error) dbError(error, "Could not load team members.");
+
+  let items = await mapMembersToUsers((data ?? []) as MemberRow[]);
+
+  if (query.search) {
+    const term = query.search.toLowerCase();
+    items = items.filter(
+      (u) => u.name?.toLowerCase().includes(term) || u.email.toLowerCase().includes(term),
+    );
+  }
+
+  return { items, total: count ?? items.length, page, page_size: pageSize };
+}
+
+export async function fetchUser(id: string): Promise<OrgUser> {
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("organization_members")
+    .select("id, user_id, role, status, store_ids, invited_email, created_at, last_active_at")
+    .eq("org_id", orgId)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) dbError(error, "Could not load the team member.");
+  if (!data) notFound("Team member not found.");
+  const [user] = await mapMembersToUsers([data as MemberRow]);
+  return user;
+}
+
+/** Direct member creation is not supported without an existing account; use inviteUser instead. */
+export async function createUser(input: UserInput): Promise<OrgUser> {
+  return inviteUser(input);
+}
+
+export async function updateUser(id: string, input: UserUpdateInput): Promise<OrgUser> {
+  const orgId = await requireOrgId();
+  const patch: Record<string, unknown> = {};
+  if (input.role) patch.role = input.role;
+  if (input.store_ids) patch.store_ids = input.store_ids;
+  if (input.status) patch.status = toMemberStatus(input.status);
+
+  const { data, error } = await supabase
+    .from("organization_members")
+    .update(patch)
+    .eq("org_id", orgId)
+    .eq("id", id)
+    .select("id, user_id, role, status, store_ids, invited_email, created_at, last_active_at")
+    .single();
+  if (error) dbError(error, "Could not update the team member.");
+
+  if (input.name) {
+    await supabase.from("profiles").update({ full_name: input.name }).eq("id", data!.user_id);
+  }
+
+  const [user] = await mapMembersToUsers([data as MemberRow]);
+  return user;
+}
+
+export async function deleteUser(id: string): Promise<void> {
+  const orgId = await requireOrgId();
+  const { error } = await supabase
+    .from("organization_members")
+    .delete()
+    .eq("org_id", orgId)
+    .eq("id", id);
+  if (error) dbError(error, "Could not remove the team member.");
+}
+
+/** Invite a user by inserting a pending organization_members row. */
+export async function inviteUser(input: UserInput): Promise<OrgUser> {
+  const orgId = await requireOrgId();
+  const inviterId = await requireUserId();
+
+  const { data, error } = await supabase
+    .from("organization_members")
+    .insert({
+      org_id: orgId,
+      user_id: inviterId,
+      role: input.role,
+      status: "invited",
+      invited_email: input.email,
+      invited_by: inviterId,
+      store_ids: input.store_ids,
+    })
+    .select("id, user_id, role, status, store_ids, invited_email, created_at, last_active_at")
+    .single();
+  if (error) dbError(error, "Could not invite the team member.");
+
+  const [user] = await mapMembersToUsers([data as MemberRow]);
+  return user;
+}
+
+/** No server-side email delivery exists; resending simply refreshes the invite timestamp. */
+export async function resendInvite(id: string): Promise<void> {
+  const orgId = await requireOrgId();
+  const { error } = await supabase
+    .from("organization_members")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("org_id", orgId)
+    .eq("id", id)
+    .eq("status", "invited");
+  if (error) dbError(error, "Could not resend the invite.");
+}
+
+export async function setUserEnabled(id: string, enabled: boolean): Promise<OrgUser> {
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("organization_members")
+    .update({ status: enabled ? "active" : "suspended" })
+    .eq("org_id", orgId)
+    .eq("id", id)
+    .select("id, user_id, role, status, store_ids, invited_email, created_at, last_active_at")
+    .single();
+  if (error) dbError(error, "Could not update the team member status.");
+  const [user] = await mapMembersToUsers([data as MemberRow]);
+  return user;
+}
+
+/** Password resets are handled by Supabase Auth directly, not this table. */
+export async function sendPasswordReset(id: string): Promise<void> {
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("organization_members")
+    .select("invited_email, user_id")
+    .eq("org_id", orgId)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) dbError(error, "Could not send the password reset.");
+  const email = data?.invited_email;
+  if (!email) return;
+  await supabase.auth.resetPasswordForEmail(email);
+}
 
 // ---------- bulk operations ----------
 
-export const bulkAssignStores = (userIds: string[], storeIds: string[]) =>
-  request<void>("/users/bulk/assign-stores", {
-    method: "POST",
-    body: JSON.stringify({ user_ids: userIds, store_ids: storeIds }),
-  });
+export async function bulkAssignStores(userIds: string[], storeIds: string[]): Promise<void> {
+  const orgId = await requireOrgId();
+  for (const id of userIds) {
+    const { data } = await supabase
+      .from("organization_members")
+      .select("store_ids")
+      .eq("org_id", orgId)
+      .eq("id", id)
+      .maybeSingle();
+    const merged = Array.from(new Set([...(data?.store_ids ?? []), ...storeIds]));
+    const { error } = await supabase
+      .from("organization_members")
+      .update({ store_ids: merged })
+      .eq("org_id", orgId)
+      .eq("id", id);
+    if (error) dbError(error, "Could not assign stores.");
+  }
+}
 
-export const bulkChangeRole = (userIds: string[], role: UserRole) =>
-  request<void>("/users/bulk/change-role", {
-    method: "POST",
-    body: JSON.stringify({ user_ids: userIds, role }),
-  });
+export async function bulkChangeRole(userIds: string[], role: UserRole): Promise<void> {
+  const orgId = await requireOrgId();
+  const { error } = await supabase
+    .from("organization_members")
+    .update({ role })
+    .eq("org_id", orgId)
+    .in("id", userIds);
+  if (error) dbError(error, "Could not change roles.");
+}
 
-export const bulkDisableUsers = (userIds: string[]) =>
-  request<void>("/users/bulk/disable", {
-    method: "POST",
-    body: JSON.stringify({ user_ids: userIds }),
-  });
+export async function bulkDisableUsers(userIds: string[]): Promise<void> {
+  const orgId = await requireOrgId();
+  const { error } = await supabase
+    .from("organization_members")
+    .update({ status: "suspended" })
+    .eq("org_id", orgId)
+    .in("id", userIds);
+  if (error) dbError(error, "Could not disable the selected users.");
+}
 
-export const bulkDeleteUsers = (userIds: string[]) =>
-  request<void>("/users/bulk/delete", {
-    method: "POST",
-    body: JSON.stringify({ user_ids: userIds }),
-  });
+export async function bulkDeleteUsers(userIds: string[]): Promise<void> {
+  const orgId = await requireOrgId();
+  const { error } = await supabase
+    .from("organization_members")
+    .delete()
+    .eq("org_id", orgId)
+    .in("id", userIds);
+  if (error) dbError(error, "Could not remove the selected users.");
+}
 
 // ---------- activity log ----------
 
@@ -262,13 +461,91 @@ export type ActivityResponse = {
   total?: number;
 };
 
-/** GET /users/activity */
-export const fetchOrgActivity = (limit = 20) =>
-  request<ActivityResponse>(`/users/activity?limit=${limit}`);
+/**
+ * There is no dedicated audit-log table. The activity feed is derived from
+ * real rows we do have: member invites (organization_members.created_at) and
+ * scans run by members (shelf_scans.created_by/created_at). Event kinds with
+ * no backing data (role_changed, store_assigned, password_reset, login, etc.)
+ * are simply omitted.
+ */
+async function buildActivity(orgId: string, userId?: string, limit = 20): Promise<ActivityEvent[]> {
+  let memberQuery = supabase
+    .from("organization_members")
+    .select("id, user_id, invited_email, status, created_at")
+    .eq("org_id", orgId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (userId) memberQuery = memberQuery.eq("user_id", userId);
+  const { data: members } = await memberQuery;
 
-/** GET /users/{id}/activity */
-export const fetchUserActivity = (id: string, limit = 20) =>
-  request<ActivityResponse>(`/users/${id}/activity?limit=${limit}`);
+  let scanQuery = supabase
+    .from("shelf_scans")
+    .select("id, created_by, created_at, status")
+    .eq("org_id", orgId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (userId) scanQuery = scanQuery.eq("created_by", userId);
+  const { data: scans } = await scanQuery;
+
+  const actorIds = Array.from(
+    new Set([...(members ?? []).map((m) => m.user_id), ...(scans ?? []).map((s) => s.created_by)]),
+  ).filter((id): id is string => Boolean(id));
+  const { data: profiles } = actorIds.length
+    ? await supabase.from("profiles").select("id, full_name, email").in("id", actorIds)
+    : { data: [] as { id: string; full_name: string | null; email: string | null }[] };
+  const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+  const events: ActivityEvent[] = [];
+
+  for (const member of members ?? []) {
+    const actor = profileById.get(member.user_id);
+    if (member.status === "invited") {
+      events.push({
+        id: `invite-${member.id}`,
+        kind: "user_invited",
+        actor_name: actor?.full_name ?? actor?.email ?? null,
+        target_name: member.invited_email,
+        created_at: member.created_at,
+      });
+    }
+  }
+
+  for (const scan of scans ?? []) {
+    const actor = scan.created_by ? profileById.get(scan.created_by) : undefined;
+    events.push({
+      id: `scan-${scan.id}`,
+      kind: "login",
+      message: `Ran a shelf scan (${scan.status})`,
+      actor_name: actor?.full_name ?? actor?.email ?? null,
+      created_at: scan.created_at,
+    });
+  }
+
+  return events
+    .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))
+    .slice(0, limit);
+}
+
+/** GET organization-wide activity, derived from real invite and scan rows. */
+export async function fetchOrgActivity(limit = 20): Promise<ActivityResponse> {
+  const orgId = await requireOrgId();
+  const items = await buildActivity(orgId, undefined, limit);
+  return { items, total: items.length };
+}
+
+/** GET a single member's activity, derived from real invite and scan rows. */
+export async function fetchUserActivity(id: string, limit = 20): Promise<ActivityResponse> {
+  const orgId = await requireOrgId();
+  const { data: member } = await supabase
+    .from("organization_members")
+    .select("user_id")
+    .eq("org_id", orgId)
+    .eq("id", id)
+    .maybeSingle();
+  if (!member) return { items: [], total: 0 };
+  const items = await buildActivity(orgId, member.user_id, limit);
+  return { items, total: items.length };
+}
 
 export const activityKindLabels: Record<ActivityEventKind, string> = {
   user_invited: "User invited",
