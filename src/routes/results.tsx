@@ -82,7 +82,7 @@ function Results() {
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {summary.map((s) => (
-          <div key={s.label} className="card-surface p-5">
+          <div key={s.label} className="card-surface card-hover p-5">
             <p className="text-xs text-muted-foreground">{s.label}</p>
             <p className="mt-2 text-2xl font-semibold tracking-tight">{s.value}</p>
           </div>

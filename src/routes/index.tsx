@@ -187,7 +187,7 @@ function Landing() {
           </h2>
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {steps.map((s, i) => (
-              <div key={s.title} className="card-surface p-7">
+              <div key={s.title} className="card-surface card-hover p-7">
                 <div className="flex items-center justify-between">
                   <span className="grid size-10 place-items-center rounded-xl bg-brand-soft text-brand">
                     <s.icon className="size-5" />
@@ -215,7 +215,7 @@ function Landing() {
                 className={
                   p.popular
                     ? "relative rounded-3xl border-2 border-brand bg-card p-7 shadow-lift"
-                    : "card-surface p-7"
+                    : "card-surface card-hover p-7"
                 }
               >
                 {p.popular && (
