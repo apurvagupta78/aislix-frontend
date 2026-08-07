@@ -131,7 +131,7 @@ export async function submitScan(
 }
 
 /** Polls the current status of a shelf scan. */
-export async function fetchScanStatus(scanId: string): Promise<ScanResponse> {
+export async function fetchScanStatus(scanId: string, _signal?: AbortSignal): Promise<ScanResponse> {
   const orgId = await requireOrgId();
   const { data, error } = await supabase
     .from("shelf_scans")
