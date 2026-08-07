@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import {
   LayoutDashboard,
   ScanLine,
+  UploadCloud,
   History,
   FileText,
   CreditCard,
@@ -28,7 +29,8 @@ import { cn } from "@/lib/utils";
 
 const nav = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-  { label: "Upload Scan", to: "/upload", icon: ScanLine },
+  { label: "New Scan", to: "/scan", icon: ScanLine },
+  { label: "Upload Scan", to: "/upload", icon: UploadCloud },
   { label: "Scan History", to: "/history", icon: History },
   { label: "Reports", to: "/report", icon: FileText },
 ] as const;
