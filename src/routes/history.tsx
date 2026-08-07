@@ -1,12 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Filter, Download, Search, SearchX } from "lucide-react";
+import { useMemo, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  ArrowLeftRight,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  FileText,
+  ImageDown,
+  MoreHorizontal,
+  Search,
+  SearchX,
+  Sheet as SheetIcon,
+  Trash2,
+} from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { EmptyState, TableSkeleton } from "@/components/States";
-
+import { EmptyState, ErrorState, TableSkeleton } from "@/components/States";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -15,6 +29,23 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -22,7 +53,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { scans } from "@/lib/aislix-data";
+import {
+  deleteScan,
+  fetchScanHistory,
+  formatCount,
+  formatScanDate,
+  formatScanTime,
+  type ScanHistoryItem,
+  type ScanHistoryQuery,
+  type ScanStatus,
+} from "@/lib/scan-history";
+import { formatConfidence, formatDuration } from "@/lib/scan-results";
+
+const PAGE_SIZE = 10;
 
 export const Route = createFileRoute("/history")({
   head: () => ({
@@ -30,210 +73,485 @@ export const Route = createFileRoute("/history")({
       { title: "Scan History — Aislix Shelf Audits" },
       {
         name: "description",
-        content: "Browse every shelf scan across your stores with confidence, shelf health and stock gaps.",
+        content:
+          "Search, filter and compare every completed shelf scan: products detected, low stock, confidence and processing time.",
       },
       { property: "og:title", content: "Scan history — Aislix" },
-      { property: "og:description", content: "A searchable archive of every shelf audit you've run." },
+      {
+        property: "og:description",
+        content: "A searchable archive of every shelf audit, with exports and scan comparison.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: HistoryPage,
 });
 
+/* --------------------------------- helpers -------------------------------- */
+
+function StatusBadge({ status }: { status: ScanStatus }) {
+  const map: Record<ScanStatus, { label: string; className: string }> = {
+    completed: { label: "Completed", className: "bg-accent-green/12 text-accent-green" },
+    processing: { label: "Processing", className: "bg-brand-soft text-brand" },
+    failed: { label: "Failed", className: "bg-destructive/10 text-destructive" },
+  };
+  const s = map[status];
+  return (
+    <Badge variant="secondary" className={`rounded-full border-0 font-medium ${s.className}`}>
+      {s.label}
+    </Badge>
+  );
+}
+
+function openUrl(url?: string) {
+  if (url) window.open(url, "_blank", "noopener,noreferrer");
+}
+
+function RowActions({
+  scan,
+  onDelete,
+}: {
+  scan: ScanHistoryItem;
+  onDelete: (scan: ScanHistoryItem) => void;
+}) {
+  const d = scan.downloads;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="rounded-xl" aria-label={`Actions for ${scan.scan_id}`}>
+          <MoreHorizontal className="size-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52 rounded-xl">
+        <DropdownMenuItem asChild>
+          <Link to="/results" search={{ scan: scan.scan_id }}>
+            <FileText className="size-4" /> View results
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={!d?.pdf_url} onSelect={() => openUrl(d?.pdf_url)}>
+          <Download className="size-4" /> Download PDF
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={!d?.csv_url} onSelect={() => openUrl(d?.csv_url)}>
+          <SheetIcon className="size-4" /> Download CSV
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={!d?.annotated_image_url}
+          onSelect={() => openUrl(d?.annotated_image_url)}
+        >
+          <ImageDown className="size-4" /> Annotated image
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="text-destructive focus:text-destructive"
+          onSelect={() => onDelete(scan)}
+        >
+          <Trash2 className="size-4" /> Delete scan
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/* ---------------------------------- page ---------------------------------- */
+
 function HistoryPage() {
-  const [query, setQuery] = useState("");
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const [q, setQ] = useState("");
   const [store, setStore] = useState("all");
-  const [loading, setLoading] = useState(true);
+  const [date, setDate] = useState("");
+  const [sort, setSort] = useState<NonNullable<ScanHistoryQuery["sort"]>>("newest");
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [pendingDelete, setPendingDelete] = useState<ScanHistoryItem | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 700);
-    return () => clearTimeout(t);
-  }, []);
+  const params: ScanHistoryQuery = { q, store, date, sort, page, page_size: PAGE_SIZE };
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return scans.filter((s) => {
-      const matchesQuery =
-        !q ||
-        s.id.toLowerCase().includes(q) ||
-        s.store.toLowerCase().includes(q) ||
-        s.aisle.toLowerCase().includes(q) ||
-        s.city.toLowerCase().includes(q);
-      const matchesStore = store === "all" || s.store === store;
-      return matchesQuery && matchesStore;
-    });
-  }, [query, store]);
+  const { data, isPending, isError, error, refetch } = useQuery({
+    queryKey: ["scan-history", params],
+    queryFn: ({ signal }) => fetchScanHistory(params, signal),
+    retry: false,
+  });
 
-  const storeOptions = useMemo(() => Array.from(new Set(scans.map((s) => s.store))), []);
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const stores = useMemo(
+    () => data?.stores ?? Array.from(new Set(items.map((i) => i.store))).sort(),
+    [data?.stores, items],
+  );
+
+  const resetPage = () => setPage(1);
+
+  const toggleSelected = (id: string) =>
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : prev.length >= 2 ? [prev[1]!, id] : [...prev, id],
+    );
+
+  const compare = () => {
+    if (selected.length !== 2) return;
+    navigate({ to: "/compare", search: { a: selected[0]!, b: selected[1]! } });
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteScan(pendingDelete.scan_id);
+      setSelected((prev) => prev.filter((id) => id !== pendingDelete.scan_id));
+      setPendingDelete(null);
+      await queryClient.invalidateQueries({ queryKey: ["scan-history"] });
+    } catch (e) {
+      setDeleteError(e instanceof Error ? e.message : "Could not delete this scan.");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <AppShell
       title="Scan history"
-      description="1,284 scans across 42 stores. Filter by store, category or date."
-      actions={
-        <Button variant="subtle" size="sm" className="rounded-xl">
-          <Download className="size-4" /> Export CSV
-        </Button>
-      }
+      description="Every shelf audit run on your workspace, with exports and scan comparison."
     >
-      <div className="card-surface p-4 sm:p-6">
-        <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center">
-          <div className="relative min-w-0 flex-1 sm:col-span-2 lg:min-w-56">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by scan ID, store, aisle or city"
-              className="h-10 rounded-xl pl-9"
-            />
-          </div>
-          <Select value={store} onValueChange={setStore}>
-            <SelectTrigger className="h-10 rounded-xl lg:w-52">
-              <SelectValue placeholder="All stores" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All stores</SelectItem>
-              {storeOptions.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select defaultValue="30">
-            <SelectTrigger className="h-10 rounded-xl lg:w-40">
-              <SelectValue placeholder="Last 30 days" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
-              <SelectItem value="90">Last quarter</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="ghost" size="sm" className="rounded-xl">
-            <Filter className="size-4" /> More filters
-          </Button>
-        </div>
+      <div className="space-y-5">
+        {/* filters */}
+        <section className="card-surface p-4 sm:p-5">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
+            <div className="relative min-w-0">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={q}
+                onChange={(e) => {
+                  setQ(e.target.value);
+                  resetPage();
+                }}
+                placeholder="Search by scan ID or store name"
+                className="h-11 rounded-xl pl-9"
+                aria-label="Search scans"
+              />
+            </div>
 
-        {loading ? (
-          <div className="mt-6">
-            <TableSkeleton rows={7} cols={6} />
+            <div className="relative">
+              <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="date"
+                value={date}
+                onChange={(e) => {
+                  setDate(e.target.value);
+                  resetPage();
+                }}
+                className="h-11 rounded-xl pl-9 sm:w-[190px]"
+                aria-label="Filter by date"
+              />
+            </div>
+
+            <Select
+              value={store}
+              onValueChange={(v) => {
+                setStore(v);
+                resetPage();
+              }}
+            >
+              <SelectTrigger className="h-11 rounded-xl sm:w-[200px]" aria-label="Filter by store">
+                <SelectValue placeholder="All stores" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All stores</SelectItem>
+                {stores.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={sort}
+              onValueChange={(v) => {
+                setSort(v as typeof sort);
+                resetPage();
+              }}
+            >
+              <SelectTrigger className="h-11 rounded-xl sm:w-[190px]" aria-label="Sort scans">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest first</SelectItem>
+                <SelectItem value="oldest">Oldest first</SelectItem>
+                <SelectItem value="processing_time">Processing time</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="mt-6">
+
+          {(q || date || store !== "all") && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span>Filters active</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 rounded-lg px-2 text-xs"
+                onClick={() => {
+                  setQ("");
+                  setDate("");
+                  setStore("all");
+                  resetPage();
+                }}
+              >
+                Clear all
+              </Button>
+            </div>
+          )}
+        </section>
+
+        {/* compare bar */}
+        <section className="card-surface flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold tracking-tight">Compare scans</p>
+            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+              Select two scans to compare inventory changes between them.
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-3">
+            <span className="text-xs text-muted-foreground">{selected.length}/2 selected</span>
+            <Button
+              variant="brand"
+              size="sm"
+              className="rounded-xl"
+              disabled={selected.length !== 2}
+              onClick={compare}
+            >
+              <ArrowLeftRight className="size-4" /> Compare
+            </Button>
+          </div>
+        </section>
+
+        {/* results */}
+        <section className="card-surface p-4 sm:p-5">
+          {isPending ? (
+            <TableSkeleton rows={6} cols={6} />
+          ) : isError ? (
+            <ErrorState
+              title="Couldn't load scan history"
+              description={error instanceof Error ? error.message : undefined}
+              onRetry={() => void refetch()}
+            />
+          ) : items.length === 0 ? (
             <EmptyState
-              icon={<SearchX className="size-5" />}
-              title="No scans match your filters"
-              description="Try a different store, widen the date range, or clear your search."
+              icon={q || date || store !== "all" ? <SearchX className="size-5" /> : undefined}
+              title={q || date || store !== "all" ? "No scans match your filters" : "No scans yet"}
+              description={
+                q || date || store !== "all"
+                  ? "Try a different scan ID, store or date."
+                  : "Run your first shelf scan and it will appear here."
+              }
               action={
-                <Button
-                  variant="subtle"
-                  size="sm"
-                  className="rounded-xl"
-                  onClick={() => {
-                    setQuery("");
-                    setStore("all");
-                  }}
-                >
-                  Clear filters
+                <Button variant="brand" size="sm" className="rounded-xl" asChild>
+                  <Link to="/scan">New scan</Link>
                 </Button>
               }
             />
-          </div>
-        ) : (
-          <div className="mt-6 -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Scan</TableHead>
-                  <TableHead>Store</TableHead>
-                  <TableHead className="hidden md:table-cell">Aisle</TableHead>
-                  <TableHead className="hidden sm:table-cell">Date</TableHead>
-                  <TableHead className="hidden text-right sm:table-cell">Products</TableHead>
-                  <TableHead className="hidden text-right lg:table-cell">Brands</TableHead>
-                  <TableHead className="hidden text-right lg:table-cell">Confidence</TableHead>
-                  <TableHead className="text-right">Shelf health</TableHead>
-                  <TableHead className="text-right">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((s) => (
-                  <TableRow key={s.id} className="cursor-pointer transition-colors hover:bg-brand-soft/50">
-                    <TableCell className="font-medium">
-                      <Link to="/results" className="hover:text-brand">
-                        {s.id}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="min-w-0">
-                      <p className="truncate font-medium">{s.store}</p>
-                      <p className="text-xs text-muted-foreground">{s.city}</p>
-                    </TableCell>
-                    <TableCell className="hidden text-muted-foreground md:table-cell">
-                      {s.aisle}
-                    </TableCell>
-                    <TableCell className="hidden whitespace-nowrap text-muted-foreground sm:table-cell">
-                      {s.date}
-                      <span className="ml-1 text-xs">{s.time}</span>
-                    </TableCell>
-                    <TableCell className="hidden text-right sm:table-cell">{s.products || "—"}</TableCell>
-                    <TableCell className="hidden text-right lg:table-cell">
-                      {s.brands || "—"}
-                    </TableCell>
-                    <TableCell className="hidden text-right lg:table-cell">
-                      {s.confidence ? `${s.confidence}%` : "—"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {s.shelfHealth ? (
-                        <span
-                          className={
-                            s.shelfHealth >= 85
-                              ? "text-accent-green"
-                              : s.shelfHealth >= 70
-                                ? "text-warning"
-                                : "text-destructive"
-                          }
-                        >
-                          {s.shelfHealth}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Badge
-                        variant="secondary"
-                        className={`rounded-full ${
-                          s.status === "completed"
-                            ? "bg-accent-green/12 text-accent-green hover:bg-accent-green/12"
-                            : s.status === "processing"
-                              ? "bg-warning/15 text-warning hover:bg-warning/15"
-                              : "bg-destructive/10 text-destructive hover:bg-destructive/10"
-                        }`}
-                      >
-                        {s.status}
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
+          ) : (
+            <>
+              {/* desktop table */}
+              <div className="hidden overflow-x-auto md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10" />
+                      <TableHead>Scan</TableHead>
+                      <TableHead>Store</TableHead>
+                      <TableHead>Date &amp; time</TableHead>
+                      <TableHead className="text-right">Products</TableHead>
+                      <TableHead className="text-right">Low stock</TableHead>
+                      <TableHead className="text-right">Confidence</TableHead>
+                      <TableHead className="text-right">Processing</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="w-10" />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map((scan) => (
+                      <TableRow key={scan.scan_id} className="transition-colors hover:bg-surface">
+                        <TableCell>
+                          <Checkbox
+                            checked={selected.includes(scan.scan_id)}
+                            onCheckedChange={() => toggleSelected(scan.scan_id)}
+                            aria-label={`Select ${scan.scan_id} for comparison`}
+                          />
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          <Link
+                            to="/results"
+                            search={{ scan: scan.scan_id }}
+                            className="font-medium text-foreground hover:text-brand"
+                          >
+                            {scan.scan_id}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate font-medium">{scan.store}</TableCell>
+                        <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
+                          {formatScanDate(scan.created_at)}
+                          <span className="ml-2 tabular-nums">{formatScanTime(scan.created_at)}</span>
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatCount(scan.products_detected)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {formatCount(scan.low_stock_products)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {scan.average_confidence === undefined
+                            ? "—"
+                            : formatConfidence(scan.average_confidence)}
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          {scan.processing_time_ms === undefined
+                            ? "—"
+                            : formatDuration(scan.processing_time_ms)}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={scan.status} />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <RowActions scan={scan} onDelete={setPendingDelete} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-muted-foreground">
-            Showing {loading ? "…" : filtered.length} of 1,284 scans
-          </p>
-          <div className="flex gap-2">
-            <Button variant="subtle" size="sm" className="rounded-xl">
-              Previous
-            </Button>
-            <Button variant="brand" size="sm" className="rounded-xl">
-              Next
-            </Button>
-          </div>
-        </div>
+              {/* mobile cards */}
+              <ul className="space-y-3 md:hidden">
+                {items.map((scan) => (
+                  <li key={scan.scan_id} className="rounded-2xl border border-border bg-surface p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <Checkbox
+                          className="mt-0.5"
+                          checked={selected.includes(scan.scan_id)}
+                          onCheckedChange={() => toggleSelected(scan.scan_id)}
+                          aria-label={`Select ${scan.scan_id} for comparison`}
+                        />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold">{scan.store}</p>
+                          <p className="mt-0.5 font-mono text-xs text-muted-foreground">{scan.scan_id}</p>
+                        </div>
+                      </div>
+                      <RowActions scan={scan} onDelete={setPendingDelete} />
+                    </div>
+
+                    <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
+                      {[
+                        { l: "Date", v: formatScanDate(scan.created_at) },
+                        { l: "Time", v: formatScanTime(scan.created_at) },
+                        { l: "Products", v: formatCount(scan.products_detected) },
+                        { l: "Low stock", v: formatCount(scan.low_stock_products) },
+                        {
+                          l: "Confidence",
+                          v:
+                            scan.average_confidence === undefined
+                              ? "—"
+                              : formatConfidence(scan.average_confidence),
+                        },
+                        {
+                          l: "Processing",
+                          v:
+                            scan.processing_time_ms === undefined
+                              ? "—"
+                              : formatDuration(scan.processing_time_ms),
+                        },
+                      ].map((row) => (
+                        <div key={row.l} className="min-w-0">
+                          <dt className="text-muted-foreground">{row.l}</dt>
+                          <dd className="mt-0.5 truncate font-medium tabular-nums">{row.v}</dd>
+                        </div>
+                      ))}
+                    </dl>
+
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                      <StatusBadge status={scan.status} />
+                      <Button variant="subtle" size="sm" className="rounded-xl" asChild>
+                        <Link to="/results" search={{ scan: scan.scan_id }}>
+                          View results
+                        </Link>
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              {/* pagination */}
+              <div className="mt-5 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Page {page} of {pageCount} · {total.toLocaleString()} scans
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="subtle"
+                    size="sm"
+                    className="rounded-xl"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    <ChevronLeft className="size-4" /> Previous
+                  </Button>
+                  <Button
+                    variant="subtle"
+                    size="sm"
+                    className="rounded-xl"
+                    disabled={page >= pageCount}
+                    onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                  >
+                    Next <ChevronRight className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </section>
       </div>
+
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) {
+            setPendingDelete(null);
+            setDeleteError(null);
+          }
+        }}
+      >
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this scan?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete?.scan_id} for {pendingDelete?.store} will be permanently removed, along
+              with its report and exports. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && <p className="text-sm text-destructive">{deleteError}</p>}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting} className="rounded-xl">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmDelete();
+              }}
+            >
+              {deleting ? "Deleting…" : "Delete scan"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }
-
