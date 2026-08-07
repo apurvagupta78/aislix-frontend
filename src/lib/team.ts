@@ -20,9 +20,10 @@
 //   POST   /users/bulk/disable
 //   POST   /users/bulk/delete
 
-const API_BASE = import.meta.env['VITE_SCAN_API_BASE'] ?? "";
+import { API_BASE, assertApiConfigured } from "./api-config";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  assertApiConfigured();
   const response = await fetch(`${API_BASE}${path}`, {
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     ...init,

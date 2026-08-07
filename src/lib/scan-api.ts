@@ -45,7 +45,7 @@ export function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-const API_BASE = import.meta.env['VITE_SCAN_API_BASE'] ?? "";
+import { API_BASE, assertApiConfigured } from "./api-config";
 
 /**
  * POST /scan — multipart upload of a single shelf image.

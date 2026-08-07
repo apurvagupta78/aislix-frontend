@@ -36,7 +36,7 @@ export type ScanHistoryQuery = {
   page_size?: number;
 };
 
-const API_BASE = import.meta.env['VITE_SCAN_API_BASE'] ?? "";
+import { API_BASE, assertApiConfigured } from "./api-config";
 
 /** GET /scans — paginated history for the signed-in user. */
 export async function fetchScanHistory(
@@ -64,6 +64,7 @@ export async function fetchScanHistory(
 
 /** DELETE /scan/{scan_id} */
 export async function deleteScan(scanId: string): Promise<void> {
+  assertApiConfigured();
   const response = await fetch(`${API_BASE}/scan/${encodeURIComponent(scanId)}`, {
     method: "DELETE",
     headers: { Accept: "application/json" },

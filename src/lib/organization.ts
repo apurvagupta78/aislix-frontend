@@ -20,7 +20,7 @@
 
 import type { TeamRole } from "@/lib/account";
 
-const API_BASE = import.meta.env['VITE_SCAN_API_BASE'] ?? "";
+import { API_BASE, assertApiConfigured } from "./api-config";
 
 // ---------- types ----------
 
@@ -146,6 +146,7 @@ export type StoreReport = {
 // ---------- transport ----------
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  assertApiConfigured();
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: {
@@ -284,6 +285,7 @@ export const removeStoreMember = (id: string, memberId: string) =>
 
 /** POST /stores/bulk/import — multipart CSV of stores. */
 export async function importStoresCsv(file: File): Promise<{ created: number; failed: number }> {
+  assertApiConfigured();
   const form = new FormData();
   form.append("file", file);
   const response = await fetch(`${API_BASE}/stores/bulk/import`, { method: "POST", body: form });

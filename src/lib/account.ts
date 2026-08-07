@@ -3,7 +3,7 @@
 // Railway with Supabase Auth for identity. No dummy data is produced here — every
 // value rendered in the UI comes from these endpoints.
 
-const API_BASE = import.meta.env['VITE_SCAN_API_BASE'] ?? "";
+import { API_BASE, assertApiConfigured } from "./api-config";
 
 // ---------- types ----------
 
@@ -86,6 +86,7 @@ export type ApiKey = {
 // ---------- transport ----------
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  assertApiConfigured();
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: { Accept: "application/json", "Content-Type": "application/json", ...(init?.headers ?? {}) },
@@ -99,6 +100,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 async function upload<T>(path: string, file: File, field = "file"): Promise<T> {
+  assertApiConfigured();
   const form = new FormData();
   form.append(field, file);
   const response = await fetch(`${API_BASE}${path}`, { method: "POST", body: form });
