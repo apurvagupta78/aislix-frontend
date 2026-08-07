@@ -1,245 +1,172 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Building2, Bell, ShieldCheck, Users, Plug, Trash2 } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  Bell,
+  Bug,
+  Building2,
+  KeySquare,
+  LifeBuoy,
+  Lightbulb,
+  LogOut,
+  MessageSquare,
+  ShieldCheck,
+  Store as StoreIcon,
+  Users,
+} from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SettingsCard } from "@/components/settings/SettingsParts";
+import { CompanyPanel } from "@/components/settings/CompanyPanel";
+import { StoreManager } from "@/components/settings/StoreManager";
+import { TeamManager } from "@/components/settings/TeamManager";
+import { NotificationsPanel } from "@/components/settings/NotificationsPanel";
+import { SecurityPanel } from "@/components/settings/SecurityPanel";
+import { ApiAccessPanel } from "@/components/settings/ApiAccessPanel";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
-      { title: "Settings — Aislix Workspace" },
+      { title: "Workspace Settings — Aislix" },
       {
         name: "description",
         content:
-          "Configure your Aislix workspace: organisation details, scan thresholds, alerts, team access and integrations.",
+          "Manage your Aislix workspace: company details, stores, team roles, notifications, security, API keys and support.",
       },
       { property: "og:title", content: "Aislix workspace settings" },
-      { property: "og:description", content: "Organisation, detection, alert and team configuration." },
+      {
+        property: "og:description",
+        content: "Company, stores, team, notifications, security and API access for your Aislix workspace.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: SettingsPage,
 });
 
-const team = [
-  { name: "Rahul Kapoor", email: "ops@moremart.in", role: "Admin" },
-  { name: "Meera Iyer", email: "meera@moremart.in", role: "Manager" },
-  { name: "Arjun Rao", email: "arjun@moremart.in", role: "Field auditor" },
-  { name: "Priya Nair", email: "priya@moremart.in", role: "Analyst" },
+const tabs = [
+  { value: "company", label: "Company", icon: Building2 },
+  { value: "stores", label: "Stores", icon: StoreIcon },
+  { value: "team", label: "Team", icon: Users },
+  { value: "notifications", label: "Notifications", icon: Bell },
+  { value: "security", label: "Security", icon: ShieldCheck },
+  { value: "api", label: "API access", icon: KeySquare },
+  { value: "support", label: "Support", icon: LifeBuoy },
 ];
-
-const integrations = [
-  { name: "SAP Retail", desc: "Sync SKU master and stock levels", on: true },
-  { name: "Slack", desc: "Post low-stock alerts to #retail-ops", on: true },
-  { name: "Google Drive", desc: "Archive PDF audit reports", on: false },
-  { name: "Power BI", desc: "Stream shelf metrics to dashboards", on: false },
-];
-
-function Card({ title, icon: Icon, children }: { title: string; icon: typeof Bell; children: React.ReactNode }) {
-  return (
-    <div className="card-surface p-6">
-      <h2 className="inline-flex items-center gap-2 text-sm font-semibold tracking-tight">
-        <Icon className="size-4 text-brand" /> {title}
-      </h2>
-      <div className="mt-5">{children}</div>
-    </div>
-  );
-}
 
 function SettingsPage() {
   return (
-    <AppShell title="Settings" description="Manage your workspace, detection thresholds and team access.">
-      <Tabs defaultValue="general">
-        <TabsList className="rounded-xl">
-          <TabsTrigger value="general" className="rounded-lg">General</TabsTrigger>
-          <TabsTrigger value="detection" className="rounded-lg">Detection</TabsTrigger>
-          <TabsTrigger value="notifications" className="rounded-lg">Notifications</TabsTrigger>
-          <TabsTrigger value="team" className="rounded-lg">Team</TabsTrigger>
-          <TabsTrigger value="integrations" className="rounded-lg">Integrations</TabsTrigger>
+    <AppShell
+      title="Settings"
+      description="Company profile, stores, team access, notifications, security and API keys."
+    >
+      <Tabs defaultValue="company" className="space-y-5">
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-2xl bg-muted/60 p-1.5">
+          {tabs.map((tab) => (
+            <TabsTrigger
+              key={tab.value}
+              value={tab.value}
+              className="gap-2 rounded-xl px-3 py-2 text-sm data-[state=active]:shadow-card"
+            >
+              <tab.icon className="size-4" />
+              <span>{tab.label}</span>
+            </TabsTrigger>
+          ))}
         </TabsList>
 
-        <TabsContent value="general" className="mt-5 space-y-4">
-          <Card title="Organisation" icon={Building2}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="org">Organisation name</Label>
-                <Input id="org" defaultValue="MoreMart Retail Pvt Ltd" className="h-11 rounded-xl" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="gst">GSTIN</Label>
-                <Input id="gst" defaultValue="29ABCDE1234F1Z5" className="h-11 rounded-xl" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="tz">Timezone</Label>
-                <Select defaultValue="ist">
-                  <SelectTrigger id="tz" className="h-11 rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ist">Asia/Kolkata (IST)</SelectItem>
-                    <SelectItem value="gst">Asia/Dubai (GST)</SelectItem>
-                    <SelectItem value="utc">UTC</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cur">Currency</Label>
-                <Select defaultValue="inr">
-                  <SelectTrigger id="cur" className="h-11 rounded-xl">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="inr">INR — ₹</SelectItem>
-                    <SelectItem value="usd">USD — $</SelectItem>
-                    <SelectItem value="aed">AED — د.إ</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="mt-6 flex justify-end">
-              <Button variant="brand" size="sm" className="rounded-xl">
-                Save organisation
-              </Button>
-            </div>
-          </Card>
-
-          <Card title="Danger zone" icon={Trash2}>
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium">Delete workspace</p>
-                <p className="text-xs text-muted-foreground">
-                  Permanently removes all scans, reports and store data.
-                </p>
-              </div>
-              <Button variant="destructive" size="sm" className="rounded-xl">
-                Delete workspace
-              </Button>
-            </div>
-          </Card>
+        <TabsContent value="company" className="mt-0">
+          <CompanyPanel />
         </TabsContent>
-
-        <TabsContent value="detection" className="mt-5">
-          <Card title="Detection thresholds" icon={ShieldCheck}>
-            <div className="space-y-8">
-              <div>
-                <div className="flex justify-between text-sm">
-                  <Label>Minimum AI confidence to accept a detection</Label>
-                  <span className="font-medium text-brand">88%</span>
-                </div>
-                <Slider defaultValue={[88]} max={100} step={1} className="mt-4" />
-              </div>
-              <div>
-                <div className="flex justify-between text-sm">
-                  <Label>Low-stock facing threshold</Label>
-                  <span className="font-medium text-brand">4 facings</span>
-                </div>
-                <Slider defaultValue={[4]} max={20} step={1} className="mt-4" />
-              </div>
-              <Separator />
-              {[
-                { l: "Auto-reject blurry images", d: "Ask the field rep to re-shoot", on: true },
-                { l: "Require GPS match", d: "Reject scans outside the store geofence", on: true },
-                { l: "Detect competitor brands", d: "Include non-portfolio SKUs in results", on: true },
-                { l: "Price tag OCR by default", d: "Read MRP tags on every scan", on: false },
-              ].map((o) => (
-                <div key={o.l} className="flex items-start gap-3">
-                  <Switch defaultChecked={o.on} className="mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">{o.l}</p>
-                    <p className="text-xs text-muted-foreground">{o.d}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
+        <TabsContent value="stores" className="mt-0">
+          <StoreManager />
         </TabsContent>
-
-        <TabsContent value="notifications" className="mt-5">
-          <Card title="Notifications" icon={Bell}>
-            <div className="space-y-5">
-              {[
-                { l: "Scan completed", d: "Email when an audit finishes processing", on: true },
-                { l: "Critical out-of-stock", d: "Instant alert when a facing hits zero", on: true },
-                { l: "Shelf health drop", d: "Notify when a store drops below 70", on: true },
-                { l: "Weekly digest", d: "Monday summary of all store performance", on: true },
-                { l: "Product updates", d: "New Aislix features and model releases", on: false },
-              ].map((o) => (
-                <div key={o.l} className="flex items-start gap-3">
-                  <Switch defaultChecked={o.on} className="mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium">{o.l}</p>
-                    <p className="text-xs text-muted-foreground">{o.d}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
+        <TabsContent value="team" className="mt-0">
+          <TeamManager />
         </TabsContent>
-
-        <TabsContent value="team" className="mt-5">
-          <Card title="Team members" icon={Users}>
-            <div className="divide-y divide-border">
-              {team.map((m) => (
-                <div key={m.email} className="flex items-center gap-4 py-3 first:pt-0">
-                  <span className="grid size-9 place-items-center rounded-xl bg-brand-soft text-xs font-medium text-brand">
-                    {m.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{m.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">{m.email}</p>
-                  </div>
-                  <Badge variant="secondary" className="rounded-full bg-muted">
-                    {m.role}
-                  </Badge>
-                  <Button variant="ghost" size="sm" className="rounded-lg">
-                    Manage
-                  </Button>
-                </div>
-              ))}
-            </div>
-            <div className="mt-6 flex items-center gap-3">
-              <Input placeholder="teammate@company.com" className="h-11 rounded-xl" />
-              <Button variant="brand" className="rounded-xl">
-                Invite
-              </Button>
-            </div>
-          </Card>
+        <TabsContent value="notifications" className="mt-0">
+          <NotificationsPanel />
         </TabsContent>
-
-        <TabsContent value="integrations" className="mt-5">
-          <Card title="Integrations" icon={Plug}>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {integrations.map((i) => (
-                <div
-                  key={i.name}
-                  className="flex items-start gap-3 rounded-2xl border border-border bg-surface p-5"
-                >
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{i.name}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{i.desc}</p>
-                  </div>
-                  <Switch defaultChecked={i.on} />
-                </div>
-              ))}
-            </div>
-          </Card>
+        <TabsContent value="security" className="mt-0">
+          <SecurityPanel />
+        </TabsContent>
+        <TabsContent value="api" className="mt-0">
+          <ApiAccessPanel />
+        </TabsContent>
+        <TabsContent value="support" className="mt-0">
+          <SupportPanel />
         </TabsContent>
       </Tabs>
     </AppShell>
+  );
+}
+
+const supportLinks = [
+  {
+    title: "Help center",
+    description: "Guides for scanning, reports and shelf metrics.",
+    icon: LifeBuoy,
+    href: "https://docs.lovable.dev",
+    cta: "Open help center",
+  },
+  {
+    title: "Contact support",
+    description: "Reach the Aislix retail intelligence team.",
+    icon: MessageSquare,
+    href: "mailto:support@aislix.com?subject=Aislix%20support%20request",
+    cta: "Email support",
+  },
+  {
+    title: "Report a bug",
+    description: "Something misdetected or broken? Send details and we'll investigate.",
+    icon: Bug,
+    href: "mailto:support@aislix.com?subject=Aislix%20bug%20report",
+    cta: "Report a bug",
+  },
+  {
+    title: "Feature request",
+    description: "Tell us what would make your shelf audits faster.",
+    icon: Lightbulb,
+    href: "mailto:product@aislix.com?subject=Aislix%20feature%20request",
+    cta: "Suggest a feature",
+  },
+];
+
+function SupportPanel() {
+  const navigate = useNavigate();
+  return (
+    <div className="space-y-4">
+      <SettingsCard title="Support" description="Get help or share feedback with the Aislix team." icon={LifeBuoy}>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {supportLinks.map((link) => (
+            <div
+              key={link.title}
+              className="flex flex-col rounded-2xl border border-border bg-surface p-4 transition-all hover:border-brand/30 hover:shadow-card"
+            >
+              <span className="grid size-9 place-items-center rounded-xl bg-brand-soft text-brand">
+                <link.icon className="size-4" />
+              </span>
+              <p className="mt-3 text-sm font-medium">{link.title}</p>
+              <p className="mt-1 flex-1 text-xs text-muted-foreground">{link.description}</p>
+              <Button variant="subtle" size="sm" className="mt-4 w-fit rounded-xl" asChild>
+                <a href={link.href} target="_blank" rel="noreferrer">
+                  {link.cta}
+                </a>
+              </Button>
+            </div>
+          ))}
+        </div>
+      </SettingsCard>
+
+      <SettingsCard title="Session" description="Sign out of Aislix on this device." icon={LogOut}>
+        <Button
+          variant="subtle"
+          size="sm"
+          className="rounded-xl"
+          onClick={() => void navigate({ to: "/login" })}
+        >
+          <LogOut className="size-4" /> Sign out
+        </Button>
+      </SettingsCard>
+    </div>
   );
 }
