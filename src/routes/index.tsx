@@ -67,6 +67,8 @@ const steps = [
 ];
 
 function Landing() {
+  const [cycle, setCycle] = useState<BillingCycle>("monthly");
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-xl">
