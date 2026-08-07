@@ -101,7 +101,7 @@ function Dashboard() {
               <span className="grid size-9 place-items-center rounded-xl bg-brand-soft text-brand">
                 <k.icon className="size-4" />
               </span>
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-brand">
+              <span className="inline-flex items-center gap-1 text-xs font-medium text-accent-green">
                 <ArrowUpRight className="size-3" />
                 {k.delta}
               </span>
@@ -170,7 +170,7 @@ function Dashboard() {
                 </div>
               </div>
             </div>
-            <Badge className="mt-5 rounded-full bg-brand-soft text-brand hover:bg-brand-soft">
+            <Badge className="mt-5 rounded-full bg-accent-green/12 text-accent-green hover:bg-accent-green/12">
               Healthy · +6 vs last week
             </Badge>
             <div className="mt-5 h-24 w-full">
@@ -231,7 +231,7 @@ function Dashboard() {
                 </div>
                 <Badge
                   variant="secondary"
-                  className="rounded-full bg-brand-soft text-brand hover:bg-brand-soft"
+                  className="rounded-full bg-accent-green/12 text-accent-green hover:bg-accent-green/12"
                 >
                   {s.confidence ? `${s.confidence}%` : "—"}
                 </Badge>

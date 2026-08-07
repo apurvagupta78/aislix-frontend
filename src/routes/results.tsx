@@ -77,7 +77,7 @@ function Results() {
         <span className="inline-flex items-center gap-1.5">
           <Gauge className="size-4 text-brand" /> Shelf health 92 / 100
         </span>
-        <Badge className="rounded-full bg-brand-soft text-brand hover:bg-brand-soft">Completed</Badge>
+        <Badge className="rounded-full bg-accent-green/12 text-accent-green hover:bg-accent-green/12">Completed</Badge>
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -206,7 +206,7 @@ function Results() {
                         variant="secondary"
                         className={`rounded-full ${
                           p.status === "In stock"
-                            ? "bg-brand-soft text-brand hover:bg-brand-soft"
+                            ? "bg-accent-green/12 text-accent-green hover:bg-accent-green/12"
                             : p.status === "Low stock"
                               ? "bg-warning/15 text-warning hover:bg-warning/15"
                               : "bg-destructive/10 text-destructive hover:bg-destructive/10"
