@@ -35,7 +35,7 @@ const filters: StoreFilter[] = ["all", "active", "archived", "healthy", "alerts"
 export const Route = createFileRoute("/stores/")({
   validateSearch: (
     search: Record<string, unknown>,
-  ): { q?: string; filter?: StoreFilter; page?: number } => {
+  ): { q?: string | undefined; filter?: StoreFilter | undefined; page?: number | undefined } => {
     const q = typeof search['q'] === "string" && search['q'] ? { q: search['q'] as string } : {};
     const rawFilter = search['filter'];
     const filter =
@@ -97,8 +97,11 @@ function StoresPage() {
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const allSelected = stores.length > 0 && stores.every((s) => selected.includes(s.id));
 
-  const setSearch = (next: { q?: string; filter?: StoreFilter; page?: number }) =>
-    navigate({ to: "/stores", search: { q, filter, page, ...next } });
+  const setSearch = (next: {
+    q?: string | undefined;
+    filter?: StoreFilter | undefined;
+    page?: number | undefined;
+  }) => navigate({ to: "/stores", search: { q, filter, page, ...next } });
 
   const bulkArchive = useMutation({
     mutationFn: () => bulkArchiveStores(selected),
