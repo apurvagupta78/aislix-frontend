@@ -25,6 +25,7 @@ import { Route as RefundsRouteImport } from './routes/refunds'
 import { Route as ReportRouteImport } from './routes/report'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as ScanRouteImport } from './routes/scan'
+import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TermsRouteImport } from './routes/terms'
@@ -110,6 +111,11 @@ const ScanRoute = ScanRouteImport.update({
   path: '/scan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SecurityRoute = SecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -148,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/report': typeof ReportRoute
   '/results': typeof ResultsRoute
   '/scan': typeof ScanRoute
+  '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
@@ -170,6 +177,7 @@ export interface FileRoutesByTo {
   '/report': typeof ReportRoute
   '/results': typeof ResultsRoute
   '/scan': typeof ScanRoute
+  '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
@@ -193,6 +201,7 @@ export interface FileRoutesById {
   '/report': typeof ReportRoute
   '/results': typeof ResultsRoute
   '/scan': typeof ScanRoute
+  '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
@@ -217,6 +226,7 @@ export interface FileRouteTypes {
     | '/report'
     | '/results'
     | '/scan'
+    | '/security'
     | '/settings'
     | '/signup'
     | '/terms'
@@ -239,6 +249,7 @@ export interface FileRouteTypes {
     | '/report'
     | '/results'
     | '/scan'
+    | '/security'
     | '/settings'
     | '/signup'
     | '/terms'
@@ -261,6 +272,7 @@ export interface FileRouteTypes {
     | '/report'
     | '/results'
     | '/scan'
+    | '/security'
     | '/settings'
     | '/signup'
     | '/terms'
@@ -284,6 +296,7 @@ export interface RootRouteChildren {
   ReportRoute: typeof ReportRoute
   ResultsRoute: typeof ResultsRoute
   ScanRoute: typeof ScanRoute
+  SecurityRoute: typeof SecurityRoute
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
@@ -404,6 +417,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/security': {
+      id: '/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof SecurityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -452,6 +472,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReportRoute: ReportRoute,
   ResultsRoute: ResultsRoute,
   ScanRoute: ScanRoute,
+  SecurityRoute: SecurityRoute,
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
