@@ -91,15 +91,15 @@ export function AppShell({
           {secondary.map((n) => item(n.to, n.label, n.icon))}
         </nav>
         <div className="mt-auto rounded-2xl border border-border bg-brand-soft/60 p-4">
-          <p className="text-sm font-medium text-foreground">Growth plan</p>
-          <p className="mt-1 text-xs text-muted-foreground">1,284 of 2,000 scans used</p>
-          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-border">
-            <div className="h-full w-[64%] rounded-full bg-gradient-brand" />
-          </div>
+          <p className="text-sm font-medium text-foreground">Need more scans?</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Review your plan, quota and invoices in billing.
+          </p>
           <Button asChild size="sm" variant="brand" className="mt-3 w-full rounded-lg">
-            <Link to="/billing">Upgrade plan</Link>
+            <Link to="/billing">Manage plan</Link>
           </Button>
         </div>
+
       </aside>
 
       <div className="lg:pl-64">
