@@ -1,5 +1,5 @@
-// Contract for the future FastAPI (Railway) scan-results response. The UI binds
-// only to these types — no fabricated inventory, KPIs or analytics anywhere.
+// Live Supabase-backed scan result loader. Everything the UI renders is
+// derived from real shelf_scans / scan_results / detected_products rows.
 
 export type Severity = "high" | "medium" | "low";
 
@@ -93,11 +93,187 @@ export type ScanResult = {
   };
 };
 
-import { api } from "./api/client";
+import { supabase } from "@/integrations/supabase/client";
+import { dbError, notFound, requireOrgId } from "@/lib/db/context";
 
-/** GET /scan/{scan_id} — full result payload for one scan. */
-export function fetchScanResult(scanId: string, signal?: AbortSignal): Promise<ScanResult> {
-  return api.get<ScanResult>(`/scan/${encodeURIComponent(scanId)}`, { signal });
+function severityFromAlert(value: unknown): Severity {
+  if (value === "high" || value === "medium" || value === "low") return value;
+  return "medium";
+}
+
+function mapAlerts(raw: unknown): ScanAlert[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item: any, index) => ({
+    id: item?.id ?? `alert-${index}`,
+    severity: severityFromAlert(item?.severity),
+    title: item?.title ?? "Alert",
+    detail: item?.detail ?? undefined,
+  }));
+}
+
+function mapRecommendations(raw: unknown): ScanRecommendation[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item: any, index) => ({
+    id: item?.id ?? `rec-${index}`,
+    title: item?.title ?? "Recommendation",
+    detail: item?.detail ?? undefined,
+    category: item?.category ?? undefined,
+    impact: item?.impact ?? undefined,
+  }));
+}
+
+function mapBrandShare(raw: unknown): BrandShare[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item: any) => ({ brand: item?.brand ?? "Unknown", share: Number(item?.share) || 0 }))
+    .filter((item) => item.brand);
+}
+
+function mapCategoryBreakdown(raw: unknown): CategorySlice[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item: any) => ({ category: item?.category ?? "Unknown", count: Number(item?.count) || 0 }))
+    .filter((item) => item.category);
+}
+
+/** Loads the full result payload for one scan from Supabase. */
+export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Promise<ScanResult> {
+  const orgId = await requireOrgId();
+
+  const { data: scan, error: scanError } = await supabase
+    .from("shelf_scans")
+    .select(
+      "id, org_id, status, shelf_label, created_at, processing_started_at, processing_completed_at, shelf_health_score, osa_percent, planogram_compliance_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count, store_id, stores(name)",
+    )
+    .eq("org_id", orgId)
+    .eq("id", scanId)
+    .maybeSingle();
+  if (scanError) return dbError(scanError, "Could not load this scan.");
+  if (!scan) notFound("Scan not found.");
+
+  const { data: result } = await supabase
+    .from("scan_results")
+    .select(
+      "executive_summary, metrics, alerts, recommendations, brand_share, category_breakdown, confidence_avg",
+    )
+    .eq("scan_id", scanId)
+    .maybeSingle();
+
+  const { data: products } = await supabase
+    .from("detected_products")
+    .select(
+      "id, name, brand, category, facings, shelf_row, stock_status, confidence, expected_facings",
+    )
+    .eq("scan_id", scanId);
+
+  const { data: images } = await supabase
+    .from("scan_images")
+    .select("kind, storage_bucket, storage_path")
+    .eq("scan_id", scanId);
+
+  let annotatedUrl: string | undefined;
+  const annotated = images?.find((img) => img.kind === "annotated");
+  if (annotated) {
+    const { data: signed } = await supabase.storage
+      .from(annotated.storage_bucket as string)
+      .createSignedUrl(annotated.storage_path as string, 3600);
+    annotatedUrl = signed?.signedUrl;
+  }
+
+  const inventory: InventoryItem[] = (products ?? []).map((p: any) => ({
+    id: p.id as string,
+    brand: p.brand ?? "Unknown",
+    product: p.name ?? "Unknown product",
+    quantity: p.facings ?? 0,
+    confidence: Number(p.confidence) || 0,
+    category: p.category ?? undefined,
+    low_stock: p.stock_status === "low_stock",
+    out_of_stock: p.stock_status === "out_of_stock",
+    shelf_position: p.shelf_row ?? undefined,
+  }));
+
+  // Derived chart buckets from real detected_products rows only.
+  const confidenceBuckets: ConfidenceBucket[] = [
+    { bucket: "0-50%", count: 0 },
+    { bucket: "50-75%", count: 0 },
+    { bucket: "75-90%", count: 0 },
+    { bucket: "90-100%", count: 0 },
+  ];
+  for (const item of inventory) {
+    const pct = item.confidence <= 1 ? item.confidence * 100 : item.confidence;
+    if (pct < 50) confidenceBuckets[0]!.count++;
+    else if (pct < 75) confidenceBuckets[1]!.count++;
+    else if (pct < 90) confidenceBuckets[2]!.count++;
+    else confidenceBuckets[3]!.count++;
+  }
+
+  const quantityBucketDefs: [string, (q: number) => boolean][] = [
+    ["0", (q) => q === 0],
+    ["1-3", (q) => q >= 1 && q <= 3],
+    ["4-6", (q) => q >= 4 && q <= 6],
+    ["7+", (q) => q >= 7],
+  ];
+  const quantityBuckets: QuantityBucket[] = quantityBucketDefs.map(([bucket, match]) => ({
+    bucket,
+    count: inventory.filter((i) => match(i.quantity)).length,
+  }));
+
+  const lowStockByCategory = new Map<string, { low: number; out: number }>();
+  for (const item of inventory) {
+    const key = item.category ?? "Uncategorized";
+    const entry = lowStockByCategory.get(key) ?? { low: 0, out: 0 };
+    if (item.low_stock) entry.low++;
+    if (item.out_of_stock) entry.out++;
+    lowStockByCategory.set(key, entry);
+  }
+  const lowStockSummary: LowStockRow[] = Array.from(lowStockByCategory.entries())
+    .filter(([, v]) => v.low > 0 || v.out > 0)
+    .map(([label, v]) => ({ label, low_stock: v.low, out_of_stock: v.out }));
+
+  const startedAt = scan.processing_started_at ? new Date(scan.processing_started_at).getTime() : undefined;
+  const completedAt = scan.processing_completed_at ? new Date(scan.processing_completed_at).getTime() : undefined;
+  const processingTimeMs = startedAt !== undefined && completedAt !== undefined ? completedAt - startedAt : 0;
+
+  const uniqueSkus = new Set(inventory.map((i) => `${i.brand}::${i.product}`)).size;
+  const uniqueBrands = new Set(inventory.map((i) => i.brand)).size;
+  const avgConfidence =
+    result?.confidence_avg ??
+    (inventory.length ? inventory.reduce((sum, i) => sum + i.confidence, 0) / inventory.length : 0);
+
+  const summary: ScanSummary = {
+    total_products: scan.total_products ?? inventory.length,
+    unique_skus: uniqueSkus,
+    unique_brands: uniqueBrands,
+    low_stock_products: scan.low_stock_count ?? inventory.filter((i) => i.low_stock).length,
+    average_confidence: Number(avgConfidence) || 0,
+    processing_time_ms: processingTimeMs,
+    out_of_stock_products: scan.out_of_stock_count ?? undefined,
+    shelf_compliance: scan.planogram_compliance_percent ?? undefined,
+    shelf_health_score: scan.shelf_health_score ?? undefined,
+  };
+
+  return {
+    scan_id: scan.id as string,
+    created_at: scan.created_at as string,
+    store: (scan as any).stores?.name ?? undefined,
+    status: scan.status as ScanStatus,
+    summary,
+    annotated_image_url: annotatedUrl,
+    executive_summary: result?.executive_summary ?? undefined,
+    alerts: mapAlerts(result?.alerts),
+    recommendations: mapRecommendations(result?.recommendations),
+    inventory,
+    charts: {
+      top_brands: mapBrandShare(result?.brand_share),
+      confidence_distribution: confidenceBuckets,
+      category_distribution: mapCategoryBreakdown(result?.category_breakdown),
+      quantity_distribution: quantityBuckets,
+      low_stock_summary: lowStockSummary,
+    },
+    downloads: {
+      annotated_image_url: annotatedUrl,
+    },
+  };
 }
 
 export function normalizeConfidence(value: number): number {
