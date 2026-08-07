@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { Check, Minus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -193,8 +194,8 @@ export function ComparisonTable() {
           </thead>
           <tbody>
             {comparisonGroups.map((group) => (
-              <>
-                <tr key={group.group} className="bg-brand-soft/50">
+              <Fragment key={group.group}>
+                <tr className="bg-brand-soft/50">
                   <td
                     colSpan={ids.length + 1}
                     className="px-5 py-2.5 text-xs font-semibold uppercase tracking-widest text-brand"
@@ -212,7 +213,7 @@ export function ComparisonTable() {
                     ))}
                   </tr>
                 ))}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>

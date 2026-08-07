@@ -248,7 +248,9 @@ function Billing() {
         <ErrorState
           title="Couldn't load your subscription"
           description={(overviewQuery.error as Error).message}
-          onRetry={() => overviewQuery.refetch()}
+          onRetry={() => {
+            void overviewQuery.refetch();
+          }}
         />
       ) : !overview ? (
         <EmptyState
@@ -571,7 +573,9 @@ function Billing() {
           <ErrorState
             title="Couldn't load invoices"
             description={(invoicesQuery.error as Error).message}
-            onRetry={() => invoicesQuery.refetch()}
+            onRetry={() => {
+              void invoicesQuery.refetch();
+            }}
           />
         ) : !invoicesQuery.data?.items.length ? (
           <EmptyState
