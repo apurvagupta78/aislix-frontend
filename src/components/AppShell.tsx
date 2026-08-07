@@ -10,6 +10,7 @@ import {
   User,
   Settings,
   Building2,
+  Users,
   Tag,
   Bell,
   Search,
@@ -36,6 +37,7 @@ const nav = [
   { label: "Scan History", to: "/history", icon: History },
   { label: "Reports", to: "/report", icon: FileText },
   { label: "Stores", to: "/stores", icon: Building2 },
+  { label: "Team", to: "/team", icon: Users },
 ] as const;
 
 const secondary = [
