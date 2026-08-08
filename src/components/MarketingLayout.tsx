@@ -8,9 +8,7 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-card/85 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-5 sm:px-8">
-        <Link to="/" aria-label="Aislix home">
-          <Logo />
-        </Link>
+        <Logo />
         <nav className="ml-auto flex items-center gap-1 sm:gap-2">
           <Button asChild variant="ghost" size="sm" className="hidden rounded-xl lg:inline-flex">
             <Link to="/platform">Platform</Link>
@@ -63,9 +61,7 @@ export function SiteFooter() {
       <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8">
         <div className="grid gap-10 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
           <div>
-            <Link to="/" aria-label="Aislix home">
-              <Logo />
-            </Link>
+            <Logo />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
               AI retail shelf intelligence for supermarkets, FMCG brands, distributors and local
               stores. Audit any shelf from a single photo.
