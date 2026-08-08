@@ -372,10 +372,122 @@ async function pollVisionScan(
   }
 
   throw new PipelineError(
-    "The AI vision backend did not finish analysing this scan within 3 minutes. Please retry.",
+    "The AI vision backend did not finish analysing this scan in time. Please retry.",
     504,
   );
 }
+
+/* -------------------------------------------------------------------------- */
+/* Short-request job API (submit once, poll separately)                       */
+/* -------------------------------------------------------------------------- */
+
+function visionHeaders(apiKey: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    accept: "application/json",
+  };
+  if (apiKey) {
+    headers["authorization"] = `Bearer ${apiKey}`;
+    headers["x-api-key"] = apiKey;
+  }
+  return headers;
+}
+
+export type SubmitVisionResult =
+  | { kind: "completed"; payload: any }
+  | { kind: "accepted"; jobId: string };
+
+/** POST /scan only — returns as soon as Railway accepts the job. */
+export async function submitVisionJob(body: unknown): Promise<SubmitVisionResult> {
+  const { url, apiKey } = visionConfig();
+  const headers = visionHeaders(apiKey);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(120_000),
+    });
+  } catch (error) {
+    const timedOut = error instanceof Error && /timeout|abort/i.test(error.name + error.message);
+    throw new PipelineError(
+      timedOut
+        ? "The AI vision backend took too long to accept this scan. Please retry."
+        : `Could not reach the AI vision backend at ${url}.`,
+      timedOut ? 504 : 502,
+    );
+  }
+
+  const text = await response.text();
+  if (!response.ok) {
+    throw new PipelineError(
+      `AI vision backend returned ${response.status}${text ? `: ${text.slice(0, 400)}` : ""}`,
+      response.status >= 500 ? 502 : response.status,
+    );
+  }
+
+  const payload = parseJson(text);
+  const status = (str(payload?.status) ?? "").toLowerCase();
+  const jobId = str(payload?.scan_id) ?? str(payload?.id) ?? str(payload?.job_id);
+  const isAsync =
+    response.status === 202 || ["queued", "pending", "processing", "running"].includes(status);
+
+  if (!isAsync) return { kind: "completed", payload };
+  if (!jobId) {
+    throw new PipelineError(
+      "The AI vision backend accepted the scan but did not return a scan_id to poll.",
+    );
+  }
+  return { kind: "accepted", jobId };
+}
+
+export type PollVisionResult = { kind: "processing" } | { kind: "completed"; payload: any };
+
+/** A single GET /scan/{id} — never loops, so the request stays short. */
+export async function pollVisionJobOnce(jobId: string): Promise<PollVisionResult> {
+  const { baseUrl, apiKey } = visionConfig();
+  const headers = visionHeaders(apiKey);
+  delete headers["content-type"];
+
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl}/scan/${encodeURIComponent(jobId)}`, {
+      method: "GET",
+      headers,
+      signal: AbortSignal.timeout(60_000),
+    });
+  } catch {
+    return { kind: "processing" }; // transient — the client will poll again
+  }
+
+  const text = await res.text();
+  if (res.status === 404 || res.status >= 500) return { kind: "processing" };
+  if (!res.ok) {
+    throw new PipelineError(
+      `AI vision backend returned ${res.status}${text ? `: ${text.slice(0, 400)}` : ""}`,
+      res.status,
+    );
+  }
+
+  const payload = parseJson(text);
+  const status = (str(payload?.status) ?? "").toLowerCase();
+
+  if (status === "failed" || status === "error") {
+    throw new PipelineError(
+      str(payload?.error) ??
+        str(payload?.error_message) ??
+        str(payload?.detail) ??
+        "The AI vision backend failed to analyse this shelf image.",
+    );
+  }
+  if (["completed", "complete", "done", "success"].includes(status)) {
+    return { kind: "completed", payload: payload?.result ?? payload?.results ?? payload };
+  }
+  return { kind: "processing" };
+}
+
 
 /* -------------------------------------------------------------------------- */
 /* Persistence                                                                */
