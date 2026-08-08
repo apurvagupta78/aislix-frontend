@@ -291,7 +291,14 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     ...(scan.shelf_health_score !== null && scan.shelf_health_score !== undefined
       ? { shelf_health_score: scan.shelf_health_score }
       : {}),
+    ...(typeof (result?.metrics as any)?.learned_catalog_size === "number"
+      ? { learned_catalog_size: Number((result?.metrics as any).learned_catalog_size) }
+      : {}),
+    ...(typeof (result?.metrics as any)?.learned_new_this_scan === "number"
+      ? { learned_new_this_scan: Number((result?.metrics as any).learned_new_this_scan) }
+      : {}),
   };
+
 
   const storeName = (scan as any).stores?.name as string | undefined;
 
