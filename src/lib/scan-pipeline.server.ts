@@ -53,7 +53,7 @@ function visionConfig() {
   }
   const path = (process.env["AISLIX_AI_SCAN_PATH"] ?? "/scan").trim() || "/scan";
   const apiKey = (process.env["AISLIX_AI_API_KEY"] ?? "").trim();
-  const timeoutMs = Number(process.env["AISLIX_AI_TIMEOUT_MS"]) || 180_000;
+  const timeoutMs = Number(process.env["AISLIX_AI_TIMEOUT_MS"]) || 600_000;
   const base = baseUrl.replace(/\/+$/, "");
   return {
     baseUrl: base,
@@ -256,7 +256,7 @@ function pct(value: unknown): number | null {
 /* -------------------------------------------------------------------------- */
 
 const POLL_INTERVAL_MS = 5_000;
-const POLL_MAX_MS = 180_000;
+const POLL_MAX_MS = Number(process.env["AISLIX_AI_TIMEOUT_MS"]) || 600_000;
 
 function parseJson(text: string): any {
   try {
