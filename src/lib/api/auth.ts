@@ -7,7 +7,11 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { ApiError } from "./errors";
-import { clearContextCache, createOrganizationForUser } from "@/lib/db/context";
+import {
+  clearContextCache,
+  createOrganizationForUser,
+  ensureOrganizationForUser,
+} from "@/lib/db/context";
 
 export type AuthUser = {
   id: string;
@@ -98,6 +102,20 @@ export async function login(input: LoginInput): Promise<AuthSession> {
   });
   if (error) authError(error.message, error.status === 400 ? 401 : (error.status ?? 400));
   if (!data.session) authError("Sign-in did not return a session.", 401);
+
+  const meta = (data.user?.user_metadata ?? {}) as {
+    company_name?: string;
+    full_name?: string;
+    name?: string;
+  };
+  const workspaceName =
+    meta.company_name?.trim() ||
+    (meta.full_name || meta.name)?.trim() ||
+    data.user?.email?.split("@")[0] ||
+    "My workspace";
+  await ensureOrganizationForUser(data.user!.id, workspaceName);
+  clearContextCache();
+
   return toSession(data.session as never);
 }
 

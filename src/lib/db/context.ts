@@ -135,3 +135,25 @@ export async function createOrganizationForUser(
   }
   return orgId;
 }
+
+/**
+ * Returns the user's existing active organization id, creating one when the
+ * account has no membership yet.
+ */
+export async function ensureOrganizationForUser(
+  userId: string,
+  name: string,
+): Promise<string> {
+  const { data, error } = await supabase
+    .from("organization_members")
+    .select("org_id")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) dbError(error, "Could not load your workspace.");
+  if (data?.org_id) return data.org_id as string;
+
+  return createOrganizationForUser(userId, name);
+}
