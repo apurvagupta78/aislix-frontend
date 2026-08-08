@@ -9,7 +9,6 @@ import {
   CreditCard,
   User,
   Settings,
-  Building2,
   Store,
   Users,
   Tag,
@@ -17,10 +16,11 @@ import {
   Search,
   LogOut,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Logo } from "@/components/Logo";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { fetchProfile } from "@/lib/account";
 
 const nav = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
@@ -37,7 +38,6 @@ const nav = [
   { label: "Upload Scan", to: "/upload", icon: UploadCloud },
   { label: "Scan History", to: "/history", icon: History },
   { label: "Reports", to: "/report", icon: FileText },
-  { label: "Organization", to: "/organization", icon: Building2 },
   { label: "Stores", to: "/stores", icon: Store },
   { label: "Team", to: "/team", icon: Users },
 ] as const;
@@ -62,6 +62,24 @@ export function AppShell({
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
+  const profileQuery = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => fetchProfile(),
+    retry: false,
+    staleTime: 60_000,
+  });
+  const profile = profileQuery.data;
+  const displayName = profile?.full_name?.trim() || profile?.email || "Your account";
+  const displayEmail = profile?.email ?? "";
+  const initials =
+    (profile?.full_name?.trim()
+      ? profile.full_name
+          .trim()
+          .split(/\s+/)
+          .slice(0, 2)
+          .map((part) => part[0])
+          .join("")
+      : profile?.email?.[0]) ?? "A";
 
   const item = (to: string, label: string, Icon: typeof Bell) => (
     <Link
@@ -82,7 +100,7 @@ export function AppShell({
   return (
     <div className="min-h-screen bg-surface">
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-border bg-card px-4 py-5 lg:flex">
-        <Logo />
+        <Logo to="/dashboard" />
         <nav className="mt-8 space-y-1">
           <p className="px-3 pb-2 text-[0.7rem] font-medium uppercase tracking-widest text-muted-foreground">
             Workspace
@@ -111,7 +129,7 @@ export function AppShell({
         <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur-xl">
           <div className="flex h-16 items-center gap-3 px-5 sm:px-8">
             <div className="lg:hidden">
-              <Logo compact />
+              <Logo compact to="/dashboard" />
             </div>
             <form
               className="relative hidden max-w-sm flex-1 md:block"
@@ -145,16 +163,21 @@ export function AppShell({
                 <DropdownMenuTrigger asChild>
                   <button className="rounded-full outline-none ring-brand/40 focus-visible:ring-2">
                     <Avatar className="size-8">
-                      <AvatarFallback className="bg-brand-soft text-xs font-medium text-brand">
-                        RK
+                      {profile?.avatar_url ? (
+                        <AvatarImage src={profile.avatar_url} alt={displayName} />
+                      ) : null}
+                      <AvatarFallback className="bg-brand-soft text-xs font-medium uppercase text-brand">
+                        {initials.toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-52 rounded-xl">
                   <DropdownMenuLabel className="font-normal">
-                    <p className="text-sm font-medium">Rahul Kapoor</p>
-                    <p className="text-xs text-muted-foreground">ops@moremart.in</p>
+                    <p className="text-sm font-medium">{displayName}</p>
+                    {displayEmail && (
+                      <p className="text-xs text-muted-foreground">{displayEmail}</p>
+                    )}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
