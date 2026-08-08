@@ -190,14 +190,31 @@ export async function submitScan(
 }
 
 /**
- * Steps 3-6: hands the uploaded images to the Railway FastAPI vision backend
- * and persists products, metrics and analytics. Resolves once the scan is
- * `completed`; rejects (and leaves the scan `failed`) when the API fails.
+ * Steps 3-6: submits the uploaded images to the Railway FastAPI vision backend
+ * and then polls with short requests (every 5s, up to 10 minutes) so no single
+ * server request blocks for minutes. Resolves once the scan is `completed`.
  */
+const ANALYSIS_POLL_INTERVAL_MS = 5_000;
+const ANALYSIS_MAX_WAIT_MS = 600_000;
+
 export async function runScanAnalysis(scanId: string): Promise<ScanAnalysisResult> {
-  const { processScan } = await import("@/lib/scan-pipeline.functions");
+  const { startScanPipeline, pollScanPipeline } = await import("@/lib/scan-pipeline.functions");
   try {
-    return (await processScan({ data: { scanId } })) as ScanAnalysisResult;
+    const started = (await startScanPipeline({ data: { scanId } })) as any;
+    if (started?.status === "completed") return started as ScanAnalysisResult;
+
+    const jobId: string | null = started?.job_id ?? null;
+    const deadline = Date.now() + ANALYSIS_MAX_WAIT_MS;
+
+    while (Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, ANALYSIS_POLL_INTERVAL_MS));
+      const poll = (await pollScanPipeline({ data: { scanId, jobId } })) as any;
+      if (poll?.status === "completed") return poll as ScanAnalysisResult;
+    }
+
+    throw new Error(
+      "The AI vision backend did not finish analysing this scan in time. Please retry the scan.",
+    );
   } catch (error) {
     throw new Error(cleanPipelineMessage(error));
   }
@@ -207,6 +224,7 @@ export async function runScanAnalysis(scanId: string): Promise<ScanAnalysisResul
 export async function retryScanAnalysis(scanId: string): Promise<ScanAnalysisResult> {
   return runScanAnalysis(scanId);
 }
+
 
 function cleanPipelineMessage(error: unknown): string {
   const raw =

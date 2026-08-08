@@ -53,7 +53,7 @@ function visionConfig() {
   }
   const path = (process.env["AISLIX_AI_SCAN_PATH"] ?? "/scan").trim() || "/scan";
   const apiKey = (process.env["AISLIX_AI_API_KEY"] ?? "").trim();
-  const timeoutMs = Number(process.env["AISLIX_AI_TIMEOUT_MS"]) || 180_000;
+  const timeoutMs = Number(process.env["AISLIX_AI_TIMEOUT_MS"]) || 600_000;
   const base = baseUrl.replace(/\/+$/, "");
   return {
     baseUrl: base,
@@ -256,7 +256,7 @@ function pct(value: unknown): number | null {
 /* -------------------------------------------------------------------------- */
 
 const POLL_INTERVAL_MS = 5_000;
-const POLL_MAX_MS = 180_000;
+const POLL_MAX_MS = Number(process.env["AISLIX_AI_TIMEOUT_MS"]) || 600_000;
 
 function parseJson(text: string): any {
   try {
@@ -372,10 +372,122 @@ async function pollVisionScan(
   }
 
   throw new PipelineError(
-    "The AI vision backend did not finish analysing this scan within 3 minutes. Please retry.",
+    "The AI vision backend did not finish analysing this scan in time. Please retry.",
     504,
   );
 }
+
+/* -------------------------------------------------------------------------- */
+/* Short-request job API (submit once, poll separately)                       */
+/* -------------------------------------------------------------------------- */
+
+function visionHeaders(apiKey: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    accept: "application/json",
+  };
+  if (apiKey) {
+    headers["authorization"] = `Bearer ${apiKey}`;
+    headers["x-api-key"] = apiKey;
+  }
+  return headers;
+}
+
+export type SubmitVisionResult =
+  | { kind: "completed"; payload: any }
+  | { kind: "accepted"; jobId: string };
+
+/** POST /scan only — returns as soon as Railway accepts the job. */
+export async function submitVisionJob(body: unknown): Promise<SubmitVisionResult> {
+  const { url, apiKey } = visionConfig();
+  const headers = visionHeaders(apiKey);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(120_000),
+    });
+  } catch (error) {
+    const timedOut = error instanceof Error && /timeout|abort/i.test(error.name + error.message);
+    throw new PipelineError(
+      timedOut
+        ? "The AI vision backend took too long to accept this scan. Please retry."
+        : `Could not reach the AI vision backend at ${url}.`,
+      timedOut ? 504 : 502,
+    );
+  }
+
+  const text = await response.text();
+  if (!response.ok) {
+    throw new PipelineError(
+      `AI vision backend returned ${response.status}${text ? `: ${text.slice(0, 400)}` : ""}`,
+      response.status >= 500 ? 502 : response.status,
+    );
+  }
+
+  const payload = parseJson(text);
+  const status = (str(payload?.status) ?? "").toLowerCase();
+  const jobId = str(payload?.scan_id) ?? str(payload?.id) ?? str(payload?.job_id);
+  const isAsync =
+    response.status === 202 || ["queued", "pending", "processing", "running"].includes(status);
+
+  if (!isAsync) return { kind: "completed", payload };
+  if (!jobId) {
+    throw new PipelineError(
+      "The AI vision backend accepted the scan but did not return a scan_id to poll.",
+    );
+  }
+  return { kind: "accepted", jobId };
+}
+
+export type PollVisionResult = { kind: "processing" } | { kind: "completed"; payload: any };
+
+/** A single GET /scan/{id} — never loops, so the request stays short. */
+export async function pollVisionJobOnce(jobId: string): Promise<PollVisionResult> {
+  const { baseUrl, apiKey } = visionConfig();
+  const headers = visionHeaders(apiKey);
+  delete headers["content-type"];
+
+  let res: Response;
+  try {
+    res = await fetch(`${baseUrl}/scan/${encodeURIComponent(jobId)}`, {
+      method: "GET",
+      headers,
+      signal: AbortSignal.timeout(60_000),
+    });
+  } catch {
+    return { kind: "processing" }; // transient — the client will poll again
+  }
+
+  const text = await res.text();
+  if (res.status === 404 || res.status >= 500) return { kind: "processing" };
+  if (!res.ok) {
+    throw new PipelineError(
+      `AI vision backend returned ${res.status}${text ? `: ${text.slice(0, 400)}` : ""}`,
+      res.status,
+    );
+  }
+
+  const payload = parseJson(text);
+  const status = (str(payload?.status) ?? "").toLowerCase();
+
+  if (status === "failed" || status === "error") {
+    throw new PipelineError(
+      str(payload?.error) ??
+        str(payload?.error_message) ??
+        str(payload?.detail) ??
+        "The AI vision backend failed to analyse this shelf image.",
+    );
+  }
+  if (["completed", "complete", "done", "success"].includes(status)) {
+    return { kind: "completed", payload: payload?.result ?? payload?.results ?? payload };
+  }
+  return { kind: "processing" };
+}
+
 
 /* -------------------------------------------------------------------------- */
 /* Persistence                                                                */
@@ -645,19 +757,242 @@ async function persistLearnedUpdates(
 /* Pipeline                                                                   */
 /* -------------------------------------------------------------------------- */
 
+type ScanRow = {
+  id: string;
+  org_id: string;
+  store_id: string | null;
+  shelf_label: string | null;
+  category: string | null;
+  notes: string | null;
+};
 
-export async function runScanPipelineServer(
-  supabase: DB,
-  scanId: string,
-): Promise<PipelineResult> {
-  const { data: scan, error: scanError } = await supabase
+async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
+  const { data: scan, error } = await supabase
     .from("shelf_scans")
     .select("id, org_id, store_id, status, shelf_label, category, notes")
     .eq("id", scanId)
     .maybeSingle();
-  if (scanError) throw new PipelineError(scanError.message, 500);
+  if (error) throw new PipelineError(error.message, 500);
   if (!scan) throw new PipelineError("Scan not found.", 404);
+  return {
+    id: scan.id as string,
+    org_id: scan.org_id as string,
+    store_id: (scan.store_id as string | null) ?? null,
+    shelf_label: (scan.shelf_label as string | null) ?? null,
+    category: (scan.category as string | null) ?? null,
+    notes: (scan.notes as string | null) ?? null,
+  };
+}
 
+/** Signs every uploaded original image and builds the Railway request body. */
+async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string) {
+  const { data: images, error: imagesError } = await supabase
+    .from("scan_images")
+    .select("id, storage_bucket, storage_path, mime_type, width, height")
+    .eq("scan_id", scan.id)
+    .eq("kind", "original")
+    .order("created_at", { ascending: true });
+  if (imagesError) throw new PipelineError(imagesError.message, 500);
+  if (!images?.length) throw new PipelineError("No shelf images were uploaded for this scan.", 400);
+
+  const signedImages: { url: string; path: string; width: number | null; height: number | null }[] =
+    [];
+  for (const image of images) {
+    const { data: signed, error: signError } = await supabase.storage
+      .from(image.storage_bucket as string)
+      .createSignedUrl(image.storage_path as string, 3600);
+    if (signError || !signed?.signedUrl) {
+      throw new PipelineError("Could not create a download link for the uploaded image.", 500);
+    }
+    signedImages.push({
+      url: signed.signedUrl,
+      path: image.storage_path as string,
+      width: (image.width as number | null) ?? null,
+      height: (image.height as number | null) ?? null,
+    });
+  }
+
+  const learnedCatalog = await loadLearnedCatalog(supabase, scan.org_id);
+
+  return {
+    scan_id: scan.id,
+    org_id: scan.org_id,
+    store_id: scan.store_id,
+    shelf_label: scan.shelf_label,
+    category: scan.category,
+    notes: scan.notes,
+    image_urls: signedImages.map((i) => i.url),
+    images: signedImages,
+    learned_catalog: learnedCatalog,
+    requested_at: startedAt,
+  };
+}
+
+/** Shared persistence for a completed vision payload. */
+async function persistScanPayload(
+  supabase: DB,
+  scan: ScanRow,
+  payload: any,
+  startedAt: string,
+): Promise<PipelineResult> {
+  const products = normalizeProducts(payload);
+  if (!products.length) {
+    throw new PipelineError(
+      "The AI vision backend did not detect any products in this shelf image.",
+      422,
+    );
+  }
+
+  // --- Persist detected products -------------------------------------------
+  await supabase.from("detected_products").delete().eq("scan_id", scan.id);
+  const { error: productError } = await supabase.from("detected_products").insert(
+    products.map((p) => ({
+      scan_id: scan.id,
+      name: p.name,
+      brand: p.brand,
+      category: p.category,
+      sku: p.sku,
+      barcode: p.barcode,
+      facings: p.facings,
+      shelf_row: p.shelf_row,
+      position_index: p.position_index,
+      stock_status: p.stock_status,
+      confidence: p.confidence,
+      price_inr: p.price_inr,
+      expected_facings: p.expected_facings,
+      bounding_box: p.bounding_box,
+    })) as never,
+  );
+  if (productError) throw new PipelineError(productError.message, 500);
+
+  // --- Metrics -------------------------------------------------------------
+  const metricsSource = (payload?.metrics ?? payload?.summary ?? payload) as any;
+  const outOfStock = products.filter((p) => p.stock_status === "out_of_stock").length;
+  const lowStock = products.filter((p) => p.stock_status === "low_stock").length;
+  const misplaced = products.filter((p) => p.stock_status === "misplaced").length;
+  const confidences = products.map((p) => p.confidence).filter((c): c is number => c !== null);
+  const confidenceAvg = confidences.length
+    ? Number((confidences.reduce((a, b) => a + b, 0) / confidences.length).toFixed(4))
+    : null;
+
+  const osa =
+    pct(metricsSource?.osa_percent ?? metricsSource?.on_shelf_availability) ??
+    Number((((products.length - outOfStock) / products.length) * 100).toFixed(2));
+  const compliance = pct(
+    metricsSource?.planogram_compliance_percent ?? metricsSource?.planogram_compliance,
+  );
+  const shareOfShelf = pct(metricsSource?.share_of_shelf_percent ?? metricsSource?.share_of_shelf);
+  const health =
+    pct(metricsSource?.shelf_health_score ?? metricsSource?.shelf_health) ??
+    Number(
+      (
+        osa * 0.6 +
+        (compliance ?? osa) * 0.25 +
+        (confidenceAvg !== null ? confidenceAvg * 100 : 90) * 0.15
+      ).toFixed(2),
+    );
+
+  const shares = brandShare(payload, products);
+  const categories = categoryBreakdown(payload, products);
+  const rows = shelfRows(payload, products);
+  const completedAt = new Date().toISOString();
+
+  // Learned catalog is persisted before the result set so the badge counts are stored.
+  await persistLearnedUpdates(supabase, { id: scan.id, org_id: scan.org_id }, payload);
+  const learnedNewThisScan = arr(payload?.learned_updates ?? payload?.learned_catalog_updates).length;
+  const { count: learnedCatalogCount } = await supabase
+    .from("learned_skus")
+    .select("id", { count: "exact", head: true })
+    .eq("org_id", scan.org_id);
+
+  const totalProducts = products.reduce((total, p) => total + p.facings, 0);
+
+  const metrics = {
+    total_products: totalProducts,
+    unique_skus: new Set(products.map((p) => `${p.brand ?? ""}::${p.name}`)).size,
+    unique_brands: new Set(products.map((p) => p.brand ?? "Unknown")).size,
+    total_facings: totalProducts,
+    out_of_stock_products: outOfStock,
+    low_stock_products: lowStock,
+    misplaced_products: misplaced,
+    average_confidence: confidenceAvg ?? 0,
+    osa_percent: osa,
+    shelf_health_score: health,
+    ...(compliance !== null ? { shelf_compliance: compliance } : {}),
+    ...(shareOfShelf !== null ? { share_of_shelf_percent: shareOfShelf } : {}),
+    learned_catalog_size: learnedCatalogCount ?? 0,
+    learned_new_this_scan: learnedNewThisScan,
+    processing_time_ms: new Date(completedAt).getTime() - new Date(startedAt).getTime(),
+  };
+
+  // --- Persist the result set ----------------------------------------------
+  const { error: resultError } = await supabase.from("scan_results").upsert(
+    {
+      scan_id: scan.id,
+      executive_summary: str(payload?.executive_summary) ?? str(payload?.summary_text) ?? null,
+      metrics,
+      alerts: normalizeAlerts(payload),
+      recommendations: normalizeRecommendations(payload),
+      brand_share: shares,
+      category_breakdown: categories,
+      shelf_rows: rows,
+      model_version: str(payload?.model_version) ?? str(payload?.version) ?? null,
+      confidence_avg: confidenceAvg,
+      raw_payload: payload ?? null,
+    } as never,
+    { onConflict: "scan_id" },
+  );
+  if (resultError) throw new PipelineError(resultError.message, 500);
+
+  await storeAnnotatedImage(supabase, { id: scan.id, org_id: scan.org_id }, payload);
+  await storePdfReport(supabase, { id: scan.id, org_id: scan.org_id }, payload);
+
+  // --- Complete the scan ---------------------------------------------------
+  const { error: completeError } = await supabase
+    .from("shelf_scans")
+    .update({
+      status: "completed",
+      total_products: totalProducts,
+      out_of_stock_count: outOfStock,
+      low_stock_count: lowStock,
+      misplaced_count: misplaced,
+      shelf_health_score: health,
+      osa_percent: osa,
+      share_of_shelf_percent: shareOfShelf,
+      planogram_compliance_percent: compliance,
+      processing_completed_at: completedAt,
+      error_message: null,
+    })
+    .eq("id", scan.id);
+  if (completeError) throw new PipelineError(completeError.message, 500);
+
+  await refreshAnalytics(supabase, { org_id: scan.org_id, store_id: scan.store_id });
+
+  return {
+    scan_id: scan.id,
+    status: "completed",
+    total_products: totalProducts,
+    out_of_stock_count: outOfStock,
+    low_stock_count: lowStock,
+    misplaced_count: misplaced,
+    shelf_health_score: health,
+  };
+}
+
+export type StartPipelineResult =
+  | { status: "processing"; scan_id: string; job_id: string | null; started_at: string }
+  | ({ status: "completed"; job_id: null; started_at: string } & PipelineResult);
+
+/**
+ * Short request: signs the images, submits the job to Railway and returns
+ * immediately. The client then calls `pollScanPipelineServer` every few
+ * seconds, so no single request ever blocks for minutes.
+ */
+export async function startScanPipelineServer(
+  supabase: DB,
+  scanId: string,
+): Promise<StartPipelineResult> {
+  const scan = await loadScan(supabase, scanId);
   const startedAt = new Date().toISOString();
   await supabase
     .from("shelf_scans")
@@ -665,211 +1000,96 @@ export async function runScanPipelineServer(
     .eq("id", scan.id);
 
   try {
-    // --- Signed URLs for every uploaded original image ----------------------
-    const { data: images, error: imagesError } = await supabase
-      .from("scan_images")
-      .select("id, storage_bucket, storage_path, mime_type, width, height")
-      .eq("scan_id", scan.id)
-      .eq("kind", "original")
-      .order("created_at", { ascending: true });
-    if (imagesError) throw new PipelineError(imagesError.message, 500);
-    if (!images?.length) throw new PipelineError("No shelf images were uploaded for this scan.", 400);
+    const body = await buildVisionRequest(supabase, scan, startedAt);
+    const submitted = await submitVisionJob(body);
 
-    const signedImages: { url: string; path: string; width: number | null; height: number | null }[] =
-      [];
-    for (const image of images) {
-      const { data: signed, error: signError } = await supabase.storage
-        .from(image.storage_bucket as string)
-        .createSignedUrl(image.storage_path as string, 3600);
-      if (signError || !signed?.signedUrl) {
-        throw new PipelineError("Could not create a download link for the uploaded image.", 500);
-      }
-      signedImages.push({
-        url: signed.signedUrl,
-        path: image.storage_path as string,
-        width: (image.width as number | null) ?? null,
-        height: (image.height as number | null) ?? null,
-      });
+    if (submitted.kind === "completed") {
+      const result = await persistScanPayload(supabase, scan, submitted.payload, startedAt);
+      return { ...result, job_id: null, started_at: startedAt };
     }
-
-    // --- Call the Railway FastAPI vision backend ---------------------------
-    const learnedCatalog = await loadLearnedCatalog(supabase, scan.org_id as string);
-
-    const payload = await callVisionApi({
-      scan_id: scan.id,
-      org_id: scan.org_id,
-      store_id: scan.store_id,
-      shelf_label: scan.shelf_label,
-      category: scan.category,
-      notes: scan.notes,
-      image_urls: signedImages.map((i) => i.url),
-      images: signedImages,
-      learned_catalog: learnedCatalog,
-      requested_at: startedAt,
-    });
-
-
-    const products = normalizeProducts(payload);
-    if (!products.length) {
-      throw new PipelineError(
-        "The AI vision backend did not detect any products in this shelf image.",
-        422,
-      );
-    }
-
-    // --- Persist detected products -----------------------------------------
-    await supabase.from("detected_products").delete().eq("scan_id", scan.id);
-    const { error: productError } = await supabase.from("detected_products").insert(
-      products.map((p) => ({
-        scan_id: scan.id,
-        name: p.name,
-        brand: p.brand,
-        category: p.category,
-        sku: p.sku,
-        barcode: p.barcode,
-        facings: p.facings,
-        shelf_row: p.shelf_row,
-        position_index: p.position_index,
-        stock_status: p.stock_status,
-        confidence: p.confidence,
-        price_inr: p.price_inr,
-        expected_facings: p.expected_facings,
-        bounding_box: p.bounding_box,
-      })) as never,
-    );
-    if (productError) throw new PipelineError(productError.message, 500);
-
-    // --- Metrics -----------------------------------------------------------
-    const metricsSource = (payload?.metrics ?? payload?.summary ?? payload) as any;
-    const outOfStock = products.filter((p) => p.stock_status === "out_of_stock").length;
-    const lowStock = products.filter((p) => p.stock_status === "low_stock").length;
-    const misplaced = products.filter((p) => p.stock_status === "misplaced").length;
-    const confidences = products
-      .map((p) => p.confidence)
-      .filter((c): c is number => c !== null);
-    const confidenceAvg = confidences.length
-      ? Number((confidences.reduce((a, b) => a + b, 0) / confidences.length).toFixed(4))
-      : null;
-
-    const osa =
-      pct(metricsSource?.osa_percent ?? metricsSource?.on_shelf_availability) ??
-      Number((((products.length - outOfStock) / products.length) * 100).toFixed(2));
-    const compliance = pct(
-      metricsSource?.planogram_compliance_percent ?? metricsSource?.planogram_compliance,
-    );
-    const shareOfShelf = pct(
-      metricsSource?.share_of_shelf_percent ?? metricsSource?.share_of_shelf,
-    );
-    const health =
-      pct(metricsSource?.shelf_health_score ?? metricsSource?.shelf_health) ??
-      Number(
-        (
-          osa * 0.6 +
-          (compliance ?? osa) * 0.25 +
-          (confidenceAvg !== null ? confidenceAvg * 100 : 90) * 0.15
-        ).toFixed(2),
-      );
-
-    const shares = brandShare(payload, products);
-    const categories = categoryBreakdown(payload, products);
-    const rows = shelfRows(payload, products);
-    const completedAt = new Date().toISOString();
-
-    // Learned catalog is persisted before the result set so the badge counts are stored.
-    await persistLearnedUpdates(
-      supabase,
-      { id: scan.id as string, org_id: scan.org_id as string },
-      payload,
-    );
-    const learnedNewThisScan = arr(
-      payload?.learned_updates ?? payload?.learned_catalog_updates,
-    ).length;
-    const { count: learnedCatalogCount } = await supabase
-      .from("learned_skus")
-      .select("id", { count: "exact", head: true })
-      .eq("org_id", scan.org_id as string);
-
-    const metrics = {
-      total_products: products.reduce((total, p) => total + p.facings, 0),
-      unique_skus: new Set(products.map((p) => `${p.brand ?? ""}::${p.name}`)).size,
-      unique_brands: new Set(products.map((p) => p.brand ?? "Unknown")).size,
-      total_facings: products.reduce((total, p) => total + p.facings, 0),
-      out_of_stock_products: outOfStock,
-      low_stock_products: lowStock,
-      misplaced_products: misplaced,
-      average_confidence: confidenceAvg ?? 0,
-      osa_percent: osa,
-      shelf_health_score: health,
-      ...(compliance !== null ? { shelf_compliance: compliance } : {}),
-      ...(shareOfShelf !== null ? { share_of_shelf_percent: shareOfShelf } : {}),
-      learned_catalog_size: learnedCatalogCount ?? 0,
-      learned_new_this_scan: learnedNewThisScan,
-      processing_time_ms: new Date(completedAt).getTime() - new Date(startedAt).getTime(),
-    };
-
-
-    // --- Persist the result set --------------------------------------------
-    const { error: resultError } = await supabase.from("scan_results").upsert(
-      {
-        scan_id: scan.id,
-        executive_summary:
-          str(payload?.executive_summary) ?? str(payload?.summary_text) ?? null,
-        metrics,
-        alerts: normalizeAlerts(payload),
-        recommendations: normalizeRecommendations(payload),
-        brand_share: shares,
-        category_breakdown: categories,
-        shelf_rows: rows,
-        model_version: str(payload?.model_version) ?? str(payload?.version) ?? null,
-        confidence_avg: confidenceAvg,
-        raw_payload: payload ?? null,
-      } as never,
-      { onConflict: "scan_id" },
-    );
-    if (resultError) throw new PipelineError(resultError.message, 500);
-
-    await storeAnnotatedImage(supabase, { id: scan.id as string, org_id: scan.org_id as string }, payload);
-    await storePdfReport(supabase, { id: scan.id as string, org_id: scan.org_id as string }, payload);
-
-
-    // --- Complete the scan -------------------------------------------------
-    const { error: completeError } = await supabase
-      .from("shelf_scans")
-      .update({
-        status: "completed",
-        total_products: products.reduce((total, p) => total + p.facings, 0),
-        out_of_stock_count: outOfStock,
-        low_stock_count: lowStock,
-        misplaced_count: misplaced,
-        shelf_health_score: health,
-        osa_percent: osa,
-        share_of_shelf_percent: shareOfShelf,
-        planogram_compliance_percent: compliance,
-        processing_completed_at: completedAt,
-        error_message: null,
-      })
-      .eq("id", scan.id);
-    if (completeError) throw new PipelineError(completeError.message, 500);
-
-    await refreshAnalytics(supabase, {
-      org_id: scan.org_id as string,
-      store_id: (scan.store_id as string | null) ?? null,
-    });
-
     return {
-      scan_id: scan.id as string,
-      status: "completed",
-      total_products: products.reduce((total, p) => total + p.facings, 0),
-      out_of_stock_count: outOfStock,
-      low_stock_count: lowStock,
-      misplaced_count: misplaced,
-      shelf_health_score: health,
+      status: "processing",
+      scan_id: scan.id,
+      job_id: submitted.jobId,
+      started_at: startedAt,
     };
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "The AI scan pipeline failed unexpectedly.";
-    await markFailed(supabase, scan.id as string, message);
+    await markFailed(supabase, scan.id, message);
     if (error instanceof PipelineError) throw error;
     throw new PipelineError(message, 500);
   }
 }
+
+export type PollPipelineResult =
+  | { status: "processing"; scan_id: string }
+  | ({ status: "completed" } & PipelineResult);
+
+/** Single short poll of the Railway job; persists everything once it completes. */
+export async function pollScanPipelineServer(
+  supabase: DB,
+  scanId: string,
+  jobId?: string | null,
+): Promise<PollPipelineResult> {
+  const scan = await loadScan(supabase, scanId);
+
+  // Already finished (e.g. persisted by an earlier poll) — report it as done.
+  const { data: existing } = await supabase
+    .from("shelf_scans")
+    .select(
+      "status, total_products, out_of_stock_count, low_stock_count, misplaced_count, shelf_health_score",
+    )
+    .eq("id", scan.id)
+    .maybeSingle();
+  if (existing?.status === "completed") {
+    return {
+      status: "completed",
+      scan_id: scan.id,
+      total_products: (existing.total_products as number) ?? 0,
+      out_of_stock_count: (existing.out_of_stock_count as number) ?? 0,
+      low_stock_count: (existing.low_stock_count as number) ?? 0,
+      misplaced_count: (existing.misplaced_count as number) ?? 0,
+      shelf_health_score: (existing.shelf_health_score as number | null) ?? null,
+    };
+  }
+
+  try {
+    const poll = await pollVisionJobOnce(jobId ?? scan.id);
+    if (poll.kind === "processing") return { status: "processing", scan_id: scan.id };
+    const startedAt = new Date().toISOString();
+    return await persistScanPayload(supabase, scan, poll.payload, startedAt);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "The AI scan pipeline failed unexpectedly.";
+    await markFailed(supabase, scan.id, message);
+    if (error instanceof PipelineError) throw error;
+    throw new PipelineError(message, 500);
+  }
+}
+
+/** Legacy single-request pipeline (kept for existing callers / retries). */
+export async function runScanPipelineServer(
+  supabase: DB,
+  scanId: string,
+): Promise<PipelineResult> {
+  const scan = await loadScan(supabase, scanId);
+  const startedAt = new Date().toISOString();
+  await supabase
+    .from("shelf_scans")
+    .update({ status: "processing", processing_started_at: startedAt, error_message: null })
+    .eq("id", scan.id);
+
+  try {
+    const body = await buildVisionRequest(supabase, scan, startedAt);
+    const payload = await callVisionApi(body);
+    return await persistScanPayload(supabase, scan, payload, startedAt);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "The AI scan pipeline failed unexpectedly.";
+    await markFailed(supabase, scan.id, message);
+    if (error instanceof PipelineError) throw error;
+    throw new PipelineError(message, 500);
+  }
+}
+
