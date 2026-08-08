@@ -124,6 +124,74 @@ export type Database = {
           },
         ]
       }
+      learned_skus: {
+        Row: {
+          avg_price_inr: number | null
+          barcode: string | null
+          brand: string | null
+          category: string | null
+          confidence: number | null
+          created_at: string
+          expected_facings: number | null
+          features_path: string | null
+          first_seen_at: string
+          id: string
+          last_seen_at: string
+          name: string
+          org_id: string
+          sku: string | null
+          times_seen: number
+          updated_at: string
+          variant: string | null
+        }
+        Insert: {
+          avg_price_inr?: number | null
+          barcode?: string | null
+          brand?: string | null
+          category?: string | null
+          confidence?: number | null
+          created_at?: string
+          expected_facings?: number | null
+          features_path?: string | null
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          name: string
+          org_id: string
+          sku?: string | null
+          times_seen?: number
+          updated_at?: string
+          variant?: string | null
+        }
+        Update: {
+          avg_price_inr?: number | null
+          barcode?: string | null
+          brand?: string | null
+          category?: string | null
+          confidence?: number | null
+          created_at?: string
+          expected_facings?: number | null
+          features_path?: string | null
+          first_seen_at?: string
+          id?: string
+          last_seen_at?: string
+          name?: string
+          org_id?: string
+          sku?: string | null
+          times_seen?: number
+          updated_at?: string
+          variant?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learned_skus_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_members: {
         Row: {
           created_at: string
