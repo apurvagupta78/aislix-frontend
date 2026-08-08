@@ -27,6 +27,9 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { fetchStores } from "@/lib/account";
+import { FALLBACK_CATEGORIES, type ShelfCategory } from "@/lib/categories.data";
+import { fetchShelfCategories } from "@/lib/categories.functions";
+
 import {
   MAX_SCAN_IMAGES,
   formatBytes,
@@ -41,13 +44,14 @@ export const Route = createFileRoute("/scan")({
       {
         name: "description",
         content:
-          "Set the store, aisle location and category, then capture or upload shelf photos for an AI audit.",
+          "Set store, location and category, then capture or upload shelf photos for an AI audit.",
       },
       { property: "og:title", content: "Scan a shelf — Aislix" },
       {
         property: "og:description",
-        content: "Set store location and category, then capture or upload shelf photos.",
+        content: "Set store, location and category, then capture or upload shelf photos.",
       },
+
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -55,18 +59,8 @@ export const Route = createFileRoute("/scan")({
   component: ScanPage,
 });
 
-const CATEGORIES = [
-  "Beverages",
-  "Fresh Food",
-  "Dairy & Chilled",
-  "Grocery & Staples",
-  "Packaged Food & Snacks",
-  "Frozen Foods & Ice Cream",
-  "Personal Care",
-  "Home Care",
-  "Health & Wellness",
-  "Baby & Pet Care",
-] as const;
+const CATEGORY_QUERY_KEY = ["shelf-categories"] as const;
+
 
 type Phase = "idle" | "uploading" | "error";
 
@@ -82,9 +76,7 @@ function ScanPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const [storeId, setStoreId] = useState("");
-  const [aisle, setAisle] = useState("");
-  const [rack, setRack] = useState("");
-  const [bin, setBin] = useState("");
+  const [shelfLocation, setShelfLocation] = useState("");
   const [category, setCategory] = useState("");
   const [showSetupErrors, setShowSetupErrors] = useState(false);
 
@@ -96,22 +88,27 @@ function ScanPage() {
   });
   const stores = storesQuery.data?.items ?? [];
 
+  const categoriesQuery = useQuery({
+    queryKey: CATEGORY_QUERY_KEY,
+    queryFn: () => fetchShelfCategories(),
+    retry: false,
+    staleTime: 10 * 60_000,
+  });
+  const categories: ShelfCategory[] = categoriesQuery.data?.length
+    ? categoriesQuery.data
+    : FALLBACK_CATEGORIES;
+
   const setupErrors = useMemo(() => {
     const errors: Record<string, string> = {};
     if (!storeId) errors.store = "Select the store for this scan.";
-    if (!aisle.trim()) errors.aisle = "Aisle is required.";
+    if (!shelfLocation.trim()) errors.location = "Location is required.";
     if (!category) errors.category = "Select a category.";
     return errors;
-  }, [storeId, aisle, category]);
+  }, [storeId, shelfLocation, category]);
   const setupComplete = Object.keys(setupErrors).length === 0;
 
-  const shelfLabel = useMemo(() => {
-    const parts: string[] = [];
-    if (aisle.trim()) parts.push(`Aisle ${aisle.trim()}`);
-    if (rack.trim()) parts.push(`Rack ${rack.trim()}`);
-    if (bin.trim()) parts.push(`Bin ${bin.trim()}`);
-    return parts.join(" · ");
-  }, [aisle, rack, bin]);
+  const shelfLabel = shelfLocation.trim();
+
 
   const cameraInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -130,7 +127,7 @@ function ScanPage() {
   const guardSetup = useCallback(() => {
     if (setupComplete) return true;
     setShowSetupErrors(true);
-    setFileError("Complete scan setup (store, aisle and category) before adding images.");
+    setFileError("Complete scan setup (store, location and category) before adding images.");
     return false;
   }, [setupComplete]);
 
@@ -240,7 +237,7 @@ function ScanPage() {
   return (
     <AppShell
       title="Scan"
-      description="Set store location and category, then capture or upload shelf photos."
+      description="Set store, location and category, then capture or upload shelf photos."
       actions={
         items.length && !busy ? (
           <Button variant="subtle" size="sm" className="rounded-xl" onClick={reset}>
@@ -323,42 +320,18 @@ function ScanPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="scan-aisle">Aisle *</Label>
+                <Label htmlFor="scan-location">Location *</Label>
                 <Input
-                  id="scan-aisle"
+                  id="scan-location"
                   className="rounded-xl"
-                  placeholder="e.g. 4"
-                  value={aisle}
+                  placeholder="e.g. Aisle 4 · Beverages · left bay"
+                  value={shelfLocation}
                   disabled={busy}
-                  onChange={(e) => setAisle(e.target.value)}
+                  onChange={(e) => setShelfLocation(e.target.value)}
                 />
-                {fieldError("aisle") && (
-                  <p className="text-xs text-destructive">{fieldError("aisle")}</p>
+                {fieldError("location") && (
+                  <p className="text-xs text-destructive">{fieldError("location")}</p>
                 )}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="scan-rack">Rack</Label>
-                <Input
-                  id="scan-rack"
-                  className="rounded-xl"
-                  placeholder="e.g. B"
-                  value={rack}
-                  disabled={busy}
-                  onChange={(e) => setRack(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="scan-bin">Bin</Label>
-                <Input
-                  id="scan-bin"
-                  className="rounded-xl"
-                  placeholder="e.g. 12"
-                  value={bin}
-                  disabled={busy}
-                  onChange={(e) => setBin(e.target.value)}
-                />
               </div>
 
               <div className="space-y-1.5">
@@ -367,10 +340,15 @@ function ScanPage() {
                   <SelectTrigger id="scan-category" className="rounded-xl">
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((name) => (
-                      <SelectItem key={name} value={name}>
-                        {name}
+                  <SelectContent className="max-h-[320px]">
+                    {categories.map((item) => (
+                      <SelectItem key={item.name} value={item.name} className="py-2">
+                        <span className="flex flex-col gap-0.5">
+                          <span className="text-sm font-medium">{item.name}</span>
+                          {item.examples ? (
+                            <span className="text-xs text-muted-foreground">{item.examples}</span>
+                          ) : null}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -381,11 +359,6 @@ function ScanPage() {
               </div>
             </div>
 
-            {shelfLabel && (
-              <p className="mt-4 rounded-xl border border-border bg-surface px-4 py-2.5 text-xs text-muted-foreground">
-                Shelf label: <span className="font-medium text-foreground">{shelfLabel}</span>
-              </p>
-            )}
           </section>
 
           {/* STEP 2 — images */}
@@ -581,7 +554,7 @@ function ScanPage() {
           <div className="card-surface p-5 sm:p-6">
             <h2 className="text-sm font-semibold tracking-tight">How it works</h2>
             <ol className="mt-4 space-y-3 text-sm text-muted-foreground">
-              <li>1. Set store, aisle location and category.</li>
+              <li>1. Set store, location and category.</li>
               <li>2. Capture or upload your shelf photos.</li>
               <li>3. AI detects products, brands and stock gaps.</li>
               <li>4. View results, CSV, and PDF report.</li>
