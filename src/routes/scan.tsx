@@ -56,7 +56,7 @@ export const Route = createFileRoute("/scan")({
   component: ScanPage,
 });
 
-type Phase2 = never;
+const CATEGORY_QUERY_KEY = ["shelf-categories"] as const;
 
 
 type Phase = "idle" | "uploading" | "error";
