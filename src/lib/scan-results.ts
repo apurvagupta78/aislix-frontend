@@ -214,7 +214,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
         category: (p.category as string | null) ?? undefined,
         low_stock: p.stock_status === "low_stock",
         out_of_stock: p.stock_status === "out_of_stock",
-        shelf_position: p.shelf_row ?? undefined,
+        shelf_position: p.shelf_row === null || p.shelf_row === undefined ? undefined : String(p.shelf_row),
       });
     }
   }
