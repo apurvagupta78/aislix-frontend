@@ -54,8 +54,10 @@ function visionConfig() {
   const path = (process.env["AISLIX_AI_SCAN_PATH"] ?? "/scan").trim() || "/scan";
   const apiKey = (process.env["AISLIX_AI_API_KEY"] ?? "").trim();
   const timeoutMs = Number(process.env["AISLIX_AI_TIMEOUT_MS"]) || 180_000;
+  const base = baseUrl.replace(/\/+$/, "");
   return {
-    url: `${baseUrl.replace(/\/+$/, "")}${path.startsWith("/") ? path : `/${path}`}`,
+    baseUrl: base,
+    url: `${base}${path.startsWith("/") ? path : `/${path}`}`,
     apiKey,
     timeoutMs,
   };
