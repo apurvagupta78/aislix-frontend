@@ -8,8 +8,16 @@ import { Download, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { CardSkeleton, EmptyState, ErrorState } from "@/components/States";
-import { fetchScanHistory, formatScanTime } from "@/lib/scan-history";
+import { fetchScanHistory, formatScanTime, type ScanHistoryItem } from "@/lib/scan-history";
 import {
   downloadBlob,
   fetchScanResult,
@@ -50,6 +58,42 @@ export function ReportsLibrary() {
     }
   };
 
+  const Actions = ({ item }: { item: ScanHistoryItem }) => (
+    <div className="inline-flex items-center gap-1">
+      <Button asChild variant="subtle" size="sm" className="rounded-xl">
+        <Link to="/report" search={{ scan: item.scan_id }}>
+          <FileText className="size-4" /> View
+        </Link>
+      </Button>
+      <Button
+        variant="subtle"
+        size="sm"
+        className="rounded-xl"
+        disabled={!item.downloads?.pdf_url}
+        onClick={() => {
+          const url = item.downloads?.pdf_url;
+          if (url) window.open(url, "_blank", "noopener,noreferrer");
+        }}
+      >
+        <Download className="size-4" /> PDF
+      </Button>
+      <Button
+        variant="subtle"
+        size="sm"
+        className="rounded-xl"
+        disabled={busyCsv === item.scan_id}
+        onClick={() => void downloadCsv(item.scan_id)}
+      >
+        {busyCsv === item.scan_id ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Download className="size-4" />
+        )}{" "}
+        CSV
+      </Button>
+    </div>
+  );
+
   if (query.isPending) {
     return (
       <div className="grid gap-4 lg:grid-cols-2">
@@ -73,7 +117,7 @@ export function ReportsLibrary() {
     return (
       <EmptyState
         title="No reports yet — run your first scan."
-        description="Every completed shelf scan generates a print-ready audit report here."
+        description="Run a scan with Store, Location and Category filled in to see reports here."
         action={
           <Button asChild variant="brand" size="sm" className="rounded-xl">
             <Link to="/scan">Start a scan</Link>
@@ -84,70 +128,110 @@ export function ReportsLibrary() {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-      <div className="hidden grid-cols-[1.4fr_1fr_0.7fr_0.7fr_auto] gap-4 border-b border-border px-5 py-3 text-xs font-medium uppercase tracking-wide text-muted-foreground lg:grid">
-        <span>Scan</span>
-        <span>Store</span>
-        <span>Products</span>
-        <span>Low stock</span>
-        <span className="text-right">Actions</span>
+    <>
+      {/* Desktop table */}
+      <div className="hidden overflow-hidden rounded-2xl border border-border bg-card shadow-card lg:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="min-w-[180px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Scan
+              </TableHead>
+              <TableHead className="min-w-[140px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Store
+              </TableHead>
+              <TableHead className="min-w-[160px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Location
+              </TableHead>
+              <TableHead className="min-w-[140px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Category
+              </TableHead>
+              <TableHead className="w-[140px] text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Actions
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((item) => (
+              <TableRow key={item.scan_id}>
+                <TableCell className="align-middle text-sm">
+                  <Link
+                    to="/results"
+                    search={{ scan: item.scan_id }}
+                    className="font-medium hover:underline"
+                  >
+                    {formatScanDate(item.created_at) ?? "Date unavailable"}
+                  </Link>
+                  <p className="text-xs text-muted-foreground">
+                    {formatScanTime(item.created_at)}
+                  </p>
+                </TableCell>
+                <TableCell className="align-middle text-sm text-muted-foreground">
+                  {item.store || "—"}
+                </TableCell>
+                <TableCell className="align-middle text-sm">
+                  <span
+                    className="block max-w-[200px] truncate"
+                    title={item.location || undefined}
+                  >
+                    {item.location || "—"}
+                  </span>
+                </TableCell>
+                <TableCell className="align-middle text-sm">
+                  {item.category ? (
+                    <Badge className="rounded-full bg-accent-green/12 text-accent-green hover:bg-accent-green/12">
+                      {item.category}
+                    </Badge>
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-right align-middle">
+                  <Actions item={item} />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
-      <ul className="divide-y divide-border">
+
+      {/* Mobile cards */}
+      <ul className="grid gap-3 lg:hidden">
         {items.map((item) => (
           <li
             key={item.scan_id}
-            className="grid gap-3 px-5 py-4 lg:grid-cols-[1.4fr_1fr_0.7fr_0.7fr_auto] lg:items-center lg:gap-4"
+            className="rounded-2xl border border-border bg-card p-4 shadow-card"
           >
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium">
-                {formatScanDate(item.created_at) ?? "Date unavailable"}
-              </p>
-              <p className="text-xs text-muted-foreground">{formatScanTime(item.created_at)}</p>
-            </div>
-            <p className="truncate text-sm text-muted-foreground">{item.store || "—"}</p>
-            <p className="text-sm">{item.products_detected ?? "—"}</p>
-            <div className="flex items-center gap-2">
-              <span className="text-sm">{item.low_stock_products ?? "—"}</span>
-              <Badge className="rounded-full bg-accent-green/12 text-accent-green hover:bg-accent-green/12 lg:hidden">
-                Completed
-              </Badge>
-            </div>
-            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-              <Button asChild variant="subtle" size="sm" className="rounded-xl">
-                <Link to="/report" search={{ scan: item.scan_id }}>
-                  <FileText className="size-4" /> View
-                </Link>
-              </Button>
-              <Button
-                variant="subtle"
-                size="sm"
-                className="rounded-xl"
-                disabled={!item.downloads?.pdf_url}
-                onClick={() => {
-                  const url = item.downloads?.pdf_url;
-                  if (url) window.open(url, "_blank", "noopener,noreferrer");
-                }}
-              >
-                <Download className="size-4" /> PDF
-              </Button>
-              <Button
-                variant="subtle"
-                size="sm"
-                className="rounded-xl"
-                disabled={busyCsv === item.scan_id}
-                onClick={() => void downloadCsv(item.scan_id)}
-              >
-                {busyCsv === item.scan_id ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Download className="size-4" />
-                )}{" "}
-                CSV
-              </Button>
+            <Link
+              to="/results"
+              search={{ scan: item.scan_id }}
+              className="text-sm font-semibold hover:underline"
+            >
+              {formatScanDate(item.created_at) ?? "Date unavailable"}
+            </Link>
+            <p className="text-xs text-muted-foreground">{formatScanTime(item.created_at)}</p>
+            <dl className="mt-3 space-y-1.5 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-xs uppercase tracking-wide text-muted-foreground">Store</dt>
+                <dd className="min-w-0 truncate">{item.store || "—"}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-xs uppercase tracking-wide text-muted-foreground">Location</dt>
+                <dd className="min-w-0 truncate" title={item.location || undefined}>
+                  {item.location || "—"}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-xs uppercase tracking-wide text-muted-foreground">Category</dt>
+                <dd className="min-w-0 truncate">{item.category || "—"}</dd>
+              </div>
+            </dl>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Actions item={item} />
             </div>
           </li>
         ))}
       </ul>
-    </div>
+    </>
   );
 }
