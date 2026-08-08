@@ -273,12 +273,13 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     total_products: scan.total_products ?? inventory.length,
     unique_skus: uniqueSkus,
     unique_brands: uniqueBrands,
-    low_stock_products: scan.low_stock_count ?? inventory.filter((i) => i.low_stock).length,
+    // Only genuinely low-stock products; out-of-stock is reported separately.
+    low_stock_products: inventory.filter((i) => i.low_stock).length,
     average_confidence: Number(avgConfidence) || 0,
     processing_time_ms: processingTimeMs,
     ...(scan.out_of_stock_count !== null && scan.out_of_stock_count !== undefined
       ? { out_of_stock_products: scan.out_of_stock_count }
-      : {}),
+      : { out_of_stock_products: inventory.filter((i) => i.out_of_stock).length }),
     ...(scan.planogram_compliance_percent !== null && scan.planogram_compliance_percent !== undefined
       ? { shelf_compliance: scan.planogram_compliance_percent }
       : {}),
