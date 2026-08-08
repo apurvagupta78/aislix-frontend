@@ -33,9 +33,9 @@ import { fetchProfile } from "@/lib/account";
 
 const nav = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-  { label: "New Scan", to: "/scan", icon: ScanLine },
-  { label: "Upload Scan", to: "/upload", icon: UploadCloud },
+  { label: "Scan", to: "/scan", icon: ScanLine },
   { label: "Scan History", to: "/history", icon: History },
+
   { label: "Reports", to: "/report", icon: FileText },
   { label: "Stores", to: "/stores", icon: Store },
   { label: "Team", to: "/team", icon: Users },
