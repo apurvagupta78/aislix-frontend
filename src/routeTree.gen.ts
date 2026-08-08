@@ -23,6 +23,7 @@ import { Route as HistoryRouteImport } from './routes/history'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LogoutRouteImport } from './routes/logout'
+import { Route as MarketingShotRouteImport } from './routes/marketing-shot'
 import { Route as OrganizationRouteImport } from './routes/organization'
 import { Route as PlatformRouteImport } from './routes/platform'
 import { Route as PricingRouteImport } from './routes/pricing'
@@ -115,6 +116,11 @@ const LoginRoute = LoginRouteImport.update({
 const LogoutRoute = LogoutRouteImport.update({
   id: '/logout',
   path: '/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketingShotRoute = MarketingShotRouteImport.update({
+  id: '/marketing-shot',
+  path: '/marketing-shot',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrganizationRoute = OrganizationRouteImport.update({
@@ -248,6 +254,7 @@ export interface FileRoutesByFullPath {
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/marketing-shot': typeof MarketingShotRoute
   '/organization': typeof OrganizationRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
@@ -287,6 +294,7 @@ export interface FileRoutesByTo {
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/marketing-shot': typeof MarketingShotRoute
   '/organization': typeof OrganizationRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
@@ -327,6 +335,7 @@ export interface FileRoutesById {
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/marketing-shot': typeof MarketingShotRoute
   '/organization': typeof OrganizationRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
@@ -368,6 +377,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/login'
     | '/logout'
+    | '/marketing-shot'
     | '/organization'
     | '/platform'
     | '/pricing'
@@ -407,6 +417,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/login'
     | '/logout'
+    | '/marketing-shot'
     | '/organization'
     | '/platform'
     | '/pricing'
@@ -446,6 +457,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/login'
     | '/logout'
+    | '/marketing-shot'
     | '/organization'
     | '/platform'
     | '/pricing'
@@ -486,6 +498,7 @@ export interface RootRouteChildren {
   HowItWorksRoute: typeof HowItWorksRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
+  MarketingShotRoute: typeof MarketingShotRoute
   OrganizationRoute: typeof OrganizationRoute
   PlatformRoute: typeof PlatformRoute
   PricingRoute: typeof PricingRoute
@@ -609,6 +622,13 @@ declare module '@tanstack/react-router' {
       path: '/logout'
       fullPath: '/logout'
       preLoaderRoute: typeof LogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketing-shot': {
+      id: '/marketing-shot'
+      path: '/marketing-shot'
+      fullPath: '/marketing-shot'
+      preLoaderRoute: typeof MarketingShotRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/organization': {
@@ -790,6 +810,7 @@ const rootRouteChildren: RootRouteChildren = {
   HowItWorksRoute: HowItWorksRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
+  MarketingShotRoute: MarketingShotRoute,
   OrganizationRoute: OrganizationRoute,
   PlatformRoute: PlatformRoute,
   PricingRoute: PricingRoute,
@@ -817,13 +838,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
