@@ -346,6 +346,19 @@ function StoresPage() {
           </>
         )}
 
+        <BulkOperationsPanel
+          selectedCount={selected.length}
+          busy={busy}
+          onExport={() => exportList.mutate()}
+          onImport={(file) => importList.mutate(file)}
+          onBulkArchive={() => bulkArchive.mutate()}
+          onAssignUsers={() =>
+            toast.info("Open a store to assign users — bulk assignment ships with the roles engine.")
+          }
+        />
+
+
+
         <p className="text-xs text-muted-foreground">
           Looking for company-wide details like GSTIN and branding?{" "}
           <Link to="/settings" className="text-brand hover:underline">
