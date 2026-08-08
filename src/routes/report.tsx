@@ -5,6 +5,14 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { fetchScanHistory, formatScanTime } from "@/lib/scan-history";
 import { CardSkeleton, EmptyState, ErrorState } from "@/components/States";
 import {
   fetchScanResult,
@@ -37,8 +45,19 @@ export const Route = createFileRoute("/report")({
 });
 
 function ReportViewer() {
-  const { scan } = Route.useSearch();
+  const { scan: scanParam } = Route.useSearch();
   const navigate = useNavigate();
+
+  // Recent completed scans power the picker and the "latest scan" fallback so
+  // that /report without a ?scan= param still renders a report.
+  const recent = useQuery({
+    queryKey: ["report-recent-scans"],
+    queryFn: ({ signal }) => fetchScanHistory({ sort: "newest", page: 1, page_size: 25 }, signal),
+    retry: false,
+  });
+
+  const completed = (recent.data?.items ?? []).filter((s) => s.status === "completed");
+  const scan = scanParam ?? completed[0]?.scan_id;
 
   const query = useQuery({
     queryKey: ["scan-result", scan],
@@ -46,6 +65,24 @@ function ReportViewer() {
     enabled: !!scan,
     retry: false,
   });
+
+  const picker = completed.length > 0 && (
+    <Select
+      value={scan ?? ""}
+      onValueChange={(value) => navigate({ to: "/report", search: { scan: value } })}
+    >
+      <SelectTrigger className="h-9 w-[230px] rounded-xl" aria-label="Choose a scan">
+        <SelectValue placeholder="Choose a scan" />
+      </SelectTrigger>
+      <SelectContent>
+        {completed.map((s) => (
+          <SelectItem key={s.scan_id} value={s.scan_id}>
+            {s.store} · {formatScanDate(s.created_at) ?? ""} {formatScanTime(s.created_at)}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 
   const data = query.data;
   const summary = data?.summary;
@@ -72,6 +109,19 @@ function ReportViewer() {
       }
       actions={
         <>
+          {picker}
+          <Button
+            variant="subtle"
+            size="sm"
+            className="rounded-xl"
+            disabled={!data?.downloads?.pdf_url}
+            onClick={() => {
+              const url = data?.downloads?.pdf_url;
+              if (url) window.open(url, "_blank", "noopener,noreferrer");
+            }}
+          >
+            <Download className="size-4" /> Download PDF
+          </Button>
           <Button
             variant="subtle"
             size="sm"
@@ -108,10 +158,15 @@ function ReportViewer() {
         </>
       }
     >
-      {!scan ? (
+      {recent.isPending && !scan ? (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <CardSkeleton />
+          <CardSkeleton />
+        </div>
+      ) : !scan ? (
         <EmptyState
-          title="No scan selected"
-          description="Pick a scan from your history to generate its audit report."
+          title="No completed scans yet"
+          description="Run a shelf scan and its audit report will be generated here."
           action={
             <Button asChild variant="brand" size="sm" className="rounded-xl">
               <Link to="/history">Open scan history</Link>
