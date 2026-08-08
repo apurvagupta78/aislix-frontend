@@ -31,6 +31,7 @@ import {
   healthTone,
   type RecentScan,
   type RecentScansQuery,
+  type RecentScansResponse,
 } from "@/lib/dashboard";
 
 const PAGE_SIZE = 8;
@@ -49,7 +50,7 @@ const healthClass = {
   unknown: "text-muted-foreground",
 } as const;
 
-export function RecentScansTable() {
+export function RecentScansTable({ demoData }: { demoData?: RecentScansResponse | undefined } = {}) {
   const [q, setQ] = useState("");
   const [store, setStore] = useState<string>("all");
   const [status, setStatus] = useState<NonNullable<RecentScansQuery["status"]>>("all");
@@ -58,15 +59,32 @@ export function RecentScansTable() {
 
   const params: RecentScansQuery = { q, store, status, sort, page, page_size: PAGE_SIZE };
 
-  const { data, isPending, error, refetch } = useQuery({
+  const query = useQuery({
     queryKey: ["recent-scans", params],
     queryFn: ({ signal }) => fetchRecentScans(params, signal),
     retry: false,
+    enabled: !demoData,
   });
+
+  const demoFiltered = demoData
+    ? demoData.items.filter(
+        (s) =>
+          (status === "all" || s.status === status) &&
+          (store === "all" || s.store === store) &&
+          (!q ||
+            `${s.store ?? ""} ${s.scan_id}`.toLowerCase().includes(q.toLowerCase())),
+      )
+    : [];
+
+  const data = demoData ? { ...demoData, items: demoFiltered, total: demoFiltered.length } : query.data;
+  const isPending = demoData ? false : query.isPending;
+  const error = demoData ? null : query.error;
+  const refetch = query.refetch;
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
 
   const reset = <T,>(setter: (v: T) => void) => (v: T) => {
     setter(v);
