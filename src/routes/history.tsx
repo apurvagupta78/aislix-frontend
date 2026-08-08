@@ -133,11 +133,12 @@ function RowActions({
     setCsvBusy(true);
     try {
       const result = await fetchScanResult(scan.scan_id);
-      if (!result.inventory.length) {
+      const inventory = result.inventory ?? [];
+      if (!inventory.length) {
         toast.error("No inventory rows to export for this scan.");
         return;
       }
-      downloadBlob(inventoryToCsv(result.inventory), `aislix-${scan.scan_id}-inventory.csv`, "text/csv");
+      downloadBlob(inventoryToCsv(inventory), `aislix-${scan.scan_id}-inventory.csv`, "text/csv");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not export this scan.");
     } finally {
