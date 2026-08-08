@@ -186,7 +186,7 @@ export function ReportsLibrary() {
                     "—"
                   )}
                 </TableCell>
-                <TableCell className="whitespace-nowrap text-right align-middle">
+                <TableCell className="whitespace-nowrap text-left align-middle">
                   <Actions item={item} />
                 </TableCell>
               </TableRow>
