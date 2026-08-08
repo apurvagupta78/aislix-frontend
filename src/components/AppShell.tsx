@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import {
   LayoutDashboard,
   ScanLine,
-  UploadCloud,
+
   History,
   FileText,
   CreditCard,
@@ -150,7 +150,7 @@ export function AppShell({
             </form>
             <div className="ml-auto flex items-center gap-2">
               <Button asChild variant="brand" size="sm" className="rounded-xl">
-                <Link to="/upload">New scan</Link>
+                <Link to="/scan">New scan</Link>
               </Button>
               <Button asChild variant="ghost" size="icon" className="rounded-xl" aria-label="Notifications">
                 <Link to="/dashboard" hash="notifications">
