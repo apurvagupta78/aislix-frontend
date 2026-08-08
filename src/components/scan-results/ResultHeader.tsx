@@ -52,6 +52,34 @@ export function ScanStatusBadge({ status }: { status?: ScanStatus | undefined })
     </Badge>
   );
 }
+export function LearnedCatalogBadge({
+  size,
+  added,
+}: {
+  size?: number | undefined;
+  added?: number | undefined;
+}) {
+  if (typeof size !== "number" || !Number.isFinite(size)) return null;
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge
+            variant="outline"
+            className="rounded-full border-brand/25 bg-brand-soft text-brand"
+          >
+            <Brain className="size-3.5" /> Learned catalog: {size} SKUs
+            {typeof added === "number" && added > 0 ? ` · +${added} new` : ""}
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs">
+          GPT-identified SKUs saved for faster FAISS matching on future scans
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 
 function MetaItem({
   icon,
