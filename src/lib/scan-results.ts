@@ -54,6 +54,11 @@ export type ScanSummary = {
   shelf_compliance?: number;
   /** 0-100 composite shelf health score. */
   shelf_health_score?: number;
+  /** Total learned SKUs in the org catalog after this scan. */
+  learned_catalog_size?: number;
+  /** New SKUs learned during this scan. */
+  learned_new_this_scan?: number;
+
 };
 
 export type ScanResult = {
@@ -286,7 +291,14 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     ...(scan.shelf_health_score !== null && scan.shelf_health_score !== undefined
       ? { shelf_health_score: scan.shelf_health_score }
       : {}),
+    ...(typeof (result?.metrics as any)?.learned_catalog_size === "number"
+      ? { learned_catalog_size: Number((result?.metrics as any).learned_catalog_size) }
+      : {}),
+    ...(typeof (result?.metrics as any)?.learned_new_this_scan === "number"
+      ? { learned_new_this_scan: Number((result?.metrics as any).learned_new_this_scan) }
+      : {}),
   };
+
 
   const storeName = (scan as any).stores?.name as string | undefined;
 
