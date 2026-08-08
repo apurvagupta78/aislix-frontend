@@ -1,17 +1,22 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { AlertTriangle, Check, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { runScanAnalysis, SCAN_STAGES } from "@/lib/scan-api";
 
 export const Route = createFileRoute("/processing")({
+  validateSearch: (search: Record<string, unknown>): { scan?: string } => {
+    const scan = search["scan"];
+    return typeof scan === "string" && scan.length > 0 ? { scan } : {};
+  },
   head: () => ({
     meta: [
       { title: "Analyzing shelf scan — Aislix" },
       {
         name: "description",
-        content: "Aislix is running detection, brand matching and planogram compliance on your shelf images.",
+        content: "Aislix is running detection, brand matching and report generation on your shelf images.",
       },
       { property: "og:title", content: "Analyzing your shelf scan — Aislix" },
       { property: "og:description", content: "Computer vision pipeline in progress." },
@@ -20,105 +25,135 @@ export const Route = createFileRoute("/processing")({
   component: Processing,
 });
 
-const stages = [
-  "Uploading images",
-  "Detecting shelf structure",
-  "Identifying products & packs",
-  "Matching brands and SKUs",
-  "Scoring planogram compliance",
-  "Generating audit report",
-];
-
 function Processing() {
+  const { scan } = Route.useSearch();
   const navigate = useNavigate();
-  const [progress, setProgress] = useState(6);
+  const [progress, setProgress] = useState(8);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
 
   useEffect(() => {
-    const t = setInterval(() => {
-      setProgress((p) => {
-        if (p >= 100) {
-          clearInterval(t);
-          return 100;
-        }
-        return p + 2;
+    if (!scan) {
+      setError("Missing scan id. Start a new scan from the scan page.");
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setInterval(() => {
+      setProgress((current) => (current >= 92 ? current : current + 1));
+    }, 1200);
+
+    runScanAnalysis(scan)
+      .then(() => {
+        if (cancelled) return;
+        setProgress(100);
+        setDone(true);
+        setTimeout(() => {
+          navigate({ to: "/results", search: { scan } });
+        }, 700);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "The scan could not be completed.");
+        clearInterval(timer);
       });
-    }, 120);
-    return () => clearInterval(t);
-  }, []);
 
-  useEffect(() => {
-    if (progress < 100) return undefined;
-    const t = setTimeout(() => navigate({ to: "/results" }), 900);
-    return () => clearTimeout(t);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [navigate, scan]);
 
-  }, [progress, navigate]);
-
-  const activeStage = Math.min(stages.length - 1, Math.floor((progress / 100) * stages.length));
+  const activeStage = Math.min(
+    SCAN_STAGES.length - 1,
+    Math.floor((progress / 100) * SCAN_STAGES.length),
+  );
 
   return (
-    <AppShell title="Processing scan" description="SCN-10429 · MoreMart Superstore · Aisle 4 · Beverages">
+    <AppShell
+      title="Processing scan"
+      description={scan ? `Scan ${scan.slice(0, 8)}…` : "Analyzing shelf image"}
+    >
       <div className="mx-auto max-w-2xl">
         <div className="card-surface p-9 text-center">
-          <div className="relative mx-auto grid size-28 place-items-center">
-            <div className="absolute inset-0 animate-pulse rounded-full bg-brand-soft" />
-            <div className="relative grid size-20 place-items-center rounded-full bg-gradient-brand shadow-card">
-              <Loader2 className="size-8 animate-spin text-brand-foreground" />
-            </div>
-          </div>
-          <h2 className="mt-7 text-xl font-semibold tracking-tight">
-            {progress >= 100 ? "Analysis complete" : "Analyzing your shelf"}
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {progress >= 100
-              ? "Opening your scan results…"
-              : "This usually takes under 30 seconds. You can leave this page — we'll notify you."}
-          </p>
-
-          <div className="mt-8">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{stages[activeStage]}</span>
-              <span>{Math.min(progress, 100)}%</span>
-            </div>
-            <Progress value={Math.min(progress, 100)} className="mt-2 h-2 rounded-full" />
-          </div>
-
-          <ul className="mt-8 space-y-3 text-left">
-            {stages.map((s, i) => {
-              const done = i < activeStage || progress >= 100;
-              const active = i === activeStage && progress < 100;
-              return (
-                <li key={s} className="flex items-center gap-3">
-                  <span
-                    className={`grid size-6 place-items-center rounded-full text-brand-foreground ${
-                      done ? "bg-brand" : active ? "bg-brand/60" : "bg-muted"
-                    }`}
+          {error ? (
+            <div className="space-y-4">
+              <span className="mx-auto grid size-16 place-items-center rounded-full bg-destructive/10 text-destructive">
+                <AlertTriangle className="size-7" />
+              </span>
+              <h2 className="text-xl font-semibold tracking-tight">Analysis failed</h2>
+              <p className="text-sm text-muted-foreground">{error}</p>
+              <div className="flex justify-center gap-2">
+                <Button asChild variant="subtle" size="sm" className="rounded-xl">
+                  <Link to="/scan">New scan</Link>
+                </Button>
+                {scan ? (
+                  <Button
+                    variant="brand"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={() => window.location.reload()}
                   >
-                    {done ? (
-                      <Check className="size-3.5" />
-                    ) : active ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <span className="size-1.5 rounded-full bg-muted-foreground" />
-                    )}
-                  </span>
-                  <span
-                    className={`text-sm ${done || active ? "text-foreground" : "text-muted-foreground"}`}
-                  >
-                    {s}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+                    Retry
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="relative mx-auto grid size-28 place-items-center">
+                <div className="absolute inset-0 animate-pulse rounded-full bg-brand-soft" />
+                <div className="relative grid size-20 place-items-center rounded-full bg-gradient-brand shadow-card">
+                  <Loader2 className="size-8 animate-spin text-brand-foreground" />
+                </div>
+              </div>
+              <h2 className="mt-7 text-xl font-semibold tracking-tight">
+                {done ? "Analysis complete" : "Analyzing your shelf"}
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {done
+                  ? "Opening your scan results…"
+                  : "This usually takes 2–4 minutes. Keep this page open."}
+              </p>
 
-          <div className="mt-9 flex justify-center gap-2">
-            <Button asChild variant="subtle" size="sm" className="rounded-xl">
-              <Link to="/dashboard">Back to dashboard</Link>
-            </Button>
-            <Button asChild variant="brand" size="sm" className="rounded-xl">
-              <Link to="/results">Skip to results</Link>
-            </Button>
-          </div>
+              <div className="mt-8">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{SCAN_STAGES[activeStage]}</span>
+                  <span>{Math.min(progress, 100)}%</span>
+                </div>
+                <Progress value={Math.min(progress, 100)} className="mt-2 h-2 rounded-full" />
+              </div>
+
+              <ul className="mt-8 space-y-3 text-left">
+                {SCAN_STAGES.map((stage, index) => {
+                  const stageDone = index < activeStage || done;
+                  const stageActive = index === activeStage && !done;
+                  return (
+                    <li key={stage} className="flex items-center gap-3">
+                      <span
+                        className={`grid size-6 place-items-center rounded-full text-brand-foreground ${
+                          stageDone ? "bg-brand" : stageActive ? "bg-brand/60" : "bg-muted"
+                        }`}
+                      >
+                        {stageDone ? (
+                          <Check className="size-3.5" />
+                        ) : stageActive ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <span className="size-1.5 rounded-full bg-muted-foreground" />
+                        )}
+                      </span>
+                      <span
+                        className={`text-sm ${stageDone || stageActive ? "text-foreground" : "text-muted-foreground"}`}
+                      >
+                        {stage}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
         </div>
       </div>
     </AppShell>
