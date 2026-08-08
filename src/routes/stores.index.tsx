@@ -248,17 +248,6 @@ function StoresPage() {
           )}
         </div>
 
-        <BulkOperationsPanel
-          selectedCount={selected.length}
-          busy={busy}
-          onExport={() => exportList.mutate()}
-          onImport={(file) => importList.mutate(file)}
-          onBulkArchive={() => bulkArchive.mutate()}
-          onAssignUsers={() =>
-            toast.info("Open a store to assign users — bulk assignment ships with the roles engine.")
-          }
-        />
-
         {storesQuery.isPending ? (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {skeletons.map((i) => (
@@ -300,7 +289,9 @@ function StoresPage() {
           />
         ) : (
           <>
+            <h2 className="text-sm font-semibold text-foreground">Your stores ({total})</h2>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+
               {stores.map((store) => (
                 <StoreCard
                   key={store.id}
@@ -354,6 +345,19 @@ function StoresPage() {
             )}
           </>
         )}
+
+        <BulkOperationsPanel
+          selectedCount={selected.length}
+          busy={busy}
+          onExport={() => exportList.mutate()}
+          onImport={(file) => importList.mutate(file)}
+          onBulkArchive={() => bulkArchive.mutate()}
+          onAssignUsers={() =>
+            toast.info("Open a store to assign users — bulk assignment ships with the roles engine.")
+          }
+        />
+
+
 
         <p className="text-xs text-muted-foreground">
           Looking for company-wide details like GSTIN and branding?{" "}
