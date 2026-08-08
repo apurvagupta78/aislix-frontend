@@ -775,6 +775,20 @@ export async function runScanPipelineServer(
     const rows = shelfRows(payload, products);
     const completedAt = new Date().toISOString();
 
+    // Learned catalog is persisted before the result set so the badge counts are stored.
+    await persistLearnedUpdates(
+      supabase,
+      { id: scan.id as string, org_id: scan.org_id as string },
+      payload,
+    );
+    const learnedNewThisScan = arr(
+      payload?.learned_updates ?? payload?.learned_catalog_updates,
+    ).length;
+    const { count: learnedCatalogCount } = await supabase
+      .from("learned_skus")
+      .select("id", { count: "exact", head: true })
+      .eq("org_id", scan.org_id as string);
+
     const metrics = {
       total_products: products.reduce((total, p) => total + p.facings, 0),
       unique_skus: new Set(products.map((p) => `${p.brand ?? ""}::${p.name}`)).size,
@@ -788,8 +802,11 @@ export async function runScanPipelineServer(
       shelf_health_score: health,
       ...(compliance !== null ? { shelf_compliance: compliance } : {}),
       ...(shareOfShelf !== null ? { share_of_shelf_percent: shareOfShelf } : {}),
+      learned_catalog_size: learnedCatalogCount ?? 0,
+      learned_new_this_scan: learnedNewThisScan,
       processing_time_ms: new Date(completedAt).getTime() - new Date(startedAt).getTime(),
     };
+
 
     // --- Persist the result set --------------------------------------------
     const { error: resultError } = await supabase.from("scan_results").upsert(
