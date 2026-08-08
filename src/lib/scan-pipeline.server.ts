@@ -253,8 +253,19 @@ function pct(value: unknown): number | null {
 /* Vision API call                                                            */
 /* -------------------------------------------------------------------------- */
 
+const POLL_INTERVAL_MS = 5_000;
+const POLL_MAX_MS = 180_000;
+
+function parseJson(text: string): any {
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new PipelineError("The AI vision backend returned a response that was not valid JSON.");
+  }
+}
+
 async function callVisionApi(body: unknown): Promise<any> {
-  const { url, apiKey, timeoutMs } = visionConfig();
+  const { baseUrl, url, apiKey, timeoutMs } = visionConfig();
 
   const headers: Record<string, string> = {
     "content-type": "application/json",
@@ -292,11 +303,76 @@ async function callVisionApi(body: unknown): Promise<any> {
     );
   }
 
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new PipelineError("The AI vision backend returned a response that was not valid JSON.");
+  const payload = parseJson(text);
+
+  // Async backend: 202 Accepted means the scan is queued; poll until it finishes.
+  const remoteId = str(payload?.scan_id) ?? str(payload?.id) ?? str(payload?.job_id);
+  const initialStatus = (str(payload?.status) ?? "").toLowerCase();
+  const isAsync =
+    response.status === 202 || ["queued", "pending", "processing", "running"].includes(initialStatus);
+  if (!isAsync) return payload;
+
+  if (!remoteId) {
+    throw new PipelineError(
+      "The AI vision backend accepted the scan but did not return a scan_id to poll.",
+    );
   }
+
+  return pollVisionScan(baseUrl, remoteId, headers);
+}
+
+async function pollVisionScan(
+  baseUrl: string,
+  remoteId: string,
+  headers: Record<string, string>,
+): Promise<any> {
+  const statusUrl = `${baseUrl}/scan/${encodeURIComponent(remoteId)}`;
+  const deadline = Date.now() + POLL_MAX_MS;
+
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+
+    let res: Response;
+    try {
+      res = await fetch(statusUrl, {
+        method: "GET",
+        headers: { accept: "application/json", ...(headers["authorization"] ? { authorization: headers["authorization"], "x-api-key": headers["x-api-key"]! } : {}) },
+        signal: AbortSignal.timeout(60_000),
+      });
+    } catch {
+      continue; // transient network/timeout — retry on the next tick
+    }
+
+    const body = await res.text();
+    if (res.status === 404 || res.status >= 500) continue;
+    if (!res.ok) {
+      throw new PipelineError(
+        `AI vision backend returned ${res.status}${body ? `: ${body.slice(0, 400)}` : ""}`,
+        res.status,
+      );
+    }
+
+    const payload = parseJson(body);
+    const status = (str(payload?.status) ?? "").toLowerCase();
+
+    if (status === "failed" || status === "error") {
+      throw new PipelineError(
+        str(payload?.error) ??
+          str(payload?.error_message) ??
+          str(payload?.detail) ??
+          "The AI vision backend failed to analyse this shelf image.",
+      );
+    }
+    if (status === "completed" || status === "complete" || status === "done" || status === "success") {
+      return payload?.result ?? payload?.results ?? payload;
+    }
+    // queued / processing → keep polling
+  }
+
+  throw new PipelineError(
+    "The AI vision backend did not finish analysing this scan within 3 minutes. Please retry.",
+    504,
+  );
 }
 
 /* -------------------------------------------------------------------------- */
