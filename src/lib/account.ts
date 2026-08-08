@@ -519,28 +519,96 @@ export async function signOutOtherDevices(): Promise<{ revoked: number }> {
 
 // ---------- api keys ----------
 
-/** No api_keys table exists yet. */
+const API_KEY_PREFIX = "aislix_sk_";
+
+function randomKeySecret(): string {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function hashKey(key: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function maskKey(prefix: string): string {
+  return `${prefix}••••••••••••`;
+}
+
+function toApiKey(row: any): ApiKey {
+  return {
+    id: row.id as string,
+    name: (row.name as string | null) ?? undefined,
+    masked_key: maskKey(row.key_prefix as string),
+    created_at: (row.created_at as string) ?? undefined,
+    last_used_at: (row.last_used_at as string | null) ?? null,
+    revoked: Boolean(row.revoked_at),
+  };
+}
+
+/** Every API key belonging to the active organization (hashes never leave the DB). */
 export async function fetchApiKeys(signal?: AbortSignal): Promise<{ items: ApiKey[] }> {
   void signal;
-  await requireUserId();
-  return { items: [] };
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("api_keys")
+    .select("id, name, key_prefix, created_at, last_used_at, revoked_at")
+    .eq("org_id", orgId)
+    .order("created_at", { ascending: false });
+  if (error) dbError(error, "Could not load your API keys.");
+  return { items: (data ?? []).map(toApiKey) };
 }
 
-export function createApiKey(_input: { name?: string } = {}): Promise<ApiKey> {
-  throw new ApiError({
-    message: "API keys aren't available yet.",
-    kind: "not_configured",
-    status: 501,
-  });
+/** Creates a key, returning the full secret exactly once. Only the hash is stored. */
+export async function createApiKey(input: { name?: string } = {}): Promise<ApiKey> {
+  const membership = await requireMembership();
+  if (membership.role !== "owner" && membership.role !== "admin") {
+    throw new ApiError({
+      message: "Only workspace owners and admins can create API keys.",
+      kind: "forbidden",
+      status: 403,
+    });
+  }
+
+  const secret = randomKeySecret();
+  const key = `${API_KEY_PREFIX}${secret}`;
+  const keyHash = await hashKey(key);
+
+  const { data, error } = await supabase
+    .from("api_keys")
+    .insert({
+      org_id: membership.org_id,
+      user_id: membership.user_id,
+      name: input.name?.trim() || `Key ${new Date().toLocaleDateString()}`,
+      key_prefix: key.slice(0, API_KEY_PREFIX.length + 8),
+      key_hash: keyHash,
+    } as never)
+    .select("id, name, key_prefix, created_at, last_used_at, revoked_at")
+    .single();
+  if (error || !data) dbError(error, "Could not create the API key.");
+
+  return { ...toApiKey(data), key };
 }
 
-export function revokeApiKey(_id: string): Promise<void> {
-  throw new ApiError({
-    message: "API keys aren't available yet.",
-    kind: "not_configured",
-    status: 501,
-  });
+/** Marks a key revoked; existing rows are never deleted so the audit trail stays. */
+export async function revokeApiKey(id: string): Promise<void> {
+  const membership = await requireMembership();
+  if (membership.role !== "owner" && membership.role !== "admin") {
+    throw new ApiError({
+      message: "Only workspace owners and admins can revoke API keys.",
+      kind: "forbidden",
+      status: 403,
+    });
+  }
+  const { error } = await supabase
+    .from("api_keys")
+    .update({ revoked_at: new Date().toISOString() } as never)
+    .eq("id", id)
+    .eq("org_id", membership.org_id);
+  if (error) dbError(error, "Could not revoke the API key.");
 }
+
 
 // ---------- account management ----------
 
