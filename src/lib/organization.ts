@@ -339,7 +339,11 @@ export async function fetchStoreList(
   if (error) dbError(error, "Could not load stores.");
 
   let items = (data ?? []).map(mapStoreRow);
-  items = await attachStoreMetrics(items);
+  try {
+    items = await attachStoreMetrics(items);
+  } catch {
+    // Metrics are best-effort: never hide stores because analytics failed.
+  }
 
   if (query.filter === "healthy") {
     items = items.filter((s) => (s.metrics?.shelf_health_score ?? 0) >= 80);
@@ -363,8 +367,12 @@ export async function fetchStore(id: string, _signal?: AbortSignal): Promise<Org
     .maybeSingle();
   if (error) dbError(error, "Could not load the store.");
   if (!data) notFound("Store not found.");
-  const [store] = await attachStoreMetrics([mapStoreRow(data)]);
-  return store!;
+  try {
+    const [store] = await attachStoreMetrics([mapStoreRow(data)]);
+    return store!;
+  } catch {
+    return mapStoreRow(data);
+  }
 }
 
 export async function createOrgStore(input: StoreInput): Promise<OrgStore> {

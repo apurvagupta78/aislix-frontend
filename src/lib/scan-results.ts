@@ -66,6 +66,8 @@ export type ScanResult = {
   created_at?: string;
   store?: string;
   aisle?: string;
+  location?: string;
+  scan_category?: string;
   status?: ScanStatus;
   summary: ScanSummary;
   annotated_image_url?: string;
@@ -148,7 +150,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   const { data: scan, error: scanError } = await supabase
     .from("shelf_scans")
     .select(
-      "id, org_id, status, shelf_label, created_at, processing_started_at, processing_completed_at, shelf_health_score, osa_percent, planogram_compliance_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count, store_id, stores(name)",
+      "id, org_id, status, shelf_label, category, created_at, processing_started_at, processing_completed_at, shelf_health_score, osa_percent, planogram_compliance_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count, store_id, stores(name)",
     )
     .eq("org_id", orgId)
     .eq("id", scanId)
@@ -323,6 +325,10 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     },
   };
   if (storeName) scanResult.store = storeName;
+  const shelfLabel = (scan as any).shelf_label as string | null | undefined;
+  const scanCategory = (scan as any).category as string | null | undefined;
+  if (shelfLabel) scanResult.location = shelfLabel;
+  if (scanCategory) scanResult.scan_category = scanCategory;
   if (annotatedUrl) scanResult.annotated_image_url = annotatedUrl;
   if (result?.executive_summary) scanResult.executive_summary = result.executive_summary;
   return scanResult;

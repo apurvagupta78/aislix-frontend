@@ -28,6 +28,7 @@ import {
   type OrgStore,
   type StoreFilter,
 } from "@/lib/organization";
+import { getMembership } from "@/lib/db/context";
 
 const PAGE_SIZE = 12;
 const filters: StoreFilter[] = ["all", "active", "archived", "healthy", "alerts"];
@@ -91,6 +92,14 @@ function StoresPage() {
   });
 
   const { archive, remove } = useStoreActions();
+
+  const roleQuery = useQuery({
+    queryKey: ["membership-role"],
+    queryFn: () => getMembership(),
+    retry: false,
+  });
+  const canDelete =
+    roleQuery.data?.role === "owner" || roleQuery.data?.role === "admin";
 
   const stores = storesQuery.data?.items ?? [];
   const total = storesQuery.data?.total ?? stores.length;
@@ -305,7 +314,13 @@ function StoresPage() {
                     setFormOpen(true);
                   }}
                   onArchiveToggle={(s) => archive.mutate(s)}
-                  onDelete={(s) => setDeleting(s)}
+                  onDelete={(s) => {
+                    if (!canDelete) {
+                      toast.error("Only owners and admins can delete a store.");
+                      return;
+                    }
+                    setDeleting(s);
+                  }}
                 />
               ))}
             </div>

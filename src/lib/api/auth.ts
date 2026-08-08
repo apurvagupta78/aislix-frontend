@@ -226,3 +226,44 @@ export async function resendVerificationEmail(input: { email: string }): Promise
   if (error) authError(error.message, error.status ?? 400);
   return { ok: true };
 }
+
+/* ------------------------------ social sign-in ----------------------------- */
+
+export type OAuthProvider = "google" | "apple";
+
+/**
+ * Starts a managed social sign-in. Either redirects to the provider or sets the
+ * session in place (editor preview / popup flow).
+ */
+export async function loginWithOAuth(
+  provider: OAuthProvider,
+): Promise<{ redirected: boolean }> {
+  clearContextCache();
+  const { lovable } = await import("@/integrations/lovable/index");
+  const result = await lovable.auth.signInWithOAuth(provider, {
+    redirect_uri: `${window.location.origin}/login`,
+  });
+  if (result.error) authError(result.error.message ?? "Social sign-in failed.", 400);
+  if (result.redirected) return { redirected: true };
+  await ensureOAuthWorkspace();
+  return { redirected: false };
+}
+
+/** Creates the workspace for a social sign-in that has no membership yet. */
+export async function ensureOAuthWorkspace(): Promise<void> {
+  const { data } = await supabase.auth.getUser();
+  const user = data.user;
+  if (!user) return;
+  const meta = (user.user_metadata ?? {}) as {
+    company_name?: string;
+    full_name?: string;
+    name?: string;
+  };
+  const workspaceName =
+    meta.company_name?.trim() ||
+    (meta.full_name || meta.name)?.trim() ||
+    user.email?.split("@")[0] ||
+    "My workspace";
+  await ensureOrganizationForUser(user.id, workspaceName);
+  clearContextCache();
+}

@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { clearContextCache } from "@/lib/db/context";
+import { ensureOAuthWorkspace } from "@/lib/api/auth";
 
 
 function NotFoundComponent() {
@@ -139,6 +140,14 @@ function RootComponent() {
       clearContextCache();
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+      if (event === "SIGNED_IN") {
+        void ensureOAuthWorkspace().then(() => {
+          const path = window.location.pathname;
+          if (path === "/login" || path === "/signup") {
+            void router.navigate({ to: "/dashboard" });
+          }
+        });
+      }
     });
     return () => data.subscription.unsubscribe();
   }, [router, queryClient]);
