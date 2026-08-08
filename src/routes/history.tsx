@@ -83,7 +83,7 @@ export const Route = createFileRoute("/history")({
       {
         name: "description",
         content:
-          "Search, filter and compare every completed shelf scan: products detected, low stock, confidence and processing time.",
+          "Search and filter scans by store, location and category, then compare any two shelf audits.",
       },
       { property: "og:title", content: "Scan history — Aislix" },
       {
