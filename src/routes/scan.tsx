@@ -314,42 +314,18 @@ function ScanPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="scan-aisle">Aisle *</Label>
+                <Label htmlFor="scan-location">Location *</Label>
                 <Input
-                  id="scan-aisle"
+                  id="scan-location"
                   className="rounded-xl"
-                  placeholder="e.g. 4"
-                  value={aisle}
+                  placeholder="e.g. Aisle 4 · Beverages · left bay"
+                  value={location}
                   disabled={busy}
-                  onChange={(e) => setAisle(e.target.value)}
+                  onChange={(e) => setLocation(e.target.value)}
                 />
-                {fieldError("aisle") && (
-                  <p className="text-xs text-destructive">{fieldError("aisle")}</p>
+                {fieldError("location") && (
+                  <p className="text-xs text-destructive">{fieldError("location")}</p>
                 )}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="scan-rack">Rack</Label>
-                <Input
-                  id="scan-rack"
-                  className="rounded-xl"
-                  placeholder="e.g. B"
-                  value={rack}
-                  disabled={busy}
-                  onChange={(e) => setRack(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="scan-bin">Bin</Label>
-                <Input
-                  id="scan-bin"
-                  className="rounded-xl"
-                  placeholder="e.g. 12"
-                  value={bin}
-                  disabled={busy}
-                  onChange={(e) => setBin(e.target.value)}
-                />
               </div>
 
               <div className="space-y-1.5">
@@ -358,10 +334,15 @@ function ScanPage() {
                   <SelectTrigger id="scan-category" className="rounded-xl">
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((name) => (
-                      <SelectItem key={name} value={name}>
-                        {name}
+                  <SelectContent className="max-h-[320px]">
+                    {categories.map((item) => (
+                      <SelectItem key={item.name} value={item.name} className="py-2">
+                        <span className="flex flex-col gap-0.5">
+                          <span className="text-sm font-medium">{item.name}</span>
+                          {item.examples ? (
+                            <span className="text-xs text-muted-foreground">{item.examples}</span>
+                          ) : null}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -372,11 +353,6 @@ function ScanPage() {
               </div>
             </div>
 
-            {shelfLabel && (
-              <p className="mt-4 rounded-xl border border-border bg-surface px-4 py-2.5 text-xs text-muted-foreground">
-                Shelf label: <span className="font-medium text-foreground">{shelfLabel}</span>
-              </p>
-            )}
           </section>
 
           {/* STEP 2 — images */}
