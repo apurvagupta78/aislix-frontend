@@ -127,7 +127,7 @@ function ScanPage() {
   const guardSetup = useCallback(() => {
     if (setupComplete) return true;
     setShowSetupErrors(true);
-    setFileError("Complete scan setup (store, aisle and category) before adding images.");
+    setFileError("Complete scan setup (store, location and category) before adding images.");
     return false;
   }, [setupComplete]);
 
@@ -237,7 +237,7 @@ function ScanPage() {
   return (
     <AppShell
       title="Scan"
-      description="Set store location and category, then capture or upload shelf photos."
+      description="Set store, location and category, then capture or upload shelf photos."
       actions={
         items.length && !busy ? (
           <Button variant="subtle" size="sm" className="rounded-xl" onClick={reset}>
@@ -554,7 +554,7 @@ function ScanPage() {
           <div className="card-surface p-5 sm:p-6">
             <h2 className="text-sm font-semibold tracking-tight">How it works</h2>
             <ol className="mt-4 space-y-3 text-sm text-muted-foreground">
-              <li>1. Set store, aisle location and category.</li>
+              <li>1. Set store, location and category.</li>
               <li>2. Capture or upload your shelf photos.</li>
               <li>3. AI detects products, brands and stock gaps.</li>
               <li>4. View results, CSV, and PDF report.</li>
