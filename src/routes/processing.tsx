@@ -119,7 +119,7 @@ function Processing() {
               <p className="mt-2 text-sm text-muted-foreground">
                 {done
                   ? "Opening your scan results…"
-                  : "This usually takes 2–4 minutes. Keep this page open."}
+                  : "This usually takes 2–5 minutes for large shelves. Keep this page open."}
               </p>
 
               <div className="mt-8">
