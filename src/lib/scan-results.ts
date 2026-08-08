@@ -172,25 +172,53 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     .eq("scan_id", scanId);
 
   let annotatedUrl: string | undefined;
+  let pdfUrl: string | undefined;
   const annotated = images?.find((img) => img.kind === "annotated");
+  const pdf = images?.find((img) => img.kind === "pdf" || img.kind === "report");
   if (annotated) {
     const { data: signed } = await supabase.storage
       .from(annotated.storage_bucket as string)
       .createSignedUrl(annotated.storage_path as string, 3600);
     annotatedUrl = signed?.signedUrl;
   }
+  if (pdf) {
+    const { data: signed } = await supabase.storage
+      .from(pdf.storage_bucket as string)
+      .createSignedUrl(pdf.storage_path as string, 3600);
+    pdfUrl = signed?.signedUrl;
+  }
 
-  const inventory: InventoryItem[] = (products ?? []).map((p: any) => ({
-    id: p.id as string,
-    brand: p.brand ?? "Unknown",
-    product: p.name ?? "Unknown product",
-    quantity: p.facings ?? 0,
-    confidence: Number(p.confidence) || 0,
-    category: p.category ?? undefined,
-    low_stock: p.stock_status === "low_stock",
-    out_of_stock: p.stock_status === "out_of_stock",
-    shelf_position: p.shelf_row ?? undefined,
-  }));
+  const inventory: InventoryItem[] = [];
+  const grouped = new Map<string, InventoryItem>();
+  for (const p of products ?? []) {
+    const brand = (p.brand as string | null) ?? "Unknown";
+    const product = (p.name as string | null) ?? "Unknown product";
+    const variant = (p as { variant?: string | null }).variant ?? "";
+    const key = `${brand}::${product}::${variant}`;
+    const qty = Number(p.facings) || 1;
+    const confidence = Number(p.confidence) || 0;
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.quantity += qty;
+      existing.confidence = Math.max(existing.confidence, confidence);
+      if (p.stock_status === "low_stock") existing.low_stock = true;
+      if (p.stock_status === "out_of_stock") existing.out_of_stock = true;
+    } else {
+      grouped.set(key, {
+        id: p.id as string,
+        brand,
+        product,
+        variant: variant || undefined,
+        quantity: qty,
+        confidence,
+        category: (p.category as string | null) ?? undefined,
+        low_stock: p.stock_status === "low_stock",
+        out_of_stock: p.stock_status === "out_of_stock",
+        shelf_position: p.shelf_row === null || p.shelf_row === undefined ? undefined : String(p.shelf_row),
+      });
+    }
+  }
+  inventory.push(...grouped.values());
 
   // Derived chart buckets from real detected_products rows only.
   const confidenceBuckets: ConfidenceBucket[] = [
@@ -275,7 +303,10 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
       quantity_distribution: quantityBuckets,
       low_stock_summary: lowStockSummary,
     },
-    downloads: annotatedUrl ? { annotated_image_url: annotatedUrl } : {},
+    downloads: {
+      ...(annotatedUrl ? { annotated_image_url: annotatedUrl } : {}),
+      ...(pdfUrl ? { pdf_url: pdfUrl } : {}),
+    },
   };
   if (storeName) scanResult.store = storeName;
   if (annotatedUrl) scanResult.annotated_image_url = annotatedUrl;

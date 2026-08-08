@@ -122,13 +122,15 @@ export type NormalizedProduct = {
 };
 
 function normalizeProducts(payload: any): NormalizedProduct[] {
-  const source = arr(payload?.products).length
-    ? arr(payload?.products)
-    : arr(payload?.detected_products).length
-      ? arr(payload?.detected_products)
-      : arr(payload?.items).length
-        ? arr(payload?.items)
-        : arr(payload?.detections);
+  const source = arr(payload?.inventory).length
+    ? arr(payload?.inventory)
+    : arr(payload?.products).length
+      ? arr(payload?.products)
+      : arr(payload?.detected_products).length
+        ? arr(payload?.detected_products)
+        : arr(payload?.items).length
+          ? arr(payload?.items)
+          : arr(payload?.detections);
 
   return source
     .map((item: any, index: number): NormalizedProduct | null => {
@@ -437,6 +439,40 @@ async function storeAnnotatedImage(
   } as never);
 }
 
+/** Stores the PDF report returned by the vision backend as base64. */
+async function storePdfReport(
+  supabase: DB,
+  scan: { id: string; org_id: string },
+  payload: any,
+): Promise<void> {
+  const base64 = str(payload?.pdf_base64) ?? str(payload?.report_pdf_base64);
+  if (!base64) return;
+
+  let bytes: Uint8Array;
+  try {
+    const cleaned = base64.replace(/^data:[^;]+;base64,/, "");
+    bytes = Uint8Array.from(Buffer.from(cleaned, "base64"));
+  } catch {
+    return;
+  }
+  if (!bytes.byteLength) return;
+
+  const path = `${scan.org_id}/${scan.id}/report-${Date.now()}.pdf`;
+  const { error: uploadError } = await supabase.storage
+    .from("scan-images")
+    .upload(path, bytes, { contentType: "application/pdf", upsert: true });
+  if (uploadError) return;
+
+  await supabase.from("scan_images").insert({
+    scan_id: scan.id,
+    kind: "pdf",
+    storage_bucket: "scan-images",
+    storage_path: path,
+    mime_type: "application/pdf",
+    file_size_bytes: bytes.byteLength,
+  } as never);
+}
+
 /** Recomputes the daily rollup for this org/store from real completed scans. */
 async function refreshAnalytics(
   supabase: DB,
@@ -663,7 +699,7 @@ export async function runScanPipelineServer(
     const completedAt = new Date().toISOString();
 
     const metrics = {
-      total_products: products.length,
+      total_products: products.reduce((total, p) => total + p.facings, 0),
       unique_skus: new Set(products.map((p) => `${p.brand ?? ""}::${p.name}`)).size,
       unique_brands: new Set(products.map((p) => p.brand ?? "Unknown")).size,
       total_facings: products.reduce((total, p) => total + p.facings, 0),
@@ -699,13 +735,14 @@ export async function runScanPipelineServer(
     if (resultError) throw new PipelineError(resultError.message, 500);
 
     await storeAnnotatedImage(supabase, { id: scan.id as string, org_id: scan.org_id as string }, payload);
+    await storePdfReport(supabase, { id: scan.id as string, org_id: scan.org_id as string }, payload);
 
     // --- Complete the scan -------------------------------------------------
     const { error: completeError } = await supabase
       .from("shelf_scans")
       .update({
         status: "completed",
-        total_products: products.length,
+        total_products: products.reduce((total, p) => total + p.facings, 0),
         out_of_stock_count: outOfStock,
         low_stock_count: lowStock,
         misplaced_count: misplaced,
@@ -727,7 +764,7 @@ export async function runScanPipelineServer(
     return {
       scan_id: scan.id as string,
       status: "completed",
-      total_products: products.length,
+      total_products: products.reduce((total, p) => total + p.facings, 0),
       out_of_stock_count: outOfStock,
       low_stock_count: lowStock,
       misplaced_count: misplaced,
