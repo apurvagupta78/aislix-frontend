@@ -21,7 +21,14 @@ import {
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/States";
+
 import { ResultSection } from "@/components/scan-results/ResultParts";
 import { cn } from "@/lib/utils";
 import {
