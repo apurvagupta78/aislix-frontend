@@ -7,7 +7,11 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { ApiError } from "./errors";
-import { clearContextCache, createOrganizationForUser } from "@/lib/db/context";
+import {
+  clearContextCache,
+  createOrganizationForUser,
+  ensureOrganizationForUser,
+} from "@/lib/db/context";
 
 export type AuthUser = {
   id: string;
