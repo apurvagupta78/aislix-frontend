@@ -6,6 +6,8 @@ export type ScanStatus = "completed" | "processing" | "failed";
 export type ScanHistoryItem = {
   scan_id: string;
   store: string;
+  location?: string;
+  category?: string;
   created_at: string; // ISO timestamp
   products_detected?: number;
   low_stock_products?: number;
@@ -102,6 +104,8 @@ export async function fetchScanHistory(
       created_at: row.created_at as string,
       status: toApiStatus(row.status as string),
     };
+    if (row.shelf_label) item.location = row.shelf_label as string;
+    if (row.category) item.category = row.category as string;
     if (row.total_products !== null && row.total_products !== undefined) {
       item.products_detected = row.total_products;
     }

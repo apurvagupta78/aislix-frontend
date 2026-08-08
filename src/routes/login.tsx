@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { login } from "@/lib/api/auth";
+import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
 import { toUserMessage } from "@/lib/api/errors";
 
 export const Route = createFileRoute("/login")({
@@ -93,6 +94,9 @@ function LoginPage() {
           {signIn.isPending ? "Signing in…" : "Log in"}
         </Button>
       </form>
+      <div className="mt-5">
+        <SocialAuthButtons />
+      </div>
     </AuthLayout>
   );
 }

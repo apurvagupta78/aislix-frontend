@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { register } from "@/lib/api/auth";
+import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
 import { toUserMessage } from "@/lib/api/errors";
 
 export const Route = createFileRoute("/signup")({
@@ -182,6 +183,9 @@ function SignupPage() {
           {signUp.isPending ? "Creating workspace…" : "Create workspace"}
         </Button>
       </form>
+      <div className="mt-5">
+        <SocialAuthButtons />
+      </div>
     </AuthLayout>
   );
 }
