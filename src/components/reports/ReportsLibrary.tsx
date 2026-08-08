@@ -146,7 +146,7 @@ export function ReportsLibrary() {
               <TableHead className="min-w-[140px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Category
               </TableHead>
-              <TableHead className="w-[140px] text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <TableHead className="w-[140px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Actions
               </TableHead>
             </TableRow>
@@ -186,7 +186,7 @@ export function ReportsLibrary() {
                     "—"
                   )}
                 </TableCell>
-                <TableCell className="whitespace-nowrap text-right align-middle">
+                <TableCell className="whitespace-nowrap text-left align-middle">
                   <Actions item={item} />
                 </TableCell>
               </TableRow>
