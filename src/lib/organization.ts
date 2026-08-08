@@ -328,7 +328,10 @@ export async function fetchStoreList(
   let builder = supabase.from("stores").select("*", { count: "exact" }).eq("org_id", orgId);
 
   if (query.search) {
-    builder = builder.or(`name.ilike.%${query.search}%,code.ilike.%${query.search}%`);
+    const q = query.search.replace(/[%,]/g, "");
+    builder = builder.or(
+      `name.ilike.%${q}%,code.ilike.%${q}%,city.ilike.%${q}%,contact_name.ilike.%${q}%`,
+    );
   }
   if (query.filter === "active") builder = builder.eq("status", "active");
   if (query.filter === "archived") builder = builder.eq("status", "inactive");
