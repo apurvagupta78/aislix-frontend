@@ -112,7 +112,12 @@ export function ScanResultHeader({
               {loading ? "Loading scan…" : (data?.scan_id ?? "Scan")}
             </h2>
             <ScanStatusBadge status={data?.status} />
+            <LearnedCatalogBadge
+              size={summary?.learned_catalog_size}
+              added={summary?.learned_new_this_scan}
+            />
           </div>
+
           <p className="mt-1 text-sm text-muted-foreground">
             AI shelf audit result{data?.aisle ? ` · ${data.aisle}` : ""}
           </p>
