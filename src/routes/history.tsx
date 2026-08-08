@@ -66,8 +66,6 @@ import {
 import {
   downloadBlob,
   fetchScanResult,
-  formatConfidence,
-  formatDuration,
   inventoryToCsv,
 } from "@/lib/scan-results";
 import { toast } from "sonner";
