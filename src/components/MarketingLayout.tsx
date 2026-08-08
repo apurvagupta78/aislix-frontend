@@ -63,8 +63,8 @@ export function SiteFooter() {
           <div>
             <Logo />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-              AI retail shelf intelligence for supermarkets, FMCG brands, distributors and local
-              stores. Audit any shelf from a single photo.
+              AI retail shelf intelligence for supermarkets, dark stores, warehouses, FMCG brands,
+              distributors and local stores. Audit any shelf from a single photo.
             </p>
             <div className="mt-5 flex items-center gap-2">
               <a
