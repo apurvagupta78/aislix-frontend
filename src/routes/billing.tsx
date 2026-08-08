@@ -341,7 +341,9 @@ function Billing() {
               <div className="min-w-0 flex-1 space-y-4">
                 <div>
                   <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-muted-foreground">Scans used this month</span>
+                    <span className="text-muted-foreground">
+                      {usage?.quota_period === "day" ? "Scans used today" : "Scans used this month"}
+                    </span>
                     <span className="font-medium">
                       {formatNumber(usage?.scans_used)} /{" "}
                       {usage?.scans_included ? formatNumber(usage.scans_included) : "Unlimited"}
@@ -486,7 +488,7 @@ function Billing() {
         ) : (
           <>
             <StatCard
-              label="Total scans this month"
+              label={usage?.quota_period === "day" ? "Scans used today" : "Total scans this month"}
               value={formatNumber(usage?.scans_used)}
               icon={<ScanLine className="size-4" />}
             />

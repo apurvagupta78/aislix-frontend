@@ -24,7 +24,7 @@ export const Route = createFileRoute("/signup")({
       {
         name: "description",
         content:
-          "Sign up for Aislix and get 50 free AI shelf scans for your supermarket, distribution network or local store.",
+          "Sign up for Aislix and get 3 free AI shelf scans per day for your supermarket, distribution network or local store.",
       },
       { property: "og:title", content: "Create your Aislix workspace" },
       { property: "og:description", content: "Start auditing retail shelves with AI in minutes." },
@@ -82,7 +82,7 @@ function SignupPage() {
   return (
     <AuthLayout
       title="Create your workspace"
-      subtitle="50 free shelf scans. No card required."
+      subtitle="3 free shelf scans every day. No card required."
       footer={
         <>
           Already have an account?{" "}

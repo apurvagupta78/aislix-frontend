@@ -108,6 +108,10 @@ export async function submitScanImages(
   const userId = await requireUserId();
   const orgId = await requireOrgId();
 
+  // Free plan is capped at 3 scans per day; paid plans are metered monthly.
+  const { assertScanAllowance, recordScanUsage } = await import("@/lib/billing");
+  await assertScanAllowance();
+
   const { data: scan, error: insertError } = await supabase
     .from("shelf_scans")
     .insert({
@@ -173,6 +177,8 @@ export async function submitScanImages(
 
     options.onUploadProgress?.(Math.round(((index + 1) / files.length) * 100));
   }
+
+  await recordScanUsage();
 
   return { scan_id: scan.id as string, status: scan.status as string };
 }
