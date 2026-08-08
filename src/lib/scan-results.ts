@@ -54,6 +54,11 @@ export type ScanSummary = {
   shelf_compliance?: number;
   /** 0-100 composite shelf health score. */
   shelf_health_score?: number;
+  /** Total learned SKUs in the org catalog after this scan. */
+  learned_catalog_size?: number;
+  /** New SKUs learned during this scan. */
+  learned_new_this_scan?: number;
+
 };
 
 export type ScanResult = {
