@@ -201,8 +201,6 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     if (existing) {
       existing.quantity += qty;
       existing.confidence = Math.max(existing.confidence, confidence);
-      if (p.stock_status === "low_stock") existing.low_stock = true;
-      if (p.stock_status === "out_of_stock") existing.out_of_stock = true;
     } else {
       grouped.set(key, {
         id: p.id as string,
@@ -212,11 +210,14 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
         quantity: qty,
         confidence,
         category: (p.category as string | null) ?? undefined,
-        low_stock: p.stock_status === "low_stock",
-        out_of_stock: p.stock_status === "out_of_stock",
         shelf_position: p.shelf_row === null || p.shelf_row === undefined ? undefined : String(p.shelf_row),
       });
     }
+  }
+  // Stock flags are derived from the aggregated facing count, not individual rows.
+  for (const item of grouped.values()) {
+    item.out_of_stock = item.quantity === 0;
+    item.low_stock = item.quantity > 0 && item.quantity <= 2;
   }
   inventory.push(...grouped.values());
 
