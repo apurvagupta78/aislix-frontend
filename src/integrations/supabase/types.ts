@@ -755,19 +755,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      has_org_role: {
-        Args: {
-          _org_id: string
-          _roles: Database["public"]["Enums"]["app_role"][]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      is_org_member: {
-        Args: { _org_id: string; _user_id: string }
-        Returns: boolean
-      }
-      scan_in_my_org: { Args: { _scan_id: string }; Returns: boolean }
+      [_ in never]: never
     }
     Enums: {
       alert_severity: "critical" | "high" | "medium" | "low"
