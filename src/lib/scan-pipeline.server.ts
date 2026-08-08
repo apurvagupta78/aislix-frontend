@@ -570,8 +570,81 @@ async function refreshAnalytics(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Learned SKU catalog (Railway cannot reach Supabase — we own persistence)    */
+/* -------------------------------------------------------------------------- */
+
+type LearnedCatalogRow = {
+  sku: string | null;
+  brand: string | null;
+  product_name: string;
+  variant: string | null;
+  category: string | null;
+  embedding: unknown;
+};
+
+/** Everything this org has learned so far, sent to Railway as `learned_catalog`. */
+async function loadLearnedCatalog(supabase: DB, orgId: string): Promise<LearnedCatalogRow[]> {
+  const { data, error } = await supabase
+    .from("learned_skus")
+    .select("sku, brand, name, variant, category, embedding")
+    .eq("org_id", orgId);
+  if (error || !data) return [];
+  return data.map((row: any) => ({
+    sku: row.sku ?? null,
+    brand: row.brand ?? null,
+    product_name: row.name ?? "",
+    variant: row.variant ?? null,
+    category: row.category ?? null,
+    embedding: row.embedding ?? null,
+  }));
+}
+
+/** Persist `learned_updates` returned by Railway back into learned_skus. */
+async function persistLearnedUpdates(
+  supabase: DB,
+  scan: { id: string; org_id: string },
+  payload: any,
+): Promise<void> {
+  const updates = arr(payload?.learned_updates ?? payload?.learned_catalog_updates);
+  if (!updates.length) return;
+
+  const now = new Date().toISOString();
+  const rows: Record<string, unknown>[] = [];
+
+  for (const raw of updates) {
+    const sku = str(raw?.sku);
+    const name = str(raw?.product_name) ?? str(raw?.name);
+    // The conflict target is (org_id, sku); rows without a SKU cannot be upserted.
+    if (!sku || !name) continue;
+    rows.push({
+      org_id: scan.org_id,
+      sku,
+      name,
+      brand: str(raw?.brand),
+      variant: str(raw?.variant),
+      category: str(raw?.category),
+      barcode: str(raw?.barcode),
+      embedding: raw?.embedding ?? null,
+      source_scan_id: scan.id,
+      times_seen: Math.max(1, Math.round(num(raw?.hit_count) ?? num(raw?.times_seen) ?? 1)),
+      confidence: normalizeConfidence(raw?.confidence),
+      expected_facings: num(raw?.expected_facings),
+      last_seen_at: now,
+    });
+  }
+  if (!rows.length) return;
+
+  const { error } = await supabase
+    .from("learned_skus")
+    .upsert(rows as never, { onConflict: "org_id,sku" });
+  // Catalog learning is best-effort: never fail a completed scan because of it.
+  if (error) console.error("[scan-pipeline] learned_skus upsert failed:", error.message);
+}
+
+/* -------------------------------------------------------------------------- */
 /* Pipeline                                                                   */
 /* -------------------------------------------------------------------------- */
+
 
 export async function runScanPipelineServer(
   supabase: DB,
@@ -620,6 +693,8 @@ export async function runScanPipelineServer(
     }
 
     // --- Call the Railway FastAPI vision backend ---------------------------
+    const learnedCatalog = await loadLearnedCatalog(supabase, scan.org_id as string);
+
     const payload = await callVisionApi({
       scan_id: scan.id,
       org_id: scan.org_id,
@@ -629,8 +704,10 @@ export async function runScanPipelineServer(
       notes: scan.notes,
       image_urls: signedImages.map((i) => i.url),
       images: signedImages,
+      learned_catalog: learnedCatalog,
       requested_at: startedAt,
     });
+
 
     const products = normalizeProducts(payload);
     if (!products.length) {
@@ -736,6 +813,12 @@ export async function runScanPipelineServer(
 
     await storeAnnotatedImage(supabase, { id: scan.id as string, org_id: scan.org_id as string }, payload);
     await storePdfReport(supabase, { id: scan.id as string, org_id: scan.org_id as string }, payload);
+    await persistLearnedUpdates(
+      supabase,
+      { id: scan.id as string, org_id: scan.org_id as string },
+      payload,
+    );
+
 
     // --- Complete the scan -------------------------------------------------
     const { error: completeError } = await supabase

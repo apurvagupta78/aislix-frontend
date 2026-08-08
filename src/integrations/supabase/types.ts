@@ -132,6 +132,7 @@ export type Database = {
           category: string | null
           confidence: number | null
           created_at: string
+          embedding: Json | null
           expected_facings: number | null
           features_path: string | null
           first_seen_at: string
@@ -140,6 +141,7 @@ export type Database = {
           name: string
           org_id: string
           sku: string | null
+          source_scan_id: string | null
           times_seen: number
           updated_at: string
           variant: string | null
@@ -151,6 +153,7 @@ export type Database = {
           category?: string | null
           confidence?: number | null
           created_at?: string
+          embedding?: Json | null
           expected_facings?: number | null
           features_path?: string | null
           first_seen_at?: string
@@ -159,6 +162,7 @@ export type Database = {
           name: string
           org_id: string
           sku?: string | null
+          source_scan_id?: string | null
           times_seen?: number
           updated_at?: string
           variant?: string | null
@@ -170,6 +174,7 @@ export type Database = {
           category?: string | null
           confidence?: number | null
           created_at?: string
+          embedding?: Json | null
           expected_facings?: number | null
           features_path?: string | null
           first_seen_at?: string
@@ -178,6 +183,7 @@ export type Database = {
           name?: string
           org_id?: string
           sku?: string | null
+          source_scan_id?: string | null
           times_seen?: number
           updated_at?: string
           variant?: string | null
@@ -188,6 +194,13 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learned_skus_source_scan_id_fkey"
+            columns: ["source_scan_id"]
+            isOneToOne: false
+            referencedRelation: "shelf_scans"
             referencedColumns: ["id"]
           },
         ]
