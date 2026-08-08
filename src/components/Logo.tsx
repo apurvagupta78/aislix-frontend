@@ -3,10 +3,18 @@ import { cn } from "@/lib/utils";
 import logoAsset from "@/assets/aislix-logo.png.asset.json";
 import markAsset from "@/assets/aislix-mark.png.asset.json";
 
-export function Logo({ className, compact = false }: { className?: string; compact?: boolean }) {
+export function Logo({
+  className,
+  compact = false,
+  to = "/",
+}: {
+  className?: string;
+  compact?: boolean;
+  to?: string;
+}) {
   return (
     <Link
-      to="/"
+      to={to}
       aria-label="Aislix home"
       className={cn("group inline-flex items-center transition-opacity hover:opacity-80", className)}
     >

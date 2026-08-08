@@ -63,7 +63,14 @@ import {
   type ScanHistoryQuery,
   type ScanStatus,
 } from "@/lib/scan-history";
-import { formatConfidence, formatDuration } from "@/lib/scan-results";
+import {
+  downloadBlob,
+  fetchScanResult,
+  formatConfidence,
+  formatDuration,
+  inventoryToCsv,
+} from "@/lib/scan-results";
+import { toast } from "sonner";
 
 const PAGE_SIZE = 10;
 
@@ -120,6 +127,25 @@ function RowActions({
   onDelete: (scan: ScanHistoryItem) => void;
 }) {
   const d = scan.downloads;
+  const [csvBusy, setCsvBusy] = useState(false);
+
+  const downloadCsv = async () => {
+    setCsvBusy(true);
+    try {
+      const result = await fetchScanResult(scan.scan_id);
+      const inventory = result.inventory ?? [];
+      if (!inventory.length) {
+        toast.error("No inventory rows to export for this scan.");
+        return;
+      }
+      downloadBlob(inventoryToCsv(inventory), `aislix-${scan.scan_id}-inventory.csv`, "text/csv");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not export this scan.");
+    } finally {
+      setCsvBusy(false);
+    }
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -133,11 +159,22 @@ function RowActions({
             <FileText className="size-4" /> View results
           </Link>
         </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link to="/report" search={{ scan: scan.scan_id }}>
+            <FileText className="size-4" /> View report
+          </Link>
+        </DropdownMenuItem>
         <DropdownMenuItem disabled={!d?.pdf_url} onSelect={() => openUrl(d?.pdf_url)}>
           <Download className="size-4" /> Download PDF
         </DropdownMenuItem>
-        <DropdownMenuItem disabled={!d?.csv_url} onSelect={() => openUrl(d?.csv_url)}>
-          <SheetIcon className="size-4" /> Download CSV
+        <DropdownMenuItem
+          disabled={csvBusy || scan.status !== "completed"}
+          onSelect={(e) => {
+            e.preventDefault();
+            void downloadCsv();
+          }}
+        >
+          <SheetIcon className="size-4" /> {csvBusy ? "Preparing CSV…" : "Download CSV"}
         </DropdownMenuItem>
         <DropdownMenuItem
           disabled={!d?.annotated_image_url}

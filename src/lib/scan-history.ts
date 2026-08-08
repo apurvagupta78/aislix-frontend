@@ -106,13 +106,53 @@ export async function fetchScanHistory(
       item.products_detected = row.total_products;
     }
     if (row.low_stock_count !== null && row.out_of_stock_count !== null) {
-      item.low_stock_products = (row.low_stock_count ?? 0) + (row.out_of_stock_count ?? 0);
+      // Low stock counts only "low_stock" products — out of stock is a separate metric.
+      item.low_stock_products = row.low_stock_count ?? 0;
     }
     if (processingTimeMs !== undefined) {
       item.processing_time_ms = processingTimeMs;
     }
     return item;
   });
+
+  // Attach signed download URLs (PDF report + annotated image) for these scans.
+  const scanIds = items.map((i) => i.scan_id);
+  if (scanIds.length > 0) {
+    const { data: imageRows } = await supabase
+      .from("scan_images")
+      .select("scan_id, kind, storage_bucket, storage_path")
+      .in("scan_id", scanIds);
+
+    const byScan = new Map<string, { pdf?: any; annotated?: any }>();
+    for (const img of imageRows ?? []) {
+      const entry = byScan.get(img.scan_id as string) ?? {};
+      const kind = img.kind as string;
+      if ((kind === "pdf" || kind === "report") && !entry.pdf) entry.pdf = img;
+      if (kind === "annotated" && !entry.annotated) entry.annotated = img;
+      byScan.set(img.scan_id as string, entry);
+    }
+
+    await Promise.all(
+      items.map(async (item) => {
+        const entry = byScan.get(item.scan_id);
+        if (!entry) return;
+        const downloads: NonNullable<ScanHistoryItem["downloads"]> = {};
+        if (entry.pdf) {
+          const { data: signed } = await supabase.storage
+            .from(entry.pdf.storage_bucket as string)
+            .createSignedUrl(entry.pdf.storage_path as string, 3600);
+          if (signed?.signedUrl) downloads.pdf_url = signed.signedUrl;
+        }
+        if (entry.annotated) {
+          const { data: signed } = await supabase.storage
+            .from(entry.annotated.storage_bucket as string)
+            .createSignedUrl(entry.annotated.storage_path as string, 3600);
+          if (signed?.signedUrl) downloads.annotated_image_url = signed.signedUrl;
+        }
+        if (Object.keys(downloads).length > 0) item.downloads = downloads;
+      }),
+    );
+  }
 
   if (params.sort === "processing_time") {
     items = [...items].sort((a, b) => (b.processing_time_ms ?? 0) - (a.processing_time_ms ?? 0));
