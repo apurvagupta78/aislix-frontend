@@ -830,11 +830,6 @@ export async function runScanPipelineServer(
 
     await storeAnnotatedImage(supabase, { id: scan.id as string, org_id: scan.org_id as string }, payload);
     await storePdfReport(supabase, { id: scan.id as string, org_id: scan.org_id as string }, payload);
-    await persistLearnedUpdates(
-      supabase,
-      { id: scan.id as string, org_id: scan.org_id as string },
-      payload,
-    );
 
 
     // --- Complete the scan -------------------------------------------------
