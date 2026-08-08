@@ -18,6 +18,8 @@ export type PaymentMethod = {
 };
 
 export type UsageSummary = {
+  /** "day" for the Free plan (3 scans/day), "month" for paid monthly quotas. */
+  quota_period?: "day" | "month";
   period_start?: string;
   period_end?: string;
   scans_used: number;
@@ -94,6 +96,60 @@ async function getSubscriptionRow(orgId: string) {
   return data;
 }
 
+
+/** Start of the current day (local timezone) as an ISO timestamp. */
+export function startOfTodayIso(): string {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+}
+
+/** Number of scans this org has created since midnight (local time). */
+export async function countScansToday(orgId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("shelf_scans")
+    .select("id", { count: "exact", head: true })
+    .eq("org_id", orgId)
+    .gte("created_at", startOfTodayIso());
+  if (error) return 0;
+  return count ?? 0;
+}
+
+export const FREE_DAILY_SCAN_LIMIT = 3;
+
+/**
+ * Free plan allowance check used before a scan is created. Paid plans are
+ * metered monthly through subscriptions.scans_used and are not blocked here.
+ */
+export async function assertScanAllowance(): Promise<void> {
+  const orgId = await requireOrgId();
+  const sub = await getSubscriptionRow(orgId);
+  const plan = sub?.subscription_plans as { code?: string; scan_quota?: number | null } | null;
+  const code = plan?.code ?? "free";
+  if (code !== "free") return;
+
+  const limit = plan?.scan_quota ?? FREE_DAILY_SCAN_LIMIT;
+  const used = await countScansToday(orgId);
+  if (used >= limit) {
+    throw new ApiError({
+      message: `Free plan allows ${limit} scans per day. Upgrade or try again tomorrow.`,
+      kind: "validation",
+      status: 429,
+    });
+  }
+}
+
+/** Increments the monthly scans_used counter for paid plans only. */
+export async function recordScanUsage(): Promise<void> {
+  const orgId = await requireOrgId();
+  const sub = await getSubscriptionRow(orgId);
+  const plan = sub?.subscription_plans as { code?: string } | null;
+  if (!sub || (plan?.code ?? "free") === "free") return;
+  await supabase
+    .from("subscriptions")
+    .update({ scans_used: (sub.scans_used ?? 0) + 1 })
+    .eq("id", sub.id);
+}
+
 /** The org's subscription, plan and real usage counted from stores/members. */
 export async function fetchBillingOverview(signal?: AbortSignal): Promise<BillingOverview> {
   void signal;
@@ -112,6 +168,8 @@ export async function fetchBillingOverview(signal?: AbortSignal): Promise<Billin
     price_monthly_inr: number;
     price_annual_inr: number;
   } | null;
+
+  const isFree = (plan?.code ?? "free") === "free";
 
   const { data: org } = await supabase
     .from("organizations")
@@ -141,9 +199,12 @@ export async function fetchBillingOverview(signal?: AbortSignal): Promise<Billin
     cancel_at_period_end: sub.cancel_at_period_end,
     currency: "INR",
     usage: {
-      period_start: sub.current_period_start,
+      quota_period: isFree ? "day" : "month",
+      period_start: isFree ? startOfTodayIso() : sub.current_period_start,
       period_end: sub.current_period_end ?? undefined,
-      scans_used: sub.scans_used,
+      // Free plan is a daily allowance counted from real scans; paid plans use
+      // the monthly scans_used counter on the subscription row.
+      scans_used: isFree ? await countScansToday(orgId) : sub.scans_used,
       scans_included: plan?.scan_quota ?? null,
     },
     payment_method: undefined,
