@@ -319,9 +319,9 @@ function ScanPage() {
                   id="scan-location"
                   className="rounded-xl"
                   placeholder="e.g. Aisle 4 · Beverages · left bay"
-                  value={location}
+                  value={shelfLocation}
                   disabled={busy}
-                  onChange={(e) => setLocation(e.target.value)}
+                  onChange={(e) => setShelfLocation(e.target.value)}
                 />
                 {fieldError("location") && (
                   <p className="text-xs text-destructive">{fieldError("location")}</p>
