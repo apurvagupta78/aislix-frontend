@@ -31,6 +31,7 @@ import {
   healthTone,
   type RecentScan,
   type RecentScansQuery,
+  type RecentScansResponse,
 } from "@/lib/dashboard";
 
 const PAGE_SIZE = 8;
