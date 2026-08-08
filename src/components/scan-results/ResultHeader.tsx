@@ -10,11 +10,13 @@ import {
   Copy,
   Gauge,
   LayoutDashboard,
+  MapPin,
   Loader2,
   Mail,
   Printer,
   ScanLine,
   Sparkles,
+  Tags,
   Timer,
   Users,
 } from "lucide-react";
@@ -156,7 +158,9 @@ export function ScanResultHeader({
           </div>
 
           <p className="mt-1 text-sm text-muted-foreground">
-            AI shelf audit result{data?.aisle ? ` · ${data.aisle}` : ""}
+            {["AI shelf audit result", data?.scan_category, data?.location]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
         </div>
         <ResultNavigation />
@@ -170,15 +174,21 @@ export function ScanResultHeader({
           loading={loading}
         />
         <MetaItem
-          icon={<CalendarClock className="size-4" />}
-          label="Scan date & time"
-          value={formatScanDate(data?.created_at)}
+          icon={<MapPin className="size-4" />}
+          label="Location"
+          value={data?.location}
           loading={loading}
         />
         <MetaItem
-          icon={<Timer className="size-4" />}
-          label="Processing time"
-          value={summary ? formatDuration(summary.processing_time_ms) : undefined}
+          icon={<Tags className="size-4" />}
+          label="Category"
+          value={data?.scan_category}
+          loading={loading}
+        />
+        <MetaItem
+          icon={<CalendarClock className="size-4" />}
+          label="Scan date & time"
+          value={formatScanDate(data?.created_at)}
           loading={loading}
         />
         <MetaItem
@@ -188,12 +198,20 @@ export function ScanResultHeader({
           loading={loading}
           accent
         />
+      </div>
+
+      <div className="mt-4 grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
+        <MetaItem
+          icon={<Timer className="size-4" />}
+          label="Processing time"
+          value={summary ? formatDuration(summary.processing_time_ms) : undefined}
+          loading={loading}
+        />
         <MetaItem
           icon={<Sparkles className="size-4" />}
           label="Avg AI confidence"
           value={summary ? formatConfidence(summary.average_confidence) : undefined}
           loading={loading}
-          accent
         />
       </div>
     </div>

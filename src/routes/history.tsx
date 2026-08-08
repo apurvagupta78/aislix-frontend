@@ -325,7 +325,7 @@ function HistoryPage() {
               <SelectContent>
                 <SelectItem value="newest">Newest first</SelectItem>
                 <SelectItem value="oldest">Oldest first</SelectItem>
-                <SelectItem value="processing_time">Processing time</SelectItem>
+                <SelectItem value="processing_time">Longest processing</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -409,9 +409,8 @@ function HistoryPage() {
                       <TableHead>Store</TableHead>
                       <TableHead>Date &amp; time</TableHead>
                       <TableHead className="text-right">Products</TableHead>
-                      <TableHead className="text-right">Low stock</TableHead>
-                      <TableHead className="text-right">Confidence</TableHead>
-                      <TableHead className="text-right">Processing</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Category</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="w-10" />
                     </TableRow>
@@ -443,18 +442,11 @@ function HistoryPage() {
                         <TableCell className="text-right tabular-nums">
                           {formatCount(scan.products_detected)}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {formatCount(scan.low_stock_products)}
+                        <TableCell className="max-w-[200px] truncate text-sm">
+                          {scan.location ?? "—"}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {scan.average_confidence === undefined
-                            ? "—"
-                            : formatConfidence(scan.average_confidence)}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {scan.processing_time_ms === undefined
-                            ? "—"
-                            : formatDuration(scan.processing_time_ms)}
+                        <TableCell className="max-w-[180px] truncate text-sm">
+                          {scan.category ?? "—"}
                         </TableCell>
                         <TableCell>
                           <StatusBadge status={scan.status} />
@@ -493,21 +485,8 @@ function HistoryPage() {
                         { l: "Date", v: formatScanDate(scan.created_at) },
                         { l: "Time", v: formatScanTime(scan.created_at) },
                         { l: "Products", v: formatCount(scan.products_detected) },
-                        { l: "Low stock", v: formatCount(scan.low_stock_products) },
-                        {
-                          l: "Confidence",
-                          v:
-                            scan.average_confidence === undefined
-                              ? "—"
-                              : formatConfidence(scan.average_confidence),
-                        },
-                        {
-                          l: "Processing",
-                          v:
-                            scan.processing_time_ms === undefined
-                              ? "—"
-                              : formatDuration(scan.processing_time_ms),
-                        },
+                        { l: "Location", v: scan.location ?? "—" },
+                        { l: "Category", v: scan.category ?? "—" },
                       ].map((row) => (
                         <div key={row.l} className="min-w-0">
                           <dt className="text-muted-foreground">{row.l}</dt>
