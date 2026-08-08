@@ -41,13 +41,14 @@ export const Route = createFileRoute("/scan")({
       {
         name: "description",
         content:
-          "Set the store, aisle location and category, then capture or upload shelf photos for an AI audit.",
+          "Set store, location and category, then capture or upload shelf photos for an AI audit.",
       },
       { property: "og:title", content: "Scan a shelf — Aislix" },
       {
         property: "og:description",
-        content: "Set store location and category, then capture or upload shelf photos.",
+        content: "Set store, location and category, then capture or upload shelf photos.",
       },
+
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -55,18 +56,8 @@ export const Route = createFileRoute("/scan")({
   component: ScanPage,
 });
 
-const CATEGORIES = [
-  "Beverages",
-  "Fresh Food",
-  "Dairy & Chilled",
-  "Grocery & Staples",
-  "Packaged Food & Snacks",
-  "Frozen Foods & Ice Cream",
-  "Personal Care",
-  "Home Care",
-  "Health & Wellness",
-  "Baby & Pet Care",
-] as const;
+type Phase2 = never;
+
 
 type Phase = "idle" | "uploading" | "error";
 
