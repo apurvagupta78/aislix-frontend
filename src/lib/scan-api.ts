@@ -94,6 +94,7 @@ export async function submitScanImages(
     onUploadProgress?: (percent: number) => void;
     storeId?: string;
     shelfLabel?: string;
+    category?: string;
   } = {},
 ): Promise<ScanResponse> {
   if (!files.length) throw new Error("Add at least one shelf image to scan.");
@@ -120,6 +121,7 @@ export async function submitScanImages(
       created_by: userId,
       status: "processing",
       shelf_label: options.shelfLabel ?? null,
+      category: options.category ?? null,
       processing_started_at: new Date().toISOString(),
     })
     .select("id, status")
