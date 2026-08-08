@@ -1,11 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   Camera,
   Check,
   ImageIcon,
   Loader2,
+  MapPin,
   Plus,
   ScanLine,
   Trash2,
@@ -14,7 +16,17 @@ import {
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { fetchStores } from "@/lib/account";
 import {
   MAX_SCAN_IMAGES,
   formatBytes,
@@ -25,15 +37,16 @@ import {
 export const Route = createFileRoute("/scan")({
   head: () => ({
     meta: [
-      { title: "New Shelf Scan — Aislix" },
+      { title: "Scan a Shelf — Aislix" },
       {
         name: "description",
-        content: "Capture or upload shelf photos and run a full Aislix AI shelf audit.",
+        content:
+          "Set the store, aisle location and category, then capture or upload shelf photos for an AI audit.",
       },
-      { property: "og:title", content: "New shelf scan — Aislix" },
+      { property: "og:title", content: "Scan a shelf — Aislix" },
       {
         property: "og:description",
-        content: "Take photos or upload shelf images to start an AI retail audit.",
+        content: "Set store location and category, then capture or upload shelf photos.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -41,6 +54,19 @@ export const Route = createFileRoute("/scan")({
   }),
   component: ScanPage,
 });
+
+const CATEGORIES = [
+  "Beverages",
+  "Fresh Food",
+  "Dairy & Chilled",
+  "Grocery & Staples",
+  "Packaged Food & Snacks",
+  "Frozen Foods & Ice Cream",
+  "Personal Care",
+  "Home Care",
+  "Health & Wellness",
+  "Baby & Pet Care",
+] as const;
 
 type Phase = "idle" | "uploading" | "error";
 
@@ -55,6 +81,38 @@ function ScanPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
 
+  const [storeId, setStoreId] = useState("");
+  const [aisle, setAisle] = useState("");
+  const [rack, setRack] = useState("");
+  const [bin, setBin] = useState("");
+  const [category, setCategory] = useState("");
+  const [showSetupErrors, setShowSetupErrors] = useState(false);
+
+  const storesQuery = useQuery({
+    queryKey: ["stores", "scan-setup"],
+    queryFn: () => fetchStores(),
+    retry: false,
+    staleTime: 60_000,
+  });
+  const stores = storesQuery.data?.items ?? [];
+
+  const setupErrors = useMemo(() => {
+    const errors: Record<string, string> = {};
+    if (!storeId) errors.store = "Select the store for this scan.";
+    if (!aisle.trim()) errors.aisle = "Aisle is required.";
+    if (!category) errors.category = "Select a category.";
+    return errors;
+  }, [storeId, aisle, category]);
+  const setupComplete = Object.keys(setupErrors).length === 0;
+
+  const shelfLabel = useMemo(() => {
+    const parts: string[] = [];
+    if (aisle.trim()) parts.push(`Aisle ${aisle.trim()}`);
+    if (rack.trim()) parts.push(`Rack ${rack.trim()}`);
+    if (bin.trim()) parts.push(`Bin ${bin.trim()}`);
+    return parts.join(" · ");
+  }, [aisle, rack, bin]);
+
   const cameraInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -68,6 +126,21 @@ function ScanPage() {
     },
     [],
   );
+
+  const guardSetup = useCallback(() => {
+    if (setupComplete) return true;
+    setShowSetupErrors(true);
+    setFileError("Complete scan setup (store, aisle and category) before adding images.");
+    return false;
+  }, [setupComplete]);
+
+  const openCamera = useCallback(() => {
+    if (guardSetup()) cameraInput.current?.click();
+  }, [guardSetup]);
+
+  const openFiles = useCallback(() => {
+    if (guardSetup()) fileInput.current?.click();
+  }, [guardSetup]);
 
   const acceptFiles = useCallback((incoming: FileList | File[] | null | undefined) => {
     const files = Array.from(incoming ?? []);
@@ -121,6 +194,7 @@ function ScanPage() {
 
   const startScan = useCallback(async () => {
     if (!items.length || phase === "uploading") return;
+    if (!guardSetup()) return;
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -134,6 +208,9 @@ function ScanPage() {
         {
           signal: controller.signal,
           onUploadProgress: setUploadProgress,
+          storeId,
+          shelfLabel,
+          category,
         },
       );
       navigate({
@@ -150,7 +227,7 @@ function ScanPage() {
     } finally {
       abortRef.current = null;
     }
-  }, [items, navigate, phase]);
+  }, [items, navigate, phase, guardSetup, storeId, shelfLabel, category]);
 
   const cancelUpload = useCallback(() => {
     abortRef.current?.abort();
@@ -158,11 +235,12 @@ function ScanPage() {
   }, []);
 
   const busy = phase === "uploading";
+  const fieldError = (key: string) => (showSetupErrors ? setupErrors[key] : undefined);
 
   return (
     <AppShell
-      title="New scan"
-      description="Capture shelves with your camera or upload images to run a full AI shelf audit."
+      title="Scan"
+      description="Set store location and category, then capture or upload shelf photos."
       actions={
         items.length && !busy ? (
           <Button variant="subtle" size="sm" className="rounded-xl" onClick={reset}>
@@ -196,11 +274,138 @@ function ScanPage() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
-          <div className="card-surface p-4 sm:p-6">
-            <div className="grid gap-3 sm:grid-cols-2">
+          {/* STEP 1 — setup */}
+          <section className="card-surface p-4 sm:p-6">
+            <div className="flex items-start gap-3">
+              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
+                <MapPin className="size-4" />
+              </span>
+              <div>
+                <h2 className="text-sm font-semibold tracking-tight">Step 1 · Scan setup</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Required before you can add shelf images.
+                </p>
+              </div>
+              {setupComplete && (
+                <span className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-accent-green-soft px-2.5 py-1 text-xs font-medium text-accent-green">
+                  <Check className="size-3.5" /> Ready
+                </span>
+              )}
+            </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="scan-store">Store *</Label>
+                <Select value={storeId} onValueChange={setStoreId} disabled={busy}>
+                  <SelectTrigger id="scan-store" className="rounded-xl">
+                    <SelectValue
+                      placeholder={
+                        storesQuery.isLoading
+                          ? "Loading stores…"
+                          : stores.length
+                            ? "Select a store"
+                            : "No stores yet — add one in Stores"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {stores.map((store) => (
+                      <SelectItem key={store.id} value={store.id}>
+                        {store.name}
+                        {store.city ? ` — ${store.city}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {fieldError("store") && (
+                  <p className="text-xs text-destructive">{fieldError("store")}</p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="scan-aisle">Aisle *</Label>
+                <Input
+                  id="scan-aisle"
+                  className="rounded-xl"
+                  placeholder="e.g. 4"
+                  value={aisle}
+                  disabled={busy}
+                  onChange={(e) => setAisle(e.target.value)}
+                />
+                {fieldError("aisle") && (
+                  <p className="text-xs text-destructive">{fieldError("aisle")}</p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="scan-rack">Rack</Label>
+                <Input
+                  id="scan-rack"
+                  className="rounded-xl"
+                  placeholder="e.g. B"
+                  value={rack}
+                  disabled={busy}
+                  onChange={(e) => setRack(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="scan-bin">Bin</Label>
+                <Input
+                  id="scan-bin"
+                  className="rounded-xl"
+                  placeholder="e.g. 12"
+                  value={bin}
+                  disabled={busy}
+                  onChange={(e) => setBin(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="scan-category">Category *</Label>
+                <Select value={category} onValueChange={setCategory} disabled={busy}>
+                  <SelectTrigger id="scan-category" className="rounded-xl">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {fieldError("category") && (
+                  <p className="text-xs text-destructive">{fieldError("category")}</p>
+                )}
+              </div>
+            </div>
+
+            {shelfLabel && (
+              <p className="mt-4 rounded-xl border border-border bg-surface px-4 py-2.5 text-xs text-muted-foreground">
+                Shelf label: <span className="font-medium text-foreground">{shelfLabel}</span>
+              </p>
+            )}
+          </section>
+
+          {/* STEP 2 — images */}
+          <section className={cn("card-surface p-4 sm:p-6", !setupComplete && "opacity-70")}>
+            <div className="flex items-start gap-3">
+              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
+                <ImageIcon className="size-4" />
+              </span>
+              <div>
+                <h2 className="text-sm font-semibold tracking-tight">Step 2 · Shelf images</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Capture with the camera or upload up to {MAX_SCAN_IMAGES} photos.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <button
                 type="button"
-                onClick={() => cameraInput.current?.click()}
+                onClick={openCamera}
                 disabled={busy}
                 className="group flex flex-col items-start gap-3 rounded-2xl border border-border bg-surface p-5 text-left transition-all hover:border-brand/45 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
               >
@@ -217,7 +422,7 @@ function ScanPage() {
 
               <button
                 type="button"
-                onClick={() => fileInput.current?.click()}
+                onClick={openFiles}
                 disabled={busy}
                 className="group flex flex-col items-start gap-3 rounded-2xl border border-border bg-surface p-5 text-left transition-all hover:border-brand/45 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
               >
@@ -237,9 +442,9 @@ function ScanPage() {
               <div
                 role="button"
                 tabIndex={0}
-                onClick={() => fileInput.current?.click()}
+                onClick={openFiles}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") fileInput.current?.click();
+                  if (e.key === "Enter" || e.key === " ") openFiles();
                 }}
                 onDragOver={(e) => {
                   e.preventDefault();
@@ -249,7 +454,7 @@ function ScanPage() {
                 onDrop={(e) => {
                   e.preventDefault();
                   setDragging(false);
-                  acceptFiles(e.dataTransfer.files);
+                  if (guardSetup()) acceptFiles(e.dataTransfer.files);
                 }}
                 className={cn(
                   "mt-3 hidden cursor-pointer place-items-center rounded-2xl border-2 border-dashed px-6 py-14 text-center transition-colors sm:grid",
@@ -277,7 +482,7 @@ function ScanPage() {
                 <p className="text-sm text-destructive">{fileError}</p>
               </div>
             )}
-          </div>
+          </section>
 
           {items.length > 0 && (
             <div className="card-surface overflow-hidden">
@@ -328,7 +533,7 @@ function ScanPage() {
                     size="sm"
                     className="rounded-xl"
                     disabled={busy || items.length >= MAX_SCAN_IMAGES}
-                    onClick={() => fileInput.current?.click()}
+                    onClick={openFiles}
                   >
                     <Plus className="size-4" /> Add image
                   </Button>
@@ -376,9 +581,9 @@ function ScanPage() {
           <div className="card-surface p-5 sm:p-6">
             <h2 className="text-sm font-semibold tracking-tight">How it works</h2>
             <ol className="mt-4 space-y-3 text-sm text-muted-foreground">
-              <li>1. Upload your shelf photo to secure storage.</li>
-              <li>2. YOLO detects every product facing.</li>
-              <li>3. FAISS matches known SKUs; unknowns go to GPT Vision.</li>
+              <li>1. Set store, aisle location and category.</li>
+              <li>2. Capture or upload your shelf photos.</li>
+              <li>3. AI detects products, brands and stock gaps.</li>
               <li>4. View results, CSV, and PDF report.</li>
             </ol>
           </div>
