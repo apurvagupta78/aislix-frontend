@@ -95,7 +95,7 @@ function Landing() {
         <div className="relative mx-auto max-w-4xl px-6 py-24 text-center sm:py-32">
           <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs text-muted-foreground shadow-soft">
             <span className="size-1.5 rounded-full bg-brand" />
-            Retail Shelf Intelligence, powered by computer vision
+            AI-Powered Retail Shelf Intelligence
           </span>
           <h1 className="mt-7 text-4xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-6xl">
             Audit every shelf.
@@ -118,7 +118,7 @@ function Landing() {
             </Button>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            No card required · 3 free scans per day · Live in under 10 minutes
+            No card required · 3 free scans per day · Instantly live
           </p>
         </div>
 
