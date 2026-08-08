@@ -1,10 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   Camera,
   Check,
-  FileJson,
   ImageIcon,
   Loader2,
   Plus,
@@ -16,7 +15,12 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { MAX_SCAN_IMAGES, formatBytes, validateScanFile } from "@/lib/scan-api";
+import {
+  MAX_SCAN_IMAGES,
+  formatBytes,
+  submitScanImages,
+  validateScanFile,
+} from "@/lib/scan-api";
 
 export const Route = createFileRoute("/scan")({
   head: () => ({
@@ -24,8 +28,7 @@ export const Route = createFileRoute("/scan")({
       { title: "New Shelf Scan — Aislix" },
       {
         name: "description",
-        content:
-          "Capture or upload shelf photos and send them to the Aislix AI backend.",
+        content: "Capture or upload shelf photos and run a full Aislix AI shelf audit.",
       },
       { property: "og:title", content: "New shelf scan — Aislix" },
       {
@@ -44,20 +47,18 @@ type Phase = "idle" | "uploading" | "error";
 type Attachment = { id: string; file: File; url: string };
 
 function ScanPage() {
+  const navigate = useNavigate();
   const [items, setItems] = useState<Attachment[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
-
   const [phase, setPhase] = useState<Phase>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [rawResponse, setRawResponse] = useState<string | null>(null);
-  const [responseStatus, setResponseStatus] = useState<number | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const cameraInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const itemsRef = useRef<Attachment[]>([]);
-
   itemsRef.current = items;
 
   useEffect(
@@ -74,8 +75,6 @@ function ScanPage() {
 
     setFileError(null);
     setErrorMessage(null);
-    setRawResponse(null);
-    setResponseStatus(null);
     setPhase("idle");
 
     setItems((current) => {
@@ -116,8 +115,7 @@ function ScanPage() {
     });
     setFileError(null);
     setErrorMessage(null);
-    setRawResponse(null);
-    setResponseStatus(null);
+    setUploadProgress(0);
     setPhase("idle");
   }, []);
 
@@ -127,48 +125,32 @@ function ScanPage() {
     const controller = new AbortController();
     abortRef.current = controller;
     setErrorMessage(null);
-    setRawResponse(null);
-    setResponseStatus(null);
     setPhase("uploading");
+    setUploadProgress(0);
 
     try {
-      const body = new FormData();
-      // The Railway backend expects one file per request in the "file" field.
-      body.append("file", items[0]!.file);
-
-      const response = await fetch("/api/scan", {
-        method: "POST",
-        body,
-        signal: controller.signal,
+      const response = await submitScanImages(
+        items.map((item) => item.file),
+        {
+          signal: controller.signal,
+          onUploadProgress: setUploadProgress,
+        },
+      );
+      navigate({
+        to: "/processing",
+        search: { scan: response.scan_id },
       });
-
-      const text = await response.text();
-      setResponseStatus(response.status);
-      setRawResponse(text);
-
-      if (!response.ok) {
-        let detail = text;
-        try {
-          const parsed = JSON.parse(text);
-          detail = parsed.error ?? text;
-        } catch {
-          // leave detail as raw text
-        }
-        throw new Error(detail || `Backend returned ${response.status}`);
-      }
-
-      setPhase("idle");
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         setPhase("idle");
         return;
       }
-      setErrorMessage(error instanceof Error ? error.message : "The scan could not be completed.");
+      setErrorMessage(error instanceof Error ? error.message : "The scan could not be started.");
       setPhase("error");
     } finally {
       abortRef.current = null;
     }
-  }, [items, phase]);
+  }, [items, navigate, phase]);
 
   const cancelUpload = useCallback(() => {
     abortRef.current?.abort();
@@ -180,7 +162,7 @@ function ScanPage() {
   return (
     <AppShell
       title="New scan"
-      description="Capture shelves with your camera or upload images to send to the AI backend."
+      description="Capture shelves with your camera or upload images to run a full AI shelf audit."
       actions={
         items.length && !busy ? (
           <Button variant="subtle" size="sm" className="rounded-xl" onClick={reset}>
@@ -362,7 +344,7 @@ function ScanPage() {
                     ) : (
                       <ScanLine className="size-4" />
                     )}
-                    {busy ? "Sending…" : "Send to backend"}
+                    {busy ? "Uploading…" : "Start scan"}
                   </Button>
                 </div>
               </div>
@@ -379,7 +361,7 @@ function ScanPage() {
                   <AlertTriangle className="size-5" />
                 </span>
                 <div>
-                  <p className="text-sm font-semibold">Backend request failed</p>
+                  <p className="text-sm font-semibold">Scan could not be started</p>
                   <p className="mt-1 text-sm text-muted-foreground">{errorMessage}</p>
                 </div>
               </div>
@@ -392,35 +374,13 @@ function ScanPage() {
 
         <aside className="space-y-4">
           <div className="card-surface p-5 sm:p-6">
-            <div className="flex items-center gap-2">
-              <FileJson className="size-4 text-brand" />
-              <h2 className="text-sm font-semibold tracking-tight">Backend response</h2>
-            </div>
-            {rawResponse ? (
-              <div className="mt-4 space-y-3">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Status</span>
-                  <span
-                    className={cn(
-                      "rounded-full px-2 py-0.5 font-medium",
-                      responseStatus && responseStatus >= 200 && responseStatus < 300
-                        ? "bg-accent-green-soft text-accent-green"
-                        : "bg-destructive/10 text-destructive",
-                    )}
-                  >
-                    {responseStatus ?? "—"}
-                  </span>
-                </div>
-                <pre className="max-h-[420px] overflow-auto rounded-xl border border-border bg-muted p-3 text-xs text-foreground">
-                  <code>{rawResponse}</code>
-                </pre>
-              </div>
-            ) : (
-              <p className="mt-4 text-sm text-muted-foreground">
-                Upload an image and click "Send to backend" to see the raw Railway API response
-                here.
-              </p>
-            )}
+            <h2 className="text-sm font-semibold tracking-tight">How it works</h2>
+            <ol className="mt-4 space-y-3 text-sm text-muted-foreground">
+              <li>1. Upload your shelf photo to secure storage.</li>
+              <li>2. YOLO detects every product facing.</li>
+              <li>3. FAISS matches known SKUs; unknowns go to GPT Vision.</li>
+              <li>4. View results, CSV, and PDF report.</li>
+            </ol>
           </div>
 
           <div className="card-surface p-5 sm:p-6">
@@ -450,11 +410,9 @@ function ScanPage() {
               </span>
             </div>
             <h2 className="mt-6 text-lg font-semibold tracking-tight sm:text-xl">
-              Sending image to backend
+              Uploading shelf image
             </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Keep this page open — the raw response will appear on the right.
-            </p>
+            <p className="mt-2 text-sm text-muted-foreground">{uploadProgress}% uploaded</p>
             <div className="mt-9 flex justify-center">
               <Button variant="subtle" size="sm" className="rounded-xl" onClick={cancelUpload}>
                 Cancel
