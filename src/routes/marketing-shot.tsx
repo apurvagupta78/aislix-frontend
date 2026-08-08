@@ -3,7 +3,7 @@ import { KpiCards } from "@/components/dashboard/DashboardParts";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import type { AnalyticsResponse, DashboardKpis } from "@/lib/dashboard";
 
-export const Route = createFileRoute("/__shot")({
+export const Route = createFileRoute("/marketing-shot")({
   component: Shot,
 });
 
