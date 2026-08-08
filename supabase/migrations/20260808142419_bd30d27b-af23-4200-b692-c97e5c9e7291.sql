@@ -1,0 +1,3 @@
+UPDATE public.shelf_scans SET org_id = 'a641147a-330a-4c99-8c1c-220dfd947add' WHERE store_id IN (SELECT id FROM public.stores WHERE org_id = '7c630db2-ad37-4efa-b26a-eab65f255375');
+UPDATE public.shelf_analytics SET org_id = 'a641147a-330a-4c99-8c1c-220dfd947add' WHERE store_id IN (SELECT id FROM public.stores WHERE org_id = '7c630db2-ad37-4efa-b26a-eab65f255375');
+UPDATE public.stores SET org_id = 'a641147a-330a-4c99-8c1c-220dfd947add' WHERE org_id = '7c630db2-ad37-4efa-b26a-eab65f255375';
