@@ -39,9 +39,14 @@ function Processing() {
     }
 
     let cancelled = false;
+    // Elapsed-time based progress: eases toward 98% over ~6 minutes.
+    const startedAt = Date.now();
+    const EXPECTED_MS = 360_000;
     const timer = setInterval(() => {
-      setProgress((current) => (current >= 92 ? current : current + 1));
-    }, 1200);
+      const ratio = Math.min(1, (Date.now() - startedAt) / EXPECTED_MS);
+      const eased = 8 + (98 - 8) * (1 - Math.pow(1 - ratio, 1.8));
+      setProgress((current) => Math.max(current, Math.min(98, Math.round(eased))));
+    }, 1000);
 
     runScanAnalysis(scan)
       .then(() => {
@@ -63,6 +68,7 @@ function Processing() {
       clearInterval(timer);
     };
   }, [navigate, scan]);
+
 
   const activeStage = Math.min(
     SCAN_STAGES.length - 1,
