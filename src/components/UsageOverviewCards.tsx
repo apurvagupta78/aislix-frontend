@@ -78,7 +78,7 @@ export function UsageOverviewCards() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <RingCard
-        label="Scans used this month"
+        label={usage.quota_period === "day" ? "Scans used today" : "Scans used this month"}
         ringValue={pct}
         ringLabel={pct === null ? "∞" : `${pct}%`}
         ringSublabel={pct === null ? "unlimited" : "of quota"}

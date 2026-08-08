@@ -32,7 +32,7 @@ export const plans: Plan[] = [
     monthlyPrice: 0,
     annualPrice: 0,
     scanLimitLabel: "3 scans per day",
-    monthlyScanQuota: 90,
+    monthlyScanQuota: 3,
     features: [
       "3 scans per day",
       "1 image per scan",

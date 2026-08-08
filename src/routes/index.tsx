@@ -118,7 +118,7 @@ function Landing() {
             </Button>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            No card required · 50 free scans · Live in under 10 minutes
+            No card required · 3 free scans per day · Live in under 10 minutes
           </p>
         </div>
 
