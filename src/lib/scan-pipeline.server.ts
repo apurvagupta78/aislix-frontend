@@ -693,6 +693,8 @@ export async function runScanPipelineServer(
     }
 
     // --- Call the Railway FastAPI vision backend ---------------------------
+    const learnedCatalog = await loadLearnedCatalog(supabase, scan.org_id as string);
+
     const payload = await callVisionApi({
       scan_id: scan.id,
       org_id: scan.org_id,
@@ -702,8 +704,10 @@ export async function runScanPipelineServer(
       notes: scan.notes,
       image_urls: signedImages.map((i) => i.url),
       images: signedImages,
+      learned_catalog: learnedCatalog,
       requested_at: startedAt,
     });
+
 
     const products = normalizeProducts(payload);
     if (!products.length) {
