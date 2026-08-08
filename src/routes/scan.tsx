@@ -27,6 +27,9 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { fetchStores } from "@/lib/account";
+import { FALLBACK_CATEGORIES, type ShelfCategory } from "@/lib/categories.data";
+import { fetchShelfCategories } from "@/lib/categories.functions";
+
 import {
   MAX_SCAN_IMAGES,
   formatBytes,
@@ -73,9 +76,7 @@ function ScanPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const [storeId, setStoreId] = useState("");
-  const [aisle, setAisle] = useState("");
-  const [rack, setRack] = useState("");
-  const [bin, setBin] = useState("");
+  const [shelfLocation, setShelfLocation] = useState("");
   const [category, setCategory] = useState("");
   const [showSetupErrors, setShowSetupErrors] = useState(false);
 
@@ -87,22 +88,27 @@ function ScanPage() {
   });
   const stores = storesQuery.data?.items ?? [];
 
+  const categoriesQuery = useQuery({
+    queryKey: CATEGORY_QUERY_KEY,
+    queryFn: () => fetchShelfCategories(),
+    retry: false,
+    staleTime: 10 * 60_000,
+  });
+  const categories: ShelfCategory[] = categoriesQuery.data?.length
+    ? categoriesQuery.data
+    : FALLBACK_CATEGORIES;
+
   const setupErrors = useMemo(() => {
     const errors: Record<string, string> = {};
     if (!storeId) errors.store = "Select the store for this scan.";
-    if (!aisle.trim()) errors.aisle = "Aisle is required.";
+    if (!shelfLocation.trim()) errors.location = "Location is required.";
     if (!category) errors.category = "Select a category.";
     return errors;
-  }, [storeId, aisle, category]);
+  }, [storeId, shelfLocation, category]);
   const setupComplete = Object.keys(setupErrors).length === 0;
 
-  const shelfLabel = useMemo(() => {
-    const parts: string[] = [];
-    if (aisle.trim()) parts.push(`Aisle ${aisle.trim()}`);
-    if (rack.trim()) parts.push(`Rack ${rack.trim()}`);
-    if (bin.trim()) parts.push(`Bin ${bin.trim()}`);
-    return parts.join(" · ");
-  }, [aisle, rack, bin]);
+  const shelfLabel = shelfLocation.trim();
+
 
   const cameraInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
