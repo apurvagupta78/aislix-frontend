@@ -130,33 +130,13 @@ function Landing() {
               <span className="size-2.5 rounded-full bg-muted" />
               <span className="ml-3 text-xs text-muted-foreground">app.aislix.com/dashboard</span>
             </div>
-            <div className="grid gap-4 p-6 sm:grid-cols-4">
-              {[
-                { l: "Total scans", v: "1,284" },
-                { l: "Products detected", v: "74,210" },
-                { l: "Avg. confidence", v: "94.6%" },
-                { l: "Shelf health", v: "88 / 100" },
-              ].map((k) => (
-                <div key={k.l} className="rounded-2xl border border-border bg-surface p-4">
-                  <p className="text-xs text-muted-foreground">{k.l}</p>
-                  <p className="mt-2 text-xl font-semibold tracking-tight">{k.v}</p>
-                </div>
-              ))}
-              <div className="sm:col-span-4 rounded-2xl border border-border bg-surface p-5">
-                <div className="flex items-end gap-2">
-                  {[38, 52, 46, 64, 58, 76, 71, 88, 82, 94, 90, 100].map((h, i) => (
-                    <div
-                      key={i}
-                      style={{ height: `${h}%` }}
-                      className="h-full flex-1 rounded-t-md bg-gradient-brand opacity-90"
-                    />
-                  ))}
-                </div>
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Products detected per week · last 12 weeks
-                </p>
-              </div>
-            </div>
+            <img
+              src="/marketing/dashboard-preview.webp"
+              alt="Aislix dashboard showing shelf health, scan analytics and recent audits"
+              className="block h-auto w-full"
+              loading="lazy"
+              decoding="async"
+            />
           </div>
         </div>
       </section>
