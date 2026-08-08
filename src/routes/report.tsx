@@ -22,6 +22,7 @@ import {
   downloadBlob,
 } from "@/lib/scan-results";
 import { toUserMessage } from "@/lib/api/errors";
+import { ReportsLibrary } from "@/components/reports/ReportsLibrary";
 
 export const Route = createFileRoute("/report")({
   validateSearch: (search: Record<string, unknown>): { scan?: string } => {
@@ -57,7 +58,8 @@ function ReportViewer() {
   });
 
   const completed = (recent.data?.items ?? []).filter((s) => s.status === "completed");
-  const scan = scanParam ?? completed[0]?.scan_id;
+  // Without ?scan= the page is the reports library; with it, the single viewer.
+  const scan = scanParam;
 
   const query = useQuery({
     queryKey: ["scan-result", scan],
@@ -98,6 +100,17 @@ function ReportViewer() {
       toast.error("Could not copy the link");
     }
   };
+
+  if (!scanParam) {
+    return (
+      <AppShell
+        title="Audit reports"
+        description="Every print-ready shelf audit report generated for your workspace"
+      >
+        <ReportsLibrary />
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell
