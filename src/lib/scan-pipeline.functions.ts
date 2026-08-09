@@ -47,3 +47,12 @@ export const processScan = createServerFn({ method: "POST" })
     const { runScanPipelineServer } = await import("@/lib/scan-pipeline.server");
     return runScanPipelineServer(context.supabase, data.scanId);
   });
+
+/** Rebuilds missing PDF / annotated / CSV downloads for an existing scan. */
+export const backfillScanAssets = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { scanId: string }) => validateScanId(input))
+  .handler(async ({ data, context }) => {
+    const { backfillScanAssetsServer } = await import("@/lib/scan-pipeline.server");
+    return backfillScanAssetsServer(context.supabase, data.scanId);
+  });

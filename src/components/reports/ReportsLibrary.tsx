@@ -40,10 +40,12 @@ export function ReportsLibrary() {
 
   const downloadCsv = async (item: ScanHistoryItem) => {
     setBusyCsv(item.scan_id);
+    const toastId = toast.loading("Preparing download…");
     try {
       await downloadScanCsv(item.scan_id, item.downloads?.csv_url);
+      toast.dismiss(toastId);
     } catch (error) {
-      toast.error(toUserMessage(error));
+      toast.error(toUserMessage(error), { id: toastId });
     } finally {
       setBusyCsv(null);
     }
@@ -51,10 +53,12 @@ export function ReportsLibrary() {
 
   const downloadPdf = async (item: ScanHistoryItem) => {
     setBusyPdf(item.scan_id);
+    const toastId = toast.loading("Preparing download…");
     try {
       await downloadScanPdf(item.scan_id, item.downloads?.pdf_url);
+      toast.dismiss(toastId);
     } catch (error) {
-      toast.error(toUserMessage(error));
+      toast.error(toUserMessage(error), { id: toastId });
     } finally {
       setBusyPdf(null);
     }

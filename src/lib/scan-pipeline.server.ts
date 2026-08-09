@@ -1080,6 +1080,12 @@ export async function pollScanPipelineServer(
     .eq("id", scan.id)
     .maybeSingle();
   if (existing?.status === "completed") {
+    // Older scans can be missing their generated PDF / annotated assets.
+    try {
+      await backfillScanAssetsServer(supabase, scan.id);
+    } catch {
+      // downloads are optional — never block the results redirect
+    }
     return {
       status: "completed",
       scan_id: scan.id,
@@ -1130,3 +1136,119 @@ export async function runScanPipelineServer(
   }
 }
 
+
+/* -------------------------------------------------------------------------- */
+/* Download asset backfill                                                    */
+/* -------------------------------------------------------------------------- */
+
+export type BackfillAssetsResult = {
+  scan_id: string;
+  pdf: boolean;
+  annotated: boolean;
+  csv: boolean;
+};
+
+async function existingAssetKinds(supabase: DB, scanId: string): Promise<Set<string>> {
+  const { data } = await supabase.from("scan_images").select("kind").eq("scan_id", scanId);
+  return new Set((data ?? []).map((row) => row.kind as string));
+}
+
+/**
+ * Ensures a completed scan has its PDF / annotated / CSV assets in storage.
+ *
+ * 1. Re-uses base64 files already saved on `scan_results.raw_payload`.
+ * 2. Falls back to the Railway `POST /scan/export-assets` endpoint, which
+ *    regenerates the report from the original shelf image.
+ */
+export async function backfillScanAssetsServer(
+  supabase: DB,
+  scanId: string,
+): Promise<BackfillAssetsResult> {
+  const scan = await loadScan(supabase, scanId);
+  let kinds = await existingAssetKinds(supabase, scan.id);
+  const done = () => ({
+    scan_id: scan.id,
+    pdf: kinds.has("pdf") || kinds.has("report"),
+    annotated: kinds.has("annotated"),
+    csv: kinds.has("csv"),
+  });
+  if (done().pdf && done().annotated && done().csv) return done();
+
+  const target = { id: scan.id, org_id: scan.org_id };
+
+  // Step 1 — replay whatever the original vision response already returned.
+  const { data: result } = await supabase
+    .from("scan_results")
+    .select("raw_payload")
+    .eq("scan_id", scan.id)
+    .maybeSingle();
+  const payload = (result?.raw_payload ?? null) as any;
+  if (payload) {
+    if (!done().annotated) await storeAnnotatedImage(supabase, target, payload);
+    if (!done().pdf) await storePdfReport(supabase, target, payload);
+    if (!done().csv) await storeCsvReport(supabase, target, payload);
+    kinds = await existingAssetKinds(supabase, scan.id);
+    if (done().pdf && done().annotated && done().csv) return done();
+  }
+
+  // Step 2 — ask the vision backend to regenerate the missing exports.
+  const { data: originals } = await supabase
+    .from("scan_images")
+    .select("storage_bucket, storage_path")
+    .eq("scan_id", scan.id)
+    .eq("kind", "original")
+    .order("created_at", { ascending: true })
+    .limit(1);
+  const original = originals?.[0];
+  if (!original) return done();
+
+  const { data: signed } = await supabase.storage
+    .from(original.storage_bucket as string)
+    .createSignedUrl(original.storage_path as string, 3600);
+  if (!signed?.signedUrl) return done();
+
+  const { baseUrl, apiKey, timeoutMs } = visionConfig();
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    accept: "application/json",
+  };
+  if (apiKey) {
+    headers["authorization"] = `Bearer ${apiKey}`;
+    headers["x-api-key"] = apiKey;
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}/scan/export-assets`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        image_url: signed.signedUrl,
+        scan_id: scan.id,
+        store_id: scan.store_id,
+        shelf_label: scan.shelf_label,
+        category: scan.category,
+      }),
+      signal: AbortSignal.timeout(Math.min(timeoutMs, 300_000)),
+    });
+  } catch {
+    throw new PipelineError(
+      "Could not reach the report service to rebuild this download. Please try again.",
+      504,
+    );
+  }
+  const text = await response.text();
+  if (!response.ok) {
+    throw new PipelineError(
+      `The report service could not rebuild this download (${response.status}).`,
+      response.status >= 500 ? 502 : response.status,
+    );
+  }
+  const exported = parseJson(text);
+
+  if (!done().annotated) await storeAnnotatedImage(supabase, target, exported);
+  if (!done().pdf) await storePdfReport(supabase, target, exported);
+  if (!done().csv) await storeCsvReport(supabase, target, exported);
+  kinds = await existingAssetKinds(supabase, scan.id);
+  return done();
+}
