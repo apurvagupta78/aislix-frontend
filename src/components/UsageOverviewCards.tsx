@@ -76,7 +76,15 @@ export function UsageOverviewCards() {
   const health = normalizePercent(usage.average_shelf_health);
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="space-y-3">
+      {usage.platform_bypass ? (
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
+          <BadgeCheck className="size-3.5" />
+          Tester access — limits not enforced
+        </span>
+      ) : null}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+
       <RingCard
         label={usage.quota_period === "rolling_24h" ? "Scans used in the last 24 hours" : "Scans used this month"}
         ringValue={pct}
