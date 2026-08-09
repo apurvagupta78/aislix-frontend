@@ -23,7 +23,12 @@ export type PipelineResult = {
   low_stock_count: number;
   misplaced_count: number;
   shelf_health_score: number | null;
+  /** Number of SKUs persisted into the learned catalog by this scan. */
+  learned_saved?: number;
+  /** Set when the learned catalog could not be persisted (surfaced as a toast). */
+  learned_error?: string | null;
 };
+
 
 export class PipelineError extends Error {
   status: number;
