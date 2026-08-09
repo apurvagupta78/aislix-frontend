@@ -35,7 +35,22 @@ export type UsageSummary = {
   status: string;
   cycle: "monthly" | "annual";
   cancel_at_period_end: boolean;
+  platform_bypass?: boolean;
+  platform_bypass_note?: string | null;
 };
+
+export const PLATFORM_BYPASS_EMAILS = ["apurv@aislix.com"];
+
+/** Internal tester allowlist — plan limits are not enforced for these accounts. */
+export function hasPlatformBypass(email?: string | null): boolean {
+  if (!email) return false;
+  return PLATFORM_BYPASS_EMAILS.includes(email.trim().toLowerCase());
+}
+
+async function currentUserEmail(): Promise<string | undefined> {
+  const { data } = await supabase.auth.getUser();
+  return data.user?.email ?? undefined;
+}
 
 export type LimitKind = "scan_quota" | "scan_cooldown" | "store_limit";
 
@@ -70,7 +85,20 @@ export async function fetchUsageSummary(signal?: AbortSignal): Promise<UsageSumm
       status: 500,
     });
   }
-  return data as unknown as UsageSummary;
+  const usage = data as unknown as UsageSummary;
+  const email = await currentUserEmail();
+  if (usage.platform_bypass || hasPlatformBypass(email)) {
+    return {
+      ...usage,
+      platform_bypass: true,
+      platform_bypass_note: usage.platform_bypass_note ?? "Internal tester — plan limits not enforced",
+      can_scan: true,
+      can_add_store: true,
+      cooldown_until: null,
+      history_days: null,
+    };
+  }
+  return usage;
 }
 
 // ---------- enforcement ----------
@@ -78,7 +106,7 @@ export async function fetchUsageSummary(signal?: AbortSignal): Promise<UsageSumm
 /** Blocks a new scan when the plan's scan allowance is exhausted. */
 export async function assertCanStartScan(): Promise<UsageSummary> {
   const usage = await fetchUsageSummary();
-  if (usage.can_scan) return usage;
+  if (usage.can_scan || usage.platform_bypass) return usage;
 
   if (usage.quota_period === "rolling_24h") {
     throw new LimitReachedError({
@@ -99,7 +127,7 @@ export async function assertCanStartScan(): Promise<UsageSummary> {
 /** Blocks a new store when the plan's store allowance is exhausted. */
 export async function assertCanAddStore(): Promise<UsageSummary> {
   const usage = await fetchUsageSummary();
-  if (usage.can_add_store) return usage;
+  if (usage.can_add_store || usage.platform_bypass) return usage;
   throw new LimitReachedError({
     limit: "store_limit",
     usage,
@@ -115,13 +143,22 @@ export async function assertCanAddStore(): Promise<UsageSummary> {
  * ISO cutoff for scan history visibility, or `null` when the plan keeps full
  * history. Data is never deleted — older scans are filtered out of listings.
  */
-export function historyCutoffIso(usage: Pick<UsageSummary, "history_days"> | null | undefined): string | null {
+export function historyCutoffIso(
+  usage: Pick<UsageSummary, "history_days" | "platform_bypass"> | null | undefined,
+): string | null {
+  if (usage?.platform_bypass) return null;
   const days = usage?.history_days;
   if (!days || days <= 0) return null;
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 }
 
 /** Convenience for data modules: resolves the cutoff without a usage object. */
+/** Full history for testers; otherwise the plan's rolling window. */
+export function historyCutoffForPlan(historyDays: number | null | undefined, email?: string | null): string | null {
+  if (hasPlatformBypass(email)) return null;
+  return historyCutoffIso({ history_days: historyDays ?? null });
+}
+
 export async function fetchHistoryCutoffIso(): Promise<string | null> {
   try {
     const usage = await fetchUsageSummary();
