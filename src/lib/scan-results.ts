@@ -88,7 +88,10 @@ export type ScanSummary = {
   learned_new_this_scan?: number;
   /** Number of ChatGPT (GPT vision) API calls used by this scan. */
   gpt_vision_calls?: number;
-
+  /** Facings detected as belonging to another sub-category. */
+  misplaced_products?: number;
+  /** Distinct SKU groups flagged as sub-category mismatches. */
+  subcategory_mismatch_skus?: number;
 };
 
 export type ScanResult = {
@@ -104,8 +107,11 @@ export type ScanResult = {
   annotated_image_url?: string;
   executive_summary?: string;
   alerts?: ScanAlert[];
+  compliance_alerts?: ComplianceAlert[];
+  subcategory_mismatches?: SubcategoryMismatch[];
   recommendations?: ScanRecommendation[];
   inventory?: InventoryItem[];
+
   charts?: {
     top_brands?: BrandShare[];
     confidence_distribution?: ConfidenceBucket[];
