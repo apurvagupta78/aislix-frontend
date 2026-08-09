@@ -1045,7 +1045,15 @@ async function persistScanPayload(
   const metricsSource = (payload?.metrics ?? payload?.summary ?? payload) as any;
   const outOfStock = products.filter((p) => p.stock_status === "out_of_stock").length;
   const lowStock = products.filter((p) => p.stock_status === "low_stock").length;
-  const misplaced = products.filter((p) => p.stock_status === "misplaced").length;
+  const misplacedFacings = products
+    .filter((p) => p.stock_status === "misplaced")
+    .reduce((total, p) => total + Math.max(1, p.facings), 0);
+  const misplaced = Math.round(num(metricsSource?.misplaced_products) ?? misplacedFacings);
+  const complianceAlerts = normalizeComplianceAlerts(payload);
+  const subcategoryMismatches = normalizeSubcategoryMismatches(payload);
+  const mismatchSkus = Math.round(
+    num(metricsSource?.subcategory_mismatch_skus) ?? subcategoryMismatches.length,
+  );
   const confidences = products.map((p) => p.confidence).filter((c): c is number => c !== null);
   const confidenceAvg = confidences.length
     ? Number((confidences.reduce((a, b) => a + b, 0) / confidences.length).toFixed(4))
