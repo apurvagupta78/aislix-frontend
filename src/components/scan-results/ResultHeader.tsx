@@ -164,11 +164,6 @@ export function ScanResultHeader({
                   .join(" · ")
               : "AI shelf audit result"}
           </p>
-          <p className="sr-only">
-            {["AI shelf audit result", data?.scan_category, data?.location]
-              .filter(Boolean)
-              .join(" · ")}
-          </p>
         </div>
         <ResultNavigation />
       </div>
