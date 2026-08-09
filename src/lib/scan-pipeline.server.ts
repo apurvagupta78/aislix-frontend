@@ -1059,6 +1059,9 @@ async function persistScanPayload(
     low_stock_count: lowStock,
     misplaced_count: misplaced,
     shelf_health_score: health,
+    learned_saved: learned.saved,
+    learned_error: learned.error,
+
   };
 }
 
