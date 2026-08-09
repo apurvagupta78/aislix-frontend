@@ -19,15 +19,15 @@ import {
 import { CardSkeleton, EmptyState, ErrorState } from "@/components/States";
 import { fetchScanHistory, formatScanTime, type ScanHistoryItem } from "@/lib/scan-history";
 import {
-  downloadBlob,
-  fetchScanResult,
+  downloadScanCsv,
+  downloadScanPdf,
   formatScanDate,
-  inventoryToCsv,
 } from "@/lib/scan-results";
 import { toUserMessage } from "@/lib/api/errors";
 
 export function ReportsLibrary() {
   const [busyCsv, setBusyCsv] = useState<string | null>(null);
+  const [busyPdf, setBusyPdf] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: ["reports-library"],
@@ -38,23 +38,25 @@ export function ReportsLibrary() {
 
   const items = (query.data?.items ?? []).filter((s) => s.status === "completed");
 
-  const downloadCsv = async (scanId: string) => {
-    setBusyCsv(scanId);
+  const downloadCsv = async (item: ScanHistoryItem) => {
+    setBusyCsv(item.scan_id);
     try {
-      const result = await fetchScanResult(scanId);
-      if (!result.inventory?.length) {
-        toast.error("This report has no inventory rows to export.");
-        return;
-      }
-      downloadBlob(
-        inventoryToCsv(result.inventory),
-        `aislix-${scanId}-report.csv`,
-        "text/csv",
-      );
+      await downloadScanCsv(item.scan_id, item.downloads?.csv_url);
     } catch (error) {
       toast.error(toUserMessage(error));
     } finally {
       setBusyCsv(null);
+    }
+  };
+
+  const downloadPdf = async (item: ScanHistoryItem) => {
+    setBusyPdf(item.scan_id);
+    try {
+      await downloadScanPdf(item.scan_id, item.downloads?.pdf_url);
+    } catch (error) {
+      toast.error(toUserMessage(error));
+    } finally {
+      setBusyPdf(null);
     }
   };
 
@@ -69,20 +71,22 @@ export function ReportsLibrary() {
         variant="subtle"
         size="sm"
         className="rounded-xl"
-        disabled={!item.downloads?.pdf_url}
-        onClick={() => {
-          const url = item.downloads?.pdf_url;
-          if (url) window.open(url, "_blank", "noopener,noreferrer");
-        }}
+        disabled={busyPdf === item.scan_id}
+        onClick={() => void downloadPdf(item)}
       >
-        <Download className="size-4" /> PDF
+        {busyPdf === item.scan_id ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Download className="size-4" />
+        )}{" "}
+        PDF
       </Button>
       <Button
         variant="subtle"
         size="sm"
         className="rounded-xl"
         disabled={busyCsv === item.scan_id}
-        onClick={() => void downloadCsv(item.scan_id)}
+        onClick={() => void downloadCsv(item)}
       >
         {busyCsv === item.scan_id ? (
           <Loader2 className="size-4 animate-spin" />
@@ -93,6 +97,7 @@ export function ReportsLibrary() {
       </Button>
     </div>
   );
+
 
   if (query.isPending) {
     return (
