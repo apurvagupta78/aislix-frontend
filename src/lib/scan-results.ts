@@ -465,7 +465,12 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
       item.expected_sub_category_label = match.expected_sub_category_label;
     }
     const mismatch = item.compliance_status === "category_mismatch";
-    item.compliance_alert = mismatch ? COMPLIANCE_ALERT_TITLE : "OK";
+    item.compliance_alert = mismatch
+      ? COMPLIANCE_ALERT_TITLE
+      : item.compliance_status === "ok"
+        ? "OK"
+        : "";
+
     if (mismatch && !item.expected_sub_category_label && auditSubLabel) {
       item.expected_sub_category_label = auditSubLabel;
     }
