@@ -645,13 +645,16 @@ export function InventoryTable({
                 sortKey="shelf_position"
                 className="hidden lg:table-cell"
               />
+              <TableHead className="text-xs font-medium text-muted-foreground">
+                Compliance
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 6 }).map((__, c) => (
+                  {Array.from({ length: 7 }).map((__, c) => (
                     <TableCell key={c}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -660,7 +663,7 @@ export function InventoryTable({
               ))
             ) : visible.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="p-4">
+                <TableCell colSpan={7} className="p-4">
                   <EmptyState
                     title={rows.length === 0 ? "No inventory yet" : "No matching products"}
                     description={
@@ -696,6 +699,34 @@ export function InventoryTable({
                   <TableCell className="hidden text-muted-foreground lg:table-cell">
                     {row.shelf_position ?? "—"}
                   </TableCell>
+                  <TableCell>
+                    {row.compliance_status === "category_mismatch" ? (
+                      <span
+                        className="block"
+                        title={row.compliance_interpretation ?? COMPLIANCE_INTERPRETATION}
+                      >
+                        <Badge
+                          variant="outline"
+                          className="rounded-full border-destructive/25 bg-destructive/10 text-destructive"
+                        >
+                          Category Mismatch Detected
+                        </Badge>
+                        <span className="mt-1 block text-xs text-muted-foreground">
+                          {row.compliance_interpretation ?? COMPLIANCE_INTERPRETATION}
+                        </span>
+                      </span>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="rounded-full border-brand/25 bg-brand-soft text-brand"
+                      >
+                        OK
+                      </Badge>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+
                 </TableRow>
               ))
             )}
