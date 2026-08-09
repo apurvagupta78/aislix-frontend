@@ -218,6 +218,8 @@ function ScanPage() {
           storeId,
           shelfLabel,
           category,
+          subCategory:
+            showShelfType && shelfType !== "general" ? shelfType : undefined,
         },
       );
       navigate({
