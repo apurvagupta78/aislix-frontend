@@ -766,12 +766,14 @@ export type Database = {
           code: string
           created_at: string
           features: Json
+          history_days: number | null
           id: string
           is_active: boolean
           is_contact_sales: boolean
           name: string
           price_annual_inr: number
           price_monthly_inr: number
+          quota_period: string
           scan_quota: number | null
           seat_limit: number | null
           sort_order: number
@@ -783,12 +785,14 @@ export type Database = {
           code: string
           created_at?: string
           features?: Json
+          history_days?: number | null
           id?: string
           is_active?: boolean
           is_contact_sales?: boolean
           name: string
           price_annual_inr?: number
           price_monthly_inr?: number
+          quota_period?: string
           scan_quota?: number | null
           seat_limit?: number | null
           sort_order?: number
@@ -800,12 +804,14 @@ export type Database = {
           code?: string
           created_at?: string
           features?: Json
+          history_days?: number | null
           id?: string
           is_active?: boolean
           is_contact_sales?: boolean
           name?: string
           price_annual_inr?: number
           price_monthly_inr?: number
+          quota_period?: string
           scan_quota?: number | null
           seat_limit?: number | null
           sort_order?: number
@@ -883,7 +889,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_org_usage_summary: { Args: { p_org_id: string }; Returns: Json }
+      roll_subscription_period: {
+        Args: { _sub_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       alert_severity: "critical" | "high" | "medium" | "low"
