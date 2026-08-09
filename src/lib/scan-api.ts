@@ -109,9 +109,11 @@ export async function submitScanImages(
   const userId = await requireUserId();
   const orgId = await requireOrgId();
 
-  // Free plan is capped at 3 scans per day; paid plans are metered monthly.
-  const { assertScanAllowance, recordScanUsage } = await import("@/lib/billing");
-  await assertScanAllowance();
+  // Plan limits: Free = 3 scans per rolling 24h, paid plans metered monthly.
+  // The scans_used counter is incremented by a DB trigger on completion.
+  const { assertCanStartScan } = await import("@/lib/subscription-limits");
+  await assertCanStartScan();
+
 
   const { data: scan, error: insertError } = await supabase
     .from("shelf_scans")
