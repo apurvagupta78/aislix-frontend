@@ -380,7 +380,10 @@ export async function fetchStore(id: string, _signal?: AbortSignal): Promise<Org
 
 export async function createOrgStore(input: StoreInput): Promise<OrgStore> {
   const orgId = await requireOrgId();
+  const { assertCanAddStore } = await import("@/lib/subscription-limits");
+  await assertCanAddStore();
   const { data, error } = await supabase
+
     .from("stores")
     .insert({ org_id: orgId, ...storeInputToRow(input) })
     .select("*")
