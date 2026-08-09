@@ -219,8 +219,15 @@ function ScanPage() {
         setPhase("idle");
         return;
       }
+      const limit = toLimitDialogState(error);
+      if (limit) {
+        setLimitDialog(limit);
+        setPhase("idle");
+        return;
+      }
       setErrorMessage(error instanceof Error ? error.message : "The scan could not be started.");
       setPhase("error");
+
     } finally {
       abortRef.current = null;
     }
