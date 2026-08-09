@@ -537,8 +537,6 @@ export function inventoryToCsv(items: InventoryItem[]): string {
   );
   return [header.join(","), ...rows].join("\n");
 }
-  return [header.join(","), ...rows].join("\n");
-}
 
 export function downloadBlob(content: string, filename: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
