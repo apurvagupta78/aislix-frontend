@@ -380,9 +380,6 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     ...(typeof (result?.metrics as any)?.learned_new_this_scan === "number"
       ? { learned_new_this_scan: Number((result?.metrics as any).learned_new_this_scan) }
       : {}),
-    ...(typeof (result?.metrics as any)?.gpt_vision_calls === "number"
-      ? { gpt_vision_calls: Number((result?.metrics as any).gpt_vision_calls) }
-      : {}),
     ...(typeof (result?.metrics as any)?.misplaced_products === "number"
       ? { misplaced_products: Number((result?.metrics as any).misplaced_products) }
       : scan.misplaced_count !== null && scan.misplaced_count !== undefined
