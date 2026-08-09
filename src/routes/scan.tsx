@@ -31,11 +31,17 @@ import { FALLBACK_CATEGORIES, type ShelfCategory } from "@/lib/categories.data";
 import { fetchShelfCategories } from "@/lib/categories.functions";
 
 import {
+  LimitReachedDialog,
+  toLimitDialogState,
+  type LimitDialogState,
+} from "@/components/billing/LimitReachedDialog";
+import {
   MAX_SCAN_IMAGES,
   formatBytes,
   submitScanImages,
   validateScanFile,
 } from "@/lib/scan-api";
+
 
 export const Route = createFileRoute("/scan")({
   head: () => ({
