@@ -175,7 +175,7 @@ function normalizeProducts(payload: any): NormalizedProduct[] {
 }
 
 function normalizeAlerts(payload: any) {
-  return arr(payload?.alerts).map((item: any, index: number) => ({
+  const map = (item: any, index: number) => ({
     id: str(item?.id) ?? `alert-${index + 1}`,
     severity: (() => {
       const s = str(item?.severity)?.toLowerCase();
@@ -183,8 +183,44 @@ function normalizeAlerts(payload: any) {
     })(),
     title: str(item?.title) ?? str(item?.message) ?? "Alert",
     detail: str(item?.detail) ?? str(item?.description) ?? undefined,
+    ...(str(item?.interpretation) ? { interpretation: str(item?.interpretation) } : {}),
+    ...(str(item?.category) ? { category: str(item?.category) } : {}),
+  });
+
+  const compliance = normalizeComplianceAlerts(payload);
+  const alerts = arr(payload?.alerts).map(map);
+  const seen = new Set(compliance.map((c) => c.id));
+  return [...compliance, ...alerts.filter((a) => !seen.has(a.id))];
+}
+
+/** Compliance / category-mismatch alerts, kept verbatim from the backend copy. */
+function normalizeComplianceAlerts(payload: any) {
+  return arr(payload?.compliance_alerts).map((item: any, index: number) => ({
+    id: str(item?.id) ?? `category-mismatch-${index + 1}`,
+    severity: (() => {
+      const s = str(item?.severity)?.toLowerCase();
+      return s === "critical" || s === "high" || s === "medium" || s === "low" ? s : "high";
+    })(),
+    category: str(item?.category) ?? "compliance",
+    title: str(item?.title) ?? "Category Mismatch Detected",
+    interpretation: str(item?.interpretation) ?? "Likely Putaway / Shelf Placement Violation",
+    detail: str(item?.detail) ?? str(item?.description) ?? undefined,
+    expected_sub_category_label: str(item?.expected_sub_category_label) ?? undefined,
+    misplaced_facings: num(item?.misplaced_facings) ?? undefined,
   }));
 }
+
+function normalizeSubcategoryMismatches(payload: any) {
+  return arr(payload?.subcategory_mismatches).map((item: any) => ({
+    brand: str(item?.brand) ?? "Unknown",
+    product_name: str(item?.product_name) ?? str(item?.name) ?? "Unknown product",
+    detected_sub_category_label: str(item?.detected_sub_category_label) ?? "—",
+    expected_sub_category_label: str(item?.expected_sub_category_label) ?? "—",
+    quantity: Math.max(0, Math.round(num(item?.quantity) ?? num(item?.facings) ?? 0)),
+    confidence: num(item?.confidence) ?? null,
+  }));
+}
+
 
 function normalizeRecommendations(payload: any) {
   return arr(payload?.recommendations).map((item: any, index: number) => ({
