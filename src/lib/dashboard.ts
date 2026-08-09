@@ -250,12 +250,19 @@ export async function fetchRecentScans(
   const page = params.page ?? 1;
   const pageSize = params.page_size ?? 8;
 
+  // Free plan only shows the last 7 days. Data is never deleted, just filtered.
+  const { fetchHistoryCutoffIso } = await import("@/lib/subscription-limits");
+  const cutoff = await fetchHistoryCutoffIso();
+
   let query = supabase
     .from("shelf_scans")
     .select("id, status, shelf_health_score, total_products, created_at, shelf_label, stores(name)", {
       count: "exact",
     })
     .eq("org_id", orgId);
+
+  if (cutoff) query = query.gte("created_at", cutoff);
+
 
   if (params.status && params.status !== "all") query = query.eq("status", params.status);
   if (params.q) query = query.ilike("shelf_label", `%${params.q}%`);
