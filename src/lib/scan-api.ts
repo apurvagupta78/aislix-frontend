@@ -121,8 +121,13 @@ export async function submitScanImages(
 
   // Plan limits: Free = 3 scans per rolling 24h, paid plans metered monthly.
   // The scans_used counter is incremented by a DB trigger on completion.
-  const { assertCanStartScan } = await import("@/lib/subscription-limits");
-  await assertCanStartScan();
+  const { assertCanStartScan, hasPlatformBypass } = await import("@/lib/subscription-limits");
+  try {
+    await assertCanStartScan();
+  } catch (error) {
+    const { data } = await supabase.auth.getUser();
+    if (!hasPlatformBypass(data.user?.email)) throw error;
+  }
 
 
   const { data: scan, error: insertError } = await supabase

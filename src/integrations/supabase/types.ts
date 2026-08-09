@@ -396,6 +396,39 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_access_grants: {
+        Row: {
+          bypass_history_limits: boolean
+          bypass_scan_limits: boolean
+          bypass_store_limits: boolean
+          created_at: string
+          email: string
+          is_active: boolean
+          note: string | null
+          updated_at: string
+        }
+        Insert: {
+          bypass_history_limits?: boolean
+          bypass_scan_limits?: boolean
+          bypass_store_limits?: boolean
+          created_at?: string
+          email: string
+          is_active?: boolean
+          note?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bypass_history_limits?: boolean
+          bypass_scan_limits?: boolean
+          bypass_store_limits?: boolean
+          created_at?: string
+          email?: string
+          is_active?: boolean
+          note?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -940,6 +973,15 @@ export type Database = {
       can_org_add_store: { Args: { p_org_id: string }; Returns: boolean }
       can_org_start_scan: { Args: { p_org_id: string }; Returns: boolean }
       get_org_usage_summary: { Args: { p_org_id: string }; Returns: Json }
+      org_has_platform_bypass: { Args: { p_org_id: string }; Returns: boolean }
+      org_has_platform_store_bypass: {
+        Args: { p_org_id: string }
+        Returns: boolean
+      }
+      user_email_has_platform_bypass: {
+        Args: { _email: string }
+        Returns: boolean
+      }
     }
     Enums: {
       alert_severity: "critical" | "high" | "medium" | "low"
