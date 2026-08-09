@@ -241,22 +241,6 @@ export function AppShell({
               </DropdownMenu>
             </div>
           </div>
-          <nav className="flex gap-1 overflow-x-auto border-t border-border px-3 py-2 lg:hidden">
-            {[...nav, ...secondary].map((n) => (
-              <Link
-                key={n.to}
-                to={n.to}
-                className={cn(
-                  "whitespace-nowrap rounded-lg px-3 py-1.5 text-xs",
-                  pathname === n.to
-                    ? "bg-brand-soft font-medium text-brand"
-                    : "text-muted-foreground",
-                )}
-              >
-                {n.label}
-              </Link>
-            ))}
-          </nav>
         </header>
 
         <main className="px-5 py-8 sm:px-8">
