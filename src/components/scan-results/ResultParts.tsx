@@ -570,7 +570,19 @@ export function InventoryTable({
     );
   };
 
-  const exportCsv = () => {
+  const unfiltered = !query.trim() && brand === "all" && stock === "all";
+
+  const exportCsv = async () => {
+    // Prefer the backend-generated CSV (it carries the full compliance report)
+    // whenever the table is not filtered down.
+    if (scanId && unfiltered) {
+      try {
+        await downloadScanCsv(scanId, csvUrl);
+        return;
+      } catch {
+        // fall back to the client-side export below
+      }
+    }
     const csv = inventoryToCsv(filtered);
     const link = document.createElement("a");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
