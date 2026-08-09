@@ -147,13 +147,16 @@ function severityFromAlert(value: unknown): Severity {
 
 function mapAlerts(raw: unknown): ScanAlert[] {
   if (!Array.isArray(raw)) return [];
-  return raw.map((item: any, index) => ({
-    id: item?.id ?? `alert-${index}`,
-    severity: severityFromAlert(item?.severity),
-    title: item?.title ?? "Alert",
-    detail: item?.detail ?? undefined,
-  }));
+  return raw
+    .filter((item: any) => item?.id !== "category-mismatch" && item?.category !== "compliance")
+    .map((item: any, index) => ({
+      id: item?.id ?? `alert-${index}`,
+      severity: severityFromAlert(item?.severity),
+      title: item?.title ?? "Alert",
+      detail: item?.detail ?? undefined,
+    }));
 }
+
 
 function mapComplianceAlerts(raw: unknown): ComplianceAlert[] {
   if (!Array.isArray(raw)) return [];
