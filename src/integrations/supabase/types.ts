@@ -171,6 +171,45 @@ export type Database = {
           },
         ]
       }
+      global_learned_skus: {
+        Row: {
+          brand: string
+          category: string
+          created_at: string
+          embedding: Json
+          hit_count: number
+          product_name: string
+          sku: string
+          source_scan_id: string | null
+          updated_at: string
+          variant: string
+        }
+        Insert: {
+          brand?: string
+          category?: string
+          created_at?: string
+          embedding: Json
+          hit_count?: number
+          product_name?: string
+          sku: string
+          source_scan_id?: string | null
+          updated_at?: string
+          variant?: string
+        }
+        Update: {
+          brand?: string
+          category?: string
+          created_at?: string
+          embedding?: Json
+          hit_count?: number
+          product_name?: string
+          sku?: string
+          source_scan_id?: string | null
+          updated_at?: string
+          variant?: string
+        }
+        Relationships: []
+      }
       learned_skus: {
         Row: {
           avg_price_inr: number | null
