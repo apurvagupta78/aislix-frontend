@@ -122,20 +122,6 @@ export async function fetchBillingOverview(signal?: AbortSignal): Promise<Billin
   void signal;
   const orgId = await requireOrgId();
   const sub = await getSubscriptionRow(orgId);
-
-  const plan = sub?.subscription_plans as { code?: string } | null;
-  if (!sub || (plan?.code ?? "free") === "free") return;
-  await supabase
-    .from("subscriptions")
-    .update({ scans_used: (sub.scans_used ?? 0) + 1 })
-    .eq("id", sub.id);
-}
-
-/** The org's subscription, plan and real usage counted from stores/members. */
-export async function fetchBillingOverview(signal?: AbortSignal): Promise<BillingOverview> {
-  void signal;
-  const orgId = await requireOrgId();
-  const sub = await getSubscriptionRow(orgId);
   if (!sub) {
     throw new ApiError({ message: "No subscription found for your workspace.", kind: "not_found", status: 404 });
   }
@@ -150,7 +136,9 @@ export async function fetchBillingOverview(signal?: AbortSignal): Promise<Billin
     price_annual_inr: number;
   } | null;
 
-  const isFree = (plan?.code ?? "free") === "free";
+  const { fetchUsageSummary } = await import("@/lib/subscription-limits");
+  const live = await fetchUsageSummary();
+
 
   const { data: org } = await supabase
     .from("organizations")
