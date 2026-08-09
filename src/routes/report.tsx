@@ -132,9 +132,14 @@ function ReportViewer() {
             disabled={!data}
             onClick={() => {
               if (!data) return;
-              void downloadScanPdf(data.scan_id, data.downloads?.pdf_url).catch((e: unknown) =>
-                toast.error(e instanceof Error ? e.message : "Could not download the PDF."),
-              );
+              const toastId = toast.loading("Preparing download…");
+              void downloadScanPdf(data.scan_id, data.downloads?.pdf_url)
+                .then(() => toast.dismiss(toastId))
+                .catch((e: unknown) =>
+                  toast.error(e instanceof Error ? e.message : "Could not download the PDF.", {
+                    id: toastId,
+                  }),
+                );
             }}
           >
             <Download className="size-4" /> Download PDF
