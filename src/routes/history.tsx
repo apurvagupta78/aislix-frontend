@@ -126,10 +126,13 @@ function RowActions({
 
   const run = async (kind: "pdf" | "csv" | "image", task: () => Promise<void>) => {
     setBusy(kind);
+    // Reports for older scans are rebuilt on demand and can take a minute.
+    const toastId = toast.loading("Preparing download…");
     try {
       await task();
+      toast.dismiss(toastId);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not download this file.");
+      toast.error(e instanceof Error ? e.message : "Could not download this file.", { id: toastId });
     } finally {
       setBusy(null);
     }
