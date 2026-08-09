@@ -460,6 +460,16 @@ export async function downloadFileFromUrl(url: string, filename: string): Promis
   setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
 }
 
+/**
+ * Asks the backend to (re)generate this scan's report assets when they are
+ * missing from storage. Safe to call repeatedly — it is a no-op once the
+ * PDF / annotated image / CSV already exist.
+ */
+export async function ensureScanAssets(scanId: string): Promise<void> {
+  const { backfillScanAssets } = await import("@/lib/scan-pipeline.functions");
+  await backfillScanAssets({ data: { scanId } });
+}
+
 async function downloadAsset(
   scanId: string,
   key: keyof ScanAssetUrls,
@@ -467,7 +477,12 @@ async function downloadAsset(
   hint: string | undefined,
   missingMessage: string,
 ): Promise<void> {
-  const url = hint ?? (await resolveScanAssetUrls(scanId))[key];
+  let url = hint ?? (await resolveScanAssetUrls(scanId))[key];
+  if (!url) {
+    // Older scans may never have had their exports stored — rebuild them.
+    await ensureScanAssets(scanId);
+    url = (await resolveScanAssetUrls(scanId))[key];
+  }
   if (!url) throw new Error(missingMessage);
   try {
     await downloadFileFromUrl(url, filename);
