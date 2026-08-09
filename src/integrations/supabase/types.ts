@@ -637,6 +637,9 @@ export type Database = {
           shelf_label: string | null
           status: Database["public"]["Enums"]["scan_status"]
           store_id: string | null
+          sub_category: string | null
+          sub_category_custom: string | null
+          sub_category_label: string | null
           total_products: number
           updated_at: string
         }
@@ -660,6 +663,9 @@ export type Database = {
           shelf_label?: string | null
           status?: Database["public"]["Enums"]["scan_status"]
           store_id?: string | null
+          sub_category?: string | null
+          sub_category_custom?: string | null
+          sub_category_label?: string | null
           total_products?: number
           updated_at?: string
         }
@@ -683,6 +689,9 @@ export type Database = {
           shelf_label?: string | null
           status?: Database["public"]["Enums"]["scan_status"]
           store_id?: string | null
+          sub_category?: string | null
+          sub_category_custom?: string | null
+          sub_category_label?: string | null
           total_products?: number
           updated_at?: string
         }
