@@ -241,10 +241,15 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     const key = `${brand}::${product}::${variant}`;
     const qty = Number(p.facings) || 1;
     const confidence = Number(p.confidence) || 0;
+    const mismatch = (p.stock_status as string | null) === "misplaced";
     const existing = grouped.get(key);
     if (existing) {
       existing.quantity += qty;
       existing.confidence = Math.max(existing.confidence, confidence);
+      if (mismatch) {
+        existing.compliance_status = "category_mismatch";
+        existing.compliance_interpretation = COMPLIANCE_INTERPRETATION;
+      }
     } else {
       grouped.set(key, {
         id: p.id as string,
@@ -254,9 +259,12 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
         quantity: qty,
         confidence,
         category: (p.category as string | null) ?? undefined,
+        compliance_status: mismatch ? "category_mismatch" : "ok",
+        ...(mismatch ? { compliance_interpretation: COMPLIANCE_INTERPRETATION } : {}),
         shelf_position: p.shelf_row === null || p.shelf_row === undefined ? undefined : String(p.shelf_row),
       });
     }
+
   }
   // Stock flags are derived from the aggregated facing count, not individual rows.
   for (const item of grouped.values()) {
