@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   LayoutDashboard,
   ScanLine,
@@ -14,6 +14,7 @@ import {
   Bell,
   Search,
   LogOut,
+  Menu,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Logo } from "@/components/Logo";
@@ -28,6 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { fetchProfile } from "@/lib/account";
 
