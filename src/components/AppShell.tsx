@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   LayoutDashboard,
   ScanLine,
@@ -14,6 +14,7 @@ import {
   Bell,
   Search,
   LogOut,
+  Menu,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Logo } from "@/components/Logo";
@@ -28,6 +29,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { fetchProfile } from "@/lib/account";
 
@@ -60,6 +62,7 @@ export function AppShell({
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
   const profileQuery = useQuery({
     queryKey: ["profile"],
     queryFn: () => fetchProfile(),
@@ -79,10 +82,11 @@ export function AppShell({
           .join("")
       : profile?.email?.[0]) ?? "A";
 
-  const item = (to: string, label: string, Icon: typeof Bell) => (
+  const item = (to: string, label: string, Icon: typeof Bell, onClick?: () => void) => (
     <Link
       key={to}
       to={to}
+      onClick={onClick}
       className={cn(
         "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors",
         pathname === to
@@ -126,9 +130,49 @@ export function AppShell({
       <div className="lg:pl-64">
         <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur-xl">
           <div className="flex h-16 items-center gap-3 px-5 sm:px-8">
+            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="rounded-xl lg:hidden"
+                  aria-label="Open navigation menu"
+                >
+                  <Menu className="size-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent
+                side="left"
+                className="flex w-[85vw] max-w-xs flex-col gap-0 overflow-y-auto p-0"
+              >
+                <div className="border-b border-border px-4 py-4">
+                  <Logo to="/dashboard" />
+                </div>
+                <nav className="space-y-1 px-3 py-4">
+                  <p className="px-3 pb-2 text-[0.7rem] font-medium uppercase tracking-widest text-muted-foreground">
+                    Workspace
+                  </p>
+                  {nav.map((n) => item(n.to, n.label, n.icon, () => setMenuOpen(false)))}
+                </nav>
+                <nav className="space-y-1 px-3 pb-4">
+                  <p className="px-3 pb-2 text-[0.7rem] font-medium uppercase tracking-widest text-muted-foreground">
+                    Account
+                  </p>
+                  {secondary.map((n) => item(n.to, n.label, n.icon, () => setMenuOpen(false)))}
+                </nav>
+                <div className="mt-auto border-t border-border px-4 py-4">
+                  <Button asChild size="sm" variant="brand" className="w-full rounded-lg">
+                    <Link to="/billing" onClick={() => setMenuOpen(false)}>
+                      Manage plan
+                    </Link>
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
             <div className="lg:hidden">
               <Logo compact to="/dashboard" />
             </div>
+
             <form
               className="relative hidden max-w-sm flex-1 md:block"
               onSubmit={(e) => {
@@ -197,22 +241,6 @@ export function AppShell({
               </DropdownMenu>
             </div>
           </div>
-          <nav className="flex gap-1 overflow-x-auto border-t border-border px-3 py-2 lg:hidden">
-            {[...nav, ...secondary].map((n) => (
-              <Link
-                key={n.to}
-                to={n.to}
-                className={cn(
-                  "whitespace-nowrap rounded-lg px-3 py-1.5 text-xs",
-                  pathname === n.to
-                    ? "bg-brand-soft font-medium text-brand"
-                    : "text-muted-foreground",
-                )}
-              >
-                {n.label}
-              </Link>
-            ))}
-          </nav>
         </header>
 
         <main className="px-5 py-8 sm:px-8">

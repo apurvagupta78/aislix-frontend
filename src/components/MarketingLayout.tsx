@@ -1,10 +1,23 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { Linkedin } from "lucide-react";
+import { Linkedin, Menu } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
+const mobileNav = [
+  { label: "Platform", to: "/platform" },
+  { label: "Features", to: "/features" },
+  { label: "How it works", to: "/how-it-works" },
+  { label: "Pricing", to: "/pricing" },
+  { label: "About", to: "/about" },
+  { label: "Contact", to: "/contact" },
+  { label: "Security", to: "/security" },
+] as const;
 
 export function SiteHeader() {
+  const [open, setOpen] = useState(false);
+
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-card/85 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-5 sm:px-8">
@@ -16,23 +29,72 @@ export function SiteHeader() {
           <Button asChild variant="ghost" size="sm" className="hidden rounded-xl lg:inline-flex">
             <Link to="/how-it-works">How it works</Link>
           </Button>
-          <Button asChild variant="ghost" size="sm" className="hidden rounded-xl sm:inline-flex">
+          <Button asChild variant="ghost" size="sm" className="hidden rounded-xl lg:inline-flex">
             <Link to="/pricing">Pricing</Link>
           </Button>
-          <Button asChild variant="ghost" size="sm" className="hidden rounded-xl sm:inline-flex">
+          <Button asChild variant="ghost" size="sm" className="hidden rounded-xl lg:inline-flex">
             <Link to="/contact">Contact</Link>
           </Button>
-          <Button asChild variant="ghost" size="sm" className="rounded-xl">
+          <Button asChild variant="ghost" size="sm" className="hidden rounded-xl lg:inline-flex">
             <Link to="/login">Sign in</Link>
           </Button>
-          <Button asChild variant="brand" size="sm" className="rounded-xl">
+          <Button asChild variant="brand" size="sm" className="hidden rounded-xl lg:inline-flex">
             <Link to="/signup">Start free</Link>
           </Button>
+
+          <Button asChild variant="brand" size="sm" className="rounded-xl lg:hidden">
+            <Link to="/signup">Start free</Link>
+          </Button>
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-xl lg:hidden"
+                aria-label="Open menu"
+              >
+                <Menu className="size-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent
+              side="right"
+              className="flex w-[85vw] max-w-sm flex-col gap-0 overflow-y-auto p-0"
+            >
+              <div className="border-b border-border px-5 py-4">
+                <Logo />
+              </div>
+              <nav className="flex flex-col gap-1 px-3 py-4">
+                {mobileNav.map((n) => (
+                  <Link
+                    key={n.to}
+                    to={n.to}
+                    onClick={() => setOpen(false)}
+                    className="rounded-xl px-3 py-2.5 text-base text-foreground transition-colors hover:bg-muted"
+                  >
+                    {n.label}
+                  </Link>
+                ))}
+              </nav>
+              <div className="mt-auto flex flex-col gap-2 border-t border-border px-5 py-5">
+                <Button asChild variant="outline" className="rounded-xl">
+                  <Link to="/login" onClick={() => setOpen(false)}>
+                    Sign in
+                  </Link>
+                </Button>
+                <Button asChild variant="brand" className="rounded-xl">
+                  <Link to="/signup" onClick={() => setOpen(false)}>
+                    Start free
+                  </Link>
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
         </nav>
       </div>
     </header>
   );
 }
+
 
 function ColumnTitle({ children }: { children: ReactNode }) {
   return (
@@ -59,8 +121,9 @@ export function SiteFooter() {
   return (
     <footer className="border-t border-border bg-surface">
       <div className="mx-auto max-w-7xl px-5 py-14 sm:px-8">
-        <div className="grid gap-10 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
-          <div>
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_repeat(4,1fr)]">
+          <div className="sm:col-span-2 lg:col-span-1">
+
             <Logo />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
               AI retail shelf intelligence for supermarkets, dark stores, warehouses, FMCG brands,

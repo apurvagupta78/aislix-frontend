@@ -10,9 +10,9 @@ import {
   Cpu,
   FileText,
 } from "lucide-react";
-import { Logo } from "@/components/Logo";
+
 import { Button } from "@/components/ui/button";
-import { SiteFooter } from "@/components/MarketingLayout";
+import { SiteFooter, SiteHeader } from "@/components/MarketingLayout";
 import { CycleToggle, PricingGrid } from "@/components/pricing/PricingPlans";
 import type { BillingCycle } from "@/lib/pricing";
 
@@ -71,24 +71,8 @@ function Landing() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-8 px-6">
-          <Logo />
-          <nav className="hidden items-center gap-6 text-sm text-muted-foreground md:flex">
-            <a href="#platform" className="transition-colors hover:text-foreground">Platform</a>
-            <a href="#how" className="transition-colors hover:text-foreground">How it works</a>
-            <a href="#pricing" className="transition-colors hover:text-foreground">Pricing</a>
-          </nav>
-          <div className="ml-auto flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm" className="rounded-xl">
-              <Link to="/login">Log in</Link>
-            </Button>
-            <Button asChild variant="brand" size="sm" className="rounded-xl">
-              <Link to="/signup">Start free</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <SiteHeader />
+
 
       <section className="relative overflow-hidden bg-hero-glow">
         <div className="absolute inset-0 grid-lines opacity-40 [mask-image:radial-gradient(70%_50%_at_50%_0%,black,transparent)]" />
