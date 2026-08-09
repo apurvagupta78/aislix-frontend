@@ -20,6 +20,31 @@ export type ScanRecommendation = {
   impact?: string;
 };
 
+export const COMPLIANCE_ALERT_TITLE = "Category Mismatch Detected";
+export const COMPLIANCE_INTERPRETATION = "Likely Putaway / Shelf Placement Violation";
+
+export type ComplianceStatus = "ok" | "category_mismatch";
+
+export type ComplianceAlert = {
+  id: string;
+  severity: Severity;
+  category?: string;
+  title: string;
+  interpretation?: string;
+  detail?: string;
+  expected_sub_category_label?: string;
+  misplaced_facings?: number;
+};
+
+export type SubcategoryMismatch = {
+  brand: string;
+  product_name: string;
+  detected_sub_category_label: string;
+  expected_sub_category_label: string;
+  quantity: number;
+  confidence?: number;
+};
+
 export type InventoryItem = {
   id: string;
   brand: string;
@@ -30,6 +55,8 @@ export type InventoryItem = {
   category?: string;
   low_stock?: boolean;
   out_of_stock?: boolean;
+  compliance_status?: ComplianceStatus;
+  compliance_interpretation?: string;
   /** Reserved for the shelf-position model (row / bay label). */
   shelf_position?: string;
 };
@@ -39,6 +66,7 @@ export type ConfidenceBucket = { bucket: string; count: number };
 export type CategorySlice = { category: string; count: number };
 export type QuantityBucket = { bucket: string; count: number };
 export type LowStockRow = { label: string; low_stock: number; out_of_stock: number };
+
 
 export type ScanSummary = {
   total_products: number;
@@ -60,7 +88,10 @@ export type ScanSummary = {
   learned_new_this_scan?: number;
   /** Number of ChatGPT (GPT vision) API calls used by this scan. */
   gpt_vision_calls?: number;
-
+  /** Facings detected as belonging to another sub-category. */
+  misplaced_products?: number;
+  /** Distinct SKU groups flagged as sub-category mismatches. */
+  subcategory_mismatch_skus?: number;
 };
 
 export type ScanResult = {
@@ -76,8 +107,11 @@ export type ScanResult = {
   annotated_image_url?: string;
   executive_summary?: string;
   alerts?: ScanAlert[];
+  compliance_alerts?: ComplianceAlert[];
+  subcategory_mismatches?: SubcategoryMismatch[];
   recommendations?: ScanRecommendation[];
   inventory?: InventoryItem[];
+
   charts?: {
     top_brands?: BrandShare[];
     confidence_distribution?: ConfidenceBucket[];
@@ -113,13 +147,47 @@ function severityFromAlert(value: unknown): Severity {
 
 function mapAlerts(raw: unknown): ScanAlert[] {
   if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((item: any) => item?.id !== "category-mismatch" && item?.category !== "compliance")
+    .map((item: any, index) => ({
+      id: item?.id ?? `alert-${index}`,
+      severity: severityFromAlert(item?.severity),
+      title: item?.title ?? "Alert",
+      detail: item?.detail ?? undefined,
+    }));
+}
+
+
+function mapComplianceAlerts(raw: unknown): ComplianceAlert[] {
+  if (!Array.isArray(raw)) return [];
   return raw.map((item: any, index) => ({
-    id: item?.id ?? `alert-${index}`,
-    severity: severityFromAlert(item?.severity),
-    title: item?.title ?? "Alert",
+    id: item?.id ?? `category-mismatch-${index}`,
+    severity: severityFromAlert(item?.severity === "critical" ? "high" : item?.severity),
+    category: item?.category ?? "compliance",
+    title: item?.title ?? COMPLIANCE_ALERT_TITLE,
+    interpretation: item?.interpretation ?? COMPLIANCE_INTERPRETATION,
     detail: item?.detail ?? undefined,
+    expected_sub_category_label: item?.expected_sub_category_label ?? undefined,
+    ...(typeof item?.misplaced_facings === "number"
+      ? { misplaced_facings: Number(item.misplaced_facings) }
+      : {}),
   }));
 }
+
+function mapSubcategoryMismatches(raw: unknown): SubcategoryMismatch[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item: any) => ({
+    brand: item?.brand ?? "Unknown",
+    product_name: item?.product_name ?? item?.name ?? "Unknown product",
+    detected_sub_category_label: item?.detected_sub_category_label ?? "—",
+    expected_sub_category_label: item?.expected_sub_category_label ?? "—",
+    quantity: Number(item?.quantity) || 0,
+    ...(item?.confidence !== null && item?.confidence !== undefined
+      ? { confidence: Number(item.confidence) }
+      : {}),
+  }));
+}
+
 
 function mapRecommendations(raw: unknown): ScanRecommendation[] {
   if (!Array.isArray(raw)) return [];
@@ -207,10 +275,15 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     const key = `${brand}::${product}::${variant}`;
     const qty = Number(p.facings) || 1;
     const confidence = Number(p.confidence) || 0;
+    const mismatch = (p.stock_status as string | null) === "misplaced";
     const existing = grouped.get(key);
     if (existing) {
       existing.quantity += qty;
       existing.confidence = Math.max(existing.confidence, confidence);
+      if (mismatch) {
+        existing.compliance_status = "category_mismatch";
+        existing.compliance_interpretation = COMPLIANCE_INTERPRETATION;
+      }
     } else {
       grouped.set(key, {
         id: p.id as string,
@@ -220,9 +293,12 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
         quantity: qty,
         confidence,
         category: (p.category as string | null) ?? undefined,
+        compliance_status: mismatch ? "category_mismatch" : "ok",
+        ...(mismatch ? { compliance_interpretation: COMPLIANCE_INTERPRETATION } : {}),
         shelf_position: p.shelf_row === null || p.shelf_row === undefined ? undefined : String(p.shelf_row),
       });
     }
+
   }
   // Stock flags are derived from the aggregated facing count, not individual rows.
   for (const item of grouped.values()) {
@@ -305,8 +381,20 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     ...(typeof (result?.metrics as any)?.gpt_vision_calls === "number"
       ? { gpt_vision_calls: Number((result?.metrics as any).gpt_vision_calls) }
       : {}),
+    ...(typeof (result?.metrics as any)?.misplaced_products === "number"
+      ? { misplaced_products: Number((result?.metrics as any).misplaced_products) }
+      : scan.misplaced_count !== null && scan.misplaced_count !== undefined
+        ? { misplaced_products: scan.misplaced_count }
+        : {}),
+    ...(typeof (result?.metrics as any)?.subcategory_mismatch_skus === "number"
+      ? { subcategory_mismatch_skus: Number((result?.metrics as any).subcategory_mismatch_skus) }
+      : {}),
   };
 
+  const complianceAlerts = mapComplianceAlerts((result?.metrics as any)?.compliance_alerts);
+  const subcategoryMismatches = mapSubcategoryMismatches(
+    (result?.metrics as any)?.subcategory_mismatches,
+  );
 
   const storeName = (scan as any).stores?.name as string | undefined;
 
@@ -316,8 +404,11 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     status: scan.status as ScanStatus,
     summary,
     alerts: mapAlerts(result?.alerts),
+    compliance_alerts: complianceAlerts,
+    subcategory_mismatches: subcategoryMismatches,
     recommendations: mapRecommendations(result?.recommendations),
     inventory,
+
     charts: {
       top_brands: mapBrandShare(result?.brand_share),
       confidence_distribution: confidenceBuckets,

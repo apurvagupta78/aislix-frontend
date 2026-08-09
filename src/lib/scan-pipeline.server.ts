@@ -161,7 +161,10 @@ function normalizeProducts(payload: any): NormalizedProduct[] {
         facings,
         shelf_row: shelfRow === null ? null : Math.round(shelfRow),
         position_index: position === null ? null : Math.round(position),
-        stock_status: normalizeStock(item?.stock_status ?? item?.status, facings, expected),
+        stock_status:
+          str(item?.compliance_status)?.toLowerCase() === "category_mismatch"
+            ? "misplaced"
+            : normalizeStock(item?.stock_status ?? item?.status, facings, expected),
         confidence: normalizeConfidence(item?.confidence ?? item?.score),
         price_inr: num(item?.price_inr) ?? num(item?.price),
         expected_facings: expected === null ? null : Math.round(expected),
@@ -172,7 +175,7 @@ function normalizeProducts(payload: any): NormalizedProduct[] {
 }
 
 function normalizeAlerts(payload: any) {
-  return arr(payload?.alerts).map((item: any, index: number) => ({
+  const map = (item: any, index: number) => ({
     id: str(item?.id) ?? `alert-${index + 1}`,
     severity: (() => {
       const s = str(item?.severity)?.toLowerCase();
@@ -180,8 +183,44 @@ function normalizeAlerts(payload: any) {
     })(),
     title: str(item?.title) ?? str(item?.message) ?? "Alert",
     detail: str(item?.detail) ?? str(item?.description) ?? undefined,
+    ...(str(item?.interpretation) ? { interpretation: str(item?.interpretation) } : {}),
+    ...(str(item?.category) ? { category: str(item?.category) } : {}),
+  });
+
+  const compliance = normalizeComplianceAlerts(payload);
+  const alerts = arr(payload?.alerts).map(map);
+  const seen = new Set(compliance.map((c) => c.id));
+  return [...compliance, ...alerts.filter((a) => !seen.has(a.id))];
+}
+
+/** Compliance / category-mismatch alerts, kept verbatim from the backend copy. */
+function normalizeComplianceAlerts(payload: any) {
+  return arr(payload?.compliance_alerts).map((item: any, index: number) => ({
+    id: str(item?.id) ?? `category-mismatch-${index + 1}`,
+    severity: (() => {
+      const s = str(item?.severity)?.toLowerCase();
+      return s === "critical" || s === "high" || s === "medium" || s === "low" ? s : "high";
+    })(),
+    category: str(item?.category) ?? "compliance",
+    title: str(item?.title) ?? "Category Mismatch Detected",
+    interpretation: str(item?.interpretation) ?? "Likely Putaway / Shelf Placement Violation",
+    detail: str(item?.detail) ?? str(item?.description) ?? undefined,
+    expected_sub_category_label: str(item?.expected_sub_category_label) ?? undefined,
+    misplaced_facings: num(item?.misplaced_facings) ?? undefined,
   }));
 }
+
+function normalizeSubcategoryMismatches(payload: any) {
+  return arr(payload?.subcategory_mismatches).map((item: any) => ({
+    brand: str(item?.brand) ?? "Unknown",
+    product_name: str(item?.product_name) ?? str(item?.name) ?? "Unknown product",
+    detected_sub_category_label: str(item?.detected_sub_category_label) ?? "—",
+    expected_sub_category_label: str(item?.expected_sub_category_label) ?? "—",
+    quantity: Math.max(0, Math.round(num(item?.quantity) ?? num(item?.facings) ?? 0)),
+    confidence: num(item?.confidence) ?? null,
+  }));
+}
+
 
 function normalizeRecommendations(payload: any) {
   return arr(payload?.recommendations).map((item: any, index: number) => ({
@@ -1006,7 +1045,15 @@ async function persistScanPayload(
   const metricsSource = (payload?.metrics ?? payload?.summary ?? payload) as any;
   const outOfStock = products.filter((p) => p.stock_status === "out_of_stock").length;
   const lowStock = products.filter((p) => p.stock_status === "low_stock").length;
-  const misplaced = products.filter((p) => p.stock_status === "misplaced").length;
+  const misplacedFacings = products
+    .filter((p) => p.stock_status === "misplaced")
+    .reduce((total, p) => total + Math.max(1, p.facings), 0);
+  const misplaced = Math.round(num(metricsSource?.misplaced_products) ?? misplacedFacings);
+  const complianceAlerts = normalizeComplianceAlerts(payload);
+  const subcategoryMismatches = normalizeSubcategoryMismatches(payload);
+  const mismatchSkus = Math.round(
+    num(metricsSource?.subcategory_mismatch_skus) ?? subcategoryMismatches.length,
+  );
   const confidences = products.map((p) => p.confidence).filter((c): c is number => c !== null);
   const confidenceAvg = confidences.length
     ? Number((confidences.reduce((a, b) => a + b, 0) / confidences.length).toFixed(4))
@@ -1057,6 +1104,12 @@ async function persistScanPayload(
     out_of_stock_products: outOfStock,
     low_stock_products: lowStock,
     misplaced_products: misplaced,
+    subcategory_mismatch_skus: mismatchSkus,
+    compliance_alerts: complianceAlerts,
+    subcategory_mismatches: subcategoryMismatches,
+    ...(typeof metricsSource?.gpt_vision_calls !== "undefined"
+      ? { gpt_vision_calls: num(metricsSource.gpt_vision_calls) ?? 0 }
+      : {}),
     average_confidence: confidenceAvg ?? 0,
     osa_percent: osa,
     shelf_health_score: health,
