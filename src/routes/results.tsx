@@ -270,6 +270,7 @@ function Results() {
               <InventoryTable
                 items={data?.inventory}
                 scanId={data?.scan_id}
+                csvUrl={data?.downloads?.csv_url}
                 loading={loading}
               />
 
