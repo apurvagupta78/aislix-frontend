@@ -896,6 +896,7 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
     store_id: scan.store_id,
     shelf_label: scan.shelf_label,
     category: scan.category,
+    sub_category: subCategoryFromNotes(scan.notes),
     notes: scan.notes,
     image_urls: signedImages.map((i) => i.url),
     images: signedImages,
