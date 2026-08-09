@@ -129,6 +129,7 @@ export async function submitScanImages(
       status: "processing",
       shelf_label: options.shelfLabel ?? null,
       category: options.category ?? null,
+      notes: options.subCategory ? `${options.subCategory} shelf` : null,
       processing_started_at: new Date().toISOString(),
     })
     .select("id, status")
