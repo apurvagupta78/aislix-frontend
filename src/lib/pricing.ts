@@ -105,7 +105,7 @@ export const plans: Plan[] = [
   {
     id: "professional",
     name: "Professional",
-    tagline: "For supermarkets, dark stores, warehouses, FMCG brands, distributors and local stores",
+    tagline: "For supermarkets, dark stores and retail chains",
     monthlyPrice: 4999,
     annualPrice: 4999 * ANNUAL_MONTHS_BILLED,
     scanLimitLabel: "5,000 scans per month",
