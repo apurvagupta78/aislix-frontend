@@ -585,6 +585,41 @@ async function storePdfReport(
   } as never);
 }
 
+/** Stores the CSV export returned by the vision backend as base64. */
+async function storeCsvReport(
+  supabase: DB,
+  scan: { id: string; org_id: string },
+  payload: any,
+): Promise<void> {
+  const base64 = str(payload?.csv_base64) ?? str(payload?.report_csv_base64);
+  if (!base64) return;
+
+  let bytes: Uint8Array;
+  try {
+    const cleaned = base64.replace(/^data:[^;]+;base64,/, "");
+    bytes = Uint8Array.from(Buffer.from(cleaned, "base64"));
+  } catch {
+    return;
+  }
+  if (!bytes.byteLength) return;
+
+  const path = `${scan.org_id}/${scan.id}/report-${Date.now()}.csv`;
+  const { error: uploadError } = await supabase.storage
+    .from("scan-images")
+    .upload(path, bytes, { contentType: "text/csv", upsert: true });
+  if (uploadError) return;
+
+  await supabase.from("scan_images").insert({
+    scan_id: scan.id,
+    kind: "csv",
+    storage_bucket: "scan-images",
+    storage_path: path,
+    mime_type: "text/csv",
+    file_size_bytes: bytes.byteLength,
+  } as never);
+}
+
+
 /** Recomputes the daily rollup for this org/store from real completed scans. */
 async function refreshAnalytics(
   supabase: DB,
