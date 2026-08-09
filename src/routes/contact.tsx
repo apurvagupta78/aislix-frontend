@@ -304,7 +304,10 @@ function Contact() {
                 <div>
                   <p className="text-sm font-medium">Office</p>
                   <p className="text-sm text-muted-foreground">
-                    Aislix Technologies — India. Full address published once our office opens.
+                    Aislix Technologies — New Delhi, India.
+                  </p>
+                  <p className="text-xs text-muted-foreground/80">
+                    Our dedicated office location will be published once our office opens.
                   </p>
                 </div>
               </li>
@@ -317,23 +320,21 @@ function Contact() {
           </div>
 
           <div className="card-surface overflow-hidden">
-            <div className="relative grid h-52 place-items-center bg-brand-soft">
-              <div
-                aria-hidden="true"
-                className="absolute inset-0 opacity-40"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(to right, color-mix(in oklab, var(--brand) 18%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in oklab, var(--brand) 18%, transparent) 1px, transparent 1px)",
-                  backgroundSize: "34px 34px",
-                }}
+            <div className="relative h-56 sm:h-72">
+              <iframe
+                title="Aislix office location - New Delhi, India"
+                src="https://www.openstreetmap.org/export/embed.html?bbox=76.9%2C28.5%2C77.5%2C28.75&layer=mapnik&marker=28.6139%2C77.2090"
+                className="absolute inset-0 h-full w-full border-0"
+                loading="lazy"
               />
-              <div className="relative text-center">
-                <span className="mx-auto grid size-11 place-items-center rounded-xl bg-card text-brand shadow-soft">
-                  <MapPin className="size-5" />
-                </span>
-                <p className="mt-3 text-sm font-medium text-brand">Office map</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Google Maps embed reserved for our office location
+              <div className="pointer-events-none absolute left-4 top-4 max-w-[calc(100%-2rem)] rounded-xl border border-border bg-card/90 p-3 shadow-soft backdrop-blur">
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                  <MapPin className="size-4 text-brand" />
+                  Office map
+                </p>
+                <p className="mt-1 text-sm font-medium text-brand">📍 New Delhi, India</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Serving retailers across India and globally.
                 </p>
               </div>
             </div>
