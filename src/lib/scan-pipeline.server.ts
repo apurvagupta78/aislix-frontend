@@ -767,7 +767,7 @@ function normalizeEmbedding(value: unknown): number[] | null {
   return vector.length ? vector : null;
 }
 
-/** Persist `learned_updates` returned by Railway back into learned_skus. */
+/** Persist `learned_updates` into the org catalog AND the shared global catalog. */
 export async function persistLearnedUpdates(
   supabase: DB,
   scan: { id: string; org_id: string },
@@ -778,6 +778,7 @@ export async function persistLearnedUpdates(
 
   const now = new Date().toISOString();
   const rows: Record<string, unknown>[] = [];
+  const globalRows: Record<string, unknown>[] = [];
   const seen = new Set<string>();
 
   for (const raw of updates) {
@@ -787,23 +788,45 @@ export async function persistLearnedUpdates(
     seen.add(sku);
     const name =
       str(raw?.product_name) ?? str(raw?.name) ?? str(raw?.title) ?? nameFromSku(sku);
+    const brand = str(raw?.brand);
+    const variant = str(raw?.variant);
+    const category = str(raw?.category);
+    const embedding = normalizeEmbedding(raw?.embedding);
+    const hits = Math.max(1, Math.round(num(raw?.times_seen) ?? num(raw?.hit_count) ?? 1));
+
     rows.push({
       org_id: scan.org_id,
       sku,
       name,
-      brand: str(raw?.brand),
-      variant: str(raw?.variant),
-      category: str(raw?.category),
+      brand,
+      variant,
+      category,
       barcode: str(raw?.barcode),
-      embedding: normalizeEmbedding(raw?.embedding),
+      embedding,
       source_scan_id: scan.id,
-      times_seen: Math.max(1, Math.round(num(raw?.hit_count) ?? num(raw?.times_seen) ?? 1)),
+      times_seen: hits,
       confidence: normalizeConfidence(raw?.confidence),
       expected_facings: num(raw?.expected_facings),
       last_seen_at: now,
     });
+
+    // global_learned_skus uses product_name / hit_count and is NOT NULL on text columns.
+    globalRows.push({
+      sku,
+      product_name: name,
+      brand: brand ?? "",
+      variant: variant ?? "",
+      category: category ?? "",
+      embedding: embedding ?? [],
+      source_scan_id: scan.id,
+      hit_count: hits,
+      updated_at: now,
+    });
   }
   if (!rows.length) return { saved: 0, error: null };
+
+  let saved = 0;
+  let failure: string | null = null;
 
   try {
     const { error } = await supabase
@@ -818,15 +841,39 @@ export async function persistLearnedUpdates(
         rows: rows.length,
         org_id: scan.org_id,
       });
-      return { saved: 0, error: error.message };
+      failure = error.message;
+    } else {
+      saved = rows.length;
     }
-    return { saved: rows.length, error: null };
   } catch (thrown) {
     const message = thrown instanceof Error ? thrown.message : String(thrown);
     console.error("[scan-pipeline] learned_skus upsert threw:", thrown);
-    return { saved: 0, error: message };
+    failure = message;
   }
+
+  try {
+    const { error } = await supabase
+      .from("global_learned_skus")
+      .upsert(globalRows as never, { onConflict: "sku" });
+    if (error) {
+      console.error("[scan-pipeline] global_learned_skus upsert failed:", {
+        message: error.message,
+        code: (error as any).code,
+        details: (error as any).details,
+        hint: (error as any).hint,
+        rows: globalRows.length,
+      });
+      failure = failure ?? error.message;
+    }
+  } catch (thrown) {
+    const message = thrown instanceof Error ? thrown.message : String(thrown);
+    console.error("[scan-pipeline] global_learned_skus upsert threw:", thrown);
+    failure = failure ?? message;
+  }
+
+  return { saved, error: failure };
 }
+
 
 
 /* -------------------------------------------------------------------------- */
