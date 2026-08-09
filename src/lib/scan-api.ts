@@ -15,7 +15,10 @@ export type ScanAnalysisResult = {
   low_stock_count: number;
   misplaced_count: number;
   shelf_health_score: number | null;
+  learned_saved?: number;
+  learned_error?: string | null;
 };
+
 
 
 export const SCAN_STAGES = [
