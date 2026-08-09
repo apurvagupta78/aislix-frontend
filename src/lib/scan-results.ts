@@ -404,3 +404,113 @@ export function downloadBlob(content: string, filename: string, type: string) {
   link.click();
   URL.revokeObjectURL(url);
 }
+
+/* ---------------------------- asset downloads ----------------------------- */
+
+export type ScanAssetUrls = {
+  pdf_url?: string;
+  csv_url?: string;
+  annotated_image_url?: string;
+};
+
+/** Signed storage URLs for a scan's generated assets (pdf / annotated / csv). */
+export async function resolveScanAssetUrls(scanId: string): Promise<ScanAssetUrls> {
+  const { data: images } = await supabase
+    .from("scan_images")
+    .select("kind, storage_bucket, storage_path")
+    .eq("scan_id", scanId);
+
+  const pick = (kinds: string[]) =>
+    (images ?? []).find((img) => kinds.includes(img.kind as string));
+
+  const urls: ScanAssetUrls = {};
+  const entries: Array<[keyof ScanAssetUrls, string[]]> = [
+    ["pdf_url", ["pdf", "report"]],
+    ["annotated_image_url", ["annotated"]],
+    ["csv_url", ["csv"]],
+  ];
+
+  await Promise.all(
+    entries.map(async ([key, kinds]) => {
+      const row = pick(kinds);
+      if (!row) return;
+      const { data: signed } = await supabase.storage
+        .from(row.storage_bucket as string)
+        .createSignedUrl(row.storage_path as string, 3600);
+      if (signed?.signedUrl) urls[key] = signed.signedUrl;
+    }),
+  );
+
+  return urls;
+}
+
+/** Fetches a URL and saves it as a real file download (works on mobile Safari). */
+export async function downloadFileFromUrl(url: string, filename: string): Promise<void> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("This file is no longer available.");
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = filename;
+  link.rel = "noopener";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000);
+}
+
+async function downloadAsset(
+  scanId: string,
+  key: keyof ScanAssetUrls,
+  filename: string,
+  hint: string | undefined,
+  missingMessage: string,
+): Promise<void> {
+  const url = hint ?? (await resolveScanAssetUrls(scanId))[key];
+  if (!url) throw new Error(missingMessage);
+  try {
+    await downloadFileFromUrl(url, filename);
+  } catch {
+    // Signed URLs expire — resolve a fresh one once before giving up.
+    const fresh = (await resolveScanAssetUrls(scanId))[key];
+    if (!fresh) throw new Error(missingMessage);
+    await downloadFileFromUrl(fresh, filename);
+  }
+}
+
+export function downloadScanPdf(scanId: string, url?: string): Promise<void> {
+  return downloadAsset(
+    scanId,
+    "pdf_url",
+    `aislix-${scanId}-report.pdf`,
+    url,
+    "No PDF report is available for this scan yet.",
+  );
+}
+
+export function downloadScanAnnotatedImage(scanId: string, url?: string): Promise<void> {
+  return downloadAsset(
+    scanId,
+    "annotated_image_url",
+    `aislix-${scanId}-annotated.jpg`,
+    url,
+    "No annotated image is available for this scan yet.",
+  );
+}
+
+/** Prefers a stored CSV asset, otherwise builds one from the scan inventory. */
+export async function downloadScanCsv(scanId: string, url?: string): Promise<void> {
+  const csvUrl = url ?? (await resolveScanAssetUrls(scanId)).csv_url;
+  if (csvUrl) {
+    try {
+      await downloadFileFromUrl(csvUrl, `aislix-${scanId}-report.csv`);
+      return;
+    } catch {
+      // fall through to generating the CSV client-side
+    }
+  }
+  const result = await fetchScanResult(scanId);
+  if (!result.inventory?.length) throw new Error("This scan has no inventory rows to export.");
+  downloadBlob(inventoryToCsv(result.inventory), `aislix-${scanId}-report.csv`, "text/csv");
+}
