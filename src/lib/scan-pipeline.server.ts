@@ -161,7 +161,10 @@ function normalizeProducts(payload: any): NormalizedProduct[] {
         facings,
         shelf_row: shelfRow === null ? null : Math.round(shelfRow),
         position_index: position === null ? null : Math.round(position),
-        stock_status: normalizeStock(item?.stock_status ?? item?.status, facings, expected),
+        stock_status:
+          str(item?.compliance_status)?.toLowerCase() === "category_mismatch"
+            ? "misplaced"
+            : normalizeStock(item?.stock_status ?? item?.status, facings, expected),
         confidence: normalizeConfidence(item?.confidence ?? item?.score),
         price_inr: num(item?.price_inr) ?? num(item?.price),
         expected_facings: expected === null ? null : Math.round(expected),
