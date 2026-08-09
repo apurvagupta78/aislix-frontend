@@ -37,6 +37,7 @@ import { EmptyState, Skeleton } from "@/components/States";
 import { cn } from "@/lib/utils";
 import {
   COMPLIANCE_INTERPRETATION,
+  downloadScanCsv,
   formatConfidence,
   inventoryToCsv,
   normalizeConfidence,
@@ -476,10 +477,12 @@ const PAGE_SIZE = 10;
 export function InventoryTable({
   items,
   scanId,
+  csvUrl,
   loading,
 }: {
   items?: InventoryItem[] | undefined;
   scanId?: string | undefined;
+  csvUrl?: string | undefined;
   loading?: boolean | undefined;
 }) {
   const rows = items ?? [];
@@ -568,7 +571,19 @@ export function InventoryTable({
     );
   };
 
-  const exportCsv = () => {
+  const unfiltered = !query.trim() && brand === "all" && stock === "all";
+
+  const exportCsv = async () => {
+    // Prefer the backend-generated CSV (it carries the full compliance report)
+    // whenever the table is not filtered down.
+    if (scanId && unfiltered) {
+      try {
+        await downloadScanCsv(scanId, csvUrl);
+        return;
+      } catch {
+        // fall back to the client-side export below
+      }
+    }
     const csv = inventoryToCsv(filtered);
     const link = document.createElement("a");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));

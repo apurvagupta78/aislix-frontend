@@ -46,6 +46,7 @@ import {
   formatPercent,
   inventoryToCsv,
   downloadBlob,
+  downloadScanCsv,
   type ScanResult,
 } from "@/lib/scan-results";
 import { retryScanAnalysis } from "@/lib/scan-api";
@@ -270,6 +271,7 @@ function Results() {
               <InventoryTable
                 items={data?.inventory}
                 scanId={data?.scan_id}
+                csvUrl={data?.downloads?.csv_url}
                 loading={loading}
               />
 
@@ -322,12 +324,21 @@ function DownloadsPanel({
   const inventory = data?.inventory ?? [];
   const imageUrl = data?.downloads?.annotated_image_url ?? data?.annotated_image_url;
 
-  const downloadCsv = () =>
+  const downloadCsv = async () => {
+    if (data?.scan_id) {
+      try {
+        await downloadScanCsv(data.scan_id, data.downloads?.csv_url);
+        return;
+      } catch {
+        // fall back to the client-side export
+      }
+    }
     downloadBlob(
       inventoryToCsv(inventory),
       `aislix-${data?.scan_id ?? "scan"}-inventory.csv`,
       "text/csv;charset=utf-8",
     );
+  };
 
   const downloadJson = () =>
     data &&

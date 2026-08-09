@@ -56,7 +56,10 @@ export type InventoryItem = {
   low_stock?: boolean;
   out_of_stock?: boolean;
   compliance_status?: ComplianceStatus;
+  compliance_alert?: string;
   compliance_interpretation?: string;
+  detected_sub_category_label?: string;
+  expected_sub_category_label?: string;
   /** Reserved for the shelf-position model (row / bay label). */
   shelf_position?: string;
 };
@@ -396,6 +399,34 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     (result?.metrics as any)?.subcategory_mismatches,
   );
 
+  // Enrich inventory rows with the compliance detail the backend reports per SKU
+  // group so exports and tables carry the same labels.
+  const auditSubLabel =
+    ((scan as any).sub_category_custom as string | null | undefined) ||
+    ((scan as any).sub_category_label as string | null | undefined) ||
+    complianceAlerts[0]?.expected_sub_category_label ||
+    undefined;
+  const mismatchByKey = new Map<string, SubcategoryMismatch>();
+  for (const m of subcategoryMismatches) {
+    mismatchByKey.set(`${m.brand.toLowerCase()}::${m.product_name.toLowerCase()}`, m);
+  }
+  for (const item of inventory) {
+    const match = mismatchByKey.get(`${item.brand.toLowerCase()}::${item.product.toLowerCase()}`);
+    if (match) {
+      item.compliance_status = "category_mismatch";
+      item.compliance_interpretation = item.compliance_interpretation ?? COMPLIANCE_INTERPRETATION;
+      item.detected_sub_category_label = match.detected_sub_category_label;
+      item.expected_sub_category_label = match.expected_sub_category_label;
+    }
+    const mismatch = item.compliance_status === "category_mismatch";
+    item.compliance_alert = mismatch ? COMPLIANCE_ALERT_TITLE : "OK";
+    if (mismatch && !item.expected_sub_category_label && auditSubLabel) {
+      item.expected_sub_category_label = auditSubLabel;
+    }
+  }
+
+
+
   const storeName = (scan as any).stores?.name as string | undefined;
 
   const scanResult: ScanResult = {
@@ -476,6 +507,10 @@ export function inventoryToCsv(items: InventoryItem[]): string {
     "Category",
     "Quantity",
     "Confidence %",
+    "Compliance Alert",
+    "Compliance Note",
+    "Detected Sub-category",
+    "Audit Sub-category",
     "Shelf position",
   ];
   const escape = (value: string | number | undefined) => {
@@ -490,6 +525,11 @@ export function inventoryToCsv(items: InventoryItem[]): string {
       i.category ?? "",
       i.quantity,
       normalizeConfidence(i.confidence).toFixed(1),
+      i.compliance_alert ??
+        (i.compliance_status === "category_mismatch" ? COMPLIANCE_ALERT_TITLE : "OK"),
+      i.compliance_interpretation ?? "",
+      i.detected_sub_category_label ?? "",
+      i.expected_sub_category_label ?? "",
       i.shelf_position ?? "",
     ]
       .map(escape)
