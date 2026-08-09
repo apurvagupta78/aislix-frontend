@@ -777,7 +777,11 @@ export async function importStoresCsv(file: File): Promise<{ created: number; fa
       contact_phone: row["contact_number"] || null,
     });
     if (error) failed += 1;
-    else created += 1;
+    else {
+      created += 1;
+      if (remaining !== null) remaining -= 1;
+    }
+
   }
 
   return { created, failed };
