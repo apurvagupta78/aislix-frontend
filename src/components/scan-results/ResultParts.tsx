@@ -730,14 +730,17 @@ export function InventoryTable({
                           {row.compliance_interpretation ?? COMPLIANCE_INTERPRETATION}
                         </span>
                       </span>
-                    ) : (
+                    ) : row.compliance_status === "ok" ? (
                       <Badge
                         variant="outline"
                         className="rounded-full border-brand/25 bg-brand-soft text-brand"
                       >
                         OK
                       </Badge>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">—</span>
                     )}
+
                   </TableCell>
                 </TableRow>
               ))
