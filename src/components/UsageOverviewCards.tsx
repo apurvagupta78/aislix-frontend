@@ -136,6 +136,8 @@ export function UsageOverviewCards() {
         hint="Current"
         icon={<BadgeCheck className="size-4" />}
       />
+      </div>
     </div>
+
   );
 }
