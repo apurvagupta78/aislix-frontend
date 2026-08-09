@@ -243,7 +243,7 @@ function ScanPage() {
     } finally {
       abortRef.current = null;
     }
-  }, [items, navigate, phase, guardSetup, storeId, shelfLabel, category]);
+  }, [items, navigate, phase, guardSetup, storeId, shelfLabel, category, showShelfType, shelfType]);
 
   const cancelUpload = useCallback(() => {
     abortRef.current?.abort();
