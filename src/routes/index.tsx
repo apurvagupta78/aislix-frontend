@@ -82,9 +82,9 @@ function Landing() {
             AI-Powered Retail Shelf Intelligence
           </span>
           <h1 className="mt-7 text-4xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-6xl">
-            Audit every shelf.
+            Audit Every Aisle.
             <br />
-            <span className="text-brand">Without walking the aisle.</span>
+            <span className="text-brand">From a Single Photo.</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
             Aislix turns a single shelf photo into a full retail audit — products detected, brands
