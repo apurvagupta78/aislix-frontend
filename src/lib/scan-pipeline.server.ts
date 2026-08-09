@@ -842,6 +842,14 @@ type ScanRow = {
   notes: string | null;
 };
 
+/** Beverages-only shelf narrowing carried in `notes` (e.g. "tea shelf" → "tea"). */
+function subCategoryFromNotes(notes: string | null): string | null {
+  const match = /^(tea|juice|soft drinks)\s+shelf$/i.exec((notes ?? "").trim());
+  return match ? match[1]!.toLowerCase() : null;
+}
+
+
+
 async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
   const { data: scan, error } = await supabase
     .from("shelf_scans")
@@ -890,12 +898,14 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
 
   const learnedCatalog = await loadLearnedCatalog(supabase, scan.org_id);
 
+
   return {
     scan_id: scan.id,
     org_id: scan.org_id,
     store_id: scan.store_id,
     shelf_label: scan.shelf_label,
     category: scan.category,
+    sub_category: subCategoryFromNotes(scan.notes),
     notes: scan.notes,
     image_urls: signedImages.map((i) => i.url),
     images: signedImages,

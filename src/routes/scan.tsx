@@ -86,7 +86,9 @@ function ScanPage() {
   const [storeId, setStoreId] = useState("");
   const [shelfLocation, setShelfLocation] = useState("");
   const [category, setCategory] = useState("");
+  const [shelfType, setShelfType] = useState("general");
   const [showSetupErrors, setShowSetupErrors] = useState(false);
+  const showShelfType = category === "Beverages";
 
   const storesQuery = useQuery({
     queryKey: ["stores", "scan-setup"],
@@ -216,6 +218,8 @@ function ScanPage() {
           storeId,
           shelfLabel,
           category,
+          subCategory:
+            showShelfType && shelfType !== "general" ? shelfType : undefined,
         },
       );
       navigate({
@@ -239,7 +243,7 @@ function ScanPage() {
     } finally {
       abortRef.current = null;
     }
-  }, [items, navigate, phase, guardSetup, storeId, shelfLabel, category]);
+  }, [items, navigate, phase, guardSetup, storeId, shelfLabel, category, showShelfType, shelfType]);
 
   const cancelUpload = useCallback(() => {
     abortRef.current?.abort();
@@ -372,6 +376,26 @@ function ScanPage() {
                   <p className="text-xs text-destructive">{fieldError("category")}</p>
                 )}
               </div>
+
+              {showShelfType && (
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="scan-shelf-type">Shelf type</Label>
+                  <Select value={shelfType} onValueChange={setShelfType} disabled={busy}>
+                    <SelectTrigger id="scan-shelf-type" className="rounded-xl">
+                      <SelectValue placeholder="General beverages" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="general">General beverages</SelectItem>
+                      <SelectItem value="tea">Tea shelf</SelectItem>
+                      <SelectItem value="juice">Juice shelf</SelectItem>
+                      <SelectItem value="soft drinks">Soft drinks shelf</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Narrows detection within the beverages aisle (e.g. hides cola on a tea shelf).
+                  </p>
+                </div>
+              )}
             </div>
 
           </section>
