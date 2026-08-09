@@ -981,6 +981,8 @@ async function persistScanPayload(
 
   await storeAnnotatedImage(supabase, { id: scan.id, org_id: scan.org_id }, payload);
   await storePdfReport(supabase, { id: scan.id, org_id: scan.org_id }, payload);
+  await storeCsvReport(supabase, { id: scan.id, org_id: scan.org_id }, payload);
+
 
   // --- Complete the scan ---------------------------------------------------
   const { error: completeError } = await supabase
