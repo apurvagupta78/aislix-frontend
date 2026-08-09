@@ -746,6 +746,10 @@ export async function importStoresCsv(file: File): Promise<{ created: number; fa
   const text = await file.text();
   const rows = parseCsv(text);
 
+  const { assertCanAddStore } = await import("@/lib/subscription-limits");
+  let allowance = await assertCanAddStore();
+  let remaining = allowance.stores_remaining;
+
   let created = 0;
   let failed = 0;
 
@@ -755,6 +759,12 @@ export async function importStoresCsv(file: File): Promise<{ created: number; fa
       failed += 1;
       continue;
     }
+    if (remaining !== null && remaining <= 0) {
+      // Plan store limit reached — surface the same limit modal as single adds.
+      allowance = await assertCanAddStore();
+      remaining = allowance.stores_remaining;
+    }
+
     const { error } = await supabase.from("stores").insert({
       org_id: orgId,
       name,
