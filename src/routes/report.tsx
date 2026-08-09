@@ -20,7 +20,9 @@ import {
   formatScanDate,
   inventoryToCsv,
   downloadBlob,
+  downloadScanPdf,
 } from "@/lib/scan-results";
+
 import { toUserMessage } from "@/lib/api/errors";
 import { ReportsLibrary } from "@/components/reports/ReportsLibrary";
 
