@@ -98,9 +98,14 @@ export async function submitScanImages(
     storeId?: string;
     shelfLabel?: string;
     category?: string;
-    /** Optional beverages-only narrowing, e.g. "tea" | "juice" | "soft drinks". */
+    /** Subcategory id from GET /categories, e.g. "soap". */
     subCategory?: string;
+    /** Human label for the subcategory, e.g. "Soap". */
+    subCategoryLabel?: string;
+    /** Free text shelf description when the user picks "Others". */
+    subCategoryCustom?: string;
   } = {},
+
 ): Promise<ScanResponse> {
   if (!files.length) throw new Error("Add at least one shelf image to scan.");
   if (files.length > MAX_SCAN_IMAGES) {
@@ -129,7 +134,11 @@ export async function submitScanImages(
       status: "processing",
       shelf_label: options.shelfLabel ?? null,
       category: options.category ?? null,
-      notes: options.subCategory ? `${options.subCategory} shelf` : null,
+      sub_category: options.subCategory ?? null,
+      sub_category_label: options.subCategoryLabel ?? null,
+      sub_category_custom: options.subCategoryCustom?.trim() || null,
+      notes: options.subCategoryCustom?.trim() || options.subCategoryLabel || null,
+
       processing_started_at: new Date().toISOString(),
     })
     .select("id, status")

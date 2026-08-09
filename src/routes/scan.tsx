@@ -50,12 +50,12 @@ export const Route = createFileRoute("/scan")({
       {
         name: "description",
         content:
-          "Set store, location and category, then capture or upload shelf photos for an AI audit.",
+          "Set store, location, category and subcategory, then capture or upload shelf photos for an AI audit.",
       },
       { property: "og:title", content: "Scan a shelf — Aislix" },
       {
         property: "og:description",
-        content: "Set store, location and category, then capture or upload shelf photos.",
+        content: "Set store, location, category and subcategory, then capture or upload shelf photos.",
       },
 
       { property: "og:type", content: "website" },
@@ -86,9 +86,9 @@ function ScanPage() {
   const [storeId, setStoreId] = useState("");
   const [shelfLocation, setShelfLocation] = useState("");
   const [category, setCategory] = useState("");
-  const [shelfType, setShelfType] = useState("general");
+  const [subCategory, setSubCategory] = useState("");
+  const [subCategoryCustom, setSubCategoryCustom] = useState("");
   const [showSetupErrors, setShowSetupErrors] = useState(false);
-  const showShelfType = category === "Beverages";
 
   const storesQuery = useQuery({
     queryKey: ["stores", "scan-setup"],
@@ -108,14 +108,34 @@ function ScanPage() {
     ? categoriesQuery.data
     : FALLBACK_CATEGORIES;
 
+  const selectedCategory = categories.find((item) => item.name === category);
+  const subcategories = selectedCategory?.subcategories ?? [];
+  const isOtherCategory = category === "Others";
+  const showSubcategory = Boolean(category) && !isOtherCategory && subcategories.length > 0;
+  const selectedSub = subcategories.find((item) => item.id === subCategory);
+  const needsCustom = isOtherCategory || subCategory === "others";
+
   const setupErrors = useMemo(() => {
     const errors: Record<string, string> = {};
     if (!storeId) errors.store = "Select the store for this scan.";
     if (!shelfLocation.trim()) errors.location = "Location is required.";
     if (!category) errors.category = "Select a category.";
+    if (showSubcategory && !subCategory) errors.subcategory = "Select a subcategory.";
+    if (category && needsCustom && !subCategoryCustom.trim()) {
+      errors.custom = "Describe the shelf type.";
+    }
     return errors;
-  }, [storeId, shelfLocation, category]);
+  }, [
+    storeId,
+    shelfLocation,
+    category,
+    showSubcategory,
+    subCategory,
+    needsCustom,
+    subCategoryCustom,
+  ]);
   const setupComplete = Object.keys(setupErrors).length === 0;
+
 
   const shelfLabel = shelfLocation.trim();
 
@@ -137,7 +157,7 @@ function ScanPage() {
   const guardSetup = useCallback(() => {
     if (setupComplete) return true;
     setShowSetupErrors(true);
-    setFileError("Complete scan setup (store, location and category) before adding images.");
+    setFileError("Complete scan setup (store, location, category and subcategory) before adding images.");
     return false;
   }, [setupComplete]);
 
@@ -218,8 +238,10 @@ function ScanPage() {
           storeId,
           shelfLabel,
           category,
-          subCategory:
-            showShelfType && shelfType !== "general" ? shelfType : undefined,
+          subCategory: isOtherCategory ? "others" : subCategory || undefined,
+          subCategoryLabel: isOtherCategory ? "Others" : selectedSub?.label,
+          subCategoryCustom: needsCustom ? subCategoryCustom.trim() : undefined,
+
         },
       );
       navigate({
@@ -243,7 +265,21 @@ function ScanPage() {
     } finally {
       abortRef.current = null;
     }
-  }, [items, navigate, phase, guardSetup, storeId, shelfLabel, category, showShelfType, shelfType]);
+  }, [
+    items,
+    navigate,
+    phase,
+    guardSetup,
+    storeId,
+    shelfLabel,
+    category,
+    isOtherCategory,
+    subCategory,
+    selectedSub,
+    needsCustom,
+    subCategoryCustom,
+  ]);
+
 
   const cancelUpload = useCallback(() => {
     abortRef.current?.abort();
@@ -256,7 +292,7 @@ function ScanPage() {
   return (
     <AppShell
       title="Scan"
-      description="Set store, location and category, then capture or upload shelf photos."
+      description="Set store, location, category and subcategory, then capture or upload shelf photos."
       actions={
         items.length && !busy ? (
           <Button variant="subtle" size="sm" className="rounded-xl" onClick={reset}>
@@ -355,7 +391,15 @@ function ScanPage() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="scan-category">Category *</Label>
-                <Select value={category} onValueChange={setCategory} disabled={busy}>
+                <Select
+                  value={category}
+                  onValueChange={(value) => {
+                    setCategory(value);
+                    setSubCategory("");
+                    setSubCategoryCustom("");
+                  }}
+                  disabled={busy}
+                >
                   <SelectTrigger id="scan-category" className="rounded-xl">
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
@@ -377,25 +421,54 @@ function ScanPage() {
                 )}
               </div>
 
-              {showShelfType && (
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="scan-shelf-type">Shelf type</Label>
-                  <Select value={shelfType} onValueChange={setShelfType} disabled={busy}>
-                    <SelectTrigger id="scan-shelf-type" className="rounded-xl">
-                      <SelectValue placeholder="General beverages" />
+              {showSubcategory && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="scan-subcategory">Subcategory *</Label>
+                  <Select
+                    value={subCategory}
+                    onValueChange={(value) => {
+                      setSubCategory(value);
+                      if (value !== "others") setSubCategoryCustom("");
+                    }}
+                    disabled={busy}
+                  >
+                    <SelectTrigger id="scan-subcategory" className="rounded-xl">
+                      <SelectValue placeholder="Select a subcategory" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="general">General beverages</SelectItem>
-                      <SelectItem value="tea">Tea shelf</SelectItem>
-                      <SelectItem value="juice">Juice shelf</SelectItem>
-                      <SelectItem value="soft drinks">Soft drinks shelf</SelectItem>
+                    <SelectContent className="max-h-[320px]">
+                      {subcategories.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Narrows detection within the beverages aisle (e.g. hides cola on a tea shelf).
+                    Narrows detection to this shelf type (e.g. hides shampoo on a soap shelf).
                   </p>
+                  {fieldError("subcategory") && (
+                    <p className="text-xs text-destructive">{fieldError("subcategory")}</p>
+                  )}
                 </div>
               )}
+
+              {category && needsCustom && (
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="scan-subcategory-custom">Describe shelf type *</Label>
+                  <Input
+                    id="scan-subcategory-custom"
+                    className="rounded-xl"
+                    placeholder="e.g. Imported chocolates end-cap"
+                    value={subCategoryCustom}
+                    disabled={busy}
+                    onChange={(e) => setSubCategoryCustom(e.target.value)}
+                  />
+                  {fieldError("custom") && (
+                    <p className="text-xs text-destructive">{fieldError("custom")}</p>
+                  )}
+                </div>
+              )}
+
             </div>
 
           </section>
@@ -593,7 +666,7 @@ function ScanPage() {
           <div className="card-surface p-5 sm:p-6">
             <h2 className="text-sm font-semibold tracking-tight">How it works</h2>
             <ol className="mt-4 space-y-3 text-sm text-muted-foreground">
-              <li>1. Set store, location and category.</li>
+              <li>1. Set store, location, category and subcategory.</li>
               <li>2. Capture or upload your shelf photos.</li>
               <li>3. AI detects products, brands and stock gaps.</li>
               <li>4. View results, CSV, and PDF report.</li>

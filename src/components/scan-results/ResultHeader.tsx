@@ -158,9 +158,11 @@ export function ScanResultHeader({
           </div>
 
           <p className="mt-1 text-sm text-muted-foreground">
-            {["AI shelf audit result", data?.scan_category, data?.location]
-              .filter(Boolean)
-              .join(" · ")}
+            {[data?.scan_category, data?.scan_sub_category, data?.location].some(Boolean)
+              ? [data?.scan_category, data?.scan_sub_category, data?.location]
+                  .filter(Boolean)
+                  .join(" · ")
+              : "AI shelf audit result"}
           </p>
         </div>
         <ResultNavigation />
@@ -182,7 +184,9 @@ export function ScanResultHeader({
         <MetaItem
           icon={<Tags className="size-4" />}
           label="Category"
-          value={data?.scan_category}
+          value={
+            [data?.scan_category, data?.scan_sub_category].filter(Boolean).join(" · ") || undefined
+          }
           loading={loading}
         />
         <MetaItem
@@ -200,7 +204,7 @@ export function ScanResultHeader({
         />
       </div>
 
-      <div className="mt-4 grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
+      <div className="mt-4 grid gap-4 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetaItem
           icon={<Timer className="size-4" />}
           label="Processing time"
@@ -213,7 +217,18 @@ export function ScanResultHeader({
           value={summary ? formatConfidence(summary.average_confidence) : undefined}
           loading={loading}
         />
+        <MetaItem
+          icon={<Sparkles className="size-4" />}
+          label="ChatGPT API calls"
+          value={
+            typeof summary?.gpt_vision_calls === "number"
+              ? summary.gpt_vision_calls.toLocaleString("en-IN")
+              : undefined
+          }
+          loading={loading}
+        />
       </div>
+
     </div>
   );
 }
