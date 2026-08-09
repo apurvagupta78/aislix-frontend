@@ -86,9 +86,9 @@ function ScanPage() {
   const [storeId, setStoreId] = useState("");
   const [shelfLocation, setShelfLocation] = useState("");
   const [category, setCategory] = useState("");
-  const [shelfType, setShelfType] = useState("general");
+  const [subCategory, setSubCategory] = useState("");
+  const [subCategoryCustom, setSubCategoryCustom] = useState("");
   const [showSetupErrors, setShowSetupErrors] = useState(false);
-  const showShelfType = category === "Beverages";
 
   const storesQuery = useQuery({
     queryKey: ["stores", "scan-setup"],
@@ -108,14 +108,34 @@ function ScanPage() {
     ? categoriesQuery.data
     : FALLBACK_CATEGORIES;
 
+  const selectedCategory = categories.find((item) => item.name === category);
+  const subcategories = selectedCategory?.subcategories ?? [];
+  const isOtherCategory = category === "Others";
+  const showSubcategory = Boolean(category) && !isOtherCategory && subcategories.length > 0;
+  const selectedSub = subcategories.find((item) => item.id === subCategory);
+  const needsCustom = isOtherCategory || subCategory === "others";
+
   const setupErrors = useMemo(() => {
     const errors: Record<string, string> = {};
     if (!storeId) errors.store = "Select the store for this scan.";
     if (!shelfLocation.trim()) errors.location = "Location is required.";
     if (!category) errors.category = "Select a category.";
+    if (showSubcategory && !subCategory) errors.subcategory = "Select a subcategory.";
+    if (category && needsCustom && !subCategoryCustom.trim()) {
+      errors.custom = "Describe the shelf type.";
+    }
     return errors;
-  }, [storeId, shelfLocation, category]);
+  }, [
+    storeId,
+    shelfLocation,
+    category,
+    showSubcategory,
+    subCategory,
+    needsCustom,
+    subCategoryCustom,
+  ]);
   const setupComplete = Object.keys(setupErrors).length === 0;
+
 
   const shelfLabel = shelfLocation.trim();
 
