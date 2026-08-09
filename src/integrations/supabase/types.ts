@@ -890,10 +890,6 @@ export type Database = {
     }
     Functions: {
       get_org_usage_summary: { Args: { p_org_id: string }; Returns: Json }
-      roll_subscription_period: {
-        Args: { _sub_id: string }
-        Returns: undefined
-      }
     }
     Enums: {
       alert_severity: "critical" | "high" | "medium" | "low"
