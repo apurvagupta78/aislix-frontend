@@ -1104,6 +1104,12 @@ async function persistScanPayload(
     out_of_stock_products: outOfStock,
     low_stock_products: lowStock,
     misplaced_products: misplaced,
+    subcategory_mismatch_skus: mismatchSkus,
+    compliance_alerts: complianceAlerts,
+    subcategory_mismatches: subcategoryMismatches,
+    ...(typeof metricsSource?.gpt_vision_calls !== "undefined"
+      ? { gpt_vision_calls: num(metricsSource.gpt_vision_calls) ?? 0 }
+      : {}),
     average_confidence: confidenceAvg ?? 0,
     osa_percent: osa,
     shelf_health_score: health,
