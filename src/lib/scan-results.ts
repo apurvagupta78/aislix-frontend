@@ -399,6 +399,34 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     (result?.metrics as any)?.subcategory_mismatches,
   );
 
+  // Enrich inventory rows with the compliance detail the backend reports per SKU
+  // group so exports and tables carry the same labels.
+  const auditSubLabel =
+    ((scan as any).sub_category_custom as string | null | undefined) ||
+    ((scan as any).sub_category_label as string | null | undefined) ||
+    complianceAlerts[0]?.expected_sub_category_label ||
+    undefined;
+  const mismatchByKey = new Map<string, SubcategoryMismatch>();
+  for (const m of subcategoryMismatches) {
+    mismatchByKey.set(`${m.brand.toLowerCase()}::${m.product_name.toLowerCase()}`, m);
+  }
+  for (const item of inventory) {
+    const match = mismatchByKey.get(`${item.brand.toLowerCase()}::${item.product.toLowerCase()}`);
+    if (match) {
+      item.compliance_status = "category_mismatch";
+      item.compliance_interpretation = item.compliance_interpretation ?? COMPLIANCE_INTERPRETATION;
+      item.detected_sub_category_label = match.detected_sub_category_label;
+      item.expected_sub_category_label = match.expected_sub_category_label;
+    }
+    const mismatch = item.compliance_status === "category_mismatch";
+    item.compliance_alert = mismatch ? COMPLIANCE_ALERT_TITLE : "OK";
+    if (mismatch && !item.expected_sub_category_label && auditSubLabel) {
+      item.expected_sub_category_label = auditSubLabel;
+    }
+  }
+
+
+
   const storeName = (scan as any).stores?.name as string | undefined;
 
   const scanResult: ScanResult = {
