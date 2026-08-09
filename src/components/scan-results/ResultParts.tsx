@@ -476,10 +476,12 @@ const PAGE_SIZE = 10;
 export function InventoryTable({
   items,
   scanId,
+  csvUrl,
   loading,
 }: {
   items?: InventoryItem[] | undefined;
   scanId?: string | undefined;
+  csvUrl?: string | undefined;
   loading?: boolean | undefined;
 }) {
   const rows = items ?? [];
