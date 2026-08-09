@@ -56,7 +56,10 @@ export type InventoryItem = {
   low_stock?: boolean;
   out_of_stock?: boolean;
   compliance_status?: ComplianceStatus;
+  compliance_alert?: string;
   compliance_interpretation?: string;
+  detected_sub_category_label?: string;
+  expected_sub_category_label?: string;
   /** Reserved for the shelf-position model (row / bay label). */
   shelf_position?: string;
 };
