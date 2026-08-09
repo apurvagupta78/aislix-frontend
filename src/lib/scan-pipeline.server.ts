@@ -1080,6 +1080,12 @@ export async function pollScanPipelineServer(
     .eq("id", scan.id)
     .maybeSingle();
   if (existing?.status === "completed") {
+    // Older scans can be missing their generated PDF / annotated assets.
+    try {
+      await backfillScanAssetsServer(supabase, scan.id);
+    } catch {
+      // downloads are optional — never block the results redirect
+    }
     return {
       status: "completed",
       scan_id: scan.id,
