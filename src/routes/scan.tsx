@@ -391,7 +391,15 @@ function ScanPage() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="scan-category">Category *</Label>
-                <Select value={category} onValueChange={setCategory} disabled={busy}>
+                <Select
+                  value={category}
+                  onValueChange={(value) => {
+                    setCategory(value);
+                    setSubCategory("");
+                    setSubCategoryCustom("");
+                  }}
+                  disabled={busy}
+                >
                   <SelectTrigger id="scan-category" className="rounded-xl">
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
@@ -413,25 +421,54 @@ function ScanPage() {
                 )}
               </div>
 
-              {showShelfType && (
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="scan-shelf-type">Shelf type</Label>
-                  <Select value={shelfType} onValueChange={setShelfType} disabled={busy}>
-                    <SelectTrigger id="scan-shelf-type" className="rounded-xl">
-                      <SelectValue placeholder="General beverages" />
+              {showSubcategory && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="scan-subcategory">Subcategory *</Label>
+                  <Select
+                    value={subCategory}
+                    onValueChange={(value) => {
+                      setSubCategory(value);
+                      if (value !== "others") setSubCategoryCustom("");
+                    }}
+                    disabled={busy}
+                  >
+                    <SelectTrigger id="scan-subcategory" className="rounded-xl">
+                      <SelectValue placeholder="Select a subcategory" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="general">General beverages</SelectItem>
-                      <SelectItem value="tea">Tea shelf</SelectItem>
-                      <SelectItem value="juice">Juice shelf</SelectItem>
-                      <SelectItem value="soft drinks">Soft drinks shelf</SelectItem>
+                    <SelectContent className="max-h-[320px]">
+                      {subcategories.map((item) => (
+                        <SelectItem key={item.id} value={item.id}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Narrows detection within the beverages aisle (e.g. hides cola on a tea shelf).
+                    Narrows detection to this shelf type (e.g. hides shampoo on a soap shelf).
                   </p>
+                  {fieldError("subcategory") && (
+                    <p className="text-xs text-destructive">{fieldError("subcategory")}</p>
+                  )}
                 </div>
               )}
+
+              {category && needsCustom && (
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="scan-subcategory-custom">Describe shelf type *</Label>
+                  <Input
+                    id="scan-subcategory-custom"
+                    className="rounded-xl"
+                    placeholder="e.g. Imported chocolates end-cap"
+                    value={subCategoryCustom}
+                    disabled={busy}
+                    onChange={(e) => setSubCategoryCustom(e.target.value)}
+                  />
+                  {fieldError("custom") && (
+                    <p className="text-xs text-destructive">{fieldError("custom")}</p>
+                  )}
+                </div>
+              )}
+
             </div>
 
           </section>
