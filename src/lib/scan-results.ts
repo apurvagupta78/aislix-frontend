@@ -58,6 +58,8 @@ export type ScanSummary = {
   learned_catalog_size?: number;
   /** New SKUs learned during this scan. */
   learned_new_this_scan?: number;
+  /** Number of ChatGPT (GPT vision) API calls used by this scan. */
+  gpt_vision_calls?: number;
 
 };
 
@@ -68,6 +70,7 @@ export type ScanResult = {
   aisle?: string;
   location?: string;
   scan_category?: string;
+  scan_sub_category?: string;
   status?: ScanStatus;
   summary: ScanSummary;
   annotated_image_url?: string;
@@ -150,7 +153,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   const { data: scan, error: scanError } = await supabase
     .from("shelf_scans")
     .select(
-      "id, org_id, status, shelf_label, category, created_at, processing_started_at, processing_completed_at, shelf_health_score, osa_percent, planogram_compliance_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count, store_id, stores(name)",
+      "id, org_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, created_at, processing_started_at, processing_completed_at, shelf_health_score, osa_percent, planogram_compliance_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count, store_id, stores(name)",
     )
     .eq("org_id", orgId)
     .eq("id", scanId)
@@ -299,6 +302,9 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     ...(typeof (result?.metrics as any)?.learned_new_this_scan === "number"
       ? { learned_new_this_scan: Number((result?.metrics as any).learned_new_this_scan) }
       : {}),
+    ...(typeof (result?.metrics as any)?.gpt_vision_calls === "number"
+      ? { gpt_vision_calls: Number((result?.metrics as any).gpt_vision_calls) }
+      : {}),
   };
 
 
@@ -329,6 +335,11 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   const scanCategory = (scan as any).category as string | null | undefined;
   if (shelfLabel) scanResult.location = shelfLabel;
   if (scanCategory) scanResult.scan_category = scanCategory;
+  const subLabel =
+    ((scan as any).sub_category_custom as string | null | undefined) ||
+    ((scan as any).sub_category_label as string | null | undefined) ||
+    ((scan as any).sub_category as string | null | undefined);
+  if (subLabel) scanResult.scan_sub_category = subLabel;
   if (annotatedUrl) scanResult.annotated_image_url = annotatedUrl;
   if (result?.executive_summary) scanResult.executive_summary = result.executive_summary;
   return scanResult;
