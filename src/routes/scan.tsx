@@ -80,6 +80,8 @@ function ScanPage() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [limitDialog, setLimitDialog] = useState<LimitDialogState>(null);
+
 
   const [storeId, setStoreId] = useState("");
   const [shelfLocation, setShelfLocation] = useState("");
