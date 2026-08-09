@@ -10,7 +10,7 @@ import {
   Cpu,
   FileText,
 } from "lucide-react";
-import { Logo } from "@/components/Logo";
+
 import { Button } from "@/components/ui/button";
 import { SiteFooter, SiteHeader } from "@/components/MarketingLayout";
 import { CycleToggle, PricingGrid } from "@/components/pricing/PricingPlans";
