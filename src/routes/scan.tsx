@@ -31,11 +31,17 @@ import { FALLBACK_CATEGORIES, type ShelfCategory } from "@/lib/categories.data";
 import { fetchShelfCategories } from "@/lib/categories.functions";
 
 import {
+  LimitReachedDialog,
+  toLimitDialogState,
+  type LimitDialogState,
+} from "@/components/billing/LimitReachedDialog";
+import {
   MAX_SCAN_IMAGES,
   formatBytes,
   submitScanImages,
   validateScanFile,
 } from "@/lib/scan-api";
+
 
 export const Route = createFileRoute("/scan")({
   head: () => ({
@@ -74,6 +80,8 @@ function ScanPage() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [limitDialog, setLimitDialog] = useState<LimitDialogState>(null);
+
 
   const [storeId, setStoreId] = useState("");
   const [shelfLocation, setShelfLocation] = useState("");
@@ -219,8 +227,15 @@ function ScanPage() {
         setPhase("idle");
         return;
       }
+      const limit = toLimitDialogState(error);
+      if (limit) {
+        setLimitDialog(limit);
+        setPhase("idle");
+        return;
+      }
       setErrorMessage(error instanceof Error ? error.message : "The scan could not be started.");
       setPhase("error");
+
     } finally {
       abortRef.current = null;
     }
@@ -599,6 +614,8 @@ function ScanPage() {
           </div>
         </div>
       )}
+      <LimitReachedDialog limit={limitDialog} onClose={() => setLimitDialog(null)} />
     </AppShell>
+
   );
 }

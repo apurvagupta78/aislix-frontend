@@ -380,7 +380,10 @@ export async function fetchStore(id: string, _signal?: AbortSignal): Promise<Org
 
 export async function createOrgStore(input: StoreInput): Promise<OrgStore> {
   const orgId = await requireOrgId();
+  const { assertCanAddStore } = await import("@/lib/subscription-limits");
+  await assertCanAddStore();
   const { data, error } = await supabase
+
     .from("stores")
     .insert({ org_id: orgId, ...storeInputToRow(input) })
     .select("*")
@@ -743,6 +746,10 @@ export async function importStoresCsv(file: File): Promise<{ created: number; fa
   const text = await file.text();
   const rows = parseCsv(text);
 
+  const { assertCanAddStore } = await import("@/lib/subscription-limits");
+  let allowance = await assertCanAddStore();
+  let remaining = allowance.stores_remaining;
+
   let created = 0;
   let failed = 0;
 
@@ -752,6 +759,12 @@ export async function importStoresCsv(file: File): Promise<{ created: number; fa
       failed += 1;
       continue;
     }
+    if (remaining !== null && remaining <= 0) {
+      // Plan store limit reached — surface the same limit modal as single adds.
+      allowance = await assertCanAddStore();
+      remaining = allowance.stores_remaining;
+    }
+
     const { error } = await supabase.from("stores").insert({
       org_id: orgId,
       name,
@@ -764,7 +777,11 @@ export async function importStoresCsv(file: File): Promise<{ created: number; fa
       contact_phone: row["contact_number"] || null,
     });
     if (error) failed += 1;
-    else created += 1;
+    else {
+      created += 1;
+      if (remaining !== null) remaining -= 1;
+    }
+
   }
 
   return { created, failed };

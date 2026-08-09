@@ -18,18 +18,25 @@ export type PaymentMethod = {
 };
 
 export type UsageSummary = {
-  /** "day" for the Free plan (3 scans/day), "month" for paid monthly quotas. */
-  quota_period?: "day" | "month";
+  /** "rolling_24h" for the Free plan (3 scans / 24h), "month" for paid quotas. */
+  quota_period?: "rolling_24h" | "month";
   period_start?: string;
   period_end?: string;
   scans_used: number;
   scans_included: number | null; // null = unlimited
+  /** Free plan only: when the rolling window frees up the next scan. */
+  cooldown_until?: string | null;
+  can_scan?: boolean;
+  stores_used?: number;
+  stores_included?: number | null;
+  history_days?: number | null;
   products_detected?: number;
   average_confidence?: number; // 0-1 or 0-100
   average_shelf_health?: number; // 0-100
   pdf_reports?: number;
   csv_reports?: number;
 };
+
 
 export type BillingOverview = {
   plan_id: PlanId;
@@ -97,60 +104,20 @@ async function getSubscriptionRow(orgId: string) {
 }
 
 
-/** Start of the current day (local timezone) as an ISO timestamp. */
-export function startOfTodayIso(): string {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-}
-
-/** Number of scans this org has created since midnight (local time). */
-export async function countScansToday(orgId: string): Promise<number> {
-  const { count, error } = await supabase
-    .from("shelf_scans")
-    .select("id", { count: "exact", head: true })
-    .eq("org_id", orgId)
-    .gte("created_at", startOfTodayIso());
-  if (error) return 0;
-  return count ?? 0;
-}
-
-export const FREE_DAILY_SCAN_LIMIT = 3;
+/** Free-plan allowance: 3 scans per rolling 24 hours. */
+export const FREE_SCAN_LIMIT_24H = 3;
 
 /**
- * Free plan allowance check used before a scan is created. Paid plans are
- * metered monthly through subscriptions.scans_used and are not blocked here.
+ * Live plan allowance check used before a scan is created. Delegates to the
+ * `get_org_usage_summary` RPC so Free (rolling 24h) and paid (monthly) plans
+ * share one source of truth. Usage counters are maintained by a DB trigger.
  */
 export async function assertScanAllowance(): Promise<void> {
-  const orgId = await requireOrgId();
-  const sub = await getSubscriptionRow(orgId);
-  const plan = sub?.subscription_plans as { code?: string; scan_quota?: number | null } | null;
-  const code = plan?.code ?? "free";
-  if (code !== "free") return;
-
-  const limit = plan?.scan_quota ?? FREE_DAILY_SCAN_LIMIT;
-  const used = await countScansToday(orgId);
-  if (used >= limit) {
-    throw new ApiError({
-      message: `Free plan allows ${limit} scans per day. Upgrade or try again tomorrow.`,
-      kind: "validation",
-      status: 429,
-    });
-  }
+  const { assertCanStartScan } = await import("@/lib/subscription-limits");
+  await assertCanStartScan();
 }
 
-/** Increments the monthly scans_used counter for paid plans only. */
-export async function recordScanUsage(): Promise<void> {
-  const orgId = await requireOrgId();
-  const sub = await getSubscriptionRow(orgId);
-  const plan = sub?.subscription_plans as { code?: string } | null;
-  if (!sub || (plan?.code ?? "free") === "free") return;
-  await supabase
-    .from("subscriptions")
-    .update({ scans_used: (sub.scans_used ?? 0) + 1 })
-    .eq("id", sub.id);
-}
-
-/** The org's subscription, plan and real usage counted from stores/members. */
+/** The org's subscription, plan and real usage from get_org_usage_summary. */
 export async function fetchBillingOverview(signal?: AbortSignal): Promise<BillingOverview> {
   void signal;
   const orgId = await requireOrgId();
@@ -169,7 +136,9 @@ export async function fetchBillingOverview(signal?: AbortSignal): Promise<Billin
     price_annual_inr: number;
   } | null;
 
-  const isFree = (plan?.code ?? "free") === "free";
+  const { fetchUsageSummary } = await import("@/lib/subscription-limits");
+  const live = await fetchUsageSummary();
+
 
   const { data: org } = await supabase
     .from("organizations")
@@ -199,14 +168,19 @@ export async function fetchBillingOverview(signal?: AbortSignal): Promise<Billin
     cancel_at_period_end: sub.cancel_at_period_end,
     currency: "INR",
     usage: {
-      quota_period: isFree ? "day" : "month",
-      period_start: isFree ? startOfTodayIso() : sub.current_period_start,
-      period_end: sub.current_period_end ?? undefined,
-      // Free plan is a daily allowance counted from real scans; paid plans use
-      // the monthly scans_used counter on the subscription row.
-      scans_used: isFree ? await countScansToday(orgId) : sub.scans_used,
-      scans_included: plan?.scan_quota ?? null,
+      quota_period: live.quota_period,
+      period_start: live.period_start ?? sub.current_period_start,
+      period_end: live.period_end ?? sub.current_period_end ?? undefined,
+      // Counted by the database: rolling 24h for Free, calendar month otherwise.
+      scans_used: live.scans_used,
+      scans_included: live.scan_quota,
+      cooldown_until: live.cooldown_until ?? null,
+      can_scan: live.can_scan,
+      stores_used: live.stores_used,
+      stores_included: live.store_limit,
+      history_days: live.history_days,
     },
+
     payment_method: undefined,
     billing_contact: {
       email: org?.billing_email ?? undefined,

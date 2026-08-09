@@ -342,7 +342,7 @@ function Billing() {
                 <div>
                   <div className="flex items-center justify-between gap-3 text-sm">
                     <span className="text-muted-foreground">
-                      {usage?.quota_period === "day" ? "Scans used today" : "Scans used this month"}
+                      {usage?.quota_period === "rolling_24h" ? "Scans used in the last 24 hours" : "Scans used this month"}
                     </span>
                     <span className="font-medium">
                       {formatNumber(usage?.scans_used)} /{" "}
@@ -488,7 +488,7 @@ function Billing() {
         ) : (
           <>
             <StatCard
-              label={usage?.quota_period === "day" ? "Scans used today" : "Total scans this month"}
+              label={usage?.quota_period === "rolling_24h" ? "Scans used in the last 24 hours" : "Total scans this month"}
               value={formatNumber(usage?.scans_used)}
               icon={<ScanLine className="size-4" />}
             />
