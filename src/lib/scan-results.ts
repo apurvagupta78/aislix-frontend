@@ -347,8 +347,20 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     ...(typeof (result?.metrics as any)?.gpt_vision_calls === "number"
       ? { gpt_vision_calls: Number((result?.metrics as any).gpt_vision_calls) }
       : {}),
+    ...(typeof (result?.metrics as any)?.misplaced_products === "number"
+      ? { misplaced_products: Number((result?.metrics as any).misplaced_products) }
+      : scan.misplaced_count !== null && scan.misplaced_count !== undefined
+        ? { misplaced_products: scan.misplaced_count }
+        : {}),
+    ...(typeof (result?.metrics as any)?.subcategory_mismatch_skus === "number"
+      ? { subcategory_mismatch_skus: Number((result?.metrics as any).subcategory_mismatch_skus) }
+      : {}),
   };
 
+  const complianceAlerts = mapComplianceAlerts((result?.metrics as any)?.compliance_alerts);
+  const subcategoryMismatches = mapSubcategoryMismatches(
+    (result?.metrics as any)?.subcategory_mismatches,
+  );
 
   const storeName = (scan as any).stores?.name as string | undefined;
 
@@ -358,8 +370,11 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     status: scan.status as ScanStatus,
     summary,
     alerts: mapAlerts(result?.alerts),
+    compliance_alerts: complianceAlerts,
+    subcategory_mismatches: subcategoryMismatches,
     recommendations: mapRecommendations(result?.recommendations),
     inventory,
+
     charts: {
       top_brands: mapBrandShare(result?.brand_share),
       confidence_distribution: confidenceBuckets,
