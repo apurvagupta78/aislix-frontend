@@ -886,21 +886,18 @@ type ScanRow = {
   store_id: string | null;
   shelf_label: string | null;
   category: string | null;
+  sub_category: string | null;
+  sub_category_label: string | null;
+  sub_category_custom: string | null;
   notes: string | null;
 };
-
-/** Beverages-only shelf narrowing carried in `notes` (e.g. "tea shelf" → "tea"). */
-function subCategoryFromNotes(notes: string | null): string | null {
-  const match = /^(tea|juice|soft drinks)\s+shelf$/i.exec((notes ?? "").trim());
-  return match ? match[1]!.toLowerCase() : null;
-}
-
-
 
 async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
   const { data: scan, error } = await supabase
     .from("shelf_scans")
-    .select("id, org_id, store_id, status, shelf_label, category, notes")
+    .select(
+      "id, org_id, store_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, notes",
+    )
     .eq("id", scanId)
     .maybeSingle();
   if (error) throw new PipelineError(error.message, 500);
@@ -911,9 +908,13 @@ async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
     store_id: (scan.store_id as string | null) ?? null,
     shelf_label: (scan.shelf_label as string | null) ?? null,
     category: (scan.category as string | null) ?? null,
+    sub_category: (scan.sub_category as string | null) ?? null,
+    sub_category_label: (scan.sub_category_label as string | null) ?? null,
+    sub_category_custom: (scan.sub_category_custom as string | null) ?? null,
     notes: (scan.notes as string | null) ?? null,
   };
 }
+
 
 /** Signs every uploaded original image and builds the Railway request body. */
 async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string) {
