@@ -842,6 +842,14 @@ type ScanRow = {
   notes: string | null;
 };
 
+/** Beverages-only shelf narrowing carried in `notes` (e.g. "tea shelf" → "tea"). */
+function subCategoryFromNotes(notes: string | null): string | null {
+  const match = /^(tea|juice|soft drinks)\s+shelf$/i.exec((notes ?? "").trim());
+  return match ? match[1]!.toLowerCase() : null;
+}
+
+
+
 async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
   const { data: scan, error } = await supabase
     .from("shelf_scans")
