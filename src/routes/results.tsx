@@ -19,6 +19,7 @@ import { EmptyState, ErrorState, Skeleton } from "@/components/States";
 import {
   AlertsPanel,
   AnnotatedImageViewer,
+  ComplianceAlertCard,
   InventoryTable,
   RecommendationsPanel,
   ResultSection,
