@@ -890,6 +890,7 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
 
   const learnedCatalog = await loadLearnedCatalog(supabase, scan.org_id);
 
+
   return {
     scan_id: scan.id,
     org_id: scan.org_id,
