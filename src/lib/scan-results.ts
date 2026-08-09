@@ -20,6 +20,31 @@ export type ScanRecommendation = {
   impact?: string;
 };
 
+export const COMPLIANCE_ALERT_TITLE = "Category Mismatch Detected";
+export const COMPLIANCE_INTERPRETATION = "Likely Putaway / Shelf Placement Violation";
+
+export type ComplianceStatus = "ok" | "category_mismatch";
+
+export type ComplianceAlert = {
+  id: string;
+  severity: Severity;
+  category?: string;
+  title: string;
+  interpretation?: string;
+  detail?: string;
+  expected_sub_category_label?: string;
+  misplaced_facings?: number;
+};
+
+export type SubcategoryMismatch = {
+  brand: string;
+  product_name: string;
+  detected_sub_category_label: string;
+  expected_sub_category_label: string;
+  quantity: number;
+  confidence?: number;
+};
+
 export type InventoryItem = {
   id: string;
   brand: string;
@@ -30,6 +55,8 @@ export type InventoryItem = {
   category?: string;
   low_stock?: boolean;
   out_of_stock?: boolean;
+  compliance_status?: ComplianceStatus;
+  compliance_interpretation?: string;
   /** Reserved for the shelf-position model (row / bay label). */
   shelf_position?: string;
 };
@@ -39,6 +66,7 @@ export type ConfidenceBucket = { bucket: string; count: number };
 export type CategorySlice = { category: string; count: number };
 export type QuantityBucket = { bucket: string; count: number };
 export type LowStockRow = { label: string; low_stock: number; out_of_stock: number };
+
 
 export type ScanSummary = {
   total_products: number;
