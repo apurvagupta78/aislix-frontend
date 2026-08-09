@@ -168,14 +168,19 @@ export async function fetchBillingOverview(signal?: AbortSignal): Promise<Billin
     cancel_at_period_end: sub.cancel_at_period_end,
     currency: "INR",
     usage: {
-      quota_period: isFree ? "day" : "month",
-      period_start: isFree ? startOfTodayIso() : sub.current_period_start,
-      period_end: sub.current_period_end ?? undefined,
-      // Free plan is a daily allowance counted from real scans; paid plans use
-      // the monthly scans_used counter on the subscription row.
-      scans_used: isFree ? await countScansToday(orgId) : sub.scans_used,
-      scans_included: plan?.scan_quota ?? null,
+      quota_period: live.quota_period,
+      period_start: live.period_start ?? sub.current_period_start,
+      period_end: live.period_end ?? sub.current_period_end ?? undefined,
+      // Counted by the database: rolling 24h for Free, calendar month otherwise.
+      scans_used: live.scans_used,
+      scans_included: live.scan_quota,
+      cooldown_until: live.cooldown_until ?? null,
+      can_scan: live.can_scan,
+      stores_used: live.stores_used,
+      stores_included: live.store_limit,
+      history_days: live.history_days,
     },
+
     payment_method: undefined,
     billing_contact: {
       email: org?.billing_email ?? undefined,
