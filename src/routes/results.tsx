@@ -46,6 +46,7 @@ import {
   formatPercent,
   inventoryToCsv,
   downloadBlob,
+  downloadScanCsv,
   type ScanResult,
 } from "@/lib/scan-results";
 import { retryScanAnalysis } from "@/lib/scan-api";
