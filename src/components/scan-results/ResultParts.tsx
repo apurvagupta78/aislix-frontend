@@ -237,7 +237,97 @@ export function AnnotatedImageViewer({
   );
 }
 
+/* ------------------------------- compliance ------------------------------- */
+
+export function ComplianceAlertCard({
+  alerts,
+  mismatches,
+}: {
+  alerts?: ComplianceAlert[] | undefined;
+  mismatches?: SubcategoryMismatch[] | undefined;
+}) {
+  const [open, setOpen] = useState(false);
+  const alert = alerts?.[0];
+  if (!alert) return null;
+  const rows = mismatches ?? [];
+
+  return (
+    <section
+      role="alert"
+      className="card-surface overflow-hidden border-l-4 border-l-destructive p-5 sm:p-6"
+    >
+      <div className="flex items-start gap-4">
+        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-destructive/10 text-destructive">
+          <AlertTriangle className="size-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-lg font-semibold tracking-tight sm:text-xl">{alert.title}</h2>
+            <SeverityBadge severity={alert.severity} />
+          </div>
+          {alert.interpretation && (
+            <p className="mt-1 text-sm italic text-muted-foreground">{alert.interpretation}</p>
+          )}
+          {alert.detail && <p className="mt-3 text-sm leading-relaxed">{alert.detail}</p>}
+          {typeof alert.misplaced_facings === "number" && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {alert.misplaced_facings} misplaced facing(s)
+              {alert.expected_sub_category_label
+                ? ` · expected ${alert.expected_sub_category_label}`
+                : ""}
+            </p>
+          )}
+          {rows.length > 0 && (
+            <>
+              <Button
+                variant="subtle"
+                size="sm"
+                className="mt-4 rounded-xl"
+                onClick={() => setOpen((v) => !v)}
+                aria-expanded={open}
+              >
+                {open ? "Hide" : "View"} mismatched products ({rows.length})
+              </Button>
+              {open && (
+                <div className="mt-3 overflow-x-auto rounded-2xl border border-border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Brand</TableHead>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Detected sub-category</TableHead>
+                        <TableHead>Expected</TableHead>
+                        <TableHead className="text-right">Qty</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {rows.map((row, i) => (
+                        <TableRow key={`${row.brand}-${row.product_name}-${i}`}>
+                          <TableCell className="font-medium">{row.brand}</TableCell>
+                          <TableCell>{row.product_name}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {row.detected_sub_category_label}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {row.expected_sub_category_label}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">{row.quantity}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* --------------------------------- alerts --------------------------------- */
+
 
 const severityStyles: Record<Severity, string> = {
   high: "border-destructive/30 bg-destructive/10 text-destructive",
