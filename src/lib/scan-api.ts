@@ -15,7 +15,10 @@ export type ScanAnalysisResult = {
   low_stock_count: number;
   misplaced_count: number;
   shelf_health_score: number | null;
+  learned_saved?: number;
+  learned_error?: string | null;
 };
+
 
 
 export const SCAN_STAGES = [
@@ -210,11 +213,21 @@ export async function submitScan(
 const ANALYSIS_POLL_INTERVAL_MS = 5_000;
 const ANALYSIS_MAX_WAIT_MS = 600_000;
 
+function reportLearnedCatalogIssue(result: ScanAnalysisResult): ScanAnalysisResult {
+  if (result?.learned_error) {
+    void import("sonner").then(({ toast }) =>
+      toast.error(`Failed to save learned products: ${result.learned_error}`),
+    );
+  }
+  return result;
+}
+
 export async function runScanAnalysis(scanId: string): Promise<ScanAnalysisResult> {
   const { startScanPipeline, pollScanPipeline } = await import("@/lib/scan-pipeline.functions");
   try {
     const started = (await startScanPipeline({ data: { scanId } })) as any;
-    if (started?.status === "completed") return started as ScanAnalysisResult;
+    if (started?.status === "completed")
+      return reportLearnedCatalogIssue(started as ScanAnalysisResult);
 
     const jobId: string | null = started?.job_id ?? null;
     const deadline = Date.now() + ANALYSIS_MAX_WAIT_MS;
@@ -222,8 +235,10 @@ export async function runScanAnalysis(scanId: string): Promise<ScanAnalysisResul
     while (Date.now() < deadline) {
       await new Promise((resolve) => setTimeout(resolve, ANALYSIS_POLL_INTERVAL_MS));
       const poll = (await pollScanPipeline({ data: { scanId, jobId } })) as any;
-      if (poll?.status === "completed") return poll as ScanAnalysisResult;
+      if (poll?.status === "completed")
+        return reportLearnedCatalogIssue(poll as ScanAnalysisResult);
     }
+
 
     throw new Error(
       "The AI vision backend did not finish analysing this scan in time. Please retry the scan.",

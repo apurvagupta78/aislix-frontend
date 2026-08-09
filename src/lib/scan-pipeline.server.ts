@@ -23,7 +23,12 @@ export type PipelineResult = {
   low_stock_count: number;
   misplaced_count: number;
   shelf_health_score: number | null;
+  /** Number of SKUs persisted into the learned catalog by this scan. */
+  learned_saved?: number;
+  /** Set when the learned catalog could not be persisted (surfaced as a toast). */
+  learned_error?: string | null;
 };
+
 
 export class PipelineError extends Error {
   status: number;
@@ -746,23 +751,42 @@ async function loadLearnedCatalog(supabase: DB, orgId: string): Promise<LearnedC
   }));
 }
 
+/** Human-readable product name derived from a SKU code (`lipton_green_tea` → `Lipton Green Tea`). */
+function nameFromSku(sku: string): string {
+  return sku
+    .replace(/[_\-.]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** Only keep numeric vectors — anything else would corrupt the stored embedding. */
+function normalizeEmbedding(value: unknown): number[] | null {
+  if (!Array.isArray(value)) return null;
+  const vector = value.filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+  return vector.length ? vector : null;
+}
+
 /** Persist `learned_updates` returned by Railway back into learned_skus. */
-async function persistLearnedUpdates(
+export async function persistLearnedUpdates(
   supabase: DB,
   scan: { id: string; org_id: string },
   payload: any,
-): Promise<void> {
+): Promise<{ saved: number; error: string | null }> {
   const updates = arr(payload?.learned_updates ?? payload?.learned_catalog_updates);
-  if (!updates.length) return;
+  if (!updates.length) return { saved: 0, error: null };
 
   const now = new Date().toISOString();
   const rows: Record<string, unknown>[] = [];
+  const seen = new Set<string>();
 
   for (const raw of updates) {
     const sku = str(raw?.sku);
-    const name = str(raw?.product_name) ?? str(raw?.name);
     // The conflict target is (org_id, sku); rows without a SKU cannot be upserted.
-    if (!sku || !name) continue;
+    if (!sku || seen.has(sku)) continue;
+    seen.add(sku);
+    const name =
+      str(raw?.product_name) ?? str(raw?.name) ?? str(raw?.title) ?? nameFromSku(sku);
     rows.push({
       org_id: scan.org_id,
       sku,
@@ -771,7 +795,7 @@ async function persistLearnedUpdates(
       variant: str(raw?.variant),
       category: str(raw?.category),
       barcode: str(raw?.barcode),
-      embedding: raw?.embedding ?? null,
+      embedding: normalizeEmbedding(raw?.embedding),
       source_scan_id: scan.id,
       times_seen: Math.max(1, Math.round(num(raw?.hit_count) ?? num(raw?.times_seen) ?? 1)),
       confidence: normalizeConfidence(raw?.confidence),
@@ -779,14 +803,31 @@ async function persistLearnedUpdates(
       last_seen_at: now,
     });
   }
-  if (!rows.length) return;
+  if (!rows.length) return { saved: 0, error: null };
 
-  const { error } = await supabase
-    .from("learned_skus")
-    .upsert(rows as never, { onConflict: "org_id,sku" });
-  // Catalog learning is best-effort: never fail a completed scan because of it.
-  if (error) console.error("[scan-pipeline] learned_skus upsert failed:", error.message);
+  try {
+    const { error } = await supabase
+      .from("learned_skus")
+      .upsert(rows as never, { onConflict: "org_id,sku" });
+    if (error) {
+      console.error("[scan-pipeline] learned_skus upsert failed:", {
+        message: error.message,
+        code: (error as any).code,
+        details: (error as any).details,
+        hint: (error as any).hint,
+        rows: rows.length,
+        org_id: scan.org_id,
+      });
+      return { saved: 0, error: error.message };
+    }
+    return { saved: rows.length, error: null };
+  } catch (thrown) {
+    const message = thrown instanceof Error ? thrown.message : String(thrown);
+    console.error("[scan-pipeline] learned_skus upsert threw:", thrown);
+    return { saved: 0, error: message };
+  }
 }
+
 
 /* -------------------------------------------------------------------------- */
 /* Pipeline                                                                   */
@@ -933,8 +974,13 @@ async function persistScanPayload(
   const completedAt = new Date().toISOString();
 
   // Learned catalog is persisted before the result set so the badge counts are stored.
-  await persistLearnedUpdates(supabase, { id: scan.id, org_id: scan.org_id }, payload);
-  const learnedNewThisScan = arr(payload?.learned_updates ?? payload?.learned_catalog_updates).length;
+  const learned = await persistLearnedUpdates(
+    supabase,
+    { id: scan.id, org_id: scan.org_id },
+    payload,
+  );
+  const learnedNewThisScan = learned.saved;
+
   const { count: learnedCatalogCount } = await supabase
     .from("learned_skus")
     .select("id", { count: "exact", head: true })
@@ -1013,6 +1059,9 @@ async function persistScanPayload(
     low_stock_count: lowStock,
     misplaced_count: misplaced,
     shelf_health_score: health,
+    learned_saved: learned.saved,
+    learned_error: learned.error,
+
   };
 }
 
