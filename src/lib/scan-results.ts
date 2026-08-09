@@ -89,8 +89,7 @@ export type ScanSummary = {
   learned_catalog_size?: number;
   /** New SKUs learned during this scan. */
   learned_new_this_scan?: number;
-  /** Number of ChatGPT (GPT vision) API calls used by this scan. */
-  gpt_vision_calls?: number;
+
   /** Facings detected as belonging to another sub-category. */
   misplaced_products?: number;
   /** Distinct SKU groups flagged as sub-category mismatches. */
