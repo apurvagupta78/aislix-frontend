@@ -64,10 +64,11 @@ import {
   type ScanStatus,
 } from "@/lib/scan-history";
 import {
-  downloadBlob,
-  fetchScanResult,
-  inventoryToCsv,
+  downloadScanAnnotatedImage,
+  downloadScanCsv,
+  downloadScanPdf,
 } from "@/lib/scan-results";
+
 import { toast } from "sonner";
 
 const PAGE_SIZE = 10;
@@ -113,10 +114,6 @@ function StatusBadge({ status }: { status: ScanStatus }) {
   );
 }
 
-function openUrl(url?: string) {
-  if (url) window.open(url, "_blank", "noopener,noreferrer");
-}
-
 function RowActions({
   scan,
   onDelete,
@@ -125,22 +122,16 @@ function RowActions({
   onDelete: (scan: ScanHistoryItem) => void;
 }) {
   const d = scan.downloads;
-  const [csvBusy, setCsvBusy] = useState(false);
+  const [busy, setBusy] = useState<"pdf" | "csv" | "image" | null>(null);
 
-  const downloadCsv = async () => {
-    setCsvBusy(true);
+  const run = async (kind: "pdf" | "csv" | "image", task: () => Promise<void>) => {
+    setBusy(kind);
     try {
-      const result = await fetchScanResult(scan.scan_id);
-      const inventory = result.inventory ?? [];
-      if (!inventory.length) {
-        toast.error("No inventory rows to export for this scan.");
-        return;
-      }
-      downloadBlob(inventoryToCsv(inventory), `aislix-${scan.scan_id}-inventory.csv`, "text/csv");
+      await task();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not export this scan.");
+      toast.error(e instanceof Error ? e.message : "Could not download this file.");
     } finally {
-      setCsvBusy(false);
+      setBusy(null);
     }
   };
 
@@ -162,24 +153,36 @@ function RowActions({
             <FileText className="size-4" /> View report
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuItem disabled={!d?.pdf_url} onSelect={() => openUrl(d?.pdf_url)}>
-          <Download className="size-4" /> Download PDF
-        </DropdownMenuItem>
         <DropdownMenuItem
-          disabled={csvBusy || scan.status !== "completed"}
+          disabled={busy === "pdf" || scan.status !== "completed"}
           onSelect={(e) => {
             e.preventDefault();
-            void downloadCsv();
+            void run("pdf", () => downloadScanPdf(scan.scan_id, d?.pdf_url));
           }}
         >
-          <SheetIcon className="size-4" /> {csvBusy ? "Preparing CSV…" : "Download CSV"}
+          <Download className="size-4" /> {busy === "pdf" ? "Preparing PDF…" : "Download PDF"}
         </DropdownMenuItem>
         <DropdownMenuItem
-          disabled={!d?.annotated_image_url}
-          onSelect={() => openUrl(d?.annotated_image_url)}
+          disabled={busy === "csv" || scan.status !== "completed"}
+          onSelect={(e) => {
+            e.preventDefault();
+            void run("csv", () => downloadScanCsv(scan.scan_id, d?.csv_url));
+          }}
         >
-          <ImageDown className="size-4" /> Annotated image
+          <SheetIcon className="size-4" /> {busy === "csv" ? "Preparing CSV…" : "Download CSV"}
         </DropdownMenuItem>
+        <DropdownMenuItem
+          disabled={busy === "image" || scan.status !== "completed"}
+          onSelect={(e) => {
+            e.preventDefault();
+            void run("image", () =>
+              downloadScanAnnotatedImage(scan.scan_id, d?.annotated_image_url),
+            );
+          }}
+        >
+          <ImageDown className="size-4" /> {busy === "image" ? "Preparing image…" : "Annotated image"}
+        </DropdownMenuItem>
+
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="text-destructive focus:text-destructive"

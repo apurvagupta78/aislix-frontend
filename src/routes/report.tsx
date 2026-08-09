@@ -20,7 +20,9 @@ import {
   formatScanDate,
   inventoryToCsv,
   downloadBlob,
+  downloadScanPdf,
 } from "@/lib/scan-results";
+
 import { toUserMessage } from "@/lib/api/errors";
 import { ReportsLibrary } from "@/components/reports/ReportsLibrary";
 
@@ -127,14 +129,17 @@ function ReportViewer() {
             variant="subtle"
             size="sm"
             className="rounded-xl"
-            disabled={!data?.downloads?.pdf_url}
+            disabled={!data}
             onClick={() => {
-              const url = data?.downloads?.pdf_url;
-              if (url) window.open(url, "_blank", "noopener,noreferrer");
+              if (!data) return;
+              void downloadScanPdf(data.scan_id, data.downloads?.pdf_url).catch((e: unknown) =>
+                toast.error(e instanceof Error ? e.message : "Could not download the PDF."),
+              );
             }}
           >
             <Download className="size-4" /> Download PDF
           </Button>
+
           <Button
             variant="subtle"
             size="sm"
