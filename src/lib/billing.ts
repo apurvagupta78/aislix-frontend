@@ -104,51 +104,25 @@ async function getSubscriptionRow(orgId: string) {
 }
 
 
-/** Start of the current day (local timezone) as an ISO timestamp. */
-export function startOfTodayIso(): string {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-}
-
-/** Number of scans this org has created since midnight (local time). */
-export async function countScansToday(orgId: string): Promise<number> {
-  const { count, error } = await supabase
-    .from("shelf_scans")
-    .select("id", { count: "exact", head: true })
-    .eq("org_id", orgId)
-    .gte("created_at", startOfTodayIso());
-  if (error) return 0;
-  return count ?? 0;
-}
-
-export const FREE_DAILY_SCAN_LIMIT = 3;
+/** Free-plan allowance: 3 scans per rolling 24 hours. */
+export const FREE_SCAN_LIMIT_24H = 3;
 
 /**
- * Free plan allowance check used before a scan is created. Paid plans are
- * metered monthly through subscriptions.scans_used and are not blocked here.
+ * Live plan allowance check used before a scan is created. Delegates to the
+ * `get_org_usage_summary` RPC so Free (rolling 24h) and paid (monthly) plans
+ * share one source of truth. Usage counters are maintained by a DB trigger.
  */
 export async function assertScanAllowance(): Promise<void> {
-  const orgId = await requireOrgId();
-  const sub = await getSubscriptionRow(orgId);
-  const plan = sub?.subscription_plans as { code?: string; scan_quota?: number | null } | null;
-  const code = plan?.code ?? "free";
-  if (code !== "free") return;
-
-  const limit = plan?.scan_quota ?? FREE_DAILY_SCAN_LIMIT;
-  const used = await countScansToday(orgId);
-  if (used >= limit) {
-    throw new ApiError({
-      message: `Free plan allows ${limit} scans per day. Upgrade or try again tomorrow.`,
-      kind: "validation",
-      status: 429,
-    });
-  }
+  const { assertCanStartScan } = await import("@/lib/subscription-limits");
+  await assertCanStartScan();
 }
 
-/** Increments the monthly scans_used counter for paid plans only. */
-export async function recordScanUsage(): Promise<void> {
+/** The org's subscription, plan and real usage from get_org_usage_summary. */
+export async function fetchBillingOverview(signal?: AbortSignal): Promise<BillingOverview> {
+  void signal;
   const orgId = await requireOrgId();
   const sub = await getSubscriptionRow(orgId);
+
   const plan = sub?.subscription_plans as { code?: string } | null;
   if (!sub || (plan?.code ?? "free") === "free") return;
   await supabase
