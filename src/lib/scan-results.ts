@@ -269,6 +269,43 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     pdfUrl = signed?.signedUrl;
   }
 
+  // Compliance is authoritative on the backend rows: build a lookup from the raw
+  // POST /scan payload so every inventory row carries the real status instead of
+  // silently defaulting to "OK".
+  const rawPayload = (result?.raw_payload ?? null) as any;
+  const rawRows: any[] = [
+    ...(Array.isArray(rawPayload?.inventory) ? rawPayload.inventory : []),
+    ...(Array.isArray(rawPayload?.products) ? rawPayload.products : []),
+  ];
+  const isMismatchRow = (row: any) =>
+    String(row?.compliance_status ?? "").toLowerCase() === "category_mismatch" ||
+    String(row?.compliance_alert ?? "").toLowerCase() === COMPLIANCE_ALERT_TITLE.toLowerCase();
+  const rawComplianceByKey = new Map<string, { mismatch: boolean; interpretation?: string }>();
+  const addRawKey = (key: string | undefined, row: any) => {
+    if (!key) return;
+    const k = key.toLowerCase().trim();
+    if (!k) return;
+    const mismatch = isMismatchRow(row);
+    const prev = rawComplianceByKey.get(k);
+    rawComplianceByKey.set(k, {
+      mismatch: mismatch || !!prev?.mismatch,
+      interpretation:
+        (mismatch ? (row?.compliance_interpretation as string | undefined) : undefined) ??
+        prev?.interpretation,
+    });
+  };
+  for (const row of rawRows) {
+    const brand = row?.brand ?? row?.brand_name ?? "";
+    const product = row?.product ?? row?.product_name ?? row?.name ?? "";
+    addRawKey(`${brand}::${product}`, row);
+    addRawKey(product, row);
+    if (row?.sku) addRawKey(String(row.sku), row);
+  }
+  const rawCompliance = (brand: string, product: string, sku?: string) =>
+    rawComplianceByKey.get(`${brand}::${product}`.toLowerCase()) ??
+    rawComplianceByKey.get(product.toLowerCase()) ??
+    (sku ? rawComplianceByKey.get(String(sku).toLowerCase()) : undefined);
+
   const inventory: InventoryItem[] = [];
   const grouped = new Map<string, InventoryItem>();
   for (const p of products ?? []) {
@@ -278,14 +315,23 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     const key = `${brand}::${product}::${variant}`;
     const qty = Number(p.facings) || 1;
     const confidence = Number(p.confidence) || 0;
-    const mismatch = (p.stock_status as string | null) === "misplaced";
+    const raw = rawCompliance(brand, product, (p as any).sku);
+    const mismatch = (p.stock_status as string | null) === "misplaced" || !!raw?.mismatch;
+    const status: ComplianceStatus | undefined = mismatch
+      ? "category_mismatch"
+      : raw
+        ? "ok"
+        : undefined;
     const existing = grouped.get(key);
     if (existing) {
       existing.quantity += qty;
       existing.confidence = Math.max(existing.confidence, confidence);
       if (mismatch) {
         existing.compliance_status = "category_mismatch";
-        existing.compliance_interpretation = COMPLIANCE_INTERPRETATION;
+        existing.compliance_interpretation =
+          raw?.interpretation ?? existing.compliance_interpretation ?? COMPLIANCE_INTERPRETATION;
+      } else if (!existing.compliance_status && status) {
+        existing.compliance_status = status;
       }
     } else {
       grouped.set(key, {
@@ -296,13 +342,16 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
         quantity: qty,
         confidence,
         category: (p.category as string | null) ?? undefined,
-        compliance_status: mismatch ? "category_mismatch" : "ok",
-        ...(mismatch ? { compliance_interpretation: COMPLIANCE_INTERPRETATION } : {}),
+        ...(status ? { compliance_status: status } : {}),
+        ...(mismatch
+          ? { compliance_interpretation: raw?.interpretation ?? COMPLIANCE_INTERPRETATION }
+          : {}),
         shelf_position: p.shelf_row === null || p.shelf_row === undefined ? undefined : String(p.shelf_row),
       });
     }
 
   }
+
   // Stock flags are derived from the aggregated facing count, not individual rows.
   for (const item of grouped.values()) {
     item.out_of_stock = item.quantity === 0;
