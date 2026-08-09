@@ -35,6 +35,9 @@ export type UsageSummary = {
   average_shelf_health?: number; // 0-100
   pdf_reports?: number;
   csv_reports?: number;
+  /** Internal tester accounts: plan limits are not enforced. */
+  platform_bypass?: boolean;
+  platform_bypass_note?: string | null;
 };
 
 
@@ -179,6 +182,9 @@ export async function fetchBillingOverview(signal?: AbortSignal): Promise<Billin
       stores_used: live.stores_used,
       stores_included: live.store_limit,
       history_days: live.history_days,
+      ...(live.platform_bypass
+        ? { platform_bypass: true, platform_bypass_note: live.platform_bypass_note ?? null }
+        : {}),
     },
 
     payment_method: undefined,
@@ -291,11 +297,13 @@ export function formatNumber(value?: number): string {
 }
 
 export function usagePercent(usage: UsageSummary): number | null {
+  if (usage.platform_bypass) return null;
   if (!usage.scans_included) return null;
   return Math.min(100, Math.round((usage.scans_used / usage.scans_included) * 100));
 }
 
 export function remainingScans(usage: UsageSummary): number | null {
+  if (usage.platform_bypass) return null;
   if (!usage.scans_included) return null;
   return Math.max(0, usage.scans_included - usage.scans_used);
 }
