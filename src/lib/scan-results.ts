@@ -507,6 +507,10 @@ export function inventoryToCsv(items: InventoryItem[]): string {
     "Category",
     "Quantity",
     "Confidence %",
+    "Compliance Alert",
+    "Compliance Note",
+    "Detected Sub-category",
+    "Audit Sub-category",
     "Shelf position",
   ];
   const escape = (value: string | number | undefined) => {
@@ -521,11 +525,18 @@ export function inventoryToCsv(items: InventoryItem[]): string {
       i.category ?? "",
       i.quantity,
       normalizeConfidence(i.confidence).toFixed(1),
+      i.compliance_alert ??
+        (i.compliance_status === "category_mismatch" ? COMPLIANCE_ALERT_TITLE : "OK"),
+      i.compliance_interpretation ?? "",
+      i.detected_sub_category_label ?? "",
+      i.expected_sub_category_label ?? "",
       i.shelf_position ?? "",
     ]
       .map(escape)
       .join(","),
   );
+  return [header.join(","), ...rows].join("\n");
+}
   return [header.join(","), ...rows].join("\n");
 }
 
