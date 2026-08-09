@@ -62,6 +62,7 @@ export function AppShell({
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
   const profileQuery = useQuery({
     queryKey: ["profile"],
     queryFn: () => fetchProfile(),
@@ -81,10 +82,11 @@ export function AppShell({
           .join("")
       : profile?.email?.[0]) ?? "A";
 
-  const item = (to: string, label: string, Icon: typeof Bell) => (
+  const item = (to: string, label: string, Icon: typeof Bell, onClick?: () => void) => (
     <Link
       key={to}
       to={to}
+      onClick={onClick}
       className={cn(
         "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors",
         pathname === to
