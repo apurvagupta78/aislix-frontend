@@ -204,7 +204,7 @@ export function ScanResultHeader({
         />
       </div>
 
-      <div className="mt-4 grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
+      <div className="mt-4 grid gap-4 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetaItem
           icon={<Timer className="size-4" />}
           label="Processing time"
@@ -217,7 +217,18 @@ export function ScanResultHeader({
           value={summary ? formatConfidence(summary.average_confidence) : undefined}
           loading={loading}
         />
+        <MetaItem
+          icon={<Sparkles className="size-4" />}
+          label="ChatGPT API calls"
+          value={
+            typeof summary?.gpt_vision_calls === "number"
+              ? summary.gpt_vision_calls.toLocaleString("en-IN")
+              : undefined
+          }
+          loading={loading}
+        />
       </div>
+
     </div>
   );
 }
