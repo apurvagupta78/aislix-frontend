@@ -50,12 +50,12 @@ export const Route = createFileRoute("/scan")({
       {
         name: "description",
         content:
-          "Set store, location and category, then capture or upload shelf photos for an AI audit.",
+          "Set store, location, category and subcategory, then capture or upload shelf photos for an AI audit.",
       },
       { property: "og:title", content: "Scan a shelf — Aislix" },
       {
         property: "og:description",
-        content: "Set store, location and category, then capture or upload shelf photos.",
+        content: "Set store, location, category and subcategory, then capture or upload shelf photos.",
       },
 
       { property: "og:type", content: "website" },
@@ -292,7 +292,7 @@ function ScanPage() {
   return (
     <AppShell
       title="Scan"
-      description="Set store, location and category, then capture or upload shelf photos."
+      description="Set store, location, category and subcategory, then capture or upload shelf photos."
       actions={
         items.length && !busy ? (
           <Button variant="subtle" size="sm" className="rounded-xl" onClick={reset}>
