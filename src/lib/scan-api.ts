@@ -182,7 +182,10 @@ export async function submitScanImages(
     options.onUploadProgress?.(Math.round(((index + 1) / files.length) * 100));
   }
 
-  await recordScanUsage();
+  // No manual usage increment: the database trigger counts the scan once it
+  // reaches "completed".
+
+
 
   return { scan_id: scan.id as string, status: scan.status as string };
 }
