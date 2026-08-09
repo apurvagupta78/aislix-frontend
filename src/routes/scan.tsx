@@ -238,8 +238,10 @@ function ScanPage() {
           storeId,
           shelfLabel,
           category,
-          subCategory:
-            showShelfType && shelfType !== "general" ? shelfType : undefined,
+          subCategory: isOtherCategory ? "others" : subCategory || undefined,
+          subCategoryLabel: isOtherCategory ? "Others" : selectedSub?.label,
+          subCategoryCustom: needsCustom ? subCategoryCustom.trim() : undefined,
+
         },
       );
       navigate({
