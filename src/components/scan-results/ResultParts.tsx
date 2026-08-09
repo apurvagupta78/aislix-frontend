@@ -727,8 +727,6 @@ export function InventoryTable({
                 </TableRow>
               ))
 
-                </TableRow>
-              ))
             )}
           </TableBody>
         </Table>
