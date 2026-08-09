@@ -18,18 +18,25 @@ export type PaymentMethod = {
 };
 
 export type UsageSummary = {
-  /** "day" for the Free plan (3 scans/day), "month" for paid monthly quotas. */
-  quota_period?: "day" | "month";
+  /** "rolling_24h" for the Free plan (3 scans / 24h), "month" for paid quotas. */
+  quota_period?: "rolling_24h" | "month";
   period_start?: string;
   period_end?: string;
   scans_used: number;
   scans_included: number | null; // null = unlimited
+  /** Free plan only: when the rolling window frees up the next scan. */
+  cooldown_until?: string | null;
+  can_scan?: boolean;
+  stores_used?: number;
+  stores_included?: number | null;
+  history_days?: number | null;
   products_detected?: number;
   average_confidence?: number; // 0-1 or 0-100
   average_shelf_health?: number; // 0-100
   pdf_reports?: number;
   csv_reports?: number;
 };
+
 
 export type BillingOverview = {
   plan_id: PlanId;
