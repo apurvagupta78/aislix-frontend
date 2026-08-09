@@ -734,22 +734,22 @@ type LearnedCatalogRow = {
   embedding: unknown;
 };
 
-/** Everything this org has learned so far, sent to Railway as `learned_catalog`. */
-async function loadLearnedCatalog(supabase: DB, orgId: string): Promise<LearnedCatalogRow[]> {
+/** Shared cross-org catalog, sent to Railway as `learned_catalog`. */
+async function loadLearnedCatalog(supabase: DB, _orgId: string): Promise<LearnedCatalogRow[]> {
   const { data, error } = await supabase
-    .from("learned_skus")
-    .select("sku, brand, name, variant, category, embedding")
-    .eq("org_id", orgId);
+    .from("global_learned_skus")
+    .select("sku, brand, product_name, variant, category, embedding");
   if (error || !data) return [];
   return data.map((row: any) => ({
     sku: row.sku ?? null,
     brand: row.brand ?? null,
-    product_name: row.name ?? "",
+    product_name: row.product_name ?? "",
     variant: row.variant ?? null,
     category: row.category ?? null,
     embedding: row.embedding ?? null,
   }));
 }
+
 
 /** Human-readable product name derived from a SKU code (`lipton_green_tea` → `Lipton Green Tea`). */
 function nameFromSku(sku: string): string {
