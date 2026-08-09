@@ -155,6 +155,37 @@ function mapAlerts(raw: unknown): ScanAlert[] {
   }));
 }
 
+function mapComplianceAlerts(raw: unknown): ComplianceAlert[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item: any, index) => ({
+    id: item?.id ?? `category-mismatch-${index}`,
+    severity: severityFromAlert(item?.severity === "critical" ? "high" : item?.severity),
+    category: item?.category ?? "compliance",
+    title: item?.title ?? COMPLIANCE_ALERT_TITLE,
+    interpretation: item?.interpretation ?? COMPLIANCE_INTERPRETATION,
+    detail: item?.detail ?? undefined,
+    expected_sub_category_label: item?.expected_sub_category_label ?? undefined,
+    ...(typeof item?.misplaced_facings === "number"
+      ? { misplaced_facings: Number(item.misplaced_facings) }
+      : {}),
+  }));
+}
+
+function mapSubcategoryMismatches(raw: unknown): SubcategoryMismatch[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.map((item: any) => ({
+    brand: item?.brand ?? "Unknown",
+    product_name: item?.product_name ?? item?.name ?? "Unknown product",
+    detected_sub_category_label: item?.detected_sub_category_label ?? "—",
+    expected_sub_category_label: item?.expected_sub_category_label ?? "—",
+    quantity: Number(item?.quantity) || 0,
+    ...(item?.confidence !== null && item?.confidence !== undefined
+      ? { confidence: Number(item.confidence) }
+      : {}),
+  }));
+}
+
+
 function mapRecommendations(raw: unknown): ScanRecommendation[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((item: any, index) => ({
