@@ -614,6 +614,8 @@ function ScanPage() {
           </div>
         </div>
       )}
+      <LimitReachedDialog limit={limitDialog} onClose={() => setLimitDialog(null)} />
     </AppShell>
+
   );
 }
