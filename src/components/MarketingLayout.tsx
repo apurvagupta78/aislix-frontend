@@ -68,7 +68,7 @@ export function SiteFooter() {
             </p>
             <div className="mt-5 flex items-center gap-2">
               <a
-                href="https://www.linkedin.com/company/aislix"
+                href="https://www.linkedin.com/company/aislix/"
                 target="_blank"
                 rel="noreferrer noopener"
                 aria-label="Aislix on LinkedIn"
@@ -77,22 +77,13 @@ export function SiteFooter() {
                 <Linkedin className="size-4" />
               </a>
               <a
-                href="https://x.com/aislix"
+                href="https://x.com/aislix_ai"
                 target="_blank"
                 rel="noreferrer noopener"
                 aria-label="Aislix on X (Twitter)"
                 className="grid size-9 place-items-center rounded-xl border border-border bg-card text-sm font-semibold text-muted-foreground transition-colors hover:text-brand"
               >
                 X
-              </a>
-              <a
-                href="https://www.youtube.com/@aislix"
-                target="_blank"
-                rel="noreferrer noopener"
-                aria-label="Aislix on YouTube"
-                className="grid size-9 place-items-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:text-brand"
-              >
-                <Youtube className="size-4" />
               </a>
             </div>
           </div>
