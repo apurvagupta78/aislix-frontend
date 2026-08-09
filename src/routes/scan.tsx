@@ -157,7 +157,7 @@ function ScanPage() {
   const guardSetup = useCallback(() => {
     if (setupComplete) return true;
     setShowSetupErrors(true);
-    setFileError("Complete scan setup (store, location and category) before adding images.");
+    setFileError("Complete scan setup (store, location, category and subcategory) before adding images.");
     return false;
   }, [setupComplete]);
 
@@ -666,7 +666,7 @@ function ScanPage() {
           <div className="card-surface p-5 sm:p-6">
             <h2 className="text-sm font-semibold tracking-tight">How it works</h2>
             <ol className="mt-4 space-y-3 text-sm text-muted-foreground">
-              <li>1. Set store, location and category.</li>
+              <li>1. Set store, location, category and subcategory.</li>
               <li>2. Capture or upload your shelf photos.</li>
               <li>3. AI detects products, brands and stock gaps.</li>
               <li>4. View results, CSV, and PDF report.</li>
