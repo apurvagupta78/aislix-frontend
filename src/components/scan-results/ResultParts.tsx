@@ -37,6 +37,7 @@ import { EmptyState, Skeleton } from "@/components/States";
 import { cn } from "@/lib/utils";
 import {
   COMPLIANCE_INTERPRETATION,
+  downloadScanCsv,
   formatConfidence,
   inventoryToCsv,
   normalizeConfidence,
