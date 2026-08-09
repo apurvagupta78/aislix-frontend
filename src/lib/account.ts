@@ -290,10 +290,13 @@ export async function fetchStores(search?: string, signal?: AbortSignal): Promis
   return { items: (data ?? []).map((row) => mapStoreRow(row as never)) };
 }
 
-/** Creates a store for the active organization. */
+/** Creates a store for the active organization (enforces the plan store limit). */
 export async function createStore(input: StoreInput): Promise<Store> {
   const orgId = await requireOrgId();
+  const { assertCanAddStore } = await import("@/lib/subscription-limits");
+  await assertCanAddStore();
   const { data, error } = await supabase
+
     .from("stores")
     .insert({
       org_id: orgId,
