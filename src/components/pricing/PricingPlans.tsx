@@ -83,7 +83,7 @@ export function PlanCard({
   return (
     <div
       className={cn(
-        "group relative flex flex-col rounded-3xl p-6 transition-all duration-300",
+        "group relative flex h-full flex-col rounded-3xl p-6 transition-all duration-300",
         plan.popular
           ? "border-2 border-brand bg-card shadow-card hover:-translate-y-1 hover:shadow-lift"
           : "card-surface card-hover",
@@ -153,7 +153,7 @@ export function PricingGrid({
   pendingPlanId?: PlanId | null | undefined;
 }) {
   return (
-    <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {plans.map((p) => (
         <PlanCard
           key={p.id}

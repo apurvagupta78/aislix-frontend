@@ -89,7 +89,7 @@ function Pricing() {
           </p>
         </section>
 
-        <section className="mx-auto max-w-7xl px-5 pb-6 pt-8 sm:px-8">
+        <section className="mx-auto max-w-[90rem] px-5 pb-6 pt-8 sm:px-8">
           <PricingGrid cycle={cycle} onSelect={onSelect} />
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
