@@ -265,7 +265,21 @@ function ScanPage() {
     } finally {
       abortRef.current = null;
     }
-  }, [items, navigate, phase, guardSetup, storeId, shelfLabel, category, showShelfType, shelfType]);
+  }, [
+    items,
+    navigate,
+    phase,
+    guardSetup,
+    storeId,
+    shelfLabel,
+    category,
+    isOtherCategory,
+    subCategory,
+    selectedSub,
+    needsCustom,
+    subCategoryCustom,
+  ]);
+
 
   const cancelUpload = useCallback(() => {
     abortRef.current?.abort();
