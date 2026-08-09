@@ -36,13 +36,16 @@ import {
 import { EmptyState, Skeleton } from "@/components/States";
 import { cn } from "@/lib/utils";
 import {
+  COMPLIANCE_INTERPRETATION,
   formatConfidence,
   inventoryToCsv,
   normalizeConfidence,
+  type ComplianceAlert,
   type InventoryItem,
   type ScanAlert,
   type ScanRecommendation,
   type Severity,
+  type SubcategoryMismatch,
 } from "@/lib/scan-results";
 
 /* ---------------------------------- shell --------------------------------- */
