@@ -86,7 +86,9 @@ function ScanPage() {
   const [storeId, setStoreId] = useState("");
   const [shelfLocation, setShelfLocation] = useState("");
   const [category, setCategory] = useState("");
+  const [shelfType, setShelfType] = useState("general");
   const [showSetupErrors, setShowSetupErrors] = useState(false);
+  const showShelfType = category === "Beverages";
 
   const storesQuery = useQuery({
     queryKey: ["stores", "scan-setup"],
