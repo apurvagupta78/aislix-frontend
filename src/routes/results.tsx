@@ -180,7 +180,10 @@ function Results() {
             <ProcessingState scanId={data?.scan_id} />
           ) : (
             <>
-
+              <ComplianceAlertCard
+                alerts={data?.compliance_alerts}
+                mismatches={data?.subcategory_mismatches}
+              />
 
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <SummaryCard
@@ -207,11 +210,12 @@ function Results() {
                   hint="Empty facings detected"
                 />
                 <SummaryCard
-                  label="Duplicate products"
-                  value={summary?.duplicate_products}
+                  label="Misplaced facings"
+                  value={summary?.misplaced_products || undefined}
                   loading={loading}
-                  hint="Coming with shelf-position model"
+                  hint="Wrong sub-category on this shelf"
                 />
+
                 <SummaryCard
                   label="Shelf compliance"
                   value={formatPercent(summary?.shelf_compliance)}
