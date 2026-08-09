@@ -158,6 +158,13 @@ export function ScanResultHeader({
           </div>
 
           <p className="mt-1 text-sm text-muted-foreground">
+            {[data?.scan_category, data?.scan_sub_category, data?.location].some(Boolean)
+              ? [data?.scan_category, data?.scan_sub_category, data?.location]
+                  .filter(Boolean)
+                  .join(" · ")
+              : "AI shelf audit result"}
+          </p>
+          <p className="sr-only">
             {["AI shelf audit result", data?.scan_category, data?.location]
               .filter(Boolean)
               .join(" · ")}
@@ -182,7 +189,9 @@ export function ScanResultHeader({
         <MetaItem
           icon={<Tags className="size-4" />}
           label="Category"
-          value={data?.scan_category}
+          value={
+            [data?.scan_category, data?.scan_sub_category].filter(Boolean).join(" · ") || undefined
+          }
           loading={loading}
         />
         <MetaItem
