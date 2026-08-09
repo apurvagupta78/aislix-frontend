@@ -64,10 +64,11 @@ import {
   type ScanStatus,
 } from "@/lib/scan-history";
 import {
-  downloadBlob,
-  fetchScanResult,
-  inventoryToCsv,
+  downloadScanAnnotatedImage,
+  downloadScanCsv,
+  downloadScanPdf,
 } from "@/lib/scan-results";
+
 import { toast } from "sonner";
 
 const PAGE_SIZE = 10;
