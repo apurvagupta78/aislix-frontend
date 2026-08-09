@@ -969,8 +969,13 @@ async function persistScanPayload(
   const completedAt = new Date().toISOString();
 
   // Learned catalog is persisted before the result set so the badge counts are stored.
-  await persistLearnedUpdates(supabase, { id: scan.id, org_id: scan.org_id }, payload);
-  const learnedNewThisScan = arr(payload?.learned_updates ?? payload?.learned_catalog_updates).length;
+  const learned = await persistLearnedUpdates(
+    supabase,
+    { id: scan.id, org_id: scan.org_id },
+    payload,
+  );
+  const learnedNewThisScan = learned.saved;
+
   const { count: learnedCatalogCount } = await supabase
     .from("learned_skus")
     .select("id", { count: "exact", head: true })
