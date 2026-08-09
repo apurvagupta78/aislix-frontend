@@ -83,9 +83,9 @@ export function LearnedCatalogBadge({
             {typeof added === "number" && added > 0 ? ` · +${added} new` : ""}
           </Badge>
         </TooltipTrigger>
-        <TooltipContent className="max-w-xs">
-          GPT-identified SKUs saved for faster FAISS matching on future scans
-        </TooltipContent>
+          <TooltipContent className="max-w-xs">
+            AI-identified SKUs saved for faster matching on future scans
+          </TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );

@@ -52,6 +52,63 @@ async function currentUserEmail(): Promise<string | undefined> {
   return data.user?.email ?? undefined;
 }
 
+async function bypassUsageFallback(orgId: string): Promise<UsageSummary> {
+  const [{ data: subscription }, { count: storesUsed }] = await Promise.all([
+    supabase
+      .from("subscriptions")
+      .select(
+        "status, cycle, current_period_start, current_period_end, scans_used, cancel_at_period_end, subscription_plans(code, name, scan_quota, store_limit, seat_limit, history_days, quota_period, is_contact_sales, price_monthly_inr)",
+      )
+      .eq("org_id", orgId)
+      .maybeSingle(),
+    supabase
+      .from("stores")
+      .select("id", { count: "exact", head: true })
+      .eq("org_id", orgId)
+      .eq("status", "active"),
+  ]);
+  const plan = subscription?.subscription_plans as
+    | {
+        code: string;
+        name: string;
+        scan_quota: number | null;
+        store_limit: number | null;
+        seat_limit: number | null;
+        history_days: number | null;
+        quota_period: QuotaPeriod;
+        is_contact_sales: boolean;
+        price_monthly_inr: number;
+      }
+    | null
+    | undefined;
+
+  return {
+    plan_code: plan?.code ?? "free",
+    plan_name: plan?.name ?? "Free",
+    quota_period: plan?.quota_period ?? "rolling_24h",
+    is_contact_sales: plan?.is_contact_sales ?? false,
+    price_monthly_inr: plan?.price_monthly_inr ?? 0,
+    scan_quota: plan?.scan_quota ?? null,
+    store_limit: plan?.store_limit ?? null,
+    seat_limit: plan?.seat_limit ?? null,
+    history_days: null,
+    scans_used: subscription?.scans_used ?? 0,
+    scans_remaining: null,
+    stores_used: storesUsed ?? 0,
+    stores_remaining: null,
+    period_start: subscription?.current_period_start ?? null,
+    period_end: subscription?.current_period_end ?? null,
+    cooldown_until: null,
+    can_scan: true,
+    can_add_store: true,
+    status: subscription?.status ?? "active",
+    cycle: subscription?.cycle ?? "monthly",
+    cancel_at_period_end: subscription?.cancel_at_period_end ?? false,
+    platform_bypass: true,
+    platform_bypass_note: "Internal tester — plan limits not enforced",
+  };
+}
+
 export type LimitKind = "scan_quota" | "scan_cooldown" | "store_limit";
 
 /** Thrown when a plan limit blocks an action. Carries data for the limit modal. */
@@ -77,8 +134,10 @@ export function isLimitReachedError(error: unknown): error is LimitReachedError 
 export async function fetchUsageSummary(signal?: AbortSignal): Promise<UsageSummary> {
   void signal;
   const orgId = await requireOrgId();
+  const email = await currentUserEmail();
   const { data, error } = await supabase.rpc("get_org_usage_summary", { p_org_id: orgId });
   if (error) {
+    if (hasPlatformBypass(email)) return bypassUsageFallback(orgId);
     throw new ApiError({
       message: error.message || "Could not load your plan usage.",
       kind: "server",
@@ -86,7 +145,6 @@ export async function fetchUsageSummary(signal?: AbortSignal): Promise<UsageSumm
     });
   }
   const usage = data as unknown as UsageSummary;
-  const email = await currentUserEmail();
   if (usage.platform_bypass || hasPlatformBypass(email)) {
     return {
       ...usage,
@@ -105,6 +163,8 @@ export async function fetchUsageSummary(signal?: AbortSignal): Promise<UsageSumm
 
 /** Blocks a new scan when the plan's scan allowance is exhausted. */
 export async function assertCanStartScan(): Promise<UsageSummary> {
+  const email = await currentUserEmail();
+  if (hasPlatformBypass(email)) return fetchUsageSummary();
   const usage = await fetchUsageSummary();
   if (usage.can_scan || usage.platform_bypass) return usage;
 
@@ -126,6 +186,8 @@ export async function assertCanStartScan(): Promise<UsageSummary> {
 
 /** Blocks a new store when the plan's store allowance is exhausted. */
 export async function assertCanAddStore(): Promise<UsageSummary> {
+  const email = await currentUserEmail();
+  if (hasPlatformBypass(email)) return fetchUsageSummary();
   const usage = await fetchUsageSummary();
   if (usage.can_add_store || usage.platform_bypass) return usage;
   throw new LimitReachedError({
