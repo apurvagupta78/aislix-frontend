@@ -89,8 +89,7 @@ export type ScanSummary = {
   learned_catalog_size?: number;
   /** New SKUs learned during this scan. */
   learned_new_this_scan?: number;
-  /** Number of ChatGPT (GPT vision) API calls used by this scan. */
-  gpt_vision_calls?: number;
+
   /** Facings detected as belonging to another sub-category. */
   misplaced_products?: number;
   /** Distinct SKU groups flagged as sub-category mismatches. */
@@ -380,9 +379,6 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
       : {}),
     ...(typeof (result?.metrics as any)?.learned_new_this_scan === "number"
       ? { learned_new_this_scan: Number((result?.metrics as any).learned_new_this_scan) }
-      : {}),
-    ...(typeof (result?.metrics as any)?.gpt_vision_calls === "number"
-      ? { gpt_vision_calls: Number((result?.metrics as any).gpt_vision_calls) }
       : {}),
     ...(typeof (result?.metrics as any)?.misplaced_products === "number"
       ? { misplaced_products: Number((result?.metrics as any).misplaced_products) }
