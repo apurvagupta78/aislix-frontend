@@ -234,10 +234,11 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   const { data: result } = await supabase
     .from("scan_results")
     .select(
-      "executive_summary, metrics, alerts, recommendations, brand_share, category_breakdown, confidence_avg",
+      "executive_summary, metrics, alerts, recommendations, brand_share, category_breakdown, confidence_avg, raw_payload",
     )
     .eq("scan_id", scanId)
     .maybeSingle();
+
 
   const { data: products } = await supabase
     .from("detected_products")
