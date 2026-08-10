@@ -891,7 +891,10 @@ export async function persistLearnedUpdates(
   }
 
   try {
-    const { error } = await supabase
+    // The shared cross-tenant catalog is write-protected: only the trusted
+    // server role may insert/update it, so use the admin client here.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
       .from("global_learned_skus")
       .upsert(globalRows as never, { onConflict: "sku" });
     if (error) {
