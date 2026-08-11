@@ -18,6 +18,7 @@ import {
   type Assignment,
 } from "@/lib/assignments";
 import { markAssignmentNotificationsRead } from "@/lib/notifications";
+import { complianceTone } from "@/lib/planogram-compliance";
 
 export const Route = createFileRoute("/my-scans")({
   head: () => ({
