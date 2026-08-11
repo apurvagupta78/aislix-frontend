@@ -597,7 +597,7 @@ export function AppShell({
           </Button>
         </div>
         {!sidebarCollapsed && workspaceSwitcher}
-        <div className="mt-5 flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="mt-5 flex min-h-0 flex-1 flex-col justify-start gap-1 overflow-hidden">
           <SidebarNav
             showManagerNav={showManagerNav}
             openTasks={pendingCount}
@@ -605,7 +605,7 @@ export function AppShell({
           />
         </div>
         <div className={cn("mt-auto shrink-0", sidebarCollapsed ? "pt-2" : "pt-2 pb-2")}>
-          <AccountNav rail={sidebarCollapsed} />
+
           <div className="pt-4">
           {sidebarCollapsed ? (
             <RailTooltip label="Manage plan">
