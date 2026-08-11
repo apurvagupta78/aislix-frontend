@@ -219,7 +219,7 @@ export async function fetchUsageSummary(signal?: AbortSignal, orgIdOverride?: st
       status: 500,
     });
   }
-  const usage = normalizeUsage((data ?? {}) as Record<string, unknown>);
+  const usage = normalizeUsageSummary(data as Record<string, unknown> | null);
   if (usage.platform_bypass || hasPlatformBypass(email)) {
     return {
       ...usage,
@@ -238,26 +238,12 @@ export async function fetchUsageSummary(signal?: AbortSignal, orgIdOverride?: st
 // ---------- enforcement ----------
 
 /** Blocks a new scan when the plan's scan allowance is exhausted. */
-export async function assertCanStartScan(): Promise<UsageSummary> {
+export async function assertCanStartScan(orgId?: string): Promise<UsageSummary> {
   const email = await currentUserEmail();
-  if (hasPlatformBypass(email)) return fetchUsageSummary();
-  const usage = await fetchUsageSummary();
+  if (hasPlatformBypass(email)) return fetchUsageSummary(undefined, orgId);
+  const usage = await fetchUsageSummary(undefined, orgId);
   if (usage.can_scan || usage.platform_bypass) return usage;
-
-  if (usage.quota_period === "rolling_24h") {
-    throw new LimitReachedError({
-      limit: "scan_cooldown",
-      usage,
-      ...(usage.cooldown_until ? { cooldownUntil: usage.cooldown_until } : {}),
-      message: `You've used all ${usage.scan_quota} scans on the ${usage.plan_name} plan. Scanning unlocks again ${formatCooldown(usage.cooldown_until)}.`,
-    });
-  }
-
-  throw new LimitReachedError({
-    limit: "scan_quota",
-    usage,
-    message: `You've used all ${usage.scan_quota} scans included in your ${usage.plan_name} plan this month. Upgrade to keep scanning.`,
-  });
+  throw scanLimitError(usage);
 }
 
 /** Blocks a new store when the plan's store allowance is exhausted. */
@@ -268,15 +254,57 @@ export async function assertCanAddStore(orgId?: string): Promise<UsageSummary> {
   // The very first store is always allowed, whatever the plan says.
   if (usage.stores_used === 0) return usage;
   if (usage.can_add_store || usage.platform_bypass) return usage;
+  throw storeLimitError(usage);
+}
+
+function scanLimitError(usage: UsageSummary): ScanLimitError {
+  const quota = usage.scan_quota ?? (usage.plan_code === "free" ? 3 : usage.scans_used);
+  if (usage.quota_period === "rolling_24h") {
+    return new ScanLimitError({
+      usage,
+      cooldown: true,
+      ...(usage.cooldown_until ? { cooldownUntil: usage.cooldown_until } : {}),
+      message: `You've used all ${quota} scans on the ${usage.plan_name} plan. Scanning unlocks again ${formatCooldown(usage.cooldown_until)}.`,
+    });
+  }
+  return new ScanLimitError({
+    usage,
+    message: `You've used all ${quota} scans included in your ${usage.plan_name} plan this month. Upgrade to keep scanning.`,
+  });
+}
+
+function storeLimitError(usage: UsageSummary): StoreLimitError {
   const limit = usage.store_limit;
-  throw new LimitReachedError({
-    limit: "store_limit",
+  return new StoreLimitError({
     usage,
     message:
       limit === null
         ? `Your ${usage.plan_name} plan cannot add more stores right now. Upgrade to add more.`
         : `The ${usage.plan_name} plan includes ${limit} ${limit === 1 ? "store" : "stores"}. Upgrade to add more.`,
   });
+}
+
+/**
+ * Maps a database trigger error (`STORE_LIMIT_REACHED` / `SCAN_LIMIT_REACHED`)
+ * onto the typed limit errors so the upgrade modal shows instead of a raw
+ * Postgres message. Anything else is returned untouched.
+ */
+export async function mapLimitError(error: unknown, orgId?: string): Promise<unknown> {
+  if (isLimitReachedError(error)) return error;
+  const text =
+    typeof error === "object" && error !== null
+      ? `${(error as { message?: string }).message ?? ""} ${(error as { details?: string }).details ?? ""}`
+      : String(error ?? "");
+  const isStore = text.includes("STORE_LIMIT_REACHED");
+  const isScan = text.includes("SCAN_LIMIT_REACHED");
+  if (!isStore && !isScan) return error;
+  let usage: UsageSummary;
+  try {
+    usage = await fetchUsageSummary(undefined, orgId);
+  } catch {
+    usage = normalizeUsageSummary(null);
+  }
+  return isStore ? storeLimitError(usage) : scanLimitError(usage);
 }
 
 
