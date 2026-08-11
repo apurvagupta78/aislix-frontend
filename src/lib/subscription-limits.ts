@@ -130,10 +130,55 @@ export function isLimitReachedError(error: unknown): error is LimitReachedError 
   return error instanceof LimitReachedError;
 }
 
+/**
+ * The RPC returns a flatter shape (`scans_included`, `stores_included`, `blocked`)
+ * than the client `UsageSummary`. Normalise it so limit messages never render
+ * `undefined` and `can_add_store` / `can_scan` are always real booleans.
+ */
+function normalizeUsage(raw: Record<string, unknown>): UsageSummary {
+  const num = (v: unknown): number | null =>
+    v === null || v === undefined ? null : Number(v);
+  const scanQuota = num(raw["scan_quota"] ?? raw["scans_included"]);
+  const storeLimit = num(raw["store_limit"] ?? raw["stores_included"]);
+  const scansUsed = num(raw["scans_used"]) ?? 0;
+  const storesUsed = num(raw["stores_used"]) ?? 0;
+  const blocked = Boolean(raw["blocked"]);
+
+  return {
+    plan_code: (raw["plan_code"] as string) ?? "free",
+    plan_name: (raw["plan_name"] as string) ?? "Free",
+    quota_period: (raw["quota_period"] as QuotaPeriod) ??
+      ((raw["plan_code"] as string) === "free" ? "rolling_24h" : "month"),
+    is_contact_sales: Boolean(raw["is_contact_sales"]),
+    price_monthly_inr: num(raw["price_monthly_inr"]) ?? 0,
+    scan_quota: scanQuota,
+    store_limit: storeLimit,
+    seat_limit: num(raw["seat_limit"]),
+    history_days: num(raw["history_days"]),
+    scans_used: scansUsed,
+    scans_remaining: num(raw["scans_remaining"]),
+    stores_used: storesUsed,
+    stores_remaining: storeLimit === null ? null : Math.max(0, storeLimit - storesUsed),
+    period_start: (raw["period_start"] as string) ?? null,
+    period_end: (raw["period_end"] as string) ?? null,
+    cooldown_until: (raw["cooldown_until"] as string) ?? null,
+    can_scan: raw["can_scan"] !== undefined ? Boolean(raw["can_scan"]) : !blocked,
+    can_add_store:
+      raw["can_add_store"] !== undefined
+        ? Boolean(raw["can_add_store"])
+        : storeLimit === null || storesUsed < storeLimit,
+    status: (raw["status"] as string) ?? "active",
+    cycle: (raw["cycle"] as "monthly" | "annual") ?? "monthly",
+    cancel_at_period_end: Boolean(raw["cancel_at_period_end"]),
+    ...(raw["platform_bypass"] !== undefined ? { platform_bypass: Boolean(raw["platform_bypass"]) } : {}),
+    platform_bypass_note: (raw["platform_bypass_note"] as string) ?? null,
+  };
+}
+
 /** Live usage + plan limits for the active organization. */
-export async function fetchUsageSummary(signal?: AbortSignal): Promise<UsageSummary> {
+export async function fetchUsageSummary(signal?: AbortSignal, orgIdOverride?: string): Promise<UsageSummary> {
   void signal;
-  const orgId = await requireOrgId();
+  const orgId = orgIdOverride ?? (await requireOrgId());
   const email = await currentUserEmail();
   const { data, error } = await supabase.rpc("get_org_usage_summary", { p_org_id: orgId });
   if (error) {
@@ -144,7 +189,7 @@ export async function fetchUsageSummary(signal?: AbortSignal): Promise<UsageSumm
       status: 500,
     });
   }
-  const usage = data as unknown as UsageSummary;
+  const usage = normalizeUsage((data ?? {}) as Record<string, unknown>);
   if (usage.platform_bypass || hasPlatformBypass(email)) {
     return {
       ...usage,
@@ -158,6 +203,7 @@ export async function fetchUsageSummary(signal?: AbortSignal): Promise<UsageSumm
   }
   return usage;
 }
+
 
 // ---------- enforcement ----------
 
@@ -185,19 +231,24 @@ export async function assertCanStartScan(): Promise<UsageSummary> {
 }
 
 /** Blocks a new store when the plan's store allowance is exhausted. */
-export async function assertCanAddStore(): Promise<UsageSummary> {
+export async function assertCanAddStore(orgId?: string): Promise<UsageSummary> {
   const email = await currentUserEmail();
-  if (hasPlatformBypass(email)) return fetchUsageSummary();
-  const usage = await fetchUsageSummary();
+  const usage = await fetchUsageSummary(undefined, orgId);
+  if (hasPlatformBypass(email)) return usage;
+  // The very first store is always allowed, whatever the plan says.
+  if (usage.stores_used === 0) return usage;
   if (usage.can_add_store || usage.platform_bypass) return usage;
+  const limit = usage.store_limit;
   throw new LimitReachedError({
     limit: "store_limit",
     usage,
-    message: `The ${usage.plan_name} plan includes ${usage.store_limit} ${
-      usage.store_limit === 1 ? "store" : "stores"
-    }. Upgrade to add more.`,
+    message:
+      limit === null
+        ? `Your ${usage.plan_name} plan cannot add more stores right now. Upgrade to add more.`
+        : `The ${usage.plan_name} plan includes ${limit} ${limit === 1 ? "store" : "stores"}. Upgrade to add more.`,
   });
 }
+
 
 // ---------- history window ----------
 
