@@ -591,6 +591,10 @@ export async function fetchStoreReports(
 
 // ---------- per-store team access ----------
 
+/**
+ * Team with access to a store: members explicitly scoped to it, plus members
+ * with no store scope at all (owners / admins / managers see every store).
+ */
 export async function fetchStoreTeam(
   id: string,
   _signal?: AbortSignal,
@@ -599,11 +603,13 @@ export async function fetchStoreTeam(
   const { data, error } = await supabase
     .from("organization_members")
     .select("id, user_id, role, status, store_ids, invited_email, created_at")
-    .eq("org_id", orgId)
-    .contains("store_ids", [id]);
+    .eq("org_id", orgId);
   if (error) dbError(error, "Could not load the store team.");
 
-  const rows = data ?? [];
+  const rows = (data ?? []).filter((row) => {
+    const storeIds = (row.store_ids ?? []) as string[];
+    return storeIds.length === 0 || storeIds.includes(id);
+  });
   const userIds = rows.map((r) => r.user_id).filter(Boolean);
   const { data: profiles } = userIds.length
     ? await supabase.from("profiles").select("id, full_name, email").in("id", userIds)
@@ -614,16 +620,42 @@ export async function fetchStoreTeam(
     const profile = profileById.get(row.user_id);
     return compact({
       id: row.id,
+      user_id: row.user_id,
       name: profile?.full_name ?? undefined,
       email: profile?.email ?? row.invited_email ?? "",
       role: toTeamRole(row.role as AppRole),
       status: row.status,
       added_at: row.created_at,
+      all_stores: ((row.store_ids ?? []) as string[]).length === 0,
     });
   });
 
   return { items };
 }
+
+/** Appends a store to the store scope of the given members (deduped). */
+export async function grantStoreAccess(storeId: string, userIds: string[]): Promise<void> {
+  if (!userIds.length) return;
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("organization_members")
+    .select("id, user_id, store_ids")
+    .eq("org_id", orgId)
+    .in("user_id", userIds);
+  if (error) dbError(error, "Could not update store access.");
+
+  for (const row of data ?? []) {
+    const current = (row.store_ids ?? []) as string[];
+    if (current.includes(storeId)) continue;
+    const merged = Array.from(new Set([...current, storeId]));
+    const { error: updateError } = await supabase
+      .from("organization_members")
+      .update({ store_ids: merged })
+      .eq("id", row.id);
+    if (updateError) dbError(updateError, "Could not update store access.");
+  }
+}
+
 
 export async function addStoreMember(
   id: string,
