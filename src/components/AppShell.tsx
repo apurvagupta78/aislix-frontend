@@ -173,7 +173,7 @@ const ACCOUNT_SECTION: NavSection = {
 
 function SectionHeader({ children }: { children: ReactNode }) {
   return (
-    <p className="sticky top-0 z-10 bg-card px-3 pb-2 pt-3 text-[0.68rem] font-semibold uppercase tracking-widest text-muted-foreground">
+    <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">
       {children}
     </p>
   );
