@@ -578,3 +578,13 @@ export async function fetchTeamScans(): Promise<TeamScan[]> {
     };
   });
 }
+
+/** Assignment a scan was launched from, if any (used for the results badge). */
+export async function fetchScanAssignmentId(scanId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("shelf_scans")
+    .select("assignment_id")
+    .eq("id", scanId)
+    .maybeSingle();
+  return ((data?.assignment_id as string | null) ?? null) || null;
+}

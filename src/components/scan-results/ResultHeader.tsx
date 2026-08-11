@@ -33,6 +33,7 @@ import { Skeleton } from "@/components/States";
 
 import { ResultSection } from "@/components/scan-results/ResultParts";
 import { cn } from "@/lib/utils";
+import { formatAssignmentId } from "@/components/AssignmentId";
 import {
   formatConfidence,
   formatDuration,
@@ -132,9 +133,11 @@ function MetaItem({
 export function ScanResultHeader({
   data,
   loading,
+  assignmentId,
 }: {
   data?: ScanResult | undefined;
   loading?: boolean | undefined;
+  assignmentId?: string | null | undefined;
 }) {
   const summary = data?.summary;
   const health =
@@ -151,6 +154,17 @@ export function ScanResultHeader({
               {loading ? "Loading scan…" : (data?.scan_id ?? "Scan")}
             </h2>
             <ScanStatusBadge status={data?.status} />
+            {assignmentId ? (
+              <Badge
+                variant="outline"
+                className="rounded-full border-brand/25 bg-brand-soft font-mono text-brand"
+                asChild
+              >
+                <Link to="/assigned-scans" search={{ tab: "assignments" as const }}>
+                  Assignment {formatAssignmentId(assignmentId)}
+                </Link>
+              </Badge>
+            ) : null}
             <LearnedCatalogBadge
               size={summary?.learned_catalog_size}
               added={summary?.learned_new_this_scan}
