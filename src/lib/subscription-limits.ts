@@ -381,3 +381,24 @@ export function storeUsageLabel(usage: UsageSummary): string {
   if (usage.store_limit === null) return `${usage.stores_used} stores · Unlimited`;
   return `${usage.stores_used} / ${usage.store_limit} stores used`;
 }
+
+/**
+ * Single label helper for dashboard / billing widgets. Values always come from
+ * the normalised usage summary, so `undefined` can never reach the UI.
+ */
+export function formatUsageLabel(usage: UsageSummary | null | undefined): {
+  scans: string;
+  stores: string;
+  cooldown: string | null;
+} {
+  const safe = usage ?? normalizeUsageSummary(null);
+  const cooldown =
+    !safe.can_scan && safe.cooldown_until
+      ? `Unlocks in ${cooldownClock(safe.cooldown_until)}`
+      : null;
+  const stores =
+    safe.store_limit === null
+      ? `${safe.stores_used} stores · Unlimited`
+      : `${safe.stores_used} / ${safe.store_limit} stores`;
+  return { scans: scanUsageLabel(safe), stores, cooldown };
+}
