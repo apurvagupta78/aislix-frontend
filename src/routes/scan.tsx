@@ -530,7 +530,7 @@ function ScanPage() {
               <button
                 type="button"
                 onClick={openCamera}
-                disabled={busy || lockedByAssignment}
+                disabled={busy}
                 className="group flex flex-col items-start gap-3 rounded-2xl border border-border bg-surface p-5 text-left transition-all hover:border-brand/45 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
               >
                 <span className="grid size-11 place-items-center rounded-xl bg-gradient-brand text-brand-foreground transition-transform group-hover:scale-105">
@@ -547,7 +547,7 @@ function ScanPage() {
               <button
                 type="button"
                 onClick={openFiles}
-                disabled={busy || lockedByAssignment}
+                disabled={busy}
                 className="group flex flex-col items-start gap-3 rounded-2xl border border-border bg-surface p-5 text-left transition-all hover:border-brand/45 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
               >
                 <span className="grid size-11 place-items-center rounded-xl bg-brand-soft text-brand transition-transform group-hover:scale-105">
@@ -666,7 +666,7 @@ function ScanPage() {
                     size="sm"
                     className="rounded-xl"
                     onClick={startScan}
-                    disabled={busy || lockedByAssignment}
+                    disabled={busy}
                   >
                     {busy ? (
                       <Loader2 className="size-4 animate-spin" />
