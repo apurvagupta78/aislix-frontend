@@ -30,6 +30,10 @@ import {
 } from "@/lib/assignments";
 
 export const Route = createFileRoute("/assign-scan")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    store: typeof search.store === "string" ? search.store : undefined,
+  }),
+
   head: () => ({
     meta: [
       { title: "Assign Scan — Delegate a shelf audit | Aislix" },
