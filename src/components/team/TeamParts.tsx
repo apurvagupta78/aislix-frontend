@@ -75,6 +75,7 @@ import {
   storeAccessLabel,
   userInitials,
   userRoleLabels,
+  inviteRoles,
   userRoles,
   userStatusLabels,
   type ActivityEvent,
@@ -274,7 +275,7 @@ export function UserFormDialog({
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<UserRole>("viewer");
+  const [role, setRole] = useState<UserRole>("member");
   const [storeIds, setStoreIds] = useState<string[]>([]);
   const [touched, setTouched] = useState(false);
 
@@ -282,7 +283,7 @@ export function UserFormDialog({
     if (!open) return;
     setName(user?.name ?? "");
     setEmail(user?.email ?? "");
-    setRole(user?.role ?? "viewer");
+    setRole(user?.role ?? "member");
     setStoreIds((user?.assigned_stores ?? []).map((store) => store.id));
     setTouched(false);
   }, [open, user]);
@@ -354,7 +355,7 @@ export function UserFormDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {userRoles.map((option) => (
+                {(mode === "invite" ? inviteRoles : userRoles).map((option) => (
                   <SelectItem key={option} value={option}>
                     {userRoleLabels[option]}
                   </SelectItem>

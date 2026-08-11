@@ -15,6 +15,7 @@ import {
   Search,
   LogOut,
   Menu,
+  ClipboardCheck,
   ClipboardList,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -39,6 +40,7 @@ const nav = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
   { label: "Scan", to: "/scan", icon: ScanLine },
   { label: "Scan History", to: "/history", icon: History },
+  { label: "My Scans", to: "/my-scans", icon: ClipboardCheck },
 
   { label: "Reports", to: "/report", icon: FileText },
   { label: "Stores", to: "/stores", icon: Store },
@@ -47,6 +49,7 @@ const nav = [
 
 const managerNav = [
   { label: "Store Master", to: "/store-master", icon: ClipboardList },
+  { label: "Assigned Scans", to: "/assigned-scans", icon: ClipboardCheck },
 ] as const;
 
 const secondary = [

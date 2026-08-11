@@ -8,13 +8,25 @@ import { dbError, notFound, requireOrgId, requireUserId } from "@/lib/db/context
 
 // ---------- roles / RBAC ----------
 
-export type UserRole = "owner" | "admin" | "store_manager" | "viewer";
+export type UserRole = "owner" | "admin" | "manager" | "member" | "store_manager" | "viewer";
 
-export const userRoles: UserRole[] = ["owner", "admin", "store_manager", "viewer"];
+export const userRoles: UserRole[] = [
+  "owner",
+  "admin",
+  "manager",
+  "member",
+  "store_manager",
+  "viewer",
+];
+
+/** Roles a manager may hand out when inviting someone new. */
+export const inviteRoles: UserRole[] = ["manager", "member"];
 
 export const userRoleLabels: Record<UserRole, string> = {
   owner: "Owner",
   admin: "Admin",
+  manager: "Manager",
+  member: "Member (Junior)",
   store_manager: "Store Manager",
   viewer: "Viewer",
 };
@@ -53,6 +65,8 @@ export const rolePermissions: Record<UserRole, PermissionKey[]> = {
     "export_data",
   ],
   admin: ["org_settings", "manage_users", "manage_stores", "run_scans", "view_reports", "export_data"],
+  manager: ["manage_stores", "run_scans", "view_reports", "export_data"],
+  member: ["run_scans", "view_reports"],
   store_manager: ["run_scans", "view_reports", "export_data"],
   viewer: ["view_reports"],
 };
@@ -60,6 +74,8 @@ export const rolePermissions: Record<UserRole, PermissionKey[]> = {
 export const roleSummaries: Record<UserRole, string> = {
   owner: "Complete control of the organization, including billing and account deletion.",
   admin: "Manages stores, users and settings. Cannot change billing or delete the account.",
+  manager: "Uploads planograms, assigns scans and reviews reports across stores.",
+  member: "Junior teammate who completes assigned scans and views their results.",
   store_manager: "Runs scans and works with reports for the stores assigned to them.",
   viewer: "Read-only access to scans and reports for assigned stores.",
 };
@@ -67,6 +83,8 @@ export const roleSummaries: Record<UserRole, string> = {
 export const roleScope: Record<UserRole, "organization" | "assigned_stores"> = {
   owner: "organization",
   admin: "organization",
+  manager: "organization",
+  member: "assigned_stores",
   store_manager: "assigned_stores",
   viewer: "assigned_stores",
 };

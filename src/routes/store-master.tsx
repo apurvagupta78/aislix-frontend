@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Loader2, Plus, Trash2, Upload, XCircle } from "lucide-react";
+import { CheckCircle2, Download, Loader2, Plus, Trash2, Upload, UserPlus, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,7 @@ import {
   parsePlanogramCsv,
   savePlanogramDraft,
   toDraftRow,
+  SAMPLE_CSV_TEMPLATE,
   type CsvParseRow,
   type DraftRow,
   type PlanogramRow,
@@ -159,6 +160,16 @@ function StoreMasterPage() {
     onError: (error) => toast.error(toUserMessage(error)),
   });
 
+  function downloadTemplate() {
+    const blob = new Blob([SAMPLE_CSV_TEMPLATE], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "aislix-planogram-template.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   function selectStore(id: string) {
     setStoreId(id);
     setDraft([]);
@@ -192,7 +203,6 @@ function StoreMasterPage() {
             ? {
                 ...emptyRow(),
                 location: prev.location,
-                aisle: prev.aisle,
                 category: prev.category,
                 sub_category: prev.sub_category,
               }
@@ -224,6 +234,13 @@ function StoreMasterPage() {
     <AppShell
       title="Store Master"
       description="Define the expected shelf data for each store — the source of truth for Expected vs Actual audits."
+      actions={
+        <Button variant="brand" className="rounded-xl" asChild>
+          <Link to="/assign-scan">
+            <UserPlus className="mr-2 size-4" /> Assign scan
+          </Link>
+        </Button>
+      }
     >
       <div className="space-y-6">
         {/* Step 1 — store */}
@@ -304,10 +321,20 @@ function StoreMasterPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Columns: location, aisle, category, sub_category, brand, product_name,
-                    expected_qty (optional: sku, shelf_position).
-                  </p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-xs text-muted-foreground">
+                      Columns: location, category, sub_category, brand, product_name,
+                      expected_qty, sku, shelf_position.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-xl"
+                      onClick={downloadTemplate}
+                    >
+                      <Download className="mr-2 size-4" /> CSV template
+                    </Button>
+                  </div>
 
                   {preview && (
                     <div className="space-y-3">
@@ -366,18 +393,11 @@ function StoreMasterPage() {
 
                 <TabsContent value="manual" className="mt-4">
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <Field label="Location">
+                    <Field label="Location (optional — zone or shelf label, e.g. A-1-Z)">
                       <Input
                         className="rounded-xl"
                         value={form.location}
                         onChange={(e) => setForm({ ...form, location: e.target.value })}
-                      />
-                    </Field>
-                    <Field label="Aisle">
-                      <Input
-                        className="rounded-xl"
-                        value={form.aisle}
-                        onChange={(e) => setForm({ ...form, aisle: e.target.value })}
                       />
                     </Field>
                     <Field label="Category">
@@ -529,7 +549,6 @@ function StoreMasterPage() {
                     <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
                       <tr>
                         <th className="px-3 py-2">Location</th>
-                        <th className="px-3 py-2">Aisle</th>
                         <th className="px-3 py-2">Category</th>
                         <th className="px-3 py-2">Sub-category</th>
                         <th className="px-3 py-2">Brand</th>
@@ -564,9 +583,6 @@ function StoreMasterPage() {
                           <tr key={row.key} className="border-t border-border align-middle">
                             <td className="px-3 py-2">
                               {cell(row.location, (v) => update({ location: v }))}
-                            </td>
-                            <td className="px-3 py-2">
-                              {cell(row.aisle, (v) => update({ aisle: v }))}
                             </td>
                             <td className="px-3 py-2">
                               {cell(row.category, (v) => update({ category: v }))}
@@ -653,34 +669,32 @@ function StoreMasterPage() {
                   )}
                 </div>
                 <div className="mt-4 space-y-4">
-                  {activeHierarchy.map((aisle) => (
-                    <div key={aisle.aisle} className="rounded-xl border border-border p-4">
-                      <p className="text-sm font-medium text-foreground">Aisle {aisle.aisle}</p>
-                      {aisle.categories.map((category) => (
-                        <div key={category.category} className="mt-3 pl-3">
-                          <p className="text-sm text-muted-foreground">{category.category}</p>
-                          {category.subCategories.map((sub) => (
-                            <div key={sub.sub_category} className="mt-2 pl-3">
-                              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                                {sub.sub_category}
-                              </p>
-                              <ul className="mt-1.5 space-y-1">
-                                {sub.products.map((product, index) => (
-                                  <li
-                                    key={`${product.brand}-${product.product_name}-${index}`}
-                                    className="flex items-center justify-between text-sm"
-                                  >
-                                    <span>
-                                      {product.brand} · {product.product_name}
-                                    </span>
-                                    <span className="text-muted-foreground">
-                                      Expected {product.expected_qty}
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          ))}
+                  {activeHierarchy.map((category) => (
+                    <div key={category.category} className="rounded-xl border border-border p-4">
+                      <p className="text-sm font-medium text-foreground">{category.category}</p>
+                      {category.subCategories.map((sub) => (
+                        <div key={sub.sub_category} className="mt-3 pl-3">
+                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {sub.sub_category}
+                          </p>
+                          <ul className="mt-1.5 space-y-1">
+                            {sub.products.map((product, index) => (
+                              <li
+                                key={`${product.brand}-${product.product_name}-${index}`}
+                                className="flex items-center justify-between gap-3 text-sm"
+                              >
+                                <span>
+                                  {product.brand} · {product.product_name}
+                                  {product.location ? (
+                                    <span className="text-muted-foreground"> · {product.location}</span>
+                                  ) : null}
+                                </span>
+                                <span className="shrink-0 text-muted-foreground">
+                                  Expected {product.expected_qty}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
                         </div>
                       ))}
                     </div>

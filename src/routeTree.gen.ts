@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AssignScanRouteImport } from './routes/assign-scan'
+import { Route as AssignedScansRouteImport } from './routes/assigned-scans'
 import { Route as BillingRouteImport } from './routes/billing'
 import { Route as CompareRouteImport } from './routes/compare'
 import { Route as ContactRouteImport } from './routes/contact'
@@ -23,6 +25,7 @@ import { Route as HistoryRouteImport } from './routes/history'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LogoutRouteImport } from './routes/logout'
+import { Route as MyScansRouteImport } from './routes/my-scans'
 import { Route as OrganizationRouteImport } from './routes/organization'
 import { Route as PlatformRouteImport } from './routes/platform'
 import { Route as PricingRouteImport } from './routes/pricing'
@@ -56,6 +59,16 @@ const IndexRoute = IndexRouteImport.update({
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssignScanRoute = AssignScanRouteImport.update({
+  id: '/assign-scan',
+  path: '/assign-scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssignedScansRoute = AssignedScansRouteImport.update({
+  id: '/assigned-scans',
+  path: '/assigned-scans',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BillingRoute = BillingRouteImport.update({
@@ -116,6 +129,11 @@ const LoginRoute = LoginRouteImport.update({
 const LogoutRoute = LogoutRouteImport.update({
   id: '/logout',
   path: '/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyScansRoute = MyScansRouteImport.update({
+  id: '/my-scans',
+  path: '/my-scans',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrganizationRoute = OrganizationRouteImport.update({
@@ -242,6 +260,8 @@ const StoresStoreIdRoute = StoresStoreIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/assign-scan': typeof AssignScanRoute
+  '/assigned-scans': typeof AssignedScansRoute
   '/billing': typeof BillingRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
@@ -254,6 +274,7 @@ export interface FileRoutesByFullPath {
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/my-scans': typeof MyScansRoute
   '/organization': typeof OrganizationRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
@@ -282,6 +303,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/assign-scan': typeof AssignScanRoute
+  '/assigned-scans': typeof AssignedScansRoute
   '/billing': typeof BillingRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
@@ -294,6 +317,7 @@ export interface FileRoutesByTo {
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/my-scans': typeof MyScansRoute
   '/organization': typeof OrganizationRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
@@ -323,6 +347,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/assign-scan': typeof AssignScanRoute
+  '/assigned-scans': typeof AssignedScansRoute
   '/billing': typeof BillingRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
@@ -335,6 +361,7 @@ export interface FileRoutesById {
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/my-scans': typeof MyScansRoute
   '/organization': typeof OrganizationRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
@@ -365,6 +392,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/assign-scan'
+    | '/assigned-scans'
     | '/billing'
     | '/compare'
     | '/contact'
@@ -377,6 +406,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/login'
     | '/logout'
+    | '/my-scans'
     | '/organization'
     | '/platform'
     | '/pricing'
@@ -405,6 +435,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/assign-scan'
+    | '/assigned-scans'
     | '/billing'
     | '/compare'
     | '/contact'
@@ -417,6 +449,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/login'
     | '/logout'
+    | '/my-scans'
     | '/organization'
     | '/platform'
     | '/pricing'
@@ -445,6 +478,8 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/assign-scan'
+    | '/assigned-scans'
     | '/billing'
     | '/compare'
     | '/contact'
@@ -457,6 +492,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/login'
     | '/logout'
+    | '/my-scans'
     | '/organization'
     | '/platform'
     | '/pricing'
@@ -486,6 +522,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AssignScanRoute: typeof AssignScanRoute
+  AssignedScansRoute: typeof AssignedScansRoute
   BillingRoute: typeof BillingRoute
   CompareRoute: typeof CompareRoute
   ContactRoute: typeof ContactRoute
@@ -498,6 +536,7 @@ export interface RootRouteChildren {
   HowItWorksRoute: typeof HowItWorksRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
+  MyScansRoute: typeof MyScansRoute
   OrganizationRoute: typeof OrganizationRoute
   PlatformRoute: typeof PlatformRoute
   PricingRoute: typeof PricingRoute
@@ -538,6 +577,20 @@ declare module '@tanstack/react-router' {
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assign-scan': {
+      id: '/assign-scan'
+      path: '/assign-scan'
+      fullPath: '/assign-scan'
+      preLoaderRoute: typeof AssignScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assigned-scans': {
+      id: '/assigned-scans'
+      path: '/assigned-scans'
+      fullPath: '/assigned-scans'
+      preLoaderRoute: typeof AssignedScansRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/billing': {
@@ -622,6 +675,13 @@ declare module '@tanstack/react-router' {
       path: '/logout'
       fullPath: '/logout'
       preLoaderRoute: typeof LogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-scans': {
+      id: '/my-scans'
+      path: '/my-scans'
+      fullPath: '/my-scans'
+      preLoaderRoute: typeof MyScansRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/organization': {
@@ -798,6 +858,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AssignScanRoute: AssignScanRoute,
+  AssignedScansRoute: AssignedScansRoute,
   BillingRoute: BillingRoute,
   CompareRoute: CompareRoute,
   ContactRoute: ContactRoute,
@@ -810,6 +872,7 @@ const rootRouteChildren: RootRouteChildren = {
   HowItWorksRoute: HowItWorksRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
+  MyScansRoute: MyScansRoute,
   OrganizationRoute: OrganizationRoute,
   PlatformRoute: PlatformRoute,
   PricingRoute: PricingRoute,
