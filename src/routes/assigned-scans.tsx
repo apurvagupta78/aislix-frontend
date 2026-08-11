@@ -343,7 +343,7 @@ function TeamScansTab() {
 }
 
 function AssignedScansPage() {
-  const { tab: tabParam } = Route.useSearch();
+  const { tab: tabParam, store: storeSearch } = Route.useSearch();
   const [tab, setTab] = useState(tabParam ?? "assignments");
   useEffect(() => {
     if (tabParam) setTab(tabParam);
