@@ -8,6 +8,14 @@ import { Download, FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -17,7 +25,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { CardSkeleton, EmptyState, ErrorState } from "@/components/States";
-import { fetchScanHistory, formatScanTime, type ScanHistoryItem } from "@/lib/scan-history";
+import {
+  fetchScanHistory,
+  formatScanTime,
+  type ScanHistoryItem,
+  type ScanHistoryQuery,
+} from "@/lib/scan-history";
+
 import {
   downloadScanCsv,
   downloadScanPdf,
