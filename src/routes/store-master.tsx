@@ -312,7 +312,7 @@ function StoreMasterPage() {
         {storeId && (
           <>
             {/* Step 2 — inputs */}
-            <section className={card}>
+            <section id="planogram-upload" className={card}>
               <h2 className="text-sm font-semibold text-foreground">Step 2 · Add expected products</h2>
               <Tabs defaultValue="csv" className="mt-4">
                 <TabsList className="rounded-xl">
@@ -708,13 +708,8 @@ function StoreMasterPage() {
                       View assignments
                     </Link>
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-xl"
-                    onClick={() => setTab("upload")}
-                  >
-                    Upload new version
+                  <Button variant="outline" size="sm" className="rounded-xl" asChild>
+                    <a href="#planogram-upload">Upload new version</a>
                   </Button>
                 </div>
                 <div className="mt-4 space-y-4">
