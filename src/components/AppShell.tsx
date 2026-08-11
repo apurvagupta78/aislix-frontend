@@ -37,6 +37,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Tooltip,
   TooltipContent,
@@ -170,9 +171,15 @@ const ACCOUNT_SECTION: NavSection = {
   ],
 };
 
+/** Expand preference is stored per parent; default (missing key) is collapsed. */
+const PARENT_STORAGE_KEYS: Record<string, string> = {
+  "My Scans": "nav_my_scans_expanded",
+  "Assigned Scans": "nav_assigned_scans_expanded",
+};
+
 function SectionHeader({ children }: { children: ReactNode }) {
   return (
-    <p className="sticky top-0 z-10 bg-card px-3 pb-2 pt-3 text-[0.68rem] font-semibold uppercase tracking-widest text-muted-foreground">
+    <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">
       {children}
     </p>
   );
@@ -215,7 +222,20 @@ function SidebarNav({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const activeTab = new URLSearchParams(searchStr).get("tab");
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  // Expandable parents start collapsed; only an explicit user click is persisted.
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    const next: Record<string, boolean> = {};
+    for (const [label, key] of Object.entries(PARENT_STORAGE_KEYS)) {
+      if (window.localStorage.getItem(key) === "true") next[label] = true;
+    }
+    setExpanded(next);
+  }, []);
+  const toggleParent = (label: string, open: boolean) => {
+    setExpanded((prev) => ({ ...prev, [label]: !open }));
+    const key = PARENT_STORAGE_KEYS[label];
+    if (key) window.localStorage.setItem(key, String(!open));
+  };
 
   const leafActive = (leaf: NavLeaf) => {
     if (pathname !== leaf.to) return false;
@@ -274,10 +294,10 @@ function SidebarNav({
         search={leaf.search ?? {}}
         onClick={onNavigate}
         className={cn(
-          "flex items-center gap-2.5 rounded-xl py-2 text-sm transition-colors",
-          nested ? "ml-3 border-l border-border pl-4 pr-3" : "px-3",
+          "flex items-center gap-2.5 rounded-lg py-2 text-sm transition-colors",
+          nested ? "pl-8 pr-3" : "px-3",
           active
-            ? "bg-brand-soft font-medium text-brand"
+            ? "font-medium text-brand"
             : "text-muted-foreground hover:bg-muted hover:text-foreground",
         )}
       >
@@ -290,32 +310,82 @@ function SidebarNav({
 
   const renderParent = (parent: NavParent) => {
     const childActive = parent.children.some((child) => leafActive(child));
-    const open = collapsed[parent.label] === undefined ? true : !collapsed[parent.label];
+    // Collapsed by default; a child route on this parent auto-expands it only.
+    const open = childActive || expanded[parent.label] === true;
     const count = badgeFor(parent.badge);
     if (rail) {
-      const first = parent.children[0];
-      if (!first) return null;
-      return railLink(parent.label, first.to, first.search, parent.icon, childActive, count);
+      return (
+        <Popover key={parent.label}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label={`${parent.label} — expand for sub-items`}
+              title={`${parent.label} — expand for sub-items`}
+              className={cn(
+                "relative flex size-10 items-center justify-center rounded-xl transition-colors",
+                childActive
+                  ? "bg-brand-soft text-brand"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              <parent.icon className="size-4" />
+              {count > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[0.6rem] font-semibold text-brand-foreground">
+                  {count > 9 ? "9+" : count}
+                </span>
+              )}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side="right" align="start" className="w-52 p-1.5">
+            <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {parent.label}
+            </p>
+            <div className="flex flex-col gap-0.5">
+              {parent.children.map((child) => (
+                <Link
+                  key={`${child.to}-${child.label}`}
+                  to={child.to}
+                  search={child.search ?? {}}
+                  onClick={onNavigate}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors",
+                    leafActive(child)
+                      ? "font-medium text-brand"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  <span className="flex-1 truncate">{child.label}</span>
+                  <CountBadge count={badgeFor(child.badge)} />
+                </Link>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+      );
     }
     return (
-      <div key={parent.label} className="space-y-1">
+      <div key={parent.label} className="flex flex-col gap-0.5">
         <button
           type="button"
-          onClick={() => setCollapsed((prev) => ({ ...prev, [parent.label]: open }))}
+          onClick={() => toggleParent(parent.label, open)}
           aria-expanded={open}
           className={cn(
-            "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors",
+            "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
             childActive
-              ? "bg-brand-soft font-medium text-brand"
+              ? "font-medium text-brand"
               : "text-muted-foreground hover:bg-muted hover:text-foreground",
           )}
         >
           <parent.icon className="size-4" />
-          <span className="flex-1 text-left truncate">{parent.label}</span>
+          <span className="flex-1 truncate text-left">{parent.label}</span>
           <CountBadge count={count} />
           <ChevronDown className={cn("size-3.5 transition-transform", !open && "-rotate-90")} />
         </button>
-        {open && <div className="space-y-1">{parent.children.map((c) => renderLeaf(c, true))}</div>}
+        {open && (
+          <div className="flex flex-col gap-0.5">
+            {parent.children.map((c) => renderLeaf(c, true))}
+          </div>
+        )}
       </div>
     );
   };
@@ -325,7 +395,11 @@ function SidebarNav({
     return (
       <div
         key={section.header ?? `section-${index}`}
-        className={cn("space-y-1", rail && "flex flex-col items-center gap-1 space-y-0")}
+        className={cn(
+          "flex flex-col gap-0.5",
+          section.header && !rail && "mt-4 first:mt-0",
+          rail && "items-center gap-1",
+        )}
       >
         {section.header && !rail && <SectionHeader>{section.header}</SectionHeader>}
         {section.header && rail && <span className="my-1 h-px w-6 bg-border" />}
@@ -337,7 +411,7 @@ function SidebarNav({
   };
 
   return (
-    <nav className={cn("space-y-1", rail && "flex flex-col items-center gap-1 space-y-0")}>
+    <nav className={cn("flex flex-col gap-0.5", rail && "items-center gap-1")}>
       {SECTIONS.map(renderSection)}
     </nav>
   );
@@ -352,7 +426,7 @@ function AccountNav({
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
-    <nav className={cn("space-y-1", rail && "flex flex-col items-center gap-1 space-y-0")}>
+    <nav className={cn("flex flex-col gap-0.5", rail ? "items-center gap-1" : "mt-4")}>
       {rail ? (
         <span className="my-1 h-px w-6 bg-border" />
       ) : (
@@ -387,9 +461,9 @@ function AccountNav({
             to={item.to}
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors",
+              "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
               active
-                ? "bg-brand-soft font-medium text-brand"
+                ? "font-medium text-brand"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
@@ -577,11 +651,10 @@ export function AppShell({
             openTasks={pendingCount}
             rail={sidebarCollapsed}
           />
-          <div className="mt-4">
-            <AccountNav rail={sidebarCollapsed} />
-          </div>
         </div>
-        <div className={cn("mt-auto shrink-0", sidebarCollapsed ? "pt-4" : "pt-4 pb-2")}>
+        <div className={cn("mt-auto shrink-0", sidebarCollapsed ? "pt-2" : "pt-2 pb-2")}>
+          <AccountNav rail={sidebarCollapsed} />
+          <div className="pt-4">
           {sidebarCollapsed ? (
             <RailTooltip label="Manage plan">
               <Link
@@ -603,8 +676,10 @@ export function AppShell({
               </Button>
             </div>
           )}
+          </div>
         </div>
       </aside>
+
 
       <div className={sidebarCollapsed ? "lg:pl-16" : "lg:pl-64"}>
 
