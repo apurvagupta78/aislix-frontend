@@ -114,7 +114,39 @@ function StatusBadge({ status }: { status: ScanStatus }) {
   );
 }
 
-function RowActions({
+const assignmentStatusMeta: Record<string, { label: string; className: string }> = {
+  pending: { label: "Pending", className: "bg-muted text-muted-foreground" },
+  in_progress: { label: "In progress", className: "bg-brand-soft text-brand" },
+  needs_correction: { label: "Needs correction", className: "bg-amber-500/12 text-amber-600" },
+  completed: { label: "Completed", className: "bg-accent-green/12 text-accent-green" },
+  cancelled: { label: "Cancelled", className: "bg-muted text-muted-foreground" },
+};
+
+function AssignmentStatusBadge({ status }: { status: string | null }) {
+  if (!status) return <span className="text-muted-foreground">—</span>;
+  const meta = assignmentStatusMeta[status] ?? {
+    label: status,
+    className: "bg-muted text-muted-foreground",
+  };
+  return (
+    <Badge variant="secondary" className={`rounded-full border-0 font-medium ${meta.className}`}>
+      {meta.label}
+    </Badge>
+  );
+}
+
+function complianceTone(value: number | null): string {
+  if (value === null) return "text-muted-foreground";
+  if (value >= 100) return "text-accent-green";
+  if (value >= 70) return "text-amber-600";
+  return "text-destructive";
+}
+
+function formatCompliance(value: number | null): string {
+  return value === null ? "—" : `${Math.round(value)}%`;
+}
+
+
   scan,
   onDelete,
 }: {
