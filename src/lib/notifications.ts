@@ -73,5 +73,6 @@ export async function markAllNotificationsRead(): Promise<void> {
 /** Route a notification to the surface that can act on it. */
 export function notificationHref(notification: InboxNotification): string {
   if (notification.type === "scan_assigned") return "/my-scans";
+  if (notification.type === "scan_completed") return "/assigned-scans";
   return "/dashboard";
 }
