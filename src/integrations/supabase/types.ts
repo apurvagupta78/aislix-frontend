@@ -106,6 +106,69 @@ export type Database = {
         }
         Relationships: []
       }
+      corrective_actions: {
+        Row: {
+          assigned_to: string | null
+          comparison_id: string
+          comparison_line_id: string | null
+          created_at: string
+          id: string
+          issue_type: string
+          notes: string | null
+          org_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          suggestion: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          comparison_id: string
+          comparison_line_id?: string | null
+          created_at?: string
+          id?: string
+          issue_type: string
+          notes?: string | null
+          org_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          suggestion: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          comparison_id?: string
+          comparison_line_id?: string | null
+          created_at?: string
+          id?: string
+          issue_type?: string
+          notes?: string | null
+          org_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          suggestion?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "corrective_actions_comparison_id_fkey"
+            columns: ["comparison_id"]
+            isOneToOne: false
+            referencedRelation: "planogram_comparisons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "corrective_actions_comparison_line_id_fkey"
+            columns: ["comparison_line_id"]
+            isOneToOne: false
+            referencedRelation: "planogram_comparison_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       detected_products: {
         Row: {
           barcode: string | null
@@ -291,6 +354,42 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          org_id: string
+          payload: Json
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          org_id: string
+          payload?: Json
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          org_id?: string
+          payload?: Json
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       organization_members: {
         Row: {
           created_at: string
@@ -396,6 +495,242 @@ export type Database = {
         }
         Relationships: []
       }
+      planogram_comparison_lines: {
+        Row: {
+          actual_brand: string | null
+          actual_product: string | null
+          actual_qty: number | null
+          comparison_id: string
+          created_at: string
+          detail: string | null
+          expected_brand: string | null
+          expected_product: string | null
+          expected_qty: number | null
+          id: string
+          issue_type: string
+          planogram_item_id: string | null
+          severity: string
+        }
+        Insert: {
+          actual_brand?: string | null
+          actual_product?: string | null
+          actual_qty?: number | null
+          comparison_id: string
+          created_at?: string
+          detail?: string | null
+          expected_brand?: string | null
+          expected_product?: string | null
+          expected_qty?: number | null
+          id?: string
+          issue_type: string
+          planogram_item_id?: string | null
+          severity?: string
+        }
+        Update: {
+          actual_brand?: string | null
+          actual_product?: string | null
+          actual_qty?: number | null
+          comparison_id?: string
+          created_at?: string
+          detail?: string | null
+          expected_brand?: string | null
+          expected_product?: string | null
+          expected_qty?: number | null
+          id?: string
+          issue_type?: string
+          planogram_item_id?: string | null
+          severity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planogram_comparison_lines_comparison_id_fkey"
+            columns: ["comparison_id"]
+            isOneToOne: false
+            referencedRelation: "planogram_comparisons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planogram_comparison_lines_planogram_item_id_fkey"
+            columns: ["planogram_item_id"]
+            isOneToOne: false
+            referencedRelation: "planogram_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planogram_comparisons: {
+        Row: {
+          assignment_id: string | null
+          compliance_percent: number | null
+          created_at: string
+          id: string
+          org_id: string
+          scan_id: string | null
+          store_id: string
+          summary: Json
+        }
+        Insert: {
+          assignment_id?: string | null
+          compliance_percent?: number | null
+          created_at?: string
+          id?: string
+          org_id: string
+          scan_id?: string | null
+          store_id: string
+          summary?: Json
+        }
+        Update: {
+          assignment_id?: string | null
+          compliance_percent?: number | null
+          created_at?: string
+          id?: string
+          org_id?: string
+          scan_id?: string | null
+          store_id?: string
+          summary?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planogram_comparisons_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scan_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planogram_comparisons_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "shelf_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planogram_items: {
+        Row: {
+          aisle: string | null
+          brand: string
+          category: string
+          created_at: string
+          expected_qty: number
+          id: string
+          location: string | null
+          match_key: string | null
+          org_id: string
+          product_name: string
+          shelf_position: string | null
+          sku: string | null
+          store_id: string
+          sub_category: string | null
+          updated_at: string
+          version_id: string
+        }
+        Insert: {
+          aisle?: string | null
+          brand: string
+          category: string
+          created_at?: string
+          expected_qty?: number
+          id?: string
+          location?: string | null
+          match_key?: string | null
+          org_id: string
+          product_name: string
+          shelf_position?: string | null
+          sku?: string | null
+          store_id: string
+          sub_category?: string | null
+          updated_at?: string
+          version_id: string
+        }
+        Update: {
+          aisle?: string | null
+          brand?: string
+          category?: string
+          created_at?: string
+          expected_qty?: number
+          id?: string
+          location?: string | null
+          match_key?: string | null
+          org_id?: string
+          product_name?: string
+          shelf_position?: string | null
+          sku?: string | null
+          store_id?: string
+          sub_category?: string | null
+          updated_at?: string
+          version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planogram_items_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "planogram_items_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "planogram_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      planogram_versions: {
+        Row: {
+          activated_at: string | null
+          created_at: string
+          id: string
+          name: string
+          org_id: string
+          row_count: number
+          source_filename: string | null
+          source_type: string
+          status: string
+          store_id: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          activated_at?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          org_id: string
+          row_count?: number
+          source_filename?: string | null
+          source_type?: string
+          status?: string
+          store_id: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          activated_at?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string
+          row_count?: number
+          source_filename?: string | null
+          source_type?: string
+          status?: string
+          store_id?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planogram_versions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_access_grants: {
         Row: {
           bypass_history_limits: boolean
@@ -470,6 +805,82 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      scan_assignments: {
+        Row: {
+          assignee_id: string
+          assigner_id: string
+          completed_at: string | null
+          created_at: string
+          due_at: string | null
+          id: string
+          instructions: string | null
+          org_id: string
+          planogram_version_id: string | null
+          scan_id: string | null
+          scope_type: string
+          scope_values: Json
+          status: string
+          store_id: string
+          updated_at: string
+        }
+        Insert: {
+          assignee_id: string
+          assigner_id: string
+          completed_at?: string | null
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          instructions?: string | null
+          org_id: string
+          planogram_version_id?: string | null
+          scan_id?: string | null
+          scope_type: string
+          scope_values?: Json
+          status?: string
+          store_id: string
+          updated_at?: string
+        }
+        Update: {
+          assignee_id?: string
+          assigner_id?: string
+          completed_at?: string | null
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          instructions?: string | null
+          org_id?: string
+          planogram_version_id?: string | null
+          scan_id?: string | null
+          scope_type?: string
+          scope_values?: Json
+          status?: string
+          store_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scan_assignments_planogram_version_id_fkey"
+            columns: ["planogram_version_id"]
+            isOneToOne: false
+            referencedRelation: "planogram_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scan_assignments_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "shelf_scans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scan_assignments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scan_images: {
         Row: {
@@ -651,6 +1062,7 @@ export type Database = {
       }
       shelf_scans: {
         Row: {
+          assignment_id: string | null
           category: string | null
           created_at: string
           created_by: string | null
@@ -677,6 +1089,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assignment_id?: string | null
           category?: string | null
           created_at?: string
           created_by?: string | null
@@ -703,6 +1116,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assignment_id?: string | null
           category?: string | null
           created_at?: string
           created_by?: string | null
@@ -729,6 +1143,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "shelf_scans_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scan_assignments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "shelf_scans_created_by_profile_fkey"
             columns: ["created_by"]
@@ -973,6 +1394,8 @@ export type Database = {
       can_org_add_store: { Args: { p_org_id: string }; Returns: boolean }
       can_org_start_scan: { Args: { p_org_id: string }; Returns: boolean }
       get_org_usage_summary: { Args: { p_org_id: string }; Returns: Json }
+      is_org_manager: { Args: { p_org_id: string }; Returns: boolean }
+      is_org_member: { Args: { p_org_id: string }; Returns: boolean }
       org_has_platform_bypass: { Args: { p_org_id: string }; Returns: boolean }
       org_has_platform_store_bypass: {
         Args: { p_org_id: string }
@@ -985,7 +1408,13 @@ export type Database = {
     }
     Enums: {
       alert_severity: "critical" | "high" | "medium" | "low"
-      app_role: "owner" | "admin" | "store_manager" | "viewer"
+      app_role:
+        | "owner"
+        | "admin"
+        | "store_manager"
+        | "viewer"
+        | "manager"
+        | "member"
       billing_cycle: "monthly" | "annual"
       member_status: "active" | "invited" | "suspended"
       scan_status: "queued" | "processing" | "completed" | "failed"
@@ -1120,7 +1549,14 @@ export const Constants = {
   public: {
     Enums: {
       alert_severity: ["critical", "high", "medium", "low"],
-      app_role: ["owner", "admin", "store_manager", "viewer"],
+      app_role: [
+        "owner",
+        "admin",
+        "store_manager",
+        "viewer",
+        "manager",
+        "member",
+      ],
       billing_cycle: ["monthly", "annual"],
       member_status: ["active", "invited", "suspended"],
       scan_status: ["queued", "processing", "completed", "failed"],
