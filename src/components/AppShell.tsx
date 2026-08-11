@@ -622,28 +622,28 @@ export function AppShell({
               </SheetTrigger>
               <SheetContent
                 side="left"
-                className="flex w-[85vw] max-w-xs flex-col gap-0 overflow-y-auto bg-card p-0"
+                className="flex h-full w-[85vw] max-w-xs flex-col gap-0 overflow-hidden bg-card p-0"
               >
-                <div className="border-b border-border px-4 py-4">
+                <div className="shrink-0 border-b border-border px-4 py-4">
                   <Logo to="/dashboard" />
                   {workspaceSwitcher}
                 </div>
-                <div className="px-3 py-3">
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-3">
                   <SidebarNav
                     showManagerNav={showManagerNav}
                     openTasks={pendingCount}
                     onNavigate={() => setMenuOpen(false)}
                   />
+                  <div className="mt-4">
+                    <AccountNav onNavigate={() => setMenuOpen(false)} />
+                  </div>
                 </div>
-                <div className="px-4 pb-2">
+                <div className="shrink-0 border-t border-border px-4 py-4">
                   <Button asChild size="sm" variant="brand" className="w-full rounded-lg">
                     <Link to="/billing" onClick={() => setMenuOpen(false)}>
                       Manage plan
                     </Link>
                   </Button>
-                </div>
-                <div className="px-3 pb-6">
-                  <AccountNav onNavigate={() => setMenuOpen(false)} />
                 </div>
               </SheetContent>
             </Sheet>
