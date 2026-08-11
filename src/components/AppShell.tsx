@@ -351,11 +351,24 @@ export function AppShell({
                         <DropdownMenuItem
                           key={m.org_id}
                           onClick={() => switchWorkspace(m.org_id)}
-                          className="text-sm"
+                          className="flex items-start justify-between gap-2 text-sm"
                         >
-                          {m.org_name ?? "Workspace"}
+                          <span className="min-w-0">
+                            <span className="block truncate">{m.org_name ?? "Workspace"}</span>
+                            {m.org_hint && (
+                              <span className="block truncate text-xs text-muted-foreground">
+                                {m.org_hint}
+                              </span>
+                            )}
+                          </span>
+                          {(m.pending_count ?? 0) > 0 && (
+                            <span className="mt-0.5 shrink-0 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                              {m.pending_count}
+                            </span>
+                          )}
                         </DropdownMenuItem>
                       ))}
+
                       <DropdownMenuSeparator />
                     </>
                   )}
