@@ -58,7 +58,9 @@ const card = "rounded-2xl border border-border bg-card p-5 shadow-sm";
 
 function AssignScanPage() {
   const navigate = useNavigate();
-  const [storeId, setStoreId] = useState("");
+  const { store: storeFromSearch } = Route.useSearch();
+  const [storeId, setStoreId] = useState(storeFromSearch ?? "");
+
   const [scopeType, setScopeType] = useState<ScopeType>("category");
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
