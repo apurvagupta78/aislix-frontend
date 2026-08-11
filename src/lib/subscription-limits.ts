@@ -130,19 +130,51 @@ export function isLimitReachedError(error: unknown): error is LimitReachedError 
   return error instanceof LimitReachedError;
 }
 
+/** Store allowance exhausted (client check or DB trigger `STORE_LIMIT_REACHED`). */
+export class StoreLimitError extends LimitReachedError {
+  constructor(input: { usage: UsageSummary; message: string }) {
+    super({ limit: "store_limit", usage: input.usage, message: input.message });
+    this.name = "StoreLimitError";
+  }
+}
+
+/** Scan allowance exhausted (client check or DB trigger `SCAN_LIMIT_REACHED`). */
+export class ScanLimitError extends LimitReachedError {
+  constructor(input: { usage: UsageSummary; message: string; cooldownUntil?: string; cooldown?: boolean }) {
+    super({
+      limit: input.cooldown ? "scan_cooldown" : "scan_quota",
+      usage: input.usage,
+      message: input.message,
+      ...(input.cooldownUntil ? { cooldownUntil: input.cooldownUntil } : {}),
+    });
+    this.name = "ScanLimitError";
+  }
+}
+
 /**
  * The RPC returns a flatter shape (`scans_included`, `stores_included`, `blocked`)
  * than the client `UsageSummary`. Normalise it so limit messages never render
  * `undefined` and `can_add_store` / `can_scan` are always real booleans.
  */
+export function normalizeUsageSummary(raw: Record<string, unknown> | null | undefined): UsageSummary {
+  return normalizeUsage((raw ?? {}) as Record<string, unknown>);
+}
+
 function normalizeUsage(raw: Record<string, unknown>): UsageSummary {
   const num = (v: unknown): number | null =>
     v === null || v === undefined ? null : Number(v);
-  const scanQuota = num(raw["scan_quota"] ?? raw["scans_included"]);
-  const storeLimit = num(raw["store_limit"] ?? raw["stores_included"]);
+  const planCode = ((raw["plan_code"] as string) ?? "free").toLowerCase();
+  const isFree = planCode === "free";
+  const isEnterprise = planCode === "enterprise";
+  // Free-plan fallbacks keep limit copy free of `undefined`.
+  const scanQuota = num(raw["scan_quota"] ?? raw["scans_included"]) ?? (isFree ? 3 : null);
+  const storeLimit =
+    num(raw["store_limit"] ?? raw["stores_included"]) ?? (isFree ? 1 : null);
+  const historyDays = num(raw["history_days"]) ?? (isFree ? 7 : null);
   const scansUsed = num(raw["scans_used"]) ?? 0;
   const storesUsed = num(raw["stores_used"]) ?? 0;
   const blocked = Boolean(raw["blocked"]);
+  void isEnterprise;
 
   return {
     plan_code: (raw["plan_code"] as string) ?? "free",
