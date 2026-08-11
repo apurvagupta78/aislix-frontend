@@ -94,9 +94,9 @@ function Results() {
   });
 
   const comparisonQuery = useQuery({
-    queryKey: ["planogram-comparison", scanId],
-    queryFn: () => fetchPlanogramComparison(scanId!),
-    enabled: Boolean(scanId),
+    queryKey: ["planogram-comparison", scan],
+    queryFn: () => fetchPlanogramComparison(scan!),
+    enabled: Boolean(scan),
     retry: false,
   });
   const comparison = comparisonQuery.data ?? null;
