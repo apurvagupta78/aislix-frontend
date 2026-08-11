@@ -174,19 +174,17 @@ function normalizeUsage(raw: Record<string, unknown>): UsageSummary {
   const scansUsed = num(raw["scans_used"]) ?? 0;
   const storesUsed = num(raw["stores_used"]) ?? 0;
   const blocked = Boolean(raw["blocked"]);
-  void isEnterprise;
 
   return {
-    plan_code: (raw["plan_code"] as string) ?? "free",
+    plan_code: planCode,
     plan_name: (raw["plan_name"] as string) ?? "Free",
-    quota_period: (raw["quota_period"] as QuotaPeriod) ??
-      ((raw["plan_code"] as string) === "free" ? "rolling_24h" : "month"),
-    is_contact_sales: Boolean(raw["is_contact_sales"]),
+    quota_period: (raw["quota_period"] as QuotaPeriod) ?? (isFree ? "rolling_24h" : "month"),
+    is_contact_sales: Boolean(raw["is_contact_sales"]) || isEnterprise,
     price_monthly_inr: num(raw["price_monthly_inr"]) ?? 0,
     scan_quota: scanQuota,
     store_limit: storeLimit,
     seat_limit: num(raw["seat_limit"]),
-    history_days: num(raw["history_days"]),
+    history_days: historyDays,
     scans_used: scansUsed,
     scans_remaining: num(raw["scans_remaining"]),
     stores_used: storesUsed,
