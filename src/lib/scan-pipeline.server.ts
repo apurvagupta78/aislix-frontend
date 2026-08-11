@@ -1118,6 +1118,128 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
   };
 }
 
+
+/* -------------------------------------------------------------------------- */
+/* Planogram compliance persistence                                           */
+/* -------------------------------------------------------------------------- */
+
+function severityFor(issueType: string, raw: unknown): string {
+  const given = str(raw);
+  if (given) return given;
+  if (issueType === "missing" || issueType === "wrong_product") return "critical";
+  if (issueType === "wrong_category") return "high";
+  if (issueType === "qty_issue") return "medium";
+  if (issueType === "unexpected") return "low";
+  return "low";
+}
+
+/**
+ * Writes planogram_comparisons + lines + corrective actions for assignment
+ * scans and closes the assignment. Returns the compliance percentage.
+ */
+async function persistPlanogramCompliance(
+  supabase: DB,
+  scan: ScanRow,
+  payload: any,
+): Promise<number | null> {
+  if (!scan.assignment_id) return null;
+  const source =
+    payload?.planogram_compliance ?? payload?.result?.planogram_compliance ?? null;
+  if (!source) return null;
+
+  const summary = (source.summary ?? {}) as Record<string, unknown>;
+  const compliance =
+    pct(source.compliance_percent ?? source.compliance ?? summary["compliance_percent"]) ?? null;
+
+  const { data: comparison, error: comparisonError } = await supabase
+    .from("planogram_comparisons")
+    .insert({
+      assignment_id: scan.assignment_id,
+      scan_id: scan.id,
+      org_id: scan.org_id,
+      store_id: scan.store_id,
+      compliance_percent: compliance,
+      summary,
+    } as never)
+    .select("id")
+    .single();
+  if (comparisonError) throw new PipelineError(comparisonError.message, 500);
+  const comparisonId = (comparison as { id: string }).id;
+
+  const lines = arr(source.lines ?? source.comparison_lines);
+  const insertedLines: { id: string; key: string }[] = [];
+  if (lines.length) {
+    const rows = lines.map((line: any) => ({
+      comparison_id: comparisonId,
+      planogram_item_id: str(line?.planogram_item_id),
+      issue_type: str(line?.issue_type) ?? "ok",
+      expected_brand: str(line?.expected_brand),
+      expected_product: str(line?.expected_product),
+      expected_qty: num(line?.expected_qty),
+      actual_brand: str(line?.actual_brand),
+      actual_product: str(line?.actual_product),
+      actual_qty: num(line?.actual_qty),
+      severity: severityFor(str(line?.issue_type) ?? "ok", line?.severity),
+      detail: str(line?.detail ?? line?.notes),
+    }));
+    const { data: lineRows, error: linesError } = await supabase
+      .from("planogram_comparison_lines")
+      .insert(rows as never)
+      .select("id, expected_product, issue_type");
+    if (linesError) throw new PipelineError(linesError.message, 500);
+    for (const row of (lineRows ?? []) as any[]) {
+      insertedLines.push({
+        id: row.id as string,
+        key: `${row.issue_type}|${row.expected_product ?? ""}`.toLowerCase(),
+      });
+    }
+  }
+
+  const actions = arr(source.corrective_actions ?? source.actions);
+  if (actions.length) {
+    const rows = actions
+      .map((action: any) => {
+        const suggestion = str(action?.suggestion ?? action?.action ?? action?.message);
+        if (!suggestion) return null;
+        const issueType = str(action?.issue_type) ?? "other";
+        const key = `${issueType}|${str(action?.expected_product) ?? ""}`.toLowerCase();
+        return {
+          comparison_id: comparisonId,
+          comparison_line_id: insertedLines.find((line) => line.key === key)?.id ?? null,
+          org_id: scan.org_id,
+          issue_type: issueType,
+          suggestion,
+          status: "open",
+        };
+      })
+      .filter(Boolean);
+    if (rows.length) {
+      const { error: actionsError } = await supabase
+        .from("corrective_actions")
+        .insert(rows as never);
+      if (actionsError) throw new PipelineError(actionsError.message, 500);
+    }
+  }
+
+  await supabase
+    .from("scan_assignments")
+    .update({
+      status: "completed",
+      scan_id: scan.id,
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", scan.assignment_id);
+
+  await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("type", "scan_assigned")
+    .is("read_at", null)
+    .contains("payload", { assignment_id: scan.assignment_id });
+
+  return compliance;
+}
+
 /** Shared persistence for a completed vision payload. */
 async function persistScanPayload(
   supabase: DB,
@@ -1257,6 +1379,8 @@ async function persistScanPayload(
   await storePdfReport(supabase, { id: scan.id, org_id: scan.org_id }, payload);
   await storeCsvReport(supabase, { id: scan.id, org_id: scan.org_id }, payload);
 
+  const planogramCompliance = await persistPlanogramCompliance(supabase, scan, payload);
+
 
   // --- Complete the scan ---------------------------------------------------
   const { error: completeError } = await supabase
@@ -1270,7 +1394,7 @@ async function persistScanPayload(
       shelf_health_score: health,
       osa_percent: osa,
       share_of_shelf_percent: shareOfShelf,
-      planogram_compliance_percent: compliance,
+      planogram_compliance_percent: planogramCompliance ?? compliance,
       processing_completed_at: completedAt,
       error_message: null,
     })
