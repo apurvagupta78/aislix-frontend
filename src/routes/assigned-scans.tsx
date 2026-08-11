@@ -31,6 +31,11 @@ import {
 import { formatDate, statusBadge } from "@/routes/my-scans";
 
 export const Route = createFileRoute("/assigned-scans")({
+  validateSearch: (search: Record<string, unknown>): { tab?: "assignments" | "team-scans" } => {
+    const raw = search["tab"];
+    return raw === "team-scans" || raw === "assignments" ? { tab: raw } : {};
+  },
+
   head: () => ({
     meta: [
       { title: "Assigned Scans — Track team shelf audits | Aislix" },
