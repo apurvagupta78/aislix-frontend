@@ -334,9 +334,26 @@ function HistoryPage() {
                 <SelectItem value="processing_time">Longest processing</SelectItem>
               </SelectContent>
             </Select>
+
+            <Select
+              value={type}
+              onValueChange={(v) => {
+                setType(v as typeof type);
+                resetPage();
+              }}
+            >
+              <SelectTrigger className="h-11 rounded-xl sm:w-[170px]" aria-label="Filter by scan type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All scans</SelectItem>
+                <SelectItem value="assigned">Assigned only</SelectItem>
+                <SelectItem value="adhoc">Ad hoc only</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {(q || date || store !== "all") && (
+          {(q || date || store !== "all" || type !== "all") && (
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span>Filters active</span>
               <Button
@@ -347,6 +364,7 @@ function HistoryPage() {
                   setQ("");
                   setDate("");
                   setStore("all");
+                  setType("all");
                   resetPage();
                 }}
               >
@@ -354,6 +372,7 @@ function HistoryPage() {
               </Button>
             </div>
           )}
+
         </section>
 
         {/* compare bar */}
