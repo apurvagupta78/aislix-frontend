@@ -13,6 +13,8 @@ import {
 } from "@/components/dashboard/DashboardParts";
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { RecentScansTable } from "@/components/dashboard/RecentScansTable";
+import { TeamAssignmentsPanel } from "@/components/dashboard/TeamAssignmentsPanel";
+
 import { Button } from "@/components/ui/button";
 import { fetchAnalytics, fetchDashboard, fetchNotifications } from "@/lib/dashboard";
 import {
