@@ -88,12 +88,14 @@ export function SummaryCard({
   hint,
   loading,
   accent,
+  valueClassName,
 }: {
   label: string;
   value?: string | number | undefined;
   hint?: string | undefined;
   loading?: boolean | undefined;
   accent?: boolean | undefined;
+  valueClassName?: string | undefined;
 }) {
   return (
     <div className="card-surface card-hover p-4 sm:p-5">
@@ -105,6 +107,7 @@ export function SummaryCard({
           className={cn(
             "mt-2 text-2xl font-semibold tracking-tight tabular-nums",
             accent && "text-accent-green",
+            valueClassName,
           )}
         >
           {value ?? "—"}

@@ -35,15 +35,14 @@ import {
   toLimitDialogState,
   type LimitDialogState,
 } from "@/components/billing/LimitReachedDialog";
-import {
-  MAX_SCAN_IMAGES,
-  formatBytes,
-  submitScanImages,
-  validateScanFile,
-} from "@/lib/scan-api";
-
+import { fetchAssignmentById, scopeSummary } from "@/lib/assignments";
+import { MAX_SCAN_IMAGES, formatBytes, submitScanImages, validateScanFile } from "@/lib/scan-api";
 
 export const Route = createFileRoute("/scan")({
+  validateSearch: (search: Record<string, unknown>): { assignmentId?: string } => {
+    const raw = search["assignmentId"];
+    return typeof raw === "string" && raw.trim() ? { assignmentId: raw.trim() } : {};
+  },
   head: () => ({
     meta: [
       { title: "Scan a Shelf — Aislix" },
@@ -55,7 +54,8 @@ export const Route = createFileRoute("/scan")({
       { property: "og:title", content: "Scan a shelf — Aislix" },
       {
         property: "og:description",
-        content: "Set store, location, category and subcategory, then capture or upload shelf photos.",
+        content:
+          "Set store, location, category and subcategory, then capture or upload shelf photos.",
       },
 
       { property: "og:type", content: "website" },
@@ -67,13 +67,13 @@ export const Route = createFileRoute("/scan")({
 
 const CATEGORY_QUERY_KEY = ["shelf-categories"] as const;
 
-
 type Phase = "idle" | "uploading" | "error";
 
 type Attachment = { id: string; file: File; url: string };
 
 function ScanPage() {
   const navigate = useNavigate();
+  const { assignmentId } = Route.useSearch();
   const [items, setItems] = useState<Attachment[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -81,7 +81,6 @@ function ScanPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [limitDialog, setLimitDialog] = useState<LimitDialogState>(null);
-
 
   const [storeId, setStoreId] = useState("");
   const [shelfLocation, setShelfLocation] = useState("");
@@ -108,15 +107,39 @@ function ScanPage() {
     ? categoriesQuery.data
     : FALLBACK_CATEGORIES;
 
+  const assignmentQuery = useQuery({
+    queryKey: ["assignment", assignmentId],
+    queryFn: () => fetchAssignmentById(assignmentId!),
+    enabled: Boolean(assignmentId),
+    retry: false,
+  });
+  const assignment = assignmentQuery.data ?? null;
+  const lockedByAssignment = Boolean(assignment);
+
+  useEffect(() => {
+    if (!assignment) return;
+    setStoreId(assignment.store_id);
+    setShelfLocation(
+      assignment.location ?? assignment.scope_values.location ?? assignment.store_name,
+    );
+    if (assignment.scope_values.category) setCategory(assignment.scope_values.category);
+    if (assignment.scope_values.sub_category) {
+      setSubCategory(assignment.scope_values.sub_category);
+    }
+  }, [assignment]);
+
   const selectedCategory = categories.find((item) => item.name === category);
   const subcategories = selectedCategory?.subcategories ?? [];
   const isOtherCategory = category === "Others";
-  const showSubcategory = Boolean(category) && !isOtherCategory && subcategories.length > 0;
+  const showSubcategory =
+    !lockedByAssignment && Boolean(category) && !isOtherCategory && subcategories.length > 0;
   const selectedSub = subcategories.find((item) => item.id === subCategory);
   const needsCustom = isOtherCategory || subCategory === "others";
 
+  const assignmentSubLabel = assignment?.scope_values.sub_category ?? "";
   const setupErrors = useMemo(() => {
     const errors: Record<string, string> = {};
+    if (lockedByAssignment) return errors;
     if (!storeId) errors.store = "Select the store for this scan.";
     if (!shelfLocation.trim()) errors.location = "Location is required.";
     if (!category) errors.category = "Select a category.";
@@ -126,6 +149,7 @@ function ScanPage() {
     }
     return errors;
   }, [
+    lockedByAssignment,
     storeId,
     shelfLocation,
     category,
@@ -136,9 +160,7 @@ function ScanPage() {
   ]);
   const setupComplete = Object.keys(setupErrors).length === 0;
 
-
   const shelfLabel = shelfLocation.trim();
-
 
   const cameraInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -157,7 +179,9 @@ function ScanPage() {
   const guardSetup = useCallback(() => {
     if (setupComplete) return true;
     setShowSetupErrors(true);
-    setFileError("Complete scan setup (store, location, category and subcategory) before adding images.");
+    setFileError(
+      "Complete scan setup (store, location, category and subcategory) before adding images.",
+    );
     return false;
   }, [setupComplete]);
 
@@ -239,9 +263,14 @@ function ScanPage() {
           shelfLabel,
           category,
           subCategory: isOtherCategory ? "others" : subCategory || undefined,
-          subCategoryLabel: isOtherCategory ? "Others" : selectedSub?.label,
-          subCategoryCustom: needsCustom ? subCategoryCustom.trim() : undefined,
-
+          subCategoryLabel: lockedByAssignment
+            ? assignmentSubLabel || undefined
+            : isOtherCategory
+              ? "Others"
+              : selectedSub?.label,
+          subCategoryCustom:
+            needsCustom && !lockedByAssignment ? subCategoryCustom.trim() : undefined,
+          ...(assignment ? { assignmentId: assignment.id } : {}),
         },
       );
       navigate({
@@ -261,7 +290,6 @@ function ScanPage() {
       }
       setErrorMessage(error instanceof Error ? error.message : "The scan could not be started.");
       setPhase("error");
-
     } finally {
       abortRef.current = null;
     }
@@ -278,8 +306,10 @@ function ScanPage() {
     selectedSub,
     needsCustom,
     subCategoryCustom,
+    lockedByAssignment,
+    assignment,
+    assignmentSubLabel,
   ]);
-
 
   const cancelUpload = useCallback(() => {
     abortRef.current?.abort();
@@ -326,6 +356,27 @@ function ScanPage() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
+          {assignment && (
+            <section className="rounded-2xl border border-brand/30 bg-brand-soft/50 p-4 sm:p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+                Assigned scan
+              </p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {assignment.store_name}
+                {assignment.location ? ` · ${assignment.location}` : ""}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {scopeSummary(assignment.scope_type, assignment.scope_values)} ·{" "}
+                {assignment.expected_products} expected products · assigned by{" "}
+                {assignment.assigner_name}
+              </p>
+              {assignment.instructions && (
+                <p className="mt-2 rounded-xl bg-card px-3 py-2 text-xs text-muted-foreground">
+                  {assignment.instructions}
+                </p>
+              )}
+            </section>
+          )}
           {/* STEP 1 — setup */}
           <section className="card-surface p-4 sm:p-6">
             <div className="flex items-start gap-3">
@@ -348,7 +399,11 @@ function ScanPage() {
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="scan-store">Store *</Label>
-                <Select value={storeId} onValueChange={setStoreId} disabled={busy}>
+                <Select
+                  value={storeId}
+                  onValueChange={setStoreId}
+                  disabled={busy || lockedByAssignment}
+                >
                   <SelectTrigger id="scan-store" className="rounded-xl">
                     <SelectValue
                       placeholder={
@@ -381,7 +436,7 @@ function ScanPage() {
                   className="rounded-xl"
                   placeholder="e.g. Aisle 4 · Beverages · left bay"
                   value={shelfLocation}
-                  disabled={busy}
+                  disabled={busy || lockedByAssignment}
                   onChange={(e) => setShelfLocation(e.target.value)}
                 />
                 {fieldError("location") && (
@@ -398,7 +453,7 @@ function ScanPage() {
                     setSubCategory("");
                     setSubCategoryCustom("");
                   }}
-                  disabled={busy}
+                  disabled={busy || lockedByAssignment}
                 >
                   <SelectTrigger id="scan-category" className="rounded-xl">
                     <SelectValue placeholder="Select a category" />
@@ -430,7 +485,7 @@ function ScanPage() {
                       setSubCategory(value);
                       if (value !== "others") setSubCategoryCustom("");
                     }}
-                    disabled={busy}
+                    disabled={busy || lockedByAssignment}
                   >
                     <SelectTrigger id="scan-subcategory" className="rounded-xl">
                       <SelectValue placeholder="Select a subcategory" />
@@ -460,7 +515,7 @@ function ScanPage() {
                     className="rounded-xl"
                     placeholder="e.g. Imported chocolates end-cap"
                     value={subCategoryCustom}
-                    disabled={busy}
+                    disabled={busy || lockedByAssignment}
                     onChange={(e) => setSubCategoryCustom(e.target.value)}
                   />
                   {fieldError("custom") && (
@@ -468,9 +523,7 @@ function ScanPage() {
                   )}
                 </div>
               )}
-
             </div>
-
           </section>
 
           {/* STEP 2 — images */}
@@ -713,6 +766,5 @@ function ScanPage() {
       )}
       <LimitReachedDialog limit={limitDialog} onClose={() => setLimitDialog(null)} />
     </AppShell>
-
   );
 }

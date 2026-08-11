@@ -104,6 +104,8 @@ export async function submitScanImages(
     subCategoryLabel?: string;
     /** Free text shelf description when the user picks "Others". */
     subCategoryCustom?: string;
+    /** Set when the scan was launched from an assigned task (/my-scans). */
+    assignmentId?: string;
   } = {},
 
 ): Promise<ScanResponse> {
@@ -143,6 +145,7 @@ export async function submitScanImages(
       sub_category_label: options.subCategoryLabel ?? null,
       sub_category_custom: options.subCategoryCustom?.trim() || null,
       notes: options.subCategoryCustom?.trim() || options.subCategoryLabel || null,
+      assignment_id: options.assignmentId ?? null,
 
       processing_started_at: new Date().toISOString(),
     })

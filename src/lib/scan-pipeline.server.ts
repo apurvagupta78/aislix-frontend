@@ -29,7 +29,6 @@ export type PipelineResult = {
   learned_error?: string | null;
 };
 
-
 export class PipelineError extends Error {
   status: number;
   constructor(message: string, status = 502) {
@@ -100,7 +99,9 @@ function normalizeConfidence(value: unknown): number | null {
 }
 
 function normalizeStock(raw: unknown, facings: number, expected: number | null): StockStatus {
-  const value = str(raw)?.toLowerCase().replace(/[\s-]+/g, "_");
+  const value = str(raw)
+    ?.toLowerCase()
+    .replace(/[\s-]+/g, "_");
   if (value && STOCK_VALUES.includes(value as StockStatus)) return value as StockStatus;
   if (value === "oos" || value === "empty") return "out_of_stock";
   if (value === "low") return "low_stock";
@@ -220,7 +221,6 @@ function normalizeSubcategoryMismatches(payload: any) {
     confidence: num(item?.confidence) ?? null,
   }));
 }
-
 
 function normalizeRecommendations(payload: any) {
   return arr(payload?.recommendations).map((item: any, index: number) => ({
@@ -355,7 +355,8 @@ async function callVisionApi(body: unknown): Promise<any> {
   const remoteId = str(payload?.scan_id) ?? str(payload?.id) ?? str(payload?.job_id);
   const initialStatus = (str(payload?.status) ?? "").toLowerCase();
   const isAsync =
-    response.status === 202 || ["queued", "pending", "processing", "running"].includes(initialStatus);
+    response.status === 202 ||
+    ["queued", "pending", "processing", "running"].includes(initialStatus);
   if (!isAsync) return payload;
 
   if (!remoteId) {
@@ -382,7 +383,12 @@ async function pollVisionScan(
     try {
       res = await fetch(statusUrl, {
         method: "GET",
-        headers: { accept: "application/json", ...(headers["authorization"] ? { authorization: headers["authorization"], "x-api-key": headers["x-api-key"]! } : {}) },
+        headers: {
+          accept: "application/json",
+          ...(headers["authorization"]
+            ? { authorization: headers["authorization"], "x-api-key": headers["x-api-key"]! }
+            : {}),
+        },
         signal: AbortSignal.timeout(60_000),
       });
     } catch {
@@ -409,7 +415,12 @@ async function pollVisionScan(
           "The AI vision backend failed to analyse this shelf image.",
       );
     }
-    if (status === "completed" || status === "complete" || status === "done" || status === "success") {
+    if (
+      status === "completed" ||
+      status === "complete" ||
+      status === "done" ||
+      status === "success"
+    ) {
       return payload?.result ?? payload?.results ?? payload;
     }
     // queued / processing → keep polling
@@ -438,8 +449,7 @@ function visionHeaders(apiKey: string): Record<string, string> {
 }
 
 export type SubmitVisionResult =
-  | { kind: "completed"; payload: any }
-  | { kind: "accepted"; jobId: string };
+  { kind: "completed"; payload: any } | { kind: "accepted"; jobId: string };
 
 /** POST /scan only — returns as soon as Railway accepts the job. */
 export async function submitVisionJob(body: unknown): Promise<SubmitVisionResult> {
@@ -531,7 +541,6 @@ export async function pollVisionJobOnce(jobId: string): Promise<PollVisionResult
   }
   return { kind: "processing" };
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* Persistence                                                                */
@@ -663,7 +672,6 @@ async function storeCsvReport(
   } as never);
 }
 
-
 /** Recomputes the daily rollup for this org/store from real completed scans. */
 async function refreshAnalytics(
   supabase: DB,
@@ -698,7 +706,9 @@ async function refreshAnalytics(
 
   const { data: brandRows } = await supabase
     .from("scan_results")
-    .select("brand_share, category_breakdown, shelf_scans!inner(org_id, store_id, created_at, status)")
+    .select(
+      "brand_share, category_breakdown, shelf_scans!inner(org_id, store_id, created_at, status)",
+    )
     .eq("shelf_scans.org_id", scan.org_id)
     .eq("shelf_scans.status", "completed")
     .gte("shelf_scans.created_at", dayStart)
@@ -715,12 +725,18 @@ async function refreshAnalytics(
     for (const entry of arr((row as any).category_breakdown)) {
       const category = str(entry?.category);
       if (category) {
-        categoryTotals.set(category, (categoryTotals.get(category) ?? 0) + (num(entry?.count) ?? 0));
+        categoryTotals.set(
+          category,
+          (categoryTotals.get(category) ?? 0) + (num(entry?.count) ?? 0),
+        );
       }
     }
   }
   const topBrands = Array.from(brandTotals.entries())
-    .map(([brand, share]) => ({ brand, share: Number((share / (brandRows?.length || 1)).toFixed(1)) }))
+    .map(([brand, share]) => ({
+      brand,
+      share: Number((share / (brandRows?.length || 1)).toFixed(1)),
+    }))
     .sort((a, b) => b.share - a.share)
     .slice(0, 8);
   const categoryMix = Array.from(categoryTotals.entries())
@@ -754,7 +770,10 @@ async function refreshAnalytics(
   const { data: existing } = await existingQuery.maybeSingle();
 
   if (existing?.id) {
-    await supabase.from("shelf_analytics").update(record as never).eq("id", existing.id);
+    await supabase
+      .from("shelf_analytics")
+      .update(record as never)
+      .eq("id", existing.id);
   } else {
     await supabase.from("shelf_analytics").insert(record as never);
   }
@@ -788,7 +807,6 @@ async function loadLearnedCatalog(supabase: DB, _orgId: string): Promise<Learned
     embedding: row.embedding ?? null,
   }));
 }
-
 
 /** Human-readable product name derived from a SKU code (`lipton_green_tea` → `Lipton Green Tea`). */
 function nameFromSku(sku: string): string {
@@ -825,8 +843,7 @@ export async function persistLearnedUpdates(
     // The conflict target is (org_id, sku); rows without a SKU cannot be upserted.
     if (!sku || seen.has(sku)) continue;
     seen.add(sku);
-    const name =
-      str(raw?.product_name) ?? str(raw?.name) ?? str(raw?.title) ?? nameFromSku(sku);
+    const name = str(raw?.product_name) ?? str(raw?.name) ?? str(raw?.title) ?? nameFromSku(sku);
     const brand = str(raw?.brand);
     const variant = str(raw?.variant);
     const category = str(raw?.category);
@@ -916,8 +933,6 @@ export async function persistLearnedUpdates(
   return { saved, error: failure };
 }
 
-
-
 /* -------------------------------------------------------------------------- */
 /* Pipeline                                                                   */
 /* -------------------------------------------------------------------------- */
@@ -932,13 +947,24 @@ type ScanRow = {
   sub_category_label: string | null;
   sub_category_custom: string | null;
   notes: string | null;
+  assignment_id: string | null;
+};
+
+type AssignmentContext = {
+  id: string;
+  store_id: string;
+  scope_type: string;
+  scope_values: Record<string, unknown>;
+  planogram_version_id: string | null;
+  items: Record<string, unknown>[];
+  items_full: Record<string, unknown>[];
 };
 
 async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
   const { data: scan, error } = await supabase
     .from("shelf_scans")
     .select(
-      "id, org_id, store_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, notes",
+      "id, org_id, store_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, notes, assignment_id",
     )
     .eq("id", scanId)
     .maybeSingle();
@@ -954,9 +980,99 @@ async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
     sub_category_label: (scan.sub_category_label as string | null) ?? null,
     sub_category_custom: (scan.sub_category_custom as string | null) ?? null,
     notes: (scan.notes as string | null) ?? null,
+    assignment_id: (scan.assignment_id as string | null) ?? null,
   };
 }
 
+const PLANOGRAM_FIELDS =
+  "id, location, aisle, category, sub_category, brand, product_name, sku, expected_qty, match_key";
+
+function planogramShape(row: Record<string, unknown>) {
+  const s = (value: unknown) => (typeof value === "string" ? value : "");
+  return {
+    location: s(row["location"]),
+    aisle: s(row["aisle"]) || s(row["location"]),
+    category: s(row["category"]),
+    sub_category: s(row["sub_category"]),
+    brand: s(row["brand"]),
+    product_name: s(row["product_name"]),
+    sku: s(row["sku"]),
+    expected_qty: Number(row["expected_qty"]) || 0,
+    match_key: s(row["match_key"]),
+    planogram_item_id: s(row["id"]),
+  };
+}
+
+function sameText(a: unknown, b: unknown): boolean {
+  return (
+    typeof a === "string" &&
+    typeof b === "string" &&
+    a.trim().toLowerCase() === b.trim().toLowerCase()
+  );
+}
+
+/** Assignment + scoped planogram rows for scans launched from /my-scans. */
+async function loadAssignmentContext(
+  supabase: DB,
+  scan: ScanRow,
+): Promise<AssignmentContext | null> {
+  if (!scan.assignment_id) return null;
+  const { data: assignment } = await supabase
+    .from("scan_assignments")
+    .select("id, store_id, scope_type, scope_values, planogram_version_id")
+    .eq("id", scan.assignment_id)
+    .maybeSingle();
+  if (!assignment) return null;
+
+  let versionId = (assignment.planogram_version_id as string | null) ?? null;
+  if (!versionId) {
+    const { data: version } = await supabase
+      .from("planogram_versions")
+      .select("id")
+      .eq("org_id", scan.org_id)
+      .eq("store_id", assignment.store_id as string)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    versionId = (version?.id as string | null) ?? null;
+  }
+
+  let itemsFull: Record<string, unknown>[] = [];
+  if (versionId) {
+    const { data: rows } = await supabase
+      .from("planogram_items")
+      .select(PLANOGRAM_FIELDS)
+      .eq("version_id", versionId);
+    itemsFull = ((rows ?? []) as Record<string, unknown>[]).map(planogramShape);
+  }
+
+  const scopeType = String(assignment.scope_type ?? "category");
+  const scopeValues = (assignment.scope_values ?? {}) as Record<string, unknown>;
+  const items = itemsFull.filter((item) => {
+    if (scopeType === "location")
+      return (
+        sameText(item["location"], scopeValues["location"]) ||
+        sameText(item["aisle"], scopeValues["location"])
+      );
+    if (scopeType === "sub_category")
+      return (
+        sameText(item["category"], scopeValues["category"]) &&
+        sameText(item["sub_category"], scopeValues["sub_category"])
+      );
+    return sameText(item["category"], scopeValues["category"]);
+  });
+
+  return {
+    id: assignment.id as string,
+    store_id: assignment.store_id as string,
+    scope_type: scopeType,
+    scope_values: scopeValues,
+    planogram_version_id: versionId,
+    items,
+    items_full: itemsFull,
+  };
+}
 
 /** Signs every uploaded original image and builds the Railway request body. */
 async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string) {
@@ -987,7 +1103,7 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
   }
 
   const learnedCatalog = await loadLearnedCatalog(supabase, scan.org_id);
-
+  const assignment = await loadAssignmentContext(supabase, scan);
 
   return {
     scan_id: scan.id,
@@ -1004,7 +1120,139 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
     images: signedImages,
     learned_catalog: learnedCatalog,
     requested_at: startedAt,
+    ...(assignment
+      ? {
+          location:
+            assignment.scope_values["location"] ?? assignment.items[0]?.["location"] ?? null,
+          assignment_id: assignment.id,
+          assignment_scope_type: assignment.scope_type,
+          assignment_scope_values: assignment.scope_values,
+          planogram_version_id: assignment.planogram_version_id,
+          planogram_items: assignment.items,
+          planogram_items_full: assignment.items_full,
+        }
+      : {}),
   };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Planogram compliance persistence                                           */
+/* -------------------------------------------------------------------------- */
+
+function severityFor(issueType: string, raw: unknown): string {
+  const given = str(raw);
+  if (given) return given;
+  if (issueType === "missing" || issueType === "wrong_product") return "critical";
+  if (issueType === "wrong_category") return "high";
+  if (issueType === "qty_issue") return "medium";
+  if (issueType === "unexpected") return "low";
+  return "low";
+}
+
+/**
+ * Writes planogram_comparisons + lines + corrective actions for assignment
+ * scans and closes the assignment. Returns the compliance percentage.
+ */
+async function persistPlanogramCompliance(
+  supabase: DB,
+  scan: ScanRow,
+  payload: any,
+): Promise<number | null> {
+  if (!scan.assignment_id) return null;
+  const source = payload?.planogram_compliance ?? payload?.result?.planogram_compliance ?? null;
+  if (!source) return null;
+
+  const summary = (source.summary ?? {}) as Record<string, unknown>;
+  const compliance =
+    pct(source.compliance_percent ?? source.compliance ?? summary["compliance_percent"]) ?? null;
+
+  const { data: comparison, error: comparisonError } = await supabase
+    .from("planogram_comparisons")
+    .insert({
+      assignment_id: scan.assignment_id,
+      scan_id: scan.id,
+      org_id: scan.org_id,
+      store_id: scan.store_id,
+      compliance_percent: compliance,
+      summary,
+    } as never)
+    .select("id")
+    .single();
+  if (comparisonError) throw new PipelineError(comparisonError.message, 500);
+  const comparisonId = (comparison as { id: string }).id;
+
+  const lines = arr(source.lines ?? source.comparison_lines);
+  const insertedLines: { id: string; key: string }[] = [];
+  if (lines.length) {
+    const rows = lines.map((line: any) => ({
+      comparison_id: comparisonId,
+      planogram_item_id: str(line?.planogram_item_id),
+      issue_type: str(line?.issue_type) ?? "ok",
+      expected_brand: str(line?.expected_brand),
+      expected_product: str(line?.expected_product),
+      expected_qty: num(line?.expected_qty),
+      actual_brand: str(line?.actual_brand),
+      actual_product: str(line?.actual_product),
+      actual_qty: num(line?.actual_qty),
+      severity: severityFor(str(line?.issue_type) ?? "ok", line?.severity),
+      detail: str(line?.detail ?? line?.notes),
+    }));
+    const { data: lineRows, error: linesError } = await supabase
+      .from("planogram_comparison_lines")
+      .insert(rows as never)
+      .select("id, expected_product, issue_type");
+    if (linesError) throw new PipelineError(linesError.message, 500);
+    for (const row of (lineRows ?? []) as any[]) {
+      insertedLines.push({
+        id: row.id as string,
+        key: `${row.issue_type}|${row.expected_product ?? ""}`.toLowerCase(),
+      });
+    }
+  }
+
+  const actions = arr(source.corrective_actions ?? source.actions);
+  if (actions.length) {
+    const rows = actions
+      .map((action: any) => {
+        const suggestion = str(action?.suggestion ?? action?.action ?? action?.message);
+        if (!suggestion) return null;
+        const issueType = str(action?.issue_type) ?? "other";
+        const key = `${issueType}|${str(action?.expected_product) ?? ""}`.toLowerCase();
+        return {
+          comparison_id: comparisonId,
+          comparison_line_id: insertedLines.find((line) => line.key === key)?.id ?? null,
+          org_id: scan.org_id,
+          issue_type: issueType,
+          suggestion,
+          status: "open",
+        };
+      })
+      .filter(Boolean);
+    if (rows.length) {
+      const { error: actionsError } = await supabase
+        .from("corrective_actions")
+        .insert(rows as never);
+      if (actionsError) throw new PipelineError(actionsError.message, 500);
+    }
+  }
+
+  await supabase
+    .from("scan_assignments")
+    .update({
+      status: "completed",
+      scan_id: scan.id,
+      completed_at: new Date().toISOString(),
+    })
+    .eq("id", scan.assignment_id);
+
+  await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("type", "scan_assigned")
+    .is("read_at", null)
+    .contains("payload", { assignment_id: scan.assignment_id });
+
+  return compliance;
 }
 
 /** Shared persistence for a completed vision payload. */
@@ -1146,6 +1394,7 @@ async function persistScanPayload(
   await storePdfReport(supabase, { id: scan.id, org_id: scan.org_id }, payload);
   await storeCsvReport(supabase, { id: scan.id, org_id: scan.org_id }, payload);
 
+  const planogramCompliance = await persistPlanogramCompliance(supabase, scan, payload);
 
   // --- Complete the scan ---------------------------------------------------
   const { error: completeError } = await supabase
@@ -1159,7 +1408,7 @@ async function persistScanPayload(
       shelf_health_score: health,
       osa_percent: osa,
       share_of_shelf_percent: shareOfShelf,
-      planogram_compliance_percent: compliance,
+      planogram_compliance_percent: planogramCompliance ?? compliance,
       processing_completed_at: completedAt,
       error_message: null,
     })
@@ -1178,7 +1427,6 @@ async function persistScanPayload(
     shelf_health_score: health,
     learned_saved: learned.saved,
     learned_error: learned.error,
-
   };
 }
 
@@ -1226,8 +1474,7 @@ export async function startScanPipelineServer(
 }
 
 export type PollPipelineResult =
-  | { status: "processing"; scan_id: string }
-  | ({ status: "completed" } & PipelineResult);
+  { status: "processing"; scan_id: string } | ({ status: "completed" } & PipelineResult);
 
 /** Single short poll of the Railway job; persists everything once it completes. */
 export async function pollScanPipelineServer(
@@ -1278,10 +1525,7 @@ export async function pollScanPipelineServer(
 }
 
 /** Legacy single-request pipeline (kept for existing callers / retries). */
-export async function runScanPipelineServer(
-  supabase: DB,
-  scanId: string,
-): Promise<PipelineResult> {
+export async function runScanPipelineServer(supabase: DB, scanId: string): Promise<PipelineResult> {
   const scan = await loadScan(supabase, scanId);
   const startedAt = new Date().toISOString();
   await supabase
@@ -1301,7 +1545,6 @@ export async function runScanPipelineServer(
     throw new PipelineError(message, 500);
   }
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* Download asset backfill                                                    */

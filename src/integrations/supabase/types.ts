@@ -1393,11 +1393,24 @@ export type Database = {
     Functions: {
       can_org_add_store: { Args: { p_org_id: string }; Returns: boolean }
       can_org_start_scan: { Args: { p_org_id: string }; Returns: boolean }
+      free_plan_scan_status: {
+        Args: { _org_id: string }
+        Returns: {
+          blocked: boolean
+          cooldown_until: string
+          scans_allowed: number
+          scans_used_in_batch: number
+        }[]
+      }
       get_org_usage_summary: { Args: { p_org_id: string }; Returns: Json }
       org_has_platform_bypass: { Args: { p_org_id: string }; Returns: boolean }
       org_has_platform_store_bypass: {
         Args: { p_org_id: string }
         Returns: boolean
+      }
+      reset_subscription_period_if_due: {
+        Args: { _org_id: string }
+        Returns: undefined
       }
       user_email_has_platform_bypass: {
         Args: { _email: string }

@@ -50,10 +50,12 @@ import {
   type ScanResult,
 } from "@/lib/scan-results";
 import { retryScanAnalysis } from "@/lib/scan-api";
+import { PlanogramComparisonSection } from "@/components/scan-results/PlanogramCompliance";
+import { complianceTone, fetchPlanogramComparison } from "@/lib/planogram-compliance";
 
 export const Route = createFileRoute("/results")({
   validateSearch: (search: Record<string, unknown>): { scan?: string } => {
-    const scan = search['scan'];
+    const scan = search["scan"];
     return typeof scan === "string" && scan.length > 0 ? { scan } : {};
   },
   head: () => ({
@@ -90,6 +92,14 @@ function Results() {
       return status === "processing" || status === "queued" ? 4000 : false;
     },
   });
+
+  const comparisonQuery = useQuery({
+    queryKey: ["planogram-comparison", scan],
+    queryFn: () => fetchPlanogramComparison(scan!),
+    enabled: Boolean(scan),
+    retry: false,
+  });
+  const comparison = comparisonQuery.data ?? null;
 
   const data = query.data;
   const loading = !!scan && query.isPending;
@@ -218,10 +228,19 @@ function Results() {
                 />
 
                 <SummaryCard
-                  label="Shelf compliance"
-                  value={formatPercent(summary?.shelf_compliance)}
+                  label={comparison ? "Planogram compliance" : "Shelf compliance"}
+                  value={
+                    comparison
+                      ? comparison.compliance_percent === null
+                        ? undefined
+                        : `${Math.round(comparison.compliance_percent)}%`
+                      : formatPercent(summary?.shelf_compliance)
+                  }
                   loading={loading}
                   hint="Against planogram"
+                  valueClassName={
+                    comparison ? complianceTone(comparison.compliance_percent) : undefined
+                  }
                 />
                 <SummaryCard
                   label="Avg confidence"
@@ -230,6 +249,8 @@ function Results() {
                   accent
                 />
               </div>
+
+              {comparison && <PlanogramComparisonSection comparison={comparison} />}
 
               <AnnotatedImageViewer
                 src={data?.annotated_image_url}
@@ -262,10 +283,7 @@ function Results() {
 
               <div className="grid gap-4 lg:grid-cols-2">
                 <AlertsPanel alerts={data?.alerts} loading={loading} />
-                <RecommendationsPanel
-                  recommendations={data?.recommendations}
-                  loading={loading}
-                />
+                <RecommendationsPanel recommendations={data?.recommendations} loading={loading} />
               </div>
 
               <InventoryTable
@@ -286,10 +304,7 @@ function Results() {
                   loading={loading}
                 />
                 <ShelfHealthChart score={summary?.shelf_health_score} loading={loading} />
-                <LowStockSummaryChart
-                  data={data?.charts?.low_stock_summary}
-                  loading={loading}
-                />
+                <LowStockSummaryChart data={data?.charts?.low_stock_summary} loading={loading} />
                 <CategoryDistributionChart
                   data={data?.charts?.category_distribution}
                   loading={loading}
