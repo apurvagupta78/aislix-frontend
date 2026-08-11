@@ -3,6 +3,14 @@
 
 export type ScanStatus = "completed" | "processing" | "failed";
 
+/** Assignment lifecycle mirrored from scan_assignments.status. */
+export type ScanAssignmentStatus =
+  | "pending"
+  | "in_progress"
+  | "needs_correction"
+  | "completed"
+  | "cancelled";
+
 export type ScanHistoryItem = {
   scan_id: string;
   store: string;
@@ -14,6 +22,13 @@ export type ScanHistoryItem = {
   average_confidence?: number; // 0-1 or 0-100
   processing_time_ms?: number;
   status: ScanStatus;
+  /** Set when the scan was run against a delegated assignment. */
+  assignment_id?: string | null;
+  assignment_status?: ScanAssignmentStatus | null;
+  /** Planogram compliance of the assignment attempt, 0-100. */
+  planogram_compliance?: number | null;
+  assignee_name?: string | null;
+  assignee_id?: string | null;
   downloads?: {
     pdf_url?: string;
     csv_url?: string;
@@ -27,19 +42,33 @@ export type ScanHistoryResponse = {
   page: number;
   page_size: number;
   stores?: string[];
+  /** Assignees present in the org, for the reports filter. */
+  assignees?: { id: string; name: string }[];
 };
+
+export type ScanTypeFilter = "all" | "assigned" | "adhoc";
 
 export type ScanHistoryQuery = {
   q?: string;
   store?: string;
   date?: string; // YYYY-MM-DD
+  date_from?: string;
+  date_to?: string;
   sort?: "newest" | "oldest" | "processing_time";
   page?: number;
   page_size?: number;
+  /** Assigned vs ad-hoc scans. */
+  type?: ScanTypeFilter;
+  /** Filter by assignment status (assigned scans only). */
+  assignment_status?: ScanAssignmentStatus | "all";
+  /** Filter by the assignee of the linked assignment. */
+  assignee?: string | "all";
 };
 
 import { supabase } from "@/integrations/supabase/client";
-import { dbError, requireOrgId } from "@/lib/db/context";
+import { dbError, getMembership, requireOrgId, requireUserId } from "@/lib/db/context";
+
+const MANAGER_ROLES = ["owner", "admin", "manager"];
 
 function toApiStatus(status: string): ScanStatus {
   if (status === "completed") return "completed";
@@ -47,12 +76,15 @@ function toApiStatus(status: string): ScanStatus {
   return "processing"; // queued, processing
 }
 
+
 /** Paginated, filtered, sorted scan history for the active organization. */
 export async function fetchScanHistory(
   params: ScanHistoryQuery,
   _signal?: AbortSignal,
 ): Promise<ScanHistoryResponse> {
   const orgId = await requireOrgId();
+  const membership = await getMembership();
+  const isManager = MANAGER_ROLES.includes(String(membership?.role ?? "").toLowerCase());
   const page = params.page ?? 1;
   const pageSize = params.page_size ?? 10;
   const from = (page - 1) * pageSize;
@@ -62,25 +94,51 @@ export async function fetchScanHistory(
   const { fetchHistoryCutoffIso } = await import("@/lib/subscription-limits");
   const cutoff = await fetchHistoryCutoffIso();
 
+  // Assignment-based filters resolve to a concrete id list first so pagination
+  // and the total count stay correct.
+  let assignmentIdFilter: string[] | null = null;
+  const wantsAssignmentStatus = params.assignment_status && params.assignment_status !== "all";
+  const wantsAssignee = params.assignee && params.assignee !== "all";
+  if (wantsAssignmentStatus || wantsAssignee) {
+    let assignmentQuery = supabase.from("scan_assignments").select("id").eq("org_id", orgId);
+    if (wantsAssignmentStatus) assignmentQuery = assignmentQuery.eq("status", params.assignment_status!);
+    if (wantsAssignee) assignmentQuery = assignmentQuery.eq("assignee_id", params.assignee!);
+    const { data: assignmentRows } = await assignmentQuery;
+    assignmentIdFilter = (assignmentRows ?? []).map((row) => row.id as string);
+    if (assignmentIdFilter.length === 0) {
+      return { items: [], total: 0, page, page_size: pageSize, stores: [], assignees: [] };
+    }
+  }
+
   let query = supabase
     .from("shelf_scans")
     .select(
-      "id, status, shelf_label, category, total_products, low_stock_count, out_of_stock_count, processing_started_at, processing_completed_at, created_at, store_id, stores(name)",
+      "id, status, shelf_label, category, total_products, low_stock_count, out_of_stock_count, processing_started_at, processing_completed_at, created_at, store_id, created_by, assignment_id, stores(name)",
       { count: "exact" },
     )
     .eq("org_id", orgId);
 
-  if (cutoff) query = query.gte("created_at", cutoff);
+  // Members only ever see the scans they ran themselves.
+  if (!isManager) {
+    const userId = await requireUserId();
+    query = query.eq("created_by", userId);
+  }
 
+  if (cutoff) query = query.gte("created_at", cutoff);
 
   if (params.store && params.store !== "all") {
     query = query.eq("store_id", params.store);
   }
+  if (params.type === "assigned") query = query.not("assignment_id", "is", null);
+  if (params.type === "adhoc") query = query.is("assignment_id", null);
+  if (assignmentIdFilter) query = query.in("assignment_id", assignmentIdFilter);
   if (params.date) {
     const start = `${params.date}T00:00:00.000Z`;
     const end = `${params.date}T23:59:59.999Z`;
     query = query.gte("created_at", start).lte("created_at", end);
   }
+  if (params.date_from) query = query.gte("created_at", `${params.date_from}T00:00:00.000Z`);
+  if (params.date_to) query = query.lte("created_at", `${params.date_to}T23:59:59.999Z`);
   if (params.q) {
     query = query.or(
       `shelf_label.ilike.%${params.q}%,category.ilike.%${params.q}%`,
@@ -99,6 +157,7 @@ export async function fetchScanHistory(
 
   const { data, error, count } = await query;
   if (error) return dbError(error, "Could not load scan history.");
+
 
   let items = (data ?? []).map((row: any): ScanHistoryItem => {
     const startedAt = row.processing_started_at ? new Date(row.processing_started_at).getTime() : undefined;
@@ -123,8 +182,42 @@ export async function fetchScanHistory(
     if (processingTimeMs !== undefined) {
       item.processing_time_ms = processingTimeMs;
     }
+    item.assignment_id = (row.assignment_id as string | null) ?? null;
     return item;
   });
+
+  // Assignment context: status, compliance and the assignee who ran it.
+  const assignmentIds = Array.from(
+    new Set(items.map((item) => item.assignment_id).filter((id): id is string => Boolean(id))),
+  );
+  if (assignmentIds.length) {
+    const { data: assignmentRows } = await supabase
+      .from("scan_assignments")
+      .select("id, status, last_compliance_percent, assignee_id")
+      .in("id", assignmentIds);
+    const assigneeIds = Array.from(
+      new Set((assignmentRows ?? []).map((row) => row.assignee_id as string).filter(Boolean)),
+    );
+    const { data: profileRows } = assigneeIds.length
+      ? await supabase.from("profiles").select("id, full_name, email").in("id", assigneeIds)
+      : { data: [] as { id: string; full_name: string | null; email: string | null }[] };
+    const profileById = new Map((profileRows ?? []).map((row) => [row.id as string, row]));
+    const assignmentById = new Map((assignmentRows ?? []).map((row) => [row.id as string, row]));
+    for (const item of items) {
+      if (!item.assignment_id) continue;
+      const assignment = assignmentById.get(item.assignment_id);
+      if (!assignment) continue;
+      item.assignment_status = assignment.status as ScanAssignmentStatus;
+      item.planogram_compliance =
+        assignment.last_compliance_percent === null ||
+        assignment.last_compliance_percent === undefined
+          ? null
+          : Number(assignment.last_compliance_percent);
+      item.assignee_id = (assignment.assignee_id as string | null) ?? null;
+      const profile = assignment.assignee_id ? profileById.get(assignment.assignee_id as string) : undefined;
+      item.assignee_name = profile?.full_name ?? profile?.email ?? null;
+    }
+  }
 
   // Attach signed download URLs (PDF report, annotated image, CSV) for these scans.
   const { resolveScanAssetUrls } = await import("@/lib/scan-results");
@@ -148,12 +241,34 @@ export async function fetchScanHistory(
   const { data: storeRows } = await supabase.from("stores").select("name").eq("org_id", orgId);
   const stores = Array.from(new Set((storeRows ?? []).map((s) => s.name as string))).sort();
 
+  // Assignee options for the reports filter (managers only need this list).
+  let assignees: { id: string; name: string }[] = [];
+  if (isManager) {
+    const { data: memberRows } = await supabase
+      .from("organization_members")
+      .select("user_id, invited_email, profiles:user_id (full_name, email)")
+      .eq("org_id", orgId);
+    assignees = (memberRows ?? [])
+      .map((row) => {
+        const profile = (row as { profiles?: { full_name?: string | null; email?: string | null } | null })
+          .profiles;
+        return {
+          id: row.user_id as string,
+          name: profile?.full_name ?? profile?.email ?? (row.invited_email as string | null) ?? "Member",
+        };
+      })
+      .filter((row) => Boolean(row.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
   return {
     items,
     total: count ?? items.length,
     page,
     page_size: pageSize,
     stores,
+    assignees,
+
   };
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+
 import {
   Archive,
   ArchiveRestore,
@@ -65,10 +66,12 @@ import {
   archiveOrgStore,
   createOrgStore,
   deleteOrgStore,
+  fetchStoreTeam,
   formatConfidence,
   formatDateTime,
   formatNumber,
   formatScore,
+  grantStoreAccess,
   healthTone,
   restoreOrgStore,
   scansRemaining,
@@ -79,6 +82,8 @@ import {
   type OrgStore,
   type StoreInput,
 } from "@/lib/organization";
+import { fetchAssignableMembers } from "@/lib/assignments";
+
 
 /* -------------------------------------------------------------------------- */
 /* Organization dashboard                                                     */
@@ -381,6 +386,8 @@ export function StoreCard({
         )}
       </div>
 
+      <StoreTeamStrip storeId={store.id} />
+
       <Button asChild variant="subtle" size="sm" className="mt-4 w-full rounded-xl">
         <Link to="/stores/$storeId" params={{ storeId: store.id }}>
           Quick view
@@ -389,6 +396,73 @@ export function StoreCard({
     </article>
   );
 }
+
+const teamRoleClasses: Record<string, string> = {
+  owner: "bg-brand-soft text-brand",
+  admin: "bg-brand-soft text-brand",
+  manager: "bg-accent-green/12 text-accent-green",
+  store_manager: "bg-accent-green/12 text-accent-green",
+  member: "bg-muted text-muted-foreground",
+  viewer: "bg-muted text-muted-foreground",
+};
+
+/** Team with access to this store — explicit scope or org-wide access. */
+function StoreTeamStrip({ storeId }: { storeId: string }) {
+  const query = useQuery({
+    queryKey: ["store-team", storeId],
+    queryFn: () => fetchStoreTeam(storeId),
+    retry: false,
+    staleTime: 60_000,
+  });
+
+  if (query.isPending) {
+    return (
+      <div className="mt-4 border-t border-border pt-3">
+        <Skeleton className="h-4 w-40" />
+      </div>
+    );
+  }
+  const items = query.data?.items ?? [];
+
+  return (
+    <div className="mt-4 border-t border-border pt-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Team with access
+      </p>
+      {items.length === 0 ? (
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          No one is scoped to this store yet.
+        </p>
+      ) : (
+        <ul className="mt-2 space-y-1.5">
+          {items.slice(0, 4).map((member) => (
+            <li key={member.id} className="flex items-center justify-between gap-2 text-xs">
+              <span className="min-w-0 truncate">
+                <span className="font-medium text-foreground">{member.name ?? member.email}</span>
+                {member.status === "invited" && (
+                  <span className="ml-1.5 text-muted-foreground">(invited)</span>
+                )}
+              </span>
+              <Badge
+                variant="secondary"
+                className={cn(
+                  "shrink-0 rounded-full border-0 text-[11px] font-medium",
+                  teamRoleClasses[member.role] ?? "bg-muted text-muted-foreground",
+                )}
+              >
+                {member.all_stores ? "All stores" : member.role.replace("_", " ")}
+              </Badge>
+            </li>
+          ))}
+          {items.length > 4 && (
+            <li className="text-xs text-muted-foreground">+{items.length - 4} more</li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 
 export function StoreCardSkeleton() {
   return (
@@ -433,9 +507,19 @@ export function StoreFormDialog({
 }) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<StoreInput>(blankStore);
+  const [teamIds, setTeamIds] = useState<string[]>([]);
+
+  const membersQuery = useQuery({
+    queryKey: ["assignable-members"],
+    queryFn: () => fetchAssignableMembers(),
+    retry: false,
+    enabled: open && !store,
+    staleTime: 60_000,
+  });
 
   useEffect(() => {
     if (!open) return;
+    setTeamIds([]);
     setForm(
       store
         ? {
@@ -454,11 +538,16 @@ export function StoreFormDialog({
   }, [open, store]);
 
   const mutation = useMutation({
-    mutationFn: (input: StoreInput) =>
-      store ? updateOrgStore(store.id, input) : createOrgStore(input),
+    mutationFn: async (input: StoreInput) => {
+      if (store) return updateOrgStore(store.id, input);
+      const created = await createOrgStore(input);
+      if (teamIds.length) await grantStoreAccess(created.id, teamIds);
+      return created;
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["stores"] });
       void queryClient.invalidateQueries({ queryKey: ["organization"] });
+      void queryClient.invalidateQueries({ queryKey: ["store-team"] });
       toast.success(store ? "Store updated" : "Store added");
       onOpenChange(false);
     },
@@ -468,6 +557,13 @@ export function StoreFormDialog({
 
   const set = (key: keyof StoreInput, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  const members = membersQuery.data ?? [];
+  const toggleMember = (userId: string) =>
+    setTeamIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
+    );
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -584,6 +680,52 @@ export function StoreFormDialog({
               placeholder="+91 98765 43210"
             />
           </div>
+
+          {!store && (
+            <div className="space-y-2 rounded-2xl border border-border bg-surface p-4 sm:col-span-2">
+              <div className="flex items-center gap-2">
+                <Users className="size-4 text-brand" />
+                <p className="text-sm font-medium">Team access</p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Members you select can scan and report on this store. Owners, admins and managers
+                already have access to every store.
+              </p>
+              {membersQuery.isPending ? (
+                <Skeleton className="h-5 w-48" />
+              ) : members.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No team members yet —{" "}
+                  <Link to="/team" className="text-brand hover:underline">
+                    invite your team
+                  </Link>
+                  .
+                </p>
+              ) : (
+                <ul className="mt-1 grid gap-2 sm:grid-cols-2">
+                  {members.map((member) => (
+                    <li key={member.user_id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`store-team-${member.user_id}`}
+                        checked={teamIds.includes(member.user_id)}
+                        onCheckedChange={() => toggleMember(member.user_id)}
+                      />
+                      <Label
+                        htmlFor={`store-team-${member.user_id}`}
+                        className="min-w-0 truncate text-sm font-normal"
+                      >
+                        {member.name}
+                        <span className="ml-1.5 text-xs text-muted-foreground">
+                          {member.role.replace("_", " ")}
+                        </span>
+                      </Label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
 
           <DialogFooter className="sm:col-span-2">
             <Button

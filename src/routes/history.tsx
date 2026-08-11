@@ -114,8 +114,41 @@ function StatusBadge({ status }: { status: ScanStatus }) {
   );
 }
 
+const assignmentStatusMeta: Record<string, { label: string; className: string }> = {
+  pending: { label: "Pending", className: "bg-muted text-muted-foreground" },
+  in_progress: { label: "In progress", className: "bg-brand-soft text-brand" },
+  needs_correction: { label: "Needs correction", className: "bg-amber-500/12 text-amber-600" },
+  completed: { label: "Completed", className: "bg-accent-green/12 text-accent-green" },
+  cancelled: { label: "Cancelled", className: "bg-muted text-muted-foreground" },
+};
+
+function AssignmentStatusBadge({ status }: { status: string | null }) {
+  if (!status) return <span className="text-muted-foreground">—</span>;
+  const meta = assignmentStatusMeta[status] ?? {
+    label: status,
+    className: "bg-muted text-muted-foreground",
+  };
+  return (
+    <Badge variant="secondary" className={`rounded-full border-0 font-medium ${meta.className}`}>
+      {meta.label}
+    </Badge>
+  );
+}
+
+function complianceTone(value: number | null): string {
+  if (value === null) return "text-muted-foreground";
+  if (value >= 100) return "text-accent-green";
+  if (value >= 70) return "text-amber-600";
+  return "text-destructive";
+}
+
+function formatCompliance(value: number | null): string {
+  return value === null ? "—" : `${Math.round(value)}%`;
+}
+
 function RowActions({
   scan,
+
   onDelete,
 }: {
   scan: ScanHistoryItem;
@@ -209,13 +242,15 @@ function HistoryPage() {
   const [store, setStore] = useState("all");
   const [date, setDate] = useState("");
   const [sort, setSort] = useState<NonNullable<ScanHistoryQuery["sort"]>>("newest");
+  const [type, setType] = useState<NonNullable<ScanHistoryQuery["type"]>>("all");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string[]>([]);
   const [pendingDelete, setPendingDelete] = useState<ScanHistoryItem | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const params: ScanHistoryQuery = { q, store, date, sort, page, page_size: PAGE_SIZE };
+  const params: ScanHistoryQuery = { q, store, date, sort, type, page, page_size: PAGE_SIZE };
+
 
   const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: ["scan-history", params],
@@ -332,9 +367,26 @@ function HistoryPage() {
                 <SelectItem value="processing_time">Longest processing</SelectItem>
               </SelectContent>
             </Select>
+
+            <Select
+              value={type}
+              onValueChange={(v) => {
+                setType(v as typeof type);
+                resetPage();
+              }}
+            >
+              <SelectTrigger className="h-11 rounded-xl sm:w-[170px]" aria-label="Filter by scan type">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All scans</SelectItem>
+                <SelectItem value="assigned">Assigned only</SelectItem>
+                <SelectItem value="adhoc">Ad hoc only</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {(q || date || store !== "all") && (
+          {(q || date || store !== "all" || type !== "all") && (
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span>Filters active</span>
               <Button
@@ -345,6 +397,7 @@ function HistoryPage() {
                   setQ("");
                   setDate("");
                   setStore("all");
+                  setType("all");
                   resetPage();
                 }}
               >
@@ -352,6 +405,7 @@ function HistoryPage() {
               </Button>
             </div>
           )}
+
         </section>
 
         {/* compare bar */}
@@ -415,8 +469,12 @@ function HistoryPage() {
                       <TableHead className="text-right">Products</TableHead>
                       <TableHead>Location</TableHead>
                       <TableHead>Category</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Assignment</TableHead>
+                      <TableHead className="text-right">Compliance</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="w-10" />
+
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -453,8 +511,31 @@ function HistoryPage() {
                           {scan.category ?? "—"}
                         </TableCell>
                         <TableCell>
+                          <Badge
+                            variant="secondary"
+                            className={`rounded-full border-0 font-medium ${
+                              scan.assignment_id
+                                ? "bg-brand-soft text-brand"
+                                : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {scan.assignment_id ? "Assigned" : "Ad hoc"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          <AssignmentStatusBadge status={scan.assignment_status ?? null} />
+                        </TableCell>
+                        <TableCell
+                          className={`text-right tabular-nums font-medium ${complianceTone(
+                            scan.planogram_compliance ?? null,
+                          )}`}
+                        >
+                          {formatCompliance(scan.planogram_compliance ?? null)}
+                        </TableCell>
+                        <TableCell>
                           <StatusBadge status={scan.status} />
                         </TableCell>
+
                         <TableCell className="text-right">
                           <RowActions scan={scan} onDelete={setPendingDelete} />
                         </TableCell>
@@ -491,6 +572,12 @@ function HistoryPage() {
                         { l: "Products", v: formatCount(scan.products_detected) },
                         { l: "Location", v: scan.location ?? "—" },
                         { l: "Category", v: scan.category ?? "—" },
+                        { l: "Type", v: scan.assignment_id ? "Assigned" : "Ad hoc" },
+                        {
+                          l: "Compliance",
+                          v: formatCompliance(scan.planogram_compliance ?? null),
+                        },
+
                       ].map((row) => (
                         <div key={row.l} className="min-w-0">
                           <dt className="text-muted-foreground">{row.l}</dt>

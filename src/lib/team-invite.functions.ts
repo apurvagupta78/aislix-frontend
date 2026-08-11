@@ -136,3 +136,51 @@ export const inviteMember = createServerFn({ method: "POST" })
       mode: isExistingActive ? "updated" : mode === "invited" ? "invited" : "updated",
     };
   });
+
+/** Re-sends the Auth invite email for a still-pending membership row. */
+export const resendMemberInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { member_id: string }) => ({
+    member_id: String(input?.member_id ?? "").trim(),
+  }))
+  .handler(async ({ data, context }): Promise<{ email: string }> => {
+    const { supabase, userId } = context;
+
+    const { data: membership } = await supabase
+      .from("organization_members")
+      .select("org_id, role")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (!membership || !MANAGER_ROLES.includes(String(membership.role))) {
+      throw new Error("Only owners, admins and managers can resend invites.");
+    }
+
+    const { data: row, error } = await supabase
+      .from("organization_members")
+      .select("id, invited_email, status")
+      .eq("org_id", membership.org_id)
+      .eq("id", data.member_id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("Invite not found.");
+    if (row.status !== "invited") throw new Error("This member has already joined.");
+    const email = String(row.invited_email ?? "").trim();
+    if (!email) throw new Error("This invite has no email address.");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const invited = await supabaseAdmin.auth.admin.inviteUserByEmail(email);
+    if (invited.error && !/already/i.test(invited.error.message)) {
+      throw new Error(invited.error.message);
+    }
+
+    await supabaseAdmin
+      .from("organization_members")
+      .update({ updated_at: new Date().toISOString() })
+      .eq("id", row.id);
+
+    return { email };
+  });
+
