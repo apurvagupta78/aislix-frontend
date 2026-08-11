@@ -337,7 +337,15 @@ export function AppShell({
     retry: false,
     staleTime: 30_000,
   });
+  const activeMembershipQuery = useQuery({
+    queryKey: ["active-membership"],
+    queryFn: () => getMembership(),
+    retry: false,
+    staleTime: 60_000,
+  });
+  const activeMembership = activeMembershipQuery.data ?? null;
   const inboxQuery = useQuery({
+
     queryKey: ["inbox"],
     queryFn: () => fetchInbox(15),
     retry: false,
