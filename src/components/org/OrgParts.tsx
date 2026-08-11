@@ -507,9 +507,19 @@ export function StoreFormDialog({
 }) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<StoreInput>(blankStore);
+  const [teamIds, setTeamIds] = useState<string[]>([]);
+
+  const membersQuery = useQuery({
+    queryKey: ["assignable-members"],
+    queryFn: () => fetchAssignableMembers(),
+    retry: false,
+    enabled: open && !store,
+    staleTime: 60_000,
+  });
 
   useEffect(() => {
     if (!open) return;
+    setTeamIds([]);
     setForm(
       store
         ? {
@@ -528,11 +538,16 @@ export function StoreFormDialog({
   }, [open, store]);
 
   const mutation = useMutation({
-    mutationFn: (input: StoreInput) =>
-      store ? updateOrgStore(store.id, input) : createOrgStore(input),
+    mutationFn: async (input: StoreInput) => {
+      if (store) return updateOrgStore(store.id, input);
+      const created = await createOrgStore(input);
+      if (teamIds.length) await grantStoreAccess(created.id, teamIds);
+      return created;
+    },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["stores"] });
       void queryClient.invalidateQueries({ queryKey: ["organization"] });
+      void queryClient.invalidateQueries({ queryKey: ["store-team"] });
       toast.success(store ? "Store updated" : "Store added");
       onOpenChange(false);
     },
@@ -542,6 +557,13 @@ export function StoreFormDialog({
 
   const set = (key: keyof StoreInput, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  const members = membersQuery.data ?? [];
+  const toggleMember = (userId: string) =>
+    setTeamIds((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
+    );
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
