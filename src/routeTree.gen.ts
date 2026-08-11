@@ -24,6 +24,7 @@ import { Route as HistoryRouteImport } from './routes/history'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LogoutRouteImport } from './routes/logout'
+import { Route as MyScansRouteImport } from './routes/my-scans'
 import { Route as OrganizationRouteImport } from './routes/organization'
 import { Route as PlatformRouteImport } from './routes/platform'
 import { Route as PricingRouteImport } from './routes/pricing'
@@ -122,6 +123,11 @@ const LoginRoute = LoginRouteImport.update({
 const LogoutRoute = LogoutRouteImport.update({
   id: '/logout',
   path: '/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyScansRoute = MyScansRouteImport.update({
+  id: '/my-scans',
+  path: '/my-scans',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrganizationRoute = OrganizationRouteImport.update({
@@ -261,6 +267,7 @@ export interface FileRoutesByFullPath {
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/my-scans': typeof MyScansRoute
   '/organization': typeof OrganizationRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
@@ -302,6 +309,7 @@ export interface FileRoutesByTo {
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/my-scans': typeof MyScansRoute
   '/organization': typeof OrganizationRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
@@ -344,6 +352,7 @@ export interface FileRoutesById {
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
+  '/my-scans': typeof MyScansRoute
   '/organization': typeof OrganizationRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
@@ -387,6 +396,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/login'
     | '/logout'
+    | '/my-scans'
     | '/organization'
     | '/platform'
     | '/pricing'
@@ -428,6 +438,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/login'
     | '/logout'
+    | '/my-scans'
     | '/organization'
     | '/platform'
     | '/pricing'
@@ -469,6 +480,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/login'
     | '/logout'
+    | '/my-scans'
     | '/organization'
     | '/platform'
     | '/pricing'
@@ -511,6 +523,7 @@ export interface RootRouteChildren {
   HowItWorksRoute: typeof HowItWorksRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
+  MyScansRoute: typeof MyScansRoute
   OrganizationRoute: typeof OrganizationRoute
   PlatformRoute: typeof PlatformRoute
   PricingRoute: typeof PricingRoute
@@ -642,6 +655,13 @@ declare module '@tanstack/react-router' {
       path: '/logout'
       fullPath: '/logout'
       preLoaderRoute: typeof LogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-scans': {
+      id: '/my-scans'
+      path: '/my-scans'
+      fullPath: '/my-scans'
+      preLoaderRoute: typeof MyScansRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/organization': {
@@ -831,6 +851,7 @@ const rootRouteChildren: RootRouteChildren = {
   HowItWorksRoute: HowItWorksRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
+  MyScansRoute: MyScansRoute,
   OrganizationRoute: OrganizationRoute,
   PlatformRoute: PlatformRoute,
   PricingRoute: PricingRoute,

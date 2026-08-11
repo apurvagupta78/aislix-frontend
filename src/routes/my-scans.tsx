@@ -97,7 +97,7 @@ function MyScansPage() {
           ))}
         </div>
       ) : query.isError ? (
-        <ErrorState message={toUserMessage(query.error)} onRetry={() => void query.refetch()} />
+        <ErrorState description={toUserMessage(query.error)} onRetry={() => void query.refetch()} />
       ) : !open.length && !done.length ? (
         <EmptyState
           icon={<ClipboardList className="size-6" />}
