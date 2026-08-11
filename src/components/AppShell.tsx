@@ -678,6 +678,8 @@ export function AppShell({
           )}
           </div>
         </div>
+      </aside>
+
 
       <div className={sidebarCollapsed ? "lg:pl-16" : "lg:pl-64"}>
 
