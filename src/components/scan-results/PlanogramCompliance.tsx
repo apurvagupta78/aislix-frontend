@@ -1,30 +1,18 @@
 import { ClipboardCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
+  SUMMARY_TILES,
   complianceTone,
   issueLabel,
   issueRowClass,
+  summaryCounts,
   type PlanogramComparison,
 } from "@/lib/planogram-compliance";
-
-const TILES: { key: keyof PlanogramComparison["summary"]; label: string }[] = [
-  { key: "expected", label: "Expected" },
-  { key: "found", label: "Found" },
-  { key: "missing", label: "Missing" },
-  { key: "qty_issues", label: "Qty issues" },
-  { key: "wrong_product", label: "Wrong product" },
-  { key: "wrong_category", label: "Wrong category" },
-  { key: "unexpected", label: "Unexpected" },
-];
-
-function tileValue(summary: PlanogramComparison["summary"], key: string): string {
-  const raw = summary[key];
-  return typeof raw === "number" ? String(raw) : "—";
-}
 
 /** "Planogram vs Actual" — only rendered for scans launched from an assignment. */
 export function PlanogramComparisonSection({ comparison }: { comparison: PlanogramComparison }) {
   const percent = comparison.compliance_percent;
+  const counts = summaryCounts(comparison.summary);
   return (
     <section className="card-surface p-4 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -48,14 +36,15 @@ export function PlanogramComparisonSection({ comparison }: { comparison: Planogr
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-        {TILES.map((tile) => (
-          <div key={String(tile.key)} className="rounded-xl border border-border bg-surface p-3">
-            <p className="text-xs text-muted-foreground">{tile.label}</p>
-            <p className="mt-1 text-lg font-semibold text-foreground">
-              {tileValue(comparison.summary, String(tile.key))}
-            </p>
-          </div>
-        ))}
+        {SUMMARY_TILES.map((tile) => {
+          const value = counts[tile.key];
+          return (
+            <div key={tile.key} className="rounded-xl border border-border bg-surface p-3">
+              <p className="text-xs text-muted-foreground">{tile.label}</p>
+              <p className="mt-1 text-lg font-semibold text-foreground">{value ?? "—"}</p>
+            </div>
+          );
+        })}
       </div>
 
       {comparison.lines.length > 0 && (
