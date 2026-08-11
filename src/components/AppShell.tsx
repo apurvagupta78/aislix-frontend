@@ -50,6 +50,7 @@ import { fetchMyPendingCount, isOrgManager } from "@/lib/assignments";
 import { getMembership, listMemberships, setActiveOrgId } from "@/lib/db/context";
 import {
   fetchInbox,
+  fetchUnreadCount,
   markAllNotificationsRead,
   markNotificationRead,
   notificationHref,
@@ -470,8 +471,15 @@ export function AppShell({
     retry: false,
     staleTime: 60_000,
   });
+  const unreadQuery = useQuery({
+    queryKey: ["inbox-unread"],
+    queryFn: () => fetchUnreadCount(),
+    retry: false,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
   const inbox = inboxQuery.data ?? [];
-  const unread = inbox.filter((n) => !n.read_at).length;
+  const unread = unreadQuery.data ?? inbox.filter((n) => !n.read_at).length;
   const memberships = membershipsQuery.data ?? [];
   const pendingCount = pendingQuery.data ?? 0;
 
@@ -691,6 +699,7 @@ export function AppShell({
                         onClick={async () => {
                           await markAllNotificationsRead();
                           void queryClient.invalidateQueries({ queryKey: ["inbox"] });
+                          void queryClient.invalidateQueries({ queryKey: ["inbox-unread"] });
                         }}
                       >
                         Mark all read
@@ -711,6 +720,7 @@ export function AppShell({
                           if (!n.read_at) {
                             await markNotificationRead(n.id);
                             void queryClient.invalidateQueries({ queryKey: ["inbox"] });
+                          void queryClient.invalidateQueries({ queryKey: ["inbox-unread"] });
                           }
                           void navigate({ to: notificationHref(n) });
                         }}
