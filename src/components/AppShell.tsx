@@ -288,10 +288,10 @@ function SidebarNav({
         search={leaf.search ?? {}}
         onClick={onNavigate}
         className={cn(
-          "flex items-center gap-2.5 rounded-xl py-2 text-sm transition-colors",
-          nested ? "ml-3 border-l border-border pl-4 pr-3" : "px-3",
+          "flex items-center gap-2.5 rounded-lg py-2 text-sm transition-colors",
+          nested ? "pl-8 pr-3" : "px-3",
           active
-            ? "bg-brand-soft font-medium text-brand"
+            ? "font-medium text-brand"
             : "text-muted-foreground hover:bg-muted hover:text-foreground",
         )}
       >
