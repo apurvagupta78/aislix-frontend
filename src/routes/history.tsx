@@ -478,8 +478,31 @@ function HistoryPage() {
                           {scan.category ?? "—"}
                         </TableCell>
                         <TableCell>
+                          <Badge
+                            variant="secondary"
+                            className={`rounded-full border-0 font-medium ${
+                              scan.assignment_id
+                                ? "bg-brand-soft text-brand"
+                                : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {scan.assignment_id ? "Assigned" : "Ad hoc"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          <AssignmentStatusBadge status={scan.assignment_status ?? null} />
+                        </TableCell>
+                        <TableCell
+                          className={`text-right tabular-nums font-medium ${complianceTone(
+                            scan.planogram_compliance ?? null,
+                          )}`}
+                        >
+                          {formatCompliance(scan.planogram_compliance ?? null)}
+                        </TableCell>
+                        <TableCell>
                           <StatusBadge status={scan.status} />
                         </TableCell>
+
                         <TableCell className="text-right">
                           <RowActions scan={scan} onDelete={setPendingDelete} />
                         </TableCell>
