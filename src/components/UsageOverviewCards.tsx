@@ -20,6 +20,7 @@ import {
   remainingScans,
   usagePercent,
 } from "@/lib/billing";
+import { formatUsageLabel } from "@/lib/subscription-limits";
 
 /**
  * Usage analytics for the current billing period. Bound to
@@ -91,9 +92,7 @@ export function UsageOverviewCards() {
         ringLabel={pct === null ? "∞" : `${pct}%`}
         ringSublabel={pct === null ? "unlimited" : "of quota"}
         tone={pct !== null && pct >= 90 ? "warning" : "brand"}
-        footer={`${formatNumber(usage.scans_used)} / ${
-          usage.scans_included ? formatNumber(usage.scans_included) : "Unlimited"
-        }`}
+        footer={formatUsageLabel(usage as unknown as Record<string, unknown>).scans}
       />
       <RingCard
         label="Average shelf health"
