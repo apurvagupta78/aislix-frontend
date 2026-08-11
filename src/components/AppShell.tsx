@@ -461,9 +461,9 @@ function AccountNav({
             to={item.to}
             onClick={onNavigate}
             className={cn(
-              "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors",
+              "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
               active
-                ? "bg-brand-soft font-medium text-brand"
+                ? "font-medium text-brand"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
