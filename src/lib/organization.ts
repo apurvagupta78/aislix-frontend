@@ -384,15 +384,19 @@ export async function fetchStore(id: string, _signal?: AbortSignal): Promise<Org
 
 export async function createOrgStore(input: StoreInput): Promise<OrgStore> {
   const orgId = await requireOrgId();
-  const { assertCanAddStore } = await import("@/lib/subscription-limits");
-  await assertCanAddStore();
+  const { assertCanAddStore, mapLimitError } = await import("@/lib/subscription-limits");
+  await assertCanAddStore(orgId);
   const { data, error } = await supabase
 
     .from("stores")
     .insert({ org_id: orgId, ...storeInputToRow(input) })
     .select("*")
     .single();
-  if (error) dbError(error, "Could not create the store.");
+  if (error) {
+    const mapped = await mapLimitError(error, orgId);
+    if (mapped !== error) throw mapped;
+    dbError(error, "Could not create the store.");
+  }
   return mapStoreRow(data!);
 }
 
