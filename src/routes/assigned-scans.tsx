@@ -7,6 +7,7 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -16,11 +17,15 @@ import {
 } from "@/components/ui/select";
 import { EmptyState, ErrorState } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
+import { complianceTone } from "@/lib/planogram-compliance";
 import {
   cancelAssignment,
   fetchOrgAssignments,
+  fetchTeamScans,
   isOrgManager,
+  isOverdue,
   scopeSummary,
+  type Assignment,
 } from "@/lib/assignments";
 import { formatDate, statusBadge } from "@/routes/my-scans";
 
@@ -31,7 +36,7 @@ export const Route = createFileRoute("/assigned-scans")({
       {
         name: "description",
         content:
-          "Track every shelf audit you assigned: store, scope, assignee, due date and completion status.",
+          "Track every shelf audit you assigned: store, scope, assignee, due date, compliance and completion status.",
       },
       { property: "og:title", content: "Assigned Scans — Aislix" },
       {
@@ -45,24 +50,31 @@ export const Route = createFileRoute("/assigned-scans")({
   component: AssignedScansPage,
 });
 
-function AssignedScansPage() {
+function compliance(value: number | null) {
+  if (value === null) return <span className="text-xs text-muted-foreground">—</span>;
+  return (
+    <span className={`text-sm font-semibold ${complianceTone(value)}`}>{Math.round(value)}%</span>
+  );
+}
+
+/** "Test store · A-1-Z · Personal Care · Shampoo" */
+function scopeLine(row: Assignment): string {
+  const parts = [row.store_name];
+  if (row.location) parts.push(row.location);
+  if (row.scope_values.category) parts.push(row.scope_values.category);
+  if (row.scope_values.sub_category) parts.push(row.scope_values.sub_category);
+  return parts.join(" · ");
+}
+
+function AssignmentsTab() {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
-
-  const managerQuery = useQuery({
-    queryKey: ["is-org-manager"],
-    queryFn: () => isOrgManager(),
-    retry: false,
-    staleTime: 60_000,
-  });
-  const isManager = managerQuery.data !== false;
 
   const query = useQuery({
     queryKey: ["org-assignments"],
     queryFn: () => fetchOrgAssignments(),
     retry: false,
-    enabled: isManager,
   });
 
   const cancelMutation = useMutation({
@@ -76,11 +88,212 @@ function AssignedScansPage() {
 
   const term = search.trim().toLowerCase();
   const rows = (query.data ?? []).filter((row) => {
-    if (status !== "all" && row.status !== status) return false;
+    if (status === "overdue" && !isOverdue(row)) return false;
+    if (status !== "all" && status !== "overdue" && row.status !== status) return false;
     if (!term) return true;
     return `${row.store_name} ${row.assignee_name} ${scopeSummary(row.scope_type, row.scope_values)}`
       .toLowerCase()
       .includes(term);
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2">
+        <Input
+          className="max-w-xs rounded-xl"
+          placeholder="Search store, assignee or scope"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger className="w-44 rounded-xl">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="in_progress">In progress</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="overdue">Overdue</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {query.isLoading ? (
+        <Skeleton className="h-64 w-full rounded-2xl" />
+      ) : query.isError ? (
+        <ErrorState description={toUserMessage(query.error)} onRetry={() => void query.refetch()} />
+      ) : !rows.length ? (
+        <EmptyState
+          icon={<ClipboardList className="size-6" />}
+          title="No assignments yet"
+          description="Assign a scoped shelf audit to a team member to see it tracked here."
+          action={
+            <Button variant="brand" className="rounded-xl" asChild>
+              <Link to="/assign-scan">Assign scan</Link>
+            </Button>
+          }
+        />
+      ) : (
+        <>
+          <div className="hidden overflow-hidden rounded-2xl border border-border bg-card md:block">
+            <table className="w-full text-sm">
+              <thead className="bg-surface text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium">Assignee</th>
+                  <th className="px-4 py-3 text-left font-medium">Store · Scope</th>
+                  <th className="px-4 py-3 text-left font-medium">Expected</th>
+                  <th className="px-4 py-3 text-left font-medium">Due</th>
+                  <th className="px-4 py-3 text-left font-medium">Status</th>
+                  <th className="px-4 py-3 text-left font-medium">Compliance</th>
+                  <th className="px-4 py-3 text-right font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id} className="border-t border-border">
+                    <td className="px-4 py-3 text-foreground">{row.assignee_name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{scopeLine(row)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{row.expected_products}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{formatDate(row.due_at)}</td>
+                    <td className="px-4 py-3">
+                      {isOverdue(row) ? (
+                        <span className="text-xs font-medium text-destructive">Overdue</span>
+                      ) : (
+                        statusBadge(row.status)
+                      )}
+                    </td>
+                    <td className="px-4 py-3">{compliance(row.compliance_percent)}</td>
+                    <td className="px-4 py-3 text-right">
+                      {row.scan_id ? (
+                        <Button variant="ghost" size="sm" className="rounded-xl" asChild>
+                          <Link to="/results" search={{ scan: row.scan_id }}>
+                            View results
+                          </Link>
+                        </Button>
+                      ) : row.status === "pending" || row.status === "in_progress" ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="rounded-xl"
+                          disabled={cancelMutation.isPending}
+                          onClick={() => cancelMutation.mutate(row.id)}
+                        >
+                          Cancel
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="space-y-3 md:hidden">
+            {rows.map((row) => (
+              <div key={row.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-foreground">{row.assignee_name}</p>
+                  {statusBadge(row.status)}
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">{scopeLine(row)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {row.expected_products} expected · {formatDate(row.due_at)}
+                </p>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  {compliance(row.compliance_percent)}
+                  {row.scan_id && (
+                    <Button variant="ghost" size="sm" className="rounded-xl" asChild>
+                      <Link to="/results" search={{ scan: row.scan_id }}>
+                        View results
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function TeamScansTab() {
+  const query = useQuery({
+    queryKey: ["team-scans"],
+    queryFn: () => fetchTeamScans(),
+    retry: false,
+  });
+
+  const rows = query.data ?? [];
+
+  if (query.isLoading) return <Skeleton className="h-64 w-full rounded-2xl" />;
+  if (query.isError)
+    return (
+      <ErrorState description={toUserMessage(query.error)} onRetry={() => void query.refetch()} />
+    );
+  if (!rows.length)
+    return (
+      <EmptyState
+        icon={<ClipboardList className="size-6" />}
+        title="No team scans yet"
+        description="Once a teammate completes an assigned audit, their scan appears here with compliance detail."
+      />
+    );
+
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+      <table className="w-full text-sm">
+        <thead className="bg-surface text-xs uppercase tracking-wide text-muted-foreground">
+          <tr>
+            <th className="px-4 py-3 text-left font-medium">Scan date</th>
+            <th className="px-4 py-3 text-left font-medium">Assignee</th>
+            <th className="px-4 py-3 text-left font-medium">Store</th>
+            <th className="px-4 py-3 text-left font-medium">Location</th>
+            <th className="px-4 py-3 text-left font-medium">Compliance</th>
+            <th className="px-4 py-3 text-left font-medium">Missing</th>
+            <th className="px-4 py-3 text-left font-medium">Wrong product</th>
+            <th className="px-4 py-3 text-left font-medium">Unexpected</th>
+            <th className="px-4 py-3 text-right font-medium">View</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.scan_id} className="border-t border-border">
+              <td className="px-4 py-3 text-muted-foreground">{formatDate(row.created_at)}</td>
+              <td className="px-4 py-3 text-foreground">{row.assignee_name}</td>
+              <td className="px-4 py-3 text-foreground">{row.store_name}</td>
+              <td className="px-4 py-3 text-muted-foreground">{row.location ?? "—"}</td>
+              <td className="px-4 py-3">{compliance(row.compliance_percent)}</td>
+              <td className="px-4 py-3 text-muted-foreground">{row.missing ?? "—"}</td>
+              <td className="px-4 py-3 text-muted-foreground">{row.wrong_product ?? "—"}</td>
+              <td className="px-4 py-3 text-muted-foreground">{row.unexpected ?? "—"}</td>
+              <td className="px-4 py-3 text-right">
+                <Button variant="ghost" size="sm" className="rounded-xl" asChild>
+                  <Link to="/results" search={{ scan: row.scan_id }}>
+                    View
+                  </Link>
+                </Button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function AssignedScansPage() {
+  const [tab, setTab] = useState("assignments");
+  const managerQuery = useQuery({
+    queryKey: ["is-org-manager"],
+    queryFn: () => isOrgManager(),
+    retry: false,
+    staleTime: 60_000,
   });
 
   return (
@@ -95,121 +308,30 @@ function AssignedScansPage() {
         </Button>
       }
     >
-      <div className="space-y-4">
-        <div className="flex flex-wrap gap-2">
-          <Input
-            className="max-w-xs rounded-xl"
-            placeholder="Search store, assignee or scope"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-44 rounded-xl">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="in_progress">In progress</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {managerQuery.data === false ? (
-          <EmptyState
-            icon={<ClipboardList className="size-6" />}
-            title="Manager access required"
-            description="Only workspace owners, admins and managers can review assigned scans. Your own tasks live on My Scans."
-            action={
-              <Button variant="brand" className="rounded-xl" asChild>
-                <Link to="/my-scans">Go to My Scans</Link>
-              </Button>
-            }
-          />
-        ) : query.isLoading ? (
-          <Skeleton className="h-64 w-full rounded-2xl" />
-        ) : query.isError ? (
-          <ErrorState description={toUserMessage(query.error)} onRetry={() => void query.refetch()} />
-        ) : !rows.length ? (
-          <EmptyState
-            icon={<ClipboardList className="size-6" />}
-            title="No assignments yet"
-            description="Assign a scoped shelf audit to a team member to see it tracked here."
-            action={
-              <Button variant="brand" className="rounded-xl" asChild>
-                <Link to="/assign-scan">Assign scan</Link>
-              </Button>
-            }
-          />
-        ) : (
-          <>
-            <div className="hidden overflow-hidden rounded-2xl border border-border bg-card md:block">
-              <table className="w-full text-sm">
-                <thead className="bg-surface text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium">Store</th>
-                    <th className="px-4 py-3 text-left font-medium">Scope</th>
-                    <th className="px-4 py-3 text-left font-medium">Assignee</th>
-                    <th className="px-4 py-3 text-left font-medium">Due</th>
-                    <th className="px-4 py-3 text-left font-medium">Status</th>
-                    <th className="px-4 py-3 text-right font-medium">Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.id} className="border-t border-border">
-                      <td className="px-4 py-3 text-foreground">{row.store_name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {scopeSummary(row.scope_type, row.scope_values)}
-                      </td>
-                      <td className="px-4 py-3 text-foreground">{row.assignee_name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{formatDate(row.due_at)}</td>
-                      <td className="px-4 py-3">{statusBadge(row.status)}</td>
-                      <td className="px-4 py-3 text-right">
-                        {row.status === "pending" || row.status === "in_progress" ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="rounded-xl"
-                            disabled={cancelMutation.isPending}
-                            onClick={() => cancelMutation.mutate(row.id)}
-                          >
-                            Cancel
-                          </Button>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="space-y-3 md:hidden">
-              {rows.map((row) => (
-                <div
-                  key={row.id}
-                  className="rounded-2xl border border-border bg-card p-4 shadow-sm"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-foreground">{row.store_name}</p>
-                    {statusBadge(row.status)}
-                  </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {scopeSummary(row.scope_type, row.scope_values)}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {row.assignee_name} · {formatDate(row.due_at)}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+      {managerQuery.data === false ? (
+        <EmptyState
+          icon={<ClipboardList className="size-6" />}
+          title="Manager access required"
+          description="Only workspace owners, admins and managers can review assigned scans. Your own tasks live on My Scans."
+          action={
+            <Button variant="brand" className="rounded-xl" asChild>
+              <Link to="/my-scans">Go to My Scans</Link>
+            </Button>
+          }
+        />
+      ) : (
+        <Tabs value={tab} onValueChange={setTab} className="space-y-4">
+          <TabsList className="rounded-xl">
+            <TabsTrigger value="assignments" className="rounded-lg">
+              Assignments
+            </TabsTrigger>
+            <TabsTrigger value="team-scans" className="rounded-lg">
+              Team Scans
+            </TabsTrigger>
+          </TabsList>
+          {tab === "assignments" ? <AssignmentsTab /> : <TeamScansTab />}
+        </Tabs>
+      )}
     </AppShell>
   );
 }
