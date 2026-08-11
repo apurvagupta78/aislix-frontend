@@ -50,6 +50,8 @@ import {
   type ScanResult,
 } from "@/lib/scan-results";
 import { retryScanAnalysis } from "@/lib/scan-api";
+import { PlanogramComparisonSection } from "@/components/scan-results/PlanogramCompliance";
+import { complianceTone, fetchPlanogramComparison } from "@/lib/planogram-compliance";
 
 export const Route = createFileRoute("/results")({
   validateSearch: (search: Record<string, unknown>): { scan?: string } => {
@@ -90,6 +92,14 @@ function Results() {
       return status === "processing" || status === "queued" ? 4000 : false;
     },
   });
+
+  const comparisonQuery = useQuery({
+    queryKey: ["planogram-comparison", scanId],
+    queryFn: () => fetchPlanogramComparison(scanId!),
+    enabled: Boolean(scanId),
+    retry: false,
+  });
+  const comparison = comparisonQuery.data ?? null;
 
   const data = query.data;
   const loading = !!scan && query.isPending;
@@ -218,10 +228,19 @@ function Results() {
                 />
 
                 <SummaryCard
-                  label="Shelf compliance"
-                  value={formatPercent(summary?.shelf_compliance)}
+                  label={comparison ? "Planogram compliance" : "Shelf compliance"}
+                  value={
+                    comparison
+                      ? comparison.compliance_percent === null
+                        ? undefined
+                        : `${Math.round(comparison.compliance_percent)}%`
+                      : formatPercent(summary?.shelf_compliance)
+                  }
                   loading={loading}
                   hint="Against planogram"
+                  valueClassName={
+                    comparison ? complianceTone(comparison.compliance_percent) : undefined
+                  }
                 />
                 <SummaryCard
                   label="Avg confidence"
@@ -230,6 +249,8 @@ function Results() {
                   accent
                 />
               </div>
+
+              {comparison && <PlanogramComparisonSection comparison={comparison} />}
 
               <AnnotatedImageViewer
                 src={data?.annotated_image_url}
