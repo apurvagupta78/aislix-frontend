@@ -812,5 +812,7 @@ export function AppShell({
         </main>
       </div>
     </div>
+    </TooltipProvider>
   );
 }
+
