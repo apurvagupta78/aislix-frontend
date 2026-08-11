@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClipboardList, UserPlus } from "lucide-react";
@@ -31,6 +31,11 @@ import {
 import { formatDate, statusBadge } from "@/routes/my-scans";
 
 export const Route = createFileRoute("/assigned-scans")({
+  validateSearch: (search: Record<string, unknown>): { tab?: "assignments" | "team-scans" } => {
+    const raw = search["tab"];
+    return raw === "team-scans" || raw === "assignments" ? { tab: raw } : {};
+  },
+
   head: () => ({
     meta: [
       { title: "Assigned Scans — Track team shelf audits | Aislix" },
@@ -331,7 +336,12 @@ function TeamScansTab() {
 }
 
 function AssignedScansPage() {
-  const [tab, setTab] = useState("assignments");
+  const { tab: tabParam } = Route.useSearch();
+  const [tab, setTab] = useState(tabParam ?? "assignments");
+  useEffect(() => {
+    if (tabParam) setTab(tabParam);
+  }, [tabParam]);
+
   const managerQuery = useQuery({
     queryKey: ["is-org-manager"],
     queryFn: () => isOrgManager(),

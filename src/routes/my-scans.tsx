@@ -21,6 +21,11 @@ import { markAssignmentNotificationsRead } from "@/lib/notifications";
 import { complianceTone } from "@/lib/planogram-compliance";
 
 export const Route = createFileRoute("/my-scans")({
+  validateSearch: (search: Record<string, unknown>): { tab?: "assigned" | "completed" } => {
+    const raw = search["tab"];
+    return raw === "completed" || raw === "assigned" ? { tab: raw } : {};
+  },
+
   head: () => ({
     meta: [
       { title: "My Assigned Scans — Aislix shelf audit tasks" },
@@ -89,7 +94,13 @@ function assignmentLine(assignment: Assignment): string {
 function MyScansPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<TabKey>("pending");
+  const { tab: tabParam } = Route.useSearch();
+  const [tab, setTab] = useState<TabKey>(tabParam === "completed" ? "completed" : "pending");
+  useEffect(() => {
+    if (tabParam === "completed") setTab("completed");
+    else if (tabParam === "assigned") setTab("pending");
+  }, [tabParam]);
+
   const query = useQuery({
     queryKey: ["my-assignments"],
     queryFn: () => fetchMyAssignments(),

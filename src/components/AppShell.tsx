@@ -2,10 +2,9 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import {
   LayoutDashboard,
-  ScanLine,
-
+  Plus,
   History,
-  FileText,
+  FileBarChart,
   CreditCard,
   User,
   Settings,
@@ -16,8 +15,10 @@ import {
   LogOut,
   Menu,
   ClipboardCheck,
-  ClipboardList,
+  LayoutGrid,
+  Send,
   Wrench,
+  ChevronDown,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Logo } from "@/components/Logo";
@@ -35,9 +36,8 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { fetchProfile } from "@/lib/account";
-import { canManagePlanogram } from "@/lib/planogram";
-import { fetchMyPendingCount } from "@/lib/assignments";
-import { listMemberships, setActiveOrgId } from "@/lib/db/context";
+import { fetchMyPendingCount, isOrgManager } from "@/lib/assignments";
+import { getMembership, listMemberships, setActiveOrgId } from "@/lib/db/context";
 import {
   fetchInbox,
   markAllNotificationsRead,
@@ -46,28 +46,263 @@ import {
 } from "@/lib/notifications";
 import { Badge } from "@/components/ui/badge";
 
-const nav = [
-  { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-  { label: "Scan", to: "/scan", icon: ScanLine },
-  { label: "Scan History", to: "/history", icon: History },
-  { label: "My Scans", to: "/my-scans", icon: ClipboardCheck },
+type LucideIcon = typeof Bell;
 
-  { label: "Reports", to: "/report", icon: FileText },
-  { label: "Stores", to: "/stores", icon: Store },
-  { label: "Team", to: "/team", icon: Users },
-] as const;
+type NavLeaf = {
+  kind: "leaf";
+  label: string;
+  to: string;
+  search?: Record<string, string>;
+  icon?: LucideIcon;
+  /** Badge only renders when the resolved count is > 0. */
+  badge?: "open-tasks";
+};
 
-const managerNav = [
-  { label: "Store Master", to: "/store-master", icon: ClipboardList },
-  { label: "Assigned Scans", to: "/assigned-scans", icon: ClipboardCheck },
-  { label: "Corrective Actions", to: "/corrective-actions", icon: Wrench },
-] as const;
+type NavParent = {
+  kind: "parent";
+  label: string;
+  icon: LucideIcon;
+  badge?: "open-tasks";
+  children: NavLeaf[];
+};
 
-const secondary = [
-  { label: "Billing", to: "/billing", icon: CreditCard },
-  { label: "Profile", to: "/profile", icon: User },
-  { label: "Settings", to: "/settings", icon: Settings },
-] as const;
+type NavItem = NavLeaf | NavParent;
+
+type NavSection = {
+  /** Undefined renders the items without an uppercase header. */
+  header?: string;
+  managerOnly?: boolean;
+  items: NavItem[];
+};
+
+const SECTIONS: NavSection[] = [
+  {
+    items: [{ kind: "leaf", label: "Dashboard", to: "/dashboard", icon: LayoutDashboard }],
+  },
+  {
+    header: "Scan & tasks",
+    items: [
+      { kind: "leaf", label: "New Scan", to: "/scan", icon: Plus },
+      {
+        kind: "parent",
+        label: "My Scans",
+        icon: ClipboardCheck,
+        badge: "open-tasks",
+        children: [
+          {
+            kind: "leaf",
+            label: "Assigned to Me",
+            to: "/my-scans",
+            search: { tab: "assigned" },
+            badge: "open-tasks",
+          },
+          {
+            kind: "leaf",
+            label: "Completed by Me",
+            to: "/my-scans",
+            search: { tab: "completed" },
+          },
+        ],
+      },
+    ],
+  },
+  {
+    managerOnly: true,
+    items: [
+      {
+        kind: "parent",
+        label: "Assigned Scans",
+        icon: Send,
+        children: [
+          {
+            kind: "leaf",
+            label: "Scans I Assigned",
+            to: "/assigned-scans",
+            search: { tab: "assignments" },
+          },
+        ],
+      },
+    ],
+  },
+  {
+    items: [{ kind: "leaf", label: "Scan History", to: "/history", icon: History }],
+  },
+  {
+    header: "Audit & actions",
+    items: [
+      { kind: "leaf", label: "Corrective Actions", to: "/corrective-actions", icon: Wrench },
+    ],
+  },
+  {
+    managerOnly: true,
+    items: [{ kind: "leaf", label: "Reports", to: "/report", icon: FileBarChart }],
+  },
+  {
+    header: "Management",
+    managerOnly: true,
+    items: [
+      { kind: "leaf", label: "Stores", to: "/stores", icon: Store },
+      { kind: "leaf", label: "Store Master", to: "/store-master", icon: LayoutGrid },
+      { kind: "leaf", label: "Team", to: "/team", icon: Users },
+    ],
+  },
+];
+
+const ACCOUNT_SECTION: NavSection = {
+  header: "Account",
+  items: [
+    { kind: "leaf", label: "Billing", to: "/billing", icon: CreditCard },
+    { kind: "leaf", label: "Profile", to: "/profile", icon: User },
+    { kind: "leaf", label: "Settings", to: "/settings", icon: Settings },
+  ],
+};
+
+function SectionHeader({ children }: { children: ReactNode }) {
+  return (
+    <p className="sticky top-0 z-10 bg-card px-3 pb-2 pt-3 text-[0.68rem] font-semibold uppercase tracking-widest text-muted-foreground">
+      {children}
+    </p>
+  );
+}
+
+function SidebarNav({
+  showManagerNav,
+  openTasks,
+  onNavigate,
+}: {
+  showManagerNav: boolean;
+  openTasks: number;
+  onNavigate?: () => void;
+}) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+  const activeTab = new URLSearchParams(searchStr).get("tab");
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  const leafActive = (leaf: NavLeaf) => {
+    if (pathname !== leaf.to) return false;
+    const tab = leaf.search?.["tab"];
+    if (!tab) return true;
+    if (activeTab) return activeTab === tab;
+    // No tab in the URL: the first child is the default landing tab.
+    return tab === "assigned" || tab === "assignments";
+  };
+
+  const badgeFor = (badge: NavLeaf["badge"]) => (badge === "open-tasks" ? openTasks : 0);
+
+  const renderLeaf = (leaf: NavLeaf, nested = false) => {
+    const active = leafActive(leaf);
+    const count = badgeFor(leaf.badge);
+    const Icon = leaf.icon;
+    return (
+      <Link
+        key={`${leaf.to}-${leaf.label}`}
+        to={leaf.to}
+        search={leaf.search ?? {}}
+        onClick={onNavigate}
+        className={cn(
+          "flex items-center gap-2.5 rounded-xl py-2 text-sm transition-colors",
+          nested ? "ml-3 border-l border-border pl-4 pr-3" : "px-3",
+          active
+            ? "bg-brand-soft font-medium text-brand"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+        )}
+      >
+        {Icon && <Icon className="size-4" />}
+        <span className="flex-1 truncate">{leaf.label}</span>
+        {count > 0 && (
+          <Badge
+            variant="secondary"
+            className="rounded-full border-0 bg-brand px-2 text-[0.7rem] text-brand-foreground"
+          >
+            {count}
+          </Badge>
+        )}
+      </Link>
+    );
+  };
+
+  const renderParent = (parent: NavParent) => {
+    const childActive = parent.children.some((child) => leafActive(child));
+    const open = collapsed[parent.label] === undefined ? true : !collapsed[parent.label];
+    const count = badgeFor(parent.badge);
+    return (
+      <div key={parent.label} className="space-y-1">
+        <button
+          type="button"
+          onClick={() => setCollapsed((prev) => ({ ...prev, [parent.label]: open }))}
+          aria-expanded={open}
+          className={cn(
+            "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors",
+            childActive
+              ? "bg-brand-soft font-medium text-brand"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+          )}
+        >
+          <parent.icon className="size-4" />
+          <span className="flex-1 text-left truncate">{parent.label}</span>
+          {count > 0 && (
+            <Badge
+              variant="secondary"
+              className="rounded-full border-0 bg-brand px-2 text-[0.7rem] text-brand-foreground"
+            >
+              {count}
+            </Badge>
+          )}
+          <ChevronDown className={cn("size-3.5 transition-transform", !open && "-rotate-90")} />
+        </button>
+        {open && <div className="space-y-1">{parent.children.map((c) => renderLeaf(c, true))}</div>}
+      </div>
+    );
+  };
+
+  const renderSection = (section: NavSection, index: number) => {
+    if (section.managerOnly && !showManagerNav) return null;
+    return (
+      <div key={section.header ?? `section-${index}`} className="space-y-1">
+        {section.header && <SectionHeader>{section.header}</SectionHeader>}
+        {section.items.map((item) =>
+          item.kind === "parent" ? renderParent(item) : renderLeaf(item),
+        )}
+      </div>
+    );
+  };
+
+  return <nav className="space-y-1">{SECTIONS.map(renderSection)}</nav>;
+}
+
+function AccountNav({
+  onNavigate,
+}: {
+  onNavigate?: () => void;
+}) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  return (
+    <nav className="space-y-1">
+      <SectionHeader>{ACCOUNT_SECTION.header}</SectionHeader>
+      {ACCOUNT_SECTION.items.map((item) => {
+        if (item.kind !== "leaf") return null;
+        const Icon = item.icon!;
+        return (
+          <Link
+            key={item.to}
+            to={item.to}
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors",
+              pathname === item.to
+                ? "bg-brand-soft font-medium text-brand"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            <Icon className="size-4" />
+            <span className="flex-1">{item.label}</span>
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
 
 export function AppShell({
   title,
@@ -80,7 +315,6 @@ export function AppShell({
   actions?: ReactNode;
   children: ReactNode;
 }) {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const profileQuery = useQuery({
@@ -89,13 +323,13 @@ export function AppShell({
     retry: false,
     staleTime: 60_000,
   });
-  const planogramAccessQuery = useQuery({
-    queryKey: ["planogram-access"],
-    queryFn: () => canManagePlanogram(),
+  const managerQuery = useQuery({
+    queryKey: ["is-org-manager"],
+    queryFn: () => isOrgManager(),
     retry: false,
     staleTime: 60_000,
   });
-  const showManagerNav = planogramAccessQuery.data === true;
+  const showManagerNav = managerQuery.data === true;
   const queryClient = useQueryClient();
   const pendingQuery = useQuery({
     queryKey: ["my-assignments-pending"],
@@ -103,7 +337,15 @@ export function AppShell({
     retry: false,
     staleTime: 30_000,
   });
+  const activeMembershipQuery = useQuery({
+    queryKey: ["active-membership"],
+    queryFn: () => getMembership(),
+    retry: false,
+    staleTime: 60_000,
+  });
+  const activeMembership = activeMembershipQuery.data ?? null;
   const inboxQuery = useQuery({
+
     queryKey: ["inbox"],
     queryFn: () => fetchInbox(15),
     retry: false,
@@ -137,49 +379,54 @@ export function AppShell({
           .join("")
       : profile?.email?.[0]) ?? "A";
 
-  const item = (to: string, label: string, Icon: typeof Bell, onClick?: () => void) => (
-    <Link
-      key={to}
-      to={to}
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors",
-        pathname === to
-          ? "bg-brand-soft font-medium text-brand"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-      )}
-    >
-      <Icon className="size-4" />
-      <span className="flex-1">{label}</span>
-      {to === "/my-scans" && pendingCount > 0 && (
-        <Badge
-          variant="secondary"
-          className="rounded-full border-0 bg-brand px-2 text-[0.7rem] text-brand-foreground"
-        >
-          {pendingCount}
-        </Badge>
-      )}
-    </Link>
-  );
+  const workspaceSwitcher =
+    memberships.length > 1 ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="mt-4 flex w-full items-center justify-between gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-muted">
+            <span className="min-w-0 flex-1 truncate font-medium text-foreground">
+              {activeMembership?.org_name ?? memberships[0]?.org_name ?? "Workspace"}
+
+            </span>
+            <ChevronDown className="size-3.5 shrink-0" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-60 rounded-xl">
+          <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+            Workspace
+          </DropdownMenuLabel>
+          {memberships.map((m) => (
+            <DropdownMenuItem
+              key={m.org_id}
+              onClick={() => switchWorkspace(m.org_id)}
+              className="flex items-start justify-between gap-2 text-sm"
+            >
+              <span className="min-w-0">
+                <span className="block truncate">{m.org_name ?? "Workspace"}</span>
+                {m.org_hint && (
+                  <span className="block truncate text-xs text-muted-foreground">{m.org_hint}</span>
+                )}
+              </span>
+              {(m.pending_count ?? 0) > 0 && (
+                <span className="mt-0.5 shrink-0 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                  {m.pending_count}
+                </span>
+              )}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : null;
 
   return (
     <div className="min-h-screen bg-surface">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-border bg-card px-4 py-5 lg:flex">
+      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col overflow-y-auto border-r border-border bg-card px-4 py-5 lg:flex">
         <Logo to="/dashboard" />
-        <nav className="mt-8 space-y-1">
-          <p className="px-3 pb-2 text-[0.7rem] font-medium uppercase tracking-widest text-muted-foreground">
-            Workspace
-          </p>
-          {nav.map((n) => item(n.to, n.label, n.icon))}
-          {showManagerNav && managerNav.map((n) => item(n.to, n.label, n.icon))}
-        </nav>
-        <nav className="mt-7 space-y-1">
-          <p className="px-3 pb-2 text-[0.7rem] font-medium uppercase tracking-widest text-muted-foreground">
-            Account
-          </p>
-          {secondary.map((n) => item(n.to, n.label, n.icon))}
-        </nav>
-        <div className="mt-auto rounded-2xl border border-border bg-brand-soft/60 p-4">
+        {workspaceSwitcher}
+        <div className="mt-5">
+          <SidebarNav showManagerNav={showManagerNav} openTasks={pendingCount} />
+        </div>
+        <div className="mt-6 rounded-2xl border border-border bg-brand-soft/60 p-4">
           <p className="text-sm font-medium text-foreground">Need more scans?</p>
           <p className="mt-1 text-xs text-muted-foreground">
             Review your plan, quota and invoices in billing.
@@ -188,7 +435,9 @@ export function AppShell({
             <Link to="/billing">Manage plan</Link>
           </Button>
         </div>
-
+        <div className="mt-4 pb-2">
+          <AccountNav />
+        </div>
       </aside>
 
       <div className="lg:pl-64">
@@ -207,31 +456,28 @@ export function AppShell({
               </SheetTrigger>
               <SheetContent
                 side="left"
-                className="flex w-[85vw] max-w-xs flex-col gap-0 overflow-y-auto p-0"
+                className="flex w-[85vw] max-w-xs flex-col gap-0 overflow-y-auto bg-card p-0"
               >
                 <div className="border-b border-border px-4 py-4">
                   <Logo to="/dashboard" />
+                  {workspaceSwitcher}
                 </div>
-                <nav className="space-y-1 px-3 py-4">
-                  <p className="px-3 pb-2 text-[0.7rem] font-medium uppercase tracking-widest text-muted-foreground">
-                    Workspace
-                  </p>
-                  {nav.map((n) => item(n.to, n.label, n.icon, () => setMenuOpen(false)))}
-                  {showManagerNav &&
-                    managerNav.map((n) => item(n.to, n.label, n.icon, () => setMenuOpen(false)))}
-                </nav>
-                <nav className="space-y-1 px-3 pb-4">
-                  <p className="px-3 pb-2 text-[0.7rem] font-medium uppercase tracking-widest text-muted-foreground">
-                    Account
-                  </p>
-                  {secondary.map((n) => item(n.to, n.label, n.icon, () => setMenuOpen(false)))}
-                </nav>
-                <div className="mt-auto border-t border-border px-4 py-4">
+                <div className="px-3 py-3">
+                  <SidebarNav
+                    showManagerNav={showManagerNav}
+                    openTasks={pendingCount}
+                    onNavigate={() => setMenuOpen(false)}
+                  />
+                </div>
+                <div className="px-4 pb-2">
                   <Button asChild size="sm" variant="brand" className="w-full rounded-lg">
                     <Link to="/billing" onClick={() => setMenuOpen(false)}>
                       Manage plan
                     </Link>
                   </Button>
+                </div>
+                <div className="px-3 pb-6">
+                  <AccountNav onNavigate={() => setMenuOpen(false)} />
                 </div>
               </SheetContent>
             </Sheet>
