@@ -514,7 +514,7 @@ export async function fetchTeamScans(): Promise<TeamScan[]> {
       .order("created_at", { ascending: true }),
     supabase
       .from("scan_assignments")
-      .select("id, scope_values")
+      .select("id, scope_type, scope_values, planogram_version_id")
       .in("id", rows.map((row) => row.assignment_id).filter(Boolean) as string[]),
   ]);
 
@@ -528,11 +528,24 @@ export async function fetchTeamScans(): Promise<TeamScan[]> {
     });
   }
 
+  // Location falls back to the aisle recorded on the scoped planogram rows.
   const locations = new Map<string, string | null>();
-  for (const row of assignments ?? []) {
-    const values = (row.scope_values ?? {}) as ScopeValues;
-    locations.set(row.id as string, values.location?.trim() || null);
-  }
+  await Promise.all(
+    (assignments ?? []).map(async (row) => {
+      const values = (row.scope_values ?? {}) as ScopeValues;
+      const explicit = values.location?.trim() || "";
+      if (explicit) {
+        locations.set(row.id as string, explicit);
+        return;
+      }
+      const meta = await scopeMeta(
+        (row.planogram_version_id as string | null) ?? null,
+        ((row.scope_type as ScopeType) ?? "category") as ScopeType,
+        values,
+      );
+      locations.set(row.id as string, meta.location);
+    }),
+  );
 
   const pick = (summary: Record<string, unknown>, keys: string[]) => {
     for (const key of keys) {
