@@ -336,7 +336,12 @@ function TeamScansTab() {
 }
 
 function AssignedScansPage() {
-  const [tab, setTab] = useState("assignments");
+  const { tab: tabParam } = Route.useSearch();
+  const [tab, setTab] = useState(tabParam ?? "assignments");
+  useEffect(() => {
+    if (tabParam) setTab(tabParam);
+  }, [tabParam]);
+
   const managerQuery = useQuery({
     queryKey: ["is-org-manager"],
     queryFn: () => isOrgManager(),
