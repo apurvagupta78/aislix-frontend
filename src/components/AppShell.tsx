@@ -216,7 +216,20 @@ function SidebarNav({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const activeTab = new URLSearchParams(searchStr).get("tab");
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  // Expandable parents start collapsed; only an explicit user click is persisted.
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    const next: Record<string, boolean> = {};
+    for (const [label, key] of Object.entries(PARENT_STORAGE_KEYS)) {
+      if (window.localStorage.getItem(key) === "true") next[label] = true;
+    }
+    setExpanded(next);
+  }, []);
+  const toggleParent = (label: string, open: boolean) => {
+    setExpanded((prev) => ({ ...prev, [label]: !open }));
+    const key = PARENT_STORAGE_KEYS[label];
+    if (key) window.localStorage.setItem(key, String(!open));
+  };
 
   const leafActive = (leaf: NavLeaf) => {
     if (pathname !== leaf.to) return false;
