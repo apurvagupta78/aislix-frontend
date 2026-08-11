@@ -62,13 +62,11 @@ export type PlanogramScopeItem = {
   match_key: string;
 };
 
-
 export const MANAGER_ROLES = ["owner", "admin", "manager"] as const;
 
 export function scopeSummary(type: ScopeType, values: ScopeValues): string {
   if (type === "location") return `Location · ${values.location ?? "—"}`;
-  if (type === "sub_category")
-    return `${values.category ?? "—"} · ${values.sub_category ?? "—"}`;
+  if (type === "sub_category") return `${values.category ?? "—"} · ${values.sub_category ?? "—"}`;
   return `Category · ${values.category ?? "—"}`;
 }
 
@@ -92,8 +90,9 @@ export async function fetchAssignableMembers(): Promise<AssignableMember[]> {
   if (error) dbError(error, "Could not load your team members.");
 
   return (data ?? []).map((row) => {
-    const profile = (row as { profiles?: { full_name?: string | null; email?: string | null } | null })
-      .profiles;
+    const profile = (
+      row as { profiles?: { full_name?: string | null; email?: string | null } | null }
+    ).profiles;
     const email = profile?.email ?? (row as { invited_email?: string | null }).invited_email ?? "";
     return {
       user_id: row.user_id as string,
@@ -165,7 +164,6 @@ async function scopeMeta(
     null;
   return { count: scoped.length, location: location || null };
 }
-
 
 export async function createScanAssignment(input: {
   storeId: string;
@@ -251,10 +249,7 @@ const SELECT =
 async function fetchNames(ids: string[]): Promise<Map<string, string>> {
   const unique = [...new Set(ids.filter(Boolean))];
   if (!unique.length) return new Map();
-  const { data } = await supabase
-    .from("profiles")
-    .select("id, full_name, email")
-    .in("id", unique);
+  const { data } = await supabase.from("profiles").select("id, full_name, email").in("id", unique);
   const map = new Map<string, string>();
   for (const row of data ?? []) {
     map.set(
@@ -315,7 +310,6 @@ export function isOverdue(assignment: Assignment): boolean {
   return new Date(assignment.due_at).getTime() < Date.now();
 }
 
-
 /** Assignments where the signed-in user is the assignee. */
 export async function fetchMyAssignments(): Promise<Assignment[]> {
   const userId = await requireUserId();
@@ -340,8 +334,7 @@ export async function fetchOrgAssignments(): Promise<Assignment[]> {
   let builder = supabase.from("scan_assignments").select(SELECT).eq("org_id", orgId);
   if (!manager) builder = builder.eq("assigner_id", userId);
 
-  const { data, error } = await builder
-    .order("created_at", { ascending: false });
+  const { data, error } = await builder.order("created_at", { ascending: false });
   if (error) dbError(error, "Could not load team assignments.");
   return mapAssignments((data ?? []) as unknown as AssignmentRow[]);
 }

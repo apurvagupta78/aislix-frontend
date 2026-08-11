@@ -36,13 +36,7 @@ import {
   type LimitDialogState,
 } from "@/components/billing/LimitReachedDialog";
 import { fetchAssignmentById, scopeSummary } from "@/lib/assignments";
-import {
-  MAX_SCAN_IMAGES,
-  formatBytes,
-  submitScanImages,
-  validateScanFile,
-} from "@/lib/scan-api";
-
+import { MAX_SCAN_IMAGES, formatBytes, submitScanImages, validateScanFile } from "@/lib/scan-api";
 
 export const Route = createFileRoute("/scan")({
   validateSearch: (search: Record<string, unknown>): { assignmentId?: string } => {
@@ -60,7 +54,8 @@ export const Route = createFileRoute("/scan")({
       { property: "og:title", content: "Scan a shelf — Aislix" },
       {
         property: "og:description",
-        content: "Set store, location, category and subcategory, then capture or upload shelf photos.",
+        content:
+          "Set store, location, category and subcategory, then capture or upload shelf photos.",
       },
 
       { property: "og:type", content: "website" },
@@ -71,7 +66,6 @@ export const Route = createFileRoute("/scan")({
 });
 
 const CATEGORY_QUERY_KEY = ["shelf-categories"] as const;
-
 
 type Phase = "idle" | "uploading" | "error";
 
@@ -87,7 +81,6 @@ function ScanPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [limitDialog, setLimitDialog] = useState<LimitDialogState>(null);
-
 
   const [storeId, setStoreId] = useState("");
   const [shelfLocation, setShelfLocation] = useState("");
@@ -167,9 +160,7 @@ function ScanPage() {
   ]);
   const setupComplete = Object.keys(setupErrors).length === 0;
 
-
   const shelfLabel = shelfLocation.trim();
-
 
   const cameraInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -188,7 +179,9 @@ function ScanPage() {
   const guardSetup = useCallback(() => {
     if (setupComplete) return true;
     setShowSetupErrors(true);
-    setFileError("Complete scan setup (store, location, category and subcategory) before adding images.");
+    setFileError(
+      "Complete scan setup (store, location, category and subcategory) before adding images.",
+    );
     return false;
   }, [setupComplete]);
 
@@ -275,9 +268,9 @@ function ScanPage() {
             : isOtherCategory
               ? "Others"
               : selectedSub?.label,
-          subCategoryCustom: needsCustom && !lockedByAssignment ? subCategoryCustom.trim() : undefined,
+          subCategoryCustom:
+            needsCustom && !lockedByAssignment ? subCategoryCustom.trim() : undefined,
           ...(assignment ? { assignmentId: assignment.id } : {}),
-
         },
       );
       navigate({
@@ -297,7 +290,6 @@ function ScanPage() {
       }
       setErrorMessage(error instanceof Error ? error.message : "The scan could not be started.");
       setPhase("error");
-
     } finally {
       abortRef.current = null;
     }
@@ -318,7 +310,6 @@ function ScanPage() {
     assignment,
     assignmentSubLabel,
   ]);
-
 
   const cancelUpload = useCallback(() => {
     abortRef.current?.abort();
@@ -408,7 +399,11 @@ function ScanPage() {
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="scan-store">Store *</Label>
-                <Select value={storeId} onValueChange={setStoreId} disabled={busy || lockedByAssignment}>
+                <Select
+                  value={storeId}
+                  onValueChange={setStoreId}
+                  disabled={busy || lockedByAssignment}
+                >
                   <SelectTrigger id="scan-store" className="rounded-xl">
                     <SelectValue
                       placeholder={
@@ -528,9 +523,7 @@ function ScanPage() {
                   )}
                 </div>
               )}
-
             </div>
-
           </section>
 
           {/* STEP 2 — images */}
@@ -773,6 +766,5 @@ function ScanPage() {
       )}
       <LimitReachedDialog limit={limitDialog} onClose={() => setLimitDialog(null)} />
     </AppShell>
-
   );
 }

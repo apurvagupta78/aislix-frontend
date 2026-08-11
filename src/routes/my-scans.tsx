@@ -116,10 +116,7 @@ function MyScansPage() {
   const actionable = tab === "pending" || tab === "in_progress" || tab === "overdue";
 
   return (
-    <AppShell
-      title="My Assigned Scans"
-      description="Shelf audits assigned to you by your manager."
-    >
+    <AppShell title="My Assigned Scans" description="Shelf audits assigned to you by your manager.">
       {query.isLoading ? (
         <div className="space-y-3">
           {[0, 1, 2].map((index) => (

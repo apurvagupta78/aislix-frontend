@@ -55,7 +55,7 @@ import { complianceTone, fetchPlanogramComparison } from "@/lib/planogram-compli
 
 export const Route = createFileRoute("/results")({
   validateSearch: (search: Record<string, unknown>): { scan?: string } => {
-    const scan = search['scan'];
+    const scan = search["scan"];
     return typeof scan === "string" && scan.length > 0 ? { scan } : {};
   },
   head: () => ({
@@ -283,10 +283,7 @@ function Results() {
 
               <div className="grid gap-4 lg:grid-cols-2">
                 <AlertsPanel alerts={data?.alerts} loading={loading} />
-                <RecommendationsPanel
-                  recommendations={data?.recommendations}
-                  loading={loading}
-                />
+                <RecommendationsPanel recommendations={data?.recommendations} loading={loading} />
               </div>
 
               <InventoryTable
@@ -307,10 +304,7 @@ function Results() {
                   loading={loading}
                 />
                 <ShelfHealthChart score={summary?.shelf_health_score} loading={loading} />
-                <LowStockSummaryChart
-                  data={data?.charts?.low_stock_summary}
-                  loading={loading}
-                />
+                <LowStockSummaryChart data={data?.charts?.low_stock_summary} loading={loading} />
                 <CategoryDistributionChart
                   data={data?.charts?.category_distribution}
                   loading={loading}

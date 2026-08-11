@@ -23,11 +23,7 @@ function tileValue(summary: PlanogramComparison["summary"], key: string): string
 }
 
 /** "Planogram vs Actual" — only rendered for scans launched from an assignment. */
-export function PlanogramComparisonSection({
-  comparison,
-}: {
-  comparison: PlanogramComparison;
-}) {
+export function PlanogramComparisonSection({ comparison }: { comparison: PlanogramComparison }) {
   const percent = comparison.compliance_percent;
   return (
     <section className="card-surface p-4 sm:p-6">

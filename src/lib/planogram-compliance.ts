@@ -9,13 +9,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export type ComparisonIssueType =
-  | "ok"
-  | "missing"
-  | "qty_issue"
-  | "wrong_product"
-  | "wrong_category"
-  | "unexpected"
-  | string;
+  "ok" | "missing" | "qty_issue" | "wrong_product" | "wrong_category" | "unexpected" | string;
 
 export type ComparisonLine = {
   id: string;

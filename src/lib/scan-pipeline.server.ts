@@ -29,7 +29,6 @@ export type PipelineResult = {
   learned_error?: string | null;
 };
 
-
 export class PipelineError extends Error {
   status: number;
   constructor(message: string, status = 502) {
@@ -100,7 +99,9 @@ function normalizeConfidence(value: unknown): number | null {
 }
 
 function normalizeStock(raw: unknown, facings: number, expected: number | null): StockStatus {
-  const value = str(raw)?.toLowerCase().replace(/[\s-]+/g, "_");
+  const value = str(raw)
+    ?.toLowerCase()
+    .replace(/[\s-]+/g, "_");
   if (value && STOCK_VALUES.includes(value as StockStatus)) return value as StockStatus;
   if (value === "oos" || value === "empty") return "out_of_stock";
   if (value === "low") return "low_stock";
@@ -220,7 +221,6 @@ function normalizeSubcategoryMismatches(payload: any) {
     confidence: num(item?.confidence) ?? null,
   }));
 }
-
 
 function normalizeRecommendations(payload: any) {
   return arr(payload?.recommendations).map((item: any, index: number) => ({
@@ -355,7 +355,8 @@ async function callVisionApi(body: unknown): Promise<any> {
   const remoteId = str(payload?.scan_id) ?? str(payload?.id) ?? str(payload?.job_id);
   const initialStatus = (str(payload?.status) ?? "").toLowerCase();
   const isAsync =
-    response.status === 202 || ["queued", "pending", "processing", "running"].includes(initialStatus);
+    response.status === 202 ||
+    ["queued", "pending", "processing", "running"].includes(initialStatus);
   if (!isAsync) return payload;
 
   if (!remoteId) {
@@ -382,7 +383,12 @@ async function pollVisionScan(
     try {
       res = await fetch(statusUrl, {
         method: "GET",
-        headers: { accept: "application/json", ...(headers["authorization"] ? { authorization: headers["authorization"], "x-api-key": headers["x-api-key"]! } : {}) },
+        headers: {
+          accept: "application/json",
+          ...(headers["authorization"]
+            ? { authorization: headers["authorization"], "x-api-key": headers["x-api-key"]! }
+            : {}),
+        },
         signal: AbortSignal.timeout(60_000),
       });
     } catch {
@@ -409,7 +415,12 @@ async function pollVisionScan(
           "The AI vision backend failed to analyse this shelf image.",
       );
     }
-    if (status === "completed" || status === "complete" || status === "done" || status === "success") {
+    if (
+      status === "completed" ||
+      status === "complete" ||
+      status === "done" ||
+      status === "success"
+    ) {
       return payload?.result ?? payload?.results ?? payload;
     }
     // queued / processing → keep polling
@@ -438,8 +449,7 @@ function visionHeaders(apiKey: string): Record<string, string> {
 }
 
 export type SubmitVisionResult =
-  | { kind: "completed"; payload: any }
-  | { kind: "accepted"; jobId: string };
+  { kind: "completed"; payload: any } | { kind: "accepted"; jobId: string };
 
 /** POST /scan only — returns as soon as Railway accepts the job. */
 export async function submitVisionJob(body: unknown): Promise<SubmitVisionResult> {
@@ -531,7 +541,6 @@ export async function pollVisionJobOnce(jobId: string): Promise<PollVisionResult
   }
   return { kind: "processing" };
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* Persistence                                                                */
@@ -663,7 +672,6 @@ async function storeCsvReport(
   } as never);
 }
 
-
 /** Recomputes the daily rollup for this org/store from real completed scans. */
 async function refreshAnalytics(
   supabase: DB,
@@ -698,7 +706,9 @@ async function refreshAnalytics(
 
   const { data: brandRows } = await supabase
     .from("scan_results")
-    .select("brand_share, category_breakdown, shelf_scans!inner(org_id, store_id, created_at, status)")
+    .select(
+      "brand_share, category_breakdown, shelf_scans!inner(org_id, store_id, created_at, status)",
+    )
     .eq("shelf_scans.org_id", scan.org_id)
     .eq("shelf_scans.status", "completed")
     .gte("shelf_scans.created_at", dayStart)
@@ -715,12 +725,18 @@ async function refreshAnalytics(
     for (const entry of arr((row as any).category_breakdown)) {
       const category = str(entry?.category);
       if (category) {
-        categoryTotals.set(category, (categoryTotals.get(category) ?? 0) + (num(entry?.count) ?? 0));
+        categoryTotals.set(
+          category,
+          (categoryTotals.get(category) ?? 0) + (num(entry?.count) ?? 0),
+        );
       }
     }
   }
   const topBrands = Array.from(brandTotals.entries())
-    .map(([brand, share]) => ({ brand, share: Number((share / (brandRows?.length || 1)).toFixed(1)) }))
+    .map(([brand, share]) => ({
+      brand,
+      share: Number((share / (brandRows?.length || 1)).toFixed(1)),
+    }))
     .sort((a, b) => b.share - a.share)
     .slice(0, 8);
   const categoryMix = Array.from(categoryTotals.entries())
@@ -754,7 +770,10 @@ async function refreshAnalytics(
   const { data: existing } = await existingQuery.maybeSingle();
 
   if (existing?.id) {
-    await supabase.from("shelf_analytics").update(record as never).eq("id", existing.id);
+    await supabase
+      .from("shelf_analytics")
+      .update(record as never)
+      .eq("id", existing.id);
   } else {
     await supabase.from("shelf_analytics").insert(record as never);
   }
@@ -788,7 +807,6 @@ async function loadLearnedCatalog(supabase: DB, _orgId: string): Promise<Learned
     embedding: row.embedding ?? null,
   }));
 }
-
 
 /** Human-readable product name derived from a SKU code (`lipton_green_tea` → `Lipton Green Tea`). */
 function nameFromSku(sku: string): string {
@@ -825,8 +843,7 @@ export async function persistLearnedUpdates(
     // The conflict target is (org_id, sku); rows without a SKU cannot be upserted.
     if (!sku || seen.has(sku)) continue;
     seen.add(sku);
-    const name =
-      str(raw?.product_name) ?? str(raw?.name) ?? str(raw?.title) ?? nameFromSku(sku);
+    const name = str(raw?.product_name) ?? str(raw?.name) ?? str(raw?.title) ?? nameFromSku(sku);
     const brand = str(raw?.brand);
     const variant = str(raw?.variant);
     const category = str(raw?.category);
@@ -915,8 +932,6 @@ export async function persistLearnedUpdates(
 
   return { saved, error: failure };
 }
-
-
 
 /* -------------------------------------------------------------------------- */
 /* Pipeline                                                                   */
@@ -1036,8 +1051,10 @@ async function loadAssignmentContext(
   const scopeValues = (assignment.scope_values ?? {}) as Record<string, unknown>;
   const items = itemsFull.filter((item) => {
     if (scopeType === "location")
-      return sameText(item["location"], scopeValues["location"]) ||
-        sameText(item["aisle"], scopeValues["location"]);
+      return (
+        sameText(item["location"], scopeValues["location"]) ||
+        sameText(item["aisle"], scopeValues["location"])
+      );
     if (scopeType === "sub_category")
       return (
         sameText(item["category"], scopeValues["category"]) &&
@@ -1056,7 +1073,6 @@ async function loadAssignmentContext(
     items_full: itemsFull,
   };
 }
-
 
 /** Signs every uploaded original image and builds the Railway request body. */
 async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string) {
@@ -1106,7 +1122,8 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
     requested_at: startedAt,
     ...(assignment
       ? {
-          location: assignment.scope_values["location"] ?? assignment.items[0]?.["location"] ?? null,
+          location:
+            assignment.scope_values["location"] ?? assignment.items[0]?.["location"] ?? null,
           assignment_id: assignment.id,
           assignment_scope_type: assignment.scope_type,
           assignment_scope_values: assignment.scope_values,
@@ -1117,7 +1134,6 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
       : {}),
   };
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* Planogram compliance persistence                                           */
@@ -1143,8 +1159,7 @@ async function persistPlanogramCompliance(
   payload: any,
 ): Promise<number | null> {
   if (!scan.assignment_id) return null;
-  const source =
-    payload?.planogram_compliance ?? payload?.result?.planogram_compliance ?? null;
+  const source = payload?.planogram_compliance ?? payload?.result?.planogram_compliance ?? null;
   if (!source) return null;
 
   const summary = (source.summary ?? {}) as Record<string, unknown>;
@@ -1381,7 +1396,6 @@ async function persistScanPayload(
 
   const planogramCompliance = await persistPlanogramCompliance(supabase, scan, payload);
 
-
   // --- Complete the scan ---------------------------------------------------
   const { error: completeError } = await supabase
     .from("shelf_scans")
@@ -1413,7 +1427,6 @@ async function persistScanPayload(
     shelf_health_score: health,
     learned_saved: learned.saved,
     learned_error: learned.error,
-
   };
 }
 
@@ -1461,8 +1474,7 @@ export async function startScanPipelineServer(
 }
 
 export type PollPipelineResult =
-  | { status: "processing"; scan_id: string }
-  | ({ status: "completed" } & PipelineResult);
+  { status: "processing"; scan_id: string } | ({ status: "completed" } & PipelineResult);
 
 /** Single short poll of the Railway job; persists everything once it completes. */
 export async function pollScanPipelineServer(
@@ -1513,10 +1525,7 @@ export async function pollScanPipelineServer(
 }
 
 /** Legacy single-request pipeline (kept for existing callers / retries). */
-export async function runScanPipelineServer(
-  supabase: DB,
-  scanId: string,
-): Promise<PipelineResult> {
+export async function runScanPipelineServer(supabase: DB, scanId: string): Promise<PipelineResult> {
   const scan = await loadScan(supabase, scanId);
   const startedAt = new Date().toISOString();
   await supabase
@@ -1536,7 +1545,6 @@ export async function runScanPipelineServer(
     throw new PipelineError(message, 500);
   }
 }
-
 
 /* -------------------------------------------------------------------------- */
 /* Download asset backfill                                                    */
