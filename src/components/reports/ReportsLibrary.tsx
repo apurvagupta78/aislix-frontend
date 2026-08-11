@@ -25,18 +25,150 @@ import {
 } from "@/lib/scan-results";
 import { toUserMessage } from "@/lib/api/errors";
 
+const assignmentStatusMeta: Record<string, { label: string; className: string }> = {
+  pending: { label: "Pending", className: "bg-muted text-muted-foreground" },
+  in_progress: { label: "In progress", className: "bg-brand-soft text-brand" },
+  needs_correction: { label: "Needs correction", className: "bg-amber-500/12 text-amber-600" },
+  completed: { label: "Completed", className: "bg-accent-green/12 text-accent-green" },
+  cancelled: { label: "Cancelled", className: "bg-muted text-muted-foreground" },
+};
+
+function AssignmentStatusBadge({ status }: { status: string | null | undefined }) {
+  if (!status) return <span className="text-muted-foreground">—</span>;
+  const meta = assignmentStatusMeta[status] ?? {
+    label: status,
+    className: "bg-muted text-muted-foreground",
+  };
+  return (
+    <Badge variant="secondary" className={`rounded-full border-0 font-medium ${meta.className}`}>
+      {meta.label}
+    </Badge>
+  );
+}
+
+function complianceTone(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "text-muted-foreground";
+  if (value >= 100) return "text-accent-green";
+  if (value >= 70) return "text-amber-600";
+  return "text-destructive";
+}
+
+function formatCompliance(value: number | null | undefined): string {
+  return value === null || value === undefined ? "—" : `${Math.round(value)}%`;
+}
+
 export function ReportsLibrary() {
   const [busyCsv, setBusyCsv] = useState<string | null>(null);
   const [busyPdf, setBusyPdf] = useState<string | null>(null);
+  const [assignee, setAssignee] = useState("all");
+  const [assignmentStatus, setAssignmentStatus] = useState("all");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  const filters = { assignee, assignmentStatus, dateFrom, dateTo };
 
   const query = useQuery({
-    queryKey: ["reports-library"],
+    queryKey: ["reports-library", filters],
     queryFn: ({ signal }) =>
-      fetchScanHistory({ sort: "newest", page: 1, page_size: 100 }, signal),
+      fetchScanHistory(
+        {
+          sort: "newest",
+          page: 1,
+          page_size: 100,
+          assignee: assignee as ScanHistoryQuery["assignee"],
+          assignment_status: assignmentStatus as ScanHistoryQuery["assignment_status"],
+          ...(dateFrom ? { date_from: dateFrom } : {}),
+          ...(dateTo ? { date_to: dateTo } : {}),
+        },
+        signal,
+      ),
     retry: false,
   });
 
   const items = (query.data?.items ?? []).filter((s) => s.status === "completed");
+  const assigneeOptions = query.data?.assignees ?? [];
+  const filtersActive =
+    assignee !== "all" || assignmentStatus !== "all" || Boolean(dateFrom) || Boolean(dateTo);
+
+  const FilterBar = (
+    <div className="mb-4 grid gap-3 rounded-2xl border border-border bg-card p-4 shadow-card sm:grid-cols-2 lg:grid-cols-4">
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Assignee
+        </label>
+        <Select value={assignee} onValueChange={setAssignee}>
+          <SelectTrigger className="h-10 rounded-xl">
+            <SelectValue placeholder="All assignees" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All assignees</SelectItem>
+            {assigneeOptions.map((option) => (
+              <SelectItem key={option.id} value={option.id}>
+                {option.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          Assignment status
+        </label>
+        <Select value={assignmentStatus} onValueChange={setAssignmentStatus}>
+          <SelectTrigger className="h-10 rounded-xl">
+            <SelectValue placeholder="All statuses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All statuses</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="in_progress">In progress</SelectItem>
+            <SelectItem value="needs_correction">Needs correction</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          From
+        </label>
+        <Input
+          type="date"
+          value={dateFrom}
+          onChange={(event) => setDateFrom(event.target.value)}
+          className="h-10 rounded-xl"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          To
+        </label>
+        <Input
+          type="date"
+          value={dateTo}
+          onChange={(event) => setDateTo(event.target.value)}
+          className="h-10 rounded-xl"
+        />
+      </div>
+      {filtersActive && (
+        <div className="sm:col-span-2 lg:col-span-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 rounded-lg px-2 text-xs"
+            onClick={() => {
+              setAssignee("all");
+              setAssignmentStatus("all");
+              setDateFrom("");
+              setDateTo("");
+            }}
+          >
+            Clear filters
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+
 
   const downloadCsv = async (item: ScanHistoryItem) => {
     setBusyCsv(item.scan_id);
