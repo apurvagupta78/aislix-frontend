@@ -105,24 +105,67 @@ export async function fetchAssignableMembers(): Promise<AssignableMember[]> {
   });
 }
 
-async function countExpectedProducts(
+const ITEM_SELECT =
+  "id, location, aisle, category, sub_category, brand, product_name, sku, expected_qty, match_key, shelf_position";
+
+function toScopeItem(row: Record<string, unknown>): PlanogramScopeItem {
+  const s = (value: unknown) => (typeof value === "string" ? value : "");
+  return {
+    location: s(row["location"]),
+    aisle: s(row["aisle"]) || s(row["location"]),
+    category: s(row["category"]),
+    sub_category: s(row["sub_category"]),
+    brand: s(row["brand"]),
+    product_name: s(row["product_name"]),
+    sku: s(row["sku"]),
+    expected_qty: Number(row["expected_qty"]) || 0,
+    match_key: s(row["match_key"]),
+  };
+}
+
+/** Planogram rows for a version, narrowed to the assignment scope. */
+export function filterScopeItems(
+  items: PlanogramScopeItem[],
+  type: ScopeType,
+  values: ScopeValues,
+): PlanogramScopeItem[] {
+  const eq = (a: string, b?: string) =>
+    Boolean(b) && a.trim().toLowerCase() === String(b).trim().toLowerCase();
+  return items.filter((item) => {
+    if (type === "location")
+      return eq(item.location, values.location) || eq(item.aisle, values.location);
+    if (type === "sub_category")
+      return eq(item.category, values.category) && eq(item.sub_category, values.sub_category);
+    return eq(item.category, values.category);
+  });
+}
+
+export async function fetchPlanogramScopeItems(
+  versionId: string | null,
+): Promise<PlanogramScopeItem[]> {
+  if (!versionId) return [];
+  const { data, error } = await supabase
+    .from("planogram_items")
+    .select(ITEM_SELECT)
+    .eq("version_id", versionId);
+  if (error) return [];
+  return (data ?? []).map((row) => toScopeItem(row as Record<string, unknown>));
+}
+
+async function scopeMeta(
   versionId: string | null,
   type: ScopeType,
   values: ScopeValues,
-): Promise<number> {
-  if (!versionId) return 0;
-  let builder = supabase
-    .from("planogram_items")
-    .select("id", { count: "exact", head: true })
-    .eq("version_id", versionId);
-  if (type === "location" && values.location) builder = builder.eq("location", values.location);
-  if (type !== "location" && values.category) builder = builder.eq("category", values.category);
-  if (type === "sub_category" && values.sub_category)
-    builder = builder.eq("sub_category", values.sub_category);
-  const { count, error } = await builder;
-  if (error) return 0;
-  return count ?? 0;
+): Promise<{ count: number; location: string | null }> {
+  const scoped = filterScopeItems(await fetchPlanogramScopeItems(versionId), type, values);
+  const location =
+    values.location?.trim() ||
+    scoped.find((item) => item.location || item.aisle)?.location ||
+    scoped.find((item) => item.aisle)?.aisle ||
+    null;
+  return { count: scoped.length, location: location || null };
 }
+
 
 export async function createScanAssignment(input: {
   storeId: string;
