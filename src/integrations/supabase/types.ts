@@ -1394,8 +1394,6 @@ export type Database = {
       can_org_add_store: { Args: { p_org_id: string }; Returns: boolean }
       can_org_start_scan: { Args: { p_org_id: string }; Returns: boolean }
       get_org_usage_summary: { Args: { p_org_id: string }; Returns: Json }
-      is_org_manager: { Args: { p_org_id: string }; Returns: boolean }
-      is_org_member: { Args: { p_org_id: string }; Returns: boolean }
       org_has_platform_bypass: { Args: { p_org_id: string }; Returns: boolean }
       org_has_platform_store_bypass: {
         Args: { p_org_id: string }
