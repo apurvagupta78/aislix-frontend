@@ -231,19 +231,24 @@ export async function assertCanStartScan(): Promise<UsageSummary> {
 }
 
 /** Blocks a new store when the plan's store allowance is exhausted. */
-export async function assertCanAddStore(): Promise<UsageSummary> {
+export async function assertCanAddStore(orgId?: string): Promise<UsageSummary> {
   const email = await currentUserEmail();
-  if (hasPlatformBypass(email)) return fetchUsageSummary();
-  const usage = await fetchUsageSummary();
+  const usage = await fetchUsageSummary(undefined, orgId);
+  if (hasPlatformBypass(email)) return usage;
+  // The very first store is always allowed, whatever the plan says.
+  if (usage.stores_used === 0) return usage;
   if (usage.can_add_store || usage.platform_bypass) return usage;
+  const limit = usage.store_limit;
   throw new LimitReachedError({
     limit: "store_limit",
     usage,
-    message: `The ${usage.plan_name} plan includes ${usage.store_limit} ${
-      usage.store_limit === 1 ? "store" : "stores"
-    }. Upgrade to add more.`,
+    message:
+      limit === null
+        ? `Your ${usage.plan_name} plan cannot add more stores right now. Upgrade to add more.`
+        : `The ${usage.plan_name} plan includes ${limit} ${limit === 1 ? "store" : "stores"}. Upgrade to add more.`,
   });
 }
+
 
 // ---------- history window ----------
 
