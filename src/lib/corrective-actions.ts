@@ -25,6 +25,8 @@ export type CorrectiveActionRow = {
   scan_id: string | null;
   scan_date: string | null;
   product: string | null;
+  assignment_id: string | null;
+  compliance_percent: number | null;
 };
 
 const SELECT =
