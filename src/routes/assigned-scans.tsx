@@ -16,7 +16,12 @@ import {
 } from "@/components/ui/select";
 import { EmptyState, ErrorState } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
-import { cancelAssignment, fetchOrgAssignments, scopeSummary } from "@/lib/assignments";
+import {
+  cancelAssignment,
+  fetchOrgAssignments,
+  isOrgManager,
+  scopeSummary,
+} from "@/lib/assignments";
 import { formatDate, statusBadge } from "@/routes/my-scans";
 
 export const Route = createFileRoute("/assigned-scans")({
@@ -45,10 +50,19 @@ function AssignedScansPage() {
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
 
+  const managerQuery = useQuery({
+    queryKey: ["is-org-manager"],
+    queryFn: () => isOrgManager(),
+    retry: false,
+    staleTime: 60_000,
+  });
+  const isManager = managerQuery.data !== false;
+
   const query = useQuery({
     queryKey: ["org-assignments"],
     queryFn: () => fetchOrgAssignments(),
     retry: false,
+    enabled: isManager,
   });
 
   const cancelMutation = useMutation({
@@ -103,7 +117,18 @@ function AssignedScansPage() {
           </Select>
         </div>
 
-        {query.isLoading ? (
+        {managerQuery.data === false ? (
+          <EmptyState
+            icon={<ClipboardList className="size-6" />}
+            title="Manager access required"
+            description="Only workspace owners, admins and managers can review assigned scans. Your own tasks live on My Scans."
+            action={
+              <Button variant="brand" className="rounded-xl" asChild>
+                <Link to="/my-scans">Go to My Scans</Link>
+              </Button>
+            }
+          />
+        ) : query.isLoading ? (
           <Skeleton className="h-64 w-full rounded-2xl" />
         ) : query.isError ? (
           <ErrorState description={toUserMessage(query.error)} onRetry={() => void query.refetch()} />
