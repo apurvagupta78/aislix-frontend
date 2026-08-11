@@ -18,7 +18,7 @@ import {
   ClipboardCheck,
   ClipboardList,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Logo } from "@/components/Logo";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,15 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { fetchProfile } from "@/lib/account";
 import { canManagePlanogram } from "@/lib/planogram";
+import { fetchMyPendingCount } from "@/lib/assignments";
+import { listMemberships, setActiveOrgId } from "@/lib/db/context";
+import {
+  fetchInbox,
+  markAllNotificationsRead,
+  markNotificationRead,
+  notificationHref,
+} from "@/lib/notifications";
+import { Badge } from "@/components/ui/badge";
 
 const nav = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
@@ -85,6 +94,34 @@ export function AppShell({
     staleTime: 60_000,
   });
   const showManagerNav = planogramAccessQuery.data === true;
+  const queryClient = useQueryClient();
+  const pendingQuery = useQuery({
+    queryKey: ["my-assignments-pending"],
+    queryFn: () => fetchMyPendingCount(),
+    retry: false,
+    staleTime: 30_000,
+  });
+  const inboxQuery = useQuery({
+    queryKey: ["inbox"],
+    queryFn: () => fetchInbox(15),
+    retry: false,
+    staleTime: 30_000,
+  });
+  const membershipsQuery = useQuery({
+    queryKey: ["memberships"],
+    queryFn: () => listMemberships(),
+    retry: false,
+    staleTime: 60_000,
+  });
+  const inbox = inboxQuery.data ?? [];
+  const unread = inbox.filter((n) => !n.read_at).length;
+  const memberships = membershipsQuery.data ?? [];
+  const pendingCount = pendingQuery.data ?? 0;
+
+  const switchWorkspace = (orgId: string) => {
+    setActiveOrgId(orgId);
+    void queryClient.invalidateQueries();
+  };
   const profile = profileQuery.data;
   const displayName = profile?.full_name?.trim() || profile?.email || "Your account";
   const displayEmail = profile?.email ?? "";
@@ -111,7 +148,15 @@ export function AppShell({
       )}
     >
       <Icon className="size-4" />
-      {label}
+      <span className="flex-1">{label}</span>
+      {to === "/my-scans" && pendingCount > 0 && (
+        <Badge
+          variant="secondary"
+          className="rounded-full border-0 bg-brand px-2 text-[0.7rem] text-brand-foreground"
+        >
+          {pendingCount}
+        </Badge>
+      )}
     </Link>
   );
 
@@ -215,11 +260,67 @@ export function AppShell({
               <Button asChild variant="brand" size="sm" className="rounded-xl">
                 <Link to="/scan">New scan</Link>
               </Button>
-              <Button asChild variant="ghost" size="icon" className="rounded-xl" aria-label="Notifications">
-                <Link to="/dashboard" hash="notifications">
-                  <Bell className="size-4" />
-                </Link>
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="relative rounded-xl p-2 text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-brand/40"
+                    aria-label={
+                      unread > 0 ? `Notifications, ${unread} unread` : "Notifications"
+                    }
+                  >
+                    <Bell className="size-4" />
+                    {unread > 0 && (
+                      <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[0.6rem] font-semibold text-destructive-foreground">
+                        {unread > 9 ? "9+" : unread}
+                      </span>
+                    )}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80 rounded-xl">
+                  <DropdownMenuLabel className="flex items-center justify-between font-normal">
+                    <span className="text-sm font-medium">Notifications</span>
+                    {unread > 0 && (
+                      <button
+                        className="text-xs text-brand hover:underline"
+                        onClick={async () => {
+                          await markAllNotificationsRead();
+                          void queryClient.invalidateQueries({ queryKey: ["inbox"] });
+                        }}
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {!inbox.length ? (
+                    <p className="px-2 py-4 text-xs text-muted-foreground">
+                      You have no notifications yet.
+                    </p>
+                  ) : (
+                    inbox.map((n) => (
+                      <DropdownMenuItem
+                        key={n.id}
+                        className="flex-col items-start gap-0.5 whitespace-normal rounded-lg"
+                        onClick={async () => {
+                          if (!n.read_at) {
+                            await markNotificationRead(n.id);
+                            void queryClient.invalidateQueries({ queryKey: ["inbox"] });
+                          }
+                          void navigate({ to: notificationHref(n) });
+                        }}
+                      >
+                        <span className="flex w-full items-center gap-2 text-sm font-medium">
+                          {!n.read_at && <span className="size-1.5 rounded-full bg-brand" />}
+                          {n.title}
+                        </span>
+                        {n.body && (
+                          <span className="text-xs text-muted-foreground">{n.body}</span>
+                        )}
+                      </DropdownMenuItem>
+                    ))
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="rounded-full outline-none ring-brand/40 focus-visible:ring-2">
@@ -241,6 +342,23 @@ export function AppShell({
                     )}
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  {memberships.length > 1 && (
+                    <>
+                      <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                        Workspace
+                      </DropdownMenuLabel>
+                      {memberships.map((m) => (
+                        <DropdownMenuItem
+                          key={m.org_id}
+                          onClick={() => switchWorkspace(m.org_id)}
+                          className="text-sm"
+                        >
+                          {m.org_name ?? "Workspace"}
+                        </DropdownMenuItem>
+                      ))}
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem asChild>
                     <Link to="/profile">Profile</Link>
                   </DropdownMenuItem>
