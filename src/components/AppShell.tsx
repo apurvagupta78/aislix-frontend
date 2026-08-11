@@ -166,13 +166,38 @@ function SectionHeader({ children }: { children: ReactNode }) {
   );
 }
 
+function RailTooltip({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="right" className="text-xs">
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function CountBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <Badge
+      variant="secondary"
+      className="rounded-full border-0 bg-brand px-2 text-[0.7rem] text-brand-foreground"
+    >
+      {count}
+    </Badge>
+  );
+}
+
 function SidebarNav({
   showManagerNav,
   openTasks,
+  rail = false,
   onNavigate,
 }: {
   showManagerNav: boolean;
   openTasks: number;
+  rail?: boolean;
   onNavigate?: () => void;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -191,10 +216,45 @@ function SidebarNav({
 
   const badgeFor = (badge: NavLeaf["badge"]) => (badge === "open-tasks" ? openTasks : 0);
 
+  const railLink = (
+    label: string,
+    to: string,
+    search: Record<string, string> | undefined,
+    Icon: LucideIcon,
+    active: boolean,
+    count: number,
+  ) => (
+    <RailTooltip key={`${to}-${label}`} label={label}>
+      <Link
+        to={to}
+        search={search ?? {}}
+        onClick={onNavigate}
+        aria-label={label}
+        className={cn(
+          "relative flex size-10 items-center justify-center rounded-xl transition-colors",
+          active
+            ? "bg-brand-soft text-brand"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+        )}
+      >
+        <Icon className="size-4" />
+        {count > 0 && (
+          <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[0.6rem] font-semibold text-brand-foreground">
+            {count > 9 ? "9+" : count}
+          </span>
+        )}
+      </Link>
+    </RailTooltip>
+  );
+
   const renderLeaf = (leaf: NavLeaf, nested = false) => {
     const active = leafActive(leaf);
     const count = badgeFor(leaf.badge);
     const Icon = leaf.icon;
+    if (rail) {
+      if (!Icon) return null;
+      return railLink(leaf.label, leaf.to, leaf.search, Icon, active, count);
+    }
     return (
       <Link
         key={`${leaf.to}-${leaf.label}`}
@@ -211,14 +271,7 @@ function SidebarNav({
       >
         {Icon && <Icon className="size-4" />}
         <span className="flex-1 truncate">{leaf.label}</span>
-        {count > 0 && (
-          <Badge
-            variant="secondary"
-            className="rounded-full border-0 bg-brand px-2 text-[0.7rem] text-brand-foreground"
-          >
-            {count}
-          </Badge>
-        )}
+        <CountBadge count={count} />
       </Link>
     );
   };
@@ -227,6 +280,11 @@ function SidebarNav({
     const childActive = parent.children.some((child) => leafActive(child));
     const open = collapsed[parent.label] === undefined ? true : !collapsed[parent.label];
     const count = badgeFor(parent.badge);
+    if (rail) {
+      const first = parent.children[0];
+      if (!first) return null;
+      return railLink(parent.label, first.to, first.search, parent.icon, childActive, count);
+    }
     return (
       <div key={parent.label} className="space-y-1">
         <button
@@ -242,14 +300,7 @@ function SidebarNav({
         >
           <parent.icon className="size-4" />
           <span className="flex-1 text-left truncate">{parent.label}</span>
-          {count > 0 && (
-            <Badge
-              variant="secondary"
-              className="rounded-full border-0 bg-brand px-2 text-[0.7rem] text-brand-foreground"
-            >
-              {count}
-            </Badge>
-          )}
+          <CountBadge count={count} />
           <ChevronDown className={cn("size-3.5 transition-transform", !open && "-rotate-90")} />
         </button>
         {open && <div className="space-y-1">{parent.children.map((c) => renderLeaf(c, true))}</div>}
@@ -260,8 +311,12 @@ function SidebarNav({
   const renderSection = (section: NavSection, index: number) => {
     if (section.managerOnly && !showManagerNav) return null;
     return (
-      <div key={section.header ?? `section-${index}`} className="space-y-1">
-        {section.header && <SectionHeader>{section.header}</SectionHeader>}
+      <div
+        key={section.header ?? `section-${index}`}
+        className={cn("space-y-1", rail && "flex flex-col items-center gap-1 space-y-0")}
+      >
+        {section.header && !rail && <SectionHeader>{section.header}</SectionHeader>}
+        {section.header && rail && <span className="my-1 h-px w-6 bg-border" />}
         {section.items.map((item) =>
           item.kind === "parent" ? renderParent(item) : renderLeaf(item),
         )}
@@ -269,21 +324,51 @@ function SidebarNav({
     );
   };
 
-  return <nav className="space-y-1">{SECTIONS.map(renderSection)}</nav>;
+  return (
+    <nav className={cn("space-y-1", rail && "flex flex-col items-center gap-1 space-y-0")}>
+      {SECTIONS.map(renderSection)}
+    </nav>
+  );
 }
 
 function AccountNav({
+  rail = false,
   onNavigate,
 }: {
+  rail?: boolean;
   onNavigate?: () => void;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
-    <nav className="space-y-1">
-      <SectionHeader>{ACCOUNT_SECTION.header}</SectionHeader>
+    <nav className={cn("space-y-1", rail && "flex flex-col items-center gap-1 space-y-0")}>
+      {rail ? (
+        <span className="my-1 h-px w-6 bg-border" />
+      ) : (
+        <SectionHeader>{ACCOUNT_SECTION.header}</SectionHeader>
+      )}
       {ACCOUNT_SECTION.items.map((item) => {
         if (item.kind !== "leaf") return null;
         const Icon = item.icon!;
+        const active = pathname === item.to;
+        if (rail) {
+          return (
+            <RailTooltip key={item.to} label={item.label}>
+              <Link
+                to={item.to}
+                onClick={onNavigate}
+                aria-label={item.label}
+                className={cn(
+                  "flex size-10 items-center justify-center rounded-xl transition-colors",
+                  active
+                    ? "bg-brand-soft text-brand"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <Icon className="size-4" />
+              </Link>
+            </RailTooltip>
+          );
+        }
         return (
           <Link
             key={item.to}
@@ -291,7 +376,7 @@ function AccountNav({
             onClick={onNavigate}
             className={cn(
               "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors",
-              pathname === item.to
+              active
                 ? "bg-brand-soft font-medium text-brand"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
@@ -304,6 +389,22 @@ function AccountNav({
     </nav>
   );
 }
+
+const SIDEBAR_STORAGE_KEY = "sidebar_collapsed";
+
+function useSidebarCollapsed(): [boolean, (next: boolean) => void] {
+  const [collapsed, setCollapsed] = useState(true);
+  useEffect(() => {
+    const stored = window.localStorage.getItem(SIDEBAR_STORAGE_KEY);
+    if (stored !== null) setCollapsed(stored === "true");
+  }, []);
+  const update = (next: boolean) => {
+    setCollapsed(next);
+    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
+  };
+  return [collapsed, update];
+}
+
 
 export function AppShell({
   title,
