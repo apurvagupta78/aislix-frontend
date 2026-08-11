@@ -39,6 +39,7 @@ import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as ScanRouteImport } from './routes/scan'
+import { Route as ScanHistoryRouteImport } from './routes/scan-history'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
@@ -202,6 +203,11 @@ const ScanRoute = ScanRouteImport.update({
   path: '/scan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ScanHistoryRoute = ScanHistoryRouteImport.update({
+  id: '/scan-history',
+  path: '/scan-history',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SecurityRoute = SecurityRouteImport.update({
   id: '/security',
   path: '/security',
@@ -294,6 +300,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/results': typeof ResultsRoute
   '/scan': typeof ScanRoute
+  '/scan-history': typeof ScanHistoryRoute
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
@@ -338,6 +345,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/results': typeof ResultsRoute
   '/scan': typeof ScanRoute
+  '/scan-history': typeof ScanHistoryRoute
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
@@ -383,6 +391,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/results': typeof ResultsRoute
   '/scan': typeof ScanRoute
+  '/scan-history': typeof ScanHistoryRoute
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
@@ -429,6 +438,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/results'
     | '/scan'
+    | '/scan-history'
     | '/security'
     | '/settings'
     | '/signup'
@@ -473,6 +483,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/results'
     | '/scan'
+    | '/scan-history'
     | '/security'
     | '/settings'
     | '/signup'
@@ -517,6 +528,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/results'
     | '/scan'
+    | '/scan-history'
     | '/security'
     | '/settings'
     | '/signup'
@@ -562,6 +574,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   ResultsRoute: typeof ResultsRoute
   ScanRoute: typeof ScanRoute
+  ScanHistoryRoute: typeof ScanHistoryRoute
   SecurityRoute: typeof SecurityRoute
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
@@ -788,6 +801,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ScanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/scan-history': {
+      id: '/scan-history'
+      path: '/scan-history'
+      fullPath: '/scan-history'
+      preLoaderRoute: typeof ScanHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/security': {
       id: '/security'
       path: '/security'
@@ -906,6 +926,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   ResultsRoute: ResultsRoute,
   ScanRoute: ScanRoute,
+  ScanHistoryRoute: ScanHistoryRoute,
   SecurityRoute: SecurityRoute,
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,

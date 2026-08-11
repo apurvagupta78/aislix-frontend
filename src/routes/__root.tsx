@@ -141,13 +141,26 @@ function RootComponent() {
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
       if (event === "SIGNED_IN") {
-        void ensureOAuthWorkspace().then(() => {
+        void ensureOAuthWorkspace().then(async () => {
           const path = window.location.pathname;
-          if (path === "/login" || path === "/signup") {
-            void router.navigate({ to: "/dashboard" });
+          if (path !== "/login" && path !== "/signup") return;
+          try {
+            const { fetchMyPendingCount, isOrgManager } = await import("@/lib/assignments");
+            const [manager, pending] = await Promise.all([
+              isOrgManager(),
+              fetchMyPendingCount(),
+            ]);
+            if (!manager && pending > 0) {
+              void router.navigate({ to: "/my-scans", search: { tab: "assigned" } });
+              return;
+            }
+          } catch {
+            // fall through to the dashboard
           }
+          void router.navigate({ to: "/dashboard" });
         });
       }
+
     });
     return () => data.subscription.unsubscribe();
   }, [router, queryClient]);
