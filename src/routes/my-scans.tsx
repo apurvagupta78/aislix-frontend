@@ -89,7 +89,13 @@ function assignmentLine(assignment: Assignment): string {
 function MyScansPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<TabKey>("pending");
+  const { tab: tabParam } = Route.useSearch();
+  const [tab, setTab] = useState<TabKey>(tabParam === "completed" ? "completed" : "pending");
+  useEffect(() => {
+    if (tabParam === "completed") setTab("completed");
+    else if (tabParam === "assigned") setTab("pending");
+  }, [tabParam]);
+
   const query = useQuery({
     queryKey: ["my-assignments"],
     queryFn: () => fetchMyAssignments(),
