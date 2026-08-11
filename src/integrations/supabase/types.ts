@@ -1402,6 +1402,10 @@ export type Database = {
     Functions: {
       can_org_add_store: { Args: { p_org_id: string }; Returns: boolean }
       can_org_start_scan: { Args: { p_org_id: string }; Returns: boolean }
+      ensure_org_free_subscription: {
+        Args: { p_org_id: string }
+        Returns: undefined
+      }
       free_plan_scan_status: {
         Args: { _org_id: string }
         Returns: {
