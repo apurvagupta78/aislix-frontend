@@ -412,6 +412,19 @@ export function ReportsLibrary() {
                 <dt className="text-xs uppercase tracking-wide text-muted-foreground">Category</dt>
                 <dd className="min-w-0 truncate">{item.category || "—"}</dd>
               </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-xs uppercase tracking-wide text-muted-foreground">Assignee</dt>
+                <dd className="min-w-0 truncate">{item.assignee_name ?? "—"}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Compliance
+                </dt>
+                <dd className={`font-medium ${complianceTone(item.planogram_compliance)}`}>
+                  {formatCompliance(item.planogram_compliance)}
+                </dd>
+              </div>
+
             </dl>
             <div className="mt-4 flex flex-wrap gap-2">
               <Actions item={item} />
