@@ -359,7 +359,21 @@ export function ReportsLibrary() {
                     "—"
                   )}
                 </TableCell>
+                <TableCell className="align-middle text-sm">
+                  {item.assignee_name ?? "—"}
+                </TableCell>
+                <TableCell className="align-middle text-sm">
+                  <AssignmentStatusBadge status={item.assignment_status} />
+                </TableCell>
+                <TableCell
+                  className={`text-right align-middle text-sm font-medium tabular-nums ${complianceTone(
+                    item.planogram_compliance,
+                  )}`}
+                >
+                  {formatCompliance(item.planogram_compliance)}
+                </TableCell>
                 <TableCell className="whitespace-nowrap text-left align-middle">
+
                   <Actions item={item} />
                 </TableCell>
               </TableRow>
