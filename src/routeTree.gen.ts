@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AssignScanRouteImport } from './routes/assign-scan'
+import { Route as AssignedScansRouteImport } from './routes/assigned-scans'
 import { Route as BillingRouteImport } from './routes/billing'
 import { Route as CompareRouteImport } from './routes/compare'
 import { Route as ContactRouteImport } from './routes/contact'
@@ -63,6 +64,11 @@ const AboutRoute = AboutRouteImport.update({
 const AssignScanRoute = AssignScanRouteImport.update({
   id: '/assign-scan',
   path: '/assign-scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssignedScansRoute = AssignedScansRouteImport.update({
+  id: '/assigned-scans',
+  path: '/assigned-scans',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BillingRoute = BillingRouteImport.update({
@@ -255,6 +261,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/assign-scan': typeof AssignScanRoute
+  '/assigned-scans': typeof AssignedScansRoute
   '/billing': typeof BillingRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
@@ -297,6 +304,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/assign-scan': typeof AssignScanRoute
+  '/assigned-scans': typeof AssignedScansRoute
   '/billing': typeof BillingRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
@@ -340,6 +348,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/assign-scan': typeof AssignScanRoute
+  '/assigned-scans': typeof AssignedScansRoute
   '/billing': typeof BillingRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
@@ -384,6 +393,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/assign-scan'
+    | '/assigned-scans'
     | '/billing'
     | '/compare'
     | '/contact'
@@ -426,6 +436,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/assign-scan'
+    | '/assigned-scans'
     | '/billing'
     | '/compare'
     | '/contact'
@@ -468,6 +479,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/assign-scan'
+    | '/assigned-scans'
     | '/billing'
     | '/compare'
     | '/contact'
@@ -511,6 +523,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AssignScanRoute: typeof AssignScanRoute
+  AssignedScansRoute: typeof AssignedScansRoute
   BillingRoute: typeof BillingRoute
   CompareRoute: typeof CompareRoute
   ContactRoute: typeof ContactRoute
@@ -571,6 +584,13 @@ declare module '@tanstack/react-router' {
       path: '/assign-scan'
       fullPath: '/assign-scan'
       preLoaderRoute: typeof AssignScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assigned-scans': {
+      id: '/assigned-scans'
+      path: '/assigned-scans'
+      fullPath: '/assigned-scans'
+      preLoaderRoute: typeof AssignedScansRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/billing': {
@@ -839,6 +859,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AssignScanRoute: AssignScanRoute,
+  AssignedScansRoute: AssignedScansRoute,
   BillingRoute: BillingRoute,
   CompareRoute: CompareRoute,
   ContactRoute: ContactRoute,
