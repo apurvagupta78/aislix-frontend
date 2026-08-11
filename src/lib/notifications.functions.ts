@@ -58,7 +58,7 @@ export const notifyMember = createServerFn({ method: "POST" })
       type: data.type,
       title: data.title,
       body: data.body,
-      payload: data.payload,
+      payload: data.payload as never,
     });
     if (insertError) throw new Error(insertError.message);
     return { ok: true };
