@@ -173,18 +173,31 @@ type AssignmentRow = {
   assigner_id: string;
   planogram_version_id: string | null;
   stores?: { name?: string | null } | null;
-  assignee?: { full_name?: string | null; email?: string | null } | null;
-  assigner?: { full_name?: string | null; email?: string | null } | null;
 };
 
 const SELECT =
-  "id, store_id, scope_type, scope_values, status, due_at, instructions, created_at, assignee_id, assigner_id, planogram_version_id, stores:store_id (name), assignee:assignee_id (full_name, email), assigner:assigner_id (full_name, email)";
+  "id, store_id, scope_type, scope_values, status, due_at, instructions, created_at, assignee_id, assigner_id, planogram_version_id, stores:store_id (name)";
 
-function personName(person: { full_name?: string | null; email?: string | null } | null | undefined) {
-  return person?.full_name?.trim() || person?.email || "Team member";
+/** scan_assignments references auth.users, so profile names are resolved separately. */
+async function fetchNames(ids: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (!unique.length) return new Map();
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .in("id", unique);
+  const map = new Map<string, string>();
+  for (const row of data ?? []) {
+    map.set(
+      row.id as string,
+      (row.full_name as string | null)?.trim() || (row.email as string | null) || "Team member",
+    );
+  }
+  return map;
 }
 
 async function mapAssignments(rows: AssignmentRow[]): Promise<Assignment[]> {
+  const names = await fetchNames(rows.flatMap((row) => [row.assignee_id, row.assigner_id]));
   return Promise.all(
     rows.map(async (row) => {
       const scopeType = (row.scope_type as ScopeType) ?? "category";
@@ -200,9 +213,9 @@ async function mapAssignments(rows: AssignmentRow[]): Promise<Assignment[]> {
         instructions: row.instructions,
         created_at: row.created_at,
         assignee_id: row.assignee_id,
-        assignee_name: personName(row.assignee),
+        assignee_name: names.get(row.assignee_id) ?? "Team member",
         assigner_id: row.assigner_id,
-        assigner_name: personName(row.assigner),
+        assigner_name: names.get(row.assigner_id) ?? "Team member",
         planogram_version_id: row.planogram_version_id,
         expected_products: await countExpectedProducts(
           row.planogram_version_id,
