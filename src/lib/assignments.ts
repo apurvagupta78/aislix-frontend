@@ -440,7 +440,12 @@ export async function cancelAssignment(assignmentId: string): Promise<void> {
 }
 
 /** Manager action: re-send the "fix the shelf and re-scan" nudge to the assignee. */
-export async function requestReScan(assignment: Assignment): Promise<void> {
+export async function requestReScan(assignmentOrId: Assignment | string): Promise<void> {
+  const assignment =
+    typeof assignmentOrId === "string"
+      ? await fetchAssignmentById(assignmentOrId)
+      : assignmentOrId;
+  if (!assignment) return;
   const percent =
     assignment.last_compliance_percent ?? assignment.compliance_percent ?? null;
   const percentLabel = percent === null ? "—" : `${Math.round(percent)}`;
