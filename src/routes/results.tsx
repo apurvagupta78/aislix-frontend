@@ -1,5 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { markScanNotificationsRead } from "@/lib/notifications";
 import { useState } from "react";
 import {
   AlertTriangle,
@@ -100,6 +102,16 @@ function Results() {
     retry: false,
   });
   const comparison = comparisonQuery.data ?? null;
+  const queryClient = useQueryClient();
+
+  // Viewing a scan's results acknowledges its bell notifications.
+  useEffect(() => {
+    if (!scan) return;
+    void markScanNotificationsRead(scan).then(() => {
+      void queryClient.invalidateQueries({ queryKey: ["inbox"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications-unread"] });
+    });
+  }, [scan, queryClient]);
 
   const data = query.data;
   const loading = !!scan && query.isPending;
