@@ -21,6 +21,11 @@ import { markAssignmentNotificationsRead } from "@/lib/notifications";
 import { complianceTone } from "@/lib/planogram-compliance";
 
 export const Route = createFileRoute("/my-scans")({
+  validateSearch: (search: Record<string, unknown>): { tab?: "assigned" | "completed" } => {
+    const raw = search["tab"];
+    return raw === "completed" || raw === "assigned" ? { tab: raw } : {};
+  },
+
   head: () => ({
     meta: [
       { title: "My Assigned Scans — Aislix shelf audit tasks" },
