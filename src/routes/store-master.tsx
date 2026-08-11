@@ -42,7 +42,7 @@ import {
 export const Route = createFileRoute("/store-master")({
   head: () => ({
     meta: [
-      { title: "Planogram Management — Expected shelf data | Aislix" },
+      { title: "Planogram | Aislix — Expected shelf data" },
       {
         name: "description",
         content:
@@ -221,7 +221,7 @@ function StoreMasterPage() {
 
   if (accessQuery.data === false) {
     return (
-      <AppShell title="Planogram Management" description="Expected planogram data per store.">
+      <AppShell title="Planogram" description="Expected planogram data per store.">
         <EmptyState
           title="Manager access required"
           description="Only owners, admins and managers can create or activate planograms. Ask your workspace owner for access."
@@ -232,7 +232,7 @@ function StoreMasterPage() {
 
   return (
     <AppShell
-      title="Planogram Management"
+      title="Planogram"
       description="Upload and activate expected shelf data (planograms) per store — source of truth for Expected vs Actual audits."
       actions={
         snapshot?.active && storeId ? (

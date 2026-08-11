@@ -152,7 +152,7 @@ const SECTIONS: NavSection[] = [
     header: "Management",
     managerOnly: true,
     items: [
-      { kind: "leaf", label: "Planogram Management", to: "/store-master", icon: LayoutGrid },
+      { kind: "leaf", label: "Planogram", to: "/store-master", icon: LayoutGrid },
       { kind: "leaf", label: "Stores", to: "/stores", icon: Store },
       { kind: "leaf", label: "Team", to: "/team", icon: Users },
     ],
