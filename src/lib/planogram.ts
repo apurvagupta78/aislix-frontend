@@ -11,7 +11,6 @@ import { dbError, getMembership, requireOrgId, requireUserId } from "@/lib/db/co
 
 export type PlanogramRow = {
   location: string;
-  aisle: string;
   category: string;
   sub_category: string;
   brand: string;
@@ -52,7 +51,12 @@ export type CsvParseResult = {
 export const PLANOGRAM_MANAGER_ROLES = ["owner", "admin", "manager"] as const;
 
 export const SAMPLE_CSV_HEADERS =
-  "location,aisle,category,sub_category,brand,product_name,expected_qty";
+  "location,category,sub_category,brand,product_name,expected_qty,sku,shelf_position";
+
+export const SAMPLE_CSV_TEMPLATE = [
+  SAMPLE_CSV_HEADERS,
+  "A-1-Z,Personal Care,Shampoo,Dove,Dove Daily Shine 340ml,6,,Shelf 2",
+].join("\n");
 
 let rowKeySeq = 0;
 export function nextRowKey(): string {
@@ -63,7 +67,6 @@ export function nextRowKey(): string {
 export function emptyRow(): PlanogramRow {
   return {
     location: "",
-    aisle: "",
     category: "",
     sub_category: "",
     brand: "",
@@ -81,7 +84,6 @@ export function toDraftRow(row: Partial<PlanogramRow> | null | undefined): Draft
   return {
     key: nextRowKey(),
     location: String(row?.location ?? "").trim(),
-    aisle: String(row?.aisle ?? "").trim(),
     category: String(row?.category ?? "").trim(),
     sub_category: String(row?.sub_category ?? "").trim(),
     brand: String(row?.brand ?? "").trim(),
@@ -171,7 +173,7 @@ export async function fetchPlanogramItems(versionId: string): Promise<DraftRow[]
   const { data, error } = await supabase
     .from("planogram_items")
     .select(
-      "location, aisle, category, sub_category, brand, product_name, sku, expected_qty, shelf_position, match_key",
+      "location, category, sub_category, brand, product_name, sku, expected_qty, shelf_position, match_key",
     )
     .eq("version_id", versionId)
     .order("created_at", { ascending: true });
@@ -257,7 +259,7 @@ export async function savePlanogramDraft(input: {
         org_id: orgId,
         store_id: input.storeId,
         location: row.location || null,
-        aisle: row.aisle || null,
+        aisle: null,
         category: row.category,
         sub_category: row.sub_category || null,
         brand: row.brand,
@@ -312,40 +314,39 @@ export async function activatePlanogram(input: {
 /* ------------------------------- hierarchy ------------------------------- */
 
 export type HierarchyNode = {
-  aisle: string;
-  categories: Array<{
-    category: string;
-    subCategories: Array<{
-      sub_category: string;
-      products: Array<{ brand: string; product_name: string; expected_qty: number }>;
+  category: string;
+  subCategories: Array<{
+    sub_category: string;
+    products: Array<{
+      brand: string;
+      product_name: string;
+      expected_qty: number;
+      location: string;
+      shelf_position: string;
     }>;
   }>;
 };
 
 export function buildHierarchy(rows: DraftRow[]): HierarchyNode[] {
-  const aisles = new Map<string, Map<string, Map<string, DraftRow[]>>>();
+  const categories = new Map<string, Map<string, DraftRow[]>>();
   for (const row of rows) {
-    const aisle = row.aisle || "Unassigned aisle";
     const category = row.category || "Uncategorised";
     const sub = row.sub_category || "General";
-    if (!aisles.has(aisle)) aisles.set(aisle, new Map());
-    const categories = aisles.get(aisle)!;
     if (!categories.has(category)) categories.set(category, new Map());
     const subs = categories.get(category)!;
     if (!subs.has(sub)) subs.set(sub, []);
     subs.get(sub)!.push(row);
   }
-  return [...aisles.entries()].map(([aisle, categories]) => ({
-    aisle,
-    categories: [...categories.entries()].map(([category, subs]) => ({
-      category,
-      subCategories: [...subs.entries()].map(([sub_category, items]) => ({
-        sub_category,
-        products: items.map((item) => ({
-          brand: item.brand,
-          product_name: item.product_name,
-          expected_qty: item.expected_qty,
-        })),
+  return [...categories.entries()].map(([category, subs]) => ({
+    category,
+    subCategories: [...subs.entries()].map(([sub_category, items]) => ({
+      sub_category,
+      products: items.map((item) => ({
+        brand: item.brand,
+        product_name: item.product_name,
+        expected_qty: item.expected_qty,
+        location: item.location,
+        shelf_position: item.shelf_position,
       })),
     })),
   }));
