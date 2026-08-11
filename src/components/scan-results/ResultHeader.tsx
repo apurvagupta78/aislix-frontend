@@ -155,15 +155,14 @@ export function ScanResultHeader({
             </h2>
             <ScanStatusBadge status={data?.status} />
             {assignmentId ? (
-              <Badge
-                variant="outline"
-                className="rounded-full border-brand/25 bg-brand-soft font-mono text-brand"
-                asChild
-              >
-                <Link to="/assigned-scans" search={{ tab: "assignments" as const }}>
+              <Link to="/assigned-scans" search={{ tab: "assignments" as const }}>
+                <Badge
+                  variant="outline"
+                  className="rounded-full border-brand/25 bg-brand-soft font-mono text-brand"
+                >
                   Assignment {formatAssignmentId(assignmentId)}
-                </Link>
-              </Badge>
+                </Badge>
+              </Link>
             ) : null}
             <LearnedCatalogBadge
               size={summary?.learned_catalog_size}
