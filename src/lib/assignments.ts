@@ -17,7 +17,12 @@ export type ScopeValues = {
   location?: string;
 };
 
-export type AssignmentStatus = "pending" | "in_progress" | "completed" | "cancelled";
+export type AssignmentStatus =
+  | "pending"
+  | "in_progress"
+  | "needs_correction"
+  | "completed"
+  | "cancelled";
 
 export type AssignableMember = {
   user_id: string;
@@ -49,6 +54,12 @@ export type Assignment = {
   scan_id: string | null;
   /** Planogram compliance for the completed scan, when available. */
   compliance_percent: number | null;
+  /** Compliance of the latest attempt, persisted on the assignment. */
+  last_compliance_percent: number | null;
+  /** How many times the assignee has scanned this shelf. */
+  scan_attempts: number;
+  /** Corrective actions still open across every attempt. */
+  open_issue_count: number;
 };
 
 /** Row of the manager "Team Scans" table. */
@@ -254,11 +265,13 @@ type AssignmentRow = {
   assigner_id: string;
   planogram_version_id: string | null;
   scan_id: string | null;
+  last_compliance_percent: number | string | null;
+  scan_attempts: number | null;
   stores?: { name?: string | null } | null;
 };
 
 const SELECT =
-  "id, org_id, store_id, scope_type, scope_values, status, due_at, instructions, created_at, assignee_id, assigner_id, planogram_version_id, scan_id, stores:store_id (name)";
+  "id, org_id, store_id, scope_type, scope_values, status, due_at, instructions, created_at, assignee_id, assigner_id, planogram_version_id, scan_id, last_compliance_percent, scan_attempts, stores:store_id (name)";
 
 /** scan_assignments references auth.users, so profile names are resolved separately. */
 async function fetchNames(ids: string[]): Promise<Map<string, string>> {
@@ -293,14 +306,47 @@ async function fetchCompliance(scanIds: string[]): Promise<Map<string, number | 
   return map;
 }
 
+/** Open (or in-progress) corrective actions per assignment, across all attempts. */
+export async function fetchOpenIssueCounts(
+  assignmentIds: string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  const unique = [...new Set(assignmentIds.filter(Boolean))];
+  if (!unique.length) return counts;
+
+  const { data: comparisons } = await supabase
+    .from("planogram_comparisons")
+    .select("id, assignment_id")
+    .in("assignment_id", unique);
+  const rows = (comparisons ?? []) as { id: string; assignment_id: string | null }[];
+  if (!rows.length) return counts;
+
+  const assignmentByComparison = new Map(rows.map((row) => [row.id, row.assignment_id]));
+  const { data: actions } = await supabase
+    .from("corrective_actions")
+    .select("id, comparison_id, status")
+    .in("comparison_id", rows.map((row) => row.id))
+    .in("status", ["open", "in_progress"]);
+
+  for (const action of (actions ?? []) as { comparison_id: string }[]) {
+    const assignmentId = assignmentByComparison.get(action.comparison_id);
+    if (!assignmentId) continue;
+    counts.set(assignmentId, (counts.get(assignmentId) ?? 0) + 1);
+  }
+  return counts;
+}
+
 async function mapAssignments(rows: AssignmentRow[]): Promise<Assignment[]> {
   const names = await fetchNames(rows.flatMap((row) => [row.assignee_id, row.assigner_id]));
   const compliance = await fetchCompliance(rows.map((row) => row.scan_id ?? ""));
+  const openIssues = await fetchOpenIssueCounts(rows.map((row) => row.id));
   return Promise.all(
     rows.map(async (row) => {
       const scopeType = (row.scope_type as ScopeType) ?? "category";
       const scopeValues = (row.scope_values ?? {}) as ScopeValues;
       const meta = await scopeMeta(row.planogram_version_id, scopeType, scopeValues);
+      const last = num(row.last_compliance_percent);
+      const scanCompliance = row.scan_id ? compliance.get(row.scan_id) ?? null : null;
       return {
         id: row.id,
         org_id: row.org_id,
@@ -318,7 +364,10 @@ async function mapAssignments(rows: AssignmentRow[]): Promise<Assignment[]> {
         assigner_name: names.get(row.assigner_id) ?? "Team member",
         planogram_version_id: row.planogram_version_id,
         scan_id: row.scan_id ?? null,
-        compliance_percent: row.scan_id ? compliance.get(row.scan_id) ?? null : null,
+        compliance_percent: scanCompliance ?? last,
+        last_compliance_percent: last,
+        scan_attempts: Number(row.scan_attempts ?? 0) || 0,
+        open_issue_count: openIssues.get(row.id) ?? 0,
         location: meta.location,
         expected_products: meta.count,
       };
@@ -390,6 +439,33 @@ export async function cancelAssignment(assignmentId: string): Promise<void> {
   if (error) dbError(error, "Could not cancel this assignment.");
 }
 
+/** Manager action: re-send the "fix the shelf and re-scan" nudge to the assignee. */
+export async function requestReScan(assignmentOrId: Assignment | string): Promise<void> {
+  const assignment =
+    typeof assignmentOrId === "string"
+      ? await fetchAssignmentById(assignmentOrId)
+      : assignmentOrId;
+  if (!assignment) return;
+  const percent =
+    assignment.last_compliance_percent ?? assignment.compliance_percent ?? null;
+  const percentLabel = percent === null ? "—" : `${Math.round(percent)}`;
+  await notifyMember({
+    data: {
+      org_id: assignment.org_id,
+      user_id: assignment.assignee_id,
+      type: "scan_needs_correction",
+      title: "Shelf audit needs correction",
+      body: `${percentLabel}% compliance — ${assignment.open_issue_count} issue(s) to fix. Re-scan after correcting the shelf.`,
+      payload: {
+        assignment_id: assignment.id,
+        scan_id: assignment.scan_id,
+        compliance_percent: percent,
+        open_issue_count: assignment.open_issue_count,
+      },
+    },
+  });
+}
+
 /** Count of open tasks assigned to the signed-in user, across every workspace. */
 export async function fetchMyPendingCount(): Promise<number> {
   const userId = await requireUserId();
@@ -397,7 +473,7 @@ export async function fetchMyPendingCount(): Promise<number> {
     .from("scan_assignments")
     .select("id", { count: "exact", head: true })
     .eq("assignee_id", userId)
-    .in("status", ["pending", "in_progress"]);
+    .in("status", ["pending", "in_progress", "needs_correction"]);
   if (error) return 0;
   return count ?? 0;
 }
@@ -443,7 +519,7 @@ export async function fetchTeamScans(): Promise<TeamScan[]> {
       .order("created_at", { ascending: true }),
     supabase
       .from("scan_assignments")
-      .select("id, scope_values")
+      .select("id, scope_type, scope_values, planogram_version_id")
       .in("id", rows.map((row) => row.assignment_id).filter(Boolean) as string[]),
   ]);
 
@@ -457,11 +533,24 @@ export async function fetchTeamScans(): Promise<TeamScan[]> {
     });
   }
 
+  // Location falls back to the aisle recorded on the scoped planogram rows.
   const locations = new Map<string, string | null>();
-  for (const row of assignments ?? []) {
-    const values = (row.scope_values ?? {}) as ScopeValues;
-    locations.set(row.id as string, values.location?.trim() || null);
-  }
+  await Promise.all(
+    (assignments ?? []).map(async (row) => {
+      const values = (row.scope_values ?? {}) as ScopeValues;
+      const explicit = values.location?.trim() || "";
+      if (explicit) {
+        locations.set(row.id as string, explicit);
+        return;
+      }
+      const meta = await scopeMeta(
+        (row.planogram_version_id as string | null) ?? null,
+        ((row.scope_type as ScopeType) ?? "category") as ScopeType,
+        values,
+      );
+      locations.set(row.id as string, meta.location);
+    }),
+  );
 
   const pick = (summary: Record<string, unknown>, keys: string[]) => {
     for (const key of keys) {

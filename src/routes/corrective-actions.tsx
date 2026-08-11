@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { EmptyState, ErrorState } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
-import { issueLabel } from "@/lib/planogram-compliance";
+import { complianceTone, issueLabel } from "@/lib/planogram-compliance";
 import {
   ACTION_STATUSES,
   actionStatusClass,
@@ -25,6 +25,7 @@ import {
   type ActionStatus,
 } from "@/lib/corrective-actions";
 import { formatDate } from "@/routes/my-scans";
+import { isOrgManager, requestReScan } from "@/lib/assignments";
 
 export const Route = createFileRoute("/corrective-actions")({
   head: () => ({
@@ -53,6 +54,14 @@ function CorrectiveActionsPage() {
   const [store, setStore] = useState("all");
   const [assignee, setAssignee] = useState("all");
 
+  const managerQuery = useQuery({
+    queryKey: ["is-org-manager"],
+    queryFn: () => isOrgManager(),
+    retry: false,
+    staleTime: 60_000,
+  });
+  const isManager = managerQuery.data === true;
+
   const query = useQuery({
     queryKey: ["corrective-actions"],
     queryFn: () => fetchCorrectiveActions(),
@@ -66,6 +75,14 @@ function CorrectiveActionsPage() {
       toast.success("Action updated");
       void queryClient.invalidateQueries({ queryKey: ["corrective-actions"] });
     },
+    onError: (error) => toast.error(toUserMessage(error)),
+  });
+
+  const reScanMutation = useMutation({
+    mutationFn: async (assignmentIds: string[]) => {
+      for (const id of assignmentIds) await requestReScan(id);
+    },
+    onSuccess: (_data, ids) => toast.success(`Re-scan requested for ${ids.length} assignment(s)`),
     onError: (error) => toast.error(toUserMessage(error)),
   });
 
@@ -126,6 +143,29 @@ function CorrectiveActionsPage() {
               ))}
             </SelectContent>
           </Select>
+          {isManager && (
+            <Button
+              variant="subtle"
+              className="rounded-xl"
+              disabled={reScanMutation.isPending}
+              onClick={() => {
+                const ids = [
+                  ...new Set(
+                    rows
+                      .filter((row) => row.status !== "resolved" && row.assignment_id)
+                      .map((row) => row.assignment_id as string),
+                  ),
+                ];
+                if (!ids.length) {
+                  toast.error("No open assignments to re-scan.");
+                  return;
+                }
+                reScanMutation.mutate(ids);
+              }}
+            >
+              Request re-scan
+            </Button>
+          )}
         </div>
 
         {query.isLoading ? (
@@ -151,6 +191,7 @@ function CorrectiveActionsPage() {
                     <th className="px-4 py-3 text-left font-medium">Product / issue</th>
                     <th className="px-4 py-3 text-left font-medium">Suggestion</th>
                     <th className="px-4 py-3 text-left font-medium">Assignee</th>
+                    <th className="px-4 py-3 text-left font-medium">Compliance</th>
                     <th className="px-4 py-3 text-left font-medium">Scan date</th>
                     <th className="px-4 py-3 text-left font-medium">Status</th>
                   </tr>
@@ -183,27 +224,60 @@ function CorrectiveActionsPage() {
                           </Link>
                         )}
                       </td>
+                      <td className="px-4 py-3">
+                        {row.compliance_percent === null ? (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        ) : (
+                          <span
+                            className={`text-sm font-semibold ${complianceTone(row.compliance_percent)}`}
+                          >
+                            {Math.round(row.compliance_percent)}%
+                          </span>
+                        )}
+                        {row.assignment_id && (
+                          <Link
+                            to="/assigned-scans"
+                            className="block text-xs text-brand hover:underline"
+                          >
+                            Assignment
+                          </Link>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {formatDate(row.scan_date)}
                       </td>
                       <td className="px-4 py-3">
-                        <Select
-                          value={row.status}
-                          onValueChange={(next) =>
-                            mutation.mutate({ id: row.id, next: next as ActionStatus })
-                          }
-                        >
-                          <SelectTrigger className="w-36 rounded-xl">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ACTION_STATUSES.map((item) => (
-                              <SelectItem key={item.value} value={item.value}>
-                                {item.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        {isManager ? (
+                          <Select
+                            value={row.status}
+                            onValueChange={(next) =>
+                              mutation.mutate({ id: row.id, next: next as ActionStatus })
+                            }
+                          >
+                            <SelectTrigger className="w-36 rounded-xl">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ACTION_STATUSES.map((item) => (
+                                <SelectItem key={item.value} value={item.value}>
+                                  {item.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <div>
+                            <Badge
+                              variant="secondary"
+                              className={`rounded-full border-0 ${actionStatusClass(row.status)}`}
+                            >
+                              {row.status.replace(/_/g, " ")}
+                            </Badge>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              Closes automatically when a re-scan shows it fixed.
+                            </p>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -234,6 +308,11 @@ function CorrectiveActionsPage() {
                     {row.assignee_name} · {formatDate(row.scan_date)}
                   </p>
                   <div className="mt-3">
+                    {!isManager ? (
+                      <p className="text-xs text-muted-foreground">
+                        Closes automatically when a re-scan shows it fixed.
+                      </p>
+                    ) : (
                     <Select
                       value={row.status}
                       onValueChange={(next) =>
@@ -251,6 +330,7 @@ function CorrectiveActionsPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    )}
                   </div>
                 </div>
               ))}

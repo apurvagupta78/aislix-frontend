@@ -1149,71 +1149,70 @@ function severityFor(issueType: string, raw: unknown): string {
   return "low";
 }
 
-/** Tells the manager who raised the assignment that the audit is done. */
-async function notifyAssignerOfCompletion(
+type AssignmentNotifyContext = {
+  id: string;
+  assigner_id: string | null;
+  assignee_id: string | null;
+  assignee_name: string;
+  store_name: string;
+  location: string;
+  scan_attempts: number;
+};
+
+/** Names and labels used in assignment notification copy. */
+async function loadAssignmentNotifyContext(
   supabase: DB,
-  scan: ScanRow,
-  compliance: number | null,
-): Promise<void> {
-  try {
-    if (!scan.assignment_id) return;
-    const { data: assignment } = await supabase
-      .from("scan_assignments")
-      .select("id, assigner_id, assignee_id, store_id, scope_values")
-      .eq("id", scan.assignment_id)
-      .maybeSingle();
-    if (!assignment?.assigner_id) return;
-    const assignerId = assignment.assigner_id as string;
-    const assigneeId = (assignment.assignee_id as string | null) ?? null;
-    if (assigneeId && assignerId === assigneeId) return;
+  assignmentId: string,
+): Promise<AssignmentNotifyContext | null> {
+  const { data: assignment } = await supabase
+    .from("scan_assignments")
+    .select("id, assigner_id, assignee_id, store_id, scope_values, scan_attempts")
+    .eq("id", assignmentId)
+    .maybeSingle();
+  if (!assignment) return null;
 
-    const [{ data: profile }, { data: store }] = await Promise.all([
-      assigneeId
-        ? supabase.from("profiles").select("full_name, email").eq("id", assigneeId).maybeSingle()
-        : Promise.resolve({ data: null }),
-      assignment.store_id
-        ? supabase
-            .from("stores")
-            .select("name")
-            .eq("id", assignment.store_id as string)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-    ]);
+  const assigneeId = (assignment.assignee_id as string | null) ?? null;
+  const [{ data: profile }, { data: store }] = await Promise.all([
+    assigneeId
+      ? supabase.from("profiles").select("full_name, email").eq("id", assigneeId).maybeSingle()
+      : Promise.resolve({ data: null }),
+    assignment.store_id
+      ? supabase
+          .from("stores")
+          .select("name")
+          .eq("id", assignment.store_id as string)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
 
-    const assigneeName =
-      ((profile as { full_name?: string | null; email?: string | null } | null)?.full_name ?? "")
-        .trim() ||
+  const scopeValues = (assignment.scope_values ?? {}) as Record<string, unknown>;
+  return {
+    id: assignment.id as string,
+    assigner_id: (assignment.assigner_id as string | null) ?? null,
+    assignee_id: assigneeId,
+    assignee_name:
+      ((profile as { full_name?: string | null } | null)?.full_name ?? "").trim() ||
       (profile as { email?: string | null } | null)?.email ||
-      "A team member";
-    const storeName = (store as { name?: string | null } | null)?.name ?? "the store";
-    const scopeValues = (assignment.scope_values ?? {}) as Record<string, unknown>;
-    const location =
+      "A team member",
+    store_name: (store as { name?: string | null } | null)?.name ?? "the store",
+    location:
       str(scopeValues["location"]) ??
       str(scopeValues["sub_category"]) ??
       str(scopeValues["category"]) ??
-      "assigned shelf";
-    const percentLabel = compliance === null ? "—" : `${Math.round(compliance)}`;
-
-    await supabase.from("notifications").insert({
-      user_id: assignerId,
-      org_id: scan.org_id,
-      type: "scan_completed",
-      title: "Assigned scan completed",
-      body: `${assigneeName} completed audit at ${storeName} · ${location} — ${percentLabel}% compliance`,
-      payload: {
-        assignment_id: scan.assignment_id,
-        scan_id: scan.id,
-        compliance_percent: compliance,
-      },
-    } as never);
-  } catch (error) {
-    console.error("[pipeline] assigner notification failed", error);
-  }
+      "assigned shelf",
+    scan_attempts: Number(assignment.scan_attempts ?? 0) || 0,
+  };
 }
 
+const normalizeKey = (brand: unknown, product: unknown) =>
+  `${str(brand) ?? ""}|${str(product) ?? ""}`.trim().toLowerCase();
+
+const COMPLIANT_ISSUE_TYPES = new Set(["ok", "correct", "compliant", "match"]);
+
 /**
- * Writes planogram_comparisons + lines + corrective actions for assignment
- * scans and closes the assignment. Returns the compliance percentage.
+ * Writes a new planogram_comparisons row (history is kept across re-scans),
+ * reconciles corrective actions and applies the M5 completion rule: an
+ * assignment only completes at 100% compliance with zero open actions.
  */
 async function persistPlanogramCompliance(
   supabase: DB,
@@ -1224,6 +1223,7 @@ async function persistPlanogramCompliance(
   const source = payload?.planogram_compliance ?? payload?.result?.planogram_compliance ?? null;
   if (!source) return null;
 
+  const assignmentId = scan.assignment_id;
   const summary = (source.summary ?? {}) as Record<string, unknown>;
   const compliance =
     pct(source.compliance_percent ?? source.compliance ?? summary["compliance_percent"]) ?? null;
@@ -1231,7 +1231,7 @@ async function persistPlanogramCompliance(
   const { data: comparison, error: comparisonError } = await supabase
     .from("planogram_comparisons")
     .insert({
-      assignment_id: scan.assignment_id,
+      assignment_id: assignmentId,
       scan_id: scan.id,
       org_id: scan.org_id,
       store_id: scan.store_id,
@@ -1245,6 +1245,8 @@ async function persistPlanogramCompliance(
 
   const lines = arr(source.lines ?? source.comparison_lines);
   const insertedLines: { id: string; key: string }[] = [];
+  /** expected brand+product pairs the re-scan now reports as compliant. */
+  const fixedKeys = new Set<string>();
   if (lines.length) {
     const rows = lines.map((line: any) => ({
       comparison_id: comparisonId,
@@ -1259,6 +1261,10 @@ async function persistPlanogramCompliance(
       severity: severityFor(str(line?.issue_type) ?? "ok", line?.severity),
       detail: str(line?.detail ?? line?.notes),
     }));
+    for (const row of rows) {
+      if (COMPLIANT_ISSUE_TYPES.has(String(row.issue_type).toLowerCase()))
+        fixedKeys.add(normalizeKey(row.expected_brand, row.expected_product));
+    }
     const { data: lineRows, error: linesError } = await supabase
       .from("planogram_comparison_lines")
       .insert(rows as never)
@@ -1298,25 +1304,204 @@ async function persistPlanogramCompliance(
     }
   }
 
+  await reconcilePreviousActions(supabase, assignmentId, comparisonId, fixedKeys);
+
+  const openIssues = await countOpenActions(supabase, assignmentId);
+  const passed = (compliance ?? 0) >= 100 && openIssues === 0;
+  const now = new Date().toISOString();
+  const context = await loadAssignmentNotifyContext(supabase, assignmentId);
+
   await supabase
     .from("scan_assignments")
     .update({
-      status: "completed",
       scan_id: scan.id,
-      completed_at: new Date().toISOString(),
-    })
-    .eq("id", scan.assignment_id);
+      last_compliance_percent: compliance,
+      scan_attempts: (context?.scan_attempts ?? 0) + 1,
+      updated_at: now,
+      ...(passed
+        ? { status: "completed", completed_at: now }
+        : { status: "needs_correction", completed_at: null }),
+    } as never)
+    .eq("id", assignmentId);
 
   await supabase
     .from("notifications")
-    .update({ read_at: new Date().toISOString() })
+    .update({ read_at: now })
     .eq("type", "scan_assigned")
     .is("read_at", null)
-    .contains("payload", { assignment_id: scan.assignment_id });
+    .contains("payload", { assignment_id: assignmentId });
 
-  await notifyAssignerOfCompletion(supabase, scan, compliance);
+  if (passed) {
+    await resolveAllActions(supabase, assignmentId, now);
+    await notifyAssignmentPassed(supabase, scan, context, compliance);
+  } else {
+    await notifyAssigneeNeedsCorrection(supabase, scan, context, compliance, openIssues);
+    await notifyAssignerOfCompletion(supabase, scan, context, compliance, openIssues);
+  }
 
   return compliance;
+}
+
+/** Comparison ids recorded for an assignment (all re-scan attempts). */
+async function comparisonIdsForAssignment(supabase: DB, assignmentId: string): Promise<string[]> {
+  const { data } = await supabase
+    .from("planogram_comparisons")
+    .select("id")
+    .eq("assignment_id", assignmentId);
+  return ((data ?? []) as { id: string }[]).map((row) => row.id);
+}
+
+/**
+ * Re-scan reconciliation: any open action from an earlier attempt whose
+ * expected brand + product now reads as compliant is auto-resolved.
+ */
+async function reconcilePreviousActions(
+  supabase: DB,
+  assignmentId: string,
+  currentComparisonId: string,
+  fixedKeys: Set<string>,
+): Promise<void> {
+  if (!fixedKeys.size) return;
+  const ids = (await comparisonIdsForAssignment(supabase, assignmentId)).filter(
+    (id) => id !== currentComparisonId,
+  );
+  if (!ids.length) return;
+
+  const { data: openActions } = await supabase
+    .from("corrective_actions")
+    .select("id, comparison_line_id")
+    .in("comparison_id", ids)
+    .in("status", ["open", "in_progress"]);
+  const rows = (openActions ?? []) as { id: string; comparison_line_id: string | null }[];
+  if (!rows.length) return;
+
+  const lineIds = rows.map((row) => row.comparison_line_id).filter(Boolean) as string[];
+  const { data: lineRows } = lineIds.length
+    ? await supabase
+        .from("planogram_comparison_lines")
+        .select("id, expected_brand, expected_product")
+        .in("id", lineIds)
+    : { data: [] as any[] };
+  const keyByLine = new Map<string, string>();
+  for (const line of (lineRows ?? []) as any[])
+    keyByLine.set(line.id as string, normalizeKey(line.expected_brand, line.expected_product));
+
+  const resolvable = rows
+    .filter((row) => row.comparison_line_id && fixedKeys.has(keyByLine.get(row.comparison_line_id!) ?? "\u0000"))
+    .map((row) => row.id);
+  if (!resolvable.length) return;
+
+  await supabase
+    .from("corrective_actions")
+    .update({ status: "resolved", resolved_at: new Date().toISOString() } as never)
+    .in("id", resolvable);
+}
+
+async function countOpenActions(supabase: DB, assignmentId: string): Promise<number> {
+  const ids = await comparisonIdsForAssignment(supabase, assignmentId);
+  if (!ids.length) return 0;
+  const { count } = await supabase
+    .from("corrective_actions")
+    .select("id", { count: "exact", head: true })
+    .in("comparison_id", ids)
+    .in("status", ["open", "in_progress"]);
+  return count ?? 0;
+}
+
+async function resolveAllActions(supabase: DB, assignmentId: string, now: string): Promise<void> {
+  const ids = await comparisonIdsForAssignment(supabase, assignmentId);
+  if (!ids.length) return;
+  await supabase
+    .from("corrective_actions")
+    .update({ status: "resolved", resolved_at: now } as never)
+    .in("comparison_id", ids)
+    .in("status", ["open", "in_progress"]);
+}
+
+/** 100% pass — tell the manager who raised the assignment. */
+async function notifyAssignmentPassed(
+  supabase: DB,
+  scan: ScanRow,
+  context: AssignmentNotifyContext | null,
+  compliance: number | null,
+): Promise<void> {
+  try {
+    if (!context?.assigner_id) return;
+    if (context.assignee_id && context.assigner_id === context.assignee_id) return;
+    await supabase.from("notifications").insert({
+      user_id: context.assigner_id,
+      org_id: scan.org_id,
+      type: "scan_completed",
+      title: "Assigned scan passed — 100% compliance",
+      body: `${context.assignee_name} completed ${context.store_name} · ${context.location} at 100%`,
+      payload: {
+        assignment_id: context.id,
+        scan_id: scan.id,
+        compliance_percent: compliance,
+      },
+    } as never);
+  } catch (error) {
+    console.error("[pipeline] pass notification failed", error);
+  }
+}
+
+/** Below 100% — ask the assignee to fix the shelf and re-scan. */
+async function notifyAssigneeNeedsCorrection(
+  supabase: DB,
+  scan: ScanRow,
+  context: AssignmentNotifyContext | null,
+  compliance: number | null,
+  openIssues: number,
+): Promise<void> {
+  try {
+    if (!context?.assignee_id) return;
+    const percentLabel = compliance === null ? "—" : `${Math.round(compliance)}`;
+    await supabase.from("notifications").insert({
+      user_id: context.assignee_id,
+      org_id: scan.org_id,
+      type: "scan_needs_correction",
+      title: "Shelf audit needs correction",
+      body: `${percentLabel}% compliance — ${openIssues} issue(s) to fix. Re-scan after correcting the shelf.`,
+      payload: {
+        assignment_id: context.id,
+        scan_id: scan.id,
+        compliance_percent: compliance,
+        open_issue_count: openIssues,
+      },
+    } as never);
+  } catch (error) {
+    console.error("[pipeline] needs-correction notification failed", error);
+  }
+}
+
+/** Keeps the manager informed about a below-target attempt. */
+async function notifyAssignerOfCompletion(
+  supabase: DB,
+  scan: ScanRow,
+  context: AssignmentNotifyContext | null,
+  compliance: number | null,
+  openIssues: number,
+): Promise<void> {
+  try {
+    if (!context?.assigner_id) return;
+    if (context.assignee_id && context.assigner_id === context.assignee_id) return;
+    const percentLabel = compliance === null ? "—" : `${Math.round(compliance)}`;
+    await supabase.from("notifications").insert({
+      user_id: context.assigner_id,
+      org_id: scan.org_id,
+      type: "scan_needs_correction_manager",
+      title: "Assigned scan needs correction",
+      body: `${context.assignee_name} scanned ${context.store_name} · ${context.location} — ${percentLabel}% compliance, ${openIssues} open issue(s)`,
+      payload: {
+        assignment_id: context.id,
+        scan_id: scan.id,
+        compliance_percent: compliance,
+        open_issue_count: openIssues,
+      },
+    } as never);
+  } catch (error) {
+    console.error("[pipeline] assigner notification failed", error);
+  }
 }
 
 /** Shared persistence for a completed vision payload. */

@@ -21,6 +21,7 @@ import { complianceTone } from "@/lib/planogram-compliance";
 import {
   cancelAssignment,
   fetchOrgAssignments,
+  requestReScan,
   fetchTeamScans,
   isOrgManager,
   isOverdue,
@@ -77,6 +78,12 @@ function AssignmentsTab() {
     retry: false,
   });
 
+  const notifyMutation = useMutation({
+    mutationFn: (row: Assignment) => requestReScan(row),
+    onSuccess: () => toast.success("Assignee notified to re-scan"),
+    onError: (error) => toast.error(toUserMessage(error)),
+  });
+
   const cancelMutation = useMutation({
     mutationFn: (id: string) => cancelAssignment(id),
     onSuccess: () => {
@@ -113,6 +120,7 @@ function AssignmentsTab() {
             <SelectItem value="all">All statuses</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="in_progress">In progress</SelectItem>
+            <SelectItem value="needs_correction">Needs correction</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
             <SelectItem value="overdue">Overdue</SelectItem>
             <SelectItem value="cancelled">Cancelled</SelectItem>
@@ -166,7 +174,26 @@ function AssignmentsTab() {
                     </td>
                     <td className="px-4 py-3">{compliance(row.compliance_percent)}</td>
                     <td className="px-4 py-3 text-right">
-                      {row.scan_id ? (
+                      {row.status === "needs_correction" ? (
+                        <div className="flex justify-end gap-1">
+                          {row.scan_id && (
+                            <Button variant="ghost" size="sm" className="rounded-xl" asChild>
+                              <Link to="/results" search={{ scan: row.scan_id }}>
+                                View results
+                              </Link>
+                            </Button>
+                          )}
+                          <Button
+                            variant="subtle"
+                            size="sm"
+                            className="rounded-xl"
+                            disabled={notifyMutation.isPending}
+                            onClick={() => notifyMutation.mutate(row)}
+                          >
+                            Notify assignee
+                          </Button>
+                        </div>
+                      ) : row.scan_id ? (
                         <Button variant="ghost" size="sm" className="rounded-xl" asChild>
                           <Link to="/results" search={{ scan: row.scan_id }}>
                             View results
@@ -203,8 +230,24 @@ function AssignmentsTab() {
                 <p className="mt-1 text-xs text-muted-foreground">
                   {row.expected_products} expected · {formatDate(row.due_at)}
                 </p>
-                <div className="mt-2 flex items-center justify-between gap-2">
+                {row.status === "needs_correction" && (
+                  <p className="mt-1 text-xs font-medium text-destructive">
+                    {row.open_issue_count} open issues · re-scan required
+                  </p>
+                )}
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
                   {compliance(row.compliance_percent)}
+                  {row.status === "needs_correction" && (
+                    <Button
+                      variant="subtle"
+                      size="sm"
+                      className="rounded-xl"
+                      disabled={notifyMutation.isPending}
+                      onClick={() => notifyMutation.mutate(row)}
+                    >
+                      Notify assignee
+                    </Button>
+                  )}
                   {row.scan_id && (
                     <Button variant="ghost" size="sm" className="rounded-xl" asChild>
                       <Link to="/results" search={{ scan: row.scan_id }}>

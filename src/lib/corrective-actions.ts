@@ -25,6 +25,16 @@ export type CorrectiveActionRow = {
   scan_id: string | null;
   scan_date: string | null;
   product: string | null;
+  assignment_id: string | null;
+  compliance_percent: number | null;
+};
+
+type ScanLite = {
+  id: string;
+  created_at: string;
+  processing_completed_at: string | null;
+  created_by: string | null;
+  assignment_id: string | null;
 };
 
 const SELECT =
@@ -69,7 +79,9 @@ export async function fetchCorrectiveActions(): Promise<CorrectiveActionRow[]> {
   const [{ data: comparisons }, { data: lines }] = await Promise.all([
     supabase
       .from("planogram_comparisons")
-      .select("id, scan_id, store_id, stores:store_id (name)")
+      .select(
+        "id, scan_id, store_id, assignment_id, compliance_percent, stores:store_id (name)",
+      )
       .in("id", [...new Set(rows.map((row) => row.comparison_id))]),
     supabase
       .from("planogram_comparison_lines")
@@ -85,8 +97,11 @@ export async function fetchCorrectiveActions(): Promise<CorrectiveActionRow[]> {
   ].filter(Boolean);
 
   const { data: scans } = scanIds.length
-    ? await supabase.from("shelf_scans").select("id, created_at, created_by").in("id", scanIds)
-    : { data: [] as { id: string; created_at: string; created_by: string | null }[] };
+    ? await supabase
+        .from("shelf_scans")
+        .select("id, created_at, processing_completed_at, created_by, assignment_id")
+        .in("id", scanIds)
+    : { data: [] as ScanLite[] };
 
   const creatorIds = [
     ...new Set(
@@ -108,11 +123,42 @@ export async function fetchCorrectiveActions(): Promise<CorrectiveActionRow[]> {
     );
   }
 
-  const scanById = new Map(
-    ((scans ?? []) as { id: string; created_at: string; created_by: string | null }[]).map(
-      (scan) => [scan.id, scan],
+  const scanById = new Map(((scans ?? []) as ScanLite[]).map((scan) => [scan.id, scan]));
+
+  // The scan operator and the assignment assignee are normally the same person,
+  // but the assignment is the source of truth for who owns the fix.
+  const assignmentIds = [
+    ...new Set(
+      (comparisons ?? [])
+        .map((row) => (row as { assignment_id?: string | null }).assignment_id ?? "")
+        .filter(Boolean),
     ),
+  ] as string[];
+  const { data: assignmentRows } = assignmentIds.length
+    ? await supabase.from("scan_assignments").select("id, assignee_id").in("id", assignmentIds)
+    : { data: [] as { id: string; assignee_id: string | null }[] };
+  const assigneeByAssignment = new Map(
+    ((assignmentRows ?? []) as { id: string; assignee_id: string | null }[]).map((row) => [
+      row.id,
+      row.assignee_id,
+    ]),
   );
+  const assigneeIds = [...new Set([...assigneeByAssignment.values()].filter(Boolean))] as string[];
+  const missingNames = assigneeIds.filter((id) => !nameById.has(id));
+  if (missingNames.length) {
+    const { data: extra } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", missingNames);
+    for (const profile of extra ?? []) {
+      nameById.set(
+        profile.id as string,
+        (profile.full_name as string | null)?.trim() ||
+          (profile.email as string | null) ||
+          "Team member",
+      );
+    }
+  }
 
   const comparisonById = new Map(
     (
@@ -120,6 +166,8 @@ export async function fetchCorrectiveActions(): Promise<CorrectiveActionRow[]> {
         id: string;
         scan_id: string | null;
         store_id: string | null;
+        assignment_id: string | null;
+        compliance_percent: number | string | null;
         stores?: { name?: string | null } | null;
       }[]
     ).map((row) => [row.id, row]),
@@ -140,6 +188,9 @@ export async function fetchCorrectiveActions(): Promise<CorrectiveActionRow[]> {
     const comparison = comparisonById.get(row.comparison_id);
     const scan = comparison?.scan_id ? scanById.get(comparison.scan_id) : undefined;
     const line = row.comparison_line_id ? lineById.get(row.comparison_line_id) : undefined;
+    const assignmentId = comparison?.assignment_id ?? null;
+    const assigneeId =
+      (assignmentId ? assigneeByAssignment.get(assignmentId) : null) ?? scan?.created_by ?? null;
     const product =
       line?.expected_product ||
       line?.actual_product ||
@@ -152,12 +203,17 @@ export async function fetchCorrectiveActions(): Promise<CorrectiveActionRow[]> {
       created_at: row.created_at,
       resolved_at: row.resolved_at,
       store_id: comparison?.store_id ?? null,
-      store_name: comparison?.stores?.name ?? "Store",
-      assignee_id: scan?.created_by ?? null,
-      assignee_name: nameById.get(scan?.created_by ?? "") ?? "Team member",
+      store_name: comparison?.stores?.name?.trim() || "Unassigned store",
+      assignee_id: assigneeId,
+      assignee_name: nameById.get(assigneeId ?? "") ?? "Team member",
       scan_id: comparison?.scan_id ?? null,
-      scan_date: scan?.created_at ?? null,
+      scan_date: scan?.processing_completed_at ?? scan?.created_at ?? null,
       product: product ?? null,
+      assignment_id: comparison?.assignment_id ?? null,
+      compliance_percent:
+        comparison?.compliance_percent === null || comparison?.compliance_percent === undefined
+          ? null
+          : Number(comparison.compliance_percent),
     } satisfies CorrectiveActionRow;
   });
 

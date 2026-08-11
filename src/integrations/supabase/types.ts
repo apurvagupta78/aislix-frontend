@@ -815,8 +815,10 @@ export type Database = {
           due_at: string | null
           id: string
           instructions: string | null
+          last_compliance_percent: number | null
           org_id: string
           planogram_version_id: string | null
+          scan_attempts: number
           scan_id: string | null
           scope_type: string
           scope_values: Json
@@ -832,8 +834,10 @@ export type Database = {
           due_at?: string | null
           id?: string
           instructions?: string | null
+          last_compliance_percent?: number | null
           org_id: string
           planogram_version_id?: string | null
+          scan_attempts?: number
           scan_id?: string | null
           scope_type: string
           scope_values?: Json
@@ -849,8 +853,10 @@ export type Database = {
           due_at?: string | null
           id?: string
           instructions?: string | null
+          last_compliance_percent?: number | null
           org_id?: string
           planogram_version_id?: string | null
+          scan_attempts?: number
           scan_id?: string | null
           scope_type?: string
           scope_values?: Json
