@@ -7,6 +7,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { dbError, getMembership, requireOrgId, requireUserId } from "@/lib/db/context";
+import { notifyMember } from "@/lib/notifications.functions";
 
 export type ScopeType = "category" | "sub_category" | "location";
 
@@ -147,16 +148,19 @@ export async function createScanAssignment(input: {
 
   const assignmentId = data!.id as string;
 
-  const { error: notifyError } = await supabase.from("notifications").insert({
-    user_id: input.assigneeId,
-    org_id: orgId,
-    type: "scan_assigned",
-    title: "New Scan Assigned",
-    body: `You have a new shelf scan task: ${scopeSummary(input.scopeType, input.scopeValues)}.`,
-    payload: { assignment_id: assignmentId },
-  });
-  if (notifyError) {
-    console.error("[assignments] notification insert failed", notifyError.message);
+  try {
+    await notifyMember({
+      data: {
+        org_id: orgId,
+        user_id: input.assigneeId,
+        type: "scan_assigned",
+        title: "New Scan Assigned",
+        body: `You have a new shelf scan task: ${scopeSummary(input.scopeType, input.scopeValues)}.`,
+        payload: { assignment_id: assignmentId, store_id: input.storeId },
+      },
+    });
+  } catch (notifyError) {
+    console.error("[assignments] notification delivery failed", notifyError);
   }
 
   return assignmentId;
@@ -241,13 +245,19 @@ export async function fetchMyAssignments(): Promise<Assignment[]> {
   return mapAssignments((data ?? []) as unknown as AssignmentRow[]);
 }
 
-/** Every assignment in the org — visible to managers through RLS. */
+/**
+ * Manager view: assignments the signed-in user created, plus every assignment in
+ * the org when they manage it. RLS already restricts non-managers to their own.
+ */
 export async function fetchOrgAssignments(): Promise<Assignment[]> {
   const orgId = await requireOrgId();
-  const { data, error } = await supabase
-    .from("scan_assignments")
-    .select(SELECT)
-    .eq("org_id", orgId)
+  const userId = await requireUserId();
+  const manager = await isOrgManager();
+
+  let builder = supabase.from("scan_assignments").select(SELECT).eq("org_id", orgId);
+  if (!manager) builder = builder.eq("assigner_id", userId);
+
+  const { data, error } = await builder
     .order("created_at", { ascending: false });
   if (error) dbError(error, "Could not load team assignments.");
   return mapAssignments((data ?? []) as unknown as AssignmentRow[]);
@@ -267,4 +277,16 @@ export async function cancelAssignment(assignmentId: string): Promise<void> {
     .update({ status: "cancelled" })
     .eq("id", assignmentId);
   if (error) dbError(error, "Could not cancel this assignment.");
+}
+
+/** Count of open tasks assigned to the signed-in user, across every workspace. */
+export async function fetchMyPendingCount(): Promise<number> {
+  const userId = await requireUserId();
+  const { count, error } = await supabase
+    .from("scan_assignments")
+    .select("id", { count: "exact", head: true })
+    .eq("assignee_id", userId)
+    .in("status", ["pending", "in_progress"]);
+  if (error) return 0;
+  return count ?? 0;
 }

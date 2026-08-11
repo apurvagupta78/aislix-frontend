@@ -73,6 +73,7 @@ function MyScansPage() {
     mutationFn: (assignment: Assignment) => startAssignment(assignment.id),
     onSuccess: (_data, assignment) => {
       void queryClient.invalidateQueries({ queryKey: ["my-assignments"] });
+      void queryClient.invalidateQueries({ queryKey: ["my-assignments-pending"] });
       if (typeof window !== "undefined") {
         window.sessionStorage.setItem("aislix.activeAssignment", assignment.id);
       }
