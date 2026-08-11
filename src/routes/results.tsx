@@ -15,6 +15,7 @@ import {
   Image as ImageIcon,
   ScanLine,
 } from "lucide-react";
+import { fetchScanAssignmentId } from "@/lib/assignments";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState, Skeleton } from "@/components/States";
@@ -102,6 +103,13 @@ function Results() {
     retry: false,
   });
   const comparison = comparisonQuery.data ?? null;
+
+  const assignmentQuery = useQuery({
+    queryKey: ["scan-assignment-id", scan],
+    queryFn: () => fetchScanAssignmentId(scan!),
+    enabled: Boolean(scan),
+    retry: false,
+  });
   const queryClient = useQueryClient();
 
   // Viewing a scan's results acknowledges its bell notifications.
@@ -195,7 +203,11 @@ function Results() {
         />
       ) : (
         <div className="space-y-4">
-          <ScanResultHeader data={data} loading={loading} />
+          <ScanResultHeader
+            data={data}
+            loading={loading}
+            assignmentId={assignmentQuery.data ?? null}
+          />
 
           {data?.status === "failed" ? (
             <FailedState scanId={data.scan_id} onRetried={() => void query.refetch()} />

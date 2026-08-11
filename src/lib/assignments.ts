@@ -65,6 +65,7 @@ export type Assignment = {
 /** Row of the manager "Team Scans" table. */
 export type TeamScan = {
   scan_id: string;
+  assignment_id: string | null;
   created_at: string;
   assignee_name: string;
   store_name: string;
@@ -565,6 +566,7 @@ export async function fetchTeamScans(): Promise<TeamScan[]> {
     const summary = comparison?.summary ?? {};
     return {
       scan_id: row.id,
+      assignment_id: row.assignment_id ?? null,
       created_at: row.created_at,
       assignee_name: names.get(row.created_by ?? "") ?? "Team member",
       store_name: row.stores?.name ?? "Store",
@@ -575,4 +577,14 @@ export async function fetchTeamScans(): Promise<TeamScan[]> {
       unexpected: pick(summary, ["unexpected_products", "unexpected"]),
     };
   });
+}
+
+/** Assignment a scan was launched from, if any (used for the results badge). */
+export async function fetchScanAssignmentId(scanId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("shelf_scans")
+    .select("assignment_id")
+    .eq("id", scanId)
+    .maybeSingle();
+  return ((data?.assignment_id as string | null) ?? null) || null;
 }
