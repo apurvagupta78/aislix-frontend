@@ -1489,7 +1489,7 @@ async function notifyAssignerOfCompletion(
     await supabase.from("notifications").insert({
       user_id: context.assigner_id,
       org_id: scan.org_id,
-      type: "scan_needs_correction",
+      type: "scan_needs_correction_manager",
       title: "Assigned scan needs correction",
       body: `${context.assignee_name} scanned ${context.store_name} · ${context.location} — ${percentLabel}% compliance, ${openIssues} open issue(s)`,
       payload: {
