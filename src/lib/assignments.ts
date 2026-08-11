@@ -439,6 +439,28 @@ export async function cancelAssignment(assignmentId: string): Promise<void> {
   if (error) dbError(error, "Could not cancel this assignment.");
 }
 
+/** Manager action: re-send the "fix the shelf and re-scan" nudge to the assignee. */
+export async function requestReScan(assignment: Assignment): Promise<void> {
+  const percent =
+    assignment.last_compliance_percent ?? assignment.compliance_percent ?? null;
+  const percentLabel = percent === null ? "—" : `${Math.round(percent)}`;
+  await notifyMember({
+    data: {
+      org_id: assignment.org_id,
+      user_id: assignment.assignee_id,
+      type: "scan_needs_correction",
+      title: "Shelf audit needs correction",
+      body: `${percentLabel}% compliance — ${assignment.open_issue_count} issue(s) to fix. Re-scan after correcting the shelf.`,
+      payload: {
+        assignment_id: assignment.id,
+        scan_id: assignment.scan_id,
+        compliance_percent: percent,
+        open_issue_count: assignment.open_issue_count,
+      },
+    },
+  });
+}
+
 /** Count of open tasks assigned to the signed-in user, across every workspace. */
 export async function fetchMyPendingCount(): Promise<number> {
   const userId = await requireUserId();
@@ -446,7 +468,7 @@ export async function fetchMyPendingCount(): Promise<number> {
     .from("scan_assignments")
     .select("id", { count: "exact", head: true })
     .eq("assignee_id", userId)
-    .in("status", ["pending", "in_progress"]);
+    .in("status", ["pending", "in_progress", "needs_correction"]);
   if (error) return 0;
   return count ?? 0;
 }
