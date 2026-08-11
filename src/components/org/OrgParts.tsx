@@ -66,10 +66,12 @@ import {
   archiveOrgStore,
   createOrgStore,
   deleteOrgStore,
+  fetchStoreTeam,
   formatConfidence,
   formatDateTime,
   formatNumber,
   formatScore,
+  grantStoreAccess,
   healthTone,
   restoreOrgStore,
   scansRemaining,
@@ -80,6 +82,8 @@ import {
   type OrgStore,
   type StoreInput,
 } from "@/lib/organization";
+import { fetchAssignableMembers } from "@/lib/assignments";
+
 
 /* -------------------------------------------------------------------------- */
 /* Organization dashboard                                                     */
