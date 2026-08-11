@@ -17,6 +17,7 @@ import {
   Menu,
   ClipboardCheck,
   ClipboardList,
+  Wrench,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Logo } from "@/components/Logo";
@@ -59,6 +60,7 @@ const nav = [
 const managerNav = [
   { label: "Store Master", to: "/store-master", icon: ClipboardList },
   { label: "Assigned Scans", to: "/assigned-scans", icon: ClipboardCheck },
+  { label: "Corrective Actions", to: "/corrective-actions", icon: Wrench },
 ] as const;
 
 const secondary = [

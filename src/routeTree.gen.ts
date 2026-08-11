@@ -17,6 +17,7 @@ import { Route as BillingRouteImport } from './routes/billing'
 import { Route as CompareRouteImport } from './routes/compare'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CookiesRouteImport } from './routes/cookies'
+import { Route as CorrectiveActionsRouteImport } from './routes/corrective-actions'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as FeaturesRouteImport } from './routes/features'
@@ -89,6 +90,11 @@ const ContactRoute = ContactRouteImport.update({
 const CookiesRoute = CookiesRouteImport.update({
   id: '/cookies',
   path: '/cookies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CorrectiveActionsRoute = CorrectiveActionsRouteImport.update({
+  id: '/corrective-actions',
+  path: '/corrective-actions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -266,6 +272,7 @@ export interface FileRoutesByFullPath {
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
+  '/corrective-actions': typeof CorrectiveActionsRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
   '/features': typeof FeaturesRoute
@@ -309,6 +316,7 @@ export interface FileRoutesByTo {
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
+  '/corrective-actions': typeof CorrectiveActionsRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
   '/features': typeof FeaturesRoute
@@ -353,6 +361,7 @@ export interface FileRoutesById {
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
+  '/corrective-actions': typeof CorrectiveActionsRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
   '/features': typeof FeaturesRoute
@@ -398,6 +407,7 @@ export interface FileRouteTypes {
     | '/compare'
     | '/contact'
     | '/cookies'
+    | '/corrective-actions'
     | '/dashboard'
     | '/demo'
     | '/features'
@@ -441,6 +451,7 @@ export interface FileRouteTypes {
     | '/compare'
     | '/contact'
     | '/cookies'
+    | '/corrective-actions'
     | '/dashboard'
     | '/demo'
     | '/features'
@@ -484,6 +495,7 @@ export interface FileRouteTypes {
     | '/compare'
     | '/contact'
     | '/cookies'
+    | '/corrective-actions'
     | '/dashboard'
     | '/demo'
     | '/features'
@@ -528,6 +540,7 @@ export interface RootRouteChildren {
   CompareRoute: typeof CompareRoute
   ContactRoute: typeof ContactRoute
   CookiesRoute: typeof CookiesRoute
+  CorrectiveActionsRoute: typeof CorrectiveActionsRoute
   DashboardRoute: typeof DashboardRoute
   DemoRoute: typeof DemoRoute
   FeaturesRoute: typeof FeaturesRoute
@@ -619,6 +632,13 @@ declare module '@tanstack/react-router' {
       path: '/cookies'
       fullPath: '/cookies'
       preLoaderRoute: typeof CookiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/corrective-actions': {
+      id: '/corrective-actions'
+      path: '/corrective-actions'
+      fullPath: '/corrective-actions'
+      preLoaderRoute: typeof CorrectiveActionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -864,6 +884,7 @@ const rootRouteChildren: RootRouteChildren = {
   CompareRoute: CompareRoute,
   ContactRoute: ContactRoute,
   CookiesRoute: CookiesRoute,
+  CorrectiveActionsRoute: CorrectiveActionsRoute,
   DashboardRoute: DashboardRoute,
   DemoRoute: DemoRoute,
   FeaturesRoute: FeaturesRoute,
