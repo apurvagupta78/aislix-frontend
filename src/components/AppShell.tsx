@@ -1,5 +1,6 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+
 import {
   LayoutDashboard,
   Plus,
@@ -19,6 +20,8 @@ import {
   Send,
   Wrench,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Logo } from "@/components/Logo";
@@ -34,12 +37,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+
 import { fetchProfile } from "@/lib/account";
 import { fetchMyPendingCount, isOrgManager } from "@/lib/assignments";
 import { getMembership, listMemberships, setActiveOrgId } from "@/lib/db/context";
 import {
   fetchInbox,
+  fetchUnreadCount,
   markAllNotificationsRead,
   markNotificationRead,
   notificationHref,
@@ -125,7 +136,7 @@ const SECTIONS: NavSection[] = [
     ],
   },
   {
-    items: [{ kind: "leaf", label: "Scan History", to: "/history", icon: History }],
+    items: [{ kind: "leaf", label: "Scan History", to: "/scan-history", icon: History }],
   },
   {
     header: "Audit & actions",
@@ -135,18 +146,19 @@ const SECTIONS: NavSection[] = [
   },
   {
     managerOnly: true,
-    items: [{ kind: "leaf", label: "Reports", to: "/report", icon: FileBarChart }],
+    items: [{ kind: "leaf", label: "Reports", to: "/reports", icon: FileBarChart }],
   },
   {
     header: "Management",
     managerOnly: true,
     items: [
+      { kind: "leaf", label: "Planogram Management", to: "/store-master", icon: LayoutGrid },
       { kind: "leaf", label: "Stores", to: "/stores", icon: Store },
-      { kind: "leaf", label: "Store Master", to: "/store-master", icon: LayoutGrid },
       { kind: "leaf", label: "Team", to: "/team", icon: Users },
     ],
   },
 ];
+
 
 const ACCOUNT_SECTION: NavSection = {
   header: "Account",
@@ -165,13 +177,38 @@ function SectionHeader({ children }: { children: ReactNode }) {
   );
 }
 
+function RailTooltip({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="right" className="text-xs">
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function CountBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <Badge
+      variant="secondary"
+      className="rounded-full border-0 bg-brand px-2 text-[0.7rem] text-brand-foreground"
+    >
+      {count}
+    </Badge>
+  );
+}
+
 function SidebarNav({
   showManagerNav,
   openTasks,
+  rail = false,
   onNavigate,
 }: {
   showManagerNav: boolean;
   openTasks: number;
+  rail?: boolean;
   onNavigate?: () => void;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -190,10 +227,45 @@ function SidebarNav({
 
   const badgeFor = (badge: NavLeaf["badge"]) => (badge === "open-tasks" ? openTasks : 0);
 
+  const railLink = (
+    label: string,
+    to: string,
+    search: Record<string, string> | undefined,
+    Icon: LucideIcon,
+    active: boolean,
+    count: number,
+  ) => (
+    <RailTooltip key={`${to}-${label}`} label={label}>
+      <Link
+        to={to}
+        search={search ?? {}}
+        onClick={onNavigate}
+        aria-label={label}
+        className={cn(
+          "relative flex size-10 items-center justify-center rounded-xl transition-colors",
+          active
+            ? "bg-brand-soft text-brand"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+        )}
+      >
+        <Icon className="size-4" />
+        {count > 0 && (
+          <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[0.6rem] font-semibold text-brand-foreground">
+            {count > 9 ? "9+" : count}
+          </span>
+        )}
+      </Link>
+    </RailTooltip>
+  );
+
   const renderLeaf = (leaf: NavLeaf, nested = false) => {
     const active = leafActive(leaf);
     const count = badgeFor(leaf.badge);
     const Icon = leaf.icon;
+    if (rail) {
+      if (!Icon) return null;
+      return railLink(leaf.label, leaf.to, leaf.search, Icon, active, count);
+    }
     return (
       <Link
         key={`${leaf.to}-${leaf.label}`}
@@ -210,14 +282,7 @@ function SidebarNav({
       >
         {Icon && <Icon className="size-4" />}
         <span className="flex-1 truncate">{leaf.label}</span>
-        {count > 0 && (
-          <Badge
-            variant="secondary"
-            className="rounded-full border-0 bg-brand px-2 text-[0.7rem] text-brand-foreground"
-          >
-            {count}
-          </Badge>
-        )}
+        <CountBadge count={count} />
       </Link>
     );
   };
@@ -226,6 +291,11 @@ function SidebarNav({
     const childActive = parent.children.some((child) => leafActive(child));
     const open = collapsed[parent.label] === undefined ? true : !collapsed[parent.label];
     const count = badgeFor(parent.badge);
+    if (rail) {
+      const first = parent.children[0];
+      if (!first) return null;
+      return railLink(parent.label, first.to, first.search, parent.icon, childActive, count);
+    }
     return (
       <div key={parent.label} className="space-y-1">
         <button
@@ -241,14 +311,7 @@ function SidebarNav({
         >
           <parent.icon className="size-4" />
           <span className="flex-1 text-left truncate">{parent.label}</span>
-          {count > 0 && (
-            <Badge
-              variant="secondary"
-              className="rounded-full border-0 bg-brand px-2 text-[0.7rem] text-brand-foreground"
-            >
-              {count}
-            </Badge>
-          )}
+          <CountBadge count={count} />
           <ChevronDown className={cn("size-3.5 transition-transform", !open && "-rotate-90")} />
         </button>
         {open && <div className="space-y-1">{parent.children.map((c) => renderLeaf(c, true))}</div>}
@@ -259,8 +322,12 @@ function SidebarNav({
   const renderSection = (section: NavSection, index: number) => {
     if (section.managerOnly && !showManagerNav) return null;
     return (
-      <div key={section.header ?? `section-${index}`} className="space-y-1">
-        {section.header && <SectionHeader>{section.header}</SectionHeader>}
+      <div
+        key={section.header ?? `section-${index}`}
+        className={cn("space-y-1", rail && "flex flex-col items-center gap-1 space-y-0")}
+      >
+        {section.header && !rail && <SectionHeader>{section.header}</SectionHeader>}
+        {section.header && rail && <span className="my-1 h-px w-6 bg-border" />}
         {section.items.map((item) =>
           item.kind === "parent" ? renderParent(item) : renderLeaf(item),
         )}
@@ -268,21 +335,51 @@ function SidebarNav({
     );
   };
 
-  return <nav className="space-y-1">{SECTIONS.map(renderSection)}</nav>;
+  return (
+    <nav className={cn("space-y-1", rail && "flex flex-col items-center gap-1 space-y-0")}>
+      {SECTIONS.map(renderSection)}
+    </nav>
+  );
 }
 
 function AccountNav({
+  rail = false,
   onNavigate,
 }: {
+  rail?: boolean;
   onNavigate?: () => void;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
-    <nav className="space-y-1">
-      <SectionHeader>{ACCOUNT_SECTION.header}</SectionHeader>
+    <nav className={cn("space-y-1", rail && "flex flex-col items-center gap-1 space-y-0")}>
+      {rail ? (
+        <span className="my-1 h-px w-6 bg-border" />
+      ) : (
+        <SectionHeader>{ACCOUNT_SECTION.header}</SectionHeader>
+      )}
       {ACCOUNT_SECTION.items.map((item) => {
         if (item.kind !== "leaf") return null;
         const Icon = item.icon!;
+        const active = pathname === item.to;
+        if (rail) {
+          return (
+            <RailTooltip key={item.to} label={item.label}>
+              <Link
+                to={item.to}
+                onClick={onNavigate}
+                aria-label={item.label}
+                className={cn(
+                  "flex size-10 items-center justify-center rounded-xl transition-colors",
+                  active
+                    ? "bg-brand-soft text-brand"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+              >
+                <Icon className="size-4" />
+              </Link>
+            </RailTooltip>
+          );
+        }
         return (
           <Link
             key={item.to}
@@ -290,7 +387,7 @@ function AccountNav({
             onClick={onNavigate}
             className={cn(
               "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors",
-              pathname === item.to
+              active
                 ? "bg-brand-soft font-medium text-brand"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
@@ -303,6 +400,22 @@ function AccountNav({
     </nav>
   );
 }
+
+const SIDEBAR_STORAGE_KEY = "sidebar_collapsed";
+
+function useSidebarCollapsed(): [boolean, (next: boolean) => void] {
+  const [collapsed, setCollapsed] = useState(true);
+  useEffect(() => {
+    const stored = window.localStorage.getItem(SIDEBAR_STORAGE_KEY);
+    if (stored !== null) setCollapsed(stored === "true");
+  }, []);
+  const update = (next: boolean) => {
+    setCollapsed(next);
+    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
+  };
+  return [collapsed, update];
+}
+
 
 export function AppShell({
   title,
@@ -317,6 +430,7 @@ export function AppShell({
 }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useSidebarCollapsed();
   const profileQuery = useQuery({
     queryKey: ["profile"],
     queryFn: () => fetchProfile(),
@@ -357,8 +471,15 @@ export function AppShell({
     retry: false,
     staleTime: 60_000,
   });
+  const unreadQuery = useQuery({
+    queryKey: ["inbox-unread"],
+    queryFn: () => fetchUnreadCount(),
+    retry: false,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
   const inbox = inboxQuery.data ?? [];
-  const unread = inbox.filter((n) => !n.read_at).length;
+  const unread = unreadQuery.data ?? inbox.filter((n) => !n.read_at).length;
   const memberships = membershipsQuery.data ?? [];
   const pendingCount = pendingQuery.data ?? 0;
 
@@ -419,28 +540,73 @@ export function AppShell({
     ) : null;
 
   return (
+    <TooltipProvider delayDuration={120}>
     <div className="min-h-screen bg-surface">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col overflow-y-auto border-r border-border bg-card px-4 py-5 lg:flex">
-        <Logo to="/dashboard" />
-        {workspaceSwitcher}
-        <div className="mt-5">
-          <SidebarNav showManagerNav={showManagerNav} openTasks={pendingCount} />
-        </div>
-        <div className="mt-6 rounded-2xl border border-border bg-brand-soft/60 p-4">
-          <p className="text-sm font-medium text-foreground">Need more scans?</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Review your plan, quota and invoices in billing.
-          </p>
-          <Button asChild size="sm" variant="brand" className="mt-3 w-full rounded-lg">
-            <Link to="/billing">Manage plan</Link>
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 hidden flex-col overflow-y-auto border-r border-border bg-card py-5 lg:flex",
+          sidebarCollapsed ? "w-16 items-center px-2" : "w-64 px-4",
+        )}
+      >
+        <div
+          className={cn(
+            "flex items-center",
+            sidebarCollapsed ? "flex-col gap-2" : "justify-between gap-2",
+          )}
+        >
+          {sidebarCollapsed ? <Logo compact to="/dashboard" /> : <Logo to="/dashboard" />}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-xl"
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          >
+            {sidebarCollapsed ? (
+              <ChevronRight className="size-4" />
+            ) : (
+              <ChevronLeft className="size-4" />
+            )}
           </Button>
         </div>
+        {!sidebarCollapsed && workspaceSwitcher}
+        <div className="mt-5">
+          <SidebarNav
+            showManagerNav={showManagerNav}
+            openTasks={pendingCount}
+            rail={sidebarCollapsed}
+          />
+        </div>
+        {sidebarCollapsed ? (
+          <div className="mt-6 flex flex-col items-center">
+            <RailTooltip label="Manage plan">
+              <Link
+                to="/billing"
+                aria-label="Manage plan"
+                className="flex size-10 items-center justify-center rounded-xl bg-brand-soft text-brand"
+              >
+                <CreditCard className="size-4" />
+              </Link>
+            </RailTooltip>
+          </div>
+        ) : (
+          <div className="mt-6 rounded-2xl border border-border bg-brand-soft/60 p-4">
+            <p className="text-sm font-medium text-foreground">Need more scans?</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Review your plan, quota and invoices in billing.
+            </p>
+            <Button asChild size="sm" variant="brand" className="mt-3 w-full rounded-lg">
+              <Link to="/billing">Manage plan</Link>
+            </Button>
+          </div>
+        )}
         <div className="mt-4 pb-2">
-          <AccountNav />
+          <AccountNav rail={sidebarCollapsed} />
         </div>
       </aside>
 
-      <div className="lg:pl-64">
+      <div className={sidebarCollapsed ? "lg:pl-16" : "lg:pl-64"}>
+
         <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur-xl">
           <div className="flex h-16 items-center gap-3 px-5 sm:px-8">
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
@@ -533,6 +699,7 @@ export function AppShell({
                         onClick={async () => {
                           await markAllNotificationsRead();
                           void queryClient.invalidateQueries({ queryKey: ["inbox"] });
+                          void queryClient.invalidateQueries({ queryKey: ["inbox-unread"] });
                         }}
                       >
                         Mark all read
@@ -553,6 +720,7 @@ export function AppShell({
                           if (!n.read_at) {
                             await markNotificationRead(n.id);
                             void queryClient.invalidateQueries({ queryKey: ["inbox"] });
+                          void queryClient.invalidateQueries({ queryKey: ["inbox-unread"] });
                           }
                           void navigate({ to: notificationHref(n) });
                         }}
@@ -657,5 +825,7 @@ export function AppShell({
         </main>
       </div>
     </div>
+    </TooltipProvider>
   );
 }
+

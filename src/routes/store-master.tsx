@@ -42,13 +42,13 @@ import {
 export const Route = createFileRoute("/store-master")({
   head: () => ({
     meta: [
-      { title: "Store Master — Expected planogram data | Aislix" },
+      { title: "Planogram Management — Expected shelf data | Aislix" },
       {
         name: "description",
         content:
           "Define the expected planogram for every store: upload a CSV or add products manually, review the draft and activate the source of truth for shelf audits.",
       },
-      { property: "og:title", content: "Store Master — Aislix" },
+      { property: "og:title", content: "Planogram Management — Aislix" },
       {
         property: "og:description",
         content:
@@ -221,7 +221,7 @@ function StoreMasterPage() {
 
   if (accessQuery.data === false) {
     return (
-      <AppShell title="Store Master" description="Expected planogram data per store.">
+      <AppShell title="Planogram Management" description="Expected planogram data per store.">
         <EmptyState
           title="Manager access required"
           description="Only owners, admins and managers can create or activate planograms. Ask your workspace owner for access."
@@ -232,8 +232,8 @@ function StoreMasterPage() {
 
   return (
     <AppShell
-      title="Store Master"
-      description="Define the expected shelf data for each store — the source of truth for Expected vs Actual audits."
+      title="Planogram Management"
+      description="Upload and activate expected shelf data (planograms) per store — source of truth for Expected vs Actual audits."
       actions={
         snapshot?.active && storeId ? (
           <Button variant="brand" className="rounded-xl" asChild>
@@ -262,6 +262,9 @@ function StoreMasterPage() {
         {/* Step 1 — store */}
         <section className={card}>
           <h2 className="text-sm font-semibold text-foreground">Step 1 · Select store</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Planograms are per store. Select a store to upload or activate.
+          </p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <div className="w-full max-w-xs">
               <Label className="sr-only" htmlFor="store">
@@ -309,7 +312,7 @@ function StoreMasterPage() {
         {storeId && (
           <>
             {/* Step 2 — inputs */}
-            <section className={card}>
+            <section id="planogram-upload" className={card}>
               <h2 className="text-sm font-semibold text-foreground">Step 2 · Add expected products</h2>
               <Tabs defaultValue="csv" className="mt-4">
                 <TabsList className="rounded-xl">
@@ -674,15 +677,40 @@ function StoreMasterPage() {
               />
             ) : snapshot?.active ? (
               <section className={card}>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h2 className="text-sm font-semibold text-foreground">
-                    Active planogram · {snapshot.active.row_count} products expected
-                  </h2>
-                  {snapshot.active.activated_at && (
-                    <span className="text-xs text-muted-foreground">
-                      Activated {new Date(snapshot.active.activated_at).toLocaleString("en-IN")}
-                    </span>
-                  )}
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h2 className="text-sm font-semibold text-foreground">
+                      Active planogram · {snapshot.active.row_count} products expected
+                    </h2>
+                    {snapshot.active.activated_at && (
+                      <span className="text-xs text-muted-foreground">
+                        Activated {new Date(snapshot.active.activated_at).toLocaleString("en-IN")}
+                      </span>
+                    )}
+                  </div>
+                  <Button variant="brand" size="sm" className="rounded-xl" asChild>
+                    <Link to="/assign-scan" search={{ store: storeId }}>
+                      <UserPlus className="mr-2 size-4" /> Assign scan to team member
+                    </Link>
+                  </Button>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button variant="outline" size="sm" className="rounded-xl" asChild>
+                    <Link to="/assign-scan" search={{ store: storeId }}>
+                      Assign scan to team member
+                    </Link>
+                  </Button>
+                  <Button variant="outline" size="sm" className="rounded-xl" asChild>
+                    <Link
+                      to="/assigned-scans"
+                      search={{ tab: "assignments", store: storeId }}
+                    >
+                      View assignments
+                    </Link>
+                  </Button>
+                  <Button variant="outline" size="sm" className="rounded-xl" asChild>
+                    <a href="#planogram-upload">Upload new version</a>
+                  </Button>
                 </div>
                 <div className="mt-4 space-y-4">
                   {activeHierarchy.map((category) => (

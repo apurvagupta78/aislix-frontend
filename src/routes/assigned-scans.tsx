@@ -31,9 +31,15 @@ import {
 import { formatDate, statusBadge } from "@/routes/my-scans";
 
 export const Route = createFileRoute("/assigned-scans")({
-  validateSearch: (search: Record<string, unknown>): { tab?: "assignments" | "team-scans" } => {
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { tab?: "assignments" | "team-scans"; store?: string } => {
     const raw = search["tab"];
-    return raw === "team-scans" || raw === "assignments" ? { tab: raw } : {};
+    const store = search["store"];
+    return {
+      ...(raw === "team-scans" || raw === "assignments" ? { tab: raw } : {}),
+      ...(typeof store === "string" && store ? { store } : {}),
+    };
   },
 
   head: () => ({
@@ -72,7 +78,7 @@ function scopeLine(row: Assignment): string {
   return parts.join(" · ");
 }
 
-function AssignmentsTab() {
+function AssignmentsTab({ storeId }: { storeId?: string }) {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
@@ -100,6 +106,7 @@ function AssignmentsTab() {
 
   const term = search.trim().toLowerCase();
   const rows = (query.data ?? []).filter((row) => {
+    if (storeId && row.store_id !== storeId) return false;
     if (status === "overdue" && !isOverdue(row)) return false;
     if (status !== "all" && status !== "overdue" && row.status !== status) return false;
     if (!term) return true;
@@ -336,7 +343,7 @@ function TeamScansTab() {
 }
 
 function AssignedScansPage() {
-  const { tab: tabParam } = Route.useSearch();
+  const { tab: tabParam, store: storeSearch } = Route.useSearch();
   const [tab, setTab] = useState(tabParam ?? "assignments");
   useEffect(() => {
     if (tabParam) setTab(tabParam);
@@ -382,7 +389,7 @@ function AssignedScansPage() {
               Team Scans
             </TabsTrigger>
           </TabsList>
-          {tab === "assignments" ? <AssignmentsTab /> : <TeamScansTab />}
+          {tab === "assignments" ? <AssignmentsTab storeId={storeSearch} /> : <TeamScansTab />}
         </Tabs>
       )}
     </AppShell>

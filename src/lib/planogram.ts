@@ -1,5 +1,5 @@
 /**
- * Store Master / Planogram expected data (Milestone 1).
+ * Planogram Management — expected shelf data per store (Milestone 1).
  *
  * CSV parsing and row normalization run on the Aislix vision backend; drafts,
  * versions and items are persisted in Supabase under the org's RLS policies.

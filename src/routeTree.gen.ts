@@ -28,6 +28,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as MyScansRouteImport } from './routes/my-scans'
 import { Route as OrganizationRouteImport } from './routes/organization'
+import { Route as PlanogramManagementRouteImport } from './routes/planogram-management'
 import { Route as PlatformRouteImport } from './routes/platform'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
@@ -146,6 +147,11 @@ const MyScansRoute = MyScansRouteImport.update({
 const OrganizationRoute = OrganizationRouteImport.update({
   id: '/organization',
   path: '/organization',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanogramManagementRoute = PlanogramManagementRouteImport.update({
+  id: '/planogram-management',
+  path: '/planogram-management',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PlatformRoute = PlatformRouteImport.update({
@@ -289,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/logout': typeof LogoutRoute
   '/my-scans': typeof MyScansRoute
   '/organization': typeof OrganizationRoute
+  '/planogram-management': typeof PlanogramManagementRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -334,6 +341,7 @@ export interface FileRoutesByTo {
   '/logout': typeof LogoutRoute
   '/my-scans': typeof MyScansRoute
   '/organization': typeof OrganizationRoute
+  '/planogram-management': typeof PlanogramManagementRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -380,6 +388,7 @@ export interface FileRoutesById {
   '/logout': typeof LogoutRoute
   '/my-scans': typeof MyScansRoute
   '/organization': typeof OrganizationRoute
+  '/planogram-management': typeof PlanogramManagementRoute
   '/platform': typeof PlatformRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
@@ -427,6 +436,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/my-scans'
     | '/organization'
+    | '/planogram-management'
     | '/platform'
     | '/pricing'
     | '/privacy'
@@ -472,6 +482,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/my-scans'
     | '/organization'
+    | '/planogram-management'
     | '/platform'
     | '/pricing'
     | '/privacy'
@@ -517,6 +528,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/my-scans'
     | '/organization'
+    | '/planogram-management'
     | '/platform'
     | '/pricing'
     | '/privacy'
@@ -563,6 +575,7 @@ export interface RootRouteChildren {
   LogoutRoute: typeof LogoutRoute
   MyScansRoute: typeof MyScansRoute
   OrganizationRoute: typeof OrganizationRoute
+  PlanogramManagementRoute: typeof PlanogramManagementRoute
   PlatformRoute: typeof PlatformRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
@@ -722,6 +735,13 @@ declare module '@tanstack/react-router' {
       path: '/organization'
       fullPath: '/organization'
       preLoaderRoute: typeof OrganizationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planogram-management': {
+      id: '/planogram-management'
+      path: '/planogram-management'
+      fullPath: '/planogram-management'
+      preLoaderRoute: typeof PlanogramManagementRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/platform': {
@@ -915,6 +935,7 @@ const rootRouteChildren: RootRouteChildren = {
   LogoutRoute: LogoutRoute,
   MyScansRoute: MyScansRoute,
   OrganizationRoute: OrganizationRoute,
+  PlanogramManagementRoute: PlanogramManagementRoute,
   PlatformRoute: PlatformRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
