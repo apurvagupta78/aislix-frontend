@@ -162,7 +162,10 @@ function Dashboard() {
         </div>
       </section>
 
+      {demo ? null : <TeamAssignmentsPanel />}
+
       <section className="mt-8">
+
         <SectionHeader
           title="Analytics"
           description="Backend-ready widgets for shelf health, scan volume, brand mix and stock risk."
