@@ -662,9 +662,6 @@ export function AppShell({
                     openTasks={pendingCount}
                     onNavigate={() => setMenuOpen(false)}
                   />
-                  <div className="mt-4">
-                    <AccountNav onNavigate={() => setMenuOpen(false)} />
-                  </div>
                 </div>
                 <div className="shrink-0 border-t border-border px-4 py-4">
                   <Button asChild size="sm" variant="brand" className="w-full rounded-lg">
