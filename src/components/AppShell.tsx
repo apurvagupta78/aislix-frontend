@@ -125,7 +125,7 @@ const SECTIONS: NavSection[] = [
     ],
   },
   {
-    items: [{ kind: "leaf", label: "Scan History", to: "/history", icon: History }],
+    items: [{ kind: "leaf", label: "Scan History", to: "/scan-history", icon: History }],
   },
   {
     header: "Audit & actions",
@@ -135,18 +135,19 @@ const SECTIONS: NavSection[] = [
   },
   {
     managerOnly: true,
-    items: [{ kind: "leaf", label: "Reports", to: "/report", icon: FileBarChart }],
+    items: [{ kind: "leaf", label: "Reports", to: "/reports", icon: FileBarChart }],
   },
   {
     header: "Management",
     managerOnly: true,
     items: [
+      { kind: "leaf", label: "Planogram Management", to: "/store-master", icon: LayoutGrid },
       { kind: "leaf", label: "Stores", to: "/stores", icon: Store },
-      { kind: "leaf", label: "Store Master", to: "/store-master", icon: LayoutGrid },
       { kind: "leaf", label: "Team", to: "/team", icon: Users },
     ],
   },
 ];
+
 
 const ACCOUNT_SECTION: NavSection = {
   header: "Account",
