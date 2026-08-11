@@ -529,28 +529,73 @@ export function AppShell({
     ) : null;
 
   return (
+    <TooltipProvider delayDuration={120}>
     <div className="min-h-screen bg-surface">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col overflow-y-auto border-r border-border bg-card px-4 py-5 lg:flex">
-        <Logo to="/dashboard" />
-        {workspaceSwitcher}
-        <div className="mt-5">
-          <SidebarNav showManagerNav={showManagerNav} openTasks={pendingCount} />
-        </div>
-        <div className="mt-6 rounded-2xl border border-border bg-brand-soft/60 p-4">
-          <p className="text-sm font-medium text-foreground">Need more scans?</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Review your plan, quota and invoices in billing.
-          </p>
-          <Button asChild size="sm" variant="brand" className="mt-3 w-full rounded-lg">
-            <Link to="/billing">Manage plan</Link>
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 hidden flex-col overflow-y-auto border-r border-border bg-card py-5 lg:flex",
+          sidebarCollapsed ? "w-16 items-center px-2" : "w-64 px-4",
+        )}
+      >
+        <div
+          className={cn(
+            "flex items-center",
+            sidebarCollapsed ? "flex-col gap-2" : "justify-between gap-2",
+          )}
+        >
+          {sidebarCollapsed ? <Logo compact to="/dashboard" /> : <Logo to="/dashboard" />}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-xl"
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          >
+            {sidebarCollapsed ? (
+              <ChevronRight className="size-4" />
+            ) : (
+              <ChevronLeft className="size-4" />
+            )}
           </Button>
         </div>
+        {!sidebarCollapsed && workspaceSwitcher}
+        <div className="mt-5">
+          <SidebarNav
+            showManagerNav={showManagerNav}
+            openTasks={pendingCount}
+            rail={sidebarCollapsed}
+          />
+        </div>
+        {sidebarCollapsed ? (
+          <div className="mt-6 flex flex-col items-center">
+            <RailTooltip label="Manage plan">
+              <Link
+                to="/billing"
+                aria-label="Manage plan"
+                className="flex size-10 items-center justify-center rounded-xl bg-brand-soft text-brand"
+              >
+                <CreditCard className="size-4" />
+              </Link>
+            </RailTooltip>
+          </div>
+        ) : (
+          <div className="mt-6 rounded-2xl border border-border bg-brand-soft/60 p-4">
+            <p className="text-sm font-medium text-foreground">Need more scans?</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Review your plan, quota and invoices in billing.
+            </p>
+            <Button asChild size="sm" variant="brand" className="mt-3 w-full rounded-lg">
+              <Link to="/billing">Manage plan</Link>
+            </Button>
+          </div>
+        )}
         <div className="mt-4 pb-2">
-          <AccountNav />
+          <AccountNav rail={sidebarCollapsed} />
         </div>
       </aside>
 
-      <div className="lg:pl-64">
+      <div className={sidebarCollapsed ? "lg:pl-16" : "lg:pl-64"}>
+
         <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur-xl">
           <div className="flex h-16 items-center gap-3 px-5 sm:px-8">
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
