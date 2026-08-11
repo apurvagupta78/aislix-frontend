@@ -54,6 +54,12 @@ export type Assignment = {
   scan_id: string | null;
   /** Planogram compliance for the completed scan, when available. */
   compliance_percent: number | null;
+  /** Compliance of the latest attempt, persisted on the assignment. */
+  last_compliance_percent: number | null;
+  /** How many times the assignee has scanned this shelf. */
+  scan_attempts: number;
+  /** Corrective actions still open across every attempt. */
+  open_issue_count: number;
 };
 
 /** Row of the manager "Team Scans" table. */
