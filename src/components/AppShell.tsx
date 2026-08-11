@@ -651,11 +651,10 @@ export function AppShell({
             openTasks={pendingCount}
             rail={sidebarCollapsed}
           />
-          <div className="mt-4">
-            <AccountNav rail={sidebarCollapsed} />
-          </div>
         </div>
-        <div className={cn("mt-auto shrink-0", sidebarCollapsed ? "pt-4" : "pt-4 pb-2")}>
+        <div className={cn("mt-auto shrink-0", sidebarCollapsed ? "pt-2" : "pt-2 pb-2")}>
+          <AccountNav rail={sidebarCollapsed} />
+          <div className="pt-4">
           {sidebarCollapsed ? (
             <RailTooltip label="Manage plan">
               <Link
