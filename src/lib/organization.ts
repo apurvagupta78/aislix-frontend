@@ -119,12 +119,16 @@ export type StoreRecommendation = {
 
 export type StoreTeamMember = {
   id: string;
+  user_id?: string;
   name?: string;
   email: string;
   role: TeamRole;
   status?: "active" | "invited" | "suspended";
   added_at?: string;
+  /** True when the member has org-wide access rather than an explicit scope. */
+  all_stores?: boolean;
 };
+
 
 export type StoreReport = {
   id: string;
