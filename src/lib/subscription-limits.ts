@@ -386,12 +386,14 @@ export function storeUsageLabel(usage: UsageSummary): string {
  * Single label helper for dashboard / billing widgets. Values always come from
  * the normalised usage summary, so `undefined` can never reach the UI.
  */
-export function formatUsageLabel(usage: UsageSummary | null | undefined): {
+export function formatUsageLabel(
+  usage: UsageSummary | Record<string, unknown> | null | undefined,
+): {
   scans: string;
   stores: string;
   cooldown: string | null;
 } {
-  const safe = usage ?? normalizeUsageSummary(null);
+  const safe = normalizeUsageSummary((usage ?? null) as Record<string, unknown> | null);
   const cooldown =
     !safe.can_scan && safe.cooldown_until
       ? `Unlocks in ${cooldownClock(safe.cooldown_until)}`
