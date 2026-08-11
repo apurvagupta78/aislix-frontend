@@ -209,13 +209,15 @@ function HistoryPage() {
   const [store, setStore] = useState("all");
   const [date, setDate] = useState("");
   const [sort, setSort] = useState<NonNullable<ScanHistoryQuery["sort"]>>("newest");
+  const [type, setType] = useState<NonNullable<ScanHistoryQuery["type"]>>("all");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string[]>([]);
   const [pendingDelete, setPendingDelete] = useState<ScanHistoryItem | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const params: ScanHistoryQuery = { q, store, date, sort, page, page_size: PAGE_SIZE };
+  const params: ScanHistoryQuery = { q, store, date, sort, type, page, page_size: PAGE_SIZE };
+
 
   const { data, isPending, isError, error, refetch } = useQuery({
     queryKey: ["scan-history", params],
