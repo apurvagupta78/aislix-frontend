@@ -229,6 +229,7 @@ export async function createScanAssignment(input: {
 
 type AssignmentRow = {
   id: string;
+  org_id: string;
   store_id: string;
   scope_type: string;
   scope_values: unknown;
@@ -239,11 +240,12 @@ type AssignmentRow = {
   assignee_id: string;
   assigner_id: string;
   planogram_version_id: string | null;
+  scan_id: string | null;
   stores?: { name?: string | null } | null;
 };
 
 const SELECT =
-  "id, store_id, scope_type, scope_values, status, due_at, instructions, created_at, assignee_id, assigner_id, planogram_version_id, stores:store_id (name)";
+  "id, org_id, store_id, scope_type, scope_values, status, due_at, instructions, created_at, assignee_id, assigner_id, planogram_version_id, scan_id, stores:store_id (name)";
 
 /** scan_assignments references auth.users, so profile names are resolved separately. */
 async function fetchNames(ids: string[]): Promise<Map<string, string>> {
@@ -269,8 +271,10 @@ async function mapAssignments(rows: AssignmentRow[]): Promise<Assignment[]> {
     rows.map(async (row) => {
       const scopeType = (row.scope_type as ScopeType) ?? "category";
       const scopeValues = (row.scope_values ?? {}) as ScopeValues;
+      const meta = await scopeMeta(row.planogram_version_id, scopeType, scopeValues);
       return {
         id: row.id,
+        org_id: row.org_id,
         store_id: row.store_id,
         store_name: row.stores?.name ?? "Store",
         scope_type: scopeType,
@@ -284,15 +288,33 @@ async function mapAssignments(rows: AssignmentRow[]): Promise<Assignment[]> {
         assigner_id: row.assigner_id,
         assigner_name: names.get(row.assigner_id) ?? "Team member",
         planogram_version_id: row.planogram_version_id,
-        expected_products: await countExpectedProducts(
-          row.planogram_version_id,
-          scopeType,
-          scopeValues,
-        ),
+        scan_id: row.scan_id ?? null,
+        location: meta.location,
+        expected_products: meta.count,
       };
     }),
   );
 }
+
+/** Full assignment context used to pre-fill and lock the scan setup form. */
+export async function fetchAssignmentById(assignmentId: string): Promise<Assignment | null> {
+  const { data, error } = await supabase
+    .from("scan_assignments")
+    .select(SELECT)
+    .eq("id", assignmentId)
+    .maybeSingle();
+  if (error) dbError(error, "Could not load this assignment.");
+  if (!data) return null;
+  const [assignment] = await mapAssignments([data as unknown as AssignmentRow]);
+  return assignment ?? null;
+}
+
+export function isOverdue(assignment: Assignment): boolean {
+  if (!assignment.due_at) return false;
+  if (assignment.status !== "pending" && assignment.status !== "in_progress") return false;
+  return new Date(assignment.due_at).getTime() < Date.now();
+}
+
 
 /** Assignments where the signed-in user is the assignee. */
 export async function fetchMyAssignments(): Promise<Assignment[]> {
