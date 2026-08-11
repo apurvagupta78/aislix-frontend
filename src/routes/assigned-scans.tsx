@@ -31,9 +31,15 @@ import {
 import { formatDate, statusBadge } from "@/routes/my-scans";
 
 export const Route = createFileRoute("/assigned-scans")({
-  validateSearch: (search: Record<string, unknown>): { tab?: "assignments" | "team-scans" } => {
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { tab?: "assignments" | "team-scans"; store?: string } => {
     const raw = search["tab"];
-    return raw === "team-scans" || raw === "assignments" ? { tab: raw } : {};
+    const store = search["store"];
+    return {
+      ...(raw === "team-scans" || raw === "assignments" ? { tab: raw } : {}),
+      ...(typeof store === "string" && store ? { store } : {}),
+    };
   },
 
   head: () => ({
