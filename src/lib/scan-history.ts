@@ -182,8 +182,42 @@ export async function fetchScanHistory(
     if (processingTimeMs !== undefined) {
       item.processing_time_ms = processingTimeMs;
     }
+    item.assignment_id = (row.assignment_id as string | null) ?? null;
     return item;
   });
+
+  // Assignment context: status, compliance and the assignee who ran it.
+  const assignmentIds = Array.from(
+    new Set(items.map((item) => item.assignment_id).filter((id): id is string => Boolean(id))),
+  );
+  if (assignmentIds.length) {
+    const { data: assignmentRows } = await supabase
+      .from("scan_assignments")
+      .select("id, status, last_compliance_percent, assignee_id")
+      .in("id", assignmentIds);
+    const assigneeIds = Array.from(
+      new Set((assignmentRows ?? []).map((row) => row.assignee_id as string).filter(Boolean)),
+    );
+    const { data: profileRows } = assigneeIds.length
+      ? await supabase.from("profiles").select("id, full_name, email").in("id", assigneeIds)
+      : { data: [] as { id: string; full_name: string | null; email: string | null }[] };
+    const profileById = new Map((profileRows ?? []).map((row) => [row.id as string, row]));
+    const assignmentById = new Map((assignmentRows ?? []).map((row) => [row.id as string, row]));
+    for (const item of items) {
+      if (!item.assignment_id) continue;
+      const assignment = assignmentById.get(item.assignment_id);
+      if (!assignment) continue;
+      item.assignment_status = assignment.status as ScanAssignmentStatus;
+      item.planogram_compliance =
+        assignment.last_compliance_percent === null ||
+        assignment.last_compliance_percent === undefined
+          ? null
+          : Number(assignment.last_compliance_percent);
+      item.assignee_id = (assignment.assignee_id as string | null) ?? null;
+      const profile = assignment.assignee_id ? profileById.get(assignment.assignee_id as string) : undefined;
+      item.assignee_name = profile?.full_name ?? profile?.email ?? null;
+    }
+  }
 
   // Attach signed download URLs (PDF report, annotated image, CSV) for these scans.
   const { resolveScanAssetUrls } = await import("@/lib/scan-results");
@@ -207,12 +241,34 @@ export async function fetchScanHistory(
   const { data: storeRows } = await supabase.from("stores").select("name").eq("org_id", orgId);
   const stores = Array.from(new Set((storeRows ?? []).map((s) => s.name as string))).sort();
 
+  // Assignee options for the reports filter (managers only need this list).
+  let assignees: { id: string; name: string }[] = [];
+  if (isManager) {
+    const { data: memberRows } = await supabase
+      .from("organization_members")
+      .select("user_id, invited_email, profiles:user_id (full_name, email)")
+      .eq("org_id", orgId);
+    assignees = (memberRows ?? [])
+      .map((row) => {
+        const profile = (row as { profiles?: { full_name?: string | null; email?: string | null } | null })
+          .profiles;
+        return {
+          id: row.user_id as string,
+          name: profile?.full_name ?? profile?.email ?? (row.invited_email as string | null) ?? "Member",
+        };
+      })
+      .filter((row) => Boolean(row.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
   return {
     items,
     total: count ?? items.length,
     page,
     page_size: pageSize,
     stores,
+    assignees,
+
   };
 }
 
