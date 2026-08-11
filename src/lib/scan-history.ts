@@ -83,6 +83,8 @@ export async function fetchScanHistory(
   _signal?: AbortSignal,
 ): Promise<ScanHistoryResponse> {
   const orgId = await requireOrgId();
+  const membership = await getMembership();
+  const isManager = MANAGER_ROLES.includes(String(membership?.role ?? "").toLowerCase());
   const page = params.page ?? 1;
   const pageSize = params.page_size ?? 10;
   const from = (page - 1) * pageSize;
@@ -92,25 +94,51 @@ export async function fetchScanHistory(
   const { fetchHistoryCutoffIso } = await import("@/lib/subscription-limits");
   const cutoff = await fetchHistoryCutoffIso();
 
+  // Assignment-based filters resolve to a concrete id list first so pagination
+  // and the total count stay correct.
+  let assignmentIdFilter: string[] | null = null;
+  const wantsAssignmentStatus = params.assignment_status && params.assignment_status !== "all";
+  const wantsAssignee = params.assignee && params.assignee !== "all";
+  if (wantsAssignmentStatus || wantsAssignee) {
+    let assignmentQuery = supabase.from("scan_assignments").select("id").eq("org_id", orgId);
+    if (wantsAssignmentStatus) assignmentQuery = assignmentQuery.eq("status", params.assignment_status!);
+    if (wantsAssignee) assignmentQuery = assignmentQuery.eq("assignee_id", params.assignee!);
+    const { data: assignmentRows } = await assignmentQuery;
+    assignmentIdFilter = (assignmentRows ?? []).map((row) => row.id as string);
+    if (assignmentIdFilter.length === 0) {
+      return { items: [], total: 0, page, page_size: pageSize, stores: [], assignees: [] };
+    }
+  }
+
   let query = supabase
     .from("shelf_scans")
     .select(
-      "id, status, shelf_label, category, total_products, low_stock_count, out_of_stock_count, processing_started_at, processing_completed_at, created_at, store_id, stores(name)",
+      "id, status, shelf_label, category, total_products, low_stock_count, out_of_stock_count, processing_started_at, processing_completed_at, created_at, store_id, created_by, assignment_id, stores(name)",
       { count: "exact" },
     )
     .eq("org_id", orgId);
 
-  if (cutoff) query = query.gte("created_at", cutoff);
+  // Members only ever see the scans they ran themselves.
+  if (!isManager) {
+    const userId = await requireUserId();
+    query = query.eq("created_by", userId);
+  }
 
+  if (cutoff) query = query.gte("created_at", cutoff);
 
   if (params.store && params.store !== "all") {
     query = query.eq("store_id", params.store);
   }
+  if (params.type === "assigned") query = query.not("assignment_id", "is", null);
+  if (params.type === "adhoc") query = query.is("assignment_id", null);
+  if (assignmentIdFilter) query = query.in("assignment_id", assignmentIdFilter);
   if (params.date) {
     const start = `${params.date}T00:00:00.000Z`;
     const end = `${params.date}T23:59:59.999Z`;
     query = query.gte("created_at", start).lte("created_at", end);
   }
+  if (params.date_from) query = query.gte("created_at", `${params.date_from}T00:00:00.000Z`);
+  if (params.date_to) query = query.lte("created_at", `${params.date_to}T23:59:59.999Z`);
   if (params.q) {
     query = query.or(
       `shelf_label.ilike.%${params.q}%,category.ilike.%${params.q}%`,
@@ -129,6 +157,7 @@ export async function fetchScanHistory(
 
   const { data, error, count } = await query;
   if (error) return dbError(error, "Could not load scan history.");
+
 
   let items = (data ?? []).map((row: any): ScanHistoryItem => {
     const startedAt = row.processing_started_at ? new Date(row.processing_started_at).getTime() : undefined;
