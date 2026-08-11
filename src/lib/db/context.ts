@@ -46,6 +46,7 @@ export type Membership = {
   user_id: string;
   role: MemberRole;
   status: "active" | "invited" | "suspended";
+  org_name?: string;
 };
 
 const ACTIVE_ORG_KEY = "aislix.activeOrg";
@@ -121,7 +122,7 @@ export async function getMembership(): Promise<Membership | null> {
     const preferred = await orgWithLatestAssignment(userId);
     membership = rows.find((row) => row.org_id === preferred);
   }
-  membership = membership ?? rows[0];
+  membership = membership ?? rows[0]!;
 
   writeStoredOrgId(membership.org_id);
   membershipCache = { userId, membership };
