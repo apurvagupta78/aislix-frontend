@@ -364,17 +364,12 @@ export async function inviteUser(input: UserInput): Promise<OrgUser> {
   return fetchUser(result.member_id);
 }
 
-/** No server-side email delivery exists; resending simply refreshes the invite timestamp. */
+/** Re-sends the auth invite email and refreshes the invite timestamp. */
 export async function resendInvite(id: string): Promise<void> {
-  const orgId = await requireOrgId();
-  const { error } = await supabase
-    .from("organization_members")
-    .update({ updated_at: new Date().toISOString() })
-    .eq("org_id", orgId)
-    .eq("id", id)
-    .eq("status", "invited");
-  if (error) dbError(error, "Could not resend the invite.");
+  const { resendMemberInvite } = await import("@/lib/team-invite.functions");
+  await resendMemberInvite({ data: { member_id: id } });
 }
+
 
 export async function setUserEnabled(id: string, enabled: boolean): Promise<OrgUser> {
   const orgId = await requireOrgId();
