@@ -426,7 +426,7 @@ function AccountNav({
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
-    <nav className={cn("space-y-1", rail && "flex flex-col items-center gap-1 space-y-0")}>
+    <nav className={cn("flex flex-col gap-0.5", rail ? "items-center gap-1" : "mt-4")}>
       {rail ? (
         <span className="my-1 h-px w-6 bg-border" />
       ) : (
