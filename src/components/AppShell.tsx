@@ -171,6 +171,12 @@ const ACCOUNT_SECTION: NavSection = {
   ],
 };
 
+/** Expand preference is stored per parent; default (missing key) is collapsed. */
+const PARENT_STORAGE_KEYS: Record<string, string> = {
+  "My Scans": "nav_my_scans_expanded",
+  "Assigned Scans": "nav_assigned_scans_expanded",
+};
+
 function SectionHeader({ children }: { children: ReactNode }) {
   return (
     <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">
