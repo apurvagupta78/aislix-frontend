@@ -265,11 +265,13 @@ type AssignmentRow = {
   assigner_id: string;
   planogram_version_id: string | null;
   scan_id: string | null;
+  last_compliance_percent: number | string | null;
+  scan_attempts: number | null;
   stores?: { name?: string | null } | null;
 };
 
 const SELECT =
-  "id, org_id, store_id, scope_type, scope_values, status, due_at, instructions, created_at, assignee_id, assigner_id, planogram_version_id, scan_id, stores:store_id (name)";
+  "id, org_id, store_id, scope_type, scope_values, status, due_at, instructions, created_at, assignee_id, assigner_id, planogram_version_id, scan_id, last_compliance_percent, scan_attempts, stores:store_id (name)";
 
 /** scan_assignments references auth.users, so profile names are resolved separately. */
 async function fetchNames(ids: string[]): Promise<Map<string, string>> {
@@ -304,14 +306,47 @@ async function fetchCompliance(scanIds: string[]): Promise<Map<string, number | 
   return map;
 }
 
+/** Open (or in-progress) corrective actions per assignment, across all attempts. */
+export async function fetchOpenIssueCounts(
+  assignmentIds: string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  const unique = [...new Set(assignmentIds.filter(Boolean))];
+  if (!unique.length) return counts;
+
+  const { data: comparisons } = await supabase
+    .from("planogram_comparisons")
+    .select("id, assignment_id")
+    .in("assignment_id", unique);
+  const rows = (comparisons ?? []) as { id: string; assignment_id: string | null }[];
+  if (!rows.length) return counts;
+
+  const assignmentByComparison = new Map(rows.map((row) => [row.id, row.assignment_id]));
+  const { data: actions } = await supabase
+    .from("corrective_actions")
+    .select("id, comparison_id, status")
+    .in("comparison_id", rows.map((row) => row.id))
+    .in("status", ["open", "in_progress"]);
+
+  for (const action of (actions ?? []) as { comparison_id: string }[]) {
+    const assignmentId = assignmentByComparison.get(action.comparison_id);
+    if (!assignmentId) continue;
+    counts.set(assignmentId, (counts.get(assignmentId) ?? 0) + 1);
+  }
+  return counts;
+}
+
 async function mapAssignments(rows: AssignmentRow[]): Promise<Assignment[]> {
   const names = await fetchNames(rows.flatMap((row) => [row.assignee_id, row.assigner_id]));
   const compliance = await fetchCompliance(rows.map((row) => row.scan_id ?? ""));
+  const openIssues = await fetchOpenIssueCounts(rows.map((row) => row.id));
   return Promise.all(
     rows.map(async (row) => {
       const scopeType = (row.scope_type as ScopeType) ?? "category";
       const scopeValues = (row.scope_values ?? {}) as ScopeValues;
       const meta = await scopeMeta(row.planogram_version_id, scopeType, scopeValues);
+      const last = num(row.last_compliance_percent);
+      const scanCompliance = row.scan_id ? compliance.get(row.scan_id) ?? null : null;
       return {
         id: row.id,
         org_id: row.org_id,
@@ -329,7 +364,10 @@ async function mapAssignments(rows: AssignmentRow[]): Promise<Assignment[]> {
         assigner_name: names.get(row.assigner_id) ?? "Team member",
         planogram_version_id: row.planogram_version_id,
         scan_id: row.scan_id ?? null,
-        compliance_percent: row.scan_id ? compliance.get(row.scan_id) ?? null : null,
+        compliance_percent: scanCompliance ?? last,
+        last_compliance_percent: last,
+        scan_attempts: Number(row.scan_attempts ?? 0) || 0,
+        open_issue_count: openIssues.get(row.id) ?? 0,
         location: meta.location,
         expected_products: meta.count,
       };
