@@ -365,6 +365,27 @@ function ScanPage() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
+          {assignment && (
+            <section className="rounded-2xl border border-brand/30 bg-brand-soft/50 p-4 sm:p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+                Assigned scan
+              </p>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                {assignment.store_name}
+                {assignment.location ? ` · ${assignment.location}` : ""}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {scopeSummary(assignment.scope_type, assignment.scope_values)} ·{" "}
+                {assignment.expected_products} expected products · assigned by{" "}
+                {assignment.assigner_name}
+              </p>
+              {assignment.instructions && (
+                <p className="mt-2 rounded-xl bg-card px-3 py-2 text-xs text-muted-foreground">
+                  {assignment.instructions}
+                </p>
+              )}
+            </section>
+          )}
           {/* STEP 1 — setup */}
           <section className="card-surface p-4 sm:p-6">
             <div className="flex items-start gap-3">
