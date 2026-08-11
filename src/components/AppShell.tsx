@@ -15,6 +15,7 @@ import {
   Search,
   LogOut,
   Menu,
+  ClipboardList,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Logo } from "@/components/Logo";
@@ -32,6 +33,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { fetchProfile } from "@/lib/account";
+import { canManagePlanogram } from "@/lib/planogram";
 
 const nav = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
@@ -41,6 +43,10 @@ const nav = [
   { label: "Reports", to: "/report", icon: FileText },
   { label: "Stores", to: "/stores", icon: Store },
   { label: "Team", to: "/team", icon: Users },
+] as const;
+
+const managerNav = [
+  { label: "Store Master", to: "/store-master", icon: ClipboardList },
 ] as const;
 
 const secondary = [
@@ -69,6 +75,13 @@ export function AppShell({
     retry: false,
     staleTime: 60_000,
   });
+  const planogramAccessQuery = useQuery({
+    queryKey: ["planogram-access"],
+    queryFn: () => canManagePlanogram(),
+    retry: false,
+    staleTime: 60_000,
+  });
+  const showManagerNav = planogramAccessQuery.data === true;
   const profile = profileQuery.data;
   const displayName = profile?.full_name?.trim() || profile?.email || "Your account";
   const displayEmail = profile?.email ?? "";
@@ -108,6 +121,7 @@ export function AppShell({
             Workspace
           </p>
           {nav.map((n) => item(n.to, n.label, n.icon))}
+          {showManagerNav && managerNav.map((n) => item(n.to, n.label, n.icon))}
         </nav>
         <nav className="mt-7 space-y-1">
           <p className="px-3 pb-2 text-[0.7rem] font-medium uppercase tracking-widest text-muted-foreground">
@@ -153,6 +167,8 @@ export function AppShell({
                     Workspace
                   </p>
                   {nav.map((n) => item(n.to, n.label, n.icon, () => setMenuOpen(false)))}
+                  {showManagerNav &&
+                    managerNav.map((n) => item(n.to, n.label, n.icon, () => setMenuOpen(false)))}
                 </nav>
                 <nav className="space-y-1 px-3 pb-4">
                   <p className="px-3 pb-2 text-[0.7rem] font-medium uppercase tracking-widest text-muted-foreground">
