@@ -27,7 +27,7 @@ export const userRoleLabels: Record<UserRole, string> = {
   owner: "Owner",
   admin: "Admin",
   manager: "Manager",
-  member: "Member (Junior)",
+  member: "Member",
   store_manager: "Store Manager",
   viewer: "Viewer",
 };
@@ -76,7 +76,7 @@ export const roleSummaries: Record<UserRole, string> = {
   owner: "Complete control of the organization, including billing and account deletion.",
   admin: "Manages stores, users and settings. Cannot change billing or delete the account.",
   manager: "Uploads planograms, assigns scans and reviews reports across stores.",
-  member: "Junior teammate who completes assigned scans and views their results.",
+  member: "Teammate who completes assigned scans and views their results.",
   store_manager: "Runs scans and works with reports for the stores assigned to them.",
   viewer: "Read-only access to scans and reports for assigned stores.",
 };
