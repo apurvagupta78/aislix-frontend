@@ -270,20 +270,28 @@ export function ReportsLibrary() {
 
   if (items.length === 0) {
     return (
-      <EmptyState
-        title="No reports yet — run your first scan."
-        description="Run a scan with Store, Location and Category filled in to see reports here."
-        action={
-          <Button asChild variant="brand" size="sm" className="rounded-xl">
-            <Link to="/scan">Start a scan</Link>
-          </Button>
-        }
-      />
+      <>
+        {FilterBar}
+        <EmptyState
+          title={filtersActive ? "No reports match these filters" : "No reports yet — run your first scan."}
+          description={
+            filtersActive
+              ? "Try a different assignee, status or date range."
+              : "Run a scan with Store, Location and Category filled in to see reports here."
+          }
+          action={
+            <Button asChild variant="brand" size="sm" className="rounded-xl">
+              <Link to="/scan">Start a scan</Link>
+            </Button>
+          }
+        />
+      </>
     );
   }
 
   return (
     <>
+      {FilterBar}
       {/* Desktop table */}
       <div className="hidden overflow-hidden rounded-2xl border border-border bg-card shadow-card lg:block">
         <Table>
@@ -301,11 +309,21 @@ export function ReportsLibrary() {
               <TableHead className="min-w-[140px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Category
               </TableHead>
+              <TableHead className="min-w-[140px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Assignee
+              </TableHead>
+              <TableHead className="min-w-[150px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Assignment
+              </TableHead>
+              <TableHead className="min-w-[120px] text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Compliance
+              </TableHead>
               <TableHead className="w-[140px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Actions
               </TableHead>
             </TableRow>
           </TableHeader>
+
           <TableBody>
             {items.map((item) => (
               <TableRow key={item.scan_id}>
