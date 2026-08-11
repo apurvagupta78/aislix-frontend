@@ -144,16 +144,24 @@ export async function ensureOrganizationForUser(
   userId: string,
   name: string,
 ): Promise<string> {
+  // An invited member already belongs to a workspace — activate it on first
+  // sign-in instead of creating a second organization for them.
   const { data, error } = await supabase
     .from("organization_members")
-    .select("org_id")
+    .select("id, org_id, status")
     .eq("user_id", userId)
-    .eq("status", "active")
+    .in("status", ["active", "invited"])
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
   if (error) dbError(error, "Could not load your workspace.");
-  if (data?.org_id) return data.org_id as string;
+  if (data?.org_id) {
+    if (data.status === "invited") {
+      await supabase.from("organization_members").update({ status: "active" }).eq("id", data.id);
+      clearContextCache();
+    }
+    return data.org_id as string;
+  }
 
   return createOrganizationForUser(userId, name);
 }

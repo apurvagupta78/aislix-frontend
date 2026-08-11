@@ -23,6 +23,7 @@ export type AssignableMember = {
   role: string;
   name: string;
   email: string;
+  status: string;
 };
 
 export type Assignment = {
@@ -65,9 +66,9 @@ export async function fetchAssignableMembers(): Promise<AssignableMember[]> {
 
   const { data, error } = await supabase
     .from("organization_members")
-    .select("user_id, role, invited_email, profiles:user_id (full_name, email)")
+    .select("user_id, role, status, invited_email, profiles:user_id (full_name, email)")
     .eq("org_id", orgId)
-    .eq("status", "active")
+    .in("status", ["active", "invited"])
     .neq("user_id", userId);
   if (error) dbError(error, "Could not load your team members.");
 
@@ -79,6 +80,7 @@ export async function fetchAssignableMembers(): Promise<AssignableMember[]> {
       user_id: row.user_id as string,
       role: String(row.role),
       name: profile?.full_name?.trim() || email || "Team member",
+      status: String((row as { status?: string }).status ?? "active"),
       email,
     };
   });

@@ -4,7 +4,8 @@
 // the helpers in `@/lib/db/context`. There is no mock data.
 
 import { supabase } from "@/integrations/supabase/client";
-import { dbError, notFound, requireOrgId, requireUserId } from "@/lib/db/context";
+import { dbError, notFound, requireOrgId } from "@/lib/db/context";
+import { inviteMember } from "@/lib/team-invite.functions";
 
 // ---------- roles / RBAC ----------
 
@@ -89,6 +90,16 @@ export const roleScope: Record<UserRole, "organization" | "assigned_stores"> = {
   viewer: "assigned_stores",
 };
 
+/** UI role -> app_role enum stored in the database. */
+export const appRoleForUiRole: Record<UserRole, string> = {
+  owner: "owner",
+  admin: "admin",
+  manager: "manager",
+  member: "member",
+  store_manager: "manager",
+  viewer: "member",
+};
+
 // ---------- users ----------
 
 export type UserStatus = "active" | "pending" | "disabled";
@@ -97,7 +108,7 @@ export const userStatuses: UserStatus[] = ["active", "pending", "disabled"];
 
 export const userStatusLabels: Record<UserStatus, string> = {
   active: "Active",
-  pending: "Pending",
+  pending: "Invited",
   disabled: "Disabled",
 };
 
@@ -227,7 +238,10 @@ async function mapMembersToUsers(rows: MemberRow[]): Promise<OrgUser[]> {
 
     return {
       id: row.id,
-      name: profile?.full_name ?? undefined,
+      name:
+        profile?.full_name ??
+        (row.invited_email ? row.invited_email.split("@")[0] : undefined) ??
+        undefined,
       email: profile?.email ?? row.invited_email ?? "",
       role: row.role,
       status: toUserStatus(row.status),
@@ -302,7 +316,7 @@ export async function createUser(input: UserInput): Promise<OrgUser> {
 export async function updateUser(id: string, input: UserUpdateInput): Promise<OrgUser> {
   const orgId = await requireOrgId();
   const patch: Record<string, unknown> = {};
-  if (input.role) patch.role = input.role;
+  if (input.role) patch.role = appRoleForUiRole[input.role] ?? input.role;
   if (input.store_ids) patch.store_ids = input.store_ids;
   if (input.status) patch.status = toMemberStatus(input.status);
 
@@ -333,28 +347,21 @@ export async function deleteUser(id: string): Promise<void> {
   if (error) dbError(error, "Could not remove the team member.");
 }
 
-/** Invite a user by inserting a pending organization_members row. */
+/**
+ * Invites a member. The server function resolves or creates the auth user and
+ * upserts the membership, so re-inviting an existing member updates their role
+ * and stores instead of hitting the (org_id, user_id) unique constraint.
+ */
 export async function inviteUser(input: UserInput): Promise<OrgUser> {
-  const orgId = await requireOrgId();
-  const inviterId = await requireUserId();
-
-  const { data, error } = await supabase
-    .from("organization_members")
-    .insert({
-      org_id: orgId,
-      user_id: inviterId,
-      role: input.role,
-      status: "invited",
-      invited_email: input.email,
-      invited_by: inviterId,
+  const result = await inviteMember({
+    data: {
+      email: input.email,
+      name: input.name,
+      role: appRoleForUiRole[input.role] ?? "member",
       store_ids: input.store_ids,
-    })
-    .select("id, user_id, role, status, store_ids, invited_email, created_at, last_active_at")
-    .single();
-  if (error) dbError(error, "Could not invite the team member.");
-
-  const [user] = await mapMembersToUsers([data as MemberRow]);
-  return user!;
+    },
+  });
+  return fetchUser(result.member_id);
 }
 
 /** No server-side email delivery exists; resending simply refreshes the invite timestamp. */
@@ -423,7 +430,7 @@ export async function bulkChangeRole(userIds: string[], role: UserRole): Promise
   const orgId = await requireOrgId();
   const { error } = await supabase
     .from("organization_members")
-    .update({ role })
+    .update({ role: (appRoleForUiRole[role] ?? role) as never })
     .eq("org_id", orgId)
     .in("id", userIds);
   if (error) dbError(error, "Could not change roles.");
