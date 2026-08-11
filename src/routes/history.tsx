@@ -572,6 +572,12 @@ function HistoryPage() {
                         { l: "Products", v: formatCount(scan.products_detected) },
                         { l: "Location", v: scan.location ?? "—" },
                         { l: "Category", v: scan.category ?? "—" },
+                        { l: "Type", v: scan.assignment_id ? "Assigned" : "Ad hoc" },
+                        {
+                          l: "Compliance",
+                          v: formatCompliance(scan.planogram_compliance ?? null),
+                        },
+
                       ].map((row) => (
                         <div key={row.l} className="min-w-0">
                           <dt className="text-muted-foreground">{row.l}</dt>
