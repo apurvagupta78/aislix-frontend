@@ -146,8 +146,9 @@ function formatCompliance(value: number | null): string {
   return value === null ? "—" : `${Math.round(value)}%`;
 }
 
-
+function RowActions({
   scan,
+
   onDelete,
 }: {
   scan: ScanHistoryItem;
