@@ -3,6 +3,14 @@
 
 export type ScanStatus = "completed" | "processing" | "failed";
 
+/** Assignment lifecycle mirrored from scan_assignments.status. */
+export type ScanAssignmentStatus =
+  | "pending"
+  | "in_progress"
+  | "needs_correction"
+  | "completed"
+  | "cancelled";
+
 export type ScanHistoryItem = {
   scan_id: string;
   store: string;
@@ -14,6 +22,13 @@ export type ScanHistoryItem = {
   average_confidence?: number; // 0-1 or 0-100
   processing_time_ms?: number;
   status: ScanStatus;
+  /** Set when the scan was run against a delegated assignment. */
+  assignment_id?: string | null;
+  assignment_status?: ScanAssignmentStatus | null;
+  /** Planogram compliance of the assignment attempt, 0-100. */
+  planogram_compliance?: number | null;
+  assignee_name?: string | null;
+  assignee_id?: string | null;
   downloads?: {
     pdf_url?: string;
     csv_url?: string;
@@ -27,25 +42,40 @@ export type ScanHistoryResponse = {
   page: number;
   page_size: number;
   stores?: string[];
+  /** Assignees present in the org, for the reports filter. */
+  assignees?: { id: string; name: string }[];
 };
+
+export type ScanTypeFilter = "all" | "assigned" | "adhoc";
 
 export type ScanHistoryQuery = {
   q?: string;
   store?: string;
   date?: string; // YYYY-MM-DD
+  date_from?: string;
+  date_to?: string;
   sort?: "newest" | "oldest" | "processing_time";
   page?: number;
   page_size?: number;
+  /** Assigned vs ad-hoc scans. */
+  type?: ScanTypeFilter;
+  /** Filter by assignment status (assigned scans only). */
+  assignment_status?: ScanAssignmentStatus | "all";
+  /** Filter by the assignee of the linked assignment. */
+  assignee?: string | "all";
 };
 
 import { supabase } from "@/integrations/supabase/client";
-import { dbError, requireOrgId } from "@/lib/db/context";
+import { dbError, getMembership, requireOrgId, requireUserId } from "@/lib/db/context";
+
+const MANAGER_ROLES = ["owner", "admin", "manager"];
 
 function toApiStatus(status: string): ScanStatus {
   if (status === "completed") return "completed";
   if (status === "failed") return "failed";
   return "processing"; // queued, processing
 }
+
 
 /** Paginated, filtered, sorted scan history for the active organization. */
 export async function fetchScanHistory(
