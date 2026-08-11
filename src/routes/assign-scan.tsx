@@ -3,6 +3,7 @@ import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
+import { formatAssignmentId } from "@/components/AssignmentId";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -116,8 +117,10 @@ function AssignScanPage() {
         dueAt: dueAt || null,
         instructions,
       }),
-    onSuccess: () => {
-      toast.success(`Scan assigned to ${assignee?.name ?? "team member"}`);
+    onSuccess: (assignmentId) => {
+      toast.success(
+        `Scan assigned to ${assignee?.name ?? "team member"} — ID: ${formatAssignmentId(assignmentId)}`,
+      );
       void navigate({ to: "/assigned-scans" });
     },
     onError: (error) => toast.error(toUserMessage(error)),

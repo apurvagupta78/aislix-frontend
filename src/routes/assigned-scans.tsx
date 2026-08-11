@@ -29,6 +29,7 @@ import {
   type Assignment,
 } from "@/lib/assignments";
 import { formatDate, statusBadge } from "@/routes/my-scans";
+import { AssignmentIdChip, formatAssignmentId } from "@/components/AssignmentId";
 
 export const Route = createFileRoute("/assigned-scans")({
   validateSearch: (
@@ -82,6 +83,7 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
+  const [sortById, setSortById] = useState(false);
 
   const query = useQuery({
     queryKey: ["org-assignments"],
@@ -105,22 +107,25 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
   });
 
   const term = search.trim().toLowerCase();
-  const rows = (query.data ?? []).filter((row) => {
+  const filtered = (query.data ?? []).filter((row) => {
     if (storeId && row.store_id !== storeId) return false;
     if (status === "overdue" && !isOverdue(row)) return false;
     if (status !== "all" && status !== "overdue" && row.status !== status) return false;
     if (!term) return true;
-    return `${row.store_name} ${row.assignee_name} ${scopeSummary(row.scope_type, row.scope_values)}`
+    return `${formatAssignmentId(row.id)} ${row.store_name} ${row.assignee_name} ${scopeSummary(row.scope_type, row.scope_values)}`
       .toLowerCase()
       .includes(term);
   });
+  const rows = [...filtered].sort((a, b) =>
+    sortById ? formatAssignmentId(a.id).localeCompare(formatAssignmentId(b.id)) : 0,
+  );
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         <Input
           className="max-w-xs rounded-xl"
-          placeholder="Search store, assignee or scope"
+          placeholder="Search assignment ID, store, assignee or scope"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
@@ -161,6 +166,15 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
             <table className="w-full text-sm">
               <thead className="bg-surface text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
+                  <th className="px-4 py-3 text-left font-medium">
+                    <button
+                      type="button"
+                      className="uppercase tracking-wide hover:text-foreground"
+                      onClick={() => setSortById((value) => !value)}
+                    >
+                      Assignment ID {sortById ? "▲" : "▼"}
+                    </button>
+                  </th>
                   <th className="px-4 py-3 text-left font-medium">Assignee</th>
                   <th className="px-4 py-3 text-left font-medium">Store · Scope</th>
                   <th className="px-4 py-3 text-left font-medium">Expected</th>
@@ -173,6 +187,9 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id} className="border-t border-border">
+                    <td className="px-4 py-3">
+                      <AssignmentIdChip id={row.id} label={false} />
+                    </td>
                     <td className="px-4 py-3 text-foreground">{row.assignee_name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{scopeLine(row)}</td>
                     <td className="px-4 py-3 text-muted-foreground">{row.expected_products}</td>
@@ -238,6 +255,7 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
                   <p className="text-sm font-semibold text-foreground">{row.assignee_name}</p>
                   {statusBadge(row.status)}
                 </div>
+                <AssignmentIdChip id={row.id} className="mt-1" />
                 <p className="mt-1 text-sm text-muted-foreground">{scopeLine(row)}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {row.expected_products} expected · {formatDate(row.due_at)}
@@ -305,6 +323,7 @@ function TeamScansTab() {
       <table className="w-full text-sm">
         <thead className="bg-surface text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
+            <th className="px-4 py-3 text-left font-medium">Assignment ID</th>
             <th className="px-4 py-3 text-left font-medium">Scan date</th>
             <th className="px-4 py-3 text-left font-medium">Assignee</th>
             <th className="px-4 py-3 text-left font-medium">Store</th>
@@ -319,6 +338,13 @@ function TeamScansTab() {
         <tbody>
           {rows.map((row) => (
             <tr key={row.scan_id} className="border-t border-border">
+              <td className="px-4 py-3">
+                {row.assignment_id ? (
+                  <AssignmentIdChip id={row.assignment_id} label={false} />
+                ) : (
+                  <span className="text-xs text-muted-foreground">—</span>
+                )}
+              </td>
               <td className="px-4 py-3 text-muted-foreground">{formatDate(row.created_at)}</td>
               <td className="px-4 py-3 text-foreground">{row.assignee_name}</td>
               <td className="px-4 py-3 text-foreground">{row.store_name}</td>

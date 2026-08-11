@@ -55,6 +55,7 @@ import {
   markNotificationRead,
   notificationHref,
 } from "@/lib/notifications";
+import { formatAssignmentId } from "@/components/AssignmentId";
 import { Badge } from "@/components/ui/badge";
 
 type LucideIcon = typeof Bell;
@@ -731,6 +732,11 @@ export function AppShell({
                         </span>
                         {n.body && (
                           <span className="text-xs text-muted-foreground">{n.body}</span>
+                        )}
+                        {typeof n.payload["assignment_id"] === "string" && (
+                          <span className="font-mono text-xs text-muted-foreground">
+                            Assignment {formatAssignmentId(n.payload["assignment_id"] as string)}
+                          </span>
                         )}
                       </DropdownMenuItem>
                     ))

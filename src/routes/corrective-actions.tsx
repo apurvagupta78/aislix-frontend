@@ -26,6 +26,7 @@ import {
 } from "@/lib/corrective-actions";
 import { formatDate } from "@/routes/my-scans";
 import { isOrgManager, requestReScan } from "@/lib/assignments";
+import { formatAssignmentId } from "@/components/AssignmentId";
 
 export const Route = createFileRoute("/corrective-actions")({
   head: () => ({
@@ -237,9 +238,10 @@ function CorrectiveActionsPage() {
                         {row.assignment_id && (
                           <Link
                             to="/assigned-scans"
-                            className="block text-xs text-brand hover:underline"
+                            search={{ tab: "assignments" as const }}
+                            className="block font-mono text-xs text-brand hover:underline"
                           >
-                            Assignment
+                            {formatAssignmentId(row.assignment_id)}
                           </Link>
                         )}
                       </td>

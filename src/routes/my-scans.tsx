@@ -19,6 +19,7 @@ import {
 } from "@/lib/assignments";
 import { markAssignmentNotificationsRead } from "@/lib/notifications";
 import { complianceTone } from "@/lib/planogram-compliance";
+import { AssignmentIdChip } from "@/components/AssignmentId";
 
 export const Route = createFileRoute("/my-scans")({
   validateSearch: (search: Record<string, unknown>): { tab?: "assigned" | "completed" } => {
@@ -204,6 +205,9 @@ function MyScansPage() {
                             Overdue
                           </Badge>
                         )}
+                      </div>
+                      <div className="mt-1">
+                        <AssignmentIdChip id={assignment.id} />
                       </div>
                       <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
                         <MapPin className="size-3.5" /> {assignmentLine(assignment)}
