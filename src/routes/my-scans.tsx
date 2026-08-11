@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, ClipboardList, Loader2, MapPin, ScanLine } from "lucide-react";
 import { toast } from "sonner";
@@ -17,6 +17,7 @@ import {
   startAssignment,
   type Assignment,
 } from "@/lib/assignments";
+import { markAssignmentNotificationsRead } from "@/lib/notifications";
 
 export const Route = createFileRoute("/my-scans")({
   head: () => ({
@@ -43,6 +44,7 @@ export function statusBadge(status: Assignment["status"]) {
   const map: Record<Assignment["status"], { label: string; className: string }> = {
     pending: { label: "Pending", className: "bg-warning/10 text-warning" },
     in_progress: { label: "In progress", className: "bg-brand-soft text-brand" },
+    needs_correction: { label: "Needs correction", className: "bg-warning/15 text-warning" },
     completed: { label: "Completed", className: "bg-success/10 text-success" },
     cancelled: { label: "Cancelled", className: "bg-muted text-muted-foreground" },
   };
@@ -63,11 +65,12 @@ export function formatDate(value: string | null) {
   });
 }
 
-type TabKey = "pending" | "in_progress" | "overdue" | "completed";
+type TabKey = "pending" | "in_progress" | "needs_correction" | "overdue" | "completed";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "pending", label: "Pending" },
   { key: "in_progress", label: "In progress" },
+  { key: "needs_correction", label: "Needs correction" },
   { key: "overdue", label: "Overdue" },
   { key: "completed", label: "Completed" },
 ];
@@ -107,13 +110,26 @@ function MyScansPage() {
     return {
       pending: all.filter((item) => item.status === "pending"),
       in_progress: all.filter((item) => item.status === "in_progress"),
+      needs_correction: all.filter((item) => item.status === "needs_correction"),
       overdue: all.filter((item) => isOverdue(item)),
       completed: all.filter((item) => item.status === "completed" || item.status === "cancelled"),
     } satisfies Record<TabKey, Assignment[]>;
   }, [all]);
 
   const visible = buckets[tab];
-  const actionable = tab === "pending" || tab === "in_progress" || tab === "overdue";
+  const actionable =
+    tab === "pending" || tab === "in_progress" || tab === "overdue" || tab === "needs_correction";
+
+  // Opening the Needs correction list acknowledges its bell notifications.
+  useEffect(() => {
+    if (tab !== "needs_correction" || !buckets.needs_correction.length) return;
+    void Promise.all(
+      buckets.needs_correction.map((item) => markAssignmentNotificationsRead(item.id)),
+    ).then(() => {
+      void queryClient.invalidateQueries({ queryKey: ["inbox"] });
+      void queryClient.invalidateQueries({ queryKey: ["notifications-unread"] });
+    });
+  }, [tab, buckets.needs_correction, queryClient]);
 
   return (
     <AppShell title="My Assigned Scans" description="Shelf audits assigned to you by your manager.">
@@ -160,6 +176,14 @@ function MyScansPage() {
                           {assignment.store_name}
                         </p>
                         {statusBadge(assignment.status)}
+                        {assignment.status === "needs_correction" && (
+                          <Badge
+                            variant="secondary"
+                            className="rounded-full border-0 bg-destructive/10 text-destructive"
+                          >
+                            {assignment.open_issue_count} open issues
+                          </Badge>
+                        )}
                         {isOverdue(assignment) && (
                           <Badge
                             variant="secondary"
@@ -176,6 +200,24 @@ function MyScansPage() {
                         {scopeSummary(assignment.scope_type, assignment.scope_values)} · assigned by{" "}
                         {assignment.assigner_name}
                       </p>
+                      {assignment.status === "needs_correction" && (
+                        <p className="mt-1 text-xs">
+                          <span
+                            className={`font-semibold ${complianceTone(
+                              assignment.last_compliance_percent,
+                            )}`}
+                          >
+                            {assignment.last_compliance_percent === null
+                              ? "—"
+                              : `${Math.round(assignment.last_compliance_percent)}%`}{" "}
+                            compliance
+                          </span>
+                          <span className="text-muted-foreground">
+                            {" "}
+                            · attempt {assignment.scan_attempts} · fix the shelf, then re-scan
+                          </span>
+                        </p>
+                      )}
                       {assignment.instructions && (
                         <p className="mt-2 rounded-xl bg-surface px-3 py-2 text-xs text-muted-foreground">
                           {assignment.instructions}
@@ -198,7 +240,11 @@ function MyScansPage() {
                           ) : (
                             <ScanLine className="mr-2 size-4" />
                           )}
-                          {assignment.status === "in_progress" ? "Continue scan" : "Start scan"}
+                          {assignment.status === "needs_correction"
+                            ? "Fix & re-scan"
+                            : assignment.status === "in_progress"
+                              ? "Continue scan"
+                              : "Start scan"}
                         </Button>
                       ) : (
                         assignment.scan_id && (
