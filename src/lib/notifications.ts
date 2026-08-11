@@ -70,9 +70,33 @@ export async function markAllNotificationsRead(): Promise<void> {
     .is("read_at", null);
 }
 
+/** Mark unread notifications tied to an assignment as read. */
+export async function markAssignmentNotificationsRead(assignmentId: string): Promise<void> {
+  const userId = await requireUserId();
+  await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .is("read_at", null)
+    .contains("payload", { assignment_id: assignmentId });
+}
+
+/** Mark unread notifications tied to a scan as read (opened its results). */
+export async function markScanNotificationsRead(scanId: string): Promise<void> {
+  const userId = await requireUserId();
+  await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .is("read_at", null)
+    .contains("payload", { scan_id: scanId });
+}
+
 /** Route a notification to the surface that can act on it. */
 export function notificationHref(notification: InboxNotification): string {
   if (notification.type === "scan_assigned") return "/my-scans";
+  if (notification.type === "scan_needs_correction") return "/my-scans";
+  if (notification.type === "scan_needs_correction_manager") return "/assigned-scans";
   if (notification.type === "scan_completed") return "/assigned-scans";
   return "/dashboard";
 }
