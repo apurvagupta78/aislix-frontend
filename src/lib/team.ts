@@ -430,7 +430,7 @@ export async function bulkChangeRole(userIds: string[], role: UserRole): Promise
   const orgId = await requireOrgId();
   const { error } = await supabase
     .from("organization_members")
-    .update({ role })
+    .update({ role: (appRoleForUiRole[role] ?? role) as never })
     .eq("org_id", orgId)
     .in("id", userIds);
   if (error) dbError(error, "Could not change roles.");
