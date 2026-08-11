@@ -130,31 +130,61 @@ export function isLimitReachedError(error: unknown): error is LimitReachedError 
   return error instanceof LimitReachedError;
 }
 
+/** Store allowance exhausted (client check or DB trigger `STORE_LIMIT_REACHED`). */
+export class StoreLimitError extends LimitReachedError {
+  constructor(input: { usage: UsageSummary; message: string }) {
+    super({ limit: "store_limit", usage: input.usage, message: input.message });
+    this.name = "StoreLimitError";
+  }
+}
+
+/** Scan allowance exhausted (client check or DB trigger `SCAN_LIMIT_REACHED`). */
+export class ScanLimitError extends LimitReachedError {
+  constructor(input: { usage: UsageSummary; message: string; cooldownUntil?: string; cooldown?: boolean }) {
+    super({
+      limit: input.cooldown ? "scan_cooldown" : "scan_quota",
+      usage: input.usage,
+      message: input.message,
+      ...(input.cooldownUntil ? { cooldownUntil: input.cooldownUntil } : {}),
+    });
+    this.name = "ScanLimitError";
+  }
+}
+
 /**
  * The RPC returns a flatter shape (`scans_included`, `stores_included`, `blocked`)
  * than the client `UsageSummary`. Normalise it so limit messages never render
  * `undefined` and `can_add_store` / `can_scan` are always real booleans.
  */
+export function normalizeUsageSummary(raw: Record<string, unknown> | null | undefined): UsageSummary {
+  return normalizeUsage((raw ?? {}) as Record<string, unknown>);
+}
+
 function normalizeUsage(raw: Record<string, unknown>): UsageSummary {
   const num = (v: unknown): number | null =>
     v === null || v === undefined ? null : Number(v);
-  const scanQuota = num(raw["scan_quota"] ?? raw["scans_included"]);
-  const storeLimit = num(raw["store_limit"] ?? raw["stores_included"]);
+  const planCode = ((raw["plan_code"] as string) ?? "free").toLowerCase();
+  const isFree = planCode === "free";
+  const isEnterprise = planCode === "enterprise";
+  // Free-plan fallbacks keep limit copy free of `undefined`.
+  const scanQuota = num(raw["scan_quota"] ?? raw["scans_included"]) ?? (isFree ? 3 : null);
+  const storeLimit =
+    num(raw["store_limit"] ?? raw["stores_included"]) ?? (isFree ? 1 : null);
+  const historyDays = num(raw["history_days"]) ?? (isFree ? 7 : null);
   const scansUsed = num(raw["scans_used"]) ?? 0;
   const storesUsed = num(raw["stores_used"]) ?? 0;
   const blocked = Boolean(raw["blocked"]);
 
   return {
-    plan_code: (raw["plan_code"] as string) ?? "free",
+    plan_code: planCode,
     plan_name: (raw["plan_name"] as string) ?? "Free",
-    quota_period: (raw["quota_period"] as QuotaPeriod) ??
-      ((raw["plan_code"] as string) === "free" ? "rolling_24h" : "month"),
-    is_contact_sales: Boolean(raw["is_contact_sales"]),
+    quota_period: (raw["quota_period"] as QuotaPeriod) ?? (isFree ? "rolling_24h" : "month"),
+    is_contact_sales: Boolean(raw["is_contact_sales"]) || isEnterprise,
     price_monthly_inr: num(raw["price_monthly_inr"]) ?? 0,
     scan_quota: scanQuota,
     store_limit: storeLimit,
     seat_limit: num(raw["seat_limit"]),
-    history_days: num(raw["history_days"]),
+    history_days: historyDays,
     scans_used: scansUsed,
     scans_remaining: num(raw["scans_remaining"]),
     stores_used: storesUsed,
@@ -189,7 +219,7 @@ export async function fetchUsageSummary(signal?: AbortSignal, orgIdOverride?: st
       status: 500,
     });
   }
-  const usage = normalizeUsage((data ?? {}) as Record<string, unknown>);
+  const usage = normalizeUsageSummary(data as Record<string, unknown> | null);
   if (usage.platform_bypass || hasPlatformBypass(email)) {
     return {
       ...usage,
@@ -208,26 +238,12 @@ export async function fetchUsageSummary(signal?: AbortSignal, orgIdOverride?: st
 // ---------- enforcement ----------
 
 /** Blocks a new scan when the plan's scan allowance is exhausted. */
-export async function assertCanStartScan(): Promise<UsageSummary> {
+export async function assertCanStartScan(orgId?: string): Promise<UsageSummary> {
   const email = await currentUserEmail();
-  if (hasPlatformBypass(email)) return fetchUsageSummary();
-  const usage = await fetchUsageSummary();
+  if (hasPlatformBypass(email)) return fetchUsageSummary(undefined, orgId);
+  const usage = await fetchUsageSummary(undefined, orgId);
   if (usage.can_scan || usage.platform_bypass) return usage;
-
-  if (usage.quota_period === "rolling_24h") {
-    throw new LimitReachedError({
-      limit: "scan_cooldown",
-      usage,
-      ...(usage.cooldown_until ? { cooldownUntil: usage.cooldown_until } : {}),
-      message: `You've used all ${usage.scan_quota} scans on the ${usage.plan_name} plan. Scanning unlocks again ${formatCooldown(usage.cooldown_until)}.`,
-    });
-  }
-
-  throw new LimitReachedError({
-    limit: "scan_quota",
-    usage,
-    message: `You've used all ${usage.scan_quota} scans included in your ${usage.plan_name} plan this month. Upgrade to keep scanning.`,
-  });
+  throw scanLimitError(usage);
 }
 
 /** Blocks a new store when the plan's store allowance is exhausted. */
@@ -238,15 +254,57 @@ export async function assertCanAddStore(orgId?: string): Promise<UsageSummary> {
   // The very first store is always allowed, whatever the plan says.
   if (usage.stores_used === 0) return usage;
   if (usage.can_add_store || usage.platform_bypass) return usage;
+  throw storeLimitError(usage);
+}
+
+function scanLimitError(usage: UsageSummary): ScanLimitError {
+  const quota = usage.scan_quota ?? (usage.plan_code === "free" ? 3 : usage.scans_used);
+  if (usage.quota_period === "rolling_24h") {
+    return new ScanLimitError({
+      usage,
+      cooldown: true,
+      ...(usage.cooldown_until ? { cooldownUntil: usage.cooldown_until } : {}),
+      message: `You've used all ${quota} scans on the ${usage.plan_name} plan. Scanning unlocks again ${formatCooldown(usage.cooldown_until)}.`,
+    });
+  }
+  return new ScanLimitError({
+    usage,
+    message: `You've used all ${quota} scans included in your ${usage.plan_name} plan this month. Upgrade to keep scanning.`,
+  });
+}
+
+function storeLimitError(usage: UsageSummary): StoreLimitError {
   const limit = usage.store_limit;
-  throw new LimitReachedError({
-    limit: "store_limit",
+  return new StoreLimitError({
     usage,
     message:
       limit === null
         ? `Your ${usage.plan_name} plan cannot add more stores right now. Upgrade to add more.`
         : `The ${usage.plan_name} plan includes ${limit} ${limit === 1 ? "store" : "stores"}. Upgrade to add more.`,
   });
+}
+
+/**
+ * Maps a database trigger error (`STORE_LIMIT_REACHED` / `SCAN_LIMIT_REACHED`)
+ * onto the typed limit errors so the upgrade modal shows instead of a raw
+ * Postgres message. Anything else is returned untouched.
+ */
+export async function mapLimitError(error: unknown, orgId?: string): Promise<unknown> {
+  if (isLimitReachedError(error)) return error;
+  const text =
+    typeof error === "object" && error !== null
+      ? `${(error as { message?: string }).message ?? ""} ${(error as { details?: string }).details ?? ""}`
+      : String(error ?? "");
+  const isStore = text.includes("STORE_LIMIT_REACHED");
+  const isScan = text.includes("SCAN_LIMIT_REACHED");
+  if (!isStore && !isScan) return error;
+  let usage: UsageSummary;
+  try {
+    usage = await fetchUsageSummary(undefined, orgId);
+  } catch {
+    usage = normalizeUsageSummary(null);
+  }
+  return isStore ? storeLimitError(usage) : scanLimitError(usage);
 }
 
 
@@ -322,4 +380,27 @@ export function scanUsageLabel(usage: UsageSummary): string {
 export function storeUsageLabel(usage: UsageSummary): string {
   if (usage.store_limit === null) return `${usage.stores_used} stores · Unlimited`;
   return `${usage.stores_used} / ${usage.store_limit} stores used`;
+}
+
+/**
+ * Single label helper for dashboard / billing widgets. Values always come from
+ * the normalised usage summary, so `undefined` can never reach the UI.
+ */
+export function formatUsageLabel(
+  usage: UsageSummary | Record<string, unknown> | null | undefined,
+): {
+  scans: string;
+  stores: string;
+  cooldown: string | null;
+} {
+  const safe = normalizeUsageSummary((usage ?? null) as Record<string, unknown> | null);
+  const cooldown =
+    !safe.can_scan && safe.cooldown_until
+      ? `Unlocks in ${cooldownClock(safe.cooldown_until)}`
+      : null;
+  const stores =
+    safe.store_limit === null
+      ? `${safe.stores_used} stores · Unlimited`
+      : `${safe.stores_used} / ${safe.store_limit} stores`;
+  return { scans: scanUsageLabel(safe), stores, cooldown };
 }
