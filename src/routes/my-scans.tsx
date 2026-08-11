@@ -246,21 +246,20 @@ function MyScansPage() {
                               ? "Continue scan"
                               : "Start scan"}
                         </Button>
-                      ) : (
-                        assignment.scan_id && (
-                          <Button
-                            variant="subtle"
-                            className="rounded-xl"
-                            onClick={() =>
-                              void navigate({
-                                to: "/results",
-                                search: { scan: assignment.scan_id! },
-                              })
-                            }
-                          >
-                            View results
-                          </Button>
-                        )
+                      ) : null}
+                      {assignment.scan_id && (
+                        <Button
+                          variant="subtle"
+                          className="rounded-xl"
+                          onClick={() =>
+                            void navigate({
+                              to: "/results",
+                              search: { scan: assignment.scan_id! },
+                            })
+                          }
+                        >
+                          {actionable ? "View last results" : "View results"}
+                        </Button>
                       )}
                     </div>
                   </div>
