@@ -386,6 +386,8 @@ export function StoreCard({
         )}
       </div>
 
+      <StoreTeamStrip storeId={store.id} />
+
       <Button asChild variant="subtle" size="sm" className="mt-4 w-full rounded-xl">
         <Link to="/stores/$storeId" params={{ storeId: store.id }}>
           Quick view
@@ -394,6 +396,73 @@ export function StoreCard({
     </article>
   );
 }
+
+const teamRoleClasses: Record<string, string> = {
+  owner: "bg-brand-soft text-brand",
+  admin: "bg-brand-soft text-brand",
+  manager: "bg-accent-green/12 text-accent-green",
+  store_manager: "bg-accent-green/12 text-accent-green",
+  member: "bg-muted text-muted-foreground",
+  viewer: "bg-muted text-muted-foreground",
+};
+
+/** Team with access to this store — explicit scope or org-wide access. */
+function StoreTeamStrip({ storeId }: { storeId: string }) {
+  const query = useQuery({
+    queryKey: ["store-team", storeId],
+    queryFn: () => fetchStoreTeam(storeId),
+    retry: false,
+    staleTime: 60_000,
+  });
+
+  if (query.isPending) {
+    return (
+      <div className="mt-4 border-t border-border pt-3">
+        <Skeleton className="h-4 w-40" />
+      </div>
+    );
+  }
+  const items = query.data?.items ?? [];
+
+  return (
+    <div className="mt-4 border-t border-border pt-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Team with access
+      </p>
+      {items.length === 0 ? (
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          No one is scoped to this store yet.
+        </p>
+      ) : (
+        <ul className="mt-2 space-y-1.5">
+          {items.slice(0, 4).map((member) => (
+            <li key={member.id} className="flex items-center justify-between gap-2 text-xs">
+              <span className="min-w-0 truncate">
+                <span className="font-medium text-foreground">{member.name ?? member.email}</span>
+                {member.status === "invited" && (
+                  <span className="ml-1.5 text-muted-foreground">(invited)</span>
+                )}
+              </span>
+              <Badge
+                variant="secondary"
+                className={cn(
+                  "shrink-0 rounded-full border-0 text-[11px] font-medium",
+                  teamRoleClasses[member.role] ?? "bg-muted text-muted-foreground",
+                )}
+              >
+                {member.all_stores ? "All stores" : member.role.replace("_", " ")}
+              </Badge>
+            </li>
+          ))}
+          {items.length > 4 && (
+            <li className="text-xs text-muted-foreground">+{items.length - 4} more</li>
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 
 export function StoreCardSkeleton() {
   return (
