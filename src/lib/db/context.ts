@@ -47,9 +47,14 @@ export type Membership = {
   role: MemberRole;
   status: "active" | "invited" | "suspended";
   org_name?: string;
+  /** Disambiguation hint when several workspaces share a name. */
+  org_hint?: string;
+  /** Open scan assignments for this user in that workspace. */
+  pending_count?: number;
 };
 
 const ACTIVE_ORG_KEY = "aislix.activeOrg";
+const ACTIVE_ORG_EXPLICIT_KEY = "aislix.activeOrg.explicit";
 
 let membershipsCache: { userId: string; rows: Membership[] } | null = null;
 let membershipCache: { userId: string; membership: Membership } | null = null;
@@ -62,6 +67,27 @@ function readStoredOrgId(): string | null {
 function writeStoredOrgId(orgId: string): void {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(ACTIVE_ORG_KEY, orgId);
+}
+
+function wasChosenByUser(orgId: string): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(ACTIVE_ORG_EXPLICIT_KEY) === orgId;
+}
+
+/** Open assignments for the signed-in user, grouped by workspace. */
+export async function pendingAssignmentCountsByOrg(): Promise<Map<string, number>> {
+  const userId = await requireUserId();
+  const { data } = await supabase
+    .from("scan_assignments")
+    .select("org_id")
+    .eq("assignee_id", userId)
+    .in("status", ["pending", "in_progress"]);
+  const counts = new Map<string, number>();
+  for (const row of data ?? []) {
+    const orgId = (row as { org_id: string }).org_id;
+    counts.set(orgId, (counts.get(orgId) ?? 0) + 1);
+  }
+  return counts;
 }
 
 /** Every active membership of the signed-in user, oldest first. */
@@ -77,12 +103,37 @@ export async function listMemberships(): Promise<Membership[]> {
     .order("created_at", { ascending: true });
   if (error) dbError(error, "Could not load your workspaces.");
 
-  const rows = (data ?? []).map((row) => ({
+  let rows = (data ?? []).map((row) => ({
     ...(row as unknown as Membership),
     org_name:
       (row as { organizations?: { name?: string | null } | null }).organizations?.name ??
       "Workspace",
   })) as Membership[];
+
+  if (rows.length > 1) {
+    const orgIds = rows.map((row) => row.org_id);
+    const [{ data: stores }, counts] = await Promise.all([
+      supabase.from("stores").select("org_id, name").in("org_id", orgIds),
+      pendingAssignmentCountsByOrg().catch(() => new Map<string, number>()),
+    ]);
+    const storeName = new Map<string, string>();
+    for (const store of (stores ?? []) as Array<{ org_id: string; name: string }>) {
+      if (!storeName.has(store.org_id)) storeName.set(store.org_id, store.name);
+    }
+    const nameCounts = new Map<string, number>();
+    for (const row of rows) {
+      nameCounts.set(row.org_name!, (nameCounts.get(row.org_name!) ?? 0) + 1);
+    }
+    rows = rows.map((row) => ({
+      ...row,
+      pending_count: counts.get(row.org_id) ?? 0,
+      // Duplicate workspace names are common in testing — always show a hint.
+      org_hint:
+        storeName.get(row.org_id) ??
+        ((nameCounts.get(row.org_name!) ?? 0) > 1 ? `#${row.org_id.slice(0, 8)}` : undefined),
+    }));
+  }
+
   membershipsCache = { userId, rows };
   return rows;
 }
@@ -101,8 +152,11 @@ async function orgWithLatestAssignment(userId: string): Promise<string | null> {
 }
 
 /** Switch the active workspace for every org-scoped query. */
-export function setActiveOrgId(orgId: string): void {
+export function setActiveOrgId(orgId: string, explicit = true): void {
   writeStoredOrgId(orgId);
+  if (explicit && typeof window !== "undefined") {
+    window.localStorage.setItem(ACTIVE_ORG_EXPLICIT_KEY, orgId);
+  }
   membershipCache = null;
 }
 
@@ -117,10 +171,11 @@ export async function getMembership(): Promise<Membership | null> {
   const stored = readStoredOrgId();
   let membership = stored ? rows.find((row) => row.org_id === stored) : undefined;
 
-  if (!membership && rows.length > 1) {
-    // Multi-org users default to the workspace that actually has work waiting.
+  if (rows.length > 1 && (!membership || !wasChosenByUser(membership.org_id))) {
+    // Auto-land in the workspace that actually has work waiting, unless the
+    // user explicitly picked one from the switcher.
     const preferred = await orgWithLatestAssignment(userId);
-    membership = rows.find((row) => row.org_id === preferred);
+    membership = rows.find((row) => row.org_id === preferred) ?? membership;
   }
   membership = membership ?? rows[0]!;
 
@@ -128,6 +183,7 @@ export async function getMembership(): Promise<Membership | null> {
   membershipCache = { userId, membership };
   return membership;
 }
+
 
 export function clearContextCache(): void {
   membershipCache = null;
