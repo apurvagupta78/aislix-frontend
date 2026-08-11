@@ -17,7 +17,12 @@ export type ScopeValues = {
   location?: string;
 };
 
-export type AssignmentStatus = "pending" | "in_progress" | "completed" | "cancelled";
+export type AssignmentStatus =
+  | "pending"
+  | "in_progress"
+  | "needs_correction"
+  | "completed"
+  | "cancelled";
 
 export type AssignableMember = {
   user_id: string;
