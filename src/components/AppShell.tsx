@@ -67,6 +67,7 @@ type NavLeaf = {
   to: string;
   search?: Record<string, string>;
   icon?: LucideIcon;
+  managerOnly?: boolean;
   /** Badge only renders when the resolved count is > 0. */
   badge?: "open-tasks";
 };
@@ -74,7 +75,8 @@ type NavLeaf = {
 type NavParent = {
   kind: "parent";
   label: string;
-  icon: LucideIcon;
+  icon?: LucideIcon;
+  managerOnly?: boolean;
   badge?: "open-tasks";
   children: NavLeaf[];
 };
@@ -82,24 +84,30 @@ type NavParent = {
 type NavItem = NavLeaf | NavParent;
 
 type NavSection = {
-  /** Undefined renders the items without an uppercase header. */
-  header?: string;
+  id: string;
+  label: string;
+  icon: LucideIcon;
   managerOnly?: boolean;
   items: NavItem[];
 };
 
+const DASHBOARD_LEAF: NavLeaf = {
+  kind: "leaf",
+  label: "Dashboard",
+  to: "/dashboard",
+  icon: LayoutDashboard,
+};
+
 const SECTIONS: NavSection[] = [
   {
-    items: [{ kind: "leaf", label: "Dashboard", to: "/dashboard", icon: LayoutDashboard }],
-  },
-  {
-    header: "Scan & tasks",
+    id: "scan",
+    label: "Scan & Tasks",
+    icon: ClipboardCheck,
     items: [
       { kind: "leaf", label: "New Scan", to: "/scan", icon: Plus },
       {
         kind: "parent",
         label: "My Scans",
-        icon: ClipboardCheck,
         badge: "open-tasks",
         children: [
           {
@@ -117,15 +125,10 @@ const SECTIONS: NavSection[] = [
           },
         ],
       },
-    ],
-  },
-  {
-    managerOnly: true,
-    items: [
       {
         kind: "parent",
         label: "Assigned Scans",
-        icon: Send,
+        managerOnly: true,
         children: [
           {
             kind: "leaf",
@@ -135,23 +138,22 @@ const SECTIONS: NavSection[] = [
           },
         ],
       },
+      { kind: "leaf", label: "Scan History", to: "/scan-history", icon: History },
     ],
   },
   {
-    items: [{ kind: "leaf", label: "Scan History", to: "/scan-history", icon: History }],
-  },
-  {
-    header: "Audit & actions",
+    id: "audit",
+    label: "Audit & Actions",
+    icon: Wrench,
     items: [
       { kind: "leaf", label: "Corrective Actions", to: "/corrective-actions", icon: Wrench },
+      { kind: "leaf", label: "Reports", to: "/reports", icon: FileBarChart, managerOnly: true },
     ],
   },
   {
-    managerOnly: true,
-    items: [{ kind: "leaf", label: "Reports", to: "/reports", icon: FileBarChart }],
-  },
-  {
-    header: "Management",
+    id: "management",
+    label: "Management",
+    icon: LayoutGrid,
     managerOnly: true,
     items: [
       { kind: "leaf", label: "Planogram", to: "/store-master", icon: LayoutGrid },
@@ -159,31 +161,19 @@ const SECTIONS: NavSection[] = [
       { kind: "leaf", label: "Team", to: "/team", icon: Users },
     ],
   },
+  {
+    id: "account",
+    label: "Account",
+    icon: User,
+    items: [
+      { kind: "leaf", label: "Billing", to: "/billing", icon: CreditCard },
+      { kind: "leaf", label: "Profile", to: "/profile", icon: User },
+      { kind: "leaf", label: "Settings", to: "/settings", icon: Settings },
+    ],
+  },
 ];
 
-
-const ACCOUNT_SECTION: NavSection = {
-  header: "Account",
-  items: [
-    { kind: "leaf", label: "Billing", to: "/billing", icon: CreditCard },
-    { kind: "leaf", label: "Profile", to: "/profile", icon: User },
-    { kind: "leaf", label: "Settings", to: "/settings", icon: Settings },
-  ],
-};
-
-/** Expand preference is stored per parent; default (missing key) is collapsed. */
-const PARENT_STORAGE_KEYS: Record<string, string> = {
-  "My Scans": "nav_my_scans_expanded",
-  "Assigned Scans": "nav_assigned_scans_expanded",
-};
-
-function SectionHeader({ children }: { children: ReactNode }) {
-  return (
-    <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">
-      {children}
-    </p>
-  );
-}
+const OPEN_SECTION_KEY = "nav_open_section";
 
 function RailTooltip({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -208,6 +198,10 @@ function CountBadge({ count }: { count: number }) {
   );
 }
 
+function sectionItems(section: NavSection, showManagerNav: boolean): NavItem[] {
+  return section.items.filter((item) => !item.managerOnly || showManagerNav);
+}
+
 function SidebarNav({
   showManagerNav,
   openTasks,
@@ -222,20 +216,6 @@ function SidebarNav({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const activeTab = new URLSearchParams(searchStr).get("tab");
-  // Expandable parents start collapsed; only an explicit user click is persisted.
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  useEffect(() => {
-    const next: Record<string, boolean> = {};
-    for (const [label, key] of Object.entries(PARENT_STORAGE_KEYS)) {
-      if (window.localStorage.getItem(key) === "true") next[label] = true;
-    }
-    setExpanded(next);
-  }, []);
-  const toggleParent = (label: string, open: boolean) => {
-    setExpanded((prev) => ({ ...prev, [label]: !open }));
-    const key = PARENT_STORAGE_KEYS[label];
-    if (key) window.localStorage.setItem(key, String(!open));
-  };
 
   const leafActive = (leaf: NavLeaf) => {
     if (pathname !== leaf.to) return false;
@@ -246,47 +226,34 @@ function SidebarNav({
     return tab === "assigned" || tab === "assignments";
   };
 
+  const itemActive = (item: NavItem): boolean =>
+    item.kind === "leaf" ? leafActive(item) : item.children.some(leafActive);
+
+  const visibleSections = SECTIONS.filter((s) => !s.managerOnly || showManagerNav);
+  const activeSectionId =
+    visibleSections.find((s) => sectionItems(s, showManagerNav).some(itemActive))?.id ?? null;
+
+  // Single-open accordion: only the active route's section is open by default.
+  const [openSection, setOpenSection] = useState<string | null>(null);
+  const [userTouched, setUserTouched] = useState(false);
+  useEffect(() => {
+    if (!userTouched) setOpenSection(activeSectionId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSectionId]);
+  const toggleSection = (id: string) => {
+    setUserTouched(true);
+    setOpenSection((prev) => {
+      const next = prev === id ? null : id;
+      window.localStorage.setItem(OPEN_SECTION_KEY, next ?? "");
+      return next;
+    });
+  };
+
+  const [openParent, setOpenParent] = useState<string | null>(null);
   const badgeFor = (badge: NavLeaf["badge"]) => (badge === "open-tasks" ? openTasks : 0);
 
-  const railLink = (
-    label: string,
-    to: string,
-    search: Record<string, string> | undefined,
-    Icon: LucideIcon,
-    active: boolean,
-    count: number,
-  ) => (
-    <RailTooltip key={`${to}-${label}`} label={label}>
-      <Link
-        to={to}
-        search={search ?? {}}
-        onClick={onNavigate}
-        aria-label={label}
-        className={cn(
-          "relative flex size-10 items-center justify-center rounded-xl transition-colors",
-          active
-            ? "bg-brand-soft text-brand"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground",
-        )}
-      >
-        <Icon className="size-4" />
-        {count > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[0.6rem] font-semibold text-brand-foreground">
-            {count > 9 ? "9+" : count}
-          </span>
-        )}
-      </Link>
-    </RailTooltip>
-  );
-
-  const renderLeaf = (leaf: NavLeaf, nested = false) => {
+  const renderLeaf = (leaf: NavLeaf, depth: 1 | 2 = 1) => {
     const active = leafActive(leaf);
-    const count = badgeFor(leaf.badge);
-    const Icon = leaf.icon;
-    if (rail) {
-      if (!Icon) return null;
-      return railLink(leaf.label, leaf.to, leaf.search, Icon, active, count);
-    }
     return (
       <Link
         key={`${leaf.to}-${leaf.label}`}
@@ -294,187 +261,172 @@ function SidebarNav({
         search={leaf.search ?? {}}
         onClick={onNavigate}
         className={cn(
-          "flex items-center gap-2.5 rounded-lg py-2 text-sm transition-colors",
-          nested ? "pl-8 pr-3" : "px-3",
+          "flex items-center gap-2 rounded-lg py-1.5 pr-3 text-sm transition-colors",
+          depth === 1 ? "pl-6" : "pl-10",
           active
             ? "font-medium text-brand"
             : "text-muted-foreground hover:bg-muted hover:text-foreground",
         )}
       >
-        {Icon && <Icon className="size-4" />}
         <span className="flex-1 truncate">{leaf.label}</span>
-        <CountBadge count={count} />
+        <CountBadge count={badgeFor(leaf.badge)} />
       </Link>
     );
   };
 
-  const renderParent = (parent: NavParent) => {
-    const childActive = parent.children.some((child) => leafActive(child));
-    // Collapsed by default; a child route on this parent auto-expands it only.
-    const open = childActive || expanded[parent.label] === true;
-    const count = badgeFor(parent.badge);
-    if (rail) {
-      return (
-        <Popover key={parent.label}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              aria-label={`${parent.label} — expand for sub-items`}
-              title={`${parent.label} — expand for sub-items`}
-              className={cn(
-                "relative flex size-10 items-center justify-center rounded-xl transition-colors",
-                childActive
-                  ? "bg-brand-soft text-brand"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              <parent.icon className="size-4" />
-              {count > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[0.6rem] font-semibold text-brand-foreground">
-                  {count > 9 ? "9+" : count}
-                </span>
-              )}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent side="right" align="start" className="w-52 p-1.5">
-            <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {parent.label}
-            </p>
-            <div className="flex flex-col gap-0.5">
-              {parent.children.map((child) => (
-                <Link
-                  key={`${child.to}-${child.label}`}
-                  to={child.to}
-                  search={child.search ?? {}}
-                  onClick={onNavigate}
-                  className={cn(
-                    "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors",
-                    leafActive(child)
-                      ? "font-medium text-brand"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
-                >
-                  <span className="flex-1 truncate">{child.label}</span>
-                  <CountBadge count={badgeFor(child.badge)} />
-                </Link>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
-      );
-    }
+  const renderSubParent = (parent: NavParent) => {
+    const childActive = parent.children.some(leafActive);
+    const open = childActive || openParent === parent.label;
     return (
       <div key={parent.label} className="flex flex-col gap-0.5">
         <button
           type="button"
-          onClick={() => toggleParent(parent.label, open)}
           aria-expanded={open}
+          onClick={() => setOpenParent(open ? null : parent.label)}
           className={cn(
-            "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
+            "flex w-full items-center gap-2 rounded-lg py-1.5 pl-6 pr-3 text-sm transition-colors",
             childActive
               ? "font-medium text-brand"
               : "text-muted-foreground hover:bg-muted hover:text-foreground",
           )}
         >
-          <parent.icon className="size-4" />
           <span className="flex-1 truncate text-left">{parent.label}</span>
-          <CountBadge count={count} />
-          <ChevronDown className={cn("size-3.5 transition-transform", !open && "-rotate-90")} />
+          <CountBadge count={badgeFor(parent.badge)} />
+          <ChevronDown className={cn("size-3 transition-transform", !open && "-rotate-90")} />
         </button>
         {open && (
           <div className="flex flex-col gap-0.5">
-            {parent.children.map((c) => renderLeaf(c, true))}
+            {parent.children.map((c) => renderLeaf(c, 2))}
           </div>
         )}
       </div>
     );
   };
 
-  const renderSection = (section: NavSection, index: number) => {
-    if (section.managerOnly && !showManagerNav) return null;
-    return (
-      <div
-        key={section.header ?? `section-${index}`}
-        className={cn(
-          "flex flex-col gap-0.5",
-          section.header && !rail && "mt-4 first:mt-0",
-          rail && "items-center gap-1",
-        )}
-      >
-        {section.header && !rail && <SectionHeader>{section.header}</SectionHeader>}
-        {section.header && rail && <span className="my-1 h-px w-6 bg-border" />}
-        {section.items.map((item) =>
-          item.kind === "parent" ? renderParent(item) : renderLeaf(item),
-        )}
-      </div>
+  const renderItem = (item: NavItem) =>
+    item.kind === "parent" ? renderSubParent(item) : renderLeaf(item, 1);
+
+  const railFlyoutItems = (section: NavSection) =>
+    sectionItems(section, showManagerNav).flatMap((item) =>
+      item.kind === "leaf" ? [item] : item.children,
     );
-  };
 
-  return (
-    <nav className={cn("flex flex-col gap-0.5", rail && "items-center gap-1")}>
-      {SECTIONS.map(renderSection)}
-    </nav>
-  );
-}
-
-function AccountNav({
-  rail = false,
-  onNavigate,
-}: {
-  rail?: boolean;
-  onNavigate?: () => void;
-}) {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  return (
-    <nav className={cn("flex flex-col gap-0.5", rail ? "items-center gap-1" : "mt-4")}>
-      {rail ? (
-        <span className="my-1 h-px w-6 bg-border" />
-      ) : (
-        <SectionHeader>{ACCOUNT_SECTION.header}</SectionHeader>
-      )}
-      {ACCOUNT_SECTION.items.map((item) => {
-        if (item.kind !== "leaf") return null;
-        const Icon = item.icon!;
-        const active = pathname === item.to;
-        if (rail) {
-          return (
-            <RailTooltip key={item.to} label={item.label}>
-              <Link
-                to={item.to}
-                onClick={onNavigate}
-                aria-label={item.label}
+  if (rail) {
+    return (
+      <nav className="flex flex-col items-center gap-1">
+        <RailTooltip label="Dashboard">
+          <Link
+            to={DASHBOARD_LEAF.to}
+            onClick={onNavigate}
+            aria-label="Dashboard"
+            className={cn(
+              "flex size-10 items-center justify-center rounded-xl transition-colors",
+              pathname === DASHBOARD_LEAF.to
+                ? "bg-brand-soft text-brand"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            <LayoutDashboard className="size-4" />
+          </Link>
+        </RailTooltip>
+        {visibleSections.map((section) => (
+          <Popover key={section.id}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label={`${section.label} — expand for sub-items`}
+                title={`${section.label} — expand for sub-items`}
                 className={cn(
-                  "flex size-10 items-center justify-center rounded-xl transition-colors",
-                  active
+                  "relative flex size-10 items-center justify-center rounded-xl transition-colors",
+                  activeSectionId === section.id
                     ? "bg-brand-soft text-brand"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground",
                 )}
               >
-                <Icon className="size-4" />
-              </Link>
-            </RailTooltip>
-          );
-        }
+                <section.icon className="size-4" />
+                {section.id === "scan" && openTasks > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[0.6rem] font-semibold text-brand-foreground">
+                    {openTasks > 9 ? "9+" : openTasks}
+                  </span>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent side="right" align="start" className="w-52 p-1.5">
+              <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {section.label}
+              </p>
+              <div className="flex flex-col gap-0.5">
+                {railFlyoutItems(section).map((child) => (
+                  <Link
+                    key={`${child.to}-${child.label}`}
+                    to={child.to}
+                    search={child.search ?? {}}
+                    onClick={onNavigate}
+                    className={cn(
+                      "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors",
+                      leafActive(child)
+                        ? "font-medium text-brand"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    )}
+                  >
+                    <span className="flex-1 truncate">{child.label}</span>
+                    <CountBadge count={badgeFor(child.badge)} />
+                  </Link>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+        ))}
+      </nav>
+    );
+  }
+
+  return (
+    <nav className="flex flex-col gap-0.5">
+      <Link
+        to={DASHBOARD_LEAF.to}
+        onClick={onNavigate}
+        className={cn(
+          "flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm transition-colors",
+          pathname === DASHBOARD_LEAF.to
+            ? "font-medium text-brand"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+        )}
+      >
+        <LayoutDashboard className="size-4" />
+        <span className="flex-1 truncate">Dashboard</span>
+      </Link>
+      {visibleSections.map((section) => {
+        const open = openSection === section.id;
         return (
-          <Link
-            key={item.to}
-            to={item.to}
-            onClick={onNavigate}
-            className={cn(
-              "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
-              active
-                ? "font-medium text-brand"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+          <div key={section.id} className="flex flex-col gap-0.5">
+            <button
+              type="button"
+              aria-expanded={open}
+              onClick={() => toggleSection(section.id)}
+              className={cn(
+                "flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm transition-colors",
+                activeSectionId === section.id
+                  ? "font-medium text-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              <section.icon className="size-4" />
+              <span className="flex-1 truncate text-left">{section.label}</span>
+              <ChevronDown className={cn("size-3.5 transition-transform", !open && "-rotate-90")} />
+            </button>
+            {open && (
+              <div className="flex flex-col gap-0.5">
+                {sectionItems(section, showManagerNav).map(renderItem)}
+              </div>
             )}
-          >
-            <Icon className="size-4" />
-            <span className="flex-1">{item.label}</span>
-          </Link>
+          </div>
         );
       })}
     </nav>
   );
 }
+
 
 const SIDEBAR_STORAGE_KEY = "sidebar_collapsed";
 
@@ -645,7 +597,7 @@ export function AppShell({
           </Button>
         </div>
         {!sidebarCollapsed && workspaceSwitcher}
-        <div className="mt-5 flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="mt-5 flex min-h-0 flex-1 flex-col justify-start gap-1 overflow-hidden">
           <SidebarNav
             showManagerNav={showManagerNav}
             openTasks={pendingCount}
@@ -653,7 +605,7 @@ export function AppShell({
           />
         </div>
         <div className={cn("mt-auto shrink-0", sidebarCollapsed ? "pt-2" : "pt-2 pb-2")}>
-          <AccountNav rail={sidebarCollapsed} />
+
           <div className="pt-4">
           {sidebarCollapsed ? (
             <RailTooltip label="Manage plan">
@@ -710,9 +662,6 @@ export function AppShell({
                     openTasks={pendingCount}
                     onNavigate={() => setMenuOpen(false)}
                   />
-                  <div className="mt-4">
-                    <AccountNav onNavigate={() => setMenuOpen(false)} />
-                  </div>
                 </div>
                 <div className="shrink-0 border-t border-border px-4 py-4">
                   <Button asChild size="sm" variant="brand" className="w-full rounded-lg">
