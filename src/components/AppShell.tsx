@@ -37,7 +37,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { fetchProfile } from "@/lib/account";
 import { fetchMyPendingCount, isOrgManager } from "@/lib/assignments";
-import { listMemberships, setActiveOrgId } from "@/lib/db/context";
+import { getMembership, listMemberships, setActiveOrgId } from "@/lib/db/context";
 import {
   fetchInbox,
   markAllNotificationsRead,
