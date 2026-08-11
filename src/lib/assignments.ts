@@ -29,6 +29,7 @@ export type AssignableMember = {
 
 export type Assignment = {
   id: string;
+  org_id: string;
   store_id: string;
   store_name: string;
   scope_type: ScopeType;
@@ -43,7 +44,24 @@ export type Assignment = {
   assigner_name: string;
   expected_products: number;
   planogram_version_id: string | null;
+  /** Aisle / location label resolved from the scope or the planogram rows. */
+  location: string | null;
+  scan_id: string | null;
 };
+
+/** Planogram row shape sent to the vision backend. */
+export type PlanogramScopeItem = {
+  location: string;
+  aisle: string;
+  category: string;
+  sub_category: string;
+  brand: string;
+  product_name: string;
+  sku: string;
+  expected_qty: number;
+  match_key: string;
+};
+
 
 export const MANAGER_ROLES = ["owner", "admin", "manager"] as const;
 
