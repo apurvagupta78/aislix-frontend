@@ -27,6 +27,7 @@ import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as MyScansRouteImport } from './routes/my-scans'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as OrganizationRouteImport } from './routes/organization'
 import { Route as PlanogramManagementRouteImport } from './routes/planogram-management'
 import { Route as PlatformRouteImport } from './routes/platform'
@@ -142,6 +143,11 @@ const LogoutRoute = LogoutRouteImport.update({
 const MyScansRoute = MyScansRouteImport.update({
   id: '/my-scans',
   path: '/my-scans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OrganizationRoute = OrganizationRouteImport.update({
@@ -294,6 +300,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/my-scans': typeof MyScansRoute
+  '/onboarding': typeof OnboardingRoute
   '/organization': typeof OrganizationRoute
   '/planogram-management': typeof PlanogramManagementRoute
   '/platform': typeof PlatformRoute
@@ -340,6 +347,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/my-scans': typeof MyScansRoute
+  '/onboarding': typeof OnboardingRoute
   '/organization': typeof OrganizationRoute
   '/planogram-management': typeof PlanogramManagementRoute
   '/platform': typeof PlatformRoute
@@ -387,6 +395,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/my-scans': typeof MyScansRoute
+  '/onboarding': typeof OnboardingRoute
   '/organization': typeof OrganizationRoute
   '/planogram-management': typeof PlanogramManagementRoute
   '/platform': typeof PlatformRoute
@@ -435,6 +444,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/my-scans'
+    | '/onboarding'
     | '/organization'
     | '/planogram-management'
     | '/platform'
@@ -481,6 +491,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/my-scans'
+    | '/onboarding'
     | '/organization'
     | '/planogram-management'
     | '/platform'
@@ -527,6 +538,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/my-scans'
+    | '/onboarding'
     | '/organization'
     | '/planogram-management'
     | '/platform'
@@ -574,6 +586,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
   MyScansRoute: typeof MyScansRoute
+  OnboardingRoute: typeof OnboardingRoute
   OrganizationRoute: typeof OrganizationRoute
   PlanogramManagementRoute: typeof PlanogramManagementRoute
   PlatformRoute: typeof PlatformRoute
@@ -728,6 +741,13 @@ declare module '@tanstack/react-router' {
       path: '/my-scans'
       fullPath: '/my-scans'
       preLoaderRoute: typeof MyScansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/organization': {
@@ -934,6 +954,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
   MyScansRoute: MyScansRoute,
+  OnboardingRoute: OnboardingRoute,
   OrganizationRoute: OrganizationRoute,
   PlanogramManagementRoute: PlanogramManagementRoute,
   PlatformRoute: PlatformRoute,
