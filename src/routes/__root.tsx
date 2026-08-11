@@ -145,6 +145,16 @@ function RootComponent() {
           const path = window.location.pathname;
           if (path !== "/login" && path !== "/signup") return;
           try {
+            const { fetchOnboardingStatus } = await import("@/lib/onboarding");
+            const status = await fetchOnboardingStatus();
+            if (!status.completed) {
+              void router.navigate({ to: "/onboarding" });
+              return;
+            }
+          } catch {
+            // fall through to the normal landing logic
+          }
+          try {
             const { fetchMyPendingCount, isOrgManager } = await import("@/lib/assignments");
             const [manager, pending] = await Promise.all([
               isOrgManager(),
@@ -159,6 +169,7 @@ function RootComponent() {
           }
           void router.navigate({ to: "/dashboard" });
         });
+
       }
 
     });
