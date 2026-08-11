@@ -73,7 +73,10 @@ function MyScansPage() {
     mutationFn: (assignment: Assignment) => startAssignment(assignment.id),
     onSuccess: (_data, assignment) => {
       void queryClient.invalidateQueries({ queryKey: ["my-assignments"] });
-      void navigate({ to: "/scan", search: { assignment: assignment.id } });
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem("aislix.activeAssignment", assignment.id);
+      }
+      void navigate({ to: "/scan" });
     },
     onError: (error) => toast.error(toUserMessage(error)),
   });
