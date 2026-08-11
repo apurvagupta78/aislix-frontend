@@ -395,7 +395,11 @@ function SidebarNav({
     return (
       <div
         key={section.header ?? `section-${index}`}
-        className={cn("space-y-1", rail && "flex flex-col items-center gap-1 space-y-0")}
+        className={cn(
+          "flex flex-col gap-0.5",
+          section.header && !rail && "mt-4 first:mt-0",
+          rail && "items-center gap-1",
+        )}
       >
         {section.header && !rail && <SectionHeader>{section.header}</SectionHeader>}
         {section.header && rail && <span className="my-1 h-px w-6 bg-border" />}
@@ -407,7 +411,7 @@ function SidebarNav({
   };
 
   return (
-    <nav className={cn("space-y-1", rail && "flex flex-col items-center gap-1 space-y-0")}>
+    <nav className={cn("flex flex-col gap-0.5", rail && "items-center gap-1")}>
       {SECTIONS.map(renderSection)}
     </nav>
   );
