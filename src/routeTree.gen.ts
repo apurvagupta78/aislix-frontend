@@ -38,6 +38,7 @@ import { Route as ScanRouteImport } from './routes/scan'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as StoreMasterRouteImport } from './routes/store-master'
 import { Route as TeamRouteImport } from './routes/team'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as UploadRouteImport } from './routes/upload'
@@ -192,6 +193,11 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StoreMasterRoute = StoreMasterRouteImport.update({
+  id: '/store-master',
+  path: '/store-master',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TeamRoute = TeamRouteImport.update({
   id: '/team',
   path: '/team',
@@ -263,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/store-master': typeof StoreMasterRoute
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/upload': typeof UploadRoute
@@ -302,6 +309,7 @@ export interface FileRoutesByTo {
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/store-master': typeof StoreMasterRoute
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/upload': typeof UploadRoute
@@ -342,6 +350,7 @@ export interface FileRoutesById {
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/store-master': typeof StoreMasterRoute
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/upload': typeof UploadRoute
@@ -383,6 +392,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/settings'
     | '/signup'
+    | '/store-master'
     | '/team'
     | '/terms'
     | '/upload'
@@ -422,6 +432,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/settings'
     | '/signup'
+    | '/store-master'
     | '/team'
     | '/terms'
     | '/upload'
@@ -461,6 +472,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/settings'
     | '/signup'
+    | '/store-master'
     | '/team'
     | '/terms'
     | '/upload'
@@ -501,6 +513,7 @@ export interface RootRouteChildren {
   SecurityRoute: typeof SecurityRoute
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
+  StoreMasterRoute: typeof StoreMasterRoute
   TeamRoute: typeof TeamRoute
   TermsRoute: typeof TermsRoute
   UploadRoute: typeof UploadRoute
@@ -716,6 +729,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/store-master': {
+      id: '/store-master'
+      path: '/store-master'
+      fullPath: '/store-master'
+      preLoaderRoute: typeof StoreMasterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/team': {
       id: '/team'
       path: '/team'
@@ -805,6 +825,7 @@ const rootRouteChildren: RootRouteChildren = {
   SecurityRoute: SecurityRoute,
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
+  StoreMasterRoute: StoreMasterRoute,
   TeamRoute: TeamRoute,
   TermsRoute: TermsRoute,
   UploadRoute: UploadRoute,
@@ -817,13 +838,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
