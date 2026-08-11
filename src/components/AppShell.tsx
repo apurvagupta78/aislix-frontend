@@ -47,6 +47,8 @@ import {
 import { cn } from "@/lib/utils";
 
 import { fetchProfile } from "@/lib/account";
+import { fetchOnboardingStatus } from "@/lib/onboarding";
+
 import { fetchMyPendingCount, isOrgManager } from "@/lib/assignments";
 import { getMembership, listMemberships, setActiveOrgId } from "@/lib/db/context";
 import {
@@ -458,12 +460,25 @@ export function AppShell({
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useSidebarCollapsed();
+  // First-time setup gate: new users finish the wizard before using the app.
+  const onboardingQuery = useQuery({
+    queryKey: ["onboarding-status"],
+    queryFn: () => fetchOnboardingStatus(),
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
+  useEffect(() => {
+    if (onboardingQuery.data && !onboardingQuery.data.completed) {
+      void navigate({ to: "/onboarding" });
+    }
+  }, [onboardingQuery.data, navigate]);
   const profileQuery = useQuery({
     queryKey: ["profile"],
     queryFn: () => fetchProfile(),
     retry: false,
     staleTime: 60_000,
   });
+
   const managerQuery = useQuery({
     queryKey: ["is-org-manager"],
     queryFn: () => isOrgManager(),

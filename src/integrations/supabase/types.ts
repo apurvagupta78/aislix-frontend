@@ -774,6 +774,7 @@ export type Database = {
           job_title: string | null
           locale: string | null
           notification_prefs: Json
+          onboarding_completed_at: string | null
           phone: string | null
           timezone: string | null
           updated_at: string
@@ -787,6 +788,7 @@ export type Database = {
           job_title?: string | null
           locale?: string | null
           notification_prefs?: Json
+          onboarding_completed_at?: string | null
           phone?: string | null
           timezone?: string | null
           updated_at?: string
@@ -800,6 +802,7 @@ export type Database = {
           job_title?: string | null
           locale?: string | null
           notification_prefs?: Json
+          onboarding_completed_at?: string | null
           phone?: string | null
           timezone?: string | null
           updated_at?: string
