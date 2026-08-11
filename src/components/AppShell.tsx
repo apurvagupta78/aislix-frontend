@@ -304,32 +304,82 @@ function SidebarNav({
 
   const renderParent = (parent: NavParent) => {
     const childActive = parent.children.some((child) => leafActive(child));
-    const open = collapsed[parent.label] === undefined ? true : !collapsed[parent.label];
+    // Collapsed by default; a child route on this parent auto-expands it only.
+    const open = childActive || expanded[parent.label] === true;
     const count = badgeFor(parent.badge);
     if (rail) {
-      const first = parent.children[0];
-      if (!first) return null;
-      return railLink(parent.label, first.to, first.search, parent.icon, childActive, count);
+      return (
+        <Popover key={parent.label}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label={`${parent.label} — expand for sub-items`}
+              title={`${parent.label} — expand for sub-items`}
+              className={cn(
+                "relative flex size-10 items-center justify-center rounded-xl transition-colors",
+                childActive
+                  ? "bg-brand-soft text-brand"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              <parent.icon className="size-4" />
+              {count > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[0.6rem] font-semibold text-brand-foreground">
+                  {count > 9 ? "9+" : count}
+                </span>
+              )}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side="right" align="start" className="w-52 p-1.5">
+            <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {parent.label}
+            </p>
+            <div className="flex flex-col gap-0.5">
+              {parent.children.map((child) => (
+                <Link
+                  key={`${child.to}-${child.label}`}
+                  to={child.to}
+                  search={child.search ?? {}}
+                  onClick={onNavigate}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors",
+                    leafActive(child)
+                      ? "font-medium text-brand"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  <span className="flex-1 truncate">{child.label}</span>
+                  <CountBadge count={badgeFor(child.badge)} />
+                </Link>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+      );
     }
     return (
-      <div key={parent.label} className="space-y-1">
+      <div key={parent.label} className="flex flex-col gap-0.5">
         <button
           type="button"
-          onClick={() => setCollapsed((prev) => ({ ...prev, [parent.label]: open }))}
+          onClick={() => toggleParent(parent.label, open)}
           aria-expanded={open}
           className={cn(
-            "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors",
+            "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
             childActive
-              ? "bg-brand-soft font-medium text-brand"
+              ? "font-medium text-brand"
               : "text-muted-foreground hover:bg-muted hover:text-foreground",
           )}
         >
           <parent.icon className="size-4" />
-          <span className="flex-1 text-left truncate">{parent.label}</span>
+          <span className="flex-1 truncate text-left">{parent.label}</span>
           <CountBadge count={count} />
           <ChevronDown className={cn("size-3.5 transition-transform", !open && "-rotate-90")} />
         </button>
-        {open && <div className="space-y-1">{parent.children.map((c) => renderLeaf(c, true))}</div>}
+        {open && (
+          <div className="flex flex-col gap-0.5">
+            {parent.children.map((c) => renderLeaf(c, true))}
+          </div>
+        )}
       </div>
     );
   };
