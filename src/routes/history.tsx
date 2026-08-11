@@ -436,8 +436,12 @@ function HistoryPage() {
                       <TableHead className="text-right">Products</TableHead>
                       <TableHead>Location</TableHead>
                       <TableHead>Category</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Assignment</TableHead>
+                      <TableHead className="text-right">Compliance</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="w-10" />
+
                     </TableRow>
                   </TableHeader>
                   <TableBody>
