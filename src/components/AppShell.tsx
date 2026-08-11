@@ -544,13 +544,13 @@ export function AppShell({
     <div className="min-h-screen bg-surface">
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 hidden flex-col overflow-y-auto border-r border-border bg-card py-5 lg:flex",
+          "fixed inset-y-0 left-0 z-40 hidden h-full flex-col border-r border-border bg-card py-5 lg:flex",
           sidebarCollapsed ? "w-16 items-center px-2" : "w-64 px-4",
         )}
       >
         <div
           className={cn(
-            "flex items-center",
+            "flex shrink-0 items-center",
             sidebarCollapsed ? "flex-col gap-2" : "justify-between gap-2",
           )}
         >
@@ -570,15 +570,18 @@ export function AppShell({
           </Button>
         </div>
         {!sidebarCollapsed && workspaceSwitcher}
-        <div className="mt-5">
+        <div className="mt-5 flex min-h-0 flex-1 flex-col overflow-y-auto">
           <SidebarNav
             showManagerNav={showManagerNav}
             openTasks={pendingCount}
             rail={sidebarCollapsed}
           />
+          <div className="mt-4">
+            <AccountNav rail={sidebarCollapsed} />
+          </div>
         </div>
-        {sidebarCollapsed ? (
-          <div className="mt-6 flex flex-col items-center">
+        <div className={cn("mt-auto shrink-0", sidebarCollapsed ? "pt-4" : "pt-4 pb-2")}>
+          {sidebarCollapsed ? (
             <RailTooltip label="Manage plan">
               <Link
                 to="/billing"
@@ -588,20 +591,17 @@ export function AppShell({
                 <CreditCard className="size-4" />
               </Link>
             </RailTooltip>
-          </div>
-        ) : (
-          <div className="mt-6 rounded-2xl border border-border bg-brand-soft/60 p-4">
-            <p className="text-sm font-medium text-foreground">Need more scans?</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Review your plan, quota and invoices in billing.
-            </p>
-            <Button asChild size="sm" variant="brand" className="mt-3 w-full rounded-lg">
-              <Link to="/billing">Manage plan</Link>
-            </Button>
-          </div>
-        )}
-        <div className="mt-4 pb-2">
-          <AccountNav rail={sidebarCollapsed} />
+          ) : (
+            <div className="rounded-2xl border border-border bg-brand-soft/60 p-4">
+              <p className="text-sm font-medium text-foreground">Need more scans?</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Review your plan, quota and invoices in billing.
+              </p>
+              <Button asChild size="sm" variant="brand" className="mt-3 w-full rounded-lg">
+                <Link to="/billing">Manage plan</Link>
+              </Button>
+            </div>
+          )}
         </div>
       </aside>
 
@@ -622,28 +622,28 @@ export function AppShell({
               </SheetTrigger>
               <SheetContent
                 side="left"
-                className="flex w-[85vw] max-w-xs flex-col gap-0 overflow-y-auto bg-card p-0"
+                className="flex h-full w-[85vw] max-w-xs flex-col gap-0 overflow-hidden bg-card p-0"
               >
-                <div className="border-b border-border px-4 py-4">
+                <div className="shrink-0 border-b border-border px-4 py-4">
                   <Logo to="/dashboard" />
                   {workspaceSwitcher}
                 </div>
-                <div className="px-3 py-3">
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-3">
                   <SidebarNav
                     showManagerNav={showManagerNav}
                     openTasks={pendingCount}
                     onNavigate={() => setMenuOpen(false)}
                   />
+                  <div className="mt-4">
+                    <AccountNav onNavigate={() => setMenuOpen(false)} />
+                  </div>
                 </div>
-                <div className="px-4 pb-2">
+                <div className="shrink-0 border-t border-border px-4 py-4">
                   <Button asChild size="sm" variant="brand" className="w-full rounded-lg">
                     <Link to="/billing" onClick={() => setMenuOpen(false)}>
                       Manage plan
                     </Link>
                   </Button>
-                </div>
-                <div className="px-3 pb-6">
-                  <AccountNav onNavigate={() => setMenuOpen(false)} />
                 </div>
               </SheetContent>
             </Sheet>
