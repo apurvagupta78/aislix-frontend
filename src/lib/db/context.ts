@@ -48,32 +48,91 @@ export type Membership = {
   status: "active" | "invited" | "suspended";
 };
 
+const ACTIVE_ORG_KEY = "aislix.activeOrg";
+
+let membershipsCache: { userId: string; rows: Membership[] } | null = null;
 let membershipCache: { userId: string; membership: Membership } | null = null;
+
+function readStoredOrgId(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(ACTIVE_ORG_KEY);
+}
+
+function writeStoredOrgId(orgId: string): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(ACTIVE_ORG_KEY, orgId);
+}
+
+/** Every active membership of the signed-in user, oldest first. */
+export async function listMemberships(): Promise<Membership[]> {
+  const userId = await requireUserId();
+  if (membershipsCache?.userId === userId) return membershipsCache.rows;
+
+  const { data, error } = await supabase
+    .from("organization_members")
+    .select("id, org_id, user_id, role, status, organizations:org_id (name)")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .order("created_at", { ascending: true });
+  if (error) dbError(error, "Could not load your workspaces.");
+
+  const rows = (data ?? []).map((row) => ({
+    ...(row as unknown as Membership),
+    org_name:
+      (row as { organizations?: { name?: string | null } | null }).organizations?.name ??
+      "Workspace",
+  })) as Membership[];
+  membershipsCache = { userId, rows };
+  return rows;
+}
+
+/** Workspace the user has the most recent scan assignment in, if any. */
+async function orgWithLatestAssignment(userId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("scan_assignments")
+    .select("org_id, created_at")
+    .eq("assignee_id", userId)
+    .in("status", ["pending", "in_progress"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data?.org_id as string | undefined) ?? null;
+}
+
+/** Switch the active workspace for every org-scoped query. */
+export function setActiveOrgId(orgId: string): void {
+  writeStoredOrgId(orgId);
+  membershipCache = null;
+}
 
 /** Membership row of the signed-in user for their active organization. */
 export async function getMembership(): Promise<Membership | null> {
   const userId = await requireUserId();
   if (membershipCache?.userId === userId) return membershipCache.membership;
 
-  const { data, error } = await supabase
-    .from("organization_members")
-    .select("id, org_id, user_id, role, status")
-    .eq("user_id", userId)
-    .eq("status", "active")
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if (error) dbError(error, "Could not load your workspace.");
-  if (!data) return null;
+  const rows = await listMemberships();
+  if (!rows.length) return null;
 
-  const membership = data as Membership;
+  const stored = readStoredOrgId();
+  let membership = stored ? rows.find((row) => row.org_id === stored) : undefined;
+
+  if (!membership && rows.length > 1) {
+    // Multi-org users default to the workspace that actually has work waiting.
+    const preferred = await orgWithLatestAssignment(userId);
+    membership = rows.find((row) => row.org_id === preferred);
+  }
+  membership = membership ?? rows[0];
+
+  writeStoredOrgId(membership.org_id);
   membershipCache = { userId, membership };
   return membership;
 }
 
 export function clearContextCache(): void {
   membershipCache = null;
+  membershipsCache = null;
 }
+
 
 /** Active organization id, throwing when the user has no workspace yet. */
 export async function requireOrgId(): Promise<string> {
