@@ -47,6 +47,21 @@ export type Assignment = {
   /** Aisle / location label resolved from the scope or the planogram rows. */
   location: string | null;
   scan_id: string | null;
+  /** Planogram compliance for the completed scan, when available. */
+  compliance_percent: number | null;
+};
+
+/** Row of the manager "Team Scans" table. */
+export type TeamScan = {
+  scan_id: string;
+  created_at: string;
+  assignee_name: string;
+  store_name: string;
+  location: string | null;
+  compliance_percent: number | null;
+  missing: number | null;
+  wrong_product: number | null;
+  unexpected: number | null;
 };
 
 /** Planogram row shape sent to the vision backend. */
@@ -260,8 +275,27 @@ async function fetchNames(ids: string[]): Promise<Map<string, string>> {
   return map;
 }
 
+/** Compliance percentages keyed by scan id, for completed assignment scans. */
+async function fetchCompliance(scanIds: string[]): Promise<Map<string, number | null>> {
+  const unique = [...new Set(scanIds.filter(Boolean))];
+  const map = new Map<string, number | null>();
+  if (!unique.length) return map;
+  const { data } = await supabase
+    .from("planogram_comparisons")
+    .select("scan_id, compliance_percent, created_at")
+    .in("scan_id", unique)
+    .order("created_at", { ascending: true });
+  for (const row of data ?? []) {
+    const scanId = row.scan_id as string | null;
+    if (!scanId) continue;
+    map.set(scanId, row.compliance_percent === null ? null : Number(row.compliance_percent));
+  }
+  return map;
+}
+
 async function mapAssignments(rows: AssignmentRow[]): Promise<Assignment[]> {
   const names = await fetchNames(rows.flatMap((row) => [row.assignee_id, row.assigner_id]));
+  const compliance = await fetchCompliance(rows.map((row) => row.scan_id ?? ""));
   return Promise.all(
     rows.map(async (row) => {
       const scopeType = (row.scope_type as ScopeType) ?? "category";
@@ -284,6 +318,7 @@ async function mapAssignments(rows: AssignmentRow[]): Promise<Assignment[]> {
         assigner_name: names.get(row.assigner_id) ?? "Team member",
         planogram_version_id: row.planogram_version_id,
         scan_id: row.scan_id ?? null,
+        compliance_percent: row.scan_id ? compliance.get(row.scan_id) ?? null : null,
         location: meta.location,
         expected_products: meta.count,
       };
@@ -365,4 +400,90 @@ export async function fetchMyPendingCount(): Promise<number> {
     .in("status", ["pending", "in_progress"]);
   if (error) return 0;
   return count ?? 0;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Manager: team scans                                                        */
+/* -------------------------------------------------------------------------- */
+
+const num = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value)))
+    return Number(value);
+  return null;
+};
+
+/** Every scan in the org that was launched from an assignment. */
+export async function fetchTeamScans(): Promise<TeamScan[]> {
+  const orgId = await requireOrgId();
+
+  const { data, error } = await supabase
+    .from("shelf_scans")
+    .select("id, created_at, created_by, store_id, assignment_id, stores:store_id (name)")
+    .eq("org_id", orgId)
+    .not("assignment_id", "is", null)
+    .order("created_at", { ascending: false });
+  if (error) dbError(error, "Could not load team scans.");
+
+  const rows = (data ?? []) as unknown as {
+    id: string;
+    created_at: string;
+    created_by: string | null;
+    assignment_id: string | null;
+    stores?: { name?: string | null } | null;
+  }[];
+  if (!rows.length) return [];
+
+  const [names, { data: comparisons }, { data: assignments }] = await Promise.all([
+    fetchNames(rows.map((row) => row.created_by ?? "")),
+    supabase
+      .from("planogram_comparisons")
+      .select("scan_id, compliance_percent, summary, created_at")
+      .in("scan_id", rows.map((row) => row.id))
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("scan_assignments")
+      .select("id, scope_values")
+      .in("id", rows.map((row) => row.assignment_id).filter(Boolean) as string[]),
+  ]);
+
+  const byScan = new Map<string, { percent: number | null; summary: Record<string, unknown> }>();
+  for (const row of comparisons ?? []) {
+    const scanId = row.scan_id as string | null;
+    if (!scanId) continue;
+    byScan.set(scanId, {
+      percent: num(row.compliance_percent),
+      summary: (row.summary ?? {}) as Record<string, unknown>,
+    });
+  }
+
+  const locations = new Map<string, string | null>();
+  for (const row of assignments ?? []) {
+    const values = (row.scope_values ?? {}) as ScopeValues;
+    locations.set(row.id as string, values.location?.trim() || null);
+  }
+
+  const pick = (summary: Record<string, unknown>, keys: string[]) => {
+    for (const key of keys) {
+      const value = num(summary[key]);
+      if (value !== null) return value;
+    }
+    return null;
+  };
+
+  return rows.map((row) => {
+    const comparison = byScan.get(row.id);
+    const summary = comparison?.summary ?? {};
+    return {
+      scan_id: row.id,
+      created_at: row.created_at,
+      assignee_name: names.get(row.created_by ?? "") ?? "Team member",
+      store_name: row.stores?.name ?? "Store",
+      location: row.assignment_id ? locations.get(row.assignment_id) ?? null : null,
+      compliance_percent: comparison?.percent ?? null,
+      missing: pick(summary, ["missing_products", "missing"]),
+      wrong_product: pick(summary, ["wrong_products", "wrong_product"]),
+      unexpected: pick(summary, ["unexpected_products", "unexpected"]),
+    };
+  });
 }

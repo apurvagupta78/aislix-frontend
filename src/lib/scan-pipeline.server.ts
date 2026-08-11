@@ -1149,6 +1149,68 @@ function severityFor(issueType: string, raw: unknown): string {
   return "low";
 }
 
+/** Tells the manager who raised the assignment that the audit is done. */
+async function notifyAssignerOfCompletion(
+  supabase: DB,
+  scan: ScanRow,
+  compliance: number | null,
+): Promise<void> {
+  try {
+    if (!scan.assignment_id) return;
+    const { data: assignment } = await supabase
+      .from("scan_assignments")
+      .select("id, assigner_id, assignee_id, store_id, scope_values")
+      .eq("id", scan.assignment_id)
+      .maybeSingle();
+    if (!assignment?.assigner_id) return;
+    const assignerId = assignment.assigner_id as string;
+    const assigneeId = (assignment.assignee_id as string | null) ?? null;
+    if (assigneeId && assignerId === assigneeId) return;
+
+    const [{ data: profile }, { data: store }] = await Promise.all([
+      assigneeId
+        ? supabase.from("profiles").select("full_name, email").eq("id", assigneeId).maybeSingle()
+        : Promise.resolve({ data: null }),
+      assignment.store_id
+        ? supabase
+            .from("stores")
+            .select("name")
+            .eq("id", assignment.store_id as string)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+
+    const assigneeName =
+      ((profile as { full_name?: string | null; email?: string | null } | null)?.full_name ?? "")
+        .trim() ||
+      (profile as { email?: string | null } | null)?.email ||
+      "A team member";
+    const storeName = (store as { name?: string | null } | null)?.name ?? "the store";
+    const scopeValues = (assignment.scope_values ?? {}) as Record<string, unknown>;
+    const location =
+      str(scopeValues["location"]) ??
+      str(scopeValues["sub_category"]) ??
+      str(scopeValues["category"]) ??
+      "assigned shelf";
+    const percentLabel = compliance === null ? "—" : `${Math.round(compliance)}`;
+
+    await supabase.from("notifications").insert({
+      user_id: assignerId,
+      org_id: scan.org_id,
+      type: "scan_completed",
+      title: "Assigned scan completed",
+      body: `${assigneeName} completed audit at ${storeName} · ${location} — ${percentLabel}% compliance`,
+      payload: {
+        assignment_id: scan.assignment_id,
+        scan_id: scan.id,
+        compliance_percent: compliance,
+      },
+    } as never);
+  } catch (error) {
+    console.error("[pipeline] assigner notification failed", error);
+  }
+}
+
 /**
  * Writes planogram_comparisons + lines + corrective actions for assignment
  * scans and closes the assignment. Returns the compliance percentage.
@@ -1251,6 +1313,8 @@ async function persistPlanogramCompliance(
     .eq("type", "scan_assigned")
     .is("read_at", null)
     .contains("payload", { assignment_id: scan.assignment_id });
+
+  await notifyAssignerOfCompletion(supabase, scan, compliance);
 
   return compliance;
 }
