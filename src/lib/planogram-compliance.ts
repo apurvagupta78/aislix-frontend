@@ -108,12 +108,48 @@ export async function fetchPlanogramComparison(
   };
 }
 
+/**
+ * The vision backend sends `expected_products` / `products_found` style keys,
+ * while earlier payloads used short names. Normalise both shapes so the summary
+ * tiles never render "—" when the data exists.
+ */
+export const SUMMARY_TILES: { key: string; label: string; aliases: string[] }[] = [
+  { key: "expected", label: "Expected", aliases: ["expected_products", "expected"] },
+  { key: "found", label: "Found", aliases: ["products_found", "found_products", "found"] },
+  { key: "missing", label: "Missing", aliases: ["missing_products", "missing"] },
+  { key: "qty_issues", label: "Qty issues", aliases: ["quantity_issues", "qty_issues"] },
+  { key: "wrong_product", label: "Wrong product", aliases: ["wrong_products", "wrong_product"] },
+  { key: "wrong_category", label: "Wrong category", aliases: ["wrong_category", "wrong_categories"] },
+  { key: "unexpected", label: "Unexpected", aliases: ["unexpected_products", "unexpected"] },
+];
+
+function readCount(summary: Record<string, unknown>, aliases: string[]): number | null {
+  for (const alias of aliases) {
+    const raw = summary[alias];
+    if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+    if (typeof raw === "string" && raw.trim() !== "" && Number.isFinite(Number(raw)))
+      return Number(raw);
+  }
+  return null;
+}
+
+/** Normalised summary counts keyed by tile key. */
+export function summaryCounts(
+  summary: PlanogramComparison["summary"] | null | undefined,
+): Record<string, number | null> {
+  const source = (summary ?? {}) as Record<string, unknown>;
+  const out: Record<string, number | null> = {};
+  for (const tile of SUMMARY_TILES) out[tile.key] = readCount(source, tile.aliases);
+  return out;
+}
+
 export function complianceTone(value: number | null | undefined): string {
   if (value === null || value === undefined) return "text-muted-foreground";
   if (value >= 90) return "text-success";
   if (value >= 70) return "text-warning";
   return "text-destructive";
 }
+
 
 export function issueLabel(issueType: string): string {
   const map: Record<string, string> = {
