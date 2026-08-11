@@ -78,7 +78,7 @@ function scopeLine(row: Assignment): string {
   return parts.join(" · ");
 }
 
-function AssignmentsTab() {
+function AssignmentsTab({ storeId }: { storeId?: string }) {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
@@ -106,6 +106,7 @@ function AssignmentsTab() {
 
   const term = search.trim().toLowerCase();
   const rows = (query.data ?? []).filter((row) => {
+    if (storeId && row.store_id !== storeId) return false;
     if (status === "overdue" && !isOverdue(row)) return false;
     if (status !== "all" && status !== "overdue" && row.status !== status) return false;
     if (!term) return true;
@@ -388,7 +389,7 @@ function AssignedScansPage() {
               Team Scans
             </TabsTrigger>
           </TabsList>
-          {tab === "assignments" ? <AssignmentsTab /> : <TeamScansTab />}
+          {tab === "assignments" ? <AssignmentsTab storeId={storeSearch} /> : <TeamScansTab />}
         </Tabs>
       )}
     </AppShell>
