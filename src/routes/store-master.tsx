@@ -235,12 +235,28 @@ function StoreMasterPage() {
       title="Store Master"
       description="Define the expected shelf data for each store — the source of truth for Expected vs Actual audits."
       actions={
-        <Button variant="brand" className="rounded-xl" asChild>
-          <Link to="/assign-scan">
+        snapshot?.active && storeId ? (
+          <Button variant="brand" className="rounded-xl" asChild>
+            <Link to="/assign-scan" search={{ store: storeId }}>
+              <UserPlus className="mr-2 size-4" /> Assign scan
+            </Link>
+          </Button>
+        ) : (
+          <Button
+            variant="brand"
+            className="rounded-xl"
+            disabled
+            title={
+              storeId
+                ? "Activate a planogram for this store to assign a scan."
+                : "Select a store with an active planogram to assign a scan."
+            }
+          >
             <UserPlus className="mr-2 size-4" /> Assign scan
-          </Link>
-        </Button>
+          </Button>
+        )
       }
+
     >
       <div className="space-y-6">
         {/* Step 1 — store */}
