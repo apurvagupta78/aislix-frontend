@@ -932,13 +932,24 @@ type ScanRow = {
   sub_category_label: string | null;
   sub_category_custom: string | null;
   notes: string | null;
+  assignment_id: string | null;
+};
+
+type AssignmentContext = {
+  id: string;
+  store_id: string;
+  scope_type: string;
+  scope_values: Record<string, unknown>;
+  planogram_version_id: string | null;
+  items: Record<string, unknown>[];
+  items_full: Record<string, unknown>[];
 };
 
 async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
   const { data: scan, error } = await supabase
     .from("shelf_scans")
     .select(
-      "id, org_id, store_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, notes",
+      "id, org_id, store_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, notes, assignment_id",
     )
     .eq("id", scanId)
     .maybeSingle();
@@ -954,6 +965,95 @@ async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
     sub_category_label: (scan.sub_category_label as string | null) ?? null,
     sub_category_custom: (scan.sub_category_custom as string | null) ?? null,
     notes: (scan.notes as string | null) ?? null,
+    assignment_id: (scan.assignment_id as string | null) ?? null,
+  };
+}
+
+const PLANOGRAM_FIELDS =
+  "id, location, aisle, category, sub_category, brand, product_name, sku, expected_qty, match_key";
+
+function planogramShape(row: Record<string, unknown>) {
+  const s = (value: unknown) => (typeof value === "string" ? value : "");
+  return {
+    location: s(row["location"]),
+    aisle: s(row["aisle"]) || s(row["location"]),
+    category: s(row["category"]),
+    sub_category: s(row["sub_category"]),
+    brand: s(row["brand"]),
+    product_name: s(row["product_name"]),
+    sku: s(row["sku"]),
+    expected_qty: Number(row["expected_qty"]) || 0,
+    match_key: s(row["match_key"]),
+    planogram_item_id: s(row["id"]),
+  };
+}
+
+function sameText(a: unknown, b: unknown): boolean {
+  return (
+    typeof a === "string" &&
+    typeof b === "string" &&
+    a.trim().toLowerCase() === b.trim().toLowerCase()
+  );
+}
+
+/** Assignment + scoped planogram rows for scans launched from /my-scans. */
+async function loadAssignmentContext(
+  supabase: DB,
+  scan: ScanRow,
+): Promise<AssignmentContext | null> {
+  if (!scan.assignment_id) return null;
+  const { data: assignment } = await supabase
+    .from("scan_assignments")
+    .select("id, store_id, scope_type, scope_values, planogram_version_id")
+    .eq("id", scan.assignment_id)
+    .maybeSingle();
+  if (!assignment) return null;
+
+  let versionId = (assignment.planogram_version_id as string | null) ?? null;
+  if (!versionId) {
+    const { data: version } = await supabase
+      .from("planogram_versions")
+      .select("id")
+      .eq("org_id", scan.org_id)
+      .eq("store_id", assignment.store_id as string)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    versionId = (version?.id as string | null) ?? null;
+  }
+
+  let itemsFull: Record<string, unknown>[] = [];
+  if (versionId) {
+    const { data: rows } = await supabase
+      .from("planogram_items")
+      .select(PLANOGRAM_FIELDS)
+      .eq("version_id", versionId);
+    itemsFull = ((rows ?? []) as Record<string, unknown>[]).map(planogramShape);
+  }
+
+  const scopeType = String(assignment.scope_type ?? "category");
+  const scopeValues = (assignment.scope_values ?? {}) as Record<string, unknown>;
+  const items = itemsFull.filter((item) => {
+    if (scopeType === "location")
+      return sameText(item["location"], scopeValues["location"]) ||
+        sameText(item["aisle"], scopeValues["location"]);
+    if (scopeType === "sub_category")
+      return (
+        sameText(item["category"], scopeValues["category"]) &&
+        sameText(item["sub_category"], scopeValues["sub_category"])
+      );
+    return sameText(item["category"], scopeValues["category"]);
+  });
+
+  return {
+    id: assignment.id as string,
+    store_id: assignment.store_id as string,
+    scope_type: scopeType,
+    scope_values: scopeValues,
+    planogram_version_id: versionId,
+    items,
+    items_full: itemsFull,
   };
 }
 
@@ -987,7 +1087,7 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
   }
 
   const learnedCatalog = await loadLearnedCatalog(supabase, scan.org_id);
-
+  const assignment = await loadAssignmentContext(supabase, scan);
 
   return {
     scan_id: scan.id,
@@ -1004,6 +1104,17 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
     images: signedImages,
     learned_catalog: learnedCatalog,
     requested_at: startedAt,
+    ...(assignment
+      ? {
+          location: assignment.scope_values["location"] ?? assignment.items[0]?.["location"] ?? null,
+          assignment_id: assignment.id,
+          assignment_scope_type: assignment.scope_type,
+          assignment_scope_values: assignment.scope_values,
+          planogram_version_id: assignment.planogram_version_id,
+          planogram_items: assignment.items,
+          planogram_items_full: assignment.items_full,
+        }
+      : {}),
   };
 }
 
