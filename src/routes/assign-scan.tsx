@@ -117,14 +117,27 @@ function AssignScanPage() {
     onError: (error) => toast.error(toUserMessage(error)),
   });
 
-  function submit() {
-    if (!storeId) return toast.error("Select a store first.");
-    if (!assigneeId) return toast.error("Select a team member to assign to.");
-    if (scopeType === "location" && !location.trim())
-      return toast.error("Enter the location or shelf label.");
-    if (scopeType !== "location" && !category) return toast.error("Select a category.");
-    if (scopeType === "sub_category" && !subCategory)
-      return toast.error("Select a sub-category.");
+  function submit(): void {
+    if (!storeId) {
+      toast.error("Select a store first.");
+      return;
+    }
+    if (!assigneeId) {
+      toast.error("Select a team member to assign to.");
+      return;
+    }
+    if (scopeType === "location" && !location.trim()) {
+      toast.error("Enter the location or shelf label.");
+      return;
+    }
+    if (scopeType !== "location" && !category) {
+      toast.error("Select a category.");
+      return;
+    }
+    if (scopeType === "sub_category" && !subCategory) {
+      toast.error("Select a sub-category.");
+      return;
+    }
     assignMutation.mutate();
   }
 
