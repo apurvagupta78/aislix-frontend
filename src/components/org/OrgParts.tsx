@@ -681,6 +681,52 @@ export function StoreFormDialog({
             />
           </div>
 
+          {!store && (
+            <div className="space-y-2 rounded-2xl border border-border bg-surface p-4 sm:col-span-2">
+              <div className="flex items-center gap-2">
+                <Users className="size-4 text-brand" />
+                <p className="text-sm font-medium">Team access</p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Members you select can scan and report on this store. Owners, admins and managers
+                already have access to every store.
+              </p>
+              {membersQuery.isPending ? (
+                <Skeleton className="h-5 w-48" />
+              ) : members.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No team members yet —{" "}
+                  <Link to="/team" className="text-brand hover:underline">
+                    invite your team
+                  </Link>
+                  .
+                </p>
+              ) : (
+                <ul className="mt-1 grid gap-2 sm:grid-cols-2">
+                  {members.map((member) => (
+                    <li key={member.user_id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`store-team-${member.user_id}`}
+                        checked={teamIds.includes(member.user_id)}
+                        onCheckedChange={() => toggleMember(member.user_id)}
+                      />
+                      <Label
+                        htmlFor={`store-team-${member.user_id}`}
+                        className="min-w-0 truncate text-sm font-normal"
+                      >
+                        {member.name}
+                        <span className="ml-1.5 text-xs text-muted-foreground">
+                          {member.role.replace("_", " ")}
+                        </span>
+                      </Label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+
           <DialogFooter className="sm:col-span-2">
             <Button
               type="button"
