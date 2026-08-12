@@ -273,6 +273,20 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   // POST /scan payload so every inventory row carries the real status instead of
   // silently defaulting to "OK".
   const rawPayload = (result?.raw_payload ?? null) as any;
+  // Always show the backend-rendered annotated image: stored signed URL first,
+  // falling back to the base64 JPEG returned by the vision service.
+  const annotatedBase64 =
+    typeof rawPayload?.annotated_image_base64 === "string" && rawPayload.annotated_image_base64
+      ? (rawPayload.annotated_image_base64 as string)
+      : undefined;
+  const annotatedImageSrc =
+    annotatedUrl ??
+    (annotatedBase64
+      ? annotatedBase64.startsWith("data:")
+        ? annotatedBase64
+        : `data:image/jpeg;base64,${annotatedBase64}`
+      : undefined);
+
   const rawRows: any[] = [
     ...(Array.isArray(rawPayload?.inventory) ? rawPayload.inventory : []),
     ...(Array.isArray(rawPayload?.products) ? rawPayload.products : []),
