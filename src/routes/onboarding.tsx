@@ -67,19 +67,35 @@ function OnboardingPage() {
   const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
 
+  // Gate first: only a signed-in, email-verified user may see the wizard.
+  const gateQuery = useQuery({
+    queryKey: ["onboarding-gate"],
+    queryFn: async () => {
+      const user = await fetchAuthUser();
+      return { signedIn: Boolean(user), verified: isEmailVerified(user) };
+    },
+    retry: false,
+    staleTime: 0,
+  });
+  const allowed = gateQuery.data?.signedIn === true && gateQuery.data.verified === true;
+
+  useEffect(() => {
+    if (!gateQuery.data) return;
+    if (!gateQuery.data.signedIn) {
+      void navigate({ to: "/login", replace: true });
+      return;
+    }
+    if (!gateQuery.data.verified) void navigate({ to: "/verify-email", replace: true });
+  }, [gateQuery.data, navigate]);
+
   const statusQuery = useQuery({
     queryKey: ["onboarding-status"],
     queryFn: () => fetchOnboardingStatus(),
     retry: false,
     staleTime: 0,
+    enabled: allowed,
   });
 
-  // Unverified sessions verify their email before setting up the workspace.
-  useEffect(() => {
-    void fetchAuthUser().then((user) => {
-      if (user && !isEmailVerified(user)) void navigate({ to: "/verify-email", replace: true });
-    });
-  }, [navigate]);
 
   // Already done (or signed out): the wizard must never block the app.
   useEffect(() => {
