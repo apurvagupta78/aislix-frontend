@@ -253,11 +253,15 @@ export async function fetchOrganization(_signal?: AbortSignal): Promise<Organiza
 
   const { data: org, error: orgError } = await supabase
     .from("organizations")
-    .select("id, name, logo_url, gstin")
+    .select("id, name, logo_url")
     .eq("id", orgId)
     .maybeSingle();
   if (orgError) dbError(orgError, "Could not load your organization.");
   if (!org) notFound("Organization not found.");
+
+  const { data: billing } = await supabase.rpc("get_org_billing_profile", { p_org_id: orgId });
+  const gstin = (Array.isArray(billing) ? billing[0]?.gstin : null) ?? null;
+
 
   const [{ count: totalStores }, { count: activeStores }, { count: archivedStores }] =
     await Promise.all([
@@ -313,7 +317,8 @@ export async function fetchOrganization(_signal?: AbortSignal): Promise<Organiza
           ? null
           : undefined,
     billing_period_end: subscription?.current_period_end ?? null,
-    gst_number: org.gstin ?? null,
+    // Owner/admin only — ordinary members cannot read tax details.
+    gst_number: gstin,
   });
 }
 

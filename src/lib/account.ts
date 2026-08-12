@@ -188,23 +188,31 @@ function formatAddress(address: Record<string, unknown> | null | undefined): str
     .join(", ");
 }
 
-/** The active organization's settings. */
+/**
+ * The active organization's settings.
+ *
+ * Tax/billing fields are not readable from the table by ordinary members; they
+ * come from the owner/admin-only `get_org_billing_profile` RPC.
+ */
 export async function fetchCompany(signal?: AbortSignal): Promise<CompanySettings> {
   void signal;
   const orgId = await requireOrgId();
-  const { data, error } = await supabase
+  const { data: base, error } = await supabase
     .from("organizations")
-    .select("id, name, logo_url, gstin, address")
+    .select("id, name, logo_url, address")
     .eq("id", orgId)
     .maybeSingle();
   if (error) dbError(error, "Could not load company settings.");
 
+  const { data: billing } = await supabase.rpc("get_org_billing_profile", { p_org_id: orgId });
+  const billingRow = Array.isArray(billing) ? billing[0] : null;
+
   return {
-    id: data?.id,
-    company_name: data?.name ?? "",
-    logo_url: await resolveLogoUrl(data as { logo_url?: string | null } | null),
-    gst_number: data?.gstin ?? "",
-    address: formatAddress(data?.address as Record<string, unknown> | null),
+    id: base?.id,
+    company_name: base?.name ?? "",
+    logo_url: await resolveLogoUrl(base as { logo_url?: string | null } | null),
+    gst_number: billingRow?.gstin ?? "",
+    address: formatAddress(base?.address as Record<string, unknown> | null),
     currency: "INR",
     date_format: "DD/MM/YYYY",
     language: "English",
