@@ -253,7 +253,7 @@ export async function fetchOrganization(_signal?: AbortSignal): Promise<Organiza
 
   const { data: org, error: orgError } = await supabase
     .from("organizations")
-    .select("id, name, logo_url, gstin")
+    .select("id, name, logo_url")
     .eq("id", orgId)
     .maybeSingle();
   if (orgError) dbError(orgError, "Could not load your organization.");
