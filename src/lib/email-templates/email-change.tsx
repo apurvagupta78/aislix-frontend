@@ -6,18 +6,17 @@ import {
   Container,
   Head,
   Heading,
+  Hr,
   Html,
   Link,
   Preview,
+  Section,
   Text,
 } from '@react-email/components'
+import { brand, button, container, heading, hr, link, main, muted, text } from './auth-styles'
 
 interface EmailChangeEmailProps {
   siteName: string
-  // oldEmail is the user's current address (HookData.OldEmail). For the
-  // NEW-recipient half of a secure email_change fanout, `email` equals the
-  // recipient (NEW), so the "from" line must render oldEmail to read
-  // "from OLD to NEW" instead of "from NEW to NEW".
   oldEmail: string
   email: string
   newEmail: string
@@ -32,59 +31,35 @@ export const EmailChangeEmail = ({
 }: EmailChangeEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Confirm your email change for {siteName}</Preview>
+    <Preview>{`Confirm your new ${siteName} email address`}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm your email change</Heading>
+        <Text style={brand}>Aislix</Text>
+        <Heading style={heading}>Confirm your new email</Heading>
         <Text style={text}>
-          You requested to change your email address for {siteName} from{' '}
-          <Link href={`mailto:${oldEmail}`} style={link}>
-            {oldEmail}
-          </Link>{' '}
-          to{' '}
-          <Link href={`mailto:${newEmail}`} style={link}>
-            {newEmail}
+          You asked to change the email on your {siteName} account from{' '}
+          <strong>{oldEmail}</strong> to <strong>{newEmail}</strong>. Confirm the change below.
+        </Text>
+        <Section style={{ margin: '0 0 28px' }}>
+          <Button style={button} href={confirmationUrl}>
+            Confirm change
+          </Button>
+        </Section>
+        <Text style={muted}>
+          If the button does not work, copy this link into your browser:
+          <br />
+          <Link href={confirmationUrl} style={link}>
+            {confirmationUrl}
           </Link>
-          .
         </Text>
-        <Text style={text}>
-          Click the button below to confirm this change:
+        <Hr style={hr} />
+        <Text style={muted}>
+          Didn't request this change? Ignore this email and your address stays the same.
         </Text>
-        <Button style={button} href={confirmationUrl}>
-          Confirm Email Change
-        </Button>
-        <Text style={footer}>
-          If you didn't request this change, please secure your account
-          immediately.
-        </Text>
+        <Text style={muted}>Aislix · AI retail shelf intelligence</Text>
       </Container>
     </Body>
   </Html>
 )
 
 export default EmailChangeEmail
-
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const link = { color: 'inherit', textDecoration: 'underline' }
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }

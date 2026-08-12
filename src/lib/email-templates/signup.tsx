@@ -6,11 +6,14 @@ import {
   Container,
   Head,
   Heading,
+  Hr,
   Html,
   Link,
   Preview,
+  Section,
   Text,
 } from '@react-email/components'
+import { brand, button, container, heading, hr, link, main, muted, text } from './auth-styles'
 
 interface SignupEmailProps {
   siteName: string
@@ -27,58 +30,39 @@ export const SignupEmail = ({
 }: SignupEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Confirm your email for {siteName}</Preview>
+    <Preview>{`Confirm your email to activate your ${siteName} workspace`}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm your email</Heading>
+        <Text style={brand}>Aislix</Text>
+        <Heading style={heading}>Confirm your email</Heading>
         <Text style={text}>
-          Thanks for signing up for{' '}
+          Welcome to{' '}
           <Link href={siteUrl} style={link}>
-            <strong>{siteName}</strong>
+            {siteName}
           </Link>
-          !
+          . Confirm <strong>{recipient}</strong> to activate your workspace and start running AI
+          shelf audits.
         </Text>
-        <Text style={text}>
-          Please confirm your email address (
-          <Link href={`mailto:${recipient}`} style={link}>
-            {recipient}
+        <Section style={{ margin: '0 0 28px' }}>
+          <Button style={button} href={confirmationUrl}>
+            Verify email
+          </Button>
+        </Section>
+        <Text style={muted}>
+          If the button does not work, copy this link into your browser:
+          <br />
+          <Link href={confirmationUrl} style={link}>
+            {confirmationUrl}
           </Link>
-          ) by clicking the button below:
         </Text>
-        <Button style={button} href={confirmationUrl}>
-          Verify Email
-        </Button>
-        <Text style={footer}>
-          If you didn't create an account, you can safely ignore this email.
+        <Hr style={hr} />
+        <Text style={muted}>
+          Didn't create an account? You can safely ignore this email.
         </Text>
+        <Text style={muted}>Aislix · AI retail shelf intelligence</Text>
       </Container>
     </Body>
   </Html>
 )
 
 export default SignupEmail
-
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const link = { color: 'inherit', textDecoration: 'underline' }
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }

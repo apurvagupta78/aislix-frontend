@@ -9,7 +9,7 @@ import { EmailChangeEmail } from '@/lib/email-templates/email-change'
 import { ReauthenticationEmail } from '@/lib/email-templates/reauthentication'
 
 // Configuration
-const SITE_NAME = "aislix"
+const SITE_NAME = "Aislix"
 const SENDER_DOMAIN = "notify.aislix.com"
 const ROOT_DOMAIN = "aislix.com"
 const FROM_DOMAIN = "aislix.com"
