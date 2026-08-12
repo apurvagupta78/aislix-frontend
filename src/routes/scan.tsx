@@ -411,34 +411,46 @@ function ScanPage() {
               )}
             </div>
 
+            {assignment && (
+              <p className="mt-4 rounded-xl bg-surface px-3 py-2 text-xs text-muted-foreground">
+                Set by your manager for this assignment.
+              </p>
+            )}
+
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="scan-store">Store *</Label>
-                <Select
-                  value={storeId}
-                  onValueChange={setStoreId}
-                  disabled={busy || lockedByAssignment}
-                >
-                  <SelectTrigger id="scan-store" className="rounded-xl">
-                    <SelectValue
-                      placeholder={
-                        storesQuery.isLoading
-                          ? "Loading stores…"
-                          : stores.length
-                            ? "Select a store"
-                            : "No stores yet — add one in Stores"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {stores.map((store) => (
-                      <SelectItem key={store.id} value={store.id}>
-                        {store.name}
-                        {store.city ? ` — ${store.city}` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {assignment ? (
+                  <Input
+                    id="scan-store"
+                    className="rounded-xl"
+                    value={assignment.store_name}
+                    readOnly
+                    disabled
+                  />
+                ) : (
+                  <Select value={storeId} onValueChange={setStoreId} disabled={busy}>
+                    <SelectTrigger id="scan-store" className="rounded-xl">
+                      <SelectValue
+                        placeholder={
+                          storesQuery.isLoading
+                            ? "Loading stores…"
+                            : stores.length
+                              ? "Select a store"
+                              : "No stores yet — add one in Stores"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stores.map((store) => (
+                        <SelectItem key={store.id} value={store.id}>
+                          {store.name}
+                          {store.city ? ` — ${store.city}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 {fieldError("store") && (
                   <p className="text-xs text-destructive">{fieldError("store")}</p>
                 )}
@@ -452,6 +464,7 @@ function ScanPage() {
                   placeholder="e.g. Aisle 4 · Beverages · left bay"
                   value={shelfLocation}
                   disabled={busy || lockedByAssignment}
+                  readOnly={lockedByAssignment}
                   onChange={(e) => setShelfLocation(e.target.value)}
                 />
                 {fieldError("location") && (
@@ -461,35 +474,58 @@ function ScanPage() {
 
               <div className="space-y-1.5">
                 <Label htmlFor="scan-category">Category *</Label>
-                <Select
-                  value={category}
-                  onValueChange={(value) => {
-                    setCategory(value);
-                    setSubCategory("");
-                    setSubCategoryCustom("");
-                  }}
-                  disabled={busy || lockedByAssignment}
-                >
-                  <SelectTrigger id="scan-category" className="rounded-xl">
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[320px]">
-                    {categories.map((item) => (
-                      <SelectItem key={item.name} value={item.name} className="py-2">
-                        <span className="flex flex-col gap-0.5">
-                          <span className="text-sm font-medium">{item.name}</span>
-                          {item.examples ? (
-                            <span className="text-xs text-muted-foreground">{item.examples}</span>
-                          ) : null}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {assignment ? (
+                  <Input
+                    id="scan-category"
+                    className="rounded-xl"
+                    value={assignment.category || "—"}
+                    readOnly
+                    disabled
+                  />
+                ) : (
+                  <Select
+                    value={category}
+                    onValueChange={(value) => {
+                      setCategory(value);
+                      setSubCategory("");
+                      setSubCategoryCustom("");
+                    }}
+                    disabled={busy}
+                  >
+                    <SelectTrigger id="scan-category" className="rounded-xl">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-[320px]">
+                      {categories.map((item) => (
+                        <SelectItem key={item.name} value={item.name} className="py-2">
+                          <span className="flex flex-col gap-0.5">
+                            <span className="text-sm font-medium">{item.name}</span>
+                            {item.examples ? (
+                              <span className="text-xs text-muted-foreground">{item.examples}</span>
+                            ) : null}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 {fieldError("category") && (
                   <p className="text-xs text-destructive">{fieldError("category")}</p>
                 )}
               </div>
+
+              {assignment && assignment.sub_category && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="scan-subcategory-locked">Sub-category</Label>
+                  <Input
+                    id="scan-subcategory-locked"
+                    className="rounded-xl"
+                    value={assignment.sub_category}
+                    readOnly
+                    disabled
+                  />
+                </div>
+              )}
 
               {showSubcategory && (
                 <div className="space-y-1.5">
@@ -521,6 +557,7 @@ function ScanPage() {
                   )}
                 </div>
               )}
+
 
               {category && needsCustom && (
                 <div className="space-y-1.5 sm:col-span-2">
