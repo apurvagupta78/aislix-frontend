@@ -119,7 +119,7 @@ export function TeamAssignmentsPanel() {
             description="Delegate a shelf audit to a team member and track it to 100% compliance."
             action={
               <Button asChild variant="brand" size="sm" className="rounded-xl">
-                <Link to="/assign-scan">Assign a scan</Link>
+                <Link to="/assign-scan" search={{}}>Assign a scan</Link>
               </Button>
             }
           />
