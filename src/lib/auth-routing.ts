@@ -9,6 +9,8 @@
 
 import { supabase } from "@/integrations/supabase/client";
 
+export type AuthRoute = { to: string; search?: Record<string, string> };
+
 export type MinimalUser = { email?: string | null; email_confirmed_at?: string | null } | null;
 
 /** True once Supabase has stamped the confirmation link click. */
@@ -24,28 +26,38 @@ export async function fetchAuthUser() {
 }
 
 /** Landing route for a verified, onboarded user. */
-export async function resolvePostLoginRoute(): Promise<string> {
+export async function resolvePostLoginRoute(): Promise<AuthRoute> {
   try {
     const { fetchMyPendingCount, isOrgManager } = await import("@/lib/assignments");
     const [manager, pending] = await Promise.all([isOrgManager(), fetchMyPendingCount()]);
-    if (!manager) return pending > 0 ? "/my-scans?tab=assigned" : "/my-scans";
+    if (!manager) {
+      return pending > 0 ? { to: "/my-scans", search: { tab: "assigned" } } : { to: "/my-scans" };
+    }
   } catch {
     // fall through to the dashboard
   }
-  return "/dashboard";
+  return { to: "/dashboard" };
 }
 
 /** Full decision: verification -> onboarding -> normal landing. */
-export async function resolvePostAuthRoute(user: MinimalUser): Promise<string> {
-  if (!isEmailVerified(user)) return "/verify-email";
+export async function resolvePostAuthRoute(user: MinimalUser): Promise<AuthRoute> {
+  if (!isEmailVerified(user)) return { to: "/verify-email" };
 
   try {
     const { fetchOnboardingStatus } = await import("@/lib/onboarding");
     const status = await fetchOnboardingStatus();
-    if (!status.completed) return "/onboarding";
+    if (!status.completed) return { to: "/onboarding" };
   } catch {
     // fall through to the normal landing logic
   }
 
   return resolvePostLoginRoute();
+}
+
+/** Navigates to a resolved route with the loose typing these helpers return. */
+export function goToAuthRoute(
+  navigate: (opts: { to: string; search?: Record<string, string>; replace?: boolean }) => unknown,
+  route: AuthRoute,
+): void {
+  navigate({ to: route.to, ...(route.search ? { search: route.search } : {}), replace: true });
 }
