@@ -29,6 +29,9 @@ export type UsageSummary = {
   can_scan?: boolean;
   stores_used?: number;
   stores_included?: number | null;
+  seats_used?: number;
+  seats_included?: number | null;
+  seat_limit_label?: string;
   history_days?: number | null;
   products_detected?: number;
   average_confidence?: number; // 0-1 or 0-100
@@ -181,6 +184,9 @@ export async function fetchBillingOverview(signal?: AbortSignal): Promise<Billin
       can_scan: live.can_scan,
       stores_used: live.stores_used,
       stores_included: live.store_limit,
+      seats_used: live.seats_used,
+      seats_included: live.seats_included,
+      seat_limit_label: live.seat_limit_label,
       history_days: live.history_days,
       ...(live.platform_bypass
         ? { platform_bypass: true, platform_bypass_note: live.platform_bypass_note ?? null }
