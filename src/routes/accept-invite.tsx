@@ -92,14 +92,19 @@ function AcceptInvitePage() {
       ) : state.kind === "signed_out" ? (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Sign in with the email address that received this invitation to join the workspace.
+            Sign in with the email address that received this invitation to join the workspace. New
+            to Aislix? Create an account, confirm your email, and you&apos;ll join automatically.
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button asChild variant="brand" className="rounded-xl">
-              <Link to="/login">Sign in</Link>
+              <Link to="/login" search={(email ? { email } : {}) as never}>
+                Sign in
+              </Link>
             </Button>
             <Button asChild variant="outline" className="rounded-xl">
-              <Link to="/signup">Create an account</Link>
+              <Link to="/signup" search={(email ? { email } : {}) as never}>
+                Create an account
+              </Link>
             </Button>
           </div>
         </div>
@@ -117,9 +122,9 @@ function AcceptInvitePage() {
           <Button
             variant="brand"
             className="rounded-xl"
-            onClick={() => void navigate({ to: "/dashboard", replace: true })}
+            onClick={() => void navigate({ to: "/my-scans", replace: true })}
           >
-            Go to dashboard
+            Go to my scans
           </Button>
         </div>
       ) : state.kind === "none" ? (
@@ -133,11 +138,12 @@ function AcceptInvitePage() {
           <Button
             variant="brand"
             className="rounded-xl"
-            onClick={() => void navigate({ to: "/dashboard", replace: true })}
+            onClick={() => void navigate({ to: "/my-scans", replace: true })}
           >
-            Continue to dashboard
+            Continue
           </Button>
         </div>
+
       ) : (
         <div className="space-y-4">
           <p className="text-sm text-destructive">{state.message}</p>
