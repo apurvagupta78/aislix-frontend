@@ -103,6 +103,7 @@ export async function completeOnboarding(): Promise<void> {
   const { error } = await supabase
     .from("profiles")
     .update({ onboarding_completed_at: new Date().toISOString() })
-    .eq("id", userId);
+    .eq("id", userId)
+    .is("onboarding_completed_at", null);
   if (error) dbError(error, "Could not finish setup.");
 }
