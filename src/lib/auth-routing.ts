@@ -41,6 +41,29 @@ export async function isEmailVerifiedServer(): Promise<boolean> {
   return data === true;
 }
 
+export type PendingInvite = { org_id: string; role: string; org_name: string };
+
+/**
+ * Pending organization invite for the signed-in user. Team invites create the
+ * auth user up-front, so the row is keyed on user_id with status "invited".
+ */
+export async function fetchPendingInvite(): Promise<PendingInvite | null> {
+  const user = await fetchAuthUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from("organization_members")
+    .select("org_id, role, organizations:org_id(name)")
+    .eq("user_id", user.id)
+    .eq("status", "invited")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  const orgName =
+    (data as never as { organizations?: { name?: string } }).organizations?.name || "your team";
+  return { org_id: data.org_id as string, role: String(data.role), org_name: orgName };
+}
+
 /** Landing route for a verified, onboarded user. */
 export async function resolvePostLoginRoute(): Promise<AuthRoute> {
   try {
