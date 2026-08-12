@@ -15,6 +15,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { clearContextCache } from "@/lib/db/context";
 import { ensureOAuthWorkspace } from "@/lib/api/auth";
+import { AuthGate } from "@/components/AuthGate";
 
 
 function NotFoundComponent() {
