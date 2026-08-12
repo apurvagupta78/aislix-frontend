@@ -160,14 +160,18 @@ function RootComponent() {
               isOrgManager(),
               fetchMyPendingCount(),
             ]);
-            if (!manager && pending > 0) {
-              void router.navigate({ to: "/my-scans", search: { tab: "assigned" } });
+            if (!manager) {
+              void router.navigate({
+                to: "/my-scans",
+                search: pending > 0 ? { tab: "assigned" } : {},
+              });
               return;
             }
           } catch {
             // fall through to the dashboard
           }
           void router.navigate({ to: "/dashboard" });
+
         });
 
       }

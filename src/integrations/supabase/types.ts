@@ -1425,6 +1425,7 @@ export type Database = {
         Args: { _org_id: string }
         Returns: undefined
       }
+      should_show_onboarding: { Args: { p_user_id: string }; Returns: boolean }
       user_email_has_platform_bypass: {
         Args: { _email: string }
         Returns: boolean
