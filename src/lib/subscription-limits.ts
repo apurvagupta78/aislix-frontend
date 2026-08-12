@@ -22,6 +22,11 @@ export type UsageSummary = {
   scan_quota: number | null; // null = unlimited
   store_limit: number | null; // null = unlimited
   seat_limit: number | null;
+  /** Alias of `seat_limit` as returned by the RPC (null = unlimited). */
+  seats_included: number | null;
+  seats_used: number;
+  /** e.g. "3 users" / "Unlimited users". */
+  seat_limit_label: string;
   history_days: number | null; // null = unlimited history
   scans_used: number;
   scans_remaining: number | null;
@@ -91,6 +96,9 @@ async function bypassUsageFallback(orgId: string): Promise<UsageSummary> {
     scan_quota: plan?.scan_quota ?? null,
     store_limit: plan?.store_limit ?? null,
     seat_limit: plan?.seat_limit ?? null,
+    seats_included: plan?.seat_limit ?? null,
+    seats_used: 0,
+    seat_limit_label: seatLimitLabel(plan?.seat_limit ?? null),
     history_days: null,
     scans_used: subscription?.scans_used ?? 0,
     scans_remaining: null,
@@ -109,7 +117,7 @@ async function bypassUsageFallback(orgId: string): Promise<UsageSummary> {
   };
 }
 
-export type LimitKind = "scan_quota" | "scan_cooldown" | "store_limit";
+export type LimitKind = "scan_quota" | "scan_cooldown" | "store_limit" | "seat_limit";
 
 /** Thrown when a plan limit blocks an action. Carries data for the limit modal. */
 export class LimitReachedError extends ApiError {
@@ -138,6 +146,14 @@ export class StoreLimitError extends LimitReachedError {
   }
 }
 
+/** Seat allowance exhausted (client check or DB trigger `SEAT_LIMIT_REACHED`). */
+export class SeatLimitError extends LimitReachedError {
+  constructor(input: { usage: UsageSummary; message: string }) {
+    super({ limit: "seat_limit", usage: input.usage, message: input.message });
+    this.name = "SeatLimitError";
+  }
+}
+
 /** Scan allowance exhausted (client check or DB trigger `SCAN_LIMIT_REACHED`). */
 export class ScanLimitError extends LimitReachedError {
   constructor(input: { usage: UsageSummary; message: string; cooldownUntil?: string; cooldown?: boolean }) {
@@ -149,6 +165,26 @@ export class ScanLimitError extends LimitReachedError {
     });
     this.name = "ScanLimitError";
   }
+}
+
+/** Canonical seat allowance per plan, mirroring `subscription_plans.seat_limit`. */
+export function defaultSeatLimit(planCode: string): number | null {
+  switch (planCode) {
+    case "free":
+    case "starter":
+      return 1;
+    case "growth":
+      return 3;
+    case "professional":
+      return 5;
+    default:
+      return null; // enterprise / unknown → unlimited
+  }
+}
+
+export function seatLimitLabel(seatLimit: number | null): string {
+  if (seatLimit === null) return "Unlimited users";
+  return seatLimit === 1 ? "1 user" : `${seatLimit} users`;
 }
 
 /**
@@ -171,6 +207,9 @@ function normalizeUsage(raw: Record<string, unknown>): UsageSummary {
   const storeLimit =
     num(raw["store_limit"] ?? raw["stores_included"]) ?? (isFree ? 1 : null);
   const historyDays = num(raw["history_days"]) ?? (isFree ? 7 : null);
+  const seatLimit =
+    num(raw["seat_limit"] ?? raw["seats_included"]) ?? defaultSeatLimit(planCode);
+  const seatsUsed = num(raw["seats_used"]) ?? 1;
   const scansUsed = num(raw["scans_used"]) ?? 0;
   const storesUsed = num(raw["stores_used"]) ?? 0;
   const blocked = Boolean(raw["blocked"]);
@@ -183,7 +222,10 @@ function normalizeUsage(raw: Record<string, unknown>): UsageSummary {
     price_monthly_inr: num(raw["price_monthly_inr"]) ?? 0,
     scan_quota: scanQuota,
     store_limit: storeLimit,
-    seat_limit: num(raw["seat_limit"]),
+    seat_limit: seatLimit,
+    seats_included: seatLimit,
+    seats_used: seatsUsed,
+    seat_limit_label: (raw["seat_limit_label"] as string) || seatLimitLabel(seatLimit),
     history_days: historyDays,
     scans_used: scansUsed,
     scans_remaining: num(raw["scans_remaining"]),
@@ -257,6 +299,46 @@ export async function assertCanAddStore(orgId?: string): Promise<UsageSummary> {
   throw storeLimitError(usage);
 }
 
+/** Blocks a new invite / member when the plan's seats are all taken. */
+export async function assertCanInviteMember(orgId?: string): Promise<UsageSummary> {
+  const email = await currentUserEmail();
+  const usage = await fetchUsageSummary(undefined, orgId);
+  if (hasPlatformBypass(email) || usage.platform_bypass) return usage;
+  if (canInviteMember(usage)) return usage;
+  throw seatLimitError(usage);
+}
+
+/** Pure check for UI gating (disabled invite forms, remaining-seat badges). */
+export function canInviteMember(usage: UsageSummary | null | undefined): boolean {
+  if (!usage) return false;
+  if (usage.platform_bypass) return true;
+  if (usage.seats_included === null) return true;
+  return usage.seats_used < usage.seats_included;
+}
+
+/** Seats still available, or `null` when unlimited. */
+export function remainingSeats(usage: UsageSummary | null | undefined): number | null {
+  if (!usage || usage.seats_included === null) return null;
+  return Math.max(0, usage.seats_included - usage.seats_used);
+}
+
+export function seatLimitError(usage: UsageSummary): SeatLimitError {
+  const limit = usage.seats_included;
+  if (limit === 1) {
+    return new SeatLimitError({
+      usage,
+      message: `Your ${usage.plan_name} plan includes 1 user (you). Upgrade to Growth to invite team members.`,
+    });
+  }
+  return new SeatLimitError({
+    usage,
+    message:
+      limit === null
+        ? `Your ${usage.plan_name} plan cannot add more users right now. Upgrade to add more.`
+        : `The ${usage.plan_name} plan includes ${limit} users and all seats are in use. Upgrade to invite more people.`,
+  });
+}
+
 function scanLimitError(usage: UsageSummary): ScanLimitError {
   const quota = usage.scan_quota ?? (usage.plan_code === "free" ? 3 : usage.scans_used);
   if (usage.quota_period === "rolling_24h") {
@@ -297,13 +379,15 @@ export async function mapLimitError(error: unknown, orgId?: string): Promise<unk
       : String(error ?? "");
   const isStore = text.includes("STORE_LIMIT_REACHED");
   const isScan = text.includes("SCAN_LIMIT_REACHED");
-  if (!isStore && !isScan) return error;
+  const isSeat = text.includes("SEAT_LIMIT_REACHED");
+  if (!isStore && !isScan && !isSeat) return error;
   let usage: UsageSummary;
   try {
     usage = await fetchUsageSummary(undefined, orgId);
   } catch {
     usage = normalizeUsageSummary(null);
   }
+  if (isSeat) return seatLimitError(usage);
   return isStore ? storeLimitError(usage) : scanLimitError(usage);
 }
 
@@ -382,6 +466,12 @@ export function storeUsageLabel(usage: UsageSummary): string {
   return `${usage.stores_used} / ${usage.store_limit} stores used`;
 }
 
+/** "2 / 3 users" or "4 users · Unlimited". */
+export function seatUsageLabel(usage: UsageSummary): string {
+  if (usage.seats_included === null) return `${usage.seats_used} users · Unlimited`;
+  return `${usage.seats_used} / ${usage.seats_included} users`;
+}
+
 /**
  * Single label helper for dashboard / billing widgets. Values always come from
  * the normalised usage summary, so `undefined` can never reach the UI.
@@ -391,6 +481,7 @@ export function formatUsageLabel(
 ): {
   scans: string;
   stores: string;
+  seats: string;
   cooldown: string | null;
 } {
   const safe = normalizeUsageSummary((usage ?? null) as Record<string, unknown> | null);
@@ -402,5 +493,5 @@ export function formatUsageLabel(
     safe.store_limit === null
       ? `${safe.stores_used} stores · Unlimited`
       : `${safe.stores_used} / ${safe.store_limit} stores`;
-  return { scans: scanUsageLabel(safe), stores, cooldown };
+  return { scans: scanUsageLabel(safe), stores, seats: seatUsageLabel(safe), cooldown };
 }
