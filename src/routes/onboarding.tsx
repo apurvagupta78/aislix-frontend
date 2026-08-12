@@ -56,9 +56,10 @@ export const Route = createFileRoute("/onboarding")({
 const STEPS = [
   { title: "Your details", hint: "Tell us who you are" },
   { title: "First store", hint: "Where you audit shelves" },
-  { title: "Planogram", hint: "Optional — skip for now" },
-  { title: "Your team", hint: "Optional — skip for now" },
+  { title: "Planogram", hint: "Set your planogram" },
+  { title: "Your team", hint: "Invite your team" },
 ] as const;
+
 
 type InviteDraft = { email: string; role: UserRole };
 
@@ -129,14 +130,18 @@ function OnboardingPage() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [invites, setInvites] = useState<InviteDraft[]>([{ email: "", role: "member" }]);
 
+  const finishedRef = useRef(false);
   const finish = useMutation({
     mutationFn: () => completeOnboarding(),
     onSuccess: () => {
-      void queryClient.invalidateQueries();
-      void navigate({ to: "/dashboard" });
+      finishedRef.current = true;
+      queryClient.removeQueries({ queryKey: ["onboarding-status"] });
+      void navigate({ to: "/dashboard", replace: true });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) =>
+      toast.error(error.message || "Could not finish setup. Please try again."),
   });
+
 
   const profileStep = useMutation({
     mutationFn: () => saveOnboardingProfile({ full_name: fullName, job_title: jobTitle, company_name: companyName }),
@@ -218,7 +223,7 @@ function OnboardingPage() {
     teamStep.isPending ||
     finish.isPending;
 
-  if (!allowed || statusQuery.isLoading || statusQuery.data?.completed) {
+  if (!allowed || statusQuery.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface">
         <Loader2 className="size-5 animate-spin text-muted-foreground" />

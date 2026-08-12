@@ -97,13 +97,11 @@ export async function saveOnboardingProfile(input: {
   }
 }
 
-/** Marks setup as done so the wizard never appears again. */
+/** Marks setup as done so the wizard never appears again (RPC — RLS-proof). */
 export async function completeOnboarding(): Promise<void> {
   const userId = await requireUserId();
-  const { error } = await supabase
-    .from("profiles")
-    .update({ onboarding_completed_at: new Date().toISOString() })
-    .eq("id", userId)
-    .is("onboarding_completed_at", null);
+  const { data, error } = await supabase.rpc("complete_onboarding", { p_user_id: userId });
   if (error) dbError(error, "Could not finish setup.");
+  if (!data) throw new Error("Could not finish setup. Please try again.");
 }
+
