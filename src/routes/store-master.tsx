@@ -547,6 +547,15 @@ function StoreMasterPage() {
                       Save &amp; add another
                     </Button>
                   </div>
+                  {manualError && (
+                    <div className="mt-4">
+                      <StickyError
+                        title="Could not add this product"
+                        message={manualError}
+                        onDismiss={() => setManualError(null)}
+                      />
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </section>
