@@ -1,13 +1,25 @@
 import { useMemo, useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Download, Loader2, Plus, Trash2, Upload, UserPlus, XCircle } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Download,
+  Loader2,
+  Plus,
+  Trash2,
+  Upload,
+  UserPlus,
+  X,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -805,6 +817,33 @@ function StoreMasterPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+/** Inline destructive alert that stays until dismissed — never auto-hides. */
+function StickyError({
+  title,
+  message,
+  onDismiss,
+}: {
+  title: string;
+  message: string;
+  onDismiss: () => void;
+}) {
+  return (
+    <Alert variant="destructive" className="relative pr-10">
+      <AlertCircle className="size-4" />
+      <AlertTitle>{title}</AlertTitle>
+      <AlertDescription className="whitespace-pre-wrap">{message}</AlertDescription>
+      <button
+        type="button"
+        className="absolute right-3 top-3 text-muted-foreground transition-colors hover:text-foreground"
+        aria-label="Dismiss error"
+        onClick={onDismiss}
+      >
+        <X className="size-4" />
+      </button>
+    </Alert>
   );
 }
 
