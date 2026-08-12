@@ -43,6 +43,7 @@ import {
   ShelfHealthChart,
   TopBrandsChart,
 } from "@/components/scan-results/ResultCharts";
+import { toast } from "sonner";
 import {
   fetchScanResult,
   formatConfidence,
@@ -50,6 +51,8 @@ import {
   inventoryToCsv,
   downloadBlob,
   downloadScanCsv,
+  downloadScanPdf,
+  downloadScanAnnotatedImage,
   type ScanResult,
 } from "@/lib/scan-results";
 import { retryScanAnalysis } from "@/lib/scan-api";
@@ -379,6 +382,26 @@ function DownloadsPanel({
     );
   };
 
+  const downloadImage = async () => {
+    if (!data?.scan_id) return;
+    try {
+      await downloadScanAnnotatedImage(data.scan_id, imageUrl);
+      toast.success("Annotated image downloaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Download failed");
+    }
+  };
+
+  const downloadPdf = async () => {
+    if (!data?.scan_id) return;
+    try {
+      await downloadScanPdf(data.scan_id, data.downloads?.pdf_url);
+      toast.success("PDF report downloaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Download failed");
+    }
+  };
+
   const downloadJson = () =>
     data &&
     downloadBlob(
@@ -386,6 +409,7 @@ function DownloadsPanel({
       `aislix-${data.scan_id}-result.json`,
       "application/json",
     );
+
 
   return (
     <ResultSection title="Downloads" description="Export this scan for sharing or analysis.">
@@ -397,17 +421,15 @@ function DownloadsPanel({
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {data?.downloads?.pdf_url ? (
-            <Button asChild variant="brand" size="lg" className="w-full rounded-xl">
-              <a href={data.downloads.pdf_url} target="_blank" rel="noreferrer">
-                <FileText className="size-4" /> PDF report
-              </a>
-            </Button>
-          ) : (
-            <Button variant="brand" size="lg" className="w-full rounded-xl" disabled>
-              <FileText className="size-4" /> PDF report
-            </Button>
-          )}
+          <Button
+            variant="brand"
+            size="lg"
+            className="w-full rounded-xl"
+            disabled={!data?.scan_id}
+            onClick={() => void downloadPdf()}
+          >
+            <FileText className="size-4" /> PDF report
+          </Button>
 
           <Button
             variant="subtle"
@@ -419,17 +441,16 @@ function DownloadsPanel({
             <FileSpreadsheet className="size-4" /> CSV inventory
           </Button>
 
-          {imageUrl ? (
-            <Button asChild variant="subtle" size="lg" className="w-full rounded-xl">
-              <a href={imageUrl} download={`aislix-${data?.scan_id ?? "scan"}-annotated.jpg`}>
-                <ImageIcon className="size-4" /> Annotated image
-              </a>
-            </Button>
-          ) : (
-            <Button variant="subtle" size="lg" className="w-full rounded-xl" disabled>
-              <ImageIcon className="size-4" /> Annotated image
-            </Button>
-          )}
+          <Button
+            variant="subtle"
+            size="lg"
+            className="w-full rounded-xl"
+            disabled={!data?.scan_id}
+            onClick={() => void downloadImage()}
+          >
+            <ImageIcon className="size-4" /> Annotated image
+          </Button>
+
 
           <PrintReportButton disabled={!data} />
 

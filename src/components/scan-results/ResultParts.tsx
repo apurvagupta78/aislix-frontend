@@ -35,8 +35,10 @@ import {
 } from "@/components/ui/table";
 import { EmptyState, Skeleton } from "@/components/States";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   COMPLIANCE_INTERPRETATION,
+  downloadScanAnnotatedImage,
   downloadScanCsv,
   formatConfidence,
   inventoryToCsv,
@@ -131,6 +133,7 @@ export function AnnotatedImageViewer({
 }) {
   const [zoom, setZoom] = useState(1);
   const [fullscreen, setFullscreen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (!fullscreen) return;
@@ -176,16 +179,25 @@ export function AnnotatedImageViewer({
       >
         <Maximize2 className="size-4" />
       </Button>
-      <Button variant="subtle" size="sm" className="rounded-xl" disabled={!src} asChild={!!src}>
-        {src ? (
-          <a href={src} download={`aislix-${scanId ?? "scan"}-annotated.jpg`}>
-            <Download className="size-4" /> Image
-          </a>
-        ) : (
-          <span>
-            <Download className="size-4" /> Image
-          </span>
-        )}
+      <Button
+        variant="subtle"
+        size="sm"
+        className="rounded-xl"
+        disabled={!src || downloading}
+        onClick={async () => {
+          if (!src) return;
+          setDownloading(true);
+          try {
+            await downloadScanAnnotatedImage(scanId ?? "scan", src);
+            toast.success("Image downloaded");
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Download failed");
+          } finally {
+            setDownloading(false);
+          }
+        }}
+      >
+        <Download className="size-4" /> Image
       </Button>
     </div>
   );
