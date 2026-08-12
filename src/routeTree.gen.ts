@@ -59,6 +59,8 @@ import { Route as StoresIndexRouteImport } from './routes/stores.index'
 import { Route as StoresStoreIdRouteImport } from './routes/stores.$storeId'
 import { Route as ApiPlanogramNormalizeRowRouteImport } from './routes/api/planogram.normalize-row'
 import { Route as ApiPlanogramParseCsvRouteImport } from './routes/api/planogram.parse-csv'
+import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
 const IndexRoute = IndexRouteImport.update({
@@ -312,6 +314,16 @@ const ApiPlanogramParseCsvRoute = ApiPlanogramParseCsvRouteImport.update({
   path: '/api/planogram/parse-csv',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
+  id: '/lovable/email/auth/preview',
+  path: '/lovable/email/auth/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
+  id: '/lovable/email/auth/webhook',
+  path: '/lovable/email/auth/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailTransactionalPreviewRoute =
   LovableEmailTransactionalPreviewRouteImport.update({
     id: '/lovable/email/transactional/preview',
@@ -370,6 +382,8 @@ export interface FileRoutesByFullPath {
   '/stores/': typeof StoresIndexRoute
   '/api/planogram/normalize-row': typeof ApiPlanogramNormalizeRowRoute
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesByTo {
@@ -423,6 +437,8 @@ export interface FileRoutesByTo {
   '/stores': typeof StoresIndexRoute
   '/api/planogram/normalize-row': typeof ApiPlanogramNormalizeRowRoute
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesById {
@@ -477,6 +493,8 @@ export interface FileRoutesById {
   '/stores/': typeof StoresIndexRoute
   '/api/planogram/normalize-row': typeof ApiPlanogramNormalizeRowRoute
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRouteTypes {
@@ -532,6 +550,8 @@ export interface FileRouteTypes {
     | '/stores/'
     | '/api/planogram/normalize-row'
     | '/api/planogram/parse-csv'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -585,6 +605,8 @@ export interface FileRouteTypes {
     | '/stores'
     | '/api/planogram/normalize-row'
     | '/api/planogram/parse-csv'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
   id:
     | '__root__'
@@ -638,6 +660,8 @@ export interface FileRouteTypes {
     | '/stores/'
     | '/api/planogram/normalize-row'
     | '/api/planogram/parse-csv'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
 }
@@ -692,6 +716,8 @@ export interface RootRouteChildren {
   StoresIndexRoute: typeof StoresIndexRoute
   ApiPlanogramNormalizeRowRoute: typeof ApiPlanogramNormalizeRowRoute
   ApiPlanogramParseCsvRoute: typeof ApiPlanogramParseCsvRoute
+  LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
+  LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
 
@@ -1047,6 +1073,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPlanogramParseCsvRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lovable/email/auth/preview': {
+      id: '/lovable/email/auth/preview'
+      path: '/lovable/email/auth/preview'
+      fullPath: '/lovable/email/auth/preview'
+      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/auth/webhook': {
+      id: '/lovable/email/auth/webhook'
+      path: '/lovable/email/auth/webhook'
+      fullPath: '/lovable/email/auth/webhook'
+      preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/transactional/preview': {
       id: '/lovable/email/transactional/preview'
       path: '/lovable/email/transactional/preview'
@@ -1108,6 +1148,8 @@ const rootRouteChildren: RootRouteChildren = {
   StoresIndexRoute: StoresIndexRoute,
   ApiPlanogramNormalizeRowRoute: ApiPlanogramNormalizeRowRoute,
   ApiPlanogramParseCsvRoute: ApiPlanogramParseCsvRoute,
+  LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
+  LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }
 export const routeTree = rootRouteImport
