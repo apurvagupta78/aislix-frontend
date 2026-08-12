@@ -815,7 +815,21 @@ function StoreMasterPage() {
           </>
         )}
       </div>
+      <AssignScanDialog
+        open={assignOpen}
+        onOpenChange={setAssignOpen}
+        storeId={storeId}
+        storeName={
+          (storesQuery.data ?? []).find((store) => store.id === storeId)?.name ?? "Store"
+        }
+        rows={(snapshot?.activeRows ?? []).map((row) => ({
+          location: row.location,
+          category: row.category,
+          sub_category: row.sub_category,
+        }))}
+      />
     </AppShell>
+
   );
 }
 
