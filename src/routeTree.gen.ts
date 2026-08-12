@@ -54,6 +54,7 @@ import { Route as UsersRouteImport } from './routes/users'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as SitemapXmlRouteImport } from './routes/sitemap.xml'
 import { Route as StoresIndexRouteImport } from './routes/stores.index'
 import { Route as StoresStoreIdRouteImport } from './routes/stores.$storeId'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
@@ -283,6 +284,11 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SitemapXmlRoute = SitemapXmlRouteImport.update({
+  id: '/sitemap/xml',
+  path: '/sitemap/xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StoresIndexRoute = StoresIndexRouteImport.update({
   id: '/stores/',
   path: '/stores/',
@@ -346,6 +352,7 @@ export interface FileRoutesByFullPath {
   '/verify-email': typeof VerifyEmailRoute
   '/api/scan': typeof ApiScanRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/sitemap/xml': typeof SitemapXmlRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -396,6 +403,7 @@ export interface FileRoutesByTo {
   '/verify-email': typeof VerifyEmailRoute
   '/api/scan': typeof ApiScanRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/sitemap/xml': typeof SitemapXmlRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores': typeof StoresIndexRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -447,6 +455,7 @@ export interface FileRoutesById {
   '/verify-email': typeof VerifyEmailRoute
   '/api/scan': typeof ApiScanRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/sitemap/xml': typeof SitemapXmlRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -499,6 +508,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/api/scan'
     | '/auth/callback'
+    | '/sitemap/xml'
     | '/stores/$storeId'
     | '/stores/'
     | '/lovable/email/transactional/preview'
@@ -549,6 +559,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/api/scan'
     | '/auth/callback'
+    | '/sitemap/xml'
     | '/stores/$storeId'
     | '/stores'
     | '/lovable/email/transactional/preview'
@@ -599,6 +610,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/api/scan'
     | '/auth/callback'
+    | '/sitemap/xml'
     | '/stores/$storeId'
     | '/stores/'
     | '/lovable/email/transactional/preview'
@@ -650,6 +662,7 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   ApiScanRoute: typeof ApiScanRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
+  SitemapXmlRoute: typeof SitemapXmlRoute
   StoresStoreIdRoute: typeof StoresStoreIdRoute
   StoresIndexRoute: typeof StoresIndexRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
@@ -972,6 +985,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sitemap/xml': {
+      id: '/sitemap/xml'
+      path: '/sitemap/xml'
+      fullPath: '/sitemap/xml'
+      preLoaderRoute: typeof SitemapXmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stores/': {
       id: '/stores/'
       path: '/stores'
@@ -1042,6 +1062,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyEmailRoute: VerifyEmailRoute,
   ApiScanRoute: ApiScanRoute,
   AuthCallbackRoute: AuthCallbackRoute,
+  SitemapXmlRoute: SitemapXmlRoute,
   StoresStoreIdRoute: StoresStoreIdRoute,
   StoresIndexRoute: StoresIndexRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
@@ -1049,3 +1070,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
