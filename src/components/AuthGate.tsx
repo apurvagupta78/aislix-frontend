@@ -58,6 +58,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           return;
         }
 
+        // Actively in the setup wizard — never evict mid-flow. Completion only
+        // happens when the user clicks "Finish setup" on the last step.
+        if (path === "/onboarding") return;
+
         if (isVerifyPath(path) || AUTH_PAGES.has(path)) {
           const route = await resolvePostAuthRoute();
           if (!cancelled) goToAuthRoute(navigate as never, route);
