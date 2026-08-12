@@ -145,7 +145,7 @@ function ScanPage() {
   const selectedSub = subcategories.find((item) => item.id === subCategory);
   const needsCustom = isOtherCategory || subCategory === "others";
 
-  const assignmentSubLabel = assignment?.scope_values.sub_category ?? "";
+  const assignmentSubLabel = assignment?.sub_category ?? "";
   const setupErrors = useMemo(() => {
     const errors: Record<string, string> = {};
     if (lockedByAssignment) return errors;
