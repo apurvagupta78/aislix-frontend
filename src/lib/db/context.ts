@@ -160,13 +160,35 @@ export function setActiveOrgId(orgId: string, explicit = true): void {
   membershipCache = null;
 }
 
+/**
+ * Links and activates any pending invite for the signed-in account. Runs on the
+ * server because members are not allowed to update membership rows themselves.
+ */
+async function activatePendingInvites(): Promise<boolean> {
+  try {
+    const { activateMyMemberships } = await import("@/lib/membership.functions");
+    const result = await activateMyMemberships({ data: {} } as never);
+    if (!result?.activated) return false;
+    clearContextCache();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Membership row of the signed-in user for their active organization. */
 export async function getMembership(): Promise<Membership | null> {
   const userId = await requireUserId();
   if (membershipCache?.userId === userId) return membershipCache.membership;
 
-  const rows = await listMemberships();
-  if (!rows.length) return null;
+  let rows = await listMemberships();
+  if (!rows.length) {
+    // Invited members have no active membership until the invite is linked;
+    // never fail with "no workspace" before trying that.
+    if (!(await activatePendingInvites())) return null;
+    rows = await listMemberships();
+    if (!rows.length) return null;
+  }
 
   const stored = readStoredOrgId();
   let membership = stored ? rows.find((row) => row.org_id === stored) : undefined;
@@ -183,6 +205,7 @@ export async function getMembership(): Promise<Membership | null> {
   membershipCache = { userId, membership };
   return membership;
 }
+
 
 
 export function clearContextCache(): void {
