@@ -14,14 +14,10 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import {
   fetchAuthUser,
-  goToAuthRoute,
   isEmailVerifiedServer,
   isPublicPath,
   isVerifyPath,
-  resolvePostAuthRoute,
 } from "@/lib/auth-routing";
-
-const AUTH_PAGES = new Set(["/login", "/signup", "/register"]);
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -32,10 +28,16 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     const enforce = async () => {
+      const path = pathname;
+
+      // ONBOARDING LOCK: this is deliberately the first routing check. Once
+      // the wizard is open, no global auth event or route check may navigate.
+      if (path === "/onboarding" || path.startsWith("/onboarding/")) return;
+
       if (busy.current) return;
       busy.current = true;
       try {
-        const path = pathname;
+
         const user = await fetchAuthUser();
         if (cancelled) return;
 
@@ -58,14 +60,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        // Actively in the setup wizard — never evict mid-flow. Completion only
-        // happens when the user clicks "Finish setup" on the last step.
-        if (path === "/onboarding") return;
-
-        if (isVerifyPath(path) || AUTH_PAGES.has(path)) {
-          const route = await resolvePostAuthRoute();
-          if (!cancelled) goToAuthRoute(navigate as never, route);
-        }
       } finally {
         busy.current = false;
       }

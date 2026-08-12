@@ -20,9 +20,8 @@ export type OnboardingStatus = {
 /**
  * Reads whether the signed-in user still needs first-time setup.
  *
- * The DB decides: `should_show_onboarding` is true only for a brand-new user
- * whose workspace has zero stores and zero scans. Existing users are stamped
- * as completed so the wizard can never appear again.
+ * `profiles.onboarding_completed_at` is the only completion signal. Creating
+ * stores, scans, planograms, or invitations must never complete the wizard.
  */
 export async function fetchOnboardingStatus(): Promise<OnboardingStatus> {
   const user = await getUser();
@@ -36,20 +35,7 @@ export async function fetchOnboardingStatus(): Promise<OnboardingStatus> {
     .maybeSingle();
   if (error) dbError(error, "Could not check your setup status.");
 
-  let completed = Boolean(data?.onboarding_completed_at);
-  if (!completed) {
-    const { data: shouldShow, error: rpcError } = await supabase.rpc("should_show_onboarding", {
-      p_user_id: user.id,
-    });
-    if (rpcError || shouldShow === false) {
-      completed = true;
-      // Backfill existing users so the check is a one-time cost.
-      await supabase
-        .from("profiles")
-        .update({ onboarding_completed_at: new Date().toISOString() })
-        .eq("id", user.id);
-    }
-  }
+  const completed = Boolean(data?.onboarding_completed_at);
 
   let companyName = "";
   try {

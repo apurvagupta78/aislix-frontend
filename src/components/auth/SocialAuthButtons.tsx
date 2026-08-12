@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { loginWithOAuth, type OAuthProvider } from "@/lib/api/auth";
 import { toUserMessage } from "@/lib/api/errors";
+import { goToAuthRoute, resolvePostAuthRoute } from "@/lib/auth-routing";
 
 function GoogleIcon() {
   return (
@@ -49,7 +50,7 @@ export function SocialAuthButtons() {
       const result = await loginWithOAuth(provider);
       if (!result.redirected) {
         toast.success("Signed in");
-        void navigate({ to: "/dashboard" });
+        goToAuthRoute(navigate as never, await resolvePostAuthRoute());
       }
     } catch (error) {
       toast.error("Could not sign in", { description: toUserMessage(error) });

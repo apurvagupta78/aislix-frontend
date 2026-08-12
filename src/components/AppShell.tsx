@@ -47,8 +47,6 @@ import {
 import { cn } from "@/lib/utils";
 
 import { fetchProfile } from "@/lib/account";
-import { fetchOnboardingStatus } from "@/lib/onboarding";
-
 import { fetchMyPendingCount, isOrgManager } from "@/lib/assignments";
 import { getMembership, listMemberships, setActiveOrgId } from "@/lib/db/context";
 import {
@@ -103,44 +101,25 @@ const DASHBOARD_LEAF: NavLeaf = {
 const SECTIONS: NavSection[] = [
   {
     id: "scan",
-    label: "Scan & Tasks",
+    label: "Scans",
     icon: ClipboardCheck,
     items: [
       { kind: "leaf", label: "New Scan", to: "/scan", icon: Plus },
       {
-        kind: "parent",
-        label: "My Scans",
+        kind: "leaf",
+        label: "Assigned to Me",
+        to: "/my-scans",
+        search: { tab: "assigned" },
         badge: "open-tasks",
-        children: [
-          {
-            kind: "leaf",
-            label: "Assigned to Me",
-            to: "/my-scans",
-            search: { tab: "assigned" },
-            badge: "open-tasks",
-          },
-          {
-            kind: "leaf",
-            label: "Completed by Me",
-            to: "/my-scans",
-            search: { tab: "completed" },
-          },
-        ],
       },
       {
-        kind: "parent",
-        label: "Assigned Scans",
+        kind: "leaf",
+        label: "Scans I Assigned",
+        to: "/assigned-scans",
+        search: { tab: "assignments" },
         managerOnly: true,
-        children: [
-          {
-            kind: "leaf",
-            label: "Scans I Assigned",
-            to: "/assigned-scans",
-            search: { tab: "assignments" },
-          },
-        ],
       },
-      { kind: "leaf", label: "Scan History", to: "/scan-history", icon: History },
+      { kind: "leaf", label: "Scan History", to: "/history", icon: History },
     ],
   },
   {
@@ -460,19 +439,6 @@ export function AppShell({
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useSidebarCollapsed();
-  // Verification is enforced globally by <AuthGate />; this only handles the
-  // first-time setup wizard.
-  const onboardingQuery = useQuery({
-    queryKey: ["onboarding-status"],
-    queryFn: () => fetchOnboardingStatus(),
-    retry: false,
-    staleTime: 5 * 60_000,
-  });
-  useEffect(() => {
-    if (onboardingQuery.data && !onboardingQuery.data.completed) {
-      void navigate({ to: "/onboarding" });
-    }
-  }, [onboardingQuery.data, navigate]);
 
   const profileQuery = useQuery({
     queryKey: ["profile"],
