@@ -282,8 +282,9 @@ function ScanPage() {
           ...(assignment
             ? { assignmentId: assignment.assignment_id, orgId: assignment.org_id }
             : {}),
-
+        },
       );
+
       navigate({
         to: "/processing",
         search: { scan: response.scan_id },
