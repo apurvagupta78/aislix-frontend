@@ -78,9 +78,10 @@ function ForgotPasswordPage() {
         >
           {mutation.isPending ? "Sending…" : "Send reset link"}
         </Button>
-        <Button asChild variant="subtle" size="lg" className="w-full" type="button">
-          <Link to="/reset-password">I already have a reset code</Link>
-        </Button>
+        <p className="text-center text-xs text-muted-foreground">
+          The email contains a secure link — just open it to set a new password.
+        </p>
+
       </form>
     </AuthLayout>
   );
