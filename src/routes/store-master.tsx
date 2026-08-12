@@ -197,23 +197,27 @@ function StoreMasterPage() {
     setSources({ csv: false, manual: false });
     setFilename(null);
     setEditingKey(null);
+    setCsvError(null);
+    setManualError(null);
+    setDraftError(null);
   }
 
   function importValidRows() {
     const valid = (preview ?? []).filter((row) => row.valid && row.data);
     if (!valid.length) {
-      toast.error("No valid rows to import.");
+      setCsvError("No valid rows to import. Fix the highlighted rows in your CSV and upload again.");
       return;
     }
     setDraft((rows) => [...rows, ...valid.map((row) => toDraftRow(row.data))]);
     setSources((s) => ({ ...s, csv: true }));
     setPreview(null);
+    setCsvError(null);
     toast.success(`${valid.length} row${valid.length === 1 ? "" : "s"} added to the draft.`);
   }
 
   function submitManual(keepContext: boolean) {
     if (!form.category || !form.brand.trim() || !form.product_name.trim()) {
-      toast.error("Category, brand and product name are required.");
+      setManualError("Category, brand and product name are required.");
       return;
     }
     normalizeMutation.mutate(form, {
