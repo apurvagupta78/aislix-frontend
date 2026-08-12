@@ -279,7 +279,7 @@ function ScanPage() {
               : selectedSub?.label,
           subCategoryCustom:
             needsCustom && !lockedByAssignment ? subCategoryCustom.trim() : undefined,
-          ...(assignment ? { assignmentId: assignment.id } : {}),
+          ...(assignment ? { assignmentId: assignment.assignment_id } : {}),
         },
       );
       navigate({
