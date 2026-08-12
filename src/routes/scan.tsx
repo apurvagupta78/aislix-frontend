@@ -35,7 +35,9 @@ import {
   toLimitDialogState,
   type LimitDialogState,
 } from "@/components/billing/LimitReachedDialog";
-import { fetchAssignmentById, scopeSummary } from "@/lib/assignments";
+import { getAssignmentScanContext } from "@/lib/assignment-context.functions";
+import { startAssignment } from "@/lib/assignments";
+
 import { MAX_SCAN_IMAGES, formatBytes, submitScanImages, validateScanFile } from "@/lib/scan-api";
 
 export const Route = createFileRoute("/scan")({
