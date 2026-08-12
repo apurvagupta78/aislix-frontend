@@ -579,6 +579,18 @@ function StoreMasterPage() {
                 </div>
               </div>
 
+              {draftError && (
+                <div className="mt-4">
+                  <StickyError
+                    title="Could not save the planogram"
+                    message={draftError}
+                    onDismiss={() => setDraftError(null)}
+                  />
+                </div>
+              )}
+
+
+
               {!draft.length ? (
                 <div className="mt-4">
                   <EmptyState
