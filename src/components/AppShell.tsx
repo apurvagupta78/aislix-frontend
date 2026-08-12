@@ -461,36 +461,19 @@ export function AppShell({
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useSidebarCollapsed();
-  // Email verification gate: an unverified session cannot reach app routes.
-  const verifiedQuery = useQuery({
-    queryKey: ["email-verified"],
-    queryFn: async () => {
-      const user = await fetchAuthUser();
-      return { signedIn: Boolean(user), verified: isEmailVerified(user) };
-    },
-    retry: false,
-    staleTime: 60_000,
-  });
-  const unverified = verifiedQuery.data?.signedIn === true && !verifiedQuery.data.verified;
-  useEffect(() => {
-    if (unverified) void navigate({ to: "/verify-email", replace: true });
-  }, [unverified, navigate]);
-
-  // First-time setup gate: new users finish the wizard before using the app.
+  // Verification is enforced globally by <AuthGate />; this only handles the
+  // first-time setup wizard.
   const onboardingQuery = useQuery({
     queryKey: ["onboarding-status"],
     queryFn: () => fetchOnboardingStatus(),
     retry: false,
     staleTime: 5 * 60_000,
-    // Never run before the email is confirmed — unverified users go to /verify-email.
-    enabled: verifiedQuery.data?.verified === true,
   });
   useEffect(() => {
-    if (verifiedQuery.data?.verified !== true) return;
     if (onboardingQuery.data && !onboardingQuery.data.completed) {
       void navigate({ to: "/onboarding" });
     }
-  }, [onboardingQuery.data, verifiedQuery.data?.verified, navigate]);
+  }, [onboardingQuery.data, navigate]);
 
   const profileQuery = useQuery({
     queryKey: ["profile"],
