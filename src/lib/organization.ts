@@ -259,6 +259,10 @@ export async function fetchOrganization(_signal?: AbortSignal): Promise<Organiza
   if (orgError) dbError(orgError, "Could not load your organization.");
   if (!org) notFound("Organization not found.");
 
+  const { data: billing } = await supabase.rpc("get_org_billing_profile", { p_org_id: orgId });
+  const gstin = (Array.isArray(billing) ? billing[0]?.gstin : null) ?? null;
+
+
   const [{ count: totalStores }, { count: activeStores }, { count: archivedStores }] =
     await Promise.all([
       supabase.from("stores").select("id", { count: "exact", head: true }).eq("org_id", orgId),
