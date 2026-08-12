@@ -130,14 +130,18 @@ function OnboardingPage() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [invites, setInvites] = useState<InviteDraft[]>([{ email: "", role: "member" }]);
 
+  const finishedRef = useRef(false);
   const finish = useMutation({
     mutationFn: () => completeOnboarding(),
     onSuccess: () => {
-      void queryClient.invalidateQueries();
-      void navigate({ to: "/dashboard" });
+      finishedRef.current = true;
+      queryClient.removeQueries({ queryKey: ["onboarding-status"] });
+      void navigate({ to: "/dashboard", replace: true });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) =>
+      toast.error(error.message || "Could not finish setup. Please try again."),
   });
+
 
   const profileStep = useMutation({
     mutationFn: () => saveOnboardingProfile({ full_name: fullName, job_title: jobTitle, company_name: companyName }),
