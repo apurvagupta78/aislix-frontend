@@ -41,8 +41,8 @@ function AuthCallbackPage() {
       } catch {
         // workspace creation is retried on the next authenticated read
       }
-      const { data: fresh } = await supabase.auth.getUser();
-      const route = await resolvePostAuthRoute(fresh.user ?? data.session.user);
+      await supabase.auth.getUser();
+      const route = await resolvePostAuthRoute();
       if (!cancelled) goToAuthRoute(navigate as never, route);
     };
     void run();

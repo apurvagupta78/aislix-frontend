@@ -31,7 +31,7 @@ import {
   fetchOnboardingStatus,
   saveOnboardingProfile,
 } from "@/lib/onboarding";
-import { fetchAuthUser, isEmailVerified } from "@/lib/auth-routing";
+import { fetchAuthUser, isEmailVerifiedServer } from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
@@ -72,7 +72,8 @@ function OnboardingPage() {
     queryKey: ["onboarding-gate"],
     queryFn: async () => {
       const user = await fetchAuthUser();
-      return { signedIn: Boolean(user), verified: isEmailVerified(user) };
+      if (!user) return { signedIn: false, verified: false };
+      return { signedIn: true, verified: await isEmailVerifiedServer() };
     },
     retry: false,
     staleTime: 0,

@@ -10,7 +10,7 @@ import { logout, resendVerificationEmail } from "@/lib/api/auth";
 import {
   fetchAuthUser,
   goToAuthRoute,
-  isEmailVerified,
+  isEmailVerifiedServer,
   resolvePostAuthRoute,
 } from "@/lib/auth-routing";
 
@@ -43,34 +43,30 @@ function VerifyEmailPage() {
   const [email, setEmail] = useState(emailFromLink ?? "");
   const [cooldown, setCooldown] = useState(0);
 
-  // Session gate: signed-out users log in first, verified users move on.
+  // This page NEVER redirects on its own except when the email is confirmed
+  // (server-side truth). A pending signup has no session — staying put is
+  // correct; AuthGate blocks leaving while unverified.
   useEffect(() => {
     let cancelled = false;
     const check = async () => {
       const user = await fetchAuthUser();
       if (cancelled) return;
-      if (!user) {
-        void navigate({ to: "/login", replace: true });
-        return;
-      }
-      if (user.email) setEmail(user.email);
-      if (isEmailVerified(user)) {
-        const route = await resolvePostAuthRoute(user);
+      if (user?.email) setEmail(user.email);
+      if (!user) return;
+      if (await isEmailVerifiedServer()) {
+        const route = await resolvePostAuthRoute();
         if (!cancelled) goToAuthRoute(navigate as never, route);
       }
     };
     void check();
     // Poll only to detect email_confirmed_at flipping in another tab.
     const timer = window.setInterval(() => void check(), 10000);
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      const user = session?.user ?? null;
-      if (user && isEmailVerified(user)) void check();
-    });
+    const { data } = supabase.auth.onAuthStateChange(() => void check());
     return () => {
       cancelled = true;
       window.clearInterval(timer);
       data.subscription.unsubscribe();
-      };
+    };
   }, [navigate]);
 
   useEffect(() => {

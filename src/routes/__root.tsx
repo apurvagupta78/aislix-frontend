@@ -15,6 +15,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { clearContextCache } from "@/lib/db/context";
 import { ensureOAuthWorkspace } from "@/lib/api/auth";
+import { AuthGate } from "@/components/AuthGate";
 
 
 function NotFoundComponent() {
@@ -135,65 +136,23 @@ function RootComponent() {
   const router = useRouter();
 
   useEffect(() => {
+    // Cache hygiene only — all auth redirects live in <AuthGate />.
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       clearContextCache();
       router.invalidate();
       if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
-      if (event === "SIGNED_IN") {
-        void ensureOAuthWorkspace().then(async () => {
-          const path = window.location.pathname;
-          if (path !== "/login" && path !== "/signup") return;
-          try {
-            const { fetchAuthUser, isEmailVerified } = await import("@/lib/auth-routing");
-            const user = await fetchAuthUser();
-            if (!isEmailVerified(user)) {
-              void router.navigate({ to: "/verify-email" });
-              return;
-            }
-          } catch {
-            // fall through to the normal landing logic
-          }
-          try {
-            const { fetchOnboardingStatus } = await import("@/lib/onboarding");
-            const status = await fetchOnboardingStatus();
-            if (!status.completed) {
-              void router.navigate({ to: "/onboarding" });
-              return;
-            }
-          } catch {
-            // fall through to the normal landing logic
-          }
-          try {
-            const { fetchMyPendingCount, isOrgManager } = await import("@/lib/assignments");
-            const [manager, pending] = await Promise.all([
-              isOrgManager(),
-              fetchMyPendingCount(),
-            ]);
-            if (!manager) {
-              void router.navigate({
-                to: "/my-scans",
-                search: pending > 0 ? { tab: "assigned" } : {},
-              });
-              return;
-            }
-          } catch {
-            // fall through to the dashboard
-          }
-          void router.navigate({ to: "/dashboard" });
-
-        });
-
-      }
-
+      if (event === "SIGNED_IN") void ensureOAuthWorkspace();
     });
     return () => data.subscription.unsubscribe();
   }, [router, queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <AuthGate>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+      </AuthGate>
       <Toaster position="top-right" richColors closeButton />
     </QueryClientProvider>
   );
