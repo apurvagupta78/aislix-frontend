@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useSeatUsage } from "@/hooks/use-seat-usage";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check, Loader2, Plus, Trash2, UploadCloud } from "lucide-react";
@@ -56,8 +56,8 @@ export const Route = createFileRoute("/onboarding")({
 const STEPS = [
   { title: "Your details", hint: "Tell us who you are" },
   { title: "First store", hint: "Where you audit shelves" },
-  { title: "Planogram", hint: "Optional — add later" },
-  { title: "Your team", hint: "Optional — invite later" },
+  { title: "Planogram", hint: "Optional — skip for now" },
+  { title: "Your team", hint: "Optional — skip for now" },
 ] as const;
 
 type InviteDraft = { email: string; role: UserRole };
@@ -248,7 +248,7 @@ function OnboardingPage() {
           Set up your workspace
         </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Four quick steps. You can skip anything optional and add it later.
+          Four quick steps. You can skip anything optional and add it later from settings.
         </p>
 
         <ol className="mt-7 grid gap-3 sm:grid-cols-4">
@@ -388,7 +388,7 @@ function OnboardingPage() {
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 A planogram lists the products, brands and expected facings for each shelf. Upload a
-                CSV now to unlock compliance scoring, or add it later from Planogram management.
+                CSV now to unlock compliance scoring, or skip for now from Planogram management.
               </p>
               <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-surface px-6 py-8 text-center">
                 <UploadCloud className="size-5 text-muted-foreground" />
@@ -510,12 +510,12 @@ function OnboardingPage() {
             <div className="flex items-center gap-2">
               {step === 2 && (
                 <Button variant="ghost" size="sm" disabled={busy} onClick={() => setStep(3)}>
-                  Add later
+                  Skip for now
                 </Button>
               )}
               {step === 3 && (
                 <Button variant="ghost" size="sm" disabled={busy} onClick={() => finish.mutate()}>
-                  Add later
+                  Skip for now
                 </Button>
               )}
               <Button
