@@ -246,29 +246,14 @@ export type AcceptInviteResult = {
 export const acceptInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<AcceptInviteResult> => {
-    const { supabase, userId } = context;
-
-    const { data: pending, error } = await supabase
-      .from("organization_members")
-      .select("id, org_id, organizations:org_id(name)")
-      .eq("user_id", userId)
-      .eq("status", "invited");
-    if (error) throw new Error(error.message);
-    if (!pending || pending.length === 0) return { accepted: 0, org_names: [] };
-
-    const { error: updateError } = await supabase
-      .from("organization_members")
-      .update({ status: "active" as never, updated_at: new Date().toISOString() })
-      .eq("user_id", userId)
-      .eq("status", "invited");
-    if (updateError) throw new Error(updateError.message);
-
-    return {
-      accepted: pending.length,
-      org_names: pending.map(
-        (row) => ((row as never as { organizations?: { name?: string } }).organizations?.name) || "Workspace",
-      ),
-    };
+    // Members cannot update their own membership row (RLS restricts updates to
+    // owners/admins), so activation runs with the privileged client after the
+    // middleware has verified the caller.
+    const { activateMembershipsForUser } = await import("@/lib/membership.server");
+    const email = (context.claims as { email?: string } | null)?.email ?? null;
+    const result = await activateMembershipsForUser(context.userId, email);
+    return { accepted: result.activated, org_names: result.org_names };
   });
+
 
 

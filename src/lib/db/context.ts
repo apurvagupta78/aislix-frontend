@@ -160,13 +160,35 @@ export function setActiveOrgId(orgId: string, explicit = true): void {
   membershipCache = null;
 }
 
+/**
+ * Links and activates any pending invite for the signed-in account. Runs on the
+ * server because members are not allowed to update membership rows themselves.
+ */
+async function activatePendingInvites(): Promise<boolean> {
+  try {
+    const { activateMyMemberships } = await import("@/lib/membership.functions");
+    const result = await activateMyMemberships({ data: {} } as never);
+    if (!result?.activated) return false;
+    clearContextCache();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Membership row of the signed-in user for their active organization. */
 export async function getMembership(): Promise<Membership | null> {
   const userId = await requireUserId();
   if (membershipCache?.userId === userId) return membershipCache.membership;
 
-  const rows = await listMemberships();
-  if (!rows.length) return null;
+  let rows = await listMemberships();
+  if (!rows.length) {
+    // Invited members have no active membership until the invite is linked;
+    // never fail with "no workspace" before trying that.
+    if (!(await activatePendingInvites())) return null;
+    rows = await listMemberships();
+    if (!rows.length) return null;
+  }
 
   const stored = readStoredOrgId();
   let membership = stored ? rows.find((row) => row.org_id === stored) : undefined;
@@ -185,18 +207,22 @@ export async function getMembership(): Promise<Membership | null> {
 }
 
 
+
 export function clearContextCache(): void {
   membershipCache = null;
   membershipsCache = null;
 }
 
 
+const NO_WORKSPACE_MESSAGE =
+  "Your team membership is not active yet. Ask your manager to re-send the invite, or sign out and use the link in your invitation email.";
+
 /** Active organization id, throwing when the user has no workspace yet. */
 export async function requireOrgId(): Promise<string> {
   const membership = await getMembership();
   if (!membership) {
     throw new ApiError({
-      message: "No workspace found for your account yet.",
+      message: NO_WORKSPACE_MESSAGE,
       kind: "not_found",
       status: 404,
     });
@@ -208,13 +234,14 @@ export async function requireMembership(): Promise<Membership> {
   const membership = await getMembership();
   if (!membership) {
     throw new ApiError({
-      message: "No workspace found for your account yet.",
+      message: NO_WORKSPACE_MESSAGE,
       kind: "not_found",
       status: 404,
     });
   }
   return membership;
 }
+
 
 /**
  * Creates the organization for a brand-new account. The database trigger adds
@@ -273,11 +300,18 @@ export async function ensureOrganizationForUser(
   if (error) dbError(error, "Could not load your workspace.");
   if (data?.org_id) {
     if (data.status === "invited") {
-      await supabase.from("organization_members").update({ status: "active" }).eq("id", data.id);
-      clearContextCache();
+      // Members may not update their own membership row under RLS.
+      await activatePendingInvites();
     }
     return data.org_id as string;
   }
 
+  // An invite may exist keyed on the email only (no user_id yet).
+  if (await activatePendingInvites()) {
+    const rows = await listMemberships();
+    if (rows.length) return rows[0]!.org_id;
+  }
+
   return createOrganizationForUser(userId, name);
+
 }
