@@ -7,6 +7,7 @@ import {
   Package,
   ScanLine,
   Sparkles,
+  Users,
   Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -128,6 +129,15 @@ export function UsageOverviewCards() {
         label="CSV reports generated"
         value={formatNumber(usage.csv_reports)}
         icon={<FileSpreadsheet className="size-4" />}
+      />
+      <StatCard
+        label="Team users"
+        value={
+          usage.seats_included === null
+            ? usage.seat_limit_label || "Unlimited"
+            : `${usage.seats_used ?? 0} / ${usage.seats_included}`
+        }
+        icon={<Users className="size-4" />}
       />
       <StatCard
         label="Plan"
