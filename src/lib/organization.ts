@@ -313,7 +313,8 @@ export async function fetchOrganization(_signal?: AbortSignal): Promise<Organiza
           ? null
           : undefined,
     billing_period_end: subscription?.current_period_end ?? null,
-    gst_number: org.gstin ?? null,
+    // Owner/admin only — ordinary members cannot read tax details.
+    gst_number: gstin,
   });
 }
 
