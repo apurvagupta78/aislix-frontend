@@ -31,6 +31,6 @@ export function useSeatUsage() {
     remaining: usage ? remainingSeats(usage) : null,
     label: usage ? seatUsageLabel(usage) : "",
     seatLimitLabel: usage?.seat_limit_label ?? "",
-    upgradeMessage: `Your ${usage?.plan_name ?? "current"} plan includes 1 user (you). Upgrade to Growth to invite team members.`,
+    upgradeMessage: "Upgrade to the Growth plan or higher to invite team members.",
   };
 }
