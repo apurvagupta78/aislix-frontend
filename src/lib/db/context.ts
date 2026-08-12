@@ -214,12 +214,15 @@ export function clearContextCache(): void {
 }
 
 
+const NO_WORKSPACE_MESSAGE =
+  "Your team membership is not active yet. Ask your manager to re-send the invite, or sign out and use the link in your invitation email.";
+
 /** Active organization id, throwing when the user has no workspace yet. */
 export async function requireOrgId(): Promise<string> {
   const membership = await getMembership();
   if (!membership) {
     throw new ApiError({
-      message: "No workspace found for your account yet.",
+      message: NO_WORKSPACE_MESSAGE,
       kind: "not_found",
       status: 404,
     });
@@ -231,13 +234,14 @@ export async function requireMembership(): Promise<Membership> {
   const membership = await getMembership();
   if (!membership) {
     throw new ApiError({
-      message: "No workspace found for your account yet.",
+      message: NO_WORKSPACE_MESSAGE,
       kind: "not_found",
       status: 404,
     });
   }
   return membership;
 }
+
 
 /**
  * Creates the organization for a brand-new account. The database trigger adds
