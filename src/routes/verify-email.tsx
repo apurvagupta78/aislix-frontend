@@ -15,9 +15,15 @@ import {
 } from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/verify-email")({
-  validateSearch: (search: Record<string, unknown>): { email?: string } => {
+  validateSearch: (search: Record<string, unknown>): { email?: string; invited?: string; org?: string } => {
     const email = search["email"];
-    return typeof email === "string" && email ? { email } : {};
+    const invited = search["invited"];
+    const org = search["org"];
+    return {
+      ...(typeof email === "string" && email ? { email } : {}),
+      ...(invited ? { invited: "1" } : {}),
+      ...(typeof org === "string" && org ? { org } : {}),
+    };
   },
   head: () => ({
     meta: [
