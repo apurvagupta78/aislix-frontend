@@ -75,6 +75,9 @@ function StoreMasterPage() {
   const [preview, setPreview] = useState<CsvParseRow[] | null>(null);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [form, setForm] = useState<PlanogramRow>(emptyRow());
+  const [csvError, setCsvError] = useState<string | null>(null);
+  const [manualError, setManualError] = useState<string | null>(null);
+  const [draftError, setDraftError] = useState<string | null>(null);
 
   const accessQuery = useQuery({
     queryKey: ["planogram-access"],
