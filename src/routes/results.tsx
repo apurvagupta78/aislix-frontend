@@ -43,6 +43,7 @@ import {
   ShelfHealthChart,
   TopBrandsChart,
 } from "@/components/scan-results/ResultCharts";
+import { toast } from "sonner";
 import {
   fetchScanResult,
   formatConfidence,
@@ -50,6 +51,8 @@ import {
   inventoryToCsv,
   downloadBlob,
   downloadScanCsv,
+  downloadScanPdf,
+  downloadScanAnnotatedImage,
   type ScanResult,
 } from "@/lib/scan-results";
 import { retryScanAnalysis } from "@/lib/scan-api";
