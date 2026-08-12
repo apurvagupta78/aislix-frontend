@@ -145,6 +145,16 @@ function RootComponent() {
           const path = window.location.pathname;
           if (path !== "/login" && path !== "/signup") return;
           try {
+            const { fetchAuthUser, isEmailVerified } = await import("@/lib/auth-routing");
+            const user = await fetchAuthUser();
+            if (!isEmailVerified(user)) {
+              void router.navigate({ to: "/verify-email" });
+              return;
+            }
+          } catch {
+            // fall through to the normal landing logic
+          }
+          try {
             const { fetchOnboardingStatus } = await import("@/lib/onboarding");
             const status = await fetchOnboardingStatus();
             if (!status.completed) {

@@ -30,6 +30,7 @@ import {
   fetchOnboardingStatus,
   saveOnboardingProfile,
 } from "@/lib/onboarding";
+import { fetchAuthUser, isEmailVerified } from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
@@ -71,6 +72,13 @@ function OnboardingPage() {
     retry: false,
     staleTime: 0,
   });
+
+  // Unverified sessions verify their email before setting up the workspace.
+  useEffect(() => {
+    void fetchAuthUser().then((user) => {
+      if (user && !isEmailVerified(user)) void navigate({ to: "/verify-email", replace: true });
+    });
+  }, [navigate]);
 
   // Already done (or signed out): the wizard must never block the app.
   useEffect(() => {
