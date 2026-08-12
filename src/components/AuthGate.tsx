@@ -14,6 +14,7 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import {
   fetchAuthUser,
+  fetchPendingInvite,
   isEmailVerifiedServer,
   isPublicPath,
   isVerifyPath,
