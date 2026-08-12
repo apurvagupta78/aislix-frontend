@@ -50,6 +50,8 @@ import {
   type PlanogramRow,
   type SourceType,
 } from "@/lib/planogram";
+import { AssignScanDialog } from "@/components/planogram/AssignScanDialog";
+
 
 export const Route = createFileRoute("/store-master")({
   head: () => ({
