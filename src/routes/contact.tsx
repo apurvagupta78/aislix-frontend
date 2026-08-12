@@ -40,7 +40,6 @@ export const Route = createFileRoute("/contact")({
       { property: "og:url", content: "https://aislix.com/contact" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      
       { title: "Contact Aislix — Talk to our shelf intelligence team" },
       {
         name: "description",
@@ -52,8 +51,8 @@ export const Route = createFileRoute("/contact")({
         property: "og:description",
         content: "Reach the Aislix team for demos, pricing, API access and enterprise rollouts.",
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      
+      
     ],
     links: [{ rel: "canonical", href: "https://aislix.com/contact" }],
   }),

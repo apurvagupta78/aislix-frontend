@@ -23,7 +23,6 @@ export const Route = createFileRoute("/")({
       { property: "og:url", content: "https://aislix.com" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      
       { title: "Aislix — AI Retail Shelf Intelligence & Shelf Auditing" },
       {
         name: "description",

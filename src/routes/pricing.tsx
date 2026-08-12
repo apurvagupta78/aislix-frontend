@@ -20,7 +20,6 @@ export const Route = createFileRoute("/pricing")({
       { property: "og:url", content: "https://aislix.com/pricing" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      
       { title: "Pricing — Aislix AI Shelf Intelligence" },
       {
         name: "description",
@@ -32,8 +31,8 @@ export const Route = createFileRoute("/pricing")({
         property: "og:description",
         content: "Free, Starter ₹999, Professional ₹4,999 or Enterprise. Compare every feature.",
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      
+      
     ],
     links: [{ rel: "canonical", href: "https://aislix.com/pricing" }],
   }),
