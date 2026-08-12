@@ -35,8 +35,10 @@ import {
 } from "@/components/ui/table";
 import { EmptyState, Skeleton } from "@/components/States";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import {
   COMPLIANCE_INTERPRETATION,
+  downloadScanAnnotatedImage,
   downloadScanCsv,
   formatConfidence,
   inventoryToCsv,
