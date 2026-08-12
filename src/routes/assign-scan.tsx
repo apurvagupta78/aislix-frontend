@@ -22,13 +22,15 @@ import { EmptyState } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
 import { fetchShelfCategories } from "@/lib/categories.functions";
 import { FALLBACK_CATEGORIES, type ShelfCategory } from "@/lib/categories.data";
-import { fetchPlanogramStores } from "@/lib/planogram";
+import { fetchPlanogramSnapshot, fetchPlanogramStores } from "@/lib/planogram";
+import { dominantScope } from "@/components/planogram/AssignScanDialog";
 import {
   createScanAssignment,
   fetchAssignableMembers,
   isOrgManager,
   type ScopeType,
 } from "@/lib/assignments";
+
 
 export const Route = createFileRoute("/assign-scan")({
   validateSearch: (search: Record<string, unknown>) => ({
