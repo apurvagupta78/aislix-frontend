@@ -6,7 +6,6 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { api } from "@/lib/api/client";
 import { dbError, getMembership, requireOrgId, requireUserId } from "@/lib/db/context";
 
 export type PlanogramRow = {
