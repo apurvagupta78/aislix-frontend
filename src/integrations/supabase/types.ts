@@ -1417,6 +1417,17 @@ export type Database = {
           scans_used_in_batch: number
         }[]
       }
+      get_org_billing_profile: {
+        Args: { p_org_id: string }
+        Returns: {
+          address: Json
+          billing_email: string
+          gstin: string
+          id: string
+          logo_url: string
+          name: string
+        }[]
+      }
       get_org_usage_summary: { Args: { p_org_id: string }; Returns: Json }
       org_has_platform_bypass: { Args: { p_org_id: string }; Returns: boolean }
       org_has_platform_store_bypass: {
