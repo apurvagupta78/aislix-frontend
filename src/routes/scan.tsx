@@ -751,6 +751,8 @@ function ScanPage() {
           </div>
         </aside>
       </div>
+      )}
+
 
       {busy && (
         <div
