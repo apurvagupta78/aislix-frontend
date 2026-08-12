@@ -43,6 +43,7 @@ type State =
 
 function AcceptInvitePage() {
   const navigate = useNavigate();
+  const { email } = Route.useSearch();
   const [state, setState] = useState<State>({ kind: "checking" });
 
   useEffect(() => {
