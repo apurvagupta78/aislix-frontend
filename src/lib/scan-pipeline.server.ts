@@ -1045,7 +1045,19 @@ async function loadAssignmentContext(
       .select(PLANOGRAM_FIELDS)
       .eq("version_id", versionId);
     itemsFull = ((rows ?? []) as Record<string, unknown>[]).map(planogramShape);
+    if (!itemsFull.length) {
+      // Assignees whose membership is still `invited` cannot read planogram rows
+      // under RLS; the assignment already authorized this scan, so read them
+      // with the privileged client instead of shipping an empty planogram.
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: adminRows } = await supabaseAdmin
+        .from("planogram_items")
+        .select(PLANOGRAM_FIELDS)
+        .eq("version_id", versionId);
+      itemsFull = ((adminRows ?? []) as Record<string, unknown>[]).map(planogramShape);
+    }
   }
+
 
   const scopeType = String(assignment.scope_type ?? "category");
   const scopeValues = (assignment.scope_values ?? {}) as Record<string, unknown>;

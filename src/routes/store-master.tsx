@@ -50,6 +50,8 @@ import {
   type PlanogramRow,
   type SourceType,
 } from "@/lib/planogram";
+import { AssignScanDialog } from "@/components/planogram/AssignScanDialog";
+
 
 export const Route = createFileRoute("/store-master")({
   head: () => ({
@@ -78,6 +80,8 @@ const card = "rounded-2xl border border-border bg-card p-5 shadow-sm";
 function StoreMasterPage() {
   const queryClient = useQueryClient();
   const [storeId, setStoreId] = useState("");
+  const [assignOpen, setAssignOpen] = useState(false);
+
   const [draft, setDraft] = useState<DraftRow[]>([]);
   const [sources, setSources] = useState<{ csv: boolean; manual: boolean }>({
     csv: false,
@@ -271,27 +275,23 @@ function StoreMasterPage() {
       title="Planogram"
       description="Upload and activate expected shelf data (planograms) per store — source of truth for Expected vs Actual audits."
       actions={
-        snapshot?.active && storeId ? (
-          <Button variant="brand" className="rounded-xl" asChild>
-            <Link to="/assign-scan" search={{ store: storeId }}>
-              <UserPlus className="mr-2 size-4" /> Assign scan
-            </Link>
-          </Button>
-        ) : (
-          <Button
-            variant="brand"
-            className="rounded-xl"
-            disabled
-            title={
-              storeId
+        <Button
+          variant="brand"
+          className="rounded-xl"
+          disabled={!snapshot?.active || !storeId}
+          title={
+            snapshot?.active && storeId
+              ? undefined
+              : storeId
                 ? "Activate a planogram for this store to assign a scan."
                 : "Select a store with an active planogram to assign a scan."
-            }
-          >
-            <UserPlus className="mr-2 size-4" /> Assign scan
-          </Button>
-        )
+          }
+          onClick={() => setAssignOpen(true)}
+        >
+          <UserPlus className="mr-2 size-4" /> Assign scan
+        </Button>
       }
+
 
     >
       <div className="space-y-6">
@@ -755,18 +755,17 @@ function StoreMasterPage() {
                       </span>
                     )}
                   </div>
-                  <Button variant="brand" size="sm" className="rounded-xl" asChild>
-                    <Link to="/assign-scan" search={{ store: storeId }}>
-                      <UserPlus className="mr-2 size-4" /> Assign scan to team member
-                    </Link>
+                  <Button
+                    variant="brand"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={() => setAssignOpen(true)}
+                  >
+                    <UserPlus className="mr-2 size-4" /> Assign scan to team member
                   </Button>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" className="rounded-xl" asChild>
-                    <Link to="/assign-scan" search={{ store: storeId }}>
-                      Assign scan to team member
-                    </Link>
-                  </Button>
+
                   <Button variant="outline" size="sm" className="rounded-xl" asChild>
                     <Link
                       to="/assigned-scans"
@@ -816,7 +815,21 @@ function StoreMasterPage() {
           </>
         )}
       </div>
+      <AssignScanDialog
+        open={assignOpen}
+        onOpenChange={setAssignOpen}
+        storeId={storeId}
+        storeName={
+          (storesQuery.data ?? []).find((store) => store.id === storeId)?.name ?? "Store"
+        }
+        rows={(snapshot?.activeRows ?? []).map((row) => ({
+          location: row.location,
+          category: row.category,
+          sub_category: row.sub_category,
+        }))}
+      />
     </AppShell>
+
   );
 }
 
