@@ -44,10 +44,24 @@ export const Route = createFileRoute("/verify-email")({
 });
 
 function VerifyEmailPage() {
-  const { email: emailFromLink } = Route.useSearch();
+  const { email: emailFromLink, invited } = Route.useSearch();
   const navigate = useNavigate();
   const [email, setEmail] = useState(emailFromLink ?? "");
   const [cooldown, setCooldown] = useState(0);
+  const [inviteOrg, setInviteOrg] = useState<string | null>(null);
+  const isInvited = Boolean(invited) || Boolean(inviteOrg);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const pending = await fetchPendingInvite().catch(() => null);
+      if (!cancelled && pending) setInviteOrg(pending.org_name);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
 
   // This page NEVER redirects on its own except when the email is confirmed
   // (server-side truth). A pending signup has no session — staying put is
