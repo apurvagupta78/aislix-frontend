@@ -7,6 +7,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { acceptInvite } from "@/lib/team-invite.functions";
 
 export const Route = createFileRoute("/accept-invite")({
+  validateSearch: (search: Record<string, unknown>): { org?: string; email?: string } => ({
+    ...(typeof search["org"] === "string" && search["org"] ? { org: search["org"] as string } : {}),
+    ...(typeof search["email"] === "string" && search["email"]
+      ? { email: search["email"] as string }
+      : {}),
+  }),
   head: () => ({
     meta: [
       { title: "Accept your Aislix invitation" },
