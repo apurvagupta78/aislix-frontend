@@ -37,6 +37,10 @@ export const Route = createFileRoute("/contact")({
   validateSearch: searchSchema,
   head: () => ({
     meta: [
+      { property: "og:url", content: "https://aislix.com/contact" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+      
       { title: "Contact Aislix — Talk to our shelf intelligence team" },
       {
         name: "description",
@@ -51,6 +55,7 @@ export const Route = createFileRoute("/contact")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
+    links: [{ rel: "canonical", href: "https://aislix.com/contact" }],
   }),
   component: Contact,
 });

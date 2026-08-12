@@ -20,6 +20,10 @@ import type { BillingCycle } from "@/lib/pricing";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
+      { property: "og:url", content: "https://aislix.com" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+      
       { title: "Aislix — AI Retail Shelf Intelligence & Shelf Auditing" },
       {
         name: "description",
@@ -33,6 +37,7 @@ export const Route = createFileRoute("/")({
           "Automated shelf audits for supermarkets, dark stores, warehouses, FMCG brands, distributors and local stores.",
       },
     ],
+    links: [{ rel: "canonical", href: "https://aislix.com" }],
   }),
   component: Landing,
 });

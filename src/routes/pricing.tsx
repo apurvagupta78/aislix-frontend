@@ -17,6 +17,10 @@ import type { BillingCycle, Plan } from "@/lib/pricing";
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
+      { property: "og:url", content: "https://aislix.com/pricing" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+      
       { title: "Pricing — Aislix AI Shelf Intelligence" },
       {
         name: "description",
@@ -31,6 +35,7 @@ export const Route = createFileRoute("/pricing")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
+    links: [{ rel: "canonical", href: "https://aislix.com/pricing" }],
   }),
   component: Pricing,
 });
