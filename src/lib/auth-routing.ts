@@ -93,7 +93,9 @@ const PUBLIC_PATHS = new Set([
   "/refunds",
   "/logout",
   "/auth/callback",
+  "/accept-invite",
 ]);
+
 
 export function isPublicPath(path: string): boolean {
   return PUBLIC_PATHS.has(path) || path.startsWith("/legal") || path.startsWith("/api");

@@ -68,6 +68,7 @@ export const inviteMember = createServerFn({ method: "POST" })
     const orgId = membership.org_id as string;
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { generateInviteLink, sendInviteEmail } = await import("@/lib/team-invite.server");
 
     // 1) Existing account? profiles mirrors auth.users and is admin-readable.
     let invitedUserId: string | null = null;
@@ -78,23 +79,28 @@ export const inviteMember = createServerFn({ method: "POST" })
       .maybeSingle();
     if (profile?.id) invitedUserId = profile.id as string;
 
-    // 2) Otherwise create the account through an Auth invite email.
+    // 2) Otherwise create the account and mint an invite action link. Supabase
+    //    does not email it — we send our own branded invitation below.
     let mode: InviteMemberResult["mode"] = "updated";
+    let actionLink: string | null = null;
     if (!invitedUserId) {
-      const invited = await supabaseAdmin.auth.admin.inviteUserByEmail(data.email, {
-        data: data.name ? { full_name: data.name } : undefined,
-      });
-      if (invited.data?.user?.id) {
-        invitedUserId = invited.data.user.id;
+      actionLink = await generateInviteLink(supabaseAdmin as never, data.email, orgId);
+      const { data: listed } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      const match = listed?.users?.find(
+        (user) => (user.email ?? "").toLowerCase() === data.email,
+      );
+      if (match) {
+        invitedUserId = match.id;
         mode = "invited";
       } else {
-        // Already registered but no profile row yet — find them in Auth.
-        const listed = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-        const match = listed.data?.users?.find(
-          (user) => (user.email ?? "").toLowerCase() === data.email,
-        );
-        if (!match) throw new Error(invited.error?.message || "Could not invite this email address.");
-        invitedUserId = match.id;
+        const invited = await supabaseAdmin.auth.admin.inviteUserByEmail(data.email, {
+          data: data.name ? { full_name: data.name } : undefined,
+        });
+        if (!invited.data?.user?.id) {
+          throw new Error(invited.error?.message || "Could not invite this email address.");
+        }
+        invitedUserId = invited.data.user.id;
+        mode = "invited";
       }
     }
 
@@ -129,6 +135,24 @@ export const inviteMember = createServerFn({ method: "POST" })
       .single();
     if (upsertError) throw new Error(upsertError.message);
 
+    // 4) Branded invitation email (never blocks the invite itself).
+    if (!isExistingActive) {
+      const [{ data: org }, { data: inviter }] = await Promise.all([
+        supabaseAdmin.from("organizations").select("name").eq("id", orgId).maybeSingle(),
+        supabaseAdmin.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
+      ]);
+      await sendInviteEmail({
+        email: data.email,
+        orgId,
+        orgName: (org?.name as string) || "your workspace",
+        inviterName: (inviter?.full_name as string) ?? null,
+        role: data.role,
+        acceptUrl: actionLink,
+        isNewUser: Boolean(actionLink),
+        idempotencySuffix: member!.id as string,
+      });
+    }
+
     return {
       member_id: member!.id as string,
       user_id: invitedUserId!,
@@ -136,6 +160,7 @@ export const inviteMember = createServerFn({ method: "POST" })
       mode: isExistingActive ? "updated" : mode === "invited" ? "invited" : "updated",
     };
   });
+
 
 /** Re-sends the Auth invite email for a still-pending membership row. */
 export const resendMemberInvite = createServerFn({ method: "POST" })
@@ -171,10 +196,34 @@ export const resendMemberInvite = createServerFn({ method: "POST" })
     if (!email) throw new Error("This invite has no email address.");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const invited = await supabaseAdmin.auth.admin.inviteUserByEmail(email);
-    if (invited.error && !/already/i.test(invited.error.message)) {
-      throw new Error(invited.error.message);
-    }
+    const { generateInviteLink, sendInviteEmail } = await import("@/lib/team-invite.server");
+
+    const orgId = membership.org_id as string;
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .ilike("email", email)
+      .maybeSingle();
+
+    // No account yet -> mint a fresh invite action link. Existing account ->
+    // plain accept link they open after signing in.
+    const actionLink = profile?.id ? null : await generateInviteLink(supabaseAdmin as never, email, orgId);
+
+    const [{ data: org }, { data: inviter }] = await Promise.all([
+      supabaseAdmin.from("organizations").select("name").eq("id", orgId).maybeSingle(),
+      supabaseAdmin.from("profiles").select("full_name").eq("id", userId).maybeSingle(),
+    ]);
+
+    await sendInviteEmail({
+      email,
+      orgId,
+      orgName: (org?.name as string) || "your workspace",
+      inviterName: (inviter?.full_name as string) ?? null,
+      role: "member",
+      acceptUrl: actionLink,
+      isNewUser: Boolean(actionLink),
+      idempotencySuffix: `resend-${Date.now()}`,
+    });
 
     await supabaseAdmin
       .from("organization_members")
@@ -183,4 +232,43 @@ export const resendMemberInvite = createServerFn({ method: "POST" })
 
     return { email };
   });
+
+export type AcceptInviteResult = {
+  accepted: number;
+  org_names: string[];
+};
+
+/**
+ * Activates every pending membership belonging to the signed-in user. The
+ * invite email link lands here, so accepting works regardless of which
+ * workspace(s) invited them.
+ */
+export const acceptInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<AcceptInviteResult> => {
+    const { supabase, userId } = context;
+
+    const { data: pending, error } = await supabase
+      .from("organization_members")
+      .select("id, org_id, organizations:org_id(name)")
+      .eq("user_id", userId)
+      .eq("status", "invited");
+    if (error) throw new Error(error.message);
+    if (!pending || pending.length === 0) return { accepted: 0, org_names: [] };
+
+    const { error: updateError } = await supabase
+      .from("organization_members")
+      .update({ status: "active" as never, updated_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .eq("status", "invited");
+    if (updateError) throw new Error(updateError.message);
+
+    return {
+      accepted: pending.length,
+      org_names: pending.map(
+        (row) => ((row as never as { organizations?: { name?: string } }).organizations?.name) || "Workspace",
+      ),
+    };
+  });
+
 
