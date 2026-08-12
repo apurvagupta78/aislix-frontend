@@ -95,17 +95,24 @@ export async function resolvePostAuthRoute(_user?: MinimalUser): Promise<AuthRou
   const user = await fetchAuthUser();
   if (!user) return { to: "/login" };
 
-  const pending = await fetchPendingInvite().catch(() => null);
-  if (pending) {
-    try {
-      const { acceptInvite } = await import("@/lib/team-invite.functions");
-      await acceptInvite({ data: {} } as never);
+  // Activation is attempted for every verified sign-in: an invite created
+  // before the account existed is keyed on the email, not the user id, so
+  // fetchPendingInvite() alone cannot see it.
+  let activated = 0;
+  try {
+    const { acceptInvite } = await import("@/lib/team-invite.functions");
+    const result = await acceptInvite({ data: {} } as never);
+    activated = result?.accepted ?? 0;
+    if (activated > 0) {
+      const { clearContextCache } = await import("@/lib/db/context");
+      clearContextCache();
       await supabase.rpc("complete_onboarding" as never, {} as never);
-    } catch {
-      // membership activation is retried on the next authenticated read
     }
-    return { to: "/my-scans" };
+  } catch {
+    // membership activation is retried on the next authenticated read
   }
+  if (activated > 0) return { to: "/my-scans" };
+
 
   const { data: profile, error } = await supabase
     .from("profiles")
