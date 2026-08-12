@@ -138,12 +138,18 @@ function AssignScanPage() {
       createScanAssignment({
         storeId,
         scopeType,
-        scopeValues:
-          scopeType === "location"
+        scopeValues: fromPlanogram
+          ? {
+              ...(category ? { category } : {}),
+              ...(subCategory ? { sub_category: subCategory } : {}),
+              ...(location.trim() ? { location: location.trim() } : {}),
+            }
+          : scopeType === "location"
             ? { location: location.trim() }
             : scopeType === "sub_category"
               ? { category, sub_category: subCategory }
               : { category },
+
         assigneeId,
         assigneeName: assignee?.name ?? "team member",
         dueAt: dueAt || null,
