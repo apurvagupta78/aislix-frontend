@@ -223,7 +223,7 @@ function OnboardingPage() {
     teamStep.isPending ||
     finish.isPending;
 
-  if (!allowed || statusQuery.isLoading || statusQuery.data?.completed) {
+  if (!allowed || statusQuery.isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface">
         <Loader2 className="size-5 animate-spin text-muted-foreground" />
