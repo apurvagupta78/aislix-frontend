@@ -133,6 +133,7 @@ export function AnnotatedImageViewer({
 }) {
   const [zoom, setZoom] = useState(1);
   const [fullscreen, setFullscreen] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (!fullscreen) return;
