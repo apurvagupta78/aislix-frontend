@@ -88,7 +88,7 @@ export async function resolvePostAuthRoute(_user?: MinimalUser): Promise<AuthRou
   if (!(await isEmailVerifiedServer())) {
     const pending = await fetchPendingInvite().catch(() => null);
     return pending
-      ? { to: "/verify-email", search: { invited: "1", org: pending.org_id } }
+      ? { to: "/verify-email", search: { invited: "true", org: pending.org_id } }
       : { to: "/verify-email" };
   }
 

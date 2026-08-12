@@ -16,13 +16,13 @@ import {
 } from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/verify-email")({
-  validateSearch: (search: Record<string, unknown>): { email?: string; invited?: string; org?: string } => {
+  validateSearch: (search: Record<string, unknown>): { email?: string; invited?: boolean; org?: string } => {
     const email = search["email"];
     const invited = search["invited"];
     const org = search["org"];
     return {
       ...(typeof email === "string" && email ? { email } : {}),
-      ...(invited ? { invited: "1" } : {}),
+      ...(invited === true || invited === "1" || invited === "true" ? { invited: true } : {}),
       ...(typeof org === "string" && org ? { org } : {}),
     };
   },

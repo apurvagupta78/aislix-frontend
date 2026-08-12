@@ -64,7 +64,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           if (cancelled) return;
           void navigate(
             pending
-              ? ({ to: "/verify-email", search: { invited: "1", org: pending.org_id }, replace: true } as never)
+              ? ({ to: "/verify-email", search: { invited: true, org: pending.org_id }, replace: true } as never)
               : { to: "/verify-email", replace: true },
           );
           return;
