@@ -106,6 +106,11 @@ export async function submitScanImages(
     subCategoryCustom?: string;
     /** Set when the scan was launched from an assigned task (/my-scans). */
     assignmentId?: string;
+    /**
+     * Workspace to record the scan in. Assigned scans pass the assignment's
+     * org so an invited member never depends on workspace bootstrap.
+     */
+    orgId?: string;
   } = {},
 
 ): Promise<ScanResponse> {
@@ -119,7 +124,8 @@ export async function submitScanImages(
   }
 
   const userId = await requireUserId();
-  const orgId = await requireOrgId();
+  const orgId = options.orgId ?? (await requireOrgId());
+
 
   // Plan limits: Free = 3 scans per rolling 24h, paid plans metered monthly.
   // The scans_used counter is incremented by a DB trigger on completion.
