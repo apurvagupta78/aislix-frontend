@@ -1,21 +1,23 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { MailCheck } from "lucide-react";
 import { AuthLayout } from "@/components/AuthLayout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { resendVerificationEmail, verifyEmail } from "@/lib/account";
+import { supabase } from "@/integrations/supabase/client";
+import { logout, resendVerificationEmail } from "@/lib/api/auth";
+import {
+  fetchAuthUser,
+  goToAuthRoute,
+  isEmailVerified,
+  resolvePostAuthRoute,
+} from "@/lib/auth-routing";
 
 export const Route = createFileRoute("/verify-email")({
-  validateSearch: (search: Record<string, unknown>): { token?: string; email?: string } => {
-    const token = search['token'];
-    const email = search['email'];
-    return {
-      ...(typeof token === "string" && token ? { token } : {}),
-      ...(typeof email === "string" && email ? { email } : {}),
-    };
+  validateSearch: (search: Record<string, unknown>): { email?: string } => {
+    const email = search["email"];
+    return typeof email === "string" && email ? { email } : {};
   },
   head: () => ({
     meta: [
@@ -25,42 +27,77 @@ export const Route = createFileRoute("/verify-email")({
         content: "Confirm your email address to activate your Aislix shelf intelligence workspace.",
       },
       { property: "og:title", content: "Verify your email — Aislix" },
-      { property: "og:description", content: "Activate your Aislix workspace by verifying your email." },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      {
+        property: "og:description",
+        content: "Activate your Aislix workspace by verifying your email.",
+      },
+      { name: "robots", content: "noindex" },
     ],
   }),
   component: VerifyEmailPage,
 });
 
 function VerifyEmailPage() {
-  const { token: tokenFromLink, email } = Route.useSearch();
+  const { email: emailFromLink } = Route.useSearch();
   const navigate = useNavigate();
-  const [token, setToken] = useState(tokenFromLink ?? "");
+  const [email, setEmail] = useState(emailFromLink ?? "");
+  const [cooldown, setCooldown] = useState(0);
 
-  const verify = useMutation({
-    mutationFn: () => verifyEmail({ token }),
-    onSuccess: () => {
-      toast.success("Email verified", { description: "Your workspace is ready." });
-      navigate({ to: "/dashboard" });
-    },
-    onError: (error: Error) => toast.error("Verification failed", { description: error.message }),
-  });
+  // Session gate: signed-out users log in first, verified users move on.
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      const user = await fetchAuthUser();
+      if (cancelled) return;
+      if (!user) {
+        void navigate({ to: "/login", replace: true });
+        return;
+      }
+      if (user.email) setEmail(user.email);
+      if (isEmailVerified(user)) {
+        const route = await resolvePostAuthRoute(user);
+        if (!cancelled) goToAuthRoute(navigate as never, route);
+      }
+    };
+    void check();
+    // Poll while the user keeps this tab open with their inbox in another one.
+    const timer = window.setInterval(() => void check(), 5000);
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user ?? null;
+      if (user && isEmailVerified(user)) void check();
+    });
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      data.subscription.unsubscribe();
+      };
+  }, [navigate]);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = window.setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [cooldown]);
 
   const resend = useMutation({
-    mutationFn: () => resendVerificationEmail({ email: email ?? "" }),
-    onSuccess: () => toast.success("Verification email sent"),
-    onError: (error: Error) => toast.error("Could not resend email", { description: error.message }),
+    mutationFn: () => resendVerificationEmail({ email }),
+    onSuccess: () => {
+      toast.success("Verification email sent again.");
+      setCooldown(60);
+    },
+    onError: (error: Error) =>
+      toast.error("Could not resend the email", { description: error.message }),
+  });
+
+  const signOut = useMutation({
+    mutationFn: () => logout(),
+    onSuccess: () => navigate({ to: "/login", replace: true }),
   });
 
   return (
     <AuthLayout
       title="Verify your email"
-      subtitle={
-        email
-          ? `We sent a verification code to ${email}. Enter it below to activate your workspace.`
-          : "Enter the verification code from your email to activate your workspace."
-      }
+      subtitle="One quick step before your workspace opens."
       footer={
         <>
           Wrong address?{" "}
@@ -70,47 +107,49 @@ function VerifyEmailPage() {
         </>
       }
     >
-      <form
-        className="space-y-4"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (token) verify.mutate();
-        }}
-      >
-        <div className="space-y-2">
-          <Label htmlFor="token">Verification code</Label>
-          <Input
-            id="token"
-            required
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder="Paste the code from your email"
-            className="h-11 rounded-xl"
-          />
+      <div className="space-y-5">
+        <div className="flex items-start gap-3 rounded-2xl border border-border bg-muted/40 p-4">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand/10 text-brand">
+            <MailCheck className="size-5" />
+          </span>
+          <div className="space-y-1">
+            <p className="text-sm text-foreground">
+              A verification email has been sent to{" "}
+              <strong className="font-semibold">{email || "your email address"}</strong>. Please
+              check your email and click the verification link to continue.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Didn't receive it? Check spam, or click Resend below.
+            </p>
+          </div>
         </div>
+
         <Button
-          type="submit"
+          type="button"
           variant="brand"
           size="lg"
           className="w-full"
-          disabled={verify.isPending || !token}
-        >
-          {verify.isPending ? "Verifying…" : "Verify email"}
-        </Button>
-        <Button
-          type="button"
-          variant="subtle"
-          size="lg"
-          className="w-full"
-          disabled={resend.isPending || !email}
+          disabled={resend.isPending || !email || cooldown > 0}
           onClick={() => resend.mutate()}
         >
-          {resend.isPending ? "Sending…" : "Resend verification email"}
+          {resend.isPending
+            ? "Sending…"
+            : cooldown > 0
+              ? `Resend available in ${cooldown}s`
+              : "Resend verification email"}
         </Button>
-        <Button asChild variant="ghost" size="lg" className="w-full" type="button">
-          <Link to="/login">Back to log in</Link>
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="lg"
+          className="w-full"
+          disabled={signOut.isPending}
+          onClick={() => signOut.mutate()}
+        >
+          Sign out
         </Button>
-      </form>
+      </div>
     </AuthLayout>
   );
 }

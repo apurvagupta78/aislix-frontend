@@ -126,7 +126,7 @@ export async function register(input: RegisterInput): Promise<AuthSession> {
     email: input.email.trim(),
     password: input.password,
     options: {
-      emailRedirectTo: `${window.location.origin}/login`,
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
       data: {
         full_name: input.full_name,
         ...(input.company_name ? { company_name: input.company_name } : {}),
@@ -137,12 +137,18 @@ export async function register(input: RegisterInput): Promise<AuthSession> {
   if (error) authError(error.message, error.status ?? 400);
 
   if (!data.session) {
-    // Email confirmation is on: the user is not signed in yet.
-    throw new ApiError({
-      message: "Check your inbox to confirm your email, then log in.",
-      kind: "bad_request",
-      status: 202,
-    });
+    // Email confirmation is on: the user is not signed in yet. The signup page
+    // sends them to /verify-email, so return a session-less shape instead of
+    // throwing.
+    return {
+      access_token: "",
+      user: {
+        id: data.user?.id ?? "",
+        email: data.user?.email ?? input.email.trim(),
+        full_name: input.full_name,
+        email_verified: false,
+      },
+    };
   }
 
   if (input.phone) {
@@ -221,7 +227,7 @@ export async function resendVerificationEmail(input: { email: string }): Promise
   const { error } = await supabase.auth.resend({
     type: "signup",
     email: input.email.trim(),
-    options: { emailRedirectTo: `${window.location.origin}/login` },
+    options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
   });
   if (error) authError(error.message, error.status ?? 400);
   return { ok: true };

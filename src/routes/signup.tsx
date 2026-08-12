@@ -58,16 +58,9 @@ function SignupPage() {
         full_name: `${form.first} ${form.last}`.trim(),
         company_name: form.company.trim() || undefined,
       }),
-    onSuccess: (session) => {
-      if (session.access_token) {
-        toast.success("Workspace created");
-        navigate({ to: "/dashboard" });
-      } else {
-        toast.success("Check your email", {
-          description: "Confirm your address to finish setting up your workspace.",
-        });
-        navigate({ to: "/verify-email" });
-      }
+    onSuccess: () => {
+      // Always land on the dedicated verification page — never a toast only.
+      navigate({ to: "/verify-email", search: { email: form.email.trim() }, replace: true });
     },
     onError: (error: unknown) =>
       toast.error("Could not create your workspace", { description: toUserMessage(error) }),

@@ -52,6 +52,7 @@ import { Route as UploadRouteImport } from './routes/upload'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as ApiScanRouteImport } from './routes/api/scan'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as StoresIndexRouteImport } from './routes/stores.index'
 import { Route as StoresStoreIdRouteImport } from './routes/stores.$storeId'
 
@@ -270,6 +271,11 @@ const ApiScanRoute = ApiScanRouteImport.update({
   path: '/api/scan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StoresIndexRoute = StoresIndexRouteImport.update({
   id: '/stores/',
   path: '/stores/',
@@ -325,6 +331,7 @@ export interface FileRoutesByFullPath {
   '/users': typeof UsersRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/scan': typeof ApiScanRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
 }
@@ -372,6 +379,7 @@ export interface FileRoutesByTo {
   '/users': typeof UsersRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/scan': typeof ApiScanRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores': typeof StoresIndexRoute
 }
@@ -420,6 +428,7 @@ export interface FileRoutesById {
   '/users': typeof UsersRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/scan': typeof ApiScanRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
 }
@@ -469,6 +478,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/verify-email'
     | '/api/scan'
+    | '/auth/callback'
     | '/stores/$storeId'
     | '/stores/'
   fileRoutesByTo: FileRoutesByTo
@@ -516,6 +526,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/verify-email'
     | '/api/scan'
+    | '/auth/callback'
     | '/stores/$storeId'
     | '/stores'
   id:
@@ -563,6 +574,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/verify-email'
     | '/api/scan'
+    | '/auth/callback'
     | '/stores/$storeId'
     | '/stores/'
   fileRoutesById: FileRoutesById
@@ -611,6 +623,7 @@ export interface RootRouteChildren {
   UsersRoute: typeof UsersRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   ApiScanRoute: typeof ApiScanRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   StoresStoreIdRoute: typeof StoresStoreIdRoute
   StoresIndexRoute: typeof StoresIndexRoute
 }
@@ -918,6 +931,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiScanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stores/': {
       id: '/stores/'
       path: '/stores'
@@ -979,6 +999,7 @@ const rootRouteChildren: RootRouteChildren = {
   UsersRoute: UsersRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   ApiScanRoute: ApiScanRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   StoresStoreIdRoute: StoresStoreIdRoute,
   StoresIndexRoute: StoresIndexRoute,
 }

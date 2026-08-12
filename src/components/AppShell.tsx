@@ -48,6 +48,7 @@ import { cn } from "@/lib/utils";
 
 import { fetchProfile } from "@/lib/account";
 import { fetchOnboardingStatus } from "@/lib/onboarding";
+import { fetchAuthUser, isEmailVerified } from "@/lib/auth-routing";
 
 import { fetchMyPendingCount, isOrgManager } from "@/lib/assignments";
 import { getMembership, listMemberships, setActiveOrgId } from "@/lib/db/context";
@@ -460,6 +461,21 @@ export function AppShell({
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useSidebarCollapsed();
+  // Email verification gate: an unverified session cannot reach app routes.
+  const verifiedQuery = useQuery({
+    queryKey: ["email-verified"],
+    queryFn: async () => {
+      const user = await fetchAuthUser();
+      return { signedIn: Boolean(user), verified: isEmailVerified(user) };
+    },
+    retry: false,
+    staleTime: 60_000,
+  });
+  const unverified = verifiedQuery.data?.signedIn === true && !verifiedQuery.data.verified;
+  useEffect(() => {
+    if (unverified) void navigate({ to: "/verify-email", replace: true });
+  }, [unverified, navigate]);
+
   // First-time setup gate: new users finish the wizard before using the app.
   const onboardingQuery = useQuery({
     queryKey: ["onboarding-status"],
@@ -468,10 +484,11 @@ export function AppShell({
     staleTime: 5 * 60_000,
   });
   useEffect(() => {
+    if (unverified) return;
     if (onboardingQuery.data && !onboardingQuery.data.completed) {
       void navigate({ to: "/onboarding" });
     }
-  }, [onboardingQuery.data, navigate]);
+  }, [onboardingQuery.data, unverified, navigate]);
   const profileQuery = useQuery({
     queryKey: ["profile"],
     queryFn: () => fetchProfile(),
