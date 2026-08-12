@@ -110,25 +110,32 @@ function ScanPage() {
     : FALLBACK_CATEGORIES;
 
   const assignmentQuery = useQuery({
-    queryKey: ["assignment", assignmentId],
-    queryFn: () => fetchAssignmentById(assignmentId!),
+    queryKey: ["assignment-scan-context", assignmentId],
+    queryFn: () => getAssignmentScanContext({ data: { assignmentId: assignmentId! } }),
     enabled: Boolean(assignmentId),
     retry: false,
   });
   const assignment = assignmentQuery.data ?? null;
   const lockedByAssignment = Boolean(assignment);
+  const loadingAssignment = Boolean(assignmentId) && assignmentQuery.isPending;
 
   useEffect(() => {
     if (!assignment) return;
     setStoreId(assignment.store_id);
-    setShelfLocation(
-      assignment.location ?? assignment.scope_values.location ?? assignment.store_name,
-    );
-    if (assignment.scope_values.category) setCategory(assignment.scope_values.category);
-    if (assignment.scope_values.sub_category) {
-      setSubCategory(assignment.scope_values.sub_category);
-    }
+    setShelfLocation(assignment.location);
+    setCategory(assignment.category);
+    setSubCategory(assignment.sub_category);
   }, [assignment]);
+
+  // The member has effectively started the task as soon as the form is open.
+  const startedRef = useRef(false);
+  useEffect(() => {
+    if (!assignment || startedRef.current) return;
+    if (assignment.status !== "pending") return;
+    startedRef.current = true;
+    void startAssignment(assignment.assignment_id).catch(() => undefined);
+  }, [assignment]);
+
 
   const selectedCategory = categories.find((item) => item.name === category);
   const subcategories = selectedCategory?.subcategories ?? [];
