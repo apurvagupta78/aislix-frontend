@@ -56,9 +56,10 @@ export const Route = createFileRoute("/onboarding")({
 const STEPS = [
   { title: "Your details", hint: "Tell us who you are" },
   { title: "First store", hint: "Where you audit shelves" },
-  { title: "Planogram", hint: "Optional — skip for now" },
-  { title: "Your team", hint: "Optional — skip for now" },
+  { title: "Planogram", hint: "Set your planogram" },
+  { title: "Your team", hint: "Invite your team" },
 ] as const;
+
 
 type InviteDraft = { email: string; role: UserRole };
 
