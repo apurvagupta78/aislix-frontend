@@ -35,7 +35,7 @@ export async function generateInviteLink(
   email: string,
   orgId: string,
 ): Promise<string | null> {
-  const redirectTo = `${siteUrl()}/accept-invite?org=${orgId}`;
+  const redirectTo = `${siteUrl()}/accept-invite?org=${orgId}&email=${encodeURIComponent(email)}`;
   const { data, error } = await admin.auth.admin.generateLink({
     type: "invite",
     email,
@@ -55,7 +55,9 @@ export async function sendInviteEmail(input: {
   isNewUser: boolean;
   idempotencySuffix: string;
 }): Promise<void> {
-  const acceptUrl = input.acceptUrl || `${siteUrl()}/accept-invite?org=${input.orgId}`;
+  const acceptUrl =
+    input.acceptUrl ||
+    `${siteUrl()}/accept-invite?org=${input.orgId}&email=${encodeURIComponent(input.email)}`;
   try {
     await sendTemplateEmail("team-invite", input.email, {
       idempotencyKey: `team-invite-${input.orgId}-${input.email}-${input.idempotencySuffix}`,
