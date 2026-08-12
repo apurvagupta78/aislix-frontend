@@ -379,6 +379,26 @@ function DownloadsPanel({
     );
   };
 
+  const downloadImage = async () => {
+    if (!data?.scan_id) return;
+    try {
+      await downloadScanAnnotatedImage(data.scan_id, imageUrl);
+      toast.success("Annotated image downloaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Download failed");
+    }
+  };
+
+  const downloadPdf = async () => {
+    if (!data?.scan_id) return;
+    try {
+      await downloadScanPdf(data.scan_id, data.downloads?.pdf_url);
+      toast.success("PDF report downloaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Download failed");
+    }
+  };
+
   const downloadJson = () =>
     data &&
     downloadBlob(
@@ -386,6 +406,7 @@ function DownloadsPanel({
       `aislix-${data.scan_id}-result.json`,
       "application/json",
     );
+
 
   return (
     <ResultSection title="Downloads" description="Export this scan for sharing or analysis.">
