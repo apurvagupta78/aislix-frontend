@@ -510,7 +510,12 @@ function OnboardingPage() {
                 </Button>
               )}
               {step === 3 && (
-                <Button variant="ghost" size="sm" disabled={busy} onClick={() => finish.mutate()}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => setInvites([{ email: "", role: "member" }])}
+                >
                   Skip for now
                 </Button>
               )}
