@@ -273,6 +273,20 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   // POST /scan payload so every inventory row carries the real status instead of
   // silently defaulting to "OK".
   const rawPayload = (result?.raw_payload ?? null) as any;
+  // Always show the backend-rendered annotated image: stored signed URL first,
+  // falling back to the base64 JPEG returned by the vision service.
+  const annotatedBase64 =
+    typeof rawPayload?.annotated_image_base64 === "string" && rawPayload.annotated_image_base64
+      ? (rawPayload.annotated_image_base64 as string)
+      : undefined;
+  const annotatedImageSrc =
+    annotatedUrl ??
+    (annotatedBase64
+      ? annotatedBase64.startsWith("data:")
+        ? annotatedBase64
+        : `data:image/jpeg;base64,${annotatedBase64}`
+      : undefined);
+
   const rawRows: any[] = [
     ...(Array.isArray(rawPayload?.inventory) ? rawPayload.inventory : []),
     ...(Array.isArray(rawPayload?.products) ? rawPayload.products : []),
@@ -499,9 +513,10 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
       low_stock_summary: lowStockSummary,
     },
     downloads: {
-      ...(annotatedUrl ? { annotated_image_url: annotatedUrl } : {}),
+      ...(annotatedImageSrc ? { annotated_image_url: annotatedImageSrc } : {}),
       ...(pdfUrl ? { pdf_url: pdfUrl } : {}),
     },
+
   };
   if (storeName) scanResult.store = storeName;
   const shelfLabel = (scan as any).shelf_label as string | null | undefined;
@@ -513,7 +528,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     ((scan as any).sub_category_label as string | null | undefined) ||
     ((scan as any).sub_category as string | null | undefined);
   if (subLabel) scanResult.scan_sub_category = subLabel;
-  if (annotatedUrl) scanResult.annotated_image_url = annotatedUrl;
+  if (annotatedImageSrc) scanResult.annotated_image_url = annotatedImageSrc;
   if (result?.executive_summary) scanResult.executive_summary = result.executive_summary;
   return scanResult;
 }
@@ -641,6 +656,15 @@ export async function resolveScanAssetUrls(scanId: string): Promise<ScanAssetUrl
 
 /** Fetches a URL and saves it as a real file download (works on mobile Safari). */
 export async function downloadFileFromUrl(url: string, filename: string): Promise<void> {
+  if (url.startsWith("data:")) {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    return;
+  }
   const response = await fetch(url);
   if (!response.ok) throw new Error("This file is no longer available.");
   const blob = await response.blob();
