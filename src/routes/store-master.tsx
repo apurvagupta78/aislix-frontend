@@ -1,13 +1,25 @@
 import { useMemo, useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Download, Loader2, Plus, Trash2, Upload, UserPlus, XCircle } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Download,
+  Loader2,
+  Plus,
+  Trash2,
+  Upload,
+  UserPlus,
+  X,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -75,6 +87,9 @@ function StoreMasterPage() {
   const [preview, setPreview] = useState<CsvParseRow[] | null>(null);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [form, setForm] = useState<PlanogramRow>(emptyRow());
+  const [csvError, setCsvError] = useState<string | null>(null);
+  const [manualError, setManualError] = useState<string | null>(null);
+  const [draftError, setDraftError] = useState<string | null>(null);
 
   const accessQuery = useQuery({
     queryKey: ["planogram-access"],
@@ -110,32 +125,48 @@ function StoreMasterPage() {
 
   const parseMutation = useMutation({
     mutationFn: (file: File) => parsePlanogramCsv(file),
+    onMutate: () => setCsvError(null),
     onSuccess: (result) => {
       setPreview(result.rows);
-      if (result.errors.length) toast.error(result.errors[0] ?? "Could not read the CSV file.");
-      else if (!result.rows.length) toast.error("No rows found in this CSV file.");
+      if (result.error_count > 0 && result.valid_count === 0) {
+        const details = (result.errors.length
+          ? result.errors
+          : result.rows.flatMap((row) => row.errors ?? [])
+        ).slice(0, 5);
+        setCsvError(
+          `CSV has ${result.error_count} error${result.error_count === 1 ? "" : "s"} and no valid rows.${
+            details.length ? `\n• ${details.join("\n• ")}` : ""
+          }\nRequired columns: location, category, sub_category, brand, product_name, expected_qty, sku, shelf_position.`,
+        );
+      } else if (result.errors.length) {
+        setCsvError(`Some rows could not be read:\n• ${result.errors.slice(0, 5).join("\n• ")}`);
+      } else if (!result.rows.length) {
+        setCsvError("No rows found in this CSV file. Download the template and try again.");
+      }
     },
-    onError: (error) => toast.error(toUserMessage(error)),
+    onError: (error) => setCsvError(toUserMessage(error)),
   });
 
   const normalizeMutation = useMutation({
     mutationFn: (row: PlanogramRow) => normalizePlanogramRow(row),
+    onMutate: () => setManualError(null),
     onSuccess: (row) => {
       setDraft((rows) => [...rows, row]);
       setSources((s) => ({ ...s, manual: true }));
       toast.success("Product added to the draft.");
     },
-    onError: (error) => toast.error(toUserMessage(error)),
+    onError: (error) => setManualError(toUserMessage(error)),
   });
 
   const saveMutation = useMutation({
     mutationFn: () =>
       savePlanogramDraft({ storeId, rows: draft, sourceType, sourceFilename: filename }),
+    onMutate: () => setDraftError(null),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["planogram-snapshot", storeId] });
       toast.success(`Draft saved — ${draft.length} product${draft.length === 1 ? "" : "s"}.`);
     },
-    onError: (error) => toast.error(toUserMessage(error)),
+    onError: (error) => setDraftError(toUserMessage(error)),
   });
 
   const activateMutation = useMutation({
@@ -148,6 +179,7 @@ function StoreMasterPage() {
       });
       return activatePlanogram({ storeId, versionId: version.id, rowCount: draft.length });
     },
+    onMutate: () => setDraftError(null),
     onSuccess: async () => {
       const count = draft.length;
       setDraft([]);
@@ -157,7 +189,7 @@ function StoreMasterPage() {
       await queryClient.invalidateQueries({ queryKey: ["planogram-snapshot", storeId] });
       toast.success(`Planogram activated — ${count} products expected`);
     },
-    onError: (error) => toast.error(toUserMessage(error)),
+    onError: (error) => setDraftError(toUserMessage(error)),
   });
 
   function downloadTemplate() {
@@ -177,23 +209,27 @@ function StoreMasterPage() {
     setSources({ csv: false, manual: false });
     setFilename(null);
     setEditingKey(null);
+    setCsvError(null);
+    setManualError(null);
+    setDraftError(null);
   }
 
   function importValidRows() {
     const valid = (preview ?? []).filter((row) => row.valid && row.data);
     if (!valid.length) {
-      toast.error("No valid rows to import.");
+      setCsvError("No valid rows to import. Fix the highlighted rows in your CSV and upload again.");
       return;
     }
     setDraft((rows) => [...rows, ...valid.map((row) => toDraftRow(row.data))]);
     setSources((s) => ({ ...s, csv: true }));
     setPreview(null);
+    setCsvError(null);
     toast.success(`${valid.length} row${valid.length === 1 ? "" : "s"} added to the draft.`);
   }
 
   function submitManual(keepContext: boolean) {
     if (!form.category || !form.brand.trim() || !form.product_name.trim()) {
-      toast.error("Category, brand and product name are required.");
+      setManualError("Category, brand and product name are required.");
       return;
     }
     normalizeMutation.mutate(form, {
@@ -354,6 +390,16 @@ function StoreMasterPage() {
                       <Download className="mr-2 size-4" /> CSV template
                     </Button>
                   </div>
+
+                  {csvError && (
+                    <StickyError
+                      title="Planogram upload failed"
+                      message={csvError}
+                      onDismiss={() => setCsvError(null)}
+                    />
+                  )}
+
+
 
                   {preview && (
                     <div className="space-y-3">
@@ -523,6 +569,15 @@ function StoreMasterPage() {
                       Save &amp; add another
                     </Button>
                   </div>
+                  {manualError && (
+                    <div className="mt-4">
+                      <StickyError
+                        title="Could not add this product"
+                        message={manualError}
+                        onDismiss={() => setManualError(null)}
+                      />
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </section>
@@ -554,6 +609,18 @@ function StoreMasterPage() {
                   </Button>
                 </div>
               </div>
+
+              {draftError && (
+                <div className="mt-4">
+                  <StickyError
+                    title="Could not save the planogram"
+                    message={draftError}
+                    onDismiss={() => setDraftError(null)}
+                  />
+                </div>
+              )}
+
+
 
               {!draft.length ? (
                 <div className="mt-4">
@@ -750,6 +817,33 @@ function StoreMasterPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+/** Inline destructive alert that stays until dismissed — never auto-hides. */
+function StickyError({
+  title,
+  message,
+  onDismiss,
+}: {
+  title: string;
+  message: string;
+  onDismiss: () => void;
+}) {
+  return (
+    <Alert variant="destructive" className="relative pr-10">
+      <AlertCircle className="size-4" />
+      <AlertTitle>{title}</AlertTitle>
+      <AlertDescription className="whitespace-pre-wrap">{message}</AlertDescription>
+      <button
+        type="button"
+        className="absolute right-3 top-3 text-muted-foreground transition-colors hover:text-foreground"
+        aria-label="Dismiss error"
+        onClick={onDismiss}
+      >
+        <X className="size-4" />
+      </button>
+    </Alert>
   );
 }
 
