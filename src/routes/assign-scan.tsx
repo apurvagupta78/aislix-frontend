@@ -100,7 +100,37 @@ function AssignScanPage() {
     [categories, category],
   );
 
+  // Arriving from the Planogram page: pre-fill and lock store + scope.
+  const fromPlanogram = Boolean(storeFromSearch);
+  const snapshotQuery = useQuery({
+    queryKey: ["planogram-snapshot", storeId],
+    queryFn: () => fetchPlanogramSnapshot(storeId),
+    enabled: fromPlanogram && Boolean(storeId),
+    retry: false,
+  });
+  const activeRows = snapshotQuery.data?.activeRows ?? [];
+  const planogramScope = useMemo(
+    () =>
+      dominantScope(
+        activeRows.map((row) => ({
+          location: row.location,
+          category: row.category,
+          sub_category: row.sub_category,
+        })),
+      ),
+    [activeRows],
+  );
+
+  useEffect(() => {
+    if (!fromPlanogram || !activeRows.length) return;
+    setScopeType(planogramScope.location ? "location" : planogramScope.subCategory ? "sub_category" : "category");
+    setCategory(planogramScope.category);
+    setSubCategory(planogramScope.subCategory);
+    setLocation(planogramScope.location);
+  }, [fromPlanogram, activeRows.length, planogramScope]);
+
   const members = membersQuery.data ?? [];
+
   const assignee = members.find((member) => member.user_id === assigneeId);
 
   const assignMutation = useMutation({
