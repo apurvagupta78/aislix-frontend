@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { logout, resendVerificationEmail } from "@/lib/api/auth";
 import {
   fetchAuthUser,
+  fetchPendingInvite,
   goToAuthRoute,
   isEmailVerifiedServer,
   resolvePostAuthRoute,
