@@ -397,17 +397,15 @@ function DownloadsPanel({
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {data?.downloads?.pdf_url ? (
-            <Button asChild variant="brand" size="lg" className="w-full rounded-xl">
-              <a href={data.downloads.pdf_url} target="_blank" rel="noreferrer">
-                <FileText className="size-4" /> PDF report
-              </a>
-            </Button>
-          ) : (
-            <Button variant="brand" size="lg" className="w-full rounded-xl" disabled>
-              <FileText className="size-4" /> PDF report
-            </Button>
-          )}
+          <Button
+            variant="brand"
+            size="lg"
+            className="w-full rounded-xl"
+            disabled={!data?.scan_id}
+            onClick={() => void downloadPdf()}
+          >
+            <FileText className="size-4" /> PDF report
+          </Button>
 
           <Button
             variant="subtle"
@@ -419,17 +417,16 @@ function DownloadsPanel({
             <FileSpreadsheet className="size-4" /> CSV inventory
           </Button>
 
-          {imageUrl ? (
-            <Button asChild variant="subtle" size="lg" className="w-full rounded-xl">
-              <a href={imageUrl} download={`aislix-${data?.scan_id ?? "scan"}-annotated.jpg`}>
-                <ImageIcon className="size-4" /> Annotated image
-              </a>
-            </Button>
-          ) : (
-            <Button variant="subtle" size="lg" className="w-full rounded-xl" disabled>
-              <ImageIcon className="size-4" /> Annotated image
-            </Button>
-          )}
+          <Button
+            variant="subtle"
+            size="lg"
+            className="w-full rounded-xl"
+            disabled={!data?.scan_id}
+            onClick={() => void downloadImage()}
+          >
+            <ImageIcon className="size-4" /> Annotated image
+          </Button>
+
 
           <PrintReportButton disabled={!data} />
 
