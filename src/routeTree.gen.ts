@@ -46,6 +46,7 @@ import { Route as ScanHistoryRouteImport } from './routes/scan-history'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StoreMasterRouteImport } from './routes/store-master'
 import { Route as TeamRouteImport } from './routes/team'
 import { Route as TermsRouteImport } from './routes/terms'
@@ -54,7 +55,6 @@ import { Route as UsersRouteImport } from './routes/users'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
-import { Route as SitemapXmlRouteImport } from './routes/sitemap.xml'
 import { Route as StoresIndexRouteImport } from './routes/stores.index'
 import { Route as StoresStoreIdRouteImport } from './routes/stores.$storeId'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
@@ -244,6 +244,11 @@ const SignupRoute = SignupRouteImport.update({
   path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StoreMasterRoute = StoreMasterRouteImport.update({
   id: '/store-master',
   path: '/store-master',
@@ -282,11 +287,6 @@ const ApiScanRoute = ApiScanRouteImport.update({
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
   path: '/auth/callback',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SitemapXmlRoute = SitemapXmlRouteImport.update({
-  id: '/sitemap/xml',
-  path: '/sitemap/xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StoresIndexRoute = StoresIndexRouteImport.update({
@@ -344,6 +344,7 @@ export interface FileRoutesByFullPath {
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/store-master': typeof StoreMasterRoute
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
@@ -352,7 +353,6 @@ export interface FileRoutesByFullPath {
   '/verify-email': typeof VerifyEmailRoute
   '/api/scan': typeof ApiScanRoute
   '/auth/callback': typeof AuthCallbackRoute
-  '/sitemap/xml': typeof SitemapXmlRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -395,6 +395,7 @@ export interface FileRoutesByTo {
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/store-master': typeof StoreMasterRoute
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
@@ -403,7 +404,6 @@ export interface FileRoutesByTo {
   '/verify-email': typeof VerifyEmailRoute
   '/api/scan': typeof ApiScanRoute
   '/auth/callback': typeof AuthCallbackRoute
-  '/sitemap/xml': typeof SitemapXmlRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores': typeof StoresIndexRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -447,6 +447,7 @@ export interface FileRoutesById {
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/store-master': typeof StoreMasterRoute
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
@@ -455,7 +456,6 @@ export interface FileRoutesById {
   '/verify-email': typeof VerifyEmailRoute
   '/api/scan': typeof ApiScanRoute
   '/auth/callback': typeof AuthCallbackRoute
-  '/sitemap/xml': typeof SitemapXmlRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -500,6 +500,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/settings'
     | '/signup'
+    | '/sitemap.xml'
     | '/store-master'
     | '/team'
     | '/terms'
@@ -508,7 +509,6 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/api/scan'
     | '/auth/callback'
-    | '/sitemap/xml'
     | '/stores/$storeId'
     | '/stores/'
     | '/lovable/email/transactional/preview'
@@ -551,6 +551,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/settings'
     | '/signup'
+    | '/sitemap.xml'
     | '/store-master'
     | '/team'
     | '/terms'
@@ -559,7 +560,6 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/api/scan'
     | '/auth/callback'
-    | '/sitemap/xml'
     | '/stores/$storeId'
     | '/stores'
     | '/lovable/email/transactional/preview'
@@ -602,6 +602,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/settings'
     | '/signup'
+    | '/sitemap.xml'
     | '/store-master'
     | '/team'
     | '/terms'
@@ -610,7 +611,6 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/api/scan'
     | '/auth/callback'
-    | '/sitemap/xml'
     | '/stores/$storeId'
     | '/stores/'
     | '/lovable/email/transactional/preview'
@@ -654,6 +654,7 @@ export interface RootRouteChildren {
   SecurityRoute: typeof SecurityRoute
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StoreMasterRoute: typeof StoreMasterRoute
   TeamRoute: typeof TeamRoute
   TermsRoute: typeof TermsRoute
@@ -662,7 +663,6 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   ApiScanRoute: typeof ApiScanRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
-  SitemapXmlRoute: typeof SitemapXmlRoute
   StoresStoreIdRoute: typeof StoresStoreIdRoute
   StoresIndexRoute: typeof StoresIndexRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
@@ -929,6 +929,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/store-master': {
       id: '/store-master'
       path: '/store-master'
@@ -983,13 +990,6 @@ declare module '@tanstack/react-router' {
       path: '/auth/callback'
       fullPath: '/auth/callback'
       preLoaderRoute: typeof AuthCallbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap/xml': {
-      id: '/sitemap/xml'
-      path: '/sitemap/xml'
-      fullPath: '/sitemap/xml'
-      preLoaderRoute: typeof SitemapXmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/stores/': {
@@ -1054,6 +1054,7 @@ const rootRouteChildren: RootRouteChildren = {
   SecurityRoute: SecurityRoute,
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   StoreMasterRoute: StoreMasterRoute,
   TeamRoute: TeamRoute,
   TermsRoute: TermsRoute,
@@ -1062,7 +1063,6 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyEmailRoute: VerifyEmailRoute,
   ApiScanRoute: ApiScanRoute,
   AuthCallbackRoute: AuthCallbackRoute,
-  SitemapXmlRoute: SitemapXmlRoute,
   StoresStoreIdRoute: StoresStoreIdRoute,
   StoresIndexRoute: StoresIndexRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
@@ -1070,3 +1070,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
