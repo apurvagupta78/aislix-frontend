@@ -755,18 +755,17 @@ function StoreMasterPage() {
                       </span>
                     )}
                   </div>
-                  <Button variant="brand" size="sm" className="rounded-xl" asChild>
-                    <Link to="/assign-scan" search={{ store: storeId }}>
-                      <UserPlus className="mr-2 size-4" /> Assign scan to team member
-                    </Link>
+                  <Button
+                    variant="brand"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={() => setAssignOpen(true)}
+                  >
+                    <UserPlus className="mr-2 size-4" /> Assign scan to team member
                   </Button>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" className="rounded-xl" asChild>
-                    <Link to="/assign-scan" search={{ store: storeId }}>
-                      Assign scan to team member
-                    </Link>
-                  </Button>
+
                   <Button variant="outline" size="sm" className="rounded-xl" asChild>
                     <Link
                       to="/assigned-scans"
