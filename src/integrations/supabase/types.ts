@@ -1403,6 +1403,7 @@ export type Database = {
       can_org_add_member: { Args: { p_org_id: string }; Returns: boolean }
       can_org_add_store: { Args: { p_org_id: string }; Returns: boolean }
       can_org_start_scan: { Args: { p_org_id: string }; Returns: boolean }
+      complete_onboarding: { Args: { p_user_id?: string }; Returns: string }
       count_org_seats: { Args: { p_org_id: string }; Returns: number }
       ensure_org_free_subscription: {
         Args: { p_org_id: string }
