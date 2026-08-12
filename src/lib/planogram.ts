@@ -104,13 +104,52 @@ export async function canManagePlanogram(): Promise<boolean> {
 
 /* ---------------------------- backend helpers ---------------------------- */
 
+/**
+ * Calls a same-origin planogram proxy route (`/api/planogram/*`) which forwards
+ * to the Railway vision backend. Going through our own origin avoids the CORS
+ * failures that previously surfaced as a generic "Network error", and the real
+ * backend message is preserved for the UI.
+ */
+async function callPlanogramApi<T>(path: string, body: unknown): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch (error) {
+    throw new Error(
+      error instanceof TypeError
+        ? "Could not reach the Aislix server. Check your connection and try again — if this persists, contact support."
+        : error instanceof Error
+          ? error.message
+          : "Planogram request failed.",
+    );
+  }
+
+  const payload = (await response.json().catch(() => null)) as
+    | (Record<string, unknown> & { detail?: unknown; message?: unknown })
+    | null;
+
+  if (!response.ok) {
+    const detail = payload?.detail ?? payload?.message ?? response.statusText;
+    throw new Error(
+      typeof detail === "string" && detail.trim()
+        ? detail
+        : `Planogram service returned ${response.status}: ${JSON.stringify(detail)}`,
+    );
+  }
+  return payload as T;
+}
+
 export async function parsePlanogramCsv(file: File): Promise<CsvParseResult> {
   const csvText = await file.text();
-  const payload = await api.post<CsvParseResult>(
-    "/planogram/parse-csv",
-    { csv_text: csvText, filename: file.name },
-    { anonymous: true },
-  );
+  if (!csvText.trim()) throw new Error("This CSV file is empty.");
+  const payload = await callPlanogramApi<CsvParseResult>("/api/planogram/parse-csv", {
+    csv_text: csvText,
+    filename: file.name,
+  });
   return {
     rows: Array.isArray(payload?.rows) ? payload.rows : [],
     errors: Array.isArray(payload?.errors) ? payload.errors.map(String) : [],
@@ -120,10 +159,9 @@ export async function parsePlanogramCsv(file: File): Promise<CsvParseResult> {
 }
 
 export async function normalizePlanogramRow(input: PlanogramRow): Promise<DraftRow> {
-  const payload = await api.post<{ row?: Partial<PlanogramRow> }>(
-    "/planogram/normalize-row",
+  const payload = await callPlanogramApi<{ row?: Partial<PlanogramRow> }>(
+    "/api/planogram/normalize-row",
     input,
-    { anonymous: true },
   );
   return toDraftRow(payload?.row ?? input);
 }
