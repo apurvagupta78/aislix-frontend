@@ -110,32 +110,48 @@ function StoreMasterPage() {
 
   const parseMutation = useMutation({
     mutationFn: (file: File) => parsePlanogramCsv(file),
+    onMutate: () => setCsvError(null),
     onSuccess: (result) => {
       setPreview(result.rows);
-      if (result.errors.length) toast.error(result.errors[0] ?? "Could not read the CSV file.");
-      else if (!result.rows.length) toast.error("No rows found in this CSV file.");
+      if (result.error_count > 0 && result.valid_count === 0) {
+        const details = (result.errors.length
+          ? result.errors
+          : result.rows.flatMap((row) => row.errors ?? [])
+        ).slice(0, 5);
+        setCsvError(
+          `CSV has ${result.error_count} error${result.error_count === 1 ? "" : "s"} and no valid rows.${
+            details.length ? `\n• ${details.join("\n• ")}` : ""
+          }\nRequired columns: location, category, sub_category, brand, product_name, expected_qty, sku, shelf_position.`,
+        );
+      } else if (result.errors.length) {
+        setCsvError(`Some rows could not be read:\n• ${result.errors.slice(0, 5).join("\n• ")}`);
+      } else if (!result.rows.length) {
+        setCsvError("No rows found in this CSV file. Download the template and try again.");
+      }
     },
-    onError: (error) => toast.error(toUserMessage(error)),
+    onError: (error) => setCsvError(toUserMessage(error)),
   });
 
   const normalizeMutation = useMutation({
     mutationFn: (row: PlanogramRow) => normalizePlanogramRow(row),
+    onMutate: () => setManualError(null),
     onSuccess: (row) => {
       setDraft((rows) => [...rows, row]);
       setSources((s) => ({ ...s, manual: true }));
       toast.success("Product added to the draft.");
     },
-    onError: (error) => toast.error(toUserMessage(error)),
+    onError: (error) => setManualError(toUserMessage(error)),
   });
 
   const saveMutation = useMutation({
     mutationFn: () =>
       savePlanogramDraft({ storeId, rows: draft, sourceType, sourceFilename: filename }),
+    onMutate: () => setDraftError(null),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["planogram-snapshot", storeId] });
       toast.success(`Draft saved — ${draft.length} product${draft.length === 1 ? "" : "s"}.`);
     },
-    onError: (error) => toast.error(toUserMessage(error)),
+    onError: (error) => setDraftError(toUserMessage(error)),
   });
 
   const activateMutation = useMutation({
@@ -148,6 +164,7 @@ function StoreMasterPage() {
       });
       return activatePlanogram({ storeId, versionId: version.id, rowCount: draft.length });
     },
+    onMutate: () => setDraftError(null),
     onSuccess: async () => {
       const count = draft.length;
       setDraft([]);
@@ -157,7 +174,7 @@ function StoreMasterPage() {
       await queryClient.invalidateQueries({ queryKey: ["planogram-snapshot", storeId] });
       toast.success(`Planogram activated — ${count} products expected`);
     },
-    onError: (error) => toast.error(toUserMessage(error)),
+    onError: (error) => setDraftError(toUserMessage(error)),
   });
 
   function downloadTemplate() {
