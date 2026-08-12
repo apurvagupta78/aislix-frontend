@@ -393,15 +393,20 @@ function OnboardingPage() {
           )}
 
           {step === 3 && seats.singleSeat && (
-            <div className="space-y-3">
+            <div className="mx-auto max-w-md space-y-4 rounded-2xl border border-border bg-muted/30 p-6 text-center">
               <p className="text-sm text-muted-foreground">
-                Team invites are available on the Growth plan (3 users) and above.
+                Need to add team members? Upgrade to the <strong>Growth plan</strong> or a higher
+                plan to invite additional users.
               </p>
-              <p className="text-sm font-medium">
-                Your {seats.usage?.plan_name ?? "current"} plan includes 1 user (you).
+              <Button asChild variant="brand" size="lg" className="rounded-xl">
+                <Link to="/pricing">View plans &amp; upgrade</Link>
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Growth includes up to 3 users · Professional up to 5 · Enterprise unlimited
               </p>
             </div>
           )}
+
 
           {step === 3 && !seats.singleSeat && (
             <div className="space-y-4">
