@@ -5,6 +5,7 @@
  * reads identity through `@/lib/db/context`.
  */
 
+import { APP_ORIGIN } from "@/lib/app-origin";
 import { supabase } from "@/integrations/supabase/client";
 import { ApiError } from "./errors";
 import {
@@ -126,7 +127,7 @@ export async function register(input: RegisterInput): Promise<AuthSession> {
     email: input.email.trim(),
     password: input.password,
     options: {
-      emailRedirectTo: `${window.location.origin}/auth/callback`,
+      emailRedirectTo: `${APP_ORIGIN}/auth/callback`,
       data: {
         full_name: input.full_name,
         ...(input.company_name ? { company_name: input.company_name } : {}),
@@ -183,7 +184,7 @@ export async function fetchSession(_signal?: AbortSignal): Promise<AuthSession> 
 /** Emails a password reset link pointing at /reset-password. */
 export async function requestPasswordReset(input: { email: string }): Promise<{ ok: true }> {
   const { error } = await supabase.auth.resetPasswordForEmail(input.email.trim(), {
-    redirectTo: `${window.location.origin}/reset-password`,
+    redirectTo: `${APP_ORIGIN}/reset-password`,
   });
   if (error) authError(error.message, error.status ?? 400);
   return { ok: true };
@@ -227,7 +228,7 @@ export async function resendVerificationEmail(input: { email: string }): Promise
   const { error } = await supabase.auth.resend({
     type: "signup",
     email: input.email.trim(),
-    options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+    options: { emailRedirectTo: `${APP_ORIGIN}/auth/callback` },
   });
   if (error) authError(error.message, error.status ?? 400);
   return { ok: true };
@@ -247,7 +248,7 @@ export async function loginWithOAuth(
   clearContextCache();
   const { lovable } = await import("@/integrations/lovable/index");
   const result = await lovable.auth.signInWithOAuth(provider, {
-    redirect_uri: `${window.location.origin}/login`,
+    redirect_uri: `${APP_ORIGIN}/login`,
   });
   if (result.error) authError(result.error.message ?? "Social sign-in failed.", 400);
   if (result.redirected) return { redirected: true };

@@ -15,6 +15,9 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/security")({
   head: () => ({
     meta: [
+      { property: "og:url", content: "https://aislix.com/security" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Security at Aislix — Encryption, access control & responsible AI" },
       {
         name: "description",
@@ -27,9 +30,10 @@ export const Route = createFileRoute("/security")({
         content:
           "Encryption, secure storage, authentication, data privacy, responsible AI, cloud infrastructure and recovery.",
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      
+      
     ],
+    links: [{ rel: "canonical", href: "https://aislix.com/security" }],
   }),
   component: SecurityPage,
 });

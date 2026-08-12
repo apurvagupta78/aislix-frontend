@@ -4,6 +4,9 @@ import { LegalDoc } from "@/components/legal/LegalDoc";
 export const Route = createFileRoute("/cookies")({
   head: () => ({
     meta: [
+      { property: "og:url", content: "https://aislix.com/cookies" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Cookie Policy — Aislix" },
       {
         name: "description",
@@ -15,9 +18,10 @@ export const Route = createFileRoute("/cookies")({
         property: "og:description",
         content: "Essential, analytics and functional cookies, plus how to manage preferences.",
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      
+      
     ],
+    links: [{ rel: "canonical", href: "https://aislix.com/cookies" }],
   }),
   component: () => (
     <LegalDoc

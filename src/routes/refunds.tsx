@@ -4,6 +4,9 @@ import { LegalDoc } from "@/components/legal/LegalDoc";
 export const Route = createFileRoute("/refunds")({
   head: () => ({
     meta: [
+      { property: "og:url", content: "https://aislix.com/refunds" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Refund Policy — Aislix" },
       {
         name: "description",
@@ -15,9 +18,10 @@ export const Route = createFileRoute("/refunds")({
         property: "og:description",
         content: "Subscription refunds, trial policy, cancellation, billing errors and contact process.",
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      
+      
     ],
+    links: [{ rel: "canonical", href: "https://aislix.com/refunds" }],
   }),
   component: () => (
     <LegalDoc

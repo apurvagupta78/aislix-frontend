@@ -4,6 +4,9 @@ import { LegalDoc } from "@/components/legal/LegalDoc";
 export const Route = createFileRoute("/privacy")({
   head: () => ({
     meta: [
+      { property: "og:url", content: "https://aislix.com/privacy" },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
       { title: "Privacy Policy — Aislix" },
       {
         name: "description",
@@ -15,9 +18,10 @@ export const Route = createFileRoute("/privacy")({
         property: "og:description",
         content: "Data collection, image storage, AI processing, cookies, security and user rights.",
       },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
+      
+      
     ],
+    links: [{ rel: "canonical", href: "https://aislix.com/privacy" }],
   }),
   component: () => (
     <LegalDoc

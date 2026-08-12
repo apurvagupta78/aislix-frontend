@@ -8,8 +8,10 @@
  */
 
 import { sendTemplateEmail } from "@/lib/email-templates/send-email";
+import { serverAppOrigin } from "@/lib/app-origin";
 
-export const SITE_URL = "https://aislix.com";
+/** Canonical origin for invite links; never a preview host. Read at call time. */
+export const siteUrl = () => serverAppOrigin();
 
 export const ROLE_LABELS: Record<string, string> = {
   owner: "Owner",
@@ -33,7 +35,7 @@ export async function generateInviteLink(
   email: string,
   orgId: string,
 ): Promise<string | null> {
-  const redirectTo = `${SITE_URL}/accept-invite?org=${orgId}`;
+  const redirectTo = `${siteUrl()}/accept-invite?org=${orgId}`;
   const { data, error } = await admin.auth.admin.generateLink({
     type: "invite",
     email,
@@ -53,7 +55,7 @@ export async function sendInviteEmail(input: {
   isNewUser: boolean;
   idempotencySuffix: string;
 }): Promise<void> {
-  const acceptUrl = input.acceptUrl || `${SITE_URL}/accept-invite?org=${input.orgId}`;
+  const acceptUrl = input.acceptUrl || `${siteUrl()}/accept-invite?org=${input.orgId}`;
   try {
     await sendTemplateEmail("team-invite", input.email, {
       idempotencyKey: `team-invite-${input.orgId}-${input.email}-${input.idempotencySuffix}`,
