@@ -48,7 +48,6 @@ import { cn } from "@/lib/utils";
 
 import { fetchProfile } from "@/lib/account";
 import { fetchOnboardingStatus } from "@/lib/onboarding";
-import { fetchAuthUser, isEmailVerified } from "@/lib/auth-routing";
 
 import { fetchMyPendingCount, isOrgManager } from "@/lib/assignments";
 import { getMembership, listMemberships, setActiveOrgId } from "@/lib/db/context";

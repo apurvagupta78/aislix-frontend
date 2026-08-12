@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { login } from "@/lib/api/auth";
-import { fetchAuthUser, goToAuthRoute, isEmailVerified, resolvePostAuthRoute } from "@/lib/auth-routing";
+import { goToAuthRoute, isEmailVerifiedServer, resolvePostAuthRoute } from "@/lib/auth-routing";
 import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
 import { toUserMessage } from "@/lib/api/errors";
 
@@ -33,13 +33,12 @@ function LoginPage() {
   const signIn = useMutation({
     mutationFn: () => login({ email, password }),
     onSuccess: async () => {
-      const user = await fetchAuthUser();
-      if (!isEmailVerified(user)) {
+      if (!(await isEmailVerifiedServer())) {
         navigate({ to: "/verify-email", search: { email: email.trim() }, replace: true });
         return;
       }
       toast.success("Welcome back");
-      goToAuthRoute(navigate as never, await resolvePostAuthRoute(user));
+      goToAuthRoute(navigate as never, await resolvePostAuthRoute());
     },
     onError: (error: unknown) =>
       toast.error("Could not sign in", { description: toUserMessage(error) }),
