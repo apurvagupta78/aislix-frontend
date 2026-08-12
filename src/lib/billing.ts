@@ -146,11 +146,11 @@ export async function fetchBillingOverview(signal?: AbortSignal): Promise<Billin
   const live = await fetchUsageSummary();
 
 
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("billing_email, name, gstin, address")
-    .eq("id", orgId)
-    .maybeSingle();
+  // Billing email + GSTIN are owner/admin-only and come from a guarded RPC.
+  const { data: billingProfile } = await supabase.rpc("get_org_billing_profile", {
+    p_org_id: orgId,
+  });
+  const org = (Array.isArray(billingProfile) ? billingProfile[0] : null) ?? null;
 
   const amount = plan
     ? sub.cycle === "annual"
