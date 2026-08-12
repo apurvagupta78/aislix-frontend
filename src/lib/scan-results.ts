@@ -499,9 +499,10 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
       low_stock_summary: lowStockSummary,
     },
     downloads: {
-      ...(annotatedUrl ? { annotated_image_url: annotatedUrl } : {}),
+      ...(annotatedImageSrc ? { annotated_image_url: annotatedImageSrc } : {}),
       ...(pdfUrl ? { pdf_url: pdfUrl } : {}),
     },
+
   };
   if (storeName) scanResult.store = storeName;
   const shelfLabel = (scan as any).shelf_label as string | null | undefined;
