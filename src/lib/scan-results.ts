@@ -528,7 +528,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     ((scan as any).sub_category_label as string | null | undefined) ||
     ((scan as any).sub_category as string | null | undefined);
   if (subLabel) scanResult.scan_sub_category = subLabel;
-  if (annotatedUrl) scanResult.annotated_image_url = annotatedUrl;
+  if (annotatedImageSrc) scanResult.annotated_image_url = annotatedImageSrc;
   if (result?.executive_summary) scanResult.executive_summary = result.executive_summary;
   return scanResult;
 }
@@ -656,6 +656,15 @@ export async function resolveScanAssetUrls(scanId: string): Promise<ScanAssetUrl
 
 /** Fetches a URL and saves it as a real file download (works on mobile Safari). */
 export async function downloadFileFromUrl(url: string, filename: string): Promise<void> {
+  if (url.startsWith("data:")) {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    return;
+  }
   const response = await fetch(url);
   if (!response.ok) throw new Error("This file is no longer available.");
   const blob = await response.blob();
