@@ -100,7 +100,20 @@ export function TeamManager() {
         }
         icon={UserPlus}
       >
-        {seats.singleSeat ? null : (
+        {seats.singleSeat || !seats.canInvite ? (
+          <div className="mx-auto max-w-md space-y-4 rounded-2xl border border-border bg-muted/30 p-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              Need to add team members? Upgrade to the <strong>Growth plan</strong> or a higher plan
+              to invite additional users.
+            </p>
+            <Button asChild variant="brand" size="lg" className="rounded-xl">
+              <Link to="/pricing">Upgrade to invite team members</Link>
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Growth includes up to 3 users · Professional up to 5 · Enterprise unlimited
+            </p>
+          </div>
+        ) : (
         <form
           className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_180px_auto] sm:items-end"
           onSubmit={(event) => {
