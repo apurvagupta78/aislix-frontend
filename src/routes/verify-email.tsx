@@ -10,7 +10,7 @@ import { logout, resendVerificationEmail } from "@/lib/api/auth";
 import {
   fetchAuthUser,
   goToAuthRoute,
-  isEmailVerified,
+  isEmailVerifiedServer,
   resolvePostAuthRoute,
 } from "@/lib/auth-routing";
 
