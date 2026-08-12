@@ -113,8 +113,12 @@ function VerifyEmailPage() {
 
   return (
     <AuthLayout
-      title="Verify your email"
-      subtitle="One quick step before your workspace opens."
+      title={isInvited ? "Verify your email to join the team" : "Verify your email"}
+      subtitle={
+        isInvited
+          ? "Confirm your email address and you'll join the workspace automatically."
+          : "One quick step before your workspace opens."
+      }
       footer={
         <>
           Wrong address?{" "}
@@ -130,16 +134,28 @@ function VerifyEmailPage() {
             <MailCheck className="size-5" />
           </span>
           <div className="space-y-1">
-            <p className="text-sm text-foreground">
-              A verification email has been sent to{" "}
-              <strong className="font-semibold">{email || "your email address"}</strong>. Please
-              check your inbox and click the verification link to continue.
-            </p>
+            {isInvited ? (
+              <p className="text-sm text-foreground">
+                You were invited to{" "}
+                <strong className="font-semibold">{inviteOrg || "an Aislix workspace"}</strong> on
+                Aislix. We sent a confirmation email to{" "}
+                <strong className="font-semibold">{email || "your email address"}</strong>. Click
+                the &ldquo;Confirm your signup&rdquo; link to activate your account — then you&apos;ll
+                join the workspace automatically.
+              </p>
+            ) : (
+              <p className="text-sm text-foreground">
+                A verification email has been sent to{" "}
+                <strong className="font-semibold">{email || "your email address"}</strong>. Please
+                check your inbox and click the verification link to continue.
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
-              Didn't receive it? Check spam or resend below.
+              Didn&apos;t get it? Check spam, or click Resend below.
             </p>
           </div>
         </div>
+
 
         <Button
           type="button"
