@@ -199,108 +199,139 @@ function AssignScanPage() {
       description="Send a scoped shelf audit to a team member and track it through to completion."
     >
       <div className="max-w-3xl space-y-6">
-        <section className={card}>
-          <h2 className="text-sm font-semibold text-foreground">Step 1 · Select store</h2>
-          <div className="mt-3 max-w-xs">
-            {storesQuery.isLoading ? (
-              <Skeleton className="h-10 w-full rounded-xl" />
-            ) : (
-              <Select value={storeId} onValueChange={setStoreId}>
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder="Choose a store" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(storesQuery.data ?? []).map((store) => (
-                    <SelectItem key={store.id} value={store.id}>
-                      {store.name}
-                      {store.code ? ` · ${store.code}` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-        </section>
-
-        <section className={card}>
-          <h2 className="text-sm font-semibold text-foreground">Step 2 · Scope</h2>
-          <Tabs
-            value={scopeType}
-            onValueChange={(value) => setScopeType(value as ScopeType)}
-            className="mt-3"
-          >
-            <TabsList className="rounded-xl">
-              <TabsTrigger value="category">By category</TabsTrigger>
-              <TabsTrigger value="sub_category">By sub-category</TabsTrigger>
-              <TabsTrigger value="location">By location</TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {scopeType !== "location" && (
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Category</Label>
-                <Select
-                  value={category}
-                  onValueChange={(value) => {
-                    setCategory(value);
-                    setSubCategory("");
-                  }}
-                >
-                  <SelectTrigger className="rounded-xl">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((item) => (
-                      <SelectItem key={item.name} value={item.name}>
-                        {item.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+        {fromPlanogram ? (
+          <section className={card}>
+            <h2 className="text-sm font-semibold text-foreground">Store &amp; scope</h2>
+            <p className="mt-2 text-sm font-medium text-foreground">
+              Store ·{" "}
+              {(storesQuery.data ?? []).find((store) => store.id === storeId)?.name ?? "Store"}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
+              {[planogramScope.category, planogramScope.subCategory, planogramScope.location]
+                .filter(Boolean)
+                .map((value) => (
+                  <span
+                    key={value}
+                    className="rounded-lg bg-surface px-2 py-1 font-medium text-foreground"
+                  >
+                    {value}
+                  </span>
+                ))}
+              <span className="rounded-lg bg-brand-soft px-2 py-1 font-medium text-brand">
+                {activeRows.length} expected products from active planogram
+              </span>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Read-only — set by this store&apos;s active planogram.
+            </p>
+          </section>
+        ) : (
+          <>
+            <section className={card}>
+              <h2 className="text-sm font-semibold text-foreground">Step 1 · Select store</h2>
+              <div className="mt-3 max-w-xs">
+                {storesQuery.isLoading ? (
+                  <Skeleton className="h-10 w-full rounded-xl" />
+                ) : (
+                  <Select value={storeId} onValueChange={setStoreId}>
+                    <SelectTrigger className="rounded-xl">
+                      <SelectValue placeholder="Choose a store" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(storesQuery.data ?? []).map((store) => (
+                        <SelectItem key={store.id} value={store.id}>
+                          {store.name}
+                          {store.code ? ` · ${store.code}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
-            )}
-            {scopeType === "sub_category" && (
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Sub-category</Label>
-                <Select
-                  value={subCategory}
-                  onValueChange={setSubCategory}
-                  disabled={!subCategories.length}
-                >
-                  <SelectTrigger className="rounded-xl">
-                    <SelectValue
-                      placeholder={
-                        subCategories.length ? "Select sub-category" : "Select a category first"
-                      }
+            </section>
+
+            <section className={card}>
+              <h2 className="text-sm font-semibold text-foreground">Step 2 · Scope</h2>
+              <Tabs
+                value={scopeType}
+                onValueChange={(value) => setScopeType(value as ScopeType)}
+                className="mt-3"
+              >
+                <TabsList className="rounded-xl">
+                  <TabsTrigger value="category">By category</TabsTrigger>
+                  <TabsTrigger value="sub_category">By sub-category</TabsTrigger>
+                  <TabsTrigger value="location">By location</TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {scopeType !== "location" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Category</Label>
+                    <Select
+                      value={category}
+                      onValueChange={(value) => {
+                        setCategory(value);
+                        setSubCategory("");
+                      }}
+                    >
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.map((item) => (
+                          <SelectItem key={item.name} value={item.name}>
+                            {item.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {scopeType === "sub_category" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Sub-category</Label>
+                    <Select
+                      value={subCategory}
+                      onValueChange={setSubCategory}
+                      disabled={!subCategories.length}
+                    >
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue
+                          placeholder={
+                            subCategories.length ? "Select sub-category" : "Select a category first"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subCategories.map((sub) => (
+                          <SelectItem key={sub.id} value={sub.label}>
+                            {sub.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {scopeType === "location" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground" htmlFor="location">
+                      Location / shelf label
+                    </Label>
+                    <Input
+                      id="location"
+                      className="rounded-xl"
+                      placeholder="e.g. A-1-Z"
+                      value={location}
+                      onChange={(event) => setLocation(event.target.value)}
                     />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {subCategories.map((sub) => (
-                      <SelectItem key={sub.id} value={sub.label}>
-                        {sub.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                )}
               </div>
-            )}
-            {scopeType === "location" && (
-              <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground" htmlFor="location">
-                  Location / shelf label
-                </Label>
-                <Input
-                  id="location"
-                  className="rounded-xl"
-                  placeholder="e.g. A-1-Z"
-                  value={location}
-                  onChange={(event) => setLocation(event.target.value)}
-                />
-              </div>
-            )}
-          </div>
-        </section>
+            </section>
+          </>
+        )}
+
 
         <section className={card}>
           <h2 className="text-sm font-semibold text-foreground">Step 3 · Assign to team member</h2>
