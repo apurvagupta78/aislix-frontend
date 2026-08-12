@@ -353,6 +353,9 @@ export async function deleteUser(id: string): Promise<void> {
  * and stores instead of hitting the (org_id, user_id) unique constraint.
  */
 export async function inviteUser(input: UserInput): Promise<OrgUser> {
+  const { assertCanInviteMember, mapLimitError } = await import("@/lib/subscription-limits");
+  const orgId = await requireOrgId();
+  await assertCanInviteMember(orgId);
   const result = await inviteMember({
     data: {
       email: input.email,
@@ -360,6 +363,8 @@ export async function inviteUser(input: UserInput): Promise<OrgUser> {
       role: appRoleForUiRole[input.role] ?? "member",
       store_ids: input.store_ids,
     },
+  }).catch(async (error: unknown) => {
+    throw await mapLimitError(error, orgId);
   });
   return fetchUser(result.member_id);
 }

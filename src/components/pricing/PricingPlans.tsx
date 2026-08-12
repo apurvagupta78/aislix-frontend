@@ -118,6 +118,11 @@ export function PlanCard({
       </p>
       <p className="mt-3 rounded-xl bg-brand-soft px-3 py-2 text-xs font-medium text-brand">
         {plan.scanLimitLabel}
+        <span className="mt-0.5 block font-normal text-brand/80">
+          {plan.seatLimit === null
+            ? "Unlimited team users"
+            : `${plan.seatLimit} team user${plan.seatLimit === 1 ? "" : "s"}`}
+        </span>
       </p>
 
       <ul className="mt-5 flex-1 space-y-2.5">

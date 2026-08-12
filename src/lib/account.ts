@@ -387,6 +387,8 @@ export async function fetchTeam(signal?: AbortSignal): Promise<{ items: TeamMemb
  */
 export async function inviteMember(input: { email: string; role: TeamRole }): Promise<TeamMember> {
   const membership = await requireMembership();
+  const { assertCanInviteMember, mapLimitError } = await import("@/lib/subscription-limits");
+  await assertCanInviteMember(membership.org_id);
   const { data: invitee, error: lookupError } = await supabase
     .from("profiles")
     .select("id, full_name, email")
@@ -413,7 +415,7 @@ export async function inviteMember(input: { email: string; role: TeamRole }): Pr
     })
     .select("id, role, status, invited_email, last_active_at, profiles:user_id(full_name, email)")
     .single();
-  if (error) dbError(error, "Could not invite that team member.");
+  if (error) throw await mapLimitError(error, membership.org_id);
   return mapMemberRow(data as never);
 }
 

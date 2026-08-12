@@ -1400,8 +1400,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_org_add_member: { Args: { p_org_id: string }; Returns: boolean }
       can_org_add_store: { Args: { p_org_id: string }; Returns: boolean }
       can_org_start_scan: { Args: { p_org_id: string }; Returns: boolean }
+      count_org_seats: { Args: { p_org_id: string }; Returns: number }
       ensure_org_free_subscription: {
         Args: { p_org_id: string }
         Returns: undefined

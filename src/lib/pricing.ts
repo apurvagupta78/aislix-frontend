@@ -25,6 +25,8 @@ export type Plan = {
   monthlyScanQuota: number | null;
   /** Stores included; null = unlimited. */
   storeLimit: number | null;
+  /** Team users included (owner counts as 1); null = unlimited. */
+  seatLimit: number | null;
   /** Visible scan-history window in days; null = unlimited. */
   historyDays: number | null;
   features: string[];
@@ -45,10 +47,12 @@ export const plans: Plan[] = [
     scanLimitLabel: "3 scans per 24 hours",
     monthlyScanQuota: 3,
     storeLimit: 1,
+    seatLimit: 1,
     historyDays: 7,
     features: [
       "3 scans per 24 hours",
       "1 store",
+      "1 user",
       "AI product detection",
       "Annotated shelf image",
       "PDF audit report",
@@ -66,10 +70,12 @@ export const plans: Plan[] = [
     scanLimitLabel: "300 scans per month",
     monthlyScanQuota: 300,
     storeLimit: 1,
+    seatLimit: 1,
     historyDays: null,
     features: [
       "300 scans per month",
       "1 store",
+      "1 user",
       "Multi-image upload",
       "AI shelf audit",
       "Annotated shelf image",
@@ -89,10 +95,12 @@ export const plans: Plan[] = [
     scanLimitLabel: "3,000 scans per month",
     monthlyScanQuota: 3000,
     storeLimit: 3,
+    seatLimit: 3,
     historyDays: null,
     features: [
       "3,000 scans per month",
       "Up to 3 stores",
+      "Up to 3 team users",
       "Multi-image upload",
       "Advanced shelf analytics",
       "Historical trends",
@@ -111,10 +119,12 @@ export const plans: Plan[] = [
     scanLimitLabel: "5,000 scans per month",
     monthlyScanQuota: 5000,
     storeLimit: 5,
+    seatLimit: 5,
     historyDays: null,
     features: [
       "5,000 scans per month",
       "Up to 5 stores",
+      "Up to 5 team users",
       "Unlimited images per scan",
       "Faster AI processing",
       "Advanced shelf analytics",
@@ -136,6 +146,7 @@ export const plans: Plan[] = [
     scanLimitLabel: "Unlimited scans, stores & users",
     monthlyScanQuota: null,
     storeLimit: null,
+    seatLimit: null,
     historyDays: null,
     features: [
       "Unlimited scans",
@@ -263,8 +274,8 @@ export const comparisonGroups: {
     group: "Platform & support",
     rows: [
       {
-        label: "Team members",
-        values: { free: "1", starter: "3", growth: "10", professional: "15", enterprise: "Unlimited" },
+        label: "Team users",
+        values: { free: "1", starter: "1", growth: "3", professional: "5", enterprise: "Unlimited" },
       },
       {
         label: "REST API access",

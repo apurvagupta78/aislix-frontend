@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useSeatUsage } from "@/hooks/use-seat-usage";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -166,6 +167,8 @@ function OnboardingPage() {
     },
     onError: (error: Error) => toast.error(error.message),
   });
+
+  const seats = useSeatUsage();
 
   const teamStep = useMutation({
     mutationFn: async () => {
@@ -389,10 +392,22 @@ function OnboardingPage() {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 3 && seats.singleSeat && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Team invites are available on the Growth plan (3 users) and above.
+              </p>
+              <p className="text-sm font-medium">
+                Your {seats.usage?.plan_name ?? "current"} plan includes 1 user (you).
+              </p>
+            </div>
+          )}
+
+          {step === 3 && !seats.singleSeat && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 Invite the people who will run scans. You can always add more from Team.
+                {seats.remaining !== null ? ` ${seats.remaining} seat${seats.remaining === 1 ? "" : "s"} remaining.` : ""}
               </p>
               <div className="space-y-2">
                 {invites.map((invite, index) => (

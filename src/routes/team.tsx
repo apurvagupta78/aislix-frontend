@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSeatUsage } from "@/hooks/use-seat-usage";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, ShieldCheck, UserPlus, Users } from "lucide-react";
@@ -253,24 +254,42 @@ function TeamPage() {
   }
 
   const activityEvents: ActivityEvent[] = activityQuery.data?.items ?? [];
+  const seats = useSeatUsage();
+  const openInvite = () => {
+    if (!seats.canInvite) {
+      toast.error(
+        seats.singleSeat
+          ? seats.upgradeMessage
+          : `All ${seats.seatLimitLabel.toLowerCase()} on your plan are in use. Upgrade to invite more people.`,
+      );
+      return;
+    }
+    setFormMode("invite");
+    setFormUser(null);
+    setFormOpen(true);
+  };
 
   return (
     <AppShell
       title="Team & user management"
       description="Invite members, control role-based access and audit every change across your organization."
       actions={
-        <Button
-          onClick={() => {
-            setFormMode("invite");
-            setFormUser(null);
-            setFormOpen(true);
-          }}
-        >
+        <Button onClick={openInvite} disabled={!seats.canInvite}>
           <UserPlus className="size-4" /> Invite user
         </Button>
       }
     >
       <div className="space-y-8">
+        {seats.usage ? (
+          <p className="text-xs text-muted-foreground">
+            Team: {seats.label}
+            {seats.singleSeat
+              ? ` · ${seats.upgradeMessage}`
+              : seats.remaining !== null
+                ? ` · ${seats.remaining} seat${seats.remaining === 1 ? "" : "s"} remaining`
+                : ""}
+          </p>
+        ) : null}
         {/* Filters + table */}
         <section className="space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
@@ -348,13 +367,7 @@ function TeamPage() {
                   : "Invite your first team member and assign the stores they should manage."
               }
               action={
-                <Button
-                  onClick={() => {
-                    setFormMode("invite");
-                    setFormUser(null);
-                    setFormOpen(true);
-                  }}
-                >
+                <Button onClick={openInvite} disabled={!seats.canInvite}>
                   <UserPlus className="size-4" /> Invite user
                 </Button>
               }
