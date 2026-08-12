@@ -112,7 +112,7 @@ function Landing() {
               <span className="size-2.5 rounded-full bg-muted" />
               <span className="size-2.5 rounded-full bg-muted" />
               <span className="size-2.5 rounded-full bg-muted" />
-              <span className="ml-3 text-xs text-muted-foreground">app.aislix.com/dashboard</span>
+              <span className="ml-3 text-xs text-muted-foreground">aislix.com/dashboard</span>
             </div>
             <img
               src="/marketing/dashboard-preview.webp"

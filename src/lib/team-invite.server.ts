@@ -8,8 +8,10 @@
  */
 
 import { sendTemplateEmail } from "@/lib/email-templates/send-email";
+import { serverAppOrigin } from "@/lib/app-origin";
 
-export const SITE_URL = "https://aislix.com";
+/** Canonical origin for invite links; never a preview host. */
+export const SITE_URL = serverAppOrigin();
 
 export const ROLE_LABELS: Record<string, string> = {
   owner: "Owner",
