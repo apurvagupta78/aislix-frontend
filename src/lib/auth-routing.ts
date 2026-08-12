@@ -41,6 +41,29 @@ export async function isEmailVerifiedServer(): Promise<boolean> {
   return data === true;
 }
 
+export type PendingInvite = { org_id: string; role: string; org_name: string };
+
+/**
+ * Pending organization invite for the signed-in user. Team invites create the
+ * auth user up-front, so the row is keyed on user_id with status "invited".
+ */
+export async function fetchPendingInvite(): Promise<PendingInvite | null> {
+  const user = await fetchAuthUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from("organization_members")
+    .select("org_id, role, organizations:org_id(name)")
+    .eq("user_id", user.id)
+    .eq("status", "invited")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (!data) return null;
+  const orgName =
+    (data as never as { organizations?: { name?: string } }).organizations?.name || "your team";
+  return { org_id: data.org_id as string, role: String(data.role), org_name: orgName };
+}
+
 /** Landing route for a verified, onboarded user. */
 export async function resolvePostLoginRoute(): Promise<AuthRoute> {
   try {
@@ -55,12 +78,35 @@ export async function resolvePostLoginRoute(): Promise<AuthRoute> {
   return { to: "/dashboard" };
 }
 
-/** Full decision: verification -> onboarding -> normal landing. */
+/**
+ * Full decision: verification -> pending invite -> onboarding -> landing.
+ *
+ * An invited member never sees the owner setup wizard: once their email is
+ * confirmed the invite is accepted automatically and they land on /my-scans.
+ */
 export async function resolvePostAuthRoute(_user?: MinimalUser): Promise<AuthRoute> {
-  if (!(await isEmailVerifiedServer())) return { to: "/verify-email" };
+  if (!(await isEmailVerifiedServer())) {
+    const pending = await fetchPendingInvite().catch(() => null);
+    return pending
+      ? { to: "/verify-email", search: { invited: "true", org: pending.org_id } }
+      : { to: "/verify-email" };
+  }
 
   const user = await fetchAuthUser();
   if (!user) return { to: "/login" };
+
+  const pending = await fetchPendingInvite().catch(() => null);
+  if (pending) {
+    try {
+      const { acceptInvite } = await import("@/lib/team-invite.functions");
+      await acceptInvite({ data: {} } as never);
+      await supabase.rpc("complete_onboarding" as never, {} as never);
+    } catch {
+      // membership activation is retried on the next authenticated read
+    }
+    return { to: "/my-scans" };
+  }
+
   const { data: profile, error } = await supabase
     .from("profiles")
     .select("onboarding_completed_at")
@@ -70,6 +116,7 @@ export async function resolvePostAuthRoute(_user?: MinimalUser): Promise<AuthRou
 
   return resolvePostLoginRoute();
 }
+
 
 const PUBLIC_PATHS = new Set([
   "/",
