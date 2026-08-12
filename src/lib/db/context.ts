@@ -300,11 +300,18 @@ export async function ensureOrganizationForUser(
   if (error) dbError(error, "Could not load your workspace.");
   if (data?.org_id) {
     if (data.status === "invited") {
-      await supabase.from("organization_members").update({ status: "active" }).eq("id", data.id);
-      clearContextCache();
+      // Members may not update their own membership row under RLS.
+      await activatePendingInvites();
     }
     return data.org_id as string;
   }
 
+  // An invite may exist keyed on the email only (no user_id yet).
+  if (await activatePendingInvites()) {
+    const rows = await listMemberships();
+    if (rows.length) return rows[0]!.org_id;
+  }
+
   return createOrganizationForUser(userId, name);
+
 }
