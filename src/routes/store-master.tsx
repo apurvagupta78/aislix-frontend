@@ -379,6 +379,16 @@ function StoreMasterPage() {
                     </Button>
                   </div>
 
+                  {csvError && (
+                    <StickyError
+                      title="Planogram upload failed"
+                      message={csvError}
+                      onDismiss={() => setCsvError(null)}
+                    />
+                  )}
+
+
+
                   {preview && (
                     <div className="space-y-3">
                       <div className="overflow-x-auto rounded-xl border border-border">
