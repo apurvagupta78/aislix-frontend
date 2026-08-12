@@ -34,6 +34,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       // the wizard is open, no global auth event or route check may navigate.
       if (path === "/onboarding" || path.startsWith("/onboarding/")) return;
 
+      // Invite acceptance is mid-flow: never bounce it, verified or not.
+      if (path.startsWith("/accept-invite")) return;
+
       if (busy.current) return;
       busy.current = true;
       try {
@@ -54,11 +57,19 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         if (cancelled) return;
 
         if (!verified) {
-          if (!isVerifyPath(path) && path !== "/auth/callback" && path !== "/logout") {
-            void navigate({ to: "/verify-email", replace: true });
-          }
+          if (isVerifyPath(path) || path === "/auth/callback" || path === "/logout") return;
+          // Invited members get the tailored "join the team" verify screen.
+          const pending = await fetchPendingInvite().catch(() => null);
+          if (cancelled) return;
+          void navigate(
+            pending
+              ? ({ to: "/verify-email", search: { invited: "1", org: pending.org_id }, replace: true } as never)
+              : { to: "/verify-email", replace: true },
+          );
           return;
         }
+
+
 
       } finally {
         busy.current = false;
