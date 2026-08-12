@@ -59,13 +59,14 @@ export async function resolvePostLoginRoute(): Promise<AuthRoute> {
 export async function resolvePostAuthRoute(_user?: MinimalUser): Promise<AuthRoute> {
   if (!(await isEmailVerifiedServer())) return { to: "/verify-email" };
 
-  try {
-    const { fetchOnboardingStatus } = await import("@/lib/onboarding");
-    const status = await fetchOnboardingStatus();
-    if (!status.completed) return { to: "/onboarding" };
-  } catch {
-    // fall through to the normal landing logic
-  }
+  const user = await fetchAuthUser();
+  if (!user) return { to: "/login" };
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("onboarding_completed_at")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (error || !profile?.onboarding_completed_at) return { to: "/onboarding" };
 
   return resolvePostLoginRoute();
 }

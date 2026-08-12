@@ -118,10 +118,21 @@ export async function fetchScanHistory(
     )
     .eq("org_id", orgId);
 
-  // Members only ever see the scans they ran themselves.
+  // Managers see every scan in the active organization. Members' history is
+  // their completed assigned work, irrespective of who created the scan row.
   if (!isManager) {
     const userId = await requireUserId();
-    query = query.eq("created_by", userId);
+    const { data: myAssignments, error: assignmentError } = await supabase
+      .from("scan_assignments")
+      .select("id")
+      .eq("assignee_id", userId)
+      .eq("status", "completed");
+    if (assignmentError) dbError(assignmentError, "Could not load your completed scans.");
+    const myAssignmentIds = (myAssignments ?? []).map((row) => row.id as string);
+    if (myAssignmentIds.length === 0) {
+      return { items: [], total: 0, page, page_size: pageSize, stores: [], assignees: [] };
+    }
+    query = query.eq("status", "completed").in("assignment_id", myAssignmentIds);
   }
 
   if (cutoff) query = query.gte("created_at", cutoff);

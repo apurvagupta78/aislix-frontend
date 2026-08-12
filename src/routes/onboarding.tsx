@@ -236,15 +236,6 @@ function OnboardingPage() {
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-5">
           <Logo />
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={busy}
-            onClick={() => finish.mutate()}
-            className="text-muted-foreground"
-          >
-            Skip setup
-          </Button>
         </div>
       </header>
 
@@ -253,7 +244,7 @@ function OnboardingPage() {
           Set up your workspace
         </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Four quick steps. You can skip anything optional and add it later from settings.
+          Complete your details and store setup, then add optional planogram and team information.
         </p>
 
         <ol className="mt-7 grid gap-3 sm:grid-cols-4">

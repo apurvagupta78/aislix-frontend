@@ -36,6 +36,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       busy.current = true;
       try {
         const path = pathname;
+
+        // ONBOARDING LOCK: once the wizard is open, no global auth event or
+        // route check may navigate away. Only the wizard's Finish setup action
+        // completes onboarding and leaves this route.
+        if (path === "/onboarding" || path.startsWith("/onboarding/")) return;
+
         const user = await fetchAuthUser();
         if (cancelled) return;
 
@@ -57,10 +63,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           }
           return;
         }
-
-        // Actively in the setup wizard — never evict mid-flow. Completion only
-        // happens when the user clicks "Finish setup" on the last step.
-        if (path === "/onboarding") return;
 
         if (isVerifyPath(path) || AUTH_PAGES.has(path)) {
           const route = await resolvePostAuthRoute();
