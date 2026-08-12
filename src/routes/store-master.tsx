@@ -275,27 +275,23 @@ function StoreMasterPage() {
       title="Planogram"
       description="Upload and activate expected shelf data (planograms) per store — source of truth for Expected vs Actual audits."
       actions={
-        snapshot?.active && storeId ? (
-          <Button variant="brand" className="rounded-xl" asChild>
-            <Link to="/assign-scan" search={{ store: storeId }}>
-              <UserPlus className="mr-2 size-4" /> Assign scan
-            </Link>
-          </Button>
-        ) : (
-          <Button
-            variant="brand"
-            className="rounded-xl"
-            disabled
-            title={
-              storeId
+        <Button
+          variant="brand"
+          className="rounded-xl"
+          disabled={!snapshot?.active || !storeId}
+          title={
+            snapshot?.active && storeId
+              ? undefined
+              : storeId
                 ? "Activate a planogram for this store to assign a scan."
                 : "Select a store with an active planogram to assign a scan."
-            }
-          >
-            <UserPlus className="mr-2 size-4" /> Assign scan
-          </Button>
-        )
+          }
+          onClick={() => setAssignOpen(true)}
+        >
+          <UserPlus className="mr-2 size-4" /> Assign scan
+        </Button>
       }
+
 
     >
       <div className="space-y-6">
