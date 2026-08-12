@@ -98,10 +98,14 @@ function OnboardingPage() {
   });
 
 
-  // Already done (or signed out): the wizard must never block the app.
+  // Entry-only guard: if setup was already finished before this page mounted,
+  // send the user on. Never re-checked while the wizard is open.
+  const entryChecked = useRef(false);
   useEffect(() => {
-    if (statusQuery.data?.completed) void navigate({ to: "/dashboard" });
-  }, [statusQuery.data?.completed, navigate]);
+    if (!statusQuery.data || entryChecked.current) return;
+    entryChecked.current = true;
+    if (statusQuery.data.completed) void navigate({ to: "/dashboard", replace: true });
+  }, [statusQuery.data, navigate]);
 
   const [fullName, setFullName] = useState("");
   const [jobTitle, setJobTitle] = useState("");
