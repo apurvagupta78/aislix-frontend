@@ -57,6 +57,7 @@ import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as StoresIndexRouteImport } from './routes/stores.index'
 import { Route as StoresStoreIdRouteImport } from './routes/stores.$storeId'
+import { Route as ApiPlanogramParseCsvRouteImport } from './routes/api/planogram.parse-csv'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 
 const IndexRoute = IndexRouteImport.update({
@@ -299,6 +300,11 @@ const StoresStoreIdRoute = StoresStoreIdRouteImport.update({
   path: '/stores/$storeId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPlanogramParseCsvRoute = ApiPlanogramParseCsvRouteImport.update({
+  id: '/api/planogram/parse-csv',
+  path: '/api/planogram/parse-csv',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailTransactionalPreviewRoute =
   LovableEmailTransactionalPreviewRouteImport.update({
     id: '/lovable/email/transactional/preview',
@@ -355,6 +361,7 @@ export interface FileRoutesByFullPath {
   '/auth/callback': typeof AuthCallbackRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
+  '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesByTo {
@@ -406,6 +413,7 @@ export interface FileRoutesByTo {
   '/auth/callback': typeof AuthCallbackRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores': typeof StoresIndexRoute
+  '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRoutesById {
@@ -458,6 +466,7 @@ export interface FileRoutesById {
   '/auth/callback': typeof AuthCallbackRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
+  '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
 }
 export interface FileRouteTypes {
@@ -511,6 +520,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/stores/$storeId'
     | '/stores/'
+    | '/api/planogram/parse-csv'
     | '/lovable/email/transactional/preview'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -562,6 +572,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/stores/$storeId'
     | '/stores'
+    | '/api/planogram/parse-csv'
     | '/lovable/email/transactional/preview'
   id:
     | '__root__'
@@ -613,6 +624,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/stores/$storeId'
     | '/stores/'
+    | '/api/planogram/parse-csv'
     | '/lovable/email/transactional/preview'
   fileRoutesById: FileRoutesById
 }
@@ -665,6 +677,7 @@ export interface RootRouteChildren {
   AuthCallbackRoute: typeof AuthCallbackRoute
   StoresStoreIdRoute: typeof StoresStoreIdRoute
   StoresIndexRoute: typeof StoresIndexRoute
+  ApiPlanogramParseCsvRoute: typeof ApiPlanogramParseCsvRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
 }
 
@@ -1006,6 +1019,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StoresStoreIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/planogram/parse-csv': {
+      id: '/api/planogram/parse-csv'
+      path: '/api/planogram/parse-csv'
+      fullPath: '/api/planogram/parse-csv'
+      preLoaderRoute: typeof ApiPlanogramParseCsvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/transactional/preview': {
       id: '/lovable/email/transactional/preview'
       path: '/lovable/email/transactional/preview'
@@ -1065,8 +1085,19 @@ const rootRouteChildren: RootRouteChildren = {
   AuthCallbackRoute: AuthCallbackRoute,
   StoresStoreIdRoute: StoresStoreIdRoute,
   StoresIndexRoute: StoresIndexRoute,
+  ApiPlanogramParseCsvRoute: ApiPlanogramParseCsvRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
