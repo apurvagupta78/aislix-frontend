@@ -390,42 +390,30 @@ export async function fetchTeam(signal?: AbortSignal): Promise<{ items: TeamMemb
 }
 
 /**
- * Invites a member by email. Because organization_members requires an
- * existing user id, the invitee must already have an Aislix account.
+ * Invites a member by email. The server function resolves or creates the auth
+ * user, upserts the membership and sends the branded Aislix invitation email.
  */
 export async function inviteMember(input: { email: string; role: TeamRole }): Promise<TeamMember> {
   const membership = await requireMembership();
   const { assertCanInviteMember, mapLimitError } = await import("@/lib/subscription-limits");
   await assertCanInviteMember(membership.org_id);
-  const { data: invitee, error: lookupError } = await supabase
-    .from("profiles")
-    .select("id, full_name, email")
-    .eq("email", input.email)
-    .maybeSingle();
-  if (lookupError) dbError(lookupError, "Could not look up that email.");
-  if (!invitee) {
-    throw new ApiError({
-      message: "That person needs to create an Aislix account before they can be invited.",
-      kind: "not_found",
-      status: 404,
-    });
-  }
+
+  const { inviteMember: inviteMemberFn } = await import("@/lib/team-invite.functions");
+  const result = await inviteMemberFn({
+    data: { email: input.email, role: roleToDb(input.role) },
+  }).catch(async (error: unknown) => {
+    throw await mapLimitError(error, membership.org_id);
+  });
 
   const { data, error } = await supabase
     .from("organization_members")
-    .insert({
-      org_id: membership.org_id,
-      user_id: invitee.id,
-      role: roleToDb(input.role),
-      status: "invited",
-      invited_email: input.email,
-      invited_by: membership.user_id,
-    })
     .select("id, role, status, invited_email, last_active_at, profiles:user_id(full_name, email)")
+    .eq("id", result.member_id)
     .single();
-  if (error) throw await mapLimitError(error, membership.org_id);
+  if (error) dbError(error, "Invite sent, but the member list could not be refreshed.");
   return mapMemberRow(data as never);
 }
+
 
 /** Updates a team member's role. */
 export async function updateMemberRole(id: string, role: TeamRole): Promise<TeamMember> {
