@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useSeatUsage } from "@/hooks/use-seat-usage";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
@@ -274,22 +274,42 @@ function TeamPage() {
       title="Team & user management"
       description="Invite members, control role-based access and audit every change across your organization."
       actions={
-        <Button onClick={openInvite} disabled={!seats.canInvite}>
-          <UserPlus className="size-4" /> Invite user
-        </Button>
+        seats.usage && !seats.canInvite ? (
+          <Button asChild variant="brand">
+            <Link to="/pricing">Upgrade to invite team members</Link>
+          </Button>
+        ) : (
+          <Button onClick={openInvite} disabled={!seats.canInvite}>
+            <UserPlus className="size-4" /> Invite user
+          </Button>
+        )
       }
     >
       <div className="space-y-8">
-        {seats.usage ? (
+        {seats.usage && !seats.canInvite ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-muted/30 p-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium">
+                Need to add team members? Upgrade to the Growth plan or higher to invite additional
+                users.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Growth includes up to 3 users · Professional up to 5 · Enterprise unlimited
+              </p>
+            </div>
+            <Button asChild variant="brand" className="rounded-xl">
+              <Link to="/pricing">View plans &amp; upgrade</Link>
+            </Button>
+          </div>
+        ) : seats.usage ? (
           <p className="text-xs text-muted-foreground">
             Team: {seats.label}
-            {seats.singleSeat
-              ? ` · ${seats.upgradeMessage}`
-              : seats.remaining !== null
-                ? ` · ${seats.remaining} seat${seats.remaining === 1 ? "" : "s"} remaining`
-                : ""}
+            {seats.remaining !== null
+              ? ` · ${seats.remaining} seat${seats.remaining === 1 ? "" : "s"} remaining`
+              : ""}
           </p>
         ) : null}
+
         {/* Filters + table */}
         <section className="space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">

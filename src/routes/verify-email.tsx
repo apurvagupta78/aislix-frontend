@@ -60,8 +60,8 @@ function VerifyEmailPage() {
       }
     };
     void check();
-    // Poll while the user keeps this tab open with their inbox in another one.
-    const timer = window.setInterval(() => void check(), 5000);
+    // Poll only to detect email_confirmed_at flipping in another tab.
+    const timer = window.setInterval(() => void check(), 10000);
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       const user = session?.user ?? null;
       if (user && isEmailVerified(user)) void check();
@@ -116,10 +116,10 @@ function VerifyEmailPage() {
             <p className="text-sm text-foreground">
               A verification email has been sent to{" "}
               <strong className="font-semibold">{email || "your email address"}</strong>. Please
-              check your email and click the verification link to continue.
+              check your inbox and click the verification link to continue.
             </p>
             <p className="text-xs text-muted-foreground">
-              Didn't receive it? Check spam, or click Resend below.
+              Didn't receive it? Check spam or resend below.
             </p>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useSeatUsage } from "@/hooks/use-seat-usage";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -67,19 +67,35 @@ function OnboardingPage() {
   const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
 
+  // Gate first: only a signed-in, email-verified user may see the wizard.
+  const gateQuery = useQuery({
+    queryKey: ["onboarding-gate"],
+    queryFn: async () => {
+      const user = await fetchAuthUser();
+      return { signedIn: Boolean(user), verified: isEmailVerified(user) };
+    },
+    retry: false,
+    staleTime: 0,
+  });
+  const allowed = gateQuery.data?.signedIn === true && gateQuery.data.verified === true;
+
+  useEffect(() => {
+    if (!gateQuery.data) return;
+    if (!gateQuery.data.signedIn) {
+      void navigate({ to: "/login", replace: true });
+      return;
+    }
+    if (!gateQuery.data.verified) void navigate({ to: "/verify-email", replace: true });
+  }, [gateQuery.data, navigate]);
+
   const statusQuery = useQuery({
     queryKey: ["onboarding-status"],
     queryFn: () => fetchOnboardingStatus(),
     retry: false,
     staleTime: 0,
+    enabled: allowed,
   });
 
-  // Unverified sessions verify their email before setting up the workspace.
-  useEffect(() => {
-    void fetchAuthUser().then((user) => {
-      if (user && !isEmailVerified(user)) void navigate({ to: "/verify-email", replace: true });
-    });
-  }, [navigate]);
 
   // Already done (or signed out): the wizard must never block the app.
   useEffect(() => {
@@ -197,7 +213,7 @@ function OnboardingPage() {
     teamStep.isPending ||
     finish.isPending;
 
-  if (statusQuery.isLoading || statusQuery.data?.completed) {
+  if (!allowed || statusQuery.isLoading || statusQuery.data?.completed) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface">
         <Loader2 className="size-5 animate-spin text-muted-foreground" />
@@ -393,15 +409,20 @@ function OnboardingPage() {
           )}
 
           {step === 3 && seats.singleSeat && (
-            <div className="space-y-3">
+            <div className="mx-auto max-w-md space-y-4 rounded-2xl border border-border bg-muted/30 p-6 text-center">
               <p className="text-sm text-muted-foreground">
-                Team invites are available on the Growth plan (3 users) and above.
+                Need to add team members? Upgrade to the <strong>Growth plan</strong> or a higher
+                plan to invite additional users.
               </p>
-              <p className="text-sm font-medium">
-                Your {seats.usage?.plan_name ?? "current"} plan includes 1 user (you).
+              <Button asChild variant="brand" size="lg" className="rounded-xl">
+                <Link to="/pricing">View plans &amp; upgrade</Link>
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Growth includes up to 3 users · Professional up to 5 · Enterprise unlimited
               </p>
             </div>
           )}
+
 
           {step === 3 && !seats.singleSeat && (
             <div className="space-y-4">
