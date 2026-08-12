@@ -80,6 +80,8 @@ const card = "rounded-2xl border border-border bg-card p-5 shadow-sm";
 function StoreMasterPage() {
   const queryClient = useQueryClient();
   const [storeId, setStoreId] = useState("");
+  const [assignOpen, setAssignOpen] = useState(false);
+
   const [draft, setDraft] = useState<DraftRow[]>([]);
   const [sources, setSources] = useState<{ csv: boolean; manual: boolean }>({
     csv: false,
