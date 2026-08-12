@@ -482,13 +482,16 @@ export function AppShell({
     queryFn: () => fetchOnboardingStatus(),
     retry: false,
     staleTime: 5 * 60_000,
+    // Never run before the email is confirmed — unverified users go to /verify-email.
+    enabled: verifiedQuery.data?.verified === true,
   });
   useEffect(() => {
-    if (unverified) return;
+    if (verifiedQuery.data?.verified !== true) return;
     if (onboardingQuery.data && !onboardingQuery.data.completed) {
       void navigate({ to: "/onboarding" });
     }
-  }, [onboardingQuery.data, unverified, navigate]);
+  }, [onboardingQuery.data, verifiedQuery.data?.verified, navigate]);
+
   const profileQuery = useQuery({
     queryKey: ["profile"],
     queryFn: () => fetchProfile(),
