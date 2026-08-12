@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { EmptyState, ErrorState, TableSkeleton } from "@/components/States";
 import { Field, SettingsCard } from "@/components/settings/SettingsParts";
+import { useSeatUsage } from "@/hooks/use-seat-usage";
 import {
   fetchTeam,
   formatDateTime,
@@ -50,6 +51,8 @@ export function TeamManager() {
     queryFn: ({ signal }) => fetchTeam(signal),
     retry: false,
   });
+
+  const seats = useSeatUsage();
 
   const invalidate = () => void queryClient.invalidateQueries({ queryKey: ["team", "members"] });
 
@@ -86,7 +89,18 @@ export function TeamManager() {
 
   return (
     <div className="space-y-4">
-      <SettingsCard title="Invite a team member" description="They receive an email invitation to join this workspace." icon={UserPlus}>
+      <SettingsCard
+        title="Invite a team member"
+        description={
+          seats.usage
+            ? seats.singleSeat
+              ? seats.upgradeMessage
+              : `Team: ${seats.label}${seats.remaining !== null ? ` · ${seats.remaining} seat${seats.remaining === 1 ? "" : "s"} remaining` : ""}`
+            : "They receive an email invitation to join this workspace."
+        }
+        icon={UserPlus}
+      >
+        {seats.singleSeat ? null : (
         <form
           className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_180px_auto] sm:items-end"
           onSubmit={(event) => {
@@ -119,11 +133,12 @@ export function TeamManager() {
               </SelectContent>
             </Select>
           </Field>
-          <Button type="submit" variant="brand" className="rounded-xl sm:mb-6" disabled={invite.isPending}>
+          <Button type="submit" variant="brand" className="rounded-xl sm:mb-6" disabled={invite.isPending || !seats.canInvite}>
             {invite.isPending ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
             Send invite
           </Button>
         </form>
+        )}
       </SettingsCard>
 
       <SettingsCard title="Team members" description="Roles control access to scans, stores, billing and settings." icon={Users}>

@@ -359,6 +359,14 @@ function Billing() {
                     </p>
                   </div>
                   <div>
+                    <p className="text-xs text-muted-foreground">Team users</p>
+                    <p className="mt-1 text-sm font-medium">
+                      {usage?.seats_included === null
+                        ? usage?.seat_limit_label || "Unlimited users"
+                        : `${formatNumber(usage?.seats_used)} / ${formatNumber(usage?.seats_included ?? undefined)} users`}
+                    </p>
+                  </div>
+                  <div>
                     <p className="text-xs text-muted-foreground">Next billing date</p>
                     <p className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium">
                       <CalendarClock className="size-3.5 text-brand" />
