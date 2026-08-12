@@ -1,0 +1,84 @@
+/**
+ * AuthGate — the ONE redirect system for auth state.
+ *
+ * Runs on every navigation and every auth event:
+ *  - signed out on a protected path -> /login
+ *  - signed in but unverified       -> /verify-email (nothing else is reachable)
+ *  - verified on /verify-email or an auth page -> resolved landing route
+ *
+ * No other component may redirect based on session / verification / onboarding.
+ */
+
+import { useEffect, useRef } from "react";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  fetchAuthUser,
+  goToAuthRoute,
+  isEmailVerifiedServer,
+  isPublicPath,
+  isVerifyPath,
+  resolvePostAuthRoute,
+} from "@/lib/auth-routing";
+
+const AUTH_PAGES = new Set(["/login", "/signup", "/register"]);
+
+export function AuthGate({ children }: { children: React.ReactNode }) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const busy = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const enforce = async () => {
+      if (busy.current) return;
+      busy.current = true;
+      try {
+        const path = pathname;
+        const user = await fetchAuthUser();
+        if (cancelled) return;
+
+        if (!user) {
+          // Signup leaves no session while confirmation is pending — the
+          // verify page must stay open, so it is never bounced to /login.
+          if (!isPublicPath(path) && !isVerifyPath(path)) {
+            void navigate({ to: "/login", replace: true });
+          }
+          return;
+        }
+
+        const verified = await isEmailVerifiedServer();
+        if (cancelled) return;
+
+        if (!verified) {
+          if (!isVerifyPath(path) && path !== "/auth/callback" && path !== "/logout") {
+            void navigate({ to: "/verify-email", replace: true });
+          }
+          return;
+        }
+
+        if (isVerifyPath(path) || AUTH_PAGES.has(path)) {
+          const route = await resolvePostAuthRoute();
+          if (!cancelled) goToAuthRoute(navigate as never, route);
+        }
+      } finally {
+        busy.current = false;
+      }
+    };
+
+    void enforce();
+
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") return;
+      void enforce();
+    });
+
+    return () => {
+      cancelled = true;
+      data.subscription.unsubscribe();
+    };
+  }, [pathname, navigate]);
+
+  return <>{children}</>;
+}
