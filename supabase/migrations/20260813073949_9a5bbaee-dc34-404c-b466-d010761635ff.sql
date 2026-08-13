@@ -1,0 +1,1 @@
+ALTER TABLE public.planogram_comparisons ALTER COLUMN store_id DROP NOT NULL;
