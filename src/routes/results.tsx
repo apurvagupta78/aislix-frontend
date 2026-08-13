@@ -56,8 +56,16 @@ import {
   type ScanResult,
 } from "@/lib/scan-results";
 import { retryScanAnalysis } from "@/lib/scan-api";
-import { PlanogramComparisonSection } from "@/components/scan-results/PlanogramCompliance";
-import { complianceTone, fetchPlanogramComparison } from "@/lib/planogram-compliance";
+import {
+  PlanogramComparisonSection,
+  PlanogramMissingAlert,
+} from "@/components/scan-results/PlanogramCompliance";
+import {
+  complianceTone,
+  fetchPlanogramComparison,
+  summaryCounts,
+  type PlanogramComparison,
+} from "@/lib/planogram-compliance";
 
 export const Route = createFileRoute("/results")({
   validateSearch: (search: Record<string, unknown>): { scan?: string } => {
