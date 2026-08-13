@@ -84,7 +84,11 @@ const CATEGORY_QUERY_KEY = ["shelf-categories"] as const;
 
 type Phase = "idle" | "uploading" | "error";
 
+/** Option 1 = free scan, Option 2 = compliance scan against expected products. */
+type ScanMode = "free" | "with_planogram";
+
 type Attachment = { id: string; file: File; url: string };
+
 
 function ScanPage() {
   const navigate = useNavigate();
