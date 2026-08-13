@@ -157,6 +157,64 @@ function ScanPage() {
   const selectedSub = subcategories.find((item) => item.id === subCategory);
   const needsCustom = isOtherCategory || subCategory === "others";
 
+  /* -------- planogram → scan category sync -------- */
+  const planogramTarget = useMemo(() => {
+    if (!planogramRows.length) return null;
+    const pair = dominantPlanogramPair(planogramRows);
+    return pair ? resolveScanCategory(categories, pair.category, pair.sub_category) : null;
+  }, [planogramRows, categories]);
+
+  const applyPlanogramCategory = useCallback(() => {
+    if (!planogramTarget) return;
+    setCategory(planogramTarget.categoryName);
+    setSubCategory(planogramTarget.subCategoryId);
+    setSubCategoryCustom("");
+    setUserEditedCategory(false);
+    setMismatchAcknowledged(false);
+    setCategorySyncNotice(
+      `Scan category updated to match your planogram: ${formatScanCategory(planogramTarget)}`,
+    );
+  }, [planogramTarget]);
+
+  // Auto-sync unless the user deliberately changed the dropdowns afterwards.
+  useEffect(() => {
+    if (lockedByAssignment || !planogramTarget || userEditedCategory) return;
+    const matches =
+      category === planogramTarget.categoryName &&
+      (!planogramTarget.subCategoryId || subCategory === planogramTarget.subCategoryId);
+    if (matches) return;
+    setCategory(planogramTarget.categoryName);
+    setSubCategory(planogramTarget.subCategoryId);
+    setSubCategoryCustom("");
+    setMismatchAcknowledged(false);
+    setCategorySyncNotice(
+      `Scan category updated to match your planogram: ${formatScanCategory(planogramTarget)}`,
+    );
+  }, [planogramTarget, userEditedCategory, lockedByAssignment, category, subCategory]);
+
+  // Clearing the planogram re-enables auto-sync for the next upload.
+  useEffect(() => {
+    if (planogramRows.length) return;
+    setUserEditedCategory(false);
+    setCategorySyncNotice(null);
+    setMismatchAcknowledged(false);
+  }, [planogramRows.length]);
+
+  const categoryMismatch = Boolean(
+    !lockedByAssignment &&
+      planogramTarget &&
+      (category !== planogramTarget.categoryName ||
+        (planogramTarget.subCategoryId && subCategory !== planogramTarget.subCategoryId)),
+  );
+  const mismatchBlocking = categoryMismatch && !mismatchAcknowledged;
+
+  const markCategoryEdited = useCallback(() => {
+    setUserEditedCategory(true);
+    setCategorySyncNotice(null);
+  }, []);
+
+
+
   const assignmentSubLabel = assignment?.sub_category ?? "";
   const setupErrors = useMemo(() => {
     const errors: Record<string, string> = {};
