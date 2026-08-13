@@ -104,8 +104,9 @@ export async function submitScanImages(
     subCategoryCustom?: string;
     /** Optional free-text note for a scan without a planogram. */
     notes?: string;
-
+    /** Set when the scan was launched from an assigned task (/my-scans). */
     assignmentId?: string;
+
     /**
      * Workspace to record the scan in. Assigned scans pass the assignment's
      * org so an invited member never depends on workspace bootstrap.
