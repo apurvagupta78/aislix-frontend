@@ -994,6 +994,16 @@ function ScanPage() {
                 </div>
               </div>
 
+              {!setupComplete && (
+                <p className="mt-4 rounded-xl border border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
+                  {withPlanogram
+                    ? "Select store, location, category, subcategory, and add at least one expected product."
+                    : "Select store, location, category and subcategory to continue."}
+                </p>
+              )}
+
+
+
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <button
                   type="button"
