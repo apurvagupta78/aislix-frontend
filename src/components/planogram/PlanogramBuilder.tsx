@@ -390,58 +390,75 @@ export function PlanogramBuilder({
         </TabsContent>
 
         <TabsContent value="manual" className="mt-4">
+          {context && (
+            <p className="mb-4 rounded-xl border border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
+              Applied to every product:{" "}
+              <span className="font-medium text-foreground">
+                {[context.location, context.category, context.subCategoryLabel]
+                  .filter(Boolean)
+                  .join(" · ") || "set location and category above"}
+              </span>
+            </p>
+          )}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Field label="Location" required>
-              <Input
-                className="rounded-xl"
-                placeholder="Shelf / aisle code, e.g. A-1-Z"
-                value={form.location}
-                onChange={(e) => setForm({ ...form, location: e.target.value })}
-              />
-            </Field>
-            <Field label="Category" required>
-              <Select
-                value={form.category}
-                onValueChange={(value) => setForm({ ...form, category: value, sub_category: "" })}
-              >
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.name} value={category.name}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Sub category" required>
-              {subCategories.length ? (
-                <Select
-                  value={form.sub_category}
-                  onValueChange={(value) => setForm({ ...form, sub_category: value })}
-                >
-                  <SelectTrigger className="rounded-xl">
-                    <SelectValue placeholder="Select sub category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {subCategories.map((sub) => (
-                      <SelectItem key={sub.id} value={sub.label}>
-                        {sub.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input
-                  className="rounded-xl"
-                  placeholder={form.category ? "e.g. Shampoo" : "Select a category first"}
-                  value={form.sub_category}
-                  onChange={(e) => setForm({ ...form, sub_category: e.target.value })}
-                />
-              )}
-            </Field>
+            {!context && (
+              <>
+                <Field label="Location" required>
+                  <Input
+                    className="rounded-xl"
+                    placeholder="Shelf / aisle code, e.g. A-1-Z"
+                    value={form.location}
+                    onChange={(e) => setForm({ ...form, location: e.target.value })}
+                  />
+                </Field>
+                <Field label="Category" required>
+                  <Select
+                    value={form.category}
+                    onValueChange={(value) =>
+                      setForm({ ...form, category: value, sub_category: "" })
+                    }
+                  >
+                    <SelectTrigger className="rounded-xl">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category.name} value={category.name}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="Sub category" required>
+                  {subCategories.length ? (
+                    <Select
+                      value={form.sub_category}
+                      onValueChange={(value) => setForm({ ...form, sub_category: value })}
+                    >
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue placeholder="Select sub category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subCategories.map((sub) => (
+                          <SelectItem key={sub.id} value={sub.label}>
+                            {sub.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      className="rounded-xl"
+                      placeholder={form.category ? "e.g. Shampoo" : "Select a category first"}
+                      value={form.sub_category}
+                      onChange={(e) => setForm({ ...form, sub_category: e.target.value })}
+                    />
+                  )}
+                </Field>
+              </>
+            )}
+
             <Field label="Brand" required>
               <Input
                 className="rounded-xl"
