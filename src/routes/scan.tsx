@@ -99,6 +99,10 @@ function ScanPage() {
   const [subCategory, setSubCategory] = useState("");
   const [subCategoryCustom, setSubCategoryCustom] = useState("");
   const [showSetupErrors, setShowSetupErrors] = useState(false);
+  const [userEditedCategory, setUserEditedCategory] = useState(false);
+  const [categorySyncNotice, setCategorySyncNotice] = useState<string | null>(null);
+  const [mismatchAcknowledged, setMismatchAcknowledged] = useState(false);
+
 
   const storesQuery = useQuery({
     queryKey: ["stores", "scan-setup"],
