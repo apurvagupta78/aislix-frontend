@@ -161,9 +161,11 @@ function Results() {
           actions: [],
         }
       : null);
-  const showPlanogramWarning =
-    !planogramSection ||
-    (expectedProducts !== null && expectedProducts === 0 && !planogramSection.lines.length);
+  const showPlanogramWarning = Boolean(
+    planogram?.requested &&
+      (!planogramSection ||
+        (expectedProducts === 0 && !planogramSection.lines.length)),
+  );
 
   const goToScan = (id?: string | null) => {
     if (!id) return;
