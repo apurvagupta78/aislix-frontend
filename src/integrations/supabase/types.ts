@@ -614,15 +614,16 @@ export type Database = {
           created_at: string
           expected_qty: number
           id: string
-          location: string | null
+          location: string
           match_key: string | null
           org_id: string
           product_name: string
           shelf_position: string | null
           sku: string | null
           store_id: string
-          sub_category: string | null
+          sub_category: string
           updated_at: string
+          variant: string | null
           version_id: string
         }
         Insert: {
@@ -632,15 +633,16 @@ export type Database = {
           created_at?: string
           expected_qty?: number
           id?: string
-          location?: string | null
+          location: string
           match_key?: string | null
           org_id: string
           product_name: string
           shelf_position?: string | null
           sku?: string | null
           store_id: string
-          sub_category?: string | null
+          sub_category: string
           updated_at?: string
+          variant?: string | null
           version_id: string
         }
         Update: {
@@ -650,15 +652,16 @@ export type Database = {
           created_at?: string
           expected_qty?: number
           id?: string
-          location?: string | null
+          location?: string
           match_key?: string | null
           org_id?: string
           product_name?: string
           shelf_position?: string | null
           sku?: string | null
           store_id?: string
-          sub_category?: string | null
+          sub_category?: string
           updated_at?: string
+          variant?: string | null
           version_id?: string
         }
         Relationships: [
@@ -1071,6 +1074,7 @@ export type Database = {
       }
       shelf_scans: {
         Row: {
+          adhoc_planogram: Json | null
           assignment_id: string | null
           category: string | null
           created_at: string
@@ -1098,6 +1102,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          adhoc_planogram?: Json | null
           assignment_id?: string | null
           category?: string | null
           created_at?: string
@@ -1125,6 +1130,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          adhoc_planogram?: Json | null
           assignment_id?: string | null
           category?: string | null
           created_at?: string
@@ -1430,6 +1436,7 @@ export type Database = {
         }[]
       }
       get_org_usage_summary: { Args: { p_org_id: string }; Returns: Json }
+      is_org_member: { Args: { p_org_id: string }; Returns: boolean }
       is_user_email_verified: { Args: { p_user_id?: string }; Returns: boolean }
       org_has_platform_bypass: { Args: { p_org_id: string }; Returns: boolean }
       org_has_platform_store_bypass: {

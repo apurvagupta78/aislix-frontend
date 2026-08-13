@@ -14,11 +14,33 @@ export type PlanogramRow = {
   sub_category: string;
   brand: string;
   product_name: string;
-  sku: string;
+  /** Optional pack size / flavour, e.g. "340ml" or "25 bags". */
+  variant: string;
   expected_qty: number;
+  sku: string;
   shelf_position: string;
   match_key: string;
 };
+
+/** Required fields for a planogram row, in display order. */
+export const REQUIRED_PLANOGRAM_FIELDS = [
+  ["location", "Location"],
+  ["category", "Category"],
+  ["sub_category", "Sub category"],
+  ["brand", "Brand"],
+  ["product_name", "Product Name"],
+] as const;
+
+/** Returns a validation message for the first missing required field. */
+export function validatePlanogramRow(row: PlanogramRow): string | null {
+  for (const [key, label] of REQUIRED_PLANOGRAM_FIELDS) {
+    if (!String(row[key] ?? "").trim()) return `${label} is required.`;
+  }
+  if (!Number.isFinite(Number(row.expected_qty)) || Number(row.expected_qty) < 0) {
+    return "Expected qty must be a number of 0 or more.";
+  }
+  return null;
+}
 
 export type DraftRow = PlanogramRow & { key: string };
 
@@ -49,13 +71,13 @@ export type CsvParseResult = {
 
 export const PLANOGRAM_MANAGER_ROLES = ["owner", "admin", "manager"] as const;
 
-export const SAMPLE_CSV_HEADERS =
-  "location,category,sub_category,brand,product_name,expected_qty,sku,shelf_position";
-
-export const SAMPLE_CSV_TEMPLATE = [
+import {
+  REQUIRED_CSV_COLUMNS,
   SAMPLE_CSV_HEADERS,
-  "A-1-Z,Personal Care,Shampoo,Dove,Dove Daily Shine 340ml,6,,Shelf 2",
-].join("\n");
+  SAMPLE_CSV_TEMPLATE,
+} from "@/lib/planogram-template";
+
+export { REQUIRED_CSV_COLUMNS, SAMPLE_CSV_HEADERS, SAMPLE_CSV_TEMPLATE };
 
 let rowKeySeq = 0;
 export function nextRowKey(): string {
@@ -70,8 +92,9 @@ export function emptyRow(): PlanogramRow {
     sub_category: "",
     brand: "",
     product_name: "",
-    sku: "",
+    variant: "",
     expected_qty: 1,
+    sku: "",
     shelf_position: "",
     match_key: "",
   };
@@ -87,6 +110,7 @@ export function toDraftRow(row: Partial<PlanogramRow> | null | undefined): Draft
     sub_category: String(row?.sub_category ?? "").trim(),
     brand: String(row?.brand ?? "").trim(),
     product_name: String(row?.product_name ?? "").trim(),
+    variant: String(row?.variant ?? "").trim(),
     sku: String(row?.sku ?? "").trim(),
     expected_qty: Number.isFinite(qty) && qty > 0 ? Math.floor(qty) : base.expected_qty,
     shelf_position: String(row?.shelf_position ?? "").trim(),
@@ -128,8 +152,7 @@ async function callPlanogramApi<T>(path: string, body: unknown): Promise<T> {
   }
 
   const payload = (await response.json().catch(() => null)) as
-    | (Record<string, unknown> & { detail?: unknown; message?: unknown })
-    | null;
+    (Record<string, unknown> & { detail?: unknown; message?: unknown }) | null;
 
   if (!response.ok) {
     const detail = payload?.detail ?? payload?.message ?? response.statusText;
@@ -142,9 +165,37 @@ async function callPlanogramApi<T>(path: string, body: unknown): Promise<T> {
   return payload as T;
 }
 
+/** Fetches the canonical CSV template text from the backend, with a local fallback. */
+export async function fetchPlanogramCsvTemplate(): Promise<string> {
+  try {
+    const response = await fetch("/api/planogram/csv-template", {
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) return SAMPLE_CSV_TEMPLATE;
+    const payload = (await response.json()) as { csv_text?: unknown };
+    const text = typeof payload?.csv_text === "string" ? payload.csv_text.trim() : "";
+    return text || SAMPLE_CSV_TEMPLATE;
+  } catch {
+    return SAMPLE_CSV_TEMPLATE;
+  }
+}
+
+/** Returns the first required CSV column missing from the header row, if any. */
+export function missingCsvColumn(csvText: string): string | null {
+  const header = (csvText.split(/\r?\n/)[0] ?? "")
+    .split(",")
+    .map((cell) => cell.trim().toLowerCase().replace(/\s+/g, "_"));
+  for (const column of REQUIRED_CSV_COLUMNS) {
+    if (!header.includes(column)) return column;
+  }
+  return null;
+}
+
 export async function parsePlanogramCsv(file: File): Promise<CsvParseResult> {
   const csvText = await file.text();
   if (!csvText.trim()) throw new Error("This CSV file is empty.");
+  const missing = missingCsvColumn(csvText);
+  if (missing) throw new Error(`Missing required column: ${missing}`);
   const payload = await callPlanogramApi<CsvParseResult>("/api/planogram/parse-csv", {
     csv_text: csvText,
     filename: file.name,
@@ -210,7 +261,7 @@ export async function fetchPlanogramItems(versionId: string): Promise<DraftRow[]
   const { data, error } = await supabase
     .from("planogram_items")
     .select(
-      "location, category, sub_category, brand, product_name, sku, expected_qty, shelf_position, match_key",
+      "location, category, sub_category, brand, product_name, variant, sku, expected_qty, shelf_position, match_key",
     )
     .eq("version_id", versionId)
     .order("created_at", { ascending: true });
@@ -295,12 +346,13 @@ export async function savePlanogramDraft(input: {
         version_id: version!.id,
         org_id: orgId,
         store_id: input.storeId,
-        location: row.location || null,
+        location: row.location,
         aisle: null,
         category: row.category,
-        sub_category: row.sub_category || null,
+        sub_category: row.sub_category,
         brand: row.brand,
         product_name: row.product_name,
+        variant: row.variant || null,
         sku: row.sku || null,
         expected_qty: row.expected_qty,
         shelf_position: row.shelf_position || null,

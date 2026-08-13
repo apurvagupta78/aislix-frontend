@@ -948,6 +948,8 @@ type ScanRow = {
   sub_category_custom: string | null;
   notes: string | null;
   assignment_id: string | null;
+  /** Optional expected products supplied ad hoc on the New Scan page. */
+  adhoc_planogram: Record<string, unknown>[] | null;
 };
 
 type AssignmentContext = {
@@ -964,7 +966,7 @@ async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
   const { data: scan, error } = await supabase
     .from("shelf_scans")
     .select(
-      "id, org_id, store_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, notes, assignment_id",
+      "id, org_id, store_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, notes, assignment_id, adhoc_planogram",
     )
     .eq("id", scanId)
     .maybeSingle();
@@ -981,11 +983,14 @@ async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
     sub_category_custom: (scan.sub_category_custom as string | null) ?? null,
     notes: (scan.notes as string | null) ?? null,
     assignment_id: (scan.assignment_id as string | null) ?? null,
+    adhoc_planogram: Array.isArray(scan.adhoc_planogram)
+      ? (scan.adhoc_planogram as Record<string, unknown>[])
+      : null,
   };
 }
 
 const PLANOGRAM_FIELDS =
-  "id, location, aisle, category, sub_category, brand, product_name, sku, expected_qty, match_key";
+  "id, location, aisle, category, sub_category, brand, product_name, variant, sku, expected_qty, match_key";
 
 function planogramShape(row: Record<string, unknown>) {
   const s = (value: unknown) => (typeof value === "string" ? value : "");
@@ -996,6 +1001,7 @@ function planogramShape(row: Record<string, unknown>) {
     sub_category: s(row["sub_category"]),
     brand: s(row["brand"]),
     product_name: s(row["product_name"]),
+    variant: s(row["variant"]),
     sku: s(row["sku"]),
     expected_qty: Number(row["expected_qty"]) || 0,
     match_key: s(row["match_key"]),
@@ -1058,7 +1064,6 @@ async function loadAssignmentContext(
     }
   }
 
-
   const scopeType = String(assignment.scope_type ?? "category");
   const scopeValues = (assignment.scope_values ?? {}) as Record<string, unknown>;
   const items = itemsFull.filter((item) => {
@@ -1116,6 +1121,11 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
 
   const learnedCatalog = await loadLearnedCatalog(supabase, scan.org_id);
   const assignment = await loadAssignmentContext(supabase, scan);
+  // No assignment: the scanner may still have supplied expected products
+  // inline on the New Scan page.
+  const adhocItems = assignment
+    ? []
+    : (scan.adhoc_planogram ?? []).map((row) => planogramShape(row));
 
   return {
     scan_id: scan.id,
@@ -1143,7 +1153,14 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
           planogram_items: assignment.items,
           planogram_items_full: assignment.items_full,
         }
-      : {}),
+      : adhocItems.length
+        ? {
+            location: adhocItems[0]?.["location"] || null,
+            planogram_source: "adhoc",
+            planogram_items: adhocItems,
+            planogram_items_full: adhocItems,
+          }
+        : {}),
   };
 }
 
@@ -1399,7 +1416,10 @@ async function reconcilePreviousActions(
     keyByLine.set(line.id as string, normalizeKey(line.expected_brand, line.expected_product));
 
   const resolvable = rows
-    .filter((row) => row.comparison_line_id && fixedKeys.has(keyByLine.get(row.comparison_line_id!) ?? "\u0000"))
+    .filter(
+      (row) =>
+        row.comparison_line_id && fixedKeys.has(keyByLine.get(row.comparison_line_id!) ?? "\u0000"),
+    )
     .map((row) => row.id);
   if (!resolvable.length) return;
 
