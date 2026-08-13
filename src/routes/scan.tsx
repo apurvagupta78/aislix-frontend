@@ -398,6 +398,8 @@ function ScanPage() {
     navigate,
     phase,
     guardSetup,
+    mismatchBlocking,
+
     storeId,
     shelfLabel,
     category,
@@ -988,7 +990,8 @@ function ScanPage() {
                       size="sm"
                       className="rounded-xl"
                       onClick={startScan}
-                      disabled={busy}
+                      disabled={busy || mismatchBlocking}
+
                     >
                       {busy ? (
                         <Loader2 className="size-4 animate-spin" />
