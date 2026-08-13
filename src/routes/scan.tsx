@@ -7,7 +7,9 @@ import {
   Check,
   ImageIcon,
   Loader2,
+  Info,
   MapPin,
+
   Plus,
   ScanLine,
   Trash2,
@@ -44,6 +46,12 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ClipboardList } from "lucide-react";
 import { fetchActivePlanogram, fetchPlanogramItems, type DraftRow } from "@/lib/planogram";
 import { toUserMessage } from "@/lib/api/errors";
+import {
+  dominantPlanogramPair,
+  formatScanCategory,
+  resolveScanCategory,
+} from "@/lib/planogram-category-sync";
+
 
 export const Route = createFileRoute("/scan")({
   validateSearch: (search: Record<string, unknown>): { assignmentId?: string } => {
@@ -99,6 +107,10 @@ function ScanPage() {
   const [subCategory, setSubCategory] = useState("");
   const [subCategoryCustom, setSubCategoryCustom] = useState("");
   const [showSetupErrors, setShowSetupErrors] = useState(false);
+  const [userEditedCategory, setUserEditedCategory] = useState(false);
+  const [categorySyncNotice, setCategorySyncNotice] = useState<string | null>(null);
+  const [mismatchAcknowledged, setMismatchAcknowledged] = useState(false);
+
 
   const storesQuery = useQuery({
     queryKey: ["stores", "scan-setup"],
@@ -152,6 +164,64 @@ function ScanPage() {
     !lockedByAssignment && Boolean(category) && !isOtherCategory && subcategories.length > 0;
   const selectedSub = subcategories.find((item) => item.id === subCategory);
   const needsCustom = isOtherCategory || subCategory === "others";
+
+  /* -------- planogram → scan category sync -------- */
+  const planogramTarget = useMemo(() => {
+    if (!planogramRows.length) return null;
+    const pair = dominantPlanogramPair(planogramRows);
+    return pair ? resolveScanCategory(categories, pair.category, pair.sub_category) : null;
+  }, [planogramRows, categories]);
+
+  const applyPlanogramCategory = useCallback(() => {
+    if (!planogramTarget) return;
+    setCategory(planogramTarget.categoryName);
+    setSubCategory(planogramTarget.subCategoryId);
+    setSubCategoryCustom("");
+    setUserEditedCategory(false);
+    setMismatchAcknowledged(false);
+    setCategorySyncNotice(
+      `Scan category updated to match your planogram: ${formatScanCategory(planogramTarget)}`,
+    );
+  }, [planogramTarget]);
+
+  // Auto-sync unless the user deliberately changed the dropdowns afterwards.
+  useEffect(() => {
+    if (lockedByAssignment || !planogramTarget || userEditedCategory) return;
+    const matches =
+      category === planogramTarget.categoryName &&
+      (!planogramTarget.subCategoryId || subCategory === planogramTarget.subCategoryId);
+    if (matches) return;
+    setCategory(planogramTarget.categoryName);
+    setSubCategory(planogramTarget.subCategoryId);
+    setSubCategoryCustom("");
+    setMismatchAcknowledged(false);
+    setCategorySyncNotice(
+      `Scan category updated to match your planogram: ${formatScanCategory(planogramTarget)}`,
+    );
+  }, [planogramTarget, userEditedCategory, lockedByAssignment, category, subCategory]);
+
+  // Clearing the planogram re-enables auto-sync for the next upload.
+  useEffect(() => {
+    if (planogramRows.length) return;
+    setUserEditedCategory(false);
+    setCategorySyncNotice(null);
+    setMismatchAcknowledged(false);
+  }, [planogramRows.length]);
+
+  const categoryMismatch = Boolean(
+    !lockedByAssignment &&
+      planogramTarget &&
+      (category !== planogramTarget.categoryName ||
+        (planogramTarget.subCategoryId && subCategory !== planogramTarget.subCategoryId)),
+  );
+  const mismatchBlocking = categoryMismatch && !mismatchAcknowledged;
+
+  const markCategoryEdited = useCallback(() => {
+    setUserEditedCategory(true);
+    setCategorySyncNotice(null);
+  }, []);
+
+
 
   const assignmentSubLabel = assignment?.sub_category ?? "";
   const setupErrors = useMemo(() => {
@@ -263,6 +333,8 @@ function ScanPage() {
   const startScan = useCallback(async () => {
     if (!items.length || phase === "uploading") return;
     if (!guardSetup()) return;
+    if (mismatchBlocking) return;
+
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -326,6 +398,8 @@ function ScanPage() {
     navigate,
     phase,
     guardSetup,
+    mismatchBlocking,
+
     storeId,
     shelfLabel,
     category,
@@ -508,7 +582,9 @@ function ScanPage() {
                         setCategory(value);
                         setSubCategory("");
                         setSubCategoryCustom("");
+                        markCategoryEdited();
                       }}
+
                       disabled={busy}
                     >
                       <SelectTrigger id="scan-category" className="rounded-xl">
@@ -556,7 +632,9 @@ function ScanPage() {
                       onValueChange={(value) => {
                         setSubCategory(value);
                         if (value !== "others") setSubCategoryCustom("");
+                        markCategoryEdited();
                       }}
+
                       disabled={busy || lockedByAssignment}
                     >
                       <SelectTrigger id="scan-subcategory" className="rounded-xl">
@@ -597,6 +675,76 @@ function ScanPage() {
                 )}
               </div>
             </section>
+
+            {categorySyncNotice && !categoryMismatch && (
+              <div
+                role="status"
+                className="flex flex-wrap items-start gap-2.5 rounded-2xl border border-brand/25 bg-brand-soft/60 px-4 py-3"
+              >
+                <Info className="mt-0.5 size-4 shrink-0 text-brand" />
+                <p className="flex-1 text-sm text-foreground">{categorySyncNotice}</p>
+                <button
+                  type="button"
+                  className="text-sm font-medium text-brand underline-offset-2 hover:underline"
+                  onClick={markCategoryEdited}
+                >
+                  Change manually
+                </button>
+              </div>
+            )}
+
+            {categoryMismatch && planogramTarget && (
+              <div
+                role="alert"
+                className="rounded-2xl border border-warning/40 bg-warning/10 px-4 py-4"
+              >
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">
+                      Planogram category mismatch
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Your planogram rows are mostly [{formatScanCategory(planogramTarget)}] but
+                      this scan is set to [
+                      {[category || "—", selectedSub?.label].filter(Boolean).join(" · ")}].
+                      Compliance and audit alerts use the scan category.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    variant="brand"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={applyPlanogramCategory}
+                  >
+                    Use planogram category
+                  </Button>
+                  <Button
+                    variant="subtle"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={() => {
+                      setPlanogramRows([]);
+                      setPlanogramNotice(null);
+                    }}
+                  >
+                    Clear planogram
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={() => setMismatchAcknowledged(true)}
+                  >
+                    Continue anyway
+                  </Button>
+                </div>
+              </div>
+            )}
+
+
 
             {/* OPTIONAL — expected shelf planogram */}
             {!lockedByAssignment && (
@@ -656,7 +804,10 @@ function ScanPage() {
                                 return;
                               }
                               const rows = await fetchPlanogramItems(active.id);
+                              setUserEditedCategory(false);
+                              setMismatchAcknowledged(false);
                               setPlanogramRows(rows);
+
                               setPlanogramNotice(
                                 `Loaded ${rows.length} product${rows.length === 1 ? "" : "s"} from the active store planogram.`,
                               );
@@ -842,7 +993,8 @@ function ScanPage() {
                       size="sm"
                       className="rounded-xl"
                       onClick={startScan}
-                      disabled={busy}
+                      disabled={busy || mismatchBlocking}
+
                     >
                       {busy ? (
                         <Loader2 className="size-4 animate-spin" />
