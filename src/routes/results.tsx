@@ -131,6 +131,32 @@ function Results() {
   const processing = data?.status === "processing" || data?.status === "queued";
   const summary = data?.summary;
 
+  // Planogram compliance is shown for assigned scans AND ad-hoc "with planogram"
+  // scans. When there is no comparison row we still render tiles from the
+  // persisted metrics summary, and fall back to a warning when nothing exists.
+  const planogram = data?.planogram;
+  const planogramSummary = comparison?.summary ?? planogram?.summary ?? {};
+  const hasSummaryCounts = Object.keys(planogramSummary).length > 0;
+  const planogramPercent = comparison?.compliance_percent ?? planogram?.percent ?? null;
+  const planogramCounts = summaryCounts(planogramSummary as PlanogramComparison["summary"]);
+  const expectedProducts = planogramCounts["expected"];
+  const matchedProducts = planogramCounts["found"];
+  const planogramSection: PlanogramComparison | null =
+    comparison ??
+    (planogram?.requested && (planogramPercent !== null || hasSummaryCounts)
+      ? {
+          id: `${data?.scan_id ?? "scan"}-planogram`,
+          compliance_percent: planogramPercent,
+          summary: planogramSummary as PlanogramComparison["summary"],
+          created_at: data?.created_at ?? new Date().toISOString(),
+          lines: [],
+          actions: [],
+        }
+      : null);
+  const showPlanogramWarning =
+    !planogramSection ||
+    (expectedProducts !== null && expectedProducts === 0 && !planogramSection.lines.length);
+
   const goToScan = (id?: string | null) => {
     if (!id) return;
     navigate({ to: "/results", search: { scan: id } });
