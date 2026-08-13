@@ -566,7 +566,7 @@ export type Database = {
           id: string
           org_id: string
           scan_id: string | null
-          store_id: string
+          store_id: string | null
           summary: Json
         }
         Insert: {
@@ -576,7 +576,7 @@ export type Database = {
           id?: string
           org_id: string
           scan_id?: string | null
-          store_id: string
+          store_id?: string | null
           summary?: Json
         }
         Update: {
@@ -586,7 +586,7 @@ export type Database = {
           id?: string
           org_id?: string
           scan_id?: string | null
-          store_id?: string
+          store_id?: string | null
           summary?: Json
         }
         Relationships: [

@@ -56,8 +56,16 @@ import {
   type ScanResult,
 } from "@/lib/scan-results";
 import { retryScanAnalysis } from "@/lib/scan-api";
-import { PlanogramComparisonSection } from "@/components/scan-results/PlanogramCompliance";
-import { complianceTone, fetchPlanogramComparison } from "@/lib/planogram-compliance";
+import {
+  PlanogramComparisonSection,
+  PlanogramMissingAlert,
+} from "@/components/scan-results/PlanogramCompliance";
+import {
+  complianceTone,
+  fetchPlanogramComparison,
+  summaryCounts,
+  type PlanogramComparison,
+} from "@/lib/planogram-compliance";
 
 export const Route = createFileRoute("/results")({
   validateSearch: (search: Record<string, unknown>): { scan?: string } => {
@@ -99,11 +107,13 @@ function Results() {
     },
   });
 
+  const scanStatus = query.data?.status;
   const comparisonQuery = useQuery({
     queryKey: ["planogram-comparison", scan],
     queryFn: () => fetchPlanogramComparison(scan!),
     enabled: Boolean(scan),
     retry: false,
+    refetchInterval: scanStatus === "processing" || scanStatus === "queued" ? 4000 : false,
   });
   const comparison = comparisonQuery.data ?? null;
 
@@ -128,6 +138,34 @@ function Results() {
   const loading = !!scan && query.isPending;
   const processing = data?.status === "processing" || data?.status === "queued";
   const summary = data?.summary;
+
+  // Planogram compliance is shown for assigned scans AND ad-hoc "with planogram"
+  // scans. When there is no comparison row we still render tiles from the
+  // persisted metrics summary, and fall back to a warning when nothing exists.
+  const planogram = data?.planogram;
+  const planogramSummary = comparison?.summary ?? planogram?.summary ?? {};
+  const hasSummaryCounts = Object.keys(planogramSummary).length > 0;
+  const planogramPercent = comparison?.compliance_percent ?? planogram?.percent ?? null;
+  const planogramCounts = summaryCounts(planogramSummary as PlanogramComparison["summary"]);
+  const expectedProducts = planogramCounts["expected"];
+  const matchedProducts = planogramCounts["found"];
+  const planogramSection: PlanogramComparison | null =
+    comparison ??
+    (planogram?.requested && (planogramPercent !== null || hasSummaryCounts)
+      ? {
+          id: `${data?.scan_id ?? "scan"}-planogram`,
+          compliance_percent: planogramPercent,
+          summary: planogramSummary as PlanogramComparison["summary"],
+          created_at: data?.created_at ?? new Date().toISOString(),
+          lines: [],
+          actions: [],
+        }
+      : null);
+  const showPlanogramWarning = Boolean(
+    planogram?.requested &&
+      (!planogramSection ||
+        (expectedProducts === 0 && !planogramSection.lines.length)),
+  );
 
   const goToScan = (id?: string | null) => {
     if (!id) return;
@@ -255,18 +293,20 @@ function Results() {
                 />
 
                 <SummaryCard
-                  label={comparison ? "Planogram compliance" : "Shelf compliance"}
+                  label="Planogram compliance"
                   value={
-                    comparison
-                      ? comparison.compliance_percent === null
-                        ? undefined
-                        : `${Math.round(comparison.compliance_percent)}%`
+                    planogramPercent !== null
+                      ? `${Math.round(planogramPercent)}%`
                       : formatPercent(summary?.shelf_compliance)
                   }
                   loading={loading}
-                  hint="Against planogram"
+                  hint={
+                    expectedProducts !== null && matchedProducts !== null
+                      ? `${matchedProducts}/${expectedProducts} SKUs matched`
+                      : "Against planogram"
+                  }
                   valueClassName={
-                    comparison ? complianceTone(comparison.compliance_percent) : undefined
+                    planogramPercent !== null ? complianceTone(planogramPercent) : undefined
                   }
                 />
                 <SummaryCard
@@ -277,7 +317,8 @@ function Results() {
                 />
               </div>
 
-              {comparison && <PlanogramComparisonSection comparison={comparison} />}
+              {planogramSection && <PlanogramComparisonSection comparison={planogramSection} />}
+              {showPlanogramWarning && <PlanogramMissingAlert />}
 
               <AnnotatedImageViewer
                 src={data?.annotated_image_url}

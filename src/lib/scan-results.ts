@@ -113,6 +113,17 @@ export type ScanResult = {
   subcategory_mismatches?: SubcategoryMismatch[];
   recommendations?: ScanRecommendation[];
   inventory?: InventoryItem[];
+  /**
+   * Planogram audit context: `requested` is true when the scan carried expected
+   * products (assignment or ad-hoc Option 2), so the results page can show the
+   * planogram section — or a warning when the backend returned nothing.
+   */
+  planogram?: {
+    requested: boolean;
+    percent: number | null;
+    summary: Record<string, unknown>;
+  };
+
 
   charts?: {
     top_brands?: BrandShare[];
@@ -223,7 +234,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   const { data: scan, error: scanError } = await supabase
     .from("shelf_scans")
     .select(
-      "id, org_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, created_at, processing_started_at, processing_completed_at, shelf_health_score, osa_percent, planogram_compliance_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count, store_id, stores(name)",
+      "id, org_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, created_at, processing_started_at, processing_completed_at, shelf_health_score, osa_percent, planogram_compliance_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count, store_id, assignment_id, adhoc_planogram, stores(name)",
     )
     .eq("org_id", orgId)
     .eq("id", scanId)
@@ -494,6 +505,21 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
 
   const storeName = (scan as any).stores?.name as string | undefined;
 
+  const metricsAny = (result?.metrics ?? {}) as Record<string, unknown>;
+  const planogramPercent =
+    scan.planogram_compliance_percent !== null && scan.planogram_compliance_percent !== undefined
+      ? Number(scan.planogram_compliance_percent)
+      : typeof metricsAny["planogram_compliance_percent"] === "number"
+        ? Number(metricsAny["planogram_compliance_percent"])
+        : null;
+  const planogramSummary = (metricsAny["planogram_summary"] ?? {}) as Record<string, unknown>;
+  const adhocRows = (scan as any).adhoc_planogram;
+  const planogramRequested =
+    Boolean((scan as any).assignment_id) ||
+    (Array.isArray(adhocRows) && adhocRows.length > 0) ||
+    planogramPercent !== null ||
+    Object.keys(planogramSummary).length > 0;
+
   const scanResult: ScanResult = {
     scan_id: scan.id as string,
     created_at: scan.created_at as string,
@@ -504,6 +530,12 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     subcategory_mismatches: subcategoryMismatches,
     recommendations: mapRecommendations(result?.recommendations),
     inventory,
+    planogram: {
+      requested: planogramRequested,
+      percent: planogramPercent,
+      summary: planogramSummary,
+    },
+
 
     charts: {
       top_brands: mapBrandShare(result?.brand_share),

@@ -1248,14 +1248,15 @@ async function persistPlanogramCompliance(
   scan: ScanRow,
   payload: any,
 ): Promise<number | null> {
-  if (!scan.assignment_id) return null;
   const source = payload?.planogram_compliance ?? payload?.result?.planogram_compliance ?? null;
   if (!source) return null;
 
-  const assignmentId = scan.assignment_id;
+  /** null for ad-hoc "with planogram" scans started from the New Scan page. */
+  const assignmentId = scan.assignment_id ?? null;
   const summary = (source.summary ?? {}) as Record<string, unknown>;
   const compliance =
     pct(source.compliance_percent ?? source.compliance ?? summary["compliance_percent"]) ?? null;
+
 
   const { data: comparison, error: comparisonError } = await supabase
     .from("planogram_comparisons")
@@ -1333,6 +1334,10 @@ async function persistPlanogramCompliance(
     }
   }
 
+  // Assignment lifecycle (re-scan reconciliation, status, notifications) only
+  // applies to delegated scans. Ad-hoc planogram scans just keep the comparison.
+  if (!assignmentId) return compliance;
+
   await reconcilePreviousActions(supabase, assignmentId, comparisonId, fixedKeys);
 
   const openIssues = await countOpenActions(supabase, assignmentId);
@@ -1369,6 +1374,7 @@ async function persistPlanogramCompliance(
   }
 
   return compliance;
+
 }
 
 /** Comparison ids recorded for an assignment (all re-scan attempts). */
@@ -1575,6 +1581,9 @@ async function persistScanPayload(
 
   // --- Metrics -------------------------------------------------------------
   const metricsSource = (payload?.metrics ?? payload?.summary ?? payload) as any;
+  const planogramSource = (payload?.planogram_compliance ??
+    payload?.result?.planogram_compliance ??
+    null) as any;
   const outOfStock = products.filter((p) => p.stock_status === "out_of_stock").length;
   const lowStock = products.filter((p) => p.stock_status === "low_stock").length;
   const misplacedFacings = products
@@ -1646,7 +1655,15 @@ async function persistScanPayload(
     osa_percent: osa,
     shelf_health_score: health,
     ...(compliance !== null ? { shelf_compliance: compliance } : {}),
+    ...(planogramSource
+      ? {
+          planogram_compliance_percent:
+            pct(planogramSource.compliance_percent ?? planogramSource.compliance) ?? compliance,
+          planogram_summary: (planogramSource.summary ?? {}) as Record<string, unknown>,
+        }
+      : {}),
     ...(shareOfShelf !== null ? { share_of_shelf_percent: shareOfShelf } : {}),
+
     learned_catalog_size: learnedCatalogCount ?? 0,
     learned_new_this_scan: learnedNewThisScan,
     processing_time_ms: new Date(completedAt).getTime() - new Date(startedAt).getTime(),

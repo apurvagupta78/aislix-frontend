@@ -1,18 +1,24 @@
-import { ClipboardCheck } from "lucide-react";
+import { AlertTriangle, ClipboardCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   SUMMARY_TILES,
   complianceTone,
+  issueBadgeClass,
   issueLabel,
   issueRowClass,
   summaryCounts,
   type PlanogramComparison,
 } from "@/lib/planogram-compliance";
 
-/** "Planogram vs Actual" — only rendered for scans launched from an assignment. */
+/**
+ * "Planogram compliance" — rendered for any scan that carried expected products,
+ * whether from an assignment or the ad-hoc Option 2 flow on the New Scan page.
+ */
 export function PlanogramComparisonSection({ comparison }: { comparison: PlanogramComparison }) {
   const percent = comparison.compliance_percent;
   const counts = summaryCounts(comparison.summary);
+  const found = counts["found"];
+  const expected = counts["expected"];
   return (
     <section className="card-surface p-4 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -21,9 +27,12 @@ export function PlanogramComparisonSection({ comparison }: { comparison: Planogr
             <ClipboardCheck className="size-4" />
           </span>
           <div>
-            <h2 className="text-sm font-semibold tracking-tight">Planogram vs Actual</h2>
+            <h2 className="text-sm font-semibold tracking-tight">Planogram compliance</h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              Assigned shelf compared against the active planogram.
+              {percent === null ? "—" : `${Math.round(percent)}%`}
+              {expected !== null && found !== null
+                ? ` · ${found} of ${expected} expected products correct`
+                : " · expected SKU list compared against the shelf"}
             </p>
           </div>
         </div>
@@ -36,15 +45,12 @@ export function PlanogramComparisonSection({ comparison }: { comparison: Planogr
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-        {SUMMARY_TILES.map((tile) => {
-          const value = counts[tile.key];
-          return (
-            <div key={tile.key} className="rounded-xl border border-border bg-surface p-3">
-              <p className="text-xs text-muted-foreground">{tile.label}</p>
-              <p className="mt-1 text-lg font-semibold text-foreground">{value ?? "—"}</p>
-            </div>
-          );
-        })}
+        {SUMMARY_TILES.map((tile) => (
+          <div key={tile.key} className="rounded-xl border border-border bg-surface p-3">
+            <p className="text-xs text-muted-foreground">{tile.label}</p>
+            <p className="mt-1 text-lg font-semibold text-foreground">{counts[tile.key] ?? "—"}</p>
+          </div>
+        ))}
       </div>
 
       {comparison.lines.length > 0 && (
@@ -52,9 +58,11 @@ export function PlanogramComparisonSection({ comparison }: { comparison: Planogr
           <table className="w-full text-left text-sm">
             <thead className="bg-surface text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
+                <th className="px-3 py-2 font-medium">Expected brand</th>
                 <th className="px-3 py-2 font-medium">Expected product</th>
-                <th className="px-3 py-2 font-medium">Actual</th>
                 <th className="px-3 py-2 font-medium">Expected qty</th>
+                <th className="px-3 py-2 font-medium">Actual brand</th>
+                <th className="px-3 py-2 font-medium">Actual product</th>
                 <th className="px-3 py-2 font-medium">Actual qty</th>
                 <th className="px-3 py-2 font-medium">Status</th>
                 <th className="px-3 py-2 font-medium">Issue</th>
@@ -66,28 +74,19 @@ export function PlanogramComparisonSection({ comparison }: { comparison: Planogr
                   key={line.id}
                   className={`border-t border-border ${issueRowClass(line.issue_type)}`}
                 >
-                  <td className="px-3 py-2">
-                    <span className="font-medium text-foreground">
-                      {line.expected_product ?? "—"}
-                    </span>
-                    {line.expected_brand && (
-                      <span className="block text-xs text-muted-foreground">
-                        {line.expected_brand}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    <span className="text-foreground">{line.actual_product ?? "—"}</span>
-                    {line.actual_brand && (
-                      <span className="block text-xs text-muted-foreground">
-                        {line.actual_brand}
-                      </span>
-                    )}
+                  <td className="px-3 py-2 text-muted-foreground">{line.expected_brand ?? "—"}</td>
+                  <td className="px-3 py-2 font-medium text-foreground">
+                    {line.expected_product ?? "—"}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground">{line.expected_qty ?? "—"}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{line.actual_brand ?? "—"}</td>
+                  <td className="px-3 py-2 text-foreground">{line.actual_product ?? "—"}</td>
                   <td className="px-3 py-2 text-muted-foreground">{line.actual_qty ?? "—"}</td>
                   <td className="px-3 py-2">
-                    <Badge variant="secondary" className="rounded-full border-0">
+                    <Badge
+                      variant="secondary"
+                      className={`rounded-full border-0 ${issueBadgeClass(line.issue_type)}`}
+                    >
                       {issueLabel(line.issue_type)}
                     </Badge>
                   </td>
@@ -104,19 +103,43 @@ export function PlanogramComparisonSection({ comparison }: { comparison: Planogr
           <p className="text-sm font-semibold text-foreground">Corrective actions</p>
           <ul className="mt-2 space-y-2">
             {comparison.actions.map((action) => (
-              <li key={action.id} className="flex gap-2 text-sm text-muted-foreground">
-                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-brand" />
-                <span>
-                  <span className="font-medium text-foreground">
-                    {issueLabel(action.issue_type)}:
-                  </span>{" "}
-                  {action.suggestion}
-                </span>
+              <li key={action.id} className="flex flex-wrap items-center gap-2 text-sm">
+                <Badge
+                  variant="secondary"
+                  className={`rounded-full border-0 ${issueBadgeClass(action.issue_type)}`}
+                >
+                  {issueLabel(action.issue_type)}
+                </Badge>
+                <span className="text-muted-foreground">{action.suggestion}</span>
+                <Badge variant="outline" className="rounded-full text-xs capitalize">
+                  {action.status}
+                </Badge>
               </li>
             ))}
           </ul>
         </div>
       )}
+    </section>
+  );
+}
+
+/** Shown when a scan was run "with planogram" but no comparison came back. */
+export function PlanogramMissingAlert() {
+  return (
+    <section
+      role="alert"
+      className="card-surface flex items-start gap-3 border-warning/40 bg-warning/5 p-4 sm:p-6"
+    >
+      <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-warning/15 text-warning">
+        <AlertTriangle className="size-4" />
+      </span>
+      <div>
+        <h2 className="text-sm font-semibold tracking-tight">Planogram compliance unavailable</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Planogram data was not included in this scan. Re-run with at least one expected product in
+          Option 2.
+        </p>
+      </div>
     </section>
   );
 }
