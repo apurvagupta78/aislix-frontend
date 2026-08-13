@@ -131,6 +131,7 @@ export function PlanogramBuilder({
   onSource,
   tableActions,
   tableTitle = "Expected products",
+  context,
 }: PlanogramBuilderProps) {
   const [preview, setPreview] = useState<CsvParseRow[] | null>(null);
   const [form, setForm] = useState<PlanogramRow>(emptyRow());
@@ -142,6 +143,29 @@ export function PlanogramBuilder({
   const hasLegacyAisle = (preview ?? []).some((row) =>
     Boolean((row.data as Record<string, unknown> | null | undefined)?.["aisle"]),
   );
+
+  const norm = (value: unknown) => String(value ?? "").trim().toLowerCase();
+
+  /** Row-level mismatch against the caller's scan context (Option 2 only). */
+  const contextIssue = (row: CsvParseRow): string | null => {
+    if (!context || !row.data) return null;
+    const rowLocation = norm(row.data.location);
+    if (context.location && rowLocation && rowLocation !== norm(context.location)) {
+      return `Location "${row.data.location}" does not match ${context.location}`;
+    }
+    return null;
+  };
+
+  const withContext = (row: PlanogramRow): PlanogramRow =>
+    context
+      ? {
+          ...row,
+          location: context.location,
+          category: context.category,
+          sub_category: context.subCategoryLabel || row.sub_category,
+        }
+      : row;
+
 
   const parseMutation = useMutation({
     mutationFn: (file: File) => parsePlanogramCsv(file),
