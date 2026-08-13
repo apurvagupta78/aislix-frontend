@@ -485,16 +485,122 @@ function ScanPage() {
               </section>
             )}
 
-            {/* STEP 1 — setup */}
+            {/* STORE — always first, applies to the scan and every planogram row */}
+            <section className="card-surface p-4 sm:p-6">
+              <div className="space-y-1.5">
+                <Label htmlFor="scan-store">Store *</Label>
+                {assignment ? (
+                  <Input
+                    id="scan-store"
+                    className="rounded-xl"
+                    value={assignment.store_name}
+                    readOnly
+                    disabled
+                  />
+                ) : (
+                  <Select value={storeId} onValueChange={setStoreId} disabled={busy}>
+                    <SelectTrigger id="scan-store" className="rounded-xl">
+                      <SelectValue
+                        placeholder={
+                          storesQuery.isLoading
+                            ? "Loading stores…"
+                            : stores.length
+                              ? "Select a store"
+                              : "No stores yet — add one in Stores"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stores.map((store) => (
+                        <SelectItem key={store.id} value={store.id}>
+                          {store.name}
+                          {store.city ? ` — ${store.city}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Applies to this scan and all planogram rows.
+                </p>
+                {fieldError("store") && (
+                  <p className="text-xs text-destructive">{fieldError("store")}</p>
+                )}
+              </div>
+            </section>
+
+            {/* SCAN MODE */}
+            {!lockedByAssignment && (
+              <section className="card-surface p-4 sm:p-6">
+                <h2 className="text-sm font-semibold tracking-tight">
+                  How are you scanning this shelf?
+                </h2>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {(
+                    [
+                      {
+                        value: "free" as ScanMode,
+                        title: "Without planogram",
+                        description: "Detect products only, no compliance %",
+                      },
+                      {
+                        value: "with_planogram" as ScanMode,
+                        title: "With planogram",
+                        description: "Compare shelf to expected products",
+                      },
+                    ] as const
+                  ).map((option) => {
+                    const active = scanMode === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        disabled={busy}
+                        onClick={() => setScanMode(option.value)}
+                        className={cn(
+                          "flex items-start gap-3 rounded-2xl border p-4 text-left transition-all",
+                          active
+                            ? "border-brand bg-brand-soft/50 shadow-card"
+                            : "border-border bg-surface hover:border-brand/40",
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border",
+                            active ? "border-brand" : "border-muted-foreground/50",
+                          )}
+                        >
+                          {active && <span className="size-2 rounded-full bg-brand" />}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold">{option.title}</span>
+                          <span className="mt-1 block text-xs text-muted-foreground">
+                            {option.description}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* STEP 1 — scan context (shared by both modes) */}
             <section className="card-surface p-4 sm:p-6">
               <div className="flex items-start gap-3">
                 <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
                   <MapPin className="size-4" />
                 </span>
                 <div>
-                  <h2 className="text-sm font-semibold tracking-tight">Step 1 · Scan setup</h2>
+                  <h2 className="text-sm font-semibold tracking-tight">
+                    Step 1 · {withPlanogram ? "Shelf context" : "Shelf setup"}
+                  </h2>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Required before you can add shelf images.
+                    {withPlanogram
+                      ? "Applies to this scan and every expected product below."
+                      : "Required before you can add shelf images."}
                   </p>
                 </div>
                 {setupComplete && (
@@ -511,50 +617,12 @@ function ScanPage() {
               )}
 
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5 sm:col-span-2">
-                  <Label htmlFor="scan-store">Store *</Label>
-                  {assignment ? (
-                    <Input
-                      id="scan-store"
-                      className="rounded-xl"
-                      value={assignment.store_name}
-                      readOnly
-                      disabled
-                    />
-                  ) : (
-                    <Select value={storeId} onValueChange={setStoreId} disabled={busy}>
-                      <SelectTrigger id="scan-store" className="rounded-xl">
-                        <SelectValue
-                          placeholder={
-                            storesQuery.isLoading
-                              ? "Loading stores…"
-                              : stores.length
-                                ? "Select a store"
-                                : "No stores yet — add one in Stores"
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {stores.map((store) => (
-                          <SelectItem key={store.id} value={store.id}>
-                            {store.name}
-                            {store.city ? ` — ${store.city}` : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  {fieldError("store") && (
-                    <p className="text-xs text-destructive">{fieldError("store")}</p>
-                  )}
-                </div>
-
                 <div className="space-y-1.5">
                   <Label htmlFor="scan-location">Location *</Label>
                   <Input
                     id="scan-location"
                     className="rounded-xl"
-                    placeholder="e.g. Aisle 4 · Beverages · left bay"
+                    placeholder="Shelf / aisle code, e.g. A-1-S"
                     value={shelfLocation}
                     disabled={busy || lockedByAssignment}
                     readOnly={lockedByAssignment}
@@ -584,7 +652,6 @@ function ScanPage() {
                         setSubCategoryCustom("");
                         markCategoryEdited();
                       }}
-
                       disabled={busy}
                     >
                       <SelectTrigger id="scan-category" className="rounded-xl">
@@ -634,7 +701,6 @@ function ScanPage() {
                         if (value !== "others") setSubCategoryCustom("");
                         markCategoryEdited();
                       }}
-
                       disabled={busy || lockedByAssignment}
                     >
                       <SelectTrigger id="scan-subcategory" className="rounded-xl">
@@ -671,6 +737,20 @@ function ScanPage() {
                     {fieldError("custom") && (
                       <p className="text-xs text-destructive">{fieldError("custom")}</p>
                     )}
+                  </div>
+                )}
+
+                {!withPlanogram && !lockedByAssignment && (
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label htmlFor="scan-notes">Notes</Label>
+                    <Input
+                      id="scan-notes"
+                      className="rounded-xl"
+                      placeholder="Optional context for this scan"
+                      value={notes}
+                      disabled={busy}
+                      onChange={(e) => setNotes(e.target.value)}
+                    />
                   </div>
                 )}
               </div>
@@ -744,98 +824,96 @@ function ScanPage() {
               </div>
             )}
 
-
-
-            {/* OPTIONAL — expected shelf planogram */}
-            {!lockedByAssignment && (
+            {/* OPTION 2 — expected shelf planogram */}
+            {withPlanogram && !lockedByAssignment && (
               <section className="card-surface p-4 sm:p-6">
-                <button
-                  type="button"
-                  className="flex w-full items-start gap-3 text-left"
-                  aria-expanded={planogramOpen}
-                  onClick={() => setPlanogramOpen((open) => !open)}
-                >
+                <div className="flex items-start gap-3">
                   <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
                     <ClipboardList className="size-4" />
                   </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold tracking-tight">
-                        Expected shelf planogram (optional)
-                      </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-sm font-semibold tracking-tight">Expected products</h2>
                       {planogramRows.length > 0 && (
                         <Badge variant="secondary" className="rounded-lg">
                           {planogramRows.length} expected product
                           {planogramRows.length === 1 ? "" : "s"}
                         </Badge>
                       )}
-                    </span>
-                    <span className="mt-1 block text-xs text-muted-foreground">
-                      Add what should be on this shelf to get an Expected vs Actual compliance
-                      report. You can start the scan without it.
-                    </span>
-                  </span>
-                  <ChevronDown
-                    className={cn(
-                      "mt-1 size-4 shrink-0 text-muted-foreground transition-transform",
-                      planogramOpen && "rotate-180",
-                    )}
-                  />
-                </button>
-
-                {planogramOpen && (
-                  <div className="mt-5 space-y-4">
-                    {storeId && (
-                      <div className="flex flex-wrap items-center gap-3">
-                        <Button
-                          variant="subtle"
-                          size="sm"
-                          className="rounded-xl"
-                          disabled={planogramLoading}
-                          onClick={async () => {
-                            setPlanogramLoading(true);
-                            setPlanogramNotice(null);
-                            try {
-                              const active = await fetchActivePlanogram(storeId);
-                              if (!active) {
-                                setPlanogramNotice(
-                                  "This store has no active planogram yet. Add expected products below or create one from the Planogram page.",
-                                );
-                                return;
-                              }
-                              const rows = await fetchPlanogramItems(active.id);
-                              setUserEditedCategory(false);
-                              setMismatchAcknowledged(false);
-                              setPlanogramRows(rows);
-
-                              setPlanogramNotice(
-                                `Loaded ${rows.length} product${rows.length === 1 ? "" : "s"} from the active store planogram.`,
-                              );
-                            } catch (error) {
-                              setPlanogramNotice(toUserMessage(error));
-                            } finally {
-                              setPlanogramLoading(false);
-                            }
-                          }}
-                        >
-                          {planogramLoading && <Loader2 className="size-4 animate-spin" />}
-                          Use active store planogram instead
-                        </Button>
-                        {planogramNotice && (
-                          <p className="text-xs text-muted-foreground">{planogramNotice}</p>
-                        )}
-                      </div>
-                    )}
-                    <PlanogramBuilder
-                      rows={planogramRows}
-                      onRowsChange={setPlanogramRows}
-                      categories={categories}
-                      tableTitle="Expected products for this scan"
-                    />
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Upload a CSV or add products — location, category and subcategory come from
+                      the shelf context above.
+                    </p>
                   </div>
-                )}
+                </div>
+
+                <div className="mt-5 space-y-4">
+                  {storeId && (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button
+                        variant="subtle"
+                        size="sm"
+                        className="rounded-xl"
+                        disabled={planogramLoading}
+                        onClick={async () => {
+                          setPlanogramLoading(true);
+                          setPlanogramNotice(null);
+                          try {
+                            const active = await fetchActivePlanogram(storeId);
+                            if (!active) {
+                              setPlanogramNotice(
+                                "This store has no active planogram yet. Add expected products below or create one from the Planogram page.",
+                              );
+                              return;
+                            }
+                            const all = await fetchPlanogramItems(active.id);
+                            const filter = shelfLocation.trim().toLowerCase();
+                            const rows = filter
+                              ? (all.filter(
+                                  (row) => row.location.trim().toLowerCase() === filter,
+                                ).length
+                                  ? all.filter(
+                                      (row) => row.location.trim().toLowerCase() === filter,
+                                    )
+                                  : all)
+                              : all;
+                            setUserEditedCategory(false);
+                            setMismatchAcknowledged(false);
+                            setPlanogramRows(rows);
+                            setPlanogramNotice(
+                              `Loaded ${rows.length} product${rows.length === 1 ? "" : "s"} from the active store planogram.`,
+                            );
+                          } catch (error) {
+                            setPlanogramNotice(toUserMessage(error));
+                          } finally {
+                            setPlanogramLoading(false);
+                          }
+                        }}
+                      >
+                        {planogramLoading && <Loader2 className="size-4 animate-spin" />}
+                        Use active store planogram instead
+                      </Button>
+                      {planogramNotice && (
+                        <p className="text-xs text-muted-foreground">{planogramNotice}</p>
+                      )}
+                    </div>
+                  )}
+                  <PlanogramBuilder
+                    rows={planogramRows}
+                    onRowsChange={setPlanogramRows}
+                    categories={categories}
+                    tableTitle="Expected products for this scan"
+                    context={{
+                      location: shelfLocation.trim(),
+                      category,
+                      subCategoryLabel: selectedSub?.label ?? "",
+                    }}
+                  />
+                </div>
               </section>
             )}
+
 
             {/* STEP 2 — images */}
             <section className={cn("card-surface p-4 sm:p-6", !setupComplete && "opacity-70")}>
