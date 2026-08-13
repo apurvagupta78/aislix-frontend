@@ -1581,6 +1581,9 @@ async function persistScanPayload(
 
   // --- Metrics -------------------------------------------------------------
   const metricsSource = (payload?.metrics ?? payload?.summary ?? payload) as any;
+  const planogramSource = (payload?.planogram_compliance ??
+    payload?.result?.planogram_compliance ??
+    null) as any;
   const outOfStock = products.filter((p) => p.stock_status === "out_of_stock").length;
   const lowStock = products.filter((p) => p.stock_status === "low_stock").length;
   const misplacedFacings = products
