@@ -102,7 +102,9 @@ export async function submitScanImages(
     subCategoryLabel?: string;
     /** Free text shelf description when the user picks "Others". */
     subCategoryCustom?: string;
-    /** Set when the scan was launched from an assigned task (/my-scans). */
+    /** Optional free-text note for a scan without a planogram. */
+    notes?: string;
+
     assignmentId?: string;
     /**
      * Workspace to record the scan in. Assigned scans pass the assignment's
