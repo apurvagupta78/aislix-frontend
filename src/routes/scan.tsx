@@ -167,7 +167,6 @@ function ScanPage() {
     return errors;
   }, [
     lockedByAssignment,
-    planogramRows,
     storeId,
     shelfLocation,
     category,
@@ -323,6 +322,7 @@ function ScanPage() {
     }
   }, [
     items,
+    planogramRows,
     navigate,
     phase,
     guardSetup,
