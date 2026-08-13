@@ -1652,7 +1652,15 @@ async function persistScanPayload(
     osa_percent: osa,
     shelf_health_score: health,
     ...(compliance !== null ? { shelf_compliance: compliance } : {}),
+    ...(planogramSource
+      ? {
+          planogram_compliance_percent:
+            pct(planogramSource.compliance_percent ?? planogramSource.compliance) ?? compliance,
+          planogram_summary: (planogramSource.summary ?? {}) as Record<string, unknown>,
+        }
+      : {}),
     ...(shareOfShelf !== null ? { share_of_shelf_percent: shareOfShelf } : {}),
+
     learned_catalog_size: learnedCatalogCount ?? 0,
     learned_new_this_scan: learnedNewThisScan,
     processing_time_ms: new Date(completedAt).getTime() - new Date(startedAt).getTime(),
