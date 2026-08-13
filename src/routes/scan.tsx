@@ -457,12 +457,13 @@ function ScanPage() {
     }
   }, [
     items,
-    planogramRows,
+    validPlanogramRows,
+    withPlanogram,
+    notes,
     navigate,
     phase,
     guardSetup,
     mismatchBlocking,
-
     storeId,
     shelfLabel,
     category,
@@ -475,6 +476,7 @@ function ScanPage() {
     assignment,
     assignmentSubLabel,
   ]);
+
 
   const cancelUpload = useCallback(() => {
     abortRef.current?.abort();
