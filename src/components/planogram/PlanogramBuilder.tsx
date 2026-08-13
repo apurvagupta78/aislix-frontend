@@ -212,27 +212,40 @@ export function PlanogramBuilder({
   }
 
   function importValidRows() {
-    const valid = (preview ?? []).filter((row) => row.valid && row.data);
+    const all = (preview ?? []).filter((row) => row.valid && row.data);
+    const mismatched = all.filter((row) => contextIssue(row));
+    const valid = all.filter((row) => !contextIssue(row));
     if (!valid.length) {
       setCsvError(
-        "No valid rows to import. Fix the highlighted rows in your CSV and upload again.",
+        mismatched.length
+          ? `No rows match this scan's location (${context?.location}). Fix the highlighted rows or change the location above.`
+          : "No valid rows to import. Fix the highlighted rows in your CSV and upload again.",
       );
       return;
     }
     onRowsChange([...rows, ...valid.map((row) => toDraftRow(row.data))]);
     onSource?.("csv");
     setPreview(null);
-    setCsvError(null);
+    setCsvError(
+      mismatched.length
+        ? `${mismatched.length} row${mismatched.length === 1 ? " was" : "s were"} skipped because the location did not match ${context?.location}.`
+        : null,
+    );
     toast.success(`${valid.length} row${valid.length === 1 ? "" : "s"} added.`);
   }
 
   function submitManual(keepContext: boolean) {
-    const problem = validatePlanogramRow(form);
+    const candidate = withContext(form);
+    const problem = validatePlanogramRow(candidate);
     if (problem) {
-      setManualError(problem);
+      setManualError(
+        context && /^(Location|Category|Sub category) is required/.test(problem)
+          ? "Set location, category and subcategory in the scan context above first."
+          : problem,
+      );
       return;
     }
-    normalizeMutation.mutate(form, {
+    normalizeMutation.mutate(candidate, {
       onSuccess: () => {
         setForm((prev) =>
           keepContext
@@ -247,6 +260,7 @@ export function PlanogramBuilder({
       },
     });
   }
+
 
   const update = (key: string, patch: Partial<DraftRow>) =>
     onRowsChange(rows.map((row) => (row.key === key ? { ...row, ...patch } : row)));
