@@ -419,16 +419,19 @@ function ScanPage() {
               : selectedSub?.label,
           subCategoryCustom:
             needsCustom && !lockedByAssignment ? subCategoryCustom.trim() : undefined,
+          notes: !lockedByAssignment && !withPlanogram ? notes.trim() || undefined : undefined,
           ...(assignment
             ? { assignmentId: assignment.assignment_id, orgId: assignment.org_id }
-            : planogramRows.length
+            : withPlanogram && validPlanogramRows.length
               ? {
-                  planogramItems: planogramRows.map(({ key: _key, ...row }) => ({
+                  planogramItems: validPlanogramRows.map(({ key: _key, ...row }) => ({
                     ...row,
-                    aisle: row.location,
+                    location: shelfLabel || row.location,
+                    aisle: shelfLabel || row.location,
                   })),
                 }
               : {}),
+
         },
       );
 
