@@ -360,17 +360,23 @@ export function PlanogramBuilder({
                           </td>
                         )}
                         <td className="px-3 py-2">
-                          {row.valid ? (
-                            <span className="flex items-center gap-1.5 text-accent">
-                              <CheckCircle2 className="size-4" /> Valid
-                            </span>
-                          ) : (
+                          {!row.valid ? (
                             <span className="flex items-center gap-1.5 text-destructive">
                               <XCircle className="size-4" />
                               {(row.errors ?? []).join(", ") || "Invalid row"}
                             </span>
+                          ) : contextIssue(row) ? (
+                            <span className="flex items-center gap-1.5 text-destructive">
+                              <XCircle className="size-4" />
+                              {contextIssue(row)}
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1.5 text-accent">
+                              <CheckCircle2 className="size-4" /> Valid
+                            </span>
                           )}
                         </td>
+
                       </tr>
                     ))}
                   </tbody>
