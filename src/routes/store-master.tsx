@@ -1,27 +1,13 @@
 import { useMemo, useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  AlertCircle,
-  CheckCircle2,
-  Download,
-  Loader2,
-  Plus,
-  Trash2,
-  Upload,
-  UserPlus,
-  X,
-  XCircle,
-} from "lucide-react";
+import { Loader2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -37,19 +23,13 @@ import {
   activatePlanogram,
   buildHierarchy,
   canManagePlanogram,
-  emptyRow,
   fetchPlanogramSnapshot,
   fetchPlanogramStores,
-  normalizePlanogramRow,
-  parsePlanogramCsv,
   savePlanogramDraft,
-  toDraftRow,
-  SAMPLE_CSV_TEMPLATE,
-  type CsvParseRow,
   type DraftRow,
-  type PlanogramRow,
   type SourceType,
 } from "@/lib/planogram";
+import { PlanogramBuilder, StickyError } from "@/components/planogram/PlanogramBuilder";
 import { AssignScanDialog } from "@/components/planogram/AssignScanDialog";
 
 
@@ -88,11 +68,6 @@ function StoreMasterPage() {
     manual: false,
   });
   const [filename, setFilename] = useState<string | null>(null);
-  const [preview, setPreview] = useState<CsvParseRow[] | null>(null);
-  const [editingKey, setEditingKey] = useState<string | null>(null);
-  const [form, setForm] = useState<PlanogramRow>(emptyRow());
-  const [csvError, setCsvError] = useState<string | null>(null);
-  const [manualError, setManualError] = useState<string | null>(null);
   const [draftError, setDraftError] = useState<string | null>(null);
 
   const accessQuery = useQuery({
@@ -113,8 +88,6 @@ function StoreMasterPage() {
   const categories: ShelfCategory[] = categoriesQuery.data?.length
     ? categoriesQuery.data
     : FALLBACK_CATEGORIES;
-  const subCategories =
-    categories.find((c) => c.name === form.category)?.subcategories ?? [];
 
   const snapshotQuery = useQuery({
     queryKey: ["planogram-snapshot", storeId],
@@ -126,41 +99,6 @@ function StoreMasterPage() {
 
   const sourceType: SourceType =
     sources.csv && sources.manual ? "mixed" : sources.manual ? "manual" : "csv";
-
-  const parseMutation = useMutation({
-    mutationFn: (file: File) => parsePlanogramCsv(file),
-    onMutate: () => setCsvError(null),
-    onSuccess: (result) => {
-      setPreview(result.rows);
-      if (result.error_count > 0 && result.valid_count === 0) {
-        const details = (result.errors.length
-          ? result.errors
-          : result.rows.flatMap((row) => row.errors ?? [])
-        ).slice(0, 5);
-        setCsvError(
-          `CSV has ${result.error_count} error${result.error_count === 1 ? "" : "s"} and no valid rows.${
-            details.length ? `\n• ${details.join("\n• ")}` : ""
-          }\nRequired columns: location, category, sub_category, brand, product_name, expected_qty, sku, shelf_position.`,
-        );
-      } else if (result.errors.length) {
-        setCsvError(`Some rows could not be read:\n• ${result.errors.slice(0, 5).join("\n• ")}`);
-      } else if (!result.rows.length) {
-        setCsvError("No rows found in this CSV file. Download the template and try again.");
-      }
-    },
-    onError: (error) => setCsvError(toUserMessage(error)),
-  });
-
-  const normalizeMutation = useMutation({
-    mutationFn: (row: PlanogramRow) => normalizePlanogramRow(row),
-    onMutate: () => setManualError(null),
-    onSuccess: (row) => {
-      setDraft((rows) => [...rows, row]);
-      setSources((s) => ({ ...s, manual: true }));
-      toast.success("Product added to the draft.");
-    },
-    onError: (error) => setManualError(toUserMessage(error)),
-  });
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -187,7 +125,6 @@ function StoreMasterPage() {
     onSuccess: async () => {
       const count = draft.length;
       setDraft([]);
-      setPreview(null);
       setSources({ csv: false, manual: false });
       setFilename(null);
       await queryClient.invalidateQueries({ queryKey: ["planogram-snapshot", storeId] });
@@ -196,60 +133,12 @@ function StoreMasterPage() {
     onError: (error) => setDraftError(toUserMessage(error)),
   });
 
-  function downloadTemplate() {
-    const blob = new Blob([SAMPLE_CSV_TEMPLATE], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "aislix-planogram-template.csv";
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
   function selectStore(id: string) {
     setStoreId(id);
     setDraft([]);
-    setPreview(null);
     setSources({ csv: false, manual: false });
     setFilename(null);
-    setEditingKey(null);
-    setCsvError(null);
-    setManualError(null);
     setDraftError(null);
-  }
-
-  function importValidRows() {
-    const valid = (preview ?? []).filter((row) => row.valid && row.data);
-    if (!valid.length) {
-      setCsvError("No valid rows to import. Fix the highlighted rows in your CSV and upload again.");
-      return;
-    }
-    setDraft((rows) => [...rows, ...valid.map((row) => toDraftRow(row.data))]);
-    setSources((s) => ({ ...s, csv: true }));
-    setPreview(null);
-    setCsvError(null);
-    toast.success(`${valid.length} row${valid.length === 1 ? "" : "s"} added to the draft.`);
-  }
-
-  function submitManual(keepContext: boolean) {
-    if (!form.category || !form.brand.trim() || !form.product_name.trim()) {
-      setManualError("Category, brand and product name are required.");
-      return;
-    }
-    normalizeMutation.mutate(form, {
-      onSuccess: () => {
-        setForm((prev) =>
-          keepContext
-            ? {
-                ...emptyRow(),
-                location: prev.location,
-                category: prev.category,
-                sub_category: prev.sub_category,
-              }
-            : emptyRow(),
-        );
-      },
-    });
   }
 
   const activeHierarchy = useMemo(
@@ -347,269 +236,15 @@ function StoreMasterPage() {
 
         {storeId && (
           <>
-            {/* Step 2 — inputs */}
+            {/* Step 2 — expected products */}
             <section id="planogram-upload" className={card}>
-              <h2 className="text-sm font-semibold text-foreground">Step 2 · Add expected products</h2>
-              <Tabs defaultValue="csv" className="mt-4">
-                <TabsList className="rounded-xl">
-                  <TabsTrigger value="csv">Upload CSV</TabsTrigger>
-                  <TabsTrigger value="manual">Add manually</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="csv" className="mt-4 space-y-4">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <Input
-                      type="file"
-                      accept=".csv,text/csv"
-                      className="max-w-sm rounded-xl"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        if (!file) return;
-                        setFilename(file.name);
-                        parseMutation.mutate(file);
-                        event.target.value = "";
-                      }}
-                    />
-                    {parseMutation.isPending && (
-                      <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="size-4 animate-spin" /> Parsing CSV…
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <p className="text-xs text-muted-foreground">
-                      Columns: location, category, sub_category, brand, product_name,
-                      expected_qty, sku, shelf_position.
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-xl"
-                      onClick={downloadTemplate}
-                    >
-                      <Download className="mr-2 size-4" /> CSV template
-                    </Button>
-                  </div>
-
-                  {csvError && (
-                    <StickyError
-                      title="Planogram upload failed"
-                      message={csvError}
-                      onDismiss={() => setCsvError(null)}
-                    />
-                  )}
-
-
-
-                  {preview && (
-                    <div className="space-y-3">
-                      <div className="overflow-x-auto rounded-xl border border-border">
-                        <table className="w-full text-sm">
-                          <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                            <tr>
-                              <th className="px-3 py-2">Row</th>
-                              <th className="px-3 py-2">Brand</th>
-                              <th className="px-3 py-2">Product</th>
-                              <th className="px-3 py-2">Category</th>
-                              <th className="px-3 py-2 text-right">Qty</th>
-                              <th className="px-3 py-2">Status</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {preview.map((row) => (
-                              <tr
-                                key={row.row_num}
-                                className={
-                                  row.valid
-                                    ? "border-t border-border"
-                                    : "border-t border-border bg-destructive/5"
-                                }
-                              >
-                                <td className="px-3 py-2 text-muted-foreground">{row.row_num}</td>
-                                <td className="px-3 py-2">{row.data?.brand ?? "—"}</td>
-                                <td className="px-3 py-2">{row.data?.product_name ?? "—"}</td>
-                                <td className="px-3 py-2">{row.data?.category ?? "—"}</td>
-                                <td className="px-3 py-2 text-right">
-                                  {row.data?.expected_qty ?? "—"}
-                                </td>
-                                <td className="px-3 py-2">
-                                  {row.valid ? (
-                                    <span className="flex items-center gap-1.5 text-accent">
-                                      <CheckCircle2 className="size-4" /> Valid
-                                    </span>
-                                  ) : (
-                                    <span className="flex items-center gap-1.5 text-destructive">
-                                      <XCircle className="size-4" />
-                                      {(row.errors ?? []).join(", ") || "Invalid row"}
-                                    </span>
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      <Button variant="brand" className="rounded-xl" onClick={importValidRows}>
-                        <Upload className="mr-2 size-4" /> Import valid rows
-                      </Button>
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="manual" className="mt-4">
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    <Field label="Location (optional — zone or shelf label, e.g. A-1-Z)">
-                      <Input
-                        className="rounded-xl"
-                        value={form.location}
-                        onChange={(e) => setForm({ ...form, location: e.target.value })}
-                      />
-                    </Field>
-                    <Field label="Category">
-                      <Select
-                        value={form.category}
-                        onValueChange={(value) =>
-                          setForm({ ...form, category: value, sub_category: "" })
-                        }
-                      >
-                        <SelectTrigger className="rounded-xl">
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map((category) => (
-                            <SelectItem key={category.name} value={category.name}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                    <Field label="Sub-category">
-                      <Select
-                        value={form.sub_category}
-                        onValueChange={(value) => setForm({ ...form, sub_category: value })}
-                        disabled={!subCategories.length}
-                      >
-                        <SelectTrigger className="rounded-xl">
-                          <SelectValue
-                            placeholder={
-                              subCategories.length ? "Select sub-category" : "Select a category first"
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {subCategories.map((sub) => (
-                            <SelectItem key={sub.id} value={sub.label}>
-                              {sub.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                    <Field label="Brand">
-                      <Input
-                        className="rounded-xl"
-                        value={form.brand}
-                        onChange={(e) => setForm({ ...form, brand: e.target.value })}
-                      />
-                    </Field>
-                    <Field label="Product name">
-                      <Input
-                        className="rounded-xl"
-                        value={form.product_name}
-                        onChange={(e) => setForm({ ...form, product_name: e.target.value })}
-                      />
-                    </Field>
-                    <Field label="Expected qty">
-                      <Input
-                        type="number"
-                        min={1}
-                        className="rounded-xl"
-                        value={form.expected_qty}
-                        onChange={(e) =>
-                          setForm({ ...form, expected_qty: Number(e.target.value) || 1 })
-                        }
-                      />
-                    </Field>
-                    <Field label="SKU (optional)">
-                      <Input
-                        className="rounded-xl"
-                        value={form.sku}
-                        onChange={(e) => setForm({ ...form, sku: e.target.value })}
-                      />
-                    </Field>
-                    <Field label="Shelf position (optional)">
-                      <Input
-                        className="rounded-xl"
-                        value={form.shelf_position}
-                        onChange={(e) => setForm({ ...form, shelf_position: e.target.value })}
-                      />
-                    </Field>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Button
-                      variant="brand"
-                      className="rounded-xl"
-                      disabled={normalizeMutation.isPending}
-                      onClick={() => submitManual(false)}
-                    >
-                      {normalizeMutation.isPending ? (
-                        <Loader2 className="mr-2 size-4 animate-spin" />
-                      ) : (
-                        <Plus className="mr-2 size-4" />
-                      )}
-                      Save product
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="rounded-xl"
-                      disabled={normalizeMutation.isPending}
-                      onClick={() => submitManual(true)}
-                    >
-                      Save &amp; add another
-                    </Button>
-                  </div>
-                  {manualError && (
-                    <div className="mt-4">
-                      <StickyError
-                        title="Could not add this product"
-                        message={manualError}
-                        onDismiss={() => setManualError(null)}
-                      />
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </section>
-
-            {/* Step 3 — draft table */}
-            <section className={card}>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-sm font-semibold text-foreground">
-                  Step 3 · Draft planogram ({draft.length})
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    className="rounded-xl"
-                    disabled={!draft.length || saveMutation.isPending}
-                    onClick={() => saveMutation.mutate()}
-                  >
-                    {saveMutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
-                    Save draft
-                  </Button>
-                  <Button
-                    variant="brand"
-                    className="rounded-xl"
-                    disabled={!draft.length || activateMutation.isPending || !canManage}
-                    onClick={() => activateMutation.mutate()}
-                  >
-                    {activateMutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
-                    Activate planogram
-                  </Button>
-                </div>
-              </div>
-
+              <h2 className="text-sm font-semibold text-foreground">
+                Step 2 · Add expected products
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Location, Category, Sub category, Brand and Product Name are required. Variant, SKU
+                and Shelf Position are optional.
+              </p>
               {draftError && (
                 <div className="mt-4">
                   <StickyError
@@ -619,123 +254,44 @@ function StoreMasterPage() {
                   />
                 </div>
               )}
-
-
-
-              {!draft.length ? (
-                <div className="mt-4">
-                  <EmptyState
-                    title="No planogram yet"
-                    description="No planogram yet — upload CSV or add products manually."
-                  />
-                </div>
-              ) : (
-                <div className="mt-4 overflow-x-auto rounded-xl border border-border">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                      <tr>
-                        <th className="px-3 py-2">Location</th>
-                        <th className="px-3 py-2">Category</th>
-                        <th className="px-3 py-2">Sub-category</th>
-                        <th className="px-3 py-2">Brand</th>
-                        <th className="px-3 py-2">Product</th>
-                        <th className="px-3 py-2 text-right">Expected qty</th>
-                        <th className="px-3 py-2">SKU</th>
-                        <th className="px-3 py-2">Shelf position</th>
-                        <th className="px-3 py-2 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {draft.map((row) => {
-                        const editing = editingKey === row.key;
-                        const update = (patch: Partial<DraftRow>) =>
-                          setDraft((rows) =>
-                            rows.map((r) => (r.key === row.key ? { ...r, ...patch } : r)),
-                          );
-                        const cell = (
-                          value: string,
-                          onChange: (next: string) => void,
-                        ) =>
-                          editing ? (
-                            <Input
-                              className="h-8 rounded-lg"
-                              value={value}
-                              onChange={(e) => onChange(e.target.value)}
-                            />
-                          ) : (
-                            <span>{value || "—"}</span>
-                          );
-                        return (
-                          <tr key={row.key} className="border-t border-border align-middle">
-                            <td className="px-3 py-2">
-                              {cell(row.location, (v) => update({ location: v }))}
-                            </td>
-                            <td className="px-3 py-2">
-                              {cell(row.category, (v) => update({ category: v }))}
-                            </td>
-                            <td className="px-3 py-2">
-                              {cell(row.sub_category, (v) => update({ sub_category: v }))}
-                            </td>
-                            <td className="px-3 py-2">
-                              {cell(row.brand, (v) => update({ brand: v }))}
-                            </td>
-                            <td className="px-3 py-2">
-                              {cell(row.product_name, (v) => update({ product_name: v }))}
-                            </td>
-                            <td className="px-3 py-2 text-right">
-                              {editing ? (
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  className="h-8 w-20 rounded-lg text-right"
-                                  value={row.expected_qty}
-                                  onChange={(e) =>
-                                    update({ expected_qty: Number(e.target.value) || 1 })
-                                  }
-                                />
-                              ) : (
-                                row.expected_qty
-                              )}
-                            </td>
-                            <td className="px-3 py-2">
-                              {cell(row.sku, (v) => update({ sku: v }))}
-                            </td>
-                            <td className="px-3 py-2">
-                              {cell(row.shelf_position, (v) => update({ shelf_position: v }))}
-                            </td>
-                            <td className="px-3 py-2">
-                              <div className="flex justify-end gap-1">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="rounded-lg"
-                                  onClick={() => setEditingKey(editing ? null : row.key)}
-                                >
-                                  {editing ? "Done" : "Edit"}
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="rounded-lg text-destructive"
-                                  aria-label="Delete row"
-                                  onClick={() =>
-                                    setDraft((rows) => rows.filter((r) => r.key !== row.key))
-                                  }
-                                >
-                                  <Trash2 className="size-4" />
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <div className="mt-4">
+                <PlanogramBuilder
+                  rows={draft}
+                  onRowsChange={setDraft}
+                  categories={categories}
+                  onFilename={setFilename}
+                  onSource={(source) => setSources((s) => ({ ...s, [source]: true }))}
+                  tableTitle="Draft planogram"
+                  tableActions={
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant="outline"
+                        className="rounded-xl"
+                        disabled={!draft.length || saveMutation.isPending}
+                        onClick={() => saveMutation.mutate()}
+                      >
+                        {saveMutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+                        Save draft
+                      </Button>
+                      <Button
+                        variant="brand"
+                        className="rounded-xl"
+                        disabled={!draft.length || activateMutation.isPending || !canManage}
+                        onClick={() => activateMutation.mutate()}
+                      >
+                        {activateMutation.isPending && (
+                          <Loader2 className="mr-2 size-4 animate-spin" />
+                        )}
+                        Activate planogram
+                      </Button>
+                    </div>
+                  }
+                />
+              </div>
             </section>
 
-            {/* Step 4 — active hierarchy */}
+
+            {/* Step 3 — active hierarchy */}
             {snapshotQuery.isError ? (
               <ErrorState
                 title="Could not load the planogram"
@@ -830,41 +386,5 @@ function StoreMasterPage() {
       />
     </AppShell>
 
-  );
-}
-
-/** Inline destructive alert that stays until dismissed — never auto-hides. */
-function StickyError({
-  title,
-  message,
-  onDismiss,
-}: {
-  title: string;
-  message: string;
-  onDismiss: () => void;
-}) {
-  return (
-    <Alert variant="destructive" className="relative pr-10">
-      <AlertCircle className="size-4" />
-      <AlertTitle>{title}</AlertTitle>
-      <AlertDescription className="whitespace-pre-wrap">{message}</AlertDescription>
-      <button
-        type="button"
-        className="absolute right-3 top-3 text-muted-foreground transition-colors hover:text-foreground"
-        aria-label="Dismiss error"
-        onClick={onDismiss}
-      >
-        <X className="size-4" />
-      </button>
-    </Alert>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      {children}
-    </div>
   );
 }

@@ -61,6 +61,7 @@ export function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+import type { Json } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import { dbError, notFound, requireOrgId, requireUserId } from "@/lib/db/context";
 
@@ -111,6 +112,11 @@ export async function submitScanImages(
      * org so an invited member never depends on workspace bootstrap.
      */
     orgId?: string;
+    /**
+     * Optional expected products entered inline on the New Scan page. Stored on
+     * the scan and forwarded to the vision backend as `planogram_items`.
+     */
+    planogramItems?: Array<Record<string, string | number | null>>;
   } = {},
 
 ): Promise<ScanResponse> {
@@ -154,6 +160,9 @@ export async function submitScanImages(
       sub_category_custom: options.subCategoryCustom?.trim() || null,
       notes: options.subCategoryCustom?.trim() || options.subCategoryLabel || null,
       assignment_id: options.assignmentId ?? null,
+      adhoc_planogram: options.planogramItems?.length
+        ? (options.planogramItems as unknown as Json)
+        : null,
 
       processing_started_at: new Date().toISOString(),
     })

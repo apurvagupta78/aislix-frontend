@@ -39,6 +39,15 @@ import { getAssignmentScanContext } from "@/lib/assignment-context.functions";
 import { startAssignment } from "@/lib/assignments";
 
 import { MAX_SCAN_IMAGES, formatBytes, submitScanImages, validateScanFile } from "@/lib/scan-api";
+import { PlanogramBuilder } from "@/components/planogram/PlanogramBuilder";
+import { Badge } from "@/components/ui/badge";
+import { ChevronDown, ClipboardList } from "lucide-react";
+import {
+  fetchActivePlanogram,
+  fetchPlanogramItems,
+  type DraftRow,
+} from "@/lib/planogram";
+import { toUserMessage } from "@/lib/api/errors";
 
 export const Route = createFileRoute("/scan")({
   validateSearch: (search: Record<string, unknown>): { assignmentId?: string } => {
@@ -85,6 +94,10 @@ function ScanPage() {
   const [limitDialog, setLimitDialog] = useState<LimitDialogState>(null);
 
   const [storeId, setStoreId] = useState("");
+  const [planogramOpen, setPlanogramOpen] = useState(false);
+  const [planogramRows, setPlanogramRows] = useState<DraftRow[]>([]);
+  const [planogramLoading, setPlanogramLoading] = useState(false);
+  const [planogramNotice, setPlanogramNotice] = useState<string | null>(null);
   const [shelfLocation, setShelfLocation] = useState("");
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
@@ -159,6 +172,7 @@ function ScanPage() {
     return errors;
   }, [
     lockedByAssignment,
+    planogramRows,
     storeId,
     shelfLocation,
     category,
@@ -281,7 +295,14 @@ function ScanPage() {
             needsCustom && !lockedByAssignment ? subCategoryCustom.trim() : undefined,
           ...(assignment
             ? { assignmentId: assignment.assignment_id, orgId: assignment.org_id }
-            : {}),
+            : planogramRows.length
+              ? {
+                  planogramItems: planogramRows.map(({ key: _key, ...row }) => ({
+                    ...row,
+                    aisle: row.location,
+                  })),
+                }
+              : {}),
         },
       );
 
@@ -581,6 +602,94 @@ function ScanPage() {
             </div>
           </section>
 
+          {/* OPTIONAL — expected shelf planogram */}
+          {!lockedByAssignment && (
+            <section className="card-surface p-4 sm:p-6">
+              <button
+                type="button"
+                className="flex w-full items-start gap-3 text-left"
+                aria-expanded={planogramOpen}
+                onClick={() => setPlanogramOpen((open) => !open)}
+              >
+                <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
+                  <ClipboardList className="size-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold tracking-tight">
+                      Expected shelf planogram (optional)
+                    </span>
+                    {planogramRows.length > 0 && (
+                      <Badge variant="secondary" className="rounded-lg">
+                        {planogramRows.length} expected product
+                        {planogramRows.length === 1 ? "" : "s"}
+                      </Badge>
+                    )}
+                  </span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    Add what should be on this shelf to get an Expected vs Actual compliance report.
+                    You can start the scan without it.
+                  </span>
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "mt-1 size-4 shrink-0 text-muted-foreground transition-transform",
+                    planogramOpen && "rotate-180",
+                  )}
+                />
+              </button>
+
+              {planogramOpen && (
+                <div className="mt-5 space-y-4">
+                  {storeId && (
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button
+                        variant="subtle"
+                        size="sm"
+                        className="rounded-xl"
+                        disabled={planogramLoading}
+                        onClick={async () => {
+                          setPlanogramLoading(true);
+                          setPlanogramNotice(null);
+                          try {
+                            const active = await fetchActivePlanogram(storeId);
+                            if (!active) {
+                              setPlanogramNotice(
+                                "This store has no active planogram yet. Add expected products below or create one from the Planogram page.",
+                              );
+                              return;
+                            }
+                            const rows = await fetchPlanogramItems(active.id);
+                            setPlanogramRows(rows);
+                            setPlanogramNotice(
+                              `Loaded ${rows.length} product${rows.length === 1 ? "" : "s"} from the active store planogram.`,
+                            );
+                          } catch (error) {
+                            setPlanogramNotice(toUserMessage(error));
+                          } finally {
+                            setPlanogramLoading(false);
+                          }
+                        }}
+                      >
+                        {planogramLoading && <Loader2 className="size-4 animate-spin" />}
+                        Use active store planogram instead
+                      </Button>
+                      {planogramNotice && (
+                        <p className="text-xs text-muted-foreground">{planogramNotice}</p>
+                      )}
+                    </div>
+                  )}
+                  <PlanogramBuilder
+                    rows={planogramRows}
+                    onRowsChange={setPlanogramRows}
+                    categories={categories}
+                    tableTitle="Expected products for this scan"
+                  />
+                </div>
+              )}
+            </section>
+          )}
+
           {/* STEP 2 — images */}
           <section className={cn("card-surface p-4 sm:p-6", !setupComplete && "opacity-70")}>
             <div className="flex items-start gap-3">
@@ -743,6 +852,14 @@ function ScanPage() {
                       <ScanLine className="size-4" />
                     )}
                     {busy ? "Uploading…" : "Start scan"}
+                    {!busy && planogramRows.length > 0 && (
+                      <Badge
+                        variant="secondary"
+                        className="ml-1 rounded-lg text-[11px] font-medium"
+                      >
+                        {planogramRows.length} expected
+                      </Badge>
+                    )}
                   </Button>
                 </div>
               </div>

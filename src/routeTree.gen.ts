@@ -57,6 +57,7 @@ import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as StoresIndexRouteImport } from './routes/stores.index'
 import { Route as StoresStoreIdRouteImport } from './routes/stores.$storeId'
+import { Route as ApiPlanogramCsvTemplateRouteImport } from './routes/api/planogram.csv-template'
 import { Route as ApiPlanogramNormalizeRowRouteImport } from './routes/api/planogram.normalize-row'
 import { Route as ApiPlanogramParseCsvRouteImport } from './routes/api/planogram.parse-csv'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
@@ -303,6 +304,11 @@ const StoresStoreIdRoute = StoresStoreIdRouteImport.update({
   path: '/stores/$storeId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPlanogramCsvTemplateRoute = ApiPlanogramCsvTemplateRouteImport.update({
+  id: '/api/planogram/csv-template',
+  path: '/api/planogram/csv-template',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPlanogramNormalizeRowRoute =
   ApiPlanogramNormalizeRowRouteImport.update({
     id: '/api/planogram/normalize-row',
@@ -380,6 +386,7 @@ export interface FileRoutesByFullPath {
   '/auth/callback': typeof AuthCallbackRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
+  '/api/planogram/csv-template': typeof ApiPlanogramCsvTemplateRoute
   '/api/planogram/normalize-row': typeof ApiPlanogramNormalizeRowRoute
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -435,6 +442,7 @@ export interface FileRoutesByTo {
   '/auth/callback': typeof AuthCallbackRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores': typeof StoresIndexRoute
+  '/api/planogram/csv-template': typeof ApiPlanogramCsvTemplateRoute
   '/api/planogram/normalize-row': typeof ApiPlanogramNormalizeRowRoute
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -491,6 +499,7 @@ export interface FileRoutesById {
   '/auth/callback': typeof AuthCallbackRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
+  '/api/planogram/csv-template': typeof ApiPlanogramCsvTemplateRoute
   '/api/planogram/normalize-row': typeof ApiPlanogramNormalizeRowRoute
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -548,6 +557,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/stores/$storeId'
     | '/stores/'
+    | '/api/planogram/csv-template'
     | '/api/planogram/normalize-row'
     | '/api/planogram/parse-csv'
     | '/lovable/email/auth/preview'
@@ -603,6 +613,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/stores/$storeId'
     | '/stores'
+    | '/api/planogram/csv-template'
     | '/api/planogram/normalize-row'
     | '/api/planogram/parse-csv'
     | '/lovable/email/auth/preview'
@@ -658,6 +669,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/stores/$storeId'
     | '/stores/'
+    | '/api/planogram/csv-template'
     | '/api/planogram/normalize-row'
     | '/api/planogram/parse-csv'
     | '/lovable/email/auth/preview'
@@ -714,6 +726,7 @@ export interface RootRouteChildren {
   AuthCallbackRoute: typeof AuthCallbackRoute
   StoresStoreIdRoute: typeof StoresStoreIdRoute
   StoresIndexRoute: typeof StoresIndexRoute
+  ApiPlanogramCsvTemplateRoute: typeof ApiPlanogramCsvTemplateRoute
   ApiPlanogramNormalizeRowRoute: typeof ApiPlanogramNormalizeRowRoute
   ApiPlanogramParseCsvRoute: typeof ApiPlanogramParseCsvRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
@@ -1059,6 +1072,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StoresStoreIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/planogram/csv-template': {
+      id: '/api/planogram/csv-template'
+      path: '/api/planogram/csv-template'
+      fullPath: '/api/planogram/csv-template'
+      preLoaderRoute: typeof ApiPlanogramCsvTemplateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/planogram/normalize-row': {
       id: '/api/planogram/normalize-row'
       path: '/api/planogram/normalize-row'
@@ -1146,6 +1166,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthCallbackRoute: AuthCallbackRoute,
   StoresStoreIdRoute: StoresStoreIdRoute,
   StoresIndexRoute: StoresIndexRoute,
+  ApiPlanogramCsvTemplateRoute: ApiPlanogramCsvTemplateRoute,
   ApiPlanogramNormalizeRowRoute: ApiPlanogramNormalizeRowRoute,
   ApiPlanogramParseCsvRoute: ApiPlanogramParseCsvRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
@@ -1155,3 +1176,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
