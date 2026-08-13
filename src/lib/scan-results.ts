@@ -234,7 +234,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   const { data: scan, error: scanError } = await supabase
     .from("shelf_scans")
     .select(
-      "id, org_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, created_at, processing_started_at, processing_completed_at, shelf_health_score, osa_percent, planogram_compliance_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count, store_id, stores(name)",
+      "id, org_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, created_at, processing_started_at, processing_completed_at, shelf_health_score, osa_percent, planogram_compliance_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count, store_id, assignment_id, adhoc_planogram, stores(name)",
     )
     .eq("org_id", orgId)
     .eq("id", scanId)
