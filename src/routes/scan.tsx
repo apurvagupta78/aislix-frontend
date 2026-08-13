@@ -333,6 +333,8 @@ function ScanPage() {
   const startScan = useCallback(async () => {
     if (!items.length || phase === "uploading") return;
     if (!guardSetup()) return;
+    if (mismatchBlocking) return;
+
 
     const controller = new AbortController();
     abortRef.current = controller;
