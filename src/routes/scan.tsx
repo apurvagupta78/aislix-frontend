@@ -576,7 +576,9 @@ function ScanPage() {
                         setCategory(value);
                         setSubCategory("");
                         setSubCategoryCustom("");
+                        markCategoryEdited();
                       }}
+
                       disabled={busy}
                     >
                       <SelectTrigger id="scan-category" className="rounded-xl">
@@ -624,7 +626,9 @@ function ScanPage() {
                       onValueChange={(value) => {
                         setSubCategory(value);
                         if (value !== "others") setSubCategoryCustom("");
+                        markCategoryEdited();
                       }}
+
                       disabled={busy || lockedByAssignment}
                     >
                       <SelectTrigger id="scan-subcategory" className="rounded-xl">
