@@ -993,8 +993,7 @@ function ScanPage() {
                       size="sm"
                       className="rounded-xl"
                       onClick={startScan}
-                      disabled={busy || mismatchBlocking}
-
+                      disabled={busy || mismatchBlocking || !setupComplete}
                     >
                       {busy ? (
                         <Loader2 className="size-4 animate-spin" />
@@ -1002,15 +1001,18 @@ function ScanPage() {
                         <ScanLine className="size-4" />
                       )}
                       {busy ? "Uploading…" : "Start scan"}
-                      {!busy && planogramRows.length > 0 && (
+                      {!busy && (
                         <Badge
                           variant="secondary"
                           className="ml-1 rounded-lg text-[11px] font-medium"
                         >
-                          {planogramRows.length} expected
+                          {withPlanogram
+                            ? `Compliance scan · ${planogramRows.length} expected product${planogramRows.length === 1 ? "" : "s"}`
+                            : "Free scan"}
                         </Badge>
                       )}
                     </Button>
+
                   </div>
                 </div>
               </div>
