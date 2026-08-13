@@ -229,33 +229,82 @@ function ScanPage() {
     setCategorySyncNotice(null);
   }, []);
 
+  /** Most frequent non-empty location across planogram rows. */
+  const dominantRowLocation = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const row of planogramRows) {
+      const value = row.location?.trim();
+      if (!value) continue;
+      counts.set(value, (counts.get(value) ?? 0) + 1);
+    }
+    let best: string | null = null;
+    let bestCount = 0;
+    for (const [value, count] of counts) {
+      if (count > bestCount) {
+        best = value;
+        bestCount = count;
+      }
+    }
+    return best;
+  }, [planogramRows]);
 
+  // Planogram rows may carry the shelf code the user has not typed yet.
+  useEffect(() => {
+    if (lockedByAssignment || shelfLocation.trim() || !dominantRowLocation) return;
+    setShelfLocation(dominantRowLocation);
+  }, [dominantRowLocation, shelfLocation, lockedByAssignment]);
+
+  // Keep every planogram row on the shelf location the user selected.
+  useEffect(() => {
+    const location = shelfLocation.trim();
+    if (!withPlanogram || !location || !planogramRows.length) return;
+    if (planogramRows.every((row) => row.location.trim() === location)) return;
+    setPlanogramRows((rows) => rows.map((row) => ({ ...row, location })));
+  }, [shelfLocation, withPlanogram, planogramRows]);
+
+  // Switching mode starts a clean planogram but keeps the store selection.
+  useEffect(() => {
+    if (withPlanogram) return;
+    setPlanogramRows([]);
+    setPlanogramNotice(null);
+  }, [withPlanogram]);
 
   const assignmentSubLabel = assignment?.sub_category ?? "";
+  const effectiveLocation = shelfLocation.trim() || dominantRowLocation || "";
+  const validPlanogramRows = useMemo(
+    () => planogramRows.filter((row) => row.brand.trim() && row.product_name.trim()),
+    [planogramRows],
+  );
+
   const setupErrors = useMemo(() => {
     const errors: Record<string, string> = {};
     if (lockedByAssignment) return errors;
     if (!storeId) errors.store = "Select the store for this scan.";
-    if (!shelfLocation.trim()) errors.location = "Location is required.";
+    if (!effectiveLocation) errors.location = "Location is required.";
     if (!category) errors.category = "Select a category.";
     if (showSubcategory && !subCategory) errors.subcategory = "Select a subcategory.";
     if (category && needsCustom && !subCategoryCustom.trim()) {
       errors.custom = "Describe the shelf type.";
     }
+    if (withPlanogram && !validPlanogramRows.length) {
+      errors.planogram = "Add at least one expected product.";
+    }
     return errors;
   }, [
     lockedByAssignment,
     storeId,
-    shelfLocation,
+    effectiveLocation,
     category,
     showSubcategory,
     subCategory,
     needsCustom,
     subCategoryCustom,
+    withPlanogram,
+    validPlanogramRows,
   ]);
   const setupComplete = Object.keys(setupErrors).length === 0;
 
-  const shelfLabel = shelfLocation.trim();
+  const shelfLabel = effectiveLocation;
 
   const cameraInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -275,10 +324,13 @@ function ScanPage() {
     if (setupComplete) return true;
     setShowSetupErrors(true);
     setFileError(
-      "Complete scan setup (store, location, category and subcategory) before adding images.",
+      withPlanogram
+        ? "Select store, location, category, subcategory, and add at least one expected product."
+        : "Select store, location, category and subcategory to continue.",
     );
     return false;
-  }, [setupComplete]);
+  }, [setupComplete, withPlanogram]);
+
 
   const openCamera = useCallback(() => {
     if (guardSetup()) cameraInput.current?.click();
