@@ -7,7 +7,9 @@ import {
   Check,
   ImageIcon,
   Loader2,
+  Info,
   MapPin,
+
   Plus,
   ScanLine,
   Trash2,
