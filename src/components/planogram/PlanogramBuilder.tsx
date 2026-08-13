@@ -48,6 +48,15 @@ import {
   type PlanogramRow,
 } from "@/lib/planogram";
 
+export type PlanogramContext = {
+  /** Shelf/aisle code applied to every row. */
+  location: string;
+  /** Category name from GET /categories. */
+  category: string;
+  /** Sub-category label stored on rows. */
+  subCategoryLabel: string;
+};
+
 export type PlanogramBuilderProps = {
   rows: DraftRow[];
   onRowsChange: (next: DraftRow[]) => void;
@@ -59,7 +68,13 @@ export type PlanogramBuilderProps = {
   /** Optional slot rendered next to the rows table heading. */
   tableActions?: React.ReactNode;
   tableTitle?: string;
+  /**
+   * When set, Location / Category / Sub category are owned by the caller: the
+   * manual form only asks product fields and CSV rows are validated against it.
+   */
+  context?: PlanogramContext;
 };
+
 
 /** Inline destructive alert that stays until dismissed — never auto-hides. */
 export function StickyError({
