@@ -113,6 +113,17 @@ export type ScanResult = {
   subcategory_mismatches?: SubcategoryMismatch[];
   recommendations?: ScanRecommendation[];
   inventory?: InventoryItem[];
+  /**
+   * Planogram audit context: `requested` is true when the scan carried expected
+   * products (assignment or ad-hoc Option 2), so the results page can show the
+   * planogram section — or a warning when the backend returned nothing.
+   */
+  planogram?: {
+    requested: boolean;
+    percent: number | null;
+    summary: Record<string, unknown>;
+  };
+
 
   charts?: {
     top_brands?: BrandShare[];
