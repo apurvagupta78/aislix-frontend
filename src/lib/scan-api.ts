@@ -19,8 +19,6 @@ export type ScanAnalysisResult = {
   learned_error?: string | null;
 };
 
-
-
 export const SCAN_STAGES = [
   "Uploading Image",
   "Detecting Products",
@@ -38,7 +36,6 @@ export type ScanResponse = {
   report_url?: string;
   error_message?: string;
 };
-
 
 export function validateScanFile(file: File): string | null {
   const type = file.type?.toLowerCase() ?? "";
@@ -118,7 +115,6 @@ export async function submitScanImages(
      */
     planogramItems?: Array<Record<string, string | number | null>>;
   } = {},
-
 ): Promise<ScanResponse> {
   if (!files.length) throw new Error("Add at least one shelf image to scan.");
   if (files.length > MAX_SCAN_IMAGES) {
@@ -132,19 +128,16 @@ export async function submitScanImages(
   const userId = await requireUserId();
   const orgId = options.orgId ?? (await requireOrgId());
 
-
   // Plan limits: Free = 3 scans per rolling 24h, paid plans metered monthly.
   // The scans_used counter is incremented by a DB trigger on completion.
-  const { assertCanStartScan, hasPlatformBypass, mapLimitError } = await import(
-    "@/lib/subscription-limits"
-  );
+  const { assertCanStartScan, hasPlatformBypass, mapLimitError } =
+    await import("@/lib/subscription-limits");
   try {
     await assertCanStartScan(orgId);
   } catch (error) {
     const { data } = await supabase.auth.getUser();
     if (!hasPlatformBypass(data.user?.email)) throw error;
   }
-
 
   const { data: scan, error: insertError } = await supabase
     .from("shelf_scans")
@@ -231,8 +224,6 @@ export async function submitScanImages(
   // No manual usage increment: the database trigger counts the scan once it
   // reaches "completed".
 
-
-
   return { scan_id: scan.id as string, status: scan.status as string };
 }
 
@@ -282,7 +273,6 @@ export async function runScanAnalysis(scanId: string): Promise<ScanAnalysisResul
         return reportLearnedCatalogIssue(poll as ScanAnalysisResult);
     }
 
-
     throw new Error(
       "The AI vision backend did not finish analysing this scan in time. Please retry the scan.",
     );
@@ -295,7 +285,6 @@ export async function runScanAnalysis(scanId: string): Promise<ScanAnalysisResul
 export async function retryScanAnalysis(scanId: string): Promise<ScanAnalysisResult> {
   return runScanAnalysis(scanId);
 }
-
 
 function cleanPipelineMessage(error: unknown): string {
   const raw =
@@ -311,7 +300,10 @@ function cleanPipelineMessage(error: unknown): string {
 }
 
 /** Polls the current status of a shelf scan. */
-export async function fetchScanStatus(scanId: string, _signal?: AbortSignal): Promise<ScanResponse> {
+export async function fetchScanStatus(
+  scanId: string,
+  _signal?: AbortSignal,
+): Promise<ScanResponse> {
   const orgId = await requireOrgId();
   const { data, error } = await supabase
     .from("shelf_scans")
@@ -327,4 +319,3 @@ export async function fetchScanStatus(scanId: string, _signal?: AbortSignal): Pr
     ...(data.error_message ? { error_message: data.error_message as string } : {}),
   };
 }
-

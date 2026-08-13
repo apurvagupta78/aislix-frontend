@@ -32,7 +32,6 @@ import {
 import { PlanogramBuilder, StickyError } from "@/components/planogram/PlanogramBuilder";
 import { AssignScanDialog } from "@/components/planogram/AssignScanDialog";
 
-
 export const Route = createFileRoute("/store-master")({
   head: () => ({
     meta: [
@@ -180,8 +179,6 @@ function StoreMasterPage() {
           <UserPlus className="mr-2 size-4" /> Assign scan
         </Button>
       }
-
-
     >
       <div className="space-y-6">
         {/* Step 1 — store */}
@@ -223,9 +220,7 @@ function StoreMasterPage() {
             )}
           </div>
           {storesQuery.isError && (
-            <p className="mt-3 text-sm text-destructive">
-              {toUserMessage(storesQuery.error)}
-            </p>
+            <p className="mt-3 text-sm text-destructive">{toUserMessage(storesQuery.error)}</p>
           )}
           {!storesQuery.isLoading && !(storesQuery.data ?? []).length && (
             <p className="mt-3 text-sm text-muted-foreground">
@@ -290,7 +285,6 @@ function StoreMasterPage() {
               </div>
             </section>
 
-
             {/* Step 3 — active hierarchy */}
             {snapshotQuery.isError ? (
               <ErrorState
@@ -321,12 +315,8 @@ function StoreMasterPage() {
                   </Button>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-
                   <Button variant="outline" size="sm" className="rounded-xl" asChild>
-                    <Link
-                      to="/assigned-scans"
-                      search={{ tab: "assignments", store: storeId }}
-                    >
+                    <Link to="/assigned-scans" search={{ tab: "assignments", store: storeId }}>
                       View assignments
                     </Link>
                   </Button>
@@ -352,7 +342,10 @@ function StoreMasterPage() {
                                 <span>
                                   {product.brand} · {product.product_name}
                                   {product.location ? (
-                                    <span className="text-muted-foreground"> · {product.location}</span>
+                                    <span className="text-muted-foreground">
+                                      {" "}
+                                      · {product.location}
+                                    </span>
                                   ) : null}
                                 </span>
                                 <span className="shrink-0 text-muted-foreground">
@@ -375,9 +368,7 @@ function StoreMasterPage() {
         open={assignOpen}
         onOpenChange={setAssignOpen}
         storeId={storeId}
-        storeName={
-          (storesQuery.data ?? []).find((store) => store.id === storeId)?.name ?? "Store"
-        }
+        storeName={(storesQuery.data ?? []).find((store) => store.id === storeId)?.name ?? "Store"}
         rows={(snapshot?.activeRows ?? []).map((row) => ({
           location: row.location,
           category: row.category,
@@ -385,6 +376,5 @@ function StoreMasterPage() {
         }))}
       />
     </AppShell>
-
   );
 }

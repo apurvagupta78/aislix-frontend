@@ -175,7 +175,9 @@ export function PlanogramBuilder({
   function importValidRows() {
     const valid = (preview ?? []).filter((row) => row.valid && row.data);
     if (!valid.length) {
-      setCsvError("No valid rows to import. Fix the highlighted rows in your CSV and upload again.");
+      setCsvError(
+        "No valid rows to import. Fix the highlighted rows in your CSV and upload again.",
+      );
       return;
     }
     onRowsChange([...rows, ...valid.map((row) => toDraftRow(row.data))]);

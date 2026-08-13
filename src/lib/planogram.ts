@@ -79,8 +79,6 @@ import {
 
 export { REQUIRED_CSV_COLUMNS, SAMPLE_CSV_HEADERS, SAMPLE_CSV_TEMPLATE };
 
-
-
 let rowKeySeq = 0;
 export function nextRowKey(): string {
   rowKeySeq += 1;
@@ -154,8 +152,7 @@ async function callPlanogramApi<T>(path: string, body: unknown): Promise<T> {
   }
 
   const payload = (await response.json().catch(() => null)) as
-    | (Record<string, unknown> & { detail?: unknown; message?: unknown })
-    | null;
+    (Record<string, unknown> & { detail?: unknown; message?: unknown }) | null;
 
   if (!response.ok) {
     const detail = payload?.detail ?? payload?.message ?? response.statusText;

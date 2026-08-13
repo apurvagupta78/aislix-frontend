@@ -1064,7 +1064,6 @@ async function loadAssignmentContext(
     }
   }
 
-
   const scopeType = String(assignment.scope_type ?? "category");
   const scopeValues = (assignment.scope_values ?? {}) as Record<string, unknown>;
   const items = itemsFull.filter((item) => {
@@ -1417,7 +1416,10 @@ async function reconcilePreviousActions(
     keyByLine.set(line.id as string, normalizeKey(line.expected_brand, line.expected_product));
 
   const resolvable = rows
-    .filter((row) => row.comparison_line_id && fixedKeys.has(keyByLine.get(row.comparison_line_id!) ?? "\u0000"))
+    .filter(
+      (row) =>
+        row.comparison_line_id && fixedKeys.has(keyByLine.get(row.comparison_line_id!) ?? "\u0000"),
+    )
     .map((row) => row.id);
   if (!resolvable.length) return;
 
