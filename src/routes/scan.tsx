@@ -670,6 +670,76 @@ function ScanPage() {
               </div>
             </section>
 
+            {categorySyncNotice && !categoryMismatch && (
+              <div
+                role="status"
+                className="flex flex-wrap items-start gap-2.5 rounded-2xl border border-brand/25 bg-brand-soft/60 px-4 py-3"
+              >
+                <Info className="mt-0.5 size-4 shrink-0 text-brand" />
+                <p className="flex-1 text-sm text-foreground">{categorySyncNotice}</p>
+                <button
+                  type="button"
+                  className="text-sm font-medium text-brand underline-offset-2 hover:underline"
+                  onClick={markCategoryEdited}
+                >
+                  Change manually
+                </button>
+              </div>
+            )}
+
+            {categoryMismatch && planogramTarget && (
+              <div
+                role="alert"
+                className="rounded-2xl border border-warning/40 bg-warning/10 px-4 py-4"
+              >
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">
+                      Planogram category mismatch
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Your planogram rows are mostly [{formatScanCategory(planogramTarget)}] but
+                      this scan is set to [
+                      {[category || "—", selectedSub?.label].filter(Boolean).join(" · ")}].
+                      Compliance and audit alerts use the scan category.
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    variant="brand"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={applyPlanogramCategory}
+                  >
+                    Use planogram category
+                  </Button>
+                  <Button
+                    variant="subtle"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={() => {
+                      setPlanogramRows([]);
+                      setPlanogramNotice(null);
+                    }}
+                  >
+                    Clear planogram
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={() => setMismatchAcknowledged(true)}
+                  >
+                    Continue anyway
+                  </Button>
+                </div>
+              </div>
+            )}
+
+
+
             {/* OPTIONAL — expected shelf planogram */}
             {!lockedByAssignment && (
               <section className="card-surface p-4 sm:p-6">
