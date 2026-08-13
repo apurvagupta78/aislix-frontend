@@ -293,18 +293,20 @@ function Results() {
                 />
 
                 <SummaryCard
-                  label={comparison ? "Planogram compliance" : "Shelf compliance"}
+                  label="Planogram compliance"
                   value={
-                    comparison
-                      ? comparison.compliance_percent === null
-                        ? undefined
-                        : `${Math.round(comparison.compliance_percent)}%`
+                    planogramPercent !== null
+                      ? `${Math.round(planogramPercent)}%`
                       : formatPercent(summary?.shelf_compliance)
                   }
                   loading={loading}
-                  hint="Against planogram"
+                  hint={
+                    expectedProducts !== null && matchedProducts !== null
+                      ? `${matchedProducts}/${expectedProducts} SKUs matched`
+                      : "Against planogram"
+                  }
                   valueClassName={
-                    comparison ? complianceTone(comparison.compliance_percent) : undefined
+                    planogramPercent !== null ? complianceTone(planogramPercent) : undefined
                   }
                 />
                 <SummaryCard
@@ -315,7 +317,8 @@ function Results() {
                 />
               </div>
 
-              {comparison && <PlanogramComparisonSection comparison={comparison} />}
+              {planogramSection && <PlanogramComparisonSection comparison={planogramSection} />}
+              {showPlanogramWarning && <PlanogramMissingAlert />}
 
               <AnnotatedImageViewer
                 src={data?.annotated_image_url}
