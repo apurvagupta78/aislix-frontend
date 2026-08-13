@@ -1248,14 +1248,15 @@ async function persistPlanogramCompliance(
   scan: ScanRow,
   payload: any,
 ): Promise<number | null> {
-  if (!scan.assignment_id) return null;
   const source = payload?.planogram_compliance ?? payload?.result?.planogram_compliance ?? null;
   if (!source) return null;
 
-  const assignmentId = scan.assignment_id;
+  /** null for ad-hoc "with planogram" scans started from the New Scan page. */
+  const assignmentId = scan.assignment_id ?? null;
   const summary = (source.summary ?? {}) as Record<string, unknown>;
   const compliance =
     pct(source.compliance_percent ?? source.compliance ?? summary["compliance_percent"]) ?? null;
+
 
   const { data: comparison, error: comparisonError } = await supabase
     .from("planogram_comparisons")
