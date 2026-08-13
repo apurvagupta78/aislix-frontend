@@ -804,7 +804,10 @@ function ScanPage() {
                                 return;
                               }
                               const rows = await fetchPlanogramItems(active.id);
+                              setUserEditedCategory(false);
+                              setMismatchAcknowledged(false);
                               setPlanogramRows(rows);
+
                               setPlanogramNotice(
                                 `Loaded ${rows.length} product${rows.length === 1 ? "" : "s"} from the active store planogram.`,
                               );
