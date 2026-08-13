@@ -48,6 +48,15 @@ import {
   type PlanogramRow,
 } from "@/lib/planogram";
 
+export type PlanogramContext = {
+  /** Shelf/aisle code applied to every row. */
+  location: string;
+  /** Category name from GET /categories. */
+  category: string;
+  /** Sub-category label stored on rows. */
+  subCategoryLabel: string;
+};
+
 export type PlanogramBuilderProps = {
   rows: DraftRow[];
   onRowsChange: (next: DraftRow[]) => void;
@@ -59,7 +68,13 @@ export type PlanogramBuilderProps = {
   /** Optional slot rendered next to the rows table heading. */
   tableActions?: React.ReactNode;
   tableTitle?: string;
+  /**
+   * When set, Location / Category / Sub category are owned by the caller: the
+   * manual form only asks product fields and CSV rows are validated against it.
+   */
+  context?: PlanogramContext;
 };
+
 
 /** Inline destructive alert that stays until dismissed — never auto-hides. */
 export function StickyError({
@@ -116,6 +131,7 @@ export function PlanogramBuilder({
   onSource,
   tableActions,
   tableTitle = "Expected products",
+  context,
 }: PlanogramBuilderProps) {
   const [preview, setPreview] = useState<CsvParseRow[] | null>(null);
   const [form, setForm] = useState<PlanogramRow>(emptyRow());
@@ -127,6 +143,29 @@ export function PlanogramBuilder({
   const hasLegacyAisle = (preview ?? []).some((row) =>
     Boolean((row.data as Record<string, unknown> | null | undefined)?.["aisle"]),
   );
+
+  const norm = (value: unknown) => String(value ?? "").trim().toLowerCase();
+
+  /** Row-level mismatch against the caller's scan context (Option 2 only). */
+  const contextIssue = (row: CsvParseRow): string | null => {
+    if (!context || !row.data) return null;
+    const rowLocation = norm(row.data.location);
+    if (context.location && rowLocation && rowLocation !== norm(context.location)) {
+      return `Location "${row.data.location}" does not match ${context.location}`;
+    }
+    return null;
+  };
+
+  const withContext = (row: PlanogramRow): PlanogramRow =>
+    context
+      ? {
+          ...row,
+          location: context.location,
+          category: context.category,
+          sub_category: context.subCategoryLabel || row.sub_category,
+        }
+      : row;
+
 
   const parseMutation = useMutation({
     mutationFn: (file: File) => parsePlanogramCsv(file),
@@ -173,27 +212,40 @@ export function PlanogramBuilder({
   }
 
   function importValidRows() {
-    const valid = (preview ?? []).filter((row) => row.valid && row.data);
+    const all = (preview ?? []).filter((row) => row.valid && row.data);
+    const mismatched = all.filter((row) => contextIssue(row));
+    const valid = all.filter((row) => !contextIssue(row));
     if (!valid.length) {
       setCsvError(
-        "No valid rows to import. Fix the highlighted rows in your CSV and upload again.",
+        mismatched.length
+          ? `No rows match this scan's location (${context?.location}). Fix the highlighted rows or change the location above.`
+          : "No valid rows to import. Fix the highlighted rows in your CSV and upload again.",
       );
       return;
     }
     onRowsChange([...rows, ...valid.map((row) => toDraftRow(row.data))]);
     onSource?.("csv");
     setPreview(null);
-    setCsvError(null);
+    setCsvError(
+      mismatched.length
+        ? `${mismatched.length} row${mismatched.length === 1 ? " was" : "s were"} skipped because the location did not match ${context?.location}.`
+        : null,
+    );
     toast.success(`${valid.length} row${valid.length === 1 ? "" : "s"} added.`);
   }
 
   function submitManual(keepContext: boolean) {
-    const problem = validatePlanogramRow(form);
+    const candidate = withContext(form);
+    const problem = validatePlanogramRow(candidate);
     if (problem) {
-      setManualError(problem);
+      setManualError(
+        context && /^(Location|Category|Sub category) is required/.test(problem)
+          ? "Set location, category and subcategory in the scan context above first."
+          : problem,
+      );
       return;
     }
-    normalizeMutation.mutate(form, {
+    normalizeMutation.mutate(candidate, {
       onSuccess: () => {
         setForm((prev) =>
           keepContext
@@ -208,6 +260,7 @@ export function PlanogramBuilder({
       },
     });
   }
+
 
   const update = (key: string, patch: Partial<DraftRow>) =>
     onRowsChange(rows.map((row) => (row.key === key ? { ...row, ...patch } : row)));
@@ -307,17 +360,23 @@ export function PlanogramBuilder({
                           </td>
                         )}
                         <td className="px-3 py-2">
-                          {row.valid ? (
-                            <span className="flex items-center gap-1.5 text-accent">
-                              <CheckCircle2 className="size-4" /> Valid
-                            </span>
-                          ) : (
+                          {!row.valid ? (
                             <span className="flex items-center gap-1.5 text-destructive">
                               <XCircle className="size-4" />
                               {(row.errors ?? []).join(", ") || "Invalid row"}
                             </span>
+                          ) : contextIssue(row) ? (
+                            <span className="flex items-center gap-1.5 text-destructive">
+                              <XCircle className="size-4" />
+                              {contextIssue(row)}
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1.5 text-accent">
+                              <CheckCircle2 className="size-4" /> Valid
+                            </span>
                           )}
                         </td>
+
                       </tr>
                     ))}
                   </tbody>
@@ -331,58 +390,75 @@ export function PlanogramBuilder({
         </TabsContent>
 
         <TabsContent value="manual" className="mt-4">
+          {context && (
+            <p className="mb-4 rounded-xl border border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
+              Applied to every product:{" "}
+              <span className="font-medium text-foreground">
+                {[context.location, context.category, context.subCategoryLabel]
+                  .filter(Boolean)
+                  .join(" · ") || "set location and category above"}
+              </span>
+            </p>
+          )}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Field label="Location" required>
-              <Input
-                className="rounded-xl"
-                placeholder="Shelf / aisle code, e.g. A-1-Z"
-                value={form.location}
-                onChange={(e) => setForm({ ...form, location: e.target.value })}
-              />
-            </Field>
-            <Field label="Category" required>
-              <Select
-                value={form.category}
-                onValueChange={(value) => setForm({ ...form, category: value, sub_category: "" })}
-              >
-                <SelectTrigger className="rounded-xl">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((category) => (
-                    <SelectItem key={category.name} value={category.name}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Sub category" required>
-              {subCategories.length ? (
-                <Select
-                  value={form.sub_category}
-                  onValueChange={(value) => setForm({ ...form, sub_category: value })}
-                >
-                  <SelectTrigger className="rounded-xl">
-                    <SelectValue placeholder="Select sub category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {subCategories.map((sub) => (
-                      <SelectItem key={sub.id} value={sub.label}>
-                        {sub.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input
-                  className="rounded-xl"
-                  placeholder={form.category ? "e.g. Shampoo" : "Select a category first"}
-                  value={form.sub_category}
-                  onChange={(e) => setForm({ ...form, sub_category: e.target.value })}
-                />
-              )}
-            </Field>
+            {!context && (
+              <>
+                <Field label="Location" required>
+                  <Input
+                    className="rounded-xl"
+                    placeholder="Shelf / aisle code, e.g. A-1-Z"
+                    value={form.location}
+                    onChange={(e) => setForm({ ...form, location: e.target.value })}
+                  />
+                </Field>
+                <Field label="Category" required>
+                  <Select
+                    value={form.category}
+                    onValueChange={(value) =>
+                      setForm({ ...form, category: value, sub_category: "" })
+                    }
+                  >
+                    <SelectTrigger className="rounded-xl">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category.name} value={category.name}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="Sub category" required>
+                  {subCategories.length ? (
+                    <Select
+                      value={form.sub_category}
+                      onValueChange={(value) => setForm({ ...form, sub_category: value })}
+                    >
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue placeholder="Select sub category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subCategories.map((sub) => (
+                          <SelectItem key={sub.id} value={sub.label}>
+                            {sub.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      className="rounded-xl"
+                      placeholder={form.category ? "e.g. Shampoo" : "Select a category first"}
+                      value={form.sub_category}
+                      onChange={(e) => setForm({ ...form, sub_category: e.target.value })}
+                    />
+                  )}
+                </Field>
+              </>
+            )}
+
             <Field label="Brand" required>
               <Input
                 className="rounded-xl"
