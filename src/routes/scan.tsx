@@ -44,6 +44,12 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ClipboardList } from "lucide-react";
 import { fetchActivePlanogram, fetchPlanogramItems, type DraftRow } from "@/lib/planogram";
 import { toUserMessage } from "@/lib/api/errors";
+import {
+  dominantPlanogramPair,
+  formatScanCategory,
+  resolveScanCategory,
+} from "@/lib/planogram-category-sync";
+
 
 export const Route = createFileRoute("/scan")({
   validateSearch: (search: Record<string, unknown>): { assignmentId?: string } => {
