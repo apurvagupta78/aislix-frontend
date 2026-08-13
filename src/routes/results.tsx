@@ -99,11 +99,13 @@ function Results() {
     },
   });
 
+  const scanStatus = query.data?.status;
   const comparisonQuery = useQuery({
     queryKey: ["planogram-comparison", scan],
     queryFn: () => fetchPlanogramComparison(scan!),
     enabled: Boolean(scan),
     retry: false,
+    refetchInterval: scanStatus === "processing" || scanStatus === "queued" ? 4000 : false,
   });
   const comparison = comparisonQuery.data ?? null;
 
