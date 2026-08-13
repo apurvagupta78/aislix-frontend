@@ -1334,6 +1334,10 @@ async function persistPlanogramCompliance(
     }
   }
 
+  // Assignment lifecycle (re-scan reconciliation, status, notifications) only
+  // applies to delegated scans. Ad-hoc planogram scans just keep the comparison.
+  if (!assignmentId) return compliance;
+
   await reconcilePreviousActions(supabase, assignmentId, comparisonId, fixedKeys);
 
   const openIssues = await countOpenActions(supabase, assignmentId);
@@ -1370,6 +1374,7 @@ async function persistPlanogramCompliance(
   }
 
   return compliance;
+
 }
 
 /** Comparison ids recorded for an assignment (all re-scan attempts). */
