@@ -43,7 +43,7 @@ import { startAssignment } from "@/lib/assignments";
 import { MAX_SCAN_IMAGES, formatBytes, submitScanImages, validateScanFile } from "@/lib/scan-api";
 import { PlanogramBuilder } from "@/components/planogram/PlanogramBuilder";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ClipboardList } from "lucide-react";
+import { ClipboardList } from "lucide-react";
 import { fetchActivePlanogram, fetchPlanogramItems, type DraftRow } from "@/lib/planogram";
 import { toUserMessage } from "@/lib/api/errors";
 import {
