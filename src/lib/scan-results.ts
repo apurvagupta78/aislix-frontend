@@ -505,6 +505,21 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
 
   const storeName = (scan as any).stores?.name as string | undefined;
 
+  const metricsAny = (result?.metrics ?? {}) as Record<string, unknown>;
+  const planogramPercent =
+    scan.planogram_compliance_percent !== null && scan.planogram_compliance_percent !== undefined
+      ? Number(scan.planogram_compliance_percent)
+      : typeof metricsAny["planogram_compliance_percent"] === "number"
+        ? Number(metricsAny["planogram_compliance_percent"])
+        : null;
+  const planogramSummary = (metricsAny["planogram_summary"] ?? {}) as Record<string, unknown>;
+  const adhocRows = (scan as any).adhoc_planogram;
+  const planogramRequested =
+    Boolean((scan as any).assignment_id) ||
+    (Array.isArray(adhocRows) && adhocRows.length > 0) ||
+    planogramPercent !== null ||
+    Object.keys(planogramSummary).length > 0;
+
   const scanResult: ScanResult = {
     scan_id: scan.id as string,
     created_at: scan.created_at as string,
@@ -515,6 +530,12 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     subcategory_mismatches: subcategoryMismatches,
     recommendations: mapRecommendations(result?.recommendations),
     inventory,
+    planogram: {
+      requested: planogramRequested,
+      percent: planogramPercent,
+      summary: planogramSummary,
+    },
+
 
     charts: {
       top_brands: mapBrandShare(result?.brand_share),
