@@ -115,9 +115,17 @@ export async function fetchPlanogramComparison(
  */
 export const SUMMARY_TILES: { key: string; label: string; aliases: string[] }[] = [
   { key: "expected", label: "Expected", aliases: ["expected_products", "expected"] },
-  { key: "found", label: "Found", aliases: ["products_found", "found_products", "found"] },
+  {
+    key: "found",
+    label: "Found",
+    aliases: ["products_found", "found_products", "correct_products", "found", "correct"],
+  },
   { key: "missing", label: "Missing", aliases: ["missing_products", "missing"] },
-  { key: "qty_issues", label: "Qty issues", aliases: ["quantity_issues", "qty_issues"] },
+  {
+    key: "qty_issues",
+    label: "Qty issues",
+    aliases: ["quantity_issues", "qty_mismatch", "qty_issues"],
+  },
   { key: "wrong_product", label: "Wrong product", aliases: ["wrong_products", "wrong_product"] },
   { key: "wrong_category", label: "Wrong category", aliases: ["wrong_category", "wrong_categories"] },
   { key: "unexpected", label: "Unexpected", aliases: ["unexpected_products", "unexpected"] },
@@ -150,23 +158,53 @@ export function complianceTone(value: number | null | undefined): string {
   return "text-destructive";
 }
 
+/** Backend sends several spellings for the same issue; collapse them. */
+export function normalizeIssueType(issueType: string): string {
+  const value = String(issueType ?? "").toLowerCase().trim();
+  if (["ok", "correct", "compliant", "match", "matched"].includes(value)) return "ok";
+  if (["qty_issue", "qty_mismatch", "quantity_mismatch", "quantity_issue"].includes(value))
+    return "qty_issue";
+  if (["wrong_product", "wrong_sku"].includes(value)) return "wrong_product";
+  if (["wrong_category", "wrong_sub_category"].includes(value)) return "wrong_category";
+  if (["wrong_location", "misplaced"].includes(value)) return "wrong_location";
+  if (["missing", "not_found", "out_of_stock"].includes(value)) return "missing";
+  if (["unexpected", "extra"].includes(value)) return "unexpected";
+  return value || "ok";
+}
 
 export function issueLabel(issueType: string): string {
   const map: Record<string, string> = {
-    ok: "Compliant",
+    ok: "Correct",
     missing: "Missing",
     qty_issue: "Qty mismatch",
     wrong_product: "Wrong product",
     wrong_category: "Wrong category",
+    wrong_location: "Wrong location",
     unexpected: "Unexpected",
   };
-  return map[issueType] ?? issueType.replace(/_/g, " ");
+  const key = normalizeIssueType(issueType);
+  return map[key] ?? key.replace(/_/g, " ");
+}
+
+/** Colour-coded badge classes per spec (green / red / amber / orange / gray). */
+export function issueBadgeClass(issueType: string): string {
+  const key = normalizeIssueType(issueType);
+  if (key === "ok") return "bg-success/10 text-success";
+  if (key === "missing") return "bg-destructive/10 text-destructive";
+  if (key === "qty_issue") return "bg-warning/10 text-warning";
+  if (key === "wrong_product" || key === "wrong_category" || key === "wrong_location")
+    return "bg-warning/15 text-warning";
+  if (key === "unexpected") return "bg-muted text-muted-foreground";
+  return "bg-muted text-muted-foreground";
 }
 
 export function issueRowClass(issueType: string): string {
-  if (issueType === "ok") return "bg-success/5";
-  if (issueType === "missing" || issueType === "wrong_product") return "bg-destructive/5";
-  if (issueType === "qty_issue" || issueType === "wrong_category") return "bg-warning/5";
-  if (issueType === "unexpected") return "bg-brand-soft/40";
+  const key = normalizeIssueType(issueType);
+  if (key === "ok") return "bg-success/5";
+  if (key === "missing" || key === "wrong_product") return "bg-destructive/5";
+  if (key === "qty_issue" || key === "wrong_category" || key === "wrong_location")
+    return "bg-warning/5";
+  if (key === "unexpected") return "bg-brand-soft/40";
   return "";
 }
+
