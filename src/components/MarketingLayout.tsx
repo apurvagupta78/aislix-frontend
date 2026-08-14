@@ -197,9 +197,6 @@ export function SiteFooter() {
             <ColumnTitle>Resources</ColumnTitle>
             <ul className="space-y-2.5">
               <li>
-                <Link to="/help" className={itemClass}>Help & Backend Setup</Link>
-              </li>
-              <li>
                 <Link to="/contact" search={{ subject: "Documentation" }} className={itemClass}>
                   Documentation
                 </Link>
