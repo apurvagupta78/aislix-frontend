@@ -95,6 +95,10 @@ export type PlanogramScopeItem = {
 export const MANAGER_ROLES = ["owner", "admin", "manager"] as const;
 
 export function scopeSummary(type: ScopeType, values: ScopeValues): string {
+  if (type === "planogram") {
+    const parts = [values.category, values.sub_category, values.location].filter(Boolean);
+    return `Planogram · ${parts.length ? parts.join(" · ") : "exact product list"}`;
+  }
   if (type === "location") return `Location · ${values.location ?? "—"}`;
   if (type === "sub_category") return `${values.category ?? "—"} · ${values.sub_category ?? "—"}`;
   return `Category · ${values.category ?? "—"}`;
