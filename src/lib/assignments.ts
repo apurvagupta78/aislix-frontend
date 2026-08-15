@@ -18,7 +18,12 @@ export type ScopeValues = {
   /** Planogram scope only: counts derived from the assignment's own row list. */
   product_count?: number;
   facing_count?: number;
+  /** Multi shelf types for sub-category scope (mixed racks). */
+  category_selections?: CategorySelection[];
+  categories?: string[];
+  sub_categories?: string[];
 };
+
 
 export type AssignmentStatus =
   | "pending"
