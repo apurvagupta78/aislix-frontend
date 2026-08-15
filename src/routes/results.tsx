@@ -60,6 +60,7 @@ import {
   PlanogramComparisonSection,
   PlanogramMissingAlert,
 } from "@/components/scan-results/PlanogramCompliance";
+import { NeedsReviewSection } from "@/components/scan-results/NeedsReview";
 import {
   complianceTone,
   fetchPlanogramComparison,
