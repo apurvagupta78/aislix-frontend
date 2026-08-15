@@ -673,6 +673,7 @@ export type ScanAssetUrls = {
   pdf_url?: string;
   csv_url?: string;
   annotated_image_url?: string;
+  original_image_url?: string;
 };
 
 /** Signed storage URLs for a scan's generated assets (pdf / annotated / csv). */
@@ -689,6 +690,7 @@ export async function resolveScanAssetUrls(scanId: string): Promise<ScanAssetUrl
   const entries: Array<[keyof ScanAssetUrls, string[]]> = [
     ["pdf_url", ["pdf", "report"]],
     ["annotated_image_url", ["annotated"]],
+    ["original_image_url", ["original"]],
     ["csv_url", ["csv"]],
   ];
 
@@ -782,12 +784,16 @@ export async function downloadScanAnnotatedImage(
 ): Promise<void> {
   const ext = url?.includes(".png") || url?.startsWith("data:image/png") ? "png" : "jpg";
 
+  const assets = url && originalUrl ? null : await resolveScanAssetUrls(scanId);
+  const annotated = url ?? assets?.annotated_image_url;
+  const original = originalUrl ?? assets?.original_image_url;
+
   // Save the same true-colour image the viewer shows (the backend writes BGR).
-  if (url && originalUrl) {
+  if (annotated && original) {
     try {
       const { correctAnnotatedImage } = await import("@/lib/annotated-image");
-      const corrected = await correctAnnotatedImage(url, originalUrl);
-      if (corrected !== url) {
+      const corrected = await correctAnnotatedImage(annotated, original);
+      if (corrected !== annotated) {
         await downloadFileFromUrl(corrected, `aislix-${scanId}-annotated.jpg`);
         return;
       }
@@ -800,7 +806,7 @@ export async function downloadScanAnnotatedImage(
     scanId,
     "annotated_image_url",
     `aislix-${scanId}-annotated.${ext}`,
-    url,
+    annotated,
 
     "No annotated image is available for this scan yet.",
   );
