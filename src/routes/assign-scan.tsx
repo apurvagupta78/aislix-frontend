@@ -205,12 +205,26 @@ function AssignScanPage() {
   const assignMutation = useMutation({
     mutationFn: async () => {
       if (planogramMode) {
-        const versionId = await createAssignmentPlanogramVersion({
-          storeId,
-          rows: planogramRows,
-          sourceType,
-          sourceFilename: csvFilename,
-        });
+        // Coming from the store's planogram library: reuse that version (any row
+        // edits made here are saved back to it) instead of cloning a new one.
+        let versionId: string;
+        if (preloadVersionId) {
+          await updateStorePlanogram({
+            versionId: preloadVersionId,
+            storeId,
+            rows: planogramRows,
+            sourceType,
+          });
+          await markPlanogramAssigned(preloadVersionId);
+          versionId = preloadVersionId;
+        } else {
+          versionId = await createAssignmentPlanogramVersion({
+            storeId,
+            rows: planogramRows,
+            sourceType,
+            sourceFilename: csvFilename,
+          });
+        }
         return createScanAssignment({
           storeId,
           scopeType: "planogram",
