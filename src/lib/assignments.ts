@@ -156,12 +156,16 @@ function toScopeItem(row: Record<string, unknown>): PlanogramScopeItem {
   };
 }
 
-/** Planogram rows for a version, narrowed to the assignment scope. */
+/**
+ * Planogram rows for a version, narrowed to the assignment scope. A `planogram`
+ * scope carries its own exact product list, so every row on the version counts.
+ */
 export function filterScopeItems(
   items: PlanogramScopeItem[],
   type: ScopeType,
   values: ScopeValues,
 ): PlanogramScopeItem[] {
+  if (type === "planogram") return items;
   const eq = (a: string, b?: string) =>
     Boolean(b) && a.trim().toLowerCase() === String(b).trim().toLowerCase();
   return items.filter((item) => {
