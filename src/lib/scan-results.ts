@@ -515,6 +515,10 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
         ? Number(metricsAny["planogram_compliance_percent"])
         : null;
   const planogramSummary = (metricsAny["planogram_summary"] ?? {}) as Record<string, unknown>;
+  const metricNum = (key: string): number | null =>
+    typeof metricsAny[key] === "number" ? Number(metricsAny[key]) : null;
+  const planogramSkuMatchPercent = metricNum("planogram_sku_match_percent") ?? planogramPercent;
+  const planogramQtyCompliancePercent = metricNum("planogram_qty_compliance_percent");
   const adhocRows = (scan as any).adhoc_planogram;
   const planogramRequested =
     Boolean((scan as any).assignment_id) ||
