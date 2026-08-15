@@ -368,12 +368,105 @@ function AssignScanPage() {
                 onValueChange={(value) => setScopeType(value as ScopeType)}
                 className="mt-3"
               >
-                <TabsList className="rounded-xl">
+                <TabsList className="flex-wrap rounded-xl">
                   <TabsTrigger value="category">By category</TabsTrigger>
                   <TabsTrigger value="sub_category">By sub-category</TabsTrigger>
                   <TabsTrigger value="location">By location</TabsTrigger>
+                  <TabsTrigger value="planogram">By planogram</TabsTrigger>
                 </TabsList>
               </Tabs>
+
+              {planogramMode && (
+                <div className="mt-4 space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Define the exact products this audit must cover — upload a CSV or add rows
+                    manually. The assignee scans against this list only.
+                  </p>
+
+                  {planogramError && (
+                    <StickyError
+                      title="Planogram needs attention"
+                      message={planogramError}
+                      onDismiss={() => setPlanogramError(null)}
+                    />
+                  )}
+
+                  {!storeId ? (
+                    <p className="text-sm text-muted-foreground">
+                      Select a store in Step 1 to build its planogram.
+                    </p>
+                  ) : (
+                    <PlanogramBuilder
+                      rows={planogramRows}
+                      onRowsChange={setPlanogramRows}
+                      categories={categories}
+                      onFilename={setCsvFilename}
+                      onSource={(source) =>
+                        setSources((prev) => ({ ...prev, [source]: true }))
+                      }
+                      tableTitle="Expected products for this assignment"
+                      tableActions={
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="rounded-xl"
+                            disabled={loadActiveMutation.isPending}
+                            onClick={() => loadActiveMutation.mutate()}
+                          >
+                            {loadActiveMutation.isPending ? (
+                              <Loader2 className="mr-2 size-4 animate-spin" />
+                            ) : (
+                              <RotateCcw className="mr-2 size-4" />
+                            )}
+                            Load active planogram
+                          </Button>
+                          {planogramRows.length > 0 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="rounded-xl text-destructive"
+                              onClick={() => {
+                                setPlanogramRows([]);
+                                setSources({ csv: false, manual: false });
+                                setCsvFilename(null);
+                              }}
+                            >
+                              <Trash2 className="mr-2 size-4" />
+                              Clear all
+                            </Button>
+                          )}
+                        </div>
+                      }
+                    />
+                  )}
+
+                  {planogramRows.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 text-xs">
+                      <span className="rounded-lg bg-brand-soft px-2 py-1 font-medium text-brand">
+                        {planogramSummary.productCount} products ·{" "}
+                        {planogramSummary.facingCount} expected facings
+                      </span>
+                      {[
+                        planogramSummary.category,
+                        planogramSummary.sub_category,
+                        planogramSummary.location,
+                      ]
+                        .filter(Boolean)
+                        .map((value) => (
+                          <span
+                            key={value}
+                            className="rounded-lg bg-surface px-2 py-1 font-medium text-foreground"
+                          >
+                            {value}
+                          </span>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 {scopeType !== "location" && (
