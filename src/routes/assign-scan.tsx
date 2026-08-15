@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Loader2, UserPlus } from "lucide-react";
+import { Loader2, RotateCcw, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { formatAssignmentId } from "@/components/AssignmentId";
 import { AppShell } from "@/components/AppShell";
@@ -22,7 +22,16 @@ import { EmptyState } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
 import { fetchShelfCategories } from "@/lib/categories.functions";
 import { FALLBACK_CATEGORIES, type ShelfCategory } from "@/lib/categories.data";
-import { fetchPlanogramSnapshot, fetchPlanogramStores } from "@/lib/planogram";
+import {
+  createAssignmentPlanogramVersion,
+  dominantScopeFromRows,
+  fetchPlanogramItems,
+  fetchPlanogramSnapshot,
+  fetchPlanogramStores,
+  type DraftRow,
+  type SourceType,
+} from "@/lib/planogram";
+import { PlanogramBuilder, StickyError } from "@/components/planogram/PlanogramBuilder";
 import { dominantScope } from "@/components/planogram/AssignScanDialog";
 import {
   createScanAssignment,
@@ -35,6 +44,9 @@ import {
 export const Route = createFileRoute("/assign-scan")({
   validateSearch: (search: Record<string, unknown>) => ({
     store: typeof search.store === "string" ? search.store : undefined,
+    scope: search.scope === "planogram" ? ("planogram" as const) : undefined,
+    planogramVersion:
+      typeof search.planogramVersion === "string" ? search.planogramVersion : undefined,
   }),
 
   head: () => ({
@@ -43,7 +55,7 @@ export const Route = createFileRoute("/assign-scan")({
       {
         name: "description",
         content:
-          "Assign a shelf audit to a team member by category, sub-category or shelf location, with a due date and instructions.",
+          "Assign a shelf audit to a team member by category, sub-category, shelf location or an exact planogram product list.",
       },
       { property: "og:title", content: "Assign Scan — Aislix" },
       {
