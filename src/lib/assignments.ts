@@ -200,7 +200,11 @@ async function scopeMeta(
     scoped.find((item) => item.location || item.aisle)?.location ||
     scoped.find((item) => item.aisle)?.aisle ||
     null;
-  return { count: scoped.length, location: location || null };
+  // Planogram assignments never show "0 expected products": fall back to the
+  // product count captured on the assignment when rows are not readable.
+  const count =
+    scoped.length || (type === "planogram" ? Number(values.product_count) || 0 : 0);
+  return { count, location: location || null };
 }
 
 export async function createScanAssignment(input: {
@@ -211,26 +215,32 @@ export async function createScanAssignment(input: {
   assigneeName: string;
   dueAt?: string | null;
   instructions?: string | null;
+  /** Planogram scope: the assignment's own draft planogram version. */
+  planogramVersionId?: string | null;
 }): Promise<string> {
   const orgId = await requireOrgId();
   const assignerId = await requireUserId();
 
-  const { data: version } = await supabase
-    .from("planogram_versions")
-    .select("id")
-    .eq("org_id", orgId)
-    .eq("store_id", input.storeId)
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  let versionId = input.planogramVersionId ?? null;
+  if (!versionId) {
+    const { data: version } = await supabase
+      .from("planogram_versions")
+      .select("id")
+      .eq("org_id", orgId)
+      .eq("store_id", input.storeId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    versionId = (version?.id as string | null) ?? null;
+  }
 
   const { data, error } = await supabase
     .from("scan_assignments")
     .insert({
       org_id: orgId,
       store_id: input.storeId,
-      planogram_version_id: version?.id ?? null,
+      planogram_version_id: versionId,
       assignee_id: input.assigneeId,
       assigner_id: assignerId,
       scope_type: input.scopeType,
