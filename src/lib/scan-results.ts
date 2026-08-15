@@ -775,8 +775,27 @@ export function downloadScanPdf(scanId: string, url?: string): Promise<void> {
   );
 }
 
-export function downloadScanAnnotatedImage(scanId: string, url?: string): Promise<void> {
+export async function downloadScanAnnotatedImage(
+  scanId: string,
+  url?: string,
+  originalUrl?: string,
+): Promise<void> {
   const ext = url?.includes(".png") || url?.startsWith("data:image/png") ? "png" : "jpg";
+
+  // Save the same true-colour image the viewer shows (the backend writes BGR).
+  if (url && originalUrl) {
+    try {
+      const { correctAnnotatedImage } = await import("@/lib/annotated-image");
+      const corrected = await correctAnnotatedImage(url, originalUrl);
+      if (corrected !== url) {
+        await downloadFileFromUrl(corrected, `aislix-${scanId}-annotated.jpg`);
+        return;
+      }
+    } catch {
+      // fall through to the stored asset
+    }
+  }
+
   return downloadAsset(
     scanId,
     "annotated_image_url",
