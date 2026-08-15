@@ -154,9 +154,13 @@ function ScanPage() {
     if (!assignment) return;
     setStoreId(assignment.store_id);
     setShelfLocation(assignment.location);
-    setCategory(assignment.category);
-    setSubCategory(assignment.sub_category);
-  }, [assignment]);
+    setSelections(
+      assignment.category_selections?.length
+        ? assignment.category_selections
+        : selectionsFromLegacy(categories, assignment.category, assignment.sub_category),
+    );
+  }, [assignment, categories]);
+
 
   // The member has effectively started the task as soon as the form is open.
   const startedRef = useRef(false);
