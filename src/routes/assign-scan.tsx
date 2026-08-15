@@ -469,7 +469,7 @@ function AssignScanPage() {
               )}
 
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                {scopeType !== "location" && (
+                {!planogramMode && scopeType !== "location" && (
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground">Category</Label>
                     <Select
