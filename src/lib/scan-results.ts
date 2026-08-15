@@ -107,6 +107,8 @@ export type ScanResult = {
   status?: ScanStatus;
   summary: ScanSummary;
   annotated_image_url?: string;
+  /** The untouched shelf photo — used to colour-correct the annotated render. */
+  original_image_url?: string;
   executive_summary?: string;
   alerts?: ScanAlert[];
   compliance_alerts?: ComplianceAlert[];
