@@ -711,12 +711,19 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   const shelfLabel = (scan as any).shelf_label as string | null | undefined;
   const scanCategory = (scan as any).category as string | null | undefined;
   if (shelfLabel) scanResult.location = shelfLabel;
-  if (scanCategory) scanResult.scan_category = scanCategory;
+  const selections = parseCategorySelections((scan as any).category_selections);
   const subLabel =
     ((scan as any).sub_category_custom as string | null | undefined) ||
     ((scan as any).sub_category_label as string | null | undefined) ||
     ((scan as any).sub_category as string | null | undefined);
-  if (subLabel) scanResult.scan_sub_category = subLabel;
+  if (selections.length > 1) {
+    // Mixed rack: show every shelf type instead of a misleading single pair.
+    scanResult.scan_category = formatCategorySelections(selections, 3);
+  } else {
+    if (scanCategory) scanResult.scan_category = scanCategory;
+    if (subLabel) scanResult.scan_sub_category = subLabel;
+  }
+
   if (annotatedImageSrc) scanResult.annotated_image_url = annotatedImageSrc;
   if (originalImageSrc) scanResult.original_image_url = originalImageSrc;
   if (result?.executive_summary) scanResult.executive_summary = result.executive_summary;
