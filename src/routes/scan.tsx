@@ -270,10 +270,11 @@ function ScanPage() {
     if (lockedByAssignment) return errors;
     if (!storeId) errors.store = "Select the store for this scan.";
     if (!effectiveLocation) errors.location = "Location is required.";
-    if (!category) errors.category = "Select a category.";
-    if (showSubcategory && !subCategory) errors.subcategory = "Select a subcategory.";
-    if (category && needsCustom && !subCategoryCustom.trim()) {
-      errors.custom = "Describe the shelf type.";
+    if (!selections.length) {
+      errors.selections = "Add at least one shelf type (category · subcategory).";
+    }
+    if (selections.some((item) => item.sub_category_id === "others" && !item.sub_category_custom)) {
+      errors.selections = "Describe every shelf type you marked as Others.";
     }
     if (withPlanogram && !validPlanogramRows.length) {
       errors.planogram = "Add at least one expected product.";
@@ -283,14 +284,11 @@ function ScanPage() {
     lockedByAssignment,
     storeId,
     effectiveLocation,
-    category,
-    showSubcategory,
-    subCategory,
-    needsCustom,
-    subCategoryCustom,
+    selections,
     withPlanogram,
     validPlanogramRows,
   ]);
+
   const setupComplete = Object.keys(setupErrors).length === 0;
 
   const shelfLabel = effectiveLocation;
