@@ -300,11 +300,7 @@ function Results() {
                       : formatPercent(summary?.shelf_compliance)
                   }
                   loading={loading}
-                  hint={
-                    expectedProducts !== null && matchedProducts !== null
-                      ? `${matchedProducts}/${expectedProducts} SKUs matched`
-                      : "Against planogram"
-                  }
+                  hint={planogramHint}
                   valueClassName={
                     planogramPercent !== null ? complianceTone(planogramPercent) : undefined
                   }
