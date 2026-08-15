@@ -107,14 +107,11 @@ function ScanPage() {
   const [planogramLoading, setPlanogramLoading] = useState(false);
   const [planogramNotice, setPlanogramNotice] = useState<string | null>(null);
   const [shelfLocation, setShelfLocation] = useState("");
-  const [category, setCategory] = useState("");
-  const [subCategory, setSubCategory] = useState("");
-  const [subCategoryCustom, setSubCategoryCustom] = useState("");
+  const [selections, setSelections] = useState<CategorySelection[]>([]);
   const [notes, setNotes] = useState("");
   const [showSetupErrors, setShowSetupErrors] = useState(false);
-  const [userEditedCategory, setUserEditedCategory] = useState(false);
   const [categorySyncNotice, setCategorySyncNotice] = useState<string | null>(null);
-  const [mismatchAcknowledged, setMismatchAcknowledged] = useState(false);
+
 
   const withPlanogram = scanMode === "with_planogram";
 
