@@ -539,6 +539,8 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     planogram: {
       requested: planogramRequested,
       percent: planogramPercent,
+      sku_match_percent: planogramSkuMatchPercent,
+      qty_compliance_percent: planogramQtyCompliancePercent,
       summary: planogramSummary,
     },
 
