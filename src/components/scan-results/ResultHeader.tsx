@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { NeedsReviewBadge, reviewCount } from "@/components/scan-results/NeedsReview";
 import { Link } from "@tanstack/react-router";
 import {
   BadgeCheck,
