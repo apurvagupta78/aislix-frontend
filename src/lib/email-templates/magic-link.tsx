@@ -15,7 +15,7 @@ import {
   Section,
   Text,
 } from '@react-email/components'
-import { brand, button, container, heading, hr, link, main, muted, text } from './auth-styles'
+import { button, container, heading, hr, link, main, muted, text } from './auth-styles'
 
 interface MagicLinkEmailProps {
   siteName: string

@@ -3,7 +3,7 @@ import * as React from 'react'
 import { EmailLogo } from './brand-header'
 
 import { Body, Container, Head, Heading, Hr, Html, Preview, Text } from '@react-email/components'
-import { brand, code, container, heading, hr, main, muted, text } from './auth-styles'
+import { code, container, heading, hr, main, muted, text } from './auth-styles'
 
 interface ReauthenticationEmailProps {
   token: string
