@@ -265,8 +265,18 @@ function AssignScanPage() {
           : scopeType === "location"
             ? { location: location.trim() }
             : scopeType === "sub_category"
-              ? { category, sub_category: subCategory }
+              ? {
+                  category: subSelections[0]?.category_name ?? category,
+                  sub_category:
+                    subSelections[0]?.sub_category_label ??
+                    subSelections[0]?.sub_category_id ??
+                    subCategory,
+                  category_selections: subSelections,
+                  categories: subSelections.map((s) => s.category_name),
+                  sub_categories: subSelections.map((s) => s.sub_category_id),
+                }
               : { category },
+
         planogramVersionId: fromPlanogram ? activeVersionId : null,
         assigneeId,
         assigneeName: assignee?.name ?? "team member",
@@ -305,16 +315,17 @@ function AssignScanPage() {
       toast.error("Enter the location or shelf label.");
       return;
     }
-    if (scopeType !== "location" && !category) {
-      toast.error("Select a category.");
+    if (scopeType === "sub_category" && !subSelections.length) {
+      toast.error("Add at least one shelf type (category · subcategory).");
       return;
     }
-    if (scopeType === "sub_category" && !subCategory) {
-      toast.error("Select a sub-category.");
+    if (scopeType === "category" && !category) {
+      toast.error("Select a category.");
       return;
     }
     assignMutation.mutate();
   }
+
 
   if (accessQuery.data === false) {
     return (
