@@ -34,6 +34,12 @@ import {
 import { markPlanogramAssigned, updateStorePlanogram } from "@/lib/planogram-library";
 import { PlanogramBuilder, StickyError } from "@/components/planogram/PlanogramBuilder";
 import { dominantScope } from "@/components/planogram/AssignScanDialog";
+import { CategorySubcategoryPicker } from "@/components/scan/CategorySubcategoryPicker";
+import {
+  selectionsFromLegacy,
+  type CategorySelection,
+} from "@/lib/category-selections";
+
 import {
   createScanAssignment,
   fetchAssignableMembers,
@@ -86,7 +92,9 @@ function AssignScanPage() {
   );
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
+  const [subSelections, setSubSelections] = useState<CategorySelection[]>([]);
   const [location, setLocation] = useState("");
+
   const [assigneeId, setAssigneeId] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [instructions, setInstructions] = useState("");
