@@ -74,17 +74,29 @@ function mode(values: string[]): string {
 function matchesScope(
   item: { category: string; sub_category: string; location: string; aisle: string },
   type: string,
-  scope: { category?: string; sub_category?: string; location?: string },
+  scope: AssignmentScanContext["scope_values"],
+  selections: CategorySelection[],
 ): boolean {
   // Planogram assignments carry their own exact product list — never filter.
   if (type === "planogram") return true;
   const eq = (a: string, b?: string) =>
     Boolean(b) && a.toLowerCase() === String(b).trim().toLowerCase();
   if (type === "location") return eq(item.location, scope.location) || eq(item.aisle, scope.location);
+  if (selections.length) {
+    return selections.some(
+      (selection) =>
+        eq(item.category, selection.category_name) &&
+        (type === "category" ||
+          !selection.sub_category_label ||
+          eq(item.sub_category, selection.sub_category_label) ||
+          eq(item.sub_category, selection.sub_category_id)),
+    );
+  }
   if (type === "sub_category")
     return eq(item.category, scope.category) && eq(item.sub_category, scope.sub_category);
   return eq(item.category, scope.category);
 }
+
 
 export async function loadAssignmentScanContext(
   userSupabase: DB,
