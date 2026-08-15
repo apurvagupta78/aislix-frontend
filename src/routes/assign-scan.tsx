@@ -166,8 +166,12 @@ function AssignScanPage() {
     setScopeType(planogramScope.location ? "location" : planogramScope.subCategory ? "sub_category" : "category");
     setCategory(planogramScope.category);
     setSubCategory(planogramScope.subCategory);
+    setSubSelections(
+      selectionsFromLegacy(categories, planogramScope.category, planogramScope.subCategory),
+    );
     setLocation(planogramScope.location);
-  }, [fromPlanogram, activeRows.length, planogramScope]);
+  }, [fromPlanogram, activeRows.length, planogramScope, categories]);
+
 
   /** Rows of a specific planogram version, used to pre-load the Planogram tab. */
   const preloadVersionId = versionFromSearch ?? null;
