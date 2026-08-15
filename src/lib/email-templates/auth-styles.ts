@@ -11,13 +11,6 @@ export const main = {
 
 export const container = { padding: '32px 28px', maxWidth: '560px' }
 
-export const brand = {
-  fontSize: '20px',
-  fontWeight: 700 as const,
-  letterSpacing: '-0.4px',
-  color: NAVY,
-  margin: '0 0 24px',
-}
 
 export const heading = {
   fontSize: '22px',
