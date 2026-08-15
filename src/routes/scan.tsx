@@ -717,7 +717,7 @@ function ScanPage() {
               </div>
             </section>
 
-            {categorySyncNotice && !categoryMismatch && (
+            {categorySyncNotice && (
               <div
                 role="status"
                 className="flex flex-wrap items-start gap-2.5 rounded-2xl border border-brand/25 bg-brand-soft/60 px-4 py-3"
@@ -727,14 +727,14 @@ function ScanPage() {
                 <button
                   type="button"
                   className="text-sm font-medium text-brand underline-offset-2 hover:underline"
-                  onClick={markCategoryEdited}
+                  onClick={() => setCategorySyncNotice(null)}
                 >
-                  Change manually
+                  Dismiss
                 </button>
               </div>
             )}
 
-            {categoryMismatch && planogramTarget && (
+            {!lockedByAssignment && missingPlanogramSelections.length > 0 && (
               <div
                 role="alert"
                 className="rounded-2xl border border-warning/40 bg-warning/10 px-4 py-4"
@@ -743,13 +743,12 @@ function ScanPage() {
                   <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-foreground">
-                      Planogram category mismatch
+                      Planogram rows outside your shelf types
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Your planogram rows are mostly [{formatScanCategory(planogramTarget)}] but
-                      this scan is set to [
-                      {[category || "—", selectedSub?.label].filter(Boolean).join(" · ")}].
-                      Compliance and audit alerts use the scan category.
+                      Your planogram includes{" "}
+                      {formatCategorySelections(missingPlanogramSelections, 3)}. Add them so the AI
+                      audits those products too.
                     </p>
                   </div>
                 </div>
@@ -758,9 +757,9 @@ function ScanPage() {
                     variant="brand"
                     size="sm"
                     className="rounded-xl"
-                    onClick={applyPlanogramCategory}
+                    onClick={mergePlanogramSelections}
                   >
-                    Use planogram category
+                    Add to shelf types
                   </Button>
                   <Button
                     variant="subtle"
@@ -773,17 +772,10 @@ function ScanPage() {
                   >
                     Clear planogram
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-xl"
-                    onClick={() => setMismatchAcknowledged(true)}
-                  >
-                    Continue anyway
-                  </Button>
                 </div>
               </div>
             )}
+
 
             {/* OPTION 2 — expected shelf planogram */}
             {withPlanogram && !lockedByAssignment && (
