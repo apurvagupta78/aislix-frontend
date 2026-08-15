@@ -270,14 +270,22 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     .eq("scan_id", scanId);
 
   let annotatedUrl: string | undefined;
+  let originalUrl: string | undefined;
   let pdfUrl: string | undefined;
   const annotated = images?.find((img) => img.kind === "annotated");
+  const original = images?.find((img) => img.kind === "original");
   const pdf = images?.find((img) => img.kind === "pdf" || img.kind === "report");
   if (annotated) {
     const { data: signed } = await supabase.storage
       .from(annotated.storage_bucket as string)
       .createSignedUrl(annotated.storage_path as string, 3600);
     annotatedUrl = signed?.signedUrl;
+  }
+  if (original) {
+    const { data: signed } = await supabase.storage
+      .from(original.storage_bucket as string)
+      .createSignedUrl(original.storage_path as string, 3600);
+    originalUrl = signed?.signedUrl;
   }
   if (pdf) {
     const { data: signed } = await supabase.storage
