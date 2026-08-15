@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { NeedsReviewBadge, reviewCount } from "@/components/scan-results/NeedsReview";
 import { Link } from "@tanstack/react-router";
 import {
   BadgeCheck,
@@ -168,6 +169,7 @@ export function ScanResultHeader({
               size={summary?.learned_catalog_size}
               added={summary?.learned_new_this_scan}
             />
+            <NeedsReviewBadge count={reviewCount(data)} />
           </div>
 
           <p className="mt-1 text-sm text-muted-foreground">

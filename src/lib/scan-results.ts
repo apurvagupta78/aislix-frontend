@@ -96,6 +96,33 @@ export type ScanSummary = {
   subcategory_mismatch_skus?: number;
 };
 
+/** Recognition-quality counters reported by the vision backend. */
+export type ScanQuality = {
+  ocr_empty_facings?: number;
+  ocr_low_confidence_facings?: number;
+  ocr_avg_confidence?: number;
+  recognition_ocr?: number;
+  recognition_faiss?: number;
+  recognition_gpt?: number;
+  recognition_unknown?: number;
+};
+
+export type FacingBox = { x1: number; y1: number; x2: number; y2: number };
+
+/** A single detected facing — the unit ops corrects in the "Needs review" flow. */
+export type ScanFacing = {
+  id: string;
+  brand: string;
+  product: string;
+  variant?: string;
+  sku?: string;
+  pack_text?: string;
+  ocr_confidence?: number;
+  confidence?: number;
+  recognition_source?: string;
+  box?: FacingBox;
+};
+
 export type ScanResult = {
   scan_id: string;
   created_at?: string;
@@ -113,6 +140,10 @@ export type ScanResult = {
   alerts?: ScanAlert[];
   compliance_alerts?: ComplianceAlert[];
   subcategory_mismatches?: SubcategoryMismatch[];
+  /** Recognition quality counters (OCR / FAISS / AI / unknown). */
+  quality?: ScanQuality;
+  /** Per-facing detections used by the "Needs review" correction flow. */
+  facings?: ScanFacing[];
   recommendations?: ScanRecommendation[];
   inventory?: InventoryItem[];
   /**
@@ -193,6 +224,84 @@ function mapComplianceAlerts(raw: unknown): ComplianceAlert[] {
   }));
 }
 
+const QUALITY_KEYS = [
+  "ocr_empty_facings",
+  "ocr_low_confidence_facings",
+  "ocr_avg_confidence",
+  "recognition_ocr",
+  "recognition_faiss",
+  "recognition_gpt",
+  "recognition_unknown",
+] as const;
+
+function mapQuality(metrics: Record<string, unknown>): ScanQuality {
+  const quality: ScanQuality = {};
+  for (const key of QUALITY_KEYS) {
+    const value = metrics[key];
+    if (typeof value === "number" && Number.isFinite(value)) quality[key] = value;
+  }
+  return quality;
+}
+
+function boxFrom(raw: unknown): FacingBox | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+  const nums = ["x1", "y1", "x2", "y2"].map((k) => Number(r[k]));
+  if (nums.some((n) => !Number.isFinite(n))) return undefined;
+  return { x1: nums[0]!, y1: nums[1]!, x2: nums[2]!, y2: nums[3]! };
+}
+
+/**
+ * Per-facing rows for the correction workflow. The backend's optional
+ * `facings_debug[]` export wins; otherwise we fall back to stored
+ * detected_products rows (which carry a bounding box and confidence).
+ */
+function mapFacings(rawPayload: any, products: any[]): ScanFacing[] {
+  const debug = Array.isArray(rawPayload?.facings_debug) ? rawPayload.facings_debug : null;
+  if (debug?.length) {
+    return debug.map((row: any, index: number) => ({
+      id: String(row?.id ?? `facing-${index}`),
+      brand: row?.brand ?? "Unknown",
+      product: row?.product_name ?? row?.product ?? "Unknown product",
+      ...(row?.sku ? { sku: String(row.sku) } : {}),
+      ...(row?.pack_text ? { pack_text: String(row.pack_text) } : {}),
+      ...(typeof row?.ocr_confidence === "number" ? { ocr_confidence: row.ocr_confidence } : {}),
+      ...(typeof row?.confidence === "number" ? { confidence: row.confidence } : {}),
+      ...(row?.recognition_source ? { recognition_source: String(row.recognition_source) } : {}),
+      ...(boxFrom(row) ? { box: boxFrom(row)! } : {}),
+    }));
+  }
+  return products.map((p, index) => ({
+    id: String(p?.id ?? `facing-${index}`),
+    brand: (p?.brand as string | null) ?? "Unknown",
+    product: (p?.name as string | null) ?? "Unknown product",
+    ...(p?.sku ? { sku: String(p.sku) } : {}),
+    ...(typeof p?.confidence === "number" ? { confidence: Number(p.confidence) } : {}),
+    ...(boxFrom(p?.bounding_box) ? { box: boxFrom(p.bounding_box)! } : {}),
+  }));
+}
+
+/** Facings a human should double-check: unknown source or weak confidence. */
+export function needsReviewFacings(result?: ScanResult | null): ScanFacing[] {
+  const facings = result?.facings ?? [];
+  return facings.filter((f) => {
+    const source = (f.recognition_source ?? "").toLowerCase();
+    if (source === "unknown" || !f.brand || f.brand.toLowerCase() === "unknown") return true;
+    const conf = normalizeConfidence(f.ocr_confidence ?? f.confidence ?? 1);
+    return conf < 70;
+  });
+}
+
+/** True when the backend reported low-confidence or unrecognised facings. */
+export function hasReviewSignals(result?: ScanResult | null): boolean {
+  const q = result?.quality ?? {};
+  return (
+    (q.ocr_low_confidence_facings ?? 0) > 0 ||
+    (q.recognition_unknown ?? 0) > 0 ||
+    needsReviewFacings(result).length > 0
+  );
+}
+
 function mapSubcategoryMismatches(raw: unknown): SubcategoryMismatch[] {
   if (!Array.isArray(raw)) return [];
   return raw.map((item: any) => ({
@@ -260,7 +369,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   const { data: products } = await supabase
     .from("detected_products")
     .select(
-      "id, name, brand, category, facings, shelf_row, stock_status, confidence, expected_facings",
+      "id, name, brand, category, facings, shelf_row, stock_status, confidence, expected_facings, sku, bounding_box",
     )
     .eq("scan_id", scanId);
 
@@ -537,6 +646,9 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     planogramPercent !== null ||
     Object.keys(planogramSummary).length > 0;
 
+  const quality = mapQuality(metricsAny);
+  const facings = mapFacings(rawPayload, products ?? []);
+
   const scanResult: ScanResult = {
     scan_id: scan.id as string,
     created_at: scan.created_at as string,
@@ -547,6 +659,8 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     subcategory_mismatches: subcategoryMismatches,
     recommendations: mapRecommendations(result?.recommendations),
     inventory,
+    quality,
+    facings,
     planogram: {
       requested: planogramRequested,
       percent: planogramPercent,

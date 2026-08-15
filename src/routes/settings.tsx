@@ -21,6 +21,7 @@ import { TeamManager } from "@/components/settings/TeamManager";
 import { NotificationsPanel } from "@/components/settings/NotificationsPanel";
 import { SecurityPanel } from "@/components/settings/SecurityPanel";
 import { ApiAccessPanel } from "@/components/settings/ApiAccessPanel";
+import { AiTrainingPanel } from "@/components/settings/AiTrainingPanel";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -88,8 +89,9 @@ function SettingsPage() {
         <TabsContent value="security" className="mt-0">
           <SecurityPanel />
         </TabsContent>
-        <TabsContent value="api" className="mt-0">
+        <TabsContent value="api" className="mt-0 space-y-4">
           <ApiAccessPanel />
+          <AiTrainingPanel />
         </TabsContent>
         <TabsContent value="support" className="mt-0">
           <SupportPanel />
