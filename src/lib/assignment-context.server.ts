@@ -158,7 +158,8 @@ export async function loadAssignmentScanContext(
     aisle: str(row["aisle"]),
     expected_qty: Number(row["expected_qty"]) || 0,
   }));
-  const scoped = items.filter((item) => matchesScope(item, scopeType, scope));
+  const selections = parseCategorySelections(scope.category_selections);
+  const scoped = items.filter((item) => matchesScope(item, scopeType, scope, selections));
   const effective = scoped.length ? scoped : items;
   const facings = effective.reduce((sum, item) => sum + item.expected_qty, 0);
 
@@ -170,9 +171,17 @@ export async function loadAssignmentScanContext(
     planogram_version_id: versionId,
     scope_type: scopeType,
     scope_values: scope,
-    category: str(scope.category) || mode(effective.map((item) => item.category)),
-    sub_category: str(scope.sub_category) || mode(effective.map((item) => item.sub_category)),
+    category:
+      selections[0]?.category_name ||
+      str(scope.category) ||
+      mode(effective.map((item) => item.category)),
+    sub_category:
+      selections[0]?.sub_category_label ||
+      str(scope.sub_category) ||
+      mode(effective.map((item) => item.sub_category)),
+    category_selections: selections,
     location:
+
       str(scope.location) ||
       mode(effective.map((item) => item.location)) ||
       mode(effective.map((item) => item.aisle)),
