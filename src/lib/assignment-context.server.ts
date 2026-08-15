@@ -14,18 +14,28 @@ import type { Database } from "@/integrations/supabase/types";
 
 type DB = SupabaseClient<Database>;
 
+export type AssignmentScopeType = "category" | "sub_category" | "location" | "planogram";
+
 export type AssignmentScanContext = {
   assignment_id: string;
   org_id: string;
   store_id: string;
   store_name: string;
   planogram_version_id: string | null;
-  scope_type: "category" | "sub_category" | "location";
-  scope_values: { category?: string; sub_category?: string; location?: string };
+  scope_type: AssignmentScopeType;
+  scope_values: {
+    category?: string;
+    sub_category?: string;
+    location?: string;
+    product_count?: number;
+    facing_count?: number;
+  };
   category: string;
   sub_category: string;
   location: string;
   expected_count: number;
+  /** Total expected facings across the scoped rows. */
+  facing_count: number;
   status: string;
   instructions: string | null;
   due_at: string | null;
@@ -56,6 +66,8 @@ function matchesScope(
   type: string,
   scope: { category?: string; sub_category?: string; location?: string },
 ): boolean {
+  // Planogram assignments carry their own exact product list — never filter.
+  if (type === "planogram") return true;
   const eq = (a: string, b?: string) =>
     Boolean(b) && a.toLowerCase() === String(b).trim().toLowerCase();
   if (type === "location") return eq(item.location, scope.location) || eq(item.aisle, scope.location);
@@ -84,15 +96,9 @@ export async function loadAssignmentScanContext(
 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-  const scope = (assignment.scope_values ?? {}) as {
-    category?: string;
-    sub_category?: string;
-    location?: string;
-  };
-  const scopeType = (String(assignment.scope_type ?? "category") || "category") as
-    | "category"
-    | "sub_category"
-    | "location";
+  const scope = (assignment.scope_values ?? {}) as AssignmentScanContext["scope_values"];
+  const scopeType = (String(assignment.scope_type ?? "category") ||
+    "category") as AssignmentScopeType;
 
   let versionId = (assignment.planogram_version_id as string | null) ?? null;
   if (!versionId) {
@@ -113,7 +119,7 @@ export async function loadAssignmentScanContext(
     versionId
       ? supabaseAdmin
           .from("planogram_items")
-          .select("category, sub_category, location, aisle")
+          .select("category, sub_category, location, aisle, expected_qty")
           .eq("version_id", versionId)
       : Promise.resolve({ data: [] as Record<string, unknown>[] }),
     supabaseAdmin
@@ -128,9 +134,11 @@ export async function loadAssignmentScanContext(
     sub_category: str(row["sub_category"]),
     location: str(row["location"]),
     aisle: str(row["aisle"]),
+    expected_qty: Number(row["expected_qty"]) || 0,
   }));
   const scoped = items.filter((item) => matchesScope(item, scopeType, scope));
   const effective = scoped.length ? scoped : items;
+  const facings = effective.reduce((sum, item) => sum + item.expected_qty, 0);
 
   return {
     assignment_id: assignment.id as string,
@@ -146,7 +154,8 @@ export async function loadAssignmentScanContext(
       str(scope.location) ||
       mode(effective.map((item) => item.location)) ||
       mode(effective.map((item) => item.aisle)),
-    expected_count: scoped.length || items.length,
+    expected_count: scoped.length || items.length || Number(scope.product_count) || 0,
+    facing_count: facings || Number(scope.facing_count) || 0,
     status: String(assignment.status ?? "pending"),
     instructions: (assignment.instructions as string | null) ?? null,
     due_at: (assignment.due_at as string | null) ?? null,

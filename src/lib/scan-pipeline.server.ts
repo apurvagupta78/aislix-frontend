@@ -1066,7 +1066,9 @@ async function loadAssignmentContext(
 
   const scopeType = String(assignment.scope_type ?? "category");
   const scopeValues = (assignment.scope_values ?? {}) as Record<string, unknown>;
-  const items = itemsFull.filter((item) => {
+  // A `planogram` assignment carries its own exact product list on the version:
+  // every row is in scope, so no filtering is applied.
+  const items = scopeType === "planogram" ? itemsFull : itemsFull.filter((item) => {
     if (scopeType === "location")
       return (
         sameText(item["location"], scopeValues["location"]) ||

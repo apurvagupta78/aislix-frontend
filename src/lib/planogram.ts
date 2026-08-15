@@ -440,3 +440,102 @@ export function buildHierarchy(rows: DraftRow[]): HierarchyNode[] {
     })),
   }));
 }
+
+/* ------------------------------ shared scope ----------------------------- */
+
+function modeOf(values: Array<string | null | undefined>): string {
+  const counts = new Map<string, number>();
+  for (const value of values) {
+    const trimmed = String(value ?? "").trim();
+    if (!trimmed) continue;
+    counts.set(trimmed, (counts.get(trimmed) ?? 0) + 1);
+  }
+  let best = "";
+  let bestCount = 0;
+  for (const [value, count] of counts) {
+    if (count > bestCount) {
+      best = value;
+      bestCount = count;
+    }
+  }
+  return best;
+}
+
+export type DominantScope = {
+  category: string;
+  sub_category: string;
+  location: string;
+  productCount: number;
+  facingCount: number;
+};
+
+/**
+ * Dominant category / sub-category / location of a set of expected products,
+ * plus product and facing totals. Shared by New Scan, Store Master and
+ * Assign Scan so every surface labels a planogram the same way.
+ */
+export function dominantScopeFromRows(
+  rows: Array<Pick<PlanogramRow, "category" | "sub_category" | "location" | "expected_qty">>,
+): DominantScope {
+  return {
+    category: modeOf(rows.map((row) => row.category)),
+    sub_category: modeOf(rows.map((row) => row.sub_category)),
+    location: modeOf(rows.map((row) => row.location)),
+    productCount: rows.length,
+    facingCount: rows.reduce((sum, row) => sum + (Number(row.expected_qty) || 0), 0),
+  };
+}
+
+/** Creates a draft planogram version for one assignment and inserts its rows. */
+export async function createAssignmentPlanogramVersion(input: {
+  storeId: string;
+  rows: DraftRow[];
+  sourceType: SourceType;
+  sourceFilename?: string | null;
+}): Promise<string> {
+  const orgId = await requireOrgId();
+  const userId = await requireUserId();
+
+  const { data: version, error } = await supabase
+    .from("planogram_versions")
+    .insert({
+      org_id: orgId,
+      store_id: input.storeId,
+      name: `Assignment planogram · ${new Date().toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })}`,
+      status: "draft",
+      source_type: input.sourceType,
+      uploaded_by: userId,
+      source_filename: input.sourceFilename ?? null,
+      row_count: input.rows.length,
+    })
+    .select("id")
+    .single();
+  if (error) dbError(error, "Could not save this assignment's planogram.");
+
+  const versionId = version!.id as string;
+  const { error: itemsError } = await supabase.from("planogram_items").insert(
+    input.rows.map((row) => ({
+      version_id: versionId,
+      org_id: orgId,
+      store_id: input.storeId,
+      location: row.location,
+      aisle: row.location || null,
+      category: row.category,
+      sub_category: row.sub_category,
+      brand: row.brand,
+      product_name: row.product_name,
+      variant: row.variant || null,
+      sku: row.sku || null,
+      expected_qty: row.expected_qty,
+      shelf_position: row.shelf_position || null,
+      match_key: row.match_key || null,
+    })),
+  );
+  if (itemsError) dbError(itemsError, "Could not save the assignment's expected products.");
+
+  return versionId;
+}

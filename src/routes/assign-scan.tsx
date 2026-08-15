@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Loader2, UserPlus } from "lucide-react";
+import { Loader2, RotateCcw, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { formatAssignmentId } from "@/components/AssignmentId";
 import { AppShell } from "@/components/AppShell";
@@ -22,7 +22,16 @@ import { EmptyState } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
 import { fetchShelfCategories } from "@/lib/categories.functions";
 import { FALLBACK_CATEGORIES, type ShelfCategory } from "@/lib/categories.data";
-import { fetchPlanogramSnapshot, fetchPlanogramStores } from "@/lib/planogram";
+import {
+  createAssignmentPlanogramVersion,
+  dominantScopeFromRows,
+  fetchPlanogramItems,
+  fetchPlanogramSnapshot,
+  fetchPlanogramStores,
+  type DraftRow,
+  type SourceType,
+} from "@/lib/planogram";
+import { PlanogramBuilder, StickyError } from "@/components/planogram/PlanogramBuilder";
 import { dominantScope } from "@/components/planogram/AssignScanDialog";
 import {
   createScanAssignment,
@@ -35,6 +44,9 @@ import {
 export const Route = createFileRoute("/assign-scan")({
   validateSearch: (search: Record<string, unknown>) => ({
     store: typeof search.store === "string" ? search.store : undefined,
+    scope: search.scope === "planogram" ? ("planogram" as const) : undefined,
+    planogramVersion:
+      typeof search.planogramVersion === "string" ? search.planogramVersion : undefined,
   }),
 
   head: () => ({
@@ -43,7 +55,7 @@ export const Route = createFileRoute("/assign-scan")({
       {
         name: "description",
         content:
-          "Assign a shelf audit to a team member by category, sub-category or shelf location, with a due date and instructions.",
+          "Assign a shelf audit to a team member by category, sub-category, shelf location or an exact planogram product list.",
       },
       { property: "og:title", content: "Assign Scan — Aislix" },
       {
@@ -61,16 +73,32 @@ const card = "rounded-2xl border border-border bg-card p-5 shadow-sm";
 
 function AssignScanPage() {
   const navigate = useNavigate();
-  const { store: storeFromSearch } = Route.useSearch();
+  const {
+    store: storeFromSearch,
+    scope: scopeFromSearch,
+    planogramVersion: versionFromSearch,
+  } = Route.useSearch();
   const [storeId, setStoreId] = useState(storeFromSearch ?? "");
 
-  const [scopeType, setScopeType] = useState<ScopeType>("category");
+  const [scopeType, setScopeType] = useState<ScopeType>(
+    scopeFromSearch === "planogram" ? "planogram" : "category",
+  );
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
   const [location, setLocation] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [instructions, setInstructions] = useState("");
+
+  // Planogram scope — the assignment's own expected product list.
+  const [planogramRows, setPlanogramRows] = useState<DraftRow[]>([]);
+  const [sources, setSources] = useState<{ csv: boolean; manual: boolean }>({
+    csv: false,
+    manual: false,
+  });
+  const [csvFilename, setCsvFilename] = useState<string | null>(null);
+  const [planogramError, setPlanogramError] = useState<string | null>(null);
+
 
   const accessQuery = useQuery({
     queryKey: ["assignment-manager"],
@@ -100,15 +128,18 @@ function AssignScanPage() {
     [categories, category],
   );
 
-  // Arriving from the Planogram page: pre-fill and lock store + scope.
-  const fromPlanogram = Boolean(storeFromSearch);
+  const planogramMode = scopeType === "planogram";
+
+  // Arriving from the Planogram page with a filter scope: pre-fill and lock it.
+  const fromPlanogram = Boolean(storeFromSearch) && scopeFromSearch !== "planogram";
   const snapshotQuery = useQuery({
     queryKey: ["planogram-snapshot", storeId],
     queryFn: () => fetchPlanogramSnapshot(storeId),
-    enabled: fromPlanogram && Boolean(storeId),
+    enabled: Boolean(storeFromSearch) && Boolean(storeId),
     retry: false,
   });
   const activeRows = snapshotQuery.data?.activeRows ?? [];
+  const activeVersionId = snapshotQuery.data?.active?.id ?? null;
   const planogramScope = useMemo(
     () =>
       dominantScope(
@@ -129,13 +160,77 @@ function AssignScanPage() {
     setLocation(planogramScope.location);
   }, [fromPlanogram, activeRows.length, planogramScope]);
 
+  /** Rows of a specific planogram version, used to pre-load the Planogram tab. */
+  const preloadVersionId = versionFromSearch ?? null;
+  const preloadQuery = useQuery({
+    queryKey: ["planogram-items", preloadVersionId],
+    queryFn: () => fetchPlanogramItems(preloadVersionId!),
+    enabled: scopeFromSearch === "planogram" && Boolean(preloadVersionId),
+    retry: false,
+  });
+
+  const [preloaded, setPreloaded] = useState(false);
+  useEffect(() => {
+    if (preloaded || scopeFromSearch !== "planogram") return;
+    const rows = preloadVersionId ? preloadQuery.data : activeRows;
+    if (!rows?.length) return;
+    setPlanogramRows(rows);
+    setPreloaded(true);
+  }, [preloaded, scopeFromSearch, preloadVersionId, preloadQuery.data, activeRows]);
+
+  const planogramSummary = useMemo(() => dominantScopeFromRows(planogramRows), [planogramRows]);
+  const sourceType: SourceType =
+    sources.csv && sources.manual ? "mixed" : sources.manual ? "manual" : "csv";
+
+  const loadActiveMutation = useMutation({
+    mutationFn: async () => {
+      if (!storeId) throw new Error("Select a store first.");
+      const snapshot = await fetchPlanogramSnapshot(storeId);
+      if (!snapshot.active) throw new Error("This store has no active planogram yet.");
+      return fetchPlanogramItems(snapshot.active.id);
+    },
+    onSuccess: (rows) => {
+      setPlanogramRows(rows);
+      setSources({ csv: false, manual: false });
+      setPlanogramError(null);
+      toast.success(`Loaded ${rows.length} product${rows.length === 1 ? "" : "s"}.`);
+    },
+    onError: (error) => setPlanogramError(toUserMessage(error)),
+  });
+
   const members = membersQuery.data ?? [];
 
   const assignee = members.find((member) => member.user_id === assigneeId);
 
   const assignMutation = useMutation({
-    mutationFn: () =>
-      createScanAssignment({
+    mutationFn: async () => {
+      if (planogramMode) {
+        const versionId = await createAssignmentPlanogramVersion({
+          storeId,
+          rows: planogramRows,
+          sourceType,
+          sourceFilename: csvFilename,
+        });
+        return createScanAssignment({
+          storeId,
+          scopeType: "planogram",
+          scopeValues: {
+            ...(planogramSummary.category ? { category: planogramSummary.category } : {}),
+            ...(planogramSummary.sub_category
+              ? { sub_category: planogramSummary.sub_category }
+              : {}),
+            ...(planogramSummary.location ? { location: planogramSummary.location } : {}),
+            product_count: planogramSummary.productCount,
+            facing_count: planogramSummary.facingCount,
+          },
+          planogramVersionId: versionId,
+          assigneeId,
+          assigneeName: assignee?.name ?? "team member",
+          dueAt: dueAt || null,
+          instructions,
+        });
+      }
+      return createScanAssignment({
         storeId,
         scopeType,
         scopeValues: fromPlanogram
@@ -149,12 +244,13 @@ function AssignScanPage() {
             : scopeType === "sub_category"
               ? { category, sub_category: subCategory }
               : { category },
-
+        planogramVersionId: fromPlanogram ? activeVersionId : null,
         assigneeId,
         assigneeName: assignee?.name ?? "team member",
         dueAt: dueAt || null,
         instructions,
-      }),
+      });
+    },
     onSuccess: (assignmentId) => {
       toast.success(
         `Scan assigned to ${assignee?.name ?? "team member"} — ID: ${formatAssignmentId(assignmentId)}`,
@@ -171,6 +267,15 @@ function AssignScanPage() {
     }
     if (!assigneeId) {
       toast.error("Select a team member to assign to.");
+      return;
+    }
+    if (planogramMode) {
+      if (!planogramRows.length) {
+        setPlanogramError("Add at least one expected product before assigning this scan.");
+        return;
+      }
+      setPlanogramError(null);
+      assignMutation.mutate();
       return;
     }
     if (scopeType === "location" && !location.trim()) {
@@ -263,15 +368,108 @@ function AssignScanPage() {
                 onValueChange={(value) => setScopeType(value as ScopeType)}
                 className="mt-3"
               >
-                <TabsList className="rounded-xl">
+                <TabsList className="flex-wrap rounded-xl">
                   <TabsTrigger value="category">By category</TabsTrigger>
                   <TabsTrigger value="sub_category">By sub-category</TabsTrigger>
                   <TabsTrigger value="location">By location</TabsTrigger>
+                  <TabsTrigger value="planogram">By planogram</TabsTrigger>
                 </TabsList>
               </Tabs>
 
+              {planogramMode && (
+                <div className="mt-4 space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Define the exact products this audit must cover — upload a CSV or add rows
+                    manually. The assignee scans against this list only.
+                  </p>
+
+                  {planogramError && (
+                    <StickyError
+                      title="Planogram needs attention"
+                      message={planogramError}
+                      onDismiss={() => setPlanogramError(null)}
+                    />
+                  )}
+
+                  {!storeId ? (
+                    <p className="text-sm text-muted-foreground">
+                      Select a store in Step 1 to build its planogram.
+                    </p>
+                  ) : (
+                    <PlanogramBuilder
+                      rows={planogramRows}
+                      onRowsChange={setPlanogramRows}
+                      categories={categories}
+                      onFilename={setCsvFilename}
+                      onSource={(source) =>
+                        setSources((prev) => ({ ...prev, [source]: true }))
+                      }
+                      tableTitle="Expected products for this assignment"
+                      tableActions={
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="rounded-xl"
+                            disabled={loadActiveMutation.isPending}
+                            onClick={() => loadActiveMutation.mutate()}
+                          >
+                            {loadActiveMutation.isPending ? (
+                              <Loader2 className="mr-2 size-4 animate-spin" />
+                            ) : (
+                              <RotateCcw className="mr-2 size-4" />
+                            )}
+                            Load active planogram
+                          </Button>
+                          {planogramRows.length > 0 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="rounded-xl text-destructive"
+                              onClick={() => {
+                                setPlanogramRows([]);
+                                setSources({ csv: false, manual: false });
+                                setCsvFilename(null);
+                              }}
+                            >
+                              <Trash2 className="mr-2 size-4" />
+                              Clear all
+                            </Button>
+                          )}
+                        </div>
+                      }
+                    />
+                  )}
+
+                  {planogramRows.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 text-xs">
+                      <span className="rounded-lg bg-brand-soft px-2 py-1 font-medium text-brand">
+                        {planogramSummary.productCount} products ·{" "}
+                        {planogramSummary.facingCount} expected facings
+                      </span>
+                      {[
+                        planogramSummary.category,
+                        planogramSummary.sub_category,
+                        planogramSummary.location,
+                      ]
+                        .filter(Boolean)
+                        .map((value) => (
+                          <span
+                            key={value}
+                            className="rounded-lg bg-surface px-2 py-1 font-medium text-foreground"
+                          >
+                            {value}
+                          </span>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                {scopeType !== "location" && (
+                {!planogramMode && scopeType !== "location" && (
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground">Category</Label>
                     <Select

@@ -9,12 +9,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { dbError, getMembership, requireOrgId, requireUserId } from "@/lib/db/context";
 import { notifyMember } from "@/lib/notifications.functions";
 
-export type ScopeType = "category" | "sub_category" | "location";
+export type ScopeType = "category" | "sub_category" | "location" | "planogram";
 
 export type ScopeValues = {
   category?: string;
   sub_category?: string;
   location?: string;
+  /** Planogram scope only: counts derived from the assignment's own row list. */
+  product_count?: number;
+  facing_count?: number;
 };
 
 export type AssignmentStatus =
@@ -92,6 +95,10 @@ export type PlanogramScopeItem = {
 export const MANAGER_ROLES = ["owner", "admin", "manager"] as const;
 
 export function scopeSummary(type: ScopeType, values: ScopeValues): string {
+  if (type === "planogram") {
+    const parts = [values.category, values.sub_category, values.location].filter(Boolean);
+    return `Planogram · ${parts.length ? parts.join(" · ") : "exact product list"}`;
+  }
   if (type === "location") return `Location · ${values.location ?? "—"}`;
   if (type === "sub_category") return `${values.category ?? "—"} · ${values.sub_category ?? "—"}`;
   return `Category · ${values.category ?? "—"}`;
@@ -149,12 +156,16 @@ function toScopeItem(row: Record<string, unknown>): PlanogramScopeItem {
   };
 }
 
-/** Planogram rows for a version, narrowed to the assignment scope. */
+/**
+ * Planogram rows for a version, narrowed to the assignment scope. A `planogram`
+ * scope carries its own exact product list, so every row on the version counts.
+ */
 export function filterScopeItems(
   items: PlanogramScopeItem[],
   type: ScopeType,
   values: ScopeValues,
 ): PlanogramScopeItem[] {
+  if (type === "planogram") return items;
   const eq = (a: string, b?: string) =>
     Boolean(b) && a.trim().toLowerCase() === String(b).trim().toLowerCase();
   return items.filter((item) => {
@@ -189,7 +200,11 @@ async function scopeMeta(
     scoped.find((item) => item.location || item.aisle)?.location ||
     scoped.find((item) => item.aisle)?.aisle ||
     null;
-  return { count: scoped.length, location: location || null };
+  // Planogram assignments never show "0 expected products": fall back to the
+  // product count captured on the assignment when rows are not readable.
+  const count =
+    scoped.length || (type === "planogram" ? Number(values.product_count) || 0 : 0);
+  return { count, location: location || null };
 }
 
 export async function createScanAssignment(input: {
@@ -200,26 +215,32 @@ export async function createScanAssignment(input: {
   assigneeName: string;
   dueAt?: string | null;
   instructions?: string | null;
+  /** Planogram scope: the assignment's own draft planogram version. */
+  planogramVersionId?: string | null;
 }): Promise<string> {
   const orgId = await requireOrgId();
   const assignerId = await requireUserId();
 
-  const { data: version } = await supabase
-    .from("planogram_versions")
-    .select("id")
-    .eq("org_id", orgId)
-    .eq("store_id", input.storeId)
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  let versionId = input.planogramVersionId ?? null;
+  if (!versionId) {
+    const { data: version } = await supabase
+      .from("planogram_versions")
+      .select("id")
+      .eq("org_id", orgId)
+      .eq("store_id", input.storeId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    versionId = (version?.id as string | null) ?? null;
+  }
 
   const { data, error } = await supabase
     .from("scan_assignments")
     .insert({
       org_id: orgId,
       store_id: input.storeId,
-      planogram_version_id: version?.id ?? null,
+      planogram_version_id: versionId,
       assignee_id: input.assigneeId,
       assigner_id: assignerId,
       scope_type: input.scopeType,
@@ -241,7 +262,12 @@ export async function createScanAssignment(input: {
         user_id: input.assigneeId,
         type: "scan_assigned",
         title: "New Scan Assigned",
-        body: `You have a new shelf scan task: ${scopeSummary(input.scopeType, input.scopeValues)}.`,
+        body:
+          input.scopeType === "planogram"
+            ? `${[input.scopeValues.location, `${input.scopeValues.product_count ?? 0} products`]
+                .filter(Boolean)
+                .join(" · ")} · planogram audit`
+            : `You have a new shelf scan task: ${scopeSummary(input.scopeType, input.scopeValues)}.`,
         payload: { assignment_id: assignmentId, store_id: input.storeId },
       },
     });
