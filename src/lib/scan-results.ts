@@ -96,6 +96,33 @@ export type ScanSummary = {
   subcategory_mismatch_skus?: number;
 };
 
+/** Recognition-quality counters reported by the vision backend. */
+export type ScanQuality = {
+  ocr_empty_facings?: number;
+  ocr_low_confidence_facings?: number;
+  ocr_avg_confidence?: number;
+  recognition_ocr?: number;
+  recognition_faiss?: number;
+  recognition_gpt?: number;
+  recognition_unknown?: number;
+};
+
+export type FacingBox = { x1: number; y1: number; x2: number; y2: number };
+
+/** A single detected facing — the unit ops corrects in the "Needs review" flow. */
+export type ScanFacing = {
+  id: string;
+  brand: string;
+  product: string;
+  variant?: string;
+  sku?: string;
+  pack_text?: string;
+  ocr_confidence?: number;
+  confidence?: number;
+  recognition_source?: string;
+  box?: FacingBox;
+};
+
 export type ScanResult = {
   scan_id: string;
   created_at?: string;
