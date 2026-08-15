@@ -325,15 +325,23 @@ function Results() {
                   }
                 />
                 <SummaryCard
-                  label="Avg confidence"
+                  label="Avg AI confidence"
                   value={summary ? formatConfidence(summary.average_confidence) : undefined}
                   loading={loading}
+                  hint="Label recognition confidence — not planogram compliance"
                   accent
                 />
               </div>
 
               {planogramSection && <PlanogramComparisonSection comparison={planogramSection} />}
               {showPlanogramWarning && <PlanogramMissingAlert />}
+
+              <NeedsReviewSection
+                data={data}
+                onCorrected={() => {
+                  void query.refetch();
+                }}
+              />
 
               <AnnotatedImageViewer
                 src={data?.annotated_image_url}
