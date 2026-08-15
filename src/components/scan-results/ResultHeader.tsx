@@ -168,6 +168,7 @@ export function ScanResultHeader({
               size={summary?.learned_catalog_size}
               added={summary?.learned_new_this_scan}
             />
+            <NeedsReviewBadge count={reviewCount(data)} />
           </div>
 
           <p className="mt-1 text-sm text-muted-foreground">
