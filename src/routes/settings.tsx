@@ -21,6 +21,7 @@ import { TeamManager } from "@/components/settings/TeamManager";
 import { NotificationsPanel } from "@/components/settings/NotificationsPanel";
 import { SecurityPanel } from "@/components/settings/SecurityPanel";
 import { ApiAccessPanel } from "@/components/settings/ApiAccessPanel";
+import { AiTrainingPanel } from "@/components/settings/AiTrainingPanel";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
