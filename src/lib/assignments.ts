@@ -6,8 +6,13 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import {
+  formatCategorySelections,
+  type CategorySelection,
+} from "@/lib/category-selections";
 import { dbError, getMembership, requireOrgId, requireUserId } from "@/lib/db/context";
 import { notifyMember } from "@/lib/notifications.functions";
+
 
 export type ScopeType = "category" | "sub_category" | "location" | "planogram";
 
@@ -105,8 +110,13 @@ export function scopeSummary(type: ScopeType, values: ScopeValues): string {
     return `Planogram · ${parts.length ? parts.join(" · ") : "exact product list"}`;
   }
   if (type === "location") return `Location · ${values.location ?? "—"}`;
-  if (type === "sub_category") return `${values.category ?? "—"} · ${values.sub_category ?? "—"}`;
+  if (type === "sub_category") {
+    if (values.category_selections?.length)
+      return formatCategorySelections(values.category_selections, 2);
+    return `${values.category ?? "—"} · ${values.sub_category ?? "—"}`;
+  }
   return `Category · ${values.category ?? "—"}`;
+
 }
 
 export async function isOrgManager(): Promise<boolean> {
