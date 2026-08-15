@@ -69,13 +69,13 @@ export const Route = createFileRoute("/scan")({
       {
         name: "description",
         content:
-          "Set store, location, category and subcategory, then capture or upload shelf photos for an AI audit.",
+          "Set store, location and shelf types, then capture or upload shelf photos for an AI audit.",
       },
       { property: "og:title", content: "Scan a shelf — Aislix" },
       {
         property: "og:description",
         content:
-          "Set store, location, category and subcategory, then capture or upload shelf photos.",
+          "Set store, location and shelf types, then capture or upload shelf photos.",
       },
 
       { property: "og:type", content: "website" },
@@ -312,8 +312,8 @@ function ScanPage() {
     setShowSetupErrors(true);
     setFileError(
       withPlanogram
-        ? "Select store, location, category, subcategory, and add at least one expected product."
-        : "Select store, location, category and subcategory to continue.",
+        ? "Select store, location, shelf types, and add at least one expected product."
+        : "Select store, location and shelf types to continue.",
     );
     return false;
   }, [setupComplete, withPlanogram]);
@@ -472,7 +472,7 @@ function ScanPage() {
   return (
     <AppShell
       title="Scan"
-      description="Set store, location, category and subcategory, then capture or upload shelf photos."
+      description="Set store, location and shelf types, then capture or upload shelf photos."
       actions={
         items.length && !busy ? (
           <Button variant="subtle" size="sm" className="rounded-xl" onClick={reset}>
@@ -795,8 +795,8 @@ function ScanPage() {
                       )}
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Upload a CSV or add products — location, category and subcategory come from
-                      the shelf context above.
+                      Upload a CSV or add products — location and shelf type come from the shelf
+                      context above.
                     </p>
                   </div>
                 </div>
@@ -885,8 +885,8 @@ function ScanPage() {
               {!setupComplete && (
                 <p className="mt-4 rounded-xl border border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
                   {withPlanogram
-                    ? "Select store, location, category, subcategory, and add at least one expected product."
-                    : "Select store, location, category and subcategory to continue."}
+                    ? "Select store, location, shelf types, and add at least one expected product."
+                    : "Select store, location and shelf types to continue."}
                 </p>
               )}
 
@@ -1084,7 +1084,7 @@ function ScanPage() {
             <div className="card-surface p-5 sm:p-6">
               <h2 className="text-sm font-semibold tracking-tight">How it works</h2>
               <ol className="mt-4 space-y-3 text-sm text-muted-foreground">
-                <li>1. Set store, location, category and subcategory.</li>
+                <li>1. Set store, location and shelf types.</li>
                 <li>2. Capture or upload your shelf photos.</li>
                 <li>3. AI detects products, brands and stock gaps.</li>
                 <li>4. View results, CSV, and PDF report.</li>
