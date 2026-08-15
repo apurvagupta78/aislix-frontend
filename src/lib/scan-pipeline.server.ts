@@ -12,6 +12,11 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  parseCategorySelections,
+  type CategorySelection,
+} from "@/lib/category-selections";
+
 
 type DB = SupabaseClient<Database>;
 
