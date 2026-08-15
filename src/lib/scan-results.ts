@@ -121,6 +121,10 @@ export type ScanResult = {
   planogram?: {
     requested: boolean;
     percent: number | null;
+    /** SKU presence match % (headline) as reported by the vision backend. */
+    sku_match_percent: number | null;
+    /** Quantity accuracy % — can be lower than the SKU match headline. */
+    qty_compliance_percent: number | null;
     summary: Record<string, unknown>;
   };
 
