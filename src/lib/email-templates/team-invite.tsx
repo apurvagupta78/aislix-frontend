@@ -1,4 +1,6 @@
 import React from 'react'
+
+import { EmailLogo } from './brand-header'
 import {
   Body,
   Button,
