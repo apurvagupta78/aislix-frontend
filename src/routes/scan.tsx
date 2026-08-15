@@ -46,11 +46,16 @@ import { Badge } from "@/components/ui/badge";
 import { ClipboardList } from "lucide-react";
 import { fetchActivePlanogram, fetchPlanogramItems, type DraftRow } from "@/lib/planogram";
 import { toUserMessage } from "@/lib/api/errors";
+import { CategorySubcategoryPicker } from "@/components/scan/CategorySubcategoryPicker";
 import {
-  dominantPlanogramPair,
-  formatScanCategory,
-  resolveScanCategory,
-} from "@/lib/planogram-category-sync";
+  dedupeSelections,
+  formatCategorySelections,
+  selectionKey,
+  selectionsFromLegacy,
+  selectionsFromPlanogramRows,
+  type CategorySelection,
+} from "@/lib/category-selections";
+
 
 
 export const Route = createFileRoute("/scan")({
