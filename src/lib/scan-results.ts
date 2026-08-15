@@ -286,17 +286,15 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   const rawPayload = (result?.raw_payload ?? null) as any;
   // Always show the backend-rendered annotated image: stored signed URL first,
   // falling back to the base64 JPEG returned by the vision service.
-  const annotatedBase64 =
-    typeof rawPayload?.annotated_image_base64 === "string" && rawPayload.annotated_image_base64
-      ? (rawPayload.annotated_image_base64 as string)
-      : undefined;
+  const toDataUrl = (value: unknown): string | undefined => {
+    if (typeof value !== "string" || !value) return undefined;
+    return value.startsWith("data:") ? value : `data:image/jpeg;base64,${value}`;
+  };
   const annotatedImageSrc =
     annotatedUrl ??
-    (annotatedBase64
-      ? annotatedBase64.startsWith("data:")
-        ? annotatedBase64
-        : `data:image/jpeg;base64,${annotatedBase64}`
-      : undefined);
+    toDataUrl(rawPayload?.annotated_image_base64) ??
+    toDataUrl(rawPayload?.original_image_base64);
+
 
   const rawRows: any[] = [
     ...(Array.isArray(rawPayload?.inventory) ? rawPayload.inventory : []),
@@ -756,11 +754,13 @@ export function downloadScanPdf(scanId: string, url?: string): Promise<void> {
 }
 
 export function downloadScanAnnotatedImage(scanId: string, url?: string): Promise<void> {
+  const ext = url?.includes(".png") || url?.startsWith("data:image/png") ? "png" : "jpg";
   return downloadAsset(
     scanId,
     "annotated_image_url",
-    `aislix-${scanId}-annotated.jpg`,
+    `aislix-${scanId}-annotated.${ext}`,
     url,
+
     "No annotated image is available for this scan yet.",
   );
 }
