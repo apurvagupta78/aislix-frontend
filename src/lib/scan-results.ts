@@ -568,6 +568,9 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     planogramPercent !== null ||
     Object.keys(planogramSummary).length > 0;
 
+  const quality = mapQuality(metricsAny);
+  const facings = mapFacings(rawPayload, products ?? []);
+
   const scanResult: ScanResult = {
     scan_id: scan.id as string,
     created_at: scan.created_at as string,
@@ -578,6 +581,8 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     subcategory_mismatches: subcategoryMismatches,
     recommendations: mapRecommendations(result?.recommendations),
     inventory,
+    quality,
+    facings,
     planogram: {
       requested: planogramRequested,
       percent: planogramPercent,
