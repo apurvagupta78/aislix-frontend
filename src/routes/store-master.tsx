@@ -442,8 +442,7 @@ function StoreMasterPage() {
               Delete planogram
             </AlertDialogAction>
           </AlertDialogFooter>
-        </AlertDialogFooter>
-      </AlertDialogContent>
+        </AlertDialogContent>
       </AlertDialog>
     </AppShell>
   );
