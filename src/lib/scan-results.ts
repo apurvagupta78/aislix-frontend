@@ -140,6 +140,10 @@ export type ScanResult = {
   alerts?: ScanAlert[];
   compliance_alerts?: ComplianceAlert[];
   subcategory_mismatches?: SubcategoryMismatch[];
+  /** Recognition quality counters (OCR / FAISS / AI / unknown). */
+  quality?: ScanQuality;
+  /** Per-facing detections used by the "Needs review" correction flow. */
+  facings?: ScanFacing[];
   recommendations?: ScanRecommendation[];
   inventory?: InventoryItem[];
   /**
