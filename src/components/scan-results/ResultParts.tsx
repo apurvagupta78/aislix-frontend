@@ -209,7 +209,7 @@ export function AnnotatedImageViewer({
           if (!src) return;
           setDownloading(true);
           try {
-            await downloadScanAnnotatedImage(scanId ?? "scan", src);
+            await downloadScanAnnotatedImage(scanId ?? "scan", rawSrc, originalSrc);
             toast.success("Image downloaded");
           } catch (e) {
             toast.error(e instanceof Error ? e.message : "Download failed");
