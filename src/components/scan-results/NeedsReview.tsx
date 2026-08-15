@@ -162,7 +162,7 @@ export function NeedsReviewSection({
     <ResultSection
       title="Needs review"
       description="Facings the AI was unsure about. Correcting them updates this scan and feeds the recognition benchmark."
-      action={
+      actions={
         <div className="flex items-center gap-2">
           <NeedsReviewBadge count={reviewCount(data)} />
           <Button
