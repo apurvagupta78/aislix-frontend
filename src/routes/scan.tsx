@@ -380,7 +380,6 @@ function ScanPage() {
   const startScan = useCallback(async () => {
     if (!items.length || phase === "uploading") return;
     if (!guardSetup()) return;
-    if (mismatchBlocking) return;
 
 
     const controller = new AbortController();
@@ -398,14 +397,13 @@ function ScanPage() {
           storeId,
           shelfLabel,
           category,
-          subCategory: isOtherCategory ? "others" : subCategory || undefined,
+          subCategory: subCategory || undefined,
           subCategoryLabel: lockedByAssignment
             ? assignmentSubLabel || undefined
-            : isOtherCategory
-              ? "Others"
-              : selectedSub?.label,
-          subCategoryCustom:
-            needsCustom && !lockedByAssignment ? subCategoryCustom.trim() : undefined,
+            : primary?.sub_category_label || undefined,
+          subCategoryCustom: primary?.sub_category_custom?.trim() || undefined,
+          categorySelections: selections,
+
           notes: !lockedByAssignment && !withPlanogram ? notes.trim() || undefined : undefined,
           ...(assignment
             ? { assignmentId: assignment.assignment_id, orgId: assignment.org_id }
