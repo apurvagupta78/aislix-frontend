@@ -1,13 +1,24 @@
-import { useMemo, useState } from "react";
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, UserPlus } from "lucide-react";
+import { ChevronDown, LayoutList, Loader2, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Select,
   SelectContent,
@@ -19,33 +30,31 @@ import { EmptyState, ErrorState } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
 import { fetchShelfCategories } from "@/lib/categories.functions";
 import { FALLBACK_CATEGORIES, type ShelfCategory } from "@/lib/categories.data";
+import { canManagePlanogram, fetchPlanogramStores } from "@/lib/planogram";
 import {
-  activatePlanogram,
-  buildHierarchy,
-  canManagePlanogram,
-  fetchPlanogramSnapshot,
-  fetchPlanogramStores,
-  savePlanogramDraft,
-  type DraftRow,
-  type SourceType,
-} from "@/lib/planogram";
-import { PlanogramBuilder, StickyError } from "@/components/planogram/PlanogramBuilder";
-import { AssignScanDialog } from "@/components/planogram/AssignScanDialog";
+  deleteStorePlanogram,
+  loadStorePlanograms,
+  type PlanogramVersionSummary,
+} from "@/lib/planogram-library";
+import {
+  PlanogramEditorDialog,
+  type PlanogramEditorTarget,
+} from "@/components/planogram/PlanogramEditorDialog";
 
 export const Route = createFileRoute("/store-master")({
   head: () => ({
     meta: [
-      { title: "Planogram | Aislix — Expected shelf data" },
+      { title: "Planogram library | Aislix — Expected shelf data" },
       {
         name: "description",
         content:
-          "Define the expected planogram for every store: upload a CSV or add products manually, review the draft and activate the source of truth for shelf audits.",
+          "Manage every planogram for a store: upload a CSV or add rows manually, edit or delete unassigned planograms, and assign a shelf audit to your team.",
       },
-      { property: "og:title", content: "Planogram Management — Aislix" },
+      { property: "og:title", content: "Planogram library — Aislix" },
       {
         property: "og:description",
         content:
-          "Upload or enter expected shelf data per store and activate it as the planogram baseline for Aislix shelf audits.",
+          "Upload expected shelf products per store, keep a library of planograms ready to assign, and delegate audits to your team in Aislix.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -56,18 +65,35 @@ export const Route = createFileRoute("/store-master")({
 
 const card = "rounded-2xl border border-border bg-card p-5 shadow-sm";
 
+function formatDate(value: string | null): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function scopeLine(version: PlanogramVersionSummary): string {
+  return [
+    version.category,
+    version.sub_category,
+    version.location,
+    `${version.row_count} product${version.row_count === 1 ? "" : "s"}`,
+    `${version.facing_count} facing${version.facing_count === 1 ? "" : "s"}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 function StoreMasterPage() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [storeId, setStoreId] = useState("");
-  const [assignOpen, setAssignOpen] = useState(false);
-
-  const [draft, setDraft] = useState<DraftRow[]>([]);
-  const [sources, setSources] = useState<{ csv: boolean; manual: boolean }>({
-    csv: false,
-    manual: false,
-  });
-  const [filename, setFilename] = useState<string | null>(null);
-  const [draftError, setDraftError] = useState<string | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorTarget, setEditorTarget] = useState<PlanogramEditorTarget>({ mode: "create" });
+  const [deleteTarget, setDeleteTarget] = useState<PlanogramVersionSummary | null>(null);
+  const [assignedOpen, setAssignedOpen] = useState(false);
 
   const accessQuery = useQuery({
     queryKey: ["planogram-access"],
@@ -88,71 +114,54 @@ function StoreMasterPage() {
     ? categoriesQuery.data
     : FALLBACK_CATEGORIES;
 
-  const snapshotQuery = useQuery({
-    queryKey: ["planogram-snapshot", storeId],
-    queryFn: () => fetchPlanogramSnapshot(storeId),
+  const libraryQuery = useQuery({
+    queryKey: ["planogram-library", storeId],
+    queryFn: () => loadStorePlanograms(storeId),
     enabled: Boolean(storeId),
     retry: false,
   });
-  const snapshot = snapshotQuery.data;
+  const unassigned = libraryQuery.data?.unassigned ?? [];
+  const assigned = libraryQuery.data?.assigned ?? [];
 
-  const sourceType: SourceType =
-    sources.csv && sources.manual ? "mixed" : sources.manual ? "manual" : "csv";
+  const refresh = () =>
+    queryClient.invalidateQueries({ queryKey: ["planogram-library", storeId] });
 
-  const saveMutation = useMutation({
-    mutationFn: () =>
-      savePlanogramDraft({ storeId, rows: draft, sourceType, sourceFilename: filename }),
-    onMutate: () => setDraftError(null),
+  const deleteMutation = useMutation({
+    mutationFn: (versionId: string) => deleteStorePlanogram(versionId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["planogram-snapshot", storeId] });
-      toast.success(`Draft saved — ${draft.length} product${draft.length === 1 ? "" : "s"}.`);
+      setDeleteTarget(null);
+      await refresh();
+      toast.success("Planogram deleted.");
     },
-    onError: (error) => setDraftError(toUserMessage(error)),
+    onError: (error) => toast.error(toUserMessage(error)),
   });
 
-  const activateMutation = useMutation({
-    mutationFn: async () => {
-      const version = await savePlanogramDraft({
-        storeId,
-        rows: draft,
-        sourceType,
-        sourceFilename: filename,
-      });
-      return activatePlanogram({ storeId, versionId: version.id, rowCount: draft.length });
-    },
-    onMutate: () => setDraftError(null),
-    onSuccess: async () => {
-      const count = draft.length;
-      setDraft([]);
-      setSources({ csv: false, manual: false });
-      setFilename(null);
-      await queryClient.invalidateQueries({ queryKey: ["planogram-snapshot", storeId] });
-      toast.success(`Planogram activated — ${count} products expected`);
-    },
-    onError: (error) => setDraftError(toUserMessage(error)),
-  });
+  const storeName =
+    (storesQuery.data ?? []).find((store) => store.id === storeId)?.name ?? "this store";
 
-  function selectStore(id: string) {
-    setStoreId(id);
-    setDraft([]);
-    setSources({ csv: false, manual: false });
-    setFilename(null);
-    setDraftError(null);
+  function openCreate() {
+    setEditorTarget({ mode: "create" });
+    setEditorOpen(true);
   }
 
-  const activeHierarchy = useMemo(
-    () => buildHierarchy(snapshot?.activeRows ?? []),
-    [snapshot?.activeRows],
-  );
+  function openEdit(version: PlanogramVersionSummary) {
+    setEditorTarget({ mode: "edit", versionId: version.id, name: version.name });
+    setEditorOpen(true);
+  }
 
-  const canManage = accessQuery.data !== false;
+  function assign(version: PlanogramVersionSummary) {
+    void navigate({
+      to: "/assign-scan",
+      search: { store: storeId, scope: "planogram", planogramVersion: version.id },
+    });
+  }
 
   if (accessQuery.data === false) {
     return (
       <AppShell title="Planogram" description="Expected planogram data per store.">
         <EmptyState
           title="Manager access required"
-          description="Only owners, admins and managers can create or activate planograms. Ask your workspace owner for access."
+          description="Only owners, admins and managers can create or assign planograms. Ask your workspace owner for access."
         />
       </AppShell>
     );
@@ -161,22 +170,10 @@ function StoreMasterPage() {
   return (
     <AppShell
       title="Planogram"
-      description="Upload and activate expected shelf data (planograms) per store — source of truth for Expected vs Actual audits."
+      description="Keep a library of expected shelf data (planograms) per store, then assign a scan to your team."
       actions={
-        <Button
-          variant="brand"
-          className="rounded-xl"
-          disabled={!snapshot?.active || !storeId}
-          title={
-            snapshot?.active && storeId
-              ? undefined
-              : storeId
-                ? "Activate a planogram for this store to assign a scan."
-                : "Select a store with an active planogram to assign a scan."
-          }
-          onClick={() => setAssignOpen(true)}
-        >
-          <UserPlus className="mr-2 size-4" /> Assign scan
+        <Button variant="brand" className="rounded-xl" disabled={!storeId} onClick={openCreate}>
+          <Plus className="mr-2 size-4" /> Add planogram
         </Button>
       }
     >
@@ -185,7 +182,7 @@ function StoreMasterPage() {
         <section className={card}>
           <h2 className="text-sm font-semibold text-foreground">Step 1 · Select store</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Planograms are per store. Select a store to upload or activate.
+            Planograms are per store. Select a store to manage its library.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <div className="w-full max-w-xs">
@@ -195,7 +192,7 @@ function StoreMasterPage() {
               {storesQuery.isLoading ? (
                 <Skeleton className="h-10 w-full rounded-xl" />
               ) : (
-                <Select value={storeId} onValueChange={selectStore}>
+                <Select value={storeId} onValueChange={setStoreId}>
                   <SelectTrigger id="store" className="rounded-xl">
                     <SelectValue placeholder="Choose a store" />
                   </SelectTrigger>
@@ -210,13 +207,10 @@ function StoreMasterPage() {
                 </Select>
               )}
             </div>
-            {storeId && snapshot?.active && (
+            {storeId && libraryQuery.data && (
               <Badge variant="secondary" className="rounded-lg">
-                Active planogram · {snapshot.active.row_count} products
+                {unassigned.length} ready to assign · {assigned.length} assigned
               </Badge>
-            )}
-            {storeId && snapshot && !snapshot.active && (
-              <span className="text-sm text-muted-foreground">No active planogram yet.</span>
             )}
           </div>
           {storesQuery.isError && (
@@ -229,152 +223,227 @@ function StoreMasterPage() {
           )}
         </section>
 
-        {storeId && (
+        {!storeId ? (
+          <EmptyState
+            title="Select a store to manage planograms"
+            description="Choose a store above to see its planogram library and assign scans."
+            icon={<LayoutList className="size-5" />}
+          />
+        ) : libraryQuery.isError ? (
+          <ErrorState
+            title="Could not load planograms"
+            description={toUserMessage(libraryQuery.error)}
+            onRetry={() => void libraryQuery.refetch()}
+          />
+        ) : (
           <>
-            {/* Step 2 — expected products */}
-            <section id="planogram-upload" className={card}>
-              <h2 className="text-sm font-semibold text-foreground">
-                Step 2 · Add expected products
-              </h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Location, Category, Sub category, Brand and Product Name are required. Variant, SKU
-                and Shelf Position are optional.
-              </p>
-              {draftError && (
-                <div className="mt-4">
-                  <StickyError
-                    title="Could not save the planogram"
-                    message={draftError}
-                    onDismiss={() => setDraftError(null)}
-                  />
+            {/* Ready to assign */}
+            <section className={card}>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-foreground">
+                    Planograms ready to assign
+                  </h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Editable until you assign them to a team member.
+                  </p>
                 </div>
-              )}
-              <div className="mt-4">
-                <PlanogramBuilder
-                  rows={draft}
-                  onRowsChange={setDraft}
-                  categories={categories}
-                  onFilename={setFilename}
-                  onSource={(source) => setSources((s) => ({ ...s, [source]: true }))}
-                  tableTitle="Draft planogram"
-                  tableActions={
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        variant="outline"
-                        className="rounded-xl"
-                        disabled={!draft.length || saveMutation.isPending}
-                        onClick={() => saveMutation.mutate()}
-                      >
-                        {saveMutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
-                        Save draft
+                <Button variant="brand" size="sm" className="rounded-xl" onClick={openCreate}>
+                  <Plus className="mr-2 size-4" /> Add planogram
+                </Button>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {libraryQuery.isLoading ? (
+                  <>
+                    <Skeleton className="h-24 w-full rounded-xl" />
+                    <Skeleton className="h-24 w-full rounded-xl" />
+                  </>
+                ) : !unassigned.length ? (
+                  <EmptyState
+                    title="No planograms waiting to assign"
+                    description="Upload expected shelf products, then assign a scan to your team."
+                    icon={<LayoutList className="size-5" />}
+                    action={
+                      <Button variant="brand" className="rounded-xl" onClick={openCreate}>
+                        <Plus className="mr-2 size-4" /> Add planogram
                       </Button>
-                      <Button
-                        variant="brand"
-                        className="rounded-xl"
-                        disabled={!draft.length || activateMutation.isPending || !canManage}
-                        onClick={() => activateMutation.mutate()}
-                      >
-                        {activateMutation.isPending && (
-                          <Loader2 className="mr-2 size-4 animate-spin" />
-                        )}
-                        Activate planogram
-                      </Button>
-                    </div>
-                  }
-                />
+                    }
+                  />
+                ) : (
+                  unassigned.map((version) => (
+                    <article key={version.id} className="rounded-xl border border-border p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium text-foreground">
+                            {version.name}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">{scopeLine(version)}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Uploaded {formatDate(version.created_at)} ·{" "}
+                            {version.source_type.toUpperCase()} · {version.status}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-xl"
+                            onClick={() => openEdit(version)}
+                          >
+                            <Pencil className="mr-2 size-4" /> Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="rounded-xl text-destructive"
+                            onClick={() => setDeleteTarget(version)}
+                          >
+                            <Trash2 className="mr-2 size-4" /> Delete
+                          </Button>
+                          <Button
+                            variant="brand"
+                            size="sm"
+                            className="rounded-xl"
+                            onClick={() => assign(version)}
+                          >
+                            <UserPlus className="mr-2 size-4" /> Assign scan
+                          </Button>
+                        </div>
+                      </div>
+                    </article>
+                  ))
+                )}
               </div>
             </section>
 
-            {/* Step 3 — active hierarchy */}
-            {snapshotQuery.isError ? (
-              <ErrorState
-                title="Could not load the planogram"
-                description={toUserMessage(snapshotQuery.error)}
-                onRetry={() => void snapshotQuery.refetch()}
-              />
-            ) : snapshot?.active ? (
-              <section className={card}>
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <h2 className="text-sm font-semibold text-foreground">
-                      Active planogram · {snapshot.active.row_count} products expected
-                    </h2>
-                    {snapshot.active.activated_at && (
-                      <span className="text-xs text-muted-foreground">
-                        Activated {new Date(snapshot.active.activated_at).toLocaleString("en-IN")}
-                      </span>
-                    )}
-                  </div>
-                  <Button
-                    variant="brand"
-                    size="sm"
-                    className="rounded-xl"
-                    onClick={() => setAssignOpen(true)}
+            {/* Assigned to team */}
+            <section className={card}>
+              <Collapsible open={assignedOpen} onOpenChange={setAssignedOpen}>
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-3 text-left"
                   >
-                    <UserPlus className="mr-2 size-4" /> Assign scan to team member
-                  </Button>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button variant="outline" size="sm" className="rounded-xl" asChild>
-                    <Link to="/assigned-scans" search={{ tab: "assignments", store: storeId }}>
-                      View assignments
-                    </Link>
-                  </Button>
-                  <Button variant="outline" size="sm" className="rounded-xl" asChild>
-                    <a href="#planogram-upload">Upload new version</a>
-                  </Button>
-                </div>
-                <div className="mt-4 space-y-4">
-                  {activeHierarchy.map((category) => (
-                    <div key={category.category} className="rounded-xl border border-border p-4">
-                      <p className="text-sm font-medium text-foreground">{category.category}</p>
-                      {category.subCategories.map((sub) => (
-                        <div key={sub.sub_category} className="mt-3 pl-3">
-                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                            {sub.sub_category}
-                          </p>
-                          <ul className="mt-1.5 space-y-1">
-                            {sub.products.map((product, index) => (
-                              <li
-                                key={`${product.brand}-${product.product_name}-${index}`}
-                                className="flex items-center justify-between gap-3 text-sm"
-                              >
-                                <span>
-                                  {product.brand} · {product.product_name}
-                                  {product.location ? (
-                                    <span className="text-muted-foreground">
-                                      {" "}
-                                      · {product.location}
-                                    </span>
-                                  ) : null}
+                    <span>
+                      <span className="text-sm font-semibold text-foreground">
+                        Assigned to team ({assigned.length})
+                      </span>
+                      <span className="mt-1 block text-xs text-muted-foreground">
+                        Read-only — the assignment owns this planogram snapshot.
+                      </span>
+                    </span>
+                    <ChevronDown
+                      className={`size-4 shrink-0 text-muted-foreground transition-transform ${
+                        assignedOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-4">
+                  {!assigned.length ? (
+                    <p className="text-sm text-muted-foreground">
+                      No planograms are assigned for this store yet.
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto rounded-xl border border-border">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                          <tr>
+                            <th className="px-3 py-2">Planogram</th>
+                            <th className="px-3 py-2">Location · Category</th>
+                            <th className="px-3 py-2">Assignee</th>
+                            <th className="px-3 py-2">Status</th>
+                            <th className="px-3 py-2">Due</th>
+                            <th className="px-3 py-2" />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {assigned.map((version) => (
+                            <tr key={version.id} className="border-t border-border">
+                              <td className="px-3 py-2 font-medium text-foreground">
+                                {version.name}
+                                <span className="block text-xs font-normal text-muted-foreground">
+                                  {version.row_count} products · {version.facing_count} facings
                                 </span>
-                                <span className="shrink-0 text-muted-foreground">
-                                  Expected {product.expected_qty}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
+                              </td>
+                              <td className="px-3 py-2 text-muted-foreground">
+                                {[version.location, version.category, version.sub_category]
+                                  .filter(Boolean)
+                                  .join(" · ") || "—"}
+                              </td>
+                              <td className="px-3 py-2">{version.assignment?.assignee_name}</td>
+                              <td className="px-3 py-2">
+                                <Badge variant="secondary" className="rounded-lg capitalize">
+                                  {version.assignment?.status ?? "pending"}
+                                </Badge>
+                              </td>
+                              <td className="px-3 py-2 text-muted-foreground">
+                                {formatDate(version.assignment?.due_at ?? null)}
+                              </td>
+                              <td className="px-3 py-2 text-right">
+                                <Button variant="outline" size="sm" className="rounded-xl" asChild>
+                                  <Link
+                                    to="/assigned-scans"
+                                    search={{ tab: "assignments", store: storeId }}
+                                  >
+                                    View assignment
+                                  </Link>
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                  ))}
-                </div>
-              </section>
-            ) : null}
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+            </section>
           </>
         )}
       </div>
-      <AssignScanDialog
-        open={assignOpen}
-        onOpenChange={setAssignOpen}
-        storeId={storeId}
-        storeName={(storesQuery.data ?? []).find((store) => store.id === storeId)?.name ?? "Store"}
-        rows={(snapshot?.activeRows ?? []).map((row) => ({
-          location: row.location,
-          category: row.category,
-          sub_category: row.sub_category,
-        }))}
-      />
+
+      {storeId && (
+        <PlanogramEditorDialog
+          open={editorOpen}
+          onOpenChange={setEditorOpen}
+          storeId={storeId}
+          storeName={storeName}
+          categories={categories}
+          target={editorTarget}
+          onSaved={() => void refresh()}
+        />
+      )}
+
+      <AlertDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this planogram?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete “{deleteTarget?.name}” and all {deleteTarget?.row_count ?? 0} expected
+              products? This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteMutation.isPending}
+              onClick={(event) => {
+                event.preventDefault();
+                if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
+              }}
+            >
+              {deleteMutation.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Delete planogram
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 }
