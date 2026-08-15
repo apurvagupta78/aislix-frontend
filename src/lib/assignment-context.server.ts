@@ -11,6 +11,10 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  parseCategorySelections,
+  type CategorySelection,
+} from "@/lib/category-selections";
 
 type DB = SupabaseClient<Database>;
 
@@ -29,18 +33,24 @@ export type AssignmentScanContext = {
     location?: string;
     product_count?: number;
     facing_count?: number;
+    category_selections?: CategorySelection[];
+    categories?: string[];
+    sub_categories?: string[];
   };
   category: string;
   sub_category: string;
+  /** Every "Category · Subcategory" shelf type the manager scoped. */
+  category_selections: CategorySelection[];
   location: string;
   expected_count: number;
   /** Total expected facings across the scoped rows. */
   facing_count: number;
   status: string;
   instructions: string | null;
-  due_at: string | null;
+  due_at: string | null
   assigner_name: string;
 };
+
 
 const str = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
 
