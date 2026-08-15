@@ -171,69 +171,52 @@ function ScanPage() {
     void startAssignment(assignment.assignment_id).catch(() => undefined);
   }, [assignment]);
 
-  const selectedCategory = categories.find((item) => item.name === category);
-  const subcategories = selectedCategory?.subcategories ?? [];
-  const isOtherCategory = category === "Others";
-  const showSubcategory =
-    !lockedByAssignment && Boolean(category) && !isOtherCategory && subcategories.length > 0;
-  const selectedSub = subcategories.find((item) => item.id === subCategory);
-  const needsCustom = isOtherCategory || subCategory === "others";
+  /* -------- shelf types (multi category · subcategory) -------- */
+  const primary = selections[0] ?? null;
+  const category = primary?.category_name ?? "";
+  const subCategory = primary?.sub_category_id ?? "";
+  const subCategoryCustom = primary?.sub_category_custom ?? "";
+  const selectedSub = primary
+    ? { label: primary.sub_category_custom || primary.sub_category_label }
+    : undefined;
 
-  /* -------- planogram → scan category sync -------- */
-  const planogramTarget = useMemo(() => {
-    if (!planogramRows.length) return null;
-    const pair = dominantPlanogramPair(planogramRows);
-    return pair ? resolveScanCategory(categories, pair.category, pair.sub_category) : null;
-  }, [planogramRows, categories]);
+  /* -------- planogram → shelf types merge -------- */
+  const planogramSelections = useMemo(
+    () => (planogramRows.length ? selectionsFromPlanogramRows(categories, planogramRows) : []),
+    [planogramRows, categories],
+  );
 
-  const applyPlanogramCategory = useCallback(() => {
-    if (!planogramTarget) return;
-    setCategory(planogramTarget.categoryName);
-    setSubCategory(planogramTarget.subCategoryId);
-    setSubCategoryCustom("");
-    setUserEditedCategory(false);
-    setMismatchAcknowledged(false);
+  const missingPlanogramSelections = useMemo(() => {
+    if (lockedByAssignment) return [];
+    const known = new Set(selections.map(selectionKey));
+    return planogramSelections.filter((item) => !known.has(selectionKey(item)));
+  }, [planogramSelections, selections, lockedByAssignment]);
+
+  const mergePlanogramSelections = useCallback(() => {
+    if (!missingPlanogramSelections.length) return;
+    const added = missingPlanogramSelections;
+    setSelections((current) => dedupeSelections([...current, ...added]));
     setCategorySyncNotice(
-      `Scan category updated to match your planogram: ${formatScanCategory(planogramTarget)}`,
+      `Added shelf types from your planogram: ${formatCategorySelections(added, 3)}`,
     );
-  }, [planogramTarget]);
+  }, [missingPlanogramSelections]);
 
-  // Auto-sync unless the user deliberately changed the dropdowns afterwards.
+  // Auto-add planogram shelf types the user has not listed yet.
   useEffect(() => {
-    if (lockedByAssignment || !planogramTarget || userEditedCategory) return;
-    const matches =
-      category === planogramTarget.categoryName &&
-      (!planogramTarget.subCategoryId || subCategory === planogramTarget.subCategoryId);
-    if (matches) return;
-    setCategory(planogramTarget.categoryName);
-    setSubCategory(planogramTarget.subCategoryId);
-    setSubCategoryCustom("");
-    setMismatchAcknowledged(false);
+    if (lockedByAssignment || !missingPlanogramSelections.length) return;
+    const added = missingPlanogramSelections;
+    setSelections((current) => dedupeSelections([...current, ...added]));
     setCategorySyncNotice(
-      `Scan category updated to match your planogram: ${formatScanCategory(planogramTarget)}`,
+      `Added shelf types from your planogram: ${formatCategorySelections(added, 3)}`,
     );
-  }, [planogramTarget, userEditedCategory, lockedByAssignment, category, subCategory]);
+  }, [missingPlanogramSelections, lockedByAssignment]);
 
-  // Clearing the planogram re-enables auto-sync for the next upload.
+  // Clearing the planogram clears the sync notice.
   useEffect(() => {
     if (planogramRows.length) return;
-    setUserEditedCategory(false);
     setCategorySyncNotice(null);
-    setMismatchAcknowledged(false);
   }, [planogramRows.length]);
 
-  const categoryMismatch = Boolean(
-    !lockedByAssignment &&
-      planogramTarget &&
-      (category !== planogramTarget.categoryName ||
-        (planogramTarget.subCategoryId && subCategory !== planogramTarget.subCategoryId)),
-  );
-  const mismatchBlocking = categoryMismatch && !mismatchAcknowledged;
-
-  const markCategoryEdited = useCallback(() => {
-    setUserEditedCategory(true);
-    setCategorySyncNotice(null);
-  }, []);
 
   /** Most frequent non-empty location across planogram rows. */
   const dominantRowLocation = useMemo(() => {
