@@ -128,15 +128,18 @@ function AssignScanPage() {
     [categories, category],
   );
 
-  // Arriving from the Planogram page: pre-fill and lock store + scope.
-  const fromPlanogram = Boolean(storeFromSearch);
+  const planogramMode = scopeType === "planogram";
+
+  // Arriving from the Planogram page with a filter scope: pre-fill and lock it.
+  const fromPlanogram = Boolean(storeFromSearch) && scopeFromSearch !== "planogram";
   const snapshotQuery = useQuery({
     queryKey: ["planogram-snapshot", storeId],
     queryFn: () => fetchPlanogramSnapshot(storeId),
-    enabled: fromPlanogram && Boolean(storeId),
+    enabled: Boolean(storeFromSearch) && Boolean(storeId),
     retry: false,
   });
   const activeRows = snapshotQuery.data?.activeRows ?? [];
+  const activeVersionId = snapshotQuery.data?.active?.id ?? null;
   const planogramScope = useMemo(
     () =>
       dominantScope(
@@ -157,13 +160,77 @@ function AssignScanPage() {
     setLocation(planogramScope.location);
   }, [fromPlanogram, activeRows.length, planogramScope]);
 
+  /** Rows of a specific planogram version, used to pre-load the Planogram tab. */
+  const preloadVersionId = versionFromSearch ?? null;
+  const preloadQuery = useQuery({
+    queryKey: ["planogram-items", preloadVersionId],
+    queryFn: () => fetchPlanogramItems(preloadVersionId!),
+    enabled: scopeFromSearch === "planogram" && Boolean(preloadVersionId),
+    retry: false,
+  });
+
+  const [preloaded, setPreloaded] = useState(false);
+  useEffect(() => {
+    if (preloaded || scopeFromSearch !== "planogram") return;
+    const rows = preloadVersionId ? preloadQuery.data : activeRows;
+    if (!rows?.length) return;
+    setPlanogramRows(rows);
+    setPreloaded(true);
+  }, [preloaded, scopeFromSearch, preloadVersionId, preloadQuery.data, activeRows]);
+
+  const planogramSummary = useMemo(() => dominantScopeFromRows(planogramRows), [planogramRows]);
+  const sourceType: SourceType =
+    sources.csv && sources.manual ? "mixed" : sources.manual ? "manual" : "csv";
+
+  const loadActiveMutation = useMutation({
+    mutationFn: async () => {
+      if (!storeId) throw new Error("Select a store first.");
+      const snapshot = await fetchPlanogramSnapshot(storeId);
+      if (!snapshot.active) throw new Error("This store has no active planogram yet.");
+      return fetchPlanogramItems(snapshot.active.id);
+    },
+    onSuccess: (rows) => {
+      setPlanogramRows(rows);
+      setSources({ csv: false, manual: false });
+      setPlanogramError(null);
+      toast.success(`Loaded ${rows.length} product${rows.length === 1 ? "" : "s"}.`);
+    },
+    onError: (error) => setPlanogramError(toUserMessage(error)),
+  });
+
   const members = membersQuery.data ?? [];
 
   const assignee = members.find((member) => member.user_id === assigneeId);
 
   const assignMutation = useMutation({
-    mutationFn: () =>
-      createScanAssignment({
+    mutationFn: async () => {
+      if (planogramMode) {
+        const versionId = await createAssignmentPlanogramVersion({
+          storeId,
+          rows: planogramRows,
+          sourceType,
+          sourceFilename: csvFilename,
+        });
+        return createScanAssignment({
+          storeId,
+          scopeType: "planogram",
+          scopeValues: {
+            ...(planogramSummary.category ? { category: planogramSummary.category } : {}),
+            ...(planogramSummary.sub_category
+              ? { sub_category: planogramSummary.sub_category }
+              : {}),
+            ...(planogramSummary.location ? { location: planogramSummary.location } : {}),
+            product_count: planogramSummary.productCount,
+            facing_count: planogramSummary.facingCount,
+          },
+          planogramVersionId: versionId,
+          assigneeId,
+          assigneeName: assignee?.name ?? "team member",
+          dueAt: dueAt || null,
+          instructions,
+        });
+      }
+      return createScanAssignment({
         storeId,
         scopeType,
         scopeValues: fromPlanogram
@@ -177,12 +244,13 @@ function AssignScanPage() {
             : scopeType === "sub_category"
               ? { category, sub_category: subCategory }
               : { category },
-
+        planogramVersionId: fromPlanogram ? activeVersionId : null,
         assigneeId,
         assigneeName: assignee?.name ?? "team member",
         dueAt: dueAt || null,
         instructions,
-      }),
+      });
+    },
     onSuccess: (assignmentId) => {
       toast.success(
         `Scan assigned to ${assignee?.name ?? "team member"} — ID: ${formatAssignmentId(assignmentId)}`,
@@ -199,6 +267,15 @@ function AssignScanPage() {
     }
     if (!assigneeId) {
       toast.error("Select a team member to assign to.");
+      return;
+    }
+    if (planogramMode) {
+      if (!planogramRows.length) {
+        setPlanogramError("Add at least one expected product before assigning this scan.");
+        return;
+      }
+      setPlanogramError(null);
+      assignMutation.mutate();
       return;
     }
     if (scopeType === "location" && !location.trim()) {
