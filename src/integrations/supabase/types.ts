@@ -1074,6 +1074,94 @@ export type Database = {
           },
         ]
       }
+      scan_share_events: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          org_id: string
+          payload: Json
+          recipient_email: string | null
+          recipient_user_id: string | null
+          scan_id: string
+          share_type: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          org_id: string
+          payload?: Json
+          recipient_email?: string | null
+          recipient_user_id?: string | null
+          scan_id: string
+          share_type: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          org_id?: string
+          payload?: Json
+          recipient_email?: string | null
+          recipient_user_id?: string | null
+          scan_id?: string
+          share_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scan_share_events_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "shelf_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scan_share_links: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          org_id: string
+          revoked_at: string | null
+          scan_id: string
+          token: string
+          view_count: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          org_id: string
+          revoked_at?: string | null
+          scan_id: string
+          token?: string
+          view_count?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          org_id?: string
+          revoked_at?: string | null
+          scan_id?: string
+          token?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scan_share_links_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "shelf_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shelf_analytics: {
         Row: {
           avg_osa_percent: number | null
@@ -1507,6 +1595,7 @@ export type Database = {
         }[]
       }
       get_org_usage_summary: { Args: { p_org_id: string }; Returns: Json }
+      is_org_member: { Args: { p_org_id: string }; Returns: boolean }
       is_user_email_verified: { Args: { p_user_id?: string }; Returns: boolean }
       org_has_platform_bypass: { Args: { p_org_id: string }; Returns: boolean }
       org_has_platform_store_bypass: {
