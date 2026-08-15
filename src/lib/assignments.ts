@@ -262,7 +262,12 @@ export async function createScanAssignment(input: {
         user_id: input.assigneeId,
         type: "scan_assigned",
         title: "New Scan Assigned",
-        body: `You have a new shelf scan task: ${scopeSummary(input.scopeType, input.scopeValues)}.`,
+        body:
+          input.scopeType === "planogram"
+            ? `${[input.scopeValues.location, `${input.scopeValues.product_count ?? 0} products`]
+                .filter(Boolean)
+                .join(" · ")} · planogram audit`
+            : `You have a new shelf scan task: ${scopeSummary(input.scopeType, input.scopeValues)}.`,
         payload: { assignment_id: assignmentId, store_id: input.storeId },
       },
     });
