@@ -10,41 +10,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { ScanShareLink, SharedScanPayload } from "@/lib/scan-share";
 
-const MANAGER_ROLES = ["owner", "admin", "manager"];
-
-export type ShareTarget = {
-  user_id: string;
-  name: string;
-  email: string;
-  role: string;
-};
-
-/** Confirms the signed-in user can share this scan, returning its org. */
-async function requireScanAccess(
-  supabase: { from: (table: string) => any },
-  scanId: string,
-): Promise<{ orgId: string; status: string; assigneeId: string | null }> {
-  const { data, error } = await supabase
-    .from("shelf_scans")
-    .select("id, org_id, status, assignment_id")
-    .eq("id", scanId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("You do not have access to this scan.");
-
-  let assigneeId: string | null = null;
-  if (data.assignment_id) {
-    const { data: assignment } = await supabase
-      .from("scan_assignments")
-      .select("assignee_id")
-      .eq("id", data.assignment_id)
-      .maybeSingle();
-    assigneeId = (assignment?.assignee_id as string | null) ?? null;
-  }
-
-  return { orgId: data.org_id as string, status: String(data.status), assigneeId };
-}
-
 /* ------------------------------- copy link -------------------------------- */
 
 export const createScanShareLink = createServerFn({ method: "POST" })
@@ -56,6 +21,7 @@ export const createScanShareLink = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }): Promise<ScanShareLink> => {
     const { supabase, userId } = context;
+    const { requireScanAccess } = await import("@/lib/scan-share.server");
     const { orgId } = await requireScanAccess(supabase as never, data.scanId);
 
     const { ensureShareLink, logShareEvent } = await import("@/lib/scan-share.server");
@@ -80,6 +46,7 @@ export const listShareTargets = createServerFn({ method: "POST" })
   }))
   .handler(async ({ data, context }): Promise<{ targets: ShareTarget[]; assignee_id: string | null }> => {
     const { supabase, userId } = context;
+    const { requireScanAccess } = await import("@/lib/scan-share.server");
     const { orgId, assigneeId } = await requireScanAccess(supabase as never, data.scanId);
 
     const { data: members, error } = await supabase
@@ -150,6 +117,7 @@ export const emailScanReport = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }): Promise<{ sent: number; skipped: number }> => {
     const { supabase, userId } = context;
+    const { requireScanAccess } = await import("@/lib/scan-share.server");
     const { orgId } = await requireScanAccess(supabase as never, data.scanId);
 
     const emails = [...data.recipients];
@@ -249,6 +217,7 @@ export const shareScanWithTeam = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }): Promise<{ shared: number; emailed: number; url: string }> => {
     const { supabase, userId } = context;
+    const { requireScanAccess } = await import("@/lib/scan-share.server");
     const { orgId } = await requireScanAccess(supabase as never, data.scanId);
 
     const { data: members, error } = await supabase
@@ -351,4 +320,3 @@ export const getSharedScan = createServerFn({ method: "POST" })
     return loadSharedScan(data.token);
   });
 
-export { MANAGER_ROLES };

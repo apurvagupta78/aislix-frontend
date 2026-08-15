@@ -280,3 +280,37 @@ export async function loadSharedScan(token: string): Promise<SharedScanPayload> 
     expires_at: link.expires_at as string,
   };
 }
+
+export type ShareTarget = {
+  user_id: string;
+  name: string;
+  email: string;
+  role: string;
+};
+
+/** Confirms the signed-in user can share this scan, returning its org. */
+export async function requireScanAccess(
+  supabase: { from: (table: string) => any },
+  scanId: string,
+): Promise<{ orgId: string; status: string; assigneeId: string | null }> {
+  const { data, error } = await supabase
+    .from("shelf_scans")
+    .select("id, org_id, status, assignment_id")
+    .eq("id", scanId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error("You do not have access to this scan.");
+
+  let assigneeId: string | null = null;
+  if (data.assignment_id) {
+    const { data: assignment } = await supabase
+      .from("scan_assignments")
+      .select("assignee_id")
+      .eq("id", data.assignment_id)
+      .maybeSingle();
+    assigneeId = (assignment?.assignee_id as string | null) ?? null;
+  }
+
+  return { orgId: data.org_id as string, status: String(data.status), assigneeId };
+}
+
