@@ -503,7 +503,7 @@ function AssignScanPage() {
               )}
 
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                {!planogramMode && scopeType !== "location" && (
+                {!planogramMode && scopeType === "category" && (
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground">Category</Label>
                     <Select
@@ -526,31 +526,18 @@ function AssignScanPage() {
                     </Select>
                   </div>
                 )}
-                {scopeType === "sub_category" && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Sub-category</Label>
-                    <Select
-                      value={subCategory}
-                      onValueChange={setSubCategory}
-                      disabled={!subCategories.length}
-                    >
-                      <SelectTrigger className="rounded-xl">
-                        <SelectValue
-                          placeholder={
-                            subCategories.length ? "Select sub-category" : "Select a category first"
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {subCategories.map((sub) => (
-                          <SelectItem key={sub.id} value={sub.label}>
-                            {sub.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                {!planogramMode && scopeType === "sub_category" && (
+                  <div className="sm:col-span-2">
+                    <CategorySubcategoryPicker
+                      value={subSelections}
+                      onChange={setSubSelections}
+                      categories={categories}
+                      label="Shelf types to audit *"
+                      helper="Add every category · subcategory the assignee should audit on this rack."
+                    />
                   </div>
                 )}
+
                 {scopeType === "location" && (
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground" htmlFor="location">
