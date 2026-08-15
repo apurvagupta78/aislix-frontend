@@ -33,7 +33,7 @@ export const SignupEmail = ({
     <Preview>{`Confirm your email to activate your ${siteName} workspace`}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Text style={brand}>Aislix</Text>
+        <EmailLogo />
         <Heading style={heading}>Confirm your email</Heading>
         <Text style={text}>
           Welcome to{' '}

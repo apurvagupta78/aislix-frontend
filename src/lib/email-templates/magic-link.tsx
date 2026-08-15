@@ -26,7 +26,7 @@ export const MagicLinkEmail = ({ siteName, confirmationUrl }: MagicLinkEmailProp
     <Preview>{`Your ${siteName} login link`}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Text style={brand}>Aislix</Text>
+        <EmailLogo />
         <Heading style={heading}>Your login link</Heading>
         <Text style={text}>
           Use the button below to sign in to {siteName}. This link expires shortly and can only be

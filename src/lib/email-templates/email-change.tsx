@@ -34,7 +34,7 @@ export const EmailChangeEmail = ({
     <Preview>{`Confirm your new ${siteName} email address`}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Text style={brand}>Aislix</Text>
+        <EmailLogo />
         <Heading style={heading}>Confirm your new email</Heading>
         <Text style={text}>
           You asked to change the email on your {siteName} account from{' '}

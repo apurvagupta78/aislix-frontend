@@ -60,7 +60,7 @@ const Email = ({
     <Preview>{`Shelf audit report${storeName ? ` — ${storeName}` : ''} shared with you`}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Text style={brand}>Aislix</Text>
+        <EmailLogo />
         <Heading style={heading}>Shelf audit report</Heading>
         <Text style={text}>
           <strong>{sharerName}</strong> shared an AI shelf audit with you

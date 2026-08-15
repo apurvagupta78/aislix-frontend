@@ -34,7 +34,7 @@ const Email = ({
     <Preview>{`You're invited to join ${orgName} on Aislix`}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Text style={brand}>Aislix</Text>
+        <EmailLogo />
         <Heading style={heading}>{`Join ${orgName} on Aislix`}</Heading>
         <Text style={text}>
           {inviterName ? `${inviterName} has invited you` : 'You have been invited'} to

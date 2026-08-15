@@ -27,7 +27,7 @@ export const InviteEmail = ({ siteName, siteUrl, confirmationUrl }: InviteEmailP
     <Preview>{`You've been invited to ${siteName}`}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Text style={brand}>Aislix</Text>
+        <EmailLogo />
         <Heading style={heading}>You've been invited</Heading>
         <Text style={text}>
           You have been invited to join{' '}

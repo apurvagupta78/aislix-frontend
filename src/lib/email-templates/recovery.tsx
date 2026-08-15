@@ -26,7 +26,7 @@ export const RecoveryEmail = ({ siteName, confirmationUrl }: RecoveryEmailProps)
     <Preview>{`Reset your ${siteName} password`}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Text style={brand}>Aislix</Text>
+        <EmailLogo />
         <Heading style={heading}>Reset your password</Heading>
         <Text style={text}>
           We received a request to reset the password for your {siteName} account. Choose a new
