@@ -188,7 +188,12 @@ export type ScanResult = {
 };
 
 import { supabase } from "@/integrations/supabase/client";
+import {
+  formatCategorySelections,
+  parseCategorySelections,
+} from "@/lib/category-selections";
 import { dbError, notFound, requireOrgId } from "@/lib/db/context";
+
 
 function severityFromAlert(value: unknown): Severity {
   if (value === "high" || value === "medium" || value === "low") return value;
@@ -349,7 +354,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   const { data: scan, error: scanError } = await supabase
     .from("shelf_scans")
     .select(
-      "id, org_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, created_at, processing_started_at, processing_completed_at, shelf_health_score, osa_percent, planogram_compliance_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count, store_id, assignment_id, adhoc_planogram, stores(name)",
+      "id, org_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, category_selections, created_at, processing_started_at, processing_completed_at, shelf_health_score, osa_percent, planogram_compliance_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count, store_id, assignment_id, adhoc_planogram, stores(name)",
     )
     .eq("org_id", orgId)
     .eq("id", scanId)
@@ -711,12 +716,19 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   const shelfLabel = (scan as any).shelf_label as string | null | undefined;
   const scanCategory = (scan as any).category as string | null | undefined;
   if (shelfLabel) scanResult.location = shelfLabel;
-  if (scanCategory) scanResult.scan_category = scanCategory;
+  const selections = parseCategorySelections((scan as any).category_selections);
   const subLabel =
     ((scan as any).sub_category_custom as string | null | undefined) ||
     ((scan as any).sub_category_label as string | null | undefined) ||
     ((scan as any).sub_category as string | null | undefined);
-  if (subLabel) scanResult.scan_sub_category = subLabel;
+  if (selections.length > 1) {
+    // Mixed rack: show every shelf type instead of a misleading single pair.
+    scanResult.scan_category = formatCategorySelections(selections, 3);
+  } else {
+    if (scanCategory) scanResult.scan_category = scanCategory;
+    if (subLabel) scanResult.scan_sub_category = subLabel;
+  }
+
   if (annotatedImageSrc) scanResult.annotated_image_url = annotatedImageSrc;
   if (originalImageSrc) scanResult.original_image_url = originalImageSrc;
   if (result?.executive_summary) scanResult.executive_summary = result.executive_summary;

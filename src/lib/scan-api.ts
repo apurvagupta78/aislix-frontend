@@ -60,7 +60,9 @@ export function formatBytes(bytes: number): string {
 
 import type { Json } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
+import type { CategorySelection } from "@/lib/category-selections";
 import { dbError, notFound, requireOrgId, requireUserId } from "@/lib/db/context";
+
 
 function readImageDimensions(file: File): Promise<{ width?: number; height?: number }> {
   return new Promise((resolve) => {
@@ -102,7 +104,9 @@ export async function submitScanImages(
     subCategoryLabel?: string;
     /** Free text shelf description when the user picks "Others". */
     subCategoryCustom?: string;
-    /** Optional free-text note for a scan without a planogram. */
+    /** Every "Category · Subcategory" shelf type visible on this rack. */
+    categorySelections?: CategorySelection[];
+
     notes?: string;
     /** Set when the scan was launched from an assigned task (/my-scans). */
     assignmentId?: string;
@@ -154,6 +158,8 @@ export async function submitScanImages(
       sub_category: options.subCategory ?? null,
       sub_category_label: options.subCategoryLabel ?? null,
       sub_category_custom: options.subCategoryCustom?.trim() || null,
+      category_selections: (options.categorySelections ?? []) as unknown as Json,
+
       notes:
         options.notes?.trim() ||
         options.subCategoryCustom?.trim() ||

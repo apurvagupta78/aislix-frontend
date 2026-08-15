@@ -1236,6 +1236,7 @@ export type Database = {
           adhoc_planogram: Json | null
           assignment_id: string | null
           category: string | null
+          category_selections: Json
           created_at: string
           created_by: string | null
           error_message: string | null
@@ -1264,6 +1265,7 @@ export type Database = {
           adhoc_planogram?: Json | null
           assignment_id?: string | null
           category?: string | null
+          category_selections?: Json
           created_at?: string
           created_by?: string | null
           error_message?: string | null
@@ -1292,6 +1294,7 @@ export type Database = {
           adhoc_planogram?: Json | null
           assignment_id?: string | null
           category?: string | null
+          category_selections?: Json
           created_at?: string
           created_by?: string | null
           error_message?: string | null

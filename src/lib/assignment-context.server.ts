@@ -11,6 +11,10 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  parseCategorySelections,
+  type CategorySelection,
+} from "@/lib/category-selections";
 
 type DB = SupabaseClient<Database>;
 
@@ -29,18 +33,24 @@ export type AssignmentScanContext = {
     location?: string;
     product_count?: number;
     facing_count?: number;
+    category_selections?: CategorySelection[];
+    categories?: string[];
+    sub_categories?: string[];
   };
   category: string;
   sub_category: string;
+  /** Every "Category · Subcategory" shelf type the manager scoped. */
+  category_selections: CategorySelection[];
   location: string;
   expected_count: number;
   /** Total expected facings across the scoped rows. */
   facing_count: number;
   status: string;
   instructions: string | null;
-  due_at: string | null;
+  due_at: string | null
   assigner_name: string;
 };
+
 
 const str = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
 
@@ -64,17 +74,29 @@ function mode(values: string[]): string {
 function matchesScope(
   item: { category: string; sub_category: string; location: string; aisle: string },
   type: string,
-  scope: { category?: string; sub_category?: string; location?: string },
+  scope: AssignmentScanContext["scope_values"],
+  selections: CategorySelection[],
 ): boolean {
   // Planogram assignments carry their own exact product list — never filter.
   if (type === "planogram") return true;
   const eq = (a: string, b?: string) =>
     Boolean(b) && a.toLowerCase() === String(b).trim().toLowerCase();
   if (type === "location") return eq(item.location, scope.location) || eq(item.aisle, scope.location);
+  if (selections.length) {
+    return selections.some(
+      (selection) =>
+        eq(item.category, selection.category_name) &&
+        (type === "category" ||
+          !selection.sub_category_label ||
+          eq(item.sub_category, selection.sub_category_label) ||
+          eq(item.sub_category, selection.sub_category_id)),
+    );
+  }
   if (type === "sub_category")
     return eq(item.category, scope.category) && eq(item.sub_category, scope.sub_category);
   return eq(item.category, scope.category);
 }
+
 
 export async function loadAssignmentScanContext(
   userSupabase: DB,
@@ -136,7 +158,8 @@ export async function loadAssignmentScanContext(
     aisle: str(row["aisle"]),
     expected_qty: Number(row["expected_qty"]) || 0,
   }));
-  const scoped = items.filter((item) => matchesScope(item, scopeType, scope));
+  const selections = parseCategorySelections(scope.category_selections);
+  const scoped = items.filter((item) => matchesScope(item, scopeType, scope, selections));
   const effective = scoped.length ? scoped : items;
   const facings = effective.reduce((sum, item) => sum + item.expected_qty, 0);
 
@@ -148,9 +171,17 @@ export async function loadAssignmentScanContext(
     planogram_version_id: versionId,
     scope_type: scopeType,
     scope_values: scope,
-    category: str(scope.category) || mode(effective.map((item) => item.category)),
-    sub_category: str(scope.sub_category) || mode(effective.map((item) => item.sub_category)),
+    category:
+      selections[0]?.category_name ||
+      str(scope.category) ||
+      mode(effective.map((item) => item.category)),
+    sub_category:
+      selections[0]?.sub_category_label ||
+      str(scope.sub_category) ||
+      mode(effective.map((item) => item.sub_category)),
+    category_selections: selections,
     location:
+
       str(scope.location) ||
       mode(effective.map((item) => item.location)) ||
       mode(effective.map((item) => item.aisle)),

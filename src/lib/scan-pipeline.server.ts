@@ -12,6 +12,11 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import {
+  parseCategorySelections,
+  type CategorySelection,
+} from "@/lib/category-selections";
+
 
 type DB = SupabaseClient<Database>;
 
@@ -946,7 +951,10 @@ type ScanRow = {
   sub_category: string | null;
   sub_category_label: string | null;
   sub_category_custom: string | null;
+  /** Every "Category · Subcategory" shelf type on this rack. */
+  category_selections: CategorySelection[];
   notes: string | null;
+
   assignment_id: string | null;
   /** Optional expected products supplied ad hoc on the New Scan page. */
   adhoc_planogram: Record<string, unknown>[] | null;
@@ -966,7 +974,8 @@ async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
   const { data: scan, error } = await supabase
     .from("shelf_scans")
     .select(
-      "id, org_id, store_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, notes, assignment_id, adhoc_planogram",
+      "id, org_id, store_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, category_selections, notes, assignment_id, adhoc_planogram",
+
     )
     .eq("id", scanId)
     .maybeSingle();
@@ -981,7 +990,9 @@ async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
     sub_category: (scan.sub_category as string | null) ?? null,
     sub_category_label: (scan.sub_category_label as string | null) ?? null,
     sub_category_custom: (scan.sub_category_custom as string | null) ?? null,
+    category_selections: parseCategorySelections(scan.category_selections),
     notes: (scan.notes as string | null) ?? null,
+
     assignment_id: (scan.assignment_id as string | null) ?? null,
     adhoc_planogram: Array.isArray(scan.adhoc_planogram)
       ? (scan.adhoc_planogram as Record<string, unknown>[])
@@ -1138,6 +1149,10 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
     sub_category: scan.sub_category ?? "",
     sub_category_label: scan.sub_category_label ?? "",
     sub_category_custom: scan.sub_category_custom ?? "",
+    categories: scan.category_selections.map((s) => s.category_name),
+    sub_categories: scan.category_selections.map((s) => s.sub_category_id),
+    category_selections: scan.category_selections,
+
 
     notes: scan.notes,
     image_urls: signedImages.map((i) => i.url),

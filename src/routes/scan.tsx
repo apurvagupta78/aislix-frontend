@@ -46,11 +46,16 @@ import { Badge } from "@/components/ui/badge";
 import { ClipboardList } from "lucide-react";
 import { fetchActivePlanogram, fetchPlanogramItems, type DraftRow } from "@/lib/planogram";
 import { toUserMessage } from "@/lib/api/errors";
+import { CategorySubcategoryPicker } from "@/components/scan/CategorySubcategoryPicker";
 import {
-  dominantPlanogramPair,
-  formatScanCategory,
-  resolveScanCategory,
-} from "@/lib/planogram-category-sync";
+  dedupeSelections,
+  formatCategorySelections,
+  selectionKey,
+  selectionsFromLegacy,
+  selectionsFromPlanogramRows,
+  type CategorySelection,
+} from "@/lib/category-selections";
+
 
 
 export const Route = createFileRoute("/scan")({
@@ -64,13 +69,13 @@ export const Route = createFileRoute("/scan")({
       {
         name: "description",
         content:
-          "Set store, location, category and subcategory, then capture or upload shelf photos for an AI audit.",
+          "Set store, location and shelf types, then capture or upload shelf photos for an AI audit.",
       },
       { property: "og:title", content: "Scan a shelf — Aislix" },
       {
         property: "og:description",
         content:
-          "Set store, location, category and subcategory, then capture or upload shelf photos.",
+          "Set store, location and shelf types, then capture or upload shelf photos.",
       },
 
       { property: "og:type", content: "website" },
@@ -107,14 +112,11 @@ function ScanPage() {
   const [planogramLoading, setPlanogramLoading] = useState(false);
   const [planogramNotice, setPlanogramNotice] = useState<string | null>(null);
   const [shelfLocation, setShelfLocation] = useState("");
-  const [category, setCategory] = useState("");
-  const [subCategory, setSubCategory] = useState("");
-  const [subCategoryCustom, setSubCategoryCustom] = useState("");
+  const [selections, setSelections] = useState<CategorySelection[]>([]);
   const [notes, setNotes] = useState("");
   const [showSetupErrors, setShowSetupErrors] = useState(false);
-  const [userEditedCategory, setUserEditedCategory] = useState(false);
   const [categorySyncNotice, setCategorySyncNotice] = useState<string | null>(null);
-  const [mismatchAcknowledged, setMismatchAcknowledged] = useState(false);
+
 
   const withPlanogram = scanMode === "with_planogram";
 
@@ -152,9 +154,13 @@ function ScanPage() {
     if (!assignment) return;
     setStoreId(assignment.store_id);
     setShelfLocation(assignment.location);
-    setCategory(assignment.category);
-    setSubCategory(assignment.sub_category);
-  }, [assignment]);
+    setSelections(
+      assignment.category_selections?.length
+        ? assignment.category_selections
+        : selectionsFromLegacy(categories, assignment.category, assignment.sub_category),
+    );
+  }, [assignment, categories]);
+
 
   // The member has effectively started the task as soon as the form is open.
   const startedRef = useRef(false);
@@ -165,69 +171,52 @@ function ScanPage() {
     void startAssignment(assignment.assignment_id).catch(() => undefined);
   }, [assignment]);
 
-  const selectedCategory = categories.find((item) => item.name === category);
-  const subcategories = selectedCategory?.subcategories ?? [];
-  const isOtherCategory = category === "Others";
-  const showSubcategory =
-    !lockedByAssignment && Boolean(category) && !isOtherCategory && subcategories.length > 0;
-  const selectedSub = subcategories.find((item) => item.id === subCategory);
-  const needsCustom = isOtherCategory || subCategory === "others";
+  /* -------- shelf types (multi category · subcategory) -------- */
+  const primary = selections[0] ?? null;
+  const category = primary?.category_name ?? "";
+  const subCategory = primary?.sub_category_id ?? "";
+  const subCategoryCustom = primary?.sub_category_custom ?? "";
+  const selectedSub = primary
+    ? { label: primary.sub_category_custom || primary.sub_category_label }
+    : undefined;
 
-  /* -------- planogram → scan category sync -------- */
-  const planogramTarget = useMemo(() => {
-    if (!planogramRows.length) return null;
-    const pair = dominantPlanogramPair(planogramRows);
-    return pair ? resolveScanCategory(categories, pair.category, pair.sub_category) : null;
-  }, [planogramRows, categories]);
+  /* -------- planogram → shelf types merge -------- */
+  const planogramSelections = useMemo(
+    () => (planogramRows.length ? selectionsFromPlanogramRows(categories, planogramRows) : []),
+    [planogramRows, categories],
+  );
 
-  const applyPlanogramCategory = useCallback(() => {
-    if (!planogramTarget) return;
-    setCategory(planogramTarget.categoryName);
-    setSubCategory(planogramTarget.subCategoryId);
-    setSubCategoryCustom("");
-    setUserEditedCategory(false);
-    setMismatchAcknowledged(false);
+  const missingPlanogramSelections = useMemo(() => {
+    if (lockedByAssignment) return [];
+    const known = new Set(selections.map(selectionKey));
+    return planogramSelections.filter((item) => !known.has(selectionKey(item)));
+  }, [planogramSelections, selections, lockedByAssignment]);
+
+  const mergePlanogramSelections = useCallback(() => {
+    if (!missingPlanogramSelections.length) return;
+    const added = missingPlanogramSelections;
+    setSelections((current) => dedupeSelections([...current, ...added]));
     setCategorySyncNotice(
-      `Scan category updated to match your planogram: ${formatScanCategory(planogramTarget)}`,
+      `Added shelf types from your planogram: ${formatCategorySelections(added, 3)}`,
     );
-  }, [planogramTarget]);
+  }, [missingPlanogramSelections]);
 
-  // Auto-sync unless the user deliberately changed the dropdowns afterwards.
+  // Auto-add planogram shelf types the user has not listed yet.
   useEffect(() => {
-    if (lockedByAssignment || !planogramTarget || userEditedCategory) return;
-    const matches =
-      category === planogramTarget.categoryName &&
-      (!planogramTarget.subCategoryId || subCategory === planogramTarget.subCategoryId);
-    if (matches) return;
-    setCategory(planogramTarget.categoryName);
-    setSubCategory(planogramTarget.subCategoryId);
-    setSubCategoryCustom("");
-    setMismatchAcknowledged(false);
+    if (lockedByAssignment || !missingPlanogramSelections.length) return;
+    const added = missingPlanogramSelections;
+    setSelections((current) => dedupeSelections([...current, ...added]));
     setCategorySyncNotice(
-      `Scan category updated to match your planogram: ${formatScanCategory(planogramTarget)}`,
+      `Added shelf types from your planogram: ${formatCategorySelections(added, 3)}`,
     );
-  }, [planogramTarget, userEditedCategory, lockedByAssignment, category, subCategory]);
+  }, [missingPlanogramSelections, lockedByAssignment]);
 
-  // Clearing the planogram re-enables auto-sync for the next upload.
+  // Clearing the planogram clears the sync notice.
   useEffect(() => {
     if (planogramRows.length) return;
-    setUserEditedCategory(false);
     setCategorySyncNotice(null);
-    setMismatchAcknowledged(false);
   }, [planogramRows.length]);
 
-  const categoryMismatch = Boolean(
-    !lockedByAssignment &&
-      planogramTarget &&
-      (category !== planogramTarget.categoryName ||
-        (planogramTarget.subCategoryId && subCategory !== planogramTarget.subCategoryId)),
-  );
-  const mismatchBlocking = categoryMismatch && !mismatchAcknowledged;
-
-  const markCategoryEdited = useCallback(() => {
-    setUserEditedCategory(true);
-    setCategorySyncNotice(null);
-  }, []);
 
   /** Most frequent non-empty location across planogram rows. */
   const dominantRowLocation = useMemo(() => {
@@ -281,10 +270,11 @@ function ScanPage() {
     if (lockedByAssignment) return errors;
     if (!storeId) errors.store = "Select the store for this scan.";
     if (!effectiveLocation) errors.location = "Location is required.";
-    if (!category) errors.category = "Select a category.";
-    if (showSubcategory && !subCategory) errors.subcategory = "Select a subcategory.";
-    if (category && needsCustom && !subCategoryCustom.trim()) {
-      errors.custom = "Describe the shelf type.";
+    if (!selections.length) {
+      errors.selections = "Add at least one shelf type (category · subcategory).";
+    }
+    if (selections.some((item) => item.sub_category_id === "others" && !item.sub_category_custom)) {
+      errors.selections = "Describe every shelf type you marked as Others.";
     }
     if (withPlanogram && !validPlanogramRows.length) {
       errors.planogram = "Add at least one expected product.";
@@ -294,14 +284,11 @@ function ScanPage() {
     lockedByAssignment,
     storeId,
     effectiveLocation,
-    category,
-    showSubcategory,
-    subCategory,
-    needsCustom,
-    subCategoryCustom,
+    selections,
     withPlanogram,
     validPlanogramRows,
   ]);
+
   const setupComplete = Object.keys(setupErrors).length === 0;
 
   const shelfLabel = effectiveLocation;
@@ -325,8 +312,8 @@ function ScanPage() {
     setShowSetupErrors(true);
     setFileError(
       withPlanogram
-        ? "Select store, location, category, subcategory, and add at least one expected product."
-        : "Select store, location, category and subcategory to continue.",
+        ? "Select store, location, shelf types, and add at least one expected product."
+        : "Select store, location and shelf types to continue.",
     );
     return false;
   }, [setupComplete, withPlanogram]);
@@ -393,7 +380,6 @@ function ScanPage() {
   const startScan = useCallback(async () => {
     if (!items.length || phase === "uploading") return;
     if (!guardSetup()) return;
-    if (mismatchBlocking) return;
 
 
     const controller = new AbortController();
@@ -411,14 +397,13 @@ function ScanPage() {
           storeId,
           shelfLabel,
           category,
-          subCategory: isOtherCategory ? "others" : subCategory || undefined,
+          subCategory: subCategory || undefined,
           subCategoryLabel: lockedByAssignment
             ? assignmentSubLabel || undefined
-            : isOtherCategory
-              ? "Others"
-              : selectedSub?.label,
-          subCategoryCustom:
-            needsCustom && !lockedByAssignment ? subCategoryCustom.trim() : undefined,
+            : primary?.sub_category_label || undefined,
+          subCategoryCustom: primary?.sub_category_custom?.trim() || undefined,
+          categorySelections: selections,
+
           notes: !lockedByAssignment && !withPlanogram ? notes.trim() || undefined : undefined,
           ...(assignment
             ? { assignmentId: assignment.assignment_id, orgId: assignment.org_id }
@@ -463,15 +448,13 @@ function ScanPage() {
     navigate,
     phase,
     guardSetup,
-    mismatchBlocking,
     storeId,
     shelfLabel,
     category,
-    isOtherCategory,
     subCategory,
-    selectedSub,
-    needsCustom,
-    subCategoryCustom,
+    primary,
+    selections,
+
     lockedByAssignment,
     assignment,
     assignmentSubLabel,
@@ -489,7 +472,7 @@ function ScanPage() {
   return (
     <AppShell
       title="Scan"
-      description="Set store, location, category and subcategory, then capture or upload shelf photos."
+      description="Set store, location and shelf types, then capture or upload shelf photos."
       actions={
         items.length && !busy ? (
           <Button variant="subtle" size="sm" className="rounded-xl" onClick={reset}>
@@ -698,112 +681,25 @@ function ScanPage() {
                   )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="scan-category">Category *</Label>
-                  {assignment ? (
-                    <Input
-                      id="scan-category"
-                      className="rounded-xl"
-                      value={assignment.category || "—"}
-                      readOnly
-                      disabled
-                    />
-                  ) : (
-                    <Select
-                      value={category}
-                      onValueChange={(value) => {
-                        setCategory(value);
-                        setSubCategory("");
-                        setSubCategoryCustom("");
-                        markCategoryEdited();
-                      }}
-                      disabled={busy}
-                    >
-                      <SelectTrigger id="scan-category" className="rounded-xl">
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[320px]">
-                        {categories.map((item) => (
-                          <SelectItem key={item.name} value={item.name} className="py-2">
-                            <span className="flex flex-col gap-0.5">
-                              <span className="text-sm font-medium">{item.name}</span>
-                              {item.examples ? (
-                                <span className="text-xs text-muted-foreground">
-                                  {item.examples}
-                                </span>
-                              ) : null}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  {fieldError("category") && (
-                    <p className="text-xs text-destructive">{fieldError("category")}</p>
-                  )}
+                <div className="sm:col-span-2">
+                  <CategorySubcategoryPicker
+                    value={selections}
+                    onChange={setSelections}
+                    categories={categories}
+                    disabled={busy}
+                    readOnly={lockedByAssignment}
+                    {...(fieldError("selections")
+                      ? { error: fieldError("selections") as string }
+                      : {})}
+                    {...(lockedByAssignment
+                      ? {
+                          label: "Shelf types assigned",
+                          helper: "Your manager set the shelf types for this task.",
+                        }
+                      : {})}
+                  />
                 </div>
 
-                {assignment && assignment.sub_category && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="scan-subcategory-locked">Sub-category</Label>
-                    <Input
-                      id="scan-subcategory-locked"
-                      className="rounded-xl"
-                      value={assignment.sub_category}
-                      readOnly
-                      disabled
-                    />
-                  </div>
-                )}
-
-                {showSubcategory && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="scan-subcategory">Subcategory *</Label>
-                    <Select
-                      value={subCategory}
-                      onValueChange={(value) => {
-                        setSubCategory(value);
-                        if (value !== "others") setSubCategoryCustom("");
-                        markCategoryEdited();
-                      }}
-                      disabled={busy || lockedByAssignment}
-                    >
-                      <SelectTrigger id="scan-subcategory" className="rounded-xl">
-                        <SelectValue placeholder="Select a subcategory" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[320px]">
-                        {subcategories.map((item) => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Narrows detection to this shelf type (e.g. hides shampoo on a soap shelf).
-                    </p>
-                    {fieldError("subcategory") && (
-                      <p className="text-xs text-destructive">{fieldError("subcategory")}</p>
-                    )}
-                  </div>
-                )}
-
-                {category && needsCustom && (
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label htmlFor="scan-subcategory-custom">Describe shelf type *</Label>
-                    <Input
-                      id="scan-subcategory-custom"
-                      className="rounded-xl"
-                      placeholder="e.g. Imported chocolates end-cap"
-                      value={subCategoryCustom}
-                      disabled={busy || lockedByAssignment}
-                      onChange={(e) => setSubCategoryCustom(e.target.value)}
-                    />
-                    {fieldError("custom") && (
-                      <p className="text-xs text-destructive">{fieldError("custom")}</p>
-                    )}
-                  </div>
-                )}
 
                 {!withPlanogram && !lockedByAssignment && (
                   <div className="space-y-1.5 sm:col-span-2">
@@ -821,7 +717,7 @@ function ScanPage() {
               </div>
             </section>
 
-            {categorySyncNotice && !categoryMismatch && (
+            {categorySyncNotice && (
               <div
                 role="status"
                 className="flex flex-wrap items-start gap-2.5 rounded-2xl border border-brand/25 bg-brand-soft/60 px-4 py-3"
@@ -831,14 +727,14 @@ function ScanPage() {
                 <button
                   type="button"
                   className="text-sm font-medium text-brand underline-offset-2 hover:underline"
-                  onClick={markCategoryEdited}
+                  onClick={() => setCategorySyncNotice(null)}
                 >
-                  Change manually
+                  Dismiss
                 </button>
               </div>
             )}
 
-            {categoryMismatch && planogramTarget && (
+            {!lockedByAssignment && missingPlanogramSelections.length > 0 && (
               <div
                 role="alert"
                 className="rounded-2xl border border-warning/40 bg-warning/10 px-4 py-4"
@@ -847,13 +743,12 @@ function ScanPage() {
                   <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-foreground">
-                      Planogram category mismatch
+                      Planogram rows outside your shelf types
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Your planogram rows are mostly [{formatScanCategory(planogramTarget)}] but
-                      this scan is set to [
-                      {[category || "—", selectedSub?.label].filter(Boolean).join(" · ")}].
-                      Compliance and audit alerts use the scan category.
+                      Your planogram includes{" "}
+                      {formatCategorySelections(missingPlanogramSelections, 3)}. Add them so the AI
+                      audits those products too.
                     </p>
                   </div>
                 </div>
@@ -862,9 +757,9 @@ function ScanPage() {
                     variant="brand"
                     size="sm"
                     className="rounded-xl"
-                    onClick={applyPlanogramCategory}
+                    onClick={mergePlanogramSelections}
                   >
-                    Use planogram category
+                    Add to shelf types
                   </Button>
                   <Button
                     variant="subtle"
@@ -877,17 +772,10 @@ function ScanPage() {
                   >
                     Clear planogram
                   </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-xl"
-                    onClick={() => setMismatchAcknowledged(true)}
-                  >
-                    Continue anyway
-                  </Button>
                 </div>
               </div>
             )}
+
 
             {/* OPTION 2 — expected shelf planogram */}
             {withPlanogram && !lockedByAssignment && (
@@ -907,8 +795,8 @@ function ScanPage() {
                       )}
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Upload a CSV or add products — location, category and subcategory come from
-                      the shelf context above.
+                      Upload a CSV or add products — location and shelf type come from the shelf
+                      context above.
                     </p>
                   </div>
                 </div>
@@ -943,8 +831,8 @@ function ScanPage() {
                                     )
                                   : all)
                               : all;
-                            setUserEditedCategory(false);
-                            setMismatchAcknowledged(false);
+                            setCategorySyncNotice(null);
+
                             setPlanogramRows(rows);
                             setPlanogramNotice(
                               `Loaded ${rows.length} product${rows.length === 1 ? "" : "s"} from the active store planogram.`,
@@ -997,8 +885,8 @@ function ScanPage() {
               {!setupComplete && (
                 <p className="mt-4 rounded-xl border border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
                   {withPlanogram
-                    ? "Select store, location, category, subcategory, and add at least one expected product."
-                    : "Select store, location, category and subcategory to continue."}
+                    ? "Select store, location, shelf types, and add at least one expected product."
+                    : "Select store, location and shelf types to continue."}
                 </p>
               )}
 
@@ -1146,7 +1034,7 @@ function ScanPage() {
                       size="sm"
                       className="rounded-xl"
                       onClick={startScan}
-                      disabled={busy || mismatchBlocking || !setupComplete}
+                      disabled={busy || !setupComplete}
                     >
                       {busy ? (
                         <Loader2 className="size-4 animate-spin" />
@@ -1196,7 +1084,7 @@ function ScanPage() {
             <div className="card-surface p-5 sm:p-6">
               <h2 className="text-sm font-semibold tracking-tight">How it works</h2>
               <ol className="mt-4 space-y-3 text-sm text-muted-foreground">
-                <li>1. Set store, location, category and subcategory.</li>
+                <li>1. Set store, location and shelf types.</li>
                 <li>2. Capture or upload your shelf photos.</li>
                 <li>3. AI detects products, brands and stock gaps.</li>
                 <li>4. View results, CSV, and PDF report.</li>

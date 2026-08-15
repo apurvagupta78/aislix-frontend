@@ -34,6 +34,12 @@ import {
 import { markPlanogramAssigned, updateStorePlanogram } from "@/lib/planogram-library";
 import { PlanogramBuilder, StickyError } from "@/components/planogram/PlanogramBuilder";
 import { dominantScope } from "@/components/planogram/AssignScanDialog";
+import { CategorySubcategoryPicker } from "@/components/scan/CategorySubcategoryPicker";
+import {
+  selectionsFromLegacy,
+  type CategorySelection,
+} from "@/lib/category-selections";
+
 import {
   createScanAssignment,
   fetchAssignableMembers,
@@ -86,7 +92,9 @@ function AssignScanPage() {
   );
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
+  const [subSelections, setSubSelections] = useState<CategorySelection[]>([]);
   const [location, setLocation] = useState("");
+
   const [assigneeId, setAssigneeId] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [instructions, setInstructions] = useState("");
@@ -158,8 +166,12 @@ function AssignScanPage() {
     setScopeType(planogramScope.location ? "location" : planogramScope.subCategory ? "sub_category" : "category");
     setCategory(planogramScope.category);
     setSubCategory(planogramScope.subCategory);
+    setSubSelections(
+      selectionsFromLegacy(categories, planogramScope.category, planogramScope.subCategory),
+    );
     setLocation(planogramScope.location);
-  }, [fromPlanogram, activeRows.length, planogramScope]);
+  }, [fromPlanogram, activeRows.length, planogramScope, categories]);
+
 
   /** Rows of a specific planogram version, used to pre-load the Planogram tab. */
   const preloadVersionId = versionFromSearch ?? null;
@@ -257,8 +269,18 @@ function AssignScanPage() {
           : scopeType === "location"
             ? { location: location.trim() }
             : scopeType === "sub_category"
-              ? { category, sub_category: subCategory }
+              ? {
+                  category: subSelections[0]?.category_name ?? category,
+                  sub_category:
+                    subSelections[0]?.sub_category_label ??
+                    subSelections[0]?.sub_category_id ??
+                    subCategory,
+                  category_selections: subSelections,
+                  categories: subSelections.map((s) => s.category_name),
+                  sub_categories: subSelections.map((s) => s.sub_category_id),
+                }
               : { category },
+
         planogramVersionId: fromPlanogram ? activeVersionId : null,
         assigneeId,
         assigneeName: assignee?.name ?? "team member",
@@ -297,16 +319,17 @@ function AssignScanPage() {
       toast.error("Enter the location or shelf label.");
       return;
     }
-    if (scopeType !== "location" && !category) {
-      toast.error("Select a category.");
+    if (scopeType === "sub_category" && !subSelections.length) {
+      toast.error("Add at least one shelf type (category · subcategory).");
       return;
     }
-    if (scopeType === "sub_category" && !subCategory) {
-      toast.error("Select a sub-category.");
+    if (scopeType === "category" && !category) {
+      toast.error("Select a category.");
       return;
     }
     assignMutation.mutate();
   }
+
 
   if (accessQuery.data === false) {
     return (
@@ -484,7 +507,7 @@ function AssignScanPage() {
               )}
 
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                {!planogramMode && scopeType !== "location" && (
+                {!planogramMode && scopeType === "category" && (
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground">Category</Label>
                     <Select
@@ -507,31 +530,18 @@ function AssignScanPage() {
                     </Select>
                   </div>
                 )}
-                {scopeType === "sub_category" && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Sub-category</Label>
-                    <Select
-                      value={subCategory}
-                      onValueChange={setSubCategory}
-                      disabled={!subCategories.length}
-                    >
-                      <SelectTrigger className="rounded-xl">
-                        <SelectValue
-                          placeholder={
-                            subCategories.length ? "Select sub-category" : "Select a category first"
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {subCategories.map((sub) => (
-                          <SelectItem key={sub.id} value={sub.label}>
-                            {sub.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                {!planogramMode && scopeType === "sub_category" && (
+                  <div className="sm:col-span-2">
+                    <CategorySubcategoryPicker
+                      value={subSelections}
+                      onChange={setSubSelections}
+                      categories={categories}
+                      label="Shelf types to audit *"
+                      helper="Add every category · subcategory the assignee should audit on this rack."
+                    />
                   </div>
                 )}
+
                 {scopeType === "location" && (
                   <div className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground" htmlFor="location">
