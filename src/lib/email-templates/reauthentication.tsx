@@ -1,7 +1,9 @@
 import * as React from 'react'
 
+import { EmailLogo } from './brand-header'
+
 import { Body, Container, Head, Heading, Hr, Html, Preview, Text } from '@react-email/components'
-import { brand, code, container, heading, hr, main, muted, text } from './auth-styles'
+import { code, container, heading, hr, main, muted, text } from './auth-styles'
 
 interface ReauthenticationEmailProps {
   token: string
@@ -13,7 +15,7 @@ export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => 
     <Preview>Your Aislix verification code</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Text style={brand}>Aislix</Text>
+        <EmailLogo />
         <Heading style={heading}>Your verification code</Heading>
         <Text style={text}>Enter this code in Aislix to confirm this action.</Text>
         <Text style={code}>{token}</Text>

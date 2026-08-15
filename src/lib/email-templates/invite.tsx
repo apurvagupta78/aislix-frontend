@@ -1,5 +1,7 @@
 import * as React from 'react'
 
+import { EmailLogo } from './brand-header'
+
 import {
   Body,
   Button,
@@ -13,7 +15,7 @@ import {
   Section,
   Text,
 } from '@react-email/components'
-import { brand, button, container, heading, hr, link, main, muted, text } from './auth-styles'
+import { button, container, heading, hr, link, main, muted, text } from './auth-styles'
 
 interface InviteEmailProps {
   siteName: string
@@ -27,7 +29,7 @@ export const InviteEmail = ({ siteName, siteUrl, confirmationUrl }: InviteEmailP
     <Preview>{`You've been invited to ${siteName}`}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Text style={brand}>Aislix</Text>
+        <EmailLogo />
         <Heading style={heading}>You've been invited</Heading>
         <Text style={text}>
           You have been invited to join{' '}

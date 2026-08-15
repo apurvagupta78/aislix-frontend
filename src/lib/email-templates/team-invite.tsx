@@ -1,4 +1,6 @@
 import React from 'react'
+
+import { EmailLogo } from './brand-header'
 import {
   Body,
   Button,
@@ -34,7 +36,7 @@ const Email = ({
     <Preview>{`You're invited to join ${orgName} on Aislix`}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Text style={brand}>Aislix</Text>
+        <EmailLogo />
         <Heading style={heading}>{`Join ${orgName} on Aislix`}</Heading>
         <Text style={text}>
           {inviterName ? `${inviterName} has invited you` : 'You have been invited'} to
@@ -84,14 +86,6 @@ export const template = {
 
 const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif' }
 const container = { padding: '32px 28px', maxWidth: '560px' }
-const brand = {
-  fontSize: '14px',
-  fontWeight: 700,
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase' as const,
-  color: '#09283e',
-  margin: '0 0 24px',
-}
 const heading = { fontSize: '24px', lineHeight: '32px', color: '#09283e', margin: '0 0 16px' }
 const text = { fontSize: '15px', lineHeight: '24px', color: '#1f2937', margin: '0 0 8px' }
 const button = {

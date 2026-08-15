@@ -1,4 +1,6 @@
 import React from 'react'
+
+import { EmailLogo } from './brand-header'
 import {
   Body,
   Button,
@@ -60,7 +62,7 @@ const Email = ({
     <Preview>{`Shelf audit report${storeName ? ` — ${storeName}` : ''} shared with you`}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Text style={brand}>Aislix</Text>
+        <EmailLogo />
         <Heading style={heading}>Shelf audit report</Heading>
         <Text style={text}>
           <strong>{sharerName}</strong> shared an AI shelf audit with you
@@ -173,14 +175,6 @@ export const template = {
 
 const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif' }
 const container = { padding: '32px 28px', maxWidth: '600px' }
-const brand = {
-  fontSize: '14px',
-  fontWeight: 700,
-  letterSpacing: '0.08em',
-  textTransform: 'uppercase' as const,
-  color: '#09283e',
-  margin: '0 0 24px',
-}
 const heading = { fontSize: '24px', lineHeight: '32px', color: '#09283e', margin: '0 0 16px' }
 const text = { fontSize: '15px', lineHeight: '24px', color: '#1f2937', margin: '0 0 8px' }
 const quote = {
