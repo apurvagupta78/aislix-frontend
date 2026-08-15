@@ -453,12 +453,36 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     rawComplianceByKey.get(product.toLowerCase()) ??
     (sku ? rawComplianceByKey.get(String(sku).toLowerCase()) : undefined);
 
+  // Human corrections override the AI labels in the displayed inventory.
+  const { data: correctionRows } = await supabase
+    .from("scan_corrections")
+    .select(
+      "predicted_brand, predicted_product, corrected_brand, corrected_product, corrected_variant, created_at",
+    )
+    .eq("scan_id", scan.id as string)
+    .order("created_at", { ascending: true });
+  const correctionByLabel = new Map<
+    string,
+    { brand?: string | null; product?: string | null; variant?: string | null }
+  >();
+  for (const row of (correctionRows ?? []) as any[]) {
+    const key = `${row.predicted_brand ?? ""}::${row.predicted_product ?? ""}`.toLowerCase();
+    correctionByLabel.set(key, {
+      brand: row.corrected_brand,
+      product: row.corrected_product,
+      variant: row.corrected_variant,
+    });
+  }
+
   const inventory: InventoryItem[] = [];
   const grouped = new Map<string, InventoryItem>();
   for (const p of products ?? []) {
-    const brand = (p.brand as string | null) ?? "Unknown";
-    const product = (p.name as string | null) ?? "Unknown product";
-    const variant = (p as { variant?: string | null }).variant ?? "";
+    const rawBrand = (p.brand as string | null) ?? "Unknown";
+    const rawProduct = (p.name as string | null) ?? "Unknown product";
+    const fix = correctionByLabel.get(`${rawBrand}::${rawProduct}`.toLowerCase());
+    const brand = fix?.brand || rawBrand;
+    const product = fix?.product || rawProduct;
+    const variant = fix?.variant || (p as { variant?: string | null }).variant || "";
     const key = `${brand}::${product}::${variant}`;
     const qty = Number(p.facings) || 1;
     const confidence = Number(p.confidence) || 0;
