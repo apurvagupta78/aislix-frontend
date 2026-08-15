@@ -1,5 +1,12 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { NeedsReviewBadge, reviewCount } from "@/components/scan-results/NeedsReview";
+import {
+  EmailShareDialog,
+  TeamShareDialog,
+} from "@/components/scan-results/ShareDialogs";
+import { createScanShareLink } from "@/lib/scan-share.functions";
 import { Link } from "@tanstack/react-router";
 import {
   BadgeCheck,
@@ -271,22 +278,33 @@ export function SharePanel({
   loading?: boolean | undefined;
 }) {
   const [copied, setCopied] = useState(false);
-  const publicUrl = data?.share?.public_url ?? null;
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [teamOpen, setTeamOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState<string | null>(null);
+  const scanId = data?.scan_id;
+  const createLink = useServerFn(createScanShareLink);
 
-  const copyLink = async () => {
-    if (!publicUrl) return;
-    try {
-      await navigator.clipboard.writeText(publicUrl);
-      setCopied(true);
-      toast.success("Share link copied");
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast.error("Could not copy the link");
-    }
-  };
+  const linkMutation = useMutation({
+    mutationFn: async () => {
+      if (!scanId) throw new Error("Scan is still loading.");
+      if (linkUrl) return { url: linkUrl };
+      return createLink({ data: { scanId } });
+    },
+    onSuccess: async (result) => {
+      setLinkUrl(result.url);
+      try {
+        await navigator.clipboard.writeText(result.url);
+        setCopied(true);
+        toast.success("Share link copied — valid for 7 days");
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        toast.info(result.url, { description: "Copy this link manually" });
+      }
+    },
+    onError: (error: Error) => toast.error(error.message || "Could not create a share link."),
+  });
 
-  const soon = (feature: string) =>
-    toast.info(`${feature} unlocks once the Aislix reporting service is connected.`);
+  const ready = Boolean(scanId) && !loading;
 
   return (
     <ResultSection
@@ -305,16 +323,22 @@ export function SharePanel({
             variant="subtle"
             size="lg"
             className="w-full rounded-xl"
-            onClick={publicUrl ? copyLink : () => soon("Share links")}
+            disabled={!ready || linkMutation.isPending}
+            onClick={() => linkMutation.mutate()}
           >
-            <Copy className="size-4" /> {copied ? "Copied" : "Copy share link"}
+            {linkMutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Copy className="size-4" />
+            )}
+            {copied ? "Copied" : "Copy share link"}
           </Button>
           <Button
             variant="subtle"
             size="lg"
             className="w-full rounded-xl"
-            onClick={() => soon("Emailing reports")}
-            disabled={!data?.share?.email_enabled && !!data}
+            disabled={!ready}
+            onClick={() => setEmailOpen(true)}
           >
             <Mail className="size-4" /> Email report
           </Button>
@@ -322,16 +346,25 @@ export function SharePanel({
             variant="subtle"
             size="lg"
             className="w-full rounded-xl"
-            onClick={() => soon("Team sharing")}
-            disabled={!data?.share?.team_sharing_enabled && !!data}
+            disabled={!ready}
+            onClick={() => setTeamOpen(true)}
           >
             <Users className="size-4" /> Share with team
           </Button>
         </div>
       )}
       <p className="mt-3 text-xs text-muted-foreground">
-        Sharing options activate when the backend returns signed share links for this scan.
+        {linkUrl
+          ? `Anyone with this link can view the report until it expires: ${linkUrl}`
+          : "Share links are read-only, expire after 7 days and include the PDF and annotated shelf image."}
       </p>
+
+      {scanId ? (
+        <>
+          <EmailShareDialog scanId={scanId} open={emailOpen} onOpenChange={setEmailOpen} />
+          <TeamShareDialog scanId={scanId} open={teamOpen} onOpenChange={setTeamOpen} />
+        </>
+      ) : null}
     </ResultSection>
   );
 }

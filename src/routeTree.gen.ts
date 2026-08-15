@@ -55,6 +55,7 @@ import { Route as UsersRouteImport } from './routes/users'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as ShareTokenRouteImport } from './routes/share.$token'
 import { Route as StoresIndexRouteImport } from './routes/stores.index'
 import { Route as StoresStoreIdRouteImport } from './routes/stores.$storeId'
 import { Route as ApiPlanogramCsvTemplateRouteImport } from './routes/api/planogram.csv-template'
@@ -294,6 +295,11 @@ const AuthCallbackRoute = AuthCallbackRouteImport.update({
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ShareTokenRoute = ShareTokenRouteImport.update({
+  id: '/share/$token',
+  path: '/share/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StoresIndexRoute = StoresIndexRouteImport.update({
   id: '/stores/',
   path: '/stores/',
@@ -384,6 +390,7 @@ export interface FileRoutesByFullPath {
   '/verify-email': typeof VerifyEmailRoute
   '/api/scan': typeof ApiScanRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/share/$token': typeof ShareTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
   '/api/planogram/csv-template': typeof ApiPlanogramCsvTemplateRoute
@@ -440,6 +447,7 @@ export interface FileRoutesByTo {
   '/verify-email': typeof VerifyEmailRoute
   '/api/scan': typeof ApiScanRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/share/$token': typeof ShareTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores': typeof StoresIndexRoute
   '/api/planogram/csv-template': typeof ApiPlanogramCsvTemplateRoute
@@ -497,6 +505,7 @@ export interface FileRoutesById {
   '/verify-email': typeof VerifyEmailRoute
   '/api/scan': typeof ApiScanRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/share/$token': typeof ShareTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
   '/api/planogram/csv-template': typeof ApiPlanogramCsvTemplateRoute
@@ -555,6 +564,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/api/scan'
     | '/auth/callback'
+    | '/share/$token'
     | '/stores/$storeId'
     | '/stores/'
     | '/api/planogram/csv-template'
@@ -611,6 +621,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/api/scan'
     | '/auth/callback'
+    | '/share/$token'
     | '/stores/$storeId'
     | '/stores'
     | '/api/planogram/csv-template'
@@ -667,6 +678,7 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/api/scan'
     | '/auth/callback'
+    | '/share/$token'
     | '/stores/$storeId'
     | '/stores/'
     | '/api/planogram/csv-template'
@@ -724,6 +736,7 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   ApiScanRoute: typeof ApiScanRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
+  ShareTokenRoute: typeof ShareTokenRoute
   StoresStoreIdRoute: typeof StoresStoreIdRoute
   StoresIndexRoute: typeof StoresIndexRoute
   ApiPlanogramCsvTemplateRoute: typeof ApiPlanogramCsvTemplateRoute
@@ -1058,6 +1071,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/share/$token': {
+      id: '/share/$token'
+      path: '/share/$token'
+      fullPath: '/share/$token'
+      preLoaderRoute: typeof ShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stores/': {
       id: '/stores/'
       path: '/stores'
@@ -1164,6 +1184,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyEmailRoute: VerifyEmailRoute,
   ApiScanRoute: ApiScanRoute,
   AuthCallbackRoute: AuthCallbackRoute,
+  ShareTokenRoute: ShareTokenRoute,
   StoresStoreIdRoute: StoresStoreIdRoute,
   StoresIndexRoute: StoresIndexRoute,
   ApiPlanogramCsvTemplateRoute: ApiPlanogramCsvTemplateRoute,
