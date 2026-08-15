@@ -188,7 +188,12 @@ export type ScanResult = {
 };
 
 import { supabase } from "@/integrations/supabase/client";
+import {
+  formatCategorySelections,
+  parseCategorySelections,
+} from "@/lib/category-selections";
 import { dbError, notFound, requireOrgId } from "@/lib/db/context";
+
 
 function severityFromAlert(value: unknown): Severity {
   if (value === "high" || value === "medium" || value === "low") return value;
