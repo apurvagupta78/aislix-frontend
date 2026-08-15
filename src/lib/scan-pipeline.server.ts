@@ -1254,8 +1254,17 @@ async function persistPlanogramCompliance(
   /** null for ad-hoc "with planogram" scans started from the New Scan page. */
   const assignmentId = scan.assignment_id ?? null;
   const summary = (source.summary ?? {}) as Record<string, unknown>;
+  // Headline is SKU presence from metrics; the source percent is a qty-weighted
+  // fallback that can read 0% even when every expected SKU was found.
+  const metricsAny = (payload?.metrics ?? {}) as any;
   const compliance =
-    pct(source.compliance_percent ?? source.compliance ?? summary["compliance_percent"]) ?? null;
+    pct(
+      metricsAny?.planogram_compliance_percent ??
+        metricsAny?.planogram_sku_match_percent ??
+        source.compliance_percent ??
+        source.compliance ??
+        summary["compliance_percent"],
+    ) ?? null;
 
 
   const { data: comparison, error: comparisonError } = await supabase
