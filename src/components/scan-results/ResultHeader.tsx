@@ -1,5 +1,12 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { NeedsReviewBadge, reviewCount } from "@/components/scan-results/NeedsReview";
+import {
+  EmailShareDialog,
+  TeamShareDialog,
+} from "@/components/scan-results/ShareDialogs";
+import { createScanShareLink } from "@/lib/scan-share.functions";
 import { Link } from "@tanstack/react-router";
 import {
   BadgeCheck,
