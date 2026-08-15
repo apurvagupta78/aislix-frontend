@@ -894,6 +894,77 @@ export type Database = {
           },
         ]
       }
+      scan_corrections: {
+        Row: {
+          category: string | null
+          corrected_brand: string | null
+          corrected_ocr_label: string | null
+          corrected_product: string | null
+          corrected_variant: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          org_id: string
+          pack_text: string | null
+          predicted_brand: string | null
+          predicted_product: string | null
+          scan_id: string
+          sub_category: string | null
+          x1: number | null
+          x2: number | null
+          y1: number | null
+          y2: number | null
+        }
+        Insert: {
+          category?: string | null
+          corrected_brand?: string | null
+          corrected_ocr_label?: string | null
+          corrected_product?: string | null
+          corrected_variant?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          org_id: string
+          pack_text?: string | null
+          predicted_brand?: string | null
+          predicted_product?: string | null
+          scan_id: string
+          sub_category?: string | null
+          x1?: number | null
+          x2?: number | null
+          y1?: number | null
+          y2?: number | null
+        }
+        Update: {
+          category?: string | null
+          corrected_brand?: string | null
+          corrected_ocr_label?: string | null
+          corrected_product?: string | null
+          corrected_variant?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          org_id?: string
+          pack_text?: string | null
+          predicted_brand?: string | null
+          predicted_product?: string | null
+          scan_id?: string
+          sub_category?: string | null
+          x1?: number | null
+          x2?: number | null
+          y1?: number | null
+          y2?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scan_corrections_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scan_images: {
         Row: {
           captured_at: string | null
