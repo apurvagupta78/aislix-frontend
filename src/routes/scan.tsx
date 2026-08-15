@@ -681,112 +681,25 @@ function ScanPage() {
                   )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="scan-category">Category *</Label>
-                  {assignment ? (
-                    <Input
-                      id="scan-category"
-                      className="rounded-xl"
-                      value={assignment.category || "—"}
-                      readOnly
-                      disabled
-                    />
-                  ) : (
-                    <Select
-                      value={category}
-                      onValueChange={(value) => {
-                        setCategory(value);
-                        setSubCategory("");
-                        setSubCategoryCustom("");
-                        markCategoryEdited();
-                      }}
-                      disabled={busy}
-                    >
-                      <SelectTrigger id="scan-category" className="rounded-xl">
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[320px]">
-                        {categories.map((item) => (
-                          <SelectItem key={item.name} value={item.name} className="py-2">
-                            <span className="flex flex-col gap-0.5">
-                              <span className="text-sm font-medium">{item.name}</span>
-                              {item.examples ? (
-                                <span className="text-xs text-muted-foreground">
-                                  {item.examples}
-                                </span>
-                              ) : null}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  {fieldError("category") && (
-                    <p className="text-xs text-destructive">{fieldError("category")}</p>
-                  )}
+                <div className="sm:col-span-2">
+                  <CategorySubcategoryPicker
+                    value={selections}
+                    onChange={setSelections}
+                    categories={categories}
+                    disabled={busy}
+                    readOnly={lockedByAssignment}
+                    {...(fieldError("selections")
+                      ? { error: fieldError("selections") as string }
+                      : {})}
+                    {...(lockedByAssignment
+                      ? {
+                          label: "Shelf types assigned",
+                          helper: "Your manager set the shelf types for this task.",
+                        }
+                      : {})}
+                  />
                 </div>
 
-                {assignment && assignment.sub_category && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="scan-subcategory-locked">Sub-category</Label>
-                    <Input
-                      id="scan-subcategory-locked"
-                      className="rounded-xl"
-                      value={assignment.sub_category}
-                      readOnly
-                      disabled
-                    />
-                  </div>
-                )}
-
-                {showSubcategory && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="scan-subcategory">Subcategory *</Label>
-                    <Select
-                      value={subCategory}
-                      onValueChange={(value) => {
-                        setSubCategory(value);
-                        if (value !== "others") setSubCategoryCustom("");
-                        markCategoryEdited();
-                      }}
-                      disabled={busy || lockedByAssignment}
-                    >
-                      <SelectTrigger id="scan-subcategory" className="rounded-xl">
-                        <SelectValue placeholder="Select a subcategory" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[320px]">
-                        {subcategories.map((item) => (
-                          <SelectItem key={item.id} value={item.id}>
-                            {item.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Narrows detection to this shelf type (e.g. hides shampoo on a soap shelf).
-                    </p>
-                    {fieldError("subcategory") && (
-                      <p className="text-xs text-destructive">{fieldError("subcategory")}</p>
-                    )}
-                  </div>
-                )}
-
-                {category && needsCustom && (
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label htmlFor="scan-subcategory-custom">Describe shelf type *</Label>
-                    <Input
-                      id="scan-subcategory-custom"
-                      className="rounded-xl"
-                      placeholder="e.g. Imported chocolates end-cap"
-                      value={subCategoryCustom}
-                      disabled={busy || lockedByAssignment}
-                      onChange={(e) => setSubCategoryCustom(e.target.value)}
-                    />
-                    {fieldError("custom") && (
-                      <p className="text-xs text-destructive">{fieldError("custom")}</p>
-                    )}
-                  </div>
-                )}
 
                 {!withPlanogram && !lockedByAssignment && (
                   <div className="space-y-1.5 sm:col-span-2">
