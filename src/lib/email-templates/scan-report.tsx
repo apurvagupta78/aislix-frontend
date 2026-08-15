@@ -174,7 +174,8 @@ export const template = {
 } satisfies TemplateEntry
 
 const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif' }
-const container = { padding: '32px 28px', maxWidth: '600px' }const heading = { fontSize: '24px', lineHeight: '32px', color: '#09283e', margin: '0 0 16px' }
+const container = { padding: '32px 28px', maxWidth: '600px' }
+const heading = { fontSize: '24px', lineHeight: '32px', color: '#09283e', margin: '0 0 16px' }
 const text = { fontSize: '15px', lineHeight: '24px', color: '#1f2937', margin: '0 0 8px' }
 const quote = {
   fontSize: '14px',

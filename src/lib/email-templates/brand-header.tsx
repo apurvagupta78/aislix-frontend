@@ -7,7 +7,7 @@ import { Img, Section } from '@react-email/components'
  * Absolute URL is required — email clients cannot resolve relative paths.
  */
 export const LOGO_URL =
-  'https://aislix.com/__l5e/assets-v1/febf1323-af97-45ef-800d-61e1f66dd987/aislix-email-logo.png'
+  'https://aislix.com/__l5e/assets-v1/989a9adf-b1ef-4195-a9ea-83b722100361/aislix-email-logo.png'
 
 export const EmailLogo = () => (
   <Section style={{ margin: '0 0 24px' }}>
