@@ -145,10 +145,28 @@ function Results() {
   const planogram = data?.planogram;
   const planogramSummary = comparison?.summary ?? planogram?.summary ?? {};
   const hasSummaryCounts = Object.keys(planogramSummary).length > 0;
-  const planogramPercent = comparison?.compliance_percent ?? planogram?.percent ?? null;
+  // Headline = SKU presence match (all expected SKUs found = 100%). Quantity
+  // accuracy is shown as subtext and detailed in the table below.
+  const skuMatchPercent = planogram?.sku_match_percent ?? null;
+  const qtyCompliancePercent = planogram?.qty_compliance_percent ?? null;
+  const planogramPercent =
+    skuMatchPercent ?? comparison?.compliance_percent ?? planogram?.percent ?? null;
   const planogramCounts = summaryCounts(planogramSummary as PlanogramComparison["summary"]);
   const expectedProducts = planogramCounts["expected"];
   const matchedProducts = planogramCounts["found"];
+  const planogramHint =
+    skuMatchPercent !== null || qtyCompliancePercent !== null
+      ? [
+          skuMatchPercent !== null ? `${Math.round(skuMatchPercent)}% SKU match` : null,
+          qtyCompliancePercent !== null
+            ? `qty accuracy ${Math.round(qtyCompliancePercent)}%`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : expectedProducts !== null && matchedProducts !== null
+        ? `${matchedProducts}/${expectedProducts} SKUs matched`
+        : "Against planogram";
   const planogramSection: PlanogramComparison | null =
     comparison ??
     (planogram?.requested && (planogramPercent !== null || hasSummaryCounts)
@@ -300,11 +318,7 @@ function Results() {
                       : formatPercent(summary?.shelf_compliance)
                   }
                   loading={loading}
-                  hint={
-                    expectedProducts !== null && matchedProducts !== null
-                      ? `${matchedProducts}/${expectedProducts} SKUs matched`
-                      : "Against planogram"
-                  }
+                  hint={planogramHint}
                   valueClassName={
                     planogramPercent !== null ? complianceTone(planogramPercent) : undefined
                   }

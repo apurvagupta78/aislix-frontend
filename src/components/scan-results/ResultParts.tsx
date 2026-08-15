@@ -215,8 +215,12 @@ export function AnnotatedImageViewer({
           <img
             src={src}
             alt="Annotated shelf image with detected products outlined"
-            style={{ width: `${zoom * 100}%` }}
-            className="block max-w-none transition-[width] duration-200"
+            style={{
+              width: `${zoom * 100}%`,
+              objectFit: "contain",
+              ...(zoom === 1 ? { maxHeight: "70vh" } : {}),
+            }}
+            className="mx-auto block max-w-none transition-[width] duration-200"
           />
         ) : (
           <div className="p-4">
@@ -249,6 +253,7 @@ export function AnnotatedImageViewer({
           <img
             src={src}
             alt="Annotated shelf image with detected products outlined"
+            style={{ objectFit: "contain" }}
             className="mx-auto mt-2 w-full max-w-6xl rounded-2xl"
           />
         </div>

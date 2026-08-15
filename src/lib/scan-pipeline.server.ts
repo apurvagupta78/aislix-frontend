@@ -1254,8 +1254,17 @@ async function persistPlanogramCompliance(
   /** null for ad-hoc "with planogram" scans started from the New Scan page. */
   const assignmentId = scan.assignment_id ?? null;
   const summary = (source.summary ?? {}) as Record<string, unknown>;
+  // Headline is SKU presence from metrics; the source percent is a qty-weighted
+  // fallback that can read 0% even when every expected SKU was found.
+  const metricsAny = (payload?.metrics ?? {}) as any;
   const compliance =
-    pct(source.compliance_percent ?? source.compliance ?? summary["compliance_percent"]) ?? null;
+    pct(
+      metricsAny?.planogram_compliance_percent ??
+        metricsAny?.planogram_sku_match_percent ??
+        source.compliance_percent ??
+        source.compliance ??
+        summary["compliance_percent"],
+    ) ?? null;
 
 
   const { data: comparison, error: comparisonError } = await supabase
@@ -1603,9 +1612,12 @@ async function persistScanPayload(
   const osa =
     pct(metricsSource?.osa_percent ?? metricsSource?.on_shelf_availability) ??
     Number((((products.length - outOfStock) / products.length) * 100).toFixed(2));
+  // Headline compliance = SKU presence (3/3 found = 100%), never the quantity score.
+  const skuMatchPercent = pct(metricsSource?.planogram_sku_match_percent);
+  const qtyCompliancePercent = pct(metricsSource?.planogram_qty_compliance_percent);
   const compliance = pct(
     metricsSource?.planogram_compliance_percent ?? metricsSource?.planogram_compliance,
-  );
+  ) ?? skuMatchPercent;
   const shareOfShelf = pct(metricsSource?.share_of_shelf_percent ?? metricsSource?.share_of_shelf);
   const health =
     pct(metricsSource?.shelf_health_score ?? metricsSource?.shelf_health) ??
@@ -1658,9 +1670,29 @@ async function persistScanPayload(
     ...(planogramSource
       ? {
           planogram_compliance_percent:
-            pct(planogramSource.compliance_percent ?? planogramSource.compliance) ?? compliance,
+            compliance ??
+            pct(planogramSource.compliance_percent ?? planogramSource.compliance),
+          ...(skuMatchPercent !== null
+            ? { planogram_sku_match_percent: skuMatchPercent }
+            : {}),
+          ...(qtyCompliancePercent !== null
+            ? { planogram_qty_compliance_percent: qtyCompliancePercent }
+            : {}),
           planogram_summary: (planogramSource.summary ?? {}) as Record<string, unknown>,
         }
+      : {}),
+    // Image dimensions returned with the annotated / original renders.
+    ...(num(payload?.annotated_image_width) !== null
+      ? { annotated_image_width: num(payload?.annotated_image_width) }
+      : {}),
+    ...(num(payload?.annotated_image_height) !== null
+      ? { annotated_image_height: num(payload?.annotated_image_height) }
+      : {}),
+    ...(num(payload?.original_image_width) !== null
+      ? { original_image_width: num(payload?.original_image_width) }
+      : {}),
+    ...(num(payload?.original_image_height) !== null
+      ? { original_image_height: num(payload?.original_image_height) }
       : {}),
     ...(shareOfShelf !== null ? { share_of_shelf_percent: shareOfShelf } : {}),
 

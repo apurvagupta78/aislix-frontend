@@ -121,6 +121,10 @@ export type ScanResult = {
   planogram?: {
     requested: boolean;
     percent: number | null;
+    /** SKU presence match % (headline) as reported by the vision backend. */
+    sku_match_percent: number | null;
+    /** Quantity accuracy % — can be lower than the SKU match headline. */
+    qty_compliance_percent: number | null;
     summary: Record<string, unknown>;
   };
 
@@ -511,6 +515,10 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
         ? Number(metricsAny["planogram_compliance_percent"])
         : null;
   const planogramSummary = (metricsAny["planogram_summary"] ?? {}) as Record<string, unknown>;
+  const metricNum = (key: string): number | null =>
+    typeof metricsAny[key] === "number" ? Number(metricsAny[key]) : null;
+  const planogramSkuMatchPercent = metricNum("planogram_sku_match_percent") ?? planogramPercent;
+  const planogramQtyCompliancePercent = metricNum("planogram_qty_compliance_percent");
   const adhocRows = (scan as any).adhoc_planogram;
   const planogramRequested =
     Boolean((scan as any).assignment_id) ||
@@ -531,6 +539,8 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     planogram: {
       requested: planogramRequested,
       percent: planogramPercent,
+      sku_match_percent: planogramSkuMatchPercent,
+      qty_compliance_percent: planogramQtyCompliancePercent,
       summary: planogramSummary,
     },
 
