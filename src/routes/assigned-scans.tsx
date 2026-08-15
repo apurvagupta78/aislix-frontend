@@ -156,7 +156,7 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
           description="Assign a scoped shelf audit to a team member to see it tracked here."
           action={
             <Button variant="brand" className="rounded-xl" asChild>
-              <Link to="/assign-scan" search={{ store: undefined }}>Assign scan</Link>
+              <Link to="/assign-scan" search={{ store: undefined, scope: undefined, planogramVersion: undefined }}>Assign scan</Link>
             </Button>
           }
         />
@@ -388,7 +388,7 @@ function AssignedScansPage() {
       description="Every shelf audit assigned across your stores and team."
       actions={
         <Button variant="brand" className="rounded-xl" asChild>
-          <Link to="/assign-scan" search={{ store: undefined }}>
+          <Link to="/assign-scan" search={{ store: undefined, scope: undefined, planogramVersion: undefined }}>
             <UserPlus className="mr-2 size-4" /> Assign scan
           </Link>
         </Button>
