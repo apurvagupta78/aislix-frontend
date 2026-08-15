@@ -281,12 +281,6 @@ export async function loadSharedScan(token: string): Promise<SharedScanPayload> 
   };
 }
 
-export type ShareTarget = {
-  user_id: string;
-  name: string;
-  email: string;
-  role: string;
-};
 
 /** Confirms the signed-in user can share this scan, returning its org. */
 export async function requireScanAccess(

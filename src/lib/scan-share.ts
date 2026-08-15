@@ -5,6 +5,13 @@
 
 import { APP_ORIGIN } from "@/lib/app-origin";
 
+export type ShareTarget = {
+  user_id: string;
+  name: string;
+  email: string;
+  role: string;
+};
+
 export type ScanShareLink = {
   token: string;
   url: string;
