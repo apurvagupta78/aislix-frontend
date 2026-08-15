@@ -31,6 +31,7 @@ import {
   type DraftRow,
   type SourceType,
 } from "@/lib/planogram";
+import { markPlanogramAssigned, updateStorePlanogram } from "@/lib/planogram-library";
 import { PlanogramBuilder, StickyError } from "@/components/planogram/PlanogramBuilder";
 import { dominantScope } from "@/components/planogram/AssignScanDialog";
 import {
