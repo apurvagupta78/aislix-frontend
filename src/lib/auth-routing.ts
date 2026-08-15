@@ -152,7 +152,12 @@ const PUBLIC_PATHS = new Set([
 
 
 export function isPublicPath(path: string): boolean {
-  return PUBLIC_PATHS.has(path) || path.startsWith("/legal") || path.startsWith("/api");
+  return (
+    PUBLIC_PATHS.has(path) ||
+    path.startsWith("/legal") ||
+    path.startsWith("/api") ||
+    path.startsWith("/share/")
+  );
 }
 
 export function isVerifyPath(path: string): boolean {
