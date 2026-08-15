@@ -98,5 +98,9 @@ export function notificationHref(notification: InboxNotification): string {
   if (notification.type === "scan_needs_correction") return "/my-scans";
   if (notification.type === "scan_needs_correction_manager") return "/assigned-scans";
   if (notification.type === "scan_completed") return "/assigned-scans";
+  if (notification.type === "scan_shared") {
+    const scanId = notification.payload["scan_id"];
+    return typeof scanId === "string" ? `/results?scanId=${encodeURIComponent(scanId)}` : "/history";
+  }
   return "/dashboard";
 }
