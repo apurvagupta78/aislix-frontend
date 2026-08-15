@@ -441,12 +441,13 @@ function DownloadsPanel({
   const downloadImage = async () => {
     if (!data?.scan_id) return;
     try {
-      await downloadScanAnnotatedImage(data.scan_id, imageUrl);
+      await downloadScanAnnotatedImage(data.scan_id, imageUrl, data.original_image_url);
       toast.success("Annotated image downloaded");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Download failed");
     }
   };
+
 
   const downloadPdf = async () => {
     if (!data?.scan_id) return;
