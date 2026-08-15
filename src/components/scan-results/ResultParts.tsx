@@ -123,17 +123,38 @@ export function SummaryCard({
 /* --------------------------- annotated image view -------------------------- */
 
 export function AnnotatedImageViewer({
-  src,
+  src: rawSrc,
+  originalSrc,
   scanId,
   loading,
 }: {
   src?: string | undefined;
+  originalSrc?: string | undefined;
   scanId?: string | undefined;
   loading?: boolean | undefined;
 }) {
   const [zoom, setZoom] = useState(1);
   const [fullscreen, setFullscreen] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  // The vision service writes its annotated JPEG in BGR order, which shows up as
+  // a blue cast. Correct it against the original photo before displaying.
+  const [correctedSrc, setCorrectedSrc] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    setCorrectedSrc(undefined);
+    if (!rawSrc || !originalSrc) return;
+    let active = true;
+    void import("@/lib/annotated-image").then(async ({ correctAnnotatedImage }) => {
+      const fixed = await correctAnnotatedImage(rawSrc, originalSrc);
+      if (active && fixed !== rawSrc) setCorrectedSrc(fixed);
+    });
+    return () => {
+      active = false;
+    };
+  }, [rawSrc, originalSrc]);
+
+  const src = correctedSrc ?? rawSrc;
+
 
   useEffect(() => {
     if (!fullscreen) return;
@@ -188,7 +209,7 @@ export function AnnotatedImageViewer({
           if (!src) return;
           setDownloading(true);
           try {
-            await downloadScanAnnotatedImage(scanId ?? "scan", src);
+            await downloadScanAnnotatedImage(scanId ?? "scan", rawSrc, originalSrc);
             toast.success("Image downloaded");
           } catch (e) {
             toast.error(e instanceof Error ? e.message : "Download failed");

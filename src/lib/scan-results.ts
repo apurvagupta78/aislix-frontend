@@ -107,6 +107,8 @@ export type ScanResult = {
   status?: ScanStatus;
   summary: ScanSummary;
   annotated_image_url?: string;
+  /** The untouched shelf photo — used to colour-correct the annotated render. */
+  original_image_url?: string;
   executive_summary?: string;
   alerts?: ScanAlert[];
   compliance_alerts?: ComplianceAlert[];
@@ -268,14 +270,22 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     .eq("scan_id", scanId);
 
   let annotatedUrl: string | undefined;
+  let originalUrl: string | undefined;
   let pdfUrl: string | undefined;
   const annotated = images?.find((img) => img.kind === "annotated");
+  const original = images?.find((img) => img.kind === "original");
   const pdf = images?.find((img) => img.kind === "pdf" || img.kind === "report");
   if (annotated) {
     const { data: signed } = await supabase.storage
       .from(annotated.storage_bucket as string)
       .createSignedUrl(annotated.storage_path as string, 3600);
     annotatedUrl = signed?.signedUrl;
+  }
+  if (original) {
+    const { data: signed } = await supabase.storage
+      .from(original.storage_bucket as string)
+      .createSignedUrl(original.storage_path as string, 3600);
+    originalUrl = signed?.signedUrl;
   }
   if (pdf) {
     const { data: signed } = await supabase.storage
@@ -298,6 +308,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     annotatedUrl ??
     toDataUrl(rawPayload?.annotated_image_base64) ??
     toDataUrl(rawPayload?.original_image_base64);
+  const originalImageSrc = originalUrl ?? toDataUrl(rawPayload?.original_image_base64);
 
 
   const rawRows: any[] = [
@@ -569,6 +580,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     ((scan as any).sub_category as string | null | undefined);
   if (subLabel) scanResult.scan_sub_category = subLabel;
   if (annotatedImageSrc) scanResult.annotated_image_url = annotatedImageSrc;
+  if (originalImageSrc) scanResult.original_image_url = originalImageSrc;
   if (result?.executive_summary) scanResult.executive_summary = result.executive_summary;
   return scanResult;
 }
@@ -661,6 +673,7 @@ export type ScanAssetUrls = {
   pdf_url?: string;
   csv_url?: string;
   annotated_image_url?: string;
+  original_image_url?: string;
 };
 
 /** Signed storage URLs for a scan's generated assets (pdf / annotated / csv). */
@@ -677,6 +690,7 @@ export async function resolveScanAssetUrls(scanId: string): Promise<ScanAssetUrl
   const entries: Array<[keyof ScanAssetUrls, string[]]> = [
     ["pdf_url", ["pdf", "report"]],
     ["annotated_image_url", ["annotated"]],
+    ["original_image_url", ["original"]],
     ["csv_url", ["csv"]],
   ];
 
@@ -763,13 +777,36 @@ export function downloadScanPdf(scanId: string, url?: string): Promise<void> {
   );
 }
 
-export function downloadScanAnnotatedImage(scanId: string, url?: string): Promise<void> {
+export async function downloadScanAnnotatedImage(
+  scanId: string,
+  url?: string,
+  originalUrl?: string,
+): Promise<void> {
   const ext = url?.includes(".png") || url?.startsWith("data:image/png") ? "png" : "jpg";
+
+  const assets = url && originalUrl ? null : await resolveScanAssetUrls(scanId);
+  const annotated = url ?? assets?.annotated_image_url;
+  const original = originalUrl ?? assets?.original_image_url;
+
+  // Save the same true-colour image the viewer shows (the backend writes BGR).
+  if (annotated && original) {
+    try {
+      const { correctAnnotatedImage } = await import("@/lib/annotated-image");
+      const corrected = await correctAnnotatedImage(annotated, original);
+      if (corrected !== annotated) {
+        await downloadFileFromUrl(corrected, `aislix-${scanId}-annotated.jpg`);
+        return;
+      }
+    } catch {
+      // fall through to the stored asset
+    }
+  }
+
   return downloadAsset(
     scanId,
     "annotated_image_url",
     `aislix-${scanId}-annotated.${ext}`,
-    url,
+    annotated,
 
     "No annotated image is available for this scan yet.",
   );
