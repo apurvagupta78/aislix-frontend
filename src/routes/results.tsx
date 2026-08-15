@@ -336,6 +336,7 @@ function Results() {
 
               <AnnotatedImageViewer
                 src={data?.annotated_image_url}
+                originalSrc={data?.original_image_url}
                 scanId={data?.scan_id}
                 loading={loading}
               />
