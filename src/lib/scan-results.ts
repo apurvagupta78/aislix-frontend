@@ -580,6 +580,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     ((scan as any).sub_category as string | null | undefined);
   if (subLabel) scanResult.scan_sub_category = subLabel;
   if (annotatedImageSrc) scanResult.annotated_image_url = annotatedImageSrc;
+  if (originalImageSrc) scanResult.original_image_url = originalImageSrc;
   if (result?.executive_summary) scanResult.executive_summary = result.executive_summary;
   return scanResult;
 }
