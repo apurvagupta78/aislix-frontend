@@ -308,6 +308,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     annotatedUrl ??
     toDataUrl(rawPayload?.annotated_image_base64) ??
     toDataUrl(rawPayload?.original_image_base64);
+  const originalImageSrc = originalUrl ?? toDataUrl(rawPayload?.original_image_base64);
 
 
   const rawRows: any[] = [
