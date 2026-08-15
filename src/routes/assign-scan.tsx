@@ -73,16 +73,32 @@ const card = "rounded-2xl border border-border bg-card p-5 shadow-sm";
 
 function AssignScanPage() {
   const navigate = useNavigate();
-  const { store: storeFromSearch } = Route.useSearch();
+  const {
+    store: storeFromSearch,
+    scope: scopeFromSearch,
+    planogramVersion: versionFromSearch,
+  } = Route.useSearch();
   const [storeId, setStoreId] = useState(storeFromSearch ?? "");
 
-  const [scopeType, setScopeType] = useState<ScopeType>("category");
+  const [scopeType, setScopeType] = useState<ScopeType>(
+    scopeFromSearch === "planogram" ? "planogram" : "category",
+  );
   const [category, setCategory] = useState("");
   const [subCategory, setSubCategory] = useState("");
   const [location, setLocation] = useState("");
   const [assigneeId, setAssigneeId] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [instructions, setInstructions] = useState("");
+
+  // Planogram scope — the assignment's own expected product list.
+  const [planogramRows, setPlanogramRows] = useState<DraftRow[]>([]);
+  const [sources, setSources] = useState<{ csv: boolean; manual: boolean }>({
+    csv: false,
+    manual: false,
+  });
+  const [csvFilename, setCsvFilename] = useState<string | null>(null);
+  const [planogramError, setPlanogramError] = useState<string | null>(null);
+
 
   const accessQuery = useQuery({
     queryKey: ["assignment-manager"],
