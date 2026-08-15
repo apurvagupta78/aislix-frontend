@@ -9,12 +9,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { dbError, getMembership, requireOrgId, requireUserId } from "@/lib/db/context";
 import { notifyMember } from "@/lib/notifications.functions";
 
-export type ScopeType = "category" | "sub_category" | "location";
+export type ScopeType = "category" | "sub_category" | "location" | "planogram";
 
 export type ScopeValues = {
   category?: string;
   sub_category?: string;
   location?: string;
+  /** Planogram scope only: counts derived from the assignment's own row list. */
+  product_count?: number;
+  facing_count?: number;
 };
 
 export type AssignmentStatus =
