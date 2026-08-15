@@ -291,7 +291,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   const { data: products } = await supabase
     .from("detected_products")
     .select(
-      "id, name, brand, category, facings, shelf_row, stock_status, confidence, expected_facings",
+      "id, name, brand, category, facings, shelf_row, stock_status, confidence, expected_facings, sku, bounding_box",
     )
     .eq("scan_id", scanId);
 
