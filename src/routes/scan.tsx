@@ -1034,7 +1034,7 @@ function ScanPage() {
                       size="sm"
                       className="rounded-xl"
                       onClick={startScan}
-                      disabled={busy || mismatchBlocking || !setupComplete}
+                      disabled={busy || !setupComplete}
                     >
                       {busy ? (
                         <Loader2 className="size-4 animate-spin" />
