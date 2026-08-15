@@ -1661,9 +1661,29 @@ async function persistScanPayload(
     ...(planogramSource
       ? {
           planogram_compliance_percent:
-            pct(planogramSource.compliance_percent ?? planogramSource.compliance) ?? compliance,
+            compliance ??
+            pct(planogramSource.compliance_percent ?? planogramSource.compliance),
+          ...(skuMatchPercent !== null
+            ? { planogram_sku_match_percent: skuMatchPercent }
+            : {}),
+          ...(qtyCompliancePercent !== null
+            ? { planogram_qty_compliance_percent: qtyCompliancePercent }
+            : {}),
           planogram_summary: (planogramSource.summary ?? {}) as Record<string, unknown>,
         }
+      : {}),
+    // Image dimensions returned with the annotated / original renders.
+    ...(num(payload?.annotated_image_width) !== null
+      ? { annotated_image_width: num(payload?.annotated_image_width) }
+      : {}),
+    ...(num(payload?.annotated_image_height) !== null
+      ? { annotated_image_height: num(payload?.annotated_image_height) }
+      : {}),
+    ...(num(payload?.original_image_width) !== null
+      ? { original_image_width: num(payload?.original_image_width) }
+      : {}),
+    ...(num(payload?.original_image_height) !== null
+      ? { original_image_height: num(payload?.original_image_height) }
       : {}),
     ...(shareOfShelf !== null ? { share_of_shelf_percent: shareOfShelf } : {}),
 
