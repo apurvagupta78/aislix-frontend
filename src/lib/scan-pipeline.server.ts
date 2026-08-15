@@ -1603,9 +1603,12 @@ async function persistScanPayload(
   const osa =
     pct(metricsSource?.osa_percent ?? metricsSource?.on_shelf_availability) ??
     Number((((products.length - outOfStock) / products.length) * 100).toFixed(2));
+  // Headline compliance = SKU presence (3/3 found = 100%), never the quantity score.
+  const skuMatchPercent = pct(metricsSource?.planogram_sku_match_percent);
+  const qtyCompliancePercent = pct(metricsSource?.planogram_qty_compliance_percent);
   const compliance = pct(
     metricsSource?.planogram_compliance_percent ?? metricsSource?.planogram_compliance,
-  );
+  ) ?? skuMatchPercent;
   const shareOfShelf = pct(metricsSource?.share_of_shelf_percent ?? metricsSource?.share_of_shelf);
   const health =
     pct(metricsSource?.shelf_health_score ?? metricsSource?.shelf_health) ??
