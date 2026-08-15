@@ -66,6 +66,8 @@ function matchesScope(
   type: string,
   scope: { category?: string; sub_category?: string; location?: string },
 ): boolean {
+  // Planogram assignments carry their own exact product list — never filter.
+  if (type === "planogram") return true;
   const eq = (a: string, b?: string) =>
     Boolean(b) && a.toLowerCase() === String(b).trim().toLowerCase();
   if (type === "location") return eq(item.location, scope.location) || eq(item.aisle, scope.location);
