@@ -14,18 +14,28 @@ import type { Database } from "@/integrations/supabase/types";
 
 type DB = SupabaseClient<Database>;
 
+export type AssignmentScopeType = "category" | "sub_category" | "location" | "planogram";
+
 export type AssignmentScanContext = {
   assignment_id: string;
   org_id: string;
   store_id: string;
   store_name: string;
   planogram_version_id: string | null;
-  scope_type: "category" | "sub_category" | "location";
-  scope_values: { category?: string; sub_category?: string; location?: string };
+  scope_type: AssignmentScopeType;
+  scope_values: {
+    category?: string;
+    sub_category?: string;
+    location?: string;
+    product_count?: number;
+    facing_count?: number;
+  };
   category: string;
   sub_category: string;
   location: string;
   expected_count: number;
+  /** Total expected facings across the scoped rows. */
+  facing_count: number;
   status: string;
   instructions: string | null;
   due_at: string | null;
