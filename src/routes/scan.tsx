@@ -831,8 +831,8 @@ function ScanPage() {
                                     )
                                   : all)
                               : all;
-                            setUserEditedCategory(false);
-                            setMismatchAcknowledged(false);
+                            setCategorySyncNotice(null);
+
                             setPlanogramRows(rows);
                             setPlanogramNotice(
                               `Loaded ${rows.length} product${rows.length === 1 ? "" : "s"} from the active store planogram.`,
