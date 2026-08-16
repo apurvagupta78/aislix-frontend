@@ -91,6 +91,7 @@ export type EmailScanReportInput = {
   message?: string | null;
   includePdf?: boolean;
   includeAnnotated?: boolean;
+  includeCsv?: boolean;
 };
 
 export const emailScanReport = createServerFn({ method: "POST" })
@@ -113,6 +114,7 @@ export const emailScanReport = createServerFn({ method: "POST" })
       message: input?.message ? String(input.message).slice(0, 1000) : null,
       includePdf: input?.includePdf !== false,
       includeAnnotated: input?.includeAnnotated !== false,
+      includeCsv: input?.includeCsv !== false,
     };
   })
   .handler(async ({ data, context }): Promise<{ sent: number; skipped: number }> => {
@@ -143,7 +145,7 @@ export const emailScanReport = createServerFn({ method: "POST" })
       ((me as any)?.email as string | null) ||
       "A teammate";
 
-    const { ensureShareLink, logShareEvent, scanShareSummary, signedScanAssets } = await import(
+    const { ensureShareLink, logShareEvent, scanShareSummary, prepareScanForShare } = await import(
       "@/lib/scan-share.server"
     );
     const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
@@ -151,7 +153,7 @@ export const emailScanReport = createServerFn({ method: "POST" })
     const [link, summary, assets] = await Promise.all([
       ensureShareLink(data.scanId, orgId, userId),
       scanShareSummary(data.scanId),
-      signedScanAssets(data.scanId, 86400),
+      prepareScanForShare(data.scanId, 86400),
     ]);
 
     let sent = 0;
@@ -172,6 +174,7 @@ export const emailScanReport = createServerFn({ method: "POST" })
           shareUrl: link.url,
           pdfUrl: data.includePdf ? assets.pdf_url : undefined,
           annotatedUrl: data.includeAnnotated ? assets.annotated_image_url : undefined,
+          csvUrl: data.includeCsv ? assets.csv_url : undefined,
         },
       });
       if (result.sent) sent += 1;
@@ -269,8 +272,8 @@ export const shareScanWithTeam = createServerFn({ method: "POST" })
         .select("id, email")
         .in("id", recipientIds);
       const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
-      const { signedScanAssets } = await import("@/lib/scan-share.server");
-      const assets = await signedScanAssets(data.scanId, 86400);
+      const { prepareScanForShare } = await import("@/lib/scan-share.server");
+      const assets = await prepareScanForShare(data.scanId, 86400);
 
       for (const profile of profiles ?? []) {
         const email = ((profile as any).email as string | null)?.toLowerCase();
@@ -290,6 +293,7 @@ export const shareScanWithTeam = createServerFn({ method: "POST" })
             shareUrl: link.url,
             pdfUrl: assets.pdf_url,
             annotatedUrl: assets.annotated_image_url,
+            csvUrl: assets.csv_url,
           },
         });
         if (result.sent) emailed += 1;

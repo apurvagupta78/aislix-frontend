@@ -45,6 +45,7 @@ export function EmailShareDialog({
   const [message, setMessage] = useState("");
   const [includePdf, setIncludePdf] = useState(true);
   const [includeAnnotated, setIncludeAnnotated] = useState(true);
+  const [includeCsv, setIncludeCsv] = useState(true);
   const send = useServerFn(emailScanReport);
 
   const mutation = useMutation({
@@ -54,7 +55,7 @@ export function EmailShareDialog({
       if (!emails.length) throw new Error("Add at least one recipient email.");
       if (emails.length > 5) throw new Error("You can email up to 5 recipients at a time.");
       return send({
-        data: { scanId, recipients: emails, message, includePdf, includeAnnotated },
+        data: { scanId, recipients: emails, message, includePdf, includeAnnotated, includeCsv },
       });
     },
     onSuccess: (result) => {
@@ -80,8 +81,8 @@ export function EmailShareDialog({
         <DialogHeader>
           <DialogTitle>Email this report</DialogTitle>
           <DialogDescription>
-            Recipients get a secure link that expires in 7 days, plus download links for the PDF
-            and annotated shelf image.
+            Recipients get a secure link that expires in 7 days, plus download links for the PDF,
+            annotated shelf image and CSV report.
           </DialogDescription>
         </DialogHeader>
 
@@ -122,6 +123,13 @@ export function EmailShareDialog({
                 onCheckedChange={(value) => setIncludeAnnotated(value === true)}
               />
               Include annotated shelf image link
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={includeCsv}
+                onCheckedChange={(value) => setIncludeCsv(value === true)}
+              />
+              Include CSV download link
             </label>
           </div>
         </div>

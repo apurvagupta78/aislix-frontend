@@ -31,6 +31,7 @@ interface Props {
   shareUrl?: string
   pdfUrl?: string
   annotatedUrl?: string
+  csvUrl?: string
 }
 
 const formatDate = (iso?: string | null) => {
@@ -56,6 +57,7 @@ const Email = ({
   shareUrl = 'https://aislix.com',
   pdfUrl,
   annotatedUrl,
+  csvUrl,
 }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
@@ -135,6 +137,14 @@ const Email = ({
             </Link>
           </Text>
         ) : null}
+        {csvUrl ? (
+          <Text style={muted}>
+            CSV report:{' '}
+            <Link href={csvUrl} style={link}>
+              download
+            </Link>
+          </Text>
+        ) : null}
 
         <Hr style={hr} />
         <Text style={muted}>
@@ -170,6 +180,7 @@ export const template = {
     shareUrl: 'https://aislix.com/share/demo-token',
     pdfUrl: 'https://aislix.com/report.pdf',
     annotatedUrl: 'https://aislix.com/annotated.jpg',
+    csvUrl: 'https://aislix.com/report.csv',
   },
 } satisfies TemplateEntry
 
