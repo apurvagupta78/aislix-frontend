@@ -81,37 +81,64 @@ export async function logShareEvent(input: {
   });
 }
 
-/** Signed storage URLs for a scan's PDF report and annotated shelf image. */
+export type SignedScanAssets = {
+  pdf_url?: string;
+  annotated_image_url?: string;
+  csv_url?: string;
+};
+
+/** Signed storage URLs for a scan's PDF report, annotated shelf image and CSV. */
 export async function signedScanAssets(
   scanId: string,
   expiresIn: number,
-): Promise<{ pdf_url?: string; annotated_image_url?: string }> {
+): Promise<SignedScanAssets> {
   const db = await admin();
   const { data: images } = await db
     .from("scan_images")
     .select("kind, storage_bucket, storage_path")
     .eq("scan_id", scanId);
 
-  const out: { pdf_url?: string; annotated_image_url?: string } = {};
+  const out: SignedScanAssets = {};
   const pick = (kinds: string[]) =>
     (images ?? []).find((img) => kinds.includes(img.kind as string));
 
-  const pdf = pick(["pdf", "report"]);
-  const annotated = pick(["annotated"]);
+  const entries: Array<[keyof SignedScanAssets, string[]]> = [
+    ["pdf_url", ["pdf", "report"]],
+    ["annotated_image_url", ["annotated"]],
+    ["csv_url", ["csv"]],
+  ];
 
-  if (pdf) {
+  for (const [key, kinds] of entries) {
+    const row = pick(kinds);
+    if (!row) continue;
     const { data } = await db.storage
-      .from(pdf.storage_bucket as string)
-      .createSignedUrl(pdf.storage_path as string, expiresIn);
-    if (data?.signedUrl) out.pdf_url = data.signedUrl;
-  }
-  if (annotated) {
-    const { data } = await db.storage
-      .from(annotated.storage_bucket as string)
-      .createSignedUrl(annotated.storage_path as string, expiresIn);
-    if (data?.signedUrl) out.annotated_image_url = data.signedUrl;
+      .from(row.storage_bucket as string)
+      .createSignedUrl(row.storage_path as string, expiresIn);
+    if (data?.signedUrl) out[key] = data.signedUrl;
   }
   return out;
+}
+
+/**
+ * Resolves share assets, asking the pipeline to rebuild any missing export
+ * (PDF, annotated image or CSV) once before signing the URLs.
+ */
+export async function prepareScanForShare(
+  scanId: string,
+  expiresIn: number,
+): Promise<SignedScanAssets> {
+  const assets = await signedScanAssets(scanId, expiresIn);
+  if (assets.pdf_url && assets.annotated_image_url && assets.csv_url) return assets;
+
+  try {
+    const db = await admin();
+    const { backfillScanAssetsServer } = await import("@/lib/scan-pipeline.server");
+    await backfillScanAssetsServer(db as never, scanId);
+  } catch {
+    // Best effort — send whatever assets already exist.
+    return assets;
+  }
+  return signedScanAssets(scanId, expiresIn);
 }
 
 /** Minimal scan facts used in emails and the public report header. */
