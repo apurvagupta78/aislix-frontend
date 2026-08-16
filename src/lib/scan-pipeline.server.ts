@@ -13,9 +13,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import {
+  dedupeSelections,
   parseCategorySelections,
+  slugifyCategory,
   type CategorySelection,
 } from "@/lib/category-selections";
+
 
 
 type DB = SupabaseClient<Database>;
@@ -1140,18 +1143,48 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
     ? []
     : (scan.adhoc_planogram ?? []).map((row) => planogramShape(row));
 
+  // Every shelf type on this rack must reach the vision backend, otherwise it
+  // scopes to one sub-category and reports false mismatches on mixed shelves.
+  const scopeSelections = assignment
+    ? parseCategorySelections((assignment.scope_values as any)?.["category_selections"])
+    : [];
+  const legacySelection: CategorySelection[] =
+    scan.category || scan.sub_category
+      ? [
+          {
+            category_id: slugifyCategory(scan.category ?? ""),
+            category_name: scan.category ?? "",
+            sub_category_id: scan.sub_category ?? "",
+            sub_category_label: scan.sub_category_label ?? "",
+            ...(scan.sub_category_custom ? { sub_category_custom: scan.sub_category_custom } : {}),
+          },
+        ]
+      : [];
+  const selections = dedupeSelections(
+    scan.category_selections.length
+      ? scan.category_selections
+      : scopeSelections.length
+        ? scopeSelections
+        : legacySelection,
+  );
+  const primary = selections[0] ?? null;
+
   return {
     scan_id: scan.id,
     org_id: scan.org_id,
     store_id: scan.store_id,
     shelf_label: scan.shelf_label,
-    category: scan.category,
-    sub_category: scan.sub_category ?? "",
-    sub_category_label: scan.sub_category_label ?? "",
+    category: scan.category || primary?.category_name || null,
+    sub_category: scan.sub_category || primary?.sub_category_id || "",
+    sub_category_label: scan.sub_category_label || primary?.sub_category_label || "",
     sub_category_custom: scan.sub_category_custom ?? "",
-    categories: scan.category_selections.map((s) => s.category_name),
-    sub_categories: scan.category_selections.map((s) => s.sub_category_id),
-    category_selections: scan.category_selections,
+    categories: Array.from(new Set(selections.map((s) => s.category_name).filter(Boolean))),
+    sub_categories: Array.from(new Set(selections.map((s) => s.sub_category_id).filter(Boolean))),
+    sub_category_labels: Array.from(
+      new Set(selections.map((s) => s.sub_category_label).filter(Boolean)),
+    ),
+    category_selections: selections,
+
 
 
     notes: scan.notes,
