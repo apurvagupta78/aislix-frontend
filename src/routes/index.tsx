@@ -37,6 +37,39 @@ export const Route = createFileRoute("/")({
       },
     ],
     links: [{ rel: "canonical", href: "https://aislix.com" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "WebSite",
+              "@id": "https://aislix.com/#website",
+              name: "Aislix",
+              url: "https://aislix.com",
+              description:
+                "AI Retail Shelf Intelligence — automated shelf audits, out-of-stock detection, share of shelf and planogram compliance from a single photo.",
+              publisher: { "@id": "https://aislix.com/#organization" },
+            },
+            {
+              "@type": "Organization",
+              "@id": "https://aislix.com/#organization",
+              name: "Aislix",
+              url: "https://aislix.com",
+              logo: "https://aislix.com/apple-touch-icon.png",
+              description:
+                "Aislix is an AI-powered retail shelf intelligence platform for supermarkets, dark stores, warehouses, FMCG brands, distributors and local stores.",
+              email: "hello@aislix.com",
+              sameAs: [
+                "https://www.linkedin.com/company/aislix/",
+                "https://x.com/aislix_ai",
+              ],
+            },
+          ],
+        }),
+      },
+    ],
   }),
   component: Landing,
 });
