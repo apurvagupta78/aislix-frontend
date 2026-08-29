@@ -3,23 +3,14 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { RetailIntelligenceNav } from "@/components/landing/retail-intelligence/RetailIntelligenceNav";
 import { HeroSection } from "@/components/landing/retail-intelligence/HeroSection";
-import { ProductDemoSection } from "@/components/landing/retail-intelligence/ProductDemoSection";
-import { ProblemSection } from "@/components/landing/retail-intelligence/ProblemSection";
-import { HowItWorksSection } from "@/components/landing/retail-intelligence/HowItWorksSection";
-import { CapabilitiesSection } from "@/components/landing/retail-intelligence/CapabilitiesSection";
-import { ProductVisualizationSection } from "@/components/landing/retail-intelligence/ProductVisualizationSection";
-import { UseCasesSection } from "@/components/landing/retail-intelligence/UseCasesSection";
-import { BusinessValueSection } from "@/components/landing/retail-intelligence/BusinessValueSection";
-import { TrustSection } from "@/components/landing/retail-intelligence/TrustSection";
-import { FinalCtaSection } from "@/components/landing/retail-intelligence/FinalCtaSection";
-import { MobileStickyCta } from "@/components/landing/retail-intelligence/MobileStickyCta";
+import { RetailIntelligenceDemo } from "@/components/landing/retail-intelligence/RetailIntelligenceDemo";
 
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import { persistUtmSession } from "@/lib/utm";
 
 const TITLE = "Aislix | AI-Powered Retail Shelf Intelligence";
 const DESCRIPTION =
-  "Turn shelf photos into retail intelligence with AI-powered product detection, availability insights and retail execution monitoring.";
+  "Run a live AI shelf scan in your browser. Aislix turns a shelf photo into product detection, SKU counts and availability insights in under a minute.";
 const URL = "https://aislix.com/retail-intelligence";
 
 export const Route = createFileRoute("/retail-intelligence")({
@@ -47,25 +38,23 @@ function RetailIntelligencePage() {
   return (
     <div className="min-h-screen bg-background">
       <RetailIntelligenceNav />
-      <main className="pb-20 lg:pb-0">
+      <main>
         <HeroSection />
-        <ProductDemoSection />
-        <ProblemSection />
-        <HowItWorksSection />
-        <CapabilitiesSection />
-        <ProductVisualizationSection />
-        <UseCasesSection />
-        <BusinessValueSection />
-        <TrustSection />
-        <FinalCtaSection />
+        <RetailIntelligenceDemo />
       </main>
-      <footer className="border-t border-border py-10 pb-24 lg:pb-10">
-        <div className="mx-auto max-w-6xl px-5 text-center text-xs text-muted-foreground sm:px-8">
-          © {new Date().getFullYear()} Aislix — AI Retail Shelf Intelligence.
+      <footer className="border-t border-border py-8">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-5 text-xs text-muted-foreground sm:flex-row sm:justify-between sm:px-8">
+          <span>© {new Date().getFullYear()} Aislix</span>
+          <span className="flex items-center gap-4">
+            <a href="/privacy" className="hover:text-foreground">
+              Privacy
+            </a>
+            <a href="/terms" className="hover:text-foreground">
+              Terms
+            </a>
+          </span>
         </div>
       </footer>
-      <MobileStickyCta />
     </div>
   );
 }
-
