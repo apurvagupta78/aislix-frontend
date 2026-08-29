@@ -22,10 +22,11 @@ export const Route = createFileRoute("/api/send-landing-onboarding")({
         }
         const { email, name, signup_url } = parsed;
 
+        const lovableKey = process.env["LOVABLE_API_KEY"];
         const resendKey = process.env["RESEND_API_KEY"];
-        if (!resendKey) {
+        if (!lovableKey || !resendKey) {
           return Response.json(
-            { ok: false, error: "RESEND_API_KEY not configured" },
+            { ok: false, error: "Resend connection is not configured" },
             { status: 500 },
           );
         }
@@ -45,10 +46,11 @@ export const Route = createFileRoute("/api/send-landing-onboarding")({
             <p style="margin-top:32px;color:#64748b">&mdash; Aislix</p>
           </div>`;
 
-        const res = await fetch("https://api.resend.com/emails", {
+        const res = await fetch("https://connector-gateway.lovable.dev/resend/emails", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${resendKey}`,
+            Authorization: `Bearer ${lovableKey}`,
+            "X-Connection-Api-Key": resendKey,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
