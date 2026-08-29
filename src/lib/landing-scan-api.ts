@@ -2,7 +2,10 @@
  * Anonymous landing-demo scan client. Talks only to the public /landing/*
  * endpoints — never to the authenticated scan pipeline.
  */
+import { captureUtmParams, readStoredUtm } from "@/lib/utm";
+
 const API = import.meta.env.VITE_AISLIX_API_URL ?? import.meta.env.VITE_API_BASE_URL;
+
 
 const SESSION_ID_KEY = "aislix_landing_session_id";
 const RESULT_KEY = "aislix_landing_scan_result";
