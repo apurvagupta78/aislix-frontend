@@ -130,8 +130,7 @@ function Landing() {
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
             Aislix turns a single shelf photo into a full retail audit — products detected, brands
-            counted, out-of-stocks flagged and shelf health scored. Built for supermarkets, dark
-            stores, warehouses, FMCG teams, distributors and local stores.
+            counted, out-of-stocks flagged and shelf health scored.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <Button
