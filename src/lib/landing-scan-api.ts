@@ -148,12 +148,16 @@ export function loadLandingScanResult(): LandingScanResult | null {
   }
 }
 
-/** /signup URL carrying the current UTM params plus the landing session id. */
+/** /signup URL carrying the current + stored UTM params plus the landing session id. */
 export function signupUrlWithLanding(): string {
   if (typeof window === "undefined") return "/signup";
   const params = new URLSearchParams(window.location.search);
+  for (const [k, v] of Object.entries({ ...readStoredUtm(), ...captureUtmParams() })) {
+    params.set(k, v);
+  }
   const sid = loadLandingSessionId();
   if (sid) params.set("landing_session_id", sid);
   const qs = params.toString();
   return qs ? `/signup?${qs}` : "/signup";
 }
+
