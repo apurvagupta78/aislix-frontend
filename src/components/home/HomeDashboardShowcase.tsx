@@ -41,7 +41,7 @@ export function HomeDashboardShowcase() {
             <span className="ml-3 text-xs text-muted-foreground">aislix.com/dashboard</span>
           </div>
 
-          <div className="bg-background p-3 sm:p-4">
+          <div className="max-h-[760px] overflow-auto bg-background p-3 sm:p-4">
             <KpiCards kpis={DEMO_DASHBOARD.kpis} isLoading={false} error={null} />
 
             <section className="mt-6">
