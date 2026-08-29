@@ -4,6 +4,7 @@ import { trackLandingEvent } from "@/lib/landing-analytics";
 import { useSignupHref } from "./useSignupHref";
 
 export function FinalCtaSection() {
+  const signupHref = useSignupHref();
   return (
     <section id="cta" className="border-t border-border bg-hero-glow py-20">
       <div className="mx-auto max-w-3xl px-5 text-center sm:px-8">

@@ -19,6 +19,7 @@ function onSignup(location: string) {
 
 export function RetailIntelligenceNav() {
   const [open, setOpen] = useState(false);
+  const signupHref = useSignupHref();
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-card/85 backdrop-blur-xl">

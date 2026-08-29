@@ -12,6 +12,7 @@ const SAMPLE_IMAGE = "/landing/samples/lays-rack.webp";
 
 export function ProductDemoSection() {
   const [state, setState] = useState<DemoState>("idle");
+  const signupHref = useSignupHref();
   const [imageSrc, setImageSrc] = useState<string>(SAMPLE_IMAGE);
   const [usedUpload, setUsedUpload] = useState(false);
   const startedRef = useRef(false);
