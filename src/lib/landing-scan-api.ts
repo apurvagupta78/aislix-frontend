@@ -214,7 +214,7 @@ export function loadLandingScanResult(): LandingScanResult | null {
 }
 
 /** /signup URL carrying the current + stored UTM params plus the landing session id. */
-export function signupUrl(extra?: Record<string, string>): string {
+export function signupUrl(extra?: Record<string, string | undefined>): string {
   if (typeof window === "undefined") return "/signup";
   const params = new URLSearchParams(window.location.search);
   for (const [k, v] of Object.entries({ ...readStoredUtm(), ...captureUtmParams() })) {
