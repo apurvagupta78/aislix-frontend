@@ -18,7 +18,7 @@ export function TrustBar() {
         <div className="mt-6 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-5">
           {ITEMS.map(({ label, Icon }) => (
             <div key={label} className="flex flex-col items-center gap-2 text-center">
-              <Icon className="size-6 text-primary" strokeWidth={1.6} />
+              <Icon className="size-6 text-brand" strokeWidth={1.8} />
               <span className="text-xs font-medium text-foreground">{label}</span>
             </div>
           ))}
