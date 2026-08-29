@@ -14,6 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { SiteFooter, SiteHeader } from "@/components/MarketingLayout";
 import { CycleToggle, PricingGrid } from "@/components/pricing/PricingPlans";
+import { HomeLeadCapture } from "@/components/home/HomeLeadCapture";
+import { HomeScanHero } from "@/components/home/HomeScanHero";
 import type { BillingCycle } from "@/lib/pricing";
 
 
@@ -143,6 +145,11 @@ function Landing() {
           </p>
         </div>
 
+      </section>
+
+      <HomeScanHero />
+
+      <section className="relative overflow-hidden bg-hero-glow">
         <div className="relative mx-auto max-w-5xl px-6 pb-24">
           <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-lift">
             <div className="flex items-center gap-2 border-b border-border px-4 py-3">
@@ -161,6 +168,8 @@ function Landing() {
           </div>
         </div>
       </section>
+
+      <HomeLeadCapture />
 
       <section id="platform" className="border-t border-border py-24">
         <div className="mx-auto max-w-6xl px-6">
