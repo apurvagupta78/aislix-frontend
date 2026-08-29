@@ -18,6 +18,8 @@ import {
 import { register } from "@/lib/api/auth";
 import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
 import { toUserMessage } from "@/lib/api/errors";
+import { convertLandingSession, loadLandingSessionId } from "@/lib/landing-scan-api";
+
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
@@ -60,10 +62,16 @@ function SignupPage() {
         full_name: `${form.first} ${form.last}`.trim(),
         company_name: form.company.trim() || undefined,
       }),
-    onSuccess: () => {
+    onSuccess: (session) => {
+      // Best-effort landing-demo attribution; never blocks the auth flow.
+      const sid =
+        new URLSearchParams(window.location.search).get("landing_session_id") ??
+        loadLandingSessionId();
+      if (sid && session?.user?.id) void convertLandingSession(sid, session.user.id);
       // Always land on the dedicated verification page — never a toast only.
       navigate({ to: "/verify-email", search: { email: form.email.trim() }, replace: true });
     },
+
     onError: (error: unknown) =>
       toast.error("Could not create your workspace", { description: toUserMessage(error) }),
   });

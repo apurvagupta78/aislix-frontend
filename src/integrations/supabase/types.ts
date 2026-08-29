@@ -273,6 +273,96 @@ export type Database = {
         }
         Relationships: []
       }
+      landing_demo_sessions: {
+        Row: {
+          category: string | null
+          converted_user_id: string | null
+          created_at: string
+          id: string
+          image_storage_path: string | null
+          ip_hash: string | null
+          lead_captured_at: string | null
+          lead_company: string | null
+          lead_email: string | null
+          lead_name: string | null
+          lead_phone: string | null
+          referrer: string | null
+          sample_id: string | null
+          scan_error: string | null
+          scan_id: string | null
+          scan_result: Json | null
+          scan_status: string
+          session_token: string
+          signed_up_at: string | null
+          signup_completed: boolean
+          updated_at: string
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          category?: string | null
+          converted_user_id?: string | null
+          created_at?: string
+          id?: string
+          image_storage_path?: string | null
+          ip_hash?: string | null
+          lead_captured_at?: string | null
+          lead_company?: string | null
+          lead_email?: string | null
+          lead_name?: string | null
+          lead_phone?: string | null
+          referrer?: string | null
+          sample_id?: string | null
+          scan_error?: string | null
+          scan_id?: string | null
+          scan_result?: Json | null
+          scan_status?: string
+          session_token: string
+          signed_up_at?: string | null
+          signup_completed?: boolean
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          category?: string | null
+          converted_user_id?: string | null
+          created_at?: string
+          id?: string
+          image_storage_path?: string | null
+          ip_hash?: string | null
+          lead_captured_at?: string | null
+          lead_company?: string | null
+          lead_email?: string | null
+          lead_name?: string | null
+          lead_phone?: string | null
+          referrer?: string | null
+          sample_id?: string | null
+          scan_error?: string | null
+          scan_id?: string | null
+          scan_result?: Json | null
+          scan_status?: string
+          session_token?: string
+          signed_up_at?: string | null
+          signup_completed?: boolean
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: []
+      }
       learned_skus: {
         Row: {
           avg_price_inr: number | null

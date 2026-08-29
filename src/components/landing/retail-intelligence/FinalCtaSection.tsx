@@ -1,10 +1,9 @@
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trackLandingEvent } from "@/lib/landing-analytics";
-import { useSignupHref } from "./useSignupHref";
+import { signupUrlWithLanding } from "@/lib/landing-scan-api";
 
 export function FinalCtaSection() {
-  const signupHref = useSignupHref();
   return (
     <section id="cta" className="border-t border-border bg-hero-glow py-20">
       <div className="mx-auto max-w-3xl px-5 text-center sm:px-8">
@@ -15,17 +14,19 @@ export function FinalCtaSection() {
           Start with 3 free shelf scans. No credit card required.
         </p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button asChild variant="hero" size="xl" className="min-h-11 w-full sm:w-auto">
-            <a
-              href={signupHref}
-              onClick={() => {
-                trackLandingEvent("cta_click", { location: "footer" });
-                trackLandingEvent("signup_started", { location: "footer" });
-              }}
-            >
-              Start Free Shelf Scan <ArrowRight className="size-4" />
-            </a>
+          <Button
+            variant="hero"
+            size="xl"
+            className="min-h-11 w-full sm:w-auto"
+            onClick={() => {
+              trackLandingEvent("cta_click", { location: "footer" });
+              trackLandingEvent("signup_started", { location: "footer" });
+              window.location.assign(signupUrlWithLanding());
+            }}
+          >
+            Start Free Shelf Scan <ArrowRight className="size-4" />
           </Button>
+
           <Button asChild variant="outline" size="xl" className="min-h-11 w-full rounded-xl sm:w-auto">
             <a
               href="/contact?subject=Book%20a%20demo"

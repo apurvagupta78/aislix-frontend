@@ -12,6 +12,8 @@ import { UseCasesSection } from "@/components/landing/retail-intelligence/UseCas
 import { BusinessValueSection } from "@/components/landing/retail-intelligence/BusinessValueSection";
 import { TrustSection } from "@/components/landing/retail-intelligence/TrustSection";
 import { FinalCtaSection } from "@/components/landing/retail-intelligence/FinalCtaSection";
+import { MobileStickyCta } from "@/components/landing/retail-intelligence/MobileStickyCta";
+
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import { persistUtmSession } from "@/lib/utm";
 
@@ -45,7 +47,7 @@ function RetailIntelligencePage() {
   return (
     <div className="min-h-screen bg-background">
       <RetailIntelligenceNav />
-      <main>
+      <main className="pb-20 lg:pb-0">
         <HeroSection />
         <ProductDemoSection />
         <ProblemSection />
@@ -57,11 +59,13 @@ function RetailIntelligencePage() {
         <TrustSection />
         <FinalCtaSection />
       </main>
-      <footer className="border-t border-border py-10">
+      <footer className="border-t border-border py-10 pb-24 lg:pb-10">
         <div className="mx-auto max-w-6xl px-5 text-center text-xs text-muted-foreground sm:px-8">
           © {new Date().getFullYear()} Aislix — AI Retail Shelf Intelligence.
         </div>
       </footer>
+      <MobileStickyCta />
     </div>
   );
 }
+

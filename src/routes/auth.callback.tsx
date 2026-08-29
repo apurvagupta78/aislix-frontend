@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureOAuthWorkspace } from "@/lib/api/auth";
 import { goToAuthRoute, resolvePostAuthRoute } from "@/lib/auth-routing";
+import { convertLandingSession, loadLandingSessionId } from "@/lib/landing-scan-api";
+
 
 export const Route = createFileRoute("/auth/callback")({
   head: () => ({
@@ -36,12 +38,18 @@ function AuthCallbackPage() {
         void navigate({ to: "/login", replace: true });
         return;
       }
+      const landingSessionId = loadLandingSessionId();
+      if (landingSessionId && data.session.user?.id) {
+        // Best-effort landing-demo attribution; failures never block auth.
+        void convertLandingSession(landingSessionId, data.session.user.id);
+      }
       try {
         await ensureOAuthWorkspace();
       } catch {
         // workspace creation is retried on the next authenticated read
       }
       await supabase.auth.getUser();
+
       const route = await resolvePostAuthRoute();
       if (!cancelled) goToAuthRoute(navigate as never, route);
     };

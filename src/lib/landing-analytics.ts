@@ -4,8 +4,13 @@ export type LandingEvent =
   | "landing_page_view"
   | "demo_started"
   | "demo_completed"
+  | "demo_scan_started"
+  | "demo_scan_completed"
+  | "demo_scan_failed"
+  | "landing_lead_captured"
   | "cta_click"
   | "signup_started";
+
 
 type Props = Record<string, string | number | boolean>;
 
@@ -36,5 +41,19 @@ export function trackLandingEvent(event: LandingEvent, props?: Props): void {
     /* analytics must never break the page */
   }
 
+  // LinkedIn Insight Tag conversion signal (tag itself is loaded globally).
+  if (
+    event === "landing_page_view" ||
+    event === "demo_scan_completed" ||
+    event === "landing_lead_captured"
+  ) {
+    try {
+      w.lintrk?.("track", { conversion_id: event });
+    } catch {
+      /* never break the page */
+    }
+  }
+
   if (import.meta.env.DEV) console.debug("[landing]", event, payload);
 }
+
