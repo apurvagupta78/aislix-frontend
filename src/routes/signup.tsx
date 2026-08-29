@@ -60,10 +60,16 @@ function SignupPage() {
         full_name: `${form.first} ${form.last}`.trim(),
         company_name: form.company.trim() || undefined,
       }),
-    onSuccess: () => {
+    onSuccess: (session) => {
+      // Best-effort landing-demo attribution; never blocks the auth flow.
+      const sid =
+        new URLSearchParams(window.location.search).get("landing_session_id") ??
+        loadLandingSessionId();
+      if (sid && session?.user?.id) void convertLandingSession(sid, session.user.id);
       // Always land on the dedicated verification page — never a toast only.
       navigate({ to: "/verify-email", search: { email: form.email.trim() }, replace: true });
     },
+
     onError: (error: unknown) =>
       toast.error("Could not create your workspace", { description: toUserMessage(error) }),
   });
