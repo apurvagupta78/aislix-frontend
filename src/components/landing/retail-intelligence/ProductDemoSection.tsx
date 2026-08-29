@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LANDING_DEMO_SAMPLE } from "@/data/landingDemoSample";
 import { trackLandingEvent } from "@/lib/landing-analytics";
-import { signupWithUtm } from "@/lib/utm";
+import { useSignupHref } from "./useSignupHref";
 
 type DemoState = "idle" | "loading" | "results";
 
@@ -198,7 +198,7 @@ export function ProductDemoSection() {
                   <p className="text-sm font-medium">Want to analyze your own shelves?</p>
                   <Button asChild variant="brand" className="mt-3 min-h-11 rounded-xl">
                     <a
-                      href={signupWithUtm("/signup")}
+                      href={signupHref}
                       onClick={() => {
                         trackLandingEvent("cta_click", { location: "demo" });
                         trackLandingEvent("signup_started", { location: "demo" });

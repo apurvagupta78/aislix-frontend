@@ -3,7 +3,7 @@ import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import logoAsset from "@/assets/aislix-logo.png.asset.json";
-import { signupWithUtm } from "@/lib/utm";
+import { useSignupHref } from "./useSignupHref";
 import { trackLandingEvent } from "@/lib/landing-analytics";
 
 const anchors = [
@@ -41,7 +41,7 @@ export function RetailIntelligenceNav() {
 
         <div className="ml-auto flex items-center gap-2 lg:ml-4">
           <Button asChild variant="brand" size="sm" className="hidden min-h-11 rounded-xl sm:inline-flex">
-            <a href={signupWithUtm("/signup")} onClick={() => onSignup("nav")}>
+            <a href={signupHref} onClick={() => onSignup("nav")}>
               Start Free Shelf Scan
             </a>
           </Button>
@@ -71,7 +71,7 @@ export function RetailIntelligenceNav() {
               <div className="mt-auto border-t border-border px-5 py-5">
                 <Button asChild variant="brand" className="min-h-11 w-full rounded-xl">
                   <a
-                    href={signupWithUtm("/signup")}
+                    href={signupHref}
                     onClick={() => {
                       setOpen(false);
                       onSignup("nav_mobile");

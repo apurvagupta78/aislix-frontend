@@ -1,7 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trackLandingEvent } from "@/lib/landing-analytics";
-import { signupWithUtm } from "@/lib/utm";
+import { useSignupHref } from "./useSignupHref";
 
 export function FinalCtaSection() {
   return (
@@ -16,7 +16,7 @@ export function FinalCtaSection() {
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
           <Button asChild variant="hero" size="xl" className="min-h-11 w-full sm:w-auto">
             <a
-              href={signupWithUtm("/signup")}
+              href={signupHref}
               onClick={() => {
                 trackLandingEvent("cta_click", { location: "footer" });
                 trackLandingEvent("signup_started", { location: "footer" });
