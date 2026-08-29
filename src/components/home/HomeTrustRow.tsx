@@ -10,7 +10,7 @@ const audiences = [
 
 export function HomeTrustRow() {
   return (
-    <section className="border-t border-border bg-background py-10">
+    <section className="bg-background py-10">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <p className="text-center text-sm font-medium text-muted-foreground">
           Built for modern retail teams
@@ -18,7 +18,7 @@ export function HomeTrustRow() {
         <div className="mt-6 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-5">
           {audiences.map(({ label, Icon }) => (
             <div key={label} className="flex flex-col items-center gap-2 text-center">
-              <Icon className="size-6 text-brand" strokeWidth={2} aria-hidden="true" />
+              <Icon className="size-6 text-landing-navy" strokeWidth={2} aria-hidden="true" />
               <span className="text-xs font-medium text-foreground">{label}</span>
             </div>
           ))}

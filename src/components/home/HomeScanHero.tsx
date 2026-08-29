@@ -18,13 +18,11 @@ export function HomeScanHero() {
               AI-Powered Retail Shelf Intelligence
             </span>
             <h2 className="mt-6 text-4xl font-semibold leading-[1.08] text-foreground sm:text-5xl">
-              Audit Every Aisle.
-              <br />
-              From a Single Photo.
+              See What AI Sees on Every Shelf.
             </h2>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Aislix turns a single shelf photo into a complete retail audit — products detected,
-              brands counted, out-of-stocks flagged and shelf health scored.
+              Aislix analyzes a single shelf photo to identify products, brands, stock gaps and
+              placement issues — giving your retail team the intelligence to act faster.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button
