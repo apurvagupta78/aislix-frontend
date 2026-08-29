@@ -47,9 +47,6 @@ export function FeaturesGrid() {
             </div>
           ))}
         </div>
-        <div className="mt-8 flex justify-center">
-          <SignupCta location="features" event="feature_cta_click" className="w-full sm:w-auto" />
-        </div>
       </div>
     </section>
   );
