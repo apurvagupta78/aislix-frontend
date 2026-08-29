@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trackLandingEvent } from "@/lib/landing-analytics";
-import { signupUrl } from "@/lib/landing-utm";
-import { captureLandingLead, loadLandingSessionId } from "@/lib/landing-scan-api";
+import { captureLandingLead, loadLandingSessionId, signupUrl } from "@/lib/landing-scan-api";
 
 
 export function WideLeadCapture({ landingSessionId }: { landingSessionId: string | null }) {
