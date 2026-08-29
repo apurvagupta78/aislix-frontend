@@ -6,41 +6,36 @@ import { captureUtmParams, readStoredUtm } from "@/lib/utm";
 
 const API = import.meta.env.VITE_AISLIX_API_URL ?? import.meta.env.VITE_API_BASE_URL;
 
-
 const SESSION_ID_KEY = "aislix_landing_session_id";
 const RESULT_KEY = "aislix_landing_scan_result";
+
+export type LandingInventoryRow = {
+  brand: string;
+  product_name: string;
+  quantity: number;
+  confidence?: number;
+  status_label?: "Detected" | "Needs review";
+  counted_in_totals?: boolean;
+};
 
 export type LandingScanResult = {
   landing_session_id: string;
   scan_id: string;
   status: "completed";
+  scan_mode?: "audit_only";
+  has_planogram?: false;
   metrics: {
     total_products?: number;
     unique_skus?: number;
     shelf_health_score?: number;
-    needs_review_facings?: number;
   };
-  inventory: Array<{
-    brand: string;
-    product_name: string;
-    quantity: number;
-    confidence?: number;
-    compliance_status?: string;
-    counted_in_totals?: boolean;
-    exclusion_reason?: string;
-  }>;
+  inventory: LandingInventoryRow[];
   executive_summary?: string;
   annotated_image_base64?: string;
   annotated_image_mime?: string;
-  facings_debug?: Array<{
-    x1: number;
-    y1: number;
-    x2: number;
-    y2: number;
-    brand?: string;
-    product_name?: string;
-    confidence?: number;
-  }>;
+  original_image_base64?: string;
+  original_image_mime?: string;
+  csv_base64?: string;
   scans_used_today?: number;
   scans_daily_limit?: number;
 };
@@ -52,6 +47,11 @@ export class LandingScanError extends Error {
     this.name = "LandingScanError";
     this.status = status;
   }
+}
+
+/** Public sample shelf image, shown instantly while the AI runs. */
+export function getSamplePreviewUrl(sampleId = "lays-a1l"): string {
+  return `${API}/landing/samples/${sampleId}/image`;
 }
 
 function appendUtm(form: FormData) {
@@ -94,12 +94,24 @@ export async function runLandingSample(
   return postScan(form, "Sample scan failed");
 }
 
+/** Download the backend-generated CSV for a completed landing scan. */
+export function downloadLandingCsv(result: LandingScanResult): void {
+  if (!result.csv_base64 || typeof window === "undefined") return;
+  const bytes = Uint8Array.from(atob(result.csv_base64), (c) => c.charCodeAt(0));
+  const blob = new Blob([bytes], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `aislix-shelf-scan-${result.scan_id || "demo"}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function captureLandingLead(payload: {
   landing_session_id: string;
   email: string;
   name?: string;
   company?: string;
-  phone?: string;
 }) {
   const res = await fetch(`${API}/landing/lead`, {
     method: "POST",
@@ -163,4 +175,3 @@ export function signupUrlWithLanding(): string {
   const qs = params.toString();
   return qs ? `/signup?${qs}` : "/signup";
 }
-
