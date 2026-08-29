@@ -13,7 +13,7 @@ import {
   runLandingUpload,
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
-import { CYAN_BTN, SectionHeading, SignupCta } from "./shared";
+import { SectionHeading, SignupCta } from "./shared";
 
 type Phase = "idle" | "scanning" | "done" | "error";
 
@@ -124,7 +124,8 @@ export function LiveDemoSection({
         <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
           <Button
             size="xl"
-            className={`min-h-11 w-full sm:w-auto ${CYAN_BTN}`}
+            variant="brand"
+            className="min-h-11 w-full sm:w-auto"
             disabled={scanning}
             onClick={onSample}
           >
@@ -163,8 +164,8 @@ export function LiveDemoSection({
               />
             )}
             {scanning && (
-              <div className="absolute inset-0 bg-landing-navy/20">
-                <Badge className={`absolute left-4 top-4 gap-2 rounded-md px-3 py-2 ${CYAN_BTN}`}>
+              <div className="absolute inset-0 bg-foreground/20">
+                <Badge className="absolute left-4 top-4 gap-2 rounded-md bg-brand px-3 py-2 text-brand-foreground">
                   <Loader2 className="size-3.5 animate-spin" /> Analyzing shelf…
                 </Badge>
               </div>

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import { signupUrl } from "@/lib/landing-utm";
 import { captureLandingLead, loadLandingSessionId } from "@/lib/landing-scan-api";
-import { CYAN_BTN } from "./shared";
+
 
 export function WideLeadCapture({ landingSessionId }: { landingSessionId: string | null }) {
   const [email, setEmail] = useState("");
@@ -58,7 +58,8 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
               </p>
               <Button
                 size="xl"
-                className={`mt-6 min-h-11 w-full sm:w-auto ${CYAN_BTN}`}
+                variant="brand"
+                className="mt-6 min-h-11 w-full sm:w-auto"
                 onClick={() => {
                   trackLandingEvent("signup_started", { location: "lead_success" });
                   window.location.assign(signupUrl());
@@ -128,7 +129,8 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
                 <Button
                   type="submit"
                   size="xl"
-                  className={`min-h-11 w-full sm:w-auto sm:min-w-64 ${CYAN_BTN}`}
+                  variant="brand"
+                  className="min-h-11 w-full sm:w-auto sm:min-w-64"
                   disabled={saving}
                 >
                   {saving ? <Loader2 className="size-4 animate-spin" /> : null}
