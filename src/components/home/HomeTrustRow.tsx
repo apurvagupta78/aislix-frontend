@@ -10,9 +10,9 @@ const audiences = [
 
 export function HomeTrustRow() {
   return (
-    <section className="bg-background py-10">
+    <section className="bg-background py-8">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <p className="text-center text-sm font-medium text-muted-foreground">
+        <p className="text-center text-base font-medium text-muted-foreground sm:text-lg">
           Built for modern retail teams
         </p>
         <div className="mt-6 grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-5">

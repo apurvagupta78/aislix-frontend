@@ -118,7 +118,7 @@ function Landing() {
 
       <section className="relative overflow-hidden bg-hero-glow">
         <div className="absolute inset-0 grid-lines opacity-40 [mask-image:radial-gradient(70%_50%_at_50%_0%,black,transparent)]" />
-        <div className="relative mx-auto max-w-4xl px-6 py-24 text-center sm:py-32">
+        <div className="relative mx-auto max-w-4xl px-6 pt-24 pb-14 text-center sm:pt-32 sm:pb-16">
           <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs text-muted-foreground shadow-soft">
             <span className="size-1.5 rounded-full bg-brand" />
             AI-Powered Retail Shelf Intelligence
