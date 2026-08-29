@@ -25,14 +25,14 @@ export function LandingHero({ stats }: { stats?: HeroStats }) {
       <div className="mx-auto grid max-w-6xl gap-12 px-5 pb-16 pt-12 sm:px-8 sm:pb-20 sm:pt-16 lg:grid-cols-[1.05fr_1fr] lg:items-center lg:gap-14">
         <div>
           <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs text-muted-foreground shadow-soft">
-            <span className="size-1.5 rounded-full bg-brand" />
+            <span className="size-1.5 rounded-full bg-primary" />
             AI-Powered Retail Shelf Intelligence
           </span>
 
           <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-5xl">
             Audit Every Aisle.
             <br />
-            <span className="text-brand">From a Single Photo.</span>
+            <span className="text-primary">From a Single Photo.</span>
           </h1>
 
           <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground">
@@ -42,7 +42,7 @@ export function LandingHero({ stats }: { stats?: HeroStats }) {
 
           <div className="mt-7">
             <Button
-              variant="brand"
+              variant="default"
               size="xl"
               className="w-full sm:w-auto"
               onClick={() => {
@@ -57,7 +57,7 @@ export function LandingHero({ stats }: { stats?: HeroStats }) {
           <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2">
             {TRUST.map((t) => (
               <li key={t} className="flex items-center gap-2 text-sm text-muted-foreground">
-                <CheckCircle2 className="size-4 text-brand" /> {t}
+                <CheckCircle2 className="size-4 text-primary" /> {t}
               </li>
             ))}
           </ul>
@@ -109,7 +109,7 @@ export function LandingHero({ stats }: { stats?: HeroStats }) {
               <ul className="mt-2 space-y-1.5">
                 {TOP_ISSUES.map((i) => (
                   <li key={i.label} className="flex items-center gap-2 text-xs text-foreground">
-                    <span className="size-1.5 rounded-full bg-brand" />
+                    <span className="size-1.5 rounded-full bg-primary" />
                     {i.label}
                   </li>
                 ))}

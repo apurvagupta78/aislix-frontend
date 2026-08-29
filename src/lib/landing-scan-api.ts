@@ -135,18 +135,39 @@ export function downloadLandingCsv(result: LandingScanResult): void {
 }
 
 export async function captureLandingLead(payload: {
-  landing_session_id: string;
+  landing_session_id?: string;
   email: string;
   name?: string;
   company?: string;
+  role?: string;
 }) {
+  const sid =
+    payload.landing_session_id ||
+    (typeof window !== "undefined" ? window.sessionStorage.getItem(SESSION_ID_KEY) : null) ||
+    undefined;
+  const body: Record<string, string | undefined> = { ...payload, landing_session_id: sid };
+  if (typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]) {
+      const value = params.get(key);
+      if (value) body[key] = value;
+    }
+  }
   const res = await fetch(`${API}/landing/lead`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   });
-  if (!res.ok) throw new LandingScanError("Could not save your details", res.status);
-  return res.json();
+  const data = (await res.json().catch(() => ({}))) as {
+    ok?: boolean;
+    detail?: string;
+    landing_session_id?: string;
+  };
+  if (!res.ok) throw new LandingScanError(data.detail || "Could not save your details.", res.status);
+  if (data.landing_session_id && typeof window !== "undefined") {
+    window.sessionStorage.setItem(SESSION_ID_KEY, data.landing_session_id);
+  }
+  return data;
 }
 
 export async function convertLandingSession(landingSessionId: string, userId: string) {

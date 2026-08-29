@@ -31,7 +31,7 @@ export function ProblemSection() {
               key={title}
               className="rounded-xl border border-border bg-card p-6 shadow-soft"
             >
-              <Icon className="size-5 text-brand" strokeWidth={1.7} />
+              <Icon className="size-5 text-primary" strokeWidth={1.7} />
               <h3 className="mt-4 text-base font-semibold text-foreground">{title}</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
             </div>

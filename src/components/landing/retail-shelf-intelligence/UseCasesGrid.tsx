@@ -25,7 +25,7 @@ export function UseCasesGrid() {
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {CASES.map(({ Icon, title, body }) => (
             <div key={title} className="rounded-xl border border-border bg-card p-5 shadow-soft">
-              <Icon className="size-5 text-brand" strokeWidth={1.7} />
+              <Icon className="size-5 text-primary" strokeWidth={1.7} />
               <h3 className="mt-3 text-sm font-semibold text-foreground">{title}</h3>
               <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{body}</p>
             </div>

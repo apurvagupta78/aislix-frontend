@@ -28,10 +28,10 @@ export function HowItWorks() {
             <div key={n} className="flex flex-1 items-center gap-4">
               <div className="flex-1 rounded-xl border border-border bg-card p-6 shadow-soft">
                 <div className="flex items-center gap-3">
-                  <span className="grid size-8 place-items-center rounded-lg bg-brand text-xs font-semibold text-brand-foreground">
+                  <span className="grid size-8 place-items-center rounded-lg bg-primary text-xs font-semibold text-primary-foreground">
                     {n}
                   </span>
-                  <Icon className="size-5 text-brand" strokeWidth={1.7} />
+                  <Icon className="size-5 text-primary" strokeWidth={1.7} />
                 </div>
                 <h3 className="mt-4 text-base font-semibold text-foreground">{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>
