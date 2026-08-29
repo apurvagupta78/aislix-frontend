@@ -168,7 +168,6 @@ function Landing() {
       <HomeDashboardShowcase />
 
 
-      <HomeLeadCapture />
 
       <section id="platform" className="border-t border-border py-24">
         <div className="mx-auto max-w-6xl px-6">
