@@ -1,17 +1,19 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, Download, ImagePlus, Loader2, Sparkles } from "lucide-react";
+import { AlertCircle, ArrowRight, Download, ImagePlus, Loader2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import {
+  DEFAULT_SAMPLE_ID,
+  DEFAULT_SAMPLE_IMAGE,
   downloadLandingCsv,
-  getSamplePreviewUrl,
   loadLandingSessionId,
   persistLandingSession,
   runLandingSample,
-  runLandingScan,
+  runLandingUpload,
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
+import { LANDING_SAMPLE_EVENT, LANDING_UPLOAD_EVENT } from "./HeroSection";
 import { LeadCaptureSection } from "./LeadCaptureSection";
 
 type Phase = "idle" | "scanning" | "done" | "error";
@@ -36,12 +38,20 @@ export function RetailIntelligenceDemo() {
   const objectUrlRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    setPreviewImageUrl(DEFAULT_SAMPLE_IMAGE);
+
+    const handleSample = () => void run("sample");
+    const handleUpload = () => fileRef.current?.click();
+    window.addEventListener(LANDING_SAMPLE_EVENT, handleSample);
+    window.addEventListener(LANDING_UPLOAD_EVENT, handleUpload);
+
+    return () => {
+      window.removeEventListener(LANDING_SAMPLE_EVENT, handleSample);
+      window.removeEventListener(LANDING_UPLOAD_EVENT, handleUpload);
       if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
-    },
-    [],
-  );
+    };
+  }, []);
 
   async function run(kind: "sample" | "upload", file?: File) {
     setError(null);
@@ -52,8 +62,11 @@ export function RetailIntelligenceDemo() {
     try {
       const scan =
         kind === "sample"
-          ? await runLandingSample("lays-a1l", loadLandingSessionId() ?? undefined)
-          : await runLandingScan(file!, loadLandingSessionId() ?? undefined);
+          ? await runLandingSample(DEFAULT_SAMPLE_ID, loadLandingSessionId() ?? undefined)
+          : file
+            ? await runLandingUpload(file, loadLandingSessionId() ?? undefined)
+            : null;
+      if (!scan) throw new Error("Choose a shelf photo to continue.");
       setResult(scan);
       persistLandingSession(scan);
       setPhase("done");
@@ -77,7 +90,11 @@ export function RetailIntelligenceDemo() {
   }
 
   function onSample() {
-    setPreviewImageUrl(getSamplePreviewUrl("lays-a1l"));
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+    setPreviewImageUrl(DEFAULT_SAMPLE_IMAGE);
     void run("sample");
   }
 
@@ -104,10 +121,11 @@ export function RetailIntelligenceDemo() {
 
   return (
     <>
-      <section id="demo" className="border-t border-border py-14">
+      <section id="demo" className="scroll-mt-16 border-t border-border bg-background py-16 sm:py-20">
         <div className="mx-auto max-w-6xl px-5 sm:px-8">
           <div className="text-center">
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">See What Aislix Sees</h2>
+            <p className="text-xs font-semibold uppercase tracking-wider text-brand">Live shelf audit</p>
+            <h2 className="mt-3 text-3xl font-semibold tracking-normal sm:text-4xl">See What Aislix Sees</h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
               Run a live AI shelf scan right here — no signup, no setup.
             </p>
@@ -115,9 +133,8 @@ export function RetailIntelligenceDemo() {
 
           <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
             <Button
-              variant="hero"
               size="xl"
-              className="min-h-11 w-full sm:w-auto"
+              className="min-h-11 w-full bg-accent-green text-brand-foreground hover:bg-accent-green/90 sm:w-auto"
               disabled={scanning}
               onClick={onSample}
             >
@@ -126,7 +143,7 @@ export function RetailIntelligenceDemo() {
             <Button
               variant="outline"
               size="xl"
-              className="min-h-11 w-full rounded-xl sm:w-auto"
+              className="min-h-11 w-full sm:w-auto"
               disabled={scanning}
               onClick={() => fileRef.current?.click()}
             >
@@ -145,20 +162,22 @@ export function RetailIntelligenceDemo() {
             />
           </div>
 
-          <div className="mt-8 grid gap-5 lg:grid-cols-[55fr_45fr]">
+          <div className="mt-8 overflow-hidden rounded-lg border border-border bg-card shadow-lift lg:grid lg:grid-cols-[55fr_45fr]">
             {/* IMAGE PANEL */}
-            <div className="relative overflow-hidden rounded-3xl border border-border bg-card shadow-soft">
+            <div className="relative grid min-h-80 place-items-center overflow-hidden bg-surface lg:min-h-[620px] lg:border-r lg:border-border">
               {shownImage ? (
                 <>
                   <img
                     src={shownImage}
-                    alt="Shelf photo analysed by Aislix"
-                    className={`block h-auto w-full ${scanning ? "animate-pulse opacity-90" : ""}`}
+                    alt={phase === "done" ? "Shelf photo analyzed by Aislix" : "Sample Lay's chip rack"}
+                    className="h-full max-h-[720px] w-full object-contain p-3 sm:p-5"
                   />
                   {scanning && (
-                    <Badge className="absolute left-4 top-4 gap-2 rounded-lg px-3 py-1.5">
-                      <Loader2 className="size-3.5 animate-spin" /> Analyzing…
-                    </Badge>
+                    <div className="absolute inset-0 bg-brand/15">
+                      <Badge className="absolute left-4 top-4 gap-2 rounded-md bg-brand px-3 py-2 text-brand-foreground">
+                        <Loader2 className="size-3.5 animate-spin" /> Analyzing shelf…
+                      </Badge>
+                    </div>
                   )}
                 </>
               ) : (
@@ -176,12 +195,12 @@ export function RetailIntelligenceDemo() {
             </div>
 
             {/* RESULTS PANEL */}
-            <div className="rounded-3xl border border-border bg-card p-5 shadow-soft sm:p-6">
+            <div className="min-w-0 p-5 sm:p-7">
               {scanning && (
                 <div className="grid min-h-72 place-items-center text-center">
                   <div>
                     <Loader2 className="mx-auto size-6 animate-spin text-brand" />
-                    <p className="mt-4 text-sm font-medium text-foreground">Analyzing shelf… 30–90s</p>
+                    <p className="mt-4 text-sm font-medium text-foreground">Analyzing shelf… about 60s</p>
                     <p className="mt-1.5 text-xs text-muted-foreground">
                       Detecting products, brands and availability gaps.
                     </p>
@@ -220,7 +239,7 @@ export function RetailIntelligenceDemo() {
                             : undefined,
                       },
                     ].map((m) => (
-                      <div key={m.label} className="rounded-2xl border border-border bg-surface p-3">
+                      <div key={m.label} className="rounded-md border border-border bg-surface p-3">
                         <p className="text-lg font-semibold tracking-tight">{m.value ?? "—"}</p>
                         <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
                           {m.label}
@@ -235,7 +254,7 @@ export function RetailIntelligenceDemo() {
                     </p>
                   )}
 
-                  <div className="mt-5 max-h-80 overflow-auto rounded-2xl border border-border">
+                  <div className="mt-5 max-h-80 overflow-auto rounded-md border border-border">
                     <table className="w-full text-left text-sm">
                       <thead className="sticky top-0 bg-surface text-xs uppercase tracking-wide text-muted-foreground">
                         <tr>
@@ -253,7 +272,9 @@ export function RetailIntelligenceDemo() {
                             <td className="px-3 py-2">{row.product_name || "—"}</td>
                             <td className="px-3 py-2">{row.quantity}</td>
                             <td className="px-3 py-2 text-muted-foreground">
-                              {row.confidence != null ? `${Math.round(row.confidence * 100)}%` : "—"}
+                               {row.confidence != null
+                                 ? `${Math.round(row.confidence <= 1 ? row.confidence * 100 : row.confidence)}%`
+                                 : "—"}
                             </td>
                             <td className="px-3 py-2">
                               <Badge
@@ -276,10 +297,19 @@ export function RetailIntelligenceDemo() {
                     </p>
                   )}
 
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => document.getElementById("lead")?.scrollIntoView({ behavior: "smooth", block: "center" })}
+                    className="mt-4 flex h-auto w-full justify-between rounded-none border-y border-border px-0 py-3 text-left text-sm font-medium text-foreground hover:bg-transparent hover:text-brand"
+                  >
+                    Want to save this audit? <ArrowRight className="size-4" />
+                  </Button>
+
                   <div className="mt-4">
                     <Button
                       variant="outline"
-                      className="min-h-11 w-full rounded-xl"
+                      className="min-h-11 w-full"
                       disabled={!result.csv_base64}
                       onClick={() => {
                         trackLandingEvent("cta_click", { location: "download_csv" });
@@ -296,9 +326,7 @@ export function RetailIntelligenceDemo() {
         </div>
       </section>
 
-      {phase === "done" && result && (
-        <LeadCaptureSection landingSessionId={result.landing_session_id} />
-      )}
+      <LeadCaptureSection landingSessionId={result?.landing_session_id ?? loadLandingSessionId()} />
     </>
   );
 }

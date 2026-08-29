@@ -4,7 +4,10 @@
  */
 import { captureUtmParams, readStoredUtm } from "@/lib/utm";
 
-const API = import.meta.env.VITE_AISLIX_API_URL ?? import.meta.env.VITE_API_BASE_URL;
+const API = import.meta.env.VITE_AISLIX_API_URL;
+
+export const DEFAULT_SAMPLE_ID = "lays-a1l";
+export const DEFAULT_SAMPLE_IMAGE = `${API}/landing/samples/${DEFAULT_SAMPLE_ID}/image`;
 
 const SESSION_ID_KEY = "aislix_landing_session_id";
 const RESULT_KEY = "aislix_landing_scan_result";
@@ -50,7 +53,7 @@ export class LandingScanError extends Error {
 }
 
 /** Public sample shelf image, shown instantly while the AI runs. */
-export function getSamplePreviewUrl(sampleId = "lays-a1l"): string {
+export function getSamplePreviewUrl(sampleId = DEFAULT_SAMPLE_ID): string {
   return `${API}/landing/samples/${sampleId}/image`;
 }
 
@@ -69,10 +72,31 @@ async function postScan(form: FormData, fallback: string): Promise<LandingScanRe
     const err = (await res.json().catch(() => ({}))) as { detail?: string };
     throw new LandingScanError(err.detail || `${fallback} (${res.status})`, res.status);
   }
-  return (await res.json()) as LandingScanResult;
+  const payload = (await res.json()) as LandingScanResult;
+  return {
+    landing_session_id: payload.landing_session_id,
+    scan_id: payload.scan_id,
+    status: "completed",
+    scan_mode: "audit_only",
+    has_planogram: false,
+    metrics: {
+      total_products: payload.metrics?.total_products,
+      unique_skus: payload.metrics?.unique_skus,
+      shelf_health_score: payload.metrics?.shelf_health_score,
+    },
+    inventory: payload.inventory ?? [],
+    executive_summary: payload.executive_summary,
+    annotated_image_base64: payload.annotated_image_base64,
+    annotated_image_mime: payload.annotated_image_mime,
+    original_image_base64: payload.original_image_base64,
+    original_image_mime: payload.original_image_mime,
+    csv_base64: payload.csv_base64,
+    scans_used_today: payload.scans_used_today,
+    scans_daily_limit: payload.scans_daily_limit,
+  };
 }
 
-export async function runLandingScan(
+export async function runLandingUpload(
   file: File,
   landingSessionId?: string,
 ): Promise<LandingScanResult> {
@@ -84,7 +108,7 @@ export async function runLandingScan(
 }
 
 export async function runLandingSample(
-  sampleId = "lays-a1l",
+  sampleId = DEFAULT_SAMPLE_ID,
   landingSessionId?: string,
 ): Promise<LandingScanResult> {
   const form = new FormData();
@@ -93,6 +117,9 @@ export async function runLandingSample(
   appendUtm(form);
   return postScan(form, "Sample scan failed");
 }
+
+/** Backward-compatible alias for earlier landing component imports. */
+export const runLandingScan = runLandingUpload;
 
 /** Download the backend-generated CSV for a completed landing scan. */
 export function downloadLandingCsv(result: LandingScanResult): void {
