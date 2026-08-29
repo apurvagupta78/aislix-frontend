@@ -30,7 +30,7 @@ export function LandingNav() {
         "sticky top-0 z-50 transition-colors",
         scrolled || open
           ? "border-b border-landing-border bg-background/90 backdrop-blur"
-          : "bg-transparent",
+          : "bg-landing-navy",
       )}
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
