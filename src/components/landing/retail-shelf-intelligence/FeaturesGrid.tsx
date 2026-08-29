@@ -10,7 +10,7 @@ import {
   Sparkles,
   Tags,
 } from "lucide-react";
-import { SectionHeading, SignupCta } from "./shared";
+import { SectionHeading } from "./shared";
 
 const FEATURES = [
   { Icon: Boxes, title: "Product Detection", body: "Identify every product on the shelf." },
@@ -46,9 +46,6 @@ export function FeaturesGrid() {
               <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{body}</p>
             </div>
           ))}
-        </div>
-        <div className="mt-8 flex justify-center">
-          <SignupCta location="features" event="feature_cta_click" className="w-full sm:w-auto" />
         </div>
       </div>
     </section>

@@ -22,7 +22,7 @@ export function FinalCtaSection() {
             variant="secondary"
             className="w-full sm:w-auto"
           >
-            Start free shelf scan →
+            Create Your Workspace →
           </SignupCta>
         </div>
 
