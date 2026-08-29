@@ -164,7 +164,7 @@ function Landing() {
 
       <HomeScanHero />
 
-      <LiveDemoSection />
+      <LiveDemoSection showWorkspaceCta />
 
       <HomeLeadCapture />
 

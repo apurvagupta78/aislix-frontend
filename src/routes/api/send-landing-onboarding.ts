@@ -26,7 +26,6 @@ export const Route = createFileRoute("/api/send-landing-onboarding")({
           const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
           const result = await sendTemplateEmail("landing-onboarding", email, {
             templateData: { name, signupUrl: signup_url },
-            idempotencyKey: `landing-onboarding:${email.toLowerCase()}`,
           });
           if (!result.sent) {
             // Suppressed recipient — expected outcome, not an error.

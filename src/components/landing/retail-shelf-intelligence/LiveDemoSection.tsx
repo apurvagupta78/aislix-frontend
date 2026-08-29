@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, Download, ImagePlus, Loader2, Sparkles } from "lucide-react";
+import { AlertCircle, ArrowRight, Download, ImagePlus, Loader2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { trackLandingEvent } from "@/lib/landing-analytics";
@@ -31,8 +31,10 @@ function annotatedSrc(result: LandingScanResult): string | null {
 
 export function LiveDemoSection({
   onResult,
+  showWorkspaceCta = false,
 }: {
   onResult?: (result: LandingScanResult, imageUrl: string | null) => void;
+  showWorkspaceCta?: boolean;
 }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(DEFAULT_SAMPLE_IMAGE);
@@ -314,6 +316,17 @@ export function LiveDemoSection({
             )}
           </div>
         </div>
+        {showWorkspaceCta ? (
+          <div className="mt-8 flex justify-center">
+            <Button
+              size="xl"
+              className="w-full sm:w-auto"
+              onClick={() => document.querySelector("#lead")?.scrollIntoView({ behavior: "smooth" })}
+            >
+              Create your workspace <ArrowRight className="size-4" />
+            </Button>
+          </div>
+        ) : null}
       </div>
     </section>
   );
