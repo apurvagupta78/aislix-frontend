@@ -13,7 +13,7 @@ import {
   runLandingUpload,
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
-import { SectionHeading, SignupCta } from "./shared";
+import { SectionHeading } from "./shared";
 
 type Phase = "idle" | "scanning" | "done" | "error";
 
@@ -124,7 +124,7 @@ export function LiveDemoSection({
         <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
           <Button
             size="xl"
-            variant="brand"
+            variant="default"
             className="min-h-11 w-full sm:w-auto"
             disabled={scanning}
             onClick={onSample}
@@ -165,7 +165,7 @@ export function LiveDemoSection({
             )}
             {scanning && (
               <div className="absolute inset-0 bg-foreground/20">
-                <Badge className="absolute left-4 top-4 gap-2 rounded-md bg-brand px-3 py-2 text-brand-foreground">
+                <Badge className="absolute left-4 top-4 gap-2 rounded-md bg-primary px-3 py-2 text-primary-foreground">
                   <Loader2 className="size-3.5 animate-spin" /> Analyzing shelf…
                 </Badge>
               </div>
@@ -177,7 +177,7 @@ export function LiveDemoSection({
             {scanning && (
               <div className="grid min-h-72 place-items-center text-center">
                 <div>
-                  <Loader2 className="mx-auto size-6 animate-spin text-brand" />
+                  <Loader2 className="mx-auto size-6 animate-spin text-primary" />
                   <p className="mt-4 text-sm font-medium text-foreground">Analyzing shelf… 30–90s</p>
                   <p className="mt-1.5 text-xs text-muted-foreground">
                     Detecting products, brands and availability gaps.
@@ -299,12 +299,7 @@ export function LiveDemoSection({
                   </p>
                 )}
 
-                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                  <SignupCta
-                    location="demo_results"
-                    event="feature_cta_click"
-                    className="w-full sm:flex-1"
-                  />
+                <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
                   <Button
                     variant="outline"
                     size="lg"

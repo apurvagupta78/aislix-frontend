@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { trackLandingEvent, type LandingEvent } from "@/lib/landing-analytics";
-import { signupUrl } from "@/lib/landing-utm";
+import { signupUrl } from "@/lib/landing-scan-api";
 
 /** Primary conversion CTA: always routes to /signup with UTMs + session id. */
 export function SignupCta({
@@ -11,25 +11,29 @@ export function SignupCta({
   location,
   className,
   size = "lg",
+  variant = "default",
 }: {
   children?: ReactNode;
   event?: LandingEvent;
   location: string;
   className?: string;
   size?: ButtonProps["size"];
+  variant?: ButtonProps["variant"];
 }) {
   return (
     <Button
       asChild
-      variant="brand"
+      variant={variant}
       size={size}
       className={cn(className)}
-      onClick={() => {
+      onClick={(clickEvent) => {
+        clickEvent.preventDefault();
         trackLandingEvent(event, { location });
         trackLandingEvent("signup_started", { location });
+        window.location.assign(signupUrl());
       }}
     >
-      <a href={signupUrl()}>{children}</a>
+      <a href="/signup">{children}</a>
     </Button>
   );
 }
@@ -48,7 +52,7 @@ export function SectionHeading({
   return (
     <div className={cn("mx-auto max-w-2xl text-center", className)}>
       {eyebrow && (
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">{eyebrow}</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">{eyebrow}</p>
       )}
       <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
         {title}

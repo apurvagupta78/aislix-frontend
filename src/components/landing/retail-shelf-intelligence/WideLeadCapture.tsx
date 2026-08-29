@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trackLandingEvent } from "@/lib/landing-analytics";
-import { signupUrl } from "@/lib/landing-utm";
-import { captureLandingLead, loadLandingSessionId } from "@/lib/landing-scan-api";
+import { captureLandingLead, loadLandingSessionId, signupUrl } from "@/lib/landing-scan-api";
 
 
 export function WideLeadCapture({ landingSessionId }: { landingSessionId: string | null }) {
@@ -24,18 +23,17 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
     setError(null);
     const sessionId = landingSessionId ?? loadLandingSessionId();
     try {
-      if (sessionId) {
-        await captureLandingLead({
-          landing_session_id: sessionId,
-          email: email.trim(),
-          name: [name.trim(), role.trim()].filter(Boolean).join(" · ") || undefined,
-          company: company.trim() || undefined,
-        });
-      }
+      await captureLandingLead({
+        landing_session_id: sessionId ?? undefined,
+        email: email.trim(),
+        name: name.trim() || undefined,
+        company: company.trim() || undefined,
+        role: role.trim() || undefined,
+      });
       trackLandingEvent("landing_lead_captured", { has_session: Boolean(sessionId) });
       setDone(true);
-    } catch {
-      setError("Could not save your details. You can still create your free account.");
+    } catch (err) {
+      setError((err as Error).message || "Could not save your details.");
     } finally {
       setSaving(false);
     }
@@ -47,25 +45,29 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
         <div className="rounded-2xl border border-border bg-card p-6 shadow-lift sm:p-10">
           {done ? (
             <div className="text-center">
-              <span className="mx-auto grid size-11 place-items-center rounded-full bg-brand-soft text-brand">
-                <CheckCircle2 className="size-6" />
+              <span className="mx-auto grid size-11 place-items-center rounded-full bg-secondary text-primary">
+                <Mail className="size-6" />
               </span>
               <h2 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
-                You&apos;re all set.
+                Check your email
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                Create your free workspace to keep scanning shelves.
+                We sent onboarding instructions to {email}. Open the email and click the link to
+                create your free Aislix workspace and unlock 3 shelf scans.
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Didn&apos;t receive it? Check spam or wait a minute.
               </p>
               <Button
                 size="xl"
-                variant="brand"
+                variant="link"
                 className="mt-6 min-h-11 w-full sm:w-auto"
                 onClick={() => {
                   trackLandingEvent("signup_started", { location: "lead_success" });
-                  window.location.assign(signupUrl());
+                  window.location.assign(signupUrl({ email }));
                 }}
               >
-                Create free account <ArrowRight className="size-4" />
+                Continue to signup <ArrowRight className="size-4" />
               </Button>
             </div>
           ) : (
@@ -129,12 +131,12 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
                 <Button
                   type="submit"
                   size="xl"
-                  variant="brand"
-                  className="min-h-11 w-full sm:w-auto sm:min-w-64"
+                  variant="default"
+                  className="min-h-11 w-full"
                   disabled={saving}
                 >
                   {saving ? <Loader2 className="size-4 animate-spin" /> : null}
-                  Start free shelf scan
+                  Get more free scans
                 </Button>
                 <p className="text-xs text-muted-foreground">
                   We only use your email to set up your Aislix workspace.

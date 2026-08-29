@@ -286,6 +286,8 @@ export type Database = {
           lead_email: string | null
           lead_name: string | null
           lead_phone: string | null
+          lead_role: string | null
+          onboarding_email_sent_at: string | null
           referrer: string | null
           sample_id: string | null
           scan_error: string | null
@@ -315,6 +317,8 @@ export type Database = {
           lead_email?: string | null
           lead_name?: string | null
           lead_phone?: string | null
+          lead_role?: string | null
+          onboarding_email_sent_at?: string | null
           referrer?: string | null
           sample_id?: string | null
           scan_error?: string | null
@@ -344,6 +348,8 @@ export type Database = {
           lead_email?: string | null
           lead_name?: string | null
           lead_phone?: string | null
+          lead_role?: string | null
+          onboarding_email_sent_at?: string | null
           referrer?: string | null
           sample_id?: string | null
           scan_error?: string | null

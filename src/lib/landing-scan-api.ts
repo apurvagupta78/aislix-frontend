@@ -135,18 +135,39 @@ export function downloadLandingCsv(result: LandingScanResult): void {
 }
 
 export async function captureLandingLead(payload: {
-  landing_session_id: string;
+  landing_session_id?: string;
   email: string;
   name?: string;
   company?: string;
+  role?: string;
 }) {
+  const sid =
+    payload.landing_session_id ||
+    (typeof window !== "undefined" ? window.sessionStorage.getItem(SESSION_ID_KEY) : null) ||
+    undefined;
+  const body: Record<string, string | undefined> = { ...payload, landing_session_id: sid };
+  if (typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    for (const key of ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"]) {
+      const value = params.get(key);
+      if (value) body[key] = value;
+    }
+  }
   const res = await fetch(`${API}/landing/lead`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   });
-  if (!res.ok) throw new LandingScanError("Could not save your details", res.status);
-  return res.json();
+  const data = (await res.json().catch(() => ({}))) as {
+    ok?: boolean;
+    detail?: string;
+    landing_session_id?: string;
+  };
+  if (!res.ok) throw new LandingScanError(data.detail || "Could not save your details.", res.status);
+  if (data.landing_session_id && typeof window !== "undefined") {
+    window.sessionStorage.setItem(SESSION_ID_KEY, data.landing_session_id);
+  }
+  return data;
 }
 
 export async function convertLandingSession(landingSessionId: string, userId: string) {
@@ -191,7 +212,7 @@ export function loadLandingScanResult(): LandingScanResult | null {
 }
 
 /** /signup URL carrying the current + stored UTM params plus the landing session id. */
-export function signupUrlWithLanding(): string {
+export function signupUrl(extra?: Record<string, string>): string {
   if (typeof window === "undefined") return "/signup";
   const params = new URLSearchParams(window.location.search);
   for (const [k, v] of Object.entries({ ...readStoredUtm(), ...captureUtmParams() })) {
@@ -199,6 +220,10 @@ export function signupUrlWithLanding(): string {
   }
   const sid = loadLandingSessionId();
   if (sid) params.set("landing_session_id", sid);
+  if (extra) for (const [key, value] of Object.entries(extra)) params.set(key, value);
   const qs = params.toString();
   return qs ? `/signup?${qs}` : "/signup";
 }
+
+/** Backward-compatible name retained for existing landing imports. */
+export const signupUrlWithLanding = signupUrl;
