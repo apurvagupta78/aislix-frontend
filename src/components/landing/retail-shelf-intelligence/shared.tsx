@@ -24,8 +24,8 @@ export function SignupCta({
       variant="default"
       size={size}
       className={cn(className)}
-      onClick={(event) => {
-        event.preventDefault();
+      onClick={(clickEvent) => {
+        clickEvent.preventDefault();
         trackLandingEvent(event, { location });
         trackLandingEvent("signup_started", { location });
         window.location.assign(signupUrl());
