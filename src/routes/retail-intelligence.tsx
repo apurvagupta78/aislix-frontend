@@ -12,6 +12,8 @@ import { UseCasesSection } from "@/components/landing/retail-intelligence/UseCas
 import { BusinessValueSection } from "@/components/landing/retail-intelligence/BusinessValueSection";
 import { TrustSection } from "@/components/landing/retail-intelligence/TrustSection";
 import { FinalCtaSection } from "@/components/landing/retail-intelligence/FinalCtaSection";
+import { MobileStickyCta } from "@/components/landing/retail-intelligence/MobileStickyCta";
+
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import { persistUtmSession } from "@/lib/utm";
 
