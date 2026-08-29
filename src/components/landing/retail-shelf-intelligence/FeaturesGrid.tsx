@@ -47,10 +47,6 @@ export function FeaturesGrid() {
             </div>
           ))}
         </div>
-
-        <div className="mt-10 text-center">
-          <SignupCta location="features" event="feature_cta_click" size="xl" />
-        </div>
       </div>
     </section>
   );
