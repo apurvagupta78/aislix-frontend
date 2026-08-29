@@ -162,6 +162,8 @@ export async function captureLandingLead(payload: {
     ok?: boolean;
     detail?: string;
     landing_session_id?: string;
+    email_sent?: boolean;
+    signup_url?: string;
   };
   if (!res.ok) throw new LandingScanError(data.detail || "Could not save your details.", res.status);
   if (data.landing_session_id && typeof window !== "undefined") {
