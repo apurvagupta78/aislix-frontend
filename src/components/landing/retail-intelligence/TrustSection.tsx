@@ -32,7 +32,7 @@ export function TrustSection() {
           </figure>
           <figure className="overflow-hidden rounded-3xl border border-border bg-card shadow-soft">
             <img
-              src="/landing/samples/lays-rack.jpg"
+              src="/landing/samples/lays-rack.webp"
               alt="Retail snack shelf photo of the kind Aislix analyses"
               className="block h-auto w-full"
               loading="lazy"

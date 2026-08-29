@@ -8,7 +8,7 @@ import { signupWithUtm } from "@/lib/utm";
 
 type DemoState = "idle" | "loading" | "results";
 
-const SAMPLE_IMAGE = "/landing/samples/lays-rack.jpg";
+const SAMPLE_IMAGE = "/landing/samples/lays-rack.webp";
 
 export function ProductDemoSection() {
   const [state, setState] = useState<DemoState>("idle");
