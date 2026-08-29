@@ -4,11 +4,15 @@ export type LandingEvent =
   | "landing_page_view"
   | "demo_started"
   | "demo_completed"
+  | "demo_click"
   | "demo_scan_started"
   | "demo_scan_completed"
   | "demo_scan_failed"
   | "landing_lead_captured"
   | "cta_click"
+  | "hero_cta_click"
+  | "feature_cta_click"
+  | "final_cta_click"
   | "signup_started";
 
 
