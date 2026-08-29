@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   ArrowRight,
   Building2,
@@ -9,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { HomeLiveDemoDashboard } from "@/components/home/HomeLiveDemoDashboard";
 
 const SAMPLE_IMAGE =
   "https://aislix-backend-production.up.railway.app/landing/samples/shampoo-a1z/image";
@@ -21,10 +23,22 @@ const audiences = [
   { label: "Local Stores", Icon: Store },
 ];
 
-export function HomeScanHero({ onLiveDemo }: { onLiveDemo: () => void }) {
+export function HomeScanHero() {
+  const [showLiveDemo, setShowLiveDemo] = useState(false);
+
+  function openLiveDemo() {
+    setShowLiveDemo(true);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        document.querySelector("#live-demo-dashboard")?.scrollIntoView({ behavior: "smooth" });
+      });
+    });
+  }
+
   return (
-    <section id="start-scanning" className="scroll-mt-20 border-t border-border bg-background py-16 sm:py-20">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+    <>
+      <section id="start-scanning" className="scroll-mt-20 border-t border-border bg-background py-16 sm:py-20">
+        <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
             <span className="inline-flex items-center rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-medium text-muted-foreground shadow-soft">
@@ -47,7 +61,7 @@ export function HomeScanHero({ onLiveDemo }: { onLiveDemo: () => void }) {
               >
                 Start scanning free <ArrowRight className="size-4" />
               </Button>
-              <Button size="xl" variant="outline" className="w-full sm:w-auto" onClick={onLiveDemo}>
+              <Button size="xl" variant="outline" className="w-full sm:w-auto" onClick={openLiveDemo}>
                 Live demo
               </Button>
             </div>
@@ -114,8 +128,10 @@ export function HomeScanHero({ onLiveDemo }: { onLiveDemo: () => void }) {
               </div>
             ))}
           </div>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+      <HomeLiveDemoDashboard expanded={showLiveDemo} />
+    </>
   );
 }
