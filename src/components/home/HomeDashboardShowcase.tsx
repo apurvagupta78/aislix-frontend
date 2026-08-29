@@ -23,7 +23,7 @@ import {
  */
 export function HomeDashboardShowcase() {
   return (
-    <section id="live-dashboard" className="scroll-mt-20 border-t border-border bg-surface py-20">
+    <section id="live-dashboard" className="scroll-mt-20 border-t border-border bg-surface py-12">
       <div className="mx-auto max-w-7xl px-6">
         <p className="text-xs font-medium uppercase tracking-widest text-brand">Live demo</p>
         <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -34,7 +34,7 @@ export function HomeDashboardShowcase() {
           exactly what your team sees after signing in.
         </p>
 
-        <div className="mt-10 overflow-hidden rounded-3xl border border-border bg-card shadow-lift">
+        <div className="mt-6 overflow-hidden rounded-3xl border border-border bg-card shadow-lift">
           <div className="flex items-center gap-2 border-b border-border px-4 py-3">
             <span className="size-2.5 rounded-full bg-muted" />
             <span className="size-2.5 rounded-full bg-muted" />
@@ -42,10 +42,10 @@ export function HomeDashboardShowcase() {
             <span className="ml-3 text-xs text-muted-foreground">aislix.com/dashboard</span>
           </div>
 
-          <div className="bg-background p-4 sm:p-6">
+          <div className="bg-background p-3 sm:p-4">
             <KpiCards kpis={DEMO_DASHBOARD.kpis} isLoading={false} error={null} />
 
-            <section className="mt-8">
+            <section className="mt-6">
               <SectionHeader
                 title="Analytics"
                 description="Shelf health, scan volume, brand mix and stock risk over the last 30 days."
@@ -84,12 +84,6 @@ export function HomeDashboardShowcase() {
                   />
                 </Panel>
               </div>
-            </div>
-
-            <div className="mt-4 grid gap-4 lg:grid-cols-3">
-              <Panel title="Recent activity" className="lg:col-span-2">
-                <ActivityTimeline items={DEMO_DASHBOARD.activity} isLoading={false} error={null} />
-              </Panel>
             </div>
           </div>
         </div>
