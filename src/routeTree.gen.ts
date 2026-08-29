@@ -56,6 +56,7 @@ import { Route as UploadRouteImport } from './routes/upload'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as ApiScanRouteImport } from './routes/api/scan'
+import { Route as ApiSendLandingOnboardingRouteImport } from './routes/api/send-landing-onboarding'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as ShareTokenRouteImport } from './routes/share.$token'
 import { Route as StoresIndexRouteImport } from './routes/stores.index'
@@ -302,6 +303,12 @@ const ApiScanRoute = ApiScanRouteImport.update({
   path: '/api/scan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSendLandingOnboardingRoute =
+  ApiSendLandingOnboardingRouteImport.update({
+    id: '/api/send-landing-onboarding',
+    path: '/api/send-landing-onboarding',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
   path: '/auth/callback',
@@ -403,6 +410,7 @@ export interface FileRoutesByFullPath {
   '/users': typeof UsersRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/scan': typeof ApiScanRoute
+  '/api/send-landing-onboarding': typeof ApiSendLandingOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/share/$token': typeof ShareTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
@@ -462,6 +470,7 @@ export interface FileRoutesByTo {
   '/users': typeof UsersRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/scan': typeof ApiScanRoute
+  '/api/send-landing-onboarding': typeof ApiSendLandingOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/share/$token': typeof ShareTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
@@ -522,6 +531,7 @@ export interface FileRoutesById {
   '/users': typeof UsersRoute
   '/verify-email': typeof VerifyEmailRoute
   '/api/scan': typeof ApiScanRoute
+  '/api/send-landing-onboarding': typeof ApiSendLandingOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/share/$token': typeof ShareTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
@@ -583,6 +593,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/verify-email'
     | '/api/scan'
+    | '/api/send-landing-onboarding'
     | '/auth/callback'
     | '/share/$token'
     | '/stores/$storeId'
@@ -642,6 +653,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/verify-email'
     | '/api/scan'
+    | '/api/send-landing-onboarding'
     | '/auth/callback'
     | '/share/$token'
     | '/stores/$storeId'
@@ -701,6 +713,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/verify-email'
     | '/api/scan'
+    | '/api/send-landing-onboarding'
     | '/auth/callback'
     | '/share/$token'
     | '/stores/$storeId'
@@ -761,6 +774,7 @@ export interface RootRouteChildren {
   UsersRoute: typeof UsersRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   ApiScanRoute: typeof ApiScanRoute
+  ApiSendLandingOnboardingRoute: typeof ApiSendLandingOnboardingRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   ShareTokenRoute: typeof ShareTokenRoute
   StoresStoreIdRoute: typeof StoresStoreIdRoute
@@ -1104,6 +1118,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiScanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/send-landing-onboarding': {
+      id: '/api/send-landing-onboarding'
+      path: '/api/send-landing-onboarding'
+      fullPath: '/api/send-landing-onboarding'
+      preLoaderRoute: typeof ApiSendLandingOnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/callback': {
       id: '/auth/callback'
       path: '/auth/callback'
@@ -1225,6 +1246,7 @@ const rootRouteChildren: RootRouteChildren = {
   UsersRoute: UsersRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   ApiScanRoute: ApiScanRoute,
+  ApiSendLandingOnboardingRoute: ApiSendLandingOnboardingRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   ShareTokenRoute: ShareTokenRoute,
   StoresStoreIdRoute: StoresStoreIdRoute,

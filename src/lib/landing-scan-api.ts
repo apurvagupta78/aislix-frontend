@@ -162,6 +162,8 @@ export async function captureLandingLead(payload: {
     ok?: boolean;
     detail?: string;
     landing_session_id?: string;
+    email_sent?: boolean;
+    signup_url?: string;
   };
   if (!res.ok) throw new LandingScanError(data.detail || "Could not save your details.", res.status);
   if (data.landing_session_id && typeof window !== "undefined") {
@@ -212,7 +214,7 @@ export function loadLandingScanResult(): LandingScanResult | null {
 }
 
 /** /signup URL carrying the current + stored UTM params plus the landing session id. */
-export function signupUrl(extra?: Record<string, string>): string {
+export function signupUrl(extra?: Record<string, string | undefined>): string {
   if (typeof window === "undefined") return "/signup";
   const params = new URLSearchParams(window.location.search);
   for (const [k, v] of Object.entries({ ...readStoredUtm(), ...captureUtmParams() })) {
@@ -220,7 +222,7 @@ export function signupUrl(extra?: Record<string, string>): string {
   }
   const sid = loadLandingSessionId();
   if (sid) params.set("landing_session_id", sid);
-  if (extra) for (const [key, value] of Object.entries(extra)) params.set(key, value);
+  if (extra) for (const [key, value] of Object.entries(extra)) if (value) params.set(key, value);
   const qs = params.toString();
   return qs ? `/signup?${qs}` : "/signup";
 }

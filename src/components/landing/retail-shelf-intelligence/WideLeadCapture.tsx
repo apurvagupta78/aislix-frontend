@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { ArrowRight, Loader2, Mail } from "lucide-react";
+import { ArrowRight, Loader2, Mail, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import { captureLandingLead, loadLandingSessionId, signupUrl } from "@/lib/landing-scan-api";
-
 
 export function WideLeadCapture({ landingSessionId }: { landingSessionId: string | null }) {
   const [email, setEmail] = useState("");
@@ -14,6 +13,8 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
   const [role, setRole] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [successSignupUrl, setSuccessSignupUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
@@ -23,7 +24,7 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
     setError(null);
     const sessionId = landingSessionId ?? loadLandingSessionId();
     try {
-      await captureLandingLead({
+      const data = await captureLandingLead({
         landing_session_id: sessionId ?? undefined,
         email: email.trim(),
         name: name.trim() || undefined,
@@ -31,6 +32,24 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
         role: role.trim() || undefined,
       });
       trackLandingEvent("landing_lead_captured", { has_session: Boolean(sessionId) });
+      const resolvedSignupUrl = data.signup_url || signupUrl({ email: email.trim() });
+      setSuccessSignupUrl(resolvedSignupUrl);
+      setEmailSent(Boolean(data.email_sent));
+      // Belt and suspenders: if the backend didn't send the onboarding email,
+      // ask our server route to send it.
+      if (!data.email_sent) {
+        void fetch("/api/send-landing-onboarding", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: email.trim(),
+            name: name.trim() || undefined,
+            signup_url: resolvedSignupUrl,
+          }),
+        }).catch(() => {
+          /* onboarding email is best-effort */
+        });
+      }
       setDone(true);
     } catch (err) {
       setError((err as Error).message || "Could not save your details.");
@@ -39,6 +58,8 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
     }
   }
 
+  const ctaHref = successSignupUrl ?? signupUrl({ email: email.trim() || undefined });
+
   return (
     <section id="lead" className="scroll-mt-16 bg-surface py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
@@ -46,28 +67,43 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
           {done ? (
             <div className="text-center">
               <span className="mx-auto grid size-11 place-items-center rounded-full bg-secondary text-primary">
-                <Mail className="size-6" />
+                {emailSent ? <Mail className="size-6" /> : <UserPlus className="size-6" />}
               </span>
-              <h2 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
-                Check your email
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                We sent onboarding instructions to {email}. Open the email and click the link to
-                create your free Aislix workspace and unlock 3 shelf scans.
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Didn&apos;t receive it? Check spam or wait a minute.
-              </p>
+              {emailSent ? (
+                <>
+                  <h2 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
+                    Check your email
+                  </h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    We sent onboarding instructions to {email}. Open the email and click the link to
+                    create your free Aislix workspace and unlock 3 shelf scans.
+                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Didn&apos;t receive it? Check spam or wait a minute — or create your account
+                    directly below.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
+                    Create your account now
+                  </h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Your details are saved. Create your free Aislix workspace to unlock 3 shelf
+                    scans.
+                  </p>
+                </>
+              )}
               <Button
                 size="xl"
-                variant="link"
+                variant="default"
                 className="mt-6 min-h-11 w-full sm:w-auto"
                 onClick={() => {
                   trackLandingEvent("signup_started", { location: "lead_success" });
-                  window.location.assign(signupUrl({ email }));
+                  window.location.assign(ctaHref);
                 }}
               >
-                Continue to signup <ArrowRight className="size-4" />
+                Create free account <ArrowRight className="size-4" />
               </Button>
             </div>
           ) : (
