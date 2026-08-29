@@ -17,6 +17,7 @@ import { MobileStickyCta } from "@/components/landing/retail-shelf-intelligence/
 
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import { persistLandingUtm } from "@/lib/landing-utm";
+import { signupUrl } from "@/lib/landing-scan-api";
 import { loadLandingSessionId, type LandingScanResult } from "@/lib/landing-scan-api";
 
 const TITLE = "AI Retail Shelf Intelligence | Aislix";
@@ -48,6 +49,17 @@ function RetailShelfIntelligencePage() {
     persistLandingUtm();
     setSessionId(loadLandingSessionId());
     trackLandingEvent("landing_page_view", { page_variant: "retail-shelf-intelligence" });
+
+    const preserveSignupAttribution = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const link = target.closest<HTMLAnchorElement>('header a[href="/signup"]');
+      if (!link) return;
+      event.preventDefault();
+      window.location.assign(signupUrl());
+    };
+    document.addEventListener("click", preserveSignupAttribution);
+    return () => document.removeEventListener("click", preserveSignupAttribution);
   }, []);
 
   function handleResult(result: LandingScanResult) {

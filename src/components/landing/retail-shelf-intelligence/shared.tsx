@@ -24,12 +24,14 @@ export function SignupCta({
       variant="default"
       size={size}
       className={cn(className)}
-      onClick={() => {
+      onClick={(event) => {
+        event.preventDefault();
         trackLandingEvent(event, { location });
         trackLandingEvent("signup_started", { location });
+        window.location.assign(signupUrl());
       }}
     >
-      <a href={signupUrl()}>{children}</a>
+      <a href="/signup">{children}</a>
     </Button>
   );
 }
