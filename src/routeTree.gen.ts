@@ -42,6 +42,7 @@ import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as RetailIntelligenceRouteImport } from './routes/retail-intelligence'
+import { Route as RetailShelfIntelligenceRouteImport } from './routes/retail-shelf-intelligence'
 import { Route as ScanRouteImport } from './routes/scan'
 import { Route as ScanHistoryRouteImport } from './routes/scan-history'
 import { Route as SecurityRouteImport } from './routes/security'
@@ -231,6 +232,11 @@ const RetailIntelligenceRoute = RetailIntelligenceRouteImport.update({
   path: '/retail-intelligence',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RetailShelfIntelligenceRoute = RetailShelfIntelligenceRouteImport.update({
+  id: '/retail-shelf-intelligence',
+  path: '/retail-shelf-intelligence',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ScanRoute = ScanRouteImport.update({
   id: '/scan',
   path: '/scan',
@@ -383,6 +389,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/results': typeof ResultsRoute
   '/retail-intelligence': typeof RetailIntelligenceRoute
+  '/retail-shelf-intelligence': typeof RetailShelfIntelligenceRoute
   '/scan': typeof ScanRoute
   '/scan-history': typeof ScanHistoryRoute
   '/security': typeof SecurityRoute
@@ -441,6 +448,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/results': typeof ResultsRoute
   '/retail-intelligence': typeof RetailIntelligenceRoute
+  '/retail-shelf-intelligence': typeof RetailShelfIntelligenceRoute
   '/scan': typeof ScanRoute
   '/scan-history': typeof ScanHistoryRoute
   '/security': typeof SecurityRoute
@@ -500,6 +508,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/results': typeof ResultsRoute
   '/retail-intelligence': typeof RetailIntelligenceRoute
+  '/retail-shelf-intelligence': typeof RetailShelfIntelligenceRoute
   '/scan': typeof ScanRoute
   '/scan-history': typeof ScanHistoryRoute
   '/security': typeof SecurityRoute
@@ -560,6 +569,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/results'
     | '/retail-intelligence'
+    | '/retail-shelf-intelligence'
     | '/scan'
     | '/scan-history'
     | '/security'
@@ -618,6 +628,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/results'
     | '/retail-intelligence'
+    | '/retail-shelf-intelligence'
     | '/scan'
     | '/scan-history'
     | '/security'
@@ -676,6 +687,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/results'
     | '/retail-intelligence'
+    | '/retail-shelf-intelligence'
     | '/scan'
     | '/scan-history'
     | '/security'
@@ -735,6 +747,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   ResultsRoute: typeof ResultsRoute
   RetailIntelligenceRoute: typeof RetailIntelligenceRoute
+  RetailShelfIntelligenceRoute: typeof RetailShelfIntelligenceRoute
   ScanRoute: typeof ScanRoute
   ScanHistoryRoute: typeof ScanHistoryRoute
   SecurityRoute: typeof SecurityRoute
@@ -993,6 +1006,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RetailIntelligenceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/retail-shelf-intelligence': {
+      id: '/retail-shelf-intelligence'
+      path: '/retail-shelf-intelligence'
+      fullPath: '/retail-shelf-intelligence'
+      preLoaderRoute: typeof RetailShelfIntelligenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/scan': {
       id: '/scan'
       path: '/scan'
@@ -1191,6 +1211,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResetPasswordRoute: ResetPasswordRoute,
   ResultsRoute: ResultsRoute,
   RetailIntelligenceRoute: RetailIntelligenceRoute,
+  RetailShelfIntelligenceRoute: RetailShelfIntelligenceRoute,
   ScanRoute: ScanRoute,
   ScanHistoryRoute: ScanHistoryRoute,
   SecurityRoute: SecurityRoute,
