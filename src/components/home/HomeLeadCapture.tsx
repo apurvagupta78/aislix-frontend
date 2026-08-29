@@ -4,7 +4,6 @@ import { ArrowRight, Loader2, Mail, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import { captureLandingLead, loadLandingSessionId, signupUrl } from "@/lib/landing-scan-api";
 
@@ -37,32 +36,25 @@ export function HomeLeadCapture() {
       const resolvedSignupUrl = data.signup_url || signupUrl({ email: email.trim() });
       setSuccessSignupUrl(resolvedSignupUrl);
 
-      let invokeSent = false;
-      const { error: invokeError } = await supabase.functions.invoke("send-landing-onboarding", {
-        body: { email: email.trim(), name: name.trim() || undefined, signup_url: resolvedSignupUrl },
-      });
-      invokeSent = !invokeError;
-
-      if (!invokeSent && !data.email_sent) {
-        try {
-          const response = await fetch("/api/send-landing-onboarding", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email: email.trim(),
-              name: name.trim() || undefined,
-              signup_url: resolvedSignupUrl,
-            }),
-          });
-          const body = (await response.json().catch(() => ({}))) as { ok?: boolean };
-          invokeSent = response.ok && Boolean(body.ok);
-        } catch {
-          /* Email fallback is best-effort; the saved lead can still continue to signup. */
-        }
+      let managedEmailSent = false;
+      try {
+        const response = await fetch("/api/send-landing-onboarding", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: email.trim(),
+            name: name.trim() || undefined,
+            signup_url: resolvedSignupUrl,
+          }),
+        });
+        const body = (await response.json().catch(() => ({}))) as { ok?: boolean };
+        managedEmailSent = response.ok && Boolean(body.ok);
+      } catch {
+        /* Email is best-effort; the saved lead can still continue to signup. */
       }
 
       trackLandingEvent("landing_lead_captured", { has_session: Boolean(sessionId) });
-      setEmailSent(Boolean(data.email_sent) || invokeSent);
+      setEmailSent(Boolean(data.email_sent) || managedEmailSent);
       setDone(true);
     } catch (submitError) {
       setError((submitError as Error).message || "Could not save your details.");
@@ -105,7 +97,7 @@ export function HomeLeadCapture() {
             <form onSubmit={submit}>
               <div className="text-center">
                 <h2 className="text-2xl font-semibold text-foreground sm:text-3xl">
-                  Get Your Free Shelf Intelligence Access
+                  Get Your Free Workspace Access
                 </h2>
                 <p className="mt-3 text-sm text-muted-foreground">
                   Enter your work email to start scanning. No credit card required.

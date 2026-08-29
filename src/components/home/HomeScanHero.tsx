@@ -9,15 +9,12 @@ export function HomeScanHero() {
   return (
     <section
       id="start-scanning"
-      className="scroll-mt-20 border-t border-border bg-background py-16 sm:py-20"
+      className="scroll-mt-20 bg-background py-16 sm:py-20"
     >
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="grid items-center gap-12 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
-            <span className="inline-flex items-center rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-medium text-muted-foreground shadow-soft">
-              AI-Powered Retail Shelf Intelligence
-            </span>
-            <h2 className="mt-6 text-4xl font-semibold leading-[1.08] text-foreground sm:text-5xl">
+            <h2 className="text-4xl font-semibold leading-[1.08] text-foreground sm:text-5xl">
               See What AI Sees on Every Shelf.
             </h2>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
