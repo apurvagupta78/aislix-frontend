@@ -19,9 +19,11 @@ export interface TemplateEntry {
  */
 import { template as teamInviteTemplate } from './team-invite'
 import { template as scanReportTemplate } from './scan-report'
+import { template as landingOnboardingTemplate } from './landing-onboarding'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'team-invite': teamInviteTemplate,
   'scan-report': scanReportTemplate,
+  'landing-onboarding': landingOnboardingTemplate,
 }
 
