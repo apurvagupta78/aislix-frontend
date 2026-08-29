@@ -311,22 +311,22 @@ export function LiveDemoSection({
                   >
                     <Download className="size-4" /> Download CSV
                   </Button>
+                  {showWorkspaceCta ? (
+                    <Button
+                      size="lg"
+                      className="w-full sm:w-auto"
+                      onClick={() =>
+                        document.querySelector("#lead")?.scrollIntoView({ behavior: "smooth" })
+                      }
+                    >
+                      Create your workspace <ArrowRight className="size-4" />
+                    </Button>
+                  ) : null}
                 </div>
               </div>
             )}
           </div>
         </div>
-        {showWorkspaceCta ? (
-          <div className="mt-8 flex justify-center">
-            <Button
-              size="xl"
-              className="w-full sm:w-auto"
-              onClick={() => document.querySelector("#lead")?.scrollIntoView({ behavior: "smooth" })}
-            >
-              Create your workspace <ArrowRight className="size-4" />
-            </Button>
-          </div>
-        ) : null}
       </div>
     </section>
   );
