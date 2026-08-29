@@ -222,7 +222,7 @@ export function signupUrl(extra?: Record<string, string | undefined>): string {
   }
   const sid = loadLandingSessionId();
   if (sid) params.set("landing_session_id", sid);
-  if (extra) for (const [key, value] of Object.entries(extra)) params.set(key, value);
+  if (extra) for (const [key, value] of Object.entries(extra)) if (value) params.set(key, value);
   const qs = params.toString();
   return qs ? `/signup?${qs}` : "/signup";
 }
