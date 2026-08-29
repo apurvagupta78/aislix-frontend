@@ -11,17 +11,19 @@ export function SignupCta({
   location,
   className,
   size = "lg",
+  variant = "default",
 }: {
   children?: ReactNode;
   event?: LandingEvent;
   location: string;
   className?: string;
   size?: ButtonProps["size"];
+  variant?: ButtonProps["variant"];
 }) {
   return (
     <Button
       asChild
-      variant="default"
+      variant={variant}
       size={size}
       className={cn(className)}
       onClick={(clickEvent) => {

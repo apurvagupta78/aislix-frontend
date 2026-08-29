@@ -15,7 +15,13 @@ export function FinalCtaSection() {
         </p>
 
         <div className="mt-7 flex justify-center">
-          <SignupCta location="final_cta" event="final_cta_click" size="xl" className="w-full sm:w-auto">
+          <SignupCta
+            location="final_cta"
+            event="final_cta_click"
+            size="xl"
+            variant="secondary"
+            className="w-full sm:w-auto"
+          >
             Start free shelf scan →
           </SignupCta>
         </div>
