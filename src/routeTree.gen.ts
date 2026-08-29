@@ -41,6 +41,7 @@ import { Route as ReportRouteImport } from './routes/report'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ResultsRouteImport } from './routes/results'
+import { Route as RetailIntelligenceRouteImport } from './routes/retail-intelligence'
 import { Route as ScanRouteImport } from './routes/scan'
 import { Route as ScanHistoryRouteImport } from './routes/scan-history'
 import { Route as SecurityRouteImport } from './routes/security'
@@ -225,6 +226,11 @@ const ResultsRoute = ResultsRouteImport.update({
   path: '/results',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RetailIntelligenceRoute = RetailIntelligenceRouteImport.update({
+  id: '/retail-intelligence',
+  path: '/retail-intelligence',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ScanRoute = ScanRouteImport.update({
   id: '/scan',
   path: '/scan',
@@ -376,6 +382,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/results': typeof ResultsRoute
+  '/retail-intelligence': typeof RetailIntelligenceRoute
   '/scan': typeof ScanRoute
   '/scan-history': typeof ScanHistoryRoute
   '/security': typeof SecurityRoute
@@ -433,6 +440,7 @@ export interface FileRoutesByTo {
   '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/results': typeof ResultsRoute
+  '/retail-intelligence': typeof RetailIntelligenceRoute
   '/scan': typeof ScanRoute
   '/scan-history': typeof ScanHistoryRoute
   '/security': typeof SecurityRoute
@@ -491,6 +499,7 @@ export interface FileRoutesById {
   '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/results': typeof ResultsRoute
+  '/retail-intelligence': typeof RetailIntelligenceRoute
   '/scan': typeof ScanRoute
   '/scan-history': typeof ScanHistoryRoute
   '/security': typeof SecurityRoute
@@ -550,6 +559,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/reset-password'
     | '/results'
+    | '/retail-intelligence'
     | '/scan'
     | '/scan-history'
     | '/security'
@@ -607,6 +617,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/reset-password'
     | '/results'
+    | '/retail-intelligence'
     | '/scan'
     | '/scan-history'
     | '/security'
@@ -664,6 +675,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/reset-password'
     | '/results'
+    | '/retail-intelligence'
     | '/scan'
     | '/scan-history'
     | '/security'
@@ -722,6 +734,7 @@ export interface RootRouteChildren {
   ReportsRoute: typeof ReportsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ResultsRoute: typeof ResultsRoute
+  RetailIntelligenceRoute: typeof RetailIntelligenceRoute
   ScanRoute: typeof ScanRoute
   ScanHistoryRoute: typeof ScanHistoryRoute
   SecurityRoute: typeof SecurityRoute
@@ -973,6 +986,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResultsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/retail-intelligence': {
+      id: '/retail-intelligence'
+      path: '/retail-intelligence'
+      fullPath: '/retail-intelligence'
+      preLoaderRoute: typeof RetailIntelligenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/scan': {
       id: '/scan'
       path: '/scan'
@@ -1170,6 +1190,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReportsRoute: ReportsRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ResultsRoute: ResultsRoute,
+  RetailIntelligenceRoute: RetailIntelligenceRoute,
   ScanRoute: ScanRoute,
   ScanHistoryRoute: ScanHistoryRoute,
   SecurityRoute: SecurityRoute,
