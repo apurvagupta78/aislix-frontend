@@ -31,7 +31,7 @@ const FEATURES = [
 
 export function FeaturesGrid() {
   return (
-    <section id="features" className="scroll-mt-16 bg-landing-surface py-16 sm:py-20">
+    <section id="features" className="scroll-mt-16 bg-surface py-16 sm:py-20">
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <SectionHeading eyebrow="Capabilities" title="One Photo. Multiple Layers of Intelligence." />
 
@@ -39,9 +39,9 @@ export function FeaturesGrid() {
           {FEATURES.map(({ Icon, title, body }) => (
             <div
               key={title}
-              className="rounded-xl border border-landing-border bg-card p-5 transition-shadow hover:shadow-card"
+              className="rounded-xl border border-border bg-card p-5 transition-shadow hover:shadow-card"
             >
-              <Icon className="size-5 text-landing-cyan" strokeWidth={1.7} />
+              <Icon className="size-5 text-brand" strokeWidth={1.7} />
               <h3 className="mt-3 text-sm font-semibold text-foreground">{title}</h3>
               <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{body}</p>
             </div>

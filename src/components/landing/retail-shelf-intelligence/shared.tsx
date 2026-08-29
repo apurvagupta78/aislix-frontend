@@ -4,9 +4,6 @@ import { cn } from "@/lib/utils";
 import { trackLandingEvent, type LandingEvent } from "@/lib/landing-analytics";
 import { signupUrl } from "@/lib/landing-utm";
 
-export const CYAN_BTN =
-  "bg-landing-cyan text-brand-foreground shadow-soft hover:bg-landing-cyan-hover";
-
 /** Primary conversion CTA: always routes to /signup with UTMs + session id. */
 export function SignupCta({
   children = "Start scanning free →",
@@ -24,8 +21,9 @@ export function SignupCta({
   return (
     <Button
       asChild
+      variant="brand"
       size={size}
-      className={cn(CYAN_BTN, className)}
+      className={cn(className)}
       onClick={() => {
         trackLandingEvent(event, { location });
         trackLandingEvent("signup_started", { location });
@@ -50,9 +48,7 @@ export function SectionHeading({
   return (
     <div className={cn("mx-auto max-w-2xl text-center", className)}>
       {eyebrow && (
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-landing-cyan">
-          {eyebrow}
-        </p>
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">{eyebrow}</p>
       )}
       <h2 className="mt-3 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
         {title}

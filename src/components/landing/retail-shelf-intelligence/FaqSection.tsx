@@ -30,7 +30,7 @@ export function FaqSection() {
     <section id="faq" className="scroll-mt-16 bg-background py-16 sm:py-20">
       <div className="mx-auto max-w-3xl px-5 sm:px-8">
         <SectionHeading eyebrow="FAQ" title="Questions retail teams ask" />
-        <div className="mt-8 divide-y divide-landing-border rounded-xl border border-landing-border bg-card">
+        <div className="mt-8 divide-y divide-border rounded-xl border border-border bg-card">
           {FAQS.map(({ q, a }) => (
             <details key={q} className="group px-5 py-4">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-medium text-foreground">

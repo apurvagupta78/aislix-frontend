@@ -13,7 +13,7 @@ import {
   runLandingUpload,
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
-import { CYAN_BTN, SectionHeading, SignupCta } from "./shared";
+import { SectionHeading, SignupCta } from "./shared";
 
 type Phase = "idle" | "scanning" | "done" | "error";
 
@@ -124,7 +124,8 @@ export function LiveDemoSection({
         <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
           <Button
             size="xl"
-            className={`min-h-11 w-full sm:w-auto ${CYAN_BTN}`}
+            variant="brand"
+            className="min-h-11 w-full sm:w-auto"
             disabled={scanning}
             onClick={onSample}
           >
@@ -152,9 +153,9 @@ export function LiveDemoSection({
           />
         </div>
 
-        <div className="mt-8 overflow-hidden rounded-2xl border border-landing-border bg-card shadow-lift lg:grid lg:grid-cols-[55fr_45fr]">
+        <div className="mt-8 overflow-hidden rounded-2xl border border-border bg-card shadow-lift lg:grid lg:grid-cols-[55fr_45fr]">
           {/* Shelf image */}
-          <div className="relative grid min-h-80 place-items-center overflow-hidden bg-landing-surface lg:min-h-[600px] lg:border-r lg:border-landing-border">
+          <div className="relative grid min-h-80 place-items-center overflow-hidden bg-surface lg:min-h-[600px] lg:border-r lg:border-border">
             {shownImage && (
               <img
                 src={shownImage}
@@ -163,8 +164,8 @@ export function LiveDemoSection({
               />
             )}
             {scanning && (
-              <div className="absolute inset-0 bg-landing-navy/20">
-                <Badge className={`absolute left-4 top-4 gap-2 rounded-md px-3 py-2 ${CYAN_BTN}`}>
+              <div className="absolute inset-0 bg-foreground/20">
+                <Badge className="absolute left-4 top-4 gap-2 rounded-md bg-brand px-3 py-2 text-brand-foreground">
                   <Loader2 className="size-3.5 animate-spin" /> Analyzing shelf…
                 </Badge>
               </div>
@@ -176,7 +177,7 @@ export function LiveDemoSection({
             {scanning && (
               <div className="grid min-h-72 place-items-center text-center">
                 <div>
-                  <Loader2 className="mx-auto size-6 animate-spin text-landing-cyan" />
+                  <Loader2 className="mx-auto size-6 animate-spin text-brand" />
                   <p className="mt-4 text-sm font-medium text-foreground">Analyzing shelf… 30–90s</p>
                   <p className="mt-1.5 text-xs text-muted-foreground">
                     Detecting products, brands and availability gaps.
@@ -201,7 +202,7 @@ export function LiveDemoSection({
                     {["Products detected", "Unique SKUs", "Shelf health"].map((label) => (
                       <div
                         key={label}
-                        className="rounded-lg border border-landing-border bg-landing-surface p-3"
+                        className="rounded-lg border border-border bg-surface p-3"
                       >
                         <p className="text-lg font-semibold tracking-tight text-muted-foreground">—</p>
                         <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
@@ -234,7 +235,7 @@ export function LiveDemoSection({
                   ].map((m) => (
                     <div
                       key={m.label}
-                      className="rounded-lg border border-landing-border bg-landing-surface p-3"
+                      className="rounded-lg border border-border bg-surface p-3"
                     >
                       <p className="text-lg font-semibold tracking-tight text-foreground">
                         {m.value ?? "—"}
@@ -252,9 +253,9 @@ export function LiveDemoSection({
                   </p>
                 )}
 
-                <div className="mt-5 max-h-72 overflow-auto rounded-lg border border-landing-border">
+                <div className="mt-5 max-h-72 overflow-auto rounded-lg border border-border">
                   <table className="w-full text-left text-sm">
-                    <thead className="sticky top-0 bg-landing-surface text-xs uppercase tracking-wide text-muted-foreground">
+                    <thead className="sticky top-0 bg-surface text-xs uppercase tracking-wide text-muted-foreground">
                       <tr>
                         <th className="px-3 py-2 font-medium">Brand</th>
                         <th className="px-3 py-2 font-medium">Product</th>
@@ -267,7 +268,7 @@ export function LiveDemoSection({
                       {result.inventory?.map((row, i) => (
                         <tr
                           key={`${row.brand}-${row.product_name}-${i}`}
-                          className="border-t border-landing-border"
+                          className="border-t border-border"
                         >
                           <td className="px-3 py-2">{row.brand || "—"}</td>
                           <td className="px-3 py-2">{row.product_name || "—"}</td>

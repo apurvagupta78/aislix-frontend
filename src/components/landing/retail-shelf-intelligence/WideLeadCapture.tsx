@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import { signupUrl } from "@/lib/landing-utm";
 import { captureLandingLead, loadLandingSessionId } from "@/lib/landing-scan-api";
-import { CYAN_BTN } from "./shared";
+
 
 export function WideLeadCapture({ landingSessionId }: { landingSessionId: string | null }) {
   const [email, setEmail] = useState("");
@@ -42,12 +42,12 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
   }
 
   return (
-    <section id="lead" className="scroll-mt-16 bg-landing-surface py-16 sm:py-20">
+    <section id="lead" className="scroll-mt-16 bg-surface py-16 sm:py-20">
       <div className="mx-auto max-w-4xl px-5 sm:px-8">
-        <div className="rounded-2xl border border-landing-border bg-card p-6 shadow-lift sm:p-10">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-lift sm:p-10">
           {done ? (
             <div className="text-center">
-              <span className="mx-auto grid size-11 place-items-center rounded-full bg-landing-cyan-soft text-landing-cyan">
+              <span className="mx-auto grid size-11 place-items-center rounded-full bg-brand-soft text-brand">
                 <CheckCircle2 className="size-6" />
               </span>
               <h2 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
@@ -58,7 +58,8 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
               </p>
               <Button
                 size="xl"
-                className={`mt-6 min-h-11 w-full sm:w-auto ${CYAN_BTN}`}
+                variant="brand"
+                className="mt-6 min-h-11 w-full sm:w-auto"
                 onClick={() => {
                   trackLandingEvent("signup_started", { location: "lead_success" });
                   window.location.assign(signupUrl());
@@ -128,7 +129,8 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
                 <Button
                   type="submit"
                   size="xl"
-                  className={`min-h-11 w-full sm:w-auto sm:min-w-64 ${CYAN_BTN}`}
+                  variant="brand"
+                  className="min-h-11 w-full sm:w-auto sm:min-w-64"
                   disabled={saving}
                 >
                   {saving ? <Loader2 className="size-4 animate-spin" /> : null}

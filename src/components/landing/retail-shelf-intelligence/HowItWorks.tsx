@@ -26,12 +26,12 @@ export function HowItWorks() {
         <div className="mt-10 flex flex-col items-stretch gap-4 lg:flex-row lg:items-center">
           {STEPS.map(({ n, Icon, title, body }, i) => (
             <div key={n} className="flex flex-1 items-center gap-4">
-              <div className="flex-1 rounded-xl border border-landing-border bg-card p-6 shadow-soft">
+              <div className="flex-1 rounded-xl border border-border bg-card p-6 shadow-soft">
                 <div className="flex items-center gap-3">
-                  <span className="grid size-8 place-items-center rounded-lg bg-landing-cyan text-xs font-semibold text-brand-foreground">
+                  <span className="grid size-8 place-items-center rounded-lg bg-brand text-xs font-semibold text-brand-foreground">
                     {n}
                   </span>
-                  <Icon className="size-5 text-landing-cyan" strokeWidth={1.7} />
+                  <Icon className="size-5 text-brand" strokeWidth={1.7} />
                 </div>
                 <h3 className="mt-4 text-base font-semibold text-foreground">{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{body}</p>

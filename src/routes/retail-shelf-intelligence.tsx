@@ -1,21 +1,20 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { LandingNav } from "@/components/landing/retail-shelf-intelligence/LandingNav";
+import { SiteFooter, SiteHeader } from "@/components/MarketingLayout";
 import { LandingHero, type HeroStats } from "@/components/landing/retail-shelf-intelligence/LandingHero";
 import { TrustBar } from "@/components/landing/retail-shelf-intelligence/TrustBar";
 import { ProblemSection } from "@/components/landing/retail-shelf-intelligence/ProblemSection";
 import { HowItWorks } from "@/components/landing/retail-shelf-intelligence/HowItWorks";
 import { FeaturesGrid } from "@/components/landing/retail-shelf-intelligence/FeaturesGrid";
 import { LiveDemoSection } from "@/components/landing/retail-shelf-intelligence/LiveDemoSection";
-import { ProductShowcase } from "@/components/landing/retail-shelf-intelligence/ProductShowcase";
+import { WideLeadCapture } from "@/components/landing/retail-shelf-intelligence/WideLeadCapture";
 import { UseCasesGrid } from "@/components/landing/retail-shelf-intelligence/UseCasesGrid";
 import { RoiSection } from "@/components/landing/retail-shelf-intelligence/RoiSection";
-import { WideLeadCapture } from "@/components/landing/retail-shelf-intelligence/WideLeadCapture";
 import { FaqSection } from "@/components/landing/retail-shelf-intelligence/FaqSection";
 import { FinalCtaSection } from "@/components/landing/retail-shelf-intelligence/FinalCtaSection";
-import { LandingFooter } from "@/components/landing/retail-shelf-intelligence/LandingFooter";
 import { MobileStickyCta } from "@/components/landing/retail-shelf-intelligence/MobileStickyCta";
+import { SignupCta } from "@/components/landing/retail-shelf-intelligence/shared";
 
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import { persistLandingUtm } from "@/lib/landing-utm";
@@ -45,7 +44,6 @@ export const Route = createFileRoute("/retail-shelf-intelligence")({
 function RetailShelfIntelligencePage() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [heroStats, setHeroStats] = useState<HeroStats | undefined>(undefined);
-  const [analyzedImage, setAnalyzedImage] = useState<string | null>(null);
 
   useEffect(() => {
     persistLandingUtm();
@@ -53,35 +51,37 @@ function RetailShelfIntelligencePage() {
     trackLandingEvent("landing_page_view", { page_variant: "retail-shelf-intelligence" });
   }, []);
 
-  function handleResult(result: LandingScanResult, imageUrl: string | null) {
+  function handleResult(result: LandingScanResult) {
     setSessionId(result.landing_session_id);
-    setAnalyzedImage(imageUrl);
     setHeroStats({
       products: result.metrics?.total_products,
       shelfHealth: result.metrics?.shelf_health_score,
     });
+    document.getElementById("lead")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   return (
     <div className="min-h-screen bg-background pb-16 md:pb-0">
-      <LandingNav />
+      <SiteHeader />
       <main>
         <LandingHero stats={heroStats} />
         <TrustBar />
         <ProblemSection />
         <HowItWorks />
         <FeaturesGrid />
+        <div className="flex justify-center bg-background pb-4">
+          <SignupCta location="after_features" event="feature_cta_click" size="xl" />
+        </div>
         <LiveDemoSection onResult={handleResult} />
-        <ProductShowcase imageUrl={analyzedImage} />
+        <WideLeadCapture landingSessionId={sessionId} />
         <UseCasesGrid />
         <RoiSection />
-        <WideLeadCapture landingSessionId={sessionId} />
         <FaqSection />
         <div id="final-cta">
           <FinalCtaSection />
         </div>
       </main>
-      <LandingFooter />
+      <SiteFooter />
       <MobileStickyCta hideWhenVisibleId="final-cta" />
     </div>
   );

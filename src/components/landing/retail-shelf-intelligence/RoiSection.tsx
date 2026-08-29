@@ -15,9 +15,9 @@ export function RoiSection() {
         <SectionHeading eyebrow="Business value" title="Turn Every Shelf Photo Into a Business Decision." />
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {OUTCOMES.map(({ Icon, title, body }) => (
-            <div key={title} className="rounded-xl border border-landing-border bg-card p-6 shadow-soft">
-              <span className="grid size-9 place-items-center rounded-lg bg-landing-cyan-soft">
-                <Icon className="size-4 text-landing-cyan" strokeWidth={1.8} />
+            <div key={title} className="rounded-xl border border-border bg-card p-6 shadow-soft">
+              <span className="grid size-9 place-items-center rounded-lg bg-brand-soft">
+                <Icon className="size-4 text-brand" strokeWidth={1.8} />
               </span>
               <h3 className="mt-4 text-sm font-semibold text-foreground">{title}</h3>
               <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{body}</p>
