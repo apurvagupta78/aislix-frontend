@@ -27,6 +27,13 @@
   --color-brand-muted: var(--brand-muted);
   --color-accent-green: var(--accent-green);
   --color-accent-green-soft: var(--accent-green-soft);
+  --color-landing-navy: var(--landing-navy);
+  --color-landing-navy-soft: var(--landing-navy-soft);
+  --color-landing-cyan: var(--landing-cyan);
+  --color-landing-cyan-hover: var(--landing-cyan-hover);
+  --color-landing-cyan-soft: var(--landing-cyan-soft);
+  --color-landing-surface: var(--landing-surface);
+  --color-landing-border: var(--landing-border);
   --color-surface: var(--surface);
   --color-warning: var(--warning);
   --color-success: var(--success);
