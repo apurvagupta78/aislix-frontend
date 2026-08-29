@@ -84,12 +84,12 @@ export function LandingHero({ stats }: { stats?: HeroStats }) {
               </p>
               <div className="mt-3 grid grid-cols-3 gap-2">
                 {[
-                  { label: "Products", value: stats?.products },
-                  { label: "Out of stock", value: stats?.outOfStock },
+                  { label: "Products", value: stats?.products ?? 37 },
+                  { label: "Out of stock", value: stats?.outOfStock ?? 4 },
                   {
                     label: "Shelf health",
                     value:
-                      stats?.shelfHealth != null ? `${Math.round(stats.shelfHealth)}%` : undefined,
+                      stats?.shelfHealth != null ? `${Math.round(stats.shelfHealth)}%` : "86%",
                   },
                 ].map((m) => (
                   <div key={m.label}>

@@ -38,7 +38,7 @@ export function ProblemSection() {
           ))}
         </div>
 
-        <p className="mx-auto mt-8 max-w-3xl rounded-xl border border-brand/25 bg-brand-soft px-6 py-4 text-center text-sm font-medium text-foreground">
+        <p className="mx-auto mt-8 max-w-3xl rounded-xl border border-primary bg-primary px-6 py-4 text-center text-sm font-medium text-primary-foreground">
           Aislix turns shelf photos into structured intelligence — in minutes.
         </p>
       </div>

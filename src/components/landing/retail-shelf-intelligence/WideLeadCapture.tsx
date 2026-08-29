@@ -43,7 +43,7 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
 
   return (
     <section id="lead" className="scroll-mt-16 bg-surface py-16 sm:py-20">
-      <div className="mx-auto max-w-4xl px-5 sm:px-8">
+      <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <div className="rounded-2xl border border-border bg-card p-6 shadow-lift sm:p-10">
           {done ? (
             <div className="text-center">

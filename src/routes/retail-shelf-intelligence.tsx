@@ -14,7 +14,6 @@ import { RoiSection } from "@/components/landing/retail-shelf-intelligence/RoiSe
 import { FaqSection } from "@/components/landing/retail-shelf-intelligence/FaqSection";
 import { FinalCtaSection } from "@/components/landing/retail-shelf-intelligence/FinalCtaSection";
 import { MobileStickyCta } from "@/components/landing/retail-shelf-intelligence/MobileStickyCta";
-import { SignupCta } from "@/components/landing/retail-shelf-intelligence/shared";
 
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import { persistLandingUtm } from "@/lib/landing-utm";
@@ -69,9 +68,6 @@ function RetailShelfIntelligencePage() {
         <ProblemSection />
         <HowItWorks />
         <FeaturesGrid />
-        <div className="flex justify-center bg-background pb-4">
-          <SignupCta location="after_features" event="feature_cta_click" size="xl" />
-        </div>
         <LiveDemoSection onResult={handleResult} />
         <WideLeadCapture landingSessionId={sessionId} />
         <UseCasesGrid />
