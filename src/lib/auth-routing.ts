@@ -140,7 +140,9 @@ const PUBLIC_PATHS = new Set([
   "/platform",
   "/compare",
   "/demo",
+  "/retail-intelligence",
   "/security",
+
   "/terms",
   "/privacy",
   "/cookies",
