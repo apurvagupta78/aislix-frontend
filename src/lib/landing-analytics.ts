@@ -4,8 +4,13 @@ export type LandingEvent =
   | "landing_page_view"
   | "demo_started"
   | "demo_completed"
+  | "demo_scan_started"
+  | "demo_scan_completed"
+  | "demo_scan_failed"
+  | "landing_lead_captured"
   | "cta_click"
   | "signup_started";
+
 
 type Props = Record<string, string | number | boolean>;
 
