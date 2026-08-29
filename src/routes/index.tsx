@@ -131,13 +131,23 @@ function Landing() {
             stores, warehouses, FMCG teams, distributors and local stores.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <Button asChild variant="hero" size="xl">
-              <Link to="/signup">
-                Start scanning free <ArrowRight className="size-4" />
-              </Link>
+            <Button
+              variant="hero"
+              size="xl"
+              onClick={() =>
+                document.querySelector("#start-scanning")?.scrollIntoView({ behavior: "smooth" })
+              }
+            >
+              Start scanning free <ArrowRight className="size-4" />
             </Button>
-            <Button asChild variant="subtle" size="xl">
-              <Link to="/dashboard">View live demo</Link>
+            <Button
+              variant="subtle"
+              size="xl"
+              onClick={() =>
+                document.querySelector("#live-dashboard")?.scrollIntoView({ behavior: "smooth" })
+              }
+            >
+              View live demo
             </Button>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
@@ -147,27 +157,16 @@ function Landing() {
 
       </section>
 
+      <HomeTrustRow />
+
       <HomeScanHero />
 
-      <section className="relative overflow-hidden bg-hero-glow">
-        <div className="relative mx-auto max-w-5xl px-6 pb-24">
-          <div className="overflow-hidden rounded-3xl border border-border bg-card shadow-lift">
-            <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-              <span className="size-2.5 rounded-full bg-muted" />
-              <span className="size-2.5 rounded-full bg-muted" />
-              <span className="size-2.5 rounded-full bg-muted" />
-              <span className="ml-3 text-xs text-muted-foreground">aislix.com/dashboard</span>
-            </div>
-            <img
-              src="/marketing/dashboard-preview.webp"
-              alt="Aislix dashboard showing shelf health, scan analytics and recent audits"
-              className="block h-auto w-full"
-              loading="lazy"
-              decoding="async"
-            />
-          </div>
-        </div>
-      </section>
+      <LiveDemoSection />
+
+      <HomeLeadCapture />
+
+      <HomeDashboardShowcase />
+
 
       <HomeLeadCapture />
 
