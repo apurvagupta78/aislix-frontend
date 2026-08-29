@@ -34,11 +34,11 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
       trackLandingEvent("landing_lead_captured", { has_session: Boolean(sessionId) });
       const resolvedSignupUrl = data.signup_url || signupUrl({ email: email.trim() });
       setSuccessSignupUrl(resolvedSignupUrl);
-      setEmailSent(Boolean(data.email_sent));
-      // Belt and suspenders: if the backend didn't send the onboarding email,
-      // ask our server route to send it.
-      if (!data.email_sent) {
-        void fetch("/api/send-landing-onboarding", {
+      // Always attempt the onboarding email through our server route; the
+      // backend may also have sent one (data.email_sent).
+      let routeSent = false;
+      try {
+        const res = await fetch("/api/send-landing-onboarding", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -46,10 +46,13 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
             name: name.trim() || undefined,
             signup_url: resolvedSignupUrl,
           }),
-        }).catch(() => {
-          /* onboarding email is best-effort */
         });
+        const body = (await res.json().catch(() => ({}))) as { ok?: boolean };
+        routeSent = res.ok && Boolean(body.ok);
+      } catch {
+        /* onboarding email is best-effort */
       }
+      setEmailSent(Boolean(data.email_sent) || routeSent);
       setDone(true);
     } catch (err) {
       setError((err as Error).message || "Could not save your details.");
