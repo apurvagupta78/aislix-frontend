@@ -18,7 +18,7 @@ export function MobileStickyCta({ hideWhenVisibleId }: { hideWhenVisibleId: stri
   if (hidden) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-landing-border bg-background/95 p-3 backdrop-blur md:hidden">
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 p-3 backdrop-blur md:hidden">
       <SignupCta location="mobile_sticky" className="w-full" />
     </div>
   );

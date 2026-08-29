@@ -37,7 +37,7 @@ export function FinalCtaSection() {
         <ul className="mt-7 flex flex-wrap justify-center gap-x-6 gap-y-2">
           {TRUST.map((t) => (
             <li key={t} className="flex items-center gap-2 text-sm text-brand-foreground/70">
-              <CheckCircle2 className="size-4 text-landing-cyan" /> {t}
+              <CheckCircle2 className="size-4 text-brand" /> {t}
             </li>
           ))}
         </ul>

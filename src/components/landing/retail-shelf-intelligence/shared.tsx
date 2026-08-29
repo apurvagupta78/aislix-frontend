@@ -5,7 +5,7 @@ import { trackLandingEvent, type LandingEvent } from "@/lib/landing-analytics";
 import { signupUrl } from "@/lib/landing-utm";
 
 export const CYAN_BTN =
-  "bg-landing-cyan text-brand-foreground shadow-soft hover:bg-landing-cyan-hover";
+  "bg-brand text-brand-foreground shadow-soft hover:bg-brand";
 
 /** Primary conversion CTA: always routes to /signup with UTMs + session id. */
 export function SignupCta({
@@ -50,7 +50,7 @@ export function SectionHeading({
   return (
     <div className={cn("mx-auto max-w-2xl text-center", className)}>
       {eyebrow && (
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-landing-cyan">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand">
           {eyebrow}
         </p>
       )}

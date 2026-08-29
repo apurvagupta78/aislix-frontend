@@ -32,7 +32,7 @@ export function LandingHero({ stats }: { stats?: HeroStats }) {
           <h1 className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight text-brand-foreground sm:text-5xl">
             Audit Every Aisle.
             <br />
-            <span className="text-landing-cyan">From a Single Photo.</span>
+            <span className="text-brand">From a Single Photo.</span>
           </h1>
 
           <p className="mt-5 max-w-xl text-base leading-relaxed text-brand-foreground/70">
@@ -58,7 +58,7 @@ export function LandingHero({ stats }: { stats?: HeroStats }) {
           <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2">
             {TRUST.map((t) => (
               <li key={t} className="flex items-center gap-2 text-sm text-brand-foreground/70">
-                <CheckCircle2 className="size-4 text-landing-cyan" /> {t}
+                <CheckCircle2 className="size-4 text-brand" /> {t}
               </li>
             ))}
           </ul>
@@ -75,7 +75,7 @@ export function LandingHero({ stats }: { stats?: HeroStats }) {
           className="group w-full text-left"
         >
           <div className="grid gap-4 rounded-2xl border border-brand-foreground/10 bg-brand-foreground/5 p-4 shadow-lift sm:grid-cols-2">
-            <div className="overflow-hidden rounded-xl border border-brand-foreground/10 bg-landing-navy-soft">
+            <div className="overflow-hidden rounded-xl border border-brand-foreground/10 bg-muted">
               <p className="border-b border-brand-foreground/10 px-3 py-2 text-[11px] font-medium uppercase tracking-wide text-brand-foreground/60">
                 Shelf photo
               </p>
@@ -88,7 +88,7 @@ export function LandingHero({ stats }: { stats?: HeroStats }) {
             </div>
 
             <div className="grid gap-4">
-              <div className="rounded-xl border border-landing-border bg-card p-4">
+              <div className="rounded-xl border border-border bg-card p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   AI analysis
                 </p>
@@ -111,14 +111,14 @@ export function LandingHero({ stats }: { stats?: HeroStats }) {
                 </div>
               </div>
 
-              <div className="rounded-xl border border-landing-border bg-card p-4">
+              <div className="rounded-xl border border-border bg-card p-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                   Top issues detected
                 </p>
                 <ul className="mt-2 space-y-1.5">
                   {TOP_ISSUES.map((i) => (
                     <li key={i.label} className="flex items-center gap-2 text-xs text-foreground">
-                      <span className="size-1.5 rounded-full bg-landing-cyan" />
+                      <span className="size-1.5 rounded-full bg-brand" />
                       {i.label}
                     </li>
                   ))}

@@ -42,12 +42,12 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
   }
 
   return (
-    <section id="lead" className="scroll-mt-16 bg-landing-surface py-16 sm:py-20">
+    <section id="lead" className="scroll-mt-16 bg-surface py-16 sm:py-20">
       <div className="mx-auto max-w-4xl px-5 sm:px-8">
-        <div className="rounded-2xl border border-landing-border bg-card p-6 shadow-lift sm:p-10">
+        <div className="rounded-2xl border border-border bg-card p-6 shadow-lift sm:p-10">
           {done ? (
             <div className="text-center">
-              <span className="mx-auto grid size-11 place-items-center rounded-full bg-landing-cyan-soft text-landing-cyan">
+              <span className="mx-auto grid size-11 place-items-center rounded-full bg-brand-soft text-brand">
                 <CheckCircle2 className="size-6" />
               </span>
               <h2 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">
