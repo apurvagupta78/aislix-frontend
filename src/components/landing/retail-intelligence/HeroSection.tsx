@@ -28,15 +28,22 @@ export function HeroSection() {
         </p>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button asChild variant="hero" size="xl" className="min-h-11 w-full sm:w-auto">
-            <a href="#demo" onClick={() => trackLandingEvent("cta_click", { location: "hero" })}>
-              Analyze a Shelf Photo <ArrowRight className="size-4" />
-            </a>
+          <Button
+            variant="hero"
+            size="xl"
+            className="min-h-11 w-full sm:w-auto"
+            onClick={() => {
+              trackLandingEvent("cta_click", { location: "hero" });
+              scrollToDemo();
+            }}
+          >
+            Analyze a Shelf Photo <ArrowRight className="size-4" />
           </Button>
           <Button asChild variant="outline" size="xl" className="min-h-11 w-full rounded-xl sm:w-auto">
             <a href="#how-it-works">See How Aislix Works</a>
           </Button>
         </div>
+
         <p className="mt-4 text-xs text-muted-foreground">
           3 free shelf scans • No credit card required
         </p>
