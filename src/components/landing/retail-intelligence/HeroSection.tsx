@@ -1,6 +1,8 @@
 import { ArrowRight, Camera, Cpu, LineChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trackLandingEvent } from "@/lib/landing-analytics";
+import { scrollToDemo } from "./demoBus";
+
 
 const flow = [
   { icon: Camera, label: "Shelf Photo" },
