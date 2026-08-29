@@ -42,8 +42,8 @@ function RetailIntelligencePage() {
         <HeroSection />
         <RetailIntelligenceDemo />
       </main>
-      <footer className="border-t border-border py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-5 text-xs text-muted-foreground sm:flex-row sm:justify-between sm:px-8">
+      <footer className="border-t border-border bg-card py-8">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-5 text-xs text-muted-foreground sm:flex-row sm:justify-between sm:px-8">
           <span>© {new Date().getFullYear()} Aislix</span>
           <span className="flex items-center gap-4">
             <a href="/privacy" className="hover:text-foreground">
