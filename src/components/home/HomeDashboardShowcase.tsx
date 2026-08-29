@@ -2,7 +2,6 @@ import { Bell } from "lucide-react";
 
 import {
   AccountSummaryPanel,
-  ActivityTimeline,
   KpiCards,
   NotificationsPanel,
   Panel,
