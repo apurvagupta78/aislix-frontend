@@ -18,6 +18,8 @@ import {
 import { register } from "@/lib/api/auth";
 import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
 import { toUserMessage } from "@/lib/api/errors";
+import { convertLandingSession, loadLandingSessionId } from "@/lib/landing-scan-api";
+
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
