@@ -10,7 +10,7 @@ import {
   Sparkles,
   Tags,
 } from "lucide-react";
-import { SectionHeading, SignupCta } from "./shared";
+import { SectionHeading } from "./shared";
 
 const FEATURES = [
   { Icon: Boxes, title: "Product Detection", body: "Identify every product on the shelf." },
