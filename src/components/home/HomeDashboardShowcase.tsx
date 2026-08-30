@@ -26,11 +26,11 @@ export function HomeDashboardShowcase() {
       <div className="mx-auto max-w-6xl px-5 text-center sm:px-8">
         <p className="text-xs font-medium uppercase tracking-widest text-brand">Live demo</p>
         <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-          The Aislix dashboard, with sample retail data.
+          Turn Shelf Photos Into Retail Decisions.
         </h2>
         <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Shelf health, scan volume, stock alerts, recent audits, notifications and plan usage —
-          exactly what your team sees after signing in.
+          Aislix turns shelf photos into actionable retail intelligence — showing shelf health,
+          products, stock issues, scan activity and AI insights in one dashboard.
         </p>
 
         <div className="mt-6 overflow-hidden rounded-3xl border border-border bg-card text-left shadow-lift">
