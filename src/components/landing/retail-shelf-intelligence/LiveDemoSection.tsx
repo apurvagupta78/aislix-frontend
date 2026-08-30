@@ -103,11 +103,7 @@ export function LiveDemoSection({
       onResult?.(scan, annotatedSrc(scan));
     } catch (err) {
       const status = (err as { status?: number }).status;
-      setError(
-        status === 429
-          ? "You've used all free demo scans for today. Create a free account to keep scanning."
-          : (err as Error).message || "Scan failed. Please try again.",
-      );
+      setError((err as Error).message || (status === 429 ? "Demo capacity is busy. Please try again shortly." : "Scan failed. Please try again."));
       setPhase("error");
       trackLandingEvent("demo_scan_failed");
     }
@@ -158,11 +154,11 @@ export function LiveDemoSection({
               : "Try a real shelf scan — no login required."
           }
           {...(homepageIntro ? {} : { eyebrow: "Live demo" })}
-          className={homepageIntro ? "mx-0 max-w-3xl text-left" : undefined}
+          className={homepageIntro ? "max-w-3xl" : undefined}
         />
 
         <div
-          className={`mt-7 flex flex-col gap-3 sm:flex-row ${homepageIntro ? "sm:justify-start" : "sm:justify-center"}`}
+          className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center"
         >
           <Button
             size="xl"
@@ -195,9 +191,9 @@ export function LiveDemoSection({
           />
         </div>
 
-        <div className="mt-8 overflow-hidden rounded-xl border border-border bg-card shadow-lift lg:grid lg:grid-cols-[55fr_45fr]">
+        <div className="mt-8 overflow-hidden rounded-xl border border-border bg-card shadow-lift lg:grid lg:grid-cols-[55fr_45fr] lg:divide-x lg:divide-border">
           {/* Shelf image */}
-          <div className="relative grid min-h-80 place-items-center overflow-hidden bg-surface lg:min-h-[600px] lg:border-r lg:border-border">
+          <div className="relative grid min-h-80 h-full place-items-center overflow-hidden bg-surface lg:min-h-[600px]">
             {shownImage && (
               <img
                 src={shownImage}
@@ -228,14 +224,22 @@ export function LiveDemoSection({
               </div>
             )}
 
-            {phase === "error" && (
+            {phase === "error" && homepageIntro && displayedResult ? (
+              <div>
+                <div className="mb-4 flex items-start gap-2 rounded-lg border border-border bg-surface p-3 text-sm text-muted-foreground">
+                  <AlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
+                  <span>{error}</span>
+                </div>
+                <SampleResult result={displayedResult} liveResult={result} showWorkspaceCta={showWorkspaceCta} />
+              </div>
+            ) : phase === "error" ? (
               <div className="grid min-h-72 place-items-center text-center">
                 <div>
                   <AlertCircle className="mx-auto size-6 text-destructive" />
                   <p className="mt-3 text-sm text-foreground">{error}</p>
                 </div>
               </div>
-            )}
+            ) : null}
 
             {phase === "idle" && !displayedResult && (
               <div className="grid min-h-72 place-items-center">
@@ -274,7 +278,26 @@ export function LiveDemoSection({
             )}
 
             {!scanning && phase !== "error" && displayedResult && (
-              <div>
+              <SampleResult result={displayedResult} liveResult={result} showWorkspaceCta={showWorkspaceCta} />
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function SampleResult({
+  result: displayedResult,
+  liveResult,
+  showWorkspaceCta,
+}: {
+  result: LandingScanResult;
+  liveResult: LandingScanResult | null;
+  showWorkspaceCta: boolean;
+}) {
+  return (
+    <div>
                 <div className="grid grid-cols-3 gap-3">
                   {[
                     { label: "Products detected", value: displayedResult.metrics?.total_products },
@@ -358,8 +381,8 @@ export function LiveDemoSection({
                     variant="outline"
                     size="lg"
                     className="w-full sm:w-auto"
-                    disabled={!result?.csv_base64}
-                    onClick={() => result && downloadLandingCsv(result)}
+                    disabled={!liveResult?.csv_base64}
+                    onClick={() => liveResult && downloadLandingCsv(liveResult)}
                   >
                     <Download className="size-4" /> Download CSV
                   </Button>
@@ -375,11 +398,6 @@ export function LiveDemoSection({
                     </Button>
                   ) : null}
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </section>
+    </div>
   );
 }
