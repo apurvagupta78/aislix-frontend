@@ -32,9 +32,11 @@ function annotatedSrc(result: LandingScanResult): string | null {
 export function LiveDemoSection({
   onResult,
   showWorkspaceCta = false,
+  homepageIntro = false,
 }: {
   onResult?: (result: LandingScanResult, imageUrl: string | null) => void;
   showWorkspaceCta?: boolean;
+  homepageIntro?: boolean;
 }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(DEFAULT_SAMPLE_IMAGE);
@@ -115,12 +117,19 @@ export function LiveDemoSection({
   const scanning = phase === "scanning";
 
   return (
-    <section id="demo" className="scroll-mt-16 bg-background py-16 sm:py-20">
+    <section
+      id={homepageIntro ? "start-scanning" : "demo"}
+      className="scroll-mt-16 bg-background py-16 sm:py-20"
+    >
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <SectionHeading
-          eyebrow="Live demo"
-          title="See What Aislix Sees"
-          subtitle="Try a real shelf scan — no login required."
+          title={homepageIntro ? "See What AI Sees on Every Shelf." : "See What Aislix Sees"}
+          subtitle={
+            homepageIntro
+              ? "Aislix analyzes a single shelf photo to identify products, brands, stock gaps and placement issues — giving your retail team the intelligence to act faster."
+              : "Try a real shelf scan — no login required."
+          }
+          {...(homepageIntro ? {} : { eyebrow: "Live demo" })}
         />
 
         <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
@@ -201,22 +210,34 @@ export function LiveDemoSection({
               <div className="grid min-h-72 place-items-center">
                 <div className="w-full">
                   <div className="grid grid-cols-3 gap-3">
-                    {["Products detected", "Unique SKUs", "Shelf health"].map((label) => (
+                    {[
+                      {
+                        label: homepageIntro ? "Products" : "Products detected",
+                        value: homepageIntro ? "8" : "—",
+                      },
+                      {
+                        label: homepageIntro ? "Out of stock" : "Unique SKUs",
+                        value: homepageIntro ? "4" : "—",
+                      },
+                      { label: "Shelf health", value: homepageIntro ? "91%" : "—" },
+                    ].map(({ label, value }) => (
                       <div
                         key={label}
                         className="rounded-lg border border-border bg-surface p-3"
                       >
-                        <p className="text-lg font-semibold tracking-tight text-muted-foreground">—</p>
+                        <p className="text-lg font-semibold tracking-tight text-foreground">{value}</p>
                         <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
                           {label}
                         </p>
                       </div>
                     ))}
                   </div>
-                  <p className="mt-5 text-center text-sm text-muted-foreground">
-                    Click <span className="font-medium text-foreground">Try Sample Shelf</span> to
-                    run live AI analysis.
-                  </p>
+                  {!homepageIntro ? (
+                    <p className="mt-5 text-center text-sm text-muted-foreground">
+                      Click <span className="font-medium text-foreground">Try Sample Shelf</span> to
+                      run live AI analysis.
+                    </p>
+                  ) : null}
                 </div>
               </div>
             )}
