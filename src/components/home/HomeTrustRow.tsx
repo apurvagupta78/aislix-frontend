@@ -12,9 +12,9 @@ export function HomeTrustRow() {
   return (
     <section className="bg-background py-8">
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <p className="text-center text-base font-medium text-muted-foreground sm:text-lg">
+        <h2 className="text-center text-xl font-semibold text-foreground sm:text-2xl">
           Built for modern retail teams
-        </p>
+        </h2>
         <div className="mt-6 grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-5">
           {audiences.map(({ label, Icon }) => (
             <div key={label} className="flex flex-col items-center gap-2 text-center">
