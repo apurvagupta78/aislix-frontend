@@ -137,7 +137,7 @@ function Dashboard() {
             <Sparkles className="mt-0.5 size-4 shrink-0 text-brand" />
             <p className="text-sm text-brand">
               <span className="font-semibold">You're viewing a live demo</span> with sample retail
-              data. Create a free account to scan your own shelves — 3 free scans every day.
+              data. Create a free account to scan your own shelves — 5 free scans every day.
             </p>
           </div>
           <Button asChild variant="brand" size="sm" className="rounded-xl">
