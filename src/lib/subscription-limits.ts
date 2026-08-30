@@ -449,7 +449,7 @@ export function cooldownClock(iso?: string | null, now: number = Date.now()): st
   return `${h}:${m}:${s}`;
 }
 
-/** "127 / 300 scans used this month" · "2 / 3 scans used in the last 24 hours". */
+/** "127 / 300 scans used this month" · "2 / 5 scans used in the last 24 hours". */
 export function scanUsageLabel(usage: UsageSummary): string {
   const window = usage.quota_period === "rolling_24h" ? "in the last 24 hours" : "this month";
   if (usage.scan_quota === null) {

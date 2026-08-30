@@ -3,7 +3,7 @@
 // Prices are in INR. Annual pricing = 10 months (≈17% saving).
 //
 // Limits mirror the `subscription_plans` table exactly:
-//   free         ₹0      3 scans / rolling 24h   1 store   7-day history
+//   free         ₹0      5 scans / rolling 24h   1 store   7-day history
 //   starter      ₹999    300 scans / month       1 store
 //   growth       ₹2,999  3,000 scans / month     3 stores
 //   professional ₹4,999  5,000 scans / month     5 stores
@@ -44,13 +44,13 @@ export const plans: Plan[] = [
     tagline: "For single-store owners trying shelf audits",
     monthlyPrice: 0,
     annualPrice: 0,
-    scanLimitLabel: "3 scans per 24 hours",
-    monthlyScanQuota: 3,
+    scanLimitLabel: "5 scans per 24 hours",
+    monthlyScanQuota: 5,
     storeLimit: 1,
     seatLimit: 1,
     historyDays: 7,
     features: [
-      "3 scans per 24 hours",
+      "5 scans per 24 hours",
       "1 store",
       "1 user",
       "AI product detection",
@@ -196,7 +196,7 @@ export const comparisonGroups: {
       {
         label: "Scans included",
         values: {
-          free: "3 / 24 hours",
+          free: "5 / 24 hours",
           starter: "300 / month",
           growth: "3,000 / month",
           professional: "5,000 / month",

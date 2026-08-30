@@ -68,7 +68,7 @@ export function LeadCaptureSection({ landingSessionId }: { landingSessionId: str
             <form onSubmit={submit}>
               <p className="text-xs font-semibold uppercase tracking-wider text-brand">Continue with Aislix</p>
               <h2 className="mt-3 text-2xl font-semibold tracking-normal sm:text-3xl">
-                Save your shelf audit &amp; unlock 3 free scans
+                Save your shelf audit &amp; unlock 5 free scans
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 Enter your work email. No credit card required.
