@@ -18,7 +18,7 @@ export type PaymentMethod = {
 };
 
 export type UsageSummary = {
-  /** "rolling_24h" for the Free plan (3 scans / 24h), "month" for paid quotas. */
+  /** "rolling_24h" for the Free plan (5 scans / 24h), "month" for paid quotas. */
   quota_period?: "rolling_24h" | "month";
   period_start?: string;
   period_end?: string;
@@ -110,8 +110,8 @@ async function getSubscriptionRow(orgId: string) {
 }
 
 
-/** Free-plan allowance: 3 scans per rolling 24 hours. */
-export const FREE_SCAN_LIMIT_24H = 3;
+/** Free-plan allowance: 5 scans per rolling 24 hours. */
+export const FREE_SCAN_LIMIT_24H = 5;
 
 /**
  * Live plan allowance check used before a scan is created. Delegates to the
