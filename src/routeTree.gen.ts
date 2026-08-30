@@ -64,6 +64,7 @@ import { Route as StoresStoreIdRouteImport } from './routes/stores.$storeId'
 import { Route as ApiPlanogramCsvTemplateRouteImport } from './routes/api/planogram.csv-template'
 import { Route as ApiPlanogramNormalizeRowRouteImport } from './routes/api/planogram.normalize-row'
 import { Route as ApiPlanogramParseCsvRouteImport } from './routes/api/planogram.parse-csv'
+import { Route as ApiPublicLandingScanRouteImport } from './routes/api/public/landing/scan'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
@@ -345,6 +346,11 @@ const ApiPlanogramParseCsvRoute = ApiPlanogramParseCsvRouteImport.update({
   path: '/api/planogram/parse-csv',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicLandingScanRoute = ApiPublicLandingScanRouteImport.update({
+  id: '/api/public/landing/scan',
+  path: '/api/public/landing/scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   id: '/lovable/email/auth/preview',
   path: '/lovable/email/auth/preview',
@@ -418,6 +424,7 @@ export interface FileRoutesByFullPath {
   '/api/planogram/csv-template': typeof ApiPlanogramCsvTemplateRoute
   '/api/planogram/normalize-row': typeof ApiPlanogramNormalizeRowRoute
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
+  '/api/public/landing/scan': typeof ApiPublicLandingScanRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -478,6 +485,7 @@ export interface FileRoutesByTo {
   '/api/planogram/csv-template': typeof ApiPlanogramCsvTemplateRoute
   '/api/planogram/normalize-row': typeof ApiPlanogramNormalizeRowRoute
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
+  '/api/public/landing/scan': typeof ApiPublicLandingScanRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -539,6 +547,7 @@ export interface FileRoutesById {
   '/api/planogram/csv-template': typeof ApiPlanogramCsvTemplateRoute
   '/api/planogram/normalize-row': typeof ApiPlanogramNormalizeRowRoute
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
+  '/api/public/landing/scan': typeof ApiPublicLandingScanRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -601,6 +610,7 @@ export interface FileRouteTypes {
     | '/api/planogram/csv-template'
     | '/api/planogram/normalize-row'
     | '/api/planogram/parse-csv'
+    | '/api/public/landing/scan'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
@@ -661,6 +671,7 @@ export interface FileRouteTypes {
     | '/api/planogram/csv-template'
     | '/api/planogram/normalize-row'
     | '/api/planogram/parse-csv'
+    | '/api/public/landing/scan'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
@@ -721,6 +732,7 @@ export interface FileRouteTypes {
     | '/api/planogram/csv-template'
     | '/api/planogram/normalize-row'
     | '/api/planogram/parse-csv'
+    | '/api/public/landing/scan'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
@@ -782,6 +794,7 @@ export interface RootRouteChildren {
   ApiPlanogramCsvTemplateRoute: typeof ApiPlanogramCsvTemplateRoute
   ApiPlanogramNormalizeRowRoute: typeof ApiPlanogramNormalizeRowRoute
   ApiPlanogramParseCsvRoute: typeof ApiPlanogramParseCsvRoute
+  ApiPublicLandingScanRoute: typeof ApiPublicLandingScanRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
@@ -1174,6 +1187,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPlanogramParseCsvRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/landing/scan': {
+      id: '/api/public/landing/scan'
+      path: '/api/public/landing/scan'
+      fullPath: '/api/public/landing/scan'
+      preLoaderRoute: typeof ApiPublicLandingScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/auth/preview': {
       id: '/lovable/email/auth/preview'
       path: '/lovable/email/auth/preview'
@@ -1254,6 +1274,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPlanogramCsvTemplateRoute: ApiPlanogramCsvTemplateRoute,
   ApiPlanogramNormalizeRowRoute: ApiPlanogramNormalizeRowRoute,
   ApiPlanogramParseCsvRoute: ApiPlanogramParseCsvRoute,
+  ApiPublicLandingScanRoute: ApiPublicLandingScanRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
