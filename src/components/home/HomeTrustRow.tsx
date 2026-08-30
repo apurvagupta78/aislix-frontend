@@ -18,8 +18,8 @@ export function HomeTrustRow() {
         <div className="mt-6 grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-5">
           {audiences.map(({ label, Icon }) => (
             <div key={label} className="flex flex-col items-center gap-2 text-center">
-              <div className="flex size-10 items-center justify-center rounded-full border-2 border-landing-navy text-landing-navy">
-                <Icon className="size-5" strokeWidth={1.5} aria-hidden="true" />
+              <div className="flex size-6 shrink-0 items-center justify-center rounded-full border border-landing-navy text-landing-navy">
+                <Icon className="size-3" strokeWidth={1.75} aria-hidden="true" />
               </div>
               <span className="text-sm font-medium text-foreground">{label}</span>
             </div>

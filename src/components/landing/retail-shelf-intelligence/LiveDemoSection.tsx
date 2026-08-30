@@ -19,6 +19,33 @@ type Phase = "idle" | "scanning" | "done" | "error";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
+const DEFAULT_SAMPLE_RESULT: LandingScanResult = {
+  landing_session_id: "sample-preview",
+  scan_id: "shampoo-a1z-preview",
+  status: "completed",
+  scan_mode: "audit_only",
+  has_planogram: false,
+  metrics: {
+    total_products: 8,
+    unique_skus: 8,
+    shelf_health_score: 90.72,
+  },
+  executive_summary:
+    "This shelf audit detected 8 product facings across 8 unique SKUs and 8 brands. Shelf utilization is 65.3% with an average AI confidence of 96.0%.",
+  inventory: [
+    { brand: "Dove", product_name: "Daily Shine Shampoo", quantity: 1, confidence: 0.98, status_label: "Detected" },
+    { brand: "Tresemme", product_name: "Smooth Shine Shampoo", quantity: 1, confidence: 0.98, status_label: "Detected" },
+    { brand: "Head & Shoulders", product_name: "And Shoulders Silky Black Shampoo", quantity: 1, confidence: 0.98, status_label: "Detected" },
+    { brand: "Dabur", product_name: "Vatika Health Shine Shampoo", quantity: 1, confidence: 0.94, status_label: "Detected" },
+    { brand: "Loreal", product_name: "Paris Hyaluron Moisture Shampoo", quantity: 1, confidence: 0.9, status_label: "Detected" },
+    { brand: "Pantene", product_name: "Lively Clean Shampoo", quantity: 1, confidence: 0.98, status_label: "Detected" },
+    { brand: "Sunsilk", product_name: "Nourishing Soft Smooth Shampoo", quantity: 1, confidence: 0.98, status_label: "Detected" },
+    { brand: "Nivea", product_name: "Men Strong Power Shampoo", quantity: 1, confidence: 0.94, status_label: "Detected" },
+  ],
+  scans_used_today: 3,
+  scans_daily_limit: 5,
+};
+
 function annotatedSrc(result: LandingScanResult): string | null {
   if (result.annotated_image_base64) {
     return `data:${result.annotated_image_mime || "image/jpeg"};base64,${result.annotated_image_base64}`;
@@ -115,11 +142,12 @@ export function LiveDemoSection({
 
   const shownImage = phase === "done" && result ? (annotatedSrc(result) ?? previewImageUrl) : previewImageUrl;
   const scanning = phase === "scanning";
+  const displayedResult = result ?? (homepageIntro ? DEFAULT_SAMPLE_RESULT : null);
 
   return (
     <section
       id={homepageIntro ? "start-scanning" : "demo"}
-      className="scroll-mt-16 bg-background py-16 sm:py-20"
+      className="scroll-mt-16 bg-surface py-16 sm:py-20"
     >
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <SectionHeading
@@ -164,7 +192,7 @@ export function LiveDemoSection({
           />
         </div>
 
-        <div className="mt-8 overflow-hidden rounded-2xl border border-border bg-card shadow-lift lg:grid lg:grid-cols-[55fr_45fr]">
+        <div className="mt-8 overflow-hidden rounded-xl border border-border bg-card shadow-lift lg:grid lg:grid-cols-[55fr_45fr]">
           {/* Shelf image */}
           <div className="relative grid min-h-80 place-items-center overflow-hidden bg-surface lg:min-h-[600px] lg:border-r lg:border-border">
             {shownImage && (
@@ -206,7 +234,7 @@ export function LiveDemoSection({
               </div>
             )}
 
-            {phase === "idle" && (
+            {phase === "idle" && !displayedResult && (
               <div className="grid min-h-72 place-items-center">
                 <div className="w-full">
                   <div className="grid grid-cols-3 gap-3">
@@ -242,17 +270,17 @@ export function LiveDemoSection({
               </div>
             )}
 
-            {phase === "done" && result && (
+            {!scanning && phase !== "error" && displayedResult && (
               <div>
                 <div className="grid grid-cols-3 gap-3">
                   {[
-                    { label: "Products detected", value: result.metrics?.total_products },
-                    { label: "Unique SKUs", value: result.metrics?.unique_skus },
+                    { label: "Products detected", value: displayedResult.metrics?.total_products },
+                    { label: "Unique SKUs", value: displayedResult.metrics?.unique_skus },
                     {
                       label: "Shelf health",
                       value:
-                        result.metrics?.shelf_health_score != null
-                          ? `${Math.round(result.metrics.shelf_health_score)}%`
+                        displayedResult.metrics?.shelf_health_score != null
+                          ? `${Math.round(displayedResult.metrics.shelf_health_score)}%`
                           : undefined,
                     },
                   ].map((m) => (
@@ -270,9 +298,9 @@ export function LiveDemoSection({
                   ))}
                 </div>
 
-                {result.executive_summary && (
+                {displayedResult.executive_summary && (
                   <p className="mt-4 line-clamp-4 text-sm leading-relaxed text-muted-foreground">
-                    {result.executive_summary}
+                    {displayedResult.executive_summary}
                   </p>
                 )}
 
@@ -288,7 +316,7 @@ export function LiveDemoSection({
                       </tr>
                     </thead>
                     <tbody>
-                      {result.inventory?.map((row, i) => (
+                      {displayedResult.inventory?.map((row, i) => (
                         <tr
                           key={`${row.brand}-${row.product_name}-${i}`}
                           className="border-t border-border"
@@ -315,9 +343,9 @@ export function LiveDemoSection({
                   </table>
                 </div>
 
-                {result.scans_daily_limit != null && (
+                {displayedResult.scans_daily_limit != null && (
                   <p className="mt-3 text-xs text-muted-foreground">
-                    {result.scans_used_today ?? 0} of {result.scans_daily_limit} free demo scans used
+                    {displayedResult.scans_used_today ?? 0} of {displayedResult.scans_daily_limit} free demo scans used
                     today
                   </p>
                 )}
@@ -327,8 +355,8 @@ export function LiveDemoSection({
                     variant="outline"
                     size="lg"
                     className="w-full sm:w-auto"
-                    disabled={!result.csv_base64}
-                    onClick={() => downloadLandingCsv(result)}
+                    disabled={!result?.csv_base64}
+                    onClick={() => result && downloadLandingCsv(result)}
                   >
                     <Download className="size-4" /> Download CSV
                   </Button>
