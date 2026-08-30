@@ -167,7 +167,7 @@ export function LiveDemoSection({
             disabled={scanning}
             onClick={onSample}
           >
-            <Sparkles className="size-4" /> Try Sample Shelf
+            <Sparkles className="size-4" /> Try Sample Shelf Below
           </Button>
           <Button
             variant="outline"
@@ -176,7 +176,7 @@ export function LiveDemoSection({
             disabled={scanning}
             onClick={() => fileRef.current?.click()}
           >
-            <ImagePlus className="size-4" /> Upload Shelf Photo
+            <ImagePlus className="size-4" /> Upload Your Shelf Photo
           </Button>
           <input
             ref={fileRef}
