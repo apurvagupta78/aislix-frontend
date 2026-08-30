@@ -152,7 +152,7 @@ function Landing() {
             </Button>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            No card required · 3 free scans per day · Instantly live
+            No card required · 5 free scans per day · Instantly live
           </p>
         </div>
 
@@ -250,7 +250,7 @@ function Landing() {
             Your shelves are talking. Start listening.
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-            Join retail teams cutting audit time by 90% with automated shelf intelligence.
+            Join retail teams turning every shelf photo into a complete retail audit in seconds.
           </p>
           <Button asChild variant="hero" size="xl" className="mt-8">
             <Link to="/signup">
