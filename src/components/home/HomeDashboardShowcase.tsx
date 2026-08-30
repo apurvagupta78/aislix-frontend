@@ -23,17 +23,17 @@ import {
 export function HomeDashboardShowcase() {
   return (
     <section id="live-dashboard" className="scroll-mt-20 border-t border-border bg-surface py-12">
-      <div className="mx-auto max-w-7xl px-6">
+      <div className="mx-auto max-w-6xl px-5 text-center sm:px-8">
         <p className="text-xs font-medium uppercase tracking-widest text-brand">Live demo</p>
         <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
           The Aislix dashboard, with sample retail data.
         </h2>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+        <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           Shelf health, scan volume, stock alerts, recent audits, notifications and plan usage —
           exactly what your team sees after signing in.
         </p>
 
-        <div className="mt-6 overflow-hidden rounded-3xl border border-border bg-card shadow-lift">
+        <div className="mt-6 overflow-hidden rounded-3xl border border-border bg-card text-left shadow-lift">
           <div className="flex items-center gap-2 border-b border-border px-4 py-3">
             <span className="size-2.5 rounded-full bg-muted" />
             <span className="size-2.5 rounded-full bg-muted" />

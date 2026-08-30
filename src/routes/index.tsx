@@ -169,12 +169,12 @@ function Landing() {
 
 
       <section id="platform" className="border-t border-border py-24">
-        <div className="mx-auto max-w-6xl px-6">
+        <div className="mx-auto max-w-6xl px-6 text-center">
           <p className="text-xs font-medium uppercase tracking-widest text-brand">Platform</p>
-          <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h2 className="mx-auto mt-3 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">
             Everything a retail audit team does manually — automated.
           </h2>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2">
+          <div className="mt-12 grid gap-5 text-left sm:grid-cols-2">
             {features.map((f) => (
               <div
                 key={f.title}
@@ -192,12 +192,12 @@ function Landing() {
       </section>
 
       <section id="how" className="border-t border-border bg-surface py-24">
-        <div className="mx-auto max-w-6xl px-6">
+        <div className="mx-auto max-w-6xl px-6 text-center">
           <p className="text-xs font-medium uppercase tracking-widest text-brand">How it works</p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
             From photo to decision in three steps.
           </h2>
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
+          <div className="mt-12 grid gap-5 text-left md:grid-cols-3">
             {steps.map((s, i) => (
               <div key={s.title} className="card-surface card-hover p-7">
                 <div className="flex items-center justify-between">
@@ -215,22 +215,22 @@ function Landing() {
       </section>
 
       <section id="pricing" className="border-t border-border py-24">
-        <div className="mx-auto max-w-7xl px-6">
+        <div className="mx-auto max-w-6xl px-6 text-center">
           <p className="text-xs font-medium uppercase tracking-widest text-brand">Pricing</p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
             Plans that scale from one local store to a national chain.
           </h2>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Start free with 3 scans a day. Move to Starter at ₹999, unlimited scans on Professional
             at ₹4,999, or talk to us about an Enterprise rollout.
           </p>
           <div className="mt-8">
             <CycleToggle cycle={cycle} onChange={setCycle} />
           </div>
-          <div className="mt-10">
+          <div className="mt-10 text-left">
             <PricingGrid cycle={cycle} />
           </div>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button asChild variant="subtle" className="rounded-xl">
               <Link to="/pricing">
                 Compare every feature <ArrowRight className="size-4" />

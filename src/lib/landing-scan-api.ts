@@ -67,7 +67,7 @@ function appendUtm(form: FormData) {
 }
 
 async function postScan(form: FormData, fallback: string): Promise<LandingScanResult> {
-  const res = await fetch(`${API}/landing/scan`, { method: "POST", body: form });
+  const res = await fetch("/api/public/landing/scan", { method: "POST", body: form });
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as { detail?: string };
     throw new LandingScanError(err.detail || `${fallback} (${res.status})`, res.status);

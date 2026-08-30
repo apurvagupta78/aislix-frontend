@@ -10,12 +10,12 @@ const audiences = [
 
 export function HomeTrustRow() {
   return (
-    <section className="bg-background py-8">
-      <div className="mx-auto max-w-7xl px-5 sm:px-8">
-        <h2 className="text-center text-xl font-semibold text-foreground sm:text-2xl">
+    <section className="bg-background py-10">
+      <div className="mx-auto max-w-6xl px-5 text-center sm:px-8">
+        <h2 className="text-2xl font-normal leading-tight tracking-tight text-foreground sm:text-3xl">
           Built for modern retail teams
         </h2>
-        <div className="mt-6 grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mx-auto mt-7 grid max-w-5xl grid-cols-2 gap-7 sm:grid-cols-3 lg:grid-cols-5">
           {audiences.map(({ label, Icon }) => (
             <div key={label} className="flex flex-col items-center gap-2 text-center">
               <div className="flex size-6 shrink-0 items-center justify-center rounded-full border border-landing-navy text-landing-navy">
