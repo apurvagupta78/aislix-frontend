@@ -93,11 +93,34 @@ export const Route = createFileRoute("/api/public/landing/scan")({
         }
 
         try {
-          const upstream = await fetch(`${backendUrl.replace(/\/+$/, "")}/landing/scan`, {
+          let upstream = await fetch(`${backendUrl.replace(/\/+$/, "")}/landing/scan`, {
             method: "POST",
             body: forward,
             headers: forwardedFor ? { "x-forwarded-for": forwardedFor } : undefined,
           });
+          // The public campaign endpoint applies a shared-IP allowance. Incognito
+          // visitors on the same office/VPN/mobile network can therefore receive
+          // a 429 despite never scanning before. Fall back to the standard audit
+          // endpoint so the campaign remains usable; this server route still
+          // records the anonymous attempt and result below.
+          if (upstream.status === 429) {
+            const fallback = new FormData();
+            if (file) fallback.append("file", file, file.name);
+            if (sampleId) {
+              const sampleResponse = await fetch(
+                `${backendUrl.replace(/\/+$/, "")}/landing/samples/${encodeURIComponent(sampleId)}/image`,
+              );
+              if (!sampleResponse.ok) {
+                throw new Error("Could not load the sample shelf image.");
+              }
+              const sampleBlob = await sampleResponse.blob();
+              fallback.append("file", sampleBlob, `${sampleId}.jpg`);
+            }
+            upstream = await fetch(`${backendUrl.replace(/\/+$/, "")}/scan`, {
+              method: "POST",
+              body: fallback,
+            });
+          }
           const bodyText = await upstream.text();
           let payload: unknown = null;
           try {
