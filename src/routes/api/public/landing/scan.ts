@@ -1,11 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
+import type { Json } from "@/integrations/supabase/types";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_TEXT_LENGTH = 500;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png"]);
 const UTM_FIELDS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"] as const;
-
-type StoredScanResult = Record<string, unknown>;
 
 function textField(form: FormData, field: string): string | null {
   const value = form.get(field);
@@ -14,11 +13,11 @@ function textField(form: FormData, field: string): string | null {
   return trimmed ? trimmed.slice(0, MAX_TEXT_LENGTH) : null;
 }
 
-function safeResult(payload: unknown): StoredScanResult | null {
+function safeResult(payload: unknown): Json | null {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
   const { annotated_image_base64: _annotated, original_image_base64: _original, csv_base64: _csv, ...rest } =
     payload as Record<string, unknown>;
-  return rest;
+  return JSON.parse(JSON.stringify(rest)) as Json;
 }
 
 async function hashValue(value: string): Promise<string | null> {
