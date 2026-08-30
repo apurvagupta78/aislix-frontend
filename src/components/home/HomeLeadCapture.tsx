@@ -66,7 +66,7 @@ export function HomeLeadCapture() {
   const ctaHref = successSignupUrl ?? signupUrl({ email: email.trim() || undefined });
 
   return (
-    <section id="lead" className="scroll-mt-20 border-b border-border bg-surface py-16 sm:py-20">
+    <section id="lead" className="scroll-mt-20 border-b border-border bg-background py-16 sm:py-20">
       <div className="mx-auto max-w-5xl px-5 sm:px-8">
         <div className="rounded-2xl border border-border bg-card p-6 shadow-lift sm:p-10">
           {done ? (

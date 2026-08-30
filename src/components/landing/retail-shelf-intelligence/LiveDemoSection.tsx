@@ -158,9 +158,12 @@ export function LiveDemoSection({
               : "Try a real shelf scan — no login required."
           }
           {...(homepageIntro ? {} : { eyebrow: "Live demo" })}
+          className={homepageIntro ? "mx-0 max-w-3xl text-left" : undefined}
         />
 
-        <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+        <div
+          className={`mt-7 flex flex-col gap-3 sm:flex-row ${homepageIntro ? "sm:justify-start" : "sm:justify-center"}`}
+        >
           <Button
             size="xl"
             variant="default"
