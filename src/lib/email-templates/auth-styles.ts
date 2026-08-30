@@ -1,7 +1,6 @@
 /** Shared Aislix brand styling for authentication emails. */
 
 export const NAVY = '#09283e'
-export const GREEN = '#0B8F4D'
 
 export const main = {
   backgroundColor: '#ffffff',
@@ -27,7 +26,7 @@ export const text = {
 }
 
 export const button = {
-  backgroundColor: GREEN,
+  backgroundColor: NAVY,
   color: '#ffffff',
   fontSize: '15px',
   fontWeight: 600 as const,
@@ -37,7 +36,7 @@ export const button = {
   display: 'inline-block',
 }
 
-export const link = { color: GREEN, textDecoration: 'underline' }
+export const link = { color: NAVY, textDecoration: 'underline' }
 
 export const hr = { borderColor: '#e5e9ee', margin: '32px 0 20px' }
 

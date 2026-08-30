@@ -193,7 +193,7 @@ const quote = {
   lineHeight: '22px',
   color: '#1f2937',
   backgroundColor: '#f1f5f9',
-  borderLeft: '3px solid #0B8F4D',
+  borderLeft: '3px solid #09283e',
   borderRadius: '8px',
   padding: '12px 14px',
   margin: '16px 0 0',
@@ -222,6 +222,6 @@ const button = {
   padding: '13px 24px',
   textDecoration: 'none',
 }
-const link = { color: '#0B8F4D' }
+const link = { color: '#09283e' }
 const hr = { borderColor: '#e5e7eb', margin: '28px 0' }
 const muted = { fontSize: '13px', lineHeight: '20px', color: '#6b7280', margin: '0 0 10px' }

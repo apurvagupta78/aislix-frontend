@@ -57,7 +57,7 @@ const Email = ({
         <Text style={muted}>
           If the button does not work, copy this link into your browser:
           <br />
-          <Link href={acceptUrl} style={{ color: '#0B8F4D' }}>
+          <Link href={acceptUrl} style={{ color: '#09283e' }}>
             {acceptUrl}
           </Link>
         </Text>
