@@ -83,10 +83,10 @@ export function PlanCard({
   return (
     <div
       className={cn(
-        "group relative flex h-full flex-col rounded-3xl px-6 pt-6 transition-all duration-300",
+        "group relative flex h-full flex-col rounded-3xl px-6 py-8 transition-all duration-300",
         plan.popular
-          ? "border-2 border-brand bg-card pb-16 shadow-card hover:-translate-y-1 hover:shadow-lift"
-          : "card-surface card-hover pb-12",
+          ? "border-2 border-brand bg-card shadow-card hover:-translate-y-1 hover:shadow-lift"
+          : "card-surface card-hover",
       )}
     >
       {plan.popular && (
@@ -136,7 +136,7 @@ export function PlanCard({
 
       <Button
         variant={plan.popular ? "brand" : isCurrent ? "soft" : "subtle"}
-        className="mt-6 mb-4 w-full rounded-xl"
+        className="mt-6 h-10 w-full rounded-xl px-2 text-[0.7rem] sm:text-xs"
         disabled={isCurrent || pending}
         onClick={() => onSelect?.(plan)}
       >
