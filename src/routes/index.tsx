@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { SiteFooter, SiteHeader } from "@/components/MarketingLayout";
 import { CycleToggle, PricingGrid } from "@/components/pricing/PricingPlans";
 import { HomeLeadCapture } from "@/components/home/HomeLeadCapture";
-import { HomeScanHero } from "@/components/home/HomeScanHero";
 import { HomeTrustRow } from "@/components/home/HomeTrustRow";
 import { HomeDashboardShowcase } from "@/components/home/HomeDashboardShowcase";
 import { LiveDemoSection } from "@/components/landing/retail-shelf-intelligence/LiveDemoSection";
@@ -161,9 +160,7 @@ function Landing() {
 
       <HomeTrustRow />
 
-      <HomeScanHero />
-
-      <LiveDemoSection showWorkspaceCta />
+      <LiveDemoSection showWorkspaceCta homepageIntro />
 
       <HomeLeadCapture />
 
