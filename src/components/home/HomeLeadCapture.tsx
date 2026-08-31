@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Loader2, Mail, UserPlus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import { captureLandingLead, loadLandingSessionId, signupUrl } from "@/lib/landing-scan-api";
+import { trackWorkspaceSignupConversion } from "@/lib/linkedin-conversion";
 
 export function HomeLeadCapture() {
   const [email, setEmail] = useState("");
@@ -17,6 +18,13 @@ export function HomeLeadCapture() {
   const [emailSent, setEmailSent] = useState(false);
   const [successSignupUrl, setSuccessSignupUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const conversionTracked = useRef(false);
+
+  useEffect(() => {
+    if (!done || conversionTracked.current) return;
+    conversionTracked.current = true;
+    trackWorkspaceSignupConversion();
+  }, [done]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();

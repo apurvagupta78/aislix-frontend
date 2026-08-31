@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { AuthLayout } from "@/components/AuthLayout";
@@ -19,6 +19,7 @@ import { register } from "@/lib/api/auth";
 import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
 import { toUserMessage } from "@/lib/api/errors";
 import { convertLandingSession, loadLandingSessionId } from "@/lib/landing-scan-api";
+import { trackWorkspaceSignupConversion } from "@/lib/linkedin-conversion";
 
 
 export const Route = createFileRoute("/signup")({
@@ -51,6 +52,7 @@ function SignupPage() {
   });
   const [agreed, setAgreed] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const conversionTracked = useRef(false);
   const set = (key: keyof typeof form) => (value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
@@ -63,6 +65,11 @@ function SignupPage() {
         company_name: form.company.trim() || undefined,
       }),
     onSuccess: (session) => {
+      // The register request resolved with a created user; fire once per signup.
+      if (session?.user?.id && !conversionTracked.current) {
+        conversionTracked.current = true;
+        trackWorkspaceSignupConversion();
+      }
       // Best-effort landing-demo attribution; never blocks the auth flow.
       const sid =
         new URLSearchParams(window.location.search).get("landing_session_id") ??
