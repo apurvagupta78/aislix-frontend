@@ -65,6 +65,11 @@ function SignupPage() {
         company_name: form.company.trim() || undefined,
       }),
     onSuccess: (session) => {
+      // The register request resolved with a created user; fire once per signup.
+      if (session?.user?.id && !conversionTracked.current) {
+        conversionTracked.current = true;
+        trackWorkspaceSignupConversion();
+      }
       // Best-effort landing-demo attribution; never blocks the auth flow.
       const sid =
         new URLSearchParams(window.location.search).get("landing_session_id") ??
