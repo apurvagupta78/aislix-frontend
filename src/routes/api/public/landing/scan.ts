@@ -60,6 +60,25 @@ export const Route = createFileRoute("/api/public/landing/scan")({
         const referrer = request.headers.get("referer")?.slice(0, 2048) ?? null;
         const utm = Object.fromEntries(UTM_FIELDS.map((field) => [field, textField(incoming, field)]));
 
+        let imageStoragePath: string | null = null;
+        if (file) {
+          try {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const ext = file.type === "image/png" ? "png" : "jpg";
+            imageStoragePath = `landing-demo/${attemptToken}.${ext}`;
+            const { error: uploadError } = await supabaseAdmin.storage
+              .from("scan-images")
+              .upload(imageStoragePath, file, { contentType: file.type, upsert: false });
+            if (uploadError) {
+              console.error("Landing demo image upload failed:", uploadError.message);
+              imageStoragePath = null;
+            }
+          } catch (error) {
+            console.error("Landing demo image upload failed:", error);
+            imageStoragePath = null;
+          }
+        }
+
         let recordId: string | null = null;
         try {
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -70,6 +89,7 @@ export const Route = createFileRoute("/api/public/landing/scan")({
               scan_status: "processing",
               sample_id: sampleId,
               category: file ? "uploaded_shelf" : "sample_shelf",
+              image_storage_path: imageStoragePath,
               ip_hash: ipHash,
               user_agent: userAgent,
               referrer,
