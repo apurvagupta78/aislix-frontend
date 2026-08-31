@@ -19,6 +19,7 @@ import { register } from "@/lib/api/auth";
 import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
 import { toUserMessage } from "@/lib/api/errors";
 import { convertLandingSession, loadLandingSessionId } from "@/lib/landing-scan-api";
+import { trackWorkspaceSignupConversion } from "@/lib/linkedin-conversion";
 
 
 export const Route = createFileRoute("/signup")({
@@ -51,6 +52,7 @@ function SignupPage() {
   });
   const [agreed, setAgreed] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const conversionTracked = useRef(false);
   const set = (key: keyof typeof form) => (value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
