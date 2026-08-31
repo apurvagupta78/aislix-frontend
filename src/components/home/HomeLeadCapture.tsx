@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Loader2, Mail, UserPlus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
