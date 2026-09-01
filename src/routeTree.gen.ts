@@ -21,6 +21,7 @@ import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as CorrectiveActionsRouteImport } from './routes/corrective-actions'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DemoRouteImport } from './routes/demo'
+import { Route as DemoScansRouteImport } from './routes/demo-scans'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as HistoryRouteImport } from './routes/history'
@@ -127,6 +128,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const DemoRoute = DemoRouteImport.update({
   id: '/demo',
   path: '/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoScansRoute = DemoScansRouteImport.update({
+  id: '/demo-scans',
+  path: '/demo-scans',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FeaturesRoute = FeaturesRouteImport.update({
@@ -381,6 +387,7 @@ export interface FileRoutesByFullPath {
   '/corrective-actions': typeof CorrectiveActionsRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
+  '/demo-scans': typeof DemoScansRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/history': typeof HistoryRoute
@@ -442,6 +449,7 @@ export interface FileRoutesByTo {
   '/corrective-actions': typeof CorrectiveActionsRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
+  '/demo-scans': typeof DemoScansRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/history': typeof HistoryRoute
@@ -504,6 +512,7 @@ export interface FileRoutesById {
   '/corrective-actions': typeof CorrectiveActionsRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
+  '/demo-scans': typeof DemoScansRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/history': typeof HistoryRoute
@@ -567,6 +576,7 @@ export interface FileRouteTypes {
     | '/corrective-actions'
     | '/dashboard'
     | '/demo'
+    | '/demo-scans'
     | '/features'
     | '/forgot-password'
     | '/history'
@@ -628,6 +638,7 @@ export interface FileRouteTypes {
     | '/corrective-actions'
     | '/dashboard'
     | '/demo'
+    | '/demo-scans'
     | '/features'
     | '/forgot-password'
     | '/history'
@@ -689,6 +700,7 @@ export interface FileRouteTypes {
     | '/corrective-actions'
     | '/dashboard'
     | '/demo'
+    | '/demo-scans'
     | '/features'
     | '/forgot-password'
     | '/history'
@@ -751,6 +763,7 @@ export interface RootRouteChildren {
   CorrectiveActionsRoute: typeof CorrectiveActionsRoute
   DashboardRoute: typeof DashboardRoute
   DemoRoute: typeof DemoRoute
+  DemoScansRoute: typeof DemoScansRoute
   FeaturesRoute: typeof FeaturesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   HistoryRoute: typeof HistoryRoute
@@ -884,6 +897,13 @@ declare module '@tanstack/react-router' {
       path: '/demo'
       fullPath: '/demo'
       preLoaderRoute: typeof DemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo-scans': {
+      id: '/demo-scans'
+      path: '/demo-scans'
+      fullPath: '/demo-scans'
+      preLoaderRoute: typeof DemoScansRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/features': {
@@ -1231,6 +1251,7 @@ const rootRouteChildren: RootRouteChildren = {
   CorrectiveActionsRoute: CorrectiveActionsRoute,
   DashboardRoute: DashboardRoute,
   DemoRoute: DemoRoute,
+  DemoScansRoute: DemoScansRoute,
   FeaturesRoute: FeaturesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   HistoryRoute: HistoryRoute,
