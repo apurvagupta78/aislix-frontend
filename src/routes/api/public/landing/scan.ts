@@ -123,7 +123,10 @@ export const Route = createFileRoute("/api/public/landing/scan")({
           // a 429 despite never scanning before. Fall back to the standard audit
           // endpoint so the campaign remains usable; this server route still
           // records the anonymous attempt and result below.
-          if (upstream.status === 429) {
+          // 5xx/524 means the campaign endpoint timed out at the edge on a
+          // large visitor photo; the standard /scan endpoint handles the same
+          // image reliably, so retry there before reporting a failure.
+          if (upstream.status === 429 || upstream.status >= 500) {
             const fallback = new FormData();
             if (file) fallback.append("file", file, file.name);
             if (sampleId) {
