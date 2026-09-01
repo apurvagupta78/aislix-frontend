@@ -94,7 +94,7 @@ function DemoScansPage() {
         />
       ) : !query.data || query.data.rows.length === 0 ? (
         <EmptyState
-          icon={ImageIcon}
+          icon={<ImageIcon className="size-5" />}
           title="No demo scans in this period"
           description="Anonymous scans from the campaign landing pages will appear here as visitors try the live demo."
         />
