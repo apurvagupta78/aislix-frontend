@@ -90,7 +90,9 @@ function DemoScansPage() {
         <ErrorState
           title="Could not load demo scans"
           description={query.error instanceof Error ? query.error.message : "Please try again."}
-          onRetry={() => query.refetch()}
+          onRetry={() => {
+            void query.refetch();
+          }}
         />
       ) : !query.data || query.data.rows.length === 0 ? (
         <EmptyState
