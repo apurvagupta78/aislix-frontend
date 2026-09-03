@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   COMPLIANCE_INTERPRETATION,
+  displayProductName,
   downloadScanAnnotatedImage,
   downloadScanCsv,
   formatConfidence,
