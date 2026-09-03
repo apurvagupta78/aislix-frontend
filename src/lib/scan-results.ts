@@ -741,6 +741,35 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   return scanResult;
 }
 
+/** Stable dedupe key for a SKU: prefers a real SKU, else brand|product|variant. */
+export function inventorySkuKey(row: Partial<InventoryItem> & { sku?: string | null }): string {
+  const sku = (row.sku ?? "").trim().toLowerCase();
+  if (sku) return sku;
+  const brand = (row.brand || "unknown").trim().toLowerCase();
+  const product = (row.product || "unknown").trim().toLowerCase();
+  const variant = (row.variant ?? "").trim().toLowerCase();
+  if (!brand && !product && !variant) return "";
+  return `${brand}|${product}|${variant}`;
+}
+
+/** Counts distinct SKUs, treating variants of the same product as separate SKUs. */
+export function countUniqueSkus(inventory: InventoryItem[] | undefined): number {
+  const keys = new Set<string>();
+  for (const row of inventory ?? []) {
+    const key = inventorySkuKey(row);
+    if (key) keys.add(key);
+  }
+  return keys.size;
+}
+
+/** Product label with the variant appended when it is not already part of the name. */
+export function displayProductName(row: { product?: string | null; variant?: string | null }): string {
+  const name = (row.product ?? "").trim() || "Unknown";
+  const variant = (row.variant ?? "").trim();
+  if (!variant || name.toLowerCase().includes(variant.toLowerCase())) return name;
+  return `${name} (${variant})`;
+}
+
 export function normalizeConfidence(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return value <= 1 ? value * 100 : value;
