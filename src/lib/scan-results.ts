@@ -374,7 +374,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   const { data: products } = await supabase
     .from("detected_products")
     .select(
-      "id, name, brand, category, facings, shelf_row, stock_status, confidence, expected_facings, sku, bounding_box",
+      "id, name, brand, variant, category, facings, shelf_row, stock_status, confidence, expected_facings, sku, bounding_box",
     )
     .eq("scan_id", scanId);
 
@@ -580,10 +580,10 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   // Prefer the backend's own SKU count; otherwise dedupe on brand|product|variant
   // so flavour variants (e.g. Lay's Magic Masala vs Tomato Tango) count separately.
   const backendUniqueSkus = Number((result?.metrics as any)?.unique_skus);
-  const uniqueSkus =
-    Number.isFinite(backendUniqueSkus) && backendUniqueSkus > 0
-      ? backendUniqueSkus
-      : countUniqueSkus(inventory);
+  const uniqueSkus = Math.max(
+    Number.isFinite(backendUniqueSkus) ? backendUniqueSkus : 0,
+    countUniqueSkus(inventory),
+  );
   const uniqueBrands = new Set(inventory.map((i) => i.brand)).size;
   const avgConfidence =
     result?.confidence_avg ??

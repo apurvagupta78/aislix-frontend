@@ -1625,6 +1625,7 @@ async function persistScanPayload(
       scan_id: scan.id,
       name: p.name,
       brand: p.brand,
+      variant: p.variant,
       category: p.category,
       sku: p.sku,
       barcode: p.barcode,
