@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   COMPLIANCE_INTERPRETATION,
+  displayProductName,
   downloadScanAnnotatedImage,
   downloadScanCsv,
   formatConfidence,
@@ -735,7 +736,7 @@ export function InventoryTable({
                 <TableRow key={row.id} className="transition-colors hover:bg-muted/50">
                   <TableCell className="font-medium">{row.brand}</TableCell>
                   <TableCell>
-                    <span className="block truncate">{row.product}</span>
+                    <span className="block truncate">{displayProductName(row)}</span>
                     {row.low_stock && (
                       <Badge
                         variant="outline"

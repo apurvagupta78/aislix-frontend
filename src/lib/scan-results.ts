@@ -374,7 +374,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   const { data: products } = await supabase
     .from("detected_products")
     .select(
-      "id, name, brand, category, facings, shelf_row, stock_status, confidence, expected_facings, sku, bounding_box",
+      "id, name, brand, variant, category, facings, shelf_row, stock_status, confidence, expected_facings, sku, bounding_box",
     )
     .eq("scan_id", scanId);
 
@@ -577,7 +577,13 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   const completedAt = scan.processing_completed_at ? new Date(scan.processing_completed_at).getTime() : undefined;
   const processingTimeMs = startedAt !== undefined && completedAt !== undefined ? completedAt - startedAt : 0;
 
-  const uniqueSkus = new Set(inventory.map((i) => `${i.brand}::${i.product}`)).size;
+  // Prefer the backend's own SKU count; otherwise dedupe on brand|product|variant
+  // so flavour variants (e.g. Lay's Magic Masala vs Tomato Tango) count separately.
+  const backendUniqueSkus = Number((result?.metrics as any)?.unique_skus);
+  const uniqueSkus = Math.max(
+    Number.isFinite(backendUniqueSkus) ? backendUniqueSkus : 0,
+    countUniqueSkus(inventory),
+  );
   const uniqueBrands = new Set(inventory.map((i) => i.brand)).size;
   const avgConfidence =
     result?.confidence_avg ??
@@ -733,6 +739,35 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   if (originalImageSrc) scanResult.original_image_url = originalImageSrc;
   if (result?.executive_summary) scanResult.executive_summary = result.executive_summary;
   return scanResult;
+}
+
+/** Stable dedupe key for a SKU: prefers a real SKU, else brand|product|variant. */
+export function inventorySkuKey(row: Partial<InventoryItem> & { sku?: string | null }): string {
+  const sku = (row.sku ?? "").trim().toLowerCase();
+  if (sku) return sku;
+  const brand = (row.brand || "unknown").trim().toLowerCase();
+  const product = (row.product || "unknown").trim().toLowerCase();
+  const variant = (row.variant ?? "").trim().toLowerCase();
+  if (!brand && !product && !variant) return "";
+  return `${brand}|${product}|${variant}`;
+}
+
+/** Counts distinct SKUs, treating variants of the same product as separate SKUs. */
+export function countUniqueSkus(inventory: InventoryItem[] | undefined): number {
+  const keys = new Set<string>();
+  for (const row of inventory ?? []) {
+    const key = inventorySkuKey(row);
+    if (key) keys.add(key);
+  }
+  return keys.size;
+}
+
+/** Product label with the variant appended when it is not already part of the name. */
+export function displayProductName(row: { product?: string | null; variant?: string | null }): string {
+  const name = (row.product ?? "").trim() || "Unknown";
+  const variant = (row.variant ?? "").trim();
+  if (!variant || name.toLowerCase().includes(variant.toLowerCase())) return name;
+  return `${name} (${variant})`;
 }
 
 export function normalizeConfidence(value: number): number {

@@ -122,6 +122,7 @@ function normalizeStock(raw: unknown, facings: number, expected: number | null):
 export type NormalizedProduct = {
   name: string;
   brand: string | null;
+  variant: string | null;
   category: string | null;
   sku: string | null;
   barcode: string | null;
@@ -164,6 +165,7 @@ function normalizeProducts(payload: any): NormalizedProduct[] {
       return {
         name,
         brand: str(item?.brand) ?? str(item?.brand_name),
+        variant: str(item?.variant) ?? str(item?.flavour) ?? str(item?.flavor) ?? null,
         category: str(item?.category) ?? str(item?.category_name),
         sku: str(item?.sku),
         barcode: str(item?.barcode) ?? str(item?.ean),
@@ -1623,6 +1625,7 @@ async function persistScanPayload(
       scan_id: scan.id,
       name: p.name,
       brand: p.brand,
+      variant: p.variant,
       category: p.category,
       sku: p.sku,
       barcode: p.barcode,
@@ -1701,7 +1704,17 @@ async function persistScanPayload(
 
   const metrics = {
     total_products: totalProducts,
-    unique_skus: new Set(products.map((p) => `${p.brand ?? ""}::${p.name}`)).size,
+    // Trust the vision backend's SKU count; the local fallback dedupes on
+    // sku, else brand|product|variant so flavour variants are not collapsed.
+    unique_skus:
+      Math.round(num(metricsSource?.unique_skus) ?? 0) ||
+      new Set(
+        products.map((p) =>
+          (p.sku ?? "").trim()
+            ? (p.sku as string).trim().toLowerCase()
+            : `${(p.brand ?? "unknown").toLowerCase()}|${p.name.toLowerCase()}|${((p as { variant?: string | null }).variant ?? "").toLowerCase()}`,
+        ),
+      ).size,
     unique_brands: new Set(products.map((p) => p.brand ?? "Unknown")).size,
     total_facings: totalProducts,
     out_of_stock_products: outOfStock,
