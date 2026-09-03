@@ -187,6 +187,7 @@ export type Database = {
           shelf_row: number | null
           sku: string | null
           stock_status: Database["public"]["Enums"]["stock_status"]
+          variant: string | null
         }
         Insert: {
           barcode?: string | null
@@ -205,6 +206,7 @@ export type Database = {
           shelf_row?: number | null
           sku?: string | null
           stock_status?: Database["public"]["Enums"]["stock_status"]
+          variant?: string | null
         }
         Update: {
           barcode?: string | null
@@ -223,6 +225,7 @@ export type Database = {
           shelf_row?: number | null
           sku?: string | null
           stock_status?: Database["public"]["Enums"]["stock_status"]
+          variant?: string | null
         }
         Relationships: [
           {
