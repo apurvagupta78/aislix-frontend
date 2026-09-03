@@ -122,6 +122,7 @@ function normalizeStock(raw: unknown, facings: number, expected: number | null):
 export type NormalizedProduct = {
   name: string;
   brand: string | null;
+  variant: string | null;
   category: string | null;
   sku: string | null;
   barcode: string | null;
@@ -164,6 +165,7 @@ function normalizeProducts(payload: any): NormalizedProduct[] {
       return {
         name,
         brand: str(item?.brand) ?? str(item?.brand_name),
+        variant: str(item?.variant) ?? str(item?.flavour) ?? str(item?.flavor) ?? null,
         category: str(item?.category) ?? str(item?.category_name),
         sku: str(item?.sku),
         barcode: str(item?.barcode) ?? str(item?.ean),
