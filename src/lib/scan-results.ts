@@ -577,7 +577,13 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   const completedAt = scan.processing_completed_at ? new Date(scan.processing_completed_at).getTime() : undefined;
   const processingTimeMs = startedAt !== undefined && completedAt !== undefined ? completedAt - startedAt : 0;
 
-  const uniqueSkus = new Set(inventory.map((i) => `${i.brand}::${i.product}`)).size;
+  // Prefer the backend's own SKU count; otherwise dedupe on brand|product|variant
+  // so flavour variants (e.g. Lay's Magic Masala vs Tomato Tango) count separately.
+  const backendUniqueSkus = Number((result?.metrics as any)?.unique_skus);
+  const uniqueSkus =
+    Number.isFinite(backendUniqueSkus) && backendUniqueSkus > 0
+      ? backendUniqueSkus
+      : countUniqueSkus(inventory);
   const uniqueBrands = new Set(inventory.map((i) => i.brand)).size;
   const avgConfidence =
     result?.confidence_avg ??
