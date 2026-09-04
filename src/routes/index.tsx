@@ -18,7 +18,6 @@ import { HomeLeadCapture } from "@/components/home/HomeLeadCapture";
 import { HomeTrustRow } from "@/components/home/HomeTrustRow";
 import { HomeDashboardShowcase } from "@/components/home/HomeDashboardShowcase";
 import { LiveDemoSection } from "@/components/landing/retail-shelf-intelligence/LiveDemoSection";
-import { DEFAULT_SAMPLE_IMAGE } from "@/lib/landing-scan-api";
 import type { BillingCycle } from "@/lib/pricing";
 
 
@@ -118,64 +117,51 @@ function Landing() {
 
       <section className="relative overflow-hidden bg-hero-glow">
         <div className="absolute inset-0 grid-lines opacity-40 [mask-image:radial-gradient(70%_50%_at_50%_0%,black,transparent)]" />
-        <div className="relative mx-auto grid max-w-6xl gap-10 px-6 pb-14 pt-16 sm:pb-16 sm:pt-20 lg:grid-cols-[1fr_0.9fr] lg:items-center lg:gap-14">
-          <div className="text-center lg:text-left">
-            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs text-muted-foreground shadow-soft">
-              <span className="size-1.5 rounded-full bg-brand" />
-              AI-Powered Retail Shelf Intelligence
-            </span>
-            <h1 className="mt-7 text-4xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-6xl">
-              Audit Every Aisle.
-              <br />
-              <span className="text-brand">From a Single Photo.</span>
-            </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg lg:mx-0">
-              Aislix turns a single shelf photo into a full retail audit — products detected, brands
-              counted, out-of-stocks flagged and shelf health scored.
-            </p>
-            <div className="mt-9 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-              <Button
-                variant="hero"
-                size="xl"
-                onClick={() =>
-                  document.querySelector("#start-scanning")?.scrollIntoView({ behavior: "smooth" })
-                }
-              >
-                Start scanning free <ArrowRight className="size-4" />
-              </Button>
-              <Button
-                variant="subtle"
-                size="xl"
-                onClick={() =>
-                  document.querySelector("#live-dashboard")?.scrollIntoView({ behavior: "smooth" })
-                }
-              >
-                View live demo
-              </Button>
-            </div>
-            <p className="mt-4 text-xs text-muted-foreground">
-              No card required · 5 free scans per day · Instantly live
-            </p>
+        <div className="relative mx-auto max-w-3xl px-6 pb-14 pt-16 text-center sm:pb-16 sm:pt-20">
+          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs text-muted-foreground shadow-soft">
+            <span className="size-1.5 rounded-full bg-brand" />
+            AI-Powered Retail Shelf Intelligence
+          </span>
+          <h1 className="mt-7 text-4xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-6xl">
+            Audit Every Aisle.
+            <br />
+            <span className="text-brand">From a Single Photo.</span>
+          </h1>
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+            Aislix turns a single shelf photo into a full retail audit — products detected, brands
+            counted, out-of-stocks flagged and shelf health scored.
+          </p>
+          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+            <Button
+              variant="hero"
+              size="xl"
+              onClick={() =>
+                document.querySelector("#live-dashboard")?.scrollIntoView({ behavior: "smooth" })
+              }
+            >
+              Start scanning free <ArrowRight className="size-4" />
+            </Button>
+            <Button
+              variant="subtle"
+              size="xl"
+              onClick={() =>
+                document.querySelector("#live-dashboard")?.scrollIntoView({ behavior: "smooth" })
+              }
+            >
+              View live demo
+            </Button>
           </div>
-
-          <div className="overflow-hidden rounded-xl border border-border bg-card shadow-lift">
-            <p className="border-b border-border px-4 py-3 text-left text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Shelf photo
-            </p>
-            <img
-              src={DEFAULT_SAMPLE_IMAGE}
-              alt="Toothpaste shelf ready for an Aislix scan"
-              loading="eager"
-              className="aspect-[4/3] w-full object-contain p-3"
-            />
-          </div>
+          <p className="mt-4 text-xs text-muted-foreground">
+            No card required · 5 free scans per day · Results in ~60 seconds
+          </p>
         </div>
-
       </section>
 
       <HomeTrustRow />
 
-      <LiveDemoSection showWorkspaceCta homepageIntro />
+      <section id="live-dashboard">
+        <LiveDemoSection showWorkspaceCta homepageIntro />
+      </section>
 
       <HomeLeadCapture />
 
