@@ -20,33 +20,6 @@ type Phase = "idle" | "scanning" | "done" | "error";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 
-const DEFAULT_SAMPLE_RESULT: LandingScanResult = {
-  landing_session_id: "sample-preview",
-  scan_id: "toothpaste-a1l-preview",
-  status: "completed",
-  scan_mode: "audit_only",
-  has_planogram: false,
-  metrics: {
-    total_products: 8,
-    unique_skus: 8,
-    shelf_health_score: 90.72,
-  },
-  executive_summary:
-    "This shelf audit detected 8 product facings across 8 unique SKUs and 8 brands. Shelf utilization is 65.3% with an average AI confidence of 96.0%.",
-  inventory: [
-    { brand: "Colgate", product_name: "Strong Teeth Toothpaste", quantity: 1, confidence: 0.98, status_label: "Detected" },
-    { brand: "Colgate", product_name: "MaxFresh Gel Toothpaste", quantity: 1, confidence: 0.98, status_label: "Detected" },
-    { brand: "Pepsodent", product_name: "Germicheck Toothpaste", quantity: 1, confidence: 0.98, status_label: "Detected" },
-    { brand: "Closeup", product_name: "Red Hot Gel Toothpaste", quantity: 1, confidence: 0.94, status_label: "Detected" },
-    { brand: "Dabur", product_name: "Red Paste Toothpaste", quantity: 1, confidence: 0.9, status_label: "Detected" },
-    { brand: "Sensodyne", product_name: "Fresh Mint Toothpaste", quantity: 1, confidence: 0.98, status_label: "Detected" },
-    { brand: "Patanjali", product_name: "Dant Kanti Toothpaste", quantity: 1, confidence: 0.98, status_label: "Detected" },
-    { brand: "Oral-B", product_name: "Pro Health Toothpaste", quantity: 1, confidence: 0.94, status_label: "Detected" },
-  ],
-  scans_used_today: 3,
-  scans_daily_limit: 5,
-};
-
 function annotatedSrc(result: LandingScanResult): string | null {
   if (result.annotated_image_base64) {
     return `data:${result.annotated_image_mime || "image/jpeg"};base64,${result.annotated_image_base64}`;
@@ -139,7 +112,6 @@ export function LiveDemoSection({
 
   const shownImage = phase === "done" && result ? (annotatedSrc(result) ?? previewImageUrl) : previewImageUrl;
   const scanning = phase === "scanning";
-  const displayedResult = result ?? (homepageIntro ? DEFAULT_SAMPLE_RESULT : null);
 
   return (
     <section
@@ -219,66 +191,48 @@ export function LiveDemoSection({
               </div>
             )}
 
-            {phase === "error" && homepageIntro && displayedResult ? (
-              <div>
-                <div className="mb-4 flex items-start gap-2 rounded-lg border border-border bg-surface p-3 text-sm text-muted-foreground">
-                  <AlertCircle className="mt-0.5 size-4 shrink-0 text-destructive" />
+            {phase === "error" ? (
+              <div className="min-h-72">
+                <div className="sticky top-4 z-10 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                  <AlertCircle className="mt-0.5 size-4 shrink-0" />
                   <span>{error}</span>
                 </div>
-                <SampleResult result={displayedResult} liveResult={result} showWorkspaceCta={showWorkspaceCta} />
-              </div>
-            ) : phase === "error" ? (
-              <div className="grid min-h-72 place-items-center text-center">
-                <div>
-                  <AlertCircle className="mx-auto size-6 text-destructive" />
-                  <p className="mt-3 text-sm text-foreground">{error}</p>
-                </div>
+                <EmptyResults />
               </div>
             ) : null}
 
-            {phase === "idle" && !displayedResult && (
-              <div className="grid min-h-72 place-items-center">
-                <div className="w-full">
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      {
-                        label: homepageIntro ? "Products" : "Products detected",
-                        value: homepageIntro ? "8" : "—",
-                      },
-                      {
-                        label: homepageIntro ? "Out of stock" : "Unique SKUs",
-                        value: homepageIntro ? "4" : "—",
-                      },
-                      { label: "Shelf health", value: homepageIntro ? "91%" : "—" },
-                    ].map(({ label, value }) => (
-                      <div
-                        key={label}
-                        className="rounded-lg border border-border bg-surface p-3"
-                      >
-                        <p className="text-lg font-semibold tracking-tight text-foreground">{value}</p>
-                        <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
-                          {label}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                  {!homepageIntro ? (
-                    <p className="mt-5 text-center text-sm text-muted-foreground">
-                      Click <span className="font-medium text-foreground">Try Sample Shelf</span> to
-                      run live AI analysis.
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            )}
+            {phase === "idle" && <EmptyResults />}
 
-            {!scanning && phase !== "error" && displayedResult && (
-              <SampleResult result={displayedResult} liveResult={result} showWorkspaceCta={showWorkspaceCta} />
+            {phase === "done" && result && (
+              <SampleResult result={result} liveResult={result} showWorkspaceCta={showWorkspaceCta} />
             )}
           </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function EmptyResults() {
+  return (
+    <div className="mt-5">
+      <div className="grid grid-cols-3 gap-3">
+        {["Products detected", "Unique SKUs", "Shelf health"].map((label) => (
+          <div key={label} className="rounded-lg border border-border bg-surface p-3">
+            <p className="text-lg font-semibold text-foreground">—</p>
+            <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">{label}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-5 overflow-hidden rounded-lg border border-border">
+        <div className="grid grid-cols-[1fr_1.5fr_0.45fr] bg-surface px-3 py-2 text-xs uppercase text-muted-foreground">
+          <span>Brand</span><span>Product</span><span>Qty</span>
+        </div>
+        <p className="border-t border-border px-3 py-10 text-center text-sm text-muted-foreground">
+          No scan results yet.
+        </p>
+      </div>
+    </div>
   );
 }
 
