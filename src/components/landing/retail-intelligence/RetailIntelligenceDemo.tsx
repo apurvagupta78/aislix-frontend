@@ -170,7 +170,7 @@ export function RetailIntelligenceDemo() {
                 <>
                   <img
                     src={shownImage}
-                    alt={phase === "done" ? "Shelf photo analyzed by Aislix" : "Sample Lay's chip rack"}
+                    alt={phase === "done" ? "Shelf photo analyzed by Aislix" : "Sample toothpaste shelf"}
                     className="h-full max-h-[720px] w-full object-contain p-3 sm:p-5"
                   />
                   {scanning && (
