@@ -249,6 +249,8 @@ export function RetailIntelligenceDemo() {
                     </p>
                   )}
 
+                  <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">{AI_DISCLAIMER}</p>
+
                   <div className="mt-5 max-h-80 overflow-auto rounded-md border border-border">
                     <table className="w-full text-left text-sm">
                       <thead className="sticky top-0 bg-surface text-xs uppercase tracking-wide text-muted-foreground">
