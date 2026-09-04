@@ -18,7 +18,6 @@ import { HomeLeadCapture } from "@/components/home/HomeLeadCapture";
 import { HomeTrustRow } from "@/components/home/HomeTrustRow";
 import { HomeDashboardShowcase } from "@/components/home/HomeDashboardShowcase";
 import { LiveDemoSection } from "@/components/landing/retail-shelf-intelligence/LiveDemoSection";
-import { DEFAULT_SAMPLE_IMAGE } from "@/lib/landing-scan-api";
 import type { BillingCycle } from "@/lib/pricing";
 
 
