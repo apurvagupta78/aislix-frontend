@@ -159,7 +159,9 @@ function Landing() {
 
       <HomeTrustRow />
 
-      <LiveDemoSection showWorkspaceCta homepageIntro />
+      <section id="live-dashboard">
+        <LiveDemoSection showWorkspaceCta homepageIntro />
+      </section>
 
       <HomeLeadCapture />
 
