@@ -13,6 +13,7 @@ import {
   runLandingUpload,
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
+import { AI_DISCLAIMER, ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
 import { SectionHeading } from "./shared";
 
 type Phase = "idle" | "scanning" | "done" | "error";
@@ -21,7 +22,7 @@ const MAX_BYTES = 10 * 1024 * 1024;
 
 const DEFAULT_SAMPLE_RESULT: LandingScanResult = {
   landing_session_id: "sample-preview",
-  scan_id: "shampoo-a1z-preview",
+  scan_id: "toothpaste-a1l-preview",
   status: "completed",
   scan_mode: "audit_only",
   has_planogram: false,
@@ -33,14 +34,14 @@ const DEFAULT_SAMPLE_RESULT: LandingScanResult = {
   executive_summary:
     "This shelf audit detected 8 product facings across 8 unique SKUs and 8 brands. Shelf utilization is 65.3% with an average AI confidence of 96.0%.",
   inventory: [
-    { brand: "Dove", product_name: "Daily Shine Shampoo", quantity: 1, confidence: 0.98, status_label: "Detected" },
-    { brand: "Tresemme", product_name: "Smooth Shine Shampoo", quantity: 1, confidence: 0.98, status_label: "Detected" },
-    { brand: "Head & Shoulders", product_name: "And Shoulders Silky Black Shampoo", quantity: 1, confidence: 0.98, status_label: "Detected" },
-    { brand: "Dabur", product_name: "Vatika Health Shine Shampoo", quantity: 1, confidence: 0.94, status_label: "Detected" },
-    { brand: "Loreal", product_name: "Paris Hyaluron Moisture Shampoo", quantity: 1, confidence: 0.9, status_label: "Detected" },
-    { brand: "Pantene", product_name: "Lively Clean Shampoo", quantity: 1, confidence: 0.98, status_label: "Detected" },
-    { brand: "Sunsilk", product_name: "Nourishing Soft Smooth Shampoo", quantity: 1, confidence: 0.98, status_label: "Detected" },
-    { brand: "Nivea", product_name: "Men Strong Power Shampoo", quantity: 1, confidence: 0.94, status_label: "Detected" },
+    { brand: "Colgate", product_name: "Strong Teeth Toothpaste", quantity: 1, confidence: 0.98, status_label: "Detected" },
+    { brand: "Colgate", product_name: "MaxFresh Gel Toothpaste", quantity: 1, confidence: 0.98, status_label: "Detected" },
+    { brand: "Pepsodent", product_name: "Germicheck Toothpaste", quantity: 1, confidence: 0.98, status_label: "Detected" },
+    { brand: "Closeup", product_name: "Red Hot Gel Toothpaste", quantity: 1, confidence: 0.94, status_label: "Detected" },
+    { brand: "Dabur", product_name: "Red Paste Toothpaste", quantity: 1, confidence: 0.9, status_label: "Detected" },
+    { brand: "Sensodyne", product_name: "Fresh Mint Toothpaste", quantity: 1, confidence: 0.98, status_label: "Detected" },
+    { brand: "Patanjali", product_name: "Dant Kanti Toothpaste", quantity: 1, confidence: 0.98, status_label: "Detected" },
+    { brand: "Oral-B", product_name: "Pro Health Toothpaste", quantity: 1, confidence: 0.94, status_label: "Detected" },
   ],
   scans_used_today: 3,
   scans_daily_limit: 5,
@@ -213,14 +214,8 @@ export function LiveDemoSection({
           {/* Analysis */}
           <div className="min-w-0 p-5 sm:p-7">
             {scanning && (
-              <div className="grid min-h-72 place-items-center text-center">
-                <div>
-                  <Loader2 className="mx-auto size-6 animate-spin text-primary" />
-                  <p className="mt-4 text-sm font-medium text-foreground">Analyzing shelf… 30–90s</p>
-                  <p className="mt-1.5 text-xs text-muted-foreground">
-                    Detecting products, brands and availability gaps.
-                  </p>
-                </div>
+              <div className="grid min-h-72 place-items-center">
+                <ScanProgressPanel active />
               </div>
             )}
 
@@ -329,6 +324,8 @@ function SampleResult({
                     {displayedResult.executive_summary}
                   </p>
                 )}
+
+                <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">{AI_DISCLAIMER}</p>
 
                 <div className="mt-5 max-h-72 overflow-auto rounded-lg border border-border">
                   <table className="w-full text-left text-sm">

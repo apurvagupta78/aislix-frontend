@@ -1,10 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { AlertTriangle, Check, Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { runScanAnalysis, SCAN_STAGES } from "@/lib/scan-api";
+import { ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
 
 export const Route = createFileRoute("/processing")({
   validateSearch: (search: Record<string, unknown>): { scan?: string } => {
@@ -28,7 +28,6 @@ export const Route = createFileRoute("/processing")({
 function Processing() {
   const { scan } = Route.useSearch();
   const navigate = useNavigate();
-  const [progress, setProgress] = useState(8);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
@@ -39,19 +38,10 @@ function Processing() {
     }
 
     let cancelled = false;
-    // Elapsed-time based progress: eases toward 98% over ~6 minutes.
-    const startedAt = Date.now();
-    const EXPECTED_MS = 360_000;
-    const timer = setInterval(() => {
-      const ratio = Math.min(1, (Date.now() - startedAt) / EXPECTED_MS);
-      const eased = 8 + (98 - 8) * (1 - Math.pow(1 - ratio, 1.8));
-      setProgress((current) => Math.max(current, Math.min(98, Math.round(eased))));
-    }, 1000);
 
     runScanAnalysis(scan)
       .then(() => {
         if (cancelled) return;
-        setProgress(100);
         setDone(true);
         setTimeout(() => {
           navigate({ to: "/results", search: { scan } });
@@ -60,20 +50,13 @@ function Processing() {
       .catch((err) => {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "The scan could not be completed.");
-        clearInterval(timer);
       });
 
     return () => {
       cancelled = true;
-      clearInterval(timer);
     };
   }, [navigate, scan]);
 
-
-  const activeStage = Math.min(
-    SCAN_STAGES.length - 1,
-    Math.floor((progress / 100) * SCAN_STAGES.length),
-  );
 
   return (
     <AppShell
@@ -116,48 +99,20 @@ function Processing() {
               <h2 className="mt-7 text-xl font-semibold tracking-tight">
                 {done ? "Analysis complete" : "Analyzing your shelf"}
               </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {done
-                  ? "Opening your scan results…"
-                  : "This usually takes 2–5 minutes for large shelves. Keep this page open."}
-              </p>
-
-              <div className="mt-8">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{SCAN_STAGES[activeStage]}</span>
-                  <span>{Math.min(progress, 100)}%</span>
-                </div>
-                <Progress value={Math.min(progress, 100)} className="mt-2 h-2 rounded-full" />
+              <div className="mt-8 text-left">
+                <ScanProgressPanel
+                  active={!done}
+                  done={done}
+                  expectedMs={360_000}
+                  stages={SCAN_STAGES}
+                  showStageList
+                  timingMessage={
+                    done
+                      ? "Opening your scan results…"
+                      : "This usually takes 2–5 minutes for large shelves. Keep this page open."
+                  }
+                />
               </div>
-
-              <ul className="mt-8 space-y-3 text-left">
-                {SCAN_STAGES.map((stage, index) => {
-                  const stageDone = index < activeStage || done;
-                  const stageActive = index === activeStage && !done;
-                  return (
-                    <li key={stage} className="flex items-center gap-3">
-                      <span
-                        className={`grid size-6 place-items-center rounded-full text-brand-foreground ${
-                          stageDone ? "bg-brand" : stageActive ? "bg-brand/60" : "bg-muted"
-                        }`}
-                      >
-                        {stageDone ? (
-                          <Check className="size-3.5" />
-                        ) : stageActive ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <span className="size-1.5 rounded-full bg-muted-foreground" />
-                        )}
-                      </span>
-                      <span
-                        className={`text-sm ${stageDone || stageActive ? "text-foreground" : "text-muted-foreground"}`}
-                      >
-                        {stage}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
             </>
           )}
         </div>

@@ -6,7 +6,7 @@ import { captureUtmParams, readStoredUtm } from "@/lib/utm";
 
 const API = import.meta.env.VITE_AISLIX_API_URL;
 
-export const DEFAULT_SAMPLE_ID = "shampoo-a1z";
+export const DEFAULT_SAMPLE_ID = "toothpaste-a1l";
 export const DEFAULT_SAMPLE_IMAGE = `${API}/landing/samples/${DEFAULT_SAMPLE_ID}/image`;
 
 const SESSION_ID_KEY = "aislix_landing_session_id";
