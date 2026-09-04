@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { AlertCircle, ArrowRight, Download, ImagePlus, Loader2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AI_DISCLAIMER, ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import {
   DEFAULT_SAMPLE_ID,
@@ -197,14 +198,8 @@ export function RetailIntelligenceDemo() {
             {/* RESULTS PANEL */}
             <div className="min-w-0 p-5 sm:p-7">
               {scanning && (
-                <div className="grid min-h-72 place-items-center text-center">
-                  <div>
-                    <Loader2 className="mx-auto size-6 animate-spin text-brand" />
-                    <p className="mt-4 text-sm font-medium text-foreground">Analyzing shelf… about 60s</p>
-                    <p className="mt-1.5 text-xs text-muted-foreground">
-                      Detecting products, brands and availability gaps.
-                    </p>
-                  </div>
+                <div className="grid min-h-72 place-items-center">
+                  <ScanProgressPanel active />
                 </div>
               )}
 

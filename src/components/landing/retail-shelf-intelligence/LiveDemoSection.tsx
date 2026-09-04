@@ -13,6 +13,7 @@ import {
   runLandingUpload,
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
+import { AI_DISCLAIMER, ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
 import { SectionHeading } from "./shared";
 
 type Phase = "idle" | "scanning" | "done" | "error";
@@ -213,14 +214,8 @@ export function LiveDemoSection({
           {/* Analysis */}
           <div className="min-w-0 p-5 sm:p-7">
             {scanning && (
-              <div className="grid min-h-72 place-items-center text-center">
-                <div>
-                  <Loader2 className="mx-auto size-6 animate-spin text-primary" />
-                  <p className="mt-4 text-sm font-medium text-foreground">Analyzing shelf… 30–90s</p>
-                  <p className="mt-1.5 text-xs text-muted-foreground">
-                    Detecting products, brands and availability gaps.
-                  </p>
-                </div>
+              <div className="grid min-h-72 place-items-center">
+                <ScanProgressPanel active />
               </div>
             )}
 
@@ -329,6 +324,8 @@ function SampleResult({
                     {displayedResult.executive_summary}
                   </p>
                 )}
+
+                <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">{AI_DISCLAIMER}</p>
 
                 <div className="mt-5 max-h-72 overflow-auto rounded-lg border border-border">
                   <table className="w-full text-left text-sm">
