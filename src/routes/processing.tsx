@@ -1,10 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { AlertTriangle, Check, Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { runScanAnalysis, SCAN_STAGES } from "@/lib/scan-api";
+import { ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
 
 export const Route = createFileRoute("/processing")({
   validateSearch: (search: Record<string, unknown>): { scan?: string } => {
@@ -69,11 +69,6 @@ function Processing() {
     };
   }, [navigate, scan]);
 
-
-  const activeStage = Math.min(
-    SCAN_STAGES.length - 1,
-    Math.floor((progress / 100) * SCAN_STAGES.length),
-  );
 
   return (
     <AppShell
