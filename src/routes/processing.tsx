@@ -28,7 +28,6 @@ export const Route = createFileRoute("/processing")({
 function Processing() {
   const { scan } = Route.useSearch();
   const navigate = useNavigate();
-  const [progress, setProgress] = useState(8);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
@@ -39,19 +38,10 @@ function Processing() {
     }
 
     let cancelled = false;
-    // Elapsed-time based progress: eases toward 98% over ~6 minutes.
-    const startedAt = Date.now();
-    const EXPECTED_MS = 360_000;
-    const timer = setInterval(() => {
-      const ratio = Math.min(1, (Date.now() - startedAt) / EXPECTED_MS);
-      const eased = 8 + (98 - 8) * (1 - Math.pow(1 - ratio, 1.8));
-      setProgress((current) => Math.max(current, Math.min(98, Math.round(eased))));
-    }, 1000);
 
     runScanAnalysis(scan)
       .then(() => {
         if (cancelled) return;
-        setProgress(100);
         setDone(true);
         setTimeout(() => {
           navigate({ to: "/results", search: { scan } });
@@ -60,12 +50,10 @@ function Processing() {
       .catch((err) => {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "The scan could not be completed.");
-        clearInterval(timer);
       });
 
     return () => {
       cancelled = true;
-      clearInterval(timer);
     };
   }, [navigate, scan]);
 
