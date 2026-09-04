@@ -4,10 +4,12 @@
  */
 import { captureUtmParams, readStoredUtm } from "@/lib/utm";
 
-const API = import.meta.env.VITE_AISLIX_API_URL;
+const API = import.meta.env.VITE_AISLIX_API_URL?.replace(/\/$/, "");
 
 export const DEFAULT_SAMPLE_ID = "toothpaste-a1l";
-export const DEFAULT_SAMPLE_IMAGE = `${API}/landing/samples/${DEFAULT_SAMPLE_ID}/image`;
+export const DEFAULT_SAMPLE_IMAGE = API
+  ? `${API}/landing/samples/${DEFAULT_SAMPLE_ID}/image`
+  : "";
 
 const SESSION_ID_KEY = "aislix_landing_session_id";
 const RESULT_KEY = "aislix_landing_scan_result";
@@ -54,6 +56,7 @@ export class LandingScanError extends Error {
 
 /** Public sample shelf image, shown instantly while the AI runs. */
 export function getSamplePreviewUrl(sampleId = DEFAULT_SAMPLE_ID): string {
+  if (!API) throw new Error("VITE_AISLIX_API_URL is not configured");
   return `${API}/landing/samples/${sampleId}/image`;
 }
 
@@ -111,11 +114,37 @@ export async function runLandingSample(
   sampleId = DEFAULT_SAMPLE_ID,
   landingSessionId?: string,
 ): Promise<LandingScanResult> {
+  if (!API) throw new Error("VITE_AISLIX_API_URL is not configured");
   const form = new FormData();
   form.append("sample_id", sampleId);
   if (landingSessionId) form.append("landing_session_id", landingSessionId);
   appendUtm(form);
-  return postScan(form, "Sample scan failed");
+
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 120_000);
+  try {
+    const res = await fetch(`${API}/landing/scan`, {
+      method: "POST",
+      body: form,
+      signal: controller.signal,
+    });
+    const body = (await res.json().catch(() => ({}))) as LandingScanResult & { detail?: unknown };
+    if (!res.ok) {
+      const detail = body.detail ?? res.statusText;
+      throw new LandingScanError(
+        typeof detail === "string" ? detail : JSON.stringify(detail),
+        res.status,
+      );
+    }
+    return body;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new LandingScanError("Shelf analysis timed out. Please try again.", 408);
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
 }
 
 /** Backward-compatible alias for earlier landing component imports. */
