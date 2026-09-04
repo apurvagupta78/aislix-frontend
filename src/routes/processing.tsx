@@ -116,48 +116,20 @@ function Processing() {
               <h2 className="mt-7 text-xl font-semibold tracking-tight">
                 {done ? "Analysis complete" : "Analyzing your shelf"}
               </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {done
-                  ? "Opening your scan results…"
-                  : "This usually takes 2–5 minutes for large shelves. Keep this page open."}
-              </p>
-
-              <div className="mt-8">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{SCAN_STAGES[activeStage]}</span>
-                  <span>{Math.min(progress, 100)}%</span>
-                </div>
-                <Progress value={Math.min(progress, 100)} className="mt-2 h-2 rounded-full" />
+              <div className="mt-8 text-left">
+                <ScanProgressPanel
+                  active={!done}
+                  done={done}
+                  expectedMs={360_000}
+                  stages={SCAN_STAGES}
+                  showStageList
+                  timingMessage={
+                    done
+                      ? "Opening your scan results…"
+                      : "This usually takes 2–5 minutes for large shelves. Keep this page open."
+                  }
+                />
               </div>
-
-              <ul className="mt-8 space-y-3 text-left">
-                {SCAN_STAGES.map((stage, index) => {
-                  const stageDone = index < activeStage || done;
-                  const stageActive = index === activeStage && !done;
-                  return (
-                    <li key={stage} className="flex items-center gap-3">
-                      <span
-                        className={`grid size-6 place-items-center rounded-full text-brand-foreground ${
-                          stageDone ? "bg-brand" : stageActive ? "bg-brand/60" : "bg-muted"
-                        }`}
-                      >
-                        {stageDone ? (
-                          <Check className="size-3.5" />
-                        ) : stageActive ? (
-                          <Loader2 className="size-3.5 animate-spin" />
-                        ) : (
-                          <span className="size-1.5 rounded-full bg-muted-foreground" />
-                        )}
-                      </span>
-                      <span
-                        className={`text-sm ${stageDone || stageActive ? "text-foreground" : "text-muted-foreground"}`}
-                      >
-                        {stage}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
             </>
           )}
         </div>
