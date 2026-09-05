@@ -103,13 +103,13 @@ function Processing() {
                 <ScanProgressPanel
                   active={!done}
                   done={done}
-                  expectedMs={360_000}
+                  expectedMs={120_000}
                   stages={SCAN_STAGES}
                   showStageList
                   timingMessage={
                     done
                       ? "Opening your scan results…"
-                      : "This usually takes less than 60 seconds for large shelves. Keep this page open."
+                      : "This usually takes 1–2 minutes for large shelves. Keep this page open."
                   }
                 />
               </div>
