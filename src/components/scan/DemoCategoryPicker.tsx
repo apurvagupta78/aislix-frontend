@@ -135,7 +135,7 @@ export function DemoCategoryPicker({
       )}
 
       <p className="mt-2 text-center text-xs text-muted-foreground">
-        Tell AI what type of shelf you're auditing — same as dashboard scans.
+        Tell AI what type of shelf you're auditing
       </p>
     </div>
   );
