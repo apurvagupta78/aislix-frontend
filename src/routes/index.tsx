@@ -118,6 +118,13 @@ const steps = [
 
 function Landing() {
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
+  const navigate = Route.useNavigate();
+
+  const onSelectPlan = (plan: Plan) => {
+    if (plan.contactSales) void navigate({ to: "/contact", search: { subject: "Sales enquiry" } });
+    else void navigate({ to: "/signup" });
+  };
+
 
   return (
     <div className="min-h-screen bg-background">
