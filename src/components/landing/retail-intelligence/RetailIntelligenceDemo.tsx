@@ -51,6 +51,7 @@ export function RetailIntelligenceDemo() {
   const [result, setResult] = useState<LandingScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [isSampleFlow, setIsSampleFlow] = useState(true);
   const objectUrlRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -121,6 +122,7 @@ export function RetailIntelligenceDemo() {
       objectUrlRef.current = null;
     }
     setPendingFile(null);
+    setIsSampleFlow(true);
     setPreviewImageUrl(DEFAULT_SAMPLE_IMAGE);
     demoCategory.setState({
       categoryName: DEFAULT_DEMO_CATEGORY,
@@ -146,6 +148,7 @@ export function RetailIntelligenceDemo() {
     objectUrlRef.current = url;
     setPreviewImageUrl(url);
     setPendingFile(file);
+    setIsSampleFlow(false);
     setError(null);
     setPhase("idle");
     demoCategory.setState(EMPTY_DEMO_CATEGORY_STATE);
