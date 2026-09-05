@@ -688,6 +688,101 @@ export function InventoryTable({
         </Select>
       </div>
 
+      <div className="mt-4 flex items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground">View:</span>
+        <div className="inline-flex rounded-xl border border-border bg-surface p-0.5">
+          {([
+            { key: "sku", label: "By SKU" },
+            { key: "brand", label: "By brand" },
+          ] as const).map((o) => (
+            <button
+              key={o.key}
+              type="button"
+              aria-pressed={view === o.key}
+              onClick={() => setView(o.key)}
+              className={cn(
+                "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                view === o.key
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {view === "brand" ? (
+        <div className="mt-4 overflow-x-auto rounded-2xl border border-border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-xs font-medium text-muted-foreground">Brand</TableHead>
+                <TableHead className="text-right text-xs font-medium text-muted-foreground">
+                  SKUs
+                </TableHead>
+                <TableHead className="text-right text-xs font-medium text-muted-foreground">
+                  Total qty
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {brandGroups.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="p-4">
+                    <EmptyState
+                      title="No matching products"
+                      description="Try a different search term or clear the filters."
+                    />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                brandGroups.map((g) => (
+                  <Fragment key={g.brand}>
+                    <TableRow className="transition-colors hover:bg-muted/50">
+                      <TableCell className="font-medium">
+                        <button
+                          type="button"
+                          className="flex items-center gap-1.5"
+                          aria-expanded={!!openBrands[g.brand]}
+                          onClick={() =>
+                            setOpenBrands((o) => ({ ...o, [g.brand]: !o[g.brand] }))
+                          }
+                        >
+                          {openBrands[g.brand] ? (
+                            <ChevronDown className="size-4" />
+                          ) : (
+                            <ChevronRight className="size-4" />
+                          )}
+                          {g.brand}
+                        </button>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">{g.skuCount}</TableCell>
+                      <TableCell className="text-right tabular-nums">{g.totalQty}</TableCell>
+                    </TableRow>
+                    {openBrands[g.brand] &&
+                      g.items.map((row) => (
+                        <TableRow key={`${g.brand}-${row.id}`} className="bg-muted/30">
+                          <TableCell className="pl-10 text-muted-foreground">
+                            {displayProductName(row)}
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {row.variant ?? "—"}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums text-muted-foreground">
+                            {row.quantity}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </Fragment>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      ) : (
+      <>
       <div className="mt-4 overflow-x-auto rounded-2xl border border-border">
         <Table>
           <TableHeader>
