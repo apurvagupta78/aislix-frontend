@@ -161,7 +161,7 @@ function Landing() {
             </Button>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            No card required · 5 free scans per day · Results in ~60 seconds
+            No card required · 5 free scans per day · Results in 60~90 seconds
           </p>
         </div>
       </section>
