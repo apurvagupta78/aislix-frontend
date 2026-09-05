@@ -15,10 +15,7 @@ import {
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
 import { AI_DISCLAIMER, ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
-import {
-  brandShareFromRows,
-  TopBrandsByShelfShare,
-} from "@/components/scan/TopBrandsByShelfShare";
+import { TopBrandsByShelfShare } from "@/components/scan/TopBrandsByShelfShare";
 import {
   DemoCategoryPicker,
   DEFAULT_DEMO_CATEGORY,
