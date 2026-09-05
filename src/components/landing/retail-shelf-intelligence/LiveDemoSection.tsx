@@ -187,36 +187,48 @@ export function LiveDemoSection({
             </p>
           )}
 
-        <div
-          className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center"
-        >
-          <Button
-            size="xl"
-            variant="default"
-            className="min-h-11 w-full sm:w-auto"
-            disabled={scanning}
-            onClick={onSample}
-          >
-            <Sparkles className="size-4" /> Try Sample Shelf Below
-          </Button>
-          <Button
-            variant="outline"
-            size="xl"
-            className="min-h-11 w-full sm:w-auto"
-            disabled={scanning}
-            onClick={() => fileRef.current?.click()}
-          >
-            <ImagePlus className="size-4" /> {pendingFile ? "Change Photo" : "Upload Your Shelf Photo"}
-          </Button>
-          {pendingFile && (
-            <Button
-              size="xl"
-              className="min-h-11 w-full sm:w-auto"
-              disabled={scanning || !demoCategory.ready}
-              onClick={() => void run("upload", pendingFile)}
-            >
-              <Sparkles className="size-4" /> Analyze My Shelf
-            </Button>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          {isSampleFlow ? (
+            <>
+              <Button
+                size="xl"
+                variant="default"
+                className="min-h-11 w-full sm:w-auto"
+                disabled={scanning}
+                onClick={onSample}
+              >
+                <Sparkles className="size-4" /> Try Sample Shelf Below
+              </Button>
+              <Button
+                variant="outline"
+                size="xl"
+                className="min-h-11 w-full sm:w-auto"
+                disabled={scanning}
+                onClick={() => fileRef.current?.click()}
+              >
+                <ImagePlus className="size-4" /> Upload Your Shelf Photo
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="outline"
+                size="xl"
+                className="min-h-11 w-full sm:w-auto"
+                disabled={scanning}
+                onClick={() => fileRef.current?.click()}
+              >
+                <ImagePlus className="size-4" /> Change Photo
+              </Button>
+              <Button
+                size="xl"
+                className="min-h-11 w-full sm:w-auto"
+                disabled={scanning || !demoCategory.ready}
+                onClick={() => void run("upload", pendingFile!)}
+              >
+                <Sparkles className="size-4" /> Analyze My Shelf
+              </Button>
+            </>
           )}
           <input
             ref={fileRef}
