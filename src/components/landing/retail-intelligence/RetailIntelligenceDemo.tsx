@@ -20,10 +20,7 @@ import {
   runLandingUpload,
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
-import {
-  brandShareFromRows,
-  TopBrandsByShelfShare,
-} from "@/components/scan/TopBrandsByShelfShare";
+import { TopBrandsByShelfShare } from "@/components/scan/TopBrandsByShelfShare";
 import { LANDING_SAMPLE_EVENT, LANDING_UPLOAD_EVENT } from "./HeroSection";
 import { LeadCaptureSection } from "./LeadCaptureSection";
 
@@ -289,13 +286,13 @@ export function RetailIntelligenceDemo() {
 
                   <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">{AI_DISCLAIMER}</p>
 
+                  {/* Bind strictly to the API's in-audit brand share — never
+                      recompute from inventory rows. */}
                   <TopBrandsByShelfShare
                     rows={
                       result.top_brands?.length
                         ? result.top_brands
-                        : result.brand_share?.length
-                          ? result.brand_share
-                          : brandShareFromRows(result.inventory ?? [])
+                        : (result.brand_share ?? [])
                     }
                     className="mt-5"
                   />

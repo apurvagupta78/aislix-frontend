@@ -15,10 +15,7 @@ import {
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
 import { AI_DISCLAIMER, ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
-import {
-  brandShareFromRows,
-  TopBrandsByShelfShare,
-} from "@/components/scan/TopBrandsByShelfShare";
+import { TopBrandsByShelfShare } from "@/components/scan/TopBrandsByShelfShare";
 import {
   DemoCategoryPicker,
   DEFAULT_DEMO_CATEGORY,
@@ -292,12 +289,12 @@ function SampleResult({
   liveResult: LandingScanResult | null;
   showWorkspaceCta: boolean;
 }) {
+  // Bind strictly to the API's in-audit brand share. Never recompute from
+  // inventory rows — that mixes in out-of-scope detections and skews %.
   const brandShare =
     displayedResult.top_brands?.length
       ? displayedResult.top_brands
-      : displayedResult.brand_share?.length
-        ? displayedResult.brand_share
-        : brandShareFromRows(displayedResult.inventory ?? []);
+      : (displayedResult.brand_share ?? []);
   return (
     <div>
                 <div className="mb-4 flex flex-wrap items-center gap-2">
