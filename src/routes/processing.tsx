@@ -109,7 +109,7 @@ function Processing() {
                   timingMessage={
                     done
                       ? "Opening your scan results…"
-                      : "This usually takes 2–5 minutes for large shelves. Keep this page open."
+                      : "This usually takes less than 60 seconds for large shelves. Keep this page open."
                   }
                 />
               </div>
