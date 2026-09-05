@@ -2,6 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { AlertCircle, ArrowRight, Download, ImagePlus, Loader2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DemoCategoryPicker,
+  DEFAULT_DEMO_CATEGORY,
+  DEFAULT_DEMO_SUBCATEGORY,
+  useDemoCategory,
+} from "@/components/scan/DemoCategoryPicker";
 import { AI_DISCLAIMER, ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import {
@@ -40,6 +46,7 @@ function imageSrc(result: LandingScanResult): string | null {
 
 export function RetailIntelligenceDemo() {
   const [phase, setPhase] = useState<Phase>("idle");
+  const demoCategory = useDemoCategory();
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [result, setResult] = useState<LandingScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +81,10 @@ export function RetailIntelligenceDemo() {
         kind === "sample"
           ? runLandingSample(DEFAULT_SAMPLE_ID, loadLandingSessionId() ?? undefined)
           : file
-            ? runLandingUpload(file, loadLandingSessionId() ?? undefined)
+            ? runLandingUpload(file, {
+              ...demoCategory.context,
+              landingSessionId: loadLandingSessionId() ?? undefined,
+            })
             : Promise.resolve(null),
         minVisible,
       ]);
@@ -108,6 +118,11 @@ export function RetailIntelligenceDemo() {
       objectUrlRef.current = null;
     }
     setPreviewImageUrl(DEFAULT_SAMPLE_IMAGE);
+    demoCategory.setState({
+      categoryName: DEFAULT_DEMO_CATEGORY,
+      subId: DEFAULT_DEMO_SUBCATEGORY,
+      customSub: "",
+    });
     void run("sample");
   }
 
@@ -144,7 +159,18 @@ export function RetailIntelligenceDemo() {
             </p>
           </div>
 
-          <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+          <DemoCategoryPicker
+            state={demoCategory.state}
+            onChange={demoCategory.setState}
+            categories={demoCategory.categories}
+            disabled={scanning}
+          />
+          {!demoCategory.ready && (
+            <p className="mt-2 text-center text-xs text-destructive">
+              Select shelf category and sub-category before uploading.
+            </p>
+          )}
+          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Button
               size="xl"
               className="min-h-11 w-full bg-accent-green text-brand-foreground hover:bg-accent-green/90 sm:w-auto"
@@ -157,7 +183,7 @@ export function RetailIntelligenceDemo() {
               variant="outline"
               size="xl"
               className="min-h-11 w-full sm:w-auto"
-              disabled={scanning}
+              disabled={scanning || !demoCategory.ready}
               onClick={() => fileRef.current?.click()}
             >
               <ImagePlus className="size-4" /> Upload Shelf Photo
