@@ -101,10 +101,6 @@ export function CategorySubcategoryPicker({
   }
 
   function remove(index: number): void {
-    if (value.length <= minSelections) {
-      toast.error("Add another shelf type before removing this one.");
-      return;
-    }
     onChange(value.filter((_, i) => i !== index));
   }
 
