@@ -18,7 +18,7 @@ import { HomeLeadCapture } from "@/components/home/HomeLeadCapture";
 import { HomeTrustRow } from "@/components/home/HomeTrustRow";
 import { HomeDashboardShowcase } from "@/components/home/HomeDashboardShowcase";
 import { LiveDemoSection } from "@/components/landing/retail-shelf-intelligence/LiveDemoSection";
-import type { BillingCycle } from "@/lib/pricing";
+import type { BillingCycle, Plan } from "@/lib/pricing";
 
 
 export const Route = createFileRoute("/")({
@@ -118,6 +118,13 @@ const steps = [
 
 function Landing() {
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
+  const navigate = Route.useNavigate();
+
+  const onSelectPlan = (plan: Plan) => {
+    if (plan.contactSales) void navigate({ to: "/contact", search: { subject: "Sales enquiry" } });
+    else void navigate({ to: "/signup" });
+  };
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -238,7 +245,7 @@ function Landing() {
             <CycleToggle cycle={cycle} onChange={setCycle} />
           </div>
           <div className="mt-10 text-left">
-            <PricingGrid cycle={cycle} />
+            <PricingGrid cycle={cycle} onSelect={onSelectPlan} />
           </div>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button asChild variant="subtle" className="rounded-xl">
