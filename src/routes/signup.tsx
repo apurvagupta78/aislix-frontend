@@ -93,7 +93,7 @@ function SignupPage() {
   return (
     <AuthLayout
       title="Create your workspace"
-      subtitle="3 free shelf scans every day. No card required."
+      subtitle="5 free shelf scans every 24 hours. No card required."
       footer={
         <>
           Already have an account?{" "}
