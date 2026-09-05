@@ -20,8 +20,10 @@ import {
   DemoCategoryPicker,
   DEFAULT_DEMO_CATEGORY,
   DEFAULT_DEMO_SUBCATEGORY,
+  EMPTY_DEMO_CATEGORY_STATE,
   useDemoCategory,
 } from "@/components/scan/DemoCategoryPicker";
+
 import { SectionHeading } from "./shared";
 
 type Phase = "idle" | "scanning" | "done" | "error";
