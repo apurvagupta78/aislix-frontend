@@ -46,7 +46,12 @@ import {
 import { toast } from "sonner";
 import { CardSkeleton, EmptyState, ErrorState, TableSkeleton } from "@/components/States";
 import { ProgressRing, StatCard } from "@/components/UsageStats";
-import { ComparisonTable, CycleToggle, PricingGrid } from "@/components/pricing/PricingPlans";
+import {
+  ComparisonTable,
+  CurrencySelect,
+  CycleToggle,
+  PricingGrid,
+} from "@/components/pricing/PricingPlans";
 import { addOns, formatPrice, getPlan, type BillingCycle, type Plan } from "@/lib/pricing";
 import { useDisplayCurrency } from "@/lib/display-currency";
 import {
@@ -135,6 +140,7 @@ function Section({
 function Billing() {
   const queryClient = useQueryClient();
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
+  const { currency, setCurrency } = useDisplayCurrency();
   const [promo, setPromo] = useState("");
   const [pendingPlanId, setPendingPlanId] = useState<Plan["id"] | null>(null);
   const [invoicePage, setInvoicePage] = useState(1);
