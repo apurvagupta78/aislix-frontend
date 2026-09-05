@@ -40,7 +40,6 @@ export function CategorySubcategoryPicker({
   value,
   onChange,
   categories,
-  minSelections = 1,
   maxSelections = 8,
   disabled = false,
   readOnly = false,
