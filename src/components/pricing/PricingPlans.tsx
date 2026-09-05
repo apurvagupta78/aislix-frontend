@@ -3,10 +3,18 @@ import { Check, Minus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { currencyList, type CurrencyCode } from "@/lib/display-currency";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   annualSaving,
   comparisonGroups,
-  formatInr,
+  formatPrice,
   plans,
   priceFor,
   type BillingCycle,
@@ -70,12 +78,14 @@ export function PlanCard({
   currentPlanId,
   onSelect,
   pending,
+  currency = "INR",
 }: {
   plan: Plan;
   cycle: BillingCycle;
   currentPlanId?: PlanId | undefined;
   onSelect?: ((plan: Plan) => void) | undefined;
   pending?: boolean | undefined;
+  currency?: CurrencyCode;
 }) {
   const isCurrent = currentPlanId === plan.id;
   const saving = annualSaving(plan);
@@ -108,13 +118,13 @@ export function PlanCard({
       </p>
 
       <div className="mt-5 flex items-end gap-1.5">
-        <span className="text-3xl font-semibold tracking-tight">{priceFor(plan, cycle)}</span>
+        <span className="text-3xl font-semibold tracking-tight">{priceFor(plan, cycle, currency)}</span>
         {plan.monthlyPrice !== null && (
           <span className="pb-1 text-xs text-muted-foreground">/ month</span>
         )}
       </div>
       <p className="mt-1 h-4 text-xs text-accent-green">
-        {cycle === "annual" && saving > 0 ? `Save ${formatInr(saving)} a year` : ""}
+        {cycle === "annual" && saving > 0 ? `Save ${formatPrice(saving, currency)} a year` : ""}
       </p>
       <p className="mt-3 rounded-xl bg-brand-soft px-3 py-2 text-xs font-medium text-brand">
         {plan.scanLimitLabel}
@@ -151,11 +161,13 @@ export function PricingGrid({
   currentPlanId,
   onSelect,
   pendingPlanId,
+  currency = "INR",
 }: {
   cycle: BillingCycle;
   currentPlanId?: PlanId | undefined;
   onSelect?: ((plan: Plan) => void) | undefined;
   pendingPlanId?: PlanId | null | undefined;
+  currency?: CurrencyCode;
 }) {
   return (
     <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
@@ -167,6 +179,7 @@ export function PricingGrid({
           currentPlanId={currentPlanId}
           onSelect={onSelect}
           pending={pendingPlanId === p.id}
+          currency={currency}
         />
       ))}
     </div>
@@ -224,5 +237,33 @@ export function ComparisonTable() {
         </table>
       </div>
     </div>
+  );
+}
+
+export function CurrencySelect({
+  currency,
+  onChange,
+  className = "",
+}: {
+  currency: CurrencyCode;
+  onChange: (c: CurrencyCode) => void;
+  className?: string;
+}) {
+  return (
+    <Select value={currency} onValueChange={(v) => onChange(v as CurrencyCode)}>
+      <SelectTrigger
+        aria-label="Display currency"
+        className={cn("h-9 w-[7.5rem] rounded-full text-xs sm:text-sm", className)}
+      >
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {currencyList.map((c) => (
+          <SelectItem key={c.code} value={c.code}>
+            {c.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

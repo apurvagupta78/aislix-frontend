@@ -9,6 +9,8 @@
 //   professional ₹4,999  5,000 scans / month     5 stores
 //   enterprise   Custom  unlimited               unlimited
 
+import { formatFromInr, type CurrencyCode } from "@/lib/display-currency";
+
 export type PlanId = "free" | "starter" | "growth" | "professional" | "enterprise";
 export type BillingCycle = "monthly" | "annual";
 
@@ -173,11 +175,20 @@ export function formatInr(amount: number): string {
   return `₹${amount.toLocaleString("en-IN")}`;
 }
 
-export function priceFor(plan: Plan, cycle: BillingCycle): string {
+/** Formats an INR amount in the visitor's display currency. */
+export function formatPrice(amountInr: number, currency: CurrencyCode = "INR"): string {
+  return formatFromInr(amountInr, currency);
+}
+
+export function priceFor(
+  plan: Plan,
+  cycle: BillingCycle,
+  currency: CurrencyCode = "INR",
+): string {
   if (plan.monthlyPrice === null) return "Custom";
-  if (plan.monthlyPrice === 0) return "₹0";
-  if (cycle === "monthly") return formatInr(plan.monthlyPrice);
-  return formatInr(Math.round((plan.annualPrice ?? 0) / 12));
+  if (plan.monthlyPrice === 0) return formatPrice(0, currency);
+  if (cycle === "monthly") return formatPrice(plan.monthlyPrice, currency);
+  return formatPrice(Math.round((plan.annualPrice ?? 0) / 12), currency);
 }
 
 export function annualSaving(plan: Plan): number {
@@ -308,7 +319,8 @@ export type AddOn = {
   id: string;
   name: string;
   description: string;
-  price: string;
+  /** Price in INR; null = quote-based. */
+  priceInr: number | null;
   unit: string;
   available: boolean;
 };
@@ -318,7 +330,7 @@ export const addOns: AddOn[] = [
     id: "scan-pack-500",
     name: "Extra scan pack",
     description: "Top up 500 additional shelf scans, valid for 12 months.",
-    price: "₹749",
+    priceInr: 749,
     unit: "per pack",
     available: true,
   },
@@ -326,7 +338,7 @@ export const addOns: AddOn[] = [
     id: "ai-credits",
     name: "AI credits",
     description: "Additional AI recommendation and re-analysis credits.",
-    price: "₹499",
+    priceInr: 499,
     unit: "per 1,000 credits",
     available: true,
   },
@@ -334,7 +346,7 @@ export const addOns: AddOn[] = [
     id: "storage",
     name: "Extra image storage",
     description: "Retain annotated shelf images and reports for longer.",
-    price: "₹299",
+    priceInr: 299,
     unit: "per 100 GB / month",
     available: true,
   },
@@ -342,7 +354,7 @@ export const addOns: AddOn[] = [
     id: "seats",
     name: "Additional team members",
     description: "Add auditors and store managers beyond your plan seats.",
-    price: "₹199",
+    priceInr: 199,
     unit: "per seat / month",
     available: true,
   },
@@ -350,7 +362,7 @@ export const addOns: AddOn[] = [
     id: "api-usage",
     name: "API usage plan",
     description: "Higher rate limits for the Aislix REST API.",
-    price: "Custom",
+    priceInr: null,
     unit: "usage based",
     available: false,
   },

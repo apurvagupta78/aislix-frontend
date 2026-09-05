@@ -46,8 +46,14 @@ import {
 import { toast } from "sonner";
 import { CardSkeleton, EmptyState, ErrorState, TableSkeleton } from "@/components/States";
 import { ProgressRing, StatCard } from "@/components/UsageStats";
-import { ComparisonTable, CycleToggle, PricingGrid } from "@/components/pricing/PricingPlans";
-import { addOns, getPlan, type BillingCycle, type Plan } from "@/lib/pricing";
+import {
+  ComparisonTable,
+  CurrencySelect,
+  CycleToggle,
+  PricingGrid,
+} from "@/components/pricing/PricingPlans";
+import { addOns, formatPrice, getPlan, type BillingCycle, type Plan } from "@/lib/pricing";
+import { useDisplayCurrency } from "@/lib/display-currency";
 import {
   applyPromoCode,
   cancelSubscription,
@@ -134,6 +140,7 @@ function Section({
 function Billing() {
   const queryClient = useQueryClient();
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
+  const { currency, setCurrency } = useDisplayCurrency();
   const [promo, setPromo] = useState("");
   const [pendingPlanId, setPendingPlanId] = useState<Plan["id"] | null>(null);
   const [invoicePage, setInvoicePage] = useState(1);
@@ -524,10 +531,16 @@ function Billing() {
       <Section
         title="Change plan"
         description="Upgrade or downgrade at any time. Downgrades apply at the end of the current period."
-        actions={<CycleToggle cycle={cycle} onChange={setCycle} />}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <CycleToggle cycle={cycle} onChange={setCycle} />
+            <CurrencySelect currency={currency} onChange={setCurrency} />
+          </div>
+        }
         className="mt-4"
       >
         <PricingGrid
+          currency={currency}
           cycle={cycle}
           currentPlanId={overview?.plan_id}
           pendingPlanId={pendingPlanId}
@@ -555,7 +568,8 @@ function Billing() {
               </div>
               <p className="mt-2 text-sm text-muted-foreground">{a.description}</p>
               <p className="mt-4 text-sm font-medium">
-                {a.price} <span className="text-xs text-muted-foreground">{a.unit}</span>
+                {a.priceInr === null ? "Custom" : formatPrice(a.priceInr, currency)}{" "}
+                <span className="text-xs text-muted-foreground">{a.unit}</span>
               </p>
               <Button
                 variant="subtle"
