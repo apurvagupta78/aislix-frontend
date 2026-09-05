@@ -133,6 +133,22 @@ const zoneCountry: Record<string, string> = {
   "Pacific/Auckland": "NZ",
   "America/Toronto": "CA",
   "America/Vancouver": "CA",
+  "America/Sao_Paulo": "BR",
+  "America/Bahia": "BR",
+  "America/Fortaleza": "BR",
+  "America/Recife": "BR",
+  "America/Mexico_City": "MX",
+  "America/Monterrey": "MX",
+  "America/Santiago": "CL",
+  "America/Bogota": "CO",
+  "America/Lima": "PE",
+  "America/Argentina/Buenos_Aires": "AR",
+  "America/Montevideo": "UY",
+  "America/Guayaquil": "EC",
+  "America/Asuncion": "PY",
+  "America/La_Paz": "BO",
+  "America/Caracas": "VE",
+
 };
 
 const STORAGE_KEY = "aislix.display-currency";
