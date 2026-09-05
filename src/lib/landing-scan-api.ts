@@ -144,25 +144,18 @@ function appendContext(form: FormData, context?: LandingScanContext) {
   }
 }
 
-/** Default audit context for anonymous homepage uploads. */
-export const DEFAULT_UPLOAD_CONTEXT: LandingScanContext = {
-  category: "Beverages",
-  sub_category: "soft_drinks",
-  sub_category_label: "Soft drinks",
-};
-
 export async function runLandingUpload(
   file: File,
-  landingSessionId?: string,
-  context: LandingScanContext = DEFAULT_UPLOAD_CONTEXT,
+  ctx: LandingScanContext & { landingSessionId?: string },
 ): Promise<LandingScanResult> {
   const form = new FormData();
   form.append("file", file);
-  if (landingSessionId) form.append("landing_session_id", landingSessionId);
-  appendContext(form, context);
+  if (ctx.landingSessionId) form.append("landing_session_id", ctx.landingSessionId);
+  appendContext(form, ctx);
   appendUtm(form);
   return postScan(form, "Scan failed");
 }
+
 
 
 export async function runLandingSample(
