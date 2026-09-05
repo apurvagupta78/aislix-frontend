@@ -581,6 +581,12 @@ export function InventoryTable({
   const current = Math.min(page, pageCount);
   const visible = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
 
+  const brandGroups = useMemo(
+    () => rollupByBrand(filtered.map((r) => ({ ...r, product: displayProductName(r) }))),
+    [filtered],
+  );
+
+
   const toggleSort = useCallback((key: SortKey) => {
     setSort((prev) =>
       prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" },
