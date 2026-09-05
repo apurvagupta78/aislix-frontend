@@ -96,7 +96,19 @@ const countryCurrency: Record<string, CurrencyCode> = {
   CA: "CAD",
   SG: "SGD",
   MY: "SGD",
+  BR: "BRL",
+  MX: "MXN",
+  CL: "CLP",
+  CO: "COP",
+  AR: "USD",
+  PE: "USD",
+  UY: "USD",
+  EC: "USD",
+  PY: "USD",
+  BO: "USD",
+  VE: "USD",
 };
+
 
 /** Time-zone → country, used when the browser locale has no region subtag. */
 const zoneCountry: Record<string, string> = {
