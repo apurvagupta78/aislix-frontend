@@ -339,7 +339,7 @@ function SampleResult({
 
                 <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">{AI_DISCLAIMER}</p>
 
-                <TopBrandsByShelfShare rows={brandShare} className="mt-5" />
+                <TopBrandsByShelfShare rows={brandShare} scope={displayedResult.brand_share_scope} className="mt-5" />
 
                 <DemoInventoryTable rows={displayedResult.inventory ?? []} />
 
