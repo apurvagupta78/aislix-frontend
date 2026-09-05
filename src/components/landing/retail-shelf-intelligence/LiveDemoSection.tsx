@@ -294,44 +294,8 @@ function SampleResult({
 
                 <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">{AI_DISCLAIMER}</p>
 
-                <div className="mt-5 max-h-72 overflow-auto rounded-lg border border-border">
-                  <table className="w-full text-left text-sm">
-                    <thead className="sticky top-0 bg-surface text-xs uppercase tracking-wide text-muted-foreground">
-                      <tr>
-                        <th className="px-3 py-2 font-medium">Brand</th>
-                        <th className="px-3 py-2 font-medium">Product</th>
-                        <th className="px-3 py-2 font-medium">Qty</th>
-                        <th className="px-3 py-2 font-medium">Conf.</th>
-                        <th className="px-3 py-2 font-medium">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {displayedResult.inventory?.map((row, i) => (
-                        <tr
-                          key={`${row.brand}-${row.product_name}-${i}`}
-                          className="border-t border-border"
-                        >
-                          <td className="px-3 py-2">{row.brand || "—"}</td>
-                          <td className="px-3 py-2">{row.product_name || "—"}</td>
-                          <td className="px-3 py-2">{row.quantity}</td>
-                          <td className="px-3 py-2 text-muted-foreground">
-                            {row.confidence != null
-                              ? `${Math.round(row.confidence <= 1 ? row.confidence * 100 : row.confidence)}%`
-                              : "—"}
-                          </td>
-                          <td className="px-3 py-2">
-                            <Badge
-                              variant={row.status_label === "Needs review" ? "outline" : "secondary"}
-                              className="rounded-lg text-xs"
-                            >
-                              {row.status_label ?? "Detected"}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <DemoInventoryTable rows={displayedResult.inventory ?? []} />
+
 
                 {displayedResult.scans_daily_limit != null && (
                   <p className="mt-3 text-xs text-muted-foreground">
