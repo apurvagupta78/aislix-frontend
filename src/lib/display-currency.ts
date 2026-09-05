@@ -200,27 +200,31 @@ function nearestCharm(raw: number, step: number, offset: number): number {
 }
 
 /**
- * Convert an INR amount and round it to a marketable charm price
- * (e.g. ₹2,999 → $29.99, £24.99, €29.99 — never $31.74).
+ * Convert an INR amount and round it to a marketable charm price, staying
+ * close to the true converted value:
+ * ₹999 → $11.99, ₹2,999 → $34.99, ₹4,999 → $59.99 — never $57.49.
  */
 export function convertFromInr(amountInr: number, code: CurrencyCode): number {
   const info = currencies[code];
   const raw = amountInr * info.rate;
   if (raw === 0) return 0;
 
-  if (code === BASE_CURRENCY) {
-    // Rupee prices keep whole-number 9 endings: 499, 999, 2,999…
-    if (raw < 100) return nearestCharm(raw, 10, -1);
+  if (info.whole) {
+    // No-cents currencies (INR, CLP, COP) keep whole-number 9 endings.
+    if (raw < 100) return Math.max(9, nearestCharm(raw, 10, -1));
     if (raw < 1000) return nearestCharm(raw, 100, -1);
-    return nearestCharm(raw, 1000, -1);
+    if (raw < 10000) return nearestCharm(raw, 1000, -1);
+    if (raw < 100000) return nearestCharm(raw, 10000, -1);
+    return nearestCharm(raw, 100000, -1);
   }
 
-  // 1.99 / 4.99 steps for small amounts, then 9.99 tiers, then 99 endings.
-  if (raw < 10) return Math.max(0.99, nearestCharm(raw, 1, -0.01));
-  if (raw < 100) return nearestCharm(raw, 10, -0.01);
-  if (raw < 1000) return nearestCharm(raw, 50, -1);
+  // .99 endings: every unit below 20, every 5 below 100, then 9-endings.
+  if (raw < 20) return Math.max(0.99, nearestCharm(raw, 1, -0.01));
+  if (raw < 100) return nearestCharm(raw, 5, -0.01);
+  if (raw < 1000) return nearestCharm(raw, 10, -1);
   return nearestCharm(raw, 100, -1);
 }
+
 
 
 /** Format an already-converted amount in its own currency. */
