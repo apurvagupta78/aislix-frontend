@@ -159,7 +159,18 @@ export function RetailIntelligenceDemo() {
             </p>
           </div>
 
-          <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
+          <DemoCategoryPicker
+            state={demoCategory.state}
+            onChange={demoCategory.setState}
+            categories={demoCategory.categories}
+            disabled={scanning}
+          />
+          {!demoCategory.ready && (
+            <p className="mt-2 text-center text-xs text-destructive">
+              Select shelf category and sub-category before uploading.
+            </p>
+          )}
+          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Button
               size="xl"
               className="min-h-11 w-full bg-accent-green text-brand-foreground hover:bg-accent-green/90 sm:w-auto"

@@ -161,8 +161,20 @@ export function LiveDemoSection({
           className={homepageIntro ? "max-w-3xl" : undefined}
         />
 
+          <DemoCategoryPicker
+            state={demoCategory.state}
+            onChange={demoCategory.setState}
+            categories={demoCategory.categories}
+            disabled={scanning}
+          />
+          {!demoCategory.ready && (
+            <p className="mt-2 text-center text-xs text-destructive">
+              Select shelf category and sub-category before uploading.
+            </p>
+          )}
+
         <div
-          className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center"
+          className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center"
         >
           <Button
             size="xl"
