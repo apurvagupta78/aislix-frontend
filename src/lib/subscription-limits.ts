@@ -202,11 +202,16 @@ function normalizeUsage(raw: Record<string, unknown>): UsageSummary {
   const planCode = ((raw["plan_code"] as string) ?? "free").toLowerCase();
   const isFree = planCode === "free";
   const isEnterprise = planCode === "enterprise";
-  // Free-plan fallbacks keep limit copy free of `undefined`.
-  const scanQuota = num(raw["scan_quota"] ?? raw["scans_included"]) ?? (isFree ? 3 : null);
+  // When the RPC omits limits, fall back to the published plan catalogue so paid
+  // tiers never render as "Unlimited" (only Enterprise has no monthly cap).
+  const catalogue = getPlan(planCode);
+  const scanQuota =
+    num(raw["scan_quota"] ?? raw["scans_included"]) ??
+    (isEnterprise ? null : (catalogue?.monthlyScanQuota ?? (isFree ? 3 : null)));
   const storeLimit =
-    num(raw["store_limit"] ?? raw["stores_included"]) ?? (isFree ? 1 : null);
-  const historyDays = num(raw["history_days"]) ?? (isFree ? 7 : null);
+    num(raw["store_limit"] ?? raw["stores_included"]) ??
+    (isEnterprise ? null : (catalogue?.storeLimit ?? (isFree ? 1 : null)));
+  const historyDays = num(raw["history_days"]) ?? catalogue?.historyDays ?? (isFree ? 7 : null);
   const seatLimit =
     num(raw["seat_limit"] ?? raw["seats_included"]) ?? defaultSeatLimit(planCode);
   const seatsUsed = num(raw["seats_used"]) ?? 1;
