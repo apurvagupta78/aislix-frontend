@@ -42,7 +42,7 @@ export function CategorySubcategoryPicker({
   onChange,
   categories,
   minSelections = 1,
-  maxSelections = 6,
+  maxSelections = 8,
   disabled = false,
   readOnly = false,
   label = "Shelf types on this rack *",
@@ -103,7 +103,10 @@ export function CategorySubcategoryPicker({
   }
 
   function remove(index: number): void {
-    if (value.length <= minSelections) return;
+    if (value.length <= minSelections) {
+      toast.error("Add another shelf type before removing this one.");
+      return;
+    }
     onChange(value.filter((_, i) => i !== index));
   }
 
