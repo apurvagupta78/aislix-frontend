@@ -4,6 +4,7 @@ import type { Json } from "@/integrations/supabase/types";
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_TEXT_LENGTH = 500;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png"]);
+const CONTEXT_FIELDS = ["category", "sub_category", "sub_category_label", "shelf_label"] as const;
 const UTM_FIELDS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"] as const;
 
 function textField(form: FormData, field: string): string | null {
@@ -107,10 +108,15 @@ export const Route = createFileRoute("/api/public/landing/scan")({
         if (file) forward.append("file", file, file.name);
         if (sampleId) forward.append("sample_id", sampleId);
         forward.append("landing_session_id", attemptToken);
+        for (const field of CONTEXT_FIELDS) {
+          const value = textField(incoming, field);
+          if (value) forward.append(field, value);
+        }
         for (const field of UTM_FIELDS) {
           const value = utm[field];
           if (value) forward.append(field, value);
         }
+
 
         try {
           let upstream = await fetch(`${backendUrl.replace(/\/+$/, "")}/landing/scan`, {
@@ -138,6 +144,10 @@ export const Route = createFileRoute("/api/public/landing/scan")({
               }
               const sampleBlob = await sampleResponse.blob();
               fallback.append("file", sampleBlob, `${sampleId}.jpg`);
+            }
+            for (const field of CONTEXT_FIELDS) {
+              const value = textField(incoming, field);
+              if (value) fallback.append(field, value);
             }
             upstream = await fetch(`${backendUrl.replace(/\/+$/, "")}/scan`, {
               method: "POST",
