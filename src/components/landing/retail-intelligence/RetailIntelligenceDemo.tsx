@@ -294,6 +294,7 @@ export function RetailIntelligenceDemo() {
                         ? result.top_brands
                         : (result.brand_share ?? [])
                     }
+                    scope={result.brand_share_scope}
                     className="mt-5"
                   />
 
