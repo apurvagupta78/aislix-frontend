@@ -6,6 +6,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { dbError, getUser, requireOrgId } from "@/lib/db/context";
+import { formatDisplayDate, formatDisplayDateTime } from "@/lib/format-date";
 
 // ---------- KPIs / account ----------
 
