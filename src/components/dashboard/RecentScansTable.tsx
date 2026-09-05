@@ -36,6 +36,34 @@ import {
 
 const PAGE_SIZE = 8;
 
+/** In the public marketing preview there is no signed-in session to open results with. */
+function ViewResultsButton({ scanId, demo, label }: { scanId: string; demo: boolean; label: string }) {
+  if (demo) {
+    return (
+      <Button
+        variant="subtle"
+        size="sm"
+        className="rounded-lg"
+        onClick={() =>
+          toast("Sign up to view scan history", {
+            description: "Create a free workspace to open full scan results.",
+            action: { label: "Sign up", onClick: () => { window.location.href = "/signup"; } },
+          })
+        }
+      >
+        {label}
+      </Button>
+    );
+  }
+  return (
+    <Button asChild variant="subtle" size="sm" className="rounded-lg">
+      <Link to="/results" search={{ scan: scanId }}>
+        {label}
+      </Link>
+    </Button>
+  );
+}
+
 const statusClass: Record<RecentScan["status"], string> = {
   completed: "bg-accent-green/12 text-accent-green hover:bg-accent-green/12",
   processing: "bg-brand-soft text-brand hover:bg-brand-soft",
