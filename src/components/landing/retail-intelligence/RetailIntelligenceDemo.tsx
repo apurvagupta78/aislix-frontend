@@ -51,6 +51,7 @@ export function RetailIntelligenceDemo() {
   const [result, setResult] = useState<LandingScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [isSampleFlow, setIsSampleFlow] = useState(true);
   const objectUrlRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
