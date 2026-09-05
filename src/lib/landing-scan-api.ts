@@ -91,11 +91,15 @@ async function postScan(form: FormData, fallback: string): Promise<LandingScanRe
     has_planogram: false,
     metrics: {
       total_products: payload.metrics?.total_products,
-      unique_skus: payload.metrics?.unique_skus,
+      unique_skus: payload.metrics?.unique_skus ?? payload.metrics?.total_skus,
       shelf_health_score: payload.metrics?.shelf_health_score,
     },
     inventory: payload.inventory ?? [],
+    top_brands: payload.top_brands,
+    brand_share: payload.brand_share,
+    scanned_at: payload.scanned_at,
     executive_summary: payload.executive_summary,
+
     annotated_image_base64: payload.annotated_image_base64,
     annotated_image_mime: payload.annotated_image_mime,
     original_image_base64: payload.original_image_base64,
