@@ -692,7 +692,7 @@ function ScanPage() {
                 <div className="sm:col-span-2">
                   <CategorySubcategoryPicker
                     value={selections}
-                    onChange={setSelections}
+                    onChange={handleSelectionsChange}
                     categories={categories}
                     disabled={busy}
                     readOnly={lockedByAssignment}
@@ -767,7 +767,7 @@ function ScanPage() {
                     className="rounded-xl"
                     onClick={mergePlanogramSelections}
                   >
-                    Add to shelf types
+                    Sync shelf types from planogram
                   </Button>
                   <Button
                     variant="subtle"
