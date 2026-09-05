@@ -24,7 +24,6 @@ export type CategorySubcategoryPickerProps = {
   value: CategorySelection[];
   onChange: (next: CategorySelection[]) => void;
   categories: ShelfCategory[];
-  minSelections?: number;
   maxSelections?: number;
   disabled?: boolean;
   readOnly?: boolean;
@@ -41,7 +40,6 @@ export function CategorySubcategoryPicker({
   value,
   onChange,
   categories,
-  minSelections = 1,
   maxSelections = 8,
   disabled = false,
   readOnly = false,
@@ -103,10 +101,6 @@ export function CategorySubcategoryPicker({
   }
 
   function remove(index: number): void {
-    if (value.length <= minSelections) {
-      toast.error("Add another shelf type before removing this one.");
-      return;
-    }
     onChange(value.filter((_, i) => i !== index));
   }
 
