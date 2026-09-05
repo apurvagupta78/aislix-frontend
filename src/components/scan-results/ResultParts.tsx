@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -35,6 +36,7 @@ import {
 } from "@/components/ui/table";
 import { EmptyState, Skeleton } from "@/components/States";
 import { cn } from "@/lib/utils";
+import { rollupByBrand } from "@/lib/brand-rollup";
 import { toast } from "sonner";
 import {
   COMPLIANCE_INTERPRETATION,
@@ -536,6 +538,8 @@ export function InventoryTable({
     dir: "desc",
   });
   const [page, setPage] = useState(1);
+  const [view, setView] = useState<"sku" | "brand">("sku");
+  const [openBrands, setOpenBrands] = useState<Record<string, boolean>>({});
 
   const brands = useMemo(
     () => Array.from(new Set(rows.map((r) => r.brand).filter(Boolean))).sort(),
