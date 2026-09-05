@@ -19,6 +19,12 @@ import {
   brandShareFromRows,
   TopBrandsByShelfShare,
 } from "@/components/scan/TopBrandsByShelfShare";
+import {
+  DemoCategoryPicker,
+  DEFAULT_DEMO_CATEGORY,
+  DEFAULT_DEMO_SUBCATEGORY,
+  useDemoCategory,
+} from "@/components/scan/DemoCategoryPicker";
 import { SectionHeading } from "./shared";
 
 type Phase = "idle" | "scanning" | "done" | "error";
@@ -48,6 +54,7 @@ export function LiveDemoSection({
   homepageIntro?: boolean;
 }) {
   const [phase, setPhase] = useState<Phase>("idle");
+  const demoCategory = useDemoCategory();
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(DEFAULT_SAMPLE_IMAGE);
   const [result, setResult] = useState<LandingScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +83,10 @@ export function LiveDemoSection({
         mode === "sample"
           ? runLandingSample(DEFAULT_SAMPLE_ID, loadLandingSessionId() ?? undefined)
           : file
-            ? runLandingUpload(file, loadLandingSessionId() ?? undefined)
+            ? runLandingUpload(file, {
+              ...demoCategory.context,
+              landingSessionId: loadLandingSessionId() ?? undefined,
+            })
             : Promise.resolve(null),
         minVisible,
       ]);

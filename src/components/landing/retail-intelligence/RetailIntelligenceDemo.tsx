@@ -2,6 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { AlertCircle, ArrowRight, Download, ImagePlus, Loader2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DemoCategoryPicker,
+  DEFAULT_DEMO_CATEGORY,
+  DEFAULT_DEMO_SUBCATEGORY,
+  useDemoCategory,
+} from "@/components/scan/DemoCategoryPicker";
 import { AI_DISCLAIMER, ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import {
@@ -40,6 +46,7 @@ function imageSrc(result: LandingScanResult): string | null {
 
 export function RetailIntelligenceDemo() {
   const [phase, setPhase] = useState<Phase>("idle");
+  const demoCategory = useDemoCategory();
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [result, setResult] = useState<LandingScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +81,10 @@ export function RetailIntelligenceDemo() {
         kind === "sample"
           ? runLandingSample(DEFAULT_SAMPLE_ID, loadLandingSessionId() ?? undefined)
           : file
-            ? runLandingUpload(file, loadLandingSessionId() ?? undefined)
+            ? runLandingUpload(file, {
+              ...demoCategory.context,
+              landingSessionId: loadLandingSessionId() ?? undefined,
+            })
             : Promise.resolve(null),
         minVisible,
       ]);
