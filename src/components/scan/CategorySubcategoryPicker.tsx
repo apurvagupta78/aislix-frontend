@@ -24,7 +24,6 @@ export type CategorySubcategoryPickerProps = {
   value: CategorySelection[];
   onChange: (next: CategorySelection[]) => void;
   categories: ShelfCategory[];
-  minSelections?: number;
   maxSelections?: number;
   disabled?: boolean;
   readOnly?: boolean;
