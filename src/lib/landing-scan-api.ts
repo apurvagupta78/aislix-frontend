@@ -128,13 +128,31 @@ async function postScan(form: FormData, fallback: string): Promise<LandingScanRe
   };
 }
 
+/** Optional shelf context forwarded with a landing scan. */
+export type LandingScanContext = {
+  category?: string;
+  sub_category?: string;
+  sub_category_label?: string;
+  shelf_label?: string;
+};
+
+function appendContext(form: FormData, context?: LandingScanContext) {
+  if (!context) return;
+  for (const key of ["category", "sub_category", "sub_category_label", "shelf_label"] as const) {
+    const value = context[key];
+    if (value) form.append(key, value);
+  }
+}
+
 export async function runLandingUpload(
   file: File,
   landingSessionId?: string,
+  context?: LandingScanContext,
 ): Promise<LandingScanResult> {
   const form = new FormData();
   form.append("file", file);
   if (landingSessionId) form.append("landing_session_id", landingSessionId);
+  appendContext(form, context);
   appendUtm(form);
   return postScan(form, "Scan failed");
 }
@@ -142,13 +160,16 @@ export async function runLandingUpload(
 export async function runLandingSample(
   sampleId = DEFAULT_SAMPLE_ID,
   landingSessionId?: string,
+  context?: LandingScanContext,
 ): Promise<LandingScanResult> {
   const form = new FormData();
   form.append("sample_id", sampleId);
   if (landingSessionId) form.append("landing_session_id", landingSessionId);
+  appendContext(form, context);
   appendUtm(form);
   return postScan(form, "Shelf analysis failed");
 }
+
 
 /** Backward-compatible alias for earlier landing component imports. */
 export const runLandingScan = runLandingUpload;
