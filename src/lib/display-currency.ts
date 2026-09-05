@@ -39,7 +39,7 @@ export type CurrencyInfo = {
 export const BASE_CURRENCY: CurrencyCode = "INR";
 
 export const currencies: Record<CurrencyCode, CurrencyInfo> = {
-  INR: { code: "INR", label: "INR ₹", rate: 1, locale: "en-IN", step: 1 },
+  INR: { code: "INR", label: "INR ₹", rate: 1, locale: "en-IN", step: 1, whole: true },
   USD: { code: "USD", label: "USD $", rate: 0.0115, locale: "en-US", step: 1 },
   GBP: { code: "GBP", label: "GBP £", rate: 0.0088, locale: "en-GB", step: 1 },
   EUR: { code: "EUR", label: "EUR €", rate: 0.0103, locale: "en-IE", step: 1 },
@@ -47,7 +47,12 @@ export const currencies: Record<CurrencyCode, CurrencyInfo> = {
   AUD: { code: "AUD", label: "AUD $", rate: 0.0176, locale: "en-AU", step: 1 },
   CAD: { code: "CAD", label: "CAD $", rate: 0.0159, locale: "en-CA", step: 1 },
   SGD: { code: "SGD", label: "SGD $", rate: 0.0150, locale: "en-SG", step: 1 },
+  BRL: { code: "BRL", label: "BRL R$", rate: 0.0620, locale: "pt-BR", step: 1 },
+  MXN: { code: "MXN", label: "MXN $", rate: 0.2100, locale: "es-MX", step: 1 },
+  CLP: { code: "CLP", label: "CLP $", rate: 11.0, locale: "es-CL", step: 1, whole: true },
+  COP: { code: "COP", label: "COP $", rate: 46.0, locale: "es-CO", step: 1, whole: true },
 };
+
 
 export const currencyList: CurrencyInfo[] = Object.values(currencies);
 
