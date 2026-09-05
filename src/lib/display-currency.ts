@@ -11,7 +11,20 @@
  */
 import { useCallback, useEffect, useState } from "react";
 
-export type CurrencyCode = "INR" | "USD" | "GBP" | "EUR" | "AED" | "AUD" | "CAD" | "SGD";
+export type CurrencyCode =
+  | "INR"
+  | "USD"
+  | "GBP"
+  | "EUR"
+  | "AED"
+  | "AUD"
+  | "CAD"
+  | "SGD"
+  | "BRL"
+  | "MXN"
+  | "CLP"
+  | "COP";
+
 
 export type CurrencyInfo = {
   code: CurrencyCode;
@@ -21,12 +34,15 @@ export type CurrencyInfo = {
   locale: string;
   /** Smallest visual step used when rounding a converted price. */
   step: number;
+  /** Currencies with no cents in everyday pricing (INR, CLP, COP). */
+  whole?: boolean;
 };
+
 
 export const BASE_CURRENCY: CurrencyCode = "INR";
 
 export const currencies: Record<CurrencyCode, CurrencyInfo> = {
-  INR: { code: "INR", label: "INR ₹", rate: 1, locale: "en-IN", step: 1 },
+  INR: { code: "INR", label: "INR ₹", rate: 1, locale: "en-IN", step: 1, whole: true },
   USD: { code: "USD", label: "USD $", rate: 0.0115, locale: "en-US", step: 1 },
   GBP: { code: "GBP", label: "GBP £", rate: 0.0088, locale: "en-GB", step: 1 },
   EUR: { code: "EUR", label: "EUR €", rate: 0.0103, locale: "en-IE", step: 1 },
@@ -34,7 +50,12 @@ export const currencies: Record<CurrencyCode, CurrencyInfo> = {
   AUD: { code: "AUD", label: "AUD $", rate: 0.0176, locale: "en-AU", step: 1 },
   CAD: { code: "CAD", label: "CAD $", rate: 0.0159, locale: "en-CA", step: 1 },
   SGD: { code: "SGD", label: "SGD $", rate: 0.0150, locale: "en-SG", step: 1 },
+  BRL: { code: "BRL", label: "BRL R$", rate: 0.0620, locale: "pt-BR", step: 1 },
+  MXN: { code: "MXN", label: "MXN $", rate: 0.2100, locale: "es-MX", step: 1 },
+  CLP: { code: "CLP", label: "CLP $", rate: 11.0, locale: "es-CL", step: 1, whole: true },
+  COP: { code: "COP", label: "COP $", rate: 46.0, locale: "es-CO", step: 1, whole: true },
 };
+
 
 export const currencyList: CurrencyInfo[] = Object.values(currencies);
 
@@ -75,7 +96,19 @@ const countryCurrency: Record<string, CurrencyCode> = {
   CA: "CAD",
   SG: "SGD",
   MY: "SGD",
+  BR: "BRL",
+  MX: "MXN",
+  CL: "CLP",
+  CO: "COP",
+  AR: "USD",
+  PE: "USD",
+  UY: "USD",
+  EC: "USD",
+  PY: "USD",
+  BO: "USD",
+  VE: "USD",
 };
+
 
 /** Time-zone → country, used when the browser locale has no region subtag. */
 const zoneCountry: Record<string, string> = {
@@ -100,6 +133,22 @@ const zoneCountry: Record<string, string> = {
   "Pacific/Auckland": "NZ",
   "America/Toronto": "CA",
   "America/Vancouver": "CA",
+  "America/Sao_Paulo": "BR",
+  "America/Bahia": "BR",
+  "America/Fortaleza": "BR",
+  "America/Recife": "BR",
+  "America/Mexico_City": "MX",
+  "America/Monterrey": "MX",
+  "America/Santiago": "CL",
+  "America/Bogota": "CO",
+  "America/Lima": "PE",
+  "America/Argentina/Buenos_Aires": "AR",
+  "America/Montevideo": "UY",
+  "America/Guayaquil": "EC",
+  "America/Asuncion": "PY",
+  "America/La_Paz": "BO",
+  "America/Caracas": "VE",
+
 };
 
 const STORAGE_KEY = "aislix.display-currency";
@@ -151,27 +200,31 @@ function nearestCharm(raw: number, step: number, offset: number): number {
 }
 
 /**
- * Convert an INR amount and round it to a marketable charm price
- * (e.g. ₹2,999 → $29.99, £24.99, €29.99 — never $31.74).
+ * Convert an INR amount and round it to a marketable charm price, staying
+ * close to the true converted value:
+ * ₹999 → $11.99, ₹2,999 → $34.99, ₹4,999 → $59.99 — never $57.49.
  */
 export function convertFromInr(amountInr: number, code: CurrencyCode): number {
   const info = currencies[code];
   const raw = amountInr * info.rate;
   if (raw === 0) return 0;
 
-  if (code === BASE_CURRENCY) {
-    // Rupee prices keep whole-number 9 endings: 499, 999, 2,999…
-    if (raw < 100) return nearestCharm(raw, 10, -1);
+  if (info.whole) {
+    // No-cents currencies (INR, CLP, COP) keep whole-number 9 endings.
+    if (raw < 100) return Math.max(9, nearestCharm(raw, 10, -1));
     if (raw < 1000) return nearestCharm(raw, 100, -1);
-    return nearestCharm(raw, 1000, -1);
+    if (raw < 10000) return nearestCharm(raw, 1000, -1);
+    if (raw < 100000) return nearestCharm(raw, 10000, -1);
+    return nearestCharm(raw, 100000, -1);
   }
 
-  // 1.99 / 4.99 steps for small amounts, then 9.99 tiers, then 99 endings.
-  if (raw < 10) return Math.max(0.99, nearestCharm(raw, 1, -0.01));
-  if (raw < 100) return nearestCharm(raw, 10, -0.01);
-  if (raw < 1000) return nearestCharm(raw, 50, -1);
+  // .99 endings: every unit below 20, every 5 below 100, then 9-endings.
+  if (raw < 20) return Math.max(0.99, nearestCharm(raw, 1, -0.01));
+  if (raw < 100) return nearestCharm(raw, 5, -0.01);
+  if (raw < 1000) return nearestCharm(raw, 10, -1);
   return nearestCharm(raw, 100, -1);
 }
+
 
 
 /** Format an already-converted amount in its own currency. */
