@@ -15,11 +15,18 @@ import {
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
 import { AI_DISCLAIMER, ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
+import {
+  brandShareFromRows,
+  TopBrandsByShelfShare,
+} from "@/components/scan/TopBrandsByShelfShare";
 import { SectionHeading } from "./shared";
 
 type Phase = "idle" | "scanning" | "done" | "error";
 
 const MAX_BYTES = 10 * 1024 * 1024;
+const MIN_SCAN_MS = 8_000;
+const DEMO_TIMING_MESSAGE =
+  "This usually takes 30–90 seconds for large shelves. Keep this page open.";
 
 function annotatedSrc(result: LandingScanResult): string | null {
   if (result.annotated_image_base64) {
@@ -196,7 +203,7 @@ export function LiveDemoSection({
           <div className="min-w-0 p-5 sm:p-7">
             {scanning && (
               <div className="grid min-h-72 place-items-center">
-                <ScanProgressPanel active />
+                <ScanProgressPanel active expectedMs={60_000} timingMessage={DEMO_TIMING_MESSAGE} />
               </div>
             )}
 
@@ -210,7 +217,7 @@ export function LiveDemoSection({
               </div>
             ) : null}
 
-            {phase === "idle" && <EmptyResults preview />}
+            {phase === "idle" && <EmptyResults />}
 
             {phase === "done" && result && (
               <SampleResult result={result} liveResult={result} showWorkspaceCta={showWorkspaceCta} />
@@ -258,8 +265,24 @@ function SampleResult({
   liveResult: LandingScanResult | null;
   showWorkspaceCta: boolean;
 }) {
+  const brandShare =
+    displayedResult.top_brands?.length
+      ? displayedResult.top_brands
+      : displayedResult.brand_share?.length
+        ? displayedResult.brand_share
+        : brandShareFromRows(displayedResult.inventory ?? []);
   return (
     <div>
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <Badge className="gap-1.5 rounded-md bg-brand text-brand-foreground">
+                    <Sparkles className="size-3" /> Live AI analysis
+                  </Badge>
+                  {displayedResult.scanned_at ? (
+                    <span className="text-[11px] text-muted-foreground">
+                      {new Date(displayedResult.scanned_at).toLocaleString()}
+                    </span>
+                  ) : null}
+                </div>
                 <div className="grid grid-cols-3 gap-3">
                   {[
                     { label: "Products detected", value: displayedResult.metrics?.total_products },
@@ -291,6 +314,8 @@ function SampleResult({
                 )}
 
                 <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">{AI_DISCLAIMER}</p>
+
+                <TopBrandsByShelfShare rows={brandShare} className="mt-5" />
 
                 <DemoInventoryTable rows={displayedResult.inventory ?? []} />
 
