@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowRight, Download, ImagePlus, Loader2, Sparkles } from "lucide-react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { AlertCircle, ArrowRight, ChevronDown, ChevronRight, Download, ImagePlus, Loader2, Sparkles } from "lucide-react";
+import { rollupByBrand } from "@/lib/brand-rollup";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { trackLandingEvent } from "@/lib/landing-analytics";
@@ -351,6 +352,142 @@ function ExecutiveSummary({ text }: { text: string }) {
           {expanded ? "Show less" : "Read more"}
         </button>
       )}
+    </div>
+  );
+}
+
+type DemoRow = NonNullable<LandingScanResult["inventory"]>[number];
+
+function ViewToggle({
+  value,
+  onChange,
+}: {
+  value: "sku" | "brand";
+  onChange: (v: "sku" | "brand") => void;
+}) {
+  return (
+    <div className="mt-5 flex items-center gap-2">
+      <span className="text-xs font-medium text-muted-foreground">View:</span>
+      <div className="inline-flex rounded-lg border border-border bg-surface p-0.5">
+        {([
+          { key: "sku", label: "By SKU" },
+          { key: "brand", label: "By brand" },
+        ] as const).map((o) => (
+          <button
+            key={o.key}
+            type="button"
+            aria-pressed={value === o.key}
+            onClick={() => onChange(o.key)}
+            className={
+              value === o.key
+                ? "rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+                : "rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+            }
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DemoInventoryTable({ rows }: { rows: DemoRow[] }) {
+  const [view, setView] = useState<"sku" | "brand">("sku");
+  const [open, setOpen] = useState<Record<string, boolean>>({});
+  const groups = rollupByBrand(rows as any) as unknown as {
+    brand: string;
+    skuCount: number;
+    totalQty: number;
+    items: DemoRow[];
+  }[];
+
+  return (
+    <div>
+      <ViewToggle value={view} onChange={setView} />
+      <div className="mt-3 max-h-72 overflow-auto rounded-lg border border-border">
+        {view === "sku" ? (
+          <table className="w-full text-left text-sm">
+            <thead className="sticky top-0 bg-surface text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2 font-medium">Brand</th>
+                <th className="px-3 py-2 font-medium">Product</th>
+                <th className="px-3 py-2 font-medium">Qty</th>
+                <th className="px-3 py-2 font-medium">Conf.</th>
+                <th className="px-3 py-2 font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => (
+                <tr key={`${row.brand}-${row.product_name}-${i}`} className="border-t border-border">
+                  <td className="px-3 py-2">{row.brand || "—"}</td>
+                  <td className="px-3 py-2">{row.product_name || "—"}</td>
+                  <td className="px-3 py-2">{row.quantity}</td>
+                  <td className="px-3 py-2 text-muted-foreground">
+                    {row.confidence != null
+                      ? `${Math.round(row.confidence <= 1 ? row.confidence * 100 : row.confidence)}%`
+                      : "—"}
+                  </td>
+                  <td className="px-3 py-2">
+                    <Badge
+                      variant={row.status_label === "Needs review" ? "outline" : "secondary"}
+                      className="rounded-lg text-xs"
+                    >
+                      {row.status_label ?? "Detected"}
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <table className="w-full text-left text-sm">
+            <thead className="sticky top-0 bg-surface text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2 font-medium">Brand</th>
+                <th className="px-3 py-2 font-medium">SKUs</th>
+                <th className="px-3 py-2 font-medium">Total qty</th>
+              </tr>
+            </thead>
+            <tbody>
+              {groups.map((g) => (
+                <Fragment key={g.brand}>
+                  <tr className="border-t border-border">
+                    <td className="px-3 py-2">
+                      <button
+                        type="button"
+                        className="flex items-center gap-1.5 font-medium text-foreground"
+                        onClick={() => setOpen((o) => ({ ...o, [g.brand]: !o[g.brand] }))}
+                        aria-expanded={!!open[g.brand]}
+                      >
+                        {open[g.brand] ? (
+                          <ChevronDown className="size-3.5" />
+                        ) : (
+                          <ChevronRight className="size-3.5" />
+                        )}
+                        {g.brand}
+                      </button>
+                    </td>
+                    <td className="px-3 py-2 tabular-nums">{g.skuCount}</td>
+                    <td className="px-3 py-2 tabular-nums">{g.totalQty}</td>
+                  </tr>
+                  {open[g.brand] &&
+                    g.items.map((row, i) => (
+                      <tr key={`${g.brand}-item-${i}`} className="border-t border-border bg-muted/30">
+                        <td className="px-3 py-1.5 pl-9 text-muted-foreground" colSpan={2}>
+                          {row.product_name || "—"}
+                        </td>
+                        <td className="px-3 py-1.5 tabular-nums text-muted-foreground">
+                          {row.quantity}
+                        </td>
+                      </tr>
+                    ))}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 }
