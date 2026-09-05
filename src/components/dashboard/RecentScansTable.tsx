@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Search, SearchX } from "lucide-react";
 import { Panel } from "@/components/dashboard/DashboardParts";
 import { EmptyState, ErrorState, TableSkeleton } from "@/components/States";
@@ -35,6 +36,34 @@ import {
 } from "@/lib/dashboard";
 
 const PAGE_SIZE = 8;
+
+/** In the public marketing preview there is no signed-in session to open results with. */
+function ViewResultsButton({ scanId, demo, label }: { scanId: string; demo: boolean; label: string }) {
+  if (demo) {
+    return (
+      <Button
+        variant="subtle"
+        size="sm"
+        className="rounded-lg"
+        onClick={() =>
+          toast("Sign up to view scan history", {
+            description: "Create a free workspace to open full scan results.",
+            action: { label: "Sign up", onClick: () => { window.location.href = "/signup"; } },
+          })
+        }
+      >
+        {label}
+      </Button>
+    );
+  }
+  return (
+    <Button asChild variant="subtle" size="sm" className="rounded-lg">
+      <Link to="/results" search={{ scan: scanId }}>
+        {label}
+      </Link>
+    </Button>
+  );
+}
 
 const statusClass: Record<RecentScan["status"], string> = {
   completed: "bg-accent-green/12 text-accent-green hover:bg-accent-green/12",
@@ -95,7 +124,10 @@ export function RecentScansTable({ demoData }: { demoData?: RecentScansResponse 
     <Panel
       title="Recent scans"
       action={
-        <Link to="/history" className="text-xs font-medium text-brand hover:underline">
+        <Link
+          to={demoData ? "/signup" : "/history"}
+          className="text-xs font-medium text-brand hover:underline"
+        >
           View all
         </Link>
       }
@@ -218,11 +250,7 @@ export function RecentScansTable({ demoData }: { demoData?: RecentScansResponse 
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button asChild variant="subtle" size="sm" className="rounded-lg">
-                          <Link to="/results" search={{ scan: s.scan_id }}>
-                            View
-                          </Link>
-                        </Button>
+                        <ViewResultsButton scanId={s.scan_id} demo={!!demoData} label="View" />
                       </TableCell>
                     </TableRow>
                   ))}
@@ -270,11 +298,7 @@ export function RecentScansTable({ demoData }: { demoData?: RecentScansResponse 
                     <span className="text-[0.7rem] text-muted-foreground">
                       {formatDateTime(s.created_at)}
                     </span>
-                    <Button asChild variant="subtle" size="sm" className="rounded-lg">
-                      <Link to="/results" search={{ scan: s.scan_id }}>
-                        View results
-                      </Link>
-                    </Button>
+                    <ViewResultsButton scanId={s.scan_id} demo={!!demoData} label="View results" />
                   </div>
                 </li>
               ))}

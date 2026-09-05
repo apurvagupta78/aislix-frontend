@@ -17,7 +17,7 @@ const FAQS = [
   },
   {
     q: "How many free scans do I get?",
-    a: "3 free shelf scans when you create a workspace. The live demo on this page includes additional anonymous trial scans per day.",
+    a: "5 free shelf scans every 24 hours when you create a workspace. The live demo on this page includes additional anonymous trial scans per day.",
   },
   {
     q: "Can my team use Aislix?",
