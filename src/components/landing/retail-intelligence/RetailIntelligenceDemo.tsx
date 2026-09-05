@@ -6,7 +6,9 @@ import {
   DemoCategoryPicker,
   DEFAULT_DEMO_CATEGORY,
   DEFAULT_DEMO_SUBCATEGORY,
+  EMPTY_DEMO_CATEGORY_STATE,
   useDemoCategory,
+
 } from "@/components/scan/DemoCategoryPicker";
 import { AI_DISCLAIMER, ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
 import { trackLandingEvent } from "@/lib/landing-analytics";
