@@ -209,20 +209,21 @@ export function convertFromInr(amountInr: number, code: CurrencyCode): number {
   const raw = amountInr * info.rate;
   if (raw === 0) return 0;
 
+  // Step keeps ~10-100 increments in the ladder, so the charm price never
+  // drifts more than a few percent from the true converted value.
+  const magnitude = Math.pow(10, Math.floor(Math.log10(raw)));
+
   if (info.whole) {
     // No-cents currencies (INR, CLP, COP) keep whole-number 9 endings.
     if (raw < 100) return Math.max(9, nearestCharm(raw, 10, -1));
-    if (raw < 1000) return nearestCharm(raw, 100, -1);
-    if (raw < 10000) return nearestCharm(raw, 1000, -1);
-    if (raw < 100000) return nearestCharm(raw, 10000, -1);
-    return nearestCharm(raw, 100000, -1);
+    return nearestCharm(raw, Math.max(1, magnitude / 10), -1);
   }
 
   // .99 endings: every unit below 20, every 5 below 100, then 9-endings.
   if (raw < 20) return Math.max(0.99, nearestCharm(raw, 1, -0.01));
   if (raw < 100) return nearestCharm(raw, 5, -0.01);
-  if (raw < 1000) return nearestCharm(raw, 10, -1);
-  return nearestCharm(raw, 100, -1);
+  return nearestCharm(raw, magnitude / 10, -1);
+
 }
 
 
