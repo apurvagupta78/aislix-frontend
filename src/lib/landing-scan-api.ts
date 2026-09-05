@@ -18,6 +18,7 @@ export type LandingInventoryRow = {
   brand: string;
   product_name: string;
   quantity: number;
+  variant?: string;
   confidence?: number;
   status_label?: "Detected" | "Needs review";
   counted_in_totals?: boolean;
@@ -36,6 +37,7 @@ export type LandingScanResult = {
     unique_skus?: number;
     total_skus?: number;
     shelf_health_score?: number;
+    average_confidence?: number;
   };
   inventory: LandingInventoryRow[];
   top_brands?: LandingBrandShare[];

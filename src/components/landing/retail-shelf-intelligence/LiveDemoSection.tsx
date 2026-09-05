@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { AlertCircle, ArrowRight, ChevronDown, ChevronRight, Download, ImagePlus, Loader2, Sparkles } from "lucide-react";
 import { rollupByBrand } from "@/lib/brand-rollup";
+import { averageConfidencePercent, displayVariant, uniqueSkuCount } from "@/lib/landing-inventory";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { trackLandingEvent } from "@/lib/landing-analytics";
@@ -319,6 +320,7 @@ function SampleResult({
     displayedResult.top_brands?.length
       ? displayedResult.top_brands
       : (displayedResult.brand_share ?? []);
+  const avgConfidence = averageConfidencePercent(displayedResult);
   return (
     <div>
                 <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -334,7 +336,7 @@ function SampleResult({
                 <div className="grid grid-cols-3 gap-3">
                   {[
                     { label: "Products detected", value: displayedResult.metrics?.total_products },
-                    { label: "Unique SKUs", value: displayedResult.metrics?.unique_skus },
+                    { label: "Unique SKUs", value: uniqueSkuCount(displayedResult) },
                     {
                       label: "Shelf health",
                       value:
@@ -367,6 +369,11 @@ function SampleResult({
 
                 <DemoInventoryTable rows={displayedResult.inventory ?? []} />
 
+                {avgConfidence != null && (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Average AI confidence: {avgConfidence}%
+                  </p>
+                )}
 
                 {displayedResult.scans_daily_limit != null && (
                   <p className="mt-3 text-xs text-muted-foreground">
@@ -482,8 +489,8 @@ function DemoInventoryTable({ rows }: { rows: DemoRow[] }) {
               <tr>
                 <th className="px-3 py-2 font-medium">Brand</th>
                 <th className="px-3 py-2 font-medium">Product</th>
+                <th className="px-3 py-2 font-medium">Variant</th>
                 <th className="px-3 py-2 font-medium">Qty</th>
-                <th className="px-3 py-2 font-medium">Conf.</th>
                 <th className="px-3 py-2 font-medium">Status</th>
               </tr>
             </thead>
@@ -492,12 +499,8 @@ function DemoInventoryTable({ rows }: { rows: DemoRow[] }) {
                 <tr key={`${row.brand}-${row.product_name}-${i}`} className="border-t border-border">
                   <td className="px-3 py-2">{row.brand || "—"}</td>
                   <td className="px-3 py-2">{row.product_name || "—"}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{displayVariant(row)}</td>
                   <td className="px-3 py-2">{row.quantity}</td>
-                  <td className="px-3 py-2 text-muted-foreground">
-                    {row.confidence != null
-                      ? `${Math.round(row.confidence <= 1 ? row.confidence * 100 : row.confidence)}%`
-                      : "—"}
-                  </td>
                   <td className="px-3 py-2">
                     <Badge
                       variant={row.status_label === "Needs review" ? "outline" : "secondary"}
