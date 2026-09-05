@@ -23,6 +23,8 @@ export type LandingInventoryRow = {
   counted_in_totals?: boolean;
 };
 
+export type LandingBrandShare = { brand: string; share: number };
+
 export type LandingScanResult = {
   landing_session_id: string;
   scan_id: string;
@@ -32,9 +34,13 @@ export type LandingScanResult = {
   metrics: {
     total_products?: number;
     unique_skus?: number;
+    total_skus?: number;
     shelf_health_score?: number;
   };
   inventory: LandingInventoryRow[];
+  top_brands?: LandingBrandShare[];
+  brand_share?: LandingBrandShare[];
+  scanned_at?: string;
   executive_summary?: string;
   annotated_image_base64?: string;
   annotated_image_mime?: string;
@@ -44,6 +50,7 @@ export type LandingScanResult = {
   scans_used_today?: number;
   scans_daily_limit?: number;
 };
+
 
 export class LandingScanError extends Error {
   status: number;
