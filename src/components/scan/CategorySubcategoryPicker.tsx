@@ -42,7 +42,7 @@ export function CategorySubcategoryPicker({
   onChange,
   categories,
   minSelections = 1,
-  maxSelections = 6,
+  maxSelections = 8,
   disabled = false,
   readOnly = false,
   label = "Shelf types on this rack *",
@@ -103,7 +103,10 @@ export function CategorySubcategoryPicker({
   }
 
   function remove(index: number): void {
-    if (value.length <= minSelections) return;
+    if (value.length <= minSelections) {
+      toast.error("Add another shelf type before removing this one.");
+      return;
+    }
     onChange(value.filter((_, i) => i !== index));
   }
 
@@ -117,11 +120,11 @@ export function CategorySubcategoryPicker({
           <p className="text-xs text-muted-foreground">No shelf types added yet.</p>
         )}
         {value.map((selection, index) => {
-          const removable = !readOnly && !disabled && value.length > minSelections;
+          const removable = !readOnly && !disabled;
           return (
             <span
               key={`${selectionKey(selection)}-${index}`}
-              className="inline-flex max-w-full items-center gap-1.5 rounded-lg bg-surface px-2.5 py-1.5 text-xs font-medium text-foreground"
+              className="inline-flex max-w-full items-center gap-1 rounded-md bg-secondary px-2.5 py-1 text-sm font-medium text-foreground"
               title={`${selection.category_name} · ${selectionLabel(selection)}`}
             >
               <span className="truncate">
@@ -130,13 +133,11 @@ export function CategorySubcategoryPicker({
               {removable && (
                 <button
                   type="button"
-                  className="text-muted-foreground transition-colors hover:text-destructive"
+                  aria-label={`Remove ${selection.category_name} ${selectionLabel(selection)}`}
+                  className="-my-2 -mr-1.5 grid min-h-11 min-w-11 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:-my-1 sm:min-h-6 sm:min-w-6"
                   onClick={() => remove(index)}
                 >
-                  <X className="size-3.5" />
-                  <span className="sr-only">
-                    Remove {selection.category_name} · {selectionLabel(selection)}
-                  </span>
+                  <X className="size-4" />
                 </button>
               )}
             </span>

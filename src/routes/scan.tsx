@@ -186,11 +186,29 @@ function ScanPage() {
     [planogramRows, categories],
   );
 
+  // Shelf types the user explicitly removed — never auto-added back on re-parse.
+  const [dismissedSelectionKeys, setDismissedSelectionKeys] = useState<string[]>([]);
+
+  const handleSelectionsChange = useCallback(
+    (next: CategorySelection[]) => {
+      const nextKeys = new Set(next.map(selectionKey));
+      const removed = selections.map(selectionKey).filter((key) => !nextKeys.has(key));
+      if (removed.length) {
+        setDismissedSelectionKeys((current) => [...new Set([...current, ...removed])]);
+      }
+      setSelections(next);
+    },
+    [selections],
+  );
+
   const missingPlanogramSelections = useMemo(() => {
     if (lockedByAssignment) return [];
     const known = new Set(selections.map(selectionKey));
-    return planogramSelections.filter((item) => !known.has(selectionKey(item)));
-  }, [planogramSelections, selections, lockedByAssignment]);
+    const dismissed = new Set(dismissedSelectionKeys);
+    return planogramSelections.filter(
+      (item) => !known.has(selectionKey(item)) && !dismissed.has(selectionKey(item)),
+    );
+  }, [planogramSelections, selections, lockedByAssignment, dismissedSelectionKeys]);
 
   const mergePlanogramSelections = useCallback(() => {
     if (!missingPlanogramSelections.length) return;
@@ -200,16 +218,6 @@ function ScanPage() {
       `Added shelf types from your planogram: ${formatCategorySelections(added, 3)}`,
     );
   }, [missingPlanogramSelections]);
-
-  // Auto-add planogram shelf types the user has not listed yet.
-  useEffect(() => {
-    if (lockedByAssignment || !missingPlanogramSelections.length) return;
-    const added = missingPlanogramSelections;
-    setSelections((current) => dedupeSelections([...current, ...added]));
-    setCategorySyncNotice(
-      `Added shelf types from your planogram: ${formatCategorySelections(added, 3)}`,
-    );
-  }, [missingPlanogramSelections, lockedByAssignment]);
 
   // Clearing the planogram clears the sync notice.
   useEffect(() => {
@@ -684,7 +692,7 @@ function ScanPage() {
                 <div className="sm:col-span-2">
                   <CategorySubcategoryPicker
                     value={selections}
-                    onChange={setSelections}
+                    onChange={handleSelectionsChange}
                     categories={categories}
                     disabled={busy}
                     readOnly={lockedByAssignment}
@@ -759,7 +767,7 @@ function ScanPage() {
                     className="rounded-xl"
                     onClick={mergePlanogramSelections}
                   >
-                    Add to shelf types
+                    Sync shelf types from planogram
                   </Button>
                   <Button
                     variant="subtle"
