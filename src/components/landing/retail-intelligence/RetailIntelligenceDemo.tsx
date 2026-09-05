@@ -118,6 +118,11 @@ export function RetailIntelligenceDemo() {
       objectUrlRef.current = null;
     }
     setPreviewImageUrl(DEFAULT_SAMPLE_IMAGE);
+    demoCategory.setState({
+      categoryName: DEFAULT_DEMO_CATEGORY,
+      subId: DEFAULT_DEMO_SUBCATEGORY,
+      customSub: "",
+    });
     void run("sample");
   }
 
@@ -167,7 +172,7 @@ export function RetailIntelligenceDemo() {
               variant="outline"
               size="xl"
               className="min-h-11 w-full sm:w-auto"
-              disabled={scanning}
+              disabled={scanning || !demoCategory.ready}
               onClick={() => fileRef.current?.click()}
             >
               <ImagePlus className="size-4" /> Upload Shelf Photo
