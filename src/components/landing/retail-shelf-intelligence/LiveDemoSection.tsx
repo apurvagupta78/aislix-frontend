@@ -60,13 +60,19 @@ export function LiveDemoSection({
     setPhase("scanning");
     trackLandingEvent("demo_scan_started", { mode });
 
+    // Keep the progress UI visible long enough to read — the analysis is real,
+    // but a fast response should never look pre-recorded.
+    const minVisible = new Promise<void>((resolve) => setTimeout(resolve, MIN_SCAN_MS));
+
     try {
-      const scan =
+      const [scan] = await Promise.all([
         mode === "sample"
-          ? await runLandingSample(DEFAULT_SAMPLE_ID, loadLandingSessionId() ?? undefined)
+          ? runLandingSample(DEFAULT_SAMPLE_ID, loadLandingSessionId() ?? undefined)
           : file
-            ? await runLandingUpload(file, loadLandingSessionId() ?? undefined)
-            : null;
+            ? runLandingUpload(file, loadLandingSessionId() ?? undefined)
+            : Promise.resolve(null),
+        minVisible,
+      ]);
       if (!scan) throw new Error("Choose a shelf photo to continue.");
       setResult(scan);
       persistLandingSession(scan);
@@ -77,12 +83,14 @@ export function LiveDemoSection({
       });
       onResult?.(scan, annotatedSrc(scan));
     } catch (err) {
+      await minVisible;
       const status = (err as { status?: number }).status;
       setError((err as Error).message || (status === 429 ? "Demo capacity is busy. Please try again shortly." : "Scan failed. Please try again."));
       setPhase("error");
       trackLandingEvent("demo_scan_failed");
     }
   }
+
 
   function onSample() {
     if (objectUrlRef.current) {
