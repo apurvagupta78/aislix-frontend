@@ -45,22 +45,3 @@ export function TopBrandsByShelfShare({
     </div>
   );
 }
-
-/** Fallback share computation from inventory rows when the API omits top_brands. */
-export function brandShareFromRows(
-  rows: { brand?: string | null; quantity?: number | null; qty?: number | null }[],
-): BrandShareRow[] {
-  const totals = new Map<string, number>();
-  let sum = 0;
-  for (const r of rows) {
-    const brand = (r.brand ?? "").trim() || "Unknown";
-    const qty = Number(r.quantity ?? r.qty ?? 0) || 0;
-    if (qty <= 0) continue;
-    totals.set(brand, (totals.get(brand) ?? 0) + qty);
-    sum += qty;
-  }
-  if (!sum) return [];
-  return [...totals.entries()]
-    .map(([brand, qty]) => ({ brand, share: (qty / sum) * 100 }))
-    .sort((a, b) => b.share - a.share);
-}
