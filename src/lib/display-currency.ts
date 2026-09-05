@@ -11,7 +11,20 @@
  */
 import { useCallback, useEffect, useState } from "react";
 
-export type CurrencyCode = "INR" | "USD" | "GBP" | "EUR" | "AED" | "AUD" | "CAD" | "SGD";
+export type CurrencyCode =
+  | "INR"
+  | "USD"
+  | "GBP"
+  | "EUR"
+  | "AED"
+  | "AUD"
+  | "CAD"
+  | "SGD"
+  | "BRL"
+  | "MXN"
+  | "CLP"
+  | "COP";
+
 
 export type CurrencyInfo = {
   code: CurrencyCode;
