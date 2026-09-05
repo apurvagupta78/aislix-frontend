@@ -140,17 +140,37 @@ export function detectCurrency(): CurrencyCode {
   return "USD";
 }
 
-/** Convert an INR amount and round it to a clean, sales-friendly figure. */
+/** Nearest value from a charm-price ladder (…9.99 / …99 endings). */
+function nearestCharm(raw: number, step: number, offset: number): number {
+  const lower = Math.floor(raw / step) * step + offset;
+  const upper = lower + step;
+  const low = lower > 0 ? lower : upper;
+  return Math.abs(raw - low) <= Math.abs(upper - raw) ? low : upper;
+}
+
+/**
+ * Convert an INR amount and round it to a marketable charm price
+ * (e.g. ₹2,999 → $29.99, £24.99, €29.99 — never $31.74).
+ */
 export function convertFromInr(amountInr: number, code: CurrencyCode): number {
   const info = currencies[code];
   const raw = amountInr * info.rate;
   if (raw === 0) return 0;
-  if (code === BASE_CURRENCY) return Math.round(raw);
-  if (raw < 20) return Math.round(raw * 2) / 2;
-  if (raw < 100) return Math.round(raw);
-  if (raw < 1000) return Math.round(raw / 5) * 5;
-  return Math.round(raw / 50) * 50;
+
+  if (code === BASE_CURRENCY) {
+    // Rupee prices keep whole-number 9 endings: 499, 999, 2,999…
+    if (raw < 100) return nearestCharm(raw, 10, -1);
+    if (raw < 1000) return nearestCharm(raw, 100, -1);
+    return nearestCharm(raw, 1000, -1);
+  }
+
+  // 1.99 / 4.99 steps for small amounts, then 9.99 tiers, then 99 endings.
+  if (raw < 10) return Math.max(0.99, nearestCharm(raw, 1, -0.01));
+  if (raw < 100) return nearestCharm(raw, 10, -0.01);
+  if (raw < 1000) return nearestCharm(raw, 50, -1);
+  return nearestCharm(raw, 100, -1);
 }
+
 
 /** Format an already-converted amount in its own currency. */
 export function formatCurrency(amount: number, code: CurrencyCode): string {
