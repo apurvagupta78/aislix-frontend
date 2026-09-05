@@ -34,7 +34,10 @@ export type CurrencyInfo = {
   locale: string;
   /** Smallest visual step used when rounding a converted price. */
   step: number;
+  /** Currencies with no cents in everyday pricing (INR, CLP, COP). */
+  whole?: boolean;
 };
+
 
 export const BASE_CURRENCY: CurrencyCode = "INR";
 
