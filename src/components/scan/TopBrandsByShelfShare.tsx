@@ -1,4 +1,4 @@
-export type BrandShareRow = { brand: string; share: number };
+export type BrandShareRow = { brand: string; share: number; quantity?: number };
 
 /**
  * Compact "Top brands by shelf share" ranked list, matching the dashboard
@@ -8,10 +8,12 @@ export function TopBrandsByShelfShare({
   rows,
   limit = 8,
   className,
+  scope,
 }: {
   rows: BrandShareRow[] | undefined;
   limit?: number;
   className?: string;
+  scope?: "in_audit" | "all";
 }) {
   const data = (rows ?? [])
     .filter((r) => r.brand && Number.isFinite(r.share) && r.share > 0)
@@ -23,10 +25,18 @@ export function TopBrandsByShelfShare({
   return (
     <div className={className}>
       <p className="text-sm font-semibold text-foreground">Top brands by shelf share</p>
-      <p className="mt-0.5 text-[11px] text-muted-foreground">Share of visible facings per brand.</p>
+      <p className="mt-0.5 text-[11px] text-muted-foreground">
+        {scope === "in_audit"
+          ? "Share of visible facings per brand (audit scope — excludes misplaced products)."
+          : "Share of visible facings per brand."}
+      </p>
       <ul className="mt-3 space-y-2">
         {data.map((row) => (
-          <li key={row.brand} className="grid grid-cols-[7rem_1fr_3rem] items-center gap-2">
+          <li
+            key={row.brand}
+            className="grid grid-cols-[7rem_1fr_3rem] items-center gap-2"
+            title={row.quantity != null ? `${row.brand}: ${row.quantity} facings` : undefined}
+          >
             <span className="truncate text-xs text-foreground" title={row.brand}>
               {row.brand}
             </span>

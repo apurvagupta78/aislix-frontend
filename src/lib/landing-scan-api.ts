@@ -23,7 +23,7 @@ export type LandingInventoryRow = {
   counted_in_totals?: boolean;
 };
 
-export type LandingBrandShare = { brand: string; share: number };
+export type LandingBrandShare = { brand: string; share: number; quantity?: number };
 
 export type LandingScanResult = {
   landing_session_id: string;
@@ -40,6 +40,8 @@ export type LandingScanResult = {
   inventory: LandingInventoryRow[];
   top_brands?: LandingBrandShare[];
   brand_share?: LandingBrandShare[];
+  brand_share_scope?: "in_audit" | "all";
+  brand_share_denominator?: number;
   scanned_at?: string;
   executive_summary?: string;
   annotated_image_base64?: string;
@@ -115,6 +117,8 @@ async function postScan(form: FormData, fallback: string): Promise<LandingScanRe
     inventory: payload.inventory ?? [],
     top_brands: payload.top_brands,
     brand_share: payload.brand_share,
+    brand_share_scope: payload.brand_share_scope,
+    brand_share_denominator: payload.brand_share_denominator,
     scanned_at: payload.scanned_at,
     executive_summary: payload.executive_summary,
 
