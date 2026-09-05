@@ -22,6 +22,12 @@ export type DemoCategoryState = {
   customSub: string;
 };
 
+export const EMPTY_DEMO_CATEGORY_STATE: DemoCategoryState = {
+  categoryName: "",
+  subId: "",
+  customSub: "",
+};
+
 export function useDemoCategory(): {
   state: DemoCategoryState;
   setState: (next: DemoCategoryState) => void;
@@ -29,11 +35,9 @@ export function useDemoCategory(): {
   ready: boolean;
   context: LandingScanContext;
 } {
-  const [state, setState] = useState<DemoCategoryState>({
-    categoryName: DEFAULT_DEMO_CATEGORY,
-    subId: DEFAULT_DEMO_SUBCATEGORY,
-    customSub: "",
-  });
+  // Upload flow starts empty on purpose — the visitor must name their own shelf.
+  const [state, setState] = useState<DemoCategoryState>(EMPTY_DEMO_CATEGORY_STATE);
+
 
   const categoriesQuery = useQuery({
     queryKey: ["shelf-categories", "landing"],

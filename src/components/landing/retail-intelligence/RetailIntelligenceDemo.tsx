@@ -6,7 +6,9 @@ import {
   DemoCategoryPicker,
   DEFAULT_DEMO_CATEGORY,
   DEFAULT_DEMO_SUBCATEGORY,
+  EMPTY_DEMO_CATEGORY_STATE,
   useDemoCategory,
+
 } from "@/components/scan/DemoCategoryPicker";
 import { AI_DISCLAIMER, ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
 import { trackLandingEvent } from "@/lib/landing-analytics";
@@ -47,8 +49,11 @@ export function RetailIntelligenceDemo() {
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [result, setResult] = useState<LandingScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     setPreviewImageUrl(DEFAULT_SAMPLE_IMAGE);
@@ -114,6 +119,7 @@ export function RetailIntelligenceDemo() {
       URL.revokeObjectURL(objectUrlRef.current);
       objectUrlRef.current = null;
     }
+    setPendingFile(null);
     setPreviewImageUrl(DEFAULT_SAMPLE_IMAGE);
     demoCategory.setState({
       categoryName: DEFAULT_DEMO_CATEGORY,
@@ -138,7 +144,11 @@ export function RetailIntelligenceDemo() {
     const url = URL.createObjectURL(file);
     objectUrlRef.current = url;
     setPreviewImageUrl(url);
-    void run("upload", file);
+    setPendingFile(file);
+    setError(null);
+    setPhase("idle");
+    demoCategory.setState(EMPTY_DEMO_CATEGORY_STATE);
+    pickerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   const shownImage = phase === "done" && result ? (imageSrc(result) ?? previewImageUrl) : previewImageUrl;
@@ -156,15 +166,17 @@ export function RetailIntelligenceDemo() {
             </p>
           </div>
 
-          <DemoCategoryPicker
-            state={demoCategory.state}
-            onChange={demoCategory.setState}
-            categories={demoCategory.categories}
-            disabled={scanning}
-          />
-          {!demoCategory.ready && (
+          <div ref={pickerRef}>
+            <DemoCategoryPicker
+              state={demoCategory.state}
+              onChange={demoCategory.setState}
+              categories={demoCategory.categories}
+              disabled={scanning}
+            />
+          </div>
+          {pendingFile && !demoCategory.ready && (
             <p className="mt-2 text-center text-xs text-destructive">
-              Select shelf category and sub-category before uploading.
+              Select category and sub-category for your shelf before analyzing.
             </p>
           )}
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
@@ -180,11 +192,21 @@ export function RetailIntelligenceDemo() {
               variant="outline"
               size="xl"
               className="min-h-11 w-full sm:w-auto"
-              disabled={scanning || !demoCategory.ready}
+              disabled={scanning}
               onClick={() => fileRef.current?.click()}
             >
-              <ImagePlus className="size-4" /> Upload Shelf Photo
+              <ImagePlus className="size-4" /> {pendingFile ? "Change Photo" : "Upload Shelf Photo"}
             </Button>
+            {pendingFile && (
+              <Button
+                size="xl"
+                className="min-h-11 w-full sm:w-auto"
+                disabled={scanning || !demoCategory.ready}
+                onClick={() => void run("upload", pendingFile)}
+              >
+                <Sparkles className="size-4" /> Analyze My Shelf
+              </Button>
+            )}
             <input
               ref={fileRef}
               type="file"
@@ -197,6 +219,7 @@ export function RetailIntelligenceDemo() {
               }}
             />
           </div>
+
 
           <div className="mt-8 overflow-hidden rounded-lg border border-border bg-card shadow-lift lg:grid lg:grid-cols-[55fr_45fr]">
             {/* IMAGE PANEL */}
