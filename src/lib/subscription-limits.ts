@@ -10,6 +10,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ApiError } from "@/lib/api/errors";
 import { requireOrgId } from "@/lib/db/context";
+import { getPlan } from "@/lib/pricing";
 
 export type QuotaPeriod = "month" | "rolling_24h";
 

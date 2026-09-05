@@ -231,7 +231,7 @@ function Landing() {
             Plans that scale from one local store to a national chain.
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Start free with 5 scans a day. Move to Starter at ₹999, unlimited scans on Professional
+            Start free with 5 scans a day. Move to Starter at ₹999, 5,000 scans a month on Professional
             at ₹4,999, or talk to us about an Enterprise rollout.
           </p>
           <div className="mt-8">
