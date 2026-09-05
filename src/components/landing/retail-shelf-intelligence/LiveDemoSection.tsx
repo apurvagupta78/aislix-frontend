@@ -57,8 +57,11 @@ export function LiveDemoSection({
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(DEFAULT_SAMPLE_IMAGE);
   const [result, setResult] = useState<LandingScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
 
   useEffect(() => {
     setPreviewImageUrl(DEFAULT_SAMPLE_IMAGE);
