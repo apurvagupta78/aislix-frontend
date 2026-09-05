@@ -201,7 +201,7 @@ export function LiveDemoSection({
               </div>
             ) : null}
 
-            {phase === "idle" && <EmptyResults />}
+            {phase === "idle" && <EmptyResults preview />}
 
             {phase === "done" && result && (
               <SampleResult result={result} liveResult={result} showWorkspaceCta={showWorkspaceCta} />
@@ -213,17 +213,32 @@ export function LiveDemoSection({
   );
 }
 
-function EmptyResults() {
+/** Illustrative figures for the idle state only — never shown after a failed scan. */
+const PREVIEW_METRICS = [
+  { label: "Products detected", value: "116" },
+  { label: "Unique SKUs", value: "17" },
+  { label: "Shelf health", value: "74%" },
+] as const;
+
+function EmptyResults({ preview = false }: { preview?: boolean }) {
   return (
     <div className="mt-5">
       <div className="grid grid-cols-3 gap-3">
-        {["Products detected", "Unique SKUs", "Shelf health"].map((label) => (
-          <div key={label} className="rounded-lg border border-border bg-surface p-3">
-            <p className="text-lg font-semibold text-foreground">—</p>
-            <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">{label}</p>
+        {PREVIEW_METRICS.map((m) => (
+          <div key={m.label} className="rounded-lg border border-border bg-surface p-3">
+            <p className={`text-lg font-semibold ${preview ? "text-foreground" : "text-foreground"}`}>
+              {preview ? m.value : "—"}
+            </p>
+            <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">{m.label}</p>
           </div>
         ))}
       </div>
+      {preview && (
+        <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+          Example figures from a typical toothpaste rack. Run the sample shelf or upload your own
+          photo for live results.
+        </p>
+      )}
       <div className="mt-5 overflow-hidden rounded-lg border border-border">
         <div className="grid grid-cols-[1fr_1.5fr_0.45fr] bg-surface px-3 py-2 text-xs uppercase text-muted-foreground">
           <span>Brand</span><span>Product</span><span>Qty</span>
@@ -274,9 +289,7 @@ function SampleResult({
                 </div>
 
                 {displayedResult.executive_summary && (
-                  <p className="mt-4 line-clamp-4 text-sm leading-relaxed text-muted-foreground">
-                    {displayedResult.executive_summary}
-                  </p>
+                  <ExecutiveSummary text={displayedResult.executive_summary} />
                 )}
 
                 <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">{AI_DISCLAIMER}</p>
@@ -349,6 +362,31 @@ function SampleResult({
                     </Button>
                   ) : null}
                 </div>
+    </div>
+  );
+}
+
+function ExecutiveSummary({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const long = text.length > 260;
+  return (
+    <div className="mt-4">
+      <p
+        className={`text-sm leading-relaxed text-muted-foreground ${
+          expanded || !long ? "" : "line-clamp-4"
+        }`}
+      >
+        {text}
+      </p>
+      {long && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mt-1.5 text-xs font-medium text-brand hover:underline"
+        >
+          {expanded ? "Show less" : "Read more"}
+        </button>
+      )}
     </div>
   );
 }
