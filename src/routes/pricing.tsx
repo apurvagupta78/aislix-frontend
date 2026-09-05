@@ -10,8 +10,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { ComparisonTable, CycleToggle, PricingGrid } from "@/components/pricing/PricingPlans";
-import { addOns } from "@/lib/pricing";
+import {
+  ComparisonTable,
+  CurrencySelect,
+  CycleToggle,
+  PricingGrid,
+} from "@/components/pricing/PricingPlans";
+import { addOns, formatPrice } from "@/lib/pricing";
+import { useDisplayCurrency } from "@/lib/display-currency";
 import type { BillingCycle, Plan } from "@/lib/pricing";
 
 export const Route = createFileRoute("/pricing")({
@@ -60,6 +66,7 @@ const faqs = [
 
 function Pricing() {
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
+  const { currency, setCurrency, isBase } = useDisplayCurrency();
 
   const navigate = Route.useNavigate();
 
@@ -85,25 +92,29 @@ function Pricing() {
             Every plan includes AI product detection, annotated shelf images and PDF audit reports.
             Move up only when your scan volume does.
           </p>
-          <div className="mt-8 flex justify-center">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <CycleToggle cycle={cycle} onChange={setCycle} />
+            <CurrencySelect currency={currency} onChange={setCurrency} />
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
             Annual billing is charged for 10 months — two months free.
+            {isBase ? "" : " Converted from INR at indicative rates; billed in INR."}
           </p>
         </section>
 
         <section className="mx-auto max-w-[90rem] px-5 pb-6 pt-8 sm:px-8">
-          <PricingGrid cycle={cycle} onSelect={onSelect} />
+          <PricingGrid cycle={cycle} onSelect={onSelect} currency={currency} />
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
-              <ShieldCheck className="size-3.5 text-accent-green" /> GST invoices for Indian businesses
+              <ShieldCheck className="size-3.5 text-accent-green" />{" "}
+              {isBase ? "GST invoices for Indian businesses" : "Tax invoices for every payment"}
             </span>
             <span className="inline-flex items-center gap-1.5">
               <Zap className="size-3.5 text-accent-green" /> No setup fee, cancel anytime
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <HelpCircle className="size-3.5 text-accent-green" /> Prices exclusive of 18% GST
+              <HelpCircle className="size-3.5 text-accent-green" />{" "}
+              {isBase ? "Prices exclusive of 18% GST" : "Taxes calculated at checkout"}
             </span>
           </div>
         </section>
@@ -136,7 +147,8 @@ function Pricing() {
                 </div>
                 <p className="mt-2 text-sm text-muted-foreground">{a.description}</p>
                 <p className="mt-4 text-sm font-medium">
-                  {a.price} <span className="text-xs text-muted-foreground">{a.unit}</span>
+                  {a.priceInr === null ? "Custom" : formatPrice(a.priceInr, currency)}{" "}
+                  <span className="text-xs text-muted-foreground">{a.unit}</span>
                 </p>
               </div>
             ))}
