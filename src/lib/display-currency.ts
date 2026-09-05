@@ -145,7 +145,9 @@ function nearestCharm(raw: number, step: number, offset: number): number {
   const lower = Math.floor(raw / step) * step + offset;
   const upper = lower + step;
   const low = lower > 0 ? lower : upper;
-  return Math.abs(raw - low) <= Math.abs(upper - raw) ? low : upper;
+  const picked = Math.abs(raw - low) <= Math.abs(upper - raw) ? low : upper;
+  return Math.round(picked * 100) / 100;
+
 }
 
 /**
