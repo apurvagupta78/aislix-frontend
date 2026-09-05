@@ -46,16 +46,16 @@ export const DEMO_DASHBOARD: DashboardResponse = {
     low_stock_alerts: 14,
     out_of_stock_alerts: 3,
     average_confidence: 94.6,
-    scans_remaining: 372,
+    scans_remaining: 4872,
   },
   account: {
     plan_name: "Professional",
     plan_id: "professional",
     status: "active",
     scans_used: 128,
-    scans_included: null,
-    scans_remaining: null,
-    renewal_date: isoIn(30 * DAY),
+    scans_included: 5000,
+    scans_remaining: 4872,
+    renewal_date: isoIn(18 * DAY),
   },
   activity: [
     {

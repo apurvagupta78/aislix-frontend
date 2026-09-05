@@ -33,12 +33,21 @@ export const Route = createFileRoute("/")({
         content:
           "Aislix audits retail shelves automatically with computer vision — detect products, brands, out-of-stocks and planogram gaps from a single photo.",
       },
-      { property: "og:title", content: "Aislix — AI Retail Shelf Intelligence" },
+      { property: "og:title", content: "Aislix — AI-Powered Retail Shelf Auditing" },
       {
         property: "og:description",
         content:
-          "Automated shelf audits for supermarkets, dark stores, warehouses, FMCG brands, distributors and local stores.",
+          "Turn a shelf photo into a complete retail audit in ~60 seconds. Product detection, planogram compliance and actionable insights.",
       },
+      { property: "og:image", content: "https://aislix.com/og-image.png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { name: "twitter:title", content: "Aislix — AI-Powered Retail Shelf Auditing" },
+      {
+        name: "twitter:description",
+        content: "Turn a shelf photo into a complete retail audit in ~60 seconds.",
+      },
+      { name: "twitter:image", content: "https://aislix.com/og-image.png" },
     ],
     links: [{ rel: "canonical", href: "https://aislix.com" }],
     scripts: [
@@ -222,7 +231,7 @@ function Landing() {
             Plans that scale from one local store to a national chain.
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Start free with 5 scans a day. Move to Starter at ₹999, unlimited scans on Professional
+            Start free with 5 scans a day. Move to Starter at ₹999, 5,000 scans a month on Professional
             at ₹4,999, or talk to us about an Enterprise rollout.
           </p>
           <div className="mt-8">

@@ -168,7 +168,7 @@ export function SiteFooter() {
               </li>
               <li>
                 <Link to="/contact" search={{ subject: "API access" }} className={itemClass}>
-                  API
+                  API access
                 </Link>
               </li>
               <li>
@@ -198,12 +198,12 @@ export function SiteFooter() {
             <ul className="space-y-2.5">
               <li>
                 <Link to="/contact" search={{ subject: "Documentation" }} className={itemClass}>
-                  Documentation
+                  Contact us
                 </Link>
               </li>
               <li>
                 <Link to="/contact" search={{ subject: "Help & support" }} className={itemClass}>
-                  Help Center
+                  Support
                 </Link>
               </li>
               <li><Soon label="Status" /></li>
