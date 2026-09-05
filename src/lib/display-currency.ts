@@ -219,10 +219,11 @@ export function convertFromInr(amountInr: number, code: CurrencyCode): number {
     return nearestCharm(raw, Math.max(1, magnitude / 10), -1);
   }
 
-  // .99 endings: every unit below 20, every 5 below 100, then 9-endings.
+  // .99 endings everywhere: every unit below 20, every 5 below 100, then
+  // 9.99 endings so AED/MXN/BRL keep cents too.
   if (raw < 20) return Math.max(0.99, nearestCharm(raw, 1, -0.01));
   if (raw < 100) return nearestCharm(raw, 5, -0.01);
-  return nearestCharm(raw, magnitude / 10, -1);
+  return nearestCharm(raw, magnitude / 10, -0.01);
 
 }
 
