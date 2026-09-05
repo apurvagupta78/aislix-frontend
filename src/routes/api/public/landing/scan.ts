@@ -107,10 +107,15 @@ export const Route = createFileRoute("/api/public/landing/scan")({
         if (file) forward.append("file", file, file.name);
         if (sampleId) forward.append("sample_id", sampleId);
         forward.append("landing_session_id", attemptToken);
+        for (const field of CONTEXT_FIELDS) {
+          const value = textField(incoming, field);
+          if (value) forward.append(field, value);
+        }
         for (const field of UTM_FIELDS) {
           const value = utm[field];
           if (value) forward.append(field, value);
         }
+
 
         try {
           let upstream = await fetch(`${backendUrl.replace(/\/+$/, "")}/landing/scan`, {
