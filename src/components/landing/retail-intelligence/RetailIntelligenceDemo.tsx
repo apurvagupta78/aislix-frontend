@@ -14,12 +14,19 @@ import {
   runLandingUpload,
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
+import {
+  brandShareFromRows,
+  TopBrandsByShelfShare,
+} from "@/components/scan/TopBrandsByShelfShare";
 import { LANDING_SAMPLE_EVENT, LANDING_UPLOAD_EVENT } from "./HeroSection";
 import { LeadCaptureSection } from "./LeadCaptureSection";
 
 type Phase = "idle" | "scanning" | "done" | "error";
 
 const MAX_BYTES = 10 * 1024 * 1024;
+const MIN_SCAN_MS = 8_000;
+const DEMO_TIMING_MESSAGE =
+  "This usually takes 30–90 seconds for large shelves. Keep this page open.";
 
 function imageSrc(result: LandingScanResult): string | null {
   if (result.annotated_image_base64) {
@@ -60,13 +67,17 @@ export function RetailIntelligenceDemo() {
     setPhase("scanning");
     trackLandingEvent("demo_scan_started", { kind });
 
+    const minVisible = new Promise<void>((resolve) => setTimeout(resolve, MIN_SCAN_MS));
+
     try {
-      const scan =
+      const [scan] = await Promise.all([
         kind === "sample"
-          ? await runLandingSample(DEFAULT_SAMPLE_ID, loadLandingSessionId() ?? undefined)
+          ? runLandingSample(DEFAULT_SAMPLE_ID, loadLandingSessionId() ?? undefined)
           : file
-            ? await runLandingUpload(file, loadLandingSessionId() ?? undefined)
-            : null;
+            ? runLandingUpload(file, loadLandingSessionId() ?? undefined)
+            : Promise.resolve(null),
+        minVisible,
+      ]);
       if (!scan) throw new Error("Choose a shelf photo to continue.");
       setResult(scan);
       persistLandingSession(scan);
@@ -79,6 +90,7 @@ export function RetailIntelligenceDemo() {
         600,
       );
     } catch (err) {
+      await minVisible;
       const status = (err as { status?: number }).status;
       setError(
         status === 429
@@ -199,7 +211,7 @@ export function RetailIntelligenceDemo() {
             <div className="min-w-0 p-5 sm:p-7">
               {scanning && (
                 <div className="grid min-h-72 place-items-center">
-                  <ScanProgressPanel active />
+                  <ScanProgressPanel active expectedMs={60_000} timingMessage={DEMO_TIMING_MESSAGE} />
                 </div>
               )}
 
@@ -250,6 +262,17 @@ export function RetailIntelligenceDemo() {
                   )}
 
                   <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">{AI_DISCLAIMER}</p>
+
+                  <TopBrandsByShelfShare
+                    rows={
+                      result.top_brands?.length
+                        ? result.top_brands
+                        : result.brand_share?.length
+                          ? result.brand_share
+                          : brandShareFromRows(result.inventory ?? [])
+                    }
+                    className="mt-5"
+                  />
 
                   <div className="mt-5 max-h-80 overflow-auto rounded-md border border-border">
                     <table className="w-full text-left text-sm">

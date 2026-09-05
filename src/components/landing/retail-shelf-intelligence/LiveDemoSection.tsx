@@ -15,11 +15,18 @@ import {
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
 import { AI_DISCLAIMER, ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
+import {
+  brandShareFromRows,
+  TopBrandsByShelfShare,
+} from "@/components/scan/TopBrandsByShelfShare";
 import { SectionHeading } from "./shared";
 
 type Phase = "idle" | "scanning" | "done" | "error";
 
 const MAX_BYTES = 10 * 1024 * 1024;
+const MIN_SCAN_MS = 8_000;
+const DEMO_TIMING_MESSAGE =
+  "This usually takes 30–90 seconds for large shelves. Keep this page open.";
 
 function annotatedSrc(result: LandingScanResult): string | null {
   if (result.annotated_image_base64) {
@@ -60,13 +67,19 @@ export function LiveDemoSection({
     setPhase("scanning");
     trackLandingEvent("demo_scan_started", { mode });
 
+    // Keep the progress UI visible long enough to read — the analysis is real,
+    // but a fast response should never look pre-recorded.
+    const minVisible = new Promise<void>((resolve) => setTimeout(resolve, MIN_SCAN_MS));
+
     try {
-      const scan =
+      const [scan] = await Promise.all([
         mode === "sample"
-          ? await runLandingSample(DEFAULT_SAMPLE_ID, loadLandingSessionId() ?? undefined)
+          ? runLandingSample(DEFAULT_SAMPLE_ID, loadLandingSessionId() ?? undefined)
           : file
-            ? await runLandingUpload(file, loadLandingSessionId() ?? undefined)
-            : null;
+            ? runLandingUpload(file, loadLandingSessionId() ?? undefined)
+            : Promise.resolve(null),
+        minVisible,
+      ]);
       if (!scan) throw new Error("Choose a shelf photo to continue.");
       setResult(scan);
       persistLandingSession(scan);
@@ -77,12 +90,14 @@ export function LiveDemoSection({
       });
       onResult?.(scan, annotatedSrc(scan));
     } catch (err) {
+      await minVisible;
       const status = (err as { status?: number }).status;
       setError((err as Error).message || (status === 429 ? "Demo capacity is busy. Please try again shortly." : "Scan failed. Please try again."));
       setPhase("error");
       trackLandingEvent("demo_scan_failed");
     }
   }
+
 
   function onSample() {
     if (objectUrlRef.current) {
@@ -188,7 +203,7 @@ export function LiveDemoSection({
           <div className="min-w-0 p-5 sm:p-7">
             {scanning && (
               <div className="grid min-h-72 place-items-center">
-                <ScanProgressPanel active />
+                <ScanProgressPanel active expectedMs={60_000} timingMessage={DEMO_TIMING_MESSAGE} />
               </div>
             )}
 
@@ -202,7 +217,7 @@ export function LiveDemoSection({
               </div>
             ) : null}
 
-            {phase === "idle" && <EmptyResults preview />}
+            {phase === "idle" && <EmptyResults />}
 
             {phase === "done" && result && (
               <SampleResult result={result} liveResult={result} showWorkspaceCta={showWorkspaceCta} />
@@ -214,32 +229,20 @@ export function LiveDemoSection({
   );
 }
 
-/** Illustrative figures for the idle state only — never shown after a failed scan. */
-const PREVIEW_METRICS = [
-  { label: "Products detected", value: "116" },
-  { label: "Unique SKUs", value: "17" },
-  { label: "Shelf health", value: "74%" },
-] as const;
+const METRIC_LABELS = ["Products detected", "Unique SKUs", "Shelf health"] as const;
 
-function EmptyResults({ preview = false }: { preview?: boolean }) {
+/** Strict empty state — never shows placeholder numbers. */
+function EmptyResults() {
   return (
     <div className="mt-5">
       <div className="grid grid-cols-3 gap-3">
-        {PREVIEW_METRICS.map((m) => (
-          <div key={m.label} className="rounded-lg border border-border bg-surface p-3">
-            <p className={`text-lg font-semibold ${preview ? "text-foreground" : "text-foreground"}`}>
-              {preview ? m.value : "—"}
-            </p>
-            <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">{m.label}</p>
+        {METRIC_LABELS.map((label) => (
+          <div key={label} className="rounded-lg border border-border bg-surface p-3">
+            <p className="text-lg font-semibold text-foreground">—</p>
+            <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">{label}</p>
           </div>
         ))}
       </div>
-      {preview && (
-        <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
-          Example figures from a typical toothpaste rack. Run the sample shelf or upload your own
-          photo for live results.
-        </p>
-      )}
       <div className="mt-5 overflow-hidden rounded-lg border border-border">
         <div className="grid grid-cols-[1fr_1.5fr_0.45fr] bg-surface px-3 py-2 text-xs uppercase text-muted-foreground">
           <span>Brand</span><span>Product</span><span>Qty</span>
@@ -252,6 +255,7 @@ function EmptyResults({ preview = false }: { preview?: boolean }) {
   );
 }
 
+
 function SampleResult({
   result: displayedResult,
   liveResult,
@@ -261,8 +265,24 @@ function SampleResult({
   liveResult: LandingScanResult | null;
   showWorkspaceCta: boolean;
 }) {
+  const brandShare =
+    displayedResult.top_brands?.length
+      ? displayedResult.top_brands
+      : displayedResult.brand_share?.length
+        ? displayedResult.brand_share
+        : brandShareFromRows(displayedResult.inventory ?? []);
   return (
     <div>
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <Badge className="gap-1.5 rounded-md bg-brand text-brand-foreground">
+                    <Sparkles className="size-3" /> Live AI analysis
+                  </Badge>
+                  {displayedResult.scanned_at ? (
+                    <span className="text-[11px] text-muted-foreground">
+                      {new Date(displayedResult.scanned_at).toLocaleString()}
+                    </span>
+                  ) : null}
+                </div>
                 <div className="grid grid-cols-3 gap-3">
                   {[
                     { label: "Products detected", value: displayedResult.metrics?.total_products },
@@ -294,6 +314,8 @@ function SampleResult({
                 )}
 
                 <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">{AI_DISCLAIMER}</p>
+
+                <TopBrandsByShelfShare rows={brandShare} className="mt-5" />
 
                 <DemoInventoryTable rows={displayedResult.inventory ?? []} />
 

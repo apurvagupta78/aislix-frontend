@@ -23,6 +23,8 @@ export type LandingInventoryRow = {
   counted_in_totals?: boolean;
 };
 
+export type LandingBrandShare = { brand: string; share: number };
+
 export type LandingScanResult = {
   landing_session_id: string;
   scan_id: string;
@@ -32,9 +34,13 @@ export type LandingScanResult = {
   metrics: {
     total_products?: number;
     unique_skus?: number;
+    total_skus?: number;
     shelf_health_score?: number;
   };
   inventory: LandingInventoryRow[];
+  top_brands?: LandingBrandShare[];
+  brand_share?: LandingBrandShare[];
+  scanned_at?: string;
   executive_summary?: string;
   annotated_image_base64?: string;
   annotated_image_mime?: string;
@@ -44,6 +50,7 @@ export type LandingScanResult = {
   scans_used_today?: number;
   scans_daily_limit?: number;
 };
+
 
 export class LandingScanError extends Error {
   status: number;
@@ -70,7 +77,25 @@ function appendUtm(form: FormData) {
 }
 
 async function postScan(form: FormData, fallback: string): Promise<LandingScanResult> {
-  const res = await fetch("/api/public/landing/scan", { method: "POST", body: form });
+  // Same-origin proxy: keeps the demo working from any origin, records the
+  // anonymous attempt, and allows the slow vision scan up to two minutes.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120_000);
+  let res: Response;
+  try {
+    res = await fetch("/api/public/landing/scan", {
+      method: "POST",
+      body: form,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new LandingScanError("Shelf analysis timed out. Please try again.", 408);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as { detail?: string };
     throw new LandingScanError(err.detail || `${fallback} (${res.status})`, res.status);
@@ -84,11 +109,15 @@ async function postScan(form: FormData, fallback: string): Promise<LandingScanRe
     has_planogram: false,
     metrics: {
       total_products: payload.metrics?.total_products,
-      unique_skus: payload.metrics?.unique_skus,
+      unique_skus: payload.metrics?.unique_skus ?? payload.metrics?.total_skus,
       shelf_health_score: payload.metrics?.shelf_health_score,
     },
     inventory: payload.inventory ?? [],
+    top_brands: payload.top_brands,
+    brand_share: payload.brand_share,
+    scanned_at: payload.scanned_at,
     executive_summary: payload.executive_summary,
+
     annotated_image_base64: payload.annotated_image_base64,
     annotated_image_mime: payload.annotated_image_mime,
     original_image_base64: payload.original_image_base64,
@@ -114,37 +143,11 @@ export async function runLandingSample(
   sampleId = DEFAULT_SAMPLE_ID,
   landingSessionId?: string,
 ): Promise<LandingScanResult> {
-  if (!API) throw new Error("VITE_AISLIX_API_URL is not configured");
   const form = new FormData();
   form.append("sample_id", sampleId);
   if (landingSessionId) form.append("landing_session_id", landingSessionId);
   appendUtm(form);
-
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 120_000);
-  try {
-    const res = await fetch(`${API}/landing/scan`, {
-      method: "POST",
-      body: form,
-      signal: controller.signal,
-    });
-    const body = (await res.json().catch(() => ({}))) as LandingScanResult & { detail?: unknown };
-    if (!res.ok) {
-      const detail = body.detail ?? res.statusText;
-      throw new LandingScanError(
-        typeof detail === "string" ? detail : JSON.stringify(detail),
-        res.status,
-      );
-    }
-    return body;
-  } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
-      throw new LandingScanError("Shelf analysis timed out. Please try again.", 408);
-    }
-    throw error;
-  } finally {
-    window.clearTimeout(timeout);
-  }
+  return postScan(form, "Shelf analysis failed");
 }
 
 /** Backward-compatible alias for earlier landing component imports. */
