@@ -825,6 +825,9 @@ export function InventoryTable({
           </Button>
         </div>
       </div>
+      </>
+      )}
+
     </ResultSection>
   );
 }
