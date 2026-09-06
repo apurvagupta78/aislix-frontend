@@ -78,6 +78,7 @@ export const Route = createFileRoute("/")({
               sameAs: [
                 "https://www.linkedin.com/company/aislix/",
                 "https://x.com/aislix_ai",
+                "https://www.youtube.com/@AislixAI",
               ],
             },
           ],
