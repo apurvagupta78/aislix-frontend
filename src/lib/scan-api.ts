@@ -287,9 +287,7 @@ export async function runScanAnalysis(scanId: string): Promise<ScanAnalysisResul
         return reportLearnedCatalogIssue(poll as ScanAnalysisResult);
     }
 
-    throw new Error(
-      "The AI vision backend did not finish analysing this scan in time. Please retry the scan.",
-    );
+    throw new Error(GENERIC_TIMEOUT);
   } catch (error) {
     throw new Error(cleanPipelineMessage(error));
   }
@@ -309,8 +307,7 @@ function cleanPipelineMessage(error: unknown): string {
         : "The scan could not be completed.";
   const message = raw.replace(/^Error:\s*/i, "").trim();
   if (/unauthorized/i.test(message)) return "Your session expired. Please sign in again.";
-  if (!message) return "The scan could not be completed.";
-  return message;
+  return sanitizeUserMessage(message);
 }
 
 /** Polls the current status of a shelf scan. */

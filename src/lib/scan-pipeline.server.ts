@@ -13,6 +13,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import {
+  GENERIC_EXPORT,
   GENERIC_SCAN,
   GENERIC_TIMEOUT,
   GENERIC_UNAVAILABLE,
@@ -2039,14 +2040,14 @@ export async function backfillScanAssetsServer(
     });
   } catch {
     throw new PipelineError(
-      "Could not reach the report service to rebuild this download. Please try again.",
+      GENERIC_EXPORT,
       504,
     );
   }
   const text = await response.text();
   if (!response.ok) {
     throw new PipelineError(
-      `The report service could not rebuild this download (${response.status}).`,
+      safeVisionMessage(text) === GENERIC_SCAN ? GENERIC_EXPORT : safeVisionMessage(text),
       response.status >= 500 ? 502 : response.status,
     );
   }

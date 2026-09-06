@@ -254,8 +254,8 @@ function Results() {
           title="Couldn't load this scan"
           description={
             query.error instanceof Error
-              ? query.error.message
-              : "The scan service did not return a result."
+              ? sanitizeUserMessage(query.error.message)
+              : "We couldn't load this scan right now. Please try again."
           }
           onRetry={() => {
             void query.refetch();
@@ -453,7 +453,7 @@ function DownloadsPanel({
       await downloadScanAnnotatedImage(data.scan_id, imageUrl, data.original_image_url);
       toast.success("Annotated image downloaded");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Download failed");
+      toast.error(networkErrorMessage(e, GENERIC_EXPORT));
     }
   };
 
@@ -464,7 +464,7 @@ function DownloadsPanel({
       await downloadScanPdf(data.scan_id, data.downloads?.pdf_url);
       toast.success("PDF report downloaded");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Download failed");
+      toast.error(networkErrorMessage(e, GENERIC_EXPORT));
     }
   };
 
@@ -552,7 +552,7 @@ function FailedState({ scanId, onRetried }: { scanId: string; onRetried: () => v
       await retryScanAnalysis(scanId);
       onRetried();
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "The analysis failed again.");
+      setMessage(networkErrorMessage(error));
     } finally {
       setRetrying(false);
     }
