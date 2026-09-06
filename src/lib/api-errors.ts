@@ -47,6 +47,10 @@ function isSafePublicMessage(msg: string): boolean {
 export function sanitizeUserMessage(raw: string, fallback = GENERIC_SCAN): string {
   let msg = normalize(raw ?? "");
 
+  // Timeout wording is checked on the raw text: stripping prefixes first would
+  // leave a meaningless fragment like "Please retry.".
+  if (/timed?\s*out|timeout|took too long|did not finish analys/i.test(msg)) return GENERIC_TIMEOUT;
+
   msg = msg.replace(/^analysis failed[:\s-]*/i, "");
   msg = msg.replace(/^(?:the )?ai vision backend returned\s+\d{3}[:\s-]*/i, "");
   msg = msg.replace(/^vision backend returned\s+\d{3}[:\s-]*/i, "");
