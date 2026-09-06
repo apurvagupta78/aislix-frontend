@@ -48,6 +48,7 @@ import { fetchActivePlanogram, fetchPlanogramItems, type DraftRow } from "@/lib/
 import { toUserMessage } from "@/lib/api/errors";
 import { CategorySubcategoryPicker } from "@/components/scan/CategorySubcategoryPicker";
 import {
+import { networkErrorMessage } from "@/lib/api-errors";
   dedupeSelections,
   formatCategorySelections,
   selectionKey,
@@ -443,7 +444,7 @@ function ScanPage() {
         setPhase("idle");
         return;
       }
-      setErrorMessage(error instanceof Error ? error.message : "The scan could not be started.");
+      setErrorMessage(networkErrorMessage(error));
       setPhase("error");
     } finally {
       abortRef.current = null;
