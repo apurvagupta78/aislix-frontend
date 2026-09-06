@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { Linkedin, Menu } from "lucide-react";
+import { Linkedin, Menu, Youtube } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -147,6 +147,15 @@ export function SiteFooter() {
                 className="grid size-9 place-items-center rounded-xl border border-border bg-card text-sm font-semibold text-muted-foreground transition-colors hover:text-brand"
               >
                 X
+              </a>
+              <a
+                href="https://www.youtube.com/@AislixAI"
+                target="_blank"
+                rel="noreferrer noopener"
+                aria-label="Aislix on YouTube"
+                className="grid size-9 place-items-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:text-brand"
+              >
+                <Youtube className="size-4" />
               </a>
             </div>
           </div>
