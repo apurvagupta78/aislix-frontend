@@ -47,8 +47,8 @@ import { ClipboardList } from "lucide-react";
 import { fetchActivePlanogram, fetchPlanogramItems, type DraftRow } from "@/lib/planogram";
 import { toUserMessage } from "@/lib/api/errors";
 import { CategorySubcategoryPicker } from "@/components/scan/CategorySubcategoryPicker";
-import {
 import { networkErrorMessage } from "@/lib/api-errors";
+import {
   dedupeSelections,
   formatCategorySelections,
   selectionKey,
