@@ -13,6 +13,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import {
+  GENERIC_SCAN,
+  GENERIC_TIMEOUT,
+  GENERIC_UNAVAILABLE,
+  parseApiDetail,
+  sanitizeUserMessage,
+} from "@/lib/api-errors";
+import {
   dedupeSelections,
   parseCategorySelections,
   slugifyCategory,
@@ -316,7 +323,16 @@ function parseJson(text: string): any {
   try {
     return JSON.parse(text);
   } catch {
-    throw new PipelineError("The AI vision backend returned a response that was not valid JSON.");
+    throw new PipelineError(GENERIC_SCAN);
+  }
+}
+
+/** Sanitized message for a non-OK vision response body (JSON or text). */
+function safeVisionMessage(text: string): string {
+  try {
+    return parseApiDetail(JSON.parse(text), GENERIC_SCAN);
+  } catch {
+    return sanitizeUserMessage(text, GENERIC_SCAN);
   }
 }
 
@@ -344,17 +360,16 @@ async function callVisionApi(body: unknown): Promise<any> {
     const timedOut = error instanceof Error && /timeout|abort/i.test(error.name + error.message);
     throw new PipelineError(
       timedOut
-        ? "The AI vision backend took too long to respond. Please retry the scan."
-        : `Could not reach the AI vision backend at ${url}.`,
+        ? GENERIC_TIMEOUT
+        : GENERIC_UNAVAILABLE,
       timedOut ? 504 : 502,
     );
   }
 
   const text = await response.text();
   if (!response.ok) {
-    const detail = text.slice(0, 400);
     throw new PipelineError(
-      `AI vision backend returned ${response.status}${detail ? `: ${detail}` : ""}`,
+      safeVisionMessage(text),
       response.status >= 500 ? 502 : response.status,
     );
   }
@@ -371,7 +386,7 @@ async function callVisionApi(body: unknown): Promise<any> {
 
   if (!remoteId) {
     throw new PipelineError(
-      "The AI vision backend accepted the scan but did not return a scan_id to poll.",
+      GENERIC_SCAN,
     );
   }
 
@@ -408,10 +423,7 @@ async function pollVisionScan(
     const body = await res.text();
     if (res.status === 404 || res.status >= 500) continue;
     if (!res.ok) {
-      throw new PipelineError(
-        `AI vision backend returned ${res.status}${body ? `: ${body.slice(0, 400)}` : ""}`,
-        res.status,
-      );
+      throw new PipelineError(safeVisionMessage(body), res.status);
     }
 
     const payload = parseJson(body);
@@ -419,10 +431,9 @@ async function pollVisionScan(
 
     if (status === "failed" || status === "error") {
       throw new PipelineError(
-        str(payload?.error) ??
-          str(payload?.error_message) ??
-          str(payload?.detail) ??
-          "The AI vision backend failed to analyse this shelf image.",
+        sanitizeUserMessage(
+          str(payload?.error) ?? str(payload?.error_message) ?? str(payload?.detail) ?? "",
+        ),
       );
     }
     if (
@@ -436,10 +447,7 @@ async function pollVisionScan(
     // queued / processing → keep polling
   }
 
-  throw new PipelineError(
-    "The AI vision backend did not finish analysing this scan in time. Please retry.",
-    504,
-  );
+  throw new PipelineError(GENERIC_TIMEOUT, 504);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -478,8 +486,8 @@ export async function submitVisionJob(body: unknown): Promise<SubmitVisionResult
     const timedOut = error instanceof Error && /timeout|abort/i.test(error.name + error.message);
     throw new PipelineError(
       timedOut
-        ? "The AI vision backend took too long to accept this scan. Please retry."
-        : `Could not reach the AI vision backend at ${url}.`,
+        ? GENERIC_TIMEOUT
+        : GENERIC_UNAVAILABLE,
       timedOut ? 504 : 502,
     );
   }
@@ -487,7 +495,7 @@ export async function submitVisionJob(body: unknown): Promise<SubmitVisionResult
   const text = await response.text();
   if (!response.ok) {
     throw new PipelineError(
-      `AI vision backend returned ${response.status}${text ? `: ${text.slice(0, 400)}` : ""}`,
+      safeVisionMessage(text),
       response.status >= 500 ? 502 : response.status,
     );
   }
@@ -501,7 +509,7 @@ export async function submitVisionJob(body: unknown): Promise<SubmitVisionResult
   if (!isAsync) return { kind: "completed", payload };
   if (!jobId) {
     throw new PipelineError(
-      "The AI vision backend accepted the scan but did not return a scan_id to poll.",
+      GENERIC_SCAN,
     );
   }
   return { kind: "accepted", jobId };
@@ -529,10 +537,7 @@ export async function pollVisionJobOnce(jobId: string): Promise<PollVisionResult
   const text = await res.text();
   if (res.status === 404 || res.status >= 500) return { kind: "processing" };
   if (!res.ok) {
-    throw new PipelineError(
-      `AI vision backend returned ${res.status}${text ? `: ${text.slice(0, 400)}` : ""}`,
-      res.status,
-    );
+    throw new PipelineError(safeVisionMessage(text), res.status);
   }
 
   const payload = parseJson(text);
@@ -540,10 +545,9 @@ export async function pollVisionJobOnce(jobId: string): Promise<PollVisionResult
 
   if (status === "failed" || status === "error") {
     throw new PipelineError(
-      str(payload?.error) ??
-        str(payload?.error_message) ??
-        str(payload?.detail) ??
-        "The AI vision backend failed to analyse this shelf image.",
+      sanitizeUserMessage(
+        str(payload?.error) ?? str(payload?.error_message) ?? str(payload?.detail) ?? "",
+      ),
     );
   }
   if (["completed", "complete", "done", "success"].includes(status)) {
@@ -1613,7 +1617,7 @@ async function persistScanPayload(
   const products = normalizeProducts(payload);
   if (!products.length) {
     throw new PipelineError(
-      "The AI vision backend did not detect any products in this shelf image.",
+      "No products detected in this shelf image. Try a clearer photo with products facing the camera.",
       422,
     );
   }
