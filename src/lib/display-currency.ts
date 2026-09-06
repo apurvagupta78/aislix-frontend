@@ -181,6 +181,12 @@ function isCurrency(value: unknown): value is CurrencyCode {
   return typeof value === "string" && value in currencies;
 }
 
+/** Display currency for an ISO country code (null when unmapped). */
+export function currencyForCountry(country?: string | null): CurrencyCode | null {
+  if (!country) return null;
+  return countryCurrency[country.toUpperCase()] ?? null;
+}
+
 /** Best-effort currency for the visitor's location. Browser-only. */
 export function detectCurrency(): CurrencyCode {
   if (typeof window === "undefined") return BASE_CURRENCY;
@@ -212,6 +218,33 @@ export function detectCurrency(): CurrencyCode {
 
   return "USD";
 }
+
+const GEO_KEY = "aislix.geo-country";
+
+/** Country from the edge network (IP-based), cached for the session. */
+async function fetchGeoCountry(): Promise<string | null> {
+  try {
+    const cached = window.sessionStorage.getItem(GEO_KEY);
+    if (cached) return cached === "-" ? null : cached;
+  } catch {
+    /* ignore */
+  }
+  try {
+    const res = await fetch("/api/public/geo", { headers: { accept: "application/json" } });
+    if (!res.ok) return null;
+    const body = (await res.json()) as { country?: string | null };
+    const country = body.country ?? null;
+    try {
+      window.sessionStorage.setItem(GEO_KEY, country ?? "-");
+    } catch {
+      /* ignore */
+    }
+    return country;
+  } catch {
+    return null;
+  }
+}
+
 
 /** Nearest value from a charm-price ladder (…9.99 / …99 endings). */
 function nearestCharm(raw: number, step: number, offset: number): number {
@@ -277,14 +310,30 @@ export function useDisplayCurrency() {
   const [currency, setCurrency] = useState<CurrencyCode>(BASE_CURRENCY);
 
   useEffect(() => {
+    let cancelled = false;
     let stored: string | null = null;
     try {
       stored = window.localStorage.getItem(STORAGE_KEY);
     } catch {
       /* ignore */
     }
-    setCurrency(isCurrency(stored) ? stored : detectCurrency());
+    if (isCurrency(stored)) {
+      setCurrency(stored);
+      return;
+    }
+    // Locale/time-zone guess renders immediately; the IP-based country is
+    // authoritative and overrides it as soon as it arrives.
+    setCurrency(detectCurrency());
+    void fetchGeoCountry().then((country) => {
+      const geo = currencyForCountry(country);
+      if (!cancelled && geo) setCurrency(geo);
+      else if (!cancelled && country) setCurrency("USD");
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
 
   const choose = useCallback((next: CurrencyCode) => {
     setCurrency(next);
