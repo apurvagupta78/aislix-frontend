@@ -310,14 +310,30 @@ export function useDisplayCurrency() {
   const [currency, setCurrency] = useState<CurrencyCode>(BASE_CURRENCY);
 
   useEffect(() => {
+    let cancelled = false;
     let stored: string | null = null;
     try {
       stored = window.localStorage.getItem(STORAGE_KEY);
     } catch {
       /* ignore */
     }
-    setCurrency(isCurrency(stored) ? stored : detectCurrency());
+    if (isCurrency(stored)) {
+      setCurrency(stored);
+      return;
+    }
+    // Locale/time-zone guess renders immediately; the IP-based country is
+    // authoritative and overrides it as soon as it arrives.
+    setCurrency(detectCurrency());
+    void fetchGeoCountry().then((country) => {
+      const geo = currencyForCountry(country);
+      if (!cancelled && geo) setCurrency(geo);
+      else if (!cancelled && country) setCurrency("USD");
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
 
   const choose = useCallback((next: CurrencyCode) => {
     setCurrency(next);
