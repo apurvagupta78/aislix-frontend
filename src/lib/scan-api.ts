@@ -209,7 +209,7 @@ export async function submitScanImages(
     if (uploadError) {
       await supabase
         .from("shelf_scans")
-        .update({ status: "failed", error_message: uploadError.message })
+        .update({ status: "failed", error_message: sanitizeUserMessage(uploadError.message) })
         .eq("id", scan.id);
       return dbError(uploadError, "Could not upload the shelf image.");
     }
@@ -228,7 +228,7 @@ export async function submitScanImages(
     if (imageError) {
       await supabase
         .from("shelf_scans")
-        .update({ status: "failed", error_message: imageError.message })
+        .update({ status: "failed", error_message: sanitizeUserMessage(imageError.message) })
         .eq("id", scan.id);
       return dbError(imageError, "Could not record the uploaded image.");
     }
@@ -328,6 +328,8 @@ export async function fetchScanStatus(
   return {
     scan_id: data.id as string,
     status: data.status as string,
-    ...(data.error_message ? { error_message: data.error_message as string } : {}),
+    ...(data.error_message
+      ? { error_message: sanitizeUserMessage(data.error_message as string) }
+      : {}),
   };
 }
