@@ -13,7 +13,8 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { SiteFooter, SiteHeader } from "@/components/MarketingLayout";
-import { CycleToggle, PricingGrid } from "@/components/pricing/PricingPlans";
+import { CurrencySelect, CycleToggle, PricingGrid } from "@/components/pricing/PricingPlans";
+import { useDisplayCurrency } from "@/lib/display-currency";
 import { HomeLeadCapture } from "@/components/home/HomeLeadCapture";
 import { HomeTrustRow } from "@/components/home/HomeTrustRow";
 import { HomeDashboardShowcase } from "@/components/home/HomeDashboardShowcase";
@@ -118,6 +119,7 @@ const steps = [
 
 function Landing() {
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
+  const { currency, setCurrency, isBase, format } = useDisplayCurrency();
   const navigate = Route.useNavigate();
 
   const onSelectPlan = (plan: Plan) => {
