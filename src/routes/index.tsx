@@ -238,15 +238,22 @@ function Landing() {
             Plans that scale from one local store to a national chain.
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Start free with 5 scans a day. Move to Starter at ₹999, 5,000 scans a month on Professional
-            at ₹4,999, or talk to us about an Enterprise rollout.
+            Start free with 5 scans a day. Move to Starter at {format(999)}, 5,000 scans a month on
+            Professional at {format(4999)}, or talk to us about an Enterprise rollout.
           </p>
-          <div className="mt-8">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <CycleToggle cycle={cycle} onChange={setCycle} />
+            <CurrencySelect currency={currency} onChange={setCurrency} />
           </div>
+          {!isBase && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Converted from INR at indicative rates; billed in INR.
+            </p>
+          )}
           <div className="mt-10 text-left">
-            <PricingGrid cycle={cycle} onSelect={onSelectPlan} />
+            <PricingGrid cycle={cycle} onSelect={onSelectPlan} currency={currency} />
           </div>
+
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button asChild variant="subtle" className="rounded-xl">
               <Link to="/pricing">
