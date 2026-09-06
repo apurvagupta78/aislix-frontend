@@ -62,6 +62,7 @@ import type { Json } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import type { CategorySelection } from "@/lib/category-selections";
 import { dbError, notFound, requireOrgId, requireUserId } from "@/lib/db/context";
+import { GENERIC_TIMEOUT, sanitizeUserMessage } from "@/lib/api-errors";
 
 
 function readImageDimensions(file: File): Promise<{ width?: number; height?: number }> {
@@ -208,7 +209,7 @@ export async function submitScanImages(
     if (uploadError) {
       await supabase
         .from("shelf_scans")
-        .update({ status: "failed", error_message: uploadError.message })
+        .update({ status: "failed", error_message: sanitizeUserMessage(uploadError.message) })
         .eq("id", scan.id);
       return dbError(uploadError, "Could not upload the shelf image.");
     }
@@ -227,7 +228,7 @@ export async function submitScanImages(
     if (imageError) {
       await supabase
         .from("shelf_scans")
-        .update({ status: "failed", error_message: imageError.message })
+        .update({ status: "failed", error_message: sanitizeUserMessage(imageError.message) })
         .eq("id", scan.id);
       return dbError(imageError, "Could not record the uploaded image.");
     }
@@ -287,9 +288,7 @@ export async function runScanAnalysis(scanId: string): Promise<ScanAnalysisResul
         return reportLearnedCatalogIssue(poll as ScanAnalysisResult);
     }
 
-    throw new Error(
-      "The AI vision backend did not finish analysing this scan in time. Please retry the scan.",
-    );
+    throw new Error(GENERIC_TIMEOUT);
   } catch (error) {
     throw new Error(cleanPipelineMessage(error));
   }
@@ -309,8 +308,7 @@ function cleanPipelineMessage(error: unknown): string {
         : "The scan could not be completed.";
   const message = raw.replace(/^Error:\s*/i, "").trim();
   if (/unauthorized/i.test(message)) return "Your session expired. Please sign in again.";
-  if (!message) return "The scan could not be completed.";
-  return message;
+  return sanitizeUserMessage(message);
 }
 
 /** Polls the current status of a shelf scan. */
@@ -330,6 +328,8 @@ export async function fetchScanStatus(
   return {
     scan_id: data.id as string,
     status: data.status as string,
-    ...(data.error_message ? { error_message: data.error_message as string } : {}),
+    ...(data.error_message
+      ? { error_message: sanitizeUserMessage(data.error_message as string) }
+      : {}),
   };
 }

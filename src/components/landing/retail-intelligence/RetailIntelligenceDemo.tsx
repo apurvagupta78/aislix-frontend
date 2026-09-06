@@ -26,6 +26,7 @@ import { averageConfidencePercent, displayVariant, uniqueSkuCount } from "@/lib/
 import { TopBrandsByShelfShare } from "@/components/scan/TopBrandsByShelfShare";
 import { LANDING_SAMPLE_EVENT, LANDING_UPLOAD_EVENT } from "./HeroSection";
 import { LeadCaptureSection } from "./LeadCaptureSection";
+import { networkErrorMessage } from "@/lib/api-errors";
 
 type Phase = "idle" | "scanning" | "done" | "error";
 
@@ -109,7 +110,7 @@ export function RetailIntelligenceDemo() {
       setError(
         status === 429
           ? "You've used all free demo scans for today. Create a free account to keep scanning."
-          : (err as Error).message || "Scan failed. Please try again.",
+          : networkErrorMessage(err),
       );
       setPhase("error");
       trackLandingEvent("demo_scan_failed");

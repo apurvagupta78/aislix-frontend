@@ -3,6 +3,12 @@
  * endpoints — never to the authenticated scan pipeline.
  */
 import { captureUtmParams, readStoredUtm } from "@/lib/utm";
+import {
+  GENERIC_TIMEOUT,
+  networkErrorMessage,
+  parseApiDetail,
+  sanitizeUserMessage,
+} from "@/lib/api-errors";
 
 const API = import.meta.env.VITE_AISLIX_API_URL?.replace(/\/$/, "");
 
@@ -80,7 +86,7 @@ function appendUtm(form: FormData) {
   }
 }
 
-async function postScan(form: FormData, fallback: string): Promise<LandingScanResult> {
+async function postScan(form: FormData, _fallback: string): Promise<LandingScanResult> {
   // Same-origin proxy: keeps the demo working from any origin, records the
   // anonymous attempt, and allows the slow vision scan up to two minutes.
   const controller = new AbortController();
@@ -94,15 +100,15 @@ async function postScan(form: FormData, fallback: string): Promise<LandingScanRe
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw new LandingScanError("Shelf analysis timed out. Please try again.", 408);
+      throw new LandingScanError(GENERIC_TIMEOUT, 408);
     }
-    throw error;
+    throw new LandingScanError(networkErrorMessage(error), 0);
   } finally {
     clearTimeout(timeout);
   }
   if (!res.ok) {
-    const err = (await res.json().catch(() => ({}))) as { detail?: string };
-    throw new LandingScanError(err.detail || `${fallback} (${res.status})`, res.status);
+    const body = (await res.json().catch(() => ({}))) as unknown;
+    throw new LandingScanError(parseApiDetail(body), res.status);
   }
   const payload = (await res.json()) as LandingScanResult;
   return {

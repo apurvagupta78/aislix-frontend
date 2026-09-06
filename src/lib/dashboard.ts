@@ -7,6 +7,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { dbError, getUser, requireOrgId } from "@/lib/db/context";
 import { formatDisplayDate, formatDisplayDateTime } from "@/lib/format-date";
+import { sanitizeUserMessage } from "@/lib/api-errors";
 
 // ---------- KPIs / account ----------
 
@@ -383,7 +384,7 @@ export async function fetchNotifications(signal?: AbortSignal): Promise<Notifica
       kind: "confidence_warning",
       severity: "critical",
       title: scan.shelf_label ? `Scan failed — ${scan.shelf_label}` : "A scan failed to process",
-      message: scan.error_message ?? undefined,
+      message: scan.error_message ? sanitizeUserMessage(scan.error_message) : undefined,
       created_at: scan.created_at,
       href: `/dashboard/scans/${scan.id}`,
     });

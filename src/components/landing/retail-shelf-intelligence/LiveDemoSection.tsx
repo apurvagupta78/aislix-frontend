@@ -26,6 +26,7 @@ import {
 } from "@/components/scan/DemoCategoryPicker";
 
 import { SectionHeading } from "./shared";
+import { networkErrorMessage } from "@/lib/api-errors";
 
 type Phase = "idle" | "scanning" | "done" | "error";
 
@@ -106,7 +107,11 @@ export function LiveDemoSection({
     } catch (err) {
       await minVisible;
       const status = (err as { status?: number }).status;
-      setError((err as Error).message || (status === 429 ? "Demo capacity is busy. Please try again shortly." : "Scan failed. Please try again."));
+      setError(
+        status === 429
+          ? "You've used all free demo scans for today. Create a free account to keep scanning."
+          : networkErrorMessage(err),
+      );
       setPhase("error");
       trackLandingEvent("demo_scan_failed");
     }

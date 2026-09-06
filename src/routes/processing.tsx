@@ -5,6 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { runScanAnalysis, SCAN_STAGES } from "@/lib/scan-api";
 import { ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
+import { networkErrorMessage } from "@/lib/api-errors";
 
 export const Route = createFileRoute("/processing")({
   validateSearch: (search: Record<string, unknown>): { scan?: string } => {
@@ -49,7 +50,7 @@ function Processing() {
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "The scan could not be completed.");
+        setError(networkErrorMessage(err));
       });
 
     return () => {

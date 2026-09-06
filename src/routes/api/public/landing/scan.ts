@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { Json } from "@/integrations/supabase/types";
+import { GENERIC_SCAN, parseApiDetail } from "@/lib/api-errors";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_TEXT_LENGTH = 500;
@@ -189,7 +190,10 @@ export const Route = createFileRoute("/api/public/landing/scan")({
           if (payload && typeof payload === "object" && !Array.isArray(payload)) {
             (payload as Record<string, unknown>).landing_session_id = attemptToken;
           }
-          return Response.json(payload ?? { detail: bodyText || "Shelf analysis failed." }, {
+          const responseBody = upstream.ok
+            ? (payload ?? {})
+            : { detail: parseApiDetail(payload ?? {}, GENERIC_SCAN) };
+          return Response.json(responseBody, {
             status: upstream.status,
             headers: { "Cache-Control": "no-store" },
           });
