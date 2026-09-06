@@ -62,6 +62,7 @@ import type { Json } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
 import type { CategorySelection } from "@/lib/category-selections";
 import { dbError, notFound, requireOrgId, requireUserId } from "@/lib/db/context";
+import { GENERIC_TIMEOUT, sanitizeUserMessage } from "@/lib/api-errors";
 
 
 function readImageDimensions(file: File): Promise<{ width?: number; height?: number }> {

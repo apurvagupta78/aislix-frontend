@@ -56,6 +56,7 @@ import {
   type ScanResult,
 } from "@/lib/scan-results";
 import { retryScanAnalysis } from "@/lib/scan-api";
+import { GENERIC_EXPORT, networkErrorMessage, sanitizeUserMessage } from "@/lib/api-errors";
 import {
   PlanogramComparisonSection,
   PlanogramMissingAlert,
