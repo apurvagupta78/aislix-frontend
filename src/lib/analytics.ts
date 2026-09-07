@@ -39,7 +39,7 @@ export function initAnalytics(): void {
   script.src = `https://www.googletagmanager.com/gtag/js?id=${id}`;
   script.onload = () => {
     // Backup page_view once the gtag script has actually loaded.
-    window.gtag?.("event", "page_view", {
+    w.gtag?.("event", "page_view", {
       page_path: location.pathname + location.search,
       page_location: location.href,
       page_title: document.title,
