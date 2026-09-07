@@ -60,8 +60,7 @@ function SignupPage() {
   const signUp = useMutation({
     mutationFn: () => {
       trackEvent("signup_started", { location: "signup_form" });
-      return
-      register({
+      return register({
         email: form.email.trim(),
         password: form.password,
         full_name: `${form.first} ${form.last}`.trim(),
