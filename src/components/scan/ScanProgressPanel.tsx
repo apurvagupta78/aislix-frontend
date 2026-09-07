@@ -23,8 +23,6 @@ type ScanProgressPanelProps = {
   expectedMs?: number;
   stages?: readonly string[];
   timingMessage?: string;
-  /** Headline shown while running (samples use "Running demo scan…"). */
-  title?: string;
   /** Show the stepped stage checklist (dashboard) instead of the compact label. */
   showStageList?: boolean;
   className?: string;
@@ -41,7 +39,6 @@ export function ScanProgressPanel({
   stages = DEMO_STAGES,
   timingMessage = "This usually takes 2–3 minutes for large shelves. Keep this page open.",
   showStageList = false,
-  title = "Analyzing shelf…",
   className,
 }: ScanProgressPanelProps) {
   const [progress, setProgress] = useState(8);
@@ -66,7 +63,7 @@ export function ScanProgressPanel({
   return (
     <div className={cn("w-full", className)}>
       <p className="text-sm font-semibold text-foreground">
-        {done ? "Analysis complete" : title}
+        {done ? "Analysis complete" : "Analyzing shelf…"}
       </p>
       <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{timingMessage}</p>
 
