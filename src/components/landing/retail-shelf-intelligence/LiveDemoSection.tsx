@@ -212,21 +212,32 @@ export function LiveDemoSection({
           className={homepageIntro ? "max-w-3xl" : undefined}
         />
 
-          <div ref={pickerRef}>
-            <DemoCategoryPicker
-              state={demoCategory.state}
-              onChange={demoCategory.setState}
-              categories={demoCategory.categories}
-              disabled={scanning}
-            />
-          </div>
-          {pendingFile && !demoCategory.ready && (
-            <p className="mt-2 text-center text-xs text-destructive">
-              Select category and sub-category for your shelf before analyzing.
-            </p>
-          )}
+        <p className="mt-4 text-center text-xs text-muted-foreground sm:text-sm">
+          No signup required for demo · Sample scan in seconds · Upload your shelf in ~2 min
+        </p>
 
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+        {isSampleFlow && samples.length > 1 ? (
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+            {samples.map((sample) => (
+              <button
+                key={sample.id}
+                type="button"
+                disabled={scanning}
+                aria-pressed={sample.id === sampleId}
+                onClick={() => selectSample(sample.id)}
+                className={
+                  sample.id === sampleId
+                    ? "rounded-full border border-brand bg-brand/10 px-4 py-1.5 text-xs font-medium text-brand"
+                    : "rounded-full border border-border bg-card px-4 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-60"
+                }
+              >
+                {sample.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center">
           {isSampleFlow ? (
             <>
               <Button
@@ -234,18 +245,18 @@ export function LiveDemoSection({
                 variant="default"
                 className="min-h-11 w-full sm:w-auto"
                 disabled={scanning}
-                onClick={onSample}
+                onClick={() => onSample()}
               >
-                <Sparkles className="size-4" /> Try Sample Shelf Below
+                <Sparkles className="size-4" /> Try sample shelf scan
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="xl"
-                className="min-h-11 w-full sm:w-auto"
+                className="min-h-11 w-full text-muted-foreground sm:w-auto"
                 disabled={scanning}
                 onClick={() => fileRef.current?.click()}
               >
-                <ImagePlus className="size-4" /> Upload Your Shelf Photo
+                <ImagePlus className="size-4" /> Or upload your shelf
               </Button>
             </>
           ) : (
@@ -265,7 +276,16 @@ export function LiveDemoSection({
                 disabled={scanning || !demoCategory.ready}
                 onClick={() => void run("upload", pendingFile!)}
               >
-                <Sparkles className="size-4" /> Analyze My Shelf
+                <Sparkles className="size-4" /> Scan my shelf
+              </Button>
+              <Button
+                variant="ghost"
+                size="xl"
+                className="min-h-11 w-full text-muted-foreground sm:w-auto"
+                disabled={scanning}
+                onClick={() => selectSample(DEFAULT_SAMPLE_ID)}
+              >
+                Back to sample shelf
               </Button>
             </>
           )}
@@ -281,6 +301,23 @@ export function LiveDemoSection({
             }}
           />
         </div>
+
+        {!isSampleFlow ? (
+          <div ref={pickerRef} className="mt-6">
+            <DemoCategoryPicker
+              state={demoCategory.state}
+              onChange={demoCategory.setState}
+              categories={demoCategory.categories}
+              disabled={scanning}
+            />
+            {pendingFile && !demoCategory.ready ? (
+              <p className="mt-2 text-center text-xs text-destructive">
+                Select a category and sub-category before uploading.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
 
 
         <div className="mt-8 overflow-hidden rounded-xl border border-border bg-card shadow-lift lg:grid lg:grid-cols-[55fr_45fr] lg:divide-x lg:divide-border">
