@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { clearContextCache } from "@/lib/db/context";
 import { ensureOAuthWorkspace } from "@/lib/api/auth";
 import { AuthGate } from "@/components/AuthGate";
+import { initAnalytics, trackPageView } from "@/lib/analytics";
 
 
 function NotFoundComponent() {
@@ -163,6 +164,13 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+
+  useEffect(() => {
+    initAnalytics();
+    return router.subscribe("onResolved", () => {
+      trackPageView(window.location.pathname + window.location.search);
+    });
+  }, [router]);
 
   useEffect(() => {
     // Cache hygiene only — all auth redirects live in <AuthGate />.

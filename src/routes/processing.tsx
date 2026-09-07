@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { trackEvent } from "@/lib/analytics";
 import { useEffect, useState } from "react";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -44,6 +45,7 @@ function Processing() {
       .then(() => {
         if (cancelled) return;
         setDone(true);
+        trackEvent("scan_completed", { scan_id: scan });
         setTimeout(() => {
           navigate({ to: "/results", search: { scan } });
         }, 700);

@@ -47,6 +47,7 @@ import { ClipboardList } from "lucide-react";
 import { fetchActivePlanogram, fetchPlanogramItems, type DraftRow } from "@/lib/planogram";
 import { toUserMessage } from "@/lib/api/errors";
 import { CategorySubcategoryPicker } from "@/components/scan/CategorySubcategoryPicker";
+import { trackEvent } from "@/lib/analytics";
 import { networkErrorMessage } from "@/lib/api-errors";
 import {
   dedupeSelections,
@@ -396,6 +397,7 @@ function ScanPage() {
     setErrorMessage(null);
     setPhase("uploading");
     setUploadProgress(0);
+    trackEvent("scan_started", { images: items.length, with_planogram: withPlanogram });
 
     try {
       const response = await submitScanImages(

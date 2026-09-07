@@ -1,4 +1,5 @@
 import { readStoredUtm, captureUtmParams } from "@/lib/utm";
+import { trackEvent } from "@/lib/analytics";
 
 export type LandingEvent =
   | "landing_page_view"
@@ -36,6 +37,9 @@ export function trackLandingEvent(event: LandingEvent, props?: Props): void {
     ...props,
     page: window.location.pathname,
   };
+
+  // Google Analytics 4 (production hosts only).
+  trackEvent(event, payload);
 
   const w = window as AnalyticsWindow;
   try {
