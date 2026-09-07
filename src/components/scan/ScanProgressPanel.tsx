@@ -37,7 +37,7 @@ export function ScanProgressPanel({
   done = false,
   expectedMs = 120_000,
   stages = DEMO_STAGES,
-  timingMessage = "This usually takes 1–2 minutes for large shelves. Keep this page open.",
+  timingMessage = "This usually takes 2–3 minutes for large shelves. Keep this page open.",
   showStageList = false,
   className,
 }: ScanProgressPanelProps) {
