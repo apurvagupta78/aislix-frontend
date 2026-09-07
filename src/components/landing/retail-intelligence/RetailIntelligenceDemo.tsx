@@ -48,6 +48,8 @@ function imageSrc(result: LandingScanResult): string | null {
 
 export function RetailIntelligenceDemo() {
   const [phase, setPhase] = useState<Phase>("idle");
+  const [scanMode, setScanMode] = useState<"sample" | "upload">("sample");
+
   const demoCategory = useDemoCategory();
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [result, setResult] = useState<LandingScanResult | null>(null);
