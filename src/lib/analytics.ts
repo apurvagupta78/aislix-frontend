@@ -24,6 +24,7 @@ export function analyticsEnabled(): boolean {
 }
 
 let initialized = false;
+let lastTrackedPath = "";
 
 /** Loads gtag.js once at app boot. Safe to call repeatedly. */
 export function initAnalytics(): void {
@@ -36,6 +37,14 @@ export function initAnalytics(): void {
   const script = document.createElement("script");
   script.async = true;
   script.src = `https://www.googletagmanager.com/gtag/js?id=${id}`;
+  script.onload = () => {
+    // Backup page_view once the gtag script has actually loaded.
+    w.gtag?.("event", "page_view", {
+      page_path: location.pathname + location.search,
+      page_location: location.href,
+      page_title: document.title,
+    });
+  };
   document.head.appendChild(script);
 
   w.dataLayer = w.dataLayer || [];
@@ -43,15 +52,18 @@ export function initAnalytics(): void {
     w.dataLayer!.push(args);
   };
   w.gtag("js", new Date());
-  // Route changes are reported manually via trackPageView.
-  w.gtag("config", id, { send_page_view: false });
+  // Enable automatic page_view on config + GA4 DebugView temporarily.
+  w.gtag("config", id, { send_page_view: true, debug_mode: true });
 
   trackPageView(window.location.pathname + window.location.search);
 }
 
-/** Reports a SPA page view. */
+/** Reports a SPA page view. Dedupes consecutive identical paths. */
 export function trackPageView(path: string): void {
   if (!analyticsEnabled()) return;
+  if (path === lastTrackedPath) return;
+  lastTrackedPath = path;
+
   const w = window as GtagWindow;
   try {
     w.gtag?.("event", "page_view", {
