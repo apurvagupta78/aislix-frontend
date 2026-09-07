@@ -333,7 +333,8 @@ export function LiveDemoSection({
             {scanning && (
               <div className="absolute inset-0 bg-foreground/20">
                 <Badge className="absolute left-4 top-4 gap-2 rounded-md bg-primary px-3 py-2 text-primary-foreground">
-                  <Loader2 className="size-3.5 animate-spin" /> Analyzing shelf…
+                  <Loader2 className="size-3.5 animate-spin" />
+                  {scanMode === "sample" ? "Running demo scan…" : "Analyzing shelf…"}
                 </Badge>
               </div>
             )}
@@ -343,7 +344,14 @@ export function LiveDemoSection({
           <div className="min-w-0 p-5 sm:p-7">
             {scanning && (
               <div className="grid min-h-72 place-items-center">
-                <ScanProgressPanel active expectedMs={60_000} timingMessage={DEMO_TIMING_MESSAGE} />
+                <ScanProgressPanel
+                  active
+                  expectedMs={scanMode === "sample" ? 15_000 : 150_000}
+                  title={scanMode === "sample" ? "Running demo scan…" : "Analyzing shelf…"}
+                  timingMessage={
+                    scanMode === "sample" ? SAMPLE_TIMING_MESSAGE : UPLOAD_TIMING_MESSAGE
+                  }
+                />
               </div>
             )}
 
@@ -353,9 +361,26 @@ export function LiveDemoSection({
                   <AlertCircle className="mt-0.5 size-4 shrink-0" />
                   <span>{error}</span>
                 </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button size="sm" onClick={() => onSample()}>
+                    <Sparkles className="size-4" /> Try sample shelf
+                  </Button>
+                  {pendingFile ? (
+                    <Button size="sm" variant="outline" onClick={() => void run("upload", pendingFile)}>
+                      Upload again
+                    </Button>
+                  ) : null}
+                  {errorStatus === 429 ? (
+                    <Button size="sm" variant="outline" asChild>
+                      <a href="/signup">Sign up for full access</a>
+                    </Button>
+                  ) : null}
+                </div>
+                <p className="mt-3 text-sm text-muted-foreground">Scan failed — try again</p>
                 <EmptyResults />
               </div>
             ) : null}
+
 
             {phase === "idle" && <EmptyResults />}
 
