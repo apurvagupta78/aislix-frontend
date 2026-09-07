@@ -31,9 +31,10 @@ import { networkErrorMessage } from "@/lib/api-errors";
 type Phase = "idle" | "scanning" | "done" | "error";
 
 const MAX_BYTES = 10 * 1024 * 1024;
-const MIN_SCAN_MS = 8_000;
+const MIN_SCAN_MS = 6_000;
 const DEMO_TIMING_MESSAGE =
-  "This usually takes 2–3 minutes for large shelves. Keep this page open.";
+  "Live scans usually take 1–3 minutes. Keep this page open. Complex shelves may take up to 4 minutes.";
+const SAMPLE_TIMING_MESSAGE = "Sample shelves finish in seconds.";
 
 function imageSrc(result: LandingScanResult): string | null {
   if (result.annotated_image_base64) {
@@ -74,6 +75,7 @@ export function RetailIntelligenceDemo() {
   }, []);
 
   async function run(kind: "sample" | "upload", file?: File) {
+    setScanMode(kind);
     setError(null);
     setResult(null);
     setPhase("scanning");
@@ -106,12 +108,7 @@ export function RetailIntelligenceDemo() {
       );
     } catch (err) {
       await minVisible;
-      const status = (err as { status?: number }).status;
-      setError(
-        status === 429
-          ? "You've used all free demo scans for today. Create a free account to keep scanning."
-          : networkErrorMessage(err),
-      );
+      setError(networkErrorMessage(err));
       setPhase("error");
       trackLandingEvent("demo_scan_failed");
     }
@@ -276,7 +273,12 @@ export function RetailIntelligenceDemo() {
             <div className="min-w-0 p-5 sm:p-7">
               {scanning && (
                 <div className="grid min-h-72 place-items-center">
-                  <ScanProgressPanel active expectedMs={60_000} timingMessage={DEMO_TIMING_MESSAGE} />
+                  <ScanProgressPanel
+                    active
+                    expectedMs={scanMode === "sample" ? 15_000 : 150_000}
+                    title={scanMode === "sample" ? "Running demo scan…" : "Analyzing shelf…"}
+                    timingMessage={scanMode === "sample" ? SAMPLE_TIMING_MESSAGE : DEMO_TIMING_MESSAGE}
+                  />
                 </div>
               )}
 
