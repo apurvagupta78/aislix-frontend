@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, ArrowRight, ChevronDown, ChevronRight, Download, ImagePlus, Loader2, Sparkles } from "lucide-react";
 import { rollupByBrand } from "@/lib/brand-rollup";
 import { averageConfidencePercent, displayVariant, uniqueSkuCount } from "@/lib/landing-inventory";
@@ -15,6 +16,12 @@ import {
   runLandingUpload,
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
+import {
+  FALLBACK_SAMPLES,
+  fetchLandingSamples,
+  sampleImageUrl,
+  type LandingSample,
+} from "@/lib/landingSamples";
 import { AI_DISCLAIMER, ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
 import { TopBrandsByShelfShare } from "@/components/scan/TopBrandsByShelfShare";
 import {
@@ -31,9 +38,10 @@ import { networkErrorMessage } from "@/lib/api-errors";
 type Phase = "idle" | "scanning" | "done" | "error";
 
 const MAX_BYTES = 10 * 1024 * 1024;
-const MIN_SCAN_MS = 8_000;
-const DEMO_TIMING_MESSAGE =
-  "This usually takes 2–3 minutes for large shelves. Keep this page open.";
+const MIN_SCAN_MS = 6_000;
+const SAMPLE_TIMING_MESSAGE = "Sample shelves finish in seconds.";
+const UPLOAD_TIMING_MESSAGE =
+  "Live scans usually take 1–3 minutes. Keep this page open. Complex shelves may take up to 4 minutes.";
 
 function annotatedSrc(result: LandingScanResult): string | null {
   if (result.annotated_image_base64) {
@@ -61,9 +69,19 @@ export function LiveDemoSection({
   const [error, setError] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [isSampleFlow, setIsSampleFlow] = useState(true);
+  const [sampleId, setSampleId] = useState(DEFAULT_SAMPLE_ID);
+  const [scanMode, setScanMode] = useState<"sample" | "upload">("sample");
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
+  const samplesQuery = useQuery({
+    queryKey: ["landing-samples"],
+    queryFn: fetchLandingSamples,
+    staleTime: 30 * 60_000,
+    retry: false,
+  });
+  const samples: LandingSample[] = samplesQuery.data?.length ? samplesQuery.data : FALLBACK_SAMPLES;
 
 
   useEffect(() => {
@@ -73,9 +91,11 @@ export function LiveDemoSection({
     };
   }, []);
 
-  async function run(mode: "sample" | "upload", file?: File) {
+  async function run(mode: "sample" | "upload", file?: File, overrideSampleId?: string) {
     setError(null);
+    setErrorStatus(null);
     setResult(null);
+    setScanMode(mode);
     setPhase("scanning");
     trackLandingEvent("demo_scan_started", { mode });
 
@@ -86,7 +106,7 @@ export function LiveDemoSection({
     try {
       const [scan] = await Promise.all([
         mode === "sample"
-          ? runLandingSample(DEFAULT_SAMPLE_ID, loadLandingSessionId() ?? undefined)
+          ? runLandingSample(overrideSampleId ?? sampleId, loadLandingSessionId() ?? undefined)
           : file
             ? runLandingUpload(file, {
               ...demoCategory.context,
@@ -106,32 +126,45 @@ export function LiveDemoSection({
       onResult?.(scan, annotatedSrc(scan));
     } catch (err) {
       await minVisible;
-      const status = (err as { status?: number }).status;
-      setError(
-        status === 429
-          ? "You've used all free demo scans for today. Create a free account to keep scanning."
-          : networkErrorMessage(err),
-      );
+      const status = (err as { status?: number }).status ?? null;
+      setErrorStatus(status);
+      setError(networkErrorMessage(err));
       setPhase("error");
       trackLandingEvent("demo_scan_failed");
     }
   }
 
 
-  function onSample() {
+  function selectSample(id: string) {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+    setSampleId(id);
+    setPendingFile(null);
+    setIsSampleFlow(true);
+    setResult(null);
+    setError(null);
+    setErrorStatus(null);
+    setPhase("idle");
+    setPreviewImageUrl(sampleImageUrl(id));
+  }
+
+  function onSample(id: string = sampleId) {
     if (objectUrlRef.current) {
       URL.revokeObjectURL(objectUrlRef.current);
       objectUrlRef.current = null;
     }
     setPendingFile(null);
     setIsSampleFlow(true);
-    setPreviewImageUrl(DEFAULT_SAMPLE_IMAGE);
+    setSampleId(id);
+    setPreviewImageUrl(sampleImageUrl(id));
     demoCategory.setState({
       categoryName: DEFAULT_DEMO_CATEGORY,
       subId: DEFAULT_DEMO_SUBCATEGORY,
       customSub: "",
     });
-    void run("sample");
+    void run("sample", undefined, id);
   }
 
   function onFile(file: File) {
@@ -153,6 +186,7 @@ export function LiveDemoSection({
     setPendingFile(file);
     setIsSampleFlow(false);
     setError(null);
+    setErrorStatus(null);
     setPhase("idle");
     demoCategory.setState(EMPTY_DEMO_CATEGORY_STATE);
     pickerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
