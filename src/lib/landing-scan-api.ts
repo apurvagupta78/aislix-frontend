@@ -5,7 +5,6 @@
 import { captureUtmParams, readStoredUtm } from "@/lib/utm";
 import { DEFAULT_SAMPLE_ID } from "@/lib/landingSamples";
 import {
-  GENERIC_TIMEOUT,
   networkErrorMessage,
   parseApiDetail,
   sanitizeUserMessage,
