@@ -3,8 +3,8 @@
  * endpoints — never to the authenticated scan pipeline.
  */
 import { captureUtmParams, readStoredUtm } from "@/lib/utm";
-import { DEFAULT_SAMPLE_ID } from "@/lib/landingSamples";
 import {
+  GENERIC_TIMEOUT,
   networkErrorMessage,
   parseApiDetail,
   sanitizeUserMessage,
@@ -12,14 +12,10 @@ import {
 
 const API = import.meta.env.VITE_AISLIX_API_URL?.replace(/\/$/, "");
 
-export {
-  DEFAULT_SAMPLE_ID,
-  DEFAULT_SAMPLE_IMAGE,
-  sampleImageUrl,
-  fetchLandingSamples,
-  FALLBACK_SAMPLES,
-  type LandingSample,
-} from "@/lib/landingSamples";
+export const DEFAULT_SAMPLE_ID = "toothpaste-a1l";
+export const DEFAULT_SAMPLE_IMAGE = API
+  ? `${API}/landing/samples/${DEFAULT_SAMPLE_ID}/image`
+  : "";
 
 const SESSION_ID_KEY = "aislix_landing_session_id";
 const RESULT_KEY = "aislix_landing_scan_result";
@@ -90,34 +86,27 @@ function appendUtm(form: FormData) {
   }
 }
 
-/** Custom uploads run a full live vision scan — allow up to four minutes. */
-const UPLOAD_TIMEOUT_MS = 240_000;
-
-async function postScan(form: FormData, timeoutMs?: number): Promise<LandingScanResult> {
-  // Same-origin proxy: keeps the demo working from any origin and records the
-  // anonymous attempt. Sample scans are cached upstream and never aborted.
-  const controller = timeoutMs ? new AbortController() : null;
-  const timeout = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+async function postScan(form: FormData, _fallback: string): Promise<LandingScanResult> {
+  // Same-origin proxy: keeps the demo working from any origin, records the
+  // anonymous attempt, and allows the slow vision scan up to two minutes.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120_000);
   let res: Response;
   try {
     res = await fetch("/api/public/landing/scan", {
       method: "POST",
       body: form,
-      ...(controller ? { signal: controller.signal } : {}),
+      signal: controller.signal,
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw new LandingScanError(
-        "Analysis took too long. Try a clearer photo or use a sample shelf.",
-        408,
-      );
+      throw new LandingScanError(GENERIC_TIMEOUT, 408);
     }
     throw new LandingScanError(networkErrorMessage(error), 0);
   } finally {
-    if (timeout) clearTimeout(timeout);
+    clearTimeout(timeout);
   }
   if (!res.ok) {
-    if (res.status === 413) throw new LandingScanError("Image too large (max 10 MB).", 413);
     const body = (await res.json().catch(() => ({}))) as unknown;
     throw new LandingScanError(parseApiDetail(body), res.status);
   }
@@ -176,7 +165,7 @@ export async function runLandingUpload(
   if (ctx.landingSessionId) form.append("landing_session_id", ctx.landingSessionId);
   appendContext(form, ctx);
   appendUtm(form);
-  return postScan(form, UPLOAD_TIMEOUT_MS);
+  return postScan(form, "Scan failed");
 }
 
 
@@ -191,7 +180,7 @@ export async function runLandingSample(
   if (landingSessionId) form.append("landing_session_id", landingSessionId);
   appendContext(form, context);
   appendUtm(form);
-  return postScan(form);
+  return postScan(form, "Shelf analysis failed");
 }
 
 

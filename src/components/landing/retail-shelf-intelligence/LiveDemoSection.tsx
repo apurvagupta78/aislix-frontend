@@ -1,5 +1,4 @@
 import { Fragment, useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, ArrowRight, ChevronDown, ChevronRight, Download, ImagePlus, Loader2, Sparkles } from "lucide-react";
 import { rollupByBrand } from "@/lib/brand-rollup";
 import { averageConfidencePercent, displayVariant, uniqueSkuCount } from "@/lib/landing-inventory";
@@ -16,12 +15,6 @@ import {
   runLandingUpload,
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
-import {
-  FALLBACK_SAMPLES,
-  fetchLandingSamples,
-  sampleImageUrl,
-  type LandingSample,
-} from "@/lib/landingSamples";
 import { AI_DISCLAIMER, ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
 import { TopBrandsByShelfShare } from "@/components/scan/TopBrandsByShelfShare";
 import {
@@ -38,10 +31,9 @@ import { networkErrorMessage } from "@/lib/api-errors";
 type Phase = "idle" | "scanning" | "done" | "error";
 
 const MAX_BYTES = 10 * 1024 * 1024;
-const MIN_SCAN_MS = 6_000;
-const SAMPLE_TIMING_MESSAGE = "Sample shelves finish in seconds.";
-const UPLOAD_TIMING_MESSAGE =
-  "Live scans usually take 1–3 minutes. Keep this page open. Complex shelves may take up to 4 minutes.";
+const MIN_SCAN_MS = 8_000;
+const DEMO_TIMING_MESSAGE =
+  "This usually takes 2–3 minutes for large shelves. Keep this page open.";
 
 function annotatedSrc(result: LandingScanResult): string | null {
   if (result.annotated_image_base64) {
@@ -69,19 +61,9 @@ export function LiveDemoSection({
   const [error, setError] = useState<string | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [isSampleFlow, setIsSampleFlow] = useState(true);
-  const [sampleId, setSampleId] = useState(DEFAULT_SAMPLE_ID);
-  const [scanMode, setScanMode] = useState<"sample" | "upload">("sample");
-  const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const objectUrlRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
-  const samplesQuery = useQuery({
-    queryKey: ["landing-samples"],
-    queryFn: fetchLandingSamples,
-    staleTime: 30 * 60_000,
-    retry: false,
-  });
-  const samples: LandingSample[] = samplesQuery.data?.length ? samplesQuery.data : FALLBACK_SAMPLES;
 
 
   useEffect(() => {
@@ -91,11 +73,9 @@ export function LiveDemoSection({
     };
   }, []);
 
-  async function run(mode: "sample" | "upload", file?: File, overrideSampleId?: string) {
+  async function run(mode: "sample" | "upload", file?: File) {
     setError(null);
-    setErrorStatus(null);
     setResult(null);
-    setScanMode(mode);
     setPhase("scanning");
     trackLandingEvent("demo_scan_started", { mode });
 
@@ -106,7 +86,7 @@ export function LiveDemoSection({
     try {
       const [scan] = await Promise.all([
         mode === "sample"
-          ? runLandingSample(overrideSampleId ?? sampleId, loadLandingSessionId() ?? undefined)
+          ? runLandingSample(DEFAULT_SAMPLE_ID, loadLandingSessionId() ?? undefined)
           : file
             ? runLandingUpload(file, {
               ...demoCategory.context,
@@ -126,45 +106,32 @@ export function LiveDemoSection({
       onResult?.(scan, annotatedSrc(scan));
     } catch (err) {
       await minVisible;
-      const status = (err as { status?: number }).status ?? null;
-      setErrorStatus(status);
-      setError(networkErrorMessage(err));
+      const status = (err as { status?: number }).status;
+      setError(
+        status === 429
+          ? "You've used all free demo scans for today. Create a free account to keep scanning."
+          : networkErrorMessage(err),
+      );
       setPhase("error");
       trackLandingEvent("demo_scan_failed");
     }
   }
 
 
-  function selectSample(id: string) {
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-      objectUrlRef.current = null;
-    }
-    setSampleId(id);
-    setPendingFile(null);
-    setIsSampleFlow(true);
-    setResult(null);
-    setError(null);
-    setErrorStatus(null);
-    setPhase("idle");
-    setPreviewImageUrl(sampleImageUrl(id));
-  }
-
-  function onSample(id: string = sampleId) {
+  function onSample() {
     if (objectUrlRef.current) {
       URL.revokeObjectURL(objectUrlRef.current);
       objectUrlRef.current = null;
     }
     setPendingFile(null);
     setIsSampleFlow(true);
-    setSampleId(id);
-    setPreviewImageUrl(sampleImageUrl(id));
+    setPreviewImageUrl(DEFAULT_SAMPLE_IMAGE);
     demoCategory.setState({
       categoryName: DEFAULT_DEMO_CATEGORY,
       subId: DEFAULT_DEMO_SUBCATEGORY,
       customSub: "",
     });
-    void run("sample", undefined, id);
+    void run("sample");
   }
 
   function onFile(file: File) {
@@ -186,7 +153,6 @@ export function LiveDemoSection({
     setPendingFile(file);
     setIsSampleFlow(false);
     setError(null);
-    setErrorStatus(null);
     setPhase("idle");
     demoCategory.setState(EMPTY_DEMO_CATEGORY_STATE);
     pickerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -212,32 +178,21 @@ export function LiveDemoSection({
           className={homepageIntro ? "max-w-3xl" : undefined}
         />
 
-        <p className="mt-4 text-center text-xs text-muted-foreground sm:text-sm">
-          No signup required for demo · Sample scan in seconds · Upload your shelf in ~2 min
-        </p>
-
-        {isSampleFlow && samples.length > 1 ? (
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-            {samples.map((sample) => (
-              <button
-                key={sample.id}
-                type="button"
-                disabled={scanning}
-                aria-pressed={sample.id === sampleId}
-                onClick={() => selectSample(sample.id)}
-                className={
-                  sample.id === sampleId
-                    ? "rounded-full border border-brand bg-brand/10 px-4 py-1.5 text-xs font-medium text-brand"
-                    : "rounded-full border border-border bg-card px-4 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-60"
-                }
-              >
-                {sample.label}
-              </button>
-            ))}
+          <div ref={pickerRef}>
+            <DemoCategoryPicker
+              state={demoCategory.state}
+              onChange={demoCategory.setState}
+              categories={demoCategory.categories}
+              disabled={scanning}
+            />
           </div>
-        ) : null}
+          {pendingFile && !demoCategory.ready && (
+            <p className="mt-2 text-center text-xs text-destructive">
+              Select category and sub-category for your shelf before analyzing.
+            </p>
+          )}
 
-        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center">
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
           {isSampleFlow ? (
             <>
               <Button
@@ -245,18 +200,18 @@ export function LiveDemoSection({
                 variant="default"
                 className="min-h-11 w-full sm:w-auto"
                 disabled={scanning}
-                onClick={() => onSample()}
+                onClick={onSample}
               >
-                <Sparkles className="size-4" /> Try sample shelf scan
+                <Sparkles className="size-4" /> Try Sample Shelf Below
               </Button>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="xl"
-                className="min-h-11 w-full text-muted-foreground sm:w-auto"
+                className="min-h-11 w-full sm:w-auto"
                 disabled={scanning}
                 onClick={() => fileRef.current?.click()}
               >
-                <ImagePlus className="size-4" /> Or upload your shelf
+                <ImagePlus className="size-4" /> Upload Your Shelf Photo
               </Button>
             </>
           ) : (
@@ -276,16 +231,7 @@ export function LiveDemoSection({
                 disabled={scanning || !demoCategory.ready}
                 onClick={() => void run("upload", pendingFile!)}
               >
-                <Sparkles className="size-4" /> Scan my shelf
-              </Button>
-              <Button
-                variant="ghost"
-                size="xl"
-                className="min-h-11 w-full text-muted-foreground sm:w-auto"
-                disabled={scanning}
-                onClick={() => selectSample(DEFAULT_SAMPLE_ID)}
-              >
-                Back to sample shelf
+                <Sparkles className="size-4" /> Analyze My Shelf
               </Button>
             </>
           )}
@@ -302,23 +248,6 @@ export function LiveDemoSection({
           />
         </div>
 
-        {!isSampleFlow ? (
-          <div ref={pickerRef} className="mt-6">
-            <DemoCategoryPicker
-              state={demoCategory.state}
-              onChange={demoCategory.setState}
-              categories={demoCategory.categories}
-              disabled={scanning}
-            />
-            {pendingFile && !demoCategory.ready ? (
-              <p className="mt-2 text-center text-xs text-destructive">
-                Select a category and sub-category before uploading.
-              </p>
-            ) : null}
-          </div>
-        ) : null}
-
-
 
         <div className="mt-8 overflow-hidden rounded-xl border border-border bg-card shadow-lift lg:grid lg:grid-cols-[55fr_45fr] lg:divide-x lg:divide-border">
           {/* Shelf image */}
@@ -333,8 +262,7 @@ export function LiveDemoSection({
             {scanning && (
               <div className="absolute inset-0 bg-foreground/20">
                 <Badge className="absolute left-4 top-4 gap-2 rounded-md bg-primary px-3 py-2 text-primary-foreground">
-                  <Loader2 className="size-3.5 animate-spin" />
-                  {scanMode === "sample" ? "Running demo scan…" : "Analyzing shelf…"}
+                  <Loader2 className="size-3.5 animate-spin" /> Analyzing shelf…
                 </Badge>
               </div>
             )}
@@ -344,14 +272,7 @@ export function LiveDemoSection({
           <div className="min-w-0 p-5 sm:p-7">
             {scanning && (
               <div className="grid min-h-72 place-items-center">
-                <ScanProgressPanel
-                  active
-                  expectedMs={scanMode === "sample" ? 15_000 : 150_000}
-                  title={scanMode === "sample" ? "Running demo scan…" : "Analyzing shelf…"}
-                  timingMessage={
-                    scanMode === "sample" ? SAMPLE_TIMING_MESSAGE : UPLOAD_TIMING_MESSAGE
-                  }
-                />
+                <ScanProgressPanel active expectedMs={60_000} timingMessage={DEMO_TIMING_MESSAGE} />
               </div>
             )}
 
@@ -361,26 +282,9 @@ export function LiveDemoSection({
                   <AlertCircle className="mt-0.5 size-4 shrink-0" />
                   <span>{error}</span>
                 </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button size="sm" onClick={() => onSample()}>
-                    <Sparkles className="size-4" /> Try sample shelf
-                  </Button>
-                  {pendingFile ? (
-                    <Button size="sm" variant="outline" onClick={() => void run("upload", pendingFile)}>
-                      Upload again
-                    </Button>
-                  ) : null}
-                  {errorStatus === 429 ? (
-                    <Button size="sm" variant="outline" asChild>
-                      <a href="/signup">Sign up for full access</a>
-                    </Button>
-                  ) : null}
-                </div>
-                <p className="mt-3 text-sm text-muted-foreground">Scan failed — try again</p>
                 <EmptyResults />
               </div>
             ) : null}
-
 
             {phase === "idle" && <EmptyResults />}
 
@@ -498,14 +402,7 @@ function SampleResult({
                   </p>
                 )}
 
-                <p className="mt-5 text-sm text-muted-foreground">
-                  Want unlimited scans for your stores?{" "}
-                  <a href="/signup" className="font-medium text-brand hover:underline">
-                    Create a free workspace
-                  </a>
-                </p>
-
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
                   <Button
                     variant="outline"
                     size="lg"
