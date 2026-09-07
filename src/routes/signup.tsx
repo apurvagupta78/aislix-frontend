@@ -20,6 +20,7 @@ import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
 import { toUserMessage } from "@/lib/api/errors";
 import { convertLandingSession, loadLandingSessionId } from "@/lib/landing-scan-api";
 import { trackWorkspaceSignupConversion } from "@/lib/linkedin-conversion";
+import { trackEvent } from "@/lib/analytics";
 
 
 export const Route = createFileRoute("/signup")({
@@ -57,14 +58,18 @@ function SignupPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
 
   const signUp = useMutation({
-    mutationFn: () =>
+    mutationFn: () => {
+      trackEvent("signup_started", { location: "signup_form" });
+      return
       register({
         email: form.email.trim(),
         password: form.password,
         full_name: `${form.first} ${form.last}`.trim(),
         company_name: form.company.trim() || undefined,
-      }),
+      });
+    },
     onSuccess: (session) => {
+      trackEvent("signup_completed", { has_company: form.company.trim().length > 0 });
       // The register request resolved with a created user; fire once per signup.
       if (session?.user?.id && !conversionTracked.current) {
         conversionTracked.current = true;
