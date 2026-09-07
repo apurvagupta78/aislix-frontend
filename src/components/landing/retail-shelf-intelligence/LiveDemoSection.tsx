@@ -498,7 +498,14 @@ function SampleResult({
                   </p>
                 )}
 
-                <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <p className="mt-5 text-sm text-muted-foreground">
+                  Want unlimited scans for your stores?{" "}
+                  <a href="/signup" className="font-medium text-brand hover:underline">
+                    Create a free workspace
+                  </a>
+                </p>
+
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
                   <Button
                     variant="outline"
                     size="lg"
