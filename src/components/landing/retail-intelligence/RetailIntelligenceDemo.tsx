@@ -33,7 +33,7 @@ type Phase = "idle" | "scanning" | "done" | "error";
 const MAX_BYTES = 10 * 1024 * 1024;
 const MIN_SCAN_MS = 8_000;
 const DEMO_TIMING_MESSAGE =
-  "This usually takes 30–90 seconds for large shelves. Keep this page open.";
+  "This usually takes 2–3 minutes for large shelves. Keep this page open.";
 
 function imageSrc(result: LandingScanResult): string | null {
   if (result.annotated_image_base64) {
