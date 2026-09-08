@@ -6,7 +6,7 @@
  */
 
 const ALLOWED_HOSTS = new Set(["aislix.com", "www.aislix.com"]);
-const DEFAULT_MEASUREMENT_ID = "G-G6Q8XMGP61";
+const DEFAULT_MEASUREMENT_ID = "G-G6Q8XHGPG1";
 
 type GtagWindow = Window & {
   dataLayer?: unknown[];
