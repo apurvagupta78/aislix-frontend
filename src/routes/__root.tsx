@@ -118,7 +118,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         children: `(function(){
 var h = window.location.hostname;
 if (h !== "aislix.com" && h !== "www.aislix.com") return;
-var id = "G-G6Q8XMGP61";
+var id = "G-G6Q8XHGPG1";
 var s = document.createElement("script");
 s.async = true;
 s.src = "https://www.googletagmanager.com/gtag/js?id=" + id;
