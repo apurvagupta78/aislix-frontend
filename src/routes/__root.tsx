@@ -115,6 +115,23 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     scripts: [
       {
         type: "text/javascript",
+        children: `(function(){
+var h = window.location.hostname;
+if (h !== "aislix.com" && h !== "www.aislix.com") return;
+var id = "G-G6Q8XMGP61";
+var s = document.createElement("script");
+s.async = true;
+s.src = "https://www.googletagmanager.com/gtag/js?id=" + id;
+document.head.appendChild(s);
+window.dataLayer = window.dataLayer || [];
+window.gtag = function(){window.dataLayer.push(arguments);};
+window.gtag("js", new Date());
+window.gtag("config", id, { send_page_view: true });
+})();`,
+      },
+      {
+
+        type: "text/javascript",
         children: `_linkedin_partner_id = "10805217";
 window._linkedin_data_partner_ids = window._linkedin_data_partner_ids || [];
 window._linkedin_data_partner_ids.push(_linkedin_partner_id);`,
