@@ -6,6 +6,7 @@
  */
 
 const ALLOWED_HOSTS = new Set(["aislix.com", "www.aislix.com"]);
+const DEFAULT_MEASUREMENT_ID = "G-G6Q8XMGP61";
 
 type GtagWindow = Window & {
   dataLayer?: unknown[];
@@ -13,7 +14,8 @@ type GtagWindow = Window & {
 };
 
 function measurementId(): string {
-  return (import.meta.env['VITE_GA_MEASUREMENT_ID'] as string | undefined)?.trim() ?? "";
+  const fromEnv = (import.meta.env['VITE_GA_MEASUREMENT_ID'] as string | undefined)?.trim();
+  return fromEnv || DEFAULT_MEASUREMENT_ID;
 }
 
 /** True when GA should run in the current browser context. */
@@ -34,31 +36,25 @@ export function initAnalytics(): void {
   const id = measurementId();
   const w = window as GtagWindow;
 
-  const script = document.createElement("script");
-  script.async = true;
-  script.src = `https://www.googletagmanager.com/gtag/js?id=${id}`;
-  script.onload = () => {
-    // Backup page_view once the gtag script has actually loaded.
-    const path = location.pathname + location.search;
-    lastTrackedPath = path;
-    w.gtag?.("event", "page_view", {
-      page_path: path,
-      page_location: location.href,
-      page_title: document.title,
-    });
-  };
-  document.head.appendChild(script);
+  // The base tag is injected in the document head (see __root.tsx). Only load
+  // it here if that inline snippet did not run for some reason.
+  if (!w.gtag) {
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = `https://www.googletagmanager.com/gtag/js?id=${id}`;
+    document.head.appendChild(script);
 
-  w.dataLayer = w.dataLayer || [];
-  w.gtag = function gtag(...args: unknown[]) {
-    w.dataLayer!.push(args);
-  };
-  w.gtag("js", new Date());
-  // SPA: manual page_view tracking via trackPageView on every route change.
-  w.gtag("config", id, { send_page_view: false });
+    w.dataLayer = w.dataLayer || [];
+    w.gtag = function gtag(...args: unknown[]) {
+      w.dataLayer!.push(args);
+    };
+    w.gtag("js", new Date());
+    w.gtag("config", id, { send_page_view: true });
+  }
 
-  trackPageView(window.location.pathname + window.location.search);
+  lastTrackedPath = window.location.pathname + window.location.search;
 }
+
 
 /** Reports a SPA page view. Dedupes consecutive identical paths. */
 export function trackPageView(path: string): void {
