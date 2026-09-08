@@ -39,8 +39,10 @@ export function initAnalytics(): void {
   script.src = `https://www.googletagmanager.com/gtag/js?id=${id}`;
   script.onload = () => {
     // Backup page_view once the gtag script has actually loaded.
+    const path = location.pathname + location.search;
+    lastTrackedPath = path;
     w.gtag?.("event", "page_view", {
-      page_path: location.pathname + location.search,
+      page_path: path,
       page_location: location.href,
       page_title: document.title,
     });
@@ -75,6 +77,14 @@ export function trackPageView(path: string): void {
     /* analytics must never break the page */
   }
 }
+
+/** Standard event names used across the app. */
+export const AnalyticsEvents = {
+  LandingScanStarted: "landing_scan_started",
+  LandingScanCompleted: "landing_scan_completed",
+  SignupCtaClick: "signup_cta_click",
+  PricingPlanClick: "pricing_plan_click",
+} as const;
 
 /** Reports a custom GA4 event. */
 export function trackEvent(name: string, params?: Record<string, unknown>): void {

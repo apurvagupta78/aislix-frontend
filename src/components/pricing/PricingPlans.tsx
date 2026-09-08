@@ -3,6 +3,7 @@ import { Check, Minus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { trackEvent, AnalyticsEvents } from "@/lib/analytics";
 import { currencyList, type CurrencyCode } from "@/lib/display-currency";
 import {
   Select,
