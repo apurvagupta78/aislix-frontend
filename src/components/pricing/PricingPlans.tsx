@@ -3,6 +3,7 @@ import { Check, Minus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { trackEvent, AnalyticsEvents } from "@/lib/analytics";
 import { currencyList, type CurrencyCode } from "@/lib/display-currency";
 import {
   Select,
@@ -148,7 +149,10 @@ export function PlanCard({
         variant={plan.popular ? "brand" : isCurrent ? "soft" : "subtle"}
         className="mt-6 h-10 w-full rounded-xl px-2 text-[0.7rem] sm:text-xs"
         disabled={isCurrent || pending}
-        onClick={() => onSelect?.(plan)}
+        onClick={() => {
+          trackEvent(AnalyticsEvents.PricingPlanClick, { plan_id: plan.id, plan_name: plan.name, cycle });
+          onSelect?.(plan);
+        }}
       >
         {isCurrent ? "Current plan" : pending ? "Redirecting…" : plan.cta}
       </Button>
