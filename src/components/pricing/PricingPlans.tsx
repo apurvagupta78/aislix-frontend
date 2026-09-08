@@ -148,7 +148,10 @@ export function PlanCard({
         variant={plan.popular ? "brand" : isCurrent ? "soft" : "subtle"}
         className="mt-6 h-10 w-full rounded-xl px-2 text-[0.7rem] sm:text-xs"
         disabled={isCurrent || pending}
-        onClick={() => onSelect?.(plan)}
+        onClick={() => {
+          trackEvent("pricing_plan_click", { plan_id: plan.id, plan_name: plan.name, cycle });
+          onSelect?.(plan);
+        }}
       >
         {isCurrent ? "Current plan" : pending ? "Redirecting…" : plan.cta}
       </Button>

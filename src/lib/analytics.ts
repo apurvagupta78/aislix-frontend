@@ -52,8 +52,8 @@ export function initAnalytics(): void {
     w.dataLayer!.push(args);
   };
   w.gtag("js", new Date());
-  // Enable automatic page_view on config + GA4 DebugView temporarily.
-  w.gtag("config", id, { send_page_view: true, debug_mode: true });
+  // SPA: manual page_view tracking via trackPageView on every route change.
+  w.gtag("config", id, { send_page_view: false });
 
   trackPageView(window.location.pathname + window.location.search);
 }
