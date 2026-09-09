@@ -32,7 +32,7 @@ async function loadWorkspaceContext(): Promise<WorkspaceContext> {
   }
 
   const orgId = await requireOrgId();
-  const [{ data: profile }, { data: org }, brandConfig] = await Promise.all([
+  const [{ data: profile }, orgResult, brandConfig] = await Promise.all([
     supabase
       .from("profiles")
       .select("job_title, role_family")
@@ -45,9 +45,12 @@ async function loadWorkspaceContext(): Promise<WorkspaceContext> {
       .maybeSingle(),
     fetchBrandConfig(),
   ]);
+  const org = orgResult.error && /permission denied/i.test(orgResult.error.message)
+    ? null
+    : orgResult.data;
 
   const customerType = normalizeCustomerType(
-    (org as { customer_type?: string | null })?.customer_type ?? org?.industry,
+    (org as { customer_type?: string | null } | null)?.customer_type ?? org?.industry,
   );
   const jobTitle = profile?.job_title ?? "";
   const roleFamily: RoleFamily =

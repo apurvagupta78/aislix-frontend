@@ -47,7 +47,11 @@ export async function fetchBrandConfig(): Promise<BrandConfig> {
     .select("brand_config")
     .eq("id", orgId)
     .maybeSingle();
-  if (error) dbError(error, "Could not load brand settings.");
+  if (error) {
+    // Column-level GRANT may omit brand_config until migration 20260909210000 is applied.
+    if (/permission denied/i.test(error.message)) return emptyConfig();
+    dbError(error, "Could not load brand settings.");
+  }
   return parseBrandConfig(data?.brand_config);
 }
 
