@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowRight, Download, ImagePlus, Loader2, Sparkles, Timer } from "lucide-react";
+import { AlertCircle, ImagePlus, Loader2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,7 +10,8 @@ import {
   useDemoCategory,
 
 } from "@/components/scan/DemoCategoryPicker";
-import { AI_DISCLAIMER, ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
+import { DemoRoleResultsPanel } from "@/components/scan/DemoRoleResultsPanel";
+import { ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import {
   DEFAULT_SAMPLE_ID,
@@ -22,10 +23,6 @@ import {
   runLandingUpload,
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
-import { averageConfidencePercent, displayVariant, uniqueSkuCount } from "@/lib/landing-inventory";
-import { TopBrandsByShelfShare } from "@/components/scan/TopBrandsByShelfShare";
-import { DemoFinancialImpactStrip } from "@/components/scan-results/ExecutionPhase1";
-import { landingExecutionScore, landingFinancialImpact } from "@/lib/demo-execution";
 import { LANDING_SAMPLE_EVENT, LANDING_UPLOAD_EVENT } from "./HeroSection";
 import { LeadCaptureSection } from "./LeadCaptureSection";
 import { networkErrorMessage } from "@/lib/api-errors";
@@ -298,142 +295,21 @@ export function RetailIntelligenceDemo() {
               {phase === "idle" && (
                 <div className="grid min-h-72 place-items-center text-center">
                   <p className="max-w-xs text-sm text-muted-foreground">
-                    Execution score, facings, and financial impact estimates will appear here.
+                    Run a sample or upload a photo — execution, merchandising, brand, and executive
+                    views will appear here with the same panels as a full workspace scan.
                   </p>
                 </div>
               )}
 
               {phase === "done" && result && (
-                <div>
-                  {elapsedSec != null && (
-                    <div className="mb-4 flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
-                      <Timer className="size-3.5 text-brand" />
-                      <span>
-                        Analysis completed in{" "}
-                        <span className="font-semibold text-foreground">{elapsedSec}s</span>
-                      </span>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    {[
-                      {
-                        label: "Execution score",
-                        value: (() => {
-                          const score = landingExecutionScore(result);
-                          return score !== undefined ? `${score}/100` : undefined;
-                        })(),
-                      },
-                      { label: "Facings", value: result.metrics?.total_products },
-                      { label: "Unique SKUs", value: uniqueSkuCount(result) },
-                      {
-                        label: "Avg confidence",
-                        value: (() => {
-                          const pct = averageConfidencePercent(result);
-                          return pct != null ? `${pct}%` : undefined;
-                        })(),
-                      },
-                    ].map((m) => (
-                      <div key={m.label} className="card-surface px-3 py-3">
-                        <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
-                          {m.label}
-                        </p>
-                        <p className="mt-1 text-lg font-semibold tabular-nums tracking-tight">
-                          {m.value ?? "—"}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <DemoFinancialImpactStrip impact={landingFinancialImpact(result)} className="mt-4" />
-
-                  {result.executive_summary && (
-                    <p className="mt-4 line-clamp-3 text-sm leading-relaxed text-muted-foreground">
-                      {result.executive_summary}
-                    </p>
-                  )}
-
-                  <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">{AI_DISCLAIMER}</p>
-
-                  {/* Bind strictly to the API's in-audit brand share — never
-                      recompute from inventory rows. */}
-                  <TopBrandsByShelfShare
-                    rows={
-                      result.top_brands?.length
-                        ? result.top_brands
-                        : (result.brand_share ?? [])
-                    }
-                    scope={result.brand_share_scope}
-                    className="mt-5"
-                  />
-
-                  <div className="mt-5 max-h-80 overflow-auto rounded-md border border-border">
-                    <table className="w-full text-left text-sm">
-                      <thead className="sticky top-0 bg-surface text-xs uppercase tracking-wide text-muted-foreground">
-                        <tr>
-                          <th className="px-3 py-2 font-medium">Brand</th>
-                          <th className="px-3 py-2 font-medium">Product</th>
-                          <th className="px-3 py-2 font-medium">Variant</th>
-                          <th className="px-3 py-2 font-medium">Qty</th>
-                          <th className="px-3 py-2 font-medium">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {result.inventory?.map((row, i) => (
-                          <tr key={`${row.brand}-${row.product_name}-${i}`} className="border-t border-border">
-                            <td className="px-3 py-2">{row.brand || "—"}</td>
-                            <td className="px-3 py-2">{row.product_name || "—"}</td>
-                            <td className="px-3 py-2 text-muted-foreground">{displayVariant(row)}</td>
-                            <td className="px-3 py-2">{row.quantity}</td>
-                            <td className="px-3 py-2">
-                              <Badge
-                                variant={row.status_label === "Needs review" ? "outline" : "secondary"}
-                                className="rounded-lg text-xs"
-                              >
-                                {row.status_label ?? "Detected"}
-                              </Badge>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {averageConfidencePercent(result) != null && (
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      Average AI confidence: {averageConfidencePercent(result)}%
-                    </p>
-                  )}
-
-                  {result.scans_daily_limit != null && (
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      {result.scans_used_today ?? 0} of {result.scans_daily_limit} free demo scans used
-                      today
-                    </p>
-                  )}
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => document.getElementById("lead")?.scrollIntoView({ behavior: "smooth", block: "center" })}
-                    className="mt-4 flex h-auto w-full justify-between rounded-none border-y border-border px-0 py-3 text-left text-sm font-medium text-foreground hover:bg-transparent hover:text-brand"
-                  >
-                    Want to save this audit? <ArrowRight className="size-4" />
-                  </Button>
-
-                  <div className="mt-4">
-                    <Button
-                      variant="outline"
-                      className="min-h-11 w-full"
-                      disabled={!result.csv_base64}
-                      onClick={() => {
-                        trackLandingEvent("cta_click", { location: "download_csv" });
-                        downloadLandingCsv(result);
-                      }}
-                    >
-                      <Download className="size-4" /> Download CSV
-                    </Button>
-                  </div>
-                </div>
+                <DemoRoleResultsPanel
+                  result={result}
+                  elapsedSec={elapsedSec}
+                  onDownloadCsv={() => downloadLandingCsv(result)}
+                  onWorkspaceCta={() =>
+                    document.getElementById("lead")?.scrollIntoView({ behavior: "smooth", block: "center" })
+                  }
+                />
               )}
             </div>
           </div>

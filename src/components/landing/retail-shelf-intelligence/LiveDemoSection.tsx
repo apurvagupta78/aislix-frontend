@@ -1,7 +1,5 @@
-import { Fragment, useEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowRight, ChevronDown, ChevronRight, Download, ImagePlus, Loader2, Sparkles, Timer } from "lucide-react";
-import { rollupByBrand } from "@/lib/brand-rollup";
-import { averageConfidencePercent, displayVariant, uniqueSkuCount } from "@/lib/landing-inventory";
+import { useEffect, useRef, useState } from "react";
+import { AlertCircle, ImagePlus, Loader2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { trackLandingEvent } from "@/lib/landing-analytics";
@@ -15,10 +13,8 @@ import {
   runLandingUpload,
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
-import { AI_DISCLAIMER, ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
-import { TopBrandsByShelfShare } from "@/components/scan/TopBrandsByShelfShare";
-import { DemoFinancialImpactStrip } from "@/components/scan-results/ExecutionPhase1";
-import { landingExecutionScore, landingFinancialImpact } from "@/lib/demo-execution";
+import { ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
+import { DemoRoleResultsPanel } from "@/components/scan/DemoRoleResultsPanel";
 import {
   DemoCategoryPicker,
   DEFAULT_DEMO_CATEGORY,
@@ -295,7 +291,15 @@ export function LiveDemoSection({
             {phase === "idle" && <EmptyResults />}
 
             {phase === "done" && result && (
-              <SampleResult result={result} liveResult={result} showWorkspaceCta={showWorkspaceCta} elapsedSec={elapsedSec} />
+              <DemoRoleResultsPanel
+                result={result}
+                elapsedSec={elapsedSec}
+                showWorkspaceCta={showWorkspaceCta}
+                onDownloadCsv={() => downloadLandingCsv(result)}
+                onWorkspaceCta={() =>
+                  document.querySelector("#lead")?.scrollIntoView({ behavior: "smooth" })
+                }
+              />
             )}
           </div>
         </div>
@@ -304,307 +308,14 @@ export function LiveDemoSection({
   );
 }
 
-const METRIC_LABELS = ["Execution score", "Facings", "Unique SKUs", "Avg confidence"] as const;
-
 /** Strict empty state — never shows placeholder numbers. */
 function EmptyResults() {
   return (
-    <div className="mt-5">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {METRIC_LABELS.map((label) => (
-          <div key={label} className="card-surface px-3 py-3">
-            <p className="text-lg font-semibold text-foreground">—</p>
-            <p className="mt-0.5 text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
-              {label}
-            </p>
-          </div>
-        ))}
-      </div>
-      <div className="mt-5 overflow-hidden rounded-lg border border-border">
-        <div className="grid grid-cols-[1fr_1.5fr_0.45fr] bg-surface px-3 py-2 text-xs uppercase text-muted-foreground">
-          <span>Brand</span><span>Product</span><span>Qty</span>
-        </div>
-        <p className="border-t border-border px-3 py-10 text-center text-sm text-muted-foreground">
-          No scan results yet.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-
-function SampleResult({
-  result: displayedResult,
-  liveResult,
-  showWorkspaceCta,
-  elapsedSec,
-}: {
-  result: LandingScanResult;
-  liveResult: LandingScanResult | null;
-  showWorkspaceCta: boolean;
-  elapsedSec?: number | null;
-}) {
-  // Bind strictly to the API's in-audit brand share. Never recompute from
-  // inventory rows — that mixes in out-of-scope detections and skews %.
-  const brandShare =
-    displayedResult.top_brands?.length
-      ? displayedResult.top_brands
-      : (displayedResult.brand_share ?? []);
-  const avgConfidence = averageConfidencePercent(displayedResult);
-  const execution = landingExecutionScore(displayedResult);
-  const financial = landingFinancialImpact(displayedResult);
-  return (
-    <div>
-                {elapsedSec != null && (
-                  <div className="mb-3 flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
-                    <Timer className="size-3.5 text-brand" />
-                    <span>
-                      Analysis completed in{" "}
-                      <span className="font-semibold text-foreground">{elapsedSec}s</span>
-                    </span>
-                  </div>
-                )}
-                <div className="mb-4 flex flex-wrap items-center gap-2">
-                  <Badge className="gap-1.5 rounded-md bg-brand text-brand-foreground">
-                    <Sparkles className="size-3" /> Live AI analysis
-                  </Badge>
-                  {displayedResult.scanned_at ? (
-                    <span className="text-[11px] text-muted-foreground">
-                      {new Date(displayedResult.scanned_at).toLocaleString()}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  {[
-                    {
-                      label: "Execution score",
-                      value: execution !== undefined ? `${execution}/100` : undefined,
-                    },
-                    {
-                      label: "Facings",
-                      value: displayedResult.metrics?.total_products,
-                    },
-                    { label: "Unique SKUs", value: uniqueSkuCount(displayedResult) },
-                    {
-                      label: "Avg confidence",
-                      value: avgConfidence != null ? `${avgConfidence}%` : undefined,
-                    },
-                  ].map((m) => (
-                    <div key={m.label} className="card-surface px-3 py-3">
-                      <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
-                        {m.label}
-                      </p>
-                      <p className="mt-1 text-lg font-semibold tabular-nums tracking-tight text-foreground">
-                        {m.value ?? "—"}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-
-                <DemoFinancialImpactStrip impact={financial} className="mt-4" />
-
-                {displayedResult.executive_summary && (
-                  <ExecutiveSummary text={displayedResult.executive_summary} />
-                )}
-
-                <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">{AI_DISCLAIMER}</p>
-
-                <TopBrandsByShelfShare rows={brandShare} scope={displayedResult.brand_share_scope} className="mt-5" />
-
-                <DemoInventoryTable rows={displayedResult.inventory ?? []} />
-
-                {avgConfidence != null && (
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    Average AI confidence: {avgConfidence}%
-                  </p>
-                )}
-
-                {displayedResult.scans_daily_limit != null && (
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    {displayedResult.scans_used_today ?? 0} of {displayedResult.scans_daily_limit} free demo scans used
-                    today
-                  </p>
-                )}
-
-                <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="w-full sm:w-auto"
-                    disabled={!liveResult?.csv_base64}
-                    onClick={() => liveResult && downloadLandingCsv(liveResult)}
-                  >
-                    <Download className="size-4" /> Download CSV
-                  </Button>
-                  {showWorkspaceCta ? (
-                    <Button
-                      size="lg"
-                      className="w-full sm:w-auto"
-                      onClick={() =>
-                        document.querySelector("#lead")?.scrollIntoView({ behavior: "smooth" })
-                      }
-                    >
-                      Create your workspace <ArrowRight className="size-4" />
-                    </Button>
-                  ) : null}
-                </div>
-    </div>
-  );
-}
-
-function ExecutiveSummary({ text }: { text: string }) {
-  const [expanded, setExpanded] = useState(false);
-  const long = text.length > 260;
-  return (
-    <div className="mt-4">
-      <p
-        className={`text-sm leading-relaxed text-muted-foreground ${
-          expanded || !long ? "" : "line-clamp-4"
-        }`}
-      >
-        {text}
+    <div className="mt-5 grid min-h-72 place-items-center text-center">
+      <p className="max-w-xs text-sm text-muted-foreground">
+        Run a sample or upload a photo — execution, merchandising, brand, and executive views
+        will appear here with the same panels as a full workspace scan.
       </p>
-      {long && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="mt-1.5 text-xs font-medium text-brand hover:underline"
-        >
-          {expanded ? "Show less" : "Read more"}
-        </button>
-      )}
-    </div>
-  );
-}
-
-type DemoRow = NonNullable<LandingScanResult["inventory"]>[number];
-
-function ViewToggle({
-  value,
-  onChange,
-}: {
-  value: "sku" | "brand";
-  onChange: (v: "sku" | "brand") => void;
-}) {
-  return (
-    <div className="mt-5 flex items-center gap-2">
-      <span className="text-xs font-medium text-muted-foreground">View:</span>
-      <div className="inline-flex rounded-lg border border-border bg-surface p-0.5">
-        {([
-          { key: "sku", label: "By SKU" },
-          { key: "brand", label: "By brand" },
-        ] as const).map((o) => (
-          <button
-            key={o.key}
-            type="button"
-            aria-pressed={value === o.key}
-            onClick={() => onChange(o.key)}
-            className={
-              value === o.key
-                ? "rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
-                : "rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-            }
-          >
-            {o.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function DemoInventoryTable({ rows }: { rows: DemoRow[] }) {
-  const [view, setView] = useState<"sku" | "brand">("sku");
-  const [open, setOpen] = useState<Record<string, boolean>>({});
-  const groups = rollupByBrand(rows as any) as unknown as {
-    brand: string;
-    skuCount: number;
-    totalQty: number;
-    items: DemoRow[];
-  }[];
-
-  return (
-    <div>
-      <ViewToggle value={view} onChange={setView} />
-      <div className="mt-3 max-h-72 overflow-auto rounded-lg border border-border">
-        {view === "sku" ? (
-          <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 bg-surface text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 font-medium">Brand</th>
-                <th className="px-3 py-2 font-medium">Product</th>
-                <th className="px-3 py-2 font-medium">Variant</th>
-                <th className="px-3 py-2 font-medium">Qty</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => (
-                <tr key={`${row.brand}-${row.product_name}-${i}`} className="border-t border-border">
-                  <td className="px-3 py-2">{row.brand || "—"}</td>
-                  <td className="px-3 py-2">{row.product_name || "—"}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{displayVariant(row)}</td>
-                  <td className="px-3 py-2">{row.quantity}</td>
-                  <td className="px-3 py-2">
-                    <Badge
-                      variant={row.status_label === "Needs review" ? "outline" : "secondary"}
-                      className="rounded-lg text-xs"
-                    >
-                      {row.status_label ?? "Detected"}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 bg-surface text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 font-medium">Brand</th>
-                <th className="px-3 py-2 font-medium">SKUs</th>
-                <th className="px-3 py-2 font-medium">Total qty</th>
-              </tr>
-            </thead>
-            <tbody>
-              {groups.map((g) => (
-                <Fragment key={g.brand}>
-                  <tr className="border-t border-border">
-                    <td className="px-3 py-2">
-                      <button
-                        type="button"
-                        className="flex items-center gap-1.5 font-medium text-foreground"
-                        onClick={() => setOpen((o) => ({ ...o, [g.brand]: !o[g.brand] }))}
-                        aria-expanded={!!open[g.brand]}
-                      >
-                        {open[g.brand] ? (
-                          <ChevronDown className="size-3.5" />
-                        ) : (
-                          <ChevronRight className="size-3.5" />
-                        )}
-                        {g.brand}
-                      </button>
-                    </td>
-                    <td className="px-3 py-2 tabular-nums">{g.skuCount}</td>
-                    <td className="px-3 py-2 tabular-nums">{g.totalQty}</td>
-                  </tr>
-                  {open[g.brand] &&
-                    g.items.map((row, i) => (
-                      <tr key={`${g.brand}-item-${i}`} className="border-t border-border bg-muted/30">
-                        <td className="px-3 py-1.5 pl-9 text-muted-foreground" colSpan={2}>
-                          {row.product_name || "—"}
-                        </td>
-                        <td className="px-3 py-1.5 tabular-nums text-muted-foreground">
-                          {row.quantity}
-                        </td>
-                      </tr>
-                    ))}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
     </div>
   );
 }

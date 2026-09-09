@@ -32,16 +32,42 @@ export type LandingInventoryRow = {
 
 export type LandingBrandShare = { brand: string; share: number; quantity?: number };
 
+export type LandingAlert = {
+  id?: string;
+  severity?: string;
+  title: string;
+  detail?: string;
+};
+
+export type LandingRecommendation = {
+  id?: string;
+  title: string;
+  detail?: string;
+  impact?: string;
+  category?: string;
+};
+
+export type LandingComplianceAlert = {
+  id?: string;
+  severity?: string;
+  title: string;
+  detail?: string;
+  interpretation?: string;
+};
+
 export type LandingScanResult = {
   landing_session_id: string;
   scan_id: string;
   status: "completed";
-  scan_mode?: "audit_only";
-  has_planogram?: false;
-  metrics: {
+  scan_mode?: "audit_only" | "sample_with_planogram";
+  has_planogram?: boolean;
+  category?: string;
+  shelf_label?: string;
+  metrics?: Record<string, unknown> & {
     total_products?: number;
     unique_skus?: number;
     total_skus?: number;
+    unique_brands?: number;
     shelf_health_score?: number;
     shelf_execution_score?: number;
     average_confidence?: number;
@@ -61,6 +87,9 @@ export type LandingScanResult = {
   brand_share_denominator?: number;
   scanned_at?: string;
   executive_summary?: string;
+  recommendations?: LandingRecommendation[];
+  alerts?: LandingAlert[];
+  compliance_alerts?: LandingComplianceAlert[];
   annotated_image_base64?: string;
   annotated_image_mime?: string;
   original_image_base64?: string;
@@ -121,31 +150,10 @@ async function postScan(form: FormData, _fallback: string): Promise<LandingScanR
   }
   const payload = (await res.json()) as LandingScanResult;
   return {
-    landing_session_id: payload.landing_session_id,
-    scan_id: payload.scan_id,
+    ...payload,
     status: "completed",
-    scan_mode: "audit_only",
-    has_planogram: false,
-    metrics: {
-      total_products: payload.metrics?.total_products,
-      unique_skus: payload.metrics?.unique_skus ?? payload.metrics?.total_skus,
-      shelf_health_score: payload.metrics?.shelf_health_score,
-    },
     inventory: payload.inventory ?? [],
-    top_brands: payload.top_brands,
-    brand_share: payload.brand_share,
-    brand_share_scope: payload.brand_share_scope,
-    brand_share_denominator: payload.brand_share_denominator,
-    scanned_at: payload.scanned_at,
-    executive_summary: payload.executive_summary,
-
-    annotated_image_base64: payload.annotated_image_base64,
-    annotated_image_mime: payload.annotated_image_mime,
-    original_image_base64: payload.original_image_base64,
-    original_image_mime: payload.original_image_mime,
-    csv_base64: payload.csv_base64,
-    scans_used_today: payload.scans_used_today,
-    scans_daily_limit: payload.scans_daily_limit,
+    metrics: payload.metrics ?? {},
   };
 }
 
