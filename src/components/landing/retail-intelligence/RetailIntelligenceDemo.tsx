@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowRight, Download, ImagePlus, Loader2, Sparkles } from "lucide-react";
+import { AlertCircle, ArrowRight, Download, ImagePlus, Loader2, Sparkles, Timer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +51,7 @@ export function RetailIntelligenceDemo() {
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [result, setResult] = useState<LandingScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [elapsedSec, setElapsedSec] = useState<number | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [isSampleFlow, setIsSampleFlow] = useState(true);
   const objectUrlRef = useRef<string | null>(null);
@@ -76,8 +77,10 @@ export function RetailIntelligenceDemo() {
   async function run(kind: "sample" | "upload", file?: File) {
     setError(null);
     setResult(null);
+    setElapsedSec(null);
     setPhase("scanning");
     trackLandingEvent("demo_scan_started", { kind });
+    const startedAt = Date.now();
 
     const minVisible = new Promise<void>((resolve) => setTimeout(resolve, MIN_SCAN_MS));
 
@@ -95,6 +98,7 @@ export function RetailIntelligenceDemo() {
       ]);
       if (!scan) throw new Error("Choose a shelf photo to continue.");
       setResult(scan);
+      setElapsedSec(Math.max(1, Math.round((Date.now() - startedAt) / 1000)));
       persistLandingSession(scan);
       setPhase("done");
       trackLandingEvent("demo_scan_completed", {
@@ -299,6 +303,15 @@ export function RetailIntelligenceDemo() {
 
               {phase === "done" && result && (
                 <div>
+                  {elapsedSec != null && (
+                    <div className="mb-4 flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
+                      <Timer className="size-3.5 text-brand" />
+                      <span>
+                        Analysis completed in{" "}
+                        <span className="font-semibold text-foreground">{elapsedSec}s</span>
+                      </span>
+                    </div>
+                  )}
                   <div className="grid grid-cols-3 gap-3">
                     {[
                       { label: "Products detected", value: result.metrics?.total_products },

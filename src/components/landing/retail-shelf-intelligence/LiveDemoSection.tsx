@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowRight, ChevronDown, ChevronRight, Download, ImagePlus, Loader2, Sparkles } from "lucide-react";
+import { AlertCircle, ArrowRight, ChevronDown, ChevronRight, Download, ImagePlus, Loader2, Sparkles, Timer } from "lucide-react";
 import { rollupByBrand } from "@/lib/brand-rollup";
 import { averageConfidencePercent, displayVariant, uniqueSkuCount } from "@/lib/landing-inventory";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +59,7 @@ export function LiveDemoSection({
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(DEFAULT_SAMPLE_IMAGE);
   const [result, setResult] = useState<LandingScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [elapsedSec, setElapsedSec] = useState<number | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [isSampleFlow, setIsSampleFlow] = useState(true);
   const objectUrlRef = useRef<string | null>(null);
@@ -76,8 +77,10 @@ export function LiveDemoSection({
   async function run(mode: "sample" | "upload", file?: File) {
     setError(null);
     setResult(null);
+    setElapsedSec(null);
     setPhase("scanning");
     trackLandingEvent("demo_scan_started", { mode });
+    const startedAt = Date.now();
 
     // Keep the progress UI visible long enough to read — the analysis is real,
     // but a fast response should never look pre-recorded.
@@ -97,6 +100,7 @@ export function LiveDemoSection({
       ]);
       if (!scan) throw new Error("Choose a shelf photo to continue.");
       setResult(scan);
+      setElapsedSec(Math.max(1, Math.round((Date.now() - startedAt) / 1000)));
       persistLandingSession(scan);
       setPhase("done");
       trackLandingEvent("demo_scan_completed", {
@@ -289,7 +293,7 @@ export function LiveDemoSection({
             {phase === "idle" && <EmptyResults />}
 
             {phase === "done" && result && (
-              <SampleResult result={result} liveResult={result} showWorkspaceCta={showWorkspaceCta} />
+              <SampleResult result={result} liveResult={result} showWorkspaceCta={showWorkspaceCta} elapsedSec={elapsedSec} />
             )}
           </div>
         </div>
@@ -329,10 +333,12 @@ function SampleResult({
   result: displayedResult,
   liveResult,
   showWorkspaceCta,
+  elapsedSec,
 }: {
   result: LandingScanResult;
   liveResult: LandingScanResult | null;
   showWorkspaceCta: boolean;
+  elapsedSec?: number | null;
 }) {
   // Bind strictly to the API's in-audit brand share. Never recompute from
   // inventory rows — that mixes in out-of-scope detections and skews %.
@@ -343,6 +349,15 @@ function SampleResult({
   const avgConfidence = averageConfidencePercent(displayedResult);
   return (
     <div>
+                {elapsedSec != null && (
+                  <div className="mb-3 flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
+                    <Timer className="size-3.5 text-brand" />
+                    <span>
+                      Analysis completed in{" "}
+                      <span className="font-semibold text-foreground">{elapsedSec}s</span>
+                    </span>
+                  </div>
+                )}
                 <div className="mb-4 flex flex-wrap items-center gap-2">
                   <Badge className="gap-1.5 rounded-md bg-brand text-brand-foreground">
                     <Sparkles className="size-3" /> Live AI analysis
