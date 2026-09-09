@@ -293,7 +293,7 @@ export function LiveDemoSection({
             {phase === "idle" && <EmptyResults />}
 
             {phase === "done" && result && (
-              <SampleResult result={result} liveResult={result} showWorkspaceCta={showWorkspaceCta} />
+              <SampleResult result={result} liveResult={result} showWorkspaceCta={showWorkspaceCta} elapsedSec={elapsedSec} />
             )}
           </div>
         </div>
@@ -333,10 +333,12 @@ function SampleResult({
   result: displayedResult,
   liveResult,
   showWorkspaceCta,
+  elapsedSec,
 }: {
   result: LandingScanResult;
   liveResult: LandingScanResult | null;
   showWorkspaceCta: boolean;
+  elapsedSec?: number | null;
 }) {
   // Bind strictly to the API's in-audit brand share. Never recompute from
   // inventory rows — that mixes in out-of-scope detections and skews %.
