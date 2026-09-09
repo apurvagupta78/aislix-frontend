@@ -15,10 +15,17 @@ const ROOT_DOMAIN = "aislix.com"
 const FROM_DOMAIN = "aislix.com"
 const SITE_URL = `https://${ROOT_DOMAIN}`
 
-// The SDK handler owns verification, dispatch, and retry semantics; this file
-// owns only the email decisions: subjects, templates, and per-type props.
-const handler = createAuthEmailHandler({
-  apiKey: process.env['LOVABLE_API_KEY']!,
+// Lazy-init so missing LOVABLE_API_KEY in preview/dev does not crash GET / at import time.
+let handler: ReturnType<typeof createAuthEmailHandler> | undefined;
+
+function getAuthEmailHandler() {
+  if (handler) return handler;
+  const apiKey = process.env['LOVABLE_API_KEY'];
+  if (!apiKey) {
+    throw new Error('LOVABLE_API_KEY is not configured');
+  }
+  handler = createAuthEmailHandler({
+  apiKey,
   from: `${SITE_NAME} <noreply@${FROM_DOMAIN}>`,
   senderDomain: SENDER_DOMAIN,
   sendUrl: process.env['LOVABLE_SEND_URL'],
@@ -75,12 +82,27 @@ const handler = createAuthEmailHandler({
         React.createElement(ReauthenticationEmail, { token: data.token ?? '' }),
     },
   },
-})
+  });
+  return handler;
+}
 
 export const Route = createFileRoute("/lovable/email/auth/webhook")({
   server: {
     handlers: {
-      POST: ({ request }) => handler(request),
+      POST: async ({ request }) => {
+        try {
+          return await getAuthEmailHandler()(request);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          if (message.includes('LOVABLE_API_KEY')) {
+            return new Response(JSON.stringify({ error: 'Email service not configured' }), {
+              status: 503,
+              headers: { 'content-type': 'application/json' },
+            });
+          }
+          throw error;
+        }
+      },
     },
   },
 })
