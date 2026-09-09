@@ -1464,48 +1464,6 @@ export type Database = {
           },
         ]
       }
-      territories: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          org_id: string
-          parent_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          org_id: string
-          parent_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          org_id?: string
-          parent_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "territories_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "territories_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "territories"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       stores: {
         Row: {
           address_line1: string | null
@@ -1729,6 +1687,48 @@ export type Database = {
           },
         ]
       }
+      territories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          org_id: string
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          org_id: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "territories_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "territories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "territories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1764,7 +1764,9 @@ export type Database = {
         }[]
       }
       get_org_usage_summary: { Args: { p_org_id: string }; Returns: Json }
+      is_org_manager: { Args: { p_org_id: string }; Returns: boolean }
       is_org_member: { Args: { p_org_id: string }; Returns: boolean }
+      is_org_owner_or_admin: { Args: { p_org_id: string }; Returns: boolean }
       is_user_email_verified: { Args: { p_user_id?: string }; Returns: boolean }
       org_has_platform_bypass: { Args: { p_org_id: string }; Returns: boolean }
       org_has_platform_store_bypass: {
