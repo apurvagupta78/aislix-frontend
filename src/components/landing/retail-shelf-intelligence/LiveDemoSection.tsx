@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowRight, ChevronDown, ChevronRight, Download, ImagePlus, Loader2, Sparkles } from "lucide-react";
+import { AlertCircle, ArrowRight, ChevronDown, ChevronRight, Download, ImagePlus, Loader2, Sparkles, Timer } from "lucide-react";
 import { rollupByBrand } from "@/lib/brand-rollup";
 import { averageConfidencePercent, displayVariant, uniqueSkuCount } from "@/lib/landing-inventory";
 import { Badge } from "@/components/ui/badge";
