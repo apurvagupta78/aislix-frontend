@@ -77,8 +77,10 @@ export function LiveDemoSection({
   async function run(mode: "sample" | "upload", file?: File) {
     setError(null);
     setResult(null);
+    setElapsedSec(null);
     setPhase("scanning");
     trackLandingEvent("demo_scan_started", { mode });
+    const startedAt = Date.now();
 
     // Keep the progress UI visible long enough to read — the analysis is real,
     // but a fast response should never look pre-recorded.

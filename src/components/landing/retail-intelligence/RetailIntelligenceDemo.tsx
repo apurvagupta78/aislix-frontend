@@ -77,8 +77,10 @@ export function RetailIntelligenceDemo() {
   async function run(kind: "sample" | "upload", file?: File) {
     setError(null);
     setResult(null);
+    setElapsedSec(null);
     setPhase("scanning");
     trackLandingEvent("demo_scan_started", { kind });
+    const startedAt = Date.now();
 
     const minVisible = new Promise<void>((resolve) => setTimeout(resolve, MIN_SCAN_MS));
 
