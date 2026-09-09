@@ -51,6 +51,7 @@ export function RetailIntelligenceDemo() {
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [result, setResult] = useState<LandingScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [elapsedSec, setElapsedSec] = useState<number | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [isSampleFlow, setIsSampleFlow] = useState(true);
   const objectUrlRef = useRef<string | null>(null);
