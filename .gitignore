@@ -8,7 +8,8 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
-.env
+# .env is committed intentionally — Lovable build reads VITE_* vars from this file.
+# Do not add service-role keys here; set those in Lovable Cloud secrets only.
 .env.local
 .env.*.local
 dist
