@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bell, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
@@ -14,9 +15,18 @@ import {
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { RecentScansTable } from "@/components/dashboard/RecentScansTable";
 import { TeamAssignmentsPanel } from "@/components/dashboard/TeamAssignmentsPanel";
+import { StoreComplianceRanking } from "@/components/dashboard/StoreComplianceRanking";
 
 import { Button } from "@/components/ui/button";
 import { fetchAnalytics, fetchDashboard, fetchNotifications } from "@/lib/dashboard";
+import { fetchTerritories } from "@/lib/territories";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   DEMO_ANALYTICS,
   DEMO_DASHBOARD,
@@ -48,6 +58,8 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function Dashboard() {
+  const [territoryId, setTerritoryId] = useState("all");
+
   const session = useQuery({
     queryKey: ["auth-session"],
     queryFn: async () => (await supabase.auth.getSession()).data.session,
@@ -71,9 +83,18 @@ function Dashboard() {
     enabled: live,
   });
 
+  const territoriesQuery = useQuery({
+    queryKey: ["territories"],
+    queryFn: fetchTerritories,
+    retry: false,
+    enabled: live,
+  });
+
+  const selectedTerritory = territoryId === "all" ? null : territoryId;
+
   const analyticsQuery = useQuery({
-    queryKey: ["analytics", "30d"],
-    queryFn: ({ signal }) => fetchAnalytics("30d", signal),
+    queryKey: ["analytics", "30d", territoryId],
+    queryFn: ({ signal }) => fetchAnalytics("30d", signal, selectedTerritory),
     retry: false,
     enabled: live,
   });
@@ -164,11 +185,33 @@ function Dashboard() {
 
       {demo ? null : <TeamAssignmentsPanel />}
 
-      <section className="mt-8">
+      {demo ? null : (
+        <section className="mt-8">
+          <StoreComplianceRanking territoryId={selectedTerritory} />
+        </section>
+      )}
 
+      <section className="mt-8">
         <SectionHeader
           title="Analytics"
           description="Backend-ready widgets for shelf health, scan volume, brand mix and stock risk."
+          action={
+            !demo && (territoriesQuery.data?.length ?? 0) > 0 ? (
+              <Select value={territoryId} onValueChange={setTerritoryId}>
+                <SelectTrigger className="h-9 w-44 rounded-xl">
+                  <SelectValue placeholder="All territories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All territories</SelectItem>
+                  {(territoriesQuery.data ?? []).map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : undefined
+          }
         />
         <div className="mt-4">
           <DashboardCharts

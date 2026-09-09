@@ -502,6 +502,7 @@ function dayKey(iso: string): string {
 export async function fetchAnalytics(
   range: AnalyticsRange = "30d",
   signal?: AbortSignal,
+  territoryId?: string | null,
 ): Promise<AnalyticsResponse> {
   void signal;
   const orgId = await requireOrgId();
@@ -510,12 +511,31 @@ export async function fetchAnalytics(
   since.setDate(since.getDate() - days);
   const sinceIso = since.toISOString();
 
-  const { data: scans, error } = await supabase
+  let storeFilter: string[] | null = null;
+  if (territoryId) {
+    const { fetchTerritoryStoreIds } = await import("@/lib/territories");
+    storeFilter = await fetchTerritoryStoreIds(territoryId);
+    if (!storeFilter.length) {
+      return {
+        shelf_health_trend: [],
+        daily_scans: [],
+        weekly_scans: undefined,
+        monthly_scans: undefined,
+        brand_distribution: [],
+        low_stock_trend: [],
+      };
+    }
+  }
+
+  let scanQuery = supabase
     .from("shelf_scans")
     .select("id, created_at, shelf_health_score, low_stock_count")
     .eq("org_id", orgId)
     .gte("created_at", sinceIso)
     .order("created_at", { ascending: true });
+  if (storeFilter) scanQuery = scanQuery.in("store_id", storeFilter);
+
+  const { data: scans, error } = await scanQuery;
   if (error) dbError(error, "Could not load analytics.");
 
   const byDay = new Map<string, { scans: number; healthSum: number; healthCount: number; lowStock: number }>();
@@ -566,6 +586,89 @@ export async function fetchAnalytics(
     brand_distribution,
     low_stock_trend,
   };
+}
+
+export type StoreComplianceRow = {
+  store_id: string;
+  store_name: string;
+  territory_name: string | null;
+  scan_count: number;
+  avg_compliance: number | null;
+  avg_execution_score: number | null;
+};
+
+/** Store-level planogram compliance ranking for multi-store ops teams. */
+export async function fetchStoreComplianceRanking(
+  range: AnalyticsRange = "30d",
+  territoryId?: string | null,
+): Promise<StoreComplianceRow[]> {
+  const orgId = await requireOrgId();
+  const since = new Date();
+  since.setDate(since.getDate() - rangeToDays(range));
+
+  let storeQuery = supabase
+    .from("stores")
+    .select("id, name, territory_id, territories:territory_id (name)")
+    .eq("org_id", orgId)
+    .eq("status", "active");
+  if (territoryId) storeQuery = storeQuery.eq("territory_id", territoryId);
+
+  const { data: stores, error: storeError } = await storeQuery;
+  if (storeError) dbError(storeError, "Could not load stores.");
+
+  const storeIds = (stores ?? []).map((s) => s.id as string);
+  if (!storeIds.length) return [];
+
+  const { data: scans, error: scanError } = await supabase
+    .from("shelf_scans")
+    .select("store_id, planogram_compliance_percent, shelf_health_score, created_at")
+    .eq("org_id", orgId)
+    .eq("status", "completed")
+    .gte("created_at", since.toISOString())
+    .in("store_id", storeIds);
+  if (scanError) dbError(scanError, "Could not load store scan metrics.");
+
+  const byStore = new Map<
+    string,
+    { count: number; complianceSum: number; complianceN: number; healthSum: number; healthN: number }
+  >();
+  for (const scan of scans ?? []) {
+    const sid = scan.store_id as string;
+    const entry = byStore.get(sid) ?? {
+      count: 0,
+      complianceSum: 0,
+      complianceN: 0,
+      healthSum: 0,
+      healthN: 0,
+    };
+    entry.count += 1;
+    if (typeof scan.planogram_compliance_percent === "number") {
+      entry.complianceSum += scan.planogram_compliance_percent;
+      entry.complianceN += 1;
+    }
+    if (typeof scan.shelf_health_score === "number") {
+      entry.healthSum += scan.shelf_health_score;
+      entry.healthN += 1;
+    }
+    byStore.set(sid, entry);
+  }
+
+  return (stores ?? [])
+    .map((store) => {
+      const stats = byStore.get(store.id as string);
+      const territory = store.territories as { name?: string | null } | null;
+      return {
+        store_id: store.id as string,
+        store_name: (store.name as string) ?? "Store",
+        territory_name: territory?.name ?? null,
+        scan_count: stats?.count ?? 0,
+        avg_compliance:
+          stats && stats.complianceN ? stats.complianceSum / stats.complianceN : null,
+        avg_execution_score: stats && stats.healthN ? stats.healthSum / stats.healthN : null,
+      };
+    })
+    .filter((row) => row.scan_count > 0)
+    .sort((a, b) => (b.avg_compliance ?? 0) - (a.avg_compliance ?? 0));
 }
 
 // ---------- formatters (presentation only) ----------

@@ -10,6 +10,7 @@ import {
   formatDuration,
   type ScanResult,
 } from "@/lib/scan-results";
+import { executionScore } from "@/lib/scan-execution";
 import { formatScanDate, formatScanTime } from "@/lib/scan-history";
 
 export const Route = createFileRoute("/compare")({
@@ -51,9 +52,27 @@ type Metric = {
 
 const metrics: Metric[] = [
   {
-    label: "Products detected",
-    value: (r) => r.summary.total_products.toLocaleString(),
-    raw: (r) => r.summary.total_products,
+    label: "Shelf execution score",
+    value: (r) => {
+      const score = executionScore(r);
+      return score !== undefined ? `${score}/100` : "—";
+    },
+    raw: (r) => executionScore(r),
+    betterWhenHigher: true,
+  },
+  {
+    label: "Planogram compliance",
+    value: (r) => {
+      const pct = r.planogram?.percent ?? r.summary.shelf_compliance;
+      return pct !== null && pct !== undefined ? `${Math.round(pct)}%` : "—";
+    },
+    raw: (r) => r.planogram?.percent ?? r.summary.shelf_compliance,
+    betterWhenHigher: true,
+  },
+  {
+    label: "Facings detected",
+    value: (r) => (r.summary.total_facings ?? r.summary.total_products).toLocaleString(),
+    raw: (r) => r.summary.total_facings ?? r.summary.total_products,
     betterWhenHigher: true,
   },
   {

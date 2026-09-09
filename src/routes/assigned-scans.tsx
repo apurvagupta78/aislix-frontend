@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ClipboardList, UserPlus } from "lucide-react";
+import { ChevronDown, ClipboardList, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { toUserMessage } from "@/lib/api/errors";
 import { complianceTone } from "@/lib/planogram-compliance";
 import {
   cancelAssignment,
+  fetchAssignmentAttempts,
   fetchOrgAssignments,
   requestReScan,
   fetchTeamScans,
@@ -28,6 +29,7 @@ import {
   scopeSummary,
   type Assignment,
 } from "@/lib/assignments";
+import { AssignmentAttemptsList } from "@/components/scan-results/FixRescanVerifyPanel";
 import { formatDate, statusBadge } from "@/routes/my-scans";
 import { AssignmentIdChip, formatAssignmentId } from "@/components/AssignmentId";
 
@@ -77,6 +79,37 @@ function scopeLine(row: Assignment): string {
   if (row.scope_values.category) parts.push(row.scope_values.category);
   if (row.scope_values.sub_category) parts.push(row.scope_values.sub_category);
   return parts.join(" · ");
+}
+
+function AssignmentAttemptsExpand({ assignmentId }: { assignmentId: string }) {
+  const [open, setOpen] = useState(false);
+  const query = useQuery({
+    queryKey: ["assignment-attempts", assignmentId],
+    queryFn: () => fetchAssignmentAttempts(assignmentId),
+    enabled: open,
+  });
+
+  return (
+    <div className="mt-2 border-t border-border pt-2">
+      <button
+        type="button"
+        className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <ChevronDown className={`size-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+        {open ? "Hide attempts" : "Show scan attempts"}
+      </button>
+      {open && (
+        <div className="mt-2">
+          {query.isPending ? (
+            <Skeleton className="h-16 w-full rounded-xl" />
+          ) : (
+            <AssignmentAttemptsList attempts={query.data ?? []} compact />
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function AssignmentsTab({ storeId }: { storeId?: string }) {
@@ -186,9 +219,12 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={row.id} className="border-t border-border">
+                  <tr key={row.id} className="border-t border-border align-top">
                     <td className="px-4 py-3">
                       <AssignmentIdChip id={row.id} label={false} />
+                      {(row.scan_attempts > 0 || row.status === "needs_correction" || row.status === "completed") && (
+                        <AssignmentAttemptsExpand assignmentId={row.id} />
+                      )}
                     </td>
                     <td className="px-4 py-3 text-foreground">{row.assignee_name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{scopeLine(row)}</td>
@@ -256,6 +292,9 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
                   {statusBadge(row.status)}
                 </div>
                 <AssignmentIdChip id={row.id} className="mt-1" />
+                {(row.scan_attempts > 0 || row.status === "needs_correction" || row.status === "completed") && (
+                  <AssignmentAttemptsExpand assignmentId={row.id} />
+                )}
                 <p className="mt-1 text-sm text-muted-foreground">{scopeLine(row)}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {row.expected_products} expected · {formatDate(row.due_at)}

@@ -10,7 +10,7 @@ import {
   formatCategorySelections,
   type CategorySelection,
 } from "@/lib/category-selections";
-import { dbError, getMembership, requireOrgId, requireUserId } from "@/lib/db/context";
+import { dbError, getMembership, requireOrgId, requireUserId, unauthorized } from "@/lib/db/context";
 import { notifyMember } from "@/lib/notifications.functions";
 
 
@@ -73,6 +73,16 @@ export type Assignment = {
   scan_attempts: number;
   /** Corrective actions still open across every attempt. */
   open_issue_count: number;
+  verified_at: string | null;
+};
+
+export type AssignmentAttempt = {
+  attempt: number;
+  scan_id: string;
+  compliance_percent: number | null;
+  created_at: string;
+  open_issues: number;
+  passed: boolean;
 };
 
 /** Row of the manager "Team Scans" table. */
@@ -309,11 +319,12 @@ type AssignmentRow = {
   scan_id: string | null;
   last_compliance_percent: number | string | null;
   scan_attempts: number | null;
+  verified_at: string | null;
   stores?: { name?: string | null } | null;
 };
 
 const SELECT =
-  "id, org_id, store_id, scope_type, scope_values, status, due_at, instructions, created_at, assignee_id, assigner_id, planogram_version_id, scan_id, last_compliance_percent, scan_attempts, stores:store_id (name)";
+  "id, org_id, store_id, scope_type, scope_values, status, due_at, instructions, created_at, assignee_id, assigner_id, planogram_version_id, scan_id, last_compliance_percent, scan_attempts, verified_at, stores:store_id (name)";
 
 /** scan_assignments references auth.users, so profile names are resolved separately. */
 async function fetchNames(ids: string[]): Promise<Map<string, string>> {
@@ -410,11 +421,51 @@ async function mapAssignments(rows: AssignmentRow[]): Promise<Assignment[]> {
         last_compliance_percent: last,
         scan_attempts: Number(row.scan_attempts ?? 0) || 0,
         open_issue_count: openIssues.get(row.id) ?? 0,
+        verified_at: (row as { verified_at?: string | null }).verified_at ?? null,
         location: meta.location,
         expected_products: meta.count,
       };
     }),
   );
+}
+
+/** All planogram comparison attempts for an assignment (fix → re-scan history). */
+export async function fetchAssignmentAttempts(assignmentId: string): Promise<AssignmentAttempt[]> {
+  const { data: comparisons, error } = await supabase
+    .from("planogram_comparisons")
+    .select("id, scan_id, compliance_percent, created_at, summary")
+    .eq("assignment_id", assignmentId)
+    .order("created_at", { ascending: true });
+  if (error) dbError(error, "Could not load assignment attempts.");
+
+  const comparisonIds = (comparisons ?? []).map((c) => c.id as string);
+  const openByComparison = new Map<string, number>();
+  if (comparisonIds.length) {
+    const { data: actions } = await supabase
+      .from("corrective_actions")
+      .select("comparison_id, status")
+      .in("comparison_id", comparisonIds)
+      .in("status", ["open", "in_progress"]);
+    for (const action of actions ?? []) {
+      const cid = action.comparison_id as string;
+      openByComparison.set(cid, (openByComparison.get(cid) ?? 0) + 1);
+    }
+  }
+
+  return (comparisons ?? []).map((row, index) => {
+    const summary = (row.summary ?? {}) as Record<string, unknown>;
+    const missing = Number(summary.missing_products ?? summary.missing ?? 0);
+    const openIssues = openByComparison.get(row.id as string) ?? missing;
+    const pct = num(row.compliance_percent);
+    return {
+      attempt: index + 1,
+      scan_id: row.scan_id as string,
+      compliance_percent: pct,
+      created_at: row.created_at as string,
+      open_issues: openIssues,
+      passed: pct !== null && pct >= 100 && openIssues === 0,
+    };
+  });
 }
 
 /** Full assignment context used to pre-fill and lock the scan setup form. */
@@ -618,6 +669,21 @@ export async function fetchTeamScans(): Promise<TeamScan[]> {
       unexpected: pick(summary, ["unexpected_products", "unexpected"]),
     };
   });
+}
+
+/** Manager sign-off after a completed assignment passes compliance checks. */
+export async function verifyAssignmentPass(assignmentId: string): Promise<void> {
+  const userId = await requireUserId();
+  if (!(await isOrgManager())) unauthorized("Only managers can verify assignment passes.");
+  const { error } = await supabase
+    .from("scan_assignments")
+    .update({
+      verified_at: new Date().toISOString(),
+      verified_by: userId,
+    })
+    .eq("id", assignmentId)
+    .eq("status", "completed");
+  if (error) dbError(error, "Could not verify this assignment.");
 }
 
 /** Assignment a scan was launched from, if any (used for the results badge). */

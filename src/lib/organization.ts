@@ -58,6 +58,8 @@ export type OrgStore = {
   manager_name?: string;
   contact_number?: string;
   timezone?: string;
+  territory_id?: string | null;
+  territory_name?: string | null;
   status?: StoreStatus;
   created_at?: string;
   metrics?: StoreMetrics;
@@ -73,6 +75,7 @@ export type StoreInput = {
   manager_name?: string;
   contact_number?: string;
   timezone?: string;
+  territory_id?: string | null;
 };
 
 export type StoreFilter = "all" | "active" | "archived" | "healthy" | "alerts";
@@ -177,8 +180,11 @@ function mapStoreRow(row: {
   contact_phone: string | null;
   status: string;
   created_at: string;
+  territory_id?: string | null;
+  territories?: { name?: string | null } | null;
 }): OrgStore {
   const address = [row.address_line1, row.address_line2].filter(Boolean).join(", ") || undefined;
+  const territory = row.territories as { name?: string | null } | null | undefined;
   return compact({
     id: row.id,
     name: row.name,
@@ -189,6 +195,8 @@ function mapStoreRow(row: {
     country: row.country ?? undefined,
     manager_name: row.contact_name ?? undefined,
     contact_number: row.contact_phone ?? undefined,
+    territory_id: row.territory_id ?? null,
+    territory_name: territory?.name ?? null,
     status: row.status === "inactive" ? "archived" : "active",
     created_at: row.created_at,
   });
@@ -204,8 +212,11 @@ function storeInputToRow(input: StoreInput) {
     country: input.country ?? null,
     contact_name: input.manager_name ?? null,
     contact_phone: input.contact_number ?? null,
+    territory_id: input.territory_id ?? null,
   };
 }
+
+const STORE_SELECT = "*, territories:territory_id (name)";
 
 async function attachStoreMetrics(stores: OrgStore[]): Promise<OrgStore[]> {
   if (stores.length === 0) return stores;
@@ -334,7 +345,7 @@ export async function fetchStoreList(
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  let builder = supabase.from("stores").select("*", { count: "exact" }).eq("org_id", orgId);
+  let builder = supabase.from("stores").select(STORE_SELECT, { count: "exact" }).eq("org_id", orgId);
 
   if (query.search) {
     const q = query.search.replace(/[%,]/g, "");
@@ -373,7 +384,7 @@ export async function fetchStore(id: string, _signal?: AbortSignal): Promise<Org
   const orgId = await requireOrgId();
   const { data, error } = await supabase
     .from("stores")
-    .select("*")
+    .select(STORE_SELECT)
     .eq("org_id", orgId)
     .eq("id", id)
     .maybeSingle();

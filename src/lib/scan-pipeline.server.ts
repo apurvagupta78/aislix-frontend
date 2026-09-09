@@ -1321,6 +1321,15 @@ async function persistPlanogramCompliance(
 
   /** null for ad-hoc "with planogram" scans started from the New Scan page. */
   const assignmentId = scan.assignment_id ?? null;
+  let assigneeId: string | null = null;
+  if (assignmentId) {
+    const { data: assignmentRow } = await supabase
+      .from("scan_assignments")
+      .select("assignee_id")
+      .eq("id", assignmentId)
+      .maybeSingle();
+    assigneeId = (assignmentRow?.assignee_id as string | null) ?? null;
+  }
   const summary = (source.summary ?? {}) as Record<string, unknown>;
   // Headline is SKU presence from metrics; the source percent is a qty-weighted
   // fallback that can read 0% even when every expected SKU was found.
@@ -1400,6 +1409,7 @@ async function persistPlanogramCompliance(
           issue_type: issueType,
           suggestion,
           status: "open",
+          assigned_to: assigneeId,
         };
       })
       .filter(Boolean);

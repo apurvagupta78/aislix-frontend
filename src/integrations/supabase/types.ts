@@ -939,6 +939,8 @@ export type Database = {
           status: string
           store_id: string
           updated_at: string
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           assignee_id: string
@@ -958,6 +960,8 @@ export type Database = {
           status?: string
           store_id: string
           updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           assignee_id?: string
@@ -977,6 +981,8 @@ export type Database = {
           status?: string
           store_id?: string
           updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -1458,6 +1464,48 @@ export type Database = {
           },
         ]
       }
+      territories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          org_id: string
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          org_id: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          org_id?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "territories_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "territories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "territories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stores: {
         Row: {
           address_line1: string | null
@@ -1481,6 +1529,7 @@ export type Database = {
           state: string | null
           status: Database["public"]["Enums"]["store_status"]
           store_type: string | null
+          territory_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1505,6 +1554,7 @@ export type Database = {
           state?: string | null
           status?: Database["public"]["Enums"]["store_status"]
           store_type?: string | null
+          territory_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1529,6 +1579,7 @@ export type Database = {
           state?: string | null
           status?: Database["public"]["Enums"]["store_status"]
           store_type?: string | null
+          territory_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1544,6 +1595,13 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stores_territory_id_fkey"
+            columns: ["territory_id"]
+            isOneToOne: false
+            referencedRelation: "territories"
             referencedColumns: ["id"]
           },
         ]

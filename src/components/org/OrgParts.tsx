@@ -517,6 +517,17 @@ export function StoreFormDialog({
     staleTime: 60_000,
   });
 
+  const territoriesQuery = useQuery({
+    queryKey: ["territories"],
+    queryFn: async () => {
+      const { fetchTerritories } = await import("@/lib/territories");
+      return fetchTerritories();
+    },
+    retry: false,
+    enabled: open,
+    staleTime: 60_000,
+  });
+
   useEffect(() => {
     if (!open) return;
     setTeamIds([]);
@@ -532,6 +543,7 @@ export function StoreFormDialog({
             manager_name: store.manager_name ?? "",
             contact_number: store.contact_number ?? "",
             timezone: store.timezone ?? "Asia/Kolkata",
+            territory_id: store.territory_id ?? null,
           }
         : blankStore,
     );
@@ -613,6 +625,30 @@ export function StoreFormDialog({
               onChange={(e) => set("manager_name", e.target.value)}
               placeholder="Full name"
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Territory / region</Label>
+            <Select
+              value={form.territory_id ?? "none"}
+              onValueChange={(value) =>
+                setForm((prev) => ({
+                  ...prev,
+                  territory_id: value === "none" ? null : value,
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="No territory" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No territory</SelectItem>
+                {(territoriesQuery.data ?? []).map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5 sm:col-span-2">
             <Label htmlFor="store-address">Address</Label>

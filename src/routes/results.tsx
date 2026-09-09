@@ -25,6 +25,7 @@ import {
   InventoryTable,
   ResultSection,
 } from "@/components/scan-results/ResultParts";
+import { FixRescanVerifyPanel } from "@/components/scan-results/FixRescanVerifyPanel";
 import {
   ActionCenterPanel,
   AiSummaryBlock,
@@ -291,6 +292,13 @@ function Results() {
             <ProcessingState scanId={data?.scan_id} />
           ) : (
             <>
+              {assignmentQuery.data && (
+                <FixRescanVerifyPanel
+                  assignmentId={assignmentQuery.data}
+                  scanId={data?.scan_id}
+                />
+              )}
+
               <div className="card-surface flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
