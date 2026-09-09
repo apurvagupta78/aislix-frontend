@@ -249,8 +249,12 @@ export function AnnotatedImageViewer({
         ) : (
           <div className="p-4">
             <EmptyState
-              title="No annotated image yet"
-              description="The annotated shelf image appears here once the scan service returns it."
+              title={scanId ? "Preparing annotated image…" : "No annotated image yet"}
+              description={
+                scanId
+                  ? "Aislix is loading or rebuilding the detection overlay for this scan."
+                  : "The annotated shelf image appears here once the scan service returns it."
+              }
             />
           </div>
         )}

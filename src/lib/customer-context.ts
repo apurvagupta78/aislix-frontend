@@ -146,19 +146,31 @@ const ALL_SECTIONS: ResultSectionKey[] = [
   "scan_details",
 ];
 
+/** Short subtitle shown under the view switcher — explains what each tab emphasizes. */
+export const VIEW_MODE_DESCRIPTIONS: Record<ResultViewMode, string> = {
+  execution:
+    "Operational view — annotated shelf, action items, placement issues, and AI review queue.",
+  merchandising:
+    "Category view — share of shelf, SKU availability, planogram compliance, and analytics.",
+  brand:
+    "Brand intelligence — competitor presence, shelf share, and commercial recommendations.",
+  executive:
+    "Executive snapshot — scores, financial impact, AI summary, and key actions.",
+};
+
 const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
   execution: [
     "improvement_banner",
     "score_hero",
+    "annotated_image",
     "kpi_strip",
     "facings_strip",
     "action_center",
-    "financial_impact",
     "placement_alert",
+    "review_queue",
     "recommended_actions",
     "planogram",
-    "review_queue",
-    "annotated_image",
+    "financial_impact",
     "inventory",
     "downloads",
     "share",
@@ -168,32 +180,29 @@ const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
     "improvement_banner",
     "score_hero",
     "kpi_strip",
-    "facings_strip",
-    "action_center",
-    "financial_impact",
-    "sku_availability",
+    "annotated_image",
     "share_of_shelf",
+    "sku_availability",
     "planogram",
-    "recommended_actions",
-    "review_queue",
-    "inventory",
     "analytics",
+    "financial_impact",
+    "recommended_actions",
+    "inventory",
     "downloads",
     "share",
   ],
   brand: [
     "improvement_banner",
     "score_hero",
-    "kpi_strip",
+    "annotated_image",
     "competitor_intel",
-    "financial_impact",
     "share_of_shelf",
     "sku_availability",
-    "recommended_actions",
-    "planogram",
+    "financial_impact",
     "ai_summary",
-    "inventory",
+    "recommended_actions",
     "analytics",
+    "inventory",
     "downloads",
     "share",
   ],
@@ -201,13 +210,14 @@ const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
     "improvement_banner",
     "score_hero",
     "kpi_strip",
+    "annotated_image",
     "financial_impact",
     "ai_summary",
     "competitor_intel",
-    "action_center",
     "recommended_actions",
     "share",
     "scan_details",
+    "downloads",
   ],
 };
 
@@ -264,18 +274,22 @@ export function defaultViewMode(
   return DEFAULT_VIEW_BY_CUSTOMER[customerType] ?? DEFAULT_VIEW_BY_ROLE[roleFamily];
 }
 
-export function visibleSections(
+export function orderedVisibleSections(
   viewMode: ResultViewMode,
   roleFamily?: RoleFamily,
-): Set<ResultSectionKey> {
+): ResultSectionKey[] {
   let sections = SECTIONS_BY_VIEW[viewMode] ?? ALL_SECTIONS;
   if (roleFamily === "field") {
     sections = sections.filter((s) => s !== "analytics" && s !== "competitor_intel");
   }
-  if (roleFamily === "executive") {
-    sections = sections.filter((s) => !["review_queue", "annotated_image"].includes(s));
-  }
-  return new Set(sections);
+  return sections;
+}
+
+export function visibleSections(
+  viewMode: ResultViewMode,
+  roleFamily?: RoleFamily,
+): Set<ResultSectionKey> {
+  return new Set(orderedVisibleSections(viewMode, roleFamily));
 }
 
 export function showCompetitorIntel(

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { Fragment, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { markScanNotificationsRead } from "@/lib/notifications";
 import { useState } from "react";
@@ -45,9 +45,9 @@ import { planHasFeature } from "@/lib/plan-features";
 import { fetchUsageSummary } from "@/lib/subscription-limits";
 import { useWorkspaceContext } from "@/hooks/use-customer-context";
 import {
+  orderedVisibleSections,
   showCompetitorIntel,
-  visibleSections,
-  type ResultSectionKey,
+  VIEW_MODE_DESCRIPTIONS,
   type ResultViewMode,
 } from "@/lib/customer-context";
 import {
@@ -67,12 +67,13 @@ import {
 } from "@/components/scan-results/ResultCharts";
 import { toast } from "sonner";
 import {
+  buildFullScanReportCsv,
   fetchScanResult,
-  inventoryToCsv,
   downloadBlob,
   downloadScanCsv,
   downloadScanPdf,
   downloadScanAnnotatedImage,
+  ensureScanAssets,
   type ScanResult,
 } from "@/lib/scan-results";
 import { executionScore } from "@/lib/scan-execution";
@@ -173,15 +174,37 @@ function Results() {
 
   const [viewOverride, setViewOverride] = useState<ResultViewMode | undefined>();
   const activeView = viewOverride ?? workspaceQuery.data?.viewMode ?? "execution";
-  const visible = visibleSections(activeView, workspaceQuery.data?.roleFamily);
-  const show = (key: ResultSectionKey) => visible.has(key);
+  const sectionOrder = orderedVisibleSections(
+    activeView,
+    workspaceQuery.data?.roleFamily,
+  );
   const competitorEnabled =
-    show("competitor_intel") &&
+    sectionOrder.includes("competitor_intel") &&
     showCompetitorIntel(
       workspaceQuery.data?.customerType ?? "supermarket",
       workspaceQuery.data?.roleFamily ?? "operations",
       workspaceQuery.data?.hasBrandConfig ?? false,
     );
+
+  // Older scans may lack stored annotated images — rebuild exports once on load.
+  useEffect(() => {
+    if (!scan || !data || data.status !== "completed") return;
+    if (data.annotated_image_url) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        await ensureScanAssets(scan);
+        if (!cancelled) {
+          void queryClient.invalidateQueries({ queryKey: ["scan-result", scan] });
+        }
+      } catch {
+        // optional asset — never block the results page
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [scan, data?.status, data?.annotated_image_url, queryClient]);
 
   // Planogram compliance is shown for assigned scans AND ad-hoc "with planogram"
   // scans. When there is no comparison row we still render tiles from the
@@ -314,154 +337,177 @@ function Results() {
 
               <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted-foreground">
-                  Results view — tailored for your role
+                  {VIEW_MODE_DESCRIPTIONS[activeView]}
                 </p>
                 <ResultViewSwitcher value={activeView} onChange={setViewOverride} />
               </div>
 
-              {show("improvement_banner") && (
-                <ExecutionImprovementBanner
-                  current={executionScore(data)}
-                  previous={data?.navigation?.previous_execution_score ?? undefined}
-                  loading={loading}
-                />
-              )}
-
-              {show("score_hero") && (
-                <ExecutionScoreHero
-                  data={data}
-                  loading={loading}
-                  previousScore={data?.navigation?.previous_execution_score ?? undefined}
-                />
-              )}
-
-              {show("kpi_strip") && <ExecutionKpiStripPanel data={data} loading={loading} />}
-
-              {show("facings_strip") && <FacingsSummaryStrip data={data} loading={loading} />}
-
-              {show("action_center") && <ActionCenterPanel data={data} loading={loading} />}
-
-              {show("financial_impact") && (
-                <FinancialImpactPanel
-                  data={data}
-                  loading={loading}
-                  locked={financialLocked}
-                  planCode={planCode}
-                />
-              )}
-
-              {show("placement_alert") && (data?.compliance_alerts?.length ?? 0) > 0 && (
-                <ComplianceAlertCard
-                  alerts={data?.compliance_alerts}
-                  mismatches={data?.subcategory_mismatches}
-                />
-              )}
-
-              {show("ai_summary") && <AiSummaryBlock data={data} loading={loading} />}
-
-              {(show("share_of_shelf") || show("sku_availability") || competitorEnabled) && (
-                <div className="grid gap-4 lg:grid-cols-2">
-                  {competitorEnabled && (
-                    <CompetitorIntelPanel snapshot={data?.competitor_intel} loading={loading} />
-                  )}
-                  {show("share_of_shelf") && <ShareOfShelfPanel data={data} loading={loading} />}
-                  {show("sku_availability") && (
-                    <SkuAvailabilityPanel
-                      data={data}
-                      loading={loading}
-                      matched={matchedProducts}
-                      expected={expectedProducts}
-                    />
-                  )}
-                </div>
-              )}
-
-              {show("recommended_actions") && (
-                <RecommendedActionsPanel data={data} loading={loading} />
-              )}
-
-              {show("planogram") && planogramSection && (
-                <PlanogramComparisonSection comparison={planogramSection} />
-              )}
-              {show("planogram") && showPlanogramWarning && <PlanogramMissingAlert />}
-
-              {show("review_queue") && (
-                <NeedsReviewSection
-                  data={data}
-                  onCorrected={() => {
-                    void query.refetch();
-                  }}
-                />
-              )}
-
-              {show("annotated_image") && (
-                <AnnotatedImageViewer
-                  src={data?.annotated_image_url}
-                  originalSrc={data?.original_image_url}
-                  scanId={data?.scan_id}
-                  loading={loading}
-                />
-              )}
-
-              {show("inventory") && (
-                <InventoryTable
-                  items={data?.inventory}
-                  scanId={data?.scan_id}
-                  csvUrl={data?.downloads?.csv_url}
-                  loading={loading}
-                />
-              )}
-
-              {show("analytics") && (
-                <details className="card-surface p-5 sm:p-6">
-                  <summary className="cursor-pointer text-sm font-semibold tracking-tight">
-                    Analytics
-                  </summary>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Brand share, confidence distribution, and legacy shelf health charts.
-                  </p>
-                  <div className="mt-4 grid gap-4 xl:grid-cols-3">
-                    <TopBrandsChart data={data?.charts?.top_brands} loading={loading} />
-                    <QuantityDistributionChart
-                      data={data?.charts?.quantity_distribution}
-                      loading={loading}
-                    />
-                    <ConfidenceDistributionChart
-                      data={data?.charts?.confidence_distribution}
-                      loading={loading}
-                    />
-                    <ShelfHealthChart score={summary?.shelf_health_score} loading={loading} />
-                    <LowStockSummaryChart data={data?.charts?.low_stock_summary} loading={loading} />
-                    <CategoryDistributionChart
-                      data={data?.charts?.category_distribution}
-                      loading={loading}
-                    />
-                  </div>
-                </details>
-              )}
-
-              {show("alerts") && <AlertsPanel alerts={data?.alerts} loading={loading} />}
-
-              {show("downloads") && <DownloadsPanel data={data} loading={loading} />}
-
-              {show("share") && <SharePanel data={data} loading={loading} />}
-
-              {show("scan_details") && (
-                <ScanDetailsAccordion
-                  data={data}
-                  loading={loading}
-                  onExportJson={
-                    data
-                      ? () =>
-                          downloadBlob(
-                            JSON.stringify(data, null, 2),
-                            `aislix-${data.scan_id}-result.json`,
-                            "application/json",
-                          )
-                      : undefined
-                  }
-                />
-              )}
+              {sectionOrder.map((key) => {
+                switch (key) {
+                  case "improvement_banner":
+                    return (
+                      <ExecutionImprovementBanner
+                        key={key}
+                        current={executionScore(data)}
+                        previous={data?.navigation?.previous_execution_score ?? undefined}
+                        loading={loading}
+                      />
+                    );
+                  case "score_hero":
+                    return (
+                      <ExecutionScoreHero
+                        key={key}
+                        data={data}
+                        loading={loading}
+                        previousScore={data?.navigation?.previous_execution_score ?? undefined}
+                      />
+                    );
+                  case "kpi_strip":
+                    return <ExecutionKpiStripPanel key={key} data={data} loading={loading} />;
+                  case "facings_strip":
+                    return <FacingsSummaryStrip key={key} data={data} loading={loading} />;
+                  case "action_center":
+                    return <ActionCenterPanel key={key} data={data} loading={loading} />;
+                  case "financial_impact":
+                    return (
+                      <FinancialImpactPanel
+                        key={key}
+                        data={data}
+                        loading={loading}
+                        locked={financialLocked}
+                        planCode={planCode}
+                      />
+                    );
+                  case "placement_alert":
+                    return (data?.compliance_alerts?.length ?? 0) > 0 ? (
+                      <ComplianceAlertCard
+                        key={key}
+                        alerts={data?.compliance_alerts}
+                        mismatches={data?.subcategory_mismatches}
+                      />
+                    ) : null;
+                  case "ai_summary":
+                    return <AiSummaryBlock key={key} data={data} loading={loading} />;
+                  case "competitor_intel":
+                    return competitorEnabled ? (
+                      <CompetitorIntelPanel
+                        key={key}
+                        snapshot={data?.competitor_intel}
+                        loading={loading}
+                      />
+                    ) : null;
+                  case "share_of_shelf":
+                    return <ShareOfShelfPanel key={key} data={data} loading={loading} />;
+                  case "sku_availability":
+                    return (
+                      <SkuAvailabilityPanel
+                        key={key}
+                        data={data}
+                        loading={loading}
+                        matched={matchedProducts}
+                        expected={expectedProducts}
+                      />
+                    );
+                  case "recommended_actions":
+                    return <RecommendedActionsPanel key={key} data={data} loading={loading} />;
+                  case "planogram":
+                    return (
+                      <Fragment key={key}>
+                        {planogramSection ? (
+                          <PlanogramComparisonSection comparison={planogramSection} />
+                        ) : null}
+                        {showPlanogramWarning ? <PlanogramMissingAlert /> : null}
+                      </Fragment>
+                    );
+                  case "review_queue":
+                    return (
+                      <NeedsReviewSection
+                        key={key}
+                        data={data}
+                        onCorrected={() => {
+                          void query.refetch();
+                        }}
+                      />
+                    );
+                  case "annotated_image":
+                    return (
+                      <AnnotatedImageViewer
+                        key={key}
+                        src={data?.annotated_image_url}
+                        originalSrc={data?.original_image_url}
+                        scanId={data?.scan_id}
+                        loading={loading}
+                      />
+                    );
+                  case "inventory":
+                    return (
+                      <InventoryTable
+                        key={key}
+                        items={data?.inventory}
+                        scanId={data?.scan_id}
+                        csvUrl={data?.downloads?.csv_url}
+                        loading={loading}
+                      />
+                    );
+                  case "analytics":
+                    return (
+                      <details key={key} className="card-surface p-5 sm:p-6">
+                        <summary className="cursor-pointer text-sm font-semibold tracking-tight">
+                          Analytics
+                        </summary>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Brand share, confidence distribution, and legacy shelf health charts.
+                        </p>
+                        <div className="mt-4 grid gap-4 xl:grid-cols-3">
+                          <TopBrandsChart data={data?.charts?.top_brands} loading={loading} />
+                          <QuantityDistributionChart
+                            data={data?.charts?.quantity_distribution}
+                            loading={loading}
+                          />
+                          <ConfidenceDistributionChart
+                            data={data?.charts?.confidence_distribution}
+                            loading={loading}
+                          />
+                          <ShelfHealthChart score={summary?.shelf_health_score} loading={loading} />
+                          <LowStockSummaryChart
+                            data={data?.charts?.low_stock_summary}
+                            loading={loading}
+                          />
+                          <CategoryDistributionChart
+                            data={data?.charts?.category_distribution}
+                            loading={loading}
+                          />
+                        </div>
+                      </details>
+                    );
+                  case "alerts":
+                    return <AlertsPanel key={key} alerts={data?.alerts} loading={loading} />;
+                  case "downloads":
+                    return <DownloadsPanel key={key} data={data} loading={loading} />;
+                  case "share":
+                    return <SharePanel key={key} data={data} loading={loading} />;
+                  case "scan_details":
+                    return (
+                      <ScanDetailsAccordion
+                        key={key}
+                        data={data}
+                        loading={loading}
+                        onExportJson={
+                          data
+                            ? () =>
+                                downloadBlob(
+                                  JSON.stringify(data, null, 2),
+                                  `aislix-${data.scan_id}-result.json`,
+                                  "application/json",
+                                )
+                            : undefined
+                        }
+                      />
+                    );
+                  default:
+                    return null;
+                }
+              })}
 
               <ResultSection
                 title="Next steps"
@@ -484,7 +530,6 @@ function DownloadsPanel({
   data?: ScanResult | undefined;
   loading?: boolean | undefined;
 }) {
-  const inventory = data?.inventory ?? [];
   const imageUrl = data?.downloads?.annotated_image_url ?? data?.annotated_image_url;
 
   const downloadCsv = async () => {
@@ -496,9 +541,10 @@ function DownloadsPanel({
         // fall back to the client-side export
       }
     }
+    if (!data) return;
     downloadBlob(
-      inventoryToCsv(inventory),
-      `aislix-${data?.scan_id ?? "scan"}-inventory.csv`,
+      buildFullScanReportCsv(data),
+      `aislix-${data.scan_id}-report.csv`,
       "text/csv;charset=utf-8",
     );
   };

@@ -474,9 +474,28 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     if (typeof value !== "string" || !value) return undefined;
     return value.startsWith("data:") ? value : `data:image/jpeg;base64,${value}`;
   };
+  const pickAnnotatedBase64 = (payload: unknown): string | undefined => {
+    if (!payload || typeof payload !== "object") return undefined;
+    const p = payload as Record<string, unknown>;
+    for (const key of [
+      "annotated_image_base64",
+      "annotated_image",
+      "annotatedImageBase64",
+    ]) {
+      const value = p[key];
+      if (typeof value === "string" && value.length > 64) return value;
+    }
+    const nested = p["metrics"];
+    if (nested && typeof nested === "object") {
+      const m = nested as Record<string, unknown>;
+      const nestedB64 = m["annotated_image_base64"];
+      if (typeof nestedB64 === "string" && nestedB64.length > 64) return nestedB64;
+    }
+    return undefined;
+  };
   const annotatedImageSrc =
     annotatedUrl ??
-    toDataUrl(rawPayload?.annotated_image_base64) ??
+    toDataUrl(pickAnnotatedBase64(rawPayload)) ??
     toDataUrl(rawPayload?.original_image_base64);
   const originalImageSrc = originalUrl ?? toDataUrl(rawPayload?.original_image_base64);
 
@@ -971,6 +990,119 @@ export function formatScanDate(iso?: string): string | undefined {
   });
 }
 
+function csvEscape(value: string | number | undefined | null): string {
+  const s = value === undefined || value === null ? "" : String(value);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function csvSection(title: string, rows: string[][]): string[] {
+  return [`# ${title}`, ...rows.map((row) => row.map(csvEscape).join(","))];
+}
+
+/** Full scan report CSV — summary metrics, actions, financial impact, brands, and inventory. */
+export function buildFullScanReportCsv(result: ScanResult): string {
+  const lines: string[] = [];
+  const s = result.summary;
+  const push = (...sectionLines: string[]) => {
+    if (lines.length) lines.push("");
+    lines.push(...sectionLines);
+  };
+
+  push(
+    "# Aislix Shelf Audit Report",
+    `# Scan ID,${csvEscape(result.scan_id)}`,
+    `# Store,${csvEscape(result.store ?? "")}`,
+    `# Location,${csvEscape(result.location ?? result.aisle ?? "")}`,
+    `# Category,${csvEscape(result.scan_category ?? "")}`,
+    `# Sub-category,${csvEscape(result.scan_sub_category ?? "")}`,
+    `# Scan date,${csvEscape(formatScanDate(result.created_at) ?? "")}`,
+  );
+
+  if (s) {
+    push(
+      ...csvSection("Execution summary", [
+        ["Metric", "Value"],
+        ["Shelf execution score", s.shelf_execution_score ?? s.shelf_health_score ?? ""],
+        ["Shelf health score", s.shelf_health_score ?? ""],
+        ["Total facings", s.total_facings ?? s.total_products ?? ""],
+        ["Unique SKUs", s.unique_skus ?? ""],
+        ["Unique brands", s.unique_brands ?? ""],
+        ["Recognition coverage %", s.recognition_coverage_percent ?? ""],
+        ["Availability %", s.availability_percent ?? s.osa_percent ?? ""],
+        ["Facing compliance %", s.facing_compliance_percent ?? ""],
+        ["Placement compliance %", s.placement_compliance_percent ?? ""],
+        ["Share of shelf %", s.share_of_shelf_percent ?? ""],
+        ["Planogram compliance %", result.planogram?.sku_match_percent ?? result.planogram?.percent ?? ""],
+        ["Confirmed OOS", s.confirmed_oos_count ?? s.out_of_stock_products ?? ""],
+        ["Possible OOS / low stock", s.possible_oos_count ?? s.low_stock_products ?? ""],
+        ["Placement issues", s.placement_issue_count ?? s.misplaced_products ?? ""],
+        ["Avg confidence %", normalizeConfidence(s.average_confidence).toFixed(1)],
+        ["Processing time", formatDuration(s.processing_time_ms)],
+      ]),
+    );
+  }
+
+  if (result.executive_summary?.trim()) {
+    push(`# Executive summary`, csvEscape(result.executive_summary.trim()));
+  }
+
+  const fi = result.financial_impact;
+  if (fi) {
+    push(
+      ...csvSection("Financial impact (indicative)", [
+        ["Metric", "Value (INR)"],
+        ["Estimated daily lost sales", fi.estimated_daily_lost_sales_inr],
+        ["Estimated weekly lost sales", fi.estimated_weekly_lost_sales_inr],
+        ["Estimated monthly lost sales", fi.estimated_monthly_lost_sales_inr],
+        ["OOS SKU count", fi.oos_sku_count],
+        ["At-risk SKU count", fi.at_risk_sku_count],
+        ["Confidence", fi.confidence],
+        ["Methodology", fi.methodology],
+      ]),
+    );
+  }
+
+  const brands = result.charts?.top_brands ?? [];
+  if (brands.length) {
+    push(
+      ...csvSection("Top brands by shelf share", [
+        ["Brand", "Share %"],
+        ...brands.map((b) => [b.brand, b.share.toFixed(1)]),
+      ]),
+    );
+  }
+
+  if (result.recommendations?.length) {
+    push(
+      ...csvSection("Recommended actions", [
+        ["Title", "Impact", "Detail"],
+        ...result.recommendations.map((r) => [r.title, r.impact ?? "", r.detail ?? ""]),
+      ]),
+    );
+  }
+
+  if (result.compliance_alerts?.length) {
+    push(
+      ...csvSection("Compliance alerts", [
+        ["Severity", "Title", "Detail"],
+        ...result.compliance_alerts.map((a) => [a.severity, a.title, a.detail ?? ""]),
+      ]),
+    );
+  }
+
+  if (result.alerts?.length) {
+    push(
+      ...csvSection("Alerts", [
+        ["Severity", "Title", "Detail"],
+        ...result.alerts.map((a) => [a.severity, a.title, a.detail ?? ""]),
+      ]),
+    );
+  }
+
+  push("# Complete inventory", inventoryToCsv(result.inventory ?? []).split("\n").slice(1).join("\n"));
+  return lines.join("\n");
+}
+
 export function inventoryToCsv(items: InventoryItem[]): string {
   const header = [
     "Brand",
@@ -1166,18 +1298,15 @@ export async function downloadScanAnnotatedImage(
   );
 }
 
-/** Prefers a stored CSV asset, otherwise builds one from the scan inventory. */
-export async function downloadScanCsv(scanId: string, url?: string): Promise<void> {
-  const csvUrl = url ?? (await resolveScanAssetUrls(scanId)).csv_url;
-  if (csvUrl) {
-    try {
-      await downloadFileFromUrl(csvUrl, `aislix-${scanId}-report.csv`);
-      return;
-    } catch {
-      // fall through to generating the CSV client-side
-    }
-  }
+/** Builds a full multi-section CSV report from live scan data. */
+export async function downloadScanCsv(scanId: string, _url?: string): Promise<void> {
   const result = await fetchScanResult(scanId);
-  if (!result.inventory?.length) throw new Error("This scan has no inventory rows to export.");
-  downloadBlob(inventoryToCsv(result.inventory), `aislix-${scanId}-report.csv`, "text/csv");
+  if (!result.summary && !result.inventory?.length) {
+    throw new Error("This scan has no report data to export.");
+  }
+  downloadBlob(
+    buildFullScanReportCsv(result),
+    `aislix-${scanId}-report.csv`,
+    "text/csv;charset=utf-8",
+  );
 }
