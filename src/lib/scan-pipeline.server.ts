@@ -1811,11 +1811,28 @@ async function persistScanPayload(
       : {}),
     ...(shareOfShelf !== null ? { share_of_shelf_percent: shareOfShelf } : {}),
     ...(metricsSource?.competitor_intel ? { competitor_intel: metricsSource.competitor_intel } : {}),
+    ...(metricsSource?.financial_impact ? { financial_impact: metricsSource.financial_impact } : {}),
+    ...(Array.isArray(payload?.facings_debug) && payload.facings_debug.length
+      ? { facings_debug: payload.facings_debug }
+      : {}),
 
     learned_catalog_size: learnedCatalogCount ?? 0,
     learned_new_this_scan: learnedNewThisScan,
     processing_time_ms: new Date(completedAt).getTime() - new Date(startedAt).getTime(),
   };
+
+  // Strip multi-MB base64 blobs — assets are stored in scan_images.
+  const slimRawPayload = (() => {
+    if (!payload || typeof payload !== "object") return payload ?? null;
+    const {
+      annotated_image_base64: _annotated,
+      original_image_base64: _original,
+      pdf_base64: _pdf,
+      csv_base64: _csv,
+      ...rest
+    } = payload as Record<string, unknown>;
+    return rest;
+  })();
 
   // --- Persist the result set ----------------------------------------------
   const { error: resultError } = await supabase.from("scan_results").upsert(
@@ -1830,7 +1847,7 @@ async function persistScanPayload(
       shelf_rows: rows,
       model_version: str(payload?.model_version) ?? str(payload?.version) ?? null,
       confidence_avg: confidenceAvg,
-      raw_payload: payload ?? null,
+      raw_payload: slimRawPayload,
     } as never,
     { onConflict: "scan_id" },
   );

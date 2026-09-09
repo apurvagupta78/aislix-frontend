@@ -73,7 +73,6 @@ import {
   downloadScanCsv,
   downloadScanPdf,
   downloadScanAnnotatedImage,
-  ensureScanAssets,
   type ScanResult,
 } from "@/lib/scan-results";
 import { executionScore } from "@/lib/scan-execution";
@@ -123,7 +122,8 @@ function Results() {
     queryKey: ["scan-result", scan],
     queryFn: ({ signal }) => fetchScanResult(scan!, signal),
     enabled: !!scan,
-    retry: false,
+    retry: 1,
+    staleTime: 30_000,
     refetchInterval: (q) => {
       const status = q.state.data?.status;
       return status === "processing" || status === "queued" ? 4000 : false;
@@ -134,9 +134,8 @@ function Results() {
   const comparisonQuery = useQuery({
     queryKey: ["planogram-comparison", scan],
     queryFn: () => fetchPlanogramComparison(scan!),
-    enabled: Boolean(scan),
+    enabled: Boolean(scan) && scanStatus === "completed",
     retry: false,
-    refetchInterval: scanStatus === "processing" || scanStatus === "queued" ? 4000 : false,
   });
   const comparison = comparisonQuery.data ?? null;
 
@@ -185,26 +184,6 @@ function Results() {
       workspaceQuery.data?.roleFamily ?? "operations",
       workspaceQuery.data?.hasBrandConfig ?? false,
     );
-
-  // Older scans may lack stored annotated images — rebuild exports once on load.
-  useEffect(() => {
-    if (!scan || !data || data.status !== "completed") return;
-    if (data.annotated_image_url) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        await ensureScanAssets(scan);
-        if (!cancelled) {
-          void queryClient.invalidateQueries({ queryKey: ["scan-result", scan] });
-        }
-      } catch {
-        // optional asset — never block the results page
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [scan, data?.status, data?.annotated_image_url, queryClient]);
 
   // Planogram compliance is shown for assigned scans AND ad-hoc "with planogram"
   // scans. When there is no comparison row we still render tiles from the

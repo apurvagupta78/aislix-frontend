@@ -222,7 +222,7 @@ export type ScanResult = {
 
 import { supabase } from "@/integrations/supabase/client";
 import type { CompetitorSnapshot } from "@/lib/brand-intel";
-import { buildCompetitorSnapshot, fetchBrandConfig } from "@/lib/brand-intel";
+import { buildCompetitorSnapshot } from "@/lib/brand-intel";
 import {
   formatCategorySelections,
   parseCategorySelections,
@@ -403,8 +403,28 @@ function mapCategoryBreakdown(raw: unknown): CategorySlice[] {
     .filter((item) => item.category);
 }
 
+function emptyScanSummary(): ScanSummary {
+  return {
+    total_products: 0,
+    unique_skus: 0,
+    unique_brands: 0,
+    low_stock_products: 0,
+    average_confidence: 0,
+    processing_time_ms: 0,
+  };
+}
+
+async function signImageUrl(
+  bucket: string,
+  path: string,
+): Promise<string | undefined> {
+  const { data: signed } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+  return signed?.signedUrl;
+}
+
 /** Loads the full result payload for one scan from Supabase. */
-export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Promise<ScanResult> {
+export async function fetchScanResult(scanId: string, signal?: AbortSignal): Promise<ScanResult> {
+  if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
   const orgId = await requireOrgId();
 
   const { data: scan, error: scanError } = await supabase
@@ -418,129 +438,65 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   if (scanError) return dbError(scanError, "Could not load this scan.");
   if (!scan) notFound("Scan not found.");
 
-  const { data: result } = await supabase
-    .from("scan_results")
-    .select(
-      "executive_summary, metrics, alerts, recommendations, brand_share, category_breakdown, confidence_avg, raw_payload",
-    )
-    .eq("scan_id", scanId)
-    .maybeSingle();
+  const scanStatus = scan.status as ScanStatus;
+  if (scanStatus === "processing" || scanStatus === "queued") {
+    return {
+      scan_id: scan.id as string,
+      created_at: scan.created_at as string,
+      status: scanStatus,
+      summary: emptyScanSummary(),
+    };
+  }
 
+  // Never select raw_payload here — it can contain multi-MB base64 images and
+  // will timeout the browser. Assets live in scan_images; metrics hold the rest.
+  const [{ data: result }, { data: products }, { data: images }, { data: correctionRows }] =
+    await Promise.all([
+      supabase
+        .from("scan_results")
+        .select(
+          "executive_summary, metrics, alerts, recommendations, brand_share, category_breakdown, confidence_avg",
+        )
+        .eq("scan_id", scanId)
+        .maybeSingle(),
+      supabase
+        .from("detected_products")
+        .select(
+          "id, name, brand, variant, category, facings, shelf_row, stock_status, confidence, expected_facings, sku, bounding_box",
+        )
+        .eq("scan_id", scanId),
+      supabase.from("scan_images").select("kind, storage_bucket, storage_path").eq("scan_id", scanId),
+      supabase
+        .from("scan_corrections")
+        .select(
+          "predicted_brand, predicted_product, corrected_brand, corrected_product, corrected_variant, created_at",
+        )
+        .eq("scan_id", scan.id as string)
+        .order("created_at", { ascending: true }),
+    ]);
 
-  const { data: products } = await supabase
-    .from("detected_products")
-    .select(
-      "id, name, brand, variant, category, facings, shelf_row, stock_status, confidence, expected_facings, sku, bounding_box",
-    )
-    .eq("scan_id", scanId);
+  if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
 
-  const { data: images } = await supabase
-    .from("scan_images")
-    .select("kind, storage_bucket, storage_path")
-    .eq("scan_id", scanId);
-
-  let annotatedUrl: string | undefined;
-  let originalUrl: string | undefined;
-  let pdfUrl: string | undefined;
   const annotated = images?.find((img) => img.kind === "annotated");
   const original = images?.find((img) => img.kind === "original");
   const pdf = images?.find((img) => img.kind === "pdf" || img.kind === "report");
-  if (annotated) {
-    const { data: signed } = await supabase.storage
-      .from(annotated.storage_bucket as string)
-      .createSignedUrl(annotated.storage_path as string, 3600);
-    annotatedUrl = signed?.signedUrl;
-  }
-  if (original) {
-    const { data: signed } = await supabase.storage
-      .from(original.storage_bucket as string)
-      .createSignedUrl(original.storage_path as string, 3600);
-    originalUrl = signed?.signedUrl;
-  }
-  if (pdf) {
-    const { data: signed } = await supabase.storage
-      .from(pdf.storage_bucket as string)
-      .createSignedUrl(pdf.storage_path as string, 3600);
-    pdfUrl = signed?.signedUrl;
-  }
-
-  // Compliance is authoritative on the backend rows: build a lookup from the raw
-  // POST /scan payload so every inventory row carries the real status instead of
-  // silently defaulting to "OK".
-  const rawPayload = (result?.raw_payload ?? null) as any;
-  // Always show the backend-rendered annotated image: stored signed URL first,
-  // falling back to the base64 JPEG returned by the vision service.
-  const toDataUrl = (value: unknown): string | undefined => {
-    if (typeof value !== "string" || !value) return undefined;
-    return value.startsWith("data:") ? value : `data:image/jpeg;base64,${value}`;
-  };
-  const pickAnnotatedBase64 = (payload: unknown): string | undefined => {
-    if (!payload || typeof payload !== "object") return undefined;
-    const p = payload as Record<string, unknown>;
-    for (const key of [
-      "annotated_image_base64",
-      "annotated_image",
-      "annotatedImageBase64",
-    ]) {
-      const value = p[key];
-      if (typeof value === "string" && value.length > 64) return value;
-    }
-    const nested = p["metrics"];
-    if (nested && typeof nested === "object") {
-      const m = nested as Record<string, unknown>;
-      const nestedB64 = m["annotated_image_base64"];
-      if (typeof nestedB64 === "string" && nestedB64.length > 64) return nestedB64;
-    }
-    return undefined;
-  };
-  const annotatedImageSrc =
-    annotatedUrl ??
-    toDataUrl(pickAnnotatedBase64(rawPayload)) ??
-    toDataUrl(rawPayload?.original_image_base64);
-  const originalImageSrc = originalUrl ?? toDataUrl(rawPayload?.original_image_base64);
-
-
-  const rawRows: any[] = [
-    ...(Array.isArray(rawPayload?.inventory) ? rawPayload.inventory : []),
-    ...(Array.isArray(rawPayload?.products) ? rawPayload.products : []),
-  ];
-  const isMismatchRow = (row: any) =>
-    String(row?.compliance_status ?? "").toLowerCase() === "category_mismatch" ||
-    String(row?.compliance_alert ?? "").toLowerCase() === COMPLIANCE_ALERT_TITLE.toLowerCase();
-  const rawComplianceByKey = new Map<string, { mismatch: boolean; interpretation?: string }>();
-  const addRawKey = (key: string | undefined, row: any) => {
-    if (!key) return;
-    const k = key.toLowerCase().trim();
-    if (!k) return;
-    const mismatch = isMismatchRow(row);
-    const prev = rawComplianceByKey.get(k);
-    rawComplianceByKey.set(k, {
-      mismatch: mismatch || !!prev?.mismatch,
-      interpretation:
-        (mismatch ? (row?.compliance_interpretation as string | undefined) : undefined) ??
-        prev?.interpretation,
-    });
-  };
-  for (const row of rawRows) {
-    const brand = row?.brand ?? row?.brand_name ?? "";
-    const product = row?.product ?? row?.product_name ?? row?.name ?? "";
-    addRawKey(`${brand}::${product}`, row);
-    addRawKey(product, row);
-    if (row?.sku) addRawKey(String(row.sku), row);
-  }
-  const rawCompliance = (brand: string, product: string, sku?: string) =>
-    rawComplianceByKey.get(`${brand}::${product}`.toLowerCase()) ??
-    rawComplianceByKey.get(product.toLowerCase()) ??
-    (sku ? rawComplianceByKey.get(String(sku).toLowerCase()) : undefined);
-
-  // Human corrections override the AI labels in the displayed inventory.
-  const { data: correctionRows } = await supabase
-    .from("scan_corrections")
-    .select(
-      "predicted_brand, predicted_product, corrected_brand, corrected_product, corrected_variant, created_at",
-    )
-    .eq("scan_id", scan.id as string)
-    .order("created_at", { ascending: true });
+  const csv = images?.find((img) => img.kind === "csv");
+  const [annotatedUrl, originalUrl, pdfUrl, csvUrl] = await Promise.all([
+    annotated
+      ? signImageUrl(annotated.storage_bucket as string, annotated.storage_path as string)
+      : Promise.resolve(undefined),
+    original
+      ? signImageUrl(original.storage_bucket as string, original.storage_path as string)
+      : Promise.resolve(undefined),
+    pdf
+      ? signImageUrl(pdf.storage_bucket as string, pdf.storage_path as string)
+      : Promise.resolve(undefined),
+    csv
+      ? signImageUrl(csv.storage_bucket as string, csv.storage_path as string)
+      : Promise.resolve(undefined),
+  ]);
+  const annotatedImageSrc = annotatedUrl;
+  const originalImageSrc = originalUrl;
   const correctionByLabel = new Map<
     string,
     { brand?: string | null; product?: string | null; variant?: string | null }
@@ -566,13 +522,8 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     const key = `${brand}::${product}::${variant}`;
     const qty = Number(p.facings) || 1;
     const confidence = Number(p.confidence) || 0;
-    const raw = rawCompliance(brand, product, (p as any).sku);
-    const mismatch = (p.stock_status as string | null) === "misplaced" || !!raw?.mismatch;
-    const status: ComplianceStatus | undefined = mismatch
-      ? "category_mismatch"
-      : raw
-        ? "ok"
-        : undefined;
+    const mismatch = (p.stock_status as string | null) === "misplaced";
+    const status: ComplianceStatus | undefined = mismatch ? "category_mismatch" : undefined;
     const existing = grouped.get(key);
     if (existing) {
       existing.quantity += qty;
@@ -580,7 +531,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
       if (mismatch) {
         existing.compliance_status = "category_mismatch";
         existing.compliance_interpretation =
-          raw?.interpretation ?? existing.compliance_interpretation ?? COMPLIANCE_INTERPRETATION;
+          existing.compliance_interpretation ?? COMPLIANCE_INTERPRETATION;
       } else if (!existing.compliance_status && status) {
         existing.compliance_status = status;
       }
@@ -594,9 +545,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
         confidence,
         category: (p.category as string | null) ?? undefined,
         ...(status ? { compliance_status: status } : {}),
-        ...(mismatch
-          ? { compliance_interpretation: raw?.interpretation ?? COMPLIANCE_INTERPRETATION }
-          : {}),
+        ...(mismatch ? { compliance_interpretation: COMPLIANCE_INTERPRETATION } : {}),
         shelf_position: p.shelf_row === null || p.shelf_row === undefined ? undefined : String(p.shelf_row),
       });
     }
@@ -808,15 +757,24 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     Object.keys(planogramSummary).length > 0;
 
   const quality = mapQuality(metricsAny);
-  const facings = mapFacings(rawPayload, products ?? []);
+  const facingsDebug = Array.isArray(metricsAny["facings_debug"])
+    ? metricsAny["facings_debug"]
+    : null;
+  const facings = mapFacings(
+    facingsDebug?.length ? { facings_debug: facingsDebug } : null,
+    products ?? [],
+  );
 
-  const brandConfig = await fetchBrandConfig();
   const metricsCompetitor =
     metricsAny["competitor_intel"] && typeof metricsAny["competitor_intel"] === "object"
       ? (metricsAny["competitor_intel"] as Partial<CompetitorSnapshot>)
       : undefined;
   const topBrands = mapBrandShare(result?.brand_share);
-  const competitorIntel = buildCompetitorSnapshot(topBrands, brandConfig, metricsCompetitor);
+  const competitorIntel = buildCompetitorSnapshot(
+    topBrands,
+    { primary_brand: "", competitor_brands: [] },
+    metricsCompetitor,
+  );
   const financialImpact = mapFinancialImpact(metricsAny["financial_impact"]);
 
   const scanResult: ScanResult = {
@@ -852,6 +810,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     downloads: {
       ...(annotatedImageSrc ? { annotated_image_url: annotatedImageSrc } : {}),
       ...(pdfUrl ? { pdf_url: pdfUrl } : {}),
+      ...(csvUrl ? { csv_url: csvUrl } : {}),
     },
 
   };
