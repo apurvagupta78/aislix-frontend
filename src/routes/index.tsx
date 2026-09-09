@@ -73,7 +73,7 @@ export const Route = createFileRoute("/")({
               url: "https://aislix.com",
               logo: "https://aislix.com/apple-touch-icon.png",
               description:
-                "Aislix is AI-powered shelf intelligence for FMCG field teams, retail audit agencies, distributors, and multi-store retail ops.",
+                "Aislix is an AI-powered retail shelf intelligence platform for supermarkets, dark stores, warehouses, FMCG brands, distributors and local stores.",
               email: "hello@aislix.com",
               sameAs: [
                 "https://www.linkedin.com/company/aislix/",
@@ -158,14 +158,20 @@ function Landing() {
                 document.querySelector("#live-dashboard")?.scrollIntoView({ behavior: "smooth" })
               }
             >
-              Try sample shelf scan <ArrowRight className="size-4" />
+              Start scanning free <ArrowRight className="size-4" />
             </Button>
-            <Button asChild variant="subtle" size="xl">
-              <Link to="/signup">Start free workspace</Link>
+            <Button
+              variant="subtle"
+              size="xl"
+              onClick={() =>
+                document.querySelector("#live-dashboard")?.scrollIntoView({ behavior: "smooth" })
+              }
+            >
+              View live demo
             </Button>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            No signup for demo · Sample scans finish in seconds · Upload your shelf below
+            No card required · 5 free scans per day · Results in 60~90 seconds
           </p>
         </div>
       </section>
@@ -232,11 +238,11 @@ function Landing() {
         <div className="mx-auto max-w-6xl px-6 text-center">
           <p className="text-xs font-medium uppercase tracking-widest text-brand">Pricing</p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-            Pricing for teams that audit shelves every week
+            Plans that scale from one local store to a national chain.
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Start free for pilots. Growth at {format(2999)}/mo is built for FMCG field teams and
-            audit agencies — upgrade when recurring store audits are part of your workflow.
+            Start free with 5 scans a day. Move to Starter at {format(999)}, 5,000 scans a month on
+            Professional at {format(4999)}, or talk to us about an Enterprise rollout.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <CycleToggle cycle={cycle} onChange={setCycle} />

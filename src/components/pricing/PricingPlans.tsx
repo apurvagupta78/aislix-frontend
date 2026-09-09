@@ -93,9 +93,8 @@ export function PlanCard({
 
   return (
     <div
-      id={`plan-${plan.id}`}
       className={cn(
-        "group relative flex h-full flex-col rounded-3xl px-6 py-8 transition-all duration-300 scroll-mt-24",
+        "group relative flex h-full flex-col rounded-3xl px-6 py-8 transition-all duration-300",
         plan.popular
           ? "border-2 border-brand bg-card shadow-card hover:-translate-y-1 hover:shadow-lift"
           : "card-surface card-hover",
@@ -115,32 +114,9 @@ export function PlanCard({
           </Badge>
         )}
       </div>
-      {plan.audience && (
-        <Badge variant="secondary" className="mt-2 w-fit rounded-full text-[0.65rem] font-normal">
-          {plan.audience}
-        </Badge>
-      )}
       <p className="mt-1.5 min-h-10 text-xs leading-relaxed text-muted-foreground sm:text-sm">
         {plan.tagline}
       </p>
-      {plan.bestFor && plan.bestFor.length > 0 && (
-        <div className="mt-3 text-left">
-          <p className="text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground">
-            Best for
-          </p>
-          <ul className="mt-1.5 space-y-1">
-            {plan.bestFor.slice(0, 3).map((item) => (
-              <li key={item} className="flex gap-1.5 text-xs text-muted-foreground">
-                <Check className="mt-0.5 size-3 shrink-0 text-accent-green" />
-                <span>{item}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      {plan.notIdealFor && (
-        <p className="mt-2 text-xs text-muted-foreground/80">{plan.notIdealFor}</p>
-      )}
 
       <div className="mt-5 flex items-end gap-1.5">
         <span className="text-3xl font-semibold tracking-tight">{priceFor(plan, cycle, currency)}</span>
@@ -180,11 +156,6 @@ export function PlanCard({
       >
         {isCurrent ? "Current plan" : pending ? "Redirecting…" : plan.cta}
       </Button>
-      {plan.id === "enterprise" && (
-        <p className="mt-2 text-center text-[0.65rem] text-muted-foreground">
-          Start with a category pilot — we&apos;ll tune recognition to your SKUs.
-        </p>
-      )}
     </div>
   );
 }
