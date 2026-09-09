@@ -9,7 +9,6 @@ import {
   ArrowRight,
   Loader2,
   RefreshCw,
-  Braces,
   FileSpreadsheet,
   FileText,
   Image as ImageIcon,
@@ -24,10 +23,20 @@ import {
   AnnotatedImageViewer,
   ComplianceAlertCard,
   InventoryTable,
-  RecommendationsPanel,
   ResultSection,
-  SummaryCard,
 } from "@/components/scan-results/ResultParts";
+import {
+  ActionCenterPanel,
+  AiSummaryBlock,
+  ExecutionImprovementBanner,
+  ExecutionKpiStripPanel,
+  ExecutionScoreHero,
+  FacingsSummaryStrip,
+  RecommendedActionsPanel,
+  ScanDetailsAccordion,
+  ShareOfShelfPanel,
+  SkuAvailabilityPanel,
+} from "@/components/scan-results/ExecutionPhase1";
 import {
   PrintReportButton,
   ProcessingState,
@@ -46,8 +55,6 @@ import {
 import { toast } from "sonner";
 import {
   fetchScanResult,
-  formatConfidence,
-  formatPercent,
   inventoryToCsv,
   downloadBlob,
   downloadScanCsv,
@@ -55,6 +62,7 @@ import {
   downloadScanAnnotatedImage,
   type ScanResult,
 } from "@/lib/scan-results";
+import { executionScore } from "@/lib/scan-execution";
 import { retryScanAnalysis } from "@/lib/scan-api";
 import { GENERIC_EXPORT, networkErrorMessage, sanitizeUserMessage } from "@/lib/api-errors";
 import {
@@ -63,7 +71,6 @@ import {
 } from "@/components/scan-results/PlanogramCompliance";
 import { NeedsReviewSection } from "@/components/scan-results/NeedsReview";
 import {
-  complianceTone,
   fetchPlanogramComparison,
   summaryCounts,
   type PlanogramComparison,
@@ -76,16 +83,16 @@ export const Route = createFileRoute("/results")({
   },
   head: () => ({
     meta: [
-      { title: "Scan Results Dashboard — Aislix Shelf Audit" },
+      { title: "Shelf Execution Report — Aislix" },
       {
         name: "description",
         content:
-          "Shelf health score, detected products, brand share, low-stock alerts and AI recommendations for a single Aislix shelf scan.",
+          "Shelf execution score, action center, share of shelf, planogram compliance and SKU availability for a single Aislix shelf audit.",
       },
-      { property: "og:title", content: "Shelf scan results — Aislix" },
+      { property: "og:title", content: "Shelf execution report — Aislix" },
       {
         property: "og:description",
-        content: "Full AI breakdown of one shelf audit: inventory, alerts and recommendations.",
+        content: "Execution-first shelf audit: score, KPIs, actions, inventory and planogram compliance.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -156,19 +163,6 @@ function Results() {
   const planogramCounts = summaryCounts(planogramSummary as PlanogramComparison["summary"]);
   const expectedProducts = planogramCounts["expected"];
   const matchedProducts = planogramCounts["found"];
-  const planogramHint =
-    skuMatchPercent !== null || qtyCompliancePercent !== null
-      ? [
-          skuMatchPercent !== null ? `${Math.round(skuMatchPercent)}% SKU match` : null,
-          qtyCompliancePercent !== null
-            ? `qty accuracy ${Math.round(qtyCompliancePercent)}%`
-            : null,
-        ]
-          .filter(Boolean)
-          .join(" · ")
-      : expectedProducts !== null && matchedProducts !== null
-        ? `${matchedProducts}/${expectedProducts} SKUs matched`
-        : "Against planogram";
   const planogramSection: PlanogramComparison | null =
     comparison ??
     (planogram?.requested && (planogramPercent !== null || hasSummaryCounts)
@@ -276,63 +270,44 @@ function Results() {
             <ProcessingState scanId={data?.scan_id} />
           ) : (
             <>
-              <ComplianceAlertCard
-                alerts={data?.compliance_alerts}
-                mismatches={data?.subcategory_mismatches}
+              <ExecutionImprovementBanner
+                current={executionScore(data)}
+                previous={data?.navigation?.previous_execution_score ?? undefined}
+                loading={loading}
               />
 
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <SummaryCard
-                  label="Products detected"
-                  value={summary?.total_products}
-                  loading={loading}
-                />
-                <SummaryCard label="Unique SKUs" value={summary?.unique_skus} loading={loading} />
-                <SummaryCard
-                  label="Unique brands"
-                  value={summary?.unique_brands}
-                  loading={loading}
-                />
-                <SummaryCard
-                  label="Low stock"
-                  value={summary?.low_stock_products}
-                  loading={loading}
-                  hint="Products below threshold"
-                />
-                <SummaryCard
-                  label="Out of stock"
-                  value={summary?.out_of_stock_products}
-                  loading={loading}
-                  hint="Empty facings detected"
-                />
-                <SummaryCard
-                  label="Misplaced facings"
-                  value={summary?.misplaced_products || undefined}
-                  loading={loading}
-                  hint="Wrong sub-category on this shelf"
-                />
+              <ExecutionScoreHero
+                data={data}
+                loading={loading}
+                previousScore={data?.navigation?.previous_execution_score ?? undefined}
+              />
 
-                <SummaryCard
-                  label="Planogram compliance"
-                  value={
-                    planogramPercent !== null
-                      ? `${Math.round(planogramPercent)}%`
-                      : formatPercent(summary?.shelf_compliance)
-                  }
-                  loading={loading}
-                  hint={planogramHint}
-                  valueClassName={
-                    planogramPercent !== null ? complianceTone(planogramPercent) : undefined
-                  }
+              <ExecutionKpiStripPanel data={data} loading={loading} />
+
+              <FacingsSummaryStrip data={data} loading={loading} />
+
+              <ActionCenterPanel data={data} loading={loading} />
+
+              {(data?.compliance_alerts?.length ?? 0) > 0 && (
+                <ComplianceAlertCard
+                  alerts={data?.compliance_alerts}
+                  mismatches={data?.subcategory_mismatches}
                 />
-                <SummaryCard
-                  label="Avg AI confidence"
-                  value={summary ? formatConfidence(summary.average_confidence) : undefined}
+              )}
+
+              <AiSummaryBlock data={data} loading={loading} />
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                <ShareOfShelfPanel data={data} loading={loading} />
+                <SkuAvailabilityPanel
+                  data={data}
                   loading={loading}
-                  hint="Label recognition confidence — not planogram compliance"
-                  accent
+                  matched={matchedProducts}
+                  expected={expectedProducts}
                 />
               </div>
+
+              <RecommendedActionsPanel data={data} loading={loading} />
 
               {planogramSection && <PlanogramComparisonSection comparison={planogramSection} />}
               {showPlanogramWarning && <PlanogramMissingAlert />}
@@ -351,34 +326,6 @@ function Results() {
                 loading={loading}
               />
 
-              <ResultSection
-                title="Executive summary"
-                description="Narrative generated by the AI pipeline."
-              >
-                {loading ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-11/12" />
-                    <Skeleton className="h-4 w-9/12" />
-                  </div>
-                ) : data?.executive_summary ? (
-                  <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-                    {data.executive_summary}
-                  </p>
-                ) : (
-                  <EmptyState
-                    icon={<FileText className="size-5" />}
-                    title="No summary yet"
-                    description="The executive summary appears here once the scan service returns it."
-                  />
-                )}
-              </ResultSection>
-
-              <div className="grid gap-4 lg:grid-cols-2">
-                <AlertsPanel alerts={data?.alerts} loading={loading} />
-                <RecommendationsPanel recommendations={data?.recommendations} loading={loading} />
-              </div>
-
               <InventoryTable
                 items={data?.inventory}
                 scanId={data?.scan_id}
@@ -386,27 +333,52 @@ function Results() {
                 loading={loading}
               />
 
-              <div className="grid gap-4 xl:grid-cols-3">
-                <TopBrandsChart data={data?.charts?.top_brands} loading={loading} />
-                <QuantityDistributionChart
-                  data={data?.charts?.quantity_distribution}
-                  loading={loading}
-                />
-                <ConfidenceDistributionChart
-                  data={data?.charts?.confidence_distribution}
-                  loading={loading}
-                />
-                <ShelfHealthChart score={summary?.shelf_health_score} loading={loading} />
-                <LowStockSummaryChart data={data?.charts?.low_stock_summary} loading={loading} />
-                <CategoryDistributionChart
-                  data={data?.charts?.category_distribution}
-                  loading={loading}
-                />
-              </div>
+              <details className="card-surface p-5 sm:p-6">
+                <summary className="cursor-pointer text-sm font-semibold tracking-tight">
+                  Analytics
+                </summary>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Brand share, confidence distribution, and legacy shelf health charts.
+                </p>
+                <div className="mt-4 grid gap-4 xl:grid-cols-3">
+                  <TopBrandsChart data={data?.charts?.top_brands} loading={loading} />
+                  <QuantityDistributionChart
+                    data={data?.charts?.quantity_distribution}
+                    loading={loading}
+                  />
+                  <ConfidenceDistributionChart
+                    data={data?.charts?.confidence_distribution}
+                    loading={loading}
+                  />
+                  <ShelfHealthChart score={summary?.shelf_health_score} loading={loading} />
+                  <LowStockSummaryChart data={data?.charts?.low_stock_summary} loading={loading} />
+                  <CategoryDistributionChart
+                    data={data?.charts?.category_distribution}
+                    loading={loading}
+                  />
+                </div>
+              </details>
+
+              <AlertsPanel alerts={data?.alerts} loading={loading} />
 
               <DownloadsPanel data={data} loading={loading} />
 
               <SharePanel data={data} loading={loading} />
+
+              <ScanDetailsAccordion
+                data={data}
+                loading={loading}
+                onExportJson={
+                  data
+                    ? () =>
+                        downloadBlob(
+                          JSON.stringify(data, null, 2),
+                          `aislix-${data.scan_id}-result.json`,
+                          "application/json",
+                        )
+                    : undefined
+                }
+              />
 
               <ResultSection
                 title="Next steps"
@@ -469,25 +441,16 @@ function DownloadsPanel({
     }
   };
 
-  const downloadJson = () =>
-    data &&
-    downloadBlob(
-      JSON.stringify(data, null, 2),
-      `aislix-${data.scan_id}-result.json`,
-      "application/json",
-    );
-
-
   return (
     <ResultSection title="Downloads" description="Export this scan for sharing or analysis.">
       {loading ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {[0, 1, 2, 3, 4].map((i) => (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-11 w-full" />
           ))}
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Button
             variant="brand"
             size="lg"
@@ -520,16 +483,6 @@ function DownloadsPanel({
 
 
           <PrintReportButton disabled={!data} />
-
-          <Button
-            variant="subtle"
-            size="lg"
-            className="w-full rounded-xl"
-            onClick={downloadJson}
-            disabled={!data}
-          >
-            <Braces className="size-4" /> JSON payload
-          </Button>
         </div>
       )}
       {!loading && !data?.downloads?.pdf_url && (

@@ -220,7 +220,7 @@ export async function loadSharedScan(token: string): Promise<SharedScanPayload> 
 
   const { data: result } = await db
     .from("scan_results")
-    .select("executive_summary")
+    .select("executive_summary, metrics")
     .eq("scan_id", scanId)
     .maybeSingle();
 
@@ -273,6 +273,15 @@ export async function loadSharedScan(token: string): Promise<SharedScanPayload> 
       ? summary.planogram_compliance_percent
       : Number(comparison.compliance_percent);
 
+  const metrics = (result?.metrics ?? {}) as Record<string, unknown>;
+  const metricNum = (key: string): number | null =>
+    typeof metrics[key] === "number" ? Number(metrics[key]) : null;
+  const executionScore =
+    metricNum("shelf_execution_score") ??
+    (summary.shelf_health_score !== null ? summary.shelf_health_score : null);
+  const facingsDetected =
+    metricNum("total_facings") ?? metricNum("total_products") ?? summary.products_detected;
+
   return {
     scan_id: scanId,
     store_name: summary.store_name,
@@ -282,10 +291,12 @@ export async function loadSharedScan(token: string): Promise<SharedScanPayload> 
     scanned_at: summary.scanned_at,
     status: summary.status,
     shelf_health_score: summary.shelf_health_score,
+    shelf_execution_score: executionScore,
     osa_percent:
       scanRow?.osa_percent === null || scanRow?.osa_percent === undefined
         ? null
         : Number(scanRow.osa_percent),
+    facings_detected: facingsDetected,
     products_detected: summary.products_detected,
     out_of_stock_count: Number(scanRow?.out_of_stock_count ?? 0),
     low_stock_count: Number(scanRow?.low_stock_count ?? 0),

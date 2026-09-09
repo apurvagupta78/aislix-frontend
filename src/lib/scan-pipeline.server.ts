@@ -1686,6 +1686,21 @@ async function persistScanPayload(
         (confidenceAvg !== null ? confidenceAvg * 100 : 90) * 0.15
       ).toFixed(2),
     );
+  const executionScore = pct(metricsSource?.shelf_execution_score);
+  const availabilityPct = pct(metricsSource?.availability_percent) ?? osa;
+  const facingCompliance = pct(metricsSource?.facing_compliance_percent);
+  const placementCompliance = pct(metricsSource?.placement_compliance_percent);
+  const recognitionCoverage = pct(metricsSource?.recognition_coverage_percent);
+  const confirmedOos = Math.round(
+    num(metricsSource?.confirmed_oos_count ?? metricsSource?.out_of_stock_products) ?? outOfStock,
+  );
+  const possibleOos = Math.round(num(metricsSource?.possible_oos_count) ?? lowStock);
+  const shelfGapCount = Math.round(num(metricsSource?.shelf_gap_count ?? metricsSource?.needs_review_facings) ?? 0);
+  const placementIssues = Math.round(
+    num(metricsSource?.placement_issue_count ?? metricsSource?.misplaced_products) ?? misplaced,
+  );
+  const needsReviewFacings = Math.round(num(metricsSource?.needs_review_facings) ?? shelfGapCount);
+  const lowStockThreshold = Math.round(num(metricsSource?.low_stock_threshold) ?? 2);
 
   const shares = brandShare(payload, products);
   const categories = categoryBreakdown(payload, products);
@@ -1733,7 +1748,18 @@ async function persistScanPayload(
       : {}),
     average_confidence: confidenceAvg ?? 0,
     osa_percent: osa,
+    availability_percent: availabilityPct,
     shelf_health_score: health,
+    ...(executionScore !== null ? { shelf_execution_score: executionScore } : {}),
+    ...(facingCompliance !== null ? { facing_compliance_percent: facingCompliance } : {}),
+    ...(placementCompliance !== null ? { placement_compliance_percent: placementCompliance } : {}),
+    ...(recognitionCoverage !== null ? { recognition_coverage_percent: recognitionCoverage } : {}),
+    confirmed_oos_count: confirmedOos,
+    possible_oos_count: possibleOos,
+    shelf_gap_count: shelfGapCount,
+    placement_issue_count: placementIssues,
+    needs_review_facings: needsReviewFacings,
+    low_stock_threshold: lowStockThreshold,
     ...(compliance !== null ? { shelf_compliance: compliance } : {}),
     ...(planogramSource
       ? {

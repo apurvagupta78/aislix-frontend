@@ -51,7 +51,7 @@ export function NeedsReviewBadge({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
     <Badge variant="outline" className="rounded-full border-amber-500/30 bg-amber-500/10 text-amber-600">
-      <ScanEye className="size-3.5" /> {count} needs review
+      <ScanEye className="size-3.5" /> {count} in AI review queue
     </Badge>
   );
 }
@@ -160,7 +160,7 @@ export function NeedsReviewSection({
 
   return (
     <ResultSection
-      title="Needs review"
+      title="AI review queue"
       description="Facings the AI was unsure about. Correcting them updates this scan and feeds the recognition benchmark."
       actions={
         <div className="flex items-center gap-2">

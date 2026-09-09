@@ -20,8 +20,9 @@ export type ScanRecommendation = {
   impact?: string;
 };
 
-export const COMPLIANCE_ALERT_TITLE = "Category Mismatch Detected";
-export const COMPLIANCE_INTERPRETATION = "Likely Putaway / Shelf Placement Violation";
+export const COMPLIANCE_ALERT_TITLE = "Placement issues detected";
+export const COMPLIANCE_INTERPRETATION =
+  "Facings appear outside the expected category or shelf position";
 
 export type ComplianceStatus = "ok" | "category_mismatch";
 
@@ -83,8 +84,26 @@ export type ScanSummary = {
   duplicate_products?: number;
   /** 0-1 or 0-100. Planogram compliance. */
   shelf_compliance?: number;
-  /** 0-100 composite shelf health score. */
+  /** 0-100 composite shelf health score (legacy). */
   shelf_health_score?: number;
+  /** 0-100 retail execution score — excludes model confidence. */
+  shelf_execution_score?: number;
+  /** Physical facings detected in the image. */
+  total_facings?: number;
+  /** Share of shelf / bbox utilization percent. */
+  share_of_shelf_percent?: number;
+  /** SKU availability percent. */
+  availability_percent?: number;
+  osa_percent?: number;
+  facing_compliance_percent?: number;
+  placement_compliance_percent?: number;
+  recognition_coverage_percent?: number;
+  confirmed_oos_count?: number;
+  possible_oos_count?: number;
+  shelf_gap_count?: number;
+  placement_issue_count?: number;
+  needs_review_facings?: number;
+  low_stock_threshold?: number;
   /** Total learned SKUs in the org catalog after this scan. */
   learned_catalog_size?: number;
   /** New SKUs learned during this scan. */
@@ -184,6 +203,7 @@ export type ScanResult = {
   navigation?: {
     previous_scan_id?: string | null;
     next_scan_id?: string | null;
+    previous_execution_score?: number | null;
   };
 };
 
@@ -354,7 +374,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   const { data: scan, error: scanError } = await supabase
     .from("shelf_scans")
     .select(
-      "id, org_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, category_selections, created_at, processing_started_at, processing_completed_at, shelf_health_score, osa_percent, planogram_compliance_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count, store_id, assignment_id, adhoc_planogram, stores(name)",
+      "id, org_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, category_selections, created_at, processing_started_at, processing_completed_at, shelf_health_score, osa_percent, share_of_shelf_percent, planogram_compliance_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count, store_id, assignment_id, adhoc_planogram, stores(name)",
     )
     .eq("org_id", orgId)
     .eq("id", scanId)
@@ -589,8 +609,19 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     result?.confidence_avg ??
     (inventory.length ? inventory.reduce((sum, i) => sum + i.confidence, 0) / inventory.length : 0);
 
+  const metricsAny = (result?.metrics ?? {}) as Record<string, unknown>;
+  const metricsNum = (key: string): number | undefined =>
+    typeof metricsAny[key] === "number" ? Number(metricsAny[key]) : undefined;
+
+  const totalFacings =
+    metricsNum("total_facings") ??
+    (scan.total_products !== null && scan.total_products !== undefined
+      ? Number(scan.total_products)
+      : inventory.reduce((n, i) => n + i.quantity, 0));
+
   const summary: ScanSummary = {
-    total_products: scan.total_products ?? inventory.length,
+    total_products: totalFacings,
+    total_facings: totalFacings,
     unique_skus: uniqueSkus,
     unique_brands: uniqueBrands,
     // Only genuinely low-stock products; out-of-stock is reported separately.
@@ -600,11 +631,51 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     ...(scan.out_of_stock_count !== null && scan.out_of_stock_count !== undefined
       ? { out_of_stock_products: scan.out_of_stock_count }
       : { out_of_stock_products: inventory.filter((i) => i.out_of_stock).length }),
+    ...(metricsNum("confirmed_oos_count") !== undefined
+      ? { confirmed_oos_count: metricsNum("confirmed_oos_count") }
+      : {}),
+    ...(metricsNum("possible_oos_count") !== undefined
+      ? { possible_oos_count: metricsNum("possible_oos_count") }
+      : {}),
+    ...(metricsNum("shelf_gap_count") !== undefined ? { shelf_gap_count: metricsNum("shelf_gap_count") } : {}),
+    ...(metricsNum("placement_issue_count") !== undefined
+      ? { placement_issue_count: metricsNum("placement_issue_count") }
+      : {}),
+    ...(metricsNum("needs_review_facings") !== undefined
+      ? { needs_review_facings: metricsNum("needs_review_facings") }
+      : {}),
+    ...(metricsNum("low_stock_threshold") !== undefined
+      ? { low_stock_threshold: metricsNum("low_stock_threshold") }
+      : { low_stock_threshold: 2 }),
     ...(scan.planogram_compliance_percent !== null && scan.planogram_compliance_percent !== undefined
       ? { shelf_compliance: scan.planogram_compliance_percent }
       : {}),
+    ...(metricsNum("shelf_execution_score") !== undefined
+      ? { shelf_execution_score: metricsNum("shelf_execution_score") }
+      : {}),
     ...(scan.shelf_health_score !== null && scan.shelf_health_score !== undefined
       ? { shelf_health_score: scan.shelf_health_score }
+      : metricsNum("shelf_health_score") !== undefined
+        ? { shelf_health_score: metricsNum("shelf_health_score") }
+        : {}),
+    ...(metricsNum("share_of_shelf_percent") !== undefined
+      ? { share_of_shelf_percent: metricsNum("share_of_shelf_percent") }
+      : scan.share_of_shelf_percent !== null && (scan as any).share_of_shelf_percent !== undefined
+        ? { share_of_shelf_percent: Number((scan as any).share_of_shelf_percent) }
+        : {}),
+    ...(metricsNum("availability_percent") !== undefined
+      ? { availability_percent: metricsNum("availability_percent") }
+      : scan.osa_percent !== null && scan.osa_percent !== undefined
+        ? { availability_percent: Number(scan.osa_percent), osa_percent: Number(scan.osa_percent) }
+        : {}),
+    ...(metricsNum("facing_compliance_percent") !== undefined
+      ? { facing_compliance_percent: metricsNum("facing_compliance_percent") }
+      : {}),
+    ...(metricsNum("placement_compliance_percent") !== undefined
+      ? { placement_compliance_percent: metricsNum("placement_compliance_percent") }
+      : {}),
+    ...(metricsNum("recognition_coverage_percent") !== undefined
+      ? { recognition_coverage_percent: metricsNum("recognition_coverage_percent") }
       : {}),
     ...(typeof (result?.metrics as any)?.learned_catalog_size === "number"
       ? { learned_catalog_size: Number((result?.metrics as any).learned_catalog_size) }
@@ -661,8 +732,8 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
 
 
   const storeName = (scan as any).stores?.name as string | undefined;
+  const storeId = (scan as any).store_id as string | null | undefined;
 
-  const metricsAny = (result?.metrics ?? {}) as Record<string, unknown>;
   const planogramPercent =
     scan.planogram_compliance_percent !== null && scan.planogram_compliance_percent !== undefined
       ? Number(scan.planogram_compliance_percent)
@@ -738,6 +809,57 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   if (annotatedImageSrc) scanResult.annotated_image_url = annotatedImageSrc;
   if (originalImageSrc) scanResult.original_image_url = originalImageSrc;
   if (result?.executive_summary) scanResult.executive_summary = result.executive_summary;
+
+  if (storeId && scan.created_at && scan.status === "completed") {
+    const createdAt = scan.created_at as string;
+    const [{ data: prevRows }, { data: nextRows }] = await Promise.all([
+      supabase
+        .from("shelf_scans")
+        .select("id")
+        .eq("org_id", orgId)
+        .eq("store_id", storeId)
+        .eq("status", "completed")
+        .lt("created_at", createdAt)
+        .order("created_at", { ascending: false })
+        .limit(1),
+      supabase
+        .from("shelf_scans")
+        .select("id")
+        .eq("org_id", orgId)
+        .eq("store_id", storeId)
+        .eq("status", "completed")
+        .gt("created_at", createdAt)
+        .order("created_at", { ascending: true })
+        .limit(1),
+    ]);
+
+    const previousScanId = prevRows?.[0]?.id as string | undefined;
+    const nextScanId = nextRows?.[0]?.id as string | undefined;
+    let previousExecutionScore: number | null = null;
+
+    if (previousScanId) {
+      const { data: prevResult } = await supabase
+        .from("scan_results")
+        .select("metrics")
+        .eq("scan_id", previousScanId)
+        .maybeSingle();
+      const prevMetrics = (prevResult?.metrics ?? {}) as Record<string, unknown>;
+      const raw =
+        typeof prevMetrics["shelf_execution_score"] === "number"
+          ? Number(prevMetrics["shelf_execution_score"])
+          : typeof prevMetrics["shelf_health_score"] === "number"
+            ? Number(prevMetrics["shelf_health_score"])
+            : null;
+      previousExecutionScore = raw;
+    }
+
+    scanResult.navigation = {
+      previous_scan_id: previousScanId ?? null,
+      next_scan_id: nextScanId ?? null,
+      previous_execution_score: previousExecutionScore,
+    };
+  }
+
   return scanResult;
 }
 
