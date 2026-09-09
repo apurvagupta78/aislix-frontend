@@ -349,6 +349,15 @@ function SampleResult({
   const avgConfidence = averageConfidencePercent(displayedResult);
   return (
     <div>
+                {elapsedSec != null && (
+                  <div className="mb-3 flex items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
+                    <Timer className="size-3.5 text-brand" />
+                    <span>
+                      Analysis completed in{" "}
+                      <span className="font-semibold text-foreground">{elapsedSec}s</span>
+                    </span>
+                  </div>
+                )}
                 <div className="mb-4 flex flex-wrap items-center gap-2">
                   <Badge className="gap-1.5 rounded-md bg-brand text-brand-foreground">
                     <Sparkles className="size-3" /> Live AI analysis
