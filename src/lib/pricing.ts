@@ -105,6 +105,7 @@ export const plans: Plan[] = [
       "Up to 3 team users",
       "Multi-image upload",
       "Advanced shelf analytics",
+      "Financial impact estimates",
       "Historical trends",
       "PDF & CSV reports",
       "Unlimited scan history",
@@ -130,6 +131,8 @@ export const plans: Plan[] = [
       "Unlimited images per scan",
       "Faster AI processing",
       "Advanced shelf analytics",
+      "Financial impact estimates",
+      "Territory roll-up analytics",
       "Historical trends",
       "Product movement insights",
       "Low stock alerts",
@@ -262,6 +265,10 @@ export const comparisonGroups: {
           professional: "Unlimited",
           enterprise: "Unlimited",
         },
+      },
+      {
+        label: "Financial impact estimates",
+        values: { free: false, starter: false, growth: true, professional: true, enterprise: true },
       },
       {
         label: "Historical trends",

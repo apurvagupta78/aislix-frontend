@@ -34,12 +34,15 @@ import {
   ExecutionKpiStripPanel,
   ExecutionScoreHero,
   FacingsSummaryStrip,
+  FinancialImpactPanel,
   RecommendedActionsPanel,
   ResultViewSwitcher,
   ScanDetailsAccordion,
   ShareOfShelfPanel,
   SkuAvailabilityPanel,
 } from "@/components/scan-results/ExecutionPhase1";
+import { planHasFeature } from "@/lib/plan-features";
+import { fetchUsageSummary } from "@/lib/subscription-limits";
 import { useWorkspaceContext } from "@/hooks/use-customer-context";
 import {
   showCompetitorIntel,
@@ -158,6 +161,16 @@ function Results() {
   const processing = data?.status === "processing" || data?.status === "queued";
   const summary = data?.summary;
   const workspaceQuery = useWorkspaceContext();
+  const usageQuery = useQuery({
+    queryKey: ["org-usage"],
+    queryFn: () => fetchUsageSummary(),
+    retry: false,
+    staleTime: 60_000,
+  });
+  const planCode = usageQuery.data?.plan_code ?? "free";
+  const financialLocked =
+    !usageQuery.data?.platform_bypass && !planHasFeature(planCode, "financial_impact");
+
   const [viewOverride, setViewOverride] = useState<ResultViewMode | undefined>();
   const activeView = viewOverride ?? workspaceQuery.data?.viewMode ?? "execution";
   const visible = visibleSections(activeView, workspaceQuery.data?.roleFamily);
@@ -299,15 +312,10 @@ function Results() {
                 />
               )}
 
-              <div className="card-surface flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-                    Results view
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Tailored for your role — same scan data, different priorities.
-                  </p>
-                </div>
+              <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Results view — tailored for your role
+                </p>
                 <ResultViewSwitcher value={activeView} onChange={setViewOverride} />
               </div>
 
@@ -332,6 +340,15 @@ function Results() {
               {show("facings_strip") && <FacingsSummaryStrip data={data} loading={loading} />}
 
               {show("action_center") && <ActionCenterPanel data={data} loading={loading} />}
+
+              {show("financial_impact") && (
+                <FinancialImpactPanel
+                  data={data}
+                  loading={loading}
+                  locked={financialLocked}
+                  planCode={planCode}
+                />
+              )}
 
               {show("placement_alert") && (data?.compliance_alerts?.length ?? 0) > 0 && (
                 <ComplianceAlertCard

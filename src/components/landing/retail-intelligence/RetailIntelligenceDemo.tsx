@@ -24,6 +24,8 @@ import {
 } from "@/lib/landing-scan-api";
 import { averageConfidencePercent, displayVariant, uniqueSkuCount } from "@/lib/landing-inventory";
 import { TopBrandsByShelfShare } from "@/components/scan/TopBrandsByShelfShare";
+import { DemoFinancialImpactStrip } from "@/components/scan-results/ExecutionPhase1";
+import { landingExecutionScore, landingFinancialImpact } from "@/lib/demo-execution";
 import { LANDING_SAMPLE_EVENT, LANDING_UPLOAD_EVENT } from "./HeroSection";
 import { LeadCaptureSection } from "./LeadCaptureSection";
 import { networkErrorMessage } from "@/lib/api-errors";
@@ -296,7 +298,7 @@ export function RetailIntelligenceDemo() {
               {phase === "idle" && (
                 <div className="grid min-h-72 place-items-center text-center">
                   <p className="max-w-xs text-sm text-muted-foreground">
-                    Your detected products, unique SKUs and shelf health score will appear here.
+                    Execution score, facings, and financial impact estimates will appear here.
                   </p>
                 </div>
               )}
@@ -312,26 +314,37 @@ export function RetailIntelligenceDemo() {
                       </span>
                     </div>
                   )}
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {[
-                      { label: "Products detected", value: result.metrics?.total_products },
+                      {
+                        label: "Execution score",
+                        value: (() => {
+                          const score = landingExecutionScore(result);
+                          return score !== undefined ? `${score}/100` : undefined;
+                        })(),
+                      },
+                      { label: "Facings", value: result.metrics?.total_products },
                       { label: "Unique SKUs", value: uniqueSkuCount(result) },
                       {
-                        label: "Shelf health",
-                        value:
-                          result.metrics?.shelf_health_score != null
-                            ? `${Math.round(result.metrics.shelf_health_score)}%`
-                            : undefined,
+                        label: "Avg confidence",
+                        value: (() => {
+                          const pct = averageConfidencePercent(result);
+                          return pct != null ? `${pct}%` : undefined;
+                        })(),
                       },
                     ].map((m) => (
-                      <div key={m.label} className="rounded-md border border-border bg-surface p-3">
-                        <p className="text-lg font-semibold tracking-tight">{m.value ?? "—"}</p>
-                        <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
+                      <div key={m.label} className="card-surface px-3 py-3">
+                        <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
                           {m.label}
+                        </p>
+                        <p className="mt-1 text-lg font-semibold tabular-nums tracking-tight">
+                          {m.value ?? "—"}
                         </p>
                       </div>
                     ))}
                   </div>
+
+                  <DemoFinancialImpactStrip impact={landingFinancialImpact(result)} className="mt-4" />
 
                   {result.executive_summary && (
                     <p className="mt-4 line-clamp-3 text-sm leading-relaxed text-muted-foreground">

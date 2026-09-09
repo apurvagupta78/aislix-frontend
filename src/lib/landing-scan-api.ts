@@ -43,7 +43,16 @@ export type LandingScanResult = {
     unique_skus?: number;
     total_skus?: number;
     shelf_health_score?: number;
+    shelf_execution_score?: number;
     average_confidence?: number;
+    financial_impact?: {
+      estimated_daily_lost_sales_inr?: number;
+      estimated_weekly_lost_sales_inr?: number;
+      estimated_monthly_lost_sales_inr?: number;
+      oos_sku_count?: number;
+      at_risk_sku_count?: number;
+      methodology?: string;
+    };
   };
   inventory: LandingInventoryRow[];
   top_brands?: LandingBrandShare[];

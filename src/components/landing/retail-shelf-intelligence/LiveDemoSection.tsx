@@ -17,6 +17,8 @@ import {
 } from "@/lib/landing-scan-api";
 import { AI_DISCLAIMER, ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
 import { TopBrandsByShelfShare } from "@/components/scan/TopBrandsByShelfShare";
+import { DemoFinancialImpactStrip } from "@/components/scan-results/ExecutionPhase1";
+import { landingExecutionScore, landingFinancialImpact } from "@/lib/demo-execution";
 import {
   DemoCategoryPicker,
   DEFAULT_DEMO_CATEGORY,
@@ -302,17 +304,19 @@ export function LiveDemoSection({
   );
 }
 
-const METRIC_LABELS = ["Products detected", "Unique SKUs", "Shelf health"] as const;
+const METRIC_LABELS = ["Execution score", "Facings", "Unique SKUs", "Avg confidence"] as const;
 
 /** Strict empty state — never shows placeholder numbers. */
 function EmptyResults() {
   return (
     <div className="mt-5">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {METRIC_LABELS.map((label) => (
-          <div key={label} className="rounded-lg border border-border bg-surface p-3">
+          <div key={label} className="card-surface px-3 py-3">
             <p className="text-lg font-semibold text-foreground">—</p>
-            <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">{label}</p>
+            <p className="mt-0.5 text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
+              {label}
+            </p>
           </div>
         ))}
       </div>
@@ -347,6 +351,8 @@ function SampleResult({
       ? displayedResult.top_brands
       : (displayedResult.brand_share ?? []);
   const avgConfidence = averageConfidencePercent(displayedResult);
+  const execution = landingExecutionScore(displayedResult);
+  const financial = landingFinancialImpact(displayedResult);
   return (
     <div>
                 {elapsedSec != null && (
@@ -368,31 +374,34 @@ function SampleResult({
                     </span>
                   ) : null}
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {[
-                    { label: "Products detected", value: displayedResult.metrics?.total_products },
+                    {
+                      label: "Execution score",
+                      value: execution !== undefined ? `${execution}/100` : undefined,
+                    },
+                    {
+                      label: "Facings",
+                      value: displayedResult.metrics?.total_products,
+                    },
                     { label: "Unique SKUs", value: uniqueSkuCount(displayedResult) },
                     {
-                      label: "Shelf health",
-                      value:
-                        displayedResult.metrics?.shelf_health_score != null
-                          ? `${Math.round(displayedResult.metrics.shelf_health_score)}%`
-                          : undefined,
+                      label: "Avg confidence",
+                      value: avgConfidence != null ? `${avgConfidence}%` : undefined,
                     },
                   ].map((m) => (
-                    <div
-                      key={m.label}
-                      className="rounded-lg border border-border bg-surface p-3"
-                    >
-                      <p className="text-lg font-semibold tracking-tight text-foreground">
-                        {m.value ?? "—"}
-                      </p>
-                      <p className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
+                    <div key={m.label} className="card-surface px-3 py-3">
+                      <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
                         {m.label}
+                      </p>
+                      <p className="mt-1 text-lg font-semibold tabular-nums tracking-tight text-foreground">
+                        {m.value ?? "—"}
                       </p>
                     </div>
                   ))}
                 </div>
+
+                <DemoFinancialImpactStrip impact={financial} className="mt-4" />
 
                 {displayedResult.executive_summary && (
                   <ExecutiveSummary text={displayedResult.executive_summary} />

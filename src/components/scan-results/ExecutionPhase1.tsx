@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, ArrowDown, ArrowUp, Minus, TrendingUp } from "lucide-react";
+import { AlertTriangle, ArrowDown, ArrowUp, IndianRupee, Lock, Minus, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/States";
@@ -9,15 +9,19 @@ import {
   buildAiSummaryParagraph,
   buildKpiStrip,
   executionScore,
+  formatLostSales,
   formatScoreDelta,
   formatConfidenceSecondary,
   priorityRecommendations,
   recognitionCoverage,
+  resolveFinancialImpact,
   shareOfShelfTopBrand,
   totalActionCount,
   totalFacings,
   type ActionCenterItem,
 } from "@/lib/scan-execution";
+import type { FinancialImpact } from "@/lib/scan-results";
+import { PLAN_TIER_LABELS, planTier } from "@/lib/plan-features";
 import type { ScanResult } from "@/lib/scan-results";
 import { formatScanDate } from "@/lib/scan-results";
 import type { CompetitorSnapshot } from "@/lib/brand-intel";
@@ -27,17 +31,17 @@ import {
 } from "@/lib/customer-context";
 
 const severityStyles: Record<ActionCenterItem["severity"], string> = {
-  critical: "text-red-600",
-  high: "text-orange-600",
-  medium: "text-amber-600",
+  critical: "text-destructive",
+  high: "text-warning",
+  medium: "text-warning",
   low: "text-muted-foreground",
 };
 
-const severityIcon: Record<ActionCenterItem["severity"], string> = {
-  critical: "🔴",
-  high: "🟠",
-  medium: "🟡",
-  low: "⚪",
+const severityDot: Record<ActionCenterItem["severity"], string> = {
+  critical: "bg-destructive",
+  high: "bg-warning",
+  medium: "bg-warning",
+  low: "bg-muted-foreground",
 };
 
 export function ExecutionAuditHeader({
@@ -103,7 +107,7 @@ export function ExecutionScoreHero({
             <span
               className={cn(
                 "inline-flex items-center gap-1 text-sm font-medium",
-                rising ? "text-accent-green" : score === previousScore ? "text-muted-foreground" : "text-orange-600",
+                rising ? "text-accent-green" : score === previousScore ? "text-muted-foreground" : "text-warning",
               )}
             >
               {rising ? <ArrowUp className="size-4" /> : score === previousScore ? <Minus className="size-4" /> : <ArrowDown className="size-4" />}
@@ -162,7 +166,7 @@ export function ActionCenterPanel({ data, loading }: { data?: ScanResult; loadin
           </p>
         </div>
         {total > 0 && (
-          <Badge variant="outline" className="rounded-full border-orange-200 text-orange-700">
+          <Badge variant="outline" className="rounded-full border-warning/40 text-warning">
             <AlertTriangle className="mr-1 size-3" /> Action required
           </Badge>
         )}
@@ -184,8 +188,9 @@ export function ActionCenterPanel({ data, loading }: { data?: ScanResult; loadin
               className="flex items-start justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3"
             >
               <div>
-                <p className={cn("text-sm font-medium", severityStyles[item.severity])}>
-                  {severityIcon[item.severity]} {item.count} {item.label}
+                <p className={cn("flex items-center gap-2 text-sm font-medium", severityStyles[item.severity])}>
+                  <span className={cn("size-2 shrink-0 rounded-full", severityDot[item.severity])} />
+                  {item.count} {item.label}
                 </p>
                 {item.detail && (
                   <p className="mt-0.5 text-xs text-muted-foreground">{item.detail}</p>
@@ -428,8 +433,18 @@ export function RecommendedActionsPanel({ data, loading }: { data?: ScanResult; 
         <ol className="mt-4 space-y-3">
           {recs.map((rec, index) => (
             <li key={rec.id} className="rounded-xl border border-border bg-surface px-4 py-3">
-              <p className="text-sm font-medium">
-                {rec.impact === "high" ? "🔴" : rec.impact === "medium" ? "🟠" : "🟡"} {index + 1}. {rec.title}
+              <p className="flex items-center gap-2 text-sm font-medium">
+                <span
+                  className={cn(
+                    "size-2 shrink-0 rounded-full",
+                    rec.impact === "high"
+                      ? "bg-destructive"
+                      : rec.impact === "medium"
+                        ? "bg-warning"
+                        : "bg-muted-foreground",
+                  )}
+                />
+                {index + 1}. {rec.title}
               </p>
               {rec.detail && (
                 <p className="mt-1 text-xs text-muted-foreground">{rec.detail}</p>
@@ -484,6 +499,139 @@ export function ScanDetailsAccordion({
         </Button>
       )}
     </details>
+  );
+}
+
+export function FinancialImpactPanel({
+  data,
+  loading,
+  locked = false,
+  planCode,
+}: {
+  data?: ScanResult;
+  loading?: boolean;
+  locked?: boolean;
+  planCode?: string | null;
+}) {
+  const impact = resolveFinancialImpact(data);
+  const tier = planTier(planCode);
+
+  if (loading) {
+    return (
+      <div className="card-surface p-5 sm:p-6">
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="mt-4 h-16 w-full" />
+      </div>
+    );
+  }
+
+  const body = impact ? (
+    <FinancialImpactBody impact={impact} />
+  ) : (
+    <p className="mt-3 text-sm text-muted-foreground">No revenue-at-risk signals for this scan.</p>
+  );
+
+  return (
+    <div className="card-surface relative overflow-hidden p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            <IndianRupee className="size-3.5" /> Financial impact
+          </p>
+          <h3 className="mt-1 text-sm font-semibold tracking-tight">Estimated lost sales</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Indicative revenue at risk from OOS and low-stock SKUs
+          </p>
+        </div>
+        <Badge variant="outline" className="rounded-full capitalize">
+          {PLAN_TIER_LABELS[tier]} plan
+        </Badge>
+      </div>
+
+      <div className={cn("mt-4", locked && "select-none blur-sm")}>{body}</div>
+
+      {locked && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/70 px-6 text-center backdrop-blur-[2px]">
+          <Lock className="size-5 text-muted-foreground" />
+          <p className="text-sm font-medium">Financial impact is available on Pro plans</p>
+          <p className="max-w-sm text-xs text-muted-foreground">
+            Upgrade to Growth or Professional to see daily, weekly, and monthly lost-sales estimates.
+          </p>
+          <Button asChild variant="brand" size="sm" className="rounded-xl">
+            <Link to="/pricing">View plans</Link>
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FinancialImpactBody({ impact }: { impact: FinancialImpact }) {
+  const hasRisk = impact.estimated_daily_lost_sales_inr > 0;
+  return (
+    <>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[
+          { label: "Daily", value: impact.estimated_daily_lost_sales_inr },
+          { label: "Weekly", value: impact.estimated_weekly_lost_sales_inr },
+          { label: "Monthly", value: impact.estimated_monthly_lost_sales_inr },
+        ].map(({ label, value }) => (
+          <div key={label} className="rounded-xl border border-border bg-surface px-4 py-3">
+            <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
+              {label}
+            </p>
+            <p
+              className={cn(
+                "mt-1 text-xl font-semibold tabular-nums",
+                hasRisk ? "text-destructive" : "text-accent-green",
+              )}
+            >
+              {formatLostSales(value)}
+            </p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-4 flex flex-wrap gap-4 text-sm">
+        <p>
+          <span className="text-muted-foreground">OOS SKUs:</span>{" "}
+          <span className="font-semibold tabular-nums">{impact.oos_sku_count}</span>
+        </p>
+        <p>
+          <span className="text-muted-foreground">At-risk SKUs:</span>{" "}
+          <span className="font-semibold tabular-nums">{impact.at_risk_sku_count}</span>
+        </p>
+      </div>
+      <p className="mt-3 text-xs text-muted-foreground">{impact.methodology}</p>
+    </>
+  );
+}
+
+/** Compact financial strip for landing demo — matches /results styling. */
+export function DemoFinancialImpactStrip({
+  impact,
+  className,
+}: {
+  impact: FinancialImpact;
+  className?: string;
+}) {
+  const hasRisk = impact.estimated_daily_lost_sales_inr > 0;
+  return (
+    <div className={cn("rounded-xl border border-border bg-surface p-4", className)}>
+      <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
+        Estimated lost sales (daily)
+      </p>
+      <p
+        className={cn(
+          "mt-1 text-2xl font-semibold tabular-nums",
+          hasRisk ? "text-destructive" : "text-accent-green",
+        )}
+      >
+        {formatLostSales(impact.estimated_daily_lost_sales_inr)}
+      </p>
+      <p className="mt-2 text-xs text-muted-foreground">
+        {impact.oos_sku_count} OOS · {impact.at_risk_sku_count} at-risk SKUs
+      </p>
+    </div>
   );
 }
 

@@ -115,6 +115,17 @@ export type ScanSummary = {
   subcategory_mismatch_skus?: number;
 };
 
+/** Indicative revenue-at-risk from OOS and low-stock SKUs. */
+export type FinancialImpact = {
+  estimated_daily_lost_sales_inr: number;
+  estimated_weekly_lost_sales_inr: number;
+  estimated_monthly_lost_sales_inr: number;
+  oos_sku_count: number;
+  at_risk_sku_count: number;
+  methodology: string;
+  confidence: "indicative" | "priced";
+};
+
 /** Recognition-quality counters reported by the vision backend. */
 export type ScanQuality = {
   ocr_empty_facings?: number;
@@ -165,6 +176,7 @@ export type ScanResult = {
   facings?: ScanFacing[];
   recommendations?: ScanRecommendation[];
   competitor_intel?: CompetitorSnapshot | null;
+  financial_impact?: FinancialImpact | null;
   inventory?: InventoryItem[];
   /**
    * Planogram audit context: `requested` is true when the scan carried expected
@@ -269,6 +281,27 @@ function mapQuality(metrics: Record<string, unknown>): ScanQuality {
     if (typeof value === "number" && Number.isFinite(value)) quality[key] = value;
   }
   return quality;
+}
+
+function mapFinancialImpact(raw: unknown): FinancialImpact | null {
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as Record<string, unknown>;
+  const num = (key: string) =>
+    typeof row[key] === "number" && Number.isFinite(row[key]) ? Number(row[key]) : null;
+  const daily = num("estimated_daily_lost_sales_inr");
+  if (daily === null) return null;
+  return {
+    estimated_daily_lost_sales_inr: daily,
+    estimated_weekly_lost_sales_inr: num("estimated_weekly_lost_sales_inr") ?? daily * 7,
+    estimated_monthly_lost_sales_inr: num("estimated_monthly_lost_sales_inr") ?? daily * 30,
+    oos_sku_count: num("oos_sku_count") ?? 0,
+    at_risk_sku_count: num("at_risk_sku_count") ?? 0,
+    methodology:
+      typeof row.methodology === "string"
+        ? row.methodology
+        : "Indicative estimate using category ASP defaults and typical daily velocity.",
+    confidence: row.confidence === "priced" ? "priced" : "indicative",
+  };
 }
 
 function boxFrom(raw: unknown): FacingBox | undefined {
@@ -765,6 +798,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
       : undefined;
   const topBrands = mapBrandShare(result?.brand_share);
   const competitorIntel = buildCompetitorSnapshot(topBrands, brandConfig, metricsCompetitor);
+  const financialImpact = mapFinancialImpact(metricsAny["financial_impact"]);
 
   const scanResult: ScanResult = {
     scan_id: scan.id as string,
@@ -776,6 +810,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     subcategory_mismatches: subcategoryMismatches,
     recommendations: mapRecommendations(result?.recommendations),
     competitor_intel: competitorIntel,
+    ...(financialImpact ? { financial_impact: financialImpact } : {}),
     inventory,
     quality,
     facings,

@@ -28,6 +28,7 @@ export type ResultSectionKey =
   | "kpi_strip"
   | "facings_strip"
   | "action_center"
+  | "financial_impact"
   | "placement_alert"
   | "ai_summary"
   | "share_of_shelf"
@@ -127,6 +128,7 @@ const ALL_SECTIONS: ResultSectionKey[] = [
   "kpi_strip",
   "facings_strip",
   "action_center",
+  "financial_impact",
   "placement_alert",
   "ai_summary",
   "share_of_shelf",
@@ -151,6 +153,7 @@ const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
     "kpi_strip",
     "facings_strip",
     "action_center",
+    "financial_impact",
     "placement_alert",
     "recommended_actions",
     "planogram",
@@ -167,6 +170,7 @@ const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
     "kpi_strip",
     "facings_strip",
     "action_center",
+    "financial_impact",
     "sku_availability",
     "share_of_shelf",
     "planogram",
@@ -182,6 +186,7 @@ const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
     "score_hero",
     "kpi_strip",
     "competitor_intel",
+    "financial_impact",
     "share_of_shelf",
     "sku_availability",
     "recommended_actions",
@@ -196,6 +201,7 @@ const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
     "improvement_banner",
     "score_hero",
     "kpi_strip",
+    "financial_impact",
     "ai_summary",
     "competitor_intel",
     "action_center",
