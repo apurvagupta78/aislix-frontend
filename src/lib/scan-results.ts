@@ -164,6 +164,7 @@ export type ScanResult = {
   /** Per-facing detections used by the "Needs review" correction flow. */
   facings?: ScanFacing[];
   recommendations?: ScanRecommendation[];
+  competitor_intel?: CompetitorSnapshot | null;
   inventory?: InventoryItem[];
   /**
    * Planogram audit context: `requested` is true when the scan carried expected
@@ -208,6 +209,8 @@ export type ScanResult = {
 };
 
 import { supabase } from "@/integrations/supabase/client";
+import type { CompetitorSnapshot } from "@/lib/brand-intel";
+import { buildCompetitorSnapshot, fetchBrandConfig } from "@/lib/brand-intel";
 import {
   formatCategorySelections,
   parseCategorySelections,
@@ -755,6 +758,14 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
   const quality = mapQuality(metricsAny);
   const facings = mapFacings(rawPayload, products ?? []);
 
+  const brandConfig = await fetchBrandConfig();
+  const metricsCompetitor =
+    metricsAny["competitor_intel"] && typeof metricsAny["competitor_intel"] === "object"
+      ? (metricsAny["competitor_intel"] as Partial<CompetitorSnapshot>)
+      : undefined;
+  const topBrands = mapBrandShare(result?.brand_share);
+  const competitorIntel = buildCompetitorSnapshot(topBrands, brandConfig, metricsCompetitor);
+
   const scanResult: ScanResult = {
     scan_id: scan.id as string,
     created_at: scan.created_at as string,
@@ -764,6 +775,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
     compliance_alerts: complianceAlerts,
     subcategory_mismatches: subcategoryMismatches,
     recommendations: mapRecommendations(result?.recommendations),
+    competitor_intel: competitorIntel,
     inventory,
     quality,
     facings,
@@ -777,7 +789,7 @@ export async function fetchScanResult(scanId: string, _signal?: AbortSignal): Pr
 
 
     charts: {
-      top_brands: mapBrandShare(result?.brand_share),
+      top_brands: topBrands,
       confidence_distribution: confidenceBuckets,
       category_distribution: mapCategoryBreakdown(result?.category_breakdown),
       quantity_distribution: quantityBuckets,

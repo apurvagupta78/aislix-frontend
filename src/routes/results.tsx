@@ -28,15 +28,24 @@ import {
 import {
   ActionCenterPanel,
   AiSummaryBlock,
+  CompetitorIntelPanel,
   ExecutionImprovementBanner,
   ExecutionKpiStripPanel,
   ExecutionScoreHero,
   FacingsSummaryStrip,
   RecommendedActionsPanel,
+  ResultViewSwitcher,
   ScanDetailsAccordion,
   ShareOfShelfPanel,
   SkuAvailabilityPanel,
 } from "@/components/scan-results/ExecutionPhase1";
+import { useWorkspaceContext } from "@/hooks/use-customer-context";
+import {
+  showCompetitorIntel,
+  visibleSections,
+  type ResultSectionKey,
+  type ResultViewMode,
+} from "@/lib/customer-context";
 import {
   PrintReportButton,
   ProcessingState,
@@ -147,6 +156,18 @@ function Results() {
   const loading = !!scan && query.isPending;
   const processing = data?.status === "processing" || data?.status === "queued";
   const summary = data?.summary;
+  const workspaceQuery = useWorkspaceContext();
+  const [viewOverride, setViewOverride] = useState<ResultViewMode | undefined>();
+  const activeView = viewOverride ?? workspaceQuery.data?.viewMode ?? "execution";
+  const visible = visibleSections(activeView, workspaceQuery.data?.roleFamily);
+  const show = (key: ResultSectionKey) => visible.has(key);
+  const competitorEnabled =
+    show("competitor_intel") &&
+    showCompetitorIntel(
+      workspaceQuery.data?.customerType ?? "supermarket",
+      workspaceQuery.data?.roleFamily ?? "operations",
+      workspaceQuery.data?.hasBrandConfig ?? false,
+    );
 
   // Planogram compliance is shown for assigned scans AND ad-hoc "with planogram"
   // scans. When there is no comparison row we still render tiles from the
@@ -270,115 +291,152 @@ function Results() {
             <ProcessingState scanId={data?.scan_id} />
           ) : (
             <>
-              <ExecutionImprovementBanner
-                current={executionScore(data)}
-                previous={data?.navigation?.previous_execution_score ?? undefined}
-                loading={loading}
-              />
+              <div className="card-surface flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+                    Results view
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Tailored for your role — same scan data, different priorities.
+                  </p>
+                </div>
+                <ResultViewSwitcher value={activeView} onChange={setViewOverride} />
+              </div>
 
-              <ExecutionScoreHero
-                data={data}
-                loading={loading}
-                previousScore={data?.navigation?.previous_execution_score ?? undefined}
-              />
+              {show("improvement_banner") && (
+                <ExecutionImprovementBanner
+                  current={executionScore(data)}
+                  previous={data?.navigation?.previous_execution_score ?? undefined}
+                  loading={loading}
+                />
+              )}
 
-              <ExecutionKpiStripPanel data={data} loading={loading} />
+              {show("score_hero") && (
+                <ExecutionScoreHero
+                  data={data}
+                  loading={loading}
+                  previousScore={data?.navigation?.previous_execution_score ?? undefined}
+                />
+              )}
 
-              <FacingsSummaryStrip data={data} loading={loading} />
+              {show("kpi_strip") && <ExecutionKpiStripPanel data={data} loading={loading} />}
 
-              <ActionCenterPanel data={data} loading={loading} />
+              {show("facings_strip") && <FacingsSummaryStrip data={data} loading={loading} />}
 
-              {(data?.compliance_alerts?.length ?? 0) > 0 && (
+              {show("action_center") && <ActionCenterPanel data={data} loading={loading} />}
+
+              {show("placement_alert") && (data?.compliance_alerts?.length ?? 0) > 0 && (
                 <ComplianceAlertCard
                   alerts={data?.compliance_alerts}
                   mismatches={data?.subcategory_mismatches}
                 />
               )}
 
-              <AiSummaryBlock data={data} loading={loading} />
+              {show("ai_summary") && <AiSummaryBlock data={data} loading={loading} />}
 
-              <div className="grid gap-4 lg:grid-cols-2">
-                <ShareOfShelfPanel data={data} loading={loading} />
-                <SkuAvailabilityPanel
+              {(show("share_of_shelf") || show("sku_availability") || competitorEnabled) && (
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {competitorEnabled && (
+                    <CompetitorIntelPanel snapshot={data?.competitor_intel} loading={loading} />
+                  )}
+                  {show("share_of_shelf") && <ShareOfShelfPanel data={data} loading={loading} />}
+                  {show("sku_availability") && (
+                    <SkuAvailabilityPanel
+                      data={data}
+                      loading={loading}
+                      matched={matchedProducts}
+                      expected={expectedProducts}
+                    />
+                  )}
+                </div>
+              )}
+
+              {show("recommended_actions") && (
+                <RecommendedActionsPanel data={data} loading={loading} />
+              )}
+
+              {show("planogram") && planogramSection && (
+                <PlanogramComparisonSection comparison={planogramSection} />
+              )}
+              {show("planogram") && showPlanogramWarning && <PlanogramMissingAlert />}
+
+              {show("review_queue") && (
+                <NeedsReviewSection
+                  data={data}
+                  onCorrected={() => {
+                    void query.refetch();
+                  }}
+                />
+              )}
+
+              {show("annotated_image") && (
+                <AnnotatedImageViewer
+                  src={data?.annotated_image_url}
+                  originalSrc={data?.original_image_url}
+                  scanId={data?.scan_id}
+                  loading={loading}
+                />
+              )}
+
+              {show("inventory") && (
+                <InventoryTable
+                  items={data?.inventory}
+                  scanId={data?.scan_id}
+                  csvUrl={data?.downloads?.csv_url}
+                  loading={loading}
+                />
+              )}
+
+              {show("analytics") && (
+                <details className="card-surface p-5 sm:p-6">
+                  <summary className="cursor-pointer text-sm font-semibold tracking-tight">
+                    Analytics
+                  </summary>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Brand share, confidence distribution, and legacy shelf health charts.
+                  </p>
+                  <div className="mt-4 grid gap-4 xl:grid-cols-3">
+                    <TopBrandsChart data={data?.charts?.top_brands} loading={loading} />
+                    <QuantityDistributionChart
+                      data={data?.charts?.quantity_distribution}
+                      loading={loading}
+                    />
+                    <ConfidenceDistributionChart
+                      data={data?.charts?.confidence_distribution}
+                      loading={loading}
+                    />
+                    <ShelfHealthChart score={summary?.shelf_health_score} loading={loading} />
+                    <LowStockSummaryChart data={data?.charts?.low_stock_summary} loading={loading} />
+                    <CategoryDistributionChart
+                      data={data?.charts?.category_distribution}
+                      loading={loading}
+                    />
+                  </div>
+                </details>
+              )}
+
+              {show("alerts") && <AlertsPanel alerts={data?.alerts} loading={loading} />}
+
+              {show("downloads") && <DownloadsPanel data={data} loading={loading} />}
+
+              {show("share") && <SharePanel data={data} loading={loading} />}
+
+              {show("scan_details") && (
+                <ScanDetailsAccordion
                   data={data}
                   loading={loading}
-                  matched={matchedProducts}
-                  expected={expectedProducts}
+                  onExportJson={
+                    data
+                      ? () =>
+                          downloadBlob(
+                            JSON.stringify(data, null, 2),
+                            `aislix-${data.scan_id}-result.json`,
+                            "application/json",
+                          )
+                      : undefined
+                  }
                 />
-              </div>
-
-              <RecommendedActionsPanel data={data} loading={loading} />
-
-              {planogramSection && <PlanogramComparisonSection comparison={planogramSection} />}
-              {showPlanogramWarning && <PlanogramMissingAlert />}
-
-              <NeedsReviewSection
-                data={data}
-                onCorrected={() => {
-                  void query.refetch();
-                }}
-              />
-
-              <AnnotatedImageViewer
-                src={data?.annotated_image_url}
-                originalSrc={data?.original_image_url}
-                scanId={data?.scan_id}
-                loading={loading}
-              />
-
-              <InventoryTable
-                items={data?.inventory}
-                scanId={data?.scan_id}
-                csvUrl={data?.downloads?.csv_url}
-                loading={loading}
-              />
-
-              <details className="card-surface p-5 sm:p-6">
-                <summary className="cursor-pointer text-sm font-semibold tracking-tight">
-                  Analytics
-                </summary>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Brand share, confidence distribution, and legacy shelf health charts.
-                </p>
-                <div className="mt-4 grid gap-4 xl:grid-cols-3">
-                  <TopBrandsChart data={data?.charts?.top_brands} loading={loading} />
-                  <QuantityDistributionChart
-                    data={data?.charts?.quantity_distribution}
-                    loading={loading}
-                  />
-                  <ConfidenceDistributionChart
-                    data={data?.charts?.confidence_distribution}
-                    loading={loading}
-                  />
-                  <ShelfHealthChart score={summary?.shelf_health_score} loading={loading} />
-                  <LowStockSummaryChart data={data?.charts?.low_stock_summary} loading={loading} />
-                  <CategoryDistributionChart
-                    data={data?.charts?.category_distribution}
-                    loading={loading}
-                  />
-                </div>
-              </details>
-
-              <AlertsPanel alerts={data?.alerts} loading={loading} />
-
-              <DownloadsPanel data={data} loading={loading} />
-
-              <SharePanel data={data} loading={loading} />
-
-              <ScanDetailsAccordion
-                data={data}
-                loading={loading}
-                onExportJson={
-                  data
-                    ? () =>
-                        downloadBlob(
-                          JSON.stringify(data, null, 2),
-                          `aislix-${data.scan_id}-result.json`,
-                          "application/json",
-                        )
-                    : undefined
-                }
-              />
+              )}
 
               <ResultSection
                 title="Next steps"

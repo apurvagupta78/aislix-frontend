@@ -1176,6 +1176,17 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
   );
   const primary = selections[0] ?? null;
 
+  const { data: orgRow } = await supabase
+    .from("organizations")
+    .select("brand_config")
+    .eq("id", scan.org_id)
+    .maybeSingle();
+  const brandConfig = (orgRow?.brand_config ?? {}) as Record<string, unknown>;
+  const primaryBrand = str(brandConfig.primary_brand);
+  const competitorBrands = Array.isArray(brandConfig.competitor_brands)
+    ? brandConfig.competitor_brands.map((b) => str(b)).filter(Boolean)
+    : [];
+
   return {
     scan_id: scan.id,
     org_id: scan.org_id,
@@ -1191,8 +1202,8 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
       new Set(selections.map((s) => s.sub_category_label).filter(Boolean)),
     ),
     category_selections: selections,
-
-
+    ...(primaryBrand ? { primary_brand: primaryBrand } : {}),
+    ...(competitorBrands.length ? { competitor_brands: competitorBrands } : {}),
 
     notes: scan.notes,
     image_urls: signedImages.map((i) => i.url),
@@ -1789,6 +1800,7 @@ async function persistScanPayload(
       ? { original_image_height: num(payload?.original_image_height) }
       : {}),
     ...(shareOfShelf !== null ? { share_of_shelf_percent: shareOfShelf } : {}),
+    ...(metricsSource?.competitor_intel ? { competitor_intel: metricsSource.competitor_intel } : {}),
 
     learned_catalog_size: learnedCatalogCount ?? 0,
     learned_new_this_scan: learnedNewThisScan,

@@ -250,6 +250,7 @@ export async function requireMembership(): Promise<Membership> {
 export async function createOrganizationForUser(
   userId: string,
   name: string,
+  customerType?: string,
 ): Promise<string> {
   const slugBase = name
     .toLowerCase()
@@ -258,9 +259,15 @@ export async function createOrganizationForUser(
     .slice(0, 40);
   const slug = `${slugBase || "workspace"}-${Math.random().toString(36).slice(2, 7)}`;
 
+  const type = customerType?.trim() || null;
   const { data, error } = await supabase
     .from("organizations")
-    .insert({ name, slug, owner_id: userId })
+    .insert({
+      name,
+      slug,
+      owner_id: userId,
+      ...(type ? { customer_type: type, industry: type } : {}),
+    } as never)
     .select("id")
     .single();
   if (error) dbError(error, "Could not create your workspace.");

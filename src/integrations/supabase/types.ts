@@ -550,8 +550,10 @@ export type Database = {
         Row: {
           address: Json
           billing_email: string | null
+          brand_config: Json
           country: string | null
           created_at: string
+          customer_type: string | null
           gstin: string | null
           id: string
           industry: string | null
@@ -565,8 +567,10 @@ export type Database = {
         Insert: {
           address?: Json
           billing_email?: string | null
+          brand_config?: Json
           country?: string | null
           created_at?: string
+          customer_type?: string | null
           gstin?: string | null
           id?: string
           industry?: string | null
@@ -580,8 +584,10 @@ export type Database = {
         Update: {
           address?: Json
           billing_email?: string | null
+          brand_config?: Json
           country?: string | null
           created_at?: string
+          customer_type?: string | null
           gstin?: string | null
           id?: string
           industry?: string | null
@@ -878,6 +884,7 @@ export type Database = {
           notification_prefs: Json
           onboarding_completed_at: string | null
           phone: string | null
+          role_family: string | null
           timezone: string | null
           updated_at: string
         }
@@ -892,6 +899,7 @@ export type Database = {
           notification_prefs?: Json
           onboarding_completed_at?: string | null
           phone?: string | null
+          role_family?: string | null
           timezone?: string | null
           updated_at?: string
         }
@@ -906,6 +914,7 @@ export type Database = {
           notification_prefs?: Json
           onboarding_completed_at?: string | null
           phone?: string | null
+          role_family?: string | null
           timezone?: string | null
           updated_at?: string
         }

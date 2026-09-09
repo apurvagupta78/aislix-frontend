@@ -39,6 +39,7 @@ export type RegisterInput = {
   password: string;
   full_name: string;
   company_name?: string;
+  customer_type?: string;
   phone?: string;
 };
 
@@ -158,6 +159,7 @@ export async function register(input: RegisterInput): Promise<AuthSession> {
   await createOrganizationForUser(
     data.user!.id,
     input.company_name?.trim() || `${input.full_name}'s workspace`,
+    input.customer_type?.trim(),
   );
   return toSession(data.session as never);
 }

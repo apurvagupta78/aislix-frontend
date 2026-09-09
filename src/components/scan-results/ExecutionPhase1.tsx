@@ -20,6 +20,11 @@ import {
 } from "@/lib/scan-execution";
 import type { ScanResult } from "@/lib/scan-results";
 import { formatScanDate } from "@/lib/scan-results";
+import type { CompetitorSnapshot } from "@/lib/brand-intel";
+import {
+  VIEW_MODE_LABELS,
+  type ResultViewMode,
+} from "@/lib/customer-context";
 
 const severityStyles: Record<ActionCenterItem["severity"], string> = {
   critical: "text-red-600",
@@ -206,6 +211,96 @@ export function AiSummaryBlock({ data, loading }: { data?: ScanResult; loading?:
         </div>
       ) : (
         <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{text || "Summary unavailable."}</p>
+      )}
+    </div>
+  );
+}
+
+export function ResultViewSwitcher({
+  value,
+  onChange,
+}: {
+  value: ResultViewMode;
+  onChange: (mode: ResultViewMode) => void;
+}) {
+  const modes: ResultViewMode[] = ["execution", "merchandising", "brand", "executive"];
+  return (
+    <div className="flex flex-wrap gap-2">
+      {modes.map((mode) => (
+        <Button
+          key={mode}
+          type="button"
+          variant={value === mode ? "brand" : "subtle"}
+          size="sm"
+          className="rounded-xl"
+          onClick={() => onChange(mode)}
+        >
+          {VIEW_MODE_LABELS[mode]}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
+export function CompetitorIntelPanel({
+  snapshot,
+  loading,
+}: {
+  snapshot?: CompetitorSnapshot | null;
+  loading?: boolean;
+}) {
+  return (
+    <div className="card-surface p-5 sm:p-6">
+      <h3 className="text-sm font-semibold tracking-tight">Competitor intelligence</h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Own brand vs tracked competitors on this shelf
+      </p>
+      {loading ? (
+        <div className="mt-4 space-y-2">
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-full" />
+        </div>
+      ) : !snapshot?.primary_brand ? (
+        <div className="mt-4">
+          <p className="text-sm text-muted-foreground">
+            Configure your primary brand and competitors in Settings → Company to unlock competitor
+            share tracking.
+          </p>
+          <Button asChild variant="subtle" size="sm" className="mt-3 rounded-xl">
+            <Link to="/settings">Open brand settings</Link>
+          </Button>
+        </div>
+      ) : (
+        <div className="mt-4 space-y-4">
+          <div className="rounded-xl border border-brand/20 bg-brand-soft/30 px-4 py-3">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">Your brand</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums">
+              {snapshot.primary_brand}{" "}
+              <span className="text-lg text-muted-foreground">
+                {snapshot.own_brand_share_percent.toFixed(1)}% share
+              </span>
+            </p>
+          </div>
+          <ul className="space-y-2">
+            {snapshot.competitor_shares
+              .filter((row) => !row.is_primary)
+              .map((row) => (
+                <li
+                  key={row.brand}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm"
+                >
+                  <span className="font-medium">{row.brand}</span>
+                  <span className="tabular-nums text-muted-foreground">
+                    {row.share > 0 ? `${row.share.toFixed(1)}%` : "Not detected"}
+                  </span>
+                </li>
+              ))}
+          </ul>
+          <p className="text-xs text-muted-foreground">
+            {snapshot.competitors_detected} of {snapshot.competitors_configured} tracked competitors
+            present on shelf
+          </p>
+        </div>
       )}
     </div>
   );

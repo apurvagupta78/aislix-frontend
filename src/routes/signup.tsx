@@ -65,6 +65,7 @@ function SignupPage() {
         password: form.password,
         full_name: `${form.first} ${form.last}`.trim(),
         company_name: form.company.trim() || undefined,
+        customer_type: form.businessType.trim() || undefined,
       });
     },
     onSuccess: (session) => {
@@ -171,6 +172,7 @@ function SignupPage() {
               <SelectItem value="fmcg">FMCG brand</SelectItem>
               <SelectItem value="distributor">Distributor</SelectItem>
               <SelectItem value="local">Local store</SelectItem>
+              <SelectItem value="audit_agency">Retail audit / Field agency</SelectItem>
             </SelectContent>
           </Select>
         </div>

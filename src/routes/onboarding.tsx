@@ -32,6 +32,13 @@ import {
   saveOnboardingProfile,
 } from "@/lib/onboarding";
 import { fetchAuthUser, isEmailVerifiedServer } from "@/lib/auth-routing";
+import {
+  CUSTOMER_TYPE_LABELS,
+  JOB_TITLES_BY_CUSTOMER,
+  inferRoleFamily,
+  normalizeCustomerType,
+  type CustomerType,
+} from "@/lib/customer-context";
 
 export const Route = createFileRoute("/onboarding")({
   head: () => ({
@@ -111,13 +118,17 @@ function OnboardingPage() {
   const [fullName, setFullName] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [customerType, setCustomerType] = useState<CustomerType>("supermarket");
   useEffect(() => {
     const d = statusQuery.data;
     if (!d) return;
     setFullName((prev) => prev || d.full_name);
     setJobTitle((prev) => prev || d.job_title);
     setCompanyName((prev) => prev || d.company_name);
+    if (d.customer_type) setCustomerType(d.customer_type);
   }, [statusQuery.data]);
+
+  const jobTitleOptions = JOB_TITLES_BY_CUSTOMER[customerType] ?? [];
 
   const [storeName, setStoreName] = useState("");
   const [storeCode, setStoreCode] = useState("");
@@ -144,7 +155,14 @@ function OnboardingPage() {
 
 
   const profileStep = useMutation({
-    mutationFn: () => saveOnboardingProfile({ full_name: fullName, job_title: jobTitle, company_name: companyName }),
+    mutationFn: () =>
+      saveOnboardingProfile({
+        full_name: fullName,
+        job_title: jobTitle,
+        company_name: companyName,
+        customer_type: customerType,
+        role_family: inferRoleFamily(jobTitle, customerType),
+      }),
     onSuccess: () => setStep(1),
     onError: (error: Error) => toast.error(error.message),
   });
@@ -287,16 +305,44 @@ function OnboardingPage() {
                   className="mt-1.5"
                 />
               </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="customer_type">Business type</Label>
+                <Select
+                  value={customerType}
+                  onValueChange={(value) => {
+                    const next = normalizeCustomerType(value);
+                    setCustomerType(next);
+                    setJobTitle("");
+                  }}
+                >
+                  <SelectTrigger id="customer_type" className="mt-1.5">
+                    <SelectValue placeholder="Select business type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.entries(CUSTOMER_TYPE_LABELS) as [CustomerType, string][]).map(
+                      ([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ),
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
               <div>
                 <Label htmlFor="job_title">Role / job title</Label>
-                <Input
-                  id="job_title"
-                  value={jobTitle}
-                  maxLength={100}
-                  onChange={(e) => setJobTitle(e.target.value)}
-                  placeholder="Category manager"
-                  className="mt-1.5"
-                />
+                <Select value={jobTitle || undefined} onValueChange={setJobTitle}>
+                  <SelectTrigger id="job_title" className="mt-1.5">
+                    <SelectValue placeholder="Select your role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {jobTitleOptions.map((title) => (
+                      <SelectItem key={title} value={title}>
+                        {title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label htmlFor="company_name">Company</Label>
