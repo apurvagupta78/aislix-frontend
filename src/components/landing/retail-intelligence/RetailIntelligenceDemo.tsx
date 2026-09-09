@@ -98,6 +98,7 @@ export function RetailIntelligenceDemo() {
       ]);
       if (!scan) throw new Error("Choose a shelf photo to continue.");
       setResult(scan);
+      setElapsedSec(Math.max(1, Math.round((Date.now() - startedAt) / 1000)));
       persistLandingSession(scan);
       setPhase("done");
       trackLandingEvent("demo_scan_completed", {
