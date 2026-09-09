@@ -37,7 +37,7 @@ Avoid editing the same files in Lovable and Cursor — pick Cursor as source of 
 ## Git rules
 
 - Do **not** force-push or rewrite history on `main` while Lovable sync is connected.
-- `.env` is local only — never commit secrets.
+- **Keep `.env` in git** for Lovable — it embeds `VITE_*` vars at build time. Only publishable keys belong there; never commit `SUPABASE_SERVICE_ROLE_KEY` or `LOVABLE_API_KEY`.
 
 ## Optional local dev
 
