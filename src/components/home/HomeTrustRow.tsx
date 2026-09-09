@@ -1,11 +1,11 @@
-import { Building2, PackageSearch, ShoppingCart, Store, Truck } from "lucide-react";
+import { Building2, ClipboardCheck, PackageSearch, Store, Truck } from "lucide-react";
 
 const audiences = [
-  { label: "Supermarkets", Icon: ShoppingCart },
-  { label: "Dark Stores", Icon: Building2 },
-  { label: "FMCG Brands", Icon: PackageSearch },
+  { label: "FMCG brands", Icon: PackageSearch },
+  { label: "Audit agencies", Icon: ClipboardCheck },
   { label: "Distributors", Icon: Truck },
-  { label: "Local Stores", Icon: Store },
+  { label: "Dark stores", Icon: Building2 },
+  { label: "Local stores", Icon: Store },
 ];
 
 export function HomeTrustRow() {
@@ -13,7 +13,7 @@ export function HomeTrustRow() {
     <section className="bg-background py-10">
       <div className="mx-auto max-w-6xl px-5 text-center sm:px-8">
         <h2 className="text-2xl font-normal leading-tight tracking-tight text-foreground sm:text-3xl">
-          Built for modern retail teams
+          Built for FMCG field teams and audit agencies
         </h2>
         <div className="mx-auto mt-7 grid max-w-5xl grid-cols-2 gap-7 sm:grid-cols-3 lg:grid-cols-5">
           {audiences.map(({ label, Icon }) => (

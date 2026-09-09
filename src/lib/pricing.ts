@@ -8,6 +8,8 @@
 //   growth       ₹2,999  3,000 scans / month     3 stores
 //   professional ₹4,999  5,000 scans / month     5 stores
 //   enterprise   Custom  unlimited               unlimited
+//
+// ICP labels: FMCG field teams and audit agencies first; kirana/warehouse de-emphasized.
 
 import { formatFromInr, type CurrencyCode } from "@/lib/display-currency";
 
@@ -18,6 +20,12 @@ export type Plan = {
   id: PlanId;
   name: string;
   tagline: string;
+  /** Short audience label shown on pricing cards (badge under plan name). */
+  audience?: string;
+  /** 2–3 bullets: who this plan is honestly best for. */
+  bestFor?: string[];
+  /** Optional honest caveat — shown as muted text. */
+  notIdealFor?: string;
   /** Monthly price in INR. `null` = quote-based (Enterprise). */
   monthlyPrice: number | null;
   /** Annual price in INR, billed yearly. `null` = quote-based. */
@@ -39,11 +47,65 @@ export type Plan = {
 
 export const ANNUAL_MONTHS_BILLED = 10;
 
+/** Primary ICP strip for /pricing hero — honest, conversion-focused. */
+export const primaryIcpStrip =
+  "Built for FMCG field teams, retail audit agencies, and multi-store ops — not generic image recognition.";
+
+/** Who Aislix helps most (pricing page “Who it’s for” section). */
+export const icpSegments: {
+  title: string;
+  description: string;
+  recommendedPlan: PlanId;
+  priority: "primary" | "secondary";
+}[] = [
+  {
+    title: "FMCG brand field teams",
+    description:
+      "Reps photograph shelves in modern trade and general trade. Get SKU counts, brand share, and planogram gaps in minutes — export to CSV for your sales head.",
+    recommendedPlan: "growth",
+    priority: "primary",
+  },
+  {
+    title: "Retail audit agencies",
+    description:
+      "Cut manual counting time per store visit. AI first pass + your auditor review. Scale audits without scaling headcount linearly.",
+    recommendedPlan: "growth",
+    priority: "primary",
+  },
+  {
+    title: "Distributors & sales teams",
+    description:
+      "Spot-check outlet availability and shelf execution across your beat. One photo per visit, structured report back to HQ.",
+    recommendedPlan: "starter",
+    priority: "secondary",
+  },
+  {
+    title: "Dark stores & small retail chains",
+    description:
+      "Daily or weekly category audits across a handful of locations. Multi-store dashboard and historical trends.",
+    recommendedPlan: "professional",
+    priority: "secondary",
+  },
+  {
+    title: "National retail & enterprise FMCG",
+    description:
+      "Category onboarding, custom models, integrations, SLA, and unlimited scale. Pilot on your SKUs first.",
+    recommendedPlan: "enterprise",
+    priority: "primary",
+  },
+];
+
 export const plans: Plan[] = [
   {
     id: "free",
     name: "Free",
-    tagline: "For single-store owners trying shelf audits",
+    tagline: "Pilot Aislix on real shelf photos",
+    audience: "Evaluation & pilots",
+    bestFor: [
+      "Try before you buy on your own shelf images",
+      "Demo to your team or client",
+      "Single store, single user",
+    ],
     monthlyPrice: 0,
     annualPrice: 0,
     scanLimitLabel: "5 scans per 24 hours",
@@ -66,7 +128,14 @@ export const plans: Plan[] = [
   {
     id: "starter",
     name: "Starter",
-    tagline: "For local stores and boutique retail chains",
+    tagline: "One rep, one store, recurring audits",
+    audience: "Solo auditors & outlet checks",
+    bestFor: [
+      "Single distributor rep checking outlets",
+      "Independent auditor or small consultancy",
+      "One location with weekly shelf audits",
+    ],
+    notIdealFor: "Not built for large field teams — see Growth.",
     monthlyPrice: 999,
     annualPrice: 999 * ANNUAL_MONTHS_BILLED,
     scanLimitLabel: "300 scans per month",
@@ -91,7 +160,13 @@ export const plans: Plan[] = [
   {
     id: "growth",
     name: "Growth",
-    tagline: "For growing retail chains and distributors",
+    tagline: "Field teams auditing multiple stores",
+    audience: "FMCG teams & audit agencies",
+    bestFor: [
+      "Regional FMCG brands (5–20 field reps)",
+      "Audit agencies running 3+ stores per week",
+      "Planogram compliance + CSV export to HQ",
+    ],
     monthlyPrice: 2999,
     annualPrice: 2999 * ANNUAL_MONTHS_BILLED,
     scanLimitLabel: "3,000 scans per month",
@@ -111,11 +186,19 @@ export const plans: Plan[] = [
       "Email support",
     ],
     cta: "Upgrade to Growth",
+    popular: true,
   },
   {
     id: "professional",
     name: "Professional",
-    tagline: "For supermarkets, dark stores and retail chains",
+    tagline: "Multi-store ops at higher volume",
+    audience: "Dark stores & multi-location ops",
+    bestFor: [
+      "Dark store / q-commerce ops (3–5 locations)",
+      "Larger audit firms with dedicated audit teams",
+      "FMCG teams needing API + priority support",
+    ],
+    notIdealFor: "Enterprise chains should start with a pilot — contact sales.",
     monthlyPrice: 4999,
     annualPrice: 4999 * ANNUAL_MONTHS_BILLED,
     scanLimitLabel: "5,000 scans per month",
@@ -137,12 +220,17 @@ export const plans: Plan[] = [
       "REST API access",
     ],
     cta: "Upgrade to Professional",
-    popular: true,
   },
   {
     id: "enterprise",
     name: "Enterprise",
-    tagline: "For multi-location retail groups and national brands",
+    tagline: "National scale with your categories onboarded",
+    audience: "Large FMCG & retail chains",
+    bestFor: [
+      "National brands with custom SKU libraries",
+      "Retail chains needing integrations & SLA",
+      "Category packs tuned to your packaging",
+    ],
     monthlyPrice: null,
     annualPrice: null,
     scanLimitLabel: "Unlimited scans, stores & users",
@@ -365,5 +453,41 @@ export const addOns: AddOn[] = [
     priceInr: null,
     unit: "usage based",
     available: false,
+  },
+];
+
+/** FAQ entries for /pricing — honest positioning. */
+export const pricingFaqs: { q: string; a: string }[] = [
+  {
+    q: "Who is Aislix best for?",
+    a: "FMCG field teams, retail audit agencies, and multi-store retail ops who need faster shelf audits — SKU counts, brand share, and planogram compliance from a phone photo. We are not a warehouse or inventory WMS.",
+  },
+  {
+    q: "Will it work on every product category?",
+    a: "Aislix works across FMCG categories (snacks, beverages, personal care, tea, etc.). Accuracy is strongest on categories you audit repeatedly. Enterprise customers can onboard custom SKU libraries for their brands.",
+  },
+  {
+    q: "Do I need a planogram?",
+    a: "No. You can run shelf audits without a planogram. Planogram mode is optional and compares expected vs actual shelf layout when you upload a planogram CSV.",
+  },
+  {
+    q: "Can kirana stores use Aislix?",
+    a: "Yes — the Free plan lets any store try shelf digitization. Paid plans are designed for teams doing recurring audits across stores, which is why Growth is our most popular plan for FMCG and agencies.",
+  },
+  {
+    q: "How accurate is the AI?",
+    a: "Treat Aislix as audit acceleration: AI produces a structured first pass in 1–3 minutes. Verify critical counts before acting. Accuracy improves with category focus and human corrections over time.",
+  },
+  {
+    q: "Can we pilot before paying?",
+    a: "Yes. Start on Free (5 scans / 24 hours), run your own shelf photos, then upgrade to Growth when your team is ready. Enterprise buyers should contact sales for a category pilot.",
+  },
+  {
+    q: "How is a scan counted?",
+    a: "One shelf image analysed end-to-end counts as one scan. Re-downloading an existing report or viewing past results never consumes a scan.",
+  },
+  {
+    q: "Do you issue GST invoices?",
+    a: "Yes. Add your GSTIN and billing address in billing settings and every invoice is issued as a GST-compliant tax invoice, downloadable as PDF.",
   },
 ];

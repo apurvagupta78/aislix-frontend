@@ -16,7 +16,8 @@ import {
   CycleToggle,
   PricingGrid,
 } from "@/components/pricing/PricingPlans";
-import { addOns, formatPrice } from "@/lib/pricing";
+import { IcpSegmentsSection } from "@/components/pricing/IcpSegmentsSection";
+import { addOns, formatPrice, pricingFaqs, primaryIcpStrip } from "@/lib/pricing";
 import { useDisplayCurrency } from "@/lib/display-currency";
 import type { BillingCycle, Plan } from "@/lib/pricing";
 
@@ -45,25 +46,6 @@ export const Route = createFileRoute("/pricing")({
   component: Pricing,
 });
 
-const faqs = [
-  {
-    q: "How is a scan counted?",
-    a: "One shelf image analysed end-to-end counts as one scan. Re-downloading an existing report or viewing past results never consumes a scan.",
-  },
-  {
-    q: "What happens when I hit my monthly limit?",
-    a: "Scanning pauses instead of silently charging you. You can upgrade instantly or add a scan pack from the billing page — usage resets on your next billing date.",
-  },
-  {
-    q: "Do you issue GST invoices?",
-    a: "Yes. Add your GSTIN and billing address in billing settings and every invoice is issued as a GST-compliant tax invoice, downloadable as PDF.",
-  },
-  {
-    q: "Can I change or cancel my plan later?",
-    a: "Upgrade, downgrade, cancel or resume at any time from the billing page. Downgrades and cancellations take effect at the end of the current billing period.",
-  },
-];
-
 function Pricing() {
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
   const { currency, setCurrency, isBase } = useDisplayCurrency();
@@ -86,11 +68,13 @@ function Pricing() {
             Scan-based pricing
           </Badge>
           <h1 className="mx-auto mt-5 max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl">
-            Pay for the shelves you audit — nothing else
+            Simple pricing for shelf audit teams
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Every plan includes AI product detection, annotated shelf images and PDF audit reports.
-            Move up only when your scan volume does.
+            {primaryIcpStrip}
+          </p>
+          <p className="mx-auto mt-2 text-sm text-muted-foreground">
+            Start free · Upgrade when your team runs recurring store audits
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <CycleToggle cycle={cycle} onChange={setCycle} />
@@ -102,7 +86,9 @@ function Pricing() {
           </p>
         </section>
 
-        <section className="mx-auto max-w-[90rem] px-5 pb-6 pt-8 sm:px-8">
+        <IcpSegmentsSection />
+
+        <section className="mx-auto max-w-[90rem] px-5 pb-6 pt-4 sm:px-8">
           <PricingGrid cycle={cycle} onSelect={onSelect} currency={currency} />
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5">
@@ -158,7 +144,7 @@ function Pricing() {
         <section className="mx-auto max-w-3xl px-5 pb-16 sm:px-8">
           <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">Pricing FAQ</h2>
           <Accordion type="single" collapsible className="mt-5">
-            {faqs.map((f) => (
+            {pricingFaqs.map((f) => (
               <AccordionItem key={f.q} value={f.q}>
                 <AccordionTrigger className="text-left text-sm font-medium">{f.q}</AccordionTrigger>
                 <AccordionContent className="text-sm text-muted-foreground">{f.a}</AccordionContent>
