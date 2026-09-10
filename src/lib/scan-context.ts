@@ -4,6 +4,7 @@
  */
 
 import {
+  buildMatchKey,
   comparePlanogramToInventory,
   computePlanogramFinancialGaps,
   type InventoryFacing,
@@ -11,7 +12,7 @@ import {
 } from "@/lib/demo-planogram-match";
 import type { CompetitorSnapshot, CompetitorUpperHand } from "@/lib/brand-intel";
 import type { FinancialImpact, ScanRecommendation, ScanResult } from "@/lib/scan-results";
-import { buildMatchKey, emptyRow, type PlanogramRow } from "@/lib/planogram";
+import { emptyRow, type PlanogramRow } from "@/lib/planogram";
 
 export type ScanFocusFilter = {
   company?: string;
@@ -351,8 +352,9 @@ export function buildDemoCompetitorIntel(
     quantity: 0,
   };
 
-  const knownCompetitors = ctx.planogramRows.length
-    ? knownCompetitorsForPlanogramRow(ctx.planogramRows[0])
+  const firstPlanogramRow = ctx.planogramRows[0];
+  const knownCompetitors = firstPlanogramRow
+    ? knownCompetitorsForPlanogramRow(firstPlanogramRow)
     : [];
   const competitorNames = new Set<string>(knownCompetitors);
   for (const row of shares) {
@@ -581,7 +583,7 @@ export function buildDemoRecommendations(
       title: `Replenish ${lowFacings.length} SKUs with fewer than ${threshold} facings`,
       detail: lowFacings
         .slice(0, 4)
-        .map((r) => `${r.brand} ${r.product ?? r.product_name} (${r.quantity ?? 0} facing(s))`)
+        .map((r) => `${r.brand} ${r.product ?? ""} (${r.quantity ?? 0} facing(s))`)
         .join("; "),
       category: "Replenishment",
       impact: "high",

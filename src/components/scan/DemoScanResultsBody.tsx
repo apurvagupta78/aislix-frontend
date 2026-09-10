@@ -174,7 +174,7 @@ export function DemoScanResultsBody({
               return <RecommendedActionsPanel key={key} data={data} />;
             case "annotated_image":
               return imageUrl ? (
-                <AnnotatedImageViewer key={key} src={imageUrl} alt="Analyzed shelf photo" />
+                <AnnotatedImageViewer key={key} src={imageUrl} />
               ) : null;
             case "planogram":
               return null;

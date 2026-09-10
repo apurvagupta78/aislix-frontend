@@ -100,7 +100,7 @@ export function BrandIntelPanel() {
               />
             </Field>
           </div>
-          <SaveBar dirty={dirty} saving={save.isPending}>
+          <div className="flex items-center gap-3">
             <Button type="submit" variant="brand" className="rounded-xl" disabled={!dirty || save.isPending}>
               {save.isPending ? (
                 <>
@@ -110,7 +110,7 @@ export function BrandIntelPanel() {
                 "Save brand settings"
               )}
             </Button>
-          </SaveBar>
+          </div>
         </form>
       )}
     </SettingsCard>

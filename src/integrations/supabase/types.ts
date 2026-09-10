@@ -714,6 +714,7 @@ export type Database = {
       planogram_items: {
         Row: {
           aisle: string | null
+          avg_daily_sales: number | null
           brand: string
           category: string
           created_at: string
@@ -721,6 +722,7 @@ export type Database = {
           id: string
           location: string
           match_key: string | null
+          mrp_inr: number | null
           org_id: string
           product_name: string
           shelf_position: string | null
@@ -733,6 +735,7 @@ export type Database = {
         }
         Insert: {
           aisle?: string | null
+          avg_daily_sales?: number | null
           brand: string
           category: string
           created_at?: string
@@ -740,6 +743,7 @@ export type Database = {
           id?: string
           location: string
           match_key?: string | null
+          mrp_inr?: number | null
           org_id: string
           product_name: string
           shelf_position?: string | null
@@ -752,6 +756,7 @@ export type Database = {
         }
         Update: {
           aisle?: string | null
+          avg_daily_sales?: number | null
           brand?: string
           category?: string
           created_at?: string
@@ -759,6 +764,7 @@ export type Database = {
           id?: string
           location?: string
           match_key?: string | null
+          mrp_inr?: number | null
           org_id?: string
           product_name?: string
           shelf_position?: string | null
