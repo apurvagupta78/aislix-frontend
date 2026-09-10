@@ -4,7 +4,7 @@
  */
 
 import type { ResultViewMode } from "@/lib/customer-context";
-import type { RoleSummaries } from "@/lib/retail-intelligence";
+import type { NextBestAction, RoleSummaries } from "@/lib/retail-intelligence";
 import type { FinancialImpact, ScanRecommendation, ScanResult } from "@/lib/scan-results";
 import { formatPercent, normalizeConfidence } from "@/lib/scan-results";
 import { formatInr } from "@/lib/pricing";
@@ -19,6 +19,17 @@ export type ActionCenterItem = {
   label: string;
   count: number;
   detail?: string;
+};
+
+export type DetailedActionItem = {
+  action_id: string;
+  priority: "critical" | "high" | "medium" | "low";
+  title: string;
+  reason: string;
+  recommended_action: string;
+  expected_state?: string;
+  actual_state?: string;
+  estimated_daily_impact_inr?: number;
 };
 
 export type ExecutionKpi = {
@@ -169,6 +180,44 @@ export function buildActionCenterItems(result?: ScanResult | null): ActionCenter
   }
 
   return items;
+}
+
+export function nextBestActionsFromResult(result?: ScanResult | null): NextBestAction[] {
+  const actions = result?.retail_intelligence?.next_best_actions;
+  if (Array.isArray(actions) && actions.length) return actions;
+  return [];
+}
+
+/** Map GPT / backend next-best-actions into detailed action rows for the Action Center. */
+export function buildDetailedActions(
+  result?: ScanResult | null,
+  view?: ResultViewMode,
+): DetailedActionItem[] {
+  const nba = nextBestActionsFromResult(result);
+  const filtered = view
+    ? nba.filter((a) => !a.role || a.role === view || a.role === "field" && view === "execution")
+    : nba;
+
+  if (filtered.length) {
+    return filtered.map((a) => ({
+      action_id: a.action_id,
+      priority: a.priority,
+      title: a.title,
+      reason: a.reason,
+      recommended_action: a.recommended_action,
+      expected_state: a.expected_state,
+      actual_state: a.actual_state,
+      estimated_daily_impact_inr: a.estimated_daily_impact_inr,
+    }));
+  }
+
+  return (result?.recommendations ?? []).slice(0, 8).map((rec, i) => ({
+    action_id: rec.id ?? `rec-${i}`,
+    priority: (rec.impact === "high" ? "high" : rec.impact === "low" ? "low" : "medium") as DetailedActionItem["priority"],
+    title: rec.title,
+    reason: rec.detail ?? "",
+    recommended_action: rec.title,
+  }));
 }
 
 export function totalActionCount(items: ActionCenterItem[]): number {

@@ -11,6 +11,7 @@ import {
   type ScanResult,
 } from "@/lib/scan-results";
 import { executionScore } from "@/lib/scan-execution";
+import { buildSkuCompareDiff } from "@/lib/scan-compare";
 import { formatScanDate, formatScanTime } from "@/lib/scan-history";
 
 export const Route = createFileRoute("/compare")({
@@ -219,8 +220,49 @@ function ComparePage() {
             <ScanHeading result={right} side="Comparison scan" />
           </section>
 
+          {(() => {
+            const skuDiff = buildSkuCompareDiff(left, right);
+            if (!skuDiff.length) return null;
+            return (
+              <section className="card-surface p-4 sm:p-6">
+                <h2 className="text-sm font-semibold tracking-tight">SKU-level changes</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Products with different facing counts between baseline and comparison scans.
+                </p>
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full min-w-[520px] text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
+                        <th className="py-2 text-left font-medium">Brand</th>
+                        <th className="py-2 text-left font-medium">Product</th>
+                        <th className="py-2 text-right font-medium">Before</th>
+                        <th className="py-2 text-right font-medium">After</th>
+                        <th className="py-2 text-right font-medium">Change</th>
+                        <th className="py-2 text-left font-medium">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {skuDiff.slice(0, 20).map((row) => (
+                        <tr key={row.key} className="border-b border-border/70 last:border-0">
+                          <td className="py-2">{row.brand}</td>
+                          <td className="py-2 font-medium">{row.product}</td>
+                          <td className="py-2 text-right tabular-nums">{row.before_qty}</td>
+                          <td className="py-2 text-right tabular-nums">{row.after_qty}</td>
+                          <td className="py-2 text-right tabular-nums">
+                            {row.delta > 0 ? `+${row.delta}` : row.delta}
+                          </td>
+                          <td className="py-2 capitalize text-muted-foreground">{row.status.replace("_", " ")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            );
+          })()}
+
           <section className="card-surface p-4 sm:p-6">
-            <h2 className="text-sm font-semibold tracking-tight">Inventory changes</h2>
+            <h2 className="text-sm font-semibold tracking-tight">Execution metrics</h2>
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
               Metrics come straight from each scan payload — no estimates.
             </p>

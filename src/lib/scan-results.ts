@@ -844,9 +844,13 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
   if (metricsRoleSummaries && typeof metricsRoleSummaries === "object") {
     scanResult.role_summaries = metricsRoleSummaries as ScanResult["role_summaries"];
   }
-  const metricsRetailIntel = (result?.metrics as Record<string, unknown> | undefined)?.retail_intelligence;
+  const metricsObj = result?.metrics as Record<string, unknown> | undefined;
+  const metricsRetailIntel = metricsObj?.retail_intelligence;
   if (metricsRetailIntel && typeof metricsRetailIntel === "object") {
     scanResult.retail_intelligence = metricsRetailIntel as ScanResult["retail_intelligence"];
+  }
+  if (!scanResult.role_summaries && metricsObj?.role_summaries) {
+    scanResult.role_summaries = metricsObj.role_summaries as ScanResult["role_summaries"];
   }
 
   if (storeId && scan.created_at && scan.status === "completed") {

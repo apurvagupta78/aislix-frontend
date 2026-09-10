@@ -347,7 +347,12 @@ function Results() {
                 <p className="text-sm text-muted-foreground">
                   {VIEW_MODE_DESCRIPTIONS[activeView]}
                 </p>
-                <ResultViewSwitcher value={activeView} onChange={setViewOverride} />
+                <ResultViewSwitcher
+                  value={activeView}
+                  onChange={setViewOverride}
+                  roleFamily={workspaceQuery.data?.roleFamily}
+                  customerType={workspaceQuery.data?.customerType}
+                />
               </div>
 
               {sectionOrder.map((key) => {
@@ -375,7 +380,14 @@ function Results() {
                   case "facings_strip":
                     return <FacingsSummaryStrip key={key} data={display} loading={loading} />;
                   case "action_center":
-                    return <ActionCenterPanel key={key} data={display} loading={loading} />;
+                    return (
+                      <ActionCenterPanel
+                        key={key}
+                        data={display}
+                        loading={loading}
+                        view={activeView}
+                      />
+                    );
                   case "financial_impact":
                     return (
                       <FinancialImpactPanel
@@ -396,7 +408,7 @@ function Results() {
                     ) : null;
                   case "ai_summary":
                     return (
-                      <AiSummaryBlock key={key} data={display} loading={loading} view={viewMode} />
+                      <AiSummaryBlock key={key} data={display} loading={loading} view={activeView} />
                     );
                   case "competitor_intel":
                     return competitorEnabled ? (

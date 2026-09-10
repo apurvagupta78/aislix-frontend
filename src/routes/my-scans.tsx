@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, ClipboardList, Loader2, MapPin, ScanLine } from "lucide-react";
@@ -275,6 +275,11 @@ function MyScansPage() {
                           }
                         >
                           {actionable ? "View last results" : "View results"}
+                        </Button>
+                      )}
+                      {assignment.status === "needs_correction" && (
+                        <Button asChild variant="subtle" className="rounded-xl">
+                          <Link to="/corrective-actions">View open actions</Link>
                         </Button>
                       )}
                     </div>

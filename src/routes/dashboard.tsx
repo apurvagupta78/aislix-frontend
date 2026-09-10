@@ -35,6 +35,9 @@ import {
   isDemoMode,
 } from "@/lib/dashboard-demo";
 import { supabase } from "@/integrations/supabase/client";
+import { useWorkspaceContext } from "@/hooks/use-customer-context";
+import { RoleDashboardExtras } from "@/components/dashboard/RoleDashboardPanels";
+import { ROLE_HERO } from "@/lib/customer-context";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
@@ -59,6 +62,9 @@ export const Route = createFileRoute("/dashboard")({
 
 function Dashboard() {
   const [territoryId, setTerritoryId] = useState("all");
+  const workspace = useWorkspaceContext();
+  const roleFamily = workspace.data?.roleFamily ?? "operations";
+  const defaultView = workspace.data?.viewMode ?? "execution";
 
   const session = useQuery({
     queryKey: ["auth-session"],
@@ -129,7 +135,11 @@ function Dashboard() {
   return (
     <AppShell
       title={demo ? "Live demo dashboard" : name ? `Welcome back, ${name}` : "Dashboard"}
-      description="Shelf performance, scan activity and account health across your stores."
+      description={
+        demo
+          ? "Shelf performance, scan activity and account health across your stores."
+          : ROLE_HERO[defaultView === "executive" ? "executive" : defaultView === "brand" ? "brand" : defaultView === "merchandising" ? "merchandising" : "execution"]
+      }
       actions={
         demo ? (
           <>
@@ -183,13 +193,15 @@ function Dashboard() {
         </div>
       </section>
 
-      {demo ? null : <TeamAssignmentsPanel />}
+      {demo ? null : <RoleDashboardExtras roleFamily={roleFamily} />}
 
-      {demo ? null : (
+      {demo ? null : roleFamily !== "field" ? <TeamAssignmentsPanel /> : null}
+
+      {demo ? null : roleFamily !== "field" ? (
         <section className="mt-8">
           <StoreComplianceRanking territoryId={selectedTerritory} />
         </section>
-      )}
+      ) : null}
 
       <section className="mt-8">
         <SectionHeader

@@ -350,3 +350,34 @@ export function showCompetitorIntel(
   if (customerType === "fmcg" || customerType === "distributor") return true;
   return roleFamily === "commercial" || roleFamily === "executive" || roleFamily === "merchandising";
 }
+
+/** Which result tabs a role may switch between (default tab still applies). */
+export function allowedViewModes(
+  roleFamily: RoleFamily,
+  customerType?: CustomerType,
+): ResultViewMode[] {
+  switch (roleFamily) {
+    case "field":
+      return ["execution"];
+    case "store_ops":
+      return ["execution", "merchandising"];
+    case "merchandising":
+    case "operations":
+      return ["execution", "merchandising", "brand"];
+    case "commercial":
+      return customerType === "fmcg"
+        ? ["brand", "merchandising", "execution"]
+        : ["brand", "merchandising", "executive"];
+    case "executive":
+      return ["executive", "merchandising", "brand", "execution"];
+    default:
+      return ["execution", "merchandising", "brand", "executive"];
+  }
+}
+
+export const ROLE_HERO: Record<ResultViewMode, string> = {
+  execution: "What needs attention?",
+  merchandising: "How is my category performing?",
+  brand: "How is my brand performing against competitors?",
+  executive: "Where should I intervene?",
+};

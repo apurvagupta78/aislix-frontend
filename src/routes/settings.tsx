@@ -24,6 +24,7 @@ import { ApiAccessPanel } from "@/components/settings/ApiAccessPanel";
 import { AiTrainingPanel } from "@/components/settings/AiTrainingPanel";
 import { BrandIntelPanel } from "@/components/settings/BrandIntelPanel";
 import { TerritoryPanel } from "@/components/settings/TerritoryPanel";
+import { CustomerProfilePanel } from "@/components/settings/CustomerProfilePanel";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -77,6 +78,7 @@ function SettingsPage() {
         </TabsList>
 
         <TabsContent value="company" className="mt-0 space-y-4">
+          <CustomerProfilePanel />
           <CompanyPanel />
           <BrandIntelPanel />
           <TerritoryPanel />

@@ -105,7 +105,7 @@ export function DemoScanResultsBody({
             case "facings_strip":
               return <FacingsSummaryStrip key={key} data={data} />;
             case "action_center":
-              return <ActionCenterPanel key={key} data={data} />;
+              return <ActionCenterPanel key={key} data={data} view={view} />;
             case "financial_impact":
               return (
                 <FinancialImpactPanel key={key} data={data} locked={false} planCode="growth" />

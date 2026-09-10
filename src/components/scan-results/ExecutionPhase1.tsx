@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   buildActionCenterItems,
   buildAiSummaryParagraph,
+  buildDetailedActions,
   buildRoleSummary,
   buildKpiStrip,
   executionScore,
@@ -27,11 +28,14 @@ import type { ScanResult } from "@/lib/scan-results";
 import { formatScanDate } from "@/lib/scan-results";
 import type { CompetitorSnapshot } from "@/lib/brand-intel";
 import {
+  allowedViewModes,
   VIEW_MODE_DESCRIPTIONS,
   VIEW_MODE_LABELS,
   VIEW_MODE_THEME,
   type ResultViewMode,
+  type RoleFamily,
 } from "@/lib/customer-context";
+import { formatInr } from "@/lib/pricing";
 
 const severityStyles: Record<ActionCenterItem["severity"], string> = {
   critical: "text-destructive",
@@ -167,8 +171,17 @@ export function ExecutionKpiStripPanel({
   );
 }
 
-export function ActionCenterPanel({ data, loading }: { data?: ScanResult; loading?: boolean }) {
+export function ActionCenterPanel({
+  data,
+  loading,
+  view,
+}: {
+  data?: ScanResult;
+  loading?: boolean;
+  view?: ResultViewMode;
+}) {
   const items = buildActionCenterItems(data);
+  const detailed = buildDetailedActions(data, view);
   const total = totalActionCount(items);
 
   return (
@@ -176,13 +189,15 @@ export function ActionCenterPanel({ data, loading }: { data?: ScanResult; loadin
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold tracking-tight">
-            {total > 0 ? `${total} issue${total === 1 ? "" : "s"} require action` : "No critical issues detected"}
+            {total > 0 || detailed.length
+              ? `${Math.max(total, detailed.length)} issue${Math.max(total, detailed.length) === 1 ? "" : "s"} require action`
+              : "No critical issues detected"}
           </h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            Prioritized from availability, placement, and planogram compliance
+            Next-best actions from availability, placement, and planogram compliance
           </p>
         </div>
-        {total > 0 && (
+        {(total > 0 || detailed.length > 0) && (
           <Badge variant="outline" className="rounded-full border-warning/40 text-warning">
             <AlertTriangle className="mr-1 size-3" /> Action required
           </Badge>
@@ -193,6 +208,46 @@ export function ActionCenterPanel({ data, loading }: { data?: ScanResult; loadin
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
         </div>
+      ) : detailed.length > 0 ? (
+        <>
+        <ol className="mt-4 space-y-3">
+          {detailed.slice(0, 8).map((action, index) => (
+            <li
+              key={action.action_id}
+              className="rounded-xl border border-border bg-surface px-4 py-3"
+            >
+              <p className="flex items-center gap-2 text-sm font-medium">
+                <span
+                  className={cn(
+                    "size-2 shrink-0 rounded-full",
+                    severityDot[action.priority === "critical" ? "critical" : action.priority],
+                  )}
+                />
+                {index + 1}. {action.title}
+              </p>
+              {action.reason ? (
+                <p className="mt-1 text-xs text-muted-foreground">{action.reason}</p>
+              ) : null}
+              {(action.expected_state || action.actual_state) && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Expected: {action.expected_state ?? "—"} · Actual: {action.actual_state ?? "—"}
+                </p>
+              )}
+              {action.estimated_daily_impact_inr ? (
+                <p className="mt-1 text-xs font-medium text-warning">
+                  Est. opportunity: {formatInr(action.estimated_daily_impact_inr)}/day
+                </p>
+              ) : null}
+              <p className="mt-1 text-xs font-medium text-foreground">
+                → {action.recommended_action}
+              </p>
+            </li>
+          ))}
+        </ol>
+        <Button asChild variant="subtle" size="sm" className="mt-4 rounded-xl">
+          <Link to="/corrective-actions">View all actions</Link>
+        </Button>
+        </>
       ) : items.length === 0 ? (
         <p className="mt-4 text-sm text-muted-foreground">
           Shelf execution looks healthy for this scan. Review inventory below for details.
@@ -250,13 +305,18 @@ export function AiSummaryBlock({
 export function ResultViewSwitcher({
   value,
   onChange,
+  roleFamily,
+  customerType,
 }: {
   value: ResultViewMode;
   onChange: (mode: ResultViewMode) => void;
+  roleFamily?: RoleFamily;
+  customerType?: import("@/lib/customer-context").CustomerType;
   /** @deprecated — tabs always wrap for readability */
   compact?: boolean;
 }) {
-  const modes: ResultViewMode[] = ["execution", "merchandising", "brand", "executive"];
+  const allModes: ResultViewMode[] = ["execution", "merchandising", "brand", "executive"];
+  const modes = roleFamily ? allowedViewModes(roleFamily, customerType) : allModes;
   return (
     <div className="flex flex-wrap gap-2" role="tablist" aria-label="Result view">
       {modes.map((mode) => {
