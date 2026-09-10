@@ -187,10 +187,15 @@ export function LiveDemoSection({
     scrollToDemo();
   }
 
-  const shownImage =
-    phase === "done" && result ? (annotatedSrc(result) ?? previewImageUrl) : previewImageUrl;
   const scanning = phase === "scanning";
-  const showImagePane = Boolean(previewImageUrl);
+  /** Homepage shows the sample shelf photo immediately; other demo pages load it on setup. */
+  const homepageSamplePreview =
+    homepageIntro && phase !== "done" ? DEFAULT_SAMPLE_IMAGE : null;
+  const displayImageUrl =
+    (phase === "done" && result ? (annotatedSrc(result) ?? previewImageUrl) : null) ??
+    previewImageUrl ??
+    homepageSamplePreview;
+  const showImagePane = Boolean(displayImageUrl);
 
   const setupPanel =
     setupMode && (phase === "idle" || phase === "error") ? (
@@ -325,7 +330,7 @@ export function LiveDemoSection({
               </p>
               <div className="relative mx-auto max-w-3xl">
                 <img
-                  src={shownImage ?? previewImageUrl ?? DEFAULT_SAMPLE_IMAGE}
+                  src={displayImageUrl ?? DEFAULT_SAMPLE_IMAGE}
                   alt={phase === "done" ? "Shelf photo analyzed by Aislix" : "Sample retail shelf"}
                   loading="lazy"
                   decoding="async"
