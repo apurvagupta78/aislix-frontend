@@ -352,8 +352,9 @@ export function buildDemoCompetitorIntel(
     quantity: 0,
   };
 
-  const knownCompetitors = ctx.planogramRows.length
-    ? knownCompetitorsForPlanogramRow(ctx.planogramRows[0])
+  const firstPlanogramRow = ctx.planogramRows[0];
+  const knownCompetitors = firstPlanogramRow
+    ? knownCompetitorsForPlanogramRow(firstPlanogramRow)
     : [];
   const competitorNames = new Set<string>(knownCompetitors);
   for (const row of shares) {

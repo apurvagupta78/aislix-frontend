@@ -977,7 +977,7 @@ function csvEscape(value: string | number | undefined | null): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-function csvSection(title: string, rows: string[][]): string[] {
+function csvSection(title: string, rows: (string | number)[][]): string[] {
   return [`# ${title}`, ...rows.map((row) => row.map(csvEscape).join(","))];
 }
 

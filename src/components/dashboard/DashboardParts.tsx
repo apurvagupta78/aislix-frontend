@@ -63,11 +63,13 @@ export function SectionHeader({
 
 export function Panel({
   title,
+  description,
   action,
   children,
   className = "",
 }: {
   title: string;
+  description?: string;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -75,7 +77,12 @@ export function Panel({
   return (
     <section className={`card-surface flex flex-col p-6 ${className}`}>
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold tracking-tight text-foreground">{title}</h2>
+        <div>
+          <h2 className="text-sm font-semibold tracking-tight text-foreground">{title}</h2>
+          {description ? (
+            <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+          ) : null}
+        </div>
         {action}
       </div>
       <div className="mt-5 flex-1">{children}</div>
