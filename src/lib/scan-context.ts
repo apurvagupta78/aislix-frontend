@@ -583,7 +583,7 @@ export function buildDemoRecommendations(
       title: `Replenish ${lowFacings.length} SKUs with fewer than ${threshold} facings`,
       detail: lowFacings
         .slice(0, 4)
-        .map((r) => `${r.brand} ${r.product ?? r.product_name} (${r.quantity ?? 0} facing(s))`)
+        .map((r) => `${r.brand} ${r.product ?? ""} (${r.quantity ?? 0} facing(s))`)
         .join("; "),
       category: "Replenishment",
       impact: "high",
