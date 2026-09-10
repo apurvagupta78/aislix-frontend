@@ -4,14 +4,17 @@ import { Progress } from "@/components/ui/progress";
 import { SCAN_STAGES } from "@/lib/scan-api";
 import { cn } from "@/lib/utils";
 
-export const AI_DISCLAIMER = "AI can make mistakes. Verify critical counts before acting on results.";
+export const AI_DISCLAIMER =
+  "Aislix uses AI to analyze your image. Review low-confidence detections and critical findings before taking action.";
 
 const DEMO_STAGES = [
-  "Uploading image",
-  "Detecting products",
-  "Identifying brands & variants",
-  "Counting inventory",
-  "Building report",
+  "Uploading Image",
+  "Detecting Products",
+  "Identifying Brands & SKUs",
+  "Measuring Availability & Facings",
+  "Analyzing Placement & Compliance",
+  "Generating Retail Insights",
+  "Preparing Your Results",
 ] as const;
 
 type ScanProgressPanelProps = {
@@ -37,7 +40,8 @@ export function ScanProgressPanel({
   done = false,
   expectedMs = 120_000,
   stages = DEMO_STAGES,
-  timingMessage = "This usually takes 2–3 minutes for large shelves. Keep this page open.",
+  timingMessage =
+    "This may take a few minutes for larger or more complex images. Please keep this page open.",
   showStageList = false,
   className,
 }: ScanProgressPanelProps) {
@@ -63,7 +67,7 @@ export function ScanProgressPanel({
   return (
     <div className={cn("w-full", className)}>
       <p className="text-sm font-semibold text-foreground">
-        {done ? "Analysis complete" : "Analyzing shelf…"}
+        {done ? "Analysis complete" : "Analyzing image…"}
       </p>
       <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{timingMessage}</p>
 

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import {
   buildActionCenterItems,
   buildAiSummaryParagraph,
+  buildRoleSummary,
   buildKpiStrip,
   executionScore,
   formatLostSales,
@@ -26,6 +27,7 @@ import type { ScanResult } from "@/lib/scan-results";
 import { formatScanDate } from "@/lib/scan-results";
 import type { CompetitorSnapshot } from "@/lib/brand-intel";
 import {
+  VIEW_MODE_DESCRIPTIONS,
   VIEW_MODE_LABELS,
   VIEW_MODE_THEME,
   type ResultViewMode,
@@ -219,11 +221,20 @@ export function ActionCenterPanel({ data, loading }: { data?: ScanResult; loadin
   );
 }
 
-export function AiSummaryBlock({ data, loading }: { data?: ScanResult; loading?: boolean }) {
-  const text = buildAiSummaryParagraph(data);
+export function AiSummaryBlock({
+  data,
+  loading,
+  view,
+}: {
+  data?: ScanResult;
+  loading?: boolean;
+  view?: import("@/lib/customer-context").ResultViewMode;
+}) {
+  const text = view ? buildRoleSummary(data, view) : buildAiSummaryParagraph(data);
+  const hero = view ? VIEW_MODE_DESCRIPTIONS[view] : "Retail execution summary";
   return (
     <div className="card-surface p-5 sm:p-6">
-      <h3 className="text-sm font-semibold tracking-tight">AI summary</h3>
+      <h3 className="text-sm font-semibold tracking-tight">{hero}</h3>
       {loading ? (
         <div className="mt-3 space-y-2">
           <Skeleton className="h-4 w-full" />

@@ -5,8 +5,9 @@
 
 import {
   comparePlanogramToInventory,
-  detectedQtyForPlanogramRow,
+  computePlanogramFinancialGaps,
   type InventoryFacing,
+  type PlanogramMatchResult,
 } from "@/lib/demo-planogram-match";
 import type { CompetitorSnapshot } from "@/lib/brand-intel";
 import type { FinancialImpact, ScanRecommendation, ScanResult } from "@/lib/scan-results";
@@ -132,6 +133,7 @@ export function computeContextFinancialImpact(
   inventory: ScanResult["inventory"],
   planogramRows: PlanogramRow[],
   threshold = OOS_THRESHOLD,
+  match?: PlanogramMatchResult,
 ): FinancialImpact {
   let oosDaily = 0;
   let atRiskDaily = 0;
@@ -141,17 +143,15 @@ export function computeContextFinancialImpact(
   const fullInventory = inventory ?? [];
 
   if (planogramRows.length > 0) {
-    for (const plan of planogramRows) {
-      const detected = detectedQtyForPlanogramRow(fullInventory as InventoryFacing[], plan);
-      const expected = Math.max(1, plan.expected_qty ?? 1);
-      const { asp, velocity } = pricingForPlanogramRow(plan);
-
-      if (detected <= 0 || detected < threshold) {
-        oosDaily += velocity * asp;
+    const planMatch =
+      match ?? comparePlanogramToInventory(fullInventory as InventoryFacing[], planogramRows);
+    const gaps = computePlanogramFinancialGaps(planMatch, threshold);
+    for (const gap of gaps) {
+      if (gap.issue_type === "missing" || gap.issue_type === "wrong_product") {
+        oosDaily += gap.daily_loss_inr;
         oosSkus += 1;
-      } else if (detected < expected) {
-        const gap = expected - detected;
-        atRiskDaily += gap * velocity * asp * LOW_STOCK_RISK;
+      } else {
+        atRiskDaily += gap.daily_loss_inr;
         atRiskSkus += 1;
       }
     }
@@ -303,19 +303,29 @@ export function buildDemoRecommendations(
   }
 
   for (const line of match.lines) {
-    if (!line.present) {
+    if (line.issue_type === "missing") {
       recs.push({
         id: `plan-missing-${line.expected.brand}-${line.expected.product_name}`,
         title: `Missing planogram SKU: ${line.expected.brand} ${line.expected.product_name}`,
-        detail: `Expected ${line.expected_qty} facings — none detected.`,
+        detail: line.detail ?? `Expected ${line.expected_qty} facings — none detected.`,
         category: "Planogram",
         impact: "high",
       });
-    } else if (!line.qty_ok) {
+    } else if (line.issue_type === "wrong_product") {
+      recs.push({
+        id: `plan-wrong-${line.expected.brand}-${line.expected.product_name}`,
+        title: `Wrong product on shelf: expected ${line.expected.brand} ${line.expected.product_name}`,
+        detail:
+          line.detail ??
+          `Detected ${line.matched_brand ?? ""} ${line.matched_product ?? ""} instead.`,
+        category: "Planogram",
+        impact: "high",
+      });
+    } else if (line.issue_type === "qty_mismatch") {
       recs.push({
         id: `plan-short-${line.expected.brand}-${line.expected.product_name}`,
         title: `Short on ${line.expected.brand} ${line.expected.product_name}`,
-        detail: `Detected ${line.detected_qty} vs ${line.expected_qty} expected facings.`,
+        detail: line.detail ?? `Detected ${line.detected_qty} vs ${line.expected_qty} expected facings.`,
         category: "Planogram",
         impact: "medium",
       });
@@ -362,7 +372,12 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
     ? comparePlanogramToInventory(fullInventory as InventoryFacing[], ctx.planogramRows)
     : comparePlanogramToInventory([], []);
 
-  const financial_impact = computeContextFinancialImpact(fullInventory, ctx.planogramRows, threshold);
+  const financial_impact = computeContextFinancialImpact(
+    fullInventory,
+    ctx.planogramRows,
+    threshold,
+    match,
+  );
 
   const displayInventory = hasFocus
     ? fullInventory.filter((row) => matchesScanFocus(row, ctx.focus))
@@ -376,7 +391,8 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
     (r) => (r.quantity ?? 0) > 0 && (r.quantity ?? 0) < threshold,
   ).length;
   const oosCount =
-    fullInventory.filter((r) => (r.quantity ?? 0) <= 0).length + (hasPlanogram ? match.missing_count : 0);
+    fullInventory.filter((r) => (r.quantity ?? 0) <= 0).length +
+    (hasPlanogram ? match.missing_count + match.wrong_product_count : 0);
 
   const facingPct = hasPlanogram
     ? match.qty_compliance_percent
@@ -420,7 +436,17 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
             ...(result.planogram?.summary ?? {}),
             expected_sku_count: ctx.planogramRows.length,
             missing: match.missing_count,
+            wrong_product: match.wrong_product_count,
             qty_short: match.qty_short_count,
+            correct: match.correct_count,
+            lines: match.lines.map((l) => ({
+              brand: l.expected.brand,
+              product: l.expected.product_name,
+              expected_qty: l.expected_qty,
+              detected_qty: l.detected_qty,
+              issue_type: l.issue_type,
+              detail: l.detail,
+            })),
             source: "demo_planogram",
           },
         }
@@ -432,4 +458,53 @@ export function hasActiveScanContext(ctx: ScanContextState): boolean {
   return (
     Boolean(ctx.focus.company || ctx.focus.brand || ctx.focus.product) || ctx.planogramRows.length > 0
   );
+}
+
+/** Convert client-side planogram match into the shared comparison shape for UI tables. */
+export function buildDemoPlanogramComparison(
+  match: PlanogramMatchResult,
+  scanId = "demo",
+): import("@/lib/planogram-compliance").PlanogramComparison {
+  return {
+    id: `${scanId}-planogram`,
+    compliance_percent: match.sku_match_percent,
+    created_at: new Date().toISOString(),
+    summary: {
+      expected: match.lines.length,
+      found: match.correct_count,
+      missing: match.missing_count,
+      wrong_product: match.wrong_product_count,
+      qty_issues: match.qty_short_count,
+    },
+    lines: match.lines.map((line, i) => ({
+      id: `line-${i}`,
+      issue_type:
+        line.issue_type === "correct"
+          ? "ok"
+          : line.issue_type === "qty_mismatch"
+            ? "qty_issue"
+            : line.issue_type,
+      expected_brand: line.expected.brand,
+      expected_product: line.expected.product_name,
+      expected_qty: line.expected_qty,
+      actual_brand: line.matched_brand ?? null,
+      actual_product: line.matched_product ?? null,
+      actual_qty: line.detected_qty,
+      severity: line.issue_type === "missing" || line.issue_type === "wrong_product" ? "critical" : "warning",
+      detail: line.detail ?? null,
+    })),
+    actions: match.lines
+      .filter((l) => l.issue_type !== "correct")
+      .map((line, i) => ({
+        id: `action-${i}`,
+        issue_type: line.issue_type,
+        suggestion:
+          line.issue_type === "missing"
+            ? `Replenish ${line.expected.brand} ${line.expected.product_name} — ${line.expected_qty} facing(s) required.`
+            : line.issue_type === "wrong_product"
+              ? `Replace with expected SKU: ${line.expected.brand} ${line.expected.product_name}.`
+              : `Add ${line.expected_qty - line.detected_qty} facing(s) of ${line.expected.brand} ${line.expected.product_name}.`,
+        status: "open",
+      })),
+  };
 }

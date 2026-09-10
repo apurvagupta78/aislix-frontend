@@ -23,10 +23,13 @@ import {
   type ResultSectionKey,
   type ResultViewMode,
 } from "@/lib/customer-context";
+import { PlanogramComparisonSection } from "@/components/scan-results/PlanogramCompliance";
 import type { ScanResult } from "@/lib/scan-results";
+import { buildDemoPlanogramComparison } from "@/lib/scan-context";
 import { cn } from "@/lib/utils";
 import { displayVariant } from "@/lib/landing-inventory";
 import type { LandingScanResult } from "@/lib/landing-scan-api";
+import type { PlanogramMatchLine } from "@/lib/demo-planogram-match";
 
 const INLINE_SKIP_SECTIONS = new Set<ResultSectionKey>([
   "annotated_image",
@@ -116,7 +119,7 @@ export function DemoScanResultsBody({
                 />
               ) : null;
             case "ai_summary":
-              return <AiSummaryBlock key={key} data={data} />;
+              return <AiSummaryBlock key={key} data={data} view={view} />;
             case "competitor_intel":
               return data.competitor_intel ? (
                 <CompetitorIntelPanel key={key} snapshot={data.competitor_intel} />
@@ -154,37 +157,77 @@ function PlanogramComplianceCard({ data }: { data: ScanResult }) {
   const pg = data.planogram;
   if (!pg?.requested) return null;
 
+  const rawLines = pg.summary?.lines;
+  if (Array.isArray(rawLines) && rawLines.length > 0) {
+    const matchLines = rawLines as Array<{
+      brand: string;
+      product: string;
+      expected_qty: number;
+      detected_qty: number;
+      issue_type: PlanogramMatchLine["issue_type"];
+      detail?: string;
+    }>;
+    const comparison = buildDemoPlanogramComparison(
+      {
+        sku_match_percent: pg.sku_match_percent ?? 0,
+        qty_compliance_percent: pg.qty_compliance_percent ?? 0,
+        missing_count: Number(pg.summary?.missing ?? 0),
+        wrong_product_count: Number(pg.summary?.wrong_product ?? 0),
+        qty_short_count: Number(pg.summary?.qty_short ?? 0),
+        correct_count: Number(pg.summary?.correct ?? 0),
+        lines: matchLines.map((l) => ({
+          expected: {
+            location: "",
+            category: "",
+            sub_category: "",
+            brand: l.brand,
+            product_name: l.product,
+            variant: "",
+            expected_qty: l.expected_qty,
+            sku: "",
+            shelf_position: "",
+            match_key: `${l.brand}|${l.product}`,
+          },
+          detected_qty: l.detected_qty,
+          expected_qty: l.expected_qty,
+          issue_type: l.issue_type,
+          present: l.issue_type !== "missing",
+          qty_ok: l.issue_type === "correct",
+          match_score: l.issue_type === "correct" ? 1 : 0,
+          detail: l.detail,
+        })),
+      },
+      data.scan_id,
+    );
+    return <PlanogramComparisonSection comparison={comparison} />;
+  }
+
+  if (pg.sku_match_percent != null) {
+    return (
+      <PlanogramComparisonSection
+        comparison={{
+          id: `${data.scan_id}-planogram`,
+          compliance_percent: pg.sku_match_percent,
+          created_at: data.created_at ?? new Date().toISOString(),
+          summary: {
+            expected: Number(pg.summary?.expected_sku_count ?? 0),
+            missing: Number(pg.summary?.missing ?? 0),
+            wrong_product: Number(pg.summary?.wrong_product ?? 0),
+            qty_issues: Number(pg.summary?.qty_short ?? 0),
+          },
+          lines: [],
+          actions: [],
+        }}
+      />
+    );
+  }
+
   return (
     <div className="card-surface p-4 text-sm">
       <h3 className="font-semibold tracking-tight">Planogram compliance</h3>
-      {pg.sku_match_percent != null ? (
-        <div className="mt-2 space-y-2 text-xs text-muted-foreground">
-          <p>
-            <span className="font-medium text-foreground">
-              {Math.round(pg.sku_match_percent)}% SKU match
-            </span>
-            {pg.qty_compliance_percent != null
-              ? ` · ${Math.round(pg.qty_compliance_percent)}% facing compliance`
-              : null}
-          </p>
-          {typeof pg.summary?.expected_sku_count === "number" ? (
-            <p>
-              Compared {pg.summary.expected_sku_count} expected SKU(s) from your planogram against
-              detected shelf inventory.
-              {typeof pg.summary.missing === "number" && pg.summary.missing > 0
-                ? ` ${pg.summary.missing} missing.`
-                : null}
-              {typeof pg.summary.qty_short === "number" && pg.summary.qty_short > 0
-                ? ` ${pg.summary.qty_short} below expected facings.`
-                : null}
-            </p>
-          ) : null}
-        </div>
-      ) : (
-        <p className="mt-1 text-xs text-muted-foreground">
-          Add a planogram in the setup panel to compare expected vs detected products.
-        </p>
-      )}
+      <p className="mt-1 text-xs text-muted-foreground">
+        Add a planogram in the setup panel to compare expected vs detected products.
+      </p>
     </div>
   );
 }

@@ -167,6 +167,12 @@ export type ScanResult = {
   /** The untouched shelf photo — used to colour-correct the annotated render. */
   original_image_url?: string;
   executive_summary?: string;
+  /** Role-specific AI summaries from Astra (execution / merchandising / brand / executive). */
+  role_summaries?: Partial<
+    Record<"execution" | "merchandising" | "brand" | "executive", string>
+  >;
+  /** Structured retail intelligence payload (scores, actions, metric states). */
+  retail_intelligence?: import("@/lib/retail-intelligence").RetailIntelligencePayload;
   alerts?: ScanAlert[];
   compliance_alerts?: ComplianceAlert[];
   subcategory_mismatches?: SubcategoryMismatch[];
@@ -834,6 +840,14 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
   if (annotatedImageSrc) scanResult.annotated_image_url = annotatedImageSrc;
   if (originalImageSrc) scanResult.original_image_url = originalImageSrc;
   if (result?.executive_summary) scanResult.executive_summary = result.executive_summary;
+  const metricsRoleSummaries = (result?.metrics as Record<string, unknown> | undefined)?.role_summaries;
+  if (metricsRoleSummaries && typeof metricsRoleSummaries === "object") {
+    scanResult.role_summaries = metricsRoleSummaries as ScanResult["role_summaries"];
+  }
+  const metricsRetailIntel = (result?.metrics as Record<string, unknown> | undefined)?.retail_intelligence;
+  if (metricsRetailIntel && typeof metricsRetailIntel === "object") {
+    scanResult.retail_intelligence = metricsRetailIntel as ScanResult["retail_intelligence"];
+  }
 
   if (storeId && scan.created_at && scan.status === "completed") {
     const createdAt = scan.created_at as string;

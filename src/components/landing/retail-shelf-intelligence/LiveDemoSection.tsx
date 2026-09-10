@@ -322,7 +322,7 @@ export function LiveDemoSection({
                 {scanning ? (
                   <div className="absolute inset-0 rounded-lg bg-foreground/15">
                     <Badge className="absolute left-3 top-3 gap-2 rounded-md bg-primary px-3 py-2 text-primary-foreground">
-                      <Loader2 className="size-3.5 animate-spin" /> Analyzing shelf…
+                      <Loader2 className="size-3.5 animate-spin" /> Analyzing image…
                     </Badge>
                   </div>
                 ) : null}

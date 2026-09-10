@@ -138,6 +138,8 @@ export function landingToScanResult(landing: LandingScanResult): ScanResult {
     status: "completed",
 
     executive_summary: landing.executive_summary,
+    role_summaries: landing.role_summaries,
+    retail_intelligence: landing.retail_intelligence,
 
     summary: {
 

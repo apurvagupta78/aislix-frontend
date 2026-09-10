@@ -3,6 +3,8 @@
  * One scan engine; this file shapes what the /results page shows.
  */
 
+import type { ResultViewMode } from "@/lib/customer-context";
+import type { RoleSummaries } from "@/lib/retail-intelligence";
 import type { FinancialImpact, ScanRecommendation, ScanResult } from "@/lib/scan-results";
 import { formatPercent, normalizeConfidence } from "@/lib/scan-results";
 import { formatInr } from "@/lib/pricing";
@@ -171,6 +173,20 @@ export function buildActionCenterItems(result?: ScanResult | null): ActionCenter
 
 export function totalActionCount(items: ActionCenterItem[]): number {
   return items.reduce((n, i) => n + i.count, 0);
+}
+
+export function roleSummariesFromResult(result?: ScanResult | null): RoleSummaries | undefined {
+  const ri = (result as ScanResult & { retail_intelligence?: { role_summaries?: RoleSummaries } })
+    ?.retail_intelligence?.role_summaries;
+  if (ri && Object.keys(ri).length) return ri;
+  const legacy = (result as ScanResult & { role_summaries?: RoleSummaries })?.role_summaries;
+  return legacy && Object.keys(legacy).length ? legacy : undefined;
+}
+
+export function buildRoleSummary(result?: ScanResult | null, view?: ResultViewMode): string {
+  const summaries = roleSummariesFromResult(result);
+  if (view && summaries?.[view]?.trim()) return summaries[view]!.trim();
+  return buildAiSummaryParagraph(result);
 }
 
 export function buildAiSummaryParagraph(result?: ScanResult | null): string {

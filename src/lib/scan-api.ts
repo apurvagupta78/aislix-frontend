@@ -22,10 +22,11 @@ export type ScanAnalysisResult = {
 export const SCAN_STAGES = [
   "Uploading Image",
   "Detecting Products",
-  "Identifying Brands & Variants",
-  "Counting Inventory",
-  "Generating AI Recommendations",
-  "Creating PDF Report",
+  "Identifying Brands & SKUs",
+  "Measuring Availability & Facings",
+  "Analyzing Placement & Compliance",
+  "Generating Retail Insights",
+  "Preparing Your Results",
 ] as const;
 
 export type ScanStage = (typeof SCAN_STAGES)[number];

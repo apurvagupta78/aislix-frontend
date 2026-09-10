@@ -395,7 +395,9 @@ function Results() {
                       />
                     ) : null;
                   case "ai_summary":
-                    return <AiSummaryBlock key={key} data={display} loading={loading} />;
+                    return (
+                      <AiSummaryBlock key={key} data={display} loading={loading} view={viewMode} />
+                    );
                   case "competitor_intel":
                     return competitorEnabled ? (
                       <CompetitorIntelPanel

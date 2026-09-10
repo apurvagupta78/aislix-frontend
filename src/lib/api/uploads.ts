@@ -47,7 +47,7 @@ export const uploadingState = (progress: number): UploadState => ({
   error: null,
 });
 
-export const processingState = (status = "Analyzing shelf image…"): UploadState => ({
+export const processingState = (status = "Analyzing retail image…"): UploadState => ({
   phase: "processing",
   progress: 100,
   status,

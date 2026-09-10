@@ -89,6 +89,10 @@ export type LandingScanResult = {
   brand_share_denominator?: number;
   scanned_at?: string;
   executive_summary?: string;
+  role_summaries?: Partial<
+    Record<"execution" | "merchandising" | "brand" | "executive", string>
+  >;
+  retail_intelligence?: Record<string, unknown>;
   recommendations?: LandingRecommendation[];
   alerts?: LandingAlert[];
   compliance_alerts?: LandingComplianceAlert[];

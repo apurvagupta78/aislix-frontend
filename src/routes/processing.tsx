@@ -15,13 +15,14 @@ export const Route = createFileRoute("/processing")({
   },
   head: () => ({
     meta: [
-      { title: "Analyzing shelf scan — Aislix" },
+      { title: "Analyzing retail image — Aislix" },
       {
         name: "description",
-        content: "Aislix is running detection, brand matching and report generation on your shelf images.",
+        content:
+          "Aislix is identifying products, checking availability and placement, and preparing retail execution insights.",
       },
-      { property: "og:title", content: "Analyzing your shelf scan — Aislix" },
-      { property: "og:description", content: "Computer vision pipeline in progress." },
+      { property: "og:title", content: "Analyzing your retail image — Aislix" },
+      { property: "og:description", content: "Retail execution intelligence pipeline in progress." },
     ],
   }),
   component: Processing,
@@ -64,7 +65,7 @@ function Processing() {
   return (
     <AppShell
       title="Processing scan"
-      description={scan ? `Scan ${scan.slice(0, 8)}…` : "Analyzing shelf image"}
+      description={scan ? `Scan ${scan.slice(0, 8)}…` : "Analyzing retail image"}
     >
       <div className="mx-auto max-w-2xl">
         <div className="card-surface p-9 text-center">
@@ -99,8 +100,12 @@ function Processing() {
                   <Loader2 className="size-8 animate-spin text-brand-foreground" />
                 </div>
               </div>
-              <h2 className="mt-7 text-xl font-semibold tracking-tight">
-                {done ? "Analysis complete" : "Analyzing your shelf"}
+              <p className="mt-7 text-sm text-muted-foreground">
+                Aislix is identifying products, checking availability and placement, and preparing
+                your retail execution insights.
+              </p>
+              <h2 className="mt-2 text-xl font-semibold tracking-tight">
+                {done ? "Analysis complete" : "Analyzing your retail image"}
               </h2>
               <div className="mt-8 text-left">
                 <ScanProgressPanel
@@ -112,7 +117,7 @@ function Processing() {
                   timingMessage={
                     done
                       ? "Opening your scan results…"
-                      : "This usually takes 2–3 minutes for large shelves. Keep this page open."
+                      : "This may take a few minutes for larger or more complex images. Please keep this page open."
                   }
                 />
               </div>
