@@ -100,17 +100,12 @@ export function BrandIntelPanel() {
               />
             </Field>
           </div>
-          <SaveBar dirty={dirty} saving={save.isPending}>
-            <Button type="submit" variant="brand" className="rounded-xl" disabled={!dirty || save.isPending}>
-              {save.isPending ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" /> Saving…
-                </>
-              ) : (
-                "Save brand settings"
-              )}
-            </Button>
-          </SaveBar>
+          <SaveBar
+            dirty={dirty}
+            saving={save.isPending}
+            saved={save.isSuccess}
+            label="Save brand settings"
+          />
         </form>
       )}
     </SettingsCard>
