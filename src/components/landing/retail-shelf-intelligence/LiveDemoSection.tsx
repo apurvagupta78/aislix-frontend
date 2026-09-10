@@ -272,7 +272,7 @@ export function LiveDemoSection({
               />
             ) : null}
 
-            {phase === "idle" && !setupMode ? <EmptyResults />}
+            {phase === "idle" && !setupMode ? <EmptyResults /> : null}
 
             {phase === "done" && result && (
               <DemoRoleResultsPanel
