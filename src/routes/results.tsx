@@ -603,7 +603,7 @@ function DownloadsPanel({
             size="lg"
             className="w-full rounded-xl"
             onClick={downloadCsv}
-            disabled={inventory.length === 0}
+            disabled={!data}
           >
             <FileSpreadsheet className="size-4" /> CSV inventory
           </Button>
