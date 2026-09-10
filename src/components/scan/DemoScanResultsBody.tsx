@@ -2,10 +2,11 @@
  * Shared scan results section loop for demo inline panel and guest fullscreen.
  */
 
-import { ComplianceAlertCard } from "@/components/scan-results/ResultParts";
+import { AnnotatedImageViewer, ComplianceAlertCard, InventoryTable } from "@/components/scan-results/ResultParts";
 import {
   ActionCenterPanel,
   AiSummaryBlock,
+  CompetitorIntelPanel,
   ExecutionKpiStripPanel,
   ExecutionScoreHero,
   FacingsSummaryStrip,
@@ -27,7 +28,7 @@ import { cn } from "@/lib/utils";
 import { displayVariant } from "@/lib/landing-inventory";
 import type { LandingScanResult } from "@/lib/landing-scan-api";
 
-const DEMO_SKIP_SECTIONS = new Set<ResultSectionKey>([
+const INLINE_SKIP_SECTIONS = new Set<ResultSectionKey>([
   "annotated_image",
   "improvement_banner",
   "review_queue",
@@ -38,11 +39,22 @@ const DEMO_SKIP_SECTIONS = new Set<ResultSectionKey>([
   "competitor_intel",
 ]);
 
+const DASHBOARD_SKIP_SECTIONS = new Set<ResultSectionKey>([
+  "improvement_banner",
+  "review_queue",
+  "share",
+  "scan_details",
+  "downloads",
+  "analytics",
+]);
+
 type DemoScanResultsBodyProps = {
   data: ScanResult;
   view: ResultViewMode;
   onViewChange: (mode: ResultViewMode) => void;
   compact?: boolean;
+  layout?: "inline" | "dashboard";
+  imageUrl?: string | null;
   landingInventory?: LandingScanResult["inventory"];
   showPlanogramStub?: boolean;
 };
@@ -52,11 +64,14 @@ export function DemoScanResultsBody({
   view,
   onViewChange,
   compact = false,
+  layout = "inline",
+  imageUrl,
   landingInventory,
   showPlanogramStub = false,
 }: DemoScanResultsBodyProps) {
   const theme = VIEW_MODE_THEME[view];
-  const sectionOrder = orderedVisibleSections(view).filter((key) => !DEMO_SKIP_SECTIONS.has(key));
+  const skip = layout === "dashboard" ? DASHBOARD_SKIP_SECTIONS : INLINE_SKIP_SECTIONS;
+  const sectionOrder = orderedVisibleSections(view).filter((key) => !skip.has(key));
 
   return (
     <>
@@ -102,42 +117,28 @@ export function DemoScanResultsBody({
               ) : null;
             case "ai_summary":
               return <AiSummaryBlock key={key} data={data} />;
+            case "competitor_intel":
+              return data.competitor_intel ? (
+                <CompetitorIntelPanel key={key} snapshot={data.competitor_intel} />
+              ) : null;
             case "share_of_shelf":
               return <ShareOfShelfPanel key={key} data={data} />;
             case "sku_availability":
               return <SkuAvailabilityPanel key={key} data={data} />;
             case "recommended_actions":
               return <RecommendedActionsPanel key={key} data={data} />;
+            case "annotated_image":
+              return imageUrl ? (
+                <AnnotatedImageViewer key={key} src={imageUrl} alt="Analyzed shelf photo" />
+              ) : null;
             case "planogram":
               return showPlanogramStub || data.planogram?.requested ? (
-                <div key={key} className="card-surface p-4 text-sm">
-                  <h3 className="font-semibold tracking-tight">Planogram compliance</h3>
-                  {data.planogram?.sku_match_percent != null ? (
-                    <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-                      <p>
-                        <span className="font-medium text-foreground">
-                          {Math.round(data.planogram.sku_match_percent)}% SKU match
-                        </span>
-                        {data.planogram.qty_compliance_percent != null
-                          ? ` · ${Math.round(data.planogram.qty_compliance_percent)}% quantity compliance`
-                          : null}
-                      </p>
-                      {typeof data.planogram.summary?.expected_sku_count === "number" ? (
-                        <p>
-                          Compared {data.planogram.summary.expected_sku_count} expected SKUs from your
-                          planogram against detected shelf inventory.
-                        </p>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Add a planogram in the setup panel to compare expected vs detected products.
-                    </p>
-                  )}
-                </div>
+                <PlanogramComplianceCard key={key} data={data} />
               ) : null;
             case "inventory":
-              return landingInventory ? (
+              return layout === "dashboard" && data.inventory?.length ? (
+                <InventoryTable key={key} items={data.inventory} />
+              ) : landingInventory ? (
                 <DemoInventoryCompact key={key} rows={landingInventory} />
               ) : null;
             default:
@@ -146,6 +147,45 @@ export function DemoScanResultsBody({
         })}
       </div>
     </>
+  );
+}
+
+function PlanogramComplianceCard({ data }: { data: ScanResult }) {
+  const pg = data.planogram;
+  if (!pg?.requested) return null;
+
+  return (
+    <div className="card-surface p-4 text-sm">
+      <h3 className="font-semibold tracking-tight">Planogram compliance</h3>
+      {pg.sku_match_percent != null ? (
+        <div className="mt-2 space-y-2 text-xs text-muted-foreground">
+          <p>
+            <span className="font-medium text-foreground">
+              {Math.round(pg.sku_match_percent)}% SKU match
+            </span>
+            {pg.qty_compliance_percent != null
+              ? ` · ${Math.round(pg.qty_compliance_percent)}% facing compliance`
+              : null}
+          </p>
+          {typeof pg.summary?.expected_sku_count === "number" ? (
+            <p>
+              Compared {pg.summary.expected_sku_count} expected SKU(s) from your planogram against
+              detected shelf inventory.
+              {typeof pg.summary.missing === "number" && pg.summary.missing > 0
+                ? ` ${pg.summary.missing} missing.`
+                : null}
+              {typeof pg.summary.qty_short === "number" && pg.summary.qty_short > 0
+                ? ` ${pg.summary.qty_short} below expected facings.`
+                : null}
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Add a planogram in the setup panel to compare expected vs detected products.
+        </p>
+      )}
+    </div>
   );
 }
 

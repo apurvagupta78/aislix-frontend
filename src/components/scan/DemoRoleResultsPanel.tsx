@@ -26,7 +26,18 @@ type DemoRoleResultsPanelProps = {
   onScanContextChange?: (ctx: ScanContextState) => void;
   defaultCategory?: string;
   defaultSubCategory?: string;
+  previewImageUrl?: string | null;
 };
+
+function landingImageUrl(landing: LandingScanResult): string | null {
+  if (landing.annotated_image_base64) {
+    return `data:${landing.annotated_image_mime || "image/jpeg"};base64,${landing.annotated_image_base64}`;
+  }
+  if (landing.original_image_base64) {
+    return `data:${landing.original_image_mime || "image/jpeg"};base64,${landing.original_image_base64}`;
+  }
+  return null;
+}
 
 export function DemoRoleResultsPanel({
   result: landing,
@@ -38,6 +49,7 @@ export function DemoRoleResultsPanel({
   onScanContextChange,
   defaultCategory,
   defaultSubCategory,
+  previewImageUrl,
 }: DemoRoleResultsPanelProps) {
   const [view, setView] = useState<ResultViewMode>("execution");
   const [fullscreen, setFullscreen] = useState(false);
@@ -50,6 +62,9 @@ export function DemoRoleResultsPanel({
     const base = landingToScanResult(landing);
     return applyScanContext(base, scanContext);
   }, [landing, scanContext]);
+
+  const imageUrl =
+    data.annotated_image_url ?? data.original_image_url ?? previewImageUrl ?? landingImageUrl(landing);
 
   const panelBody = (
     <>
@@ -150,36 +165,22 @@ export function DemoRoleResultsPanel({
           description={[landing.category, landing.shelf_label].filter(Boolean).join(" · ") || "Demo scan"}
           onClose={() => setFullscreen(false)}
         >
-          <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-            <div className="overflow-hidden rounded-xl border border-border bg-card">
-              {(landing.annotated_image_base64 || landing.original_image_base64) && (
-                <img
-                  src={
-                    landing.annotated_image_base64
-                      ? `data:${landing.annotated_image_mime || "image/jpeg"};base64,${landing.annotated_image_base64}`
-                      : `data:${landing.original_image_mime || "image/jpeg"};base64,${landing.original_image_base64}`
-                  }
-                  alt="Analyzed shelf"
-                  className="max-h-[70vh] w-full object-contain p-4"
-                />
-              )}
-            </div>
-            <div className="min-w-0">
-              <ScanContextPanel
-                value={scanContext}
-                onChange={setScanContext}
-                defaultCategory={defaultCategory ?? landing.category}
-                defaultSubCategory={defaultSubCategory}
-                className="mb-4"
-              />
-              <DemoScanResultsBody
-                data={data}
-                view={view}
-                onViewChange={setView}
-                landingInventory={landing.inventory ?? []}
-                showPlanogramStub={scanContext.planogramRows.length > 0}
-              />
-            </div>
+          <div className="mx-auto max-w-6xl space-y-4">
+            <ScanContextPanel
+              value={scanContext}
+              onChange={setScanContext}
+              defaultCategory={defaultCategory ?? landing.category}
+              defaultSubCategory={defaultSubCategory}
+            />
+
+            <DemoScanResultsBody
+              layout="dashboard"
+              data={data}
+              view={view}
+              onViewChange={setView}
+              imageUrl={imageUrl}
+              showPlanogramStub={scanContext.planogramRows.length > 0}
+            />
           </div>
         </GuestDemoShell>
       )}

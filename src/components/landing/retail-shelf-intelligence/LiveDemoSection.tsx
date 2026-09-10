@@ -65,7 +65,7 @@ export function LiveDemoSection({
 }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const demoCategory = useDemoCategory();
-  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(DEFAULT_SAMPLE_IMAGE);
   const [result, setResult] = useState<LandingScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [elapsedSec, setElapsedSec] = useState<number | null>(null);
@@ -186,7 +186,7 @@ export function LiveDemoSection({
   const shownImage =
     phase === "done" && result ? (annotatedSrc(result) ?? previewImageUrl) : previewImageUrl;
   const scanning = phase === "scanning";
-  const sessionActive = setupMode !== null || scanning || phase === "done";
+  const showImagePane = Boolean(previewImageUrl);
 
   const setupPanel =
     setupMode && (phase === "idle" || phase === "error") ? (
@@ -300,6 +300,7 @@ export function LiveDemoSection({
                 defaultCategory={demoCategory.state.categoryName}
                 defaultSubCategory={subCategoryLabel}
                 onDownloadCsv={() => downloadLandingCsv(result)}
+                previewImageUrl={previewImageUrl}
                 onWorkspaceCta={() =>
                   document.querySelector("#lead")?.scrollIntoView({ behavior: "smooth" })
                 }
@@ -307,24 +308,18 @@ export function LiveDemoSection({
             ) : null}
           </div>
 
-          {sessionActive ? (
+          {showImagePane ? (
             <div className="relative border-t border-border bg-surface px-4 py-5 sm:px-6 sm:py-6">
               <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {phase === "done" ? "Annotated shelf photo" : "Shelf photo"}
               </p>
               <div className="relative mx-auto max-w-3xl">
-                {shownImage ? (
-                  <img
-                    src={shownImage}
-                    alt={phase === "done" ? "Shelf photo analyzed by Aislix" : "Sample retail shelf"}
-                    className="mx-auto max-h-[min(52vh,520px)] w-full rounded-lg object-contain"
-                  />
-                ) : (
-                  <div className="grid min-h-48 place-items-center rounded-lg border border-dashed border-border bg-muted/30 px-6 text-center">
-                    <p className="text-sm text-muted-foreground">Loading shelf photo…</p>
-                  </div>
-                )}
-                {scanning && shownImage ? (
+                <img
+                  src={shownImage ?? previewImageUrl ?? DEFAULT_SAMPLE_IMAGE}
+                  alt={phase === "done" ? "Shelf photo analyzed by Aislix" : "Sample retail shelf"}
+                  className="mx-auto max-h-[min(52vh,520px)] w-full rounded-lg object-contain"
+                />
+                {scanning ? (
                   <div className="absolute inset-0 rounded-lg bg-foreground/15">
                     <Badge className="absolute left-3 top-3 gap-2 rounded-md bg-primary px-3 py-2 text-primary-foreground">
                       <Loader2 className="size-3.5 animate-spin" /> Analyzing shelf…
@@ -333,16 +328,7 @@ export function LiveDemoSection({
                 ) : null}
               </div>
             </div>
-          ) : (
-            <div className="border-t border-border bg-surface px-4 py-10 text-center sm:px-6">
-              <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-muted text-muted-foreground">
-                <ImagePlus className="size-5" />
-              </span>
-              <p className="mx-auto mt-4 max-w-sm text-sm text-muted-foreground">
-                Choose the sample shelf or upload your photo — your shelf image will appear here.
-              </p>
-            </div>
-          )}
+          ) : null}
         </div>
       </div>
     </section>

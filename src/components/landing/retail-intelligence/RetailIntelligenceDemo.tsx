@@ -48,7 +48,7 @@ function imageSrc(result: LandingScanResult): string | null {
 export function RetailIntelligenceDemo() {
   const [phase, setPhase] = useState<Phase>("idle");
   const demoCategory = useDemoCategory();
-  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(DEFAULT_SAMPLE_IMAGE);
   const [result, setResult] = useState<LandingScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [elapsedSec, setElapsedSec] = useState<number | null>(null);
@@ -175,7 +175,7 @@ export function RetailIntelligenceDemo() {
 
   const shownImage = phase === "done" && result ? (imageSrc(result) ?? previewImageUrl) : previewImageUrl;
   const scanning = phase === "scanning";
-  const sessionActive = setupMode !== null || scanning || phase === "done";
+  const showImagePane = Boolean(previewImageUrl);
 
   const setupPanel =
     setupMode && (phase === "idle" || phase === "error") ? (
@@ -281,6 +281,7 @@ export function RetailIntelligenceDemo() {
                   onScanContextChange={setScanContext}
                   defaultCategory={demoCategory.state.categoryName}
                   defaultSubCategory={subCategoryLabel}
+                  previewImageUrl={previewImageUrl}
                   onDownloadCsv={() => downloadLandingCsv(result)}
                   onWorkspaceCta={() =>
                     document.getElementById("lead")?.scrollIntoView({ behavior: "smooth", block: "center" })
@@ -289,24 +290,18 @@ export function RetailIntelligenceDemo() {
               ) : null}
             </div>
 
-            {sessionActive ? (
+            {showImagePane ? (
               <div className="relative border-t border-border bg-surface px-4 py-5 sm:px-6 sm:py-6">
                 <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   {phase === "done" ? "Annotated shelf photo" : "Shelf photo"}
                 </p>
                 <div className="relative mx-auto max-w-3xl">
-                  {shownImage ? (
-                    <img
-                      src={shownImage}
-                      alt={phase === "done" ? "Shelf photo analyzed by Aislix" : "Sample toothpaste shelf"}
-                      className="mx-auto max-h-[min(52vh,520px)] w-full rounded-lg object-contain"
-                    />
-                  ) : (
-                    <div className="grid min-h-48 place-items-center rounded-lg border border-dashed border-border bg-muted/30 px-6 text-center">
-                      <p className="text-sm text-muted-foreground">Loading shelf photo…</p>
-                    </div>
-                  )}
-                  {scanning && shownImage ? (
+                  <img
+                    src={shownImage ?? previewImageUrl ?? DEFAULT_SAMPLE_IMAGE}
+                    alt={phase === "done" ? "Shelf photo analyzed by Aislix" : "Sample toothpaste shelf"}
+                    className="mx-auto max-h-[min(52vh,520px)] w-full rounded-lg object-contain"
+                  />
+                  {scanning ? (
                     <div className="absolute inset-0 rounded-lg bg-brand/15">
                       <Badge className="absolute left-3 top-3 gap-2 rounded-md bg-brand px-3 py-2 text-brand-foreground">
                         <Loader2 className="size-3.5 animate-spin" /> Analyzing shelf…
@@ -315,16 +310,7 @@ export function RetailIntelligenceDemo() {
                   ) : null}
                 </div>
               </div>
-            ) : (
-              <div className="border-t border-border bg-surface px-4 py-10 text-center sm:px-6">
-                <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand">
-                  <ImagePlus className="size-5" />
-                </span>
-                <p className="mx-auto mt-4 max-w-sm text-sm text-muted-foreground">
-                  Pick the sample shelf or upload your own photo (JPEG/PNG, up to 10MB).
-                </p>
-              </div>
-            )}
+            ) : null}
           </div>
         </div>
       </section>

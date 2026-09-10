@@ -3,7 +3,13 @@
  * used to filter results and compute financial impact.
  */
 
-import type { FinancialImpact, ScanResult } from "@/lib/scan-results";
+import {
+  comparePlanogramToInventory,
+  detectedQtyForPlanogramRow,
+  type InventoryFacing,
+} from "@/lib/demo-planogram-match";
+import type { CompetitorSnapshot } from "@/lib/brand-intel";
+import type { FinancialImpact, ScanRecommendation, ScanResult } from "@/lib/scan-results";
 import type { PlanogramRow } from "@/lib/planogram";
 
 export type ScanFocusFilter = {
@@ -23,6 +29,11 @@ export const EMPTY_SCAN_CONTEXT: ScanContextState = {
 };
 
 const STORAGE_KEY = "aislix_scan_context";
+
+const DEFAULT_ASP_INR = 75;
+const DEFAULT_UNITS_PER_DAY = 4;
+const LOW_STOCK_RISK = 0.35;
+const OOS_THRESHOLD = 2;
 
 export function loadStoredScanContext(): ScanContextState {
   if (typeof sessionStorage === "undefined") return EMPTY_SCAN_CONTEXT;
@@ -48,25 +59,36 @@ export function saveStoredScanContext(ctx: ScanContextState): void {
   }
 }
 
-const DEFAULT_ASP_INR = 75;
-const DEFAULT_UNITS_PER_DAY = 4;
-const LOW_STOCK_RISK = 0.35;
-
 function norm(value?: string | null): string {
   return (value ?? "").trim().toLowerCase();
 }
 
-function rowBrand(row: { brand?: string | null }): string {
-  return norm(row.brand);
+function normalizeBrand(value?: string | null): string {
+  return norm(value).replace(/[^a-z0-9]/g, "");
 }
 
-function rowProduct(row: { product?: string | null; product_name?: string | null }): string {
-  return norm(row.product ?? row.product_name);
+function brandsMatch(a?: string | null, b?: string | null): boolean {
+  const na = normalizeBrand(a);
+  const nb = normalizeBrand(b);
+  if (!na || !nb) return false;
+  return na.includes(nb) || nb.includes(na);
+}
+
+function productBlob(row: {
+  brand?: string | null;
+  product?: string | null;
+  product_name?: string | null;
+  variant?: string | null;
+}): string {
+  return [row.brand, row.product ?? row.product_name, row.variant]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
 }
 
 /** True when a row matches the optional company / brand / product focus. */
 export function matchesScanFocus(
-  row: { brand?: string | null; product?: string | null; product_name?: string | null },
+  row: { brand?: string | null; product?: string | null; product_name?: string | null; variant?: string | null },
   focus: ScanFocusFilter,
 ): boolean {
   const company = norm(focus.company);
@@ -74,50 +96,34 @@ export function matchesScanFocus(
   const product = norm(focus.product);
   if (!company && !brand && !product) return true;
 
+  const blob = productBlob(row);
   const b = rowBrand(row);
-  const p = rowProduct(row);
 
-  if (brand && !b.includes(brand)) return false;
-  if (product && !p.includes(product)) return false;
-  if (company && !b.includes(company) && !p.includes(company)) return false;
+  if (brand && !b.includes(brand) && !normalizeBrand(row.brand).includes(normalizeBrand(focus.brand))) {
+    return false;
+  }
+  if (product) {
+    const tokens = product.split(/\s+/).filter((t) => t.length > 2);
+    if (tokens.length && !tokens.some((t) => blob.includes(t))) return false;
+  }
+  if (company && !blob.includes(company) && !b.includes(company.replace(/[^a-z0-9]/g, ""))) {
+    return false;
+  }
   return true;
 }
 
-function planogramKey(row: {
-  brand?: string;
-  product_name?: string;
-  product?: string;
-  variant?: string;
-  match_key?: string;
-}): string {
-  if (row.match_key) return row.match_key.toLowerCase();
-  return [norm(row.brand), norm(row.product_name ?? row.product), norm(row.variant)]
-    .filter(Boolean)
-    .join("|");
+function rowBrand(row: { brand?: string | null }): string {
+  return norm(row.brand);
 }
 
-function buildPricingLookup(rows: PlanogramRow[]): Map<string, PlanogramRow> {
-  const map = new Map<string, PlanogramRow>();
-  for (const row of rows) {
-    map.set(planogramKey(row), row);
-  }
-  return map;
-}
-
-function pricingForRow(
-  row: { brand?: string; product?: string; variant?: string; match_key?: string },
-  lookup: Map<string, PlanogramRow>,
-): { asp: number; velocity: number } {
-  const plan = lookup.get(planogramKey(row));
+function pricingForPlanogramRow(row: PlanogramRow): { asp: number; velocity: number } {
   const asp =
-    plan?.mrp_inr != null && Number.isFinite(plan.mrp_inr) && plan.mrp_inr > 0
-      ? plan.mrp_inr
+    row.mrp_inr != null && Number.isFinite(row.mrp_inr) && row.mrp_inr > 0
+      ? row.mrp_inr
       : DEFAULT_ASP_INR;
   const velocity =
-    plan?.avg_daily_sales != null &&
-    Number.isFinite(plan.avg_daily_sales) &&
-    plan.avg_daily_sales > 0
-      ? plan.avg_daily_sales
+    row.avg_daily_sales != null && Number.isFinite(row.avg_daily_sales) && row.avg_daily_sales > 0
+      ? row.avg_daily_sales
       : DEFAULT_UNITS_PER_DAY;
   return { asp, velocity };
 }
@@ -125,24 +131,45 @@ function pricingForRow(
 export function computeContextFinancialImpact(
   inventory: ScanResult["inventory"],
   planogramRows: PlanogramRow[],
-  threshold = 2,
+  threshold = OOS_THRESHOLD,
 ): FinancialImpact {
-  const lookup = buildPricingLookup(planogramRows);
   let oosDaily = 0;
   let atRiskDaily = 0;
   let oosSkus = 0;
   let atRiskSkus = 0;
 
-  for (const row of inventory ?? []) {
-    const qty = row.quantity ?? 0;
-    const { asp, velocity } = pricingForRow(row, lookup);
-    if (row.out_of_stock || qty <= 0) {
-      oosDaily += velocity * asp;
-      oosSkus += 1;
-    } else if (row.low_stock || qty <= threshold) {
-      const gap = Math.max(0, threshold - qty);
-      atRiskDaily += gap * velocity * asp * LOW_STOCK_RISK;
-      atRiskSkus += 1;
+  const fullInventory = inventory ?? [];
+
+  if (planogramRows.length > 0) {
+    for (const plan of planogramRows) {
+      const detected = detectedQtyForPlanogramRow(fullInventory as InventoryFacing[], plan);
+      const expected = Math.max(1, plan.expected_qty ?? 1);
+      const { asp, velocity } = pricingForPlanogramRow(plan);
+
+      if (detected <= 0 || detected < threshold) {
+        oosDaily += velocity * asp;
+        oosSkus += 1;
+      } else if (detected < expected) {
+        const gap = expected - detected;
+        atRiskDaily += gap * velocity * asp * LOW_STOCK_RISK;
+        atRiskSkus += 1;
+      }
+    }
+  } else {
+    for (const row of fullInventory) {
+      const qty = row.quantity ?? 0;
+      const asp = DEFAULT_ASP_INR;
+      const velocity = DEFAULT_UNITS_PER_DAY;
+      if (row.out_of_stock || qty <= 0) {
+        oosDaily += velocity * asp;
+        oosSkus += 1;
+      } else if (row.low_stock || qty < threshold) {
+        const gap = Math.max(0, threshold - qty);
+        oosDaily += gap * velocity * asp;
+        oosSkus += 1;
+        atRiskDaily += gap * velocity * asp * LOW_STOCK_RISK;
+        atRiskSkus += 1;
+      }
     }
   }
 
@@ -167,11 +194,10 @@ export function computeContextFinancialImpact(
 function filteredBrandShare(
   inventory: NonNullable<ScanResult["inventory"]>,
   focus: ScanFocusFilter,
-): { brand: string; share: number }[] {
+): { brand: string; share: number; quantity?: number }[] {
   const totals = new Map<string, number>();
   let sum = 0;
   for (const row of inventory) {
-    if (!matchesScanFocus(row, focus)) continue;
     const brand = row.brand || "Unknown";
     const qty = row.quantity ?? 0;
     totals.set(brand, (totals.get(brand) ?? 0) + qty);
@@ -179,34 +205,149 @@ function filteredBrandShare(
   }
   if (!sum) return [];
   return [...totals.entries()]
-    .map(([brand, qty]) => ({ brand, share: Math.round((qty / sum) * 1000) / 10 }))
+    .map(([brand, qty]) => ({
+      brand,
+      quantity: qty,
+      share: Math.round((qty / sum) * 1000) / 10,
+    }))
     .sort((a, b) => b.share - a.share);
 }
 
-function computePlanogramMatch(
+function focusBrandSharePercent(
   inventory: NonNullable<ScanResult["inventory"]>,
-  rows: PlanogramRow[],
-): { sku_match_percent: number; qty_compliance_percent: number } {
-  if (!rows.length) return { sku_match_percent: 0, qty_compliance_percent: 0 };
+  focus: ScanFocusFilter,
+): number | undefined {
+  const primary = focus.brand || focus.company;
+  if (!primary) return undefined;
+  const total = inventory.reduce((n, r) => n + (r.quantity ?? 0), 0);
+  if (!total) return undefined;
+  const own = inventory
+    .filter((r) => brandsMatch(r.brand, primary) || productBlob(r).includes(norm(primary)))
+    .reduce((n, r) => n + (r.quantity ?? 0), 0);
+  return Math.round((own / total) * 1000) / 10;
+}
 
-  const qtyByKey = new Map<string, number>();
-  for (const item of inventory) {
-    qtyByKey.set(planogramKey(item), item.quantity ?? 0);
-  }
+export function buildDemoCompetitorIntel(
+  inventory: NonNullable<ScanResult["inventory"]>,
+  focus: ScanFocusFilter,
+): CompetitorSnapshot | null {
+  const primary = (focus.brand || focus.company || "").trim();
+  if (!primary) return null;
 
-  let present = 0;
-  let qtyScore = 0;
-  for (const row of rows) {
-    const qty = qtyByKey.get(planogramKey(row)) ?? 0;
-    if (qty > 0) present += 1;
-    const expected = Math.max(1, row.expected_qty ?? 1);
-    qtyScore += Math.min(qty, expected) / expected;
-  }
+  const shares = filteredBrandShare(inventory, {});
+  if (!shares.length) return null;
+
+  const ownRow = shares.find((s) => brandsMatch(s.brand, primary)) ?? {
+    brand: primary,
+    share: 0,
+    quantity: 0,
+  };
+  const competitors = shares.filter((s) => !brandsMatch(s.brand, primary)).slice(0, 6);
 
   return {
-    sku_match_percent: Math.round((present / rows.length) * 100),
-    qty_compliance_percent: Math.round((qtyScore / rows.length) * 100),
+    primary_brand: primary,
+    own_brand_share_percent: ownRow.share,
+    competitor_shares: [
+      {
+        brand: ownRow.brand,
+        share: ownRow.share,
+        facings: ownRow.quantity,
+        is_primary: true,
+      },
+      ...competitors.map((c) => ({
+        brand: c.brand,
+        share: c.share,
+        facings: c.quantity,
+        is_competitor: true,
+      })),
+    ],
+    competitors_detected: competitors.filter((c) => c.share > 0).length,
+    competitors_configured: competitors.length,
   };
+}
+
+export function buildDemoRecommendations(
+  inventory: NonNullable<ScanResult["inventory"]>,
+  ctx: ScanContextState,
+  match: ReturnType<typeof comparePlanogramToInventory>,
+): ScanRecommendation[] {
+  const recs: ScanRecommendation[] = [];
+  const threshold = OOS_THRESHOLD;
+
+  const lowFacings = inventory.filter((row) => {
+    const qty = row.quantity ?? 0;
+    return qty > 0 && qty < threshold;
+  });
+  if (lowFacings.length) {
+    recs.push({
+      id: "replenish-low-facings",
+      title: `Replenish ${lowFacings.length} SKUs with fewer than ${threshold} facings`,
+      detail: lowFacings
+        .slice(0, 4)
+        .map((r) => `${r.brand} ${r.product ?? r.product_name} (${r.quantity ?? 0} facing(s))`)
+        .join("; "),
+      category: "Replenishment",
+      impact: "high",
+    });
+  }
+
+  const zeroQty = inventory.filter((row) => (row.quantity ?? 0) <= 0);
+  if (zeroQty.length) {
+    recs.push({
+      id: "replenish-oos",
+      title: `Restock ${zeroQty.length} out-of-stock SKUs`,
+      detail: "These products were not detected on the shelf.",
+      category: "Replenishment",
+      impact: "high",
+    });
+  }
+
+  for (const line of match.lines) {
+    if (!line.present) {
+      recs.push({
+        id: `plan-missing-${line.expected.brand}-${line.expected.product_name}`,
+        title: `Missing planogram SKU: ${line.expected.brand} ${line.expected.product_name}`,
+        detail: `Expected ${line.expected_qty} facings — none detected.`,
+        category: "Planogram",
+        impact: "high",
+      });
+    } else if (!line.qty_ok) {
+      recs.push({
+        id: `plan-short-${line.expected.brand}-${line.expected.product_name}`,
+        title: `Short on ${line.expected.brand} ${line.expected.product_name}`,
+        detail: `Detected ${line.detected_qty} vs ${line.expected_qty} expected facings.`,
+        category: "Planogram",
+        impact: "medium",
+      });
+    }
+  }
+
+  const intel = buildDemoCompetitorIntel(inventory, ctx.focus);
+  if (intel && intel.competitor_shares.length > 1) {
+    const topRival = intel.competitor_shares.find((r) => r.is_competitor && (r.share ?? 0) > 0);
+    if (topRival && topRival.share > intel.own_brand_share_percent) {
+      recs.push({
+        id: "competitor-edge",
+        title: `${topRival.brand} leads shelf share at ${topRival.share}% vs your ${intel.own_brand_share_percent}%`,
+        detail:
+          "Consider adding facings or improving placement for your brand to close the share gap.",
+        category: "Competitive intelligence",
+        impact: "medium",
+      });
+    }
+  }
+
+  if (match.sku_match_percent > 0 && match.sku_match_percent < 85) {
+    recs.push({
+      id: "planogram-compliance",
+      title: `Improve planogram compliance (${match.sku_match_percent}% SKU match)`,
+      detail: `${match.missing_count} expected SKU(s) missing and ${match.qty_short_count} below expected facings.`,
+      category: "Merchandising",
+      impact: "medium",
+    });
+  }
+
+  return recs;
 }
 
 /** Apply focus filter + planogram pricing to a scan result (client-side). */
@@ -215,46 +356,74 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
   const hasPlanogram = ctx.planogramRows.length > 0;
   if (!hasFocus && !hasPlanogram) return result;
 
-  const inventory = (result.inventory ?? []).filter((row) => matchesScanFocus(row, ctx.focus));
-  const threshold = result.summary?.low_stock_threshold ?? 2;
-  const financial_impact = computeContextFinancialImpact(inventory, ctx.planogramRows, threshold);
+  const fullInventory = result.inventory ?? [];
+  const threshold = result.summary?.low_stock_threshold ?? OOS_THRESHOLD;
+  const match = hasPlanogram
+    ? comparePlanogramToInventory(fullInventory as InventoryFacing[], ctx.planogramRows)
+    : comparePlanogramToInventory([], []);
 
-  const topBrands = filteredBrandShare(inventory, ctx.focus);
-  const focusBrand = norm(ctx.focus.brand) || norm(ctx.focus.company);
-  const ownShare = focusBrand
-    ? topBrands.find((b) => norm(b.brand).includes(focusBrand))?.share
-    : undefined;
+  const financial_impact = computeContextFinancialImpact(fullInventory, ctx.planogramRows, threshold);
+
+  const displayInventory = hasFocus
+    ? fullInventory.filter((row) => matchesScanFocus(row, ctx.focus))
+    : fullInventory;
+
+  const topBrands = filteredBrandShare(fullInventory, {});
+  const ownShare = focusBrandSharePercent(fullInventory, ctx.focus);
+  const competitor_intel = buildDemoCompetitorIntel(fullInventory, ctx.focus);
+
+  const lowStock = fullInventory.filter(
+    (r) => (r.quantity ?? 0) > 0 && (r.quantity ?? 0) < threshold,
+  ).length;
+  const oosCount =
+    fullInventory.filter((r) => (r.quantity ?? 0) <= 0).length + (hasPlanogram ? match.missing_count : 0);
+
+  const facingPct = hasPlanogram
+    ? match.qty_compliance_percent
+    : result.summary?.facing_compliance_percent;
+  const placementPct = hasPlanogram
+    ? match.sku_match_percent
+    : result.summary?.placement_compliance_percent;
+
+  const demoRecs = buildDemoRecommendations(fullInventory, ctx, match);
+  const mergedRecs = [...demoRecs, ...(result.recommendations ?? [])];
 
   return {
     ...result,
-    inventory,
+    inventory: displayInventory,
     financial_impact,
+    competitor_intel: competitor_intel ?? result.competitor_intel,
+    recommendations: mergedRecs,
     summary: {
       ...result.summary,
-      total_products: inventory.reduce((n, r) => n + (r.quantity ?? 0), 0),
-      unique_skus: inventory.length,
-      unique_brands: new Set(inventory.map((r) => r.brand)).size,
-      low_stock_products: inventory.filter((r) => r.low_stock).length,
-      share_of_shelf_percent: ownShare ?? result.summary?.share_of_shelf_percent,
+      total_products: fullInventory.reduce((n, r) => n + (r.quantity ?? 0), 0),
+      unique_skus: fullInventory.length,
+      unique_brands: new Set(fullInventory.map((r) => r.brand)).size,
+      low_stock_products: lowStock,
+      confirmed_oos_count: oosCount,
+      possible_oos_count: lowStock,
+      share_of_shelf_percent: ownShare ?? topBrands[0]?.share ?? result.summary?.share_of_shelf_percent,
+      facing_compliance_percent: facingPct ?? undefined,
+      placement_compliance_percent: placementPct ?? undefined,
+      availability_percent: hasPlanogram
+        ? match.sku_match_percent
+        : result.summary?.availability_percent,
     },
-    charts: topBrands.length
-      ? { ...result.charts, top_brands: topBrands }
-      : result.charts,
+    charts: topBrands.length ? { ...result.charts, top_brands: topBrands } : result.charts,
     planogram: hasPlanogram
-      ? (() => {
-          const match = computePlanogramMatch(inventory, ctx.planogramRows);
-          return {
-            requested: true,
-            percent: match.sku_match_percent,
-            sku_match_percent: match.sku_match_percent,
-            qty_compliance_percent: match.qty_compliance_percent,
-            summary: {
-              ...(result.planogram?.summary ?? {}),
-              expected_sku_count: ctx.planogramRows.length,
-              source: "demo_planogram",
-            },
-          };
-        })()
+      ? {
+          requested: true,
+          percent: match.sku_match_percent,
+          sku_match_percent: match.sku_match_percent,
+          qty_compliance_percent: match.qty_compliance_percent,
+          summary: {
+            ...(result.planogram?.summary ?? {}),
+            expected_sku_count: ctx.planogramRows.length,
+            missing: match.missing_count,
+            qty_short: match.qty_short_count,
+            source: "demo_planogram",
+          },
+        }
       : result.planogram,
   };
 }

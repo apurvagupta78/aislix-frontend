@@ -20,6 +20,7 @@ import {
   type ScanContextState,
   type ScanFocusFilter,
 } from "@/lib/scan-context";
+import { buildMatchKey } from "@/lib/demo-planogram-match";
 import {
   emptyRow,
   fetchPlanogramCsvTemplate,
@@ -144,6 +145,7 @@ export function ScanContextPanel({
           : undefined,
       sku: manual.sku?.trim() ?? "",
       shelf_position: manual.shelf_position?.trim() ?? "",
+      match_key: buildMatchKey(brand, product, manual.sku?.trim() ?? ""),
     };
     setRows([...value.planogramRows, row]);
     setManual(
