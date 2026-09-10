@@ -83,6 +83,12 @@ export function DemoScanResultsBody({
   if (landingInventory?.length && !sectionOrder.includes("inventory")) {
     demoEnrichSections.push("inventory");
   }
+  if (
+    (data.planogram?.requested || showPlanogramStub) &&
+    !sectionOrder.includes("planogram")
+  ) {
+    demoEnrichSections.push("planogram");
+  }
   if (demoEnrichSections.length) {
     const anchor = sectionOrder.indexOf("action_center");
     const insertAt = anchor >= 0 ? anchor + 1 : Math.min(3, sectionOrder.length);
@@ -144,22 +150,14 @@ export function DemoScanResultsBody({
               return (
                 <FinancialImpactPanel key={key} data={data} locked={false} planCode="growth" />
               );
-            case "placement_alert": {
-              const hasPlacement = (data.compliance_alerts?.length ?? 0) > 0;
-              const hasPlanogram = data.planogram?.requested;
-              if (!hasPlacement && !hasPlanogram) return null;
-              return (
-                <div key={key} className="space-y-3">
-                  {hasPlacement ? (
-                    <ComplianceAlertCard
-                      alerts={data.compliance_alerts}
-                      mismatches={data.subcategory_mismatches}
-                    />
-                  ) : null}
-                  {hasPlanogram ? <DemoPlanogramMatchCompact data={data} /> : null}
-                </div>
-              );
-            }
+            case "placement_alert":
+              return (data.compliance_alerts?.length ?? 0) > 0 ? (
+                <ComplianceAlertCard
+                  key={key}
+                  alerts={data.compliance_alerts}
+                  mismatches={data.subcategory_mismatches}
+                />
+              ) : null;
             case "ai_summary":
               return <AiSummaryBlock key={key} data={data} view={view} />;
             case "competitor_intel":
@@ -177,7 +175,9 @@ export function DemoScanResultsBody({
                 <AnnotatedImageViewer key={key} src={imageUrl} />
               ) : null;
             case "planogram":
-              return null;
+              return data.planogram?.requested || showPlanogramStub ? (
+                <DemoPlanogramMatchCompact key={key} data={data} />
+              ) : null;
             case "inventory":
               return layout === "dashboard" && data.inventory?.length ? (
                 <InventoryTable key={key} items={data.inventory} />

@@ -520,6 +520,10 @@ function buildDemoRoleSummaries(
     focus.brand
       ? `Brand view for ${focus.brand}${focus.product ? ` ${focus.product}` : ""}.`
       : "Brand view:",
+    hasEffectivePlanogram
+      ? `Planogram compliance ${match.sku_match_percent}% SKU match, ${match.qty_compliance_percent}% facing compliance.`
+      : "",
+    planogram,
     brandShare !== undefined ? `${focus.brand} holds ${brandShare}% brand share.` : "",
     productShare !== undefined && focus.product
       ? `${focus.brand} ${focus.product} product share is ${productShare}% (this SKU only).`
