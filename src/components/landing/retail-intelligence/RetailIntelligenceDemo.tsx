@@ -243,48 +243,16 @@ export function RetailIntelligenceDemo() {
           </div>
 
 
-          <div className="mt-8 overflow-hidden rounded-lg border border-border bg-card shadow-lift lg:grid lg:grid-cols-[1fr_1fr] xl:grid-cols-[55fr_45fr] lg:divide-x lg:divide-border">
-            {/* IMAGE PANEL */}
-            <div className="relative grid min-h-64 place-items-center overflow-hidden bg-surface lg:min-h-[520px]">
-              {shownImage ? (
-                <>
-                  <img
-                    src={shownImage}
-                    alt={phase === "done" ? "Shelf photo analyzed by Aislix" : "Sample toothpaste shelf"}
-                    className="h-full max-h-[720px] w-full object-contain p-3 sm:p-5"
-                  />
-                  {scanning && (
-                    <div className="absolute inset-0 bg-brand/15">
-                      <Badge className="absolute left-4 top-4 gap-2 rounded-md bg-brand px-3 py-2 text-brand-foreground">
-                        <Loader2 className="size-3.5 animate-spin" /> Analyzing shelf…
-                      </Badge>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="grid min-h-72 place-items-center p-8 text-center">
-                  <div>
-                    <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand">
-                      <ImagePlus className="size-5" />
-                    </span>
-                    <p className="mt-4 text-sm text-muted-foreground">
-                      Pick the sample shelf or upload your own photo (JPEG/PNG, up to 10MB).
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* RESULTS PANEL */}
-            <div className="min-w-0 overflow-hidden p-4 sm:p-6">
+          <div className="mt-8 overflow-hidden rounded-lg border border-border bg-card shadow-lift">
+            <div className="p-4 sm:p-6 lg:p-8">
               {scanning && (
-                <div className="grid min-h-72 place-items-center">
+                <div className="grid min-h-48 place-items-center py-8">
                   <ScanProgressPanel active expectedMs={60_000} timingMessage={DEMO_TIMING_MESSAGE} />
                 </div>
               )}
 
               {phase === "error" && (
-                <div className="grid min-h-72 place-items-center text-center">
+                <div className="grid min-h-48 place-items-center py-8 text-center">
                   <div>
                     <AlertCircle className="mx-auto size-6 text-destructive" />
                     <p className="mt-3 text-sm text-foreground">{error}</p>
@@ -293,8 +261,8 @@ export function RetailIntelligenceDemo() {
               )}
 
               {phase === "idle" && (
-                <div className="grid min-h-72 place-items-center text-center">
-                  <p className="max-w-xs text-sm text-muted-foreground">
+                <div className="grid min-h-48 place-items-center py-8 text-center">
+                  <p className="max-w-md text-sm text-muted-foreground">
                     Run a sample or upload a photo — execution, merchandising, brand, and executive
                     views will appear here with the same panels as a full workspace scan.
                   </p>
@@ -318,6 +286,37 @@ export function RetailIntelligenceDemo() {
                 />
               )}
             </div>
+
+            {shownImage ? (
+              <div className="relative border-t border-border bg-surface px-4 py-5 sm:px-6 sm:py-6">
+                <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {phase === "done" ? "Annotated shelf photo" : "Shelf photo"}
+                </p>
+                <div className="relative mx-auto max-w-3xl">
+                  <img
+                    src={shownImage}
+                    alt={phase === "done" ? "Shelf photo analyzed by Aislix" : "Sample toothpaste shelf"}
+                    className="mx-auto max-h-[min(52vh,520px)] w-full rounded-lg object-contain"
+                  />
+                  {scanning && (
+                    <div className="absolute inset-0 rounded-lg bg-brand/15">
+                      <Badge className="absolute left-3 top-3 gap-2 rounded-md bg-brand px-3 py-2 text-brand-foreground">
+                        <Loader2 className="size-3.5 animate-spin" /> Analyzing shelf…
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="border-t border-border bg-surface px-4 py-10 text-center sm:px-6">
+                <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-brand-soft text-brand">
+                  <ImagePlus className="size-5" />
+                </span>
+                <p className="mx-auto mt-4 max-w-sm text-sm text-muted-foreground">
+                  Pick the sample shelf or upload your own photo (JPEG/PNG, up to 10MB).
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </section>

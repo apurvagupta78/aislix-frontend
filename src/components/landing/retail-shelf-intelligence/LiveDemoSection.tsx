@@ -251,36 +251,18 @@ export function LiveDemoSection({
         </div>
 
 
-        <div className="mt-8 overflow-hidden rounded-xl border border-border bg-card shadow-lift lg:grid lg:grid-cols-[1fr_1fr] xl:grid-cols-[55fr_45fr] lg:divide-x lg:divide-border">
-          {/* Shelf image */}
-          <div className="relative grid min-h-64 place-items-center overflow-hidden bg-surface lg:min-h-[520px]">
-            {shownImage && (
-              <img
-                src={shownImage}
-                alt={phase === "done" ? "Shelf photo analyzed by Aislix" : "Sample retail shelf"}
-                className="h-full max-h-[700px] w-full object-contain p-3 sm:p-5"
-              />
-            )}
+        <div className="mt-8 overflow-hidden rounded-xl border border-border bg-card shadow-lift">
+          {/* Results first — full width */}
+          <div className="p-4 sm:p-6 lg:p-8">
             {scanning && (
-              <div className="absolute inset-0 bg-foreground/20">
-                <Badge className="absolute left-4 top-4 gap-2 rounded-md bg-primary px-3 py-2 text-primary-foreground">
-                  <Loader2 className="size-3.5 animate-spin" /> Analyzing shelf…
-                </Badge>
-              </div>
-            )}
-          </div>
-
-          {/* Analysis */}
-          <div className="min-w-0 overflow-hidden p-4 sm:p-6">
-            {scanning && (
-              <div className="grid min-h-72 place-items-center">
+              <div className="grid min-h-48 place-items-center py-8">
                 <ScanProgressPanel active expectedMs={60_000} timingMessage={DEMO_TIMING_MESSAGE} />
               </div>
             )}
 
             {phase === "error" ? (
-              <div className="min-h-72">
-                <div className="sticky top-4 z-10 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              <div>
+                <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                   <AlertCircle className="mt-0.5 size-4 shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -308,6 +290,29 @@ export function LiveDemoSection({
               />
             )}
           </div>
+
+          {/* Shelf image at bottom */}
+          {shownImage && (
+            <div className="relative border-t border-border bg-surface px-4 py-5 sm:px-6 sm:py-6">
+              <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {phase === "done" ? "Annotated shelf photo" : "Shelf photo"}
+              </p>
+              <div className="relative mx-auto max-w-3xl">
+                <img
+                  src={shownImage}
+                  alt={phase === "done" ? "Shelf photo analyzed by Aislix" : "Sample retail shelf"}
+                  className="mx-auto max-h-[min(52vh,520px)] w-full rounded-lg object-contain"
+                />
+                {scanning && (
+                  <div className="absolute inset-0 rounded-lg bg-foreground/15">
+                    <Badge className="absolute left-3 top-3 gap-2 rounded-md bg-primary px-3 py-2 text-primary-foreground">
+                      <Loader2 className="size-3.5 animate-spin" /> Analyzing shelf…
+                    </Badge>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>

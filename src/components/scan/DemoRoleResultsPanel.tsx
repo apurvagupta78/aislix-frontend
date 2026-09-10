@@ -65,7 +65,6 @@ export function DemoRoleResultsPanel({
         data={data}
         view={view}
         onViewChange={setView}
-        compact
         landingInventory={landing.inventory ?? []}
         showPlanogramStub={scanContext.planogramRows.length > 0}
       />

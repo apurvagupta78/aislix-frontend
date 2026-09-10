@@ -70,7 +70,7 @@ export function DemoScanResultsBody({
         <p className={cn("text-muted-foreground", compact ? "text-xs" : "text-sm")}>
           {VIEW_MODE_DESCRIPTIONS[view]}
         </p>
-        <ResultViewSwitcher value={view} onChange={onViewChange} compact={compact} />
+        <ResultViewSwitcher value={view} onChange={onViewChange} />
       </div>
 
       <div className={cn("space-y-3", compact ? "" : "space-y-4")}>

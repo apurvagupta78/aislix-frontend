@@ -143,7 +143,12 @@ export function ExecutionKpiStripPanel({
 }) {
   const kpis = buildKpiStrip(data);
   return (
-    <div className={cn("grid gap-2", compact ? "grid-cols-2" : "sm:grid-cols-3 lg:grid-cols-5")}>
+    <div
+      className={cn(
+        "grid gap-2",
+        compact ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5",
+      )}
+    >
       {kpis.map((kpi) => (
         <div key={kpi.key} className="card-surface px-4 py-3">
           <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
@@ -234,22 +239,15 @@ export function AiSummaryBlock({ data, loading }: { data?: ScanResult; loading?:
 export function ResultViewSwitcher({
   value,
   onChange,
-  compact = false,
 }: {
   value: ResultViewMode;
   onChange: (mode: ResultViewMode) => void;
+  /** @deprecated — tabs always wrap for readability */
   compact?: boolean;
 }) {
   const modes: ResultViewMode[] = ["execution", "merchandising", "brand", "executive"];
   return (
-    <div
-      className={cn(
-        "flex gap-1.5",
-        compact ? "flex-nowrap overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "flex-wrap gap-2",
-      )}
-      role="tablist"
-      aria-label="Result view"
-    >
+    <div className="flex flex-wrap gap-2" role="tablist" aria-label="Result view">
       {modes.map((mode) => {
         const theme = VIEW_MODE_THEME[mode];
         const active = value === mode;
@@ -260,8 +258,7 @@ export function ResultViewSwitcher({
             role="tab"
             aria-selected={active}
             className={cn(
-              "shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
-              compact ? "px-2.5 py-1 text-[11px] sm:text-xs" : "rounded-xl px-3.5 py-2",
+              "rounded-xl px-3 py-1.5 text-xs font-medium transition-colors sm:px-3.5 sm:py-2 sm:text-sm",
               active ? theme.tabActive : theme.tabInactive,
             )}
             onClick={() => onChange(mode)}
