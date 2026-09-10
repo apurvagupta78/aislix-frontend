@@ -302,6 +302,32 @@ export function formatFromInr(amountInr: number, code: CurrencyCode): string {
   return formatCurrency(convertFromInr(amountInr, code), code);
 }
 
+/** Convert a display-currency amount back to INR for storage. */
+export function convertToInr(amountDisplay: number, code: CurrencyCode): number {
+  const rate = currencies[code].rate;
+  if (!rate || !Number.isFinite(amountDisplay)) return amountDisplay;
+  return Math.round((amountDisplay / rate) * 100) / 100;
+}
+
+/** UI label for planogram price fields (never hard-code INR). */
+export function priceFieldLabel(code: CurrencyCode): string {
+  if (code === BASE_CURRENCY) return "Price";
+  return `Price (${code})`;
+}
+
+/** Exact display amount for a stored INR price (no charm rounding). */
+export function inrToDisplayAmount(amountInr: number, code: CurrencyCode): number {
+  const rate = currencies[code].rate;
+  if (!rate || !Number.isFinite(amountInr)) return amountInr;
+  return Math.round(amountInr * rate * 100) / 100;
+}
+
+/** Show a stored INR price in the visitor's display currency. */
+export function formatStoredPrice(amountInr: number | undefined | null, code: CurrencyCode): string {
+  if (amountInr == null || !Number.isFinite(amountInr)) return "—";
+  return formatCurrency(inrToDisplayAmount(amountInr, code), code);
+}
+
 /**
  * Currency for the current visitor. Starts at INR (SSR-safe) and switches to
  * the detected or stored currency right after hydration.

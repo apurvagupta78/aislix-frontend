@@ -17,7 +17,7 @@ export type PlanogramRow = {
   /** Optional pack size / flavour, e.g. "340ml" or "25 bags". */
   variant: string;
   expected_qty: number;
-  /** MRP in INR — used for financial impact calculations. */
+  /** Price in INR (CSV column mrp_inr) — used for financial impact calculations. */
   mrp_inr?: number;
   /** Average daily unit sales — used for velocity-based lost sales. */
   avg_daily_sales?: number;

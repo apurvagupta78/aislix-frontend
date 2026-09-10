@@ -34,6 +34,13 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
+import {
+  convertToInr,
+  formatStoredPrice,
+  inrToDisplayAmount,
+  priceFieldLabel,
+  useDisplayCurrency,
+} from "@/lib/display-currency";
 import type { ShelfCategory } from "@/lib/categories.data";
 import {
   SAMPLE_CSV_HEADERS,
@@ -133,8 +140,11 @@ export function PlanogramBuilder({
   tableTitle = "Expected products",
   context,
 }: PlanogramBuilderProps) {
+  const { currency } = useDisplayCurrency();
+  const priceLabel = priceFieldLabel(currency);
   const [preview, setPreview] = useState<CsvParseRow[] | null>(null);
   const [form, setForm] = useState<PlanogramRow>(emptyRow());
+  const [priceDisplay, setPriceDisplay] = useState<number | undefined>();
   const [csvError, setCsvError] = useState<string | null>(null);
   const [manualError, setManualError] = useState<string | null>(null);
   const [editingKey, setEditingKey] = useState<string | null>(null);
@@ -235,7 +245,13 @@ export function PlanogramBuilder({
   }
 
   function submitManual(keepContext: boolean) {
-    const candidate = withContext(form);
+    const candidate = withContext({
+      ...form,
+      mrp_inr:
+        priceDisplay != null && Number.isFinite(priceDisplay)
+          ? convertToInr(priceDisplay, currency)
+          : undefined,
+    });
     const problem = validatePlanogramRow(candidate);
     if (problem) {
       setManualError(
@@ -257,6 +273,7 @@ export function PlanogramBuilder({
               }
             : emptyRow(),
         );
+        setPriceDisplay(undefined);
       },
     });
   }
@@ -296,7 +313,7 @@ export function PlanogramBuilder({
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-xs text-muted-foreground">
               Columns: {SAMPLE_CSV_HEADERS}. Required: location, category, sub_category, brand,
-              product_name, expected_qty. Optional: mrp_inr, avg_daily_sales for financial impact.
+              product_name, expected_qty. Optional: price (mrp_inr column), avg_daily_sales for financial impact.
             </p>
             <Button variant="outline" size="sm" className="rounded-xl" onClick={downloadTemplate}>
               <Download className="mr-2 size-4" /> CSV template
@@ -490,18 +507,16 @@ export function PlanogramBuilder({
                 onChange={(e) => setForm({ ...form, expected_qty: Number(e.target.value) || 0 })}
               />
             </Field>
-            <Field label="MRP ₹ (optional)">
+            <Field label={`${priceLabel} (optional)`}>
               <Input
                 type="number"
                 min={0}
+                step="0.01"
                 className="rounded-xl"
-                placeholder="e.g. 299"
-                value={form.mrp_inr ?? ""}
+                placeholder={currency === "INR" ? "e.g. 299" : "e.g. 3.99"}
+                value={priceDisplay ?? ""}
                 onChange={(e) =>
-                  setForm({
-                    ...form,
-                    mrp_inr: e.target.value ? Number(e.target.value) : undefined,
-                  })
+                  setPriceDisplay(e.target.value ? Number(e.target.value) : undefined)
                 }
               />
             </Field>
@@ -596,7 +611,7 @@ export function PlanogramBuilder({
                   <th className="px-3 py-2">Product</th>
                   <th className="px-3 py-2">Variant</th>
                   <th className="px-3 py-2 text-right">Expected qty</th>
-                  <th className="px-3 py-2 text-right">MRP ₹</th>
+                  <th className="px-3 py-2 text-right">{priceLabel}</th>
                   <th className="px-3 py-2 text-right">Sales/d</th>
                   <th className="px-3 py-2">SKU</th>
                   <th className="px-3 py-2">Shelf position</th>
@@ -656,16 +671,21 @@ export function PlanogramBuilder({
                           <Input
                             type="number"
                             min={0}
-                            className="h-8 w-20 rounded-lg text-right"
-                            value={row.mrp_inr ?? ""}
+                            step="0.01"
+                            className="h-8 w-24 rounded-lg text-right"
+                            value={
+                              row.mrp_inr != null ? inrToDisplayAmount(row.mrp_inr, currency) : ""
+                            }
                             onChange={(e) =>
                               update(row.key, {
-                                mrp_inr: e.target.value ? Number(e.target.value) : undefined,
+                                mrp_inr: e.target.value
+                                  ? convertToInr(Number(e.target.value), currency)
+                                  : undefined,
                               })
                             }
                           />
                         ) : (
-                          row.mrp_inr ?? "—"
+                          formatStoredPrice(row.mrp_inr, currency)
                         )}
                       </td>
                       <td className="px-3 py-2 text-right tabular-nums">

@@ -158,7 +158,7 @@ export function computeContextFinancialImpact(
     oos_sku_count: oosSkus,
     at_risk_sku_count: atRiskSkus,
     methodology: hasPlanogramPricing
-      ? "Uses planogram MRP and daily sales velocity per SKU where provided."
+      ? "Uses planogram price and daily sales velocity per SKU where provided."
       : "Indicative estimate using category ASP defaults and typical daily velocity.",
     confidence: hasPlanogramPricing ? "priced" : "indicative",
   };

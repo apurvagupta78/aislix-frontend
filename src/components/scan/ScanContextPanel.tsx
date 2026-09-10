@@ -9,6 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  convertToInr,
+  formatStoredPrice,
+  priceFieldLabel,
+  useDisplayCurrency,
+} from "@/lib/display-currency";
+import {
   EMPTY_SCAN_CONTEXT,
   hasActiveScanContext,
   type ScanContextState,
@@ -18,20 +24,28 @@ import {
   emptyRow,
   fetchPlanogramCsvTemplate,
   parsePlanogramCsv,
-  REQUIRED_CSV_COLUMNS,
   SAMPLE_CSV_HEADERS,
   type DraftRow,
   type PlanogramRow,
 } from "@/lib/planogram";
 import { cn } from "@/lib/utils";
 
-const OPTIONAL_CSV_COLUMNS = [
-  "variant",
-  "mrp_inr",
-  "avg_daily_sales",
-  "sku",
-  "shelf_position",
+/** CSV columns in file order — matches planogram template and manual form. */
+const PLANOGRAM_CSV_FIELDS = [
+  { key: "location", label: "Location", required: true },
+  { key: "category", label: "Category", required: true },
+  { key: "sub_category", label: "Sub category", required: true },
+  { key: "brand", label: "Brand", required: true },
+  { key: "product_name", label: "Product name", required: true },
+  { key: "variant", label: "Variant", required: false },
+  { key: "expected_qty", label: "Expected qty", required: true },
+  { key: "mrp_inr", label: "Price", required: false, note: "CSV column mrp_inr — INR in file; manual entry uses your local currency" },
+  { key: "avg_daily_sales", label: "Daily sales (units)", required: false },
+  { key: "sku", label: "SKU", required: false },
+  { key: "shelf_position", label: "Shelf position", required: false },
 ] as const;
+
+type ManualForm = Partial<PlanogramRow> & { price_display?: number };
 
 type ScanContextPanelProps = {
   value: ScanContextState;
@@ -42,6 +56,26 @@ type ScanContextPanelProps = {
   className?: string;
 };
 
+function emptyManual(defaults: {
+  location: string;
+  category: string;
+  sub_category: string;
+}): ManualForm {
+  return {
+    location: defaults.location,
+    category: defaults.category,
+    sub_category: defaults.sub_category,
+    brand: "",
+    product_name: "",
+    variant: "",
+    expected_qty: 1,
+    price_display: undefined,
+    avg_daily_sales: undefined,
+    sku: "",
+    shelf_position: "",
+  };
+}
+
 export function ScanContextPanel({
   value,
   onChange,
@@ -50,14 +84,16 @@ export function ScanContextPanel({
   defaultLocation = "",
   className,
 }: ScanContextPanelProps) {
+  const { currency } = useDisplayCurrency();
+  const priceLabel = priceFieldLabel(currency);
   const [open, setOpen] = useState(hasActiveScanContext(value));
-  const [manual, setManual] = useState<Partial<PlanogramRow>>({
-    brand: "",
-    product_name: "",
-    expected_qty: 1,
-    mrp_inr: undefined,
-    avg_daily_sales: undefined,
-  });
+  const [manual, setManual] = useState<ManualForm>(() =>
+    emptyManual({
+      location: defaultLocation || "A-1",
+      category: defaultCategory || "Personal Care",
+      sub_category: defaultSubCategory || "Toothpaste",
+    }),
+  );
   const [csvError, setCsvError] = useState<string | null>(null);
 
   const setFocus = (patch: Partial<ScanFocusFilter>) =>
@@ -84,26 +120,39 @@ export function ScanContextPanel({
   function addManualRow() {
     const brand = manual.brand?.trim();
     const product = manual.product_name?.trim();
-    if (!brand || !product) return;
+    const location = manual.location?.trim();
+    const category = manual.category?.trim();
+    const subCategory = manual.sub_category?.trim();
+    if (!brand || !product || !location || !category || !subCategory) return;
+
     const row: PlanogramRow = {
       ...emptyRow(),
-      location: defaultLocation || "A-1",
-      category: defaultCategory || "General",
-      sub_category: defaultSubCategory || "General",
+      location,
+      category,
+      sub_category: subCategory,
       brand,
       product_name: product,
+      variant: manual.variant?.trim() ?? "",
       expected_qty: Number(manual.expected_qty) || 1,
-      mrp_inr: manual.mrp_inr ? Number(manual.mrp_inr) : undefined,
-      avg_daily_sales: manual.avg_daily_sales ? Number(manual.avg_daily_sales) : undefined,
+      mrp_inr:
+        manual.price_display != null && Number.isFinite(manual.price_display)
+          ? convertToInr(manual.price_display, currency)
+          : undefined,
+      avg_daily_sales:
+        manual.avg_daily_sales != null && Number.isFinite(manual.avg_daily_sales)
+          ? Number(manual.avg_daily_sales)
+          : undefined,
+      sku: manual.sku?.trim() ?? "",
+      shelf_position: manual.shelf_position?.trim() ?? "",
     };
     setRows([...value.planogramRows, row]);
-    setManual({
-      brand: "",
-      product_name: "",
-      expected_qty: 1,
-      mrp_inr: undefined,
-      avg_daily_sales: undefined,
-    });
+    setManual(
+      emptyManual({
+        location: location || defaultLocation || "A-1",
+        category: category || defaultCategory || "Personal Care",
+        sub_category: subCategory || defaultSubCategory || "Toothpaste",
+      }),
+    );
     setOpen(true);
   }
 
@@ -118,6 +167,9 @@ export function ScanContextPanel({
     URL.revokeObjectURL(url);
   }
 
+  const requiredCols = PLANOGRAM_CSV_FIELDS.filter((f) => f.required).map((f) => f.key);
+  const optionalCols = PLANOGRAM_CSV_FIELDS.filter((f) => !f.required).map((f) => f.key);
+
   return (
     <div className={cn("rounded-xl border border-border bg-surface", className)}>
       <button
@@ -128,7 +180,7 @@ export function ScanContextPanel({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">Your brand &amp; planogram</p>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Optional — filter results to your company and add MRP / sales for financial impact
+            Optional — filter results to your company and add price / sales for financial impact
           </p>
         </div>
         <ChevronDown
@@ -141,7 +193,6 @@ export function ScanContextPanel({
 
       {open && (
         <div className="space-y-5 border-t border-border px-4 pb-4 pt-4">
-          {/* Brand filter */}
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Filter calculations
@@ -154,7 +205,7 @@ export function ScanContextPanel({
                 <Input
                   id="scan-focus-company"
                   className="h-9 rounded-lg text-sm"
-                  placeholder="Hindustan Unilever"
+                  placeholder="Colgate-Palmolive"
                   value={value.focus.company ?? ""}
                   onChange={(e) => setFocus({ company: e.target.value })}
                 />
@@ -186,22 +237,26 @@ export function ScanContextPanel({
             </div>
           </div>
 
-          {/* Planogram */}
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Planogram data
             </p>
 
             <div className="space-y-3 rounded-lg border border-border bg-muted/20 p-3 sm:p-4">
-              <p className="text-xs font-medium text-foreground">CSV columns</p>
+              <p className="text-xs font-medium text-foreground">CSV format (same order as manual form)</p>
               <div className="space-y-2 text-xs leading-relaxed text-muted-foreground">
                 <p>
                   <span className="font-medium text-foreground">Required: </span>
-                  {REQUIRED_CSV_COLUMNS.join(", ")}
+                  {requiredCols.join(", ")}
                 </p>
                 <p>
                   <span className="font-medium text-foreground">Optional: </span>
-                  {OPTIONAL_CSV_COLUMNS.join(", ")}
+                  {optionalCols.join(", ")}
+                </p>
+                <p>
+                  <span className="font-medium text-foreground">Price column: </span>
+                  <code className="rounded bg-background px-1">mrp_inr</code> in CSV files (INR values). Manual
+                  entry below uses {currency}.
                 </p>
               </div>
               <pre className="overflow-x-auto rounded-md border border-border bg-background p-2.5 text-[10px] leading-relaxed text-muted-foreground">
@@ -237,9 +292,36 @@ export function ScanContextPanel({
             </div>
 
             <div className="rounded-lg border border-dashed border-border p-3 sm:p-4">
-              <p className="text-xs font-medium">Or add one product manually</p>
+              <p className="text-xs font-medium">Add one product manually</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Fields follow the same order as the CSV template above.
+              </p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <div className="space-y-1.5 sm:col-span-1">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Location *</Label>
+                  <Input
+                    className="h-9 rounded-lg text-sm"
+                    value={manual.location ?? ""}
+                    onChange={(e) => setManual({ ...manual, location: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Category *</Label>
+                  <Input
+                    className="h-9 rounded-lg text-sm"
+                    value={manual.category ?? ""}
+                    onChange={(e) => setManual({ ...manual, category: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Sub category *</Label>
+                  <Input
+                    className="h-9 rounded-lg text-sm"
+                    value={manual.sub_category ?? ""}
+                    onChange={(e) => setManual({ ...manual, sub_category: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
                   <Label className="text-xs">Brand *</Label>
                   <Input
                     className="h-9 rounded-lg text-sm"
@@ -247,7 +329,7 @@ export function ScanContextPanel({
                     onChange={(e) => setManual({ ...manual, brand: e.target.value })}
                   />
                 </div>
-                <div className="space-y-1.5 sm:col-span-1 lg:col-span-2">
+                <div className="space-y-1.5 sm:col-span-2">
                   <Label className="text-xs">Product name *</Label>
                   <Input
                     className="h-9 rounded-lg text-sm"
@@ -256,7 +338,16 @@ export function ScanContextPanel({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Expected qty</Label>
+                  <Label className="text-xs">Variant</Label>
+                  <Input
+                    className="h-9 rounded-lg text-sm"
+                    placeholder="340ml"
+                    value={manual.variant ?? ""}
+                    onChange={(e) => setManual({ ...manual, variant: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Expected qty *</Label>
                   <Input
                     type="number"
                     min={0}
@@ -266,17 +357,18 @@ export function ScanContextPanel({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">MRP (₹)</Label>
+                  <Label className="text-xs">{priceLabel}</Label>
                   <Input
                     type="number"
                     min={0}
+                    step="0.01"
                     className="h-9 rounded-lg text-sm"
-                    placeholder="299"
-                    value={manual.mrp_inr ?? ""}
+                    placeholder={currency === "INR" ? "299" : "3.99"}
+                    value={manual.price_display ?? ""}
                     onChange={(e) =>
                       setManual({
                         ...manual,
-                        mrp_inr: e.target.value ? Number(e.target.value) : undefined,
+                        price_display: e.target.value ? Number(e.target.value) : undefined,
                       })
                     }
                   />
@@ -297,6 +389,23 @@ export function ScanContextPanel({
                     }
                   />
                 </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">SKU</Label>
+                  <Input
+                    className="h-9 rounded-lg text-sm"
+                    value={manual.sku ?? ""}
+                    onChange={(e) => setManual({ ...manual, sku: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Shelf position</Label>
+                  <Input
+                    className="h-9 rounded-lg text-sm"
+                    placeholder="1"
+                    value={manual.shelf_position ?? ""}
+                    onChange={(e) => setManual({ ...manual, shelf_position: e.target.value })}
+                  />
+                </div>
               </div>
               <Button
                 type="button"
@@ -311,26 +420,34 @@ export function ScanContextPanel({
 
             {value.planogramRows.length > 0 ? (
               <div className="overflow-x-auto rounded-lg border border-border">
-                <table className="w-full min-w-[28rem] text-left text-xs">
+                <table className="w-full min-w-[40rem] text-left text-xs">
                   <thead className="bg-muted/50 text-muted-foreground">
                     <tr>
-                      <th className="px-3 py-2 font-medium">Brand</th>
-                      <th className="px-3 py-2 font-medium">Product</th>
-                      <th className="px-3 py-2 font-medium">Qty</th>
-                      <th className="px-3 py-2 font-medium">MRP</th>
-                      <th className="px-3 py-2 font-medium">Sales/d</th>
-                      <th className="px-3 py-2 w-8" />
+                      {PLANOGRAM_CSV_FIELDS.map((f) => (
+                        <th key={f.key} className="px-2 py-2 font-medium whitespace-nowrap">
+                          {f.key === "mrp_inr" ? priceLabel : f.label}
+                        </th>
+                      ))}
+                      <th className="w-8 px-2 py-2" />
                     </tr>
                   </thead>
                   <tbody>
                     {value.planogramRows.map((row, i) => (
                       <tr key={`${row.brand}-${row.product_name}-${i}`} className="border-t border-border">
-                        <td className="px-3 py-2">{row.brand}</td>
-                        <td className="px-3 py-2">{row.product_name}</td>
-                        <td className="px-3 py-2 tabular-nums">{row.expected_qty}</td>
-                        <td className="px-3 py-2 tabular-nums">{row.mrp_inr ?? "—"}</td>
-                        <td className="px-3 py-2 tabular-nums">{row.avg_daily_sales ?? "—"}</td>
-                        <td className="px-3 py-2">
+                        <td className="px-2 py-2">{row.location || "—"}</td>
+                        <td className="px-2 py-2">{row.category || "—"}</td>
+                        <td className="px-2 py-2">{row.sub_category || "—"}</td>
+                        <td className="px-2 py-2">{row.brand}</td>
+                        <td className="px-2 py-2">{row.product_name}</td>
+                        <td className="px-2 py-2">{row.variant || "—"}</td>
+                        <td className="px-2 py-2 tabular-nums">{row.expected_qty}</td>
+                        <td className="px-2 py-2 tabular-nums whitespace-nowrap">
+                          {formatStoredPrice(row.mrp_inr, currency)}
+                        </td>
+                        <td className="px-2 py-2 tabular-nums">{row.avg_daily_sales ?? "—"}</td>
+                        <td className="px-2 py-2">{row.sku || "—"}</td>
+                        <td className="px-2 py-2">{row.shelf_position || "—"}</td>
+                        <td className="px-2 py-2">
                           <button
                             type="button"
                             className="text-muted-foreground hover:text-destructive"
