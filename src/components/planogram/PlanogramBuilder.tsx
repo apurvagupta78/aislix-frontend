@@ -296,7 +296,7 @@ export function PlanogramBuilder({
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-xs text-muted-foreground">
               Columns: {SAMPLE_CSV_HEADERS}. Required: location, category, sub_category, brand,
-              product_name, expected_qty.
+              product_name, expected_qty. Optional: mrp_inr, avg_daily_sales for financial impact.
             </p>
             <Button variant="outline" size="sm" className="rounded-xl" onClick={downloadTemplate}>
               <Download className="mr-2 size-4" /> CSV template
@@ -490,6 +490,36 @@ export function PlanogramBuilder({
                 onChange={(e) => setForm({ ...form, expected_qty: Number(e.target.value) || 0 })}
               />
             </Field>
+            <Field label="MRP ₹ (optional)">
+              <Input
+                type="number"
+                min={0}
+                className="rounded-xl"
+                placeholder="e.g. 299"
+                value={form.mrp_inr ?? ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    mrp_inr: e.target.value ? Number(e.target.value) : undefined,
+                  })
+                }
+              />
+            </Field>
+            <Field label="Daily sales (optional)">
+              <Input
+                type="number"
+                min={0}
+                className="rounded-xl"
+                placeholder="Units per day"
+                value={form.avg_daily_sales ?? ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    avg_daily_sales: e.target.value ? Number(e.target.value) : undefined,
+                  })
+                }
+              />
+            </Field>
             <Field label="SKU (optional)">
               <Input
                 className="rounded-xl"
@@ -566,6 +596,8 @@ export function PlanogramBuilder({
                   <th className="px-3 py-2">Product</th>
                   <th className="px-3 py-2">Variant</th>
                   <th className="px-3 py-2 text-right">Expected qty</th>
+                  <th className="px-3 py-2 text-right">MRP ₹</th>
+                  <th className="px-3 py-2 text-right">Sales/d</th>
                   <th className="px-3 py-2">SKU</th>
                   <th className="px-3 py-2">Shelf position</th>
                   <th className="px-3 py-2 text-right">Actions</th>
@@ -617,6 +649,42 @@ export function PlanogramBuilder({
                           />
                         ) : (
                           row.expected_qty
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {editing ? (
+                          <Input
+                            type="number"
+                            min={0}
+                            className="h-8 w-20 rounded-lg text-right"
+                            value={row.mrp_inr ?? ""}
+                            onChange={(e) =>
+                              update(row.key, {
+                                mrp_inr: e.target.value ? Number(e.target.value) : undefined,
+                              })
+                            }
+                          />
+                        ) : (
+                          row.mrp_inr ?? "—"
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {editing ? (
+                          <Input
+                            type="number"
+                            min={0}
+                            className="h-8 w-20 rounded-lg text-right"
+                            value={row.avg_daily_sales ?? ""}
+                            onChange={(e) =>
+                              update(row.key, {
+                                avg_daily_sales: e.target.value
+                                  ? Number(e.target.value)
+                                  : undefined,
+                              })
+                            }
+                          />
+                        ) : (
+                          row.avg_daily_sales ?? "—"
                         )}
                       </td>
                       <td className="px-3 py-2">

@@ -27,6 +27,7 @@ import { formatScanDate } from "@/lib/scan-results";
 import type { CompetitorSnapshot } from "@/lib/brand-intel";
 import {
   VIEW_MODE_LABELS,
+  VIEW_MODE_THEME,
   type ResultViewMode,
 } from "@/lib/customer-context";
 
@@ -130,10 +131,19 @@ export function ExecutionScoreHero({
   );
 }
 
-export function ExecutionKpiStripPanel({ data, loading }: { data?: ScanResult; loading?: boolean }) {
+export function ExecutionKpiStripPanel({
+  data,
+  loading,
+  compact = false,
+}: {
+  data?: ScanResult;
+  loading?: boolean;
+  /** Narrow columns (demo panel) — 2-up grid instead of 5. */
+  compact?: boolean;
+}) {
   const kpis = buildKpiStrip(data);
   return (
-    <div className="grid gap-2 sm:grid-cols-5">
+    <div className={cn("grid gap-2", compact ? "grid-cols-2" : "sm:grid-cols-3 lg:grid-cols-5")}>
       {kpis.map((kpi) => (
         <div key={kpi.key} className="card-surface px-4 py-3">
           <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
@@ -224,25 +234,42 @@ export function AiSummaryBlock({ data, loading }: { data?: ScanResult; loading?:
 export function ResultViewSwitcher({
   value,
   onChange,
+  compact = false,
 }: {
   value: ResultViewMode;
   onChange: (mode: ResultViewMode) => void;
+  compact?: boolean;
 }) {
   const modes: ResultViewMode[] = ["execution", "merchandising", "brand", "executive"];
   return (
-    <div className="flex flex-wrap gap-2">
-      {modes.map((mode) => (
-        <Button
-          key={mode}
-          type="button"
-          variant={value === mode ? "brand" : "subtle"}
-          size="sm"
-          className="rounded-xl"
-          onClick={() => onChange(mode)}
-        >
-          {VIEW_MODE_LABELS[mode]}
-        </Button>
-      ))}
+    <div
+      className={cn(
+        "flex gap-1.5",
+        compact ? "flex-nowrap overflow-x-auto pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" : "flex-wrap gap-2",
+      )}
+      role="tablist"
+      aria-label="Result view"
+    >
+      {modes.map((mode) => {
+        const theme = VIEW_MODE_THEME[mode];
+        const active = value === mode;
+        return (
+          <button
+            key={mode}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            className={cn(
+              "shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
+              compact ? "px-2.5 py-1 text-[11px] sm:text-xs" : "rounded-xl px-3.5 py-2",
+              active ? theme.tabActive : theme.tabInactive,
+            )}
+            onClick={() => onChange(mode)}
+          >
+            {VIEW_MODE_LABELS[mode]}
+          </button>
+        );
+      })}
     </div>
   );
 }

@@ -78,6 +78,55 @@ export const VIEW_MODE_LABELS: Record<ResultViewMode, string> = {
   executive: "Executive summary",
 };
 
+/** Distinct accent per role tab — shared by demo and dashboard results. */
+export type ViewModeTheme = {
+  tabActive: string;
+  tabInactive: string;
+  accentText: string;
+  accentBorder: string;
+  accentSoft: string;
+  ring: string;
+};
+
+export const VIEW_MODE_THEME: Record<ResultViewMode, ViewModeTheme> = {
+  execution: {
+    tabActive: "bg-emerald-600 text-white shadow-sm hover:bg-emerald-600",
+    tabInactive:
+      "border border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100",
+    accentText: "text-emerald-700 dark:text-emerald-300",
+    accentBorder: "border-emerald-200 dark:border-emerald-800",
+    accentSoft: "bg-emerald-50/80 dark:bg-emerald-950/30",
+    ring: "ring-emerald-500/30",
+  },
+  merchandising: {
+    tabActive: "bg-violet-600 text-white shadow-sm hover:bg-violet-600",
+    tabInactive:
+      "border border-violet-200 bg-violet-50 text-violet-900 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-100",
+    accentText: "text-violet-700 dark:text-violet-300",
+    accentBorder: "border-violet-200 dark:border-violet-800",
+    accentSoft: "bg-violet-50/80 dark:bg-violet-950/30",
+    ring: "ring-violet-500/30",
+  },
+  brand: {
+    tabActive: "bg-amber-600 text-white shadow-sm hover:bg-amber-600",
+    tabInactive:
+      "border border-amber-200 bg-amber-50 text-amber-950 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100",
+    accentText: "text-amber-800 dark:text-amber-300",
+    accentBorder: "border-amber-200 dark:border-amber-800",
+    accentSoft: "bg-amber-50/80 dark:bg-amber-950/30",
+    ring: "ring-amber-500/30",
+  },
+  executive: {
+    tabActive: "bg-slate-700 text-white shadow-sm hover:bg-slate-700 dark:bg-slate-600",
+    tabInactive:
+      "border border-slate-200 bg-slate-100 text-slate-800 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200",
+    accentText: "text-slate-700 dark:text-slate-300",
+    accentBorder: "border-slate-200 dark:border-slate-700",
+    accentSoft: "bg-slate-100/80 dark:bg-slate-900/40",
+    ring: "ring-slate-500/30",
+  },
+};
+
 /** Job titles offered per customer type during onboarding. */
 export const JOB_TITLES_BY_CUSTOMER: Record<CustomerType, string[]> = {
   fmcg: [

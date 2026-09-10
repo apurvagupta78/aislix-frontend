@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Fragment, useEffect } from "react";
+import { Fragment, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { markScanNotificationsRead } from "@/lib/notifications";
 import { useState } from "react";
@@ -48,8 +48,16 @@ import {
   orderedVisibleSections,
   showCompetitorIntel,
   VIEW_MODE_DESCRIPTIONS,
+  VIEW_MODE_THEME,
   type ResultViewMode,
 } from "@/lib/customer-context";
+import { ScanContextPanel } from "@/components/scan/ScanContextPanel";
+import {
+  applyScanContext,
+  loadStoredScanContext,
+  saveStoredScanContext,
+  type ScanContextState,
+} from "@/lib/scan-context";
 import {
   PrintReportButton,
   ProcessingState,
@@ -172,7 +180,14 @@ function Results() {
     !usageQuery.data?.platform_bypass && !planHasFeature(planCode, "financial_impact");
 
   const [viewOverride, setViewOverride] = useState<ResultViewMode | undefined>();
+  const [scanContext, setScanContext] = useState<ScanContextState>(() => loadStoredScanContext());
   const activeView = viewOverride ?? workspaceQuery.data?.viewMode ?? "execution";
+  const viewTheme = VIEW_MODE_THEME[activeView];
+  const contextualData = useMemo(
+    () => (data ? applyScanContext(data, scanContext) : data),
+    [data, scanContext],
+  );
+  const display = contextualData ?? data;
   const sectionOrder = orderedVisibleSections(
     activeView,
     workspaceQuery.data?.roleFamily,
@@ -314,7 +329,21 @@ function Results() {
                 />
               )}
 
-              <div className="flex flex-col gap-3 border-b border-border pb-4 sm:flex-row sm:items-center sm:justify-between">
+              <ScanContextPanel
+                value={scanContext}
+                onChange={(next) => {
+                  setScanContext(next);
+                  saveStoredScanContext(next);
+                }}
+                defaultCategory={data?.scan_category ?? ""}
+                defaultSubCategory={data?.scan_sub_category ?? ""}
+                defaultLocation={data?.location ?? data?.aisle ?? ""}
+                className="mb-4"
+              />
+
+              <div
+                className={`flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between ${viewTheme.accentBorder}`}
+              >
                 <p className="text-sm text-muted-foreground">
                   {VIEW_MODE_DESCRIPTIONS[activeView]}
                 </p>
@@ -336,22 +365,22 @@ function Results() {
                     return (
                       <ExecutionScoreHero
                         key={key}
-                        data={data}
+                        data={display}
                         loading={loading}
                         previousScore={data?.navigation?.previous_execution_score ?? undefined}
                       />
                     );
                   case "kpi_strip":
-                    return <ExecutionKpiStripPanel key={key} data={data} loading={loading} />;
+                    return <ExecutionKpiStripPanel key={key} data={display} loading={loading} />;
                   case "facings_strip":
-                    return <FacingsSummaryStrip key={key} data={data} loading={loading} />;
+                    return <FacingsSummaryStrip key={key} data={display} loading={loading} />;
                   case "action_center":
-                    return <ActionCenterPanel key={key} data={data} loading={loading} />;
+                    return <ActionCenterPanel key={key} data={display} loading={loading} />;
                   case "financial_impact":
                     return (
                       <FinancialImpactPanel
                         key={key}
-                        data={data}
+                        data={display}
                         loading={loading}
                         locked={financialLocked}
                         planCode={planCode}
@@ -366,7 +395,7 @@ function Results() {
                       />
                     ) : null;
                   case "ai_summary":
-                    return <AiSummaryBlock key={key} data={data} loading={loading} />;
+                    return <AiSummaryBlock key={key} data={display} loading={loading} />;
                   case "competitor_intel":
                     return competitorEnabled ? (
                       <CompetitorIntelPanel
@@ -376,19 +405,19 @@ function Results() {
                       />
                     ) : null;
                   case "share_of_shelf":
-                    return <ShareOfShelfPanel key={key} data={data} loading={loading} />;
+                    return <ShareOfShelfPanel key={key} data={display} loading={loading} />;
                   case "sku_availability":
                     return (
                       <SkuAvailabilityPanel
                         key={key}
-                        data={data}
+                        data={display}
                         loading={loading}
                         matched={matchedProducts}
                         expected={expectedProducts}
                       />
                     );
                   case "recommended_actions":
-                    return <RecommendedActionsPanel key={key} data={data} loading={loading} />;
+                    return <RecommendedActionsPanel key={key} data={display} loading={loading} />;
                   case "planogram":
                     return (
                       <Fragment key={key}>
@@ -422,7 +451,7 @@ function Results() {
                     return (
                       <InventoryTable
                         key={key}
-                        items={data?.inventory}
+                        items={display?.inventory}
                         scanId={data?.scan_id}
                         csvUrl={data?.downloads?.csv_url}
                         loading={loading}
@@ -438,7 +467,7 @@ function Results() {
                           Brand share, confidence distribution, and legacy shelf health charts.
                         </p>
                         <div className="mt-4 grid gap-4 xl:grid-cols-3">
-                          <TopBrandsChart data={data?.charts?.top_brands} loading={loading} />
+                          <TopBrandsChart data={display?.charts?.top_brands} loading={loading} />
                           <QuantityDistributionChart
                             data={data?.charts?.quantity_distribution}
                             loading={loading}

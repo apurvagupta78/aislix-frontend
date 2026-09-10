@@ -47,6 +47,12 @@ import { ClipboardList } from "lucide-react";
 import { fetchActivePlanogram, fetchPlanogramItems, type DraftRow } from "@/lib/planogram";
 import { toUserMessage } from "@/lib/api/errors";
 import { CategorySubcategoryPicker } from "@/components/scan/CategorySubcategoryPicker";
+import { ScanContextPanel } from "@/components/scan/ScanContextPanel";
+import {
+  loadStoredScanContext,
+  saveStoredScanContext,
+  type ScanContextState,
+} from "@/lib/scan-context";
 import { trackEvent } from "@/lib/analytics";
 import { networkErrorMessage } from "@/lib/api-errors";
 import {
@@ -118,7 +124,7 @@ function ScanPage() {
   const [notes, setNotes] = useState("");
   const [showSetupErrors, setShowSetupErrors] = useState(false);
   const [categorySyncNotice, setCategorySyncNotice] = useState<string | null>(null);
-
+  const [scanContext, setScanContext] = useState<ScanContextState>(() => loadStoredScanContext());
 
   const withPlanogram = scanMode === "with_planogram";
 
@@ -645,6 +651,16 @@ function ScanPage() {
                 </div>
               </section>
             )}
+
+            <ScanContextPanel
+              value={scanContext}
+              onChange={(next) => {
+                setScanContext(next);
+                saveStoredScanContext(next);
+              }}
+              defaultLocation={shelfLocation}
+              className="card-surface"
+            />
 
             {/* STEP 1 — scan context (shared by both modes) */}
             <section className="card-surface p-4 sm:p-6">

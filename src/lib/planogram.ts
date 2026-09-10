@@ -17,6 +17,10 @@ export type PlanogramRow = {
   /** Optional pack size / flavour, e.g. "340ml" or "25 bags". */
   variant: string;
   expected_qty: number;
+  /** MRP in INR — used for financial impact calculations. */
+  mrp_inr?: number;
+  /** Average daily unit sales — used for velocity-based lost sales. */
+  avg_daily_sales?: number;
   sku: string;
   shelf_position: string;
   match_key: string;
@@ -94,6 +98,8 @@ export function emptyRow(): PlanogramRow {
     product_name: "",
     variant: "",
     expected_qty: 1,
+    mrp_inr: undefined,
+    avg_daily_sales: undefined,
     sku: "",
     shelf_position: "",
     match_key: "",
@@ -113,6 +119,10 @@ export function toDraftRow(row: Partial<PlanogramRow> | null | undefined): Draft
     variant: String(row?.variant ?? "").trim(),
     sku: String(row?.sku ?? "").trim(),
     expected_qty: Number.isFinite(qty) && qty > 0 ? Math.floor(qty) : base.expected_qty,
+    mrp_inr: Number.isFinite(Number(row?.mrp_inr)) ? Number(row?.mrp_inr) : undefined,
+    avg_daily_sales: Number.isFinite(Number(row?.avg_daily_sales))
+      ? Number(row?.avg_daily_sales)
+      : undefined,
     shelf_position: String(row?.shelf_position ?? "").trim(),
     match_key: String(row?.match_key ?? "").trim(),
   };
@@ -355,6 +365,8 @@ export async function savePlanogramDraft(input: {
         variant: row.variant || null,
         sku: row.sku || null,
         expected_qty: row.expected_qty,
+        mrp_inr: row.mrp_inr ?? null,
+        avg_daily_sales: row.avg_daily_sales ?? null,
         shelf_position: row.shelf_position || null,
         match_key: row.match_key || null,
       })),
@@ -531,6 +543,8 @@ export async function createAssignmentPlanogramVersion(input: {
       variant: row.variant || null,
       sku: row.sku || null,
       expected_qty: row.expected_qty,
+      mrp_inr: row.mrp_inr ?? null,
+      avg_daily_sales: row.avg_daily_sales ?? null,
       shelf_position: row.shelf_position || null,
       match_key: row.match_key || null,
     })),

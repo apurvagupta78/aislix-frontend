@@ -243,9 +243,9 @@ export function RetailIntelligenceDemo() {
           </div>
 
 
-          <div className="mt-8 overflow-hidden rounded-lg border border-border bg-card shadow-lift lg:grid lg:grid-cols-[55fr_45fr]">
+          <div className="mt-8 overflow-hidden rounded-lg border border-border bg-card shadow-lift lg:grid lg:grid-cols-[1fr_1fr] xl:grid-cols-[55fr_45fr] lg:divide-x lg:divide-border">
             {/* IMAGE PANEL */}
-            <div className="relative grid min-h-80 place-items-center overflow-hidden bg-surface lg:min-h-[620px] lg:border-r lg:border-border">
+            <div className="relative grid min-h-64 place-items-center overflow-hidden bg-surface lg:min-h-[520px]">
               {shownImage ? (
                 <>
                   <img
@@ -276,7 +276,7 @@ export function RetailIntelligenceDemo() {
             </div>
 
             {/* RESULTS PANEL */}
-            <div className="min-w-0 p-5 sm:p-7">
+            <div className="min-w-0 overflow-hidden p-4 sm:p-6">
               {scanning && (
                 <div className="grid min-h-72 place-items-center">
                   <ScanProgressPanel active expectedMs={60_000} timingMessage={DEMO_TIMING_MESSAGE} />
@@ -305,6 +305,12 @@ export function RetailIntelligenceDemo() {
                 <DemoRoleResultsPanel
                   result={result}
                   elapsedSec={elapsedSec}
+                  defaultCategory={demoCategory.state.categoryName}
+                  defaultSubCategory={
+                    demoCategory.categories
+                      .find((c) => c.name === demoCategory.state.categoryName)
+                      ?.subcategories?.find((s) => s.id === demoCategory.state.subId)?.label
+                  }
                   onDownloadCsv={() => downloadLandingCsv(result)}
                   onWorkspaceCta={() =>
                     document.getElementById("lead")?.scrollIntoView({ behavior: "smooth", block: "center" })
