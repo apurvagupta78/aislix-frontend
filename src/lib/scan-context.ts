@@ -11,7 +11,7 @@ import {
 } from "@/lib/demo-planogram-match";
 import type { CompetitorSnapshot, CompetitorUpperHand } from "@/lib/brand-intel";
 import type { FinancialImpact, ScanRecommendation, ScanResult } from "@/lib/scan-results";
-import type { PlanogramRow } from "@/lib/planogram";
+import { buildMatchKey, emptyRow, type PlanogramRow } from "@/lib/planogram";
 
 export type ScanFocusFilter = {
   company?: string;
@@ -209,6 +209,40 @@ function knownCompetitorsForPlanogramRow(row: PlanogramRow): string[] {
   return [];
 }
 
+const GENERIC_PRODUCT_WORDS = new Set([
+  "toothpaste",
+  "shampoo",
+  "chips",
+  "tea",
+  "soap",
+  "water",
+  "soda",
+  "mouthwash",
+]);
+
+/** Planogram rows from table, or a single implicit row when brand + product focus is set. */
+export function effectivePlanogramRows(
+  ctx: ScanContextState,
+  defaults?: { category?: string; subCategory?: string },
+): PlanogramRow[] {
+  if (ctx.planogramRows.length > 0) return ctx.planogramRows;
+  const brand = ctx.focus.brand?.trim();
+  const product = ctx.focus.product?.trim();
+  if (!brand || !product) return [];
+  return [
+    {
+      ...emptyRow(),
+      location: "A-1",
+      category: defaults?.category ?? "Personal Care",
+      sub_category: defaults?.subCategory ?? "Toothpaste",
+      brand,
+      product_name: product,
+      expected_qty: 1,
+      match_key: buildMatchKey(brand, product),
+    },
+  ];
+}
+
 /** Derive audit focus from explicit focus fields or the first planogram row. */
 export function effectiveFocusFromContext(ctx: ScanContextState): ScanFocusFilter {
   if (ctx.focus.brand || ctx.focus.company || ctx.focus.product) return ctx.focus;
@@ -221,6 +255,12 @@ export function effectiveFocusFromContext(ctx: ScanContextState): ScanFocusFilte
   };
 }
 
+function productNameTokens(name?: string | null): string[] {
+  return norm(name)
+    .split(/\s+/)
+    .filter((t) => t.length > 2 && !GENERIC_PRODUCT_WORDS.has(t));
+}
+
 function productMatchesRow(
   row: { brand?: string | null; product?: string | null; product_name?: string | null; variant?: string | null },
   brand: string,
@@ -229,10 +269,22 @@ function productMatchesRow(
   if (!brandsMatch(row.brand, brand)) return false;
   if (!product?.trim()) return true;
   const blob = productBlob(row);
-  const tokens = norm(product)
-    .split(/\s+/)
-    .filter((t) => t.length > 2);
-  return tokens.length === 0 || tokens.some((t) => blob.includes(t));
+  const tokens = productNameTokens(product);
+  const required = tokens.length ? tokens : norm(product).split(/\s+/).filter((t) => t.length > 2);
+  return required.length > 0 && required.every((t) => blob.includes(t));
+}
+
+function computeProductShareFromMatch(
+  inventory: NonNullable<ScanResult["inventory"]>,
+  match: PlanogramMatchResult,
+): number {
+  const total = inventory.reduce((n, r) => n + (r.quantity ?? 0), 0);
+  if (!total) return 0;
+  const own = match.lines.reduce((n, line) => {
+    if (line.issue_type === "missing" || line.issue_type === "wrong_product") return n;
+    return n + line.detected_qty;
+  }, 0);
+  return Math.round((own / total) * 1000) / 10;
 }
 
 function computeBrandSharePercent(
@@ -397,34 +449,22 @@ function topBrandSummary(inventory: NonNullable<ScanResult["inventory"]>): strin
 function stockGapSummary(
   inventory: NonNullable<ScanResult["inventory"]>,
   threshold: number,
+  listAll = false,
 ): string {
-  const oos = inventory.filter((r) => (r.quantity ?? 0) <= 0);
-  const low = inventory.filter((r) => {
-    const q = r.quantity ?? 0;
-    return q > 0 && q < threshold;
-  });
-  const parts: string[] = [];
-  if (oos.length) {
-    parts.push(
-      `Out of stock (${oos.length}): ${oos
-        .slice(0, 6)
-        .map((r) => skuLabel(r))
-        .join(", ")}${oos.length > 6 ? ` and ${oos.length - 6} more` : ""}.`,
-    );
+  const atRisk = inventory.filter((r) => (r.quantity ?? 0) < threshold);
+  if (!atRisk.length) {
+    return `All detected SKUs meet the ${threshold}-facing threshold.`;
   }
-  if (low.length) {
-    parts.push(
-      `Low stock (${low.length}): ${low
-        .slice(0, 6)
-        .map((r) => `${skuLabel(r)} (${r.quantity})`)
-        .join(", ")}${low.length > 6 ? ` and ${low.length - 6} more` : ""}.`,
-    );
-  }
-  return parts.join(" ");
+  const listed = listAll ? atRisk : atRisk.slice(0, 8);
+  const names = listed
+    .map((r) => `${skuLabel(r)} (${r.quantity ?? 0} facing${(r.quantity ?? 0) === 1 ? "" : "s"})`)
+    .join("; ");
+  const suffix = !listAll && atRisk.length > listed.length ? `; and ${atRisk.length - listed.length} more` : "";
+  return `Below ${threshold} facings (${atRisk.length} SKU${atRisk.length === 1 ? "" : "s"}): ${names}${suffix}.`;
 }
 
 function planogramGapSummary(ctx: ScanContextState, match: PlanogramMatchResult): string {
-  if (!ctx.planogramRows.length) return "";
+  if (!match.lines.length) return "";
   const parts: string[] = [];
   for (const line of match.lines) {
     if (line.issue_type === "correct") continue;
@@ -447,14 +487,15 @@ function buildDemoRoleSummaries(
   const threshold = s?.low_stock_threshold ?? OOS_THRESHOLD;
   const { match, brandShare, productShare, intel, financial, inventory } = summaryCtx;
   const facings = s?.total_facings ?? s?.total_products ?? 0;
-  const stockGaps = stockGapSummary(inventory, threshold);
+  const stockGapsFull = stockGapSummary(inventory, threshold, true);
   const brandMix = topBrandSummary(inventory);
   const catalog = inventoryCatalogSummary(inventory);
   const planogram = planogramGapSummary(ctx, match);
+  const hasEffectivePlanogram = match.lines.length > 0;
 
   const executionParts = [
     `Field view: ${facings} facings detected across ${s?.unique_skus ?? 0} SKUs.`,
-    stockGaps,
+    stockGapsFull,
     (s?.placement_issue_count ?? s?.misplaced_products ?? 0) > 0
       ? `${s?.placement_issue_count ?? s?.misplaced_products} placement issue(s) — move products to correct section and rescan.`
       : "",
@@ -464,7 +505,7 @@ function buildDemoRoleSummaries(
   const merchandisingParts = [
     `Category view: ${s?.unique_brands ?? 0} brands on shelf.`,
     brandMix,
-    ctx.planogramRows.length
+    hasEffectivePlanogram
       ? `Planogram compliance ${match.sku_match_percent}% SKU match, ${match.qty_compliance_percent}% facing compliance.`
       : "",
     planogram,
@@ -494,7 +535,9 @@ function buildDemoRoleSummaries(
 
   const executiveParts = [
     `Executive snapshot: ${facings} facings, ${s?.unique_skus ?? 0} SKUs, ${s?.unique_brands ?? 0} brands.`,
-    executionParts.join(" "),
+    stockGapsFull,
+    planogram,
+    executionParts.filter((p) => p !== stockGapsFull).join(" "),
     merchandisingParts.join(" "),
     brandParts.join(" "),
     financial && financial.estimated_daily_lost_sales_inr > 0
@@ -617,18 +660,22 @@ export function buildDemoRecommendations(
 /** Apply focus filter + planogram pricing to a scan result (client-side). */
 export function applyScanContext(result: ScanResult, ctx: ScanContextState): ScanResult {
   const hasFocus = Boolean(ctx.focus.company || ctx.focus.brand || ctx.focus.product);
-  const hasPlanogram = ctx.planogramRows.length > 0;
+  const planogramRows = effectivePlanogramRows(ctx, {
+    category: result.scan_category,
+    subCategory: result.scan_sub_category,
+  });
+  const hasPlanogram = planogramRows.length > 0;
   if (!hasFocus && !hasPlanogram) return result;
 
   const fullInventory = result.inventory ?? [];
   const threshold = result.summary?.low_stock_threshold ?? OOS_THRESHOLD;
   const match = hasPlanogram
-    ? comparePlanogramToInventory(fullInventory as InventoryFacing[], ctx.planogramRows)
+    ? comparePlanogramToInventory(fullInventory as InventoryFacing[], planogramRows)
     : comparePlanogramToInventory([], []);
 
   const financial_impact = computeContextFinancialImpact(
     fullInventory,
-    ctx.planogramRows,
+    planogramRows,
     threshold,
     match,
   );
@@ -645,13 +692,18 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
     : undefined;
   const productShare =
     primaryBrand && effectiveFocus.product
-      ? computeProductSharePercent(fullInventory, primaryBrand, effectiveFocus.product)
+      ? hasPlanogram
+        ? computeProductShareFromMatch(fullInventory, match)
+        : computeProductSharePercent(fullInventory, primaryBrand, effectiveFocus.product)
       : undefined;
   const productShareLabel =
     primaryBrand && effectiveFocus.product
       ? `${primaryBrand} ${effectiveFocus.product}`.trim()
       : undefined;
   const competitor_intel = buildDemoCompetitorIntel(fullInventory, ctx);
+  if (competitor_intel && productShare !== undefined) {
+    competitor_intel.product_share_percent = productShare;
+  }
 
   const lowStock = fullInventory.filter(
     (r) => (r.quantity ?? 0) > 0 && (r.quantity ?? 0) < threshold,
@@ -716,12 +768,12 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
           qty_compliance_percent: match.qty_compliance_percent,
           summary: {
             ...(result.planogram?.summary ?? {}),
-            expected_sku_count: ctx.planogramRows.length,
+            expected_sku_count: planogramRows.length,
             missing: match.missing_count,
             wrong_product: match.wrong_product_count,
             qty_short: match.qty_short_count,
             correct: match.correct_count,
-            configured_rows: ctx.planogramRows,
+            configured_rows: planogramRows,
             lines: match.lines.map((l) => ({
               brand: l.expected.brand,
               product: l.expected.product_name,
@@ -743,9 +795,13 @@ export function enrichDemoScanResult(result: ScanResult, ctx: ScanContextState):
   if (applied.role_summaries?.executive?.trim()) return applied;
 
   const fullInventory = result.inventory ?? [];
+  const planogramRows = effectivePlanogramRows(ctx, {
+    category: result.scan_category,
+    subCategory: result.scan_sub_category,
+  });
   const match =
-    ctx.planogramRows.length > 0
-      ? comparePlanogramToInventory(fullInventory as InventoryFacing[], ctx.planogramRows)
+    planogramRows.length > 0
+      ? comparePlanogramToInventory(fullInventory as InventoryFacing[], planogramRows)
       : comparePlanogramToInventory([], []);
   const effectiveFocus = effectiveFocusFromContext(ctx);
   const primaryBrand = effectiveFocus.brand || effectiveFocus.company;
@@ -754,11 +810,13 @@ export function enrichDemoScanResult(result: ScanResult, ctx: ScanContextState):
     : undefined;
   const productShare =
     primaryBrand && effectiveFocus.product
-      ? computeProductSharePercent(fullInventory, primaryBrand, effectiveFocus.product)
+      ? planogramRows.length
+        ? computeProductShareFromMatch(fullInventory, match)
+        : computeProductSharePercent(fullInventory, primaryBrand, effectiveFocus.product)
       : undefined;
   const intel = buildDemoCompetitorIntel(fullInventory, ctx);
   const threshold = result.summary?.low_stock_threshold ?? OOS_THRESHOLD;
-  const financial = computeContextFinancialImpact(fullInventory, ctx.planogramRows, threshold, match);
+  const financial = computeContextFinancialImpact(fullInventory, planogramRows, threshold, match);
 
   const summaryCtx: DemoSummaryContext = {
     match,

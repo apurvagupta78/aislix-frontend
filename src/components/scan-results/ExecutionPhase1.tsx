@@ -150,13 +150,16 @@ export function ExecutionKpiStripPanel({
   compact?: boolean;
 }) {
   const kpis = buildKpiStrip(data);
+  const gridCols =
+    kpis.length >= 6
+      ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6"
+      : kpis.length === 4
+        ? "grid-cols-2 sm:grid-cols-4"
+        : compact
+          ? "grid-cols-2 sm:grid-cols-3"
+          : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5";
   return (
-    <div
-      className={cn(
-        "grid gap-2",
-        compact ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5",
-      )}
-    >
+    <div className={cn("grid gap-2", gridCols)}>
       {kpis.map((kpi) => (
         <div key={kpi.key} className="card-surface px-4 py-3">
           <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
@@ -315,14 +318,28 @@ export function AiSummaryBlock({
         : "Retail execution summary";
   return (
     <div className="card-surface p-5 sm:p-6">
-      <h3 className="text-sm font-semibold tracking-tight">{hero}</h3>
+      <h3
+        className={cn(
+          "font-semibold tracking-tight",
+          view === "executive" ? "text-base sm:text-lg" : "text-sm",
+        )}
+      >
+        {hero}
+      </h3>
       {loading ? (
         <div className="mt-3 space-y-2">
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-11/12" />
         </div>
       ) : (
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{text || "Summary unavailable."}</p>
+        <p
+          className={cn(
+            "text-sm leading-relaxed text-muted-foreground",
+            view === "executive" ? "mt-4 space-y-3" : "mt-3",
+          )}
+        >
+          {text || "Summary unavailable."}
+        </p>
       )}
     </div>
   );

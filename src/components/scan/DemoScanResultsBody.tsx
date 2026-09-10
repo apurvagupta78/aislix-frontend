@@ -24,11 +24,10 @@ import {
   type ResultViewMode,
 } from "@/lib/customer-context";
 import type { ScanResult } from "@/lib/scan-results";
-import type { PlanogramRow } from "@/lib/planogram";
 import { cn } from "@/lib/utils";
 import { displayVariant } from "@/lib/landing-inventory";
 import type { LandingScanResult } from "@/lib/landing-scan-api";
-import { Badge } from "@/components/ui/badge";
+import { DemoPlanogramMatchCompact } from "@/components/scan/DemoPlanogramMatchCompact";
 
 const INLINE_SKIP_SECTIONS = new Set<ResultSectionKey>([
   "annotated_image",
@@ -94,6 +93,21 @@ export function DemoScanResultsBody({
     ];
   }
 
+  if (view === "executive" || view === "execution") {
+    const withoutSummary = sectionOrder.filter((k) => k !== "ai_summary");
+    const heroIdx = withoutSummary.indexOf("score_hero");
+    sectionOrder =
+      heroIdx >= 0
+        ? [
+            ...withoutSummary.slice(0, heroIdx + 1),
+            "ai_summary",
+            ...withoutSummary.slice(heroIdx + 1),
+          ]
+        : ["ai_summary", ...withoutSummary];
+  }
+
+  sectionOrder = sectionOrder.filter((key, i, arr) => arr.indexOf(key) === i);
+
   return (
     <>
       <div
@@ -103,9 +117,11 @@ export function DemoScanResultsBody({
           compact ? "mb-3 space-y-2" : "mb-4 space-y-3 pb-4",
         )}
       >
-        <p className={cn("text-muted-foreground", compact ? "text-xs" : "text-sm")}>
-          {VIEW_MODE_DESCRIPTIONS[view]}
-        </p>
+        {view !== "executive" ? (
+          <p className={cn("text-muted-foreground", compact ? "text-xs" : "text-sm")}>
+            {VIEW_MODE_DESCRIPTIONS[view]}
+          </p>
+        ) : null}
         <ResultViewSwitcher value={view} onChange={onViewChange} />
       </div>
 
@@ -128,14 +144,22 @@ export function DemoScanResultsBody({
               return (
                 <FinancialImpactPanel key={key} data={data} locked={false} planCode="growth" />
               );
-            case "placement_alert":
-              return (data.compliance_alerts?.length ?? 0) > 0 ? (
-                <ComplianceAlertCard
-                  key={key}
-                  alerts={data.compliance_alerts}
-                  mismatches={data.subcategory_mismatches}
-                />
-              ) : null;
+            case "placement_alert": {
+              const hasPlacement = (data.compliance_alerts?.length ?? 0) > 0;
+              const hasPlanogram = data.planogram?.requested;
+              if (!hasPlacement && !hasPlanogram) return null;
+              return (
+                <div key={key} className="space-y-3">
+                  {hasPlacement ? (
+                    <ComplianceAlertCard
+                      alerts={data.compliance_alerts}
+                      mismatches={data.subcategory_mismatches}
+                    />
+                  ) : null}
+                  {hasPlanogram ? <DemoPlanogramMatchCompact data={data} /> : null}
+                </div>
+              );
+            }
             case "ai_summary":
               return <AiSummaryBlock key={key} data={data} view={view} />;
             case "competitor_intel":
@@ -153,9 +177,7 @@ export function DemoScanResultsBody({
                 <AnnotatedImageViewer key={key} src={imageUrl} alt="Analyzed shelf photo" />
               ) : null;
             case "planogram":
-              return showPlanogramStub || data.planogram?.requested ? (
-                <PlanogramComplianceCard key={key} data={data} />
-              ) : null;
+              return null;
             case "inventory":
               return layout === "dashboard" && data.inventory?.length ? (
                 <InventoryTable key={key} items={data.inventory} />
@@ -168,89 +190,6 @@ export function DemoScanResultsBody({
         })}
       </div>
     </>
-  );
-}
-
-const PLANOGRAM_DISPLAY_COLUMNS = [
-  { key: "location", label: "Location" },
-  { key: "category", label: "Category" },
-  { key: "sub_category", label: "Sub category" },
-  { key: "brand", label: "Brand" },
-  { key: "product_name", label: "Product name" },
-  { key: "variant", label: "Variant" },
-  { key: "expected_qty", label: "Expected qty" },
-  { key: "mrp_inr", label: "Price" },
-  { key: "avg_daily_sales", label: "Daily sales (units)" },
-  { key: "sku", label: "SKU" },
-  { key: "shelf_position", label: "Shelf position" },
-] as const;
-
-function formatPlanogramCell(key: string, row: PlanogramRow): string {
-  if (key === "mrp_inr") {
-    return row.mrp_inr != null && row.mrp_inr > 0 ? `₹${row.mrp_inr}` : "—";
-  }
-  if (key === "expected_qty") return String(row.expected_qty ?? "—");
-  if (key === "avg_daily_sales") {
-    return row.avg_daily_sales != null ? String(row.avg_daily_sales) : "—";
-  }
-  const value = row[key as keyof PlanogramRow];
-  const text = typeof value === "string" ? value.trim() : "";
-  return text || "—";
-}
-
-function PlanogramComplianceCard({ data }: { data: ScanResult }) {
-  const pg = data.planogram;
-  if (!pg?.requested) return null;
-
-  const configured = pg.summary?.configured_rows;
-  const rows = Array.isArray(configured) ? (configured as PlanogramRow[]) : [];
-
-  return (
-    <div className="card-surface overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <div>
-          <h3 className="text-sm font-semibold tracking-tight">Your planogram</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Expected products you configured for this scan
-          </p>
-        </div>
-        {pg.sku_match_percent != null ? (
-          <Badge variant="secondary" className="rounded-full tabular-nums">
-            {Math.round(pg.sku_match_percent)}% match
-          </Badge>
-        ) : null}
-      </div>
-      {rows.length === 0 ? (
-        <p className="px-4 py-3 text-sm text-muted-foreground">
-          Add a planogram row in the setup panel before scanning.
-        </p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[720px] text-left text-sm">
-            <thead className="bg-surface text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                {PLANOGRAM_DISPLAY_COLUMNS.map((col) => (
-                  <th key={col.key} className="whitespace-nowrap px-3 py-2 font-medium">
-                    {col.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, i) => (
-                <tr key={row.match_key || `${row.brand}-${row.product_name}-${i}`} className="border-t border-border">
-                  {PLANOGRAM_DISPLAY_COLUMNS.map((col) => (
-                    <td key={col.key} className="whitespace-nowrap px-3 py-2">
-                      {formatPlanogramCell(col.key, row)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
   );
 }
 

@@ -72,7 +72,10 @@ export function DemoRoleResultsPanel({
         view={view}
         onViewChange={setView}
         landingInventory={landing.inventory ?? []}
-        showPlanogramStub={scanContext.planogramRows.length > 0}
+        showPlanogramStub={
+          scanContext.planogramRows.length > 0 ||
+          Boolean(scanContext.focus.brand && scanContext.focus.product)
+        }
       />
 
       <p className="mt-3 shrink-0 text-[11px] leading-relaxed text-muted-foreground">{AI_DISCLAIMER}</p>
@@ -163,7 +166,10 @@ export function DemoRoleResultsPanel({
               view={view}
               onViewChange={setView}
               imageUrl={imageUrl}
-              showPlanogramStub={scanContext.planogramRows.length > 0}
+              showPlanogramStub={
+          scanContext.planogramRows.length > 0 ||
+          Boolean(scanContext.focus.brand && scanContext.focus.product)
+        }
             />
           </div>
         </GuestDemoShell>
