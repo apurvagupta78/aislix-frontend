@@ -954,8 +954,8 @@ function csvEscape(value: string | number | undefined | null): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
-function csvSection(title: string, rows: string[][]): string[] {
-  return [`# ${title}`, ...rows.map((row) => row.map(csvEscape).join(","))];
+function csvSection(title: string, rows: (string | number)[][]): string[] {
+  return [`# ${title}`, ...rows.map((row) => row.map((cell) => csvEscape(String(cell))).join(","))];
 }
 
 /** Full scan report CSV — summary metrics, actions, financial impact, brands, and inventory. */
