@@ -4,6 +4,7 @@
  */
 
 import {
+  buildMatchKey,
   comparePlanogramToInventory,
   computePlanogramFinancialGaps,
   type InventoryFacing,
@@ -11,7 +12,7 @@ import {
 } from "@/lib/demo-planogram-match";
 import type { CompetitorSnapshot, CompetitorUpperHand } from "@/lib/brand-intel";
 import type { FinancialImpact, ScanRecommendation, ScanResult } from "@/lib/scan-results";
-import { buildMatchKey, emptyRow, type PlanogramRow } from "@/lib/planogram";
+import { emptyRow, type PlanogramRow } from "@/lib/planogram";
 
 export type ScanFocusFilter = {
   company?: string;
