@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Suspense, lazy, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ScanLine,
@@ -15,10 +15,15 @@ import { Button } from "@/components/ui/button";
 import { SiteFooter, SiteHeader } from "@/components/MarketingLayout";
 import { CurrencySelect, CycleToggle, PricingGrid } from "@/components/pricing/PricingPlans";
 import { useDisplayCurrency } from "@/lib/display-currency";
-import { HomeLeadCapture } from "@/components/home/HomeLeadCapture";
 import { HomeTrustRow } from "@/components/home/HomeTrustRow";
-import { HomeDashboardShowcase } from "@/components/home/HomeDashboardShowcase";
 import { LiveDemoSection } from "@/components/landing/retail-shelf-intelligence/LiveDemoSection";
+
+const HomeLeadCapture = lazy(() =>
+  import("@/components/home/HomeLeadCapture").then((m) => ({ default: m.HomeLeadCapture })),
+);
+const HomeDashboardShowcase = lazy(() =>
+  import("@/components/home/HomeDashboardShowcase").then((m) => ({ default: m.HomeDashboardShowcase })),
+);
 import type { BillingCycle, Plan } from "@/lib/pricing";
 
 
@@ -182,9 +187,13 @@ function Landing() {
         <LiveDemoSection showWorkspaceCta homepageIntro />
       </section>
 
-      <HomeLeadCapture />
+      <Suspense fallback={null}>
+        <HomeLeadCapture />
+      </Suspense>
 
-      <HomeDashboardShowcase />
+      <Suspense fallback={null}>
+        <HomeDashboardShowcase />
+      </Suspense>
 
 
 

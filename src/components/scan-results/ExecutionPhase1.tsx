@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, ArrowDown, ArrowUp, IndianRupee, Lock, Minus, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +8,7 @@ import { cn } from "@/lib/utils";
 import {
   buildActionCenterItems,
   buildAiSummaryParagraph,
+  buildAllDemoActions,
   buildDetailedActions,
   buildRoleSummary,
   buildKpiStrip,
@@ -171,33 +173,41 @@ export function ExecutionKpiStripPanel({
   );
 }
 
+const DEMO_ACTION_PREVIEW = 5;
+
 export function ActionCenterPanel({
   data,
   loading,
   view,
+  demoMode = false,
 }: {
   data?: ScanResult;
   loading?: boolean;
   view?: ResultViewMode;
+  /** Guest demo — expand actions inline instead of linking to login. */
+  demoMode?: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const items = buildActionCenterItems(data);
-  const detailed = buildDetailedActions(data, view);
-  const total = totalActionCount(items);
+  const detailed = demoMode ? buildAllDemoActions(data, view) : buildDetailedActions(data, view);
+  const issueCount = demoMode ? detailed.length : Math.max(totalActionCount(items), detailed.length);
+  const previewCount = demoMode ? (expanded ? detailed.length : DEMO_ACTION_PREVIEW) : 8;
+  const visibleActions = detailed.slice(0, previewCount);
 
   return (
     <div className="card-surface p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold tracking-tight">
-            {total > 0 || detailed.length
-              ? `${Math.max(total, detailed.length)} issue${Math.max(total, detailed.length) === 1 ? "" : "s"} require action`
+            {issueCount > 0
+              ? `${issueCount} issue${issueCount === 1 ? "" : "s"} require action`
               : "No critical issues detected"}
           </h3>
           <p className="mt-1 text-xs text-muted-foreground">
             Next-best actions from availability, placement, and planogram compliance
           </p>
         </div>
-        {(total > 0 || detailed.length > 0) && (
+        {issueCount > 0 && (
           <Badge variant="outline" className="rounded-full border-warning/40 text-warning">
             <AlertTriangle className="mr-1 size-3" /> Action required
           </Badge>
@@ -208,10 +218,10 @@ export function ActionCenterPanel({
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
         </div>
-      ) : detailed.length > 0 ? (
+      ) : visibleActions.length > 0 ? (
         <>
         <ol className="mt-4 space-y-3">
-          {detailed.slice(0, 8).map((action, index) => (
+          {visibleActions.map((action, index) => (
             <li
               key={action.action_id}
               className="rounded-xl border border-border bg-surface px-4 py-3"
@@ -244,9 +254,20 @@ export function ActionCenterPanel({
             </li>
           ))}
         </ol>
-        <Button asChild variant="subtle" size="sm" className="mt-4 rounded-xl">
-          <Link to="/corrective-actions">View all actions</Link>
-        </Button>
+        {demoMode && detailed.length > DEMO_ACTION_PREVIEW ? (
+          <Button
+            variant="subtle"
+            size="sm"
+            className="mt-4 rounded-xl"
+            onClick={() => setExpanded((v) => !v)}
+          >
+            {expanded ? "Show fewer actions" : `View all ${detailed.length} actions`}
+          </Button>
+        ) : !demoMode && detailed.length > 8 ? (
+          <Button asChild variant="subtle" size="sm" className="mt-4 rounded-xl">
+            <Link to="/corrective-actions">View all actions</Link>
+          </Button>
+        ) : null}
         </>
       ) : items.length === 0 ? (
         <p className="mt-4 text-sm text-muted-foreground">
@@ -286,7 +307,12 @@ export function AiSummaryBlock({
   view?: import("@/lib/customer-context").ResultViewMode;
 }) {
   const text = view ? buildRoleSummary(data, view) : buildAiSummaryParagraph(data);
-  const hero = view ? VIEW_MODE_DESCRIPTIONS[view] : "Retail execution summary";
+  const hero =
+    view === "executive"
+      ? "Executive summary"
+      : view
+        ? VIEW_MODE_DESCRIPTIONS[view]
+        : "Retail execution summary";
   return (
     <div className="card-surface p-5 sm:p-6">
       <h3 className="text-sm font-semibold tracking-tight">{hero}</h3>

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { AlertCircle, ImagePlus, Loader2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,11 @@ import {
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
 import { ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
-import { DemoRoleResultsPanel } from "@/components/scan/DemoRoleResultsPanel";
+const DemoRoleResultsPanel = lazy(() =>
+  import("@/components/scan/DemoRoleResultsPanel").then((m) => ({
+    default: m.DemoRoleResultsPanel,
+  })),
+);
 import {
   DEFAULT_DEMO_CATEGORY,
   DEFAULT_DEMO_SUBCATEGORY,
@@ -30,7 +34,7 @@ type Phase = "idle" | "scanning" | "done" | "error";
 type SetupMode = null | "sample" | "upload";
 
 const MAX_BYTES = 10 * 1024 * 1024;
-const MIN_SCAN_MS = 8_000;
+const MIN_SCAN_MS = 2_000;
 const DEMO_TIMING_MESSAGE =
   "This usually takes 2–3 minutes for large shelves. Keep this page open.";
 
@@ -65,7 +69,7 @@ export function LiveDemoSection({
 }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const demoCategory = useDemoCategory();
-  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(DEFAULT_SAMPLE_IMAGE);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [result, setResult] = useState<LandingScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [elapsedSec, setElapsedSec] = useState<number | null>(null);
@@ -291,20 +295,26 @@ export function LiveDemoSection({
             {!scanning && phase === "idle" && !setupMode ? <EmptyResults /> : null}
 
             {!scanning && phase === "done" && result ? (
-              <DemoRoleResultsPanel
-                result={result}
-                elapsedSec={elapsedSec}
-                showWorkspaceCta={showWorkspaceCta}
-                scanContext={scanContext}
-                onScanContextChange={setScanContext}
-                defaultCategory={demoCategory.state.categoryName}
-                defaultSubCategory={subCategoryLabel}
-                onDownloadCsv={() => downloadLandingCsv(result)}
-                previewImageUrl={previewImageUrl}
-                onWorkspaceCta={() =>
-                  document.querySelector("#lead")?.scrollIntoView({ behavior: "smooth" })
+              <Suspense
+                fallback={
+                  <div className="py-8 text-center text-sm text-muted-foreground">Loading results…</div>
                 }
-              />
+              >
+                <DemoRoleResultsPanel
+                  result={result}
+                  elapsedSec={elapsedSec}
+                  showWorkspaceCta={showWorkspaceCta}
+                  scanContext={scanContext}
+                  onScanContextChange={setScanContext}
+                  defaultCategory={demoCategory.state.categoryName}
+                  defaultSubCategory={subCategoryLabel}
+                  onDownloadCsv={() => downloadLandingCsv(result)}
+                  previewImageUrl={previewImageUrl}
+                  onWorkspaceCta={() =>
+                    document.querySelector("#lead")?.scrollIntoView({ behavior: "smooth" })
+                  }
+                />
+              </Suspense>
             ) : null}
           </div>
 
@@ -317,6 +327,8 @@ export function LiveDemoSection({
                 <img
                   src={shownImage ?? previewImageUrl ?? DEFAULT_SAMPLE_IMAGE}
                   alt={phase === "done" ? "Shelf photo analyzed by Aislix" : "Sample retail shelf"}
+                  loading="lazy"
+                  decoding="async"
                   className="mx-auto max-h-[min(52vh,520px)] w-full rounded-lg object-contain"
                 />
                 {scanning ? (

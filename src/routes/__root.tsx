@@ -118,6 +118,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         children: `(function(){
 var h = window.location.hostname;
 if (h !== "aislix.com" && h !== "www.aislix.com") return;
+function loadGa(){
 var id = "G-G6Q8XHGPG1";
 var s = document.createElement("script");
 s.async = true;
@@ -127,25 +128,30 @@ window.dataLayer = window.dataLayer || [];
 window.gtag = function(){window.dataLayer.push(arguments);};
 window.gtag("js", new Date());
 window.gtag("config", id, { send_page_view: true });
+}
+if ("requestIdleCallback" in window) requestIdleCallback(loadGa, { timeout: 3000 });
+else setTimeout(loadGa, 2500);
 })();`,
       },
       {
-
         type: "text/javascript",
-        children: `_linkedin_partner_id = "10805217";
+        children: `(function(){
+function loadLi(){
+window._linkedin_partner_id = "10805217";
 window._linkedin_data_partner_ids = window._linkedin_data_partner_ids || [];
-window._linkedin_data_partner_ids.push(_linkedin_partner_id);`,
-      },
-      {
-        type: "text/javascript",
-        children: `(function(l) {
+window._linkedin_data_partner_ids.push(window._linkedin_partner_id);
+(function(l) {
 if (!l){window.lintrk = function(a,b){window.lintrk.q.push([a,b])};
 window.lintrk.q=[]}
 var s = document.getElementsByTagName("script")[0];
 var b = document.createElement("script");
 b.type = "text/javascript";b.async = true;
 b.src = "https://snap.licdn.com/li.lms-analytics/insight.min.js";
-s.parentNode.insertBefore(b, s);})(window.lintrk);`,
+s.parentNode.insertBefore(b, s);})(window.lintrk);
+}
+if ("requestIdleCallback" in window) requestIdleCallback(loadLi, { timeout: 4000 });
+else setTimeout(loadLi, 3000);
+})();`,
       },
     ],
   }),

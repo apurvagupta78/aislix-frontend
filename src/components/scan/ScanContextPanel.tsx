@@ -54,6 +54,8 @@ type ScanContextPanelProps = {
   defaultCategory?: string;
   defaultSubCategory?: string;
   defaultLocation?: string;
+  /** When false, panel starts collapsed (recommended for pre-scan setup). */
+  defaultOpen?: boolean;
   className?: string;
 };
 
@@ -77,17 +79,30 @@ function emptyManual(defaults: {
   };
 }
 
+function contextSummary(value: ScanContextState): string | null {
+  const parts: string[] = [];
+  if (value.focus.brand) parts.push(value.focus.brand);
+  if (value.focus.product) parts.push(value.focus.product);
+  if (value.planogramRows.length) {
+    parts.push(`${value.planogramRows.length} planogram row${value.planogramRows.length === 1 ? "" : "s"}`);
+  }
+  return parts.length ? parts.join(" · ") : null;
+}
+
 export function ScanContextPanel({
   value,
   onChange,
   defaultCategory = "",
   defaultSubCategory = "",
   defaultLocation = "",
+  defaultOpen,
   className,
 }: ScanContextPanelProps) {
   const { currency } = useDisplayCurrency();
   const priceLabel = priceFieldLabel(currency);
-  const [open, setOpen] = useState(hasActiveScanContext(value));
+  const [open, setOpen] = useState(
+    defaultOpen !== undefined ? defaultOpen : hasActiveScanContext(value),
+  );
   const [manual, setManual] = useState<ManualForm>(() =>
     emptyManual({
       location: defaultLocation || "A-1",
@@ -182,7 +197,8 @@ export function ScanContextPanel({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium">Your brand &amp; planogram</p>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Optional — filter results to your company and add price / sales for financial impact
+            {contextSummary(value) ??
+              "Optional — filter results to your company and add price / sales for financial impact"}
           </p>
         </div>
         <ChevronDown

@@ -355,82 +355,169 @@ export function buildDemoCompetitorIntel(
   };
 }
 
-function buildDemoExecutiveSummary(
-  result: ScanResult,
-  ctx: ScanContextState,
-  match: PlanogramMatchResult,
-  brandShare?: number,
-  productShare?: number,
-  intel?: CompetitorSnapshot | null,
-  financial?: FinancialImpact,
-): string {
-  const s = result.summary;
-  const facings = s?.total_facings ?? s?.total_products ?? 0;
-  const focus = effectiveFocusFromContext(ctx);
-  const parts: string[] = [];
+type DemoSummaryContext = {
+  match: PlanogramMatchResult;
+  brandShare?: number;
+  productShare?: number;
+  intel?: CompetitorSnapshot | null;
+  financial?: FinancialImpact;
+  inventory: NonNullable<ScanResult["inventory"]>;
+};
 
-  parts.push(
-    `Aislix analyzed this shelf and detected ${facings} facings across ${s?.unique_skus ?? 0} SKU groups and ${s?.unique_brands ?? 0} brands.`,
+function skuLabel(row: {
+  brand?: string | null;
+  product?: string | null;
+  product_name?: string | null;
+  variant?: string | null;
+}): string {
+  const name = row.product_name ?? row.product ?? "Unknown";
+  const variant = row.variant?.trim();
+  return variant ? `${row.brand ?? ""} ${name} (${variant})`.trim() : `${row.brand ?? ""} ${name}`.trim();
+}
+
+function inventoryCatalogSummary(inventory: NonNullable<ScanResult["inventory"]>): string {
+  if (!inventory.length) return "No SKU groups detected.";
+  const sorted = [...inventory].sort((a, b) => (b.quantity ?? 0) - (a.quantity ?? 0));
+  const lines = sorted.map(
+    (row) => `${skuLabel(row)}: ${row.quantity ?? 0} facing${(row.quantity ?? 0) === 1 ? "" : "s"}`,
   );
+  return `Complete inventory (${inventory.length} SKU groups): ${lines.join("; ")}.`;
+}
 
-  if (ctx.planogramRows.length > 0) {
-    const row = ctx.planogramRows[0];
-    const gapParts: string[] = [];
-    if (match.missing_count) gapParts.push(`${match.missing_count} missing`);
-    if (match.wrong_product_count) gapParts.push(`${match.wrong_product_count} wrong product`);
-    if (match.qty_short_count) gapParts.push(`${match.qty_short_count} short on facings`);
-    const gapText = gapParts.length ? gapParts.join(", ") : "all checks passed";
+function topBrandSummary(inventory: NonNullable<ScanResult["inventory"]>): string {
+  const shares = filteredBrandShare(inventory, {});
+  if (!shares.length) return "";
+  const top = shares
+    .slice(0, 6)
+    .map((b) => `${b.brand} ${b.share}% (${b.quantity ?? 0} facings)`)
+    .join(", ");
+  return `Brand mix: ${top}.`;
+}
+
+function stockGapSummary(
+  inventory: NonNullable<ScanResult["inventory"]>,
+  threshold: number,
+): string {
+  const oos = inventory.filter((r) => (r.quantity ?? 0) <= 0);
+  const low = inventory.filter((r) => {
+    const q = r.quantity ?? 0;
+    return q > 0 && q < threshold;
+  });
+  const parts: string[] = [];
+  if (oos.length) {
     parts.push(
-      `Planogram audit for ${row.brand} ${row.product_name} at ${row.location} (${row.category} / ${row.sub_category}): ${match.sku_match_percent}% SKU match — ${gapText}. Expected ${row.expected_qty} facings${row.mrp_inr ? ` at ₹${row.mrp_inr}` : ""}${row.avg_daily_sales ? ` with ~${row.avg_daily_sales} units/day velocity` : ""}.`,
+      `Out of stock (${oos.length}): ${oos
+        .slice(0, 6)
+        .map((r) => skuLabel(r))
+        .join(", ")}${oos.length > 6 ? ` and ${oos.length - 6} more` : ""}.`,
     );
   }
-
-  if (brandShare !== undefined && focus.brand) {
-    parts.push(`${focus.brand} brand share (all SKUs) is ${brandShare}% of total shelf facings.`);
-  }
-  if (productShare !== undefined && focus.product) {
+  if (low.length) {
     parts.push(
-      `${focus.brand} ${focus.product} product share is ${productShare}% — this counts only that SKU, not every ${focus.brand} variant on the shelf.`,
+      `Low stock (${low.length}): ${low
+        .slice(0, 6)
+        .map((r) => `${skuLabel(r)} (${r.quantity})`)
+        .join(", ")}${low.length > 6 ? ` and ${low.length - 6} more` : ""}.`,
     );
   }
+  return parts.join(" ");
+}
 
-  if (intel?.upper_hand?.length) {
-    for (const edge of intel.upper_hand.slice(0, 2)) {
-      parts.push(`Competitive gap: ${edge.note}`);
-    }
-  } else if (intel && intel.competitor_shares.some((c) => c.is_competitor && (c.share ?? 0) > 0)) {
-    const rivals = intel.competitor_shares
-      .filter((c) => c.is_competitor && (c.share ?? 0) > 0)
-      .slice(0, 3)
-      .map((c) => `${c.brand} (${c.share}%)`)
-      .join(", ");
-    parts.push(`Competitors detected on shelf: ${rivals}.`);
-  }
-
-  if (financial && financial.estimated_daily_lost_sales_inr > 0) {
-    parts.push(
-      `Estimated daily revenue at risk from planogram gaps: ₹${financial.estimated_daily_lost_sales_inr.toLocaleString("en-IN")} (${financial.confidence === "priced" ? "planogram-priced" : "indicative"}).`,
-    );
-  }
-
-  const issues = match.lines.filter((l) => l.issue_type !== "correct").slice(0, 2);
-  for (const line of issues) {
+function planogramGapSummary(ctx: ScanContextState, match: PlanogramMatchResult): string {
+  if (!ctx.planogramRows.length) return "";
+  const parts: string[] = [];
+  for (const line of match.lines) {
+    if (line.issue_type === "correct") continue;
     parts.push(
       line.detail ??
         `${line.expected.brand} ${line.expected.product_name}: expected ${line.expected_qty}, detected ${line.detected_qty}.`,
     );
   }
+  if (!parts.length) return "Planogram: all configured SKUs match expected facings.";
+  return `Planogram gaps: ${parts.join(" ")}`;
+}
 
-  if ((s?.low_stock_products ?? 0) > 0) {
-    parts.push(`${s!.low_stock_products} SKU(s) are below the facing threshold.`);
-  }
+function buildDemoRoleSummaries(
+  result: ScanResult,
+  ctx: ScanContextState,
+  summaryCtx: DemoSummaryContext,
+): NonNullable<ScanResult["role_summaries"]> {
+  const s = result.summary;
+  const focus = effectiveFocusFromContext(ctx);
+  const threshold = s?.low_stock_threshold ?? OOS_THRESHOLD;
+  const { match, brandShare, productShare, intel, financial, inventory } = summaryCtx;
+  const facings = s?.total_facings ?? s?.total_products ?? 0;
+  const stockGaps = stockGapSummary(inventory, threshold);
+  const brandMix = topBrandSummary(inventory);
+  const catalog = inventoryCatalogSummary(inventory);
+  const planogram = planogramGapSummary(ctx, match);
 
-  const base = result.executive_summary?.trim();
-  if (base && !ctx.planogramRows.length) {
-    return `${base} ${parts.slice(1).join(" ")}`.trim();
-  }
+  const executionParts = [
+    `Field view: ${facings} facings detected across ${s?.unique_skus ?? 0} SKUs.`,
+    stockGaps,
+    (s?.placement_issue_count ?? s?.misplaced_products ?? 0) > 0
+      ? `${s?.placement_issue_count ?? s?.misplaced_products} placement issue(s) — move products to correct section and rescan.`
+      : "",
+    planogram,
+  ].filter(Boolean);
 
-  return parts.join(" ");
+  const merchandisingParts = [
+    `Category view: ${s?.unique_brands ?? 0} brands on shelf.`,
+    brandMix,
+    ctx.planogramRows.length
+      ? `Planogram compliance ${match.sku_match_percent}% SKU match, ${match.qty_compliance_percent}% facing compliance.`
+      : "",
+    planogram,
+    brandShare !== undefined && focus.brand
+      ? `${focus.brand} brand share ${brandShare}% · ${focus.product && productShare !== undefined ? `${focus.product} product share ${productShare}%` : ""}`.trim()
+      : "",
+  ].filter(Boolean);
+
+  const brandParts = [
+    focus.brand
+      ? `Brand view for ${focus.brand}${focus.product ? ` ${focus.product}` : ""}.`
+      : "Brand view:",
+    brandShare !== undefined ? `${focus.brand} holds ${brandShare}% brand share.` : "",
+    productShare !== undefined && focus.product
+      ? `${focus.brand} ${focus.product} product share is ${productShare}% (this SKU only).`
+      : "",
+    intel?.upper_hand?.length
+      ? intel.upper_hand.map((e) => e.note).join(" ")
+      : intel
+        ? `Competitors on shelf: ${intel.competitor_shares
+            .filter((c) => c.is_competitor && (c.share ?? 0) > 0)
+            .slice(0, 4)
+            .map((c) => `${c.brand} ${c.share}%`)
+            .join(", ")}.`
+        : "",
+  ].filter(Boolean);
+
+  const executiveParts = [
+    `Executive snapshot: ${facings} facings, ${s?.unique_skus ?? 0} SKUs, ${s?.unique_brands ?? 0} brands.`,
+    executionParts.join(" "),
+    merchandisingParts.join(" "),
+    brandParts.join(" "),
+    financial && financial.estimated_daily_lost_sales_inr > 0
+      ? `Revenue at risk: ₹${financial.estimated_daily_lost_sales_inr.toLocaleString("en-IN")}/day.`
+      : "",
+    catalog,
+  ].filter(Boolean);
+
+  return {
+    execution: executionParts.join(" "),
+    merchandising: merchandisingParts.join(" "),
+    brand: brandParts.join(" "),
+    executive: executiveParts.join(" "),
+  };
+}
+
+function buildDemoExecutiveSummary(
+  result: ScanResult,
+  ctx: ScanContextState,
+  summaryCtx: DemoSummaryContext,
+): string {
+  const roleSummaries = buildDemoRoleSummaries(result, ctx, summaryCtx);
+  return roleSummaries.executive ?? roleSummaries.execution ?? "";
 }
 
 export function buildDemoRecommendations(
@@ -582,21 +669,23 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
 
   const demoRecs = buildDemoRecommendations(fullInventory, ctx, match);
   const mergedRecs = [...demoRecs, ...(result.recommendations ?? [])];
-  const executive_summary = buildDemoExecutiveSummary(
-    result,
-    ctx,
+  const summaryCtx: DemoSummaryContext = {
     match,
     brandShare,
     productShare,
-    competitor_intel,
-    financial_impact,
-  );
+    intel: competitor_intel,
+    financial: financial_impact,
+    inventory: fullInventory,
+  };
+  const role_summaries = buildDemoRoleSummaries(result, ctx, summaryCtx);
+  const executive_summary = buildDemoExecutiveSummary(result, ctx, summaryCtx);
 
   return {
     ...result,
     inventory: displayInventory,
     financial_impact,
     executive_summary,
+    role_summaries,
     competitor_intel: competitor_intel ?? result.competitor_intel,
     recommendations: mergedRecs,
     summary: {
@@ -645,6 +734,46 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
           },
         }
       : result.planogram,
+  };
+}
+
+/** Always enrich demo scan results with role summaries and full inventory analysis. */
+export function enrichDemoScanResult(result: ScanResult, ctx: ScanContextState): ScanResult {
+  const applied = applyScanContext(result, ctx);
+  if (applied.role_summaries?.executive?.trim()) return applied;
+
+  const fullInventory = result.inventory ?? [];
+  const match =
+    ctx.planogramRows.length > 0
+      ? comparePlanogramToInventory(fullInventory as InventoryFacing[], ctx.planogramRows)
+      : comparePlanogramToInventory([], []);
+  const effectiveFocus = effectiveFocusFromContext(ctx);
+  const primaryBrand = effectiveFocus.brand || effectiveFocus.company;
+  const brandShare = primaryBrand
+    ? computeBrandSharePercent(fullInventory, primaryBrand)
+    : undefined;
+  const productShare =
+    primaryBrand && effectiveFocus.product
+      ? computeProductSharePercent(fullInventory, primaryBrand, effectiveFocus.product)
+      : undefined;
+  const intel = buildDemoCompetitorIntel(fullInventory, ctx);
+  const threshold = result.summary?.low_stock_threshold ?? OOS_THRESHOLD;
+  const financial = computeContextFinancialImpact(fullInventory, ctx.planogramRows, threshold, match);
+
+  const summaryCtx: DemoSummaryContext = {
+    match,
+    brandShare,
+    productShare,
+    intel,
+    financial,
+    inventory: fullInventory,
+  };
+
+  return {
+    ...applied,
+    role_summaries: buildDemoRoleSummaries(applied, ctx, summaryCtx),
+    executive_summary: buildDemoExecutiveSummary(applied, ctx, summaryCtx),
+    competitor_intel: intel ?? applied.competitor_intel,
   };
 }
 

@@ -5,10 +5,9 @@ import { Button } from "@/components/ui/button";
 import { AI_DISCLAIMER } from "@/components/scan/ScanProgressPanel";
 import { DemoScanResultsBody } from "@/components/scan/DemoScanResultsBody";
 import { GuestDemoShell } from "@/components/scan/GuestDemoShell";
-import { ScanContextPanel } from "@/components/scan/ScanContextPanel";
 import {
   EMPTY_SCAN_CONTEXT,
-  applyScanContext,
+  enrichDemoScanResult,
   type ScanContextState,
 } from "@/lib/scan-context";
 import type { ResultViewMode } from "@/lib/customer-context";
@@ -60,7 +59,7 @@ export function DemoRoleResultsPanel({
 
   const data = useMemo(() => {
     const base = landingToScanResult(landing);
-    return applyScanContext(base, scanContext);
+    return enrichDemoScanResult(base, scanContext);
   }, [landing, scanContext]);
 
   const imageUrl =
@@ -68,14 +67,6 @@ export function DemoRoleResultsPanel({
 
   const panelBody = (
     <>
-      <ScanContextPanel
-        value={scanContext}
-        onChange={setScanContext}
-        defaultCategory={defaultCategory ?? landing.category}
-        defaultSubCategory={defaultSubCategory}
-        className="mb-3"
-      />
-
       <DemoScanResultsBody
         data={data}
         view={view}
@@ -166,13 +157,6 @@ export function DemoRoleResultsPanel({
           onClose={() => setFullscreen(false)}
         >
           <div className="mx-auto max-w-6xl space-y-4">
-            <ScanContextPanel
-              value={scanContext}
-              onChange={setScanContext}
-              defaultCategory={defaultCategory ?? landing.category}
-              defaultSubCategory={defaultSubCategory}
-            />
-
             <DemoScanResultsBody
               layout="dashboard"
               data={data}

@@ -55,6 +55,7 @@ export function DemoScanSetupPanel({
         onChange={onScanContextChange}
         defaultCategory={defaultCategory}
         defaultSubCategory={defaultSubCategory}
+        defaultOpen={false}
         className="mt-5"
       />
 

@@ -38,6 +38,7 @@ const INLINE_SKIP_SECTIONS = new Set<ResultSectionKey>([
   "scan_details",
   "downloads",
   "analytics",
+  "recommended_actions",
 ]);
 
 const DASHBOARD_SKIP_SECTIONS = new Set<ResultSectionKey>([
@@ -74,16 +75,17 @@ export function DemoScanResultsBody({
   const skip = layout === "dashboard" ? DASHBOARD_SKIP_SECTIONS : INLINE_SKIP_SECTIONS;
   let sectionOrder = orderedVisibleSections(view).filter((key) => !skip.has(key));
 
-  /** Demo with planogram: surface executive summary + competitor intel on every tab. */
+  /** Demo: always surface executive summary, competitor intel, and inventory on every tab. */
   const demoEnrichSections: ResultSectionKey[] = [];
-  if (data.executive_summary && !sectionOrder.includes("ai_summary")) {
-    demoEnrichSections.push("ai_summary");
-  }
+  if (!sectionOrder.includes("ai_summary")) demoEnrichSections.push("ai_summary");
   if (data.competitor_intel && !sectionOrder.includes("competitor_intel")) {
     demoEnrichSections.push("competitor_intel");
   }
+  if (landingInventory?.length && !sectionOrder.includes("inventory")) {
+    demoEnrichSections.push("inventory");
+  }
   if (demoEnrichSections.length) {
-    const anchor = sectionOrder.indexOf("financial_impact");
+    const anchor = sectionOrder.indexOf("action_center");
     const insertAt = anchor >= 0 ? anchor + 1 : Math.min(3, sectionOrder.length);
     sectionOrder = [
       ...sectionOrder.slice(0, insertAt),
@@ -121,7 +123,7 @@ export function DemoScanResultsBody({
             case "facings_strip":
               return <FacingsSummaryStrip key={key} data={data} />;
             case "action_center":
-              return <ActionCenterPanel key={key} data={data} view={view} />;
+              return <ActionCenterPanel key={key} data={data} view={view} demoMode />;
             case "financial_impact":
               return (
                 <FinancialImpactPanel key={key} data={data} locked={false} planCode="growth" />
@@ -259,7 +261,7 @@ function DemoInventoryCompact({ rows }: { rows: LandingScanResult["inventory"] }
         <h3 className="text-sm font-semibold tracking-tight">Complete inventory</h3>
         <p className="mt-0.5 text-xs text-muted-foreground">{rows.length} SKU groups detected</p>
       </div>
-      <div className="max-h-48 overflow-auto">
+      <div className="max-h-[min(420px,60vh)] overflow-auto">
         <table className="w-full text-left text-sm">
           <thead className="sticky top-0 bg-surface text-xs uppercase tracking-wide text-muted-foreground">
             <tr>

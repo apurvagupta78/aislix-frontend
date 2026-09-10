@@ -240,8 +240,55 @@ export function buildDetailedActions(
     priority: (rec.impact === "high" ? "high" : rec.impact === "low" ? "low" : "medium") as DetailedActionItem["priority"],
     title: rec.title,
     reason: rec.detail ?? "",
-    recommended_action: rec.title,
+    recommended_action: rec.detail ?? rec.title,
   }));
+}
+
+/** Demo: merge next-best-actions, recommendations, and aggregate issue counts into one list. */
+export function buildAllDemoActions(
+  result?: ScanResult | null,
+  view?: ResultViewMode,
+): DetailedActionItem[] {
+  const out: DetailedActionItem[] = [];
+  const seen = new Set<string>();
+
+  const push = (action: DetailedActionItem) => {
+    if (seen.has(action.action_id)) return;
+    seen.add(action.action_id);
+    out.push(action);
+  };
+
+  for (const action of buildDetailedActions(result, view)) {
+    push(action);
+  }
+
+  for (const [i, rec] of (result?.recommendations ?? []).entries()) {
+    push({
+      action_id: rec.id ?? `rec-${i}`,
+      priority: (rec.impact === "high" ? "high" : rec.impact === "low" ? "low" : "medium") as DetailedActionItem["priority"],
+      title: rec.title,
+      reason: rec.detail ?? "",
+      recommended_action: rec.detail ?? rec.title,
+    });
+  }
+
+  for (const item of buildActionCenterItems(result)) {
+    const severityToPriority = {
+      critical: "critical",
+      high: "high",
+      medium: "medium",
+      low: "low",
+    } as const;
+    push({
+      action_id: `aggregate-${item.id}`,
+      priority: severityToPriority[item.severity] ?? "medium",
+      title: `Fix ${item.count} ${item.label.toLowerCase()}`,
+      reason: item.detail ?? "",
+      recommended_action: item.detail ?? `Address ${item.label} and rescan to verify.`,
+    });
+  }
+
+  return out;
 }
 
 export function totalActionCount(items: ActionCenterItem[]): number {
