@@ -220,7 +220,6 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
           sku_match_percent: result.planogram?.sku_match_percent ?? null,
           qty_compliance_percent: result.planogram?.qty_compliance_percent ?? null,
           summary: result.planogram?.summary ?? {},
-          ...result.planogram,
           requested: true,
         }
       : result.planogram,
