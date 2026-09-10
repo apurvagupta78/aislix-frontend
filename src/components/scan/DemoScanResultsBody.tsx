@@ -23,13 +23,12 @@ import {
   type ResultSectionKey,
   type ResultViewMode,
 } from "@/lib/customer-context";
-import { PlanogramComparisonSection } from "@/components/scan-results/PlanogramCompliance";
 import type { ScanResult } from "@/lib/scan-results";
-import { buildDemoPlanogramComparison } from "@/lib/scan-context";
+import type { PlanogramRow } from "@/lib/planogram";
 import { cn } from "@/lib/utils";
 import { displayVariant } from "@/lib/landing-inventory";
 import type { LandingScanResult } from "@/lib/landing-scan-api";
-import type { PlanogramMatchLine } from "@/lib/demo-planogram-match";
+import { Badge } from "@/components/ui/badge";
 
 const INLINE_SKIP_SECTIONS = new Set<ResultSectionKey>([
   "annotated_image",
@@ -39,7 +38,6 @@ const INLINE_SKIP_SECTIONS = new Set<ResultSectionKey>([
   "scan_details",
   "downloads",
   "analytics",
-  "competitor_intel",
 ]);
 
 const DASHBOARD_SKIP_SECTIONS = new Set<ResultSectionKey>([
@@ -74,7 +72,25 @@ export function DemoScanResultsBody({
 }: DemoScanResultsBodyProps) {
   const theme = VIEW_MODE_THEME[view];
   const skip = layout === "dashboard" ? DASHBOARD_SKIP_SECTIONS : INLINE_SKIP_SECTIONS;
-  const sectionOrder = orderedVisibleSections(view).filter((key) => !skip.has(key));
+  let sectionOrder = orderedVisibleSections(view).filter((key) => !skip.has(key));
+
+  /** Demo with planogram: surface executive summary + competitor intel on every tab. */
+  const demoEnrichSections: ResultSectionKey[] = [];
+  if (data.executive_summary && !sectionOrder.includes("ai_summary")) {
+    demoEnrichSections.push("ai_summary");
+  }
+  if (data.competitor_intel && !sectionOrder.includes("competitor_intel")) {
+    demoEnrichSections.push("competitor_intel");
+  }
+  if (demoEnrichSections.length) {
+    const anchor = sectionOrder.indexOf("financial_impact");
+    const insertAt = anchor >= 0 ? anchor + 1 : Math.min(3, sectionOrder.length);
+    sectionOrder = [
+      ...sectionOrder.slice(0, insertAt),
+      ...demoEnrichSections,
+      ...sectionOrder.slice(insertAt),
+    ];
+  }
 
   return (
     <>
@@ -153,81 +169,85 @@ export function DemoScanResultsBody({
   );
 }
 
+const PLANOGRAM_DISPLAY_COLUMNS = [
+  { key: "location", label: "Location" },
+  { key: "category", label: "Category" },
+  { key: "sub_category", label: "Sub category" },
+  { key: "brand", label: "Brand" },
+  { key: "product_name", label: "Product name" },
+  { key: "variant", label: "Variant" },
+  { key: "expected_qty", label: "Expected qty" },
+  { key: "mrp_inr", label: "Price" },
+  { key: "avg_daily_sales", label: "Daily sales (units)" },
+  { key: "sku", label: "SKU" },
+  { key: "shelf_position", label: "Shelf position" },
+] as const;
+
+function formatPlanogramCell(key: string, row: PlanogramRow): string {
+  if (key === "mrp_inr") {
+    return row.mrp_inr != null && row.mrp_inr > 0 ? `₹${row.mrp_inr}` : "—";
+  }
+  if (key === "expected_qty") return String(row.expected_qty ?? "—");
+  if (key === "avg_daily_sales") {
+    return row.avg_daily_sales != null ? String(row.avg_daily_sales) : "—";
+  }
+  const value = row[key as keyof PlanogramRow];
+  const text = typeof value === "string" ? value.trim() : "";
+  return text || "—";
+}
+
 function PlanogramComplianceCard({ data }: { data: ScanResult }) {
   const pg = data.planogram;
   if (!pg?.requested) return null;
 
-  const rawLines = pg.summary?.lines;
-  if (Array.isArray(rawLines) && rawLines.length > 0) {
-    const matchLines = rawLines as Array<{
-      brand: string;
-      product: string;
-      expected_qty: number;
-      detected_qty: number;
-      issue_type: PlanogramMatchLine["issue_type"];
-      detail?: string;
-    }>;
-    const comparison = buildDemoPlanogramComparison(
-      {
-        sku_match_percent: pg.sku_match_percent ?? 0,
-        qty_compliance_percent: pg.qty_compliance_percent ?? 0,
-        missing_count: Number(pg.summary?.missing ?? 0),
-        wrong_product_count: Number(pg.summary?.wrong_product ?? 0),
-        qty_short_count: Number(pg.summary?.qty_short ?? 0),
-        correct_count: Number(pg.summary?.correct ?? 0),
-        lines: matchLines.map((l) => ({
-          expected: {
-            location: "",
-            category: "",
-            sub_category: "",
-            brand: l.brand,
-            product_name: l.product,
-            variant: "",
-            expected_qty: l.expected_qty,
-            sku: "",
-            shelf_position: "",
-            match_key: `${l.brand}|${l.product}`,
-          },
-          detected_qty: l.detected_qty,
-          expected_qty: l.expected_qty,
-          issue_type: l.issue_type,
-          present: l.issue_type !== "missing",
-          qty_ok: l.issue_type === "correct",
-          match_score: l.issue_type === "correct" ? 1 : 0,
-          detail: l.detail,
-        })),
-      },
-      data.scan_id,
-    );
-    return <PlanogramComparisonSection comparison={comparison} />;
-  }
-
-  if (pg.sku_match_percent != null) {
-    return (
-      <PlanogramComparisonSection
-        comparison={{
-          id: `${data.scan_id}-planogram`,
-          compliance_percent: pg.sku_match_percent,
-          created_at: data.created_at ?? new Date().toISOString(),
-          summary: {
-            expected: Number(pg.summary?.expected_sku_count ?? 0),
-            missing: Number(pg.summary?.missing ?? 0),
-            wrong_product: Number(pg.summary?.wrong_product ?? 0),
-            qty_issues: Number(pg.summary?.qty_short ?? 0),
-          },
-          lines: [],
-          actions: [],
-        }}
-      />
-    );
-  }
+  const configured = pg.summary?.configured_rows;
+  const rows = Array.isArray(configured) ? (configured as PlanogramRow[]) : [];
 
   return (
-    <div className="card-surface p-4 text-sm">
-      <h3 className="font-semibold tracking-tight">Planogram compliance</h3>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Add a planogram in the setup panel to compare expected vs detected products.
-      </p>
+    <div className="card-surface overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
+        <div>
+          <h3 className="text-sm font-semibold tracking-tight">Your planogram</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Expected products you configured for this scan
+          </p>
+        </div>
+        {pg.sku_match_percent != null ? (
+          <Badge variant="secondary" className="rounded-full tabular-nums">
+            {Math.round(pg.sku_match_percent)}% match
+          </Badge>
+        ) : null}
+      </div>
+      {rows.length === 0 ? (
+        <p className="px-4 py-3 text-sm text-muted-foreground">
+          Add a planogram row in the setup panel before scanning.
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[720px] text-left text-sm">
+            <thead className="bg-surface text-xs uppercase tracking-wide text-muted-foreground">
+              <tr>
+                {PLANOGRAM_DISPLAY_COLUMNS.map((col) => (
+                  <th key={col.key} className="whitespace-nowrap px-3 py-2 font-medium">
+                    {col.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => (
+                <tr key={row.match_key || `${row.brand}-${row.product_name}-${i}`} className="border-t border-border">
+                  {PLANOGRAM_DISPLAY_COLUMNS.map((col) => (
+                    <td key={col.key} className="whitespace-nowrap px-3 py-2">
+                      {formatPlanogramCell(col.key, row)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

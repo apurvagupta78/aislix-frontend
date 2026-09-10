@@ -90,8 +90,13 @@ export type ScanSummary = {
   shelf_execution_score?: number;
   /** Physical facings detected in the image. */
   total_facings?: number;
-  /** Share of shelf / bbox utilization percent. */
+  /** Share of shelf / bbox utilization percent (legacy — prefer brand_share_percent). */
   share_of_shelf_percent?: number;
+  /** All facings for the planogram/focus brand as % of total shelf facings. */
+  brand_share_percent?: number;
+  /** Facings for the specific planogram product SKU as % of total shelf facings. */
+  product_share_percent?: number;
+  product_share_label?: string;
   /** SKU availability percent. */
   availability_percent?: number;
   osa_percent?: number;

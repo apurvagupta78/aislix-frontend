@@ -372,15 +372,49 @@ export function CompetitorIntelPanel({
         </div>
       ) : (
         <div className="mt-4 space-y-4">
-          <div className="rounded-xl border border-brand/20 bg-brand-soft/30 px-4 py-3">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground">Your brand</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums">
-              {snapshot.primary_brand}{" "}
-              <span className="text-lg text-muted-foreground">
-                {snapshot.own_brand_share_percent.toFixed(1)}% share
-              </span>
-            </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-brand/20 bg-brand-soft/30 px-4 py-3">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">Brand share</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">
+                {snapshot.primary_brand}{" "}
+                <span className="text-lg text-muted-foreground">
+                  {snapshot.own_brand_share_percent.toFixed(1)}%
+                </span>
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">All {snapshot.primary_brand} SKUs on shelf</p>
+            </div>
+            {snapshot.product_share_percent !== undefined && snapshot.product_label ? (
+              <div className="rounded-xl border border-border bg-surface px-4 py-3">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Product share</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {snapshot.product_label}{" "}
+                  <span className="text-lg text-muted-foreground">
+                    {snapshot.product_share_percent.toFixed(1)}%
+                  </span>
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">This SKU only — not all brand variants</p>
+              </div>
+            ) : null}
           </div>
+          {snapshot.upper_hand?.length ? (
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-widest text-amber-700 dark:text-amber-400">
+                Where competitors lead
+              </p>
+              {snapshot.upper_hand.map((edge) => (
+                <div
+                  key={edge.brand}
+                  className="rounded-xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/30"
+                >
+                  <p className="font-medium">
+                    {edge.brand}{" "}
+                    <span className="tabular-nums text-muted-foreground">{edge.share.toFixed(1)}% share</span>
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">{edge.note}</p>
+                </div>
+              ))}
+            </div>
+          ) : null}
           <ul className="space-y-2">
             {snapshot.competitor_shares
               .filter((row) => !row.is_primary)
@@ -397,7 +431,7 @@ export function CompetitorIntelPanel({
               ))}
           </ul>
           <p className="text-xs text-muted-foreground">
-            {snapshot.competitors_detected} of {snapshot.competitors_configured} tracked competitors
+            {snapshot.competitors_detected} of {snapshot.competitors_configured} category competitors
             present on shelf
           </p>
         </div>
@@ -409,17 +443,38 @@ export function CompetitorIntelPanel({
 export function ShareOfShelfPanel({ data, loading }: { data?: ScanResult; loading?: boolean }) {
   const brands = data?.charts?.top_brands ?? [];
   const topShare = shareOfShelfTopBrand(data);
+  const s = data?.summary;
+  const brandShare = s?.brand_share_percent;
+  const productShare = s?.product_share_percent;
 
   return (
     <div className="card-surface p-5 sm:p-6">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-semibold tracking-tight">Share of shelf</h3>
-        {topShare !== undefined && (
-          <Badge className="rounded-full bg-brand-soft text-brand hover:bg-brand-soft">
-            Top brand {topShare.toFixed(0)}%
-          </Badge>
-        )}
+        <div className="flex flex-wrap gap-2">
+          {brandShare !== undefined && (
+            <Badge className="rounded-full bg-brand-soft text-brand hover:bg-brand-soft">
+              Brand {brandShare.toFixed(1)}%
+            </Badge>
+          )}
+          {productShare !== undefined && s?.product_share_label && (
+            <Badge variant="secondary" className="rounded-full tabular-nums">
+              {s.product_share_label} {productShare.toFixed(1)}%
+            </Badge>
+          )}
+          {brandShare === undefined && topShare !== undefined && (
+            <Badge className="rounded-full bg-brand-soft text-brand hover:bg-brand-soft">
+              Top brand {topShare.toFixed(0)}%
+            </Badge>
+          )}
+        </div>
       </div>
+      {(brandShare !== undefined || productShare !== undefined) && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Brand share counts every facing for that brand. Product share counts only the planogram SKU
+          (e.g. Colgate Max Fresh), not other Colgate variants.
+        </p>
+      )}
       {loading ? (
         <div className="mt-4 space-y-2">
           {[0, 1, 2].map((i) => (

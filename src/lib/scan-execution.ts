@@ -69,7 +69,7 @@ export function shareOfShelfTopBrand(result?: ScanResult | null): number | undef
 export function buildKpiStrip(result?: ScanResult | null): ExecutionKpi[] {
   const s = result?.summary;
   const planogram = result?.planogram?.sku_match_percent ?? result?.planogram?.percent ?? s?.shelf_compliance;
-  return [
+  const kpis: ExecutionKpi[] = [
     {
       key: "availability",
       label: "Availability",
@@ -82,12 +82,34 @@ export function buildKpiStrip(result?: ScanResult | null): ExecutionKpi[] {
       value: planogram !== null && planogram !== undefined ? `${Math.round(planogram)}%` : "Not configured",
       numeric: planogram ?? undefined,
     },
-    {
+  ];
+
+  if (s?.brand_share_percent !== undefined) {
+    kpis.push({
+      key: "brand_share",
+      label: "Brand share",
+      value: formatPercent(s.brand_share_percent) ?? "—",
+      numeric: s.brand_share_percent,
+    });
+  }
+  if (s?.product_share_percent !== undefined) {
+    kpis.push({
+      key: "product_share",
+      label: "Product share",
+      value: formatPercent(s.product_share_percent) ?? "—",
+      numeric: s.product_share_percent,
+    });
+  }
+  if (s?.brand_share_percent === undefined && s?.product_share_percent === undefined) {
+    kpis.push({
       key: "share",
       label: "Shelf share",
       value: formatPercent(s?.share_of_shelf_percent ?? shareOfShelfTopBrand(result)) ?? "—",
       numeric: s?.share_of_shelf_percent ?? shareOfShelfTopBrand(result),
-    },
+    });
+  }
+
+  kpis.push(
     {
       key: "facing",
       label: "Facing",
@@ -100,7 +122,9 @@ export function buildKpiStrip(result?: ScanResult | null): ExecutionKpi[] {
       value: formatPercent(s?.placement_compliance_percent) ?? "—",
       numeric: s?.placement_compliance_percent,
     },
-  ];
+  );
+
+  return kpis;
 }
 
 export function buildActionCenterItems(result?: ScanResult | null): ActionCenterItem[] {

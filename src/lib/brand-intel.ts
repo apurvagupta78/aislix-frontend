@@ -18,12 +18,23 @@ export type CompetitorShareRow = {
   is_competitor?: boolean;
 };
 
+export type CompetitorUpperHand = {
+  brand: string;
+  share: number;
+  note: string;
+};
+
 export type CompetitorSnapshot = {
   primary_brand: string;
   own_brand_share_percent: number;
+  /** Share for a specific planogram SKU (e.g. Colgate Max Fresh only — not all Colgate). */
+  product_share_percent?: number;
+  product_label?: string;
   competitor_shares: CompetitorShareRow[];
   competitors_detected: number;
   competitors_configured: number;
+  /** Competitors leading shelf share vs the primary brand. */
+  upper_hand?: CompetitorUpperHand[];
 };
 
 const emptyConfig = (): BrandConfig => ({ primary_brand: "", competitor_brands: [] });
