@@ -10,12 +10,14 @@ import {
   sanitizeUserMessage,
 } from "@/lib/api-errors";
 
-const API = import.meta.env.VITE_AISLIX_API_URL?.replace(/\/$/, "");
+const API = (
+  import.meta.env.VITE_AISLIX_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://aislix-backend-production.up.railway.app"
+).replace(/\/$/, "");
 
 export const DEFAULT_SAMPLE_ID = "toothpaste-a1l";
-export const DEFAULT_SAMPLE_IMAGE = API
-  ? `${API}/landing/samples/${DEFAULT_SAMPLE_ID}/image`
-  : "";
+export const DEFAULT_SAMPLE_IMAGE = `${API}/landing/samples/${DEFAULT_SAMPLE_ID}/image`;
 
 const SESSION_ID_KEY = "aislix_landing_session_id";
 const RESULT_KEY = "aislix_landing_scan_result";

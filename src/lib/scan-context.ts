@@ -183,6 +183,32 @@ function filteredBrandShare(
     .sort((a, b) => b.share - a.share);
 }
 
+function computePlanogramMatch(
+  inventory: NonNullable<ScanResult["inventory"]>,
+  rows: PlanogramRow[],
+): { sku_match_percent: number; qty_compliance_percent: number } {
+  if (!rows.length) return { sku_match_percent: 0, qty_compliance_percent: 0 };
+
+  const qtyByKey = new Map<string, number>();
+  for (const item of inventory) {
+    qtyByKey.set(planogramKey(item), item.quantity ?? 0);
+  }
+
+  let present = 0;
+  let qtyScore = 0;
+  for (const row of rows) {
+    const qty = qtyByKey.get(planogramKey(row)) ?? 0;
+    if (qty > 0) present += 1;
+    const expected = Math.max(1, row.expected_qty ?? 1);
+    qtyScore += Math.min(qty, expected) / expected;
+  }
+
+  return {
+    sku_match_percent: Math.round((present / rows.length) * 100),
+    qty_compliance_percent: Math.round((qtyScore / rows.length) * 100),
+  };
+}
+
 /** Apply focus filter + planogram pricing to a scan result (client-side). */
 export function applyScanContext(result: ScanResult, ctx: ScanContextState): ScanResult {
   const hasFocus = Boolean(ctx.focus.company || ctx.focus.brand || ctx.focus.product);
@@ -215,10 +241,20 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
       ? { ...result.charts, top_brands: topBrands }
       : result.charts,
     planogram: hasPlanogram
-      ? {
-          ...result.planogram,
-          requested: true,
-        }
+      ? (() => {
+          const match = computePlanogramMatch(inventory, ctx.planogramRows);
+          return {
+            requested: true,
+            percent: match.sku_match_percent,
+            sku_match_percent: match.sku_match_percent,
+            qty_compliance_percent: match.qty_compliance_percent,
+            summary: {
+              ...(result.planogram?.summary ?? {}),
+              expected_sku_count: ctx.planogramRows.length,
+              source: "demo_planogram",
+            },
+          };
+        })()
       : result.planogram,
   };
 }

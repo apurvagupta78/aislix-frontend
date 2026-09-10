@@ -112,11 +112,28 @@ export function DemoScanResultsBody({
               return showPlanogramStub || data.planogram?.requested ? (
                 <div key={key} className="card-surface p-4 text-sm">
                   <h3 className="font-semibold tracking-tight">Planogram compliance</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {data.planogram?.sku_match_percent != null
-                      ? `${Math.round(data.planogram.sku_match_percent)}% SKU match`
-                      : "Add a planogram above to compare expected vs detected products."}
-                  </p>
+                  {data.planogram?.sku_match_percent != null ? (
+                    <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                      <p>
+                        <span className="font-medium text-foreground">
+                          {Math.round(data.planogram.sku_match_percent)}% SKU match
+                        </span>
+                        {data.planogram.qty_compliance_percent != null
+                          ? ` · ${Math.round(data.planogram.qty_compliance_percent)}% quantity compliance`
+                          : null}
+                      </p>
+                      {typeof data.planogram.summary?.expected_sku_count === "number" ? (
+                        <p>
+                          Compared {data.planogram.summary.expected_sku_count} expected SKUs from your
+                          planogram against detected shelf inventory.
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Add a planogram in the setup panel to compare expected vs detected products.
+                    </p>
+                  )}
                 </div>
               ) : null;
             case "inventory":

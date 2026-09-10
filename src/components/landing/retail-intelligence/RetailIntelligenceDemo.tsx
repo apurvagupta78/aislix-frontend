@@ -22,6 +22,7 @@ import {
   runLandingUpload,
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
+import { EMPTY_SCAN_CONTEXT, type ScanContextState } from "@/lib/scan-context";
 import { LANDING_SAMPLE_EVENT, LANDING_UPLOAD_EVENT } from "./HeroSection";
 import { LeadCaptureSection } from "./LeadCaptureSection";
 import { networkErrorMessage } from "@/lib/api-errors";
@@ -53,12 +54,19 @@ export function RetailIntelligenceDemo() {
   const [elapsedSec, setElapsedSec] = useState<number | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [setupMode, setSetupMode] = useState<SetupMode>(null);
+  const [scanContext, setScanContext] = useState<ScanContextState>(EMPTY_SCAN_CONTEXT);
   const objectUrlRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const demoCardRef = useRef<HTMLDivElement>(null);
 
+  const subCategoryLabel = demoCategory.categories
+    .find((c) => c.name === demoCategory.state.categoryName)
+    ?.subcategories?.find((s) => s.id === demoCategory.state.subId)?.label;
+
   function scrollToDemo() {
-    demoCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.requestAnimationFrame(() => {
+      demoCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function beginSampleSetup() {
@@ -69,7 +77,9 @@ export function RetailIntelligenceDemo() {
     setPendingFile(null);
     setSetupMode("sample");
     setPreviewImageUrl(DEFAULT_SAMPLE_IMAGE);
+    setScanContext(EMPTY_SCAN_CONTEXT);
     setError(null);
+    setResult(null);
     setPhase("idle");
     demoCategory.setState({
       categoryName: DEFAULT_DEMO_CATEGORY,
@@ -99,7 +109,6 @@ export function RetailIntelligenceDemo() {
     setPhase("scanning");
     trackLandingEvent("demo_scan_started", { kind });
     const startedAt = Date.now();
-
     const minVisible = new Promise<void>((resolve) => setTimeout(resolve, MIN_SCAN_MS));
 
     try {
@@ -108,9 +117,9 @@ export function RetailIntelligenceDemo() {
           ? runLandingSample(DEFAULT_SAMPLE_ID, loadLandingSessionId() ?? undefined)
           : file
             ? runLandingUpload(file, {
-              ...demoCategory.context,
-              landingSessionId: loadLandingSessionId() ?? undefined,
-            })
+                ...demoCategory.context,
+                landingSessionId: loadLandingSessionId() ?? undefined,
+              })
             : Promise.resolve(null),
         minVisible,
       ]);
@@ -156,7 +165,9 @@ export function RetailIntelligenceDemo() {
     setPreviewImageUrl(url);
     setPendingFile(file);
     setSetupMode("upload");
+    setScanContext(EMPTY_SCAN_CONTEXT);
     setError(null);
+    setResult(null);
     setPhase("idle");
     demoCategory.setState(EMPTY_DEMO_CATEGORY_STATE);
     scrollToDemo();
@@ -164,6 +175,26 @@ export function RetailIntelligenceDemo() {
 
   const shownImage = phase === "done" && result ? (imageSrc(result) ?? previewImageUrl) : previewImageUrl;
   const scanning = phase === "scanning";
+  const sessionActive = setupMode !== null || scanning || phase === "done";
+
+  const setupPanel =
+    setupMode && (phase === "idle" || phase === "error") ? (
+      <DemoScanSetupPanel
+        mode={setupMode}
+        state={demoCategory.state}
+        onChange={demoCategory.setState}
+        categories={demoCategory.categories}
+        ready={demoCategory.ready}
+        disabled={scanning}
+        scanContext={scanContext}
+        onScanContextChange={setScanContext}
+        defaultCategory={demoCategory.state.categoryName}
+        defaultSubCategory={subCategoryLabel}
+        onStart={() =>
+          void run(setupMode, setupMode === "upload" ? (pendingFile ?? undefined) : undefined)
+        }
+      />
+    ) : null;
 
   return (
     <>
@@ -231,80 +262,57 @@ export function RetailIntelligenceDemo() {
                 </div>
               )}
 
-              {phase === "error" && (
-                <div>
-                  <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
-                    <AlertCircle className="mt-0.5 size-4 shrink-0" />
-                    <span>{error}</span>
-                  </div>
-                  {setupMode ? (
-                    <DemoScanSetupPanel
-                      mode={setupMode}
-                      state={demoCategory.state}
-                      onChange={demoCategory.setState}
-                      categories={demoCategory.categories}
-                      ready={demoCategory.ready}
-                      onStart={() =>
-                        void run(setupMode, setupMode === "upload" ? pendingFile ?? undefined : undefined)
-                      }
-                    />
-                  ) : (
-                    <EmptyResults />
-                  )}
+              {phase === "error" && error ? (
+                <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                  <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                  <span>{error}</span>
                 </div>
-              )}
+              ) : null}
 
-              {phase === "idle" && setupMode && (
-                <DemoScanSetupPanel
-                  mode={setupMode}
-                  state={demoCategory.state}
-                  onChange={demoCategory.setState}
-                  categories={demoCategory.categories}
-                  ready={demoCategory.ready}
-                  onStart={() =>
-                    void run(setupMode, setupMode === "upload" ? pendingFile ?? undefined : undefined)
-                  }
-                />
-              )}
+              {!scanning && setupPanel}
 
-              {phase === "idle" && !setupMode && <EmptyResults />}
+              {!scanning && phase === "idle" && !setupMode ? <EmptyResults /> : null}
 
-              {phase === "done" && result && (
+              {!scanning && phase === "done" && result ? (
                 <DemoRoleResultsPanel
                   result={result}
                   elapsedSec={elapsedSec}
+                  scanContext={scanContext}
+                  onScanContextChange={setScanContext}
                   defaultCategory={demoCategory.state.categoryName}
-                  defaultSubCategory={
-                    demoCategory.categories
-                      .find((c) => c.name === demoCategory.state.categoryName)
-                      ?.subcategories?.find((s) => s.id === demoCategory.state.subId)?.label
-                  }
+                  defaultSubCategory={subCategoryLabel}
                   onDownloadCsv={() => downloadLandingCsv(result)}
                   onWorkspaceCta={() =>
                     document.getElementById("lead")?.scrollIntoView({ behavior: "smooth", block: "center" })
                   }
                 />
-              )}
+              ) : null}
             </div>
 
-            {shownImage ? (
+            {sessionActive ? (
               <div className="relative border-t border-border bg-surface px-4 py-5 sm:px-6 sm:py-6">
                 <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   {phase === "done" ? "Annotated shelf photo" : "Shelf photo"}
                 </p>
                 <div className="relative mx-auto max-w-3xl">
-                  <img
-                    src={shownImage}
-                    alt={phase === "done" ? "Shelf photo analyzed by Aislix" : "Sample toothpaste shelf"}
-                    className="mx-auto max-h-[min(52vh,520px)] w-full rounded-lg object-contain"
-                  />
-                  {scanning && (
+                  {shownImage ? (
+                    <img
+                      src={shownImage}
+                      alt={phase === "done" ? "Shelf photo analyzed by Aislix" : "Sample toothpaste shelf"}
+                      className="mx-auto max-h-[min(52vh,520px)] w-full rounded-lg object-contain"
+                    />
+                  ) : (
+                    <div className="grid min-h-48 place-items-center rounded-lg border border-dashed border-border bg-muted/30 px-6 text-center">
+                      <p className="text-sm text-muted-foreground">Loading shelf photo…</p>
+                    </div>
+                  )}
+                  {scanning && shownImage ? (
                     <div className="absolute inset-0 rounded-lg bg-brand/15">
                       <Badge className="absolute left-3 top-3 gap-2 rounded-md bg-brand px-3 py-2 text-brand-foreground">
                         <Loader2 className="size-3.5 animate-spin" /> Analyzing shelf…
                       </Badge>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               </div>
             ) : (
@@ -330,8 +338,9 @@ function EmptyResults() {
   return (
     <div className="grid min-h-48 place-items-center py-8 text-center">
       <p className="max-w-md text-sm text-muted-foreground">
-        Choose the sample shelf or upload your photo above — then confirm category and start
-        scanning. Execution, merchandising, brand, and executive views will appear here.
+        Choose the sample shelf or upload your photo above — then confirm category, optionally add a
+        planogram, and start scanning. Execution, merchandising, brand, and executive views will
+        appear here.
       </p>
     </div>
   );
