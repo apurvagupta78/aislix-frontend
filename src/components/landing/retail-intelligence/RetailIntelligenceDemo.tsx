@@ -3,13 +3,12 @@ import { AlertCircle, ImagePlus, Loader2, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  DemoCategoryPicker,
   DEFAULT_DEMO_CATEGORY,
   DEFAULT_DEMO_SUBCATEGORY,
   EMPTY_DEMO_CATEGORY_STATE,
   useDemoCategory,
-
 } from "@/components/scan/DemoCategoryPicker";
+import { DemoScanSetupPanel } from "@/components/scan/DemoScanSetupPanel";
 import { DemoRoleResultsPanel } from "@/components/scan/DemoRoleResultsPanel";
 import { ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
 import { trackLandingEvent } from "@/lib/landing-analytics";
@@ -28,6 +27,7 @@ import { LeadCaptureSection } from "./LeadCaptureSection";
 import { networkErrorMessage } from "@/lib/api-errors";
 
 type Phase = "idle" | "scanning" | "done" | "error";
+type SetupMode = null | "sample" | "upload";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const MIN_SCAN_MS = 8_000;
@@ -52,16 +52,35 @@ export function RetailIntelligenceDemo() {
   const [error, setError] = useState<string | null>(null);
   const [elapsedSec, setElapsedSec] = useState<number | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [isSampleFlow, setIsSampleFlow] = useState(true);
+  const [setupMode, setSetupMode] = useState<SetupMode>(null);
   const objectUrlRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const pickerRef = useRef<HTMLDivElement>(null);
+  const demoCardRef = useRef<HTMLDivElement>(null);
 
+  function scrollToDemo() {
+    demoCardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function beginSampleSetup() {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+    setPendingFile(null);
+    setSetupMode("sample");
+    setPreviewImageUrl(DEFAULT_SAMPLE_IMAGE);
+    setError(null);
+    setPhase("idle");
+    demoCategory.setState({
+      categoryName: DEFAULT_DEMO_CATEGORY,
+      subId: DEFAULT_DEMO_SUBCATEGORY,
+      customSub: "",
+    });
+    scrollToDemo();
+  }
 
   useEffect(() => {
-    setPreviewImageUrl(DEFAULT_SAMPLE_IMAGE);
-
-    const handleSample = () => void run("sample");
+    const handleSample = () => beginSampleSetup();
     const handleUpload = () => fileRef.current?.click();
     window.addEventListener(LANDING_SAMPLE_EVENT, handleSample);
     window.addEventListener(LANDING_UPLOAD_EVENT, handleUpload);
@@ -120,22 +139,6 @@ export function RetailIntelligenceDemo() {
     }
   }
 
-  function onSample() {
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-      objectUrlRef.current = null;
-    }
-    setPendingFile(null);
-    setIsSampleFlow(true);
-    setPreviewImageUrl(DEFAULT_SAMPLE_IMAGE);
-    demoCategory.setState({
-      categoryName: DEFAULT_DEMO_CATEGORY,
-      subId: DEFAULT_DEMO_SUBCATEGORY,
-      customSub: "",
-    });
-    void run("sample");
-  }
-
   function onFile(file: File) {
     if (!/^image\/(jpeg|png)$/.test(file.type)) {
       setError("Please upload a JPEG or PNG shelf photo.");
@@ -152,11 +155,11 @@ export function RetailIntelligenceDemo() {
     objectUrlRef.current = url;
     setPreviewImageUrl(url);
     setPendingFile(file);
-    setIsSampleFlow(false);
+    setSetupMode("upload");
     setError(null);
     setPhase("idle");
     demoCategory.setState(EMPTY_DEMO_CATEGORY_STATE);
-    pickerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    scrollToDemo();
   }
 
   const shownImage = phase === "done" && result ? (imageSrc(result) ?? previewImageUrl) : previewImageUrl;
@@ -174,60 +177,35 @@ export function RetailIntelligenceDemo() {
             </p>
           </div>
 
-          <div ref={pickerRef}>
-            <DemoCategoryPicker
-              state={demoCategory.state}
-              onChange={demoCategory.setState}
-              categories={demoCategory.categories}
-              disabled={scanning}
-            />
-          </div>
-          {pendingFile && !demoCategory.ready && (
-            <p className="mt-2 text-center text-xs text-destructive">
-              Select category and sub-category for your shelf before analyzing.
-            </p>
-          )}
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-            {isSampleFlow ? (
-              <>
-                <Button
-                  size="xl"
-                  className="min-h-11 w-full bg-accent-green text-brand-foreground hover:bg-accent-green/90 sm:w-auto"
-                  disabled={scanning}
-                  onClick={onSample}
-                >
-                  <Sparkles className="size-4" /> Try Sample Shelf
-                </Button>
-                <Button
-                  variant="outline"
-                  size="xl"
-                  className="min-h-11 w-full sm:w-auto"
-                  disabled={scanning}
-                  onClick={() => fileRef.current?.click()}
-                >
-                  <ImagePlus className="size-4" /> Upload Shelf Photo
-                </Button>
-              </>
+            <Button
+              size="xl"
+              className="min-h-11 w-full bg-accent-green text-brand-foreground hover:bg-accent-green/90 sm:w-auto"
+              disabled={scanning}
+              onClick={beginSampleSetup}
+            >
+              <Sparkles className="size-4" /> Try Sample Shelf
+            </Button>
+            {setupMode === "upload" ? (
+              <Button
+                variant="outline"
+                size="xl"
+                className="min-h-11 w-full sm:w-auto"
+                disabled={scanning}
+                onClick={() => fileRef.current?.click()}
+              >
+                <ImagePlus className="size-4" /> Change Photo
+              </Button>
             ) : (
-              <>
-                <Button
-                  variant="outline"
-                  size="xl"
-                  className="min-h-11 w-full sm:w-auto"
-                  disabled={scanning}
-                  onClick={() => fileRef.current?.click()}
-                >
-                  <ImagePlus className="size-4" /> Change Photo
-                </Button>
-                <Button
-                  size="xl"
-                  className="min-h-11 w-full bg-accent-green text-brand-foreground hover:bg-accent-green/90 sm:w-auto"
-                  disabled={scanning || !demoCategory.ready}
-                  onClick={() => void run("upload", pendingFile!)}
-                >
-                  <Sparkles className="size-4" /> Analyze My Shelf
-                </Button>
-              </>
+              <Button
+                variant="outline"
+                size="xl"
+                className="min-h-11 w-full sm:w-auto"
+                disabled={scanning}
+                onClick={() => fileRef.current?.click()}
+              >
+                <ImagePlus className="size-4" /> Upload Shelf Photo
+              </Button>
             )}
             <input
               ref={fileRef}
@@ -242,8 +220,10 @@ export function RetailIntelligenceDemo() {
             />
           </div>
 
-
-          <div className="mt-8 overflow-hidden rounded-lg border border-border bg-card shadow-lift">
+          <div
+            ref={demoCardRef}
+            className="mt-8 overflow-hidden rounded-lg border border-border bg-card shadow-lift"
+          >
             <div className="p-4 sm:p-6 lg:p-8">
               {scanning && (
                 <div className="grid min-h-48 place-items-center py-8">
@@ -252,22 +232,42 @@ export function RetailIntelligenceDemo() {
               )}
 
               {phase === "error" && (
-                <div className="grid min-h-48 place-items-center py-8 text-center">
-                  <div>
-                    <AlertCircle className="mx-auto size-6 text-destructive" />
-                    <p className="mt-3 text-sm text-foreground">{error}</p>
+                <div>
+                  <div className="mb-4 flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                    <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                    <span>{error}</span>
                   </div>
+                  {setupMode ? (
+                    <DemoScanSetupPanel
+                      mode={setupMode}
+                      state={demoCategory.state}
+                      onChange={demoCategory.setState}
+                      categories={demoCategory.categories}
+                      ready={demoCategory.ready}
+                      onStart={() =>
+                        void run(setupMode, setupMode === "upload" ? pendingFile ?? undefined : undefined)
+                      }
+                    />
+                  ) : (
+                    <EmptyResults />
+                  )}
                 </div>
               )}
 
-              {phase === "idle" && (
-                <div className="grid min-h-48 place-items-center py-8 text-center">
-                  <p className="max-w-md text-sm text-muted-foreground">
-                    Run a sample or upload a photo — execution, merchandising, brand, and executive
-                    views will appear here with the same panels as a full workspace scan.
-                  </p>
-                </div>
+              {phase === "idle" && setupMode && (
+                <DemoScanSetupPanel
+                  mode={setupMode}
+                  state={demoCategory.state}
+                  onChange={demoCategory.setState}
+                  categories={demoCategory.categories}
+                  ready={demoCategory.ready}
+                  onStart={() =>
+                    void run(setupMode, setupMode === "upload" ? pendingFile ?? undefined : undefined)
+                  }
+                />
               )}
+
+              {phase === "idle" && !setupMode && <EmptyResults />}
 
               {phase === "done" && result && (
                 <DemoRoleResultsPanel
@@ -323,5 +323,16 @@ export function RetailIntelligenceDemo() {
 
       <LeadCaptureSection landingSessionId={result?.landing_session_id ?? loadLandingSessionId()} />
     </>
+  );
+}
+
+function EmptyResults() {
+  return (
+    <div className="grid min-h-48 place-items-center py-8 text-center">
+      <p className="max-w-md text-sm text-muted-foreground">
+        Choose the sample shelf or upload your photo above — then confirm category and start
+        scanning. Execution, merchandising, brand, and executive views will appear here.
+      </p>
+    </div>
   );
 }
