@@ -6,7 +6,6 @@ import { trackLandingEvent } from "@/lib/landing-analytics";
 import {
   DEFAULT_SAMPLE_ID,
   DEFAULT_SAMPLE_IMAGE,
-  downloadLandingCsv,
   loadLandingSessionId,
   persistLandingSession,
   runLandingSample,
@@ -313,7 +312,6 @@ export function LiveDemoSection({
                   onScanContextChange={setScanContext}
                   defaultCategory={demoCategory.state.categoryName}
                   defaultSubCategory={subCategoryLabel}
-                  onDownloadCsv={() => downloadLandingCsv(result)}
                   previewImageUrl={previewImageUrl}
                   onWorkspaceCta={() =>
                     document.querySelector("#lead")?.scrollIntoView({ behavior: "smooth" })

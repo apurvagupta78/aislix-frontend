@@ -15,7 +15,6 @@ import { trackLandingEvent } from "@/lib/landing-analytics";
 import {
   DEFAULT_SAMPLE_ID,
   DEFAULT_SAMPLE_IMAGE,
-  downloadLandingCsv,
   loadLandingSessionId,
   persistLandingSession,
   runLandingSample,
@@ -282,7 +281,6 @@ export function RetailIntelligenceDemo() {
                   defaultCategory={demoCategory.state.categoryName}
                   defaultSubCategory={subCategoryLabel}
                   previewImageUrl={previewImageUrl}
-                  onDownloadCsv={() => downloadLandingCsv(result)}
                   onWorkspaceCta={() =>
                     document.getElementById("lead")?.scrollIntoView({ behavior: "smooth", block: "center" })
                   }

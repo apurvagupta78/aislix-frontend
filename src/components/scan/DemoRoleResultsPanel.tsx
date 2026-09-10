@@ -14,11 +14,13 @@ import type { ResultViewMode } from "@/lib/customer-context";
 import { landingToScanResult } from "@/lib/demo-execution";
 import type { LandingScanResult } from "@/lib/landing-scan-api";
 import { trackLandingEvent } from "@/lib/landing-analytics";
+import { downloadDemoFullReportCsv } from "@/lib/scan-results";
 
 type DemoRoleResultsPanelProps = {
   result: LandingScanResult;
   elapsedSec?: number | null;
   showWorkspaceCta?: boolean;
+  /** @deprecated — panel builds full CSV from enriched scan data internally */
   onDownloadCsv?: () => void;
   onWorkspaceCta?: () => void;
   scanContext?: ScanContextState;
@@ -102,13 +104,13 @@ export function DemoRoleResultsPanel({
           variant="outline"
           size="sm"
           className="w-full sm:w-auto"
-          disabled={!onDownloadCsv}
           onClick={() => {
             trackLandingEvent("cta_click", { location: "download_csv" });
-            onDownloadCsv?.();
+            if (onDownloadCsv) onDownloadCsv();
+            else downloadDemoFullReportCsv(data);
           }}
         >
-          <Download className="size-4" /> Download CSV
+          <Download className="size-4" /> Download full report CSV
         </Button>
         {showWorkspaceCta ? (
           <Button

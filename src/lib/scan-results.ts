@@ -1014,7 +1014,11 @@ export function buildFullScanReportCsv(result: ScanResult): string {
         ["Facing compliance %", s.facing_compliance_percent ?? ""],
         ["Placement compliance %", s.placement_compliance_percent ?? ""],
         ["Share of shelf %", s.share_of_shelf_percent ?? ""],
-        ["Planogram compliance %", result.planogram?.sku_match_percent ?? result.planogram?.percent ?? ""],
+        ["Brand share %", s.brand_share_percent ?? ""],
+        ["Product share %", s.product_share_percent ?? ""],
+        ["Product share SKU", s.product_share_label ?? ""],
+        ["Planogram SKU match %", result.planogram?.sku_match_percent ?? result.planogram?.percent ?? ""],
+        ["Planogram qty compliance %", result.planogram?.qty_compliance_percent ?? ""],
         ["Confirmed OOS", s.confirmed_oos_count ?? s.out_of_stock_products ?? ""],
         ["Possible OOS / low stock", s.possible_oos_count ?? s.low_stock_products ?? ""],
         ["Placement issues", s.placement_issue_count ?? s.misplaced_products ?? ""],
@@ -1024,8 +1028,136 @@ export function buildFullScanReportCsv(result: ScanResult): string {
     );
   }
 
+  const roleSummaries =
+    result.role_summaries ??
+    (result.retail_intelligence as { role_summaries?: Record<string, string> } | undefined)
+      ?.role_summaries;
+  if (roleSummaries && Object.keys(roleSummaries).length) {
+    const roleRows: (string | number)[][] = [["View", "Summary"]];
+    for (const view of ["execution", "merchandising", "brand", "executive"] as const) {
+      const text = roleSummaries[view]?.trim();
+      if (text) roleRows.push([view, text]);
+    }
+    if (roleRows.length > 1) {
+      push(...csvSection("Role summaries (all 4 views)", roleRows));
+    }
+  }
+
   if (result.executive_summary?.trim()) {
     push(`# Executive summary`, csvEscape(result.executive_summary.trim()));
+  }
+
+  const pgSummary = result.planogram?.summary ?? {};
+  const pgLines = pgSummary.lines;
+  if (Array.isArray(pgLines) && pgLines.length) {
+    push(
+      ...csvSection("Planogram compliance (expected vs found)", [
+        ["Brand", "Product", "Expected qty", "Found qty", "Status", "Detail"],
+        ...pgLines.map((line) => {
+          const row = line as Record<string, unknown>;
+          return [
+            String(row.brand ?? ""),
+            String(row.product ?? ""),
+            row.expected_qty ?? "",
+            row.detected_qty ?? "",
+            String(row.issue_type ?? ""),
+            String(row.detail ?? ""),
+          ];
+        }),
+      ]),
+    );
+  }
+
+  const configured = pgSummary.configured_rows;
+  if (Array.isArray(configured) && configured.length) {
+    push(
+      ...csvSection("Planogram configuration", [
+        [
+          "Location",
+          "Category",
+          "Sub category",
+          "Brand",
+          "Product",
+          "Variant",
+          "Expected qty",
+          "Price INR",
+          "Daily sales",
+          "SKU",
+          "Shelf position",
+        ],
+        ...configured.map((row) => {
+          const r = row as Record<string, unknown>;
+          return [
+            r.location ?? "",
+            r.category ?? "",
+            r.sub_category ?? "",
+            r.brand ?? "",
+            r.product_name ?? "",
+            r.variant ?? "",
+            r.expected_qty ?? "",
+            r.mrp_inr ?? "",
+            r.avg_daily_sales ?? "",
+            r.sku ?? "",
+            r.shelf_position ?? "",
+          ];
+        }),
+      ]),
+    );
+  }
+
+  const ci = result.competitor_intel;
+  if (ci?.competitor_shares?.length) {
+    push(
+      ...csvSection("Competitor intelligence", [
+        ["Brand", "Share %", "Facings", "Role"],
+        ...ci.competitor_shares.map((row) => [
+          row.brand,
+          row.share?.toFixed?.(1) ?? row.share ?? "",
+          row.facings ?? "",
+          row.is_primary ? "Primary" : row.is_competitor ? "Competitor" : "",
+        ]),
+      ]),
+    );
+    if (ci.upper_hand?.length) {
+      push(
+        ...csvSection("Competitor upper hand", [
+          ["Brand", "Share %", "Note"],
+          ...ci.upper_hand.map((edge) => [edge.brand, edge.share, edge.note]),
+        ]),
+      );
+    }
+  }
+
+  const threshold = s?.low_stock_threshold ?? 2;
+  const atRisk = (result.inventory ?? []).filter((r) => (r.quantity ?? 0) < threshold);
+  if (atRisk.length) {
+    push(
+      ...csvSection(`SKUs below ${threshold} facings (OOS / low stock)`, [
+        ["Brand", "Product", "Variant", "Quantity"],
+        ...atRisk.map((r) => [
+          r.brand,
+          r.product ?? r.product_name ?? "",
+          r.variant ?? "",
+          r.quantity ?? 0,
+        ]),
+      ]),
+    );
+  }
+
+  const nba = result.retail_intelligence?.next_best_actions;
+  if (nba?.length) {
+    push(
+      ...csvSection("Next best actions", [
+        ["Priority", "Title", "Reason", "Recommended action", "Est. daily impact INR"],
+        ...nba.map((a) => [
+          a.priority,
+          a.title,
+          a.reason ?? "",
+          a.recommended_action ?? "",
+          a.estimated_daily_impact_inr ?? "",
+        ]),
+      ]),
+    );
   }
 
   const fi = result.financial_impact;
@@ -1277,6 +1409,15 @@ export async function downloadScanAnnotatedImage(
     annotated,
 
     "No annotated image is available for this scan yet.",
+  );
+}
+
+/** Download combined KPI + inventory CSV for demo / guest results (all 4 role views). */
+export function downloadDemoFullReportCsv(result: ScanResult): void {
+  downloadBlob(
+    buildFullScanReportCsv(result),
+    `aislix-${result.scan_id || "demo"}-full-report.csv`,
+    "text/csv;charset=utf-8",
   );
 }
 
