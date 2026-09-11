@@ -172,7 +172,13 @@ export function computeRetailExecutionScore(result?: ScanResult | null): RetailE
   const kpis = buildKpiMetrics(result);
   const byKey = Object.fromEntries(kpis.map((k) => [k.key, k]));
   const planoConfigured = planogramIsConfigured(result);
-  const weights = planoConfigured ? SCORE_WEIGHTS_WITH_PLANO : SCORE_WEIGHTS_NO_PLANO;
+  const weightMap = planoConfigured ? SCORE_WEIGHTS_WITH_PLANO : SCORE_WEIGHTS_NO_PLANO;
+  const weights = {
+    availability: weightMap.availability ?? 0,
+    planogram: weightMap.planogram ?? 0,
+    facing: weightMap.facing ?? 0,
+    placement: weightMap.placement ?? 0,
+  };
 
   const components: ScoreComponent[] = [];
   if (byKey.availability?.state === "available" || byKey.availability?.state === "estimated") {
