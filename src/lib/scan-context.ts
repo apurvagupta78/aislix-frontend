@@ -520,7 +520,7 @@ function inventoryCatalogSummary(inventory: NonNullable<ScanResult["inventory"]>
   const lines = sorted.map(
     (row) => `${skuLabel(row)}: ${row.quantity ?? 0} facing${(row.quantity ?? 0) === 1 ? "" : "s"}`,
   );
-  return `Complete inventory (${inventory.length} SKU groups): ${lines.join("; ")}.`;
+  return `Observed shelf products (${inventory.length} visual groups): ${lines.join("; ")}.`;
 }
 
 function topBrandSummary(inventory: NonNullable<ScanResult["inventory"]>): string {

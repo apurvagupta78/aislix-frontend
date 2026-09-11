@@ -92,8 +92,12 @@ export type ScanSummary = {
   total_facings?: number;
   /** Share of shelf / bbox utilization percent (legacy — prefer brand_share_percent). */
   share_of_shelf_percent?: number;
-  /** All facings for the planogram/focus brand as % of total shelf facings. */
+  /** All facings for the planogram/focus brand as % of scoped shelf facings. */
   brand_share_percent?: number;
+  brand_share_scope?: string;
+  brand_share_denominator?: number;
+  brand_share_denominator_definition?: string;
+  identified_brand_count?: number;
   /** Facings for the specific planogram product SKU as % of total shelf facings. */
   product_share_percent?: number;
   product_share_label?: string;
@@ -721,6 +725,21 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
     ...(metricsNum("brand_share_percent") !== undefined
       ? { brand_share_percent: metricsNum("brand_share_percent") }
       : {}),
+    ...((result?.metrics as any)?.brand_share_scope
+      ? { brand_share_scope: String((result?.metrics as any).brand_share_scope) }
+      : {}),
+    ...(metricsNum("brand_share_denominator") !== undefined
+      ? { brand_share_denominator: metricsNum("brand_share_denominator") }
+      : {}),
+    ...(typeof (result?.metrics as any)?.brand_share_denominator_definition === "string"
+      ? {
+          brand_share_denominator_definition: (result?.metrics as any)
+            .brand_share_denominator_definition as string,
+        }
+      : {}),
+    ...(typeof (result?.metrics as any)?.identified_brand_count === "number"
+      ? { identified_brand_count: Number((result?.metrics as any).identified_brand_count) }
+      : {}),
     ...(metricsNum("product_share_percent") !== undefined
       ? { product_share_percent: metricsNum("product_share_percent") }
       : {}),
@@ -1277,7 +1296,10 @@ export function buildFullScanReportCsv(result: ScanResult): string {
     );
   }
 
-  push("# Complete inventory", inventoryToCsv(result.inventory ?? []).split("\n").slice(1).join("\n"));
+  push(
+    "# Observed shelf products (visible facings)",
+    inventoryToCsv(result.inventory ?? []).split("\n").slice(1).join("\n"),
+  );
   return lines.join("\n");
 }
 
@@ -1287,7 +1309,7 @@ export function inventoryToCsv(items: InventoryItem[]): string {
     "Product",
     "Variant",
     "Category",
-    "Quantity",
+    "Visible facings",
     "Confidence %",
     "Compliance Alert",
     "Compliance Note",
@@ -1502,7 +1524,7 @@ export function buildFullScanReportExcel(result: ScanResult): ArrayBuffer {
       "Product",
       "Variant",
       "Category",
-      "Quantity",
+      "Visible facings",
       "Confidence %",
       "Detected Sub-category",
       "Audit Sub-category",

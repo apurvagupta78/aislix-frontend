@@ -651,8 +651,8 @@ export function InventoryTable({
 
   return (
     <ResultSection
-      title="Complete inventory"
-      description="Every detection returned for this scan."
+      title="Observed shelf products"
+      description="Visual product groups detected in this capture — visible facings, not store inventory."
       actions={
         <Button
           variant="subtle"

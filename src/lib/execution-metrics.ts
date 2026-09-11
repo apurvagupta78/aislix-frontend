@@ -242,12 +242,20 @@ export function buildKpiMetrics(result?: ScanResult | null): KpiMetric[] {
   ];
 
   if (s?.brand_share_percent !== undefined && Number.isFinite(s.brand_share_percent)) {
+    const denom = s.brand_share_denominator;
+    const scopeLabel =
+      s.brand_share_scope === "eligible_category" ? "eligible category" : "full image";
+    const denomNote =
+      denom != null && Number.isFinite(denom)
+        ? ` (${formatPercent(s.brand_share_percent) ?? s.brand_share_percent}% · ${denom} ${scopeLabel} facings)`
+        : ` (${scopeLabel})`;
     kpis.push({
       key: "share_of_facings",
       label: "Share of facings",
-      value: `${formatPercent(s.brand_share_percent) ?? s.brand_share_percent}% of eligible category facings`,
+      value: `${formatPercent(s.brand_share_percent) ?? s.brand_share_percent}%${denomNote}`,
       numeric: s.brand_share_percent,
       state: "available",
+      detail: s.brand_share_denominator_definition,
     });
   }
 

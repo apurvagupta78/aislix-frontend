@@ -228,7 +228,7 @@ function DemoInventoryCompact({ rows }: { rows: LandingScanResult["inventory"] }
   return (
     <div className="card-surface overflow-hidden">
       <div className="border-b border-border px-4 py-3">
-        <h3 className="text-sm font-semibold tracking-tight">Complete inventory</h3>
+        <h3 className="text-sm font-semibold tracking-tight">Observed shelf products</h3>
         <p className="mt-0.5 text-xs text-muted-foreground">{rows.length} SKU groups detected</p>
       </div>
       <div className="max-h-[min(420px,60vh)] overflow-auto">
