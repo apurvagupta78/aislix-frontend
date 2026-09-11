@@ -647,9 +647,10 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
     unique_brands: uniqueBrands,
     // Only genuinely low-stock products; out-of-stock is reported separately.
     low_stock_products: inventory.filter((i) => i.low_stock).length,
-    ...(avgConfidence !== null && avgConfidence !== undefined && Number(avgConfidence) > 0
-      ? { average_confidence: Number(avgConfidence) }
-      : {}),
+    average_confidence:
+      avgConfidence !== null && avgConfidence !== undefined && Number(avgConfidence) > 0
+        ? Number(avgConfidence)
+        : 0,
     processing_time_ms: processingTimeMs,
     ...(scan.out_of_stock_count !== null && scan.out_of_stock_count !== undefined
       ? { out_of_stock_products: scan.out_of_stock_count }
