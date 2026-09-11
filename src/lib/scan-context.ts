@@ -911,7 +911,7 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
       assortment,
       opportunity_ledger,
       ...(execution_verification ? { execution_verification } : {}),
-    },
+    } as ScanResult["retail_intelligence"],
     summary: summaryBlock,
     charts: topBrands.length ? { ...result.charts, top_brands: topBrands } : result.charts,
     planogram: planogramBlock,
@@ -973,7 +973,7 @@ export function enrichDemoScanResult(result: ScanResult, ctx: ScanContextState):
       assortment,
       opportunity_ledger,
       ...(execution_verification ? { execution_verification } : {}),
-    },
+    } as ScanResult["retail_intelligence"],
   };
 }
 
