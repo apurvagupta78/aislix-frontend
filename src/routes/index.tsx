@@ -21,9 +21,6 @@ import { LiveDemoSection } from "@/components/landing/retail-shelf-intelligence/
 const HomeLeadCapture = lazy(() =>
   import("@/components/home/HomeLeadCapture").then((m) => ({ default: m.HomeLeadCapture })),
 );
-const HomeDashboardShowcase = lazy(() =>
-  import("@/components/home/HomeDashboardShowcase").then((m) => ({ default: m.HomeDashboardShowcase })),
-);
 import type { BillingCycle, Plan } from "@/lib/pricing";
 
 
@@ -165,15 +162,6 @@ function Landing() {
             >
               Start scanning free <ArrowRight className="size-4" />
             </Button>
-            <Button
-              variant="subtle"
-              size="xl"
-              onClick={() =>
-                document.querySelector("#live-dashboard")?.scrollIntoView({ behavior: "smooth" })
-              }
-            >
-              View live demo
-            </Button>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
             No card required · 5 free scans per day · Results in 60~90 seconds
@@ -190,12 +178,6 @@ function Landing() {
       <Suspense fallback={null}>
         <HomeLeadCapture />
       </Suspense>
-
-      <Suspense fallback={null}>
-        <HomeDashboardShowcase />
-      </Suspense>
-
-
 
       <section id="platform" className="border-t border-border py-24">
         <div className="mx-auto max-w-6xl px-6 text-center">

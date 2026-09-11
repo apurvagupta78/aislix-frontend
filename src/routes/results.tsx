@@ -11,26 +11,30 @@ import {
   Loader2,
   RefreshCw,
   ScanLine,
+  Sparkles,
 } from "lucide-react";
 import { fetchScanAssignmentId } from "@/lib/assignments";
 import { AppShell } from "@/components/AppShell";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/States";
-import { ResultSection } from "@/components/scan-results/ResultParts";
 import { FixRescanVerifyPanel } from "@/components/scan-results/FixRescanVerifyPanel";
+import { ScanResultsActionsFooter } from "@/components/scan/ScanResultsActionsFooter";
+import { AI_DISCLAIMER } from "@/components/scan/ScanProgressPanel";
 import { planHasFeature } from "@/lib/plan-features";
 import { fetchUsageSummary } from "@/lib/subscription-limits";
-import { useWorkspaceContext } from "@/hooks/use-customer-context";
-import { showCompetitorIntel, type ResultViewMode } from "@/lib/customer-context";
+import type { ResultViewMode } from "@/lib/customer-context";
 import { ScanContextPanel } from "@/components/scan/ScanContextPanel";
 import { ScanResultsBody } from "@/components/scan/DemoScanResultsBody";
 import {
-  enrichScanResult,
+  EMPTY_SCAN_CONTEXT,
+  enrichScanResultForDisplay,
+  hasActiveScanContext,
   loadStoredScanContext,
   saveStoredScanContext,
   type ScanContextState,
 } from "@/lib/scan-context";
-import { ProcessingState, ResultNavigation, ScanResultHeader } from "@/components/scan-results/ResultHeader";
+import { ProcessingState, ScanResultHeader } from "@/components/scan-results/ResultHeader";
 import { fetchScanResult } from "@/lib/scan-results";
 import { retryScanAnalysis } from "@/lib/scan-api";
 import { networkErrorMessage, sanitizeUserMessage } from "@/lib/api-errors";
@@ -106,7 +110,6 @@ function Results() {
   const data = query.data;
   const loading = !!scan && query.isPending;
   const processing = data?.status === "processing" || data?.status === "queued";
-  const workspaceQuery = useWorkspaceContext();
   const usageQuery = useQuery({
     queryKey: ["org-usage"],
     queryFn: () => fetchUsageSummary(),
@@ -119,16 +122,27 @@ function Results() {
 
   const [viewOverride, setViewOverride] = useState<ResultViewMode | undefined>();
   const [scanContext, setScanContext] = useState<ScanContextState>(() => loadStoredScanContext());
-  const activeView = viewOverride ?? workspaceQuery.data?.viewMode ?? "execution";
+  const [showOptionalPricing, setShowOptionalPricing] = useState(false);
+  const assignmentId = assignmentQuery.data ?? null;
+  const scanHadPlanogram = Boolean(data?.planogram?.requested || assignmentId);
+  const allowClientPlanogram = scanHadPlanogram || showOptionalPricing;
+
+  useEffect(() => {
+    if (!scan || scanHadPlanogram) return;
+    setShowOptionalPricing(false);
+    setScanContext(EMPTY_SCAN_CONTEXT);
+    saveStoredScanContext(EMPTY_SCAN_CONTEXT);
+  }, [scan, scanHadPlanogram]);
+
+  const activeView = viewOverride ?? "execution";
   const display = useMemo(
-    () => (data ? enrichScanResult(data, scanContext) : undefined),
-    [data, scanContext],
+    () =>
+      data
+        ? enrichScanResultForDisplay(data, scanContext, { allowClientPlanogram })
+        : undefined,
+    [data, scanContext, allowClientPlanogram],
   );
-  const competitorEnabled = showCompetitorIntel(
-    workspaceQuery.data?.customerType ?? "supermarket",
-    workspaceQuery.data?.roleFamily ?? "operations",
-    workspaceQuery.data?.hasBrandConfig ?? false,
-  );
+  const imageUrl = data?.annotated_image_url ?? data?.original_image_url ?? undefined;
 
   const goToScan = (id?: string | null) => {
     if (!id) return;
@@ -207,11 +221,13 @@ function Results() {
         />
       ) : (
         <div className="space-y-4">
-          <ScanResultHeader
-            data={data}
-            loading={loading}
-            assignmentId={assignmentQuery.data ?? null}
-          />
+          {(loading || processing) && (
+            <ScanResultHeader
+              data={data}
+              loading={loading}
+              assignmentId={assignmentQuery.data ?? null}
+            />
+          )}
 
           {data?.status === "failed" ? (
             <FailedState scanId={data.scan_id} onRetried={() => void query.refetch()} />
@@ -226,51 +242,115 @@ function Results() {
                 />
               )}
 
-              <div className="mb-4 overflow-hidden rounded-2xl border-2 border-brand/25 bg-gradient-to-br from-brand-soft/40 to-background shadow-sm">
-                <div className="flex items-center gap-2 border-b border-brand/15 bg-brand/5 px-4 py-3">
-                  <IndianRupee className="size-4 text-brand" />
-                  <p className="text-sm font-semibold">Products &amp; prices</p>
+              {scanHadPlanogram ? (
+                <div className="mb-4 overflow-hidden rounded-2xl border-2 border-brand/25 bg-gradient-to-br from-brand-soft/40 to-background shadow-sm">
+                  <div className="flex items-center gap-2 border-b border-brand/15 bg-brand/5 px-4 py-3">
+                    <IndianRupee className="size-4 text-brand" />
+                    <p className="text-sm font-semibold">Products &amp; prices</p>
+                  </div>
+                  <ScanContextPanel
+                    value={scanContext}
+                    onChange={(next) => {
+                      setScanContext(next);
+                      saveStoredScanContext(next);
+                    }}
+                    defaultCategory={data?.scan_category ?? ""}
+                    defaultSubCategory={data?.scan_sub_category ?? ""}
+                    defaultLocation={data?.location ?? data?.aisle ?? ""}
+                    defaultOpen
+                    embedded
+                  />
                 </div>
-                <ScanContextPanel
-                  value={scanContext}
-                  onChange={(next) => {
-                    setScanContext(next);
-                    saveStoredScanContext(next);
-                  }}
-                  defaultCategory={data?.scan_category ?? ""}
-                  defaultSubCategory={data?.scan_sub_category ?? ""}
-                  defaultLocation={data?.location ?? data?.aisle ?? ""}
-                  defaultOpen
-                  embedded
-                />
-              </div>
-
-              {display && (
-                <ScanResultsBody
-                  data={display}
-                  rawData={data}
-                  view={activeView}
-                  onViewChange={setViewOverride}
-                  loading={loading}
-                  planogramComparison={comparison}
-                  financialLocked={financialLocked}
-                  planCode={planCode}
-                  previousScore={data?.navigation?.previous_execution_score ?? undefined}
-                  roleFamily={workspaceQuery.data?.roleFamily}
-                  customerType={workspaceQuery.data?.customerType}
-                  competitorEnabled={competitorEnabled}
-                  onCorrected={() => {
-                    void query.refetch();
-                  }}
-                />
+              ) : showOptionalPricing || hasActiveScanContext(scanContext) ? (
+                <div className="mb-4 overflow-hidden rounded-2xl border border-border bg-surface">
+                  <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <IndianRupee className="size-4 text-muted-foreground" />
+                      <p className="text-sm font-medium">Optional products &amp; prices</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 rounded-lg text-xs"
+                      onClick={() => {
+                        setShowOptionalPricing(false);
+                        setScanContext(EMPTY_SCAN_CONTEXT);
+                        saveStoredScanContext(EMPTY_SCAN_CONTEXT);
+                      }}
+                    >
+                      Hide
+                    </Button>
+                  </div>
+                  <ScanContextPanel
+                    value={scanContext}
+                    onChange={(next) => {
+                      setScanContext(next);
+                      saveStoredScanContext(next);
+                    }}
+                    defaultCategory={data?.scan_category ?? ""}
+                    defaultSubCategory={data?.scan_sub_category ?? ""}
+                    defaultLocation={data?.location ?? data?.aisle ?? ""}
+                    defaultOpen
+                    embedded
+                  />
+                </div>
+              ) : (
+                <div className="mb-4 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-xl"
+                    onClick={() => setShowOptionalPricing(true)}
+                  >
+                    <IndianRupee className="size-4" /> Add optional products &amp; prices
+                  </Button>
+                </div>
               )}
 
-              <ResultSection
-                title="Next steps"
-                description="Continue auditing or review your scan portfolio."
-              >
-                <ResultNavigation />
-              </ResultSection>
+              {display && (
+                <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+                  <div className="p-4 sm:p-6 lg:p-8">
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <Badge className="gap-1.5 rounded-md bg-brand text-brand-foreground">
+                        <Sparkles className="size-3" /> Shelf execution report
+                      </Badge>
+                      {data?.created_at ? (
+                        <span className="text-[11px] text-muted-foreground">
+                          {new Date(data.created_at).toLocaleString()}
+                        </span>
+                      ) : null}
+                      {assignmentId ? (
+                        <Badge variant="outline" className="rounded-md font-mono text-xs">
+                          Assignment
+                        </Badge>
+                      ) : null}
+                    </div>
+                    <ScanResultsBody
+                      data={display}
+                      rawData={data}
+                      view={activeView}
+                      onViewChange={setViewOverride}
+                      loading={loading}
+                      planogramComparison={comparison}
+                      financialLocked={financialLocked}
+                      planCode={planCode}
+                      parityLayout
+                      imageUrl={imageUrl}
+                      previousScore={data?.navigation?.previous_execution_score ?? undefined}
+                      competitorEnabled
+                      onCorrected={() => {
+                        void query.refetch();
+                      }}
+                    />
+                    <ScanResultsActionsFooter data={display} loading={loading} />
+                    <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+                      {AI_DISCLAIMER}
+                    </p>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

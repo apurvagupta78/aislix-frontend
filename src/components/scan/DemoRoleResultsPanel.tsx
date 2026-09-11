@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowRight, Download, Maximize2, Sparkles, Timer } from "lucide-react";
+import { ArrowRight, Maximize2, Sparkles, Timer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AI_DISCLAIMER } from "@/components/scan/ScanProgressPanel";
@@ -14,7 +14,7 @@ import type { ResultViewMode } from "@/lib/customer-context";
 import { landingToScanResult } from "@/lib/demo-execution";
 import type { LandingScanResult } from "@/lib/landing-scan-api";
 import { trackLandingEvent } from "@/lib/landing-analytics";
-import { downloadDemoFullReportExcel } from "@/lib/scan-results";
+import { ScanResultsActionsFooter } from "@/components/scan/ScanResultsActionsFooter";
 
 type DemoRoleResultsPanelProps = {
   result: LandingScanResult;
@@ -75,11 +75,14 @@ export function DemoRoleResultsPanel({
         rawData={baseResult}
         view={view}
         onViewChange={setView}
-        guestInline={!fullscreen}
+        compact={!fullscreen}
         demoMode
+        parityLayout
         imageUrl={imageUrl ?? undefined}
         competitorEnabled
       />
+
+      <ScanResultsActionsFooter data={data} />
 
       <p className="mt-3 shrink-0 text-[11px] leading-relaxed text-muted-foreground">{AI_DISCLAIMER}</p>
 
@@ -100,18 +103,6 @@ export function DemoRoleResultsPanel({
           }}
         >
           <Maximize2 className="size-4" /> Fullscreen
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full sm:w-auto"
-          onClick={() => {
-            trackLandingEvent("cta_click", { location: "download_csv" });
-            if (onDownloadCsv) onDownloadCsv();
-            else downloadDemoFullReportExcel(data);
-          }}
-        >
-          <Download className="size-4" /> Download full report (Excel)
         </Button>
         {showWorkspaceCta ? (
           <Button
@@ -165,12 +156,15 @@ export function DemoRoleResultsPanel({
           <div className="mx-auto max-w-6xl space-y-4">
             <DemoScanResultsBody
               data={data}
+              rawData={baseResult}
               view={view}
               onViewChange={setView}
               imageUrl={imageUrl ?? undefined}
               demoMode
+              parityLayout
               competitorEnabled
             />
+            <ScanResultsActionsFooter data={data} />
           </div>
         </GuestDemoShell>
       )}

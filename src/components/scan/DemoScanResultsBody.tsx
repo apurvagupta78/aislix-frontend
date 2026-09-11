@@ -67,8 +67,8 @@ import {
 import { planogramComparisonFromResult } from "@/lib/planogram-display";
 import { summaryCounts } from "@/lib/planogram-compliance";
 
-/** Guest inline demo hides auth-only sections; fullscreen matches dashboard. */
-const GUEST_INLINE_SKIP = new Set<ResultSectionKey>([
+/** Demo + dashboard parity — footer handles download/share; no duplicate in-scroll blocks. */
+export const PARITY_LAYOUT_SKIP = new Set<ResultSectionKey>([
   "improvement_banner",
   "review_queue",
   "share",
@@ -95,6 +95,8 @@ export type ScanResultsBodyProps = {
   roleFamily?: import("@/lib/customer-context").RoleFamily;
   customerType?: import("@/lib/customer-context").CustomerType;
   competitorEnabled?: boolean;
+  /** Hide legacy in-scroll download/share blocks — use ScanResultsActionsFooter instead. */
+  parityLayout?: boolean;
   /** Unfiltered API payload for review queue, alerts, and exports. */
   rawData?: ScanResult;
   onCorrected?: () => void;
@@ -116,14 +118,17 @@ export function ScanResultsBody({
   roleFamily,
   customerType,
   competitorEnabled = true,
+  parityLayout = true,
   rawData,
   onCorrected,
 }: ScanResultsBodyProps) {
   const theme = VIEW_MODE_THEME[view];
-  const skip = guestInline ? GUEST_INLINE_SKIP : new Set<ResultSectionKey>();
-  const sectionOrder = orderedVisibleSections(view, roleFamily, customerType).filter(
-    (key) => !skip.has(key),
-  );
+  const skip = parityLayout ? PARITY_LAYOUT_SKIP : new Set<ResultSectionKey>();
+  const sectionOrder = orderedVisibleSections(
+    view,
+    parityLayout ? undefined : roleFamily,
+    parityLayout ? undefined : customerType,
+  ).filter((key) => !skip.has(key));
   const source = rawData ?? data;
 
   const comparison = useMemo(
@@ -150,8 +155,8 @@ export function ScanResultsBody({
         <ResultViewSwitcher
           value={view}
           onChange={onViewChange}
-          roleFamily={roleFamily}
-          customerType={customerType}
+          roleFamily={parityLayout ? undefined : roleFamily}
+          customerType={parityLayout ? undefined : customerType}
         />
       </div>
 

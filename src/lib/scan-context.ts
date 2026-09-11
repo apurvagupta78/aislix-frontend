@@ -921,7 +921,14 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
 /** Always enrich demo scan results with role summaries and full inventory analysis. */
 export function enrichDemoScanResult(result: ScanResult, ctx: ScanContextState): ScanResult {
   const applied = applyScanContext(result, ctx);
-  if (applied.role_summaries?.executive?.trim()) return applied;
+  const existing = applied.role_summaries;
+  const hasFullRoleSummaries = Boolean(
+    existing?.execution?.trim() &&
+      existing?.merchandising?.trim() &&
+      existing?.brand?.trim() &&
+      existing?.executive?.trim(),
+  );
+  if (hasFullRoleSummaries) return applied;
 
   const fullInventory = result.inventory ?? [];
   const planogramRows = effectivePlanogramRows(ctx, {
@@ -963,10 +970,20 @@ export function enrichDemoScanResult(result: ScanResult, ctx: ScanContextState):
   const execution_verification = buildVerificationSnapshot(applied) ?? undefined;
   const assortment = buildClientAssortment(planogramRows, match);
 
+  const built = buildDemoRoleSummaries(applied, ctx, summaryCtx);
+  const role_summaries = {
+    execution: existing?.execution?.trim() || built.execution,
+    merchandising: existing?.merchandising?.trim() || built.merchandising,
+    brand: existing?.brand?.trim() || built.brand,
+    executive: existing?.executive?.trim() || built.executive,
+  };
+
   return {
     ...applied,
-    role_summaries: buildDemoRoleSummaries(applied, ctx, summaryCtx),
-    executive_summary: buildDemoExecutiveSummary(applied, ctx, summaryCtx),
+    role_summaries,
+    executive_summary:
+      applied.executive_summary?.trim() ||
+      buildDemoExecutiveSummary({ ...applied, role_summaries }, ctx, summaryCtx),
     competitor_intel: intel ?? applied.competitor_intel,
     retail_intelligence: {
       ...(applied.retail_intelligence ?? {}),
@@ -1038,6 +1055,30 @@ export function pricingSetupMessage(
 
 /** Dashboard + demo: enrich summaries, competitor intel, and ledger consistently. */
 export const enrichScanResult = enrichDemoScanResult;
+
+/**
+ * Enrich a scan for display without applying stale session planogram data to free scans.
+ * Client planogram rows apply only when the scan carried a planogram or the user opted in.
+ */
+export function enrichScanResultForDisplay(
+  result: ScanResult,
+  ctx: ScanContextState,
+  options?: { allowClientPlanogram?: boolean },
+): ScanResult {
+  const allowClientPlanogram =
+    options?.allowClientPlanogram ?? Boolean(result.planogram?.requested);
+  const effectiveCtx: ScanContextState = allowClientPlanogram
+    ? ctx
+    : { ...ctx, planogramRows: [] };
+  const enriched = enrichDemoScanResult(result, effectiveCtx);
+  if (allowClientPlanogram || result.planogram?.requested) return enriched;
+  return {
+    ...enriched,
+    planogram: result.planogram ?? enriched.planogram,
+    executive_summary: result.executive_summary ?? enriched.executive_summary,
+    role_summaries: result.role_summaries ?? enriched.role_summaries,
+  };
+}
 
 /** Convert client-side planogram match into the shared comparison shape for UI tables. */
 export function buildDemoPlanogramComparison(

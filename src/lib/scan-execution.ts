@@ -270,6 +270,29 @@ export function buildRoleSummary(result?: ScanResult | null, view?: ResultViewMo
   return buildAiSummaryParagraph(result);
 }
 
+const EXECUTIVE_ROLLUP_ROLES: Array<{ key: ResultViewMode; label: string }> = [
+  { key: "execution", label: "Execution" },
+  { key: "merchandising", label: "Merchandising" },
+  { key: "brand", label: "Brand" },
+  { key: "executive", label: "Executive snapshot" },
+];
+
+/** All role summaries for the executive tab — omits empty sections. */
+export function executiveRollupSections(
+  result?: ScanResult | null,
+): Array<{ key: ResultViewMode; label: string; text: string }> {
+  const summaries = roleSummariesFromResult(result);
+  if (summaries) {
+    return EXECUTIVE_ROLLUP_ROLES.map(({ key, label }) => ({
+      key,
+      label,
+      text: summaries[key]?.trim() ?? "",
+    })).filter((section) => section.text.length > 0);
+  }
+  const fallback = buildAiSummaryParagraph(result);
+  return fallback ? [{ key: "executive", label: "Summary", text: fallback }] : [];
+}
+
 export function buildAiSummaryParagraph(result?: ScanResult | null): string {
   if (result?.executive_summary?.trim()) return result.executive_summary.trim();
   const facings = totalFacings(result);

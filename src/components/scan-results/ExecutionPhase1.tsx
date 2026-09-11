@@ -11,6 +11,7 @@ import {
   buildAllDemoActions,
   buildDetailedActions,
   buildRoleSummary,
+  executiveRollupSections,
   buildKpiStrip,
   computeRetailExecutionScore,
   executionScore,
@@ -419,13 +420,15 @@ export function AiSummaryBlock({
   loading?: boolean;
   view?: import("@/lib/customer-context").ResultViewMode;
 }) {
-  const text = view ? buildRoleSummary(data, view) : buildAiSummaryParagraph(data);
   const hero =
     view === "executive"
       ? "Executive summary"
       : view
         ? VIEW_MODE_DESCRIPTIONS[view]
         : "Retail execution summary";
+  const rollup = view === "executive" ? executiveRollupSections(data) : [];
+  const text =
+    view && view !== "executive" ? buildRoleSummary(data, view) : buildAiSummaryParagraph(data);
   return (
     <div className="card-surface p-5 sm:p-6">
       <h3
@@ -441,13 +444,19 @@ export function AiSummaryBlock({
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-11/12" />
         </div>
+      ) : view === "executive" && rollup.length > 0 ? (
+        <div className="mt-4 space-y-4">
+          {rollup.map((section) => (
+            <div key={section.key}>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {section.label}
+              </p>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{section.text}</p>
+            </div>
+          ))}
+        </div>
       ) : (
-        <p
-          className={cn(
-            "text-sm leading-relaxed text-muted-foreground",
-            view === "executive" ? "mt-4 space-y-3" : "mt-3",
-          )}
-        >
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           {text || "Summary unavailable."}
         </p>
       )}
