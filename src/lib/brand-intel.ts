@@ -40,6 +40,8 @@ export type CompetitorSnapshot = {
   competitor_shares: CompetitorShareRow[];
   competitors_detected: number;
   competitors_configured: number;
+  /** True when competitor list comes from org/planogram config, not shelf heuristics. */
+  competitors_tracked_configured?: boolean;
   /** Facings that could not be classified to a known brand. */
   unclassified_facings?: number;
   unclassified_share_percent?: number;

@@ -238,11 +238,7 @@ function LedgerRow({ row }: { row: OpportunityLedgerRow }) {
 
           ? `${formatInr(Math.round(row.revenue_at_risk_inr))}/day`
 
-          : row.commercial_risk
-
-            ? `${row.commercial_risk} risk`
-
-            : "—"}
+          : "Not estimated"}
 
       </td>
 

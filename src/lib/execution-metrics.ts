@@ -20,8 +20,10 @@ const SCORE_WEIGHTS: Record<string, number> = {
   presentability: 5,
 };
 
-/** Minimum nominal weight (of 100) required before showing an overall score. */
-const MIN_SCORE_COVERAGE_WEIGHT = 25;
+/** Minimum fraction of planned score weight required (matches backend 80% gate). */
+const MIN_SCORE_COVERAGE_FRACTION = 0.8;
+const PLANNED_SCORE_WEIGHT = Object.values(SCORE_WEIGHTS).reduce((a, b) => a + b, 0);
+const MIN_SCORE_COVERAGE_WEIGHT = PLANNED_SCORE_WEIGHT * MIN_SCORE_COVERAGE_FRACTION;
 
 const UNCLASSIFIED_BRANDS = new Set(["", "unknown", "unidentified", "unclassified"]);
 

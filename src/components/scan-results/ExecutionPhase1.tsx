@@ -564,8 +564,9 @@ export function CompetitorIntelPanel({
               ))}
           </ul>
           <p className="text-xs text-muted-foreground">
-            {snapshot.competitors_detected} of {snapshot.competitors_configured} tracked competitors
-            detected on shelf
+            {snapshot.competitors_tracked_configured
+              ? `${snapshot.competitors_detected} of ${snapshot.competitors_configured} tracked competitors detected on shelf`
+              : `${snapshot.competitors_detected} other observed brand${snapshot.competitors_detected === 1 ? "" : "s"} on shelf (no competitor set configured)`}
           </p>
           {snapshot.unclassified_facings ? (
             <p className="text-xs text-muted-foreground">

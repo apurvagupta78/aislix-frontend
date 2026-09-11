@@ -192,7 +192,6 @@ export function computeContextFinancialImpact(
   if (!hasPlanogramPricing && daily <= 0 && oosSkus === 0 && atRiskSkus === 0) {
     return {
       level: 1,
-      commercial_risk: "low",
       estimated_daily_lost_sales_inr: 0,
       estimated_weekly_lost_sales_inr: 0,
       estimated_monthly_lost_sales_inr: 0,
@@ -202,22 +201,25 @@ export function computeContextFinancialImpact(
         "Financial impact cannot be estimated until sales velocity and price data are configured.",
       confidence: "indicative",
       source: "image_only",
+      estimate_status: "not_estimated",
     };
   }
 
   if (!hasPlanogramPricing && (oosSkus > 0 || atRiskSkus > 0)) {
     return {
       level: 1,
-      commercial_risk: oosSkus > 0 ? "high" : "medium",
+      operational_priority: oosSkus > 0 ? "high" : "medium",
       estimated_daily_lost_sales_inr: 0,
       estimated_weekly_lost_sales_inr: 0,
       estimated_monthly_lost_sales_inr: 0,
       oos_sku_count: oosSkus,
       at_risk_sku_count: atRiskSkus,
       methodology:
-        "Commercial risk detected. Configure SKU price and velocity to quantify revenue at risk.",
+        "Operational issue detected. Configure SKU price and velocity to quantify revenue exposure.",
       confidence: "indicative",
       source: "image_only",
+      estimate_status: "not_estimated",
+      missing_prerequisites: ["selling_price", "demand_velocity"],
     };
   }
 
@@ -467,7 +469,7 @@ export function buildDemoCompetitorIntel(
   const trackedDetected = competitorRows.filter(
     (c) => c.share > 0 && knownCompetitors.includes(c.brand),
   ).length;
-  const trackedConfigured = knownCompetitors.length || competitorRows.length;
+  const trackedConfigured = knownCompetitors.length;
 
   return {
     primary_brand: primary,
@@ -483,10 +485,11 @@ export function buildDemoCompetitorIntel(
       },
       ...competitorRows,
     ],
-    competitors_detected: knownCompetitors.length
+    competitors_detected: trackedConfigured
       ? trackedDetected
       : competitorRows.filter((c) => c.share > 0).length,
-    competitors_configured: trackedConfigured,
+    competitors_configured: trackedConfigured || competitorRows.filter((c) => c.share > 0).length,
+    competitors_tracked_configured: trackedConfigured > 0,
     unclassified_facings: unclassifiedFacings || undefined,
     unclassified_share_percent:
       unclassifiedShare > 0 ? Math.round(unclassifiedShare * 10) / 10 : undefined,
@@ -579,6 +582,14 @@ function buildDemoRoleSummaries(
   const catalog = inventoryCatalogSummary(inventory);
   const planogram = planogramGapSummary(ctx, match);
   const hasEffectivePlanogram = match.lines.length > 0;
+  const facingConfigured = hasExplicitExpectedFacings(ctx.planogramRows);
+  const placementConfigured = hasPlacementRules(ctx.planogramRows);
+  const planogramComplianceText =
+    hasEffectivePlanogram && facingConfigured
+      ? `Planogram SKU presence ${match.sku_match_percent}% · facing compliance ${match.qty_compliance_percent}% (configured targets).`
+      : hasEffectivePlanogram
+        ? `Planogram SKU presence ${match.sku_match_percent}% · facing compliance not configured.`
+        : "";
 
   const executionParts = [
     `Field view: ${facings} facings detected across ${s?.unique_skus ?? 0} SKUs.`,
@@ -590,11 +601,9 @@ function buildDemoRoleSummaries(
   ].filter(Boolean);
 
   const merchandisingParts = [
-    `Category view: ${s?.unique_brands ?? 0} brands on shelf.`,
+    `Category view: ${s?.identified_brand_count ?? s?.unique_brands ?? 0} identified brands on shelf.`,
     brandMix,
-    hasEffectivePlanogram
-      ? `Planogram compliance ${match.sku_match_percent}% SKU match, ${match.qty_compliance_percent}% facing compliance.`
-      : "",
+    planogramComplianceText,
     planogram,
     brandShare !== undefined && focus.brand
       ? `${focus.brand} brand share ${brandShare}% · ${focus.product && productShare !== undefined ? `${focus.product} product share ${productShare}%` : ""}`.trim()
@@ -605,11 +614,11 @@ function buildDemoRoleSummaries(
     focus.brand
       ? `Brand view for ${focus.brand}${focus.product ? ` ${focus.product}` : ""}.`
       : "Brand view:",
-    hasEffectivePlanogram
-      ? `Planogram compliance ${match.sku_match_percent}% SKU match, ${match.qty_compliance_percent}% facing compliance.`
-      : "",
+    planogramComplianceText,
     planogram,
-    brandShare !== undefined ? `${focus.brand} holds ${brandShare}% brand share.` : "",
+    brandShare !== undefined
+      ? `${focus.brand} holds ${brandShare}% facing share${s?.brand_share_denominator ? ` (${s.brand_share_denominator} eligible facings)` : ""}.`
+      : "",
     productShare !== undefined && focus.product
       ? `${focus.brand} ${focus.product} product share is ${productShare}% (this SKU only).`
       : "",
@@ -632,8 +641,10 @@ function buildDemoRoleSummaries(
     merchandisingParts.join(" "),
     brandParts.join(" "),
     financial && financial.estimated_daily_lost_sales_inr > 0
-      ? `Revenue at risk: ₹${financial.estimated_daily_lost_sales_inr.toLocaleString("en-IN")}/day.`
-      : "",
+      ? `Modeled demand exposure: ₹${financial.estimated_daily_lost_sales_inr.toLocaleString("en-IN")}/day (scenario, not measured loss).`
+      : financial?.estimate_status === "not_estimated"
+        ? "Financial value not estimated — add selling price and demand velocity."
+        : "",
     catalog,
   ].filter(Boolean);
 

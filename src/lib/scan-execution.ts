@@ -84,14 +84,23 @@ export function buildActionCenterItems(result?: ScanResult | null): ActionCenter
   if (!s) return [];
   const items: ActionCenterItem[] = [];
 
-  const oos = s.confirmed_oos_count ?? s.out_of_stock_products ?? 0;
+  const oos = s.confirmed_oos_count ?? 0;
+  const suspected = (s as { suspected_shelf_gap_count?: number }).suspected_shelf_gap_count ?? 0;
   if (oos > 0) {
     items.push({
       id: "oos",
       severity: "critical",
-      label: "Confirmed OOS",
+      label: "Verified shelf absence",
       count: oos,
-      detail: "Expected SKUs not detected on shelf",
+      detail: "Expected products not detected with adequate coverage — not confirmed store inventory stockout",
+    });
+  } else if (suspected > 0) {
+    items.push({
+      id: "suspected-gap",
+      severity: "high",
+      label: "Suspected shelf gaps",
+      count: suspected,
+      detail: "Unresolved identity or insufficient evidence — review before treating as stockout",
     });
   }
 
@@ -268,11 +277,15 @@ export function buildAiSummaryParagraph(result?: ScanResult | null): string {
   if (!s) return "";
   const recognition = recognitionCoverage(result);
   const execution = executionScore(result);
+  const identifiedBrands = s.identified_brand_count ?? s.unique_brands;
   const parts = [
-    `Aislix detected ${facings} facings across ${s.unique_skus} unique SKUs and ${s.unique_brands} brands.`,
+    `Observed ${facings} visible facings across ${s.unique_skus} visual product groups and ${identifiedBrands} identified brands.`,
   ];
-  if (recognition !== undefined) parts.push(`Recognition coverage is ${recognition}%.`);
-  if (execution !== undefined) parts.push(`Shelf execution score is ${execution}/100.`);
+  if (recognition !== undefined) {
+    parts.push(`Recognition coverage among detections is ${recognition}% (not measured accuracy).`);
+  }
+  if (execution !== undefined) parts.push(`Execution score ${execution}/100.`);
+  else parts.push("Execution score unavailable — insufficient configured KPI coverage.");
   if ((s.low_stock_products ?? 0) > 0) {
     parts.push(`${s.low_stock_products} SKU(s) are below the facing threshold.`);
   }
