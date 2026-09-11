@@ -1419,7 +1419,8 @@ export function buildFullScanReportExcel(result: ScanResult): ArrayBuffer {
   ]);
 
   const inventoryRows = result.inventory ?? [];
-  append("S4 Observed Products", [
+  const totalFacings = inventoryRows.reduce((n, row) => n + (row.quantity ?? 0), 0);
+  append("Observed shelf products", [
     [
       "Brand",
       "Product",
@@ -1431,16 +1432,28 @@ export function buildFullScanReportExcel(result: ScanResult): ArrayBuffer {
       "Compliance",
     ],
     ...(inventoryRows.length
-      ? inventoryRows.map((i) => [
-          i.brand,
-          i.product,
-          i.variant ?? "",
-          i.category ?? "",
-          i.quantity,
-          normalizeConfidence(i.confidence).toFixed(1),
-          i.out_of_stock ? "Out" : i.low_stock ? "Low" : "In stock",
-          i.compliance_status ?? "OK",
-        ])
+      ? [
+          ...inventoryRows.map((i) => [
+            i.brand,
+            i.product,
+            i.variant ?? "",
+            i.category ?? "",
+            i.quantity,
+            normalizeConfidence(i.confidence).toFixed(1),
+            i.out_of_stock ? "Out" : i.low_stock ? "Low" : "In stock",
+            i.compliance_status ?? "OK",
+          ]),
+          [
+            "TOTAL",
+            `${inventoryRows.length} SKUs`,
+            "",
+            "",
+            totalFacings,
+            "",
+            "",
+            "",
+          ],
+        ]
       : [["—", "No products returned by scan API", "", "", "", "", "", ""]]),
   ]);
 
@@ -1459,10 +1472,29 @@ export function buildFullScanReportExcel(result: ScanResult): ArrayBuffer {
 
   const brands = result.charts?.top_brands ?? [];
   if (brands.length) {
-    append("S5 Brand Share", [
-      ["Brand", "Share %", "Facings"],
-      ...brands.map((b) => [b.brand, b.share.toFixed(1), ""]),
+    append("Share of facings", [
+      ["Brand", "Share %", "Visible facings"],
+      ...brands.map((b) => [b.brand, b.share.toFixed(1), b.quantity ?? ""]),
     ]);
+  }
+
+  const ci = result.competitor_intel;
+  if (ci?.competitor_shares?.length) {
+    append("Competitor intelligence", [
+      ["Brand", "Share %", "Visible facings", "Role"],
+      ...ci.competitor_shares.map((row) => [
+        row.brand,
+        row.share?.toFixed?.(1) ?? row.share ?? "",
+        row.facings ?? "",
+        row.is_primary ? "Primary" : row.is_competitor ? "Competitor" : "Other",
+      ]),
+    ]);
+    if (ci.upper_hand?.length) {
+      append("Competitor upper hand", [
+        ["Brand", "Share %", "Note"],
+        ...ci.upper_hand.map((edge) => [edge.brand, edge.share, edge.note]),
+      ]);
+    }
   }
 
   const assortment = result.retail_intelligence?.assortment as

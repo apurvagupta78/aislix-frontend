@@ -124,7 +124,10 @@ export function PlanogramComparisonSection({ comparison }: { comparison: Planogr
 }
 
 /** Shown when a scan was run "with planogram" but no comparison came back. */
-export function PlanogramMissingAlert() {
+export function PlanogramMissingAlert({ demoMode = false }: { demoMode?: boolean }) {
+  const detail = demoMode
+    ? "Add at least one expected product with brand, product name, and expected facings in Products & prices above, then rescan."
+    : "Link this scan to expected products before scanning — add rows in Products & prices on the New Scan page (Option 2), or assign from a planogram library entry.";
   return (
     <section
       role="alert"
@@ -135,10 +138,7 @@ export function PlanogramMissingAlert() {
       </span>
       <div>
         <h2 className="text-sm font-semibold tracking-tight">Planogram compliance unavailable</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Planogram data was not included in this scan. Re-run with at least one expected product in
-          Option 2.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{detail}</p>
       </div>
     </section>
   );

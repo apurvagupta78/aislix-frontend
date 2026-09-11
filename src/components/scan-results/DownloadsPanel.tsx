@@ -25,22 +25,24 @@ export function DownloadsPanel({
   const imageUrl = data?.downloads?.annotated_image_url ?? data?.annotated_image_url;
 
   const downloadExcel = async () => {
-    if (data?.scan_id) {
+    if (!data) return;
+    if (data.summary || data.inventory?.length) {
+      downloadBlobBytes(
+        buildFullScanReportExcel(data),
+        `aislix-${data.scan_id || "scan"}-report.xlsx`,
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
+      toast.success("Excel report downloaded");
+      return;
+    }
+    if (data.scan_id) {
       try {
         await downloadScanExcel(data.scan_id, data.downloads?.csv_url);
         toast.success("Excel report downloaded");
-        return;
       } catch {
-        // fall back to the client-side export
+        toast.error("This scan has no report data to export.");
       }
     }
-    if (!data) return;
-    downloadBlobBytes(
-      buildFullScanReportExcel(data),
-      `aislix-${data.scan_id}-report.xlsx`,
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    );
-    toast.success("Excel report downloaded");
   };
 
   const downloadImage = async () => {

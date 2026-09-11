@@ -127,12 +127,12 @@ export function ScanResultsBody({
   const source = rawData ?? data;
 
   const comparison = useMemo(
-    () => planogramComparisonFromResult(source, planogramComparison),
-    [source, planogramComparison],
+    () => planogramComparisonFromResult(data, planogramComparison),
+    [data, planogramComparison],
   );
   const planogramCounts = summaryCounts(comparison?.summary ?? {});
   const showPlanogramWarning =
-    Boolean(source.planogram?.requested) &&
+    Boolean(data.planogram?.requested) &&
     (!comparison || (planogramCounts.expected === 0 && !comparison.lines.length));
 
   return (
@@ -227,7 +227,7 @@ export function ScanResultsBody({
               return <AiSummaryBlock key={key} data={data} loading={loading} view={view} />;
             case "competitor_intel":
               return competitorEnabled ? (
-                <CompetitorIntelPanel key={key} snapshot={source.competitor_intel} loading={loading} />
+                <CompetitorIntelPanel key={key} snapshot={data.competitor_intel} loading={loading} />
               ) : null;
             case "share_of_shelf":
               return <ShareOfShelfPanel key={key} data={data} loading={loading} />;
@@ -247,7 +247,7 @@ export function ScanResultsBody({
               return (
                 <Fragment key={key}>
                   {comparison ? <PlanogramComparisonSection comparison={comparison} /> : null}
-                  {showPlanogramWarning ? <PlanogramMissingAlert /> : null}
+                  {showPlanogramWarning ? <PlanogramMissingAlert demoMode={demoMode} /> : null}
                 </Fragment>
               );
             case "review_queue":
@@ -268,7 +268,7 @@ export function ScanResultsBody({
               return (
                 <InventoryTable
                   key={key}
-                  items={rawData?.inventory?.length ? rawData.inventory : data.inventory}
+                  items={data.inventory?.length ? data.inventory : (rawData?.inventory ?? [])}
                   scanId={data.scan_id}
                   csvUrl={rawData?.downloads?.csv_url ?? data.downloads?.csv_url}
                   loading={loading}
@@ -305,7 +305,7 @@ export function ScanResultsBody({
             case "alerts":
               return <AlertsPanel key={key} alerts={source.alerts} loading={loading} />;
             case "downloads":
-              return <DownloadsPanel key={key} data={source} loading={loading} />;
+              return <DownloadsPanel key={key} data={data} loading={loading} />;
             case "share":
               return <SharePanel key={key} data={source} loading={loading} />;
             case "scan_details":
