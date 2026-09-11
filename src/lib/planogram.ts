@@ -66,6 +66,16 @@ export function validatePlanogramRow(row: PlanogramRow): string | null {
   return null;
 }
 
+/** Parse expected facings / qty from manual form input (supports leading zeros). */
+export function parsePlanogramQty(value: unknown): number | null {
+  if (value == null) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  if (!/^\d+$/.test(raw)) return null;
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
 export type DraftRow = PlanogramRow & { key: string };
 
 export type PlanogramVersion = {

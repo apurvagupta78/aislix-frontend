@@ -47,7 +47,7 @@ import { ClipboardList, IndianRupee } from "lucide-react";
 import { fetchActivePlanogram, fetchPlanogramItems, type DraftRow } from "@/lib/planogram";
 import { toUserMessage } from "@/lib/api/errors";
 import { CategorySubcategoryPicker } from "@/components/scan/CategorySubcategoryPicker";
-import { ScanContextPanel } from "@/components/scan/ScanContextPanel";
+import { ScanContextPanel, type ScanContextPanelHandle } from "@/components/scan/ScanContextPanel";
 import {
   hasScanPricingConfigured,
   loadStoredScanContext,
@@ -136,8 +136,18 @@ function ScanPage() {
   const [showSetupErrors, setShowSetupErrors] = useState(false);
   const [categorySyncNotice, setCategorySyncNotice] = useState<string | null>(null);
   const [scanContext, setScanContext] = useState<ScanContextState>(() => loadStoredScanContext());
+  const scanContextPanelRef = useRef<ScanContextPanelHandle>(null);
 
   const withPlanogram = scanMode === "with_planogram";
+
+  const syncScanContextFromPanel = useCallback((): ScanContextState => {
+    const next = scanContextPanelRef.current?.flushPendingManualRow() ?? scanContext;
+    if (next !== scanContext) {
+      setScanContext(next);
+      saveStoredScanContext(next);
+    }
+    return next;
+  }, [scanContext]);
 
 
 
@@ -283,6 +293,11 @@ function ScanPage() {
     if (withPlanogram) return;
     setPlanogramRows([]);
     setPlanogramNotice(null);
+    setScanContext((prev) => {
+      const next = { ...prev, planogramRows: [] };
+      saveStoredScanContext(next);
+      return next;
+    });
   }, [withPlanogram]);
 
   const assignmentSubLabel = assignment?.sub_category ?? "";
@@ -306,9 +321,12 @@ function ScanPage() {
     if (withPlanogram && !validPlanogramRows.length) {
       errors.planogram = "Add at least one expected product.";
     }
-    if (!hasScanPricingConfigured(scanContext, withPlanogram ? validPlanogramRows : [])) {
+    if (
+      withPlanogram &&
+      !hasScanPricingConfigured(scanContext, validPlanogramRows)
+    ) {
       errors.pricing =
-        pricingSetupMessage(scanContext, withPlanogram ? validPlanogramRows : []) ??
+        pricingSetupMessage(scanContext, validPlanogramRows) ??
         "Add shelf prices before scanning.";
     }
     return errors;
@@ -341,15 +359,16 @@ function ScanPage() {
   );
 
   const guardSetup = useCallback(() => {
+    syncScanContextFromPanel();
     if (setupComplete) return true;
     setShowSetupErrors(true);
     setFileError(
       withPlanogram
         ? "Complete shelf setup, add expected products with prices, then continue."
-        : "Select store, location, shelf types, and add at least one product with shelf price (MRP).",
+        : "Select store, location, and shelf types, then add shelf images.",
     );
     return false;
-  }, [setupComplete, withPlanogram]);
+  }, [setupComplete, withPlanogram, syncScanContextFromPanel]);
 
 
   const openCamera = useCallback(() => {
@@ -412,6 +431,7 @@ function ScanPage() {
 
   const startScan = useCallback(async () => {
     if (!items.length || phase === "uploading") return;
+    syncScanContextFromPanel();
     if (!guardSetup()) return;
 
 
@@ -482,6 +502,7 @@ function ScanPage() {
     navigate,
     phase,
     guardSetup,
+    syncScanContextFromPanel,
     storeId,
     shelfLabel,
     category,
@@ -678,31 +699,42 @@ function ScanPage() {
                     );
                   })}
                 </div>
+                {!withPlanogram ? (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Detect products on shelf only — no planogram or pricing needed. You can optionally
+                    add products and prices on the results page after scanning.
+                  </p>
+                ) : null}
               </section>
             )}
 
-            <div className="overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background shadow-sm">
-              <div className="flex items-center gap-2 border-b border-brand/20 bg-brand/5 px-4 py-3">
-                <IndianRupee className="size-4 text-brand" />
-                <p className="text-sm font-semibold">Products &amp; prices (required)</p>
-              </div>
-              <ScanContextPanel
-                value={scanContext}
-                onChange={(next) => {
-                  setScanContext(next);
-                  saveStoredScanContext(next);
-                }}
-                defaultLocation={shelfLocation}
-                defaultOpen
-                requirePricing
-                embedded
-              />
-            </div>
-            {fieldError("pricing") && (
-              <p className="text-center text-xs font-medium text-amber-700 dark:text-amber-400">
-                {fieldError("pricing")}
-              </p>
-            )}
+            {withPlanogram && !lockedByAssignment ? (
+              <>
+                <div className="overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background shadow-sm">
+                  <div className="flex items-center gap-2 border-b border-brand/20 bg-brand/5 px-4 py-3">
+                    <IndianRupee className="size-4 text-brand" />
+                    <p className="text-sm font-semibold">Products &amp; prices (required)</p>
+                  </div>
+                  <ScanContextPanel
+                    ref={scanContextPanelRef}
+                    value={scanContext}
+                    onChange={(next) => {
+                      setScanContext(next);
+                      saveStoredScanContext(next);
+                    }}
+                    defaultLocation={shelfLocation}
+                    defaultOpen
+                    requirePricing
+                    embedded
+                  />
+                </div>
+                {fieldError("pricing") && (
+                  <p className="text-center text-xs font-medium text-amber-700 dark:text-amber-400">
+                    {fieldError("pricing")}
+                  </p>
+                )}
+              </>
+            ) : null}
 
             {/* STEP 1 — scan context (shared by both modes) */}
             <section className="card-surface p-4 sm:p-6">

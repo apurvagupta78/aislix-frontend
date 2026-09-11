@@ -241,7 +241,6 @@ function Results() {
                   defaultSubCategory={data?.scan_sub_category ?? ""}
                   defaultLocation={data?.location ?? data?.aisle ?? ""}
                   defaultOpen
-                  requirePricing
                   embedded
                 />
               </div>
