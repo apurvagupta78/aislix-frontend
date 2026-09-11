@@ -128,6 +128,7 @@ export async function resolvePostAuthRoute(_user?: MinimalUser): Promise<AuthRou
 const PUBLIC_PATHS = new Set([
   "/",
   "/login",
+  "/admin/login",
   "/signup",
   "/register",
   "/forgot-password",
@@ -161,6 +162,14 @@ export function isPublicPath(path: string): boolean {
     path.startsWith("/api") ||
     path.startsWith("/share/")
   );
+}
+
+export function isAdminPath(path: string): boolean {
+  return path === "/admin" || path.startsWith("/admin/");
+}
+
+export function isAdminLoginPath(path: string): boolean {
+  return path === "/admin/login";
 }
 
 export function isVerifyPath(path: string): boolean {

@@ -9,6 +9,7 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requirePlatformAdminContext } from "@/lib/platform-admin.server";
 
 export type DemoScanRow = {
   id: string;
@@ -49,17 +50,8 @@ export const listLandingDemoScans = createServerFn({ method: "POST" })
   }))
   .handler(async ({ data, context }): Promise<DemoScanListResult> => {
     const email = String(context.claims?.email ?? "").toLowerCase();
-    if (!email) throw new Error("Sign in with your platform admin account.");
-
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const { data: grant } = await supabaseAdmin
-      .from("platform_access_grants")
-      .select("email")
-      .eq("is_active", true)
-      .ilike("email", email)
-      .maybeSingle();
-    if (!grant) throw new Error("This page is limited to Aislix platform admins.");
+    await requirePlatformAdminContext(supabaseAdmin, email);
 
     const since = new Date(Date.now() - data.days * 24 * 60 * 60 * 1000).toISOString();
     const { data: sessions, error } = await supabaseAdmin

@@ -16,6 +16,8 @@ import {
   fetchAuthUser,
   fetchPendingInvite,
   isEmailVerifiedServer,
+  isAdminLoginPath,
+  isAdminPath,
   isPublicPath,
   isVerifyPath,
 } from "@/lib/auth-routing";
@@ -49,7 +51,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           // Signup leaves no session while confirmation is pending — the
           // verify page must stay open, so it is never bounced to /login.
           if (!isPublicPath(path) && !isVerifyPath(path)) {
-            void navigate({ to: "/login", replace: true });
+            void navigate({
+              to: isAdminPath(path) && !isAdminLoginPath(path) ? "/admin/login" : "/login",
+              replace: true,
+            });
           }
           return;
         }
