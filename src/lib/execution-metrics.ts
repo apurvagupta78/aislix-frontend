@@ -4,7 +4,15 @@
  */
 
 import type { PlanogramRow } from "@/lib/planogram";
-import type { MetricState, RetailExecutionScore, ScoreComponent } from "@/lib/retail-intelligence";
+import type {
+  AuditKpiDashboard,
+  AuditKpiResult,
+  MetricState,
+  RetailExecutionScore,
+  ScoreComponent,
+} from "@/lib/retail-intelligence";
+import type { CustomerType } from "@/lib/customer-context";
+import { getRoleProfile, normalizeRoleId } from "@/lib/role-kpi-config";
 import type { ScanResult } from "@/lib/scan-results";
 import { formatPercent } from "@/lib/scan-results";
 
@@ -34,6 +42,13 @@ export type KpiMetric = {
   numeric?: number;
   state: MetricState;
   detail?: string;
+  coverage_percent?: number | null;
+  coverage_label?: string;
+  formula?: string;
+  numerator?: number | null;
+  denominator?: number | null;
+  unit?: "percent" | "count";
+  audit_status?: AuditKpiResult["status"];
 };
 
 export type PlanogramSummaryShape = {
@@ -308,6 +323,95 @@ export function buildKpiMetrics(result?: ScanResult | null): KpiMetric[] {
   );
 
   return kpis;
+}
+
+function auditStatusToMetricState(status: AuditKpiResult["status"]): MetricState {
+  if (status === "complete" || status === "partial") return "available";
+  if (status === "not_applicable") return "not_applicable";
+  if (status === "not_assessable") return "insufficient_evidence";
+  return "not_configured";
+}
+
+function formatAuditKpiValue(kpi: AuditKpiResult): string {
+  if (kpi.status === "not_configured") return "Not configured";
+  if (kpi.status === "not_applicable") return "Not applicable";
+  if (kpi.status === "not_assessable" || kpi.value == null) return "Not assessable";
+  if (kpi.unit === "count") {
+    const planned =
+      kpi.denominator != null && Number.isFinite(kpi.denominator) ? ` / ${kpi.denominator} planned` : "";
+    return `${kpi.value}${planned}`;
+  }
+  return formatPercent(kpi.value) ?? `${Math.round(kpi.value)}%`;
+}
+
+function auditKpiToMetric(kpi: AuditKpiResult): KpiMetric {
+  const coverage =
+    kpi.coverage_percent != null && Number.isFinite(kpi.coverage_percent)
+      ? `Coverage: ${Math.round(kpi.coverage_percent)}%`
+      : undefined;
+  const excluded =
+    kpi.excluded_count && kpi.excluded_count > 0 ? `${kpi.excluded_count} not assessable` : undefined;
+  return {
+    key: kpi.kpi_id,
+    label: kpi.label,
+    value: formatAuditKpiValue(kpi),
+    numeric: kpi.unit === "percent" && kpi.value != null ? kpi.value : undefined,
+    state: auditStatusToMetricState(kpi.status),
+    detail: kpi.tooltip,
+    coverage_percent: kpi.coverage_percent,
+    coverage_label: [coverage, excluded].filter(Boolean).join(" · ") || undefined,
+    formula: kpi.formula,
+    numerator: kpi.numerator,
+    denominator: kpi.denominator,
+    unit: kpi.unit,
+    audit_status: kpi.status,
+  };
+}
+
+export function auditKpiDashboardFromResult(result?: ScanResult | null): AuditKpiDashboard | undefined {
+  return result?.retail_intelligence?.audit_kpi_dashboard;
+}
+
+/** Exactly five role-specific KPIs when backend audit dashboard is present; else legacy strip. */
+export function buildRoleKpiMetrics(
+  result?: ScanResult | null,
+  customerType?: CustomerType | string | null,
+): KpiMetric[] {
+  const dashboard = auditKpiDashboardFromResult(result);
+  if (dashboard?.primary_kpis?.length === 5) {
+    return dashboard.primary_kpis.map(auditKpiToMetric);
+  }
+
+  const profile = getRoleProfile(customerType ?? dashboard?.role_id);
+  const legacyByKey = Object.fromEntries(buildKpiMetrics(result).map((k) => [k.key, k]));
+  const legacyAliases: Record<string, string[]> = {
+    osa: ["category_osa", "target_sku_availability"],
+    planogram_compliance: ["planogram_compliance", "planogram_sku_presence"],
+    assortment_compliance: ["target_sku_availability"],
+    price_compliance: [],
+    promotional_compliance: [],
+    location_accuracy: ["placement"],
+    facing_count: ["facing"],
+    share_of_shelf: ["share_of_facings", "product_share"],
+    msl_compliance: ["target_sku_availability"],
+  };
+
+  return profile.primary_kpis.map((def) => {
+    const aliases = legacyAliases[def.kpi_id] ?? [];
+    for (const alias of aliases) {
+      const hit = legacyByKey[alias];
+      if (hit && hit.state === "available") {
+        return { ...hit, key: def.kpi_id, label: def.label, detail: def.tooltip };
+      }
+    }
+    return {
+      key: def.kpi_id,
+      label: def.label,
+      value: "Not configured",
+      state: "not_configured" as MetricState,
+      detail: def.tooltip,
+    };
+  });
 }
 
 function componentFromMetric(

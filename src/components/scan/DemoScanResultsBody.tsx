@@ -14,6 +14,7 @@ import {
   AiSummaryBlock,
   CompetitorIntelPanel,
   ExecutionImprovementBanner,
+  AuditRoleIntroPanel,
   ExecutionKpiStripPanel,
   ExecutionScoreHero,
   FacingsSummaryStrip,
@@ -190,13 +191,16 @@ export function ScanResultsBody({
               );
             case "kpi_strip":
               return (
-                <ExecutionKpiStripPanel
-                  key={key}
-                  data={data}
-                  loading={loading}
-                  compact={compact}
-                  view={view}
-                />
+                <div key={key} className="space-y-3">
+                  <AuditRoleIntroPanel data={data} loading={loading} />
+                  <ExecutionKpiStripPanel
+                    data={data}
+                    loading={loading}
+                    compact={compact}
+                    view={view}
+                    customerType={customerType}
+                  />
+                </div>
               );
             case "facings_strip":
               return <FacingsSummaryStrip key={key} data={data} loading={loading} />;

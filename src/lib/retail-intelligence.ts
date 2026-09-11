@@ -125,6 +125,34 @@ export type ExecutionVerification = {
   summary: string;
 };
 
+export type AuditKpiResult = {
+  kpi_id: string;
+  label: string;
+  value: number | null;
+  unit: "percent" | "count";
+  status: "complete" | "partial" | "not_assessable" | "not_applicable" | "not_configured";
+  numerator?: number | null;
+  denominator?: number | null;
+  coverage_percent?: number | null;
+  coverage_numerator?: number | null;
+  coverage_denominator?: number | null;
+  excluded_count?: number;
+  formula?: string;
+  scope?: string;
+  tooltip?: string;
+  warnings?: string[];
+};
+
+export type AuditKpiDashboard = {
+  role_id: string;
+  role_label: string;
+  introduction: string;
+  primary_kpis: AuditKpiResult[];
+  kpi_count: number;
+  readiness?: Array<{ kpi_id: string; ready: boolean; label: string }>;
+  formula_version?: string;
+};
+
 export type RetailIntelligencePayload = {
   scan_summary?: string;
   image_quality?: ImageQualityAssessment & {
@@ -173,6 +201,7 @@ export type RetailIntelligencePayload = {
     share_note: string;
     action: string;
   }>;
+  audit_kpi_dashboard?: AuditKpiDashboard;
 };
 
 export const ROLE_HERO: Record<ResultViewMode, string> = {

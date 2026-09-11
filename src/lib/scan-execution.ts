@@ -4,8 +4,10 @@
  */
 
 import type { ResultViewMode } from "@/lib/customer-context";
+import type { CustomerType } from "@/lib/customer-context";
 import {
   buildKpiMetrics,
+  buildRoleKpiMetrics,
   computeRetailExecutionScore,
   executionScoreFromResult,
 } from "@/lib/execution-metrics";
@@ -42,6 +44,10 @@ export type ExecutionKpi = {
   label: string;
   value: string;
   numeric?: number;
+  state?: import("@/lib/retail-intelligence").MetricState;
+  coverage_label?: string;
+  detail?: string;
+  audit_status?: string;
 };
 
 export function executionScore(result?: ScanResult | null): number | undefined {
@@ -70,12 +76,20 @@ export function shareOfShelfTopBrand(result?: ScanResult | null): number | undef
   return brands[0]?.share;
 }
 
-export function buildKpiStrip(result?: ScanResult | null): ExecutionKpi[] {
-  return buildKpiMetrics(result).map(({ key, label, value, numeric }) => ({
+export function buildKpiStrip(
+  result?: ScanResult | null,
+  customerType?: CustomerType | string | null,
+): ExecutionKpi[] {
+  const metrics = buildRoleKpiMetrics(result, customerType);
+  return metrics.map(({ key, label, value, numeric, state, coverage_label, detail, audit_status }) => ({
     key,
     label,
     value,
     numeric,
+    state,
+    coverage_label,
+    detail,
+    audit_status,
   }));
 }
 

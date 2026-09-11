@@ -5,6 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/States";
 import { cn } from "@/lib/utils";
+import type { CustomerType } from "@/lib/customer-context";
+import { auditKpiDashboardFromResult } from "@/lib/execution-metrics";
+import { metricLabel } from "@/lib/retail-intelligence";
 import {
   buildActionCenterItems,
   buildAiSummaryParagraph,
@@ -229,38 +232,65 @@ function ScoreBreakdownPanel({
 }
 
 const KPI_ACCENT: Record<string, string> = {
+  osa: "border-l-brand bg-brand-soft/40",
   target_sku_availability: "border-l-brand bg-brand-soft/40",
   category_osa: "border-l-brand-muted bg-brand-soft/30",
   planogram_sku_presence: "border-l-violet-500 bg-violet-500/10",
   planogram_compliance: "border-l-violet-500 bg-violet-500/10",
+  assortment_compliance: "border-l-indigo-500 bg-indigo-500/10",
+  price_compliance: "border-l-sky-500 bg-sky-500/10",
+  promotional_compliance: "border-l-pink-500 bg-pink-500/10",
+  location_accuracy: "border-l-orange-500 bg-orange-500/10",
   facing: "border-l-amber-500 bg-amber-500/10",
+  facing_count: "border-l-amber-500 bg-amber-500/10",
   placement: "border-l-orange-500 bg-orange-500/10",
   share_of_facings: "border-l-emerald-600 bg-emerald-500/10",
+  share_of_shelf: "border-l-emerald-600 bg-emerald-500/10",
   product_share: "border-l-teal-600 bg-teal-500/10",
+  msl_compliance: "border-l-cyan-600 bg-cyan-500/10",
 };
+
+const AUDIT_STATUS_BADGE: Record<string, string> = {
+  complete: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
+  partial: "bg-amber-500/15 text-amber-800 dark:text-amber-200",
+  not_assessable: "bg-muted text-muted-foreground",
+  not_applicable: "bg-muted text-muted-foreground",
+  not_configured: "bg-muted text-muted-foreground",
+};
+
+export function AuditRoleIntroPanel({ data, loading }: { data?: ScanResult; loading?: boolean }) {
+  const dashboard = auditKpiDashboardFromResult(data);
+  if (!dashboard?.introduction) return null;
+  return (
+    <div className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+      <p className="font-medium text-foreground">{dashboard.role_label} audit</p>
+      {loading ? (
+        <Skeleton className="mt-2 h-4 w-full max-w-xl" />
+      ) : (
+        <p className="mt-1 leading-relaxed">{dashboard.introduction}</p>
+      )}
+    </div>
+  );
+}
 
 export function ExecutionKpiStripPanel({
   data,
   loading,
   compact = false,
   view = "execution",
+  customerType,
 }: {
   data?: ScanResult;
   loading?: boolean;
-  /** Narrow columns (demo panel) — 2-up grid instead of 5. */
   compact?: boolean;
   view?: ResultViewMode;
+  customerType?: CustomerType | string | null;
 }) {
-  const kpis = buildKpiStrip(data);
+  const kpis = buildKpiStrip(data, customerType);
   const theme = VIEW_MODE_THEME[view];
-  const gridCols =
-    kpis.length >= 6
-      ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6"
-      : kpis.length === 4
-        ? "grid-cols-2 sm:grid-cols-4"
-        : compact
-          ? "grid-cols-2 sm:grid-cols-3"
-          : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5";
+  const gridCols = compact
+    ? "grid-cols-2 sm:grid-cols-3"
+    : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5";
   return (
     <div className={cn("grid gap-2.5", gridCols)}>
       {kpis.map((kpi) => (
@@ -270,16 +300,36 @@ export function ExecutionKpiStripPanel({
             "rounded-xl border border-border border-l-4 px-4 py-3 shadow-sm",
             KPI_ACCENT[kpi.key] ?? cn(theme.accentSoft, "border-l-brand/60"),
           )}
+          title={kpi.detail}
         >
-          <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
-            {kpi.label}
-          </p>
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
+              {kpi.label}
+            </p>
+            {kpi.audit_status ? (
+              <Badge
+                variant="secondary"
+                className={cn("shrink-0 text-[0.6rem] capitalize", AUDIT_STATUS_BADGE[kpi.audit_status])}
+              >
+                {kpi.audit_status.replace(/_/g, " ")}
+              </Badge>
+            ) : kpi.state && kpi.state !== "available" ? (
+              <Badge variant="secondary" className="shrink-0 text-[0.6rem]">
+                {metricLabel(kpi.state)}
+              </Badge>
+            ) : null}
+          </div>
           {loading ? (
             <Skeleton className="mt-2 h-6 w-16" />
           ) : (
-            <p className={cn("mt-1 text-base font-semibold tabular-nums leading-snug sm:text-lg", theme.accentText)}>
-              {kpi.value}
-            </p>
+            <>
+              <p className={cn("mt-1 text-base font-semibold tabular-nums leading-snug sm:text-lg", theme.accentText)}>
+                {kpi.value}
+              </p>
+              {kpi.coverage_label ? (
+                <p className="mt-1 text-[0.65rem] text-muted-foreground">{kpi.coverage_label}</p>
+              ) : null}
+            </>
           )}
         </div>
       ))}

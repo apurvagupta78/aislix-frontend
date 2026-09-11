@@ -24,6 +24,7 @@ import { AI_DISCLAIMER } from "@/components/scan/ScanProgressPanel";
 import { planHasFeature } from "@/lib/plan-features";
 import { fetchUsageSummary } from "@/lib/subscription-limits";
 import type { ResultViewMode } from "@/lib/customer-context";
+import { useWorkspaceContext } from "@/hooks/use-customer-context";
 import { ScanContextPanel } from "@/components/scan/ScanContextPanel";
 import { ScanResultsBody } from "@/components/scan/DemoScanResultsBody";
 import {
@@ -68,6 +69,7 @@ export const Route = createFileRoute("/results")({
 function Results() {
   const { scan } = Route.useSearch();
   const navigate = useNavigate();
+  const workspace = useWorkspaceContext();
 
   const query = useQuery({
     queryKey: ["scan-result", scan],
@@ -337,6 +339,8 @@ function Results() {
                       financialLocked={financialLocked}
                       planCode={planCode}
                       parityLayout
+                      customerType={workspace.customerType}
+                      roleFamily={workspace.roleFamily}
                       imageUrl={imageUrl}
                       previousScore={data?.navigation?.previous_execution_score ?? undefined}
                       competitorEnabled
