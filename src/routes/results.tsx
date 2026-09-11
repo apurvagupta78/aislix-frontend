@@ -27,6 +27,15 @@ import {
 } from "@/components/scan-results/ResultParts";
 import { FixRescanVerifyPanel } from "@/components/scan-results/FixRescanVerifyPanel";
 import {
+  AssortmentPanel,
+  FixRescanCtaPanel,
+  HistoricalIntelligencePanel,
+  ImageQualityPanel,
+  OpportunityLedgerPanel,
+  PresentabilityPanel,
+  VerifiedExecutionPanel,
+} from "@/components/scan-results/RetailIntelligencePanels";
+import {
   ActionCenterPanel,
   AiSummaryBlock,
   CompetitorIntelPanel,
@@ -75,10 +84,11 @@ import {
 } from "@/components/scan-results/ResultCharts";
 import { toast } from "sonner";
 import {
-  buildFullScanReportCsv,
-  fetchScanResult,
+  buildFullScanReportExcel,
   downloadBlob,
-  downloadScanCsv,
+  downloadBlobBytes,
+  downloadScanExcel,
+  fetchScanResult,
   downloadScanPdf,
   downloadScanAnnotatedImage,
   type ScanResult,
@@ -191,6 +201,7 @@ function Results() {
   const sectionOrder = orderedVisibleSections(
     activeView,
     workspaceQuery.data?.roleFamily,
+    workspaceQuery.data?.customerType,
   );
   const competitorEnabled =
     sectionOrder.includes("competitor_intel") &&
@@ -526,6 +537,20 @@ function Results() {
                         }
                       />
                     );
+                  case "image_quality":
+                    return <ImageQualityPanel key={key} data={display} loading={loading} />;
+                  case "assortment":
+                    return <AssortmentPanel key={key} data={display} loading={loading} />;
+                  case "opportunity_ledger":
+                    return <OpportunityLedgerPanel key={key} data={display} loading={loading} />;
+                  case "verified_execution":
+                    return <VerifiedExecutionPanel key={key} data={display} loading={loading} />;
+                  case "historical_intel":
+                    return <HistoricalIntelligencePanel key={key} data={display} loading={loading} />;
+                  case "presentability":
+                    return <PresentabilityPanel key={key} data={display} loading={loading} />;
+                  case "fix_rescan_cta":
+                    return <FixRescanCtaPanel key={key} scanId={data?.scan_id} />;
                   default:
                     return null;
                 }
@@ -554,21 +579,23 @@ function DownloadsPanel({
 }) {
   const imageUrl = data?.downloads?.annotated_image_url ?? data?.annotated_image_url;
 
-  const downloadCsv = async () => {
+  const downloadExcel = async () => {
     if (data?.scan_id) {
       try {
-        await downloadScanCsv(data.scan_id, data.downloads?.csv_url);
+        await downloadScanExcel(data.scan_id, data.downloads?.csv_url);
+        toast.success("Excel report downloaded");
         return;
       } catch {
         // fall back to the client-side export
       }
     }
     if (!data) return;
-    downloadBlob(
-      buildFullScanReportCsv(data),
-      `aislix-${data.scan_id}-report.csv`,
-      "text/csv;charset=utf-8",
+    downloadBlobBytes(
+      buildFullScanReportExcel(data),
+      `aislix-${data.scan_id}-report.xlsx`,
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
+    toast.success("Excel report downloaded");
   };
 
   const downloadImage = async () => {
@@ -616,10 +643,10 @@ function DownloadsPanel({
             variant="subtle"
             size="lg"
             className="w-full rounded-xl"
-            onClick={downloadCsv}
+            onClick={() => void downloadExcel()}
             disabled={!data}
           >
-            <FileSpreadsheet className="size-4" /> CSV inventory
+            <FileSpreadsheet className="size-4" /> Excel report
           </Button>
 
           <Button

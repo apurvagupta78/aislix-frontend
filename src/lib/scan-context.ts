@@ -10,7 +10,13 @@ import {
   type InventoryFacing,
   type PlanogramMatchResult,
 } from "@/lib/demo-planogram-match";
-import type { CompetitorSnapshot, CompetitorUpperHand } from "@/lib/brand-intel";
+import {
+  annotateCompetitorCategories,
+  brandIsDifferentCategory,
+  formatCompetitorBrandLabel,
+  type CompetitorSnapshot,
+  type CompetitorUpperHand,
+} from "@/lib/brand-intel";
 import type { FinancialImpact, ScanRecommendation, ScanResult } from "@/lib/scan-results";
 import { emptyRow, type PlanogramRow } from "@/lib/planogram";
 
@@ -175,20 +181,53 @@ export function computeContextFinancialImpact(
   }
 
   const daily = Math.round(oosDaily + atRiskDaily);
-  const hasPlanogramPricing = planogramRows.some(
-    (r) => (r.mrp_inr ?? 0) > 0 || (r.avg_daily_sales ?? 0) > 0,
-  );
+  const hasPlanogramPricing = planogramRows.some((r) => (r.mrp_inr ?? 0) > 0);
+
+  if (!hasPlanogramPricing && daily <= 0 && oosSkus === 0 && atRiskSkus === 0) {
+    return {
+      level: 1,
+      commercial_risk: "low",
+      estimated_daily_lost_sales_inr: 0,
+      estimated_weekly_lost_sales_inr: 0,
+      estimated_monthly_lost_sales_inr: 0,
+      oos_sku_count: 0,
+      at_risk_sku_count: 0,
+      methodology:
+        "Financial impact cannot be estimated until sales velocity and price data are configured.",
+      confidence: "indicative",
+      source: "image_only",
+    };
+  }
+
+  if (!hasPlanogramPricing && (oosSkus > 0 || atRiskSkus > 0)) {
+    return {
+      level: 1,
+      commercial_risk: oosSkus > 0 ? "high" : "medium",
+      estimated_daily_lost_sales_inr: 0,
+      estimated_weekly_lost_sales_inr: 0,
+      estimated_monthly_lost_sales_inr: 0,
+      oos_sku_count: oosSkus,
+      at_risk_sku_count: atRiskSkus,
+      methodology:
+        "Commercial risk detected. Configure SKU price and velocity to quantify revenue at risk.",
+      confidence: "indicative",
+      source: "image_only",
+    };
+  }
 
   return {
+    level: 2,
     estimated_daily_lost_sales_inr: daily,
     estimated_weekly_lost_sales_inr: daily * 7,
     estimated_monthly_lost_sales_inr: daily * 30,
     oos_sku_count: oosSkus,
     at_risk_sku_count: atRiskSkus,
     methodology: hasPlanogramPricing
-      ? "Uses planogram price and daily sales velocity per SKU where provided."
+      ? "Estimated revenue at risk: price × quantity gap (expected minus actual facings) per planogram SKU."
       : "Indicative estimate using category ASP defaults and typical daily velocity.",
     confidence: hasPlanogramPricing ? "priced" : "indicative",
+    source: hasPlanogramPricing ? "customer_provided_velocity" : "default_assumption",
+    assumption: hasPlanogramPricing ? "1 day exposure" : undefined,
   };
 }
 
@@ -335,9 +374,24 @@ function filteredBrandShare(
     .sort((a, b) => b.share - a.share);
 }
 
+function auditSubCategoryLabel(
+  ctx: ScanContextState,
+  audit?: { subCategory?: string; category?: string },
+): string {
+  const row = ctx.planogramRows[0];
+  return (
+    row?.sub_category?.trim() ||
+    audit?.subCategory?.trim() ||
+    row?.category?.trim() ||
+    audit?.category?.trim() ||
+    ""
+  );
+}
+
 export function buildDemoCompetitorIntel(
   inventory: NonNullable<ScanResult["inventory"]>,
   ctx: ScanContextState,
+  audit?: { subCategory?: string; category?: string },
 ): CompetitorSnapshot | null {
   const focus = effectiveFocusFromContext(ctx);
   const primary = (focus.brand || focus.company || "").trim();
@@ -352,6 +406,8 @@ export function buildDemoCompetitorIntel(
     quantity: 0,
   };
 
+  const auditSubCategory = auditSubCategoryLabel(ctx, audit);
+
   const firstPlanogramRow = ctx.planogramRows[0];
   const knownCompetitors = firstPlanogramRow
     ? knownCompetitorsForPlanogramRow(firstPlanogramRow)
@@ -364,11 +420,13 @@ export function buildDemoCompetitorIntel(
   const competitorRows = [...competitorNames]
     .map((name) => {
       const detected = shares.find((s) => brandsMatch(s.brand, name));
+      const differentCategory = brandIsDifferentCategory(inventory, name, auditSubCategory);
       return {
         brand: name,
         share: detected?.share ?? 0,
         facings: detected?.quantity,
         is_competitor: true as const,
+        different_category: differentCategory || undefined,
       };
     })
     .sort((a, b) => b.share - a.share)
@@ -376,11 +434,15 @@ export function buildDemoCompetitorIntel(
 
   const upperHand: CompetitorUpperHand[] = competitorRows
     .filter((c) => c.share > ownRow.share && c.share > 0)
-    .map((c) => ({
-      brand: c.brand,
-      share: c.share,
-      note: `${c.brand} leads with ${c.share}% shelf share vs ${primary} at ${ownRow.share}% — consider adding facings or improving eye-level placement for ${primary}.`,
-    }));
+    .map((c) => {
+      const label = formatCompetitorBrandLabel(c.brand, c.different_category);
+      return {
+        brand: c.brand,
+        share: c.share,
+        different_category: c.different_category,
+        note: `${label} leads with ${c.share}% shelf share vs ${primary} at ${ownRow.share}% — consider adding facings or improving eye-level placement for ${primary}.`,
+      };
+    });
 
   const productLabel = focus.product?.trim()
     ? `${primary} ${focus.product}`.trim()
@@ -671,9 +733,18 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
     subCategory: result.scan_sub_category,
   });
   const hasPlanogram = planogramRows.length > 0;
-  if (!hasFocus && !hasPlanogram) return result;
-
   const fullInventory = result.inventory ?? [];
+  const auditSubCategory = result.scan_sub_category ?? result.scan_category;
+
+  if (!hasFocus && !hasPlanogram) {
+    const competitor_intel = annotateCompetitorCategories(
+      result.competitor_intel ?? null,
+      fullInventory,
+      auditSubCategory,
+    );
+    if (!competitor_intel) return result;
+    return { ...result, competitor_intel };
+  }
   const threshold = result.summary?.low_stock_threshold ?? OOS_THRESHOLD;
   const match = hasPlanogram
     ? comparePlanogramToInventory(fullInventory as InventoryFacing[], planogramRows)
@@ -706,7 +777,10 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
     primaryBrand && effectiveFocus.product
       ? `${primaryBrand} ${effectiveFocus.product}`.trim()
       : undefined;
-  const competitor_intel = buildDemoCompetitorIntel(fullInventory, ctx);
+  const competitor_intel = buildDemoCompetitorIntel(fullInventory, ctx, {
+    subCategory: result.scan_sub_category,
+    category: result.scan_category,
+  });
   if (competitor_intel && productShare !== undefined) {
     competitor_intel.product_share_percent = productShare;
   }
@@ -820,7 +894,10 @@ export function enrichDemoScanResult(result: ScanResult, ctx: ScanContextState):
         ? computeProductShareFromMatch(fullInventory, match)
         : computeProductSharePercent(fullInventory, primaryBrand, effectiveFocus.product)
       : undefined;
-  const intel = buildDemoCompetitorIntel(fullInventory, ctx);
+  const intel = buildDemoCompetitorIntel(fullInventory, ctx, {
+    subCategory: result.scan_sub_category,
+    category: result.scan_category,
+  });
   const threshold = result.summary?.low_stock_threshold ?? OOS_THRESHOLD;
   const financial = computeContextFinancialImpact(fullInventory, planogramRows, threshold, match);
 

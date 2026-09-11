@@ -4,9 +4,14 @@
  */
 
 import type { ResultViewMode } from "@/lib/customer-context";
+import {
+  buildKpiMetrics,
+  computeRetailExecutionScore,
+  executionScoreFromResult,
+} from "@/lib/execution-metrics";
 import type { NextBestAction, RoleSummaries } from "@/lib/retail-intelligence";
 import type { FinancialImpact, ScanRecommendation, ScanResult } from "@/lib/scan-results";
-import { formatPercent, normalizeConfidence } from "@/lib/scan-results";
+import { normalizeConfidence } from "@/lib/scan-results";
 import { formatInr } from "@/lib/pricing";
 
 const DEFAULT_ASP_INR = 75;
@@ -40,11 +45,10 @@ export type ExecutionKpi = {
 };
 
 export function executionScore(result?: ScanResult | null): number | undefined {
-  const s = result?.summary;
-  if (!s) return undefined;
-  const score = s.shelf_execution_score ?? s.shelf_health_score;
-  return score !== undefined && Number.isFinite(score) ? Math.round(score) : undefined;
+  return executionScoreFromResult(result);
 }
+
+export { computeRetailExecutionScore, buildKpiMetrics };
 
 export function totalFacings(result?: ScanResult | null): number {
   const s = result?.summary;
@@ -67,64 +71,12 @@ export function shareOfShelfTopBrand(result?: ScanResult | null): number | undef
 }
 
 export function buildKpiStrip(result?: ScanResult | null): ExecutionKpi[] {
-  const s = result?.summary;
-  const planogram = result?.planogram?.sku_match_percent ?? result?.planogram?.percent ?? s?.shelf_compliance;
-  const kpis: ExecutionKpi[] = [
-    {
-      key: "availability",
-      label: "Availability",
-      value: formatPercent(s?.availability_percent ?? s?.osa_percent) ?? "—",
-      numeric: s?.availability_percent ?? s?.osa_percent,
-    },
-    {
-      key: "planogram",
-      label: "Planogram",
-      value: planogram !== null && planogram !== undefined ? `${Math.round(planogram)}%` : "Not configured",
-      numeric: planogram ?? undefined,
-    },
-  ];
-
-  if (s?.brand_share_percent !== undefined) {
-    kpis.push({
-      key: "brand_share",
-      label: "Brand share",
-      value: formatPercent(s.brand_share_percent) ?? "—",
-      numeric: s.brand_share_percent,
-    });
-  }
-  if (s?.product_share_percent !== undefined) {
-    kpis.push({
-      key: "product_share",
-      label: "Product share",
-      value: formatPercent(s.product_share_percent) ?? "—",
-      numeric: s.product_share_percent,
-    });
-  }
-  if (s?.brand_share_percent === undefined && s?.product_share_percent === undefined) {
-    kpis.push({
-      key: "share",
-      label: "Shelf share",
-      value: formatPercent(s?.share_of_shelf_percent ?? shareOfShelfTopBrand(result)) ?? "—",
-      numeric: s?.share_of_shelf_percent ?? shareOfShelfTopBrand(result),
-    });
-  }
-
-  kpis.push(
-    {
-      key: "facing",
-      label: "Facing",
-      value: formatPercent(s?.facing_compliance_percent) ?? "—",
-      numeric: s?.facing_compliance_percent,
-    },
-    {
-      key: "placement",
-      label: "Placement",
-      value: formatPercent(s?.placement_compliance_percent) ?? "—",
-      numeric: s?.placement_compliance_percent,
-    },
-  );
-
-  return kpis;
+  return buildKpiMetrics(result).map(({ key, label, value, numeric }) => ({
+    key,
+    label,
+    value,
+    numeric,
+  }));
 }
 
 export function buildActionCenterItems(result?: ScanResult | null): ActionCenterItem[] {
@@ -352,58 +304,29 @@ export function formatConfidenceSecondary(value?: number): string | undefined {
   return `${normalizeConfidence(value).toFixed(1)}% avg model confidence`;
 }
 
-/** Resolve financial impact from backend metrics or derive a client-side estimate. */
+/** Resolve financial impact — returns null when pricing/velocity data is insufficient. */
 export function resolveFinancialImpact(result?: ScanResult | null): FinancialImpact | null {
   if (result?.financial_impact) return result.financial_impact;
   const s = result?.summary;
   const inventory = result?.inventory ?? [];
   if (!s && !inventory.length) return null;
 
-  const threshold = s?.low_stock_threshold ?? 2;
-  let oosDaily = 0;
-  let atRiskDaily = 0;
-  let oosSkus = 0;
-  let atRiskSkus = 0;
-
-  for (const row of inventory) {
-    const qty = row.quantity ?? 0;
-    if (row.out_of_stock || qty <= 0) {
-      oosDaily += UNITS_PER_DAY * DEFAULT_ASP_INR;
-      oosSkus += 1;
-    } else if (row.low_stock || qty <= threshold) {
-      const gap = Math.max(0, threshold - qty);
-      atRiskDaily += gap * UNITS_PER_DAY * DEFAULT_ASP_INR * LOW_STOCK_RISK;
-      atRiskSkus += 1;
-    }
-  }
-
-  const confirmedOos = s?.confirmed_oos_count ?? s?.out_of_stock_products ?? oosSkus;
-  const atRisk = s?.possible_oos_count ?? s?.low_stock_products ?? atRiskSkus;
-  if (confirmedOos === 0 && atRisk === 0 && oosDaily + atRiskDaily === 0) {
-    return {
-      estimated_daily_lost_sales_inr: 0,
-      estimated_weekly_lost_sales_inr: 0,
-      estimated_monthly_lost_sales_inr: 0,
-      oos_sku_count: 0,
-      at_risk_sku_count: 0,
-      methodology: "Indicative estimate using category ASP defaults and typical daily velocity.",
-      confidence: "indicative",
-    };
-  }
-
-  const daily =
-    oosDaily + atRiskDaily > 0
-      ? Math.round(oosDaily + atRiskDaily)
-      : Math.round(confirmedOos * UNITS_PER_DAY * DEFAULT_ASP_INR + atRisk * UNITS_PER_DAY * DEFAULT_ASP_INR * LOW_STOCK_RISK);
+  const confirmedOos = s?.confirmed_oos_count ?? s?.out_of_stock_products ?? 0;
+  const atRisk = s?.possible_oos_count ?? s?.low_stock_products ?? 0;
+  if (confirmedOos === 0 && atRisk === 0) return null;
 
   return {
-    estimated_daily_lost_sales_inr: daily,
-    estimated_weekly_lost_sales_inr: daily * 7,
-    estimated_monthly_lost_sales_inr: daily * 30,
+    level: 1,
+    commercial_risk: confirmedOos > 0 ? "high" : atRisk > 0 ? "medium" : "low",
+    estimated_daily_lost_sales_inr: 0,
+    estimated_weekly_lost_sales_inr: 0,
+    estimated_monthly_lost_sales_inr: 0,
     oos_sku_count: confirmedOos,
     at_risk_sku_count: atRisk,
-    methodology: "Indicative estimate using category ASP defaults and typical daily velocity.",
+    methodology:
+      "Financial impact cannot be estimated until sales velocity and price data are configured.",
     confidence: "indicative",
+    source: "image_only",
   };
 }
 

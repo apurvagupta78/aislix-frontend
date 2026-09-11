@@ -12,6 +12,7 @@ import {
   buildDetailedActions,
   buildRoleSummary,
   buildKpiStrip,
+  computeRetailExecutionScore,
   executionScore,
   formatLostSales,
   formatScoreDelta,
@@ -28,7 +29,7 @@ import type { FinancialImpact } from "@/lib/scan-results";
 import { PLAN_TIER_LABELS, planTier } from "@/lib/plan-features";
 import type { ScanResult } from "@/lib/scan-results";
 import { formatScanDate } from "@/lib/scan-results";
-import type { CompetitorSnapshot } from "@/lib/brand-intel";
+import { formatCompetitorBrandLabel, type CompetitorSnapshot } from "@/lib/brand-intel";
 import {
   allowedViewModes,
   VIEW_MODE_DESCRIPTIONS,
@@ -94,21 +95,22 @@ export function ExecutionScoreHero({
   previousScore?: number;
 }) {
   const score = executionScore(data);
+  const scoreDetail = computeRetailExecutionScore(data);
   const delta = formatScoreDelta(score, previousScore);
   const rising = score !== undefined && previousScore !== undefined && score > previousScore;
 
   return (
     <div className="card-surface p-5 sm:p-6">
       <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-        Shelf execution score
+        Retail execution score
       </p>
       {loading ? (
         <Skeleton className="mt-3 h-12 w-32" />
       ) : (
         <div className="mt-2 flex flex-wrap items-end gap-3">
           <p className="text-5xl font-semibold tabular-nums tracking-tight">
-            {score ?? "—"}
-            {score !== undefined && (
+            {scoreDetail.state === "not_configured" ? "—" : (score ?? "—")}
+            {score !== undefined && scoreDetail.state !== "not_configured" && (
               <span className="text-2xl font-normal text-muted-foreground"> / 100</span>
             )}
           </p>
@@ -125,12 +127,18 @@ export function ExecutionScoreHero({
           )}
         </div>
       )}
+      {!loading && scoreDetail.components.length > 0 && (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Based on {scoreDetail.components.length} configured KPI
+          {scoreDetail.components.length === 1 ? "" : "s"} (weights renormalized)
+        </p>
+      )}
       {!loading && recognitionCoverage(data) !== undefined && (
         <p className="mt-3 text-sm text-muted-foreground">
           Recognition coverage: <strong>{recognitionCoverage(data)}%</strong>
           {data?.summary?.average_confidence !== undefined && (
             <span className="ml-2 text-xs">
-              ({formatConfidenceSecondary(data.summary.average_confidence)})
+              · AI confidence: {formatConfidenceSecondary(data.summary.average_confidence)}
             </span>
           )}
         </p>
@@ -417,7 +425,7 @@ export function CompetitorIntelPanel({
         <div className="mt-4 space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-brand/20 bg-brand-soft/30 px-4 py-3">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">Brand share</p>
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">Share of facings</p>
               <p className="mt-1 text-2xl font-semibold tabular-nums">
                 {snapshot.primary_brand}{" "}
                 <span className="text-lg text-muted-foreground">
@@ -441,16 +449,16 @@ export function CompetitorIntelPanel({
           </div>
           {snapshot.upper_hand?.length ? (
             <div className="space-y-2">
-              <p className="text-xs font-medium uppercase tracking-widest text-amber-700 dark:text-amber-400">
+              <p className="text-xs font-medium uppercase tracking-widest text-brand">
                 Where competitors lead
               </p>
               {snapshot.upper_hand.map((edge) => (
                 <div
                   key={edge.brand}
-                  className="rounded-xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-sm dark:border-amber-900/50 dark:bg-amber-950/30"
+                  className="rounded-xl border border-brand/15 bg-brand-soft/30 px-4 py-3 text-sm"
                 >
                   <p className="font-medium">
-                    {edge.brand}{" "}
+                    {formatCompetitorBrandLabel(edge.brand, edge.different_category)}{" "}
                     <span className="tabular-nums text-muted-foreground">{edge.share.toFixed(1)}% share</span>
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">{edge.note}</p>
@@ -466,7 +474,9 @@ export function CompetitorIntelPanel({
                   key={row.brand}
                   className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-2.5 text-sm"
                 >
-                  <span className="font-medium">{row.brand}</span>
+                  <span className="font-medium">
+                    {formatCompetitorBrandLabel(row.brand, row.different_category)}
+                  </span>
                   <span className="tabular-nums text-muted-foreground">
                     {row.share > 0 ? `${row.share.toFixed(1)}%` : "Not detected"}
                   </span>
@@ -493,11 +503,11 @@ export function ShareOfShelfPanel({ data, loading }: { data?: ScanResult; loadin
   return (
     <div className="card-surface p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold tracking-tight">Share of shelf</h3>
+        <h3 className="text-sm font-semibold tracking-tight">Share of facings</h3>
         <div className="flex flex-wrap gap-2">
           {brandShare !== undefined && (
             <Badge className="rounded-full bg-brand-soft text-brand hover:bg-brand-soft">
-              Brand {brandShare.toFixed(1)}%
+              {brandShare.toFixed(1)}% of facings
             </Badge>
           )}
           {productShare !== undefined && s?.product_share_label && (
@@ -514,7 +524,7 @@ export function ShareOfShelfPanel({ data, loading }: { data?: ScanResult; loadin
       </div>
       {(brandShare !== undefined || productShare !== undefined) && (
         <p className="mt-2 text-xs text-muted-foreground">
-          Brand share counts every facing for that brand. Product share counts only the planogram SKU
+          Share of facings counts every facing for that brand vs total category facings. Product share counts only the planogram SKU
           (e.g. Colgate Max Fresh), not other Colgate variants.
         </p>
       )}
@@ -719,7 +729,7 @@ export function FinancialImpactPanel({
   }
 
   const body = impact ? (
-    <FinancialImpactBody impact={impact} />
+    <FinancialImpactBody impact={impact} competitorIntel={data?.competitor_intel} />
   ) : (
     <p className="mt-3 text-sm text-muted-foreground">No revenue-at-risk signals for this scan.</p>
   );
@@ -731,9 +741,9 @@ export function FinancialImpactPanel({
           <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
             <IndianRupee className="size-3.5" /> Financial impact
           </p>
-          <h3 className="mt-1 text-sm font-semibold tracking-tight">Estimated lost sales</h3>
+          <h3 className="mt-1 text-sm font-semibold tracking-tight">Revenue at risk</h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            Indicative revenue at risk from OOS and low-stock SKUs
+            Commercial impact from OOS, low stock, and facing gaps
           </p>
         </div>
         <Badge variant="outline" className="rounded-full capitalize">
@@ -759,31 +769,57 @@ export function FinancialImpactPanel({
   );
 }
 
-function FinancialImpactBody({ impact }: { impact: FinancialImpact }) {
-  const hasRisk = impact.estimated_daily_lost_sales_inr > 0;
+function FinancialImpactBody({
+  impact,
+  competitorIntel,
+}: {
+  impact: FinancialImpact;
+  competitorIntel?: CompetitorSnapshot | null;
+}) {
+  const level = impact.level ?? (impact.estimated_daily_lost_sales_inr > 0 ? 2 : 1);
+  const hasRupeeEstimate = level >= 2 && impact.estimated_daily_lost_sales_inr > 0;
+  const riskLabel =
+    impact.commercial_risk === "critical"
+      ? "Critical"
+      : impact.commercial_risk === "high"
+        ? "High"
+        : impact.commercial_risk === "medium"
+          ? "Medium"
+          : "Low";
+
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-3">
-        {[
-          { label: "Daily", value: impact.estimated_daily_lost_sales_inr },
-          { label: "Weekly", value: impact.estimated_weekly_lost_sales_inr },
-          { label: "Monthly", value: impact.estimated_monthly_lost_sales_inr },
-        ].map(({ label, value }) => (
-          <div key={label} className="rounded-xl border border-border bg-surface px-4 py-3">
-            <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
-              {label}
-            </p>
-            <p
-              className={cn(
-                "mt-1 text-xl font-semibold tabular-nums",
-                hasRisk ? "text-destructive" : "text-accent-green",
-              )}
-            >
-              {formatLostSales(value)}
-            </p>
-          </div>
-        ))}
-      </div>
+      {level === 1 ? (
+        <div className="rounded-xl border border-border bg-surface px-4 py-3">
+          <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
+            Commercial risk
+          </p>
+          <p className="mt-1 text-xl font-semibold capitalize text-brand">{riskLabel}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{impact.methodology}</p>
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[
+            { label: "Daily", value: impact.estimated_daily_lost_sales_inr },
+            { label: "Weekly", value: impact.estimated_weekly_lost_sales_inr },
+            { label: "Monthly", value: impact.estimated_monthly_lost_sales_inr },
+          ].map(({ label, value }) => (
+            <div key={label} className="rounded-xl border border-border bg-surface px-4 py-3">
+              <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
+                {label}
+              </p>
+              <p
+                className={cn(
+                  "mt-1 text-xl font-semibold tabular-nums",
+                  hasRupeeEstimate ? "text-destructive" : "text-accent-green",
+                )}
+              >
+                {formatLostSales(value)}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="mt-4 flex flex-wrap gap-4 text-sm">
         <p>
           <span className="text-muted-foreground">OOS SKUs:</span>{" "}
@@ -794,7 +830,30 @@ function FinancialImpactBody({ impact }: { impact: FinancialImpact }) {
           <span className="font-semibold tabular-nums">{impact.at_risk_sku_count}</span>
         </p>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">{impact.methodology}</p>
+      {competitorIntel?.upper_hand?.length ? (
+        <div className="mt-4 space-y-2 border-t border-border pt-4">
+          <p className="text-xs font-medium uppercase tracking-widest text-brand">Competitor edge</p>
+          {competitorIntel.upper_hand.map((edge) => (
+            <div
+              key={edge.brand}
+              className="rounded-xl border border-brand/15 bg-brand-soft/25 px-4 py-3 text-sm"
+            >
+              <p className="font-medium">
+                {formatCompetitorBrandLabel(edge.brand, edge.different_category)}{" "}
+                <span className="tabular-nums text-muted-foreground">{edge.share.toFixed(1)}% share</span>
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{edge.note}</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+      {level >= 2 ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          {impact.methodology}
+          {impact.source ? ` Source: ${impact.source.replace(/_/g, " ")}.` : ""}
+          {impact.assumption ? ` Assumption: ${impact.assumption}.` : ""}
+        </p>
+      ) : null}
     </>
   );
 }
@@ -807,11 +866,12 @@ export function DemoFinancialImpactStrip({
   impact: FinancialImpact;
   className?: string;
 }) {
-  const hasRisk = impact.estimated_daily_lost_sales_inr > 0;
+  const level = impact.level ?? (impact.estimated_daily_lost_sales_inr > 0 ? 2 : 1);
+  const hasRisk = level >= 2 && impact.estimated_daily_lost_sales_inr > 0;
   return (
     <div className={cn("rounded-xl border border-border bg-surface p-4", className)}>
       <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
-        Estimated lost sales (daily)
+        {level === 1 ? "Commercial risk" : "Revenue at risk (daily)"}
       </p>
       <p
         className={cn(
@@ -819,7 +879,10 @@ export function DemoFinancialImpactStrip({
           hasRisk ? "text-destructive" : "text-accent-green",
         )}
       >
-        {formatLostSales(impact.estimated_daily_lost_sales_inr)}
+        {level === 1
+          ? (impact.commercial_risk ?? "low").charAt(0).toUpperCase() +
+            (impact.commercial_risk ?? "low").slice(1)
+          : formatLostSales(impact.estimated_daily_lost_sales_inr)}
       </p>
       <p className="mt-2 text-xs text-muted-foreground">
         {impact.oos_sku_count} OOS · {impact.at_risk_sku_count} at-risk SKUs

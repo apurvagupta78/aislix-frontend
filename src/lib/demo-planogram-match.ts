@@ -287,48 +287,38 @@ export type FinancialGapLine = {
   daily_loss_inr: number;
 };
 
-/** Compute per-SKU financial gap from planogram match lines. */
+const DEFAULT_PLANOGRAM_PRICE_INR = 75;
+
+/** Compute per-SKU financial gap: price × (expected qty − actual qty). */
 export function computePlanogramFinancialGaps(
   match: PlanogramMatchResult,
-  threshold = 2,
+  _threshold = 2,
 ): FinancialGapLine[] {
   const gaps: FinancialGapLine[] = [];
 
   for (const line of match.lines) {
     const plan = line.expected;
-    const asp =
-      plan.mrp_inr != null && Number.isFinite(plan.mrp_inr) && plan.mrp_inr > 0 ? plan.mrp_inr : 75;
-    const velocity =
-      plan.avg_daily_sales != null && Number.isFinite(plan.avg_daily_sales) && plan.avg_daily_sales > 0
-        ? plan.avg_daily_sales
-        : 4;
+    const price =
+      plan.mrp_inr != null && Number.isFinite(plan.mrp_inr) && plan.mrp_inr > 0
+        ? plan.mrp_inr
+        : DEFAULT_PLANOGRAM_PRICE_INR;
 
-    if (line.issue_type === ISSUE_MISSING || line.issue_type === ISSUE_WRONG) {
-      gaps.push({
-        brand: plan.brand,
-        product: plan.product_name,
-        issue_type: line.issue_type,
-        gap_units: line.expected_qty,
-        daily_loss_inr: Math.round(velocity * asp * line.expected_qty),
-      });
-    } else if (line.issue_type === ISSUE_QTY) {
-      const gap = line.expected_qty - line.detected_qty;
-      gaps.push({
-        brand: plan.brand,
-        product: plan.product_name,
-        issue_type: line.issue_type,
-        gap_units: gap,
-        daily_loss_inr: Math.round(gap * velocity * asp * 0.35),
-      });
-    } else if (line.detected_qty > 0 && line.detected_qty < threshold) {
-      gaps.push({
-        brand: plan.brand,
-        product: plan.product_name,
-        issue_type: ISSUE_QTY,
-        gap_units: threshold - line.detected_qty,
-        daily_loss_inr: Math.round((threshold - line.detected_qty) * velocity * asp),
-      });
-    }
+    const expected = line.expected_qty;
+    const actual =
+      line.issue_type === ISSUE_MISSING || line.issue_type === ISSUE_WRONG ? 0 : line.detected_qty;
+    const gapUnits = Math.max(0, expected - actual);
+    if (gapUnits <= 0) continue;
+
+    gaps.push({
+      brand: plan.brand,
+      product: plan.product_name,
+      issue_type:
+        line.issue_type === ISSUE_MISSING || line.issue_type === ISSUE_WRONG
+          ? line.issue_type
+          : ISSUE_QTY,
+      gap_units: gapUnits,
+      daily_loss_inr: Math.round(price * gapUnits),
+    });
   }
 
   return gaps;

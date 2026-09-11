@@ -28,6 +28,14 @@ import { cn } from "@/lib/utils";
 import { displayVariant } from "@/lib/landing-inventory";
 import type { LandingScanResult } from "@/lib/landing-scan-api";
 import { DemoPlanogramMatchCompact } from "@/components/scan/DemoPlanogramMatchCompact";
+import {
+  AssortmentPanel,
+  FixRescanCtaPanel,
+  ImageQualityPanel,
+  OpportunityLedgerPanel,
+  PresentabilityPanel,
+  VerifiedExecutionPanel,
+} from "@/components/scan-results/RetailIntelligencePanels";
 
 const INLINE_SKIP_SECTIONS = new Set<ResultSectionKey>([
   "annotated_image",
@@ -184,6 +192,18 @@ export function DemoScanResultsBody({
               ) : landingInventory ? (
                 <DemoInventoryCompact key={key} rows={landingInventory} />
               ) : null;
+            case "image_quality":
+              return <ImageQualityPanel key={key} data={data} />;
+            case "assortment":
+              return <AssortmentPanel key={key} data={data} />;
+            case "opportunity_ledger":
+              return <OpportunityLedgerPanel key={key} data={data} />;
+            case "verified_execution":
+              return <VerifiedExecutionPanel key={key} data={data} />;
+            case "presentability":
+              return <PresentabilityPanel key={key} data={data} />;
+            case "fix_rescan_cta":
+              return <FixRescanCtaPanel key={key} scanId={data.scan_id} />;
             default:
               return null;
           }

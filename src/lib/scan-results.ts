@@ -120,15 +120,20 @@ export type ScanSummary = {
   subcategory_mismatch_skus?: number;
 };
 
-/** Indicative revenue-at-risk from OOS and low-stock SKUs. */
+/** Revenue at risk / estimated lost sales — never invent velocity or price. */
 export type FinancialImpact = {
+  /** 1 = image only (risk level), 2 = velocity+price, 3 = OOS duration */
+  level?: 1 | 2 | 3;
+  commercial_risk?: "low" | "medium" | "high" | "critical";
   estimated_daily_lost_sales_inr: number;
   estimated_weekly_lost_sales_inr: number;
   estimated_monthly_lost_sales_inr: number;
   oos_sku_count: number;
   at_risk_sku_count: number;
   methodology: string;
-  confidence: "indicative" | "priced";
+  confidence: "indicative" | "priced" | "medium" | "high" | "low";
+  source?: string;
+  assumption?: string;
 };
 
 /** Recognition-quality counters reported by the vision backend. */
@@ -231,9 +236,10 @@ export type ScanResult = {
   };
 };
 
+import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import type { CompetitorSnapshot } from "@/lib/brand-intel";
-import { buildCompetitorSnapshot } from "@/lib/brand-intel";
+import { annotateCompetitorCategories, buildCompetitorSnapshot } from "@/lib/brand-intel";
 import {
   formatCategorySelections,
   parseCategorySelections,
@@ -641,7 +647,9 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
     unique_brands: uniqueBrands,
     // Only genuinely low-stock products; out-of-stock is reported separately.
     low_stock_products: inventory.filter((i) => i.low_stock).length,
-    average_confidence: Number(avgConfidence) || 0,
+    ...(avgConfidence !== null && avgConfidence !== undefined && Number(avgConfidence) > 0
+      ? { average_confidence: Number(avgConfidence) }
+      : {}),
     processing_time_ms: processingTimeMs,
     ...(scan.out_of_stock_count !== null && scan.out_of_stock_count !== undefined
       ? { out_of_stock_products: scan.out_of_stock_count }
@@ -705,6 +713,12 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
         : {}),
     ...(typeof (result?.metrics as any)?.subcategory_mismatch_skus === "number"
       ? { subcategory_mismatch_skus: Number((result?.metrics as any).subcategory_mismatch_skus) }
+      : {}),
+    ...(metricsNum("brand_share_percent") !== undefined
+      ? { brand_share_percent: metricsNum("brand_share_percent") }
+      : {}),
+    ...(metricsNum("product_share_percent") !== undefined
+      ? { product_share_percent: metricsNum("product_share_percent") }
       : {}),
   };
 
@@ -781,10 +795,18 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
       ? (metricsAny["competitor_intel"] as Partial<CompetitorSnapshot>)
       : undefined;
   const topBrands = mapBrandShare(result?.brand_share);
-  const competitorIntel = buildCompetitorSnapshot(
-    topBrands,
-    { primary_brand: "", competitor_brands: [] },
-    metricsCompetitor,
+  const auditSubCategory =
+    (scan.sub_category_label as string | null) ??
+    (scan.sub_category as string | null) ??
+    undefined;
+  const competitorIntel = annotateCompetitorCategories(
+    buildCompetitorSnapshot(
+      topBrands,
+      { primary_brand: "", competitor_brands: [] },
+      metricsCompetitor,
+    ),
+    inventory,
+    auditSubCategory,
   );
   const financialImpact = mapFinancialImpact(metricsAny["financial_impact"]);
 
@@ -825,6 +847,14 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
     },
 
   };
+  if (
+    scanResult.summary &&
+    scanResult.summary.brand_share_percent === undefined &&
+    competitorIntel?.own_brand_share_percent !== undefined
+  ) {
+    scanResult.summary.brand_share_percent = competitorIntel.own_brand_share_percent;
+  }
+
   if (storeName) scanResult.store = storeName;
   const shelfLabel = (scan as any).shelf_label as string | null | undefined;
   const scanCategory = (scan as any).category as string | null | undefined;
@@ -851,8 +881,15 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
   }
   const metricsObj = result?.metrics as Record<string, unknown> | undefined;
   const metricsRetailIntel = metricsObj?.retail_intelligence;
+  const metricsExecutionScore = metricsObj?.retail_execution_score;
   if (metricsRetailIntel && typeof metricsRetailIntel === "object") {
     scanResult.retail_intelligence = metricsRetailIntel as ScanResult["retail_intelligence"];
+  }
+  if (metricsExecutionScore && typeof metricsExecutionScore === "object") {
+    scanResult.retail_intelligence = {
+      ...(scanResult.retail_intelligence ?? {}),
+      retail_execution_score: metricsExecutionScore as import("@/lib/retail-intelligence").RetailExecutionScore,
+    };
   }
   if (!scanResult.role_summaries && metricsObj?.role_summaries) {
     scanResult.role_summaries = metricsObj.role_summaries as ScanResult["role_summaries"];
@@ -1136,7 +1173,7 @@ export function buildFullScanReportCsv(result: ScanResult): string {
         ["Brand", "Product", "Variant", "Quantity"],
         ...atRisk.map((r) => [
           r.brand,
-          r.product ?? r.product_name ?? "",
+          r.product ?? "",
           r.variant ?? "",
           r.quantity ?? 0,
         ]),
@@ -1265,6 +1302,218 @@ export function downloadBlob(content: string, filename: string, type: string) {
   link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+export function downloadBlobBytes(content: ArrayBuffer | Uint8Array, filename: string, type: string) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+type ExcelRows = (string | number | undefined | null)[][];
+
+function excelSheetName(label: string): string {
+  return label.replace(/[\\/?*[\]:]/g, "").slice(0, 31);
+}
+
+/** Multi-tab Excel workbook — one sheet per report section / role view. */
+export function buildFullScanReportExcel(result: ScanResult): ArrayBuffer {
+  const wb = XLSX.utils.book_new();
+  const s = result.summary;
+
+  const append = (name: string, rows: ExcelRows) => {
+    if (!rows.length) return;
+    const sheet = XLSX.utils.aoa_to_sheet(rows.map((row) => row.map((cell) => cell ?? "")));
+    XLSX.utils.book_append_sheet(wb, sheet, excelSheetName(name));
+  };
+
+  append("Overview", [
+    ["Aislix Shelf Audit Report"],
+    [],
+    ["Scan ID", result.scan_id],
+    ["Store", result.store ?? ""],
+    ["Location", result.location ?? result.aisle ?? ""],
+    ["Category", result.scan_category ?? ""],
+    ["Sub-category", result.scan_sub_category ?? ""],
+    ["Scan date", formatScanDate(result.created_at) ?? ""],
+    [],
+    ["Metric", "Value"],
+    ["Shelf execution score", s?.shelf_execution_score ?? s?.shelf_health_score ?? ""],
+    ["Total facings", s?.total_facings ?? s?.total_products ?? ""],
+    ["Unique SKUs", s?.unique_skus ?? ""],
+    ["Brand share %", s?.brand_share_percent ?? ""],
+    ["Product share %", s?.product_share_percent ?? ""],
+    ["Product share SKU", s?.product_share_label ?? ""],
+    ["Planogram SKU match %", result.planogram?.sku_match_percent ?? result.planogram?.percent ?? ""],
+    ["Confirmed OOS", s?.confirmed_oos_count ?? s?.out_of_stock_products ?? ""],
+    ["Avg confidence %", s ? normalizeConfidence(s.average_confidence).toFixed(1) : ""],
+    ["Processing time", s ? formatDuration(s.processing_time_ms) : ""],
+  ]);
+
+  const roleSummaries =
+    result.role_summaries ??
+    (result.retail_intelligence as { role_summaries?: Record<string, string> } | undefined)
+      ?.role_summaries;
+  const roleLabels: Record<string, string> = {
+    execution: "Execution",
+    merchandising: "Merchandising",
+    brand: "Brand Intel",
+    executive: "Executive",
+  };
+  if (roleSummaries) {
+    for (const view of ["execution", "merchandising", "brand", "executive"] as const) {
+      const text = roleSummaries[view]?.trim();
+      if (text) append(roleLabels[view], [["Summary"], [text]]);
+    }
+  }
+
+  if (result.executive_summary?.trim()) {
+    append("Executive Summary", [["Summary"], [result.executive_summary.trim()]]);
+  }
+
+  const pgLines = result.planogram?.summary?.lines;
+  if (Array.isArray(pgLines) && pgLines.length) {
+    append("Planogram", [
+      ["Brand", "Product", "Expected qty", "Found qty", "Status", "Detail"],
+      ...pgLines.map((line) => {
+        const row = line as Record<string, unknown>;
+        return [
+          String(row.brand ?? ""),
+          String(row.product ?? ""),
+          row.expected_qty ?? "",
+          row.detected_qty ?? "",
+          String(row.issue_type ?? ""),
+          String(row.detail ?? ""),
+        ];
+      }),
+    ]);
+  }
+
+  const ci = result.competitor_intel;
+  if (ci?.competitor_shares?.length) {
+    append("Competitors", [
+      ["Brand", "Share %", "Facings", "Role", "Different category"],
+      ...ci.competitor_shares.map((row) => [
+        row.brand,
+        row.share?.toFixed?.(1) ?? row.share ?? "",
+        row.facings ?? "",
+        row.is_primary ? "Primary" : row.is_competitor ? "Competitor" : "",
+        row.different_category ? "Yes" : "",
+      ]),
+    ]);
+    if (ci.upper_hand?.length) {
+      append("Competitor Edge", [
+        ["Brand", "Share %", "Note"],
+        ...ci.upper_hand.map((edge) => [edge.brand, edge.share, edge.note]),
+      ]);
+    }
+  }
+
+  const fi = result.financial_impact;
+  if (fi) {
+    append("Financial Impact", [
+      ["Metric", "Value (INR)"],
+      ["Estimated daily lost sales", fi.estimated_daily_lost_sales_inr],
+      ["Estimated weekly lost sales", fi.estimated_weekly_lost_sales_inr],
+      ["Estimated monthly lost sales", fi.estimated_monthly_lost_sales_inr],
+      ["OOS SKU count", fi.oos_sku_count],
+      ["At-risk SKU count", fi.at_risk_sku_count],
+      ["Methodology", fi.methodology],
+    ]);
+  }
+
+  const threshold = s?.low_stock_threshold ?? 2;
+  const atRisk = (result.inventory ?? []).filter((r) => (r.quantity ?? 0) < threshold);
+  if (atRisk.length) {
+    append("OOS Low Stock", [
+      ["Brand", "Product", "Variant", "Quantity"],
+      ...atRisk.map((r) => [
+        r.brand,
+        r.product ?? "",
+        r.variant ?? "",
+        r.quantity ?? 0,
+      ]),
+    ]);
+  }
+
+  const nba = result.retail_intelligence?.next_best_actions;
+  if (nba?.length) {
+    append("Actions", [
+      ["Priority", "Title", "Reason", "Recommended action", "Est. daily impact INR"],
+      ...nba.map((a) => [
+        a.priority,
+        a.title,
+        a.reason ?? "",
+        a.recommended_action ?? "",
+        a.estimated_daily_impact_inr ?? "",
+      ]),
+    ]);
+  }
+
+  if (result.recommendations?.length) {
+    append("Recommendations", [
+      ["Title", "Impact", "Detail"],
+      ...result.recommendations.map((r) => [r.title, r.impact ?? "", r.detail ?? ""]),
+    ]);
+  }
+
+  const brands = result.charts?.top_brands ?? [];
+  if (brands.length) {
+    append("Brand Share", [
+      ["Brand", "Share %"],
+      ...brands.map((b) => [b.brand, b.share.toFixed(1)]),
+    ]);
+  }
+
+  append("Inventory", [
+    [
+      "Brand",
+      "Product",
+      "Variant",
+      "Category",
+      "Quantity",
+      "Confidence %",
+      "Detected Sub-category",
+      "Audit Sub-category",
+    ],
+    ...(result.inventory ?? []).map((i) => [
+      i.brand,
+      i.product,
+      i.variant ?? "",
+      i.category ?? "",
+      i.quantity,
+      normalizeConfidence(i.confidence).toFixed(1),
+      i.detected_sub_category_label ?? "",
+      i.expected_sub_category_label ?? "",
+    ]),
+  ]);
+
+  return XLSX.write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
+}
+
+/** Download combined KPI + role summaries as multi-tab Excel (demo / guest). */
+export function downloadDemoFullReportExcel(result: ScanResult): void {
+  downloadBlobBytes(
+    buildFullScanReportExcel(result),
+    `aislix-${result.scan_id || "demo"}-full-report.xlsx`,
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  );
+}
+
+/** Builds a full multi-tab Excel report from live scan data. */
+export async function downloadScanExcel(scanId: string, _url?: string): Promise<void> {
+  const result = await fetchScanResult(scanId);
+  if (!result.summary && !result.inventory?.length) {
+    throw new Error("This scan has no report data to export.");
+  }
+  downloadBlobBytes(
+    buildFullScanReportExcel(result),
+    `aislix-${scanId}-report.xlsx`,
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  );
 }
 
 /* ---------------------------- asset downloads ----------------------------- */
@@ -1412,24 +1661,12 @@ export async function downloadScanAnnotatedImage(
   );
 }
 
-/** Download combined KPI + inventory CSV for demo / guest results (all 4 role views). */
+/** @deprecated Use downloadDemoFullReportExcel */
 export function downloadDemoFullReportCsv(result: ScanResult): void {
-  downloadBlob(
-    buildFullScanReportCsv(result),
-    `aislix-${result.scan_id || "demo"}-full-report.csv`,
-    "text/csv;charset=utf-8",
-  );
+  downloadDemoFullReportExcel(result);
 }
 
-/** Builds a full multi-section CSV report from live scan data. */
-export async function downloadScanCsv(scanId: string, _url?: string): Promise<void> {
-  const result = await fetchScanResult(scanId);
-  if (!result.summary && !result.inventory?.length) {
-    throw new Error("This scan has no report data to export.");
-  }
-  downloadBlob(
-    buildFullScanReportCsv(result),
-    `aislix-${scanId}-report.csv`,
-    "text/csv;charset=utf-8",
-  );
+/** @deprecated Use downloadScanExcel */
+export async function downloadScanCsv(scanId: string, url?: string): Promise<void> {
+  return downloadScanExcel(scanId, url);
 }

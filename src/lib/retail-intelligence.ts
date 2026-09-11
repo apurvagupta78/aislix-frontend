@@ -6,13 +6,15 @@
 import type { ResultViewMode } from "@/lib/customer-context";
 import type { PlanogramIssueType } from "@/lib/demo-planogram-match";
 
-/** How a metric value was produced. */
+/** How a metric value was produced — never show 0% when state is not `available`. */
 export type MetricState =
   | "available"
   | "calculated"
   | "estimated"
   | "not_configured"
-  | "insufficient_evidence";
+  | "insufficient_evidence"
+  | "not_applicable"
+  | "unavailable";
 
 export type MetricValue<T = number> = {
   value: T | null;
@@ -90,16 +92,52 @@ export type ImageQualityAssessment = {
   notes?: string;
 };
 
+export type OpportunityLedgerRow = {
+  id: string;
+  issue?: string;
+  sku?: string;
+  brand?: string;
+  severity?: string;
+  priority?: string;
+  revenue_at_risk_inr?: number | null;
+  commercial_risk?: string | null;
+  source?: string;
+  confidence?: string;
+  recommended_action?: string;
+  status?: string;
+  commercial_impact_score?: number;
+};
+
 export type RetailIntelligencePayload = {
   scan_summary?: string;
-  image_quality?: ImageQualityAssessment;
+  image_quality?: ImageQualityAssessment & {
+    audit_image_quality_score?: MetricValue;
+    status?: string;
+    notes?: string;
+  };
+  shelf_structure?: Record<string, unknown>;
+  assortment?: Record<string, MetricValue | string>;
+  availability?: Record<string, MetricValue | string>;
+  facings?: Record<string, MetricValue | string>;
+  placement_compliance?: MetricValue;
+  share_of_facings?: MetricValue;
+  linear_shelf_share?: MetricValue;
+  presentability?: { score?: MetricValue; methodology?: string };
+  pricing?: MetricValue | Record<string, unknown>;
+  promotions?: MetricValue | Record<string, unknown>;
+  posm?: MetricValue | Record<string, unknown>;
+  freshness?: MetricValue | Record<string, unknown>;
+  opportunity_ledger?: OpportunityLedgerRow[];
+  historical_patterns?: string[];
   role_summaries?: RoleSummaries;
   role_insights?: RoleFamilyInsight[];
+  role_specific_insights?: Record<string, unknown>;
   next_best_actions?: NextBestAction[];
   retail_execution_score?: RetailExecutionScore;
   planogram_analysis?: PlanogramAnalysis;
   recognition_coverage?: MetricValue;
   ai_confidence?: MetricValue;
+  financial_impact?: import("@/lib/scan-results").FinancialImpact;
   competitive_insights?: Array<{
     brand: string;
     share_note: string;
@@ -120,6 +158,10 @@ export function metricLabel(state: MetricState): string {
       return "Not configured";
     case "insufficient_evidence":
       return "Insufficient evidence";
+    case "not_applicable":
+      return "Not applicable";
+    case "unavailable":
+      return "Unavailable";
     case "estimated":
       return "Estimated";
     default:
@@ -134,6 +176,8 @@ export function formatMetricValue(
   if (!metric) return "Not configured";
   if (metric.state === "not_configured") return "Not configured";
   if (metric.state === "insufficient_evidence") return "Insufficient evidence";
+  if (metric.state === "not_applicable") return "Not applicable";
+  if (metric.state === "unavailable") return "Unavailable";
   if (metric.value == null) return metricLabel(metric.state);
   const suffix = metric.state === "estimated" ? " (est.)" : "";
   return `${formatter(metric.value)}${suffix}`;

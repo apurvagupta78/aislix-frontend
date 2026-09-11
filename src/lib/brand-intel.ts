@@ -16,13 +16,20 @@ export type CompetitorShareRow = {
   facings?: number;
   is_primary?: boolean;
   is_competitor?: boolean;
+  /** True when the brand was detected outside the audited sub-category. */
+  different_category?: boolean;
 };
 
 export type CompetitorUpperHand = {
   brand: string;
   share: number;
   note: string;
+  different_category?: boolean;
 };
+
+export function formatCompetitorBrandLabel(brand: string, differentCategory?: boolean): string {
+  return differentCategory ? `${brand} (different category)` : brand;
+}
 
 export type CompetitorSnapshot = {
   primary_brand: string;
@@ -82,6 +89,85 @@ export async function saveBrandConfig(input: BrandConfig): Promise<BrandConfig> 
 
 function brandKey(name: string): string {
   return name.trim().toLowerCase();
+}
+
+function normalizeBrandKey(name: string): string {
+  return name.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function brandsMatch(a: string, b: string): boolean {
+  const na = normalizeBrandKey(a);
+  const nb = normalizeBrandKey(b);
+  if (!na || !nb) return false;
+  return na.includes(nb) || nb.includes(na);
+}
+
+function subCategoriesAlign(expected: string, detected: string): boolean {
+  const e = expected.trim().toLowerCase();
+  const d = detected.trim().toLowerCase();
+  if (!e || !d) return true;
+  if (e === d || e.includes(d) || d.includes(e)) return true;
+  const tokenize = (value: string) =>
+    value.split(/[\s/,-]+/).filter((token) => token.length > 2);
+  const eTokens = tokenize(e);
+  const dTokens = tokenize(d);
+  return eTokens.some((token) => dTokens.includes(token));
+}
+
+type CategoryInventoryRow = {
+  brand: string;
+  category?: string;
+  detected_sub_category_label?: string;
+  compliance_status?: "ok" | "category_mismatch";
+};
+
+/** True when facings for this brand sit outside the audited sub-category. */
+export function brandIsDifferentCategory(
+  inventory: CategoryInventoryRow[],
+  brandName: string,
+  auditSubCategory: string,
+): boolean {
+  if (!auditSubCategory.trim()) return false;
+  const items = inventory.filter((row) => brandsMatch(row.brand, brandName));
+  if (!items.length) return false;
+  if (items.some((row) => row.compliance_status === "category_mismatch")) return true;
+  return items.some((row) => {
+    const detected = row.detected_sub_category_label?.trim() || row.category?.trim() || "";
+    if (!detected) return false;
+    return !subCategoriesAlign(auditSubCategory, detected);
+  });
+}
+
+/** Flag cross-category competitors on an existing snapshot. */
+export function annotateCompetitorCategories(
+  snapshot: CompetitorSnapshot | null,
+  inventory: CategoryInventoryRow[],
+  auditSubCategory?: string,
+): CompetitorSnapshot | null {
+  if (!snapshot || !auditSubCategory?.trim()) return snapshot;
+
+  const isDifferent = (brand: string) => brandIsDifferentCategory(inventory, brand, auditSubCategory);
+
+  return {
+    ...snapshot,
+    competitor_shares: snapshot.competitor_shares.map((row) => ({
+      ...row,
+      different_category: row.is_primary ? undefined : isDifferent(row.brand),
+    })),
+    upper_hand: snapshot.upper_hand?.map((edge) => {
+      const different = isDifferent(edge.brand);
+      return {
+        ...edge,
+        different_category: different,
+        note: different
+          ? edge.note.replace(
+              new RegExp(`\\b${edge.brand.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`),
+              formatCompetitorBrandLabel(edge.brand, true),
+            )
+          : edge.note,
+      };
+    }),
+  };
 }
 
 /** Build competitor intel from brand share rows + org config (works on old scans). */

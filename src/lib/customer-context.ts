@@ -43,7 +43,14 @@ export type ResultSectionKey =
   | "alerts"
   | "downloads"
   | "share"
-  | "scan_details";
+  | "scan_details"
+  | "image_quality"
+  | "assortment"
+  | "opportunity_ledger"
+  | "verified_execution"
+  | "historical_intel"
+  | "presentability"
+  | "fix_rescan_cta";
 
 export type CustomerContext = {
   customerType: CustomerType;
@@ -88,42 +95,42 @@ export type ViewModeTheme = {
   ring: string;
 };
 
+/** Shared inactive tab styling — neutral surface aligned with Aislix brand. */
+const TAB_INACTIVE =
+  "border border-border bg-background text-muted-foreground hover:border-brand/25 hover:bg-brand-soft/40 hover:text-foreground";
+
 export const VIEW_MODE_THEME: Record<ResultViewMode, ViewModeTheme> = {
   execution: {
-    tabActive: "bg-emerald-600 text-white shadow-sm hover:bg-emerald-600",
-    tabInactive:
-      "border border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100",
-    accentText: "text-emerald-700 dark:text-emerald-300",
-    accentBorder: "border-emerald-200 dark:border-emerald-800",
-    accentSoft: "bg-emerald-50/80 dark:bg-emerald-950/30",
-    ring: "ring-emerald-500/30",
+    tabActive: "bg-brand text-brand-foreground shadow-sm hover:bg-brand",
+    tabInactive: TAB_INACTIVE,
+    accentText: "text-brand",
+    accentBorder: "border-brand/20",
+    accentSoft: "bg-brand-soft/50",
+    ring: "ring-brand/25",
   },
   merchandising: {
-    tabActive: "bg-violet-600 text-white shadow-sm hover:bg-violet-600",
-    tabInactive:
-      "border border-violet-200 bg-violet-50 text-violet-900 hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-100",
-    accentText: "text-violet-700 dark:text-violet-300",
-    accentBorder: "border-violet-200 dark:border-violet-800",
-    accentSoft: "bg-violet-50/80 dark:bg-violet-950/30",
-    ring: "ring-violet-500/30",
+    tabActive: "bg-brand-muted text-white shadow-sm hover:bg-brand-muted",
+    tabInactive: TAB_INACTIVE,
+    accentText: "text-brand-muted",
+    accentBorder: "border-brand/15",
+    accentSoft: "bg-brand-soft/35",
+    ring: "ring-brand-muted/25",
   },
   brand: {
-    tabActive: "bg-amber-600 text-white shadow-sm hover:bg-amber-600",
-    tabInactive:
-      "border border-amber-200 bg-amber-50 text-amber-950 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100",
-    accentText: "text-amber-800 dark:text-amber-300",
-    accentBorder: "border-amber-200 dark:border-amber-800",
-    accentSoft: "bg-amber-50/80 dark:bg-amber-950/30",
-    ring: "ring-amber-500/30",
+    tabActive: "bg-foreground text-background shadow-sm hover:bg-foreground",
+    tabInactive: TAB_INACTIVE,
+    accentText: "text-foreground",
+    accentBorder: "border-border",
+    accentSoft: "bg-muted/60",
+    ring: "ring-foreground/15",
   },
   executive: {
-    tabActive: "bg-slate-700 text-white shadow-sm hover:bg-slate-700 dark:bg-slate-600",
-    tabInactive:
-      "border border-slate-200 bg-slate-100 text-slate-800 hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-200",
-    accentText: "text-slate-700 dark:text-slate-300",
-    accentBorder: "border-slate-200 dark:border-slate-700",
-    accentSoft: "bg-slate-100/80 dark:bg-slate-900/40",
-    ring: "ring-slate-500/30",
+    tabActive: "bg-primary text-primary-foreground shadow-sm hover:bg-primary",
+    tabInactive: TAB_INACTIVE,
+    accentText: "text-primary",
+    accentBorder: "border-primary/20",
+    accentSoft: "bg-muted/50",
+    ring: "ring-primary/20",
   },
 };
 
@@ -210,16 +217,22 @@ export const VIEW_MODE_DESCRIPTIONS: Record<ResultViewMode, string> = {
 const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
   execution: [
     "improvement_banner",
+    "verified_execution",
     "score_hero",
-    "annotated_image",
+    "image_quality",
     "kpi_strip",
+    "annotated_image",
     "facings_strip",
     "action_center",
+    "fix_rescan_cta",
+    "opportunity_ledger",
     "placement_alert",
+    "sku_availability",
+    "planogram",
+    "presentability",
+    "financial_impact",
     "review_queue",
     "recommended_actions",
-    "planogram",
-    "financial_impact",
     "inventory",
     "downloads",
     "share",
@@ -229,12 +242,16 @@ const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
     "improvement_banner",
     "score_hero",
     "kpi_strip",
+    "image_quality",
     "annotated_image",
     "share_of_shelf",
+    "assortment",
     "sku_availability",
+    "presentability",
     "planogram",
     "analytics",
     "financial_impact",
+    "opportunity_ledger",
     "recommended_actions",
     "inventory",
     "downloads",
@@ -246,9 +263,11 @@ const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
     "annotated_image",
     "competitor_intel",
     "share_of_shelf",
+    "assortment",
     "sku_availability",
     "planogram",
     "financial_impact",
+    "opportunity_ledger",
     "ai_summary",
     "recommended_actions",
     "analytics",
@@ -258,10 +277,13 @@ const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
   ],
   executive: [
     "improvement_banner",
+    "verified_execution",
     "score_hero",
     "kpi_strip",
+    "historical_intel",
     "annotated_image",
     "financial_impact",
+    "opportunity_ledger",
     "ai_summary",
     "planogram",
     "competitor_intel",
@@ -270,6 +292,15 @@ const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
     "scan_details",
     "downloads",
   ],
+};
+
+/** Customer-mode section emphasis (merged with role view). */
+const CUSTOMER_SECTION_BOOST: Partial<Record<CustomerType, ResultSectionKey[]>> = {
+  darkstore: ["sku_availability", "planogram", "action_center", "fix_rescan_cta"],
+  fmcg: ["competitor_intel", "share_of_shelf", "opportunity_ledger", "financial_impact"],
+  local: ["action_center", "opportunity_ledger", "financial_impact", "fix_rescan_cta"],
+  distributor: ["assortment", "sku_availability", "inventory"],
+  supermarket: ["sku_availability", "planogram", "presentability", "share_of_shelf"],
 };
 
 const DEFAULT_VIEW_BY_ROLE: Record<RoleFamily, ResultViewMode> = {
@@ -328,10 +359,16 @@ export function defaultViewMode(
 export function orderedVisibleSections(
   viewMode: ResultViewMode,
   roleFamily?: RoleFamily,
+  customerType?: CustomerType,
 ): ResultSectionKey[] {
-  let sections = SECTIONS_BY_VIEW[viewMode] ?? ALL_SECTIONS;
+  let sections = [...(SECTIONS_BY_VIEW[viewMode] ?? ALL_SECTIONS)];
   if (roleFamily === "field") {
     sections = sections.filter((s) => s !== "analytics" && s !== "competitor_intel");
+  }
+  const boost = customerType ? CUSTOMER_SECTION_BOOST[customerType] : undefined;
+  if (boost?.length) {
+    const boosted = boost.filter((s) => !sections.includes(s));
+    sections = [...sections, ...boosted];
   }
   return sections;
 }

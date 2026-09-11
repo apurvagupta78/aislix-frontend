@@ -24,6 +24,7 @@ function impactFromMetrics(metrics: Record<string, unknown>): FinancialImpact | 
   const fi = metrics["financial_impact"];
   if (!fi || typeof fi !== "object") return null;
   const row = fi as FinancialImpact;
+  if (row.level === 1 && row.commercial_risk) return row;
   if (!row.estimated_daily_lost_sales_inr) return null;
   return row;
 }
@@ -60,7 +61,10 @@ export async function fetchExecutionOpportunities(limit = 8): Promise<ExecutionO
     const scanId = scan.id as string;
     const metrics = metricsByScan.get(scanId) ?? {};
     const fi = impactFromMetrics(metrics);
-    if (!fi || fi.estimated_daily_lost_sales_inr <= 0) continue;
+    if (!fi) continue;
+    const hasFinancial = fi.estimated_daily_lost_sales_inr > 0;
+    const hasRisk = fi.level === 1 && Boolean(fi.commercial_risk);
+    if (!hasFinancial && !hasRisk) continue;
 
     const storeJoin = scan.stores as { name?: string } | null;
     const oos = fi.oos_sku_count ?? 0;
@@ -78,7 +82,7 @@ export async function fetchExecutionOpportunities(limit = 8): Promise<ExecutionO
           ? `${oos} OOS SKU(s) — estimated opportunity`
           : `${atRisk} at-risk SKU(s) — estimated opportunity`,
       detail: fi.methodology ?? "Indicative revenue at risk from latest scan.",
-      estimated_daily_impact_inr: fi.estimated_daily_lost_sales_inr,
+      estimated_daily_impact_inr: fi.estimated_daily_lost_sales_inr || 0,
       confidence: fi.confidence === "priced" ? "priced" : "indicative",
       created_at: scan.created_at as string,
     });
