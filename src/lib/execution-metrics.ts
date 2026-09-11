@@ -348,7 +348,7 @@ export function computeRetailExecutionScore(result?: ScanResult | null): RetailE
   const targetAvail = byKey.target_sku_availability;
   if (targetAvail?.state === "available" && targetAvail.numeric != null) {
     components.push(
-      componentFromMetric("availability", "Target SKU availability", SCORE_WEIGHTS.availability, targetAvail),
+      componentFromMetric("availability", "Target SKU availability", (SCORE_WEIGHTS.availability ?? 0), targetAvail),
     );
   }
 
@@ -356,14 +356,14 @@ export function computeRetailExecutionScore(result?: ScanResult | null): RetailE
   const planoPresence = byKey.planogram_sku_presence;
   if (planoCompliance?.state === "available" && planoCompliance.numeric != null) {
     components.push(
-      componentFromMetric("planogram", "Planogram compliance", SCORE_WEIGHTS.planogram, planoCompliance),
+      componentFromMetric("planogram", "Planogram compliance", (SCORE_WEIGHTS.planogram ?? 0), planoCompliance),
     );
   } else if (planoPresence?.state === "available" && planoPresence.numeric != null) {
     components.push(
       componentFromMetric(
         "planogram_sku_presence",
         "Planogram SKU presence",
-        SCORE_WEIGHTS.planogram,
+        (SCORE_WEIGHTS.planogram ?? 0),
         planoPresence,
       ),
     );
@@ -371,18 +371,18 @@ export function computeRetailExecutionScore(result?: ScanResult | null): RetailE
 
   const facing = byKey.facing;
   if (facing?.state === "available" && facing.numeric != null) {
-    components.push(componentFromMetric("facing", "Facing compliance", SCORE_WEIGHTS.facing, facing));
+    components.push(componentFromMetric("facing", "Facing compliance", (SCORE_WEIGHTS.facing ?? 0), facing));
   }
 
   const placement = byKey.placement;
   if (placement?.state === "available" && placement.numeric != null) {
-    components.push(componentFromMetric("placement", "Placement", SCORE_WEIGHTS.placement, placement));
+    components.push(componentFromMetric("placement", "Placement", (SCORE_WEIGHTS.placement ?? 0), placement));
   }
 
   const share = byKey.share_of_facings;
   if (share?.state === "available" && share.numeric != null) {
     components.push(
-      componentFromMetric("share_of_facings", "Share of facings", SCORE_WEIGHTS.share_of_facings, share),
+      componentFromMetric("share_of_facings", "Share of facings", (SCORE_WEIGHTS.share_of_facings ?? 0), share),
     );
   }
 
