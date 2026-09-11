@@ -647,9 +647,10 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
     unique_brands: uniqueBrands,
     // Only genuinely low-stock products; out-of-stock is reported separately.
     low_stock_products: inventory.filter((i) => i.low_stock).length,
-    ...(avgConfidence !== null && avgConfidence !== undefined && Number(avgConfidence) > 0
-      ? { average_confidence: Number(avgConfidence) }
-      : {}),
+    average_confidence:
+      avgConfidence !== null && avgConfidence !== undefined && Number(avgConfidence) > 0
+        ? Number(avgConfidence)
+        : 0,
     processing_time_ms: processingTimeMs,
     ...(scan.out_of_stock_count !== null && scan.out_of_stock_count !== undefined
       ? { out_of_stock_products: scan.out_of_stock_count }
@@ -1095,8 +1096,8 @@ export function buildFullScanReportCsv(result: ScanResult): string {
           return [
             String(row.brand ?? ""),
             String(row.product ?? ""),
-            row.expected_qty ?? "",
-            row.detected_qty ?? "",
+            String(row.expected_qty ?? ""),
+            String(row.detected_qty ?? ""),
             String(row.issue_type ?? ""),
             String(row.detail ?? ""),
           ];
@@ -1125,17 +1126,17 @@ export function buildFullScanReportCsv(result: ScanResult): string {
         ...configured.map((row) => {
           const r = row as Record<string, unknown>;
           return [
-            r.location ?? "",
-            r.category ?? "",
-            r.sub_category ?? "",
-            r.brand ?? "",
-            r.product_name ?? "",
-            r.variant ?? "",
-            r.expected_qty ?? "",
-            r.mrp_inr ?? "",
-            r.avg_daily_sales ?? "",
-            r.sku ?? "",
-            r.shelf_position ?? "",
+            String(r.location ?? ""),
+            String(r.category ?? ""),
+            String(r.sub_category ?? ""),
+            String(r.brand ?? ""),
+            String(r.product_name ?? ""),
+            String(r.variant ?? ""),
+            String(r.expected_qty ?? ""),
+            String(r.mrp_inr ?? ""),
+            String(r.avg_daily_sales ?? ""),
+            String(r.sku ?? ""),
+            String(r.shelf_position ?? ""),
           ];
         }),
       ]),
@@ -1305,7 +1306,8 @@ export function downloadBlob(content: string, filename: string, type: string) {
 }
 
 export function downloadBlobBytes(content: ArrayBuffer | Uint8Array, filename: string, type: string) {
-  const url = URL.createObjectURL(new Blob([content], { type }));
+  const part = content instanceof Uint8Array ? new Uint8Array(content).buffer : content;
+  const url = URL.createObjectURL(new Blob([part as ArrayBuffer], { type }));
   const link = document.createElement("a");
   link.href = url;
   link.download = filename;
@@ -1366,7 +1368,7 @@ export function buildFullScanReportExcel(result: ScanResult): ArrayBuffer {
   if (roleSummaries) {
     for (const view of ["execution", "merchandising", "brand", "executive"] as const) {
       const text = roleSummaries[view]?.trim();
-      if (text) append(roleLabels[view], [["Summary"], [text]]);
+      if (text) append(roleLabels[view] ?? view, [["Summary"], [text]]);
     }
   }
 
@@ -1383,8 +1385,8 @@ export function buildFullScanReportExcel(result: ScanResult): ArrayBuffer {
         return [
           String(row.brand ?? ""),
           String(row.product ?? ""),
-          row.expected_qty ?? "",
-          row.detected_qty ?? "",
+          String(row.expected_qty ?? ""),
+          String(row.detected_qty ?? ""),
           String(row.issue_type ?? ""),
           String(row.detail ?? ""),
         ];
