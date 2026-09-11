@@ -82,6 +82,15 @@ function DemoScansPage() {
               <SelectItem value="180">Last 6 months</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={sort} onValueChange={setSort}>
+            <SelectTrigger className="w-40" aria-label="Sort by date">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">Newest first</SelectItem>
+              <SelectItem value="oldest">Oldest first</SelectItem>
+            </SelectContent>
+          </Select>
           <Button variant="outline" onClick={() => query.refetch()} disabled={query.isFetching}>
             <RefreshCw className={`mr-2 size-4 ${query.isFetching ? "animate-spin" : ""}`} />
             Refresh
@@ -128,7 +137,7 @@ function DemoScansPage() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {query.data.rows.map((row) => (
+            {sortedRows.map((row) => (
               <Card key={row.id} className="card-surface overflow-hidden">
                 {row.image_url ? (
                   <a href={row.image_url} target="_blank" rel="noreferrer">
