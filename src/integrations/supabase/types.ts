@@ -237,6 +237,150 @@ export type Database = {
           },
         ]
       }
+      execution_actions: {
+        Row: {
+          action_type: string
+          actor_id: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          opportunity_id: string
+          org_id: string
+          payload: Json
+          scan_id: string | null
+        }
+        Insert: {
+          action_type?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          opportunity_id: string
+          org_id: string
+          payload?: Json
+          scan_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          opportunity_id?: string
+          org_id?: string
+          payload?: Json
+          scan_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "execution_actions_opportunity_id_fkey"
+            columns: ["opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "execution_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "execution_actions_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "shelf_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      execution_opportunities: {
+        Row: {
+          actual_value: string | null
+          assigned_to: string | null
+          brand: string | null
+          commercial_impact_score: number | null
+          confidence: string | null
+          created_at: string
+          expected_value: string | null
+          gap_value: string | null
+          id: string
+          issue_type: string
+          org_id: string
+          priority: string
+          product_name: string | null
+          recommended_action: string | null
+          resolved_at: string | null
+          revenue_at_risk_inr: number | null
+          scan_id: string
+          severity: string
+          sku: string | null
+          source: string | null
+          status: string
+          store_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          actual_value?: string | null
+          assigned_to?: string | null
+          brand?: string | null
+          commercial_impact_score?: number | null
+          confidence?: string | null
+          created_at?: string
+          expected_value?: string | null
+          gap_value?: string | null
+          id?: string
+          issue_type: string
+          org_id: string
+          priority?: string
+          product_name?: string | null
+          recommended_action?: string | null
+          resolved_at?: string | null
+          revenue_at_risk_inr?: number | null
+          scan_id: string
+          severity?: string
+          sku?: string | null
+          source?: string | null
+          status?: string
+          store_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          actual_value?: string | null
+          assigned_to?: string | null
+          brand?: string | null
+          commercial_impact_score?: number | null
+          confidence?: string | null
+          created_at?: string
+          expected_value?: string | null
+          gap_value?: string | null
+          id?: string
+          issue_type?: string
+          org_id?: string
+          priority?: string
+          product_name?: string | null
+          recommended_action?: string | null
+          resolved_at?: string | null
+          revenue_at_risk_inr?: number | null
+          scan_id?: string
+          severity?: string
+          sku?: string | null
+          source?: string | null
+          status?: string
+          store_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "execution_opportunities_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "shelf_scans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "execution_opportunities_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       global_learned_skus: {
         Row: {
           brand: string
@@ -718,10 +862,14 @@ export type Database = {
           brand: string
           category: string
           created_at: string
+          expected_facings: number | null
           expected_qty: number
+          expected_shelf_units: number | null
           id: string
           location: string
           match_key: string | null
+          max_facings: number | null
+          min_facings: number | null
           mrp_inr: number | null
           org_id: string
           product_name: string
@@ -739,10 +887,14 @@ export type Database = {
           brand: string
           category: string
           created_at?: string
+          expected_facings?: number | null
           expected_qty?: number
+          expected_shelf_units?: number | null
           id?: string
           location: string
           match_key?: string | null
+          max_facings?: number | null
+          min_facings?: number | null
           mrp_inr?: number | null
           org_id: string
           product_name: string
@@ -760,10 +912,14 @@ export type Database = {
           brand?: string
           category?: string
           created_at?: string
+          expected_facings?: number | null
           expected_qty?: number
+          expected_shelf_units?: number | null
           id?: string
           location?: string
           match_key?: string | null
+          max_facings?: number | null
+          min_facings?: number | null
           mrp_inr?: number | null
           org_id?: string
           product_name?: string
@@ -796,6 +952,8 @@ export type Database = {
         Row: {
           activated_at: string | null
           created_at: string
+          effective_from: string | null
+          effective_to: string | null
           id: string
           name: string
           org_id: string
@@ -803,6 +961,7 @@ export type Database = {
           source_filename: string | null
           source_type: string
           status: string
+          store_format: string | null
           store_id: string
           updated_at: string
           uploaded_by: string | null
@@ -810,6 +969,8 @@ export type Database = {
         Insert: {
           activated_at?: string | null
           created_at?: string
+          effective_from?: string | null
+          effective_to?: string | null
           id?: string
           name?: string
           org_id: string
@@ -817,6 +978,7 @@ export type Database = {
           source_filename?: string | null
           source_type?: string
           status?: string
+          store_format?: string | null
           store_id: string
           updated_at?: string
           uploaded_by?: string | null
@@ -824,6 +986,8 @@ export type Database = {
         Update: {
           activated_at?: string | null
           created_at?: string
+          effective_from?: string | null
+          effective_to?: string | null
           id?: string
           name?: string
           org_id?: string
@@ -831,6 +995,7 @@ export type Database = {
           source_filename?: string | null
           source_type?: string
           status?: string
+          store_format?: string | null
           store_id?: string
           updated_at?: string
           uploaded_by?: string | null
@@ -1367,6 +1532,8 @@ export type Database = {
           org_id: string
           osa_percent: number | null
           out_of_stock_count: number
+          parent_scan_id: string | null
+          photo_count: number
           planogram_compliance_percent: number | null
           processing_completed_at: string | null
           processing_started_at: string | null
@@ -1396,6 +1563,8 @@ export type Database = {
           org_id: string
           osa_percent?: number | null
           out_of_stock_count?: number
+          parent_scan_id?: string | null
+          photo_count?: number
           planogram_compliance_percent?: number | null
           processing_completed_at?: string | null
           processing_started_at?: string | null
@@ -1425,6 +1594,8 @@ export type Database = {
           org_id?: string
           osa_percent?: number | null
           out_of_stock_count?: number
+          parent_scan_id?: string | null
+          photo_count?: number
           planogram_compliance_percent?: number | null
           processing_completed_at?: string | null
           processing_started_at?: string | null
@@ -1459,6 +1630,13 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shelf_scans_parent_scan_id_fkey"
+            columns: ["parent_scan_id"]
+            isOneToOne: false
+            referencedRelation: "shelf_scans"
             referencedColumns: ["id"]
           },
           {
