@@ -57,9 +57,13 @@ export function planogramIsConfigured(result?: ScanResult | null): boolean {
 }
 
 export function hasExplicitExpectedFacings(rows: PlanogramRow[]): boolean {
-  return rows.some(
-    (r) => r.expected_facings != null && Number.isFinite(Number(r.expected_facings)) && Number(r.expected_facings) >= 0,
-  );
+  return rows.some((r) => {
+    if (r.expected_facings != null && Number.isFinite(Number(r.expected_facings))) {
+      return Number(r.expected_facings) >= 0;
+    }
+    const qty = Number(r.expected_qty);
+    return Number.isFinite(qty) && qty > 0;
+  });
 }
 
 export function hasPlacementRules(rows: PlanogramRow[]): boolean {
@@ -79,6 +83,8 @@ export function expectedFacingsForRow(row: PlanogramRow): number | null {
   if (row.expected_facings != null && Number.isFinite(Number(row.expected_facings))) {
     return Math.max(0, Number(row.expected_facings));
   }
+  const qty = Number(row.expected_qty);
+  if (Number.isFinite(qty) && qty > 0) return qty;
   return null;
 }
 
@@ -389,14 +395,21 @@ export function computeRetailExecutionScore(result?: ScanResult | null): RetailE
 
   const nominalWeight = scorable.reduce((n, c) => n + (c.weight ?? 0), 0);
 
-  if (!scorable.length || nominalWeight < MIN_SCORE_COVERAGE_WEIGHT) {
+  const partialPlanogram = planogramIsConfigured(result) && !hasFullPlanogramRules(planogramRowsFromResult(result));
+  const minWeight = partialPlanogram
+    ? PLANNED_SCORE_WEIGHT * 0.45
+    : MIN_SCORE_COVERAGE_WEIGHT;
+
+  if (!scorable.length || nominalWeight < minWeight) {
     return {
       overall: null,
       state: scorable.length ? "insufficient_evidence" : "not_configured",
       components,
       withhold_reason:
-        nominalWeight < MIN_SCORE_COVERAGE_WEIGHT
-          ? "Score withheld because expected facings, placement rules, or assortment coverage are insufficient."
+        nominalWeight < minWeight
+          ? partialPlanogram
+            ? "Add expected qty, shelf position, and your target SKUs with prices to unlock the execution score."
+            : "Score withheld because expected facings, placement rules, or assortment coverage are insufficient."
           : "Score withheld — no configured execution KPIs with sufficient evidence.",
     };
   }

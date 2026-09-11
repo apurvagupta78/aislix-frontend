@@ -791,10 +791,6 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
     match,
   );
 
-  const displayInventory = hasFocus
-    ? fullInventory.filter((row) => matchesScanFocus(row, ctx.focus))
-    : fullInventory;
-
   const effectiveFocus = effectiveFocusFromContext(ctx);
   const topBrands = filteredBrandShare(fullInventory, {});
   const primaryBrand = effectiveFocus.brand || effectiveFocus.company;
@@ -901,9 +897,11 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
   const opportunity_ledger = buildOpportunityLedger(ledgerBase, match, financial_impact);
   const execution_verification = buildVerificationSnapshot(ledgerBase) ?? undefined;
 
+  const assortment = buildClientAssortment(planogramRows, match);
+
   return {
     ...result,
-    inventory: displayInventory,
+    inventory: fullInventory,
     financial_impact,
     executive_summary,
     role_summaries,
@@ -911,6 +909,7 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
     recommendations: mergedRecs,
     retail_intelligence: {
       ...(result.retail_intelligence ?? {}),
+      assortment,
       opportunity_ledger,
       ...(execution_verification ? { execution_verification } : {}),
     },
@@ -963,6 +962,7 @@ export function enrichDemoScanResult(result: ScanResult, ctx: ScanContextState):
 
   const opportunity_ledger = buildOpportunityLedger(applied, match, financial);
   const execution_verification = buildVerificationSnapshot(applied) ?? undefined;
+  const assortment = buildClientAssortment(planogramRows, match);
 
   return {
     ...applied,
@@ -971,9 +971,37 @@ export function enrichDemoScanResult(result: ScanResult, ctx: ScanContextState):
     competitor_intel: intel ?? applied.competitor_intel,
     retail_intelligence: {
       ...(applied.retail_intelligence ?? {}),
+      assortment,
       opportunity_ledger,
       ...(execution_verification ? { execution_verification } : {}),
     },
+  };
+}
+
+/** Client-side assortment KPIs from user-supplied planogram rows (demo / post-scan context). */
+function buildClientAssortment(
+  planogramRows: PlanogramRow[],
+  match: PlanogramMatchResult,
+): Record<string, unknown> {
+  if (!planogramRows.length) {
+    return {
+      breadth_percent: { value: null, state: "not_configured", label: "Target assortment not configured" },
+      missing_assortment: { value: null, state: "not_configured" },
+      target_sku_availability: { value: null, state: "not_configured" },
+      state: "not_configured",
+    };
+  }
+  const expected = planogramRows.length;
+  const detected = Math.max(0, expected - match.missing_count - match.wrong_product_count);
+  const missing = match.missing_count;
+  const breadth = Math.round((detected / Math.max(expected, 1)) * 100);
+  return {
+    breadth_percent: { value: breadth, state: "available" },
+    missing_assortment: { value: missing, state: "available" },
+    expected_sku_count: { value: expected, state: "available" },
+    detected_expected_sku_count: { value: detected, state: "available" },
+    target_sku_availability: { value: breadth, state: "available" },
+    state: "available",
   };
 }
 

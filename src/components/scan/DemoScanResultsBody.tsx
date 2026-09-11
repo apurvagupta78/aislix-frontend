@@ -268,9 +268,9 @@ export function ScanResultsBody({
               return (
                 <InventoryTable
                   key={key}
-                  items={data.inventory}
+                  items={rawData?.inventory?.length ? rawData.inventory : data.inventory}
                   scanId={data.scan_id}
-                  csvUrl={data.downloads?.csv_url}
+                  csvUrl={rawData?.downloads?.csv_url ?? data.downloads?.csv_url}
                   loading={loading}
                 />
               );

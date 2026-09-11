@@ -1369,7 +1369,7 @@ function excelSheetName(label: string): string {
   return label.replace(/[\\/?*[\]:]/g, "").slice(0, 31);
 }
 
-/** Multi-tab Excel workbook — one sheet per report section / role view. */
+/** Multi-tab Excel workbook — eight-section retail report (table-first). */
 export function buildFullScanReportExcel(result: ScanResult): ArrayBuffer {
   const wb = XLSX.utils.book_new();
   const s = result.summary;
@@ -1380,53 +1380,122 @@ export function buildFullScanReportExcel(result: ScanResult): ArrayBuffer {
     XLSX.utils.book_append_sheet(wb, sheet, excelSheetName(name));
   };
 
-  append("Overview", [
-    ["Aislix Shelf Audit Report"],
-    [],
-    ["Scan ID", result.scan_id],
+  append("Report Header", [
+    ["RETAIL SHELF AI ANALYSIS REPORT"],
+    ["Report ID", result.scan_id],
+    ["Status", "DRAFT"],
+    ["Analysis date", formatScanDate(result.created_at) ?? ""],
+  ]);
+
+  append("S1 Purpose Scope", [
+    ["Field", "Value"],
     ["Store", result.store ?? ""],
     ["Location", result.location ?? result.aisle ?? ""],
     ["Category", result.scan_category ?? ""],
     ["Sub-category", result.scan_sub_category ?? ""],
-    ["Scan date", formatScanDate(result.created_at) ?? ""],
-    [],
-    ["Metric", "Value"],
-    ["Shelf execution score", s?.shelf_execution_score ?? s?.shelf_health_score ?? ""],
-    ["Total facings", s?.total_facings ?? s?.total_products ?? ""],
-    ["Unique SKUs", s?.unique_skus ?? ""],
-    ["Brand share %", s?.brand_share_percent ?? ""],
-    ["Product share %", s?.product_share_percent ?? ""],
-    ["Product share SKU", s?.product_share_label ?? ""],
-    ["Planogram SKU match %", result.planogram?.sku_match_percent ?? result.planogram?.percent ?? ""],
-    ["Confirmed OOS", s?.confirmed_oos_count ?? s?.out_of_stock_products ?? ""],
-    ["Avg confidence %", s ? normalizeConfidence(s.average_confidence).toFixed(1) : ""],
-    ["Processing time", s ? formatDuration(s.processing_time_ms) : ""],
+    ["Executive summary", result.executive_summary ?? ""],
   ]);
 
   const roleSummaries =
     result.role_summaries ??
     (result.retail_intelligence as { role_summaries?: Record<string, string> } | undefined)
       ?.role_summaries;
-  const roleLabels: Record<string, string> = {
-    execution: "Execution",
-    merchandising: "Merchandising",
-    brand: "Brand Intel",
-    executive: "Executive",
-  };
   if (roleSummaries) {
-    for (const view of ["execution", "merchandising", "brand", "executive"] as const) {
-      const text = roleSummaries[view]?.trim();
-      if (text) append(roleLabels[view] ?? view, [["Summary"], [text]]);
-    }
+    append("S1 Role Summaries", [
+      ["Role", "Summary"],
+      ...(["execution", "merchandising", "brand", "executive"] as const)
+        .map((view) => [view, roleSummaries[view]?.trim() ?? ""])
+        .filter((row) => row[1]),
+    ]);
   }
 
-  if (result.executive_summary?.trim()) {
-    append("Executive Summary", [["Summary"], [result.executive_summary.trim()]]);
+  append("S2 Inputs Method", [
+    ["Field", "Value"],
+    ["Evidence", "PHOTO-DETECTED"],
+    ["Recognition coverage %", s?.recognition_coverage_percent ?? ""],
+    ["Avg confidence %", s ? normalizeConfidence(s.average_confidence).toFixed(1) : ""],
+    ["Processing time", s ? formatDuration(s.processing_time_ms) : ""],
+    ["Planogram supplied", result.planogram?.requested ? "Yes" : "No"],
+  ]);
+
+  const inventoryRows = result.inventory ?? [];
+  append("S4 Observed Products", [
+    [
+      "Brand",
+      "Product",
+      "Variant",
+      "Category",
+      "Visible facings",
+      "Confidence %",
+      "Stock status",
+      "Compliance",
+    ],
+    ...(inventoryRows.length
+      ? inventoryRows.map((i) => [
+          i.brand,
+          i.product,
+          i.variant ?? "",
+          i.category ?? "",
+          i.quantity,
+          normalizeConfidence(i.confidence).toFixed(1),
+          i.out_of_stock ? "Out" : i.low_stock ? "Low" : "In stock",
+          i.compliance_status ?? "OK",
+        ])
+      : [["—", "No products returned by scan API", "", "", "", "", "", ""]]),
+  ]);
+
+  append("S5 Core KPIs", [
+    ["KPI", "Value"],
+    ["Retail execution score", s?.shelf_execution_score ?? "Not scoreable"],
+    ["Total visible facings", s?.total_facings ?? s?.total_products ?? ""],
+    ["Unique SKUs", s?.unique_skus ?? ""],
+    ["Brand share %", s?.brand_share_percent ?? ""],
+    ["Planogram SKU match %", result.planogram?.sku_match_percent ?? result.planogram?.percent ?? ""],
+    ["Facing compliance %", s?.facing_compliance_percent ?? ""],
+    ["Placement compliance %", s?.placement_compliance_percent ?? ""],
+    ["Target SKU availability %", s?.availability_percent ?? s?.osa_percent ?? ""],
+    ["Confirmed shelf absence", s?.confirmed_oos_count ?? ""],
+  ]);
+
+  const brands = result.charts?.top_brands ?? [];
+  if (brands.length) {
+    append("S5 Brand Share", [
+      ["Brand", "Share %", "Facings"],
+      ...brands.map((b) => [b.brand, b.share.toFixed(1), ""]),
+    ]);
+  }
+
+  const assortment = result.retail_intelligence?.assortment as
+    | Record<string, { value?: number | null }>
+    | undefined;
+  if (assortment) {
+    append("S5 Assortment", [
+      ["Metric", "Value"],
+      ["Assortment breadth %", assortment.breadth_percent?.value ?? "Not configured"],
+      ["Missing assortment", assortment.missing_assortment?.value ?? "Not configured"],
+      ["Target SKU availability %", assortment.target_sku_availability?.value ?? "Not configured"],
+    ]);
   }
 
   const pgLines = result.planogram?.summary?.lines;
-  if (Array.isArray(pgLines) && pgLines.length) {
-    append("Planogram", [
+  const configured = (result.planogram?.summary as { configured_rows?: unknown[] } | undefined)
+    ?.configured_rows;
+  if (Array.isArray(configured) && configured.length) {
+    append("S3 Planogram Reference", [
+      ["Brand", "Product", "Expected qty", "Shelf position", "MRP INR"],
+      ...configured.map((line) => {
+        const row = line as Record<string, unknown>;
+        return [
+          String(row.brand ?? ""),
+          String(row.product_name ?? row.product ?? ""),
+          String(row.expected_qty ?? ""),
+          String(row.shelf_position ?? ""),
+          String(row.mrp_inr ?? ""),
+        ];
+      }),
+    ]);
+  } else if (Array.isArray(pgLines) && pgLines.length) {
+    append("S3 Planogram Match", [
       ["Brand", "Product", "Expected qty", "Found qty", "Status", "Detail"],
       ...pgLines.map((line) => {
         const row = line as Record<string, unknown>;
@@ -1442,103 +1511,47 @@ export function buildFullScanReportExcel(result: ScanResult): ArrayBuffer {
     ]);
   }
 
-  const ci = result.competitor_intel;
-  if (ci?.competitor_shares?.length) {
-    append("Competitors", [
-      ["Brand", "Share %", "Facings", "Role", "Different category"],
-      ...ci.competitor_shares.map((row) => [
-        row.brand,
-        row.share?.toFixed?.(1) ?? row.share ?? "",
-        row.facings ?? "",
-        row.is_primary ? "Primary" : row.is_competitor ? "Competitor" : "",
-        row.different_category ? "Yes" : "",
-      ]),
-    ]);
-    if (ci.upper_hand?.length) {
-      append("Competitor Edge", [
-        ["Brand", "Share %", "Note"],
-        ...ci.upper_hand.map((edge) => [edge.brand, edge.share, edge.note]),
-      ]);
-    }
-  }
-
   const fi = result.financial_impact;
-  if (fi) {
-    append("Financial Impact", [
-      ["Metric", "Value (INR)"],
-      ["Estimated daily lost sales", fi.estimated_daily_lost_sales_inr],
-      ["Estimated weekly lost sales", fi.estimated_weekly_lost_sales_inr],
-      ["Estimated monthly lost sales", fi.estimated_monthly_lost_sales_inr],
-      ["OOS SKU count", fi.oos_sku_count],
-      ["At-risk SKU count", fi.at_risk_sku_count],
-      ["Methodology", fi.methodology],
-    ]);
-  }
-
-  const threshold = s?.low_stock_threshold ?? 2;
-  const atRisk = (result.inventory ?? []).filter((r) => (r.quantity ?? 0) < threshold);
-  if (atRisk.length) {
-    append("OOS Low Stock", [
-      ["Brand", "Product", "Variant", "Quantity"],
-      ...atRisk.map((r) => [
-        r.brand,
-        r.product ?? "",
-        r.variant ?? "",
-        r.quantity ?? 0,
-      ]),
-    ]);
-  }
-
-  const nba = result.retail_intelligence?.next_best_actions;
-  if (nba?.length) {
-    append("Actions", [
-      ["Priority", "Title", "Reason", "Recommended action", "Est. daily impact INR"],
-      ...nba.map((a) => [
-        a.priority,
-        a.title,
-        a.reason ?? "",
-        a.recommended_action ?? "",
-        a.estimated_daily_impact_inr ?? "",
-      ]),
-    ]);
-  }
-
-  if (result.recommendations?.length) {
-    append("Recommendations", [
-      ["Title", "Impact", "Detail"],
-      ...result.recommendations.map((r) => [r.title, r.impact ?? "", r.detail ?? ""]),
-    ]);
-  }
-
-  const brands = result.charts?.top_brands ?? [];
-  if (brands.length) {
-    append("Brand Share", [
-      ["Brand", "Share %"],
-      ...brands.map((b) => [b.brand, b.share.toFixed(1)]),
-    ]);
-  }
-
-  append("Inventory", [
+  append("S6 Commercial", [
+    ["Metric", "Value (INR)", "Evidence"],
     [
-      "Brand",
-      "Product",
-      "Variant",
-      "Category",
-      "Visible facings",
-      "Confidence %",
-      "Detected Sub-category",
-      "Audit Sub-category",
+      "Est. daily lost sales",
+      fi?.estimated_daily_lost_sales_inr ?? "Not configured",
+      fi ? "ESTIMATED" : "NOT CONFIGURED",
     ],
-    ...(result.inventory ?? []).map((i) => [
-      i.brand,
-      i.product,
-      i.variant ?? "",
-      i.category ?? "",
-      i.quantity,
-      normalizeConfidence(i.confidence).toFixed(1),
-      i.detected_sub_category_label ?? "",
-      i.expected_sub_category_label ?? "",
-    ]),
+    ["Est. weekly lost sales", fi?.estimated_weekly_lost_sales_inr ?? "", fi?.confidence ?? ""],
+    ["OOS SKU count", fi?.oos_sku_count ?? "", "PHOTO-DETECTED"],
+    ["Methodology", fi?.methodology ?? "Add product prices and daily sales in setup", ""],
+  ]);
+
+  const actionRows: ExcelRows = [["Priority", "Title", "Detail", "Impact"]];
+  for (const r of result.recommendations ?? []) {
+    actionRows.push([r.impact ?? "medium", r.title, r.detail ?? "", r.category ?? ""]);
+  }
+  const ledger = result.retail_intelligence?.opportunity_ledger as
+    | Array<Record<string, unknown>>
+    | undefined;
+  for (const item of ledger ?? []) {
+    actionRows.push([
+      String(item.severity ?? item.priority ?? "medium"),
+      String(item.issue ?? item.title ?? ""),
+      String(item.recommended_action ?? ""),
+      String(item.estimated_daily_impact_inr ?? ""),
+    ]);
+  }
+  append("S7 Actions", actionRows);
+
+  append("S8 Limitations", [
+    ["Item", "Detail"],
+    [
+      "Photo scope",
+      "Visible facings only — not hidden depth, backroom stock, or store-wide inventory.",
+    ],
+    [
+      "Financial",
+      "Lost sales are indicative when user-supplied MRP and daily sales are configured.",
+    ],
+    ["Score gate", "Execution score needs target SKUs, expected qty, and shelf position rules."],
   ]);
 
   return XLSX.write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;

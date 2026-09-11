@@ -59,10 +59,11 @@ export function DemoRoleResultsPanel({
   const scanContext = scanContextProp ?? localContext;
   const setScanContext = onScanContextChange ?? setLocalContext;
 
-  const data = useMemo(() => {
-    const base = landingToScanResult(landing);
-    return enrichScanResult(base, scanContext);
-  }, [landing, scanContext]);
+  const baseResult = useMemo(() => landingToScanResult(landing), [landing]);
+  const data = useMemo(
+    () => enrichScanResult(baseResult, scanContext),
+    [baseResult, scanContext],
+  );
 
   const imageUrl =
     data.annotated_image_url ?? data.original_image_url ?? previewImageUrl ?? landingImageUrl(landing);
@@ -71,6 +72,7 @@ export function DemoRoleResultsPanel({
     <>
       <DemoScanResultsBody
         data={data}
+        rawData={baseResult}
         view={view}
         onViewChange={setView}
         guestInline={!fullscreen}

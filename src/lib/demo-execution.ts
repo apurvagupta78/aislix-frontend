@@ -46,6 +46,36 @@ export function landingExecutionScore(result: LandingScanResult): number | undef
 
 
 
+function inventoryFromLanding(landing: LandingScanResult) {
+  const rows = landing.inventory ?? [];
+  if (rows.length) {
+    return rows.map((row, i) => ({
+      id: `demo-${i}`,
+      brand: row.brand || "Unknown",
+      product: row.product_name || "Unknown product",
+      variant: row.variant,
+      quantity: row.quantity ?? 0,
+      confidence: row.confidence ?? 0,
+      low_stock: (row.quantity ?? 0) > 0 && (row.quantity ?? 0) <= LOW_STOCK_THRESHOLD,
+      out_of_stock: (row.quantity ?? 0) <= 0,
+    }));
+  }
+  const products = (landing as { products?: Array<Record<string, unknown>> }).products ?? [];
+  if (products.length) {
+    return products.map((row, i) => ({
+      id: `demo-${i}`,
+      brand: String(row.brand ?? "Unknown"),
+      product: String(row.product_name ?? row.product ?? "Unknown product"),
+      variant: row.variant != null ? String(row.variant) : undefined,
+      quantity: Number(row.quantity ?? row.qty ?? 0),
+      confidence: Number(row.confidence ?? 0),
+      low_stock: false,
+      out_of_stock: false,
+    }));
+  }
+  return [];
+}
+
 export function landingFinancialImpact(result: LandingScanResult): FinancialImpact {
 
   const backend = (result.metrics as { financial_impact?: FinancialImpact })?.financial_impact;
@@ -189,25 +219,7 @@ export function landingToScanResult(landing: LandingScanResult): ScanResult {
 
     financial_impact: financial,
 
-    inventory: (landing.inventory ?? []).map((row, i) => ({
-
-      id: `demo-${i}`,
-
-      brand: row.brand || "Unknown",
-
-      product: row.product_name || "Unknown product",
-
-      variant: row.variant,
-
-      quantity: row.quantity ?? 0,
-
-      confidence: row.confidence ?? 0,
-
-      low_stock: (row.quantity ?? 0) > 0 && (row.quantity ?? 0) <= LOW_STOCK_THRESHOLD,
-
-      out_of_stock: (row.quantity ?? 0) <= 0,
-
-    })),
+    inventory: inventoryFromLanding(landing),
 
     recommendations: (landing.recommendations ?? []).map((r, i) => ({
 
