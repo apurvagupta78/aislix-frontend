@@ -179,7 +179,7 @@ export function ScanResultsBody({
                   <ExecutionScoreHero
                     data={data}
                     loading={loading}
-                    previousScore={previousScore ?? source.navigation?.previous_execution_score}
+                    previousScore={previousScore ?? source.navigation?.previous_execution_score ?? undefined}
                   />
                 </div>
               );

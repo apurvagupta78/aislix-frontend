@@ -138,6 +138,9 @@ export type FinancialImpact = {
   confidence: "indicative" | "priced" | "medium" | "high" | "low";
   source?: string;
   assumption?: string;
+  estimate_status?: "estimated" | "not_estimated";
+  operational_priority?: "low" | "medium" | "high" | "critical";
+  missing_prerequisites?: string[];
 };
 
 /** Recognition-quality counters reported by the vision backend. */

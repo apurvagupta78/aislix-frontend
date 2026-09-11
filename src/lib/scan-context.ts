@@ -236,7 +236,6 @@ export function computeContextFinancialImpact(
     confidence: hasPlanogramPricing ? "priced" : "indicative",
     source: hasPlanogramPricing ? "customer_provided_velocity" : "default_assumption",
     assumption: hasPlanogramPricing ? "1-day exposure; OOS duration unknown" : undefined,
-    assumption: hasPlanogramPricing ? "1 day exposure" : undefined,
   };
 }
 

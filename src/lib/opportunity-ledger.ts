@@ -90,7 +90,7 @@ export function buildOpportunityLedger(
             ? `Replenish ${plan.brand} ${plan.product_name} and capture a follow-up shelf image.`
             : `Correct ${plan.brand} ${plan.product_name} placement or facings, then rescan.`),
         status: "open",
-        commercial_impact_score: commercialImpactScore(dailyInr ?? 0, priority),
+        commercial_impact_score: commercialImpactScore(dailyInr ?? 0, priority ?? "medium"),
       });
     }
   }
