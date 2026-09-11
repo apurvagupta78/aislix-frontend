@@ -3,8 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { RefreshCw, Search } from "lucide-react";
-import { AdminShell } from "@/components/admin/AdminShell";
-import { PlatformAdminGate } from "@/components/admin/PlatformAdminGate";
+import { AdminPage } from "@/components/admin/AdminPage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -40,17 +39,16 @@ function AdminUsersPage() {
   const totalPages = Math.max(1, Math.ceil((query.data?.total ?? 0) / 25));
 
   return (
-    <PlatformAdminGate>
-      <AdminShell
-        title="All users"
-        description="Profiles, workspace memberships and scan counts by user id."
-        actions={
-          <Button variant="outline" size="sm" onClick={() => void query.refetch()} disabled={query.isFetching}>
-            <RefreshCw className={`mr-2 size-4 ${query.isFetching ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        }
-      >
+    <AdminPage
+      title="All users"
+      description="Profiles, workspace memberships and scan counts by user id."
+      actions={
+        <Button variant="outline" size="sm" onClick={() => void query.refetch()} disabled={query.isFetching}>
+          <RefreshCw className={`mr-2 size-4 ${query.isFetching ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+      }
+    >
         <div className="relative mb-4 max-w-md">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -135,7 +133,6 @@ function AdminUsersPage() {
             </div>
           </>
         )}
-      </AdminShell>
-    </PlatformAdminGate>
+    </AdminPage>
   );
 }

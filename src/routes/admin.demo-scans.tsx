@@ -3,8 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Image as ImageIcon, RefreshCw } from "lucide-react";
-import { AdminShell } from "@/components/admin/AdminShell";
-import { PlatformAdminGate } from "@/components/admin/PlatformAdminGate";
+import { AdminPage } from "@/components/admin/AdminPage";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,30 +41,29 @@ function AdminDemoScansPage() {
   });
 
   return (
-    <PlatformAdminGate>
-      <AdminShell
-        title="Landing demo scans"
-        description="Anonymous homepage and campaign scans — photos, status and UTM attribution."
-        actions={
-          <div className="flex items-center gap-2">
-            <Select value={days} onValueChange={setDays}>
-              <SelectTrigger className="w-36">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">Last 24 hours</SelectItem>
-                <SelectItem value="7">Last 7 days</SelectItem>
-                <SelectItem value="30">Last 30 days</SelectItem>
-                <SelectItem value="180">Last 6 months</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="sm" onClick={() => void query.refetch()} disabled={query.isFetching}>
-              <RefreshCw className={`mr-2 size-4 ${query.isFetching ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
-          </div>
-        }
-      >
+    <AdminPage
+      title="Landing demo scans"
+      description="Anonymous homepage and campaign scans — photos, status and UTM attribution."
+      actions={
+        <div className="flex items-center gap-2">
+          <Select value={days} onValueChange={setDays}>
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">Last 24 hours</SelectItem>
+              <SelectItem value="7">Last 7 days</SelectItem>
+              <SelectItem value="30">Last 30 days</SelectItem>
+              <SelectItem value="180">Last 6 months</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" onClick={() => void query.refetch()} disabled={query.isFetching}>
+            <RefreshCw className={`mr-2 size-4 ${query.isFetching ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
+      }
+    >
         {query.isLoading ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, index) => (
@@ -133,7 +131,6 @@ function AdminDemoScansPage() {
             </div>
           </div>
         )}
-      </AdminShell>
-    </PlatformAdminGate>
+    </AdminPage>
   );
 }
