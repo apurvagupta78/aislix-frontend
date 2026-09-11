@@ -55,6 +55,9 @@ import {
   PlanogramMissingAlert,
 } from "@/components/scan-results/PlanogramCompliance";
 import { NeedsReviewSection } from "@/components/scan-results/NeedsReview";
+import { BboxAnnotationEditor } from "@/components/scan-results/BboxAnnotationEditor";
+import { PlanogramSideBySidePanel } from "@/components/scan-results/PlanogramSideBySidePanel";
+import { UnifiedExceptionsPanel } from "@/components/scan-results/UnifiedExceptionsPanel";
 import { DownloadsPanel } from "@/components/scan-results/DownloadsPanel";
 import { SharePanel } from "@/components/scan-results/ResultHeader";
 import {
@@ -259,6 +262,35 @@ export function ScanResultsBody({
                   {showPlanogramWarning ? <PlanogramMissingAlert demoMode={demoMode} /> : null}
                 </Fragment>
               );
+            case "planogram_side_by_side":
+              return (
+                <PlanogramSideBySidePanel
+                  key={key}
+                  data={data}
+                  comparison={comparison}
+                  imageUrl={imageUrl}
+                  loading={loading}
+                />
+              );
+            case "unified_exceptions":
+              return (
+                <UnifiedExceptionsPanel
+                  key={key}
+                  data={source}
+                  comparison={comparison}
+                  view={view}
+                  loading={loading}
+                />
+              );
+            case "bbox_annotation":
+              return onCorrected ? (
+                <BboxAnnotationEditor
+                  key={key}
+                  data={source}
+                  imageUrl={imageUrl}
+                  onCorrected={onCorrected}
+                />
+              ) : null;
             case "review_queue":
               return onCorrected ? (
                 <NeedsReviewSection key={key} data={source} onCorrected={onCorrected} />

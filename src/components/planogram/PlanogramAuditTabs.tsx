@@ -4,7 +4,7 @@
  */
 
 import { useRef, useState } from "react";
-import { CheckCircle2, Download, Loader2, Upload, XCircle } from "lucide-react";
+import { CheckCircle2, Download, FileJson, Loader2, Upload, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -17,9 +17,11 @@ import type { ShelfCategory } from "@/lib/categories.data";
 import type { DraftRow } from "@/lib/planogram";
 import {
   computeReadiness,
+  exportPlanogramPackageJson,
   fetchPackageCsvTemplate,
   mergeAssortmentLists,
   parsePackageCsv,
+  parsePlanogramPackageImport,
   splitAssortmentRows,
   type AssortmentEntry,
   type PlanogramAuditPackage,
@@ -144,6 +146,7 @@ export type PlanogramAuditTabsProps = {
   onFilename?: (name: string) => void;
   onSource?: (source: "csv" | "manual") => void;
   tableActions?: React.ReactNode;
+  planogramName?: string;
 };
 
 export function PlanogramAuditTabs({
@@ -155,7 +158,10 @@ export function PlanogramAuditTabs({
   onFilename,
   onSource,
   tableActions,
+  planogramName = "planogram",
 }: PlanogramAuditTabsProps) {
+  const jsonInputRef = useRef<HTMLInputElement>(null);
+  const [jsonBusy, setJsonBusy] = useState(false);
   const allAssortment = mergeAssortmentLists(auditPackage.assortment_skus, auditPackage.msl_skus);
 
   const patch = (partial: Partial<PlanogramAuditPackage>) =>
@@ -216,6 +222,71 @@ export function PlanogramAuditTabs({
               onChange={(e) => patch({ primary_brand: e.target.value })}
             />
           </div>
+        </div>
+        <div className="rounded-xl border border-brand/15 bg-brand-soft/20 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <p className="text-sm font-medium text-foreground">Full planogram package</p>
+              <p className="text-xs text-muted-foreground">
+                Export or import products, assortment, prices, promotions, and scoring in one JSON file.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-lg border-brand/20"
+                onClick={() => exportPlanogramPackageJson(planogramName, rows, auditPackage)}
+              >
+                <FileJson className="mr-1.5 size-4" /> Export JSON
+              </Button>
+              <Button
+                type="button"
+                variant="brand"
+                size="sm"
+                className="rounded-lg"
+                disabled={jsonBusy}
+                onClick={() => jsonInputRef.current?.click()}
+              >
+                {jsonBusy ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : <Upload className="mr-1.5 size-4" />}
+                Import JSON
+              </Button>
+            </div>
+          </div>
+          <input
+            ref={jsonInputRef}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (!file) return;
+              setJsonBusy(true);
+              void file
+                .text()
+                .then((text) => {
+                  const parsed = JSON.parse(text) as unknown;
+                  const result = parsePlanogramPackageImport(parsed);
+                  if (result.errors.length) {
+                    toast.error("Could not import planogram package", {
+                      description: result.errors.slice(0, 3).join(" · "),
+                    });
+                    return;
+                  }
+                  if (result.rows.length) onRowsChange(result.rows);
+                  onAuditPackageChange(result.auditPackage);
+                  if (result.name) onFilename?.(result.name);
+                  onSource?.("manual");
+                  toast.success("Planogram package imported", {
+                    description: `${result.rows.length} product row(s) loaded.`,
+                  });
+                })
+                .catch(() => toast.error("Invalid JSON file."))
+                .finally(() => setJsonBusy(false));
+            }}
+          />
         </div>
         <ReadinessPanel rows={rows} pkg={auditPackage} />
       </TabsContent>

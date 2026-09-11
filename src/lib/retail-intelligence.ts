@@ -209,6 +209,7 @@ export const ROLE_HERO: Record<ResultViewMode, string> = {
   merchandising: "How is my category performing?",
   brand: "How is my brand performing against competitors?",
   executive: "Where should I intervene?",
+  exceptions: "What failed the audit?",
 };
 
 export function metricLabel(state: MetricState): string {

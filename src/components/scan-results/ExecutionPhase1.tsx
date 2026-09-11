@@ -527,7 +527,7 @@ export function ResultViewSwitcher({
   /** @deprecated — tabs always wrap for readability */
   compact?: boolean;
 }) {
-  const allModes: ResultViewMode[] = ["execution", "merchandising", "brand", "executive"];
+  const allModes: ResultViewMode[] = ["execution", "exceptions", "merchandising", "brand", "executive"];
   const modes = roleFamily ? allowedViewModes(roleFamily, customerType) : allModes;
   return (
     <div className="flex flex-wrap gap-2" role="tablist" aria-label="Result view">

@@ -1,5 +1,8 @@
 /** Planogram audit package — assortment, MSL, prices, promotions, scoring targets. */
 
+import type { DraftRow, PlanogramRow } from "@/lib/planogram";
+import { downloadBlob } from "@/lib/scan-results";
+
 export type AssortmentEntry = {
   sku: string;
   list_type: "mandatory_assortment" | "msl" | "optional";
@@ -165,4 +168,102 @@ export function packageFromDb(raw: unknown): PlanogramAuditPackage {
     fixture_id: typeof obj.fixture_id === "string" ? obj.fixture_id : "",
     store_timezone: typeof obj.store_timezone === "string" ? obj.store_timezone : "",
   };
+}
+
+export type PlanogramPackageExport = {
+  version: 1;
+  exported_at: string;
+  name?: string;
+  rows: PlanogramRow[];
+  audit_package: PlanogramAuditPackage;
+};
+
+let rowKeyCounter = 0;
+
+function nextRowKey(prefix = "import"): string {
+  rowKeyCounter += 1;
+  return `${prefix}-${Date.now()}-${rowKeyCounter}`;
+}
+
+/** Download full planogram + audit package as JSON. */
+export function exportPlanogramPackageJson(
+  name: string,
+  rows: DraftRow[],
+  auditPackage: PlanogramAuditPackage,
+): void {
+  const payload: PlanogramPackageExport = {
+    version: 1,
+    exported_at: new Date().toISOString(),
+    name: name.trim() || undefined,
+    rows: rows.map(({ key: _key, ...row }) => row),
+    audit_package: auditPackage,
+  };
+  const stamp = new Date().toISOString().slice(0, 10);
+  const slug = (name.trim() || "planogram").replace(/[^\w.-]+/g, "-").slice(0, 40);
+  downloadBlob(JSON.stringify(payload, null, 2), `aislix-${slug}-${stamp}.json`, "application/json");
+}
+
+export type PlanogramPackageImportResult = {
+  rows: DraftRow[];
+  auditPackage: PlanogramAuditPackage;
+  name?: string;
+  errors: string[];
+};
+
+/** Parse and validate a planogram package JSON export. */
+export function parsePlanogramPackageImport(raw: unknown): PlanogramPackageImportResult {
+  const errors: string[] = [];
+  if (!raw || typeof raw !== "object") {
+    return { rows: [], auditPackage: { ...EMPTY_AUDIT_PACKAGE }, errors: ["Invalid JSON object."] };
+  }
+  const obj = raw as Record<string, unknown>;
+  const name = typeof obj.name === "string" ? obj.name : undefined;
+  const auditRaw = obj.audit_package ?? obj.auditPackage;
+  const auditPackage = packageFromDb(auditRaw);
+
+  const rowSource = obj.rows;
+  if (!Array.isArray(rowSource)) {
+    errors.push("Missing rows array.");
+    return { rows: [], auditPackage, name, errors };
+  }
+
+  const rows: DraftRow[] = [];
+  for (const [i, item] of rowSource.entries()) {
+    if (!item || typeof item !== "object") {
+      errors.push(`Row ${i + 1}: invalid object.`);
+      continue;
+    }
+    const row = item as Record<string, unknown>;
+    const product = String(row.product_name ?? row.product ?? "").trim();
+    const brand = String(row.brand ?? "").trim();
+    if (!product || !brand) {
+      errors.push(`Row ${i + 1}: brand and product_name are required.`);
+      continue;
+    }
+    rows.push({
+      key: nextRowKey("row"),
+      location: String(row.location ?? ""),
+      category: String(row.category ?? ""),
+      sub_category: String(row.sub_category ?? row.subcategory ?? ""),
+      brand,
+      product_name: product,
+      variant: String(row.variant ?? ""),
+      expected_qty: Number(row.expected_qty ?? row.expected_facings ?? 1) || 1,
+      expected_facings:
+        row.expected_facings != null ? Number(row.expected_facings) : undefined,
+      min_facings: row.min_facings != null ? Number(row.min_facings) : undefined,
+      max_facings: row.max_facings != null ? Number(row.max_facings) : undefined,
+      expected_shelf_units:
+        row.expected_shelf_units != null ? Number(row.expected_shelf_units) : undefined,
+      expected_shelf_level: String(row.expected_shelf_level ?? ""),
+      expected_position: String(row.expected_position ?? ""),
+      mrp_inr: row.mrp_inr != null ? Number(row.mrp_inr) : undefined,
+      avg_daily_sales: row.avg_daily_sales != null ? Number(row.avg_daily_sales) : undefined,
+      sku: String(row.sku ?? ""),
+      shelf_position: String(row.shelf_position ?? row.expected_position ?? ""),
+      match_key: String(row.match_key ?? `${brand}::${product}`),
+    });
+  }
+
+  return { rows, auditPackage, name, errors };
 }

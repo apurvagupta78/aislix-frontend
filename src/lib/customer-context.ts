@@ -20,7 +20,7 @@ export type RoleFamily =
   | "commercial"
   | "executive";
 
-export type ResultViewMode = "execution" | "merchandising" | "brand" | "executive";
+export type ResultViewMode = "execution" | "merchandising" | "brand" | "executive" | "exceptions";
 
 export type ResultSectionKey =
   | "improvement_banner"
@@ -53,7 +53,10 @@ export type ResultSectionKey =
   | "fix_rescan_cta"
   | "audit_scope"
   | "pricing_compliance"
-  | "multi_photo";
+  | "multi_photo"
+  | "unified_exceptions"
+  | "planogram_side_by_side"
+  | "bbox_annotation";
 
 export type CustomerContext = {
   customerType: CustomerType;
@@ -86,6 +89,7 @@ export const VIEW_MODE_LABELS: Record<ResultViewMode, string> = {
   merchandising: "Merchandising",
   brand: "Brand intelligence",
   executive: "Executive summary",
+  exceptions: "Exceptions",
 };
 
 /** Distinct accent per role tab — shared by demo and dashboard results. */
@@ -134,6 +138,14 @@ export const VIEW_MODE_THEME: Record<ResultViewMode, ViewModeTheme> = {
     accentBorder: "border-primary/20",
     accentSoft: "bg-muted/50",
     ring: "ring-primary/20",
+  },
+  exceptions: {
+    tabActive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive",
+    tabInactive: TAB_INACTIVE,
+    accentText: "text-destructive",
+    accentBorder: "border-destructive/20",
+    accentSoft: "bg-destructive/5",
+    ring: "ring-destructive/20",
   },
 };
 
@@ -215,6 +227,8 @@ export const VIEW_MODE_DESCRIPTIONS: Record<ResultViewMode, string> = {
     "Brand intelligence — competitor presence, shelf share, and commercial recommendations.",
   executive:
     "Executive snapshot — scores, financial impact, AI summary, and key actions.",
+  exceptions:
+    "All audit exceptions — planogram gaps, pricing, compliance, and AI review in one dashboard.",
 };
 
 const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
@@ -234,6 +248,7 @@ const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
     "placement_alert",
     "sku_availability",
     "planogram",
+    "planogram_side_by_side",
     "presentability",
     "pricing_compliance",
     "financial_impact",
@@ -255,6 +270,7 @@ const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
     "sku_availability",
     "presentability",
     "planogram",
+    "planogram_side_by_side",
     "pricing_compliance",
     "analytics",
     "financial_impact",
@@ -298,6 +314,17 @@ const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
     "share",
     "scan_details",
     "downloads",
+  ],
+  exceptions: [
+    "unified_exceptions",
+    "planogram_side_by_side",
+    "bbox_annotation",
+    "review_queue",
+    "planogram",
+    "placement_alert",
+    "recommended_actions",
+    "annotated_image",
+    "scan_details",
   ],
 };
 
@@ -404,20 +431,20 @@ export function allowedViewModes(
 ): ResultViewMode[] {
   switch (roleFamily) {
     case "field":
-      return ["execution"];
+      return ["execution", "exceptions"];
     case "store_ops":
-      return ["execution", "merchandising"];
+      return ["execution", "exceptions", "merchandising"];
     case "merchandising":
     case "operations":
-      return ["execution", "merchandising", "brand"];
+      return ["execution", "exceptions", "merchandising", "brand"];
     case "commercial":
       return customerType === "fmcg"
-        ? ["brand", "merchandising", "execution"]
-        : ["brand", "merchandising", "executive"];
+        ? ["brand", "merchandising", "exceptions", "execution"]
+        : ["brand", "merchandising", "exceptions", "executive"];
     case "executive":
-      return ["executive", "merchandising", "brand", "execution"];
+      return ["executive", "exceptions", "merchandising", "brand", "execution"];
     default:
-      return ["execution", "merchandising", "brand", "executive"];
+      return ["execution", "exceptions", "merchandising", "brand", "executive"];
   }
 }
 
@@ -426,4 +453,5 @@ export const ROLE_HERO: Record<ResultViewMode, string> = {
   merchandising: "How is my category performing?",
   brand: "How is my brand performing against competitors?",
   executive: "Where should I intervene?",
+  exceptions: "What failed the audit?",
 };

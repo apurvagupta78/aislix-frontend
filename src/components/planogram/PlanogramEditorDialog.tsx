@@ -182,6 +182,7 @@ export function PlanogramEditorDialog({
               auditPackage={auditPackage}
               onAuditPackageChange={setAuditPackage}
               onFilename={setFilename}
+              planogramName={name || filename || storeName}
               onSource={(source) => setSources((prev) => ({ ...prev, [source]: true }))}
               tableActions={
                 rows.length > 0 ? (
