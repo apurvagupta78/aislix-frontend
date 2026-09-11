@@ -174,7 +174,7 @@ export function RetailIntelligenceDemo() {
 
   const shownImage = phase === "done" && result ? (imageSrc(result) ?? previewImageUrl) : previewImageUrl;
   const scanning = phase === "scanning";
-  const showImagePane = Boolean(previewImageUrl);
+  const showImagePane = Boolean(previewImageUrl) && phase !== "done";
 
   const setupPanel =
     setupMode && (phase === "idle" || phase === "error") ? (

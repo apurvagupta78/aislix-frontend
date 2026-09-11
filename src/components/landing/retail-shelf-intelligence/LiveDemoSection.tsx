@@ -194,7 +194,7 @@ export function LiveDemoSection({
     (phase === "done" && result ? (annotatedSrc(result) ?? previewImageUrl) : null) ??
     previewImageUrl ??
     homepageSamplePreview;
-  const showImagePane = Boolean(displayImageUrl);
+  const showImagePane = Boolean(displayImageUrl) && phase !== "done";
 
   const setupPanel =
     setupMode && (phase === "idle" || phase === "error") ? (
