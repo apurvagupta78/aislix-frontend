@@ -11,6 +11,12 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AdminDemoScansRouteImport } from './routes/admin.demo-scans'
+import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as AdminOrgsRouteImport } from './routes/admin.orgs'
+import { Route as AdminScansRouteImport } from './routes/admin.scans'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as AssignScanRouteImport } from './routes/assign-scan'
 import { Route as AssignedScansRouteImport } from './routes/assigned-scans'
@@ -79,6 +85,36 @@ const IndexRoute = IndexRouteImport.update({
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminDemoScansRoute = AdminDemoScansRouteImport.update({
+  id: '/admin/demo-scans',
+  path: '/admin/demo-scans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin/login',
+  path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminOrgsRoute = AdminOrgsRouteImport.update({
+  id: '/admin/orgs',
+  path: '/admin/orgs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminScansRoute = AdminScansRouteImport.update({
+  id: '/admin/scans',
+  path: '/admin/scans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AcceptInviteRoute = AcceptInviteRouteImport.update({
@@ -383,6 +419,12 @@ const LovableEmailTransactionalPreviewRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
+  '/admin/demo-scans': typeof AdminDemoScansRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/orgs': typeof AdminOrgsRoute
+  '/admin/scans': typeof AdminScansRoute
+  '/admin/users': typeof AdminUsersRoute
   '/accept-invite': typeof AcceptInviteRoute
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
@@ -446,6 +488,12 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
+  '/admin/demo-scans': typeof AdminDemoScansRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/orgs': typeof AdminOrgsRoute
+  '/admin/scans': typeof AdminScansRoute
+  '/admin/users': typeof AdminUsersRoute
   '/accept-invite': typeof AcceptInviteRoute
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
@@ -510,6 +558,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
+  '/admin/demo-scans': typeof AdminDemoScansRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/orgs': typeof AdminOrgsRoute
+  '/admin/scans': typeof AdminScansRoute
+  '/admin/users': typeof AdminUsersRoute
   '/accept-invite': typeof AcceptInviteRoute
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
@@ -575,6 +629,12 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/admin'
+    | '/admin/demo-scans'
+    | '/admin/login'
+    | '/admin/orgs'
+    | '/admin/scans'
+    | '/admin/users'
     | '/accept-invite'
     | '/assign-scan'
     | '/assigned-scans'
@@ -638,6 +698,12 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/admin'
+    | '/admin/demo-scans'
+    | '/admin/login'
+    | '/admin/orgs'
+    | '/admin/scans'
+    | '/admin/users'
     | '/accept-invite'
     | '/assign-scan'
     | '/assigned-scans'
@@ -701,6 +767,12 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/admin'
+    | '/admin/demo-scans'
+    | '/admin/login'
+    | '/admin/orgs'
+    | '/admin/scans'
+    | '/admin/users'
     | '/accept-invite'
     | '/assign-scan'
     | '/assigned-scans'
@@ -765,6 +837,12 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AdminRoute: typeof AdminRoute
+  AdminDemoScansRoute: typeof AdminDemoScansRoute
+  AdminLoginRoute: typeof AdminLoginRoute
+  AdminOrgsRoute: typeof AdminOrgsRoute
+  AdminScansRoute: typeof AdminScansRoute
+  AdminUsersRoute: typeof AdminUsersRoute
   AcceptInviteRoute: typeof AcceptInviteRoute
   AssignScanRoute: typeof AssignScanRoute
   AssignedScansRoute: typeof AssignedScansRoute
@@ -840,6 +918,48 @@ declare module '@tanstack/react-router' {
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/demo-scans': {
+      id: '/admin/demo-scans'
+      path: '/admin/demo-scans'
+      fullPath: '/admin/demo-scans'
+      preLoaderRoute: typeof AdminDemoScansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/admin/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/orgs': {
+      id: '/admin/orgs'
+      path: '/admin/orgs'
+      fullPath: '/admin/orgs'
+      preLoaderRoute: typeof AdminOrgsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/scans': {
+      id: '/admin/scans'
+      path: '/admin/scans'
+      fullPath: '/admin/scans'
+      preLoaderRoute: typeof AdminScansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/accept-invite': {
@@ -1261,6 +1381,12 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AdminRoute: AdminRoute,
+  AdminDemoScansRoute: AdminDemoScansRoute,
+  AdminLoginRoute: AdminLoginRoute,
+  AdminOrgsRoute: AdminOrgsRoute,
+  AdminScansRoute: AdminScansRoute,
+  AdminUsersRoute: AdminUsersRoute,
   AcceptInviteRoute: AcceptInviteRoute,
   AssignScanRoute: AssignScanRoute,
   AssignedScansRoute: AssignedScansRoute,

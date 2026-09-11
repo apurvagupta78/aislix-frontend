@@ -8,7 +8,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/States";
-import { getPlatformAdminOverview } from "@/lib/platform-admin.functions";
+import {
+  getPlatformAdminOverview,
+  listPlatformScans,
+  listPlatformUsers,
+} from "@/lib/platform-admin.functions";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({
@@ -19,9 +31,22 @@ export const Route = createFileRoute("/admin")({
 
 function AdminOverviewPage() {
   const fetchOverview = useServerFn(getPlatformAdminOverview);
+  const fetchScans = useServerFn(listPlatformScans);
+  const fetchUsers = useServerFn(listPlatformUsers);
+
   const query = useQuery({
     queryKey: ["platform-admin-overview"],
     queryFn: () => fetchOverview({ data: {} }),
+    staleTime: 30_000,
+  });
+  const recentScans = useQuery({
+    queryKey: ["platform-admin-recent-scans"],
+    queryFn: () => fetchScans({ data: { page: 1, pageSize: 8 } }),
+    staleTime: 30_000,
+  });
+  const recentUsers = useQuery({
+    queryKey: ["platform-admin-recent-users"],
+    queryFn: () => fetchUsers({ data: { page: 1, pageSize: 8 } }),
     staleTime: 30_000,
   });
 
@@ -76,6 +101,71 @@ function AdminOverviewPage() {
               <Button asChild variant="outline" className="rounded-xl">
                 <Link to="/admin/orgs">View organizations</Link>
               </Button>
+              <Button asChild variant="outline" className="rounded-xl">
+                <Link to="/admin/demo-scans">Demo sessions</Link>
+              </Button>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="overflow-hidden rounded-xl border border-border">
+                <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                  <p className="text-sm font-semibold">Recent scans</p>
+                  <Link to="/admin/scans" className="text-xs text-brand hover:underline">
+                    View all
+                  </Link>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>When</TableHead>
+                      <TableHead>User</TableHead>
+                      <TableHead>Products</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(recentScans.data?.rows ?? []).map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell className="text-xs">
+                          {new Date(row.created_at).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="max-w-[120px] truncate text-xs">
+                          {row.user_email ?? row.created_by?.slice(0, 8) ?? "—"}
+                        </TableCell>
+                        <TableCell>{row.total_products}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="overflow-hidden rounded-xl border border-border">
+                <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                  <p className="text-sm font-semibold">Recent users</p>
+                  <Link to="/admin/users" className="text-xs text-brand hover:underline">
+                    View all
+                  </Link>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Scans</TableHead>
+                      <TableHead>Orgs</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {(recentUsers.data?.rows ?? []).map((row) => (
+                      <TableRow key={row.id}>
+                        <TableCell className="max-w-[160px] truncate text-xs">
+                          {row.email ?? row.id.slice(0, 8)}
+                        </TableCell>
+                        <TableCell>{row.scan_count}</TableCell>
+                        <TableCell>{row.org_count}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </div>
         )}
