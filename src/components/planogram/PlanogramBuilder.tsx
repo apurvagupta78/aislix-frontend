@@ -313,7 +313,8 @@ export function PlanogramBuilder({
           <div className="flex flex-wrap items-center gap-3">
             <p className="text-xs text-muted-foreground">
               Columns: {SAMPLE_CSV_HEADERS}. Required: location, category, sub_category, brand,
-              product_name, expected_qty. Optional: price (mrp_inr column), avg_daily_sales for financial impact.
+              product_name, expected_facings (or legacy expected_qty). Optional: min/max facings, price,
+              avg_daily_sales, shelf_position.
             </p>
             <Button variant="outline" size="sm" className="rounded-xl" onClick={downloadTemplate}>
               <Download className="mr-2 size-4" /> CSV template
@@ -498,13 +499,57 @@ export function PlanogramBuilder({
                 onChange={(e) => setForm({ ...form, variant: e.target.value })}
               />
             </Field>
-            <Field label="Expected qty" required>
+            <Field label="Expected facings" required>
               <Input
                 type="number"
                 min={0}
                 className="rounded-xl"
-                value={form.expected_qty}
-                onChange={(e) => setForm({ ...form, expected_qty: Number(e.target.value) || 0 })}
+                title="Visible product faces expected on shelf — different from inventory quantity."
+                placeholder="e.g. 3"
+                value={form.expected_facings ?? ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    expected_facings: e.target.value ? Number(e.target.value) : undefined,
+                  })
+                }
+              />
+            </Field>
+            <Field label="Min / max facings (optional)">
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  className="rounded-xl"
+                  placeholder="Min"
+                  value={form.min_facings ?? ""}
+                  onChange={(e) =>
+                    setForm({ ...form, min_facings: e.target.value ? Number(e.target.value) : undefined })
+                  }
+                />
+                <Input
+                  type="number"
+                  min={0}
+                  className="rounded-xl"
+                  placeholder="Max"
+                  value={form.max_facings ?? ""}
+                  onChange={(e) =>
+                    setForm({ ...form, max_facings: e.target.value ? Number(e.target.value) : undefined })
+                  }
+                />
+              </div>
+            </Field>
+            <Field label="Expected shelf units (optional)">
+              <Input
+                type="number"
+                min={0}
+                className="rounded-xl"
+                title="Optional inventory unit expectation — separate from visible facings."
+                value={form.expected_shelf_units ?? form.expected_qty ?? ""}
+                onChange={(e) => {
+                  const n = e.target.value ? Number(e.target.value) : undefined;
+                  setForm({ ...form, expected_shelf_units: n, expected_qty: n ?? 0 });
+                }}
               />
             </Field>
             <Field label={`${priceLabel} (optional)`}>
@@ -610,7 +655,8 @@ export function PlanogramBuilder({
                   <th className="px-3 py-2">Brand</th>
                   <th className="px-3 py-2">Product</th>
                   <th className="px-3 py-2">Variant</th>
-                  <th className="px-3 py-2 text-right">Expected qty</th>
+                  <th className="px-3 py-2 text-right">Facings</th>
+                  <th className="px-3 py-2 text-right">Shelf units</th>
                   <th className="px-3 py-2 text-right">{priceLabel}</th>
                   <th className="px-3 py-2 text-right">Sales/d</th>
                   <th className="px-3 py-2">SKU</th>
@@ -651,19 +697,39 @@ export function PlanogramBuilder({
                       <td className="px-3 py-2">
                         {cell(row.variant, (v) => update(row.key, { variant: v }))}
                       </td>
-                      <td className="px-3 py-2 text-right">
+                      <td className="px-3 py-2 text-right tabular-nums">
                         {editing ? (
                           <Input
                             type="number"
                             min={0}
                             className="h-8 w-20 rounded-lg text-right"
-                            value={row.expected_qty}
+                            value={row.expected_facings ?? ""}
                             onChange={(e) =>
-                              update(row.key, { expected_qty: Number(e.target.value) || 0 })
+                              update(row.key, {
+                                expected_facings: e.target.value ? Number(e.target.value) : undefined,
+                              })
                             }
                           />
                         ) : (
-                          row.expected_qty
+                          row.expected_facings ?? "—"
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {editing ? (
+                          <Input
+                            type="number"
+                            min={0}
+                            className="h-8 w-20 rounded-lg text-right"
+                            value={row.expected_shelf_units ?? row.expected_qty}
+                            onChange={(e) =>
+                              update(row.key, {
+                                expected_shelf_units: e.target.value ? Number(e.target.value) : undefined,
+                                expected_qty: Number(e.target.value) || 0,
+                              })
+                            }
+                          />
+                        ) : (
+                          row.expected_shelf_units ?? row.expected_qty
                         )}
                       </td>
                       <td className="px-3 py-2 text-right tabular-nums">

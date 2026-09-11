@@ -550,7 +550,7 @@ function Results() {
                   case "presentability":
                     return <PresentabilityPanel key={key} data={display} loading={loading} />;
                   case "fix_rescan_cta":
-                    return <FixRescanCtaPanel key={key} scanId={data?.scan_id} />;
+                    return <FixRescanCtaPanel key={key} scanId={data?.scan_id} data={display} />;
                   default:
                     return null;
                 }

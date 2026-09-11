@@ -49,7 +49,18 @@ export function validatePlanogramRow(row: PlanogramRow): string | null {
   for (const [key, label] of REQUIRED_PLANOGRAM_FIELDS) {
     if (!String(row[key] ?? "").trim()) return `${label} is required.`;
   }
-  if (!Number.isFinite(Number(row.expected_qty)) || Number(row.expected_qty) < 0) {
+  const facings = row.expected_facings;
+  const hasFacings =
+    facings != null && Number.isFinite(Number(facings)) && Number(facings) >= 0;
+  const qty = Number(row.expected_qty);
+  const hasQty = Number.isFinite(qty) && qty >= 0;
+  if (!hasFacings && !hasQty) {
+    return "Expected facings (or legacy expected qty) must be configured.";
+  }
+  if (hasFacings && Number(facings) < 0) {
+    return "Expected facings must be 0 or more.";
+  }
+  if (!hasFacings && !hasQty) {
     return "Expected qty must be a number of 0 or more.";
   }
   return null;
@@ -107,6 +118,10 @@ export function emptyRow(): PlanogramRow {
     product_name: "",
     variant: "",
     expected_qty: 1,
+    expected_facings: undefined,
+    min_facings: undefined,
+    max_facings: undefined,
+    expected_shelf_units: undefined,
     mrp_inr: undefined,
     avg_daily_sales: undefined,
     sku: "",
@@ -118,6 +133,10 @@ export function emptyRow(): PlanogramRow {
 export function toDraftRow(row: Partial<PlanogramRow> | null | undefined): DraftRow {
   const base = emptyRow();
   const qty = Number(row?.expected_qty);
+  const facings = Number(row?.expected_facings);
+  const minFacings = Number(row?.min_facings);
+  const maxFacings = Number(row?.max_facings);
+  const shelfUnits = Number(row?.expected_shelf_units);
   return {
     key: nextRowKey(),
     location: String(row?.location ?? "").trim(),
@@ -127,7 +146,13 @@ export function toDraftRow(row: Partial<PlanogramRow> | null | undefined): Draft
     product_name: String(row?.product_name ?? "").trim(),
     variant: String(row?.variant ?? "").trim(),
     sku: String(row?.sku ?? "").trim(),
-    expected_qty: Number.isFinite(qty) && qty > 0 ? Math.floor(qty) : base.expected_qty,
+    expected_qty: Number.isFinite(qty) && qty >= 0 ? Math.floor(qty) : base.expected_qty,
+    expected_facings:
+      Number.isFinite(facings) && facings >= 0 ? Math.floor(facings) : undefined,
+    min_facings: Number.isFinite(minFacings) && minFacings >= 0 ? Math.floor(minFacings) : undefined,
+    max_facings: Number.isFinite(maxFacings) && maxFacings >= 0 ? Math.floor(maxFacings) : undefined,
+    expected_shelf_units:
+      Number.isFinite(shelfUnits) && shelfUnits >= 0 ? Math.floor(shelfUnits) : undefined,
     mrp_inr: Number.isFinite(Number(row?.mrp_inr)) ? Number(row?.mrp_inr) : undefined,
     avg_daily_sales: Number.isFinite(Number(row?.avg_daily_sales))
       ? Number(row?.avg_daily_sales)

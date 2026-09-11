@@ -22,6 +22,7 @@ import {
   hasExplicitExpectedFacings,
   hasPlacementRules,
 } from "@/lib/execution-metrics";
+import { buildOpportunityLedger, buildVerificationSnapshot } from "@/lib/opportunity-ledger";
 import type { FinancialImpact, ScanRecommendation, ScanResult } from "@/lib/scan-results";
 import { emptyRow, type PlanogramRow } from "@/lib/planogram";
 
@@ -835,6 +836,60 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
   const role_summaries = buildDemoRoleSummaries(result, ctx, summaryCtx);
   const executive_summary = buildDemoExecutiveSummary(result, ctx, summaryCtx);
 
+  const planogramBlock = hasPlanogram
+    ? {
+        requested: true as const,
+        percent: match.sku_match_percent,
+        sku_match_percent: match.sku_match_percent,
+        qty_compliance_percent: match.qty_compliance_percent,
+        summary: {
+          ...(result.planogram?.summary ?? {}),
+          expected_sku_count: planogramRows.length,
+          missing: match.missing_count,
+          wrong_product: match.wrong_product_count,
+          qty_short: match.qty_short_count,
+          correct: match.correct_count,
+          configured_rows: planogramRows,
+          lines: match.lines.map((l) => ({
+            brand: l.expected.brand,
+            product: l.expected.product_name,
+            expected_qty: l.expected_qty,
+            detected_qty: l.detected_qty,
+            issue_type: l.issue_type,
+            detail: l.detail,
+          })),
+          source: "demo_planogram",
+        },
+      }
+    : result.planogram;
+
+  const summaryBlock = {
+    ...result.summary,
+    total_products: fullInventory.reduce((n, r) => n + (r.quantity ?? 0), 0),
+    unique_skus: fullInventory.length,
+    unique_brands: new Set(fullInventory.map((r) => r.brand)).size,
+    low_stock_products: lowStock,
+    confirmed_oos_count: oosCount,
+    possible_oos_count: lowStock,
+    brand_share_percent: brandShare,
+    product_share_percent: productShare,
+    product_share_label: productShareLabel,
+    share_of_shelf_percent:
+      brandShare ?? productShare ?? topBrands[0]?.share ?? result.summary?.share_of_shelf_percent,
+    facing_compliance_percent: facingPct ?? undefined,
+    placement_compliance_percent: placementPct ?? undefined,
+    availability_percent: hasPlanogram ? match.sku_match_percent : result.summary?.availability_percent,
+  };
+
+  const ledgerBase: ScanResult = {
+    ...result,
+    financial_impact,
+    planogram: planogramBlock,
+    summary: summaryBlock,
+  };
+  const opportunity_ledger = buildOpportunityLedger(ledgerBase, match, financial_impact);
+  const execution_verification = buildVerificationSnapshot(ledgerBase) ?? undefined;
+
   return {
     ...result,
     inventory: displayInventory,
@@ -843,52 +898,14 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
     role_summaries,
     competitor_intel: competitor_intel ?? result.competitor_intel,
     recommendations: mergedRecs,
-    summary: {
-      ...result.summary,
-      total_products: fullInventory.reduce((n, r) => n + (r.quantity ?? 0), 0),
-      unique_skus: fullInventory.length,
-      unique_brands: new Set(fullInventory.map((r) => r.brand)).size,
-      low_stock_products: lowStock,
-      confirmed_oos_count: oosCount,
-      possible_oos_count: lowStock,
-      brand_share_percent: brandShare,
-      product_share_percent: productShare,
-      product_share_label: productShareLabel,
-      share_of_shelf_percent:
-        brandShare ?? productShare ?? topBrands[0]?.share ?? result.summary?.share_of_shelf_percent,
-      facing_compliance_percent: facingPct ?? undefined,
-      placement_compliance_percent: placementPct ?? undefined,
-      availability_percent: hasPlanogram
-        ? match.sku_match_percent
-        : result.summary?.availability_percent,
+    retail_intelligence: {
+      ...(result.retail_intelligence ?? {}),
+      opportunity_ledger,
+      ...(execution_verification ? { execution_verification } : {}),
     },
+    summary: summaryBlock,
     charts: topBrands.length ? { ...result.charts, top_brands: topBrands } : result.charts,
-    planogram: hasPlanogram
-      ? {
-          requested: true,
-          percent: match.sku_match_percent,
-          sku_match_percent: match.sku_match_percent,
-          qty_compliance_percent: match.qty_compliance_percent,
-          summary: {
-            ...(result.planogram?.summary ?? {}),
-            expected_sku_count: planogramRows.length,
-            missing: match.missing_count,
-            wrong_product: match.wrong_product_count,
-            qty_short: match.qty_short_count,
-            correct: match.correct_count,
-            configured_rows: planogramRows,
-            lines: match.lines.map((l) => ({
-              brand: l.expected.brand,
-              product: l.expected.product_name,
-              expected_qty: l.expected_qty,
-              detected_qty: l.detected_qty,
-              issue_type: l.issue_type,
-              detail: l.detail,
-            })),
-            source: "demo_planogram",
-          },
-        }
-      : result.planogram,
+    planogram: planogramBlock,
   };
 }
 
@@ -933,11 +950,19 @@ export function enrichDemoScanResult(result: ScanResult, ctx: ScanContextState):
     inventory: fullInventory,
   };
 
+  const opportunity_ledger = buildOpportunityLedger(applied, match, financial);
+  const execution_verification = buildVerificationSnapshot(applied) ?? undefined;
+
   return {
     ...applied,
     role_summaries: buildDemoRoleSummaries(applied, ctx, summaryCtx),
     executive_summary: buildDemoExecutiveSummary(applied, ctx, summaryCtx),
     competitor_intel: intel ?? applied.competitor_intel,
+    retail_intelligence: {
+      ...(applied.retail_intelligence ?? {}),
+      opportunity_ledger,
+      ...(execution_verification ? { execution_verification } : {}),
+    },
   };
 }
 

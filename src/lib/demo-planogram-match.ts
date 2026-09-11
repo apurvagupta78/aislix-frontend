@@ -3,7 +3,14 @@
  * Aligns with backend issue types: missing, wrong_product, qty_mismatch, correct.
  */
 
+import { expectedFacingsForRow } from "@/lib/execution-metrics";
 import type { PlanogramRow } from "@/lib/planogram";
+
+function facingTarget(plan: PlanogramRow): number {
+  const explicit = expectedFacingsForRow(plan);
+  if (explicit != null) return explicit;
+  return Math.max(1, plan.expected_qty ?? 1);
+}
 
 export type PlanogramIssueType =
   | "correct"
@@ -223,7 +230,7 @@ export function comparePlanogramToInventory(
   let qtyScoreSum = 0;
 
   for (const expected of rows) {
-    const expected_qty = Math.max(1, expected.expected_qty ?? 1);
+    const expected_qty = facingTarget(expected);
     const match = findBestMatch(expected, inventory, used);
 
     let detected_qty = 0;

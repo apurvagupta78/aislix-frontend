@@ -203,7 +203,7 @@ export function DemoScanResultsBody({
             case "presentability":
               return <PresentabilityPanel key={key} data={data} />;
             case "fix_rescan_cta":
-              return <FixRescanCtaPanel key={key} scanId={data.scan_id} />;
+              return <FixRescanCtaPanel key={key} scanId={data.scan_id} data={data} />;
             default:
               return null;
           }

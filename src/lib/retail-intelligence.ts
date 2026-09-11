@@ -100,13 +100,29 @@ export type OpportunityLedgerRow = {
   brand?: string;
   severity?: string;
   priority?: string;
+  expected?: string;
+  actual?: string;
+  gap?: string;
+  evidence?: string;
   revenue_at_risk_inr?: number | null;
   commercial_risk?: string | null;
   source?: string;
   confidence?: string;
   recommended_action?: string;
-  status?: string;
+  status?: "open" | "assigned" | "in_progress" | "fixed" | "rescan_required" | "verified" | "dismissed" | "closed" | string;
   commercial_impact_score?: number;
+};
+
+export type ExecutionVerification = {
+  previous_score?: number | null;
+  current_score?: number | null;
+  previous_target_sku_availability?: string;
+  current_target_sku_availability?: string;
+  previous_planogram_presence?: string;
+  current_planogram_presence?: string;
+  improved: boolean;
+  verified: boolean;
+  summary: string;
 };
 
 export type RetailIntelligencePayload = {
@@ -129,6 +145,7 @@ export type RetailIntelligencePayload = {
   posm?: MetricValue | Record<string, unknown>;
   freshness?: MetricValue | Record<string, unknown>;
   opportunity_ledger?: OpportunityLedgerRow[];
+  execution_verification?: ExecutionVerification;
   historical_patterns?: string[];
   role_summaries?: RoleSummaries;
   role_insights?: RoleFamilyInsight[];
