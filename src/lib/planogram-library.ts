@@ -15,6 +15,11 @@ import {
   type PlanogramRow,
   type SourceType,
 } from "@/lib/planogram";
+import {
+  packageForSave,
+  packageFromDb,
+  type PlanogramAuditPackage,
+} from "@/lib/planogram-audit-package";
 
 export type PlanogramLibraryStatus = "draft" | "active" | "archived";
 
@@ -200,10 +205,12 @@ export async function createStorePlanogram(input: {
   sourceType: SourceType;
   name?: string | null;
   sourceFilename?: string | null;
+  auditPackage?: PlanogramAuditPackage;
 }): Promise<string> {
   const orgId = await requireOrgId();
   const userId = await requireUserId();
 
+  const auditPayload = input.auditPackage ? packageForSave(input.auditPackage) : {};
   const { data: version, error } = await supabase
     .from("planogram_versions")
     .insert({
@@ -215,6 +222,9 @@ export async function createStorePlanogram(input: {
       uploaded_by: userId,
       source_filename: input.sourceFilename ?? null,
       row_count: input.rows.length,
+      audit_package: auditPayload,
+      fixture_id: input.auditPackage?.fixture_id || null,
+      store_timezone: input.auditPackage?.store_timezone || null,
     })
     .select("id")
     .single();
@@ -236,10 +246,11 @@ export async function loadPlanogramForEdit(versionId: string): Promise<{
   name: string;
   source_type: SourceType;
   rows: DraftRow[];
+  auditPackage: PlanogramAuditPackage;
 }> {
   const { data: version, error } = await supabase
     .from("planogram_versions")
-    .select("id, name, source_type")
+    .select("id, name, source_type, audit_package, fixture_id, store_timezone")
     .eq("id", versionId)
     .single();
   if (error) dbError(error, "Could not load this planogram.");
@@ -253,11 +264,16 @@ export async function loadPlanogramForEdit(versionId: string): Promise<{
     .order("created_at", { ascending: true });
   if (itemsError) dbError(itemsError, "Could not load the expected products.");
 
+  const auditPackage = packageFromDb(version!.audit_package);
+  if (version!.fixture_id) auditPackage.fixture_id = String(version!.fixture_id);
+  if (version!.store_timezone) auditPackage.store_timezone = String(version!.store_timezone);
+
   return {
     id: version!.id as string,
     name: ((version!.name as string | null) ?? "").trim(),
     source_type: ((version!.source_type as SourceType) ?? "csv") as SourceType,
     rows: (items ?? []).map((item) => toDraftRow(item as Partial<PlanogramRow>)),
+    auditPackage,
   };
 }
 
@@ -268,9 +284,11 @@ export async function updateStorePlanogram(input: {
   rows: DraftRow[];
   sourceType: SourceType;
   name?: string | null;
+  auditPackage?: PlanogramAuditPackage;
 }): Promise<void> {
   const orgId = await requireOrgId();
 
+  const auditPayload = input.auditPackage ? packageForSave(input.auditPackage) : {};
   const { error } = await supabase
     .from("planogram_versions")
     .update({
@@ -278,6 +296,9 @@ export async function updateStorePlanogram(input: {
       source_type: input.sourceType,
       row_count: input.rows.length,
       updated_at: new Date().toISOString(),
+      audit_package: auditPayload,
+      fixture_id: input.auditPackage?.fixture_id || null,
+      store_timezone: input.auditPackage?.store_timezone || null,
     })
     .eq("id", input.versionId);
   if (error) dbError(error, "Could not update this planogram.");

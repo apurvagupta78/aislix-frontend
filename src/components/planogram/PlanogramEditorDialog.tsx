@@ -1,7 +1,5 @@
 /**
- * Add / edit a planogram in a store's library. Reuses PlanogramBuilder so CSV
- * upload, manual entry and row validation behave exactly like New Scan and
- * Assign Scan.
+ * Add / edit a planogram in a store's library — tabbed audit package editor.
  */
 
 import { useEffect, useState } from "react";
@@ -19,10 +17,15 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlanogramBuilder, StickyError } from "@/components/planogram/PlanogramBuilder";
+import { PlanogramAuditTabs } from "@/components/planogram/PlanogramAuditTabs";
+import { StickyError } from "@/components/planogram/PlanogramBuilder";
 import { toUserMessage } from "@/lib/api/errors";
 import type { ShelfCategory } from "@/lib/categories.data";
 import { dominantScopeFromRows, type DraftRow, type SourceType } from "@/lib/planogram";
+import {
+  EMPTY_AUDIT_PACKAGE,
+  type PlanogramAuditPackage,
+} from "@/lib/planogram-audit-package";
 import {
   createStorePlanogram,
   loadPlanogramForEdit,
@@ -53,6 +56,7 @@ export function PlanogramEditorDialog({
   const editing = target.mode === "edit";
   const [name, setName] = useState("");
   const [rows, setRows] = useState<DraftRow[]>([]);
+  const [auditPackage, setAuditPackage] = useState<PlanogramAuditPackage>({ ...EMPTY_AUDIT_PACKAGE });
   const [sources, setSources] = useState<{ csv: boolean; manual: boolean }>({
     csv: false,
     manual: false,
@@ -70,6 +74,7 @@ export function PlanogramEditorDialog({
     setError(null);
     setSources({ csv: false, manual: false });
     setFilename(null);
+    setAuditPackage({ ...EMPTY_AUDIT_PACKAGE });
     if (target.mode === "create") {
       setName("");
       setRows([]);
@@ -82,6 +87,7 @@ export function PlanogramEditorDialog({
       .then((data) => {
         setName(data.name);
         setRows(data.rows);
+        setAuditPackage(data.auditPackage ?? { ...EMPTY_AUDIT_PACKAGE });
         setSources({ csv: data.source_type !== "manual", manual: data.source_type !== "csv" });
       })
       .catch((err) => setError(toUserMessage(err)))
@@ -98,6 +104,7 @@ export function PlanogramEditorDialog({
           rows,
           sourceType,
           name,
+          auditPackage,
         });
         return "updated" as const;
       }
@@ -107,6 +114,7 @@ export function PlanogramEditorDialog({
         sourceType,
         name,
         sourceFilename: filename,
+        auditPackage,
       });
       return "created" as const;
     },
@@ -125,12 +133,12 @@ export function PlanogramEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] max-w-5xl overflow-y-auto">
+      <DialogContent className="max-h-[92vh] max-w-5xl overflow-y-auto border-brand/10">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit planogram" : "Add planogram"}</DialogTitle>
+          <DialogTitle className="text-brand">{editing ? "Edit planogram" : "Add planogram"}</DialogTitle>
           <DialogDescription>
-            Expected shelf products for {storeName}. Upload a CSV or add rows manually — save when
-            it is ready to assign.
+            Build a complete audit package for {storeName} — products, assortment, prices, promotions and KPI
+            targets.
           </DialogDescription>
         </DialogHeader>
 
@@ -141,7 +149,7 @@ export function PlanogramEditorDialog({
             </Label>
             <Input
               id="planogram-name"
-              className="rounded-xl"
+              className="rounded-xl border-brand/20 focus-visible:ring-brand/30"
               placeholder={
                 summary.location || summary.sub_category
                   ? [summary.location, summary.sub_category || summary.category]
@@ -164,16 +172,17 @@ export function PlanogramEditorDialog({
 
           {loading ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" /> Loading expected products…
+              <Loader2 className="size-4 animate-spin text-brand" /> Loading planogram…
             </p>
           ) : (
-            <PlanogramBuilder
+            <PlanogramAuditTabs
               rows={rows}
               onRowsChange={setRows}
               categories={categories}
+              auditPackage={auditPackage}
+              onAuditPackageChange={setAuditPackage}
               onFilename={setFilename}
               onSource={(source) => setSources((prev) => ({ ...prev, [source]: true }))}
-              tableTitle="Expected products"
               tableActions={
                 rows.length > 0 ? (
                   <Button

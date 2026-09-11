@@ -1,0 +1,168 @@
+/** Planogram audit package — assortment, MSL, prices, promotions, scoring targets. */
+
+export type AssortmentEntry = {
+  sku: string;
+  list_type: "mandatory_assortment" | "msl" | "optional";
+  outlet_scope: string;
+  valid_from?: string;
+  valid_to?: string;
+  substitution_allowed?: boolean;
+  optional?: boolean;
+};
+
+export type PriceRequirement = {
+  sku: string;
+  label_location: string;
+  expected_price: number;
+  currency: string;
+  price_basis: string;
+  valid_from?: string;
+  valid_to?: string;
+};
+
+export type PromotionEntry = {
+  promotion_id: string;
+  participating_skus: string[];
+  start_date?: string;
+  end_date?: string;
+  required_location?: string;
+  expected_offer_text?: string;
+  expected_promo_price?: number | null;
+  required_facings?: number | null;
+};
+
+export type ScoringTargets = {
+  osa_target?: number;
+  planogram_target?: number;
+  assortment_target?: number;
+  price_target?: number;
+  promotional_target?: number;
+  msl_target?: number;
+  share_of_shelf_target?: number;
+};
+
+export type PlanogramAuditPackage = {
+  assortment_skus: AssortmentEntry[];
+  msl_skus: AssortmentEntry[];
+  price_requirements: PriceRequirement[];
+  promotions: PromotionEntry[];
+  scoring?: ScoringTargets;
+  primary_brand?: string;
+  fixture_id?: string;
+  store_timezone?: string;
+};
+
+export type KpiReadiness = { kpi_id: string; ready: boolean; label: string };
+
+export const EMPTY_AUDIT_PACKAGE: PlanogramAuditPackage = {
+  assortment_skus: [],
+  msl_skus: [],
+  price_requirements: [],
+  promotions: [],
+  scoring: {},
+};
+
+export function computeReadiness(
+  rows: { sku?: string; expected_facings?: number; mrp_inr?: number; shelf_position?: string }[],
+  pkg: PlanogramAuditPackage,
+): KpiReadiness[] {
+  const hasProducts = rows.length > 0;
+  const hasFacings = rows.some((r) => r.expected_facings != null);
+  const hasPrices =
+    rows.some((r) => r.mrp_inr != null) || pkg.price_requirements.length > 0;
+  return [
+    { kpi_id: "osa", ready: hasProducts, label: "Listed SKUs" },
+    { kpi_id: "planogram_compliance", ready: hasProducts, label: "Shelf layout" },
+    { kpi_id: "assortment_compliance", ready: pkg.assortment_skus.length > 0, label: "Assortment list" },
+    { kpi_id: "msl_compliance", ready: pkg.msl_skus.length > 0, label: "Must-stock list" },
+    { kpi_id: "price_compliance", ready: hasPrices, label: "Price requirements" },
+    { kpi_id: "promotional_compliance", ready: pkg.promotions.length > 0, label: "Promotions" },
+    { kpi_id: "location_accuracy", ready: rows.some((r) => String(r.shelf_position ?? "").trim()), label: "Slot IDs" },
+    { kpi_id: "facing_count", ready: hasFacings, label: "Expected facings" },
+    { kpi_id: "share_of_shelf", ready: Boolean(pkg.primary_brand?.trim()), label: "Brand scope" },
+  ];
+}
+
+export function splitAssortmentRows(rows: AssortmentEntry[]): {
+  assortment_skus: AssortmentEntry[];
+  msl_skus: AssortmentEntry[];
+} {
+  const assortment_skus = rows.filter((r) => r.list_type === "mandatory_assortment" || r.list_type === "optional");
+  const msl_skus = rows.filter((r) => r.list_type === "msl");
+  return { assortment_skus, msl_skus };
+}
+
+export function mergeAssortmentLists(assortment: AssortmentEntry[], msl: AssortmentEntry[]): AssortmentEntry[] {
+  return [...assortment, ...msl];
+}
+
+const API_BASE = () =>
+  (import.meta.env.VITE_AISLIX_API_URL as string | undefined)?.replace(/\/+$/, "") ?? "";
+
+export async function fetchPackageCsvTemplate(kind: "assortment" | "prices" | "promotions"): Promise<string> {
+  const local: Record<string, string> = {
+    assortment: "sku,list_type,outlet_scope,valid_from,valid_to,substitution_allowed\nCOL-001,mandatory_assortment,all,2026-01-01,2026-12-31,false\n",
+    prices: "sku,label_location,expected_price,currency,price_basis,valid_from,valid_to\nCOL-001,shelf_tag,99,INR,item,2026-01-01,2026-12-31\n",
+    promotions:
+      'promotion_id,participating_skus,start_date,end_date,required_location,expected_offer_text,expected_promo_price,required_facings\nPROMO-01,"COL-001|COL-002",2026-03-01,2026-03-31,S1,Buy 2 Save 10%,89,4\n',
+  };
+  const base = API_BASE();
+  if (base) {
+    try {
+      const res = await fetch(`${base}/planogram/csv-template/${kind}`, { headers: { Accept: "application/json" } });
+      if (res.ok) {
+        const json = (await res.json()) as { csv_text?: string };
+        if (json.csv_text) return json.csv_text;
+      }
+    } catch {
+      // fallback
+    }
+  }
+  return local[kind];
+}
+
+export async function parsePackageCsv(
+  kind: "assortment" | "prices" | "promotions",
+  content: string,
+): Promise<{ rows: Array<{ valid: boolean; data?: unknown; errors?: string[] }>; errors: string[] }> {
+  const base = API_BASE();
+  if (base) {
+    try {
+      const res = await fetch(`${base}/planogram/parse-package-csv`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ kind, content }),
+      });
+      if (res.ok) return (await res.json()) as { rows: Array<{ valid: boolean; data?: unknown; errors?: string[] }>; errors: string[] };
+    } catch {
+      // fallback: client accepts any non-empty CSV with header
+    }
+  }
+  const lines = content.trim().split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) return { rows: [], errors: ["CSV must include a header and at least one row."] };
+  return { rows: lines.slice(1).map(() => ({ valid: true, data: {} })), errors: [] };
+}
+
+export function packageForSave(pkg: PlanogramAuditPackage): Record<string, unknown> {
+  const { assortment_skus, msl_skus, ...rest } = pkg;
+  return {
+    ...rest,
+    assortment_skus,
+    msl_skus,
+  };
+}
+
+export function packageFromDb(raw: unknown): PlanogramAuditPackage {
+  if (!raw || typeof raw !== "object") return { ...EMPTY_AUDIT_PACKAGE };
+  const obj = raw as Record<string, unknown>;
+  return {
+    assortment_skus: (obj.assortment_skus as AssortmentEntry[]) ?? [],
+    msl_skus: (obj.msl_skus as AssortmentEntry[]) ?? [],
+    price_requirements: (obj.price_requirements as PriceRequirement[]) ?? [],
+    promotions: (obj.promotions as PromotionEntry[]) ?? [],
+    scoring: (obj.scoring as ScoringTargets) ?? {},
+    primary_brand: typeof obj.primary_brand === "string" ? obj.primary_brand : "",
+    fixture_id: typeof obj.fixture_id === "string" ? obj.fixture_id : "",
+    store_timezone: typeof obj.store_timezone === "string" ? obj.store_timezone : "",
+  };
+}

@@ -9,7 +9,7 @@ export const REQUIRED_CSV_COLUMNS = [
   "sub_category",
   "brand",
   "product_name",
-  "expected_qty",
+  "expected_facings or expected_qty",
 ] as const;
 
 export const SAMPLE_CSV_TEMPLATE = [
