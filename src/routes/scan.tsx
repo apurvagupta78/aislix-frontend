@@ -43,13 +43,15 @@ import { startAssignment } from "@/lib/assignments";
 import { MAX_SCAN_IMAGES, formatBytes, submitScanImages, validateScanFile } from "@/lib/scan-api";
 import { PlanogramBuilder } from "@/components/planogram/PlanogramBuilder";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardList } from "lucide-react";
+import { ClipboardList, IndianRupee } from "lucide-react";
 import { fetchActivePlanogram, fetchPlanogramItems, type DraftRow } from "@/lib/planogram";
 import { toUserMessage } from "@/lib/api/errors";
 import { CategorySubcategoryPicker } from "@/components/scan/CategorySubcategoryPicker";
 import { ScanContextPanel } from "@/components/scan/ScanContextPanel";
 import {
+  hasScanPricingConfigured,
   loadStoredScanContext,
+  pricingSetupMessage,
   saveStoredScanContext,
   type ScanContextState,
 } from "@/lib/scan-context";
@@ -304,6 +306,11 @@ function ScanPage() {
     if (withPlanogram && !validPlanogramRows.length) {
       errors.planogram = "Add at least one expected product.";
     }
+    if (!hasScanPricingConfigured(scanContext, withPlanogram ? validPlanogramRows : [])) {
+      errors.pricing =
+        pricingSetupMessage(scanContext, withPlanogram ? validPlanogramRows : []) ??
+        "Add shelf prices before scanning.";
+    }
     return errors;
   }, [
     lockedByAssignment,
@@ -312,6 +319,7 @@ function ScanPage() {
     selections,
     withPlanogram,
     validPlanogramRows,
+    scanContext,
   ]);
 
   const setupComplete = Object.keys(setupErrors).length === 0;
@@ -337,8 +345,8 @@ function ScanPage() {
     setShowSetupErrors(true);
     setFileError(
       withPlanogram
-        ? "Select store, location, shelf types, and add at least one expected product."
-        : "Select store, location and shelf types to continue.",
+        ? "Complete shelf setup, add expected products with prices, then continue."
+        : "Select store, location, shelf types, and add at least one product with shelf price (MRP).",
     );
     return false;
   }, [setupComplete, withPlanogram]);
@@ -673,15 +681,28 @@ function ScanPage() {
               </section>
             )}
 
-            <ScanContextPanel
-              value={scanContext}
-              onChange={(next) => {
-                setScanContext(next);
-                saveStoredScanContext(next);
-              }}
-              defaultLocation={shelfLocation}
-              className="card-surface"
-            />
+            <div className="overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background shadow-sm">
+              <div className="flex items-center gap-2 border-b border-brand/20 bg-brand/5 px-4 py-3">
+                <IndianRupee className="size-4 text-brand" />
+                <p className="text-sm font-semibold">Products &amp; prices (required)</p>
+              </div>
+              <ScanContextPanel
+                value={scanContext}
+                onChange={(next) => {
+                  setScanContext(next);
+                  saveStoredScanContext(next);
+                }}
+                defaultLocation={shelfLocation}
+                defaultOpen
+                requirePricing
+                embedded
+              />
+            </div>
+            {fieldError("pricing") && (
+              <p className="text-center text-xs font-medium text-amber-700 dark:text-amber-400">
+                {fieldError("pricing")}
+              </p>
+            )}
 
             {/* STEP 1 — scan context (shared by both modes) */}
             <section className="card-surface p-4 sm:p-6">
@@ -932,10 +953,10 @@ function ScanPage() {
               </div>
 
               {!setupComplete && (
-                <p className="mt-4 rounded-xl border border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
+                <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
                   {withPlanogram
-                    ? "Select store, location, shelf types, and add at least one expected product."
-                    : "Select store, location and shelf types to continue."}
+                    ? "Complete shelf setup, add expected products with prices, then upload photos."
+                    : "Select store, location, shelf types, and add at least one product with shelf price (MRP)."}
                 </p>
               )}
 

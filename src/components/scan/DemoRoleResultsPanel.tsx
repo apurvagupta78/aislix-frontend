@@ -7,7 +7,7 @@ import { DemoScanResultsBody } from "@/components/scan/DemoScanResultsBody";
 import { GuestDemoShell } from "@/components/scan/GuestDemoShell";
 import {
   EMPTY_SCAN_CONTEXT,
-  enrichDemoScanResult,
+  enrichScanResult,
   type ScanContextState,
 } from "@/lib/scan-context";
 import type { ResultViewMode } from "@/lib/customer-context";
@@ -61,7 +61,7 @@ export function DemoRoleResultsPanel({
 
   const data = useMemo(() => {
     const base = landingToScanResult(landing);
-    return enrichDemoScanResult(base, scanContext);
+    return enrichScanResult(base, scanContext);
   }, [landing, scanContext]);
 
   const imageUrl =
@@ -73,11 +73,10 @@ export function DemoRoleResultsPanel({
         data={data}
         view={view}
         onViewChange={setView}
-        landingInventory={landing.inventory ?? []}
-        showPlanogramStub={
-          scanContext.planogramRows.length > 0 ||
-          Boolean(scanContext.focus.brand && scanContext.focus.product)
-        }
+        guestInline={!fullscreen}
+        demoMode
+        imageUrl={imageUrl ?? undefined}
+        competitorEnabled
       />
 
       <p className="mt-3 shrink-0 text-[11px] leading-relaxed text-muted-foreground">{AI_DISCLAIMER}</p>
@@ -163,15 +162,12 @@ export function DemoRoleResultsPanel({
         >
           <div className="mx-auto max-w-6xl space-y-4">
             <DemoScanResultsBody
-              layout="dashboard"
               data={data}
               view={view}
               onViewChange={setView}
-              imageUrl={imageUrl}
-              showPlanogramStub={
-          scanContext.planogramRows.length > 0 ||
-          Boolean(scanContext.focus.brand && scanContext.focus.product)
-        }
+              imageUrl={imageUrl ?? undefined}
+              demoMode
+              competitorEnabled
             />
           </div>
         </GuestDemoShell>

@@ -983,6 +983,35 @@ export function hasActiveScanContext(ctx: ScanContextState): boolean {
   );
 }
 
+/** At least one planogram row with MRP/price — required before scan for financial KPIs. */
+export function hasPricingConfigured(ctx: ScanContextState): boolean {
+  return ctx.planogramRows.some((row) => (row.mrp_inr ?? 0) > 0);
+}
+
+/** Scan flow: context panel prices or every expected planogram row priced. */
+export function hasScanPricingConfigured(
+  ctx: ScanContextState,
+  expectedRows: { mrp_inr?: number | null }[] = [],
+): boolean {
+  if (hasPricingConfigured(ctx)) return true;
+  if (!expectedRows.length) return false;
+  return expectedRows.every((row) => (row.mrp_inr ?? 0) > 0);
+}
+
+export function pricingSetupMessage(
+  ctx: ScanContextState,
+  expectedRows: { mrp_inr?: number | null }[] = [],
+): string | null {
+  if (hasScanPricingConfigured(ctx, expectedRows)) return null;
+  if (expectedRows.length) {
+    return "Add shelf price (MRP) for every expected product before scanning.";
+  }
+  return "Add at least one product with shelf price (MRP) before scanning.";
+}
+
+/** Dashboard + demo: enrich summaries, competitor intel, and ledger consistently. */
+export const enrichScanResult = enrichDemoScanResult;
+
 /** Convert client-side planogram match into the shared comparison shape for UI tables. */
 export function buildDemoPlanogramComparison(
   match: PlanogramMatchResult,

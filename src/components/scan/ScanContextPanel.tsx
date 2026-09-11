@@ -40,7 +40,7 @@ const PLANOGRAM_CSV_FIELDS = [
   { key: "product_name", label: "Product name", required: true },
   { key: "variant", label: "Variant", required: false },
   { key: "expected_qty", label: "Expected qty", required: true },
-  { key: "mrp_inr", label: "Price", required: false, note: "CSV column mrp_inr — INR in file; manual entry uses your local currency" },
+  { key: "mrp_inr", label: "Price (MRP)", required: true, note: "Required for financial estimates — CSV column mrp_inr" },
   { key: "avg_daily_sales", label: "Daily sales (units)", required: false },
   { key: "sku", label: "SKU", required: false },
   { key: "shelf_position", label: "Shelf position", required: false },
@@ -54,8 +54,12 @@ type ScanContextPanelProps = {
   defaultCategory?: string;
   defaultSubCategory?: string;
   defaultLocation?: string;
-  /** When false, panel starts collapsed (recommended for pre-scan setup). */
+  /** When false, panel starts collapsed (recommended for post-scan). */
   defaultOpen?: boolean;
+  /** Require MRP on manual add and highlight pricing fields. */
+  requirePricing?: boolean;
+  /** Inside colored setup card — hide outer border. */
+  embedded?: boolean;
   className?: string;
 };
 
@@ -96,6 +100,8 @@ export function ScanContextPanel({
   defaultSubCategory = "",
   defaultLocation = "",
   defaultOpen,
+  requirePricing = false,
+  embedded = false,
   className,
 }: ScanContextPanelProps) {
   const { currency } = useDisplayCurrency();
@@ -140,6 +146,14 @@ export function ScanContextPanel({
     const category = manual.category?.trim();
     const subCategory = manual.sub_category?.trim();
     if (!brand || !product || !location || !category || !subCategory) return;
+    if (
+      requirePricing &&
+      (manual.price_display == null || !Number.isFinite(manual.price_display) || manual.price_display <= 0)
+    ) {
+      setCsvError("Shelf price (MRP) is required for each product.");
+      return;
+    }
+    setCsvError(null);
 
     const row: PlanogramRow = {
       ...emptyRow(),
@@ -187,30 +201,12 @@ export function ScanContextPanel({
   const requiredCols = PLANOGRAM_CSV_FIELDS.filter((f) => f.required).map((f) => f.key);
   const optionalCols = PLANOGRAM_CSV_FIELDS.filter((f) => !f.required).map((f) => f.key);
 
-  return (
-    <div className={cn("rounded-xl border border-border bg-surface", className)}>
-      <button
-        type="button"
-        className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">Your brand &amp; planogram</p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            {contextSummary(value) ??
-              "Optional — filter results to your company and add price / sales for financial impact"}
-          </p>
-        </div>
-        <ChevronDown
-          className={cn(
-            "mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform",
-            open && "rotate-180",
-          )}
-        />
-      </button>
+  const defaultHint = requirePricing
+    ? "Add your products with shelf prices — required before scanning."
+    : "Optional — filter results to your company and add price / sales for financial impact";
 
-      {open && (
-        <div className="space-y-5 border-t border-border px-4 pb-4 pt-4">
+  const panelBody = open ? (
+        <div className={cn("space-y-5 px-4 pb-4 pt-4", !embedded && "border-t border-border")}>
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Filter calculations
@@ -375,13 +371,19 @@ export function ScanContextPanel({
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">{priceLabel}</Label>
+                  <Label className="text-xs">
+                    {priceLabel}
+                    {requirePricing ? " *" : ""}
+                  </Label>
                   <Input
                     type="number"
                     min={0}
                     step="0.01"
-                    className="h-9 rounded-lg text-sm"
-                    placeholder={currency === "INR" ? "299" : "3.99"}
+                    className={cn(
+                      "h-9 rounded-lg text-sm",
+                      requirePricing && "border-brand/40 bg-brand-soft/20",
+                    )}
+                    placeholder={currency === "INR" ? "100" : "3.99"}
                     value={manual.price_display ?? ""}
                     onChange={(e) =>
                       setManual({
@@ -497,7 +499,33 @@ export function ScanContextPanel({
             </Button>
           ) : null}
         </div>
-      )}
+  ) : null;
+
+  if (embedded) {
+    return <div className={cn(className)}>{panelBody}</div>;
+  }
+
+  return (
+    <div className={cn("rounded-xl border border-border bg-surface", className)}>
+      <button
+        type="button"
+        className="flex w-full items-start justify-between gap-3 px-4 py-3 text-left"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">Your brand &amp; planogram</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            {contextSummary(value) ?? defaultHint}
+          </p>
+        </div>
+        <ChevronDown
+          className={cn(
+            "mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform",
+            open && "rotate-180",
+          )}
+        />
+      </button>
+      {panelBody}
     </div>
   );
 }

@@ -1,18 +1,26 @@
 /**
- * Shared scan results section loop for demo inline panel and guest fullscreen.
+ * Scan results sections — shared layout for demo and dashboard.
  */
 
-import { AnnotatedImageViewer, ComplianceAlertCard, InventoryTable } from "@/components/scan-results/ResultParts";
+import { Fragment, useMemo } from "react";
+import {
+  AlertsPanel,
+  AnnotatedImageViewer,
+  ComplianceAlertCard,
+  InventoryTable,
+} from "@/components/scan-results/ResultParts";
 import {
   ActionCenterPanel,
   AiSummaryBlock,
   CompetitorIntelPanel,
+  ExecutionImprovementBanner,
   ExecutionKpiStripPanel,
   ExecutionScoreHero,
   FacingsSummaryStrip,
   FinancialImpactPanel,
   RecommendedActionsPanel,
   ResultViewSwitcher,
+  ScanDetailsAccordion,
   ShareOfShelfPanel,
   SkuAvailabilityPanel,
 } from "@/components/scan-results/ExecutionPhase1";
@@ -24,13 +32,13 @@ import {
   type ResultViewMode,
 } from "@/lib/customer-context";
 import type { ScanResult } from "@/lib/scan-results";
+import { downloadBlob } from "@/lib/scan-results";
+import { executionScore } from "@/lib/scan-execution";
 import { cn } from "@/lib/utils";
-import { displayVariant } from "@/lib/landing-inventory";
-import type { LandingScanResult } from "@/lib/landing-scan-api";
-import { DemoPlanogramMatchCompact } from "@/components/scan/DemoPlanogramMatchCompact";
 import {
   AssortmentPanel,
   FixRescanCtaPanel,
+  HistoricalIntelligencePanel,
   ImageQualityPanel,
   OpportunityLedgerPanel,
   PresentabilityPanel,
@@ -41,91 +49,91 @@ import {
   MultiPhotoSummaryPanel,
   PricingCompliancePanel,
 } from "@/components/scan-results/P2ExecutionPanels";
+import {
+  PlanogramComparisonSection,
+  PlanogramMissingAlert,
+} from "@/components/scan-results/PlanogramCompliance";
+import { NeedsReviewSection } from "@/components/scan-results/NeedsReview";
+import { DownloadsPanel } from "@/components/scan-results/DownloadsPanel";
+import { SharePanel } from "@/components/scan-results/ResultHeader";
+import {
+  CategoryDistributionChart,
+  ConfidenceDistributionChart,
+  LowStockSummaryChart,
+  QuantityDistributionChart,
+  ShelfHealthChart,
+  TopBrandsChart,
+} from "@/components/scan-results/ResultCharts";
+import { planogramComparisonFromResult } from "@/lib/planogram-display";
+import { summaryCounts } from "@/lib/planogram-compliance";
 
-const INLINE_SKIP_SECTIONS = new Set<ResultSectionKey>([
-  "annotated_image",
+/** Guest inline demo hides auth-only sections; fullscreen matches dashboard. */
+const GUEST_INLINE_SKIP = new Set<ResultSectionKey>([
   "improvement_banner",
   "review_queue",
   "share",
   "scan_details",
   "downloads",
   "analytics",
-  "recommended_actions",
+  "historical_intel",
 ]);
 
-const DASHBOARD_SKIP_SECTIONS = new Set<ResultSectionKey>([
-  "improvement_banner",
-  "review_queue",
-  "share",
-  "scan_details",
-  "downloads",
-  "analytics",
-]);
-
-type DemoScanResultsBodyProps = {
+export type ScanResultsBodyProps = {
   data: ScanResult;
   view: ResultViewMode;
   onViewChange: (mode: ResultViewMode) => void;
+  loading?: boolean;
   compact?: boolean;
-  layout?: "inline" | "dashboard";
+  /** Guest demo inline — slightly narrower; fullscreen uses dashboard parity. */
+  guestInline?: boolean;
   imageUrl?: string | null;
-  landingInventory?: LandingScanResult["inventory"];
-  showPlanogramStub?: boolean;
+  planogramComparison?: import("@/lib/planogram-compliance").PlanogramComparison | null;
+  financialLocked?: boolean;
+  planCode?: string;
+  demoMode?: boolean;
+  previousScore?: number;
+  roleFamily?: import("@/lib/customer-context").RoleFamily;
+  customerType?: import("@/lib/customer-context").CustomerType;
+  competitorEnabled?: boolean;
+  /** Unfiltered API payload for review queue, alerts, and exports. */
+  rawData?: ScanResult;
+  onCorrected?: () => void;
 };
 
-export function DemoScanResultsBody({
+export function ScanResultsBody({
   data,
   view,
   onViewChange,
+  loading = false,
   compact = false,
-  layout = "inline",
+  guestInline = false,
   imageUrl,
-  landingInventory,
-  showPlanogramStub = false,
-}: DemoScanResultsBodyProps) {
+  planogramComparison,
+  financialLocked = false,
+  planCode = "growth",
+  demoMode = false,
+  previousScore,
+  roleFamily,
+  customerType,
+  competitorEnabled = true,
+  rawData,
+  onCorrected,
+}: ScanResultsBodyProps) {
   const theme = VIEW_MODE_THEME[view];
-  const skip = layout === "dashboard" ? DASHBOARD_SKIP_SECTIONS : INLINE_SKIP_SECTIONS;
-  let sectionOrder = orderedVisibleSections(view).filter((key) => !skip.has(key));
+  const skip = guestInline ? GUEST_INLINE_SKIP : new Set<ResultSectionKey>();
+  const sectionOrder = orderedVisibleSections(view, roleFamily, customerType).filter(
+    (key) => !skip.has(key),
+  );
+  const source = rawData ?? data;
 
-  /** Demo: always surface executive summary, competitor intel, and inventory on every tab. */
-  const demoEnrichSections: ResultSectionKey[] = [];
-  if (!sectionOrder.includes("ai_summary")) demoEnrichSections.push("ai_summary");
-  if (data.competitor_intel && !sectionOrder.includes("competitor_intel")) {
-    demoEnrichSections.push("competitor_intel");
-  }
-  if (landingInventory?.length && !sectionOrder.includes("inventory")) {
-    demoEnrichSections.push("inventory");
-  }
-  if (
-    (data.planogram?.requested || showPlanogramStub) &&
-    !sectionOrder.includes("planogram")
-  ) {
-    demoEnrichSections.push("planogram");
-  }
-  if (demoEnrichSections.length) {
-    const anchor = sectionOrder.indexOf("action_center");
-    const insertAt = anchor >= 0 ? anchor + 1 : Math.min(3, sectionOrder.length);
-    sectionOrder = [
-      ...sectionOrder.slice(0, insertAt),
-      ...demoEnrichSections,
-      ...sectionOrder.slice(insertAt),
-    ];
-  }
-
-  if (view === "executive" || view === "execution") {
-    const withoutSummary = sectionOrder.filter((k) => k !== "ai_summary");
-    const heroIdx = withoutSummary.indexOf("score_hero");
-    sectionOrder =
-      heroIdx >= 0
-        ? [
-            ...withoutSummary.slice(0, heroIdx + 1),
-            "ai_summary",
-            ...withoutSummary.slice(heroIdx + 1),
-          ]
-        : ["ai_summary", ...withoutSummary];
-  }
-
-  sectionOrder = sectionOrder.filter((key, i, arr) => arr.indexOf(key) === i);
+  const comparison = useMemo(
+    () => planogramComparisonFromResult(source, planogramComparison),
+    [source, planogramComparison],
+  );
+  const planogramCounts = summaryCounts(comparison?.summary ?? {});
+  const showPlanogramWarning =
+    Boolean(source.planogram?.requested) &&
+    (!comparison || (planogramCounts.expected === 0 && !comparison.lines.length));
 
   return (
     <>
@@ -136,83 +144,206 @@ export function DemoScanResultsBody({
           compact ? "mb-3 space-y-2" : "mb-4 space-y-3 pb-4",
         )}
       >
-        {view !== "executive" ? (
-          <p className={cn("text-muted-foreground", compact ? "text-xs" : "text-sm")}>
-            {VIEW_MODE_DESCRIPTIONS[view]}
-          </p>
-        ) : null}
-        <ResultViewSwitcher value={view} onChange={onViewChange} />
+        <p className={cn("text-muted-foreground", compact ? "text-xs" : "text-sm")}>
+          {VIEW_MODE_DESCRIPTIONS[view]}
+        </p>
+        <ResultViewSwitcher
+          value={view}
+          onChange={onViewChange}
+          roleFamily={roleFamily}
+          customerType={customerType}
+        />
       </div>
 
       <div className={cn("space-y-3", compact ? "" : "space-y-4")}>
         {sectionOrder.map((key) => {
           switch (key) {
+            case "improvement_banner":
+              return (
+                <ExecutionImprovementBanner
+                  key={key}
+                  current={executionScore(source)}
+                  previous={source.navigation?.previous_execution_score ?? previousScore}
+                  loading={loading}
+                />
+              );
             case "score_hero":
               return (
-                <div key={key} className={cn("rounded-xl ring-1", theme.accentBorder, theme.ring)}>
-                  <ExecutionScoreHero data={data} />
+                <div
+                  key={key}
+                  className={cn(
+                    "overflow-hidden rounded-2xl border-2 bg-gradient-to-br from-background to-muted/30 shadow-sm",
+                    theme.accentBorder,
+                  )}
+                >
+                  <ExecutionScoreHero
+                    data={data}
+                    loading={loading}
+                    previousScore={previousScore ?? source.navigation?.previous_execution_score}
+                  />
                 </div>
               );
             case "kpi_strip":
-              return <ExecutionKpiStripPanel key={key} data={data} compact={compact} />;
+              return (
+                <ExecutionKpiStripPanel
+                  key={key}
+                  data={data}
+                  loading={loading}
+                  compact={compact}
+                  view={view}
+                />
+              );
             case "facings_strip":
-              return <FacingsSummaryStrip key={key} data={data} />;
+              return <FacingsSummaryStrip key={key} data={data} loading={loading} />;
             case "action_center":
-              return <ActionCenterPanel key={key} data={data} view={view} demoMode />;
+              return (
+                <ActionCenterPanel
+                  key={key}
+                  data={data}
+                  loading={loading}
+                  view={view}
+                  demoMode={demoMode}
+                />
+              );
             case "financial_impact":
               return (
-                <FinancialImpactPanel key={key} data={data} locked={false} planCode="growth" />
+                <FinancialImpactPanel
+                  key={key}
+                  data={data}
+                  loading={loading}
+                  locked={financialLocked}
+                  planCode={planCode}
+                />
               );
             case "placement_alert":
-              return (data.compliance_alerts?.length ?? 0) > 0 ? (
+              return (source.compliance_alerts?.length ?? 0) > 0 ? (
                 <ComplianceAlertCard
                   key={key}
-                  alerts={data.compliance_alerts}
-                  mismatches={data.subcategory_mismatches}
+                  alerts={source.compliance_alerts}
+                  mismatches={source.subcategory_mismatches}
                 />
               ) : null;
             case "ai_summary":
-              return <AiSummaryBlock key={key} data={data} view={view} />;
+              return <AiSummaryBlock key={key} data={data} loading={loading} view={view} />;
             case "competitor_intel":
-              return data.competitor_intel ? (
-                <CompetitorIntelPanel key={key} snapshot={data.competitor_intel} />
+              return competitorEnabled ? (
+                <CompetitorIntelPanel key={key} snapshot={source.competitor_intel} loading={loading} />
               ) : null;
             case "share_of_shelf":
-              return <ShareOfShelfPanel key={key} data={data} />;
+              return <ShareOfShelfPanel key={key} data={data} loading={loading} />;
             case "sku_availability":
-              return <SkuAvailabilityPanel key={key} data={data} />;
+              return (
+                <SkuAvailabilityPanel
+                  key={key}
+                  data={data}
+                  loading={loading}
+                  matched={planogramCounts.found}
+                  expected={planogramCounts.expected}
+                />
+              );
             case "recommended_actions":
-              return <RecommendedActionsPanel key={key} data={data} />;
-            case "annotated_image":
-              return imageUrl ? (
-                <AnnotatedImageViewer key={key} src={imageUrl} />
-              ) : null;
+              return <RecommendedActionsPanel key={key} data={data} loading={loading} />;
             case "planogram":
-              return data.planogram?.requested || showPlanogramStub ? (
-                <DemoPlanogramMatchCompact key={key} data={data} />
+              return (
+                <Fragment key={key}>
+                  {comparison ? <PlanogramComparisonSection comparison={comparison} /> : null}
+                  {showPlanogramWarning ? <PlanogramMissingAlert /> : null}
+                </Fragment>
+              );
+            case "review_queue":
+              return onCorrected ? (
+                <NeedsReviewSection key={key} data={source} onCorrected={onCorrected} />
               ) : null;
+            case "annotated_image":
+              return (
+                <AnnotatedImageViewer
+                  key={key}
+                  src={imageUrl ?? data.annotated_image_url}
+                  originalSrc={data.original_image_url}
+                  scanId={data.scan_id}
+                  loading={loading}
+                />
+              );
             case "inventory":
-              return layout === "dashboard" && data.inventory?.length ? (
-                <InventoryTable key={key} items={data.inventory} />
-              ) : landingInventory ? (
-                <DemoInventoryCompact key={key} rows={landingInventory} />
-              ) : null;
+              return (
+                <InventoryTable
+                  key={key}
+                  items={data.inventory}
+                  scanId={data.scan_id}
+                  csvUrl={data.downloads?.csv_url}
+                  loading={loading}
+                />
+              );
+            case "analytics":
+              return (
+                <details key={key} className="card-surface p-5 sm:p-6">
+                  <summary className="cursor-pointer text-sm font-semibold tracking-tight">
+                    Analytics
+                  </summary>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Brand share, confidence distribution, and legacy shelf health charts.
+                  </p>
+                  <div className="mt-4 grid gap-4 xl:grid-cols-3">
+                    <TopBrandsChart data={data.charts?.top_brands} loading={loading} />
+                    <QuantityDistributionChart
+                      data={source.charts?.quantity_distribution}
+                      loading={loading}
+                    />
+                    <ConfidenceDistributionChart
+                      data={source.charts?.confidence_distribution}
+                      loading={loading}
+                    />
+                    <ShelfHealthChart score={source.summary?.shelf_health_score} loading={loading} />
+                    <LowStockSummaryChart data={source.charts?.low_stock_summary} loading={loading} />
+                    <CategoryDistributionChart
+                      data={source.charts?.category_distribution}
+                      loading={loading}
+                    />
+                  </div>
+                </details>
+              );
+            case "alerts":
+              return <AlertsPanel key={key} alerts={source.alerts} loading={loading} />;
+            case "downloads":
+              return <DownloadsPanel key={key} data={source} loading={loading} />;
+            case "share":
+              return <SharePanel key={key} data={source} loading={loading} />;
+            case "scan_details":
+              return (
+                <ScanDetailsAccordion
+                  key={key}
+                  data={source}
+                  loading={loading}
+                  onExportJson={
+                    source
+                      ? () =>
+                          downloadBlob(
+                            JSON.stringify(source, null, 2),
+                            `aislix-${source.scan_id}-result.json`,
+                            "application/json",
+                          )
+                      : undefined
+                  }
+                />
+              );
             case "image_quality":
-              return <ImageQualityPanel key={key} data={data} />;
+              return <ImageQualityPanel key={key} data={data} loading={loading} />;
             case "multi_photo":
-              return <MultiPhotoSummaryPanel key={key} data={data} />;
+              return <MultiPhotoSummaryPanel key={key} data={data} loading={loading} />;
             case "audit_scope":
-              return <AuditScopePanel key={key} data={data} />;
+              return <AuditScopePanel key={key} data={data} loading={loading} />;
             case "pricing_compliance":
-              return <PricingCompliancePanel key={key} data={data} />;
+              return <PricingCompliancePanel key={key} data={data} loading={loading} />;
             case "assortment":
-              return <AssortmentPanel key={key} data={data} />;
+              return <AssortmentPanel key={key} data={data} loading={loading} />;
             case "opportunity_ledger":
-              return <OpportunityLedgerPanel key={key} data={data} />;
+              return <OpportunityLedgerPanel key={key} data={data} loading={loading} />;
             case "verified_execution":
-              return <VerifiedExecutionPanel key={key} data={data} />;
+              return <VerifiedExecutionPanel key={key} data={data} loading={loading} />;
+            case "historical_intel":
+              return <HistoricalIntelligencePanel key={key} data={data} loading={loading} />;
             case "presentability":
-              return <PresentabilityPanel key={key} data={data} />;
+              return <PresentabilityPanel key={key} data={data} loading={loading} />;
             case "fix_rescan_cta":
               return <FixRescanCtaPanel key={key} scanId={data.scan_id} data={data} />;
             default:
@@ -224,38 +355,5 @@ export function DemoScanResultsBody({
   );
 }
 
-function DemoInventoryCompact({ rows }: { rows: LandingScanResult["inventory"] }) {
-  return (
-    <div className="card-surface overflow-hidden">
-      <div className="border-b border-border px-4 py-3">
-        <h3 className="text-sm font-semibold tracking-tight">Observed shelf products</h3>
-        <p className="mt-0.5 text-xs text-muted-foreground">{rows.length} SKU groups detected</p>
-      </div>
-      <div className="max-h-[min(420px,60vh)] overflow-auto">
-        <table className="w-full text-left text-sm">
-          <thead className="sticky top-0 bg-surface text-xs uppercase tracking-wide text-muted-foreground">
-            <tr>
-              <th className="px-3 py-2 font-medium">Brand</th>
-              <th className="px-3 py-2 font-medium">Product</th>
-              <th className="px-3 py-2 font-medium">Qty</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={`${row.brand}-${row.product_name}-${i}`} className="border-t border-border">
-                <td className="px-3 py-2">{row.brand || "—"}</td>
-                <td className="px-3 py-2">
-                  {row.product_name || "—"}
-                  {displayVariant(row) ? (
-                    <span className="block text-xs text-muted-foreground">{displayVariant(row)}</span>
-                  ) : null}
-                </td>
-                <td className="px-3 py-2 tabular-nums">{row.quantity}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
+/** @deprecated Use ScanResultsBody — kept for imports. */
+export const DemoScanResultsBody = ScanResultsBody;

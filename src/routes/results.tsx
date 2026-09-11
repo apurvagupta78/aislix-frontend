@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Fragment, useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { markScanNotificationsRead } from "@/lib/notifications";
 import { useState } from "react";
@@ -7,110 +7,34 @@ import {
   AlertTriangle,
   ArrowLeft,
   ArrowRight,
+  IndianRupee,
   Loader2,
   RefreshCw,
-  FileSpreadsheet,
-  FileText,
-  Image as ImageIcon,
   ScanLine,
 } from "lucide-react";
 import { fetchScanAssignmentId } from "@/lib/assignments";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { EmptyState, ErrorState, Skeleton } from "@/components/States";
-import {
-  AlertsPanel,
-  AnnotatedImageViewer,
-  ComplianceAlertCard,
-  InventoryTable,
-  ResultSection,
-} from "@/components/scan-results/ResultParts";
+import { EmptyState, ErrorState } from "@/components/States";
+import { ResultSection } from "@/components/scan-results/ResultParts";
 import { FixRescanVerifyPanel } from "@/components/scan-results/FixRescanVerifyPanel";
-import {
-  AssortmentPanel,
-  FixRescanCtaPanel,
-  HistoricalIntelligencePanel,
-  ImageQualityPanel,
-  OpportunityLedgerPanel,
-  PresentabilityPanel,
-  VerifiedExecutionPanel,
-} from "@/components/scan-results/RetailIntelligencePanels";
-import {
-  AuditScopePanel,
-  MultiPhotoSummaryPanel,
-  PricingCompliancePanel,
-} from "@/components/scan-results/P2ExecutionPanels";
-import {
-  ActionCenterPanel,
-  AiSummaryBlock,
-  CompetitorIntelPanel,
-  ExecutionImprovementBanner,
-  ExecutionKpiStripPanel,
-  ExecutionScoreHero,
-  FacingsSummaryStrip,
-  FinancialImpactPanel,
-  RecommendedActionsPanel,
-  ResultViewSwitcher,
-  ScanDetailsAccordion,
-  ShareOfShelfPanel,
-  SkuAvailabilityPanel,
-} from "@/components/scan-results/ExecutionPhase1";
 import { planHasFeature } from "@/lib/plan-features";
 import { fetchUsageSummary } from "@/lib/subscription-limits";
 import { useWorkspaceContext } from "@/hooks/use-customer-context";
-import {
-  orderedVisibleSections,
-  showCompetitorIntel,
-  VIEW_MODE_DESCRIPTIONS,
-  VIEW_MODE_THEME,
-  type ResultViewMode,
-} from "@/lib/customer-context";
+import { showCompetitorIntel, type ResultViewMode } from "@/lib/customer-context";
 import { ScanContextPanel } from "@/components/scan/ScanContextPanel";
+import { ScanResultsBody } from "@/components/scan/DemoScanResultsBody";
 import {
-  applyScanContext,
+  enrichScanResult,
   loadStoredScanContext,
   saveStoredScanContext,
   type ScanContextState,
 } from "@/lib/scan-context";
-import {
-  PrintReportButton,
-  ProcessingState,
-  ResultNavigation,
-  ScanResultHeader,
-  SharePanel,
-} from "@/components/scan-results/ResultHeader";
-import {
-  CategoryDistributionChart,
-  ConfidenceDistributionChart,
-  LowStockSummaryChart,
-  QuantityDistributionChart,
-  ShelfHealthChart,
-  TopBrandsChart,
-} from "@/components/scan-results/ResultCharts";
-import { toast } from "sonner";
-import {
-  buildFullScanReportExcel,
-  downloadBlob,
-  downloadBlobBytes,
-  downloadScanExcel,
-  fetchScanResult,
-  downloadScanPdf,
-  downloadScanAnnotatedImage,
-  type ScanResult,
-} from "@/lib/scan-results";
-import { executionScore } from "@/lib/scan-execution";
+import { ProcessingState, ResultNavigation, ScanResultHeader } from "@/components/scan-results/ResultHeader";
+import { fetchScanResult } from "@/lib/scan-results";
 import { retryScanAnalysis } from "@/lib/scan-api";
-import { GENERIC_EXPORT, networkErrorMessage, sanitizeUserMessage } from "@/lib/api-errors";
-import {
-  PlanogramComparisonSection,
-  PlanogramMissingAlert,
-} from "@/components/scan-results/PlanogramCompliance";
-import { NeedsReviewSection } from "@/components/scan-results/NeedsReview";
-import {
-  fetchPlanogramComparison,
-  summaryCounts,
-  type PlanogramComparison,
-} from "@/lib/planogram-compliance";
+import { networkErrorMessage, sanitizeUserMessage } from "@/lib/api-errors";
+import { fetchPlanogramComparison } from "@/lib/planogram-compliance";
 
 export const Route = createFileRoute("/results")({
   validateSearch: (search: Record<string, unknown>): { scan?: string } => {
@@ -182,7 +106,6 @@ function Results() {
   const data = query.data;
   const loading = !!scan && query.isPending;
   const processing = data?.status === "processing" || data?.status === "queued";
-  const summary = data?.summary;
   const workspaceQuery = useWorkspaceContext();
   const usageQuery = useQuery({
     queryKey: ["org-usage"],
@@ -197,56 +120,14 @@ function Results() {
   const [viewOverride, setViewOverride] = useState<ResultViewMode | undefined>();
   const [scanContext, setScanContext] = useState<ScanContextState>(() => loadStoredScanContext());
   const activeView = viewOverride ?? workspaceQuery.data?.viewMode ?? "execution";
-  const viewTheme = VIEW_MODE_THEME[activeView];
-  const contextualData = useMemo(
-    () => (data ? applyScanContext(data, scanContext) : data),
+  const display = useMemo(
+    () => (data ? enrichScanResult(data, scanContext) : undefined),
     [data, scanContext],
   );
-  const display = contextualData ?? data;
-  const sectionOrder = orderedVisibleSections(
-    activeView,
-    workspaceQuery.data?.roleFamily,
-    workspaceQuery.data?.customerType,
-  );
-  const competitorEnabled =
-    sectionOrder.includes("competitor_intel") &&
-    showCompetitorIntel(
-      workspaceQuery.data?.customerType ?? "supermarket",
-      workspaceQuery.data?.roleFamily ?? "operations",
-      workspaceQuery.data?.hasBrandConfig ?? false,
-    );
-
-  // Planogram compliance is shown for assigned scans AND ad-hoc "with planogram"
-  // scans. When there is no comparison row we still render tiles from the
-  // persisted metrics summary, and fall back to a warning when nothing exists.
-  const planogram = data?.planogram;
-  const planogramSummary = comparison?.summary ?? planogram?.summary ?? {};
-  const hasSummaryCounts = Object.keys(planogramSummary).length > 0;
-  // Headline = SKU presence match (all expected SKUs found = 100%). Quantity
-  // accuracy is shown as subtext and detailed in the table below.
-  const skuMatchPercent = planogram?.sku_match_percent ?? null;
-  const qtyCompliancePercent = planogram?.qty_compliance_percent ?? null;
-  const planogramPercent =
-    skuMatchPercent ?? comparison?.compliance_percent ?? planogram?.percent ?? null;
-  const planogramCounts = summaryCounts(planogramSummary as PlanogramComparison["summary"]);
-  const expectedProducts = planogramCounts["expected"];
-  const matchedProducts = planogramCounts["found"];
-  const planogramSection: PlanogramComparison | null =
-    comparison ??
-    (planogram?.requested && (planogramPercent !== null || hasSummaryCounts)
-      ? {
-          id: `${data?.scan_id ?? "scan"}-planogram`,
-          compliance_percent: planogramPercent,
-          summary: planogramSummary as PlanogramComparison["summary"],
-          created_at: data?.created_at ?? new Date().toISOString(),
-          lines: [],
-          actions: [],
-        }
-      : null);
-  const showPlanogramWarning = Boolean(
-    planogram?.requested &&
-      (!planogramSection ||
-        (expectedProducts === 0 && !planogramSection.lines.length)),
+  const competitorEnabled = showCompetitorIntel(
+    workspaceQuery.data?.customerType ?? "supermarket",
+    workspaceQuery.data?.roleFamily ?? "operations",
+    workspaceQuery.data?.hasBrandConfig ?? false,
   );
 
   const goToScan = (id?: string | null) => {
@@ -345,227 +226,45 @@ function Results() {
                 />
               )}
 
-              <ScanContextPanel
-                value={scanContext}
-                onChange={(next) => {
-                  setScanContext(next);
-                  saveStoredScanContext(next);
-                }}
-                defaultCategory={data?.scan_category ?? ""}
-                defaultSubCategory={data?.scan_sub_category ?? ""}
-                defaultLocation={data?.location ?? data?.aisle ?? ""}
-                className="mb-4"
-              />
-
-              <div
-                className={`flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between ${viewTheme.accentBorder}`}
-              >
-                <p className="text-sm text-muted-foreground">
-                  {VIEW_MODE_DESCRIPTIONS[activeView]}
-                </p>
-                <ResultViewSwitcher
-                  value={activeView}
-                  onChange={setViewOverride}
-                  roleFamily={workspaceQuery.data?.roleFamily}
-                  customerType={workspaceQuery.data?.customerType}
+              <div className="mb-4 overflow-hidden rounded-2xl border-2 border-brand/25 bg-gradient-to-br from-brand-soft/40 to-background shadow-sm">
+                <div className="flex items-center gap-2 border-b border-brand/15 bg-brand/5 px-4 py-3">
+                  <IndianRupee className="size-4 text-brand" />
+                  <p className="text-sm font-semibold">Products &amp; prices</p>
+                </div>
+                <ScanContextPanel
+                  value={scanContext}
+                  onChange={(next) => {
+                    setScanContext(next);
+                    saveStoredScanContext(next);
+                  }}
+                  defaultCategory={data?.scan_category ?? ""}
+                  defaultSubCategory={data?.scan_sub_category ?? ""}
+                  defaultLocation={data?.location ?? data?.aisle ?? ""}
+                  defaultOpen
+                  requirePricing
+                  embedded
                 />
               </div>
 
-              {sectionOrder.map((key) => {
-                switch (key) {
-                  case "improvement_banner":
-                    return (
-                      <ExecutionImprovementBanner
-                        key={key}
-                        current={executionScore(data)}
-                        previous={data?.navigation?.previous_execution_score ?? undefined}
-                        loading={loading}
-                      />
-                    );
-                  case "score_hero":
-                    return (
-                      <ExecutionScoreHero
-                        key={key}
-                        data={display}
-                        loading={loading}
-                        previousScore={data?.navigation?.previous_execution_score ?? undefined}
-                      />
-                    );
-                  case "kpi_strip":
-                    return <ExecutionKpiStripPanel key={key} data={display} loading={loading} />;
-                  case "facings_strip":
-                    return <FacingsSummaryStrip key={key} data={display} loading={loading} />;
-                  case "action_center":
-                    return (
-                      <ActionCenterPanel
-                        key={key}
-                        data={display}
-                        loading={loading}
-                        view={activeView}
-                      />
-                    );
-                  case "financial_impact":
-                    return (
-                      <FinancialImpactPanel
-                        key={key}
-                        data={display}
-                        loading={loading}
-                        locked={financialLocked}
-                        planCode={planCode}
-                      />
-                    );
-                  case "placement_alert":
-                    return (data?.compliance_alerts?.length ?? 0) > 0 ? (
-                      <ComplianceAlertCard
-                        key={key}
-                        alerts={data?.compliance_alerts}
-                        mismatches={data?.subcategory_mismatches}
-                      />
-                    ) : null;
-                  case "ai_summary":
-                    return (
-                      <AiSummaryBlock key={key} data={display} loading={loading} view={activeView} />
-                    );
-                  case "competitor_intel":
-                    return competitorEnabled ? (
-                      <CompetitorIntelPanel
-                        key={key}
-                        snapshot={data?.competitor_intel}
-                        loading={loading}
-                      />
-                    ) : null;
-                  case "share_of_shelf":
-                    return <ShareOfShelfPanel key={key} data={display} loading={loading} />;
-                  case "sku_availability":
-                    return (
-                      <SkuAvailabilityPanel
-                        key={key}
-                        data={display}
-                        loading={loading}
-                        matched={matchedProducts}
-                        expected={expectedProducts}
-                      />
-                    );
-                  case "recommended_actions":
-                    return <RecommendedActionsPanel key={key} data={display} loading={loading} />;
-                  case "planogram":
-                    return (
-                      <Fragment key={key}>
-                        {planogramSection ? (
-                          <PlanogramComparisonSection comparison={planogramSection} />
-                        ) : null}
-                        {showPlanogramWarning ? <PlanogramMissingAlert /> : null}
-                      </Fragment>
-                    );
-                  case "review_queue":
-                    return (
-                      <NeedsReviewSection
-                        key={key}
-                        data={data}
-                        onCorrected={() => {
-                          void query.refetch();
-                        }}
-                      />
-                    );
-                  case "annotated_image":
-                    return (
-                      <AnnotatedImageViewer
-                        key={key}
-                        src={data?.annotated_image_url}
-                        originalSrc={data?.original_image_url}
-                        scanId={data?.scan_id}
-                        loading={loading}
-                      />
-                    );
-                  case "inventory":
-                    return (
-                      <InventoryTable
-                        key={key}
-                        items={display?.inventory}
-                        scanId={data?.scan_id}
-                        csvUrl={data?.downloads?.csv_url}
-                        loading={loading}
-                      />
-                    );
-                  case "analytics":
-                    return (
-                      <details key={key} className="card-surface p-5 sm:p-6">
-                        <summary className="cursor-pointer text-sm font-semibold tracking-tight">
-                          Analytics
-                        </summary>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Brand share, confidence distribution, and legacy shelf health charts.
-                        </p>
-                        <div className="mt-4 grid gap-4 xl:grid-cols-3">
-                          <TopBrandsChart data={display?.charts?.top_brands} loading={loading} />
-                          <QuantityDistributionChart
-                            data={data?.charts?.quantity_distribution}
-                            loading={loading}
-                          />
-                          <ConfidenceDistributionChart
-                            data={data?.charts?.confidence_distribution}
-                            loading={loading}
-                          />
-                          <ShelfHealthChart score={summary?.shelf_health_score} loading={loading} />
-                          <LowStockSummaryChart
-                            data={data?.charts?.low_stock_summary}
-                            loading={loading}
-                          />
-                          <CategoryDistributionChart
-                            data={data?.charts?.category_distribution}
-                            loading={loading}
-                          />
-                        </div>
-                      </details>
-                    );
-                  case "alerts":
-                    return <AlertsPanel key={key} alerts={data?.alerts} loading={loading} />;
-                  case "downloads":
-                    return <DownloadsPanel key={key} data={data} loading={loading} />;
-                  case "share":
-                    return <SharePanel key={key} data={data} loading={loading} />;
-                  case "scan_details":
-                    return (
-                      <ScanDetailsAccordion
-                        key={key}
-                        data={data}
-                        loading={loading}
-                        onExportJson={
-                          data
-                            ? () =>
-                                downloadBlob(
-                                  JSON.stringify(data, null, 2),
-                                  `aislix-${data.scan_id}-result.json`,
-                                  "application/json",
-                                )
-                            : undefined
-                        }
-                      />
-                    );
-                  case "image_quality":
-                    return <ImageQualityPanel key={key} data={display} loading={loading} />;
-                  case "multi_photo":
-                    return <MultiPhotoSummaryPanel key={key} data={display} loading={loading} />;
-                  case "audit_scope":
-                    return <AuditScopePanel key={key} data={display} loading={loading} />;
-                  case "pricing_compliance":
-                    return <PricingCompliancePanel key={key} data={display} loading={loading} />;
-                  case "assortment":
-                    return <AssortmentPanel key={key} data={display} loading={loading} />;
-                  case "opportunity_ledger":
-                    return <OpportunityLedgerPanel key={key} data={display} loading={loading} />;
-                  case "verified_execution":
-                    return <VerifiedExecutionPanel key={key} data={display} loading={loading} />;
-                  case "historical_intel":
-                    return <HistoricalIntelligencePanel key={key} data={display} loading={loading} />;
-                  case "presentability":
-                    return <PresentabilityPanel key={key} data={display} loading={loading} />;
-                  case "fix_rescan_cta":
-                    return <FixRescanCtaPanel key={key} scanId={data?.scan_id} data={display} />;
-                  default:
-                    return null;
-                }
-              })}
+              {display && (
+                <ScanResultsBody
+                  data={display}
+                  rawData={data}
+                  view={activeView}
+                  onViewChange={setViewOverride}
+                  loading={loading}
+                  planogramComparison={comparison}
+                  financialLocked={financialLocked}
+                  planCode={planCode}
+                  previousScore={data?.navigation?.previous_execution_score ?? undefined}
+                  roleFamily={workspaceQuery.data?.roleFamily}
+                  customerType={workspaceQuery.data?.customerType}
+                  competitorEnabled={competitorEnabled}
+                  onCorrected={() => {
+                    void query.refetch();
+                  }}
+                />
+              )}
 
               <ResultSection
                 title="Next steps"
@@ -578,109 +277,6 @@ function Results() {
         </div>
       )}
     </AppShell>
-  );
-}
-
-function DownloadsPanel({
-  data,
-  loading,
-}: {
-  data?: ScanResult | undefined;
-  loading?: boolean | undefined;
-}) {
-  const imageUrl = data?.downloads?.annotated_image_url ?? data?.annotated_image_url;
-
-  const downloadExcel = async () => {
-    if (data?.scan_id) {
-      try {
-        await downloadScanExcel(data.scan_id, data.downloads?.csv_url);
-        toast.success("Excel report downloaded");
-        return;
-      } catch {
-        // fall back to the client-side export
-      }
-    }
-    if (!data) return;
-    downloadBlobBytes(
-      buildFullScanReportExcel(data),
-      `aislix-${data.scan_id}-report.xlsx`,
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    );
-    toast.success("Excel report downloaded");
-  };
-
-  const downloadImage = async () => {
-    if (!data?.scan_id) return;
-    try {
-      await downloadScanAnnotatedImage(data.scan_id, imageUrl, data.original_image_url);
-      toast.success("Annotated image downloaded");
-    } catch (e) {
-      toast.error(networkErrorMessage(e, GENERIC_EXPORT));
-    }
-  };
-
-
-  const downloadPdf = async () => {
-    if (!data?.scan_id) return;
-    try {
-      await downloadScanPdf(data.scan_id, data.downloads?.pdf_url);
-      toast.success("PDF report downloaded");
-    } catch (e) {
-      toast.error(networkErrorMessage(e, GENERIC_EXPORT));
-    }
-  };
-
-  return (
-    <ResultSection title="Downloads" description="Export this scan for sharing or analysis.">
-      {loading ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-11 w-full" />
-          ))}
-        </div>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Button
-            variant="brand"
-            size="lg"
-            className="w-full rounded-xl"
-            disabled={!data?.scan_id}
-            onClick={() => void downloadPdf()}
-          >
-            <FileText className="size-4" /> PDF report
-          </Button>
-
-          <Button
-            variant="subtle"
-            size="lg"
-            className="w-full rounded-xl"
-            onClick={() => void downloadExcel()}
-            disabled={!data}
-          >
-            <FileSpreadsheet className="size-4" /> Excel report
-          </Button>
-
-          <Button
-            variant="subtle"
-            size="lg"
-            className="w-full rounded-xl"
-            disabled={!data?.scan_id}
-            onClick={() => void downloadImage()}
-          >
-            <ImageIcon className="size-4" /> Annotated image
-          </Button>
-
-
-          <PrintReportButton disabled={!data} />
-        </div>
-      )}
-      {!loading && !data?.downloads?.pdf_url && (
-        <p className="mt-3 text-xs text-muted-foreground">
-          PDF reports become available once the Aislix reporting service returns a document URL for
-          this scan.
-        </p>
-      )}
-    </ResultSection>
   );
 }
 

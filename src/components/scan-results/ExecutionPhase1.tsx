@@ -227,17 +227,31 @@ function ScoreBreakdownPanel({
   );
 }
 
+const KPI_ACCENT: Record<string, string> = {
+  target_sku_availability: "border-l-brand bg-brand-soft/40",
+  category_osa: "border-l-brand-muted bg-brand-soft/30",
+  planogram_sku_presence: "border-l-violet-500 bg-violet-500/10",
+  planogram_compliance: "border-l-violet-500 bg-violet-500/10",
+  facing: "border-l-amber-500 bg-amber-500/10",
+  placement: "border-l-orange-500 bg-orange-500/10",
+  share_of_facings: "border-l-emerald-600 bg-emerald-500/10",
+  product_share: "border-l-teal-600 bg-teal-500/10",
+};
+
 export function ExecutionKpiStripPanel({
   data,
   loading,
   compact = false,
+  view = "execution",
 }: {
   data?: ScanResult;
   loading?: boolean;
   /** Narrow columns (demo panel) — 2-up grid instead of 5. */
   compact?: boolean;
+  view?: ResultViewMode;
 }) {
   const kpis = buildKpiStrip(data);
+  const theme = VIEW_MODE_THEME[view];
   const gridCols =
     kpis.length >= 6
       ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-6"
@@ -247,16 +261,24 @@ export function ExecutionKpiStripPanel({
           ? "grid-cols-2 sm:grid-cols-3"
           : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5";
   return (
-    <div className={cn("grid gap-2", gridCols)}>
+    <div className={cn("grid gap-2.5", gridCols)}>
       {kpis.map((kpi) => (
-        <div key={kpi.key} className="card-surface px-4 py-3">
-          <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
+        <div
+          key={kpi.key}
+          className={cn(
+            "rounded-xl border border-border border-l-4 px-4 py-3 shadow-sm",
+            KPI_ACCENT[kpi.key] ?? cn(theme.accentSoft, "border-l-brand/60"),
+          )}
+        >
+          <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
             {kpi.label}
           </p>
           {loading ? (
             <Skeleton className="mt-2 h-6 w-16" />
           ) : (
-            <p className="mt-1 text-lg font-semibold tabular-nums">{kpi.value}</p>
+            <p className={cn("mt-1 text-base font-semibold tabular-nums leading-snug sm:text-lg", theme.accentText)}>
+              {kpi.value}
+            </p>
           )}
         </div>
       ))}
