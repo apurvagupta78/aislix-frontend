@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ExternalLink, RefreshCw, Search } from "lucide-react";
+import { Download, ExternalLink, ImageIcon, RefreshCw, Search } from "lucide-react";
 import { AdminShell } from "@/components/admin/AdminShell";
 import { PlatformAdminGate } from "@/components/admin/PlatformAdminGate";
 import { Badge } from "@/components/ui/badge";
@@ -148,6 +148,7 @@ function AdminScansPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-16">Photo</TableHead>
                     <TableHead>When</TableHead>
                     <TableHead>Scan ID</TableHead>
                     <TableHead>User</TableHead>
@@ -165,6 +166,19 @@ function AdminScansPage() {
                       className="cursor-pointer"
                       onClick={() => setSelected(row)}
                     >
+                      <TableCell>
+                        {row.preview_image_url ? (
+                          <img
+                            src={row.preview_image_url}
+                            alt=""
+                            className="size-12 rounded-md object-cover"
+                          />
+                        ) : (
+                          <span className="grid size-12 place-items-center rounded-md bg-muted text-muted-foreground">
+                            <ImageIcon className="size-4" />
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell className="whitespace-nowrap text-xs">
                         {new Date(row.created_at).toLocaleString()}
                       </TableCell>
@@ -216,7 +230,7 @@ function AdminScansPage() {
         )}
 
         <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
-          <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
+          <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Scan {selected?.id.slice(0, 8)}…</DialogTitle>
             </DialogHeader>
@@ -263,6 +277,74 @@ function AdminScansPage() {
                   <Skeleton className="h-40 w-full" />
                 ) : detailQuery.data ? (
                   <>
+                    {(detailQuery.data.assets.annotated_image_url ||
+                      detailQuery.data.assets.original_image_url) && (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {detailQuery.data.assets.annotated_image_url ? (
+                          <div>
+                            <p className="mb-1 text-xs font-medium text-muted-foreground">
+                              Annotated shelf photo
+                            </p>
+                            <a
+                              href={detailQuery.data.assets.annotated_image_url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              <img
+                                src={detailQuery.data.assets.annotated_image_url}
+                                alt="Annotated shelf"
+                                className="max-h-64 w-full rounded-lg border border-border object-contain bg-muted"
+                              />
+                            </a>
+                          </div>
+                        ) : null}
+                        {detailQuery.data.assets.original_image_url ? (
+                          <div>
+                            <p className="mb-1 text-xs font-medium text-muted-foreground">
+                              Original shelf photo
+                            </p>
+                            <a
+                              href={detailQuery.data.assets.original_image_url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              <img
+                                src={detailQuery.data.assets.original_image_url}
+                                alt="Original shelf"
+                                className="max-h-64 w-full rounded-lg border border-border object-contain bg-muted"
+                              />
+                            </a>
+                          </div>
+                        ) : null}
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-2">
+                      {detailQuery.data.assets.pdf_url ? (
+                        <Button asChild size="sm" variant="outline">
+                          <a href={detailQuery.data.assets.pdf_url} target="_blank" rel="noreferrer">
+                            <Download className="size-4" /> PDF report
+                          </a>
+                        </Button>
+                      ) : null}
+                      {detailQuery.data.assets.csv_url ? (
+                        <Button asChild size="sm" variant="outline">
+                          <a href={detailQuery.data.assets.csv_url} target="_blank" rel="noreferrer">
+                            <Download className="size-4" /> CSV export
+                          </a>
+                        </Button>
+                      ) : null}
+                    </div>
+
+                    {detailQuery.data.scan_result?.metrics ? (
+                      <details className="rounded-lg border border-border p-3" open>
+                        <summary className="cursor-pointer text-xs font-medium">Scan metrics</summary>
+                        <pre className="mt-2 max-h-48 overflow-auto text-[10px]">
+                          {JSON.stringify(detailQuery.data.scan_result.metrics, null, 2)}
+                        </pre>
+                      </details>
+                    ) : null}
+
                     {detailQuery.data.scan_result?.executive_summary ? (
                       <div className="rounded-lg border border-border p-3">
                         <p className="text-xs font-medium text-muted-foreground">Executive summary</p>
@@ -302,6 +384,33 @@ function AdminScansPage() {
                         </Table>
                       </div>
                     </div>
+
+                    {detailQuery.data.scan_result?.brand_share?.length ? (
+                      <details className="rounded-lg border border-border p-3">
+                        <summary className="cursor-pointer text-xs font-medium">Brand share</summary>
+                        <pre className="mt-2 max-h-48 overflow-auto text-[10px]">
+                          {JSON.stringify(detailQuery.data.scan_result.brand_share, null, 2)}
+                        </pre>
+                      </details>
+                    ) : null}
+
+                    {detailQuery.data.scan_result?.alerts?.length ? (
+                      <details className="rounded-lg border border-border p-3">
+                        <summary className="cursor-pointer text-xs font-medium">Alerts</summary>
+                        <pre className="mt-2 max-h-48 overflow-auto text-[10px]">
+                          {JSON.stringify(detailQuery.data.scan_result.alerts, null, 2)}
+                        </pre>
+                      </details>
+                    ) : null}
+
+                    {detailQuery.data.scan_result?.recommendations?.length ? (
+                      <details className="rounded-lg border border-border p-3">
+                        <summary className="cursor-pointer text-xs font-medium">Recommendations</summary>
+                        <pre className="mt-2 max-h-48 overflow-auto text-[10px]">
+                          {JSON.stringify(detailQuery.data.scan_result.recommendations, null, 2)}
+                        </pre>
+                      </details>
+                    ) : null}
 
                     {detailQuery.data.scan_result?.raw_payload ? (
                       <details className="rounded-lg border border-border p-3">

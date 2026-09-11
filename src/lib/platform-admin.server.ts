@@ -35,3 +35,84 @@ export async function requirePlatformAdminContext(
   assertAdminConsolePassword(adminPassword);
   await assertPlatformAdminEmail(supabaseAdmin, email);
 }
+
+const SIGNED_URL_TTL = 60 * 60;
+
+export type ScanAssetUrls = {
+  annotated_image_url?: string;
+  original_image_url?: string;
+  pdf_url?: string;
+  csv_url?: string;
+};
+
+/** Signed URLs for a scan's stored assets (service role). */
+export async function resolveAdminScanAssetUrls(
+  supabaseAdmin: SupabaseClient,
+  scanId: string,
+): Promise<ScanAssetUrls> {
+  const { data: images } = await supabaseAdmin
+    .from("scan_images")
+    .select("kind, storage_bucket, storage_path")
+    .eq("scan_id", scanId);
+
+  const pick = (kinds: string[]) =>
+    (images ?? []).find((img) => kinds.includes(String(img.kind)));
+
+  const urls: ScanAssetUrls = {};
+  const entries: Array<[keyof ScanAssetUrls, string[]]> = [
+    ["pdf_url", ["pdf", "report"]],
+    ["annotated_image_url", ["annotated"]],
+    ["original_image_url", ["original"]],
+    ["csv_url", ["csv"]],
+  ];
+
+  await Promise.all(
+    entries.map(async ([key, kinds]) => {
+      const row = pick(kinds);
+      if (!row?.storage_path) return;
+      const { data: signed } = await supabaseAdmin.storage
+        .from(String(row.storage_bucket))
+        .createSignedUrl(String(row.storage_path), SIGNED_URL_TTL);
+      if (signed?.signedUrl) urls[key] = signed.signedUrl;
+    }),
+  );
+
+  return urls;
+}
+
+/** Batch preview thumbnails for admin scan tables. */
+export async function resolveAdminScanPreviewUrls(
+  supabaseAdmin: SupabaseClient,
+  scanIds: string[],
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (!scanIds.length) return out;
+
+  const { data: images } = await supabaseAdmin
+    .from("scan_images")
+    .select("scan_id, kind, storage_bucket, storage_path")
+    .in("scan_id", scanIds)
+    .in("kind", ["annotated", "original"]);
+
+  const byScan = new Map<string, { annotated?: typeof images[0]; original?: typeof images[0] }>();
+  for (const img of images ?? []) {
+    const sid = String(img.scan_id);
+    const slot = byScan.get(sid) ?? {};
+    if (img.kind === "annotated") slot.annotated = img;
+    else if (img.kind === "original") slot.original = img;
+    byScan.set(sid, slot);
+  }
+
+  await Promise.all(
+    [...byScan.entries()].map(async ([scanId, slot]) => {
+      const row = slot.annotated ?? slot.original;
+      if (!row?.storage_path) return;
+      const { data: signed } = await supabaseAdmin.storage
+        .from(String(row.storage_bucket))
+        .createSignedUrl(String(row.storage_path), SIGNED_URL_TTL);
+      if (signed?.signedUrl) out.set(scanId, signed.signedUrl);
+    }),
+  );
+
+  return out;
+}

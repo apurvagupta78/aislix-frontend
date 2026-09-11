@@ -5,7 +5,12 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { requirePlatformAdminContext } from "@/lib/platform-admin.server";
+import {
+  requirePlatformAdminContext,
+  resolveAdminScanAssetUrls,
+  resolveAdminScanPreviewUrls,
+  type ScanAssetUrls,
+} from "@/lib/platform-admin.server";
 
 export type PlatformAdminAccess = {
   email: string;
@@ -39,6 +44,7 @@ export type PlatformScanRow = {
   shelf_health_score: number | null;
   planogram_compliance_percent: number | null;
   error_message: string | null;
+  preview_image_url?: string | null;
 };
 
 export type PlatformUserRow = {
@@ -70,6 +76,7 @@ export type PlatformOrgRow = {
 
 export type PlatformScanDetail = {
   scan: PlatformScanRow;
+  assets: ScanAssetUrls;
   detected_products: {
     id: string;
     brand: string | null;
@@ -83,10 +90,20 @@ export type PlatformScanDetail = {
   scan_result: {
     executive_summary: string | null;
     confidence_avg: number | null;
+    model_version: string | null;
     metrics: Record<string, unknown> | null;
+    alerts: unknown[] | null;
+    recommendations: unknown[] | null;
+    brand_share: unknown[] | null;
+    category_breakdown: unknown[] | null;
+    shelf_rows: unknown[] | null;
     raw_payload: Record<string, unknown> | null;
   } | null;
 };
+
+function jsonArray(value: unknown): unknown[] | null {
+  return Array.isArray(value) ? value : null;
+}
 
 async function adminEmail(context: { claims?: { email?: string } }): Promise<string> {
   const email = String(context.claims?.email ?? "").toLowerCase();
@@ -197,6 +214,9 @@ export const listPlatformScans = createServerFn({ method: "POST" })
     const { data: rows, error, count } = await query.range(from, to);
     if (error) throw new Error(error.message);
 
+    const scanIds = (rows ?? []).map((row) => row.id as string);
+    const previews = await resolveAdminScanPreviewUrls(db, scanIds);
+
     return {
       total: count ?? 0,
       rows: (rows ?? []).map((row) => {
@@ -224,6 +244,7 @@ export const listPlatformScans = createServerFn({ method: "POST" })
               ? row.planogram_compliance_percent
               : null,
           error_message: (row.error_message as string | null) ?? null,
+          preview_image_url: previews.get(row.id as string) ?? null,
         };
       }),
     };
@@ -463,7 +484,8 @@ export const getPlatformScanDetail = createServerFn({ method: "POST" })
       error_message: (row.error_message as string | null) ?? null,
     };
 
-    const [{ data: products }, { data: resultRow }] = await Promise.all([
+    const [assets, { data: products }, { data: resultRow }] = await Promise.all([
+      resolveAdminScanAssetUrls(db, data.scanId),
       db
         .from("detected_products")
         .select("id, brand, name, variant, facings, confidence, stock_status, sku")
@@ -472,13 +494,19 @@ export const getPlatformScanDetail = createServerFn({ method: "POST" })
         .limit(500),
       db
         .from("scan_results")
-        .select("executive_summary, confidence_avg, metrics, raw_payload")
+        .select(
+          "executive_summary, confidence_avg, metrics, raw_payload, alerts, recommendations, brand_share, category_breakdown, shelf_rows, model_version",
+        )
         .eq("scan_id", data.scanId)
         .maybeSingle(),
     ]);
 
     return {
-      scan,
+      scan: {
+        ...scan,
+        preview_image_url: assets.annotated_image_url ?? assets.original_image_url ?? null,
+      },
+      assets,
       detected_products: (products ?? []).map((p) => ({
         id: p.id as string,
         brand: (p.brand as string | null) ?? null,
@@ -494,10 +522,16 @@ export const getPlatformScanDetail = createServerFn({ method: "POST" })
             executive_summary: (resultRow.executive_summary as string | null) ?? null,
             confidence_avg:
               typeof resultRow.confidence_avg === "number" ? resultRow.confidence_avg : null,
+            model_version: (resultRow.model_version as string | null) ?? null,
             metrics:
               resultRow.metrics && typeof resultRow.metrics === "object" && !Array.isArray(resultRow.metrics)
                 ? (resultRow.metrics as Record<string, unknown>)
                 : null,
+            alerts: jsonArray(resultRow.alerts),
+            recommendations: jsonArray(resultRow.recommendations),
+            brand_share: jsonArray(resultRow.brand_share),
+            category_breakdown: jsonArray(resultRow.category_breakdown),
+            shelf_rows: jsonArray(resultRow.shelf_rows),
             raw_payload:
               resultRow.raw_payload &&
               typeof resultRow.raw_payload === "object" &&
