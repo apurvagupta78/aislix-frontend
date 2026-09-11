@@ -288,8 +288,16 @@ export type FinancialGapLine = {
 };
 
 const DEFAULT_PLANOGRAM_PRICE_INR = 75;
+const DEFAULT_UNITS_PER_DAY = 4;
 
-/** Compute per-SKU financial gap: price × (expected qty − actual qty). */
+function salesVelocity(plan: PlanogramRow): number {
+  if (plan.avg_daily_sales != null && Number.isFinite(plan.avg_daily_sales) && plan.avg_daily_sales > 0) {
+    return plan.avg_daily_sales;
+  }
+  return DEFAULT_UNITS_PER_DAY;
+}
+
+/** Revenue at risk uses avg daily sales × selling price — never expected facings as velocity. */
 export function computePlanogramFinancialGaps(
   match: PlanogramMatchResult,
   _threshold = 2,
@@ -302,12 +310,20 @@ export function computePlanogramFinancialGaps(
       plan.mrp_inr != null && Number.isFinite(plan.mrp_inr) && plan.mrp_inr > 0
         ? plan.mrp_inr
         : DEFAULT_PLANOGRAM_PRICE_INR;
+    const velocity = salesVelocity(plan);
 
     const expected = line.expected_qty;
     const actual =
       line.issue_type === ISSUE_MISSING || line.issue_type === ISSUE_WRONG ? 0 : line.detected_qty;
     const gapUnits = Math.max(0, expected - actual);
     if (gapUnits <= 0) continue;
+
+    let dailyLoss: number;
+    if (line.issue_type === ISSUE_MISSING || line.issue_type === ISSUE_WRONG) {
+      dailyLoss = velocity * price;
+    } else {
+      dailyLoss = velocity * price * (gapUnits / Math.max(expected, 1));
+    }
 
     gaps.push({
       brand: plan.brand,
@@ -317,7 +333,7 @@ export function computePlanogramFinancialGaps(
           ? line.issue_type
           : ISSUE_QTY,
       gap_units: gapUnits,
-      daily_loss_inr: Math.round(price * gapUnits),
+      daily_loss_inr: Math.round(dailyLoss),
     });
   }
 

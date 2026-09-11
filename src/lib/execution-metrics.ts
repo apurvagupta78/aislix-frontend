@@ -3,22 +3,27 @@
  * Never treat missing configuration as 0% performance.
  */
 
+import type { PlanogramRow } from "@/lib/planogram";
 import type { MetricState, RetailExecutionScore, ScoreComponent } from "@/lib/retail-intelligence";
 import type { ScanResult } from "@/lib/scan-results";
 import { formatPercent } from "@/lib/scan-results";
 
-const SCORE_WEIGHTS_WITH_PLANO: Record<string, number> = {
-  availability: 30,
-  planogram: 25,
-  facing: 25,
-  placement: 20,
+/** Default execution-score weights (renormalized when KPIs are unavailable). */
+const SCORE_WEIGHTS: Record<string, number> = {
+  availability: 25,
+  planogram: 20,
+  facing: 15,
+  placement: 15,
+  share_of_facings: 10,
+  price: 5,
+  promotion: 5,
+  presentability: 5,
 };
 
-const SCORE_WEIGHTS_NO_PLANO: Record<string, number> = {
-  availability: 35,
-  facing: 35,
-  placement: 30,
-};
+/** Minimum nominal weight (of 100) required before showing an overall score. */
+const MIN_SCORE_COVERAGE_WEIGHT = 25;
+
+const UNCLASSIFIED_BRANDS = new Set(["", "unknown", "unidentified", "unclassified"]);
 
 export type KpiMetric = {
   key: string;
@@ -26,17 +31,57 @@ export type KpiMetric = {
   value: string;
   numeric?: number;
   state: MetricState;
+  detail?: string;
 };
+
+export type PlanogramSummaryShape = {
+  configured_rows?: PlanogramRow[];
+  expected_sku_count?: number;
+  correct?: number;
+  missing?: number;
+  wrong_product?: number;
+  qty_short?: number;
+};
+
+export function planogramRowsFromResult(result?: ScanResult | null): PlanogramRow[] {
+  const summary = result?.planogram?.summary as PlanogramSummaryShape | undefined;
+  return Array.isArray(summary?.configured_rows) ? summary.configured_rows : [];
+}
 
 export function planogramIsConfigured(result?: ScanResult | null): boolean {
   if (!result) return false;
   if (result.planogram?.requested) return true;
-  const summary = result.planogram?.summary as { configured_rows?: unknown[] } | undefined;
-  return Array.isArray(summary?.configured_rows) && summary.configured_rows.length > 0;
+  return planogramRowsFromResult(result).length > 0;
 }
 
-export function assortmentIsConfigured(result?: ScanResult | null): boolean {
-  return planogramIsConfigured(result);
+export function hasExplicitExpectedFacings(rows: PlanogramRow[]): boolean {
+  return rows.some(
+    (r) => r.expected_facings != null && Number.isFinite(Number(r.expected_facings)) && Number(r.expected_facings) >= 0,
+  );
+}
+
+export function hasPlacementRules(rows: PlanogramRow[]): boolean {
+  return rows.some(
+    (r) =>
+      String(r.shelf_position ?? "").trim().length > 0 ||
+      String(r.expected_shelf_level ?? "").trim().length > 0 ||
+      String(r.expected_position ?? "").trim().length > 0,
+  );
+}
+
+export function hasFullPlanogramRules(rows: PlanogramRow[]): boolean {
+  return hasExplicitExpectedFacings(rows) && hasPlacementRules(rows);
+}
+
+export function expectedFacingsForRow(row: PlanogramRow): number | null {
+  if (row.expected_facings != null && Number.isFinite(Number(row.expected_facings))) {
+    return Math.max(0, Number(row.expected_facings));
+  }
+  return null;
+}
+
+function planogramSummary(result?: ScanResult | null): PlanogramSummaryShape {
+  return (result?.planogram?.summary as PlanogramSummaryShape | undefined) ?? {};
 }
 
 function displayForState(state: MetricState, formatted?: string): string {
@@ -52,13 +97,19 @@ function resolvePercentMetric(
   key: string,
   label: string,
   value: number | undefined | null,
-  opts: { configured: boolean; hasEvidence: boolean },
+  opts: { configured: boolean; hasEvidence: boolean; detail?: string },
 ): KpiMetric {
   if (!opts.configured) {
-    return { key, label, value: "Not configured", state: "not_configured" };
+    return { key, label, value: "Not configured", state: "not_configured", detail: opts.detail };
   }
   if (!opts.hasEvidence || value === undefined || value === null || !Number.isFinite(value)) {
-    return { key, label, value: "Insufficient evidence", state: "insufficient_evidence" };
+    return {
+      key,
+      label,
+      value: "Insufficient evidence",
+      state: "insufficient_evidence",
+      detail: opts.detail,
+    };
   }
   return {
     key,
@@ -66,82 +117,178 @@ function resolvePercentMetric(
     value: formatPercent(value) ?? `${Math.round(value)}%`,
     numeric: value,
     state: "available",
+    detail: opts.detail,
   };
+}
+
+function targetSkuAvailabilityMetric(result?: ScanResult | null): KpiMetric {
+  const rows = planogramRowsFromResult(result);
+  if (!rows.length) {
+    return {
+      key: "target_sku_availability",
+      label: "Target SKU availability",
+      value: "Not configured",
+      state: "not_configured",
+      detail: "Configure a planogram or target assortment to measure SKU availability.",
+    };
+  }
+
+  const summary = planogramSummary(result);
+  const expected = summary.expected_sku_count ?? rows.length;
+  const missing = summary.missing ?? 0;
+  const detected = Math.max(0, expected - missing);
+  const pct = Math.round((detected / Math.max(expected, 1)) * 100);
+
+  return {
+    key: "target_sku_availability",
+    label: "Target SKU availability",
+    value: `${detected}/${expected} — ${pct}%`,
+    numeric: pct,
+    state: "available",
+    detail: `${detected} of ${expected} configured target SKU(s) detected on the audited shelf.`,
+  };
+}
+
+function categoryOsaMetric(result?: ScanResult | null): KpiMetric {
+  const assortmentConfigured = Boolean(
+    (result?.retail_intelligence?.assortment as { state?: string } | undefined)?.state === "available",
+  );
+  if (!assortmentConfigured) {
+    return {
+      key: "category_osa",
+      label: "Category OSA",
+      value: "Not configured",
+      state: "not_configured",
+      detail: "Configure the full category assortment to measure on-shelf availability.",
+    };
+  }
+  const pct = result?.summary?.availability_percent ?? result?.summary?.osa_percent;
+  return resolvePercentMetric("category_osa", "Category OSA", pct, {
+    configured: true,
+    hasEvidence: pct !== undefined && pct !== null,
+  });
+}
+
+function planogramMetrics(result?: ScanResult | null): KpiMetric[] {
+  const rows = planogramRowsFromResult(result);
+  const configured = planogramIsConfigured(result);
+  if (!configured) {
+    return [
+      {
+        key: "planogram",
+        label: "Planogram",
+        value: "Not configured",
+        state: "not_configured",
+      },
+    ];
+  }
+
+  const summary = planogramSummary(result);
+  const expected = summary.expected_sku_count ?? rows.length;
+  const missing = summary.missing ?? 0;
+  const detected = Math.max(0, expected - missing);
+  const presencePct =
+    result?.planogram?.sku_match_percent ??
+    result?.planogram?.percent ??
+    Math.round((detected / Math.max(expected, 1)) * 100);
+
+  const presence: KpiMetric = {
+    key: "planogram_sku_presence",
+    label: "Planogram SKU presence",
+    value: `${detected}/${expected} — ${Math.round(presencePct ?? 0)}%`,
+    numeric: presencePct ?? undefined,
+    state: "available",
+    detail: "SKU presence only — facing and placement rules not fully configured.",
+  };
+
+  if (hasFullPlanogramRules(rows)) {
+    const compliancePct =
+      result?.planogram?.qty_compliance_percent ??
+      result?.summary?.shelf_compliance ??
+      presencePct;
+    return [
+      presence,
+      resolvePercentMetric("planogram_compliance", "Planogram compliance", compliancePct, {
+        configured: true,
+        hasEvidence: compliancePct !== undefined && compliancePct !== null,
+      }),
+    ];
+  }
+
+  return [
+    presence,
+    {
+      key: "planogram_compliance",
+      label: "Planogram compliance",
+      value: "Not scoreable",
+      state: "not_configured",
+      detail: "Expected facings and shelf placement rules are required for full planogram compliance.",
+    },
+  ];
 }
 
 /** Build KPI strip with explicit metric states (no false zeros). */
 export function buildKpiMetrics(result?: ScanResult | null): KpiMetric[] {
   const s = result?.summary;
-  const hasInventory = (result?.inventory?.length ?? 0) > 0;
+  const rows = planogramRowsFromResult(result);
   const hasFacings = (s?.total_facings ?? s?.total_products ?? 0) > 0;
-  const planoConfigured = planogramIsConfigured(result);
-  const assortmentConfigured = assortmentIsConfigured(result);
+  const facingConfigured = hasExplicitExpectedFacings(rows);
+  const placementConfigured = hasPlacementRules(rows);
 
-  const availabilityPct = s?.availability_percent ?? s?.osa_percent;
-  const availability = assortmentConfigured
-    ? resolvePercentMetric("availability", "Availability", availabilityPct, {
-        configured: true,
-        hasEvidence: hasInventory,
-      })
-    : hasInventory && availabilityPct !== undefined
-      ? {
-          key: "availability",
-          label: "Availability",
-          value: formatPercent(availabilityPct) ?? "—",
-          numeric: availabilityPct,
-          state: "estimated" as MetricState,
-        }
-      : {
-          key: "availability",
-          label: "SKU Availability",
-          value: "Target assortment not configured",
-          state: "not_configured" as MetricState,
-        };
-
-  const planoPct =
-    result?.planogram?.sku_match_percent ??
-    result?.planogram?.percent ??
-    s?.shelf_compliance;
-  const planogram = resolvePercentMetric("planogram", "Planogram", planoPct, {
-    configured: planoConfigured,
-    hasEvidence: planoConfigured && planoPct !== undefined && planoPct !== null,
-  });
-
-  const kpis: KpiMetric[] = [availability, planogram];
+  const kpis: KpiMetric[] = [
+    targetSkuAvailabilityMetric(result),
+    categoryOsaMetric(result),
+    ...planogramMetrics(result),
+  ];
 
   if (s?.brand_share_percent !== undefined && Number.isFinite(s.brand_share_percent)) {
     kpis.push({
       key: "share_of_facings",
       label: "Share of facings",
-      value: formatPercent(s.brand_share_percent) ?? "—",
+      value: `${formatPercent(s.brand_share_percent) ?? s.brand_share_percent}% of eligible category facings`,
       numeric: s.brand_share_percent,
       state: "available",
     });
   }
+
   if (s?.product_share_percent !== undefined && Number.isFinite(s.product_share_percent)) {
     kpis.push({
       key: "product_share",
-      label: "Product share",
+      label: "Product share of facings",
       value: formatPercent(s.product_share_percent) ?? "—",
       numeric: s.product_share_percent,
       state: "available",
     });
   }
 
-  const facingPct = s?.facing_compliance_percent;
   kpis.push(
-    resolvePercentMetric("facing", "Facing compliance", facingPct, {
-      configured: hasFacings,
-      hasEvidence: hasFacings && facingPct !== undefined,
-    }),
+    facingConfigured
+      ? resolvePercentMetric("facing", "Facing compliance", s?.facing_compliance_percent, {
+          configured: true,
+          hasEvidence: hasFacings && s?.facing_compliance_percent !== undefined,
+        })
+      : {
+          key: "facing",
+          label: "Facing compliance",
+          value: "Not configured",
+          state: "not_configured",
+          detail: "Set expected facings on planogram rows to measure facing compliance.",
+        },
   );
 
-  const placementPct = s?.placement_compliance_percent;
   kpis.push(
-    resolvePercentMetric("placement", "Placement", placementPct, {
-      configured: hasFacings,
-      hasEvidence: hasFacings && placementPct !== undefined,
-    }),
+    placementConfigured
+      ? resolvePercentMetric("placement", "Placement", s?.placement_compliance_percent, {
+          configured: true,
+          hasEvidence: hasFacings && s?.placement_compliance_percent !== undefined,
+        })
+      : {
+          key: "placement",
+          label: "Placement",
+          value: "Not scoreable",
+          state: "not_configured",
+          detail: "Shelf level and position rules are not configured.",
+        },
   );
 
   return kpis;
@@ -162,39 +309,64 @@ function componentFromMetric(
   };
 }
 
+function scoreCoverageReason(components: ScoreComponent[], scorable: ScoreComponent[]): string | undefined {
+  if (!scorable.length) {
+    return "Score withheld — no configured execution KPIs with sufficient evidence.";
+  }
+  const excludedLabels = components
+    .filter((c) => !scorable.some((s) => s.key === c.key))
+    .map((c) => c.label);
+  if (excludedLabels.length) {
+    return `Weights renormalized across ${scorable.length} KPI(s). Excluded: ${excludedLabels.join(", ")}.`;
+  }
+  return undefined;
+}
+
 /** Renormalize execution score — only configured, evidence-backed KPIs contribute. */
 export function computeRetailExecutionScore(result?: ScanResult | null): RetailExecutionScore {
-  const structured = result?.retail_intelligence?.retail_execution_score;
-  if (structured?.components?.length && structured.overall != null) {
-    return structured;
-  }
-
   const kpis = buildKpiMetrics(result);
   const byKey = Object.fromEntries(kpis.map((k) => [k.key, k]));
-  const planoConfigured = planogramIsConfigured(result);
-  const weightMap = planoConfigured ? SCORE_WEIGHTS_WITH_PLANO : SCORE_WEIGHTS_NO_PLANO;
-  const weights = {
-    availability: weightMap.availability ?? 0,
-    planogram: weightMap.planogram ?? 0,
-    facing: weightMap.facing ?? 0,
-    placement: weightMap.placement ?? 0,
-  };
 
   const components: ScoreComponent[] = [];
-  if (byKey.availability?.state === "available" || byKey.availability?.state === "estimated") {
+
+  const targetAvail = byKey.target_sku_availability;
+  if (targetAvail?.state === "available" && targetAvail.numeric != null) {
     components.push(
-      componentFromMetric("availability", "Availability", weights.availability, byKey.availability),
+      componentFromMetric("availability", "Target SKU availability", SCORE_WEIGHTS.availability, targetAvail),
     );
   }
-  if (planoConfigured && byKey.planogram?.state === "available") {
-    components.push(componentFromMetric("planogram", "Planogram", weights.planogram, byKey.planogram));
-  }
-  if (byKey.facing?.state === "available") {
-    components.push(componentFromMetric("facing", "Facing", weights.facing, byKey.facing));
-  }
-  if (byKey.placement?.state === "available") {
+
+  const planoCompliance = byKey.planogram_compliance;
+  const planoPresence = byKey.planogram_sku_presence;
+  if (planoCompliance?.state === "available" && planoCompliance.numeric != null) {
     components.push(
-      componentFromMetric("placement", "Placement", weights.placement, byKey.placement),
+      componentFromMetric("planogram", "Planogram compliance", SCORE_WEIGHTS.planogram, planoCompliance),
+    );
+  } else if (planoPresence?.state === "available" && planoPresence.numeric != null) {
+    components.push(
+      componentFromMetric(
+        "planogram_sku_presence",
+        "Planogram SKU presence",
+        SCORE_WEIGHTS.planogram,
+        planoPresence,
+      ),
+    );
+  }
+
+  const facing = byKey.facing;
+  if (facing?.state === "available" && facing.numeric != null) {
+    components.push(componentFromMetric("facing", "Facing compliance", SCORE_WEIGHTS.facing, facing));
+  }
+
+  const placement = byKey.placement;
+  if (placement?.state === "available" && placement.numeric != null) {
+    components.push(componentFromMetric("placement", "Placement", SCORE_WEIGHTS.placement, placement));
+  }
+
+  const share = byKey.share_of_facings;
+  if (share?.state === "available" && share.numeric != null) {
+    components.push(
+      componentFromMetric("share_of_facings", "Share of facings", SCORE_WEIGHTS.share_of_facings, share),
     );
   }
 
@@ -205,31 +377,46 @@ export function computeRetailExecutionScore(result?: ScanResult | null): RetailE
       Number.isFinite(c.score),
   );
 
-  if (!scorable.length) {
-    return { overall: null, state: "not_configured", components };
+  const nominalWeight = scorable.reduce((n, c) => n + (c.weight ?? 0), 0);
+
+  if (!scorable.length || nominalWeight < MIN_SCORE_COVERAGE_WEIGHT) {
+    return {
+      overall: null,
+      state: scorable.length ? "insufficient_evidence" : "not_configured",
+      components,
+      withhold_reason:
+        nominalWeight < MIN_SCORE_COVERAGE_WEIGHT
+          ? "Score withheld because expected facings, placement rules, or assortment coverage are insufficient."
+          : "Score withheld — no configured execution KPIs with sufficient evidence.",
+    };
   }
 
   const totalWeight = scorable.reduce((n, c) => n + (c.weight ?? 0), 0);
-  if (totalWeight <= 0) {
-    return { overall: null, state: "insufficient_evidence", components };
-  }
-
   const overall = Math.round(
     scorable.reduce((sum, c) => sum + (c.score as number) * ((c.weight ?? 0) / totalWeight), 0),
   );
 
-  return { overall, state: "available", components: scorable };
+  return {
+    overall,
+    state: "available",
+    components: scorable,
+    withhold_reason: scoreCoverageReason(components, scorable),
+  };
 }
 
+/** Never fall back to legacy shelf_health_score (includes AI confidence). */
 export function executionScoreFromResult(result?: ScanResult | null): number | undefined {
   const computed = computeRetailExecutionScore(result);
-  if (computed.overall != null && computed.state !== "not_configured") {
+  if (computed.overall != null && computed.state === "available") {
     return computed.overall;
   }
-  const legacy = result?.summary?.shelf_execution_score ?? result?.summary?.shelf_health_score;
-  return legacy !== undefined && Number.isFinite(legacy) ? Math.round(legacy) : undefined;
+  return undefined;
 }
 
 export function formatKpiValue(metric: KpiMetric): string {
   return displayForState(metric.state, metric.value !== "—" ? metric.value : undefined);
+}
+
+export function isUnclassifiedBrand(brand: string): boolean {
+  return UNCLASSIFIED_BRANDS.has(brand.trim().toLowerCase());
 }

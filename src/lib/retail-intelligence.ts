@@ -65,6 +65,7 @@ export type RetailExecutionScore = {
   overall: number | null;
   state: MetricState;
   components: ScoreComponent[];
+  withhold_reason?: string;
 };
 
 export type PlanogramAnalysis = {

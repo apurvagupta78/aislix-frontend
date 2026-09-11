@@ -16,7 +16,16 @@ export type PlanogramRow = {
   product_name: string;
   /** Optional pack size / flavour, e.g. "340ml" or "25 bags". */
   variant: string;
+  /** Legacy shelf quantity field — prefer expected_facings for planogram facing rules. */
   expected_qty: number;
+  /** Visible product faces expected on shelf (distinct from inventory units). */
+  expected_facings?: number;
+  min_facings?: number;
+  max_facings?: number;
+  /** Optional on-shelf inventory unit expectation (separate from facings). */
+  expected_shelf_units?: number;
+  expected_shelf_level?: string;
+  expected_position?: string;
   /** Price in INR (CSV column mrp_inr) — used for financial impact calculations. */
   mrp_inr?: number;
   /** Average daily unit sales — used for velocity-based lost sales. */

@@ -98,6 +98,12 @@ export function ExecutionScoreHero({
   const scoreDetail = computeRetailExecutionScore(data);
   const delta = formatScoreDelta(score, previousScore);
   const rising = score !== undefined && previousScore !== undefined && score > previousScore;
+  const notScoreable = score === undefined || scoreDetail.overall == null;
+  const facings = totalFacings(data);
+  const recognized =
+    facings > 0 && recognitionCoverage(data) !== undefined
+      ? Math.round((facings * (recognitionCoverage(data) ?? 0)) / 100)
+      : undefined;
 
   return (
     <div className="card-surface p-5 sm:p-6">
@@ -106,13 +112,19 @@ export function ExecutionScoreHero({
       </p>
       {loading ? (
         <Skeleton className="mt-3 h-12 w-32" />
+      ) : notScoreable ? (
+        <div className="mt-2">
+          <p className="text-2xl font-semibold tracking-tight text-muted-foreground">Not scoreable</p>
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+            {scoreDetail.withhold_reason ??
+              "Configure planogram facings, placement rules, or target assortment to compute a defensible execution score."}
+          </p>
+        </div>
       ) : (
         <div className="mt-2 flex flex-wrap items-end gap-3">
           <p className="text-5xl font-semibold tabular-nums tracking-tight">
-            {scoreDetail.state === "not_configured" ? "—" : (score ?? "—")}
-            {score !== undefined && scoreDetail.state !== "not_configured" && (
-              <span className="text-2xl font-normal text-muted-foreground"> / 100</span>
-            )}
+            {score}
+            <span className="text-2xl font-normal text-muted-foreground"> / 100</span>
           </p>
           {delta && (
             <span
@@ -128,20 +140,88 @@ export function ExecutionScoreHero({
         </div>
       )}
       {!loading && scoreDetail.components.length > 0 && (
-        <p className="mt-2 text-xs text-muted-foreground">
-          Based on {scoreDetail.components.length} configured KPI
-          {scoreDetail.components.length === 1 ? "" : "s"} (weights renormalized)
-        </p>
+        <ScoreBreakdownPanel scoreDetail={scoreDetail} showOverall={!notScoreable} />
       )}
       {!loading && recognitionCoverage(data) !== undefined && (
         <p className="mt-3 text-sm text-muted-foreground">
           Recognition coverage: <strong>{recognitionCoverage(data)}%</strong>
+          {recognized !== undefined && facings > 0 && (
+            <span className="text-xs"> ({recognized}/{facings} facings confidently recognized)</span>
+          )}
           {data?.summary?.average_confidence !== undefined && (
             <span className="ml-2 text-xs">
-              · AI confidence: {formatConfidenceSecondary(data.summary.average_confidence)}
+              · Detection confidence: {formatConfidenceSecondary(data.summary.average_confidence)}
             </span>
           )}
         </p>
+      )}
+    </div>
+  );
+}
+
+function ScoreBreakdownPanel({
+  scoreDetail,
+  showOverall,
+}: {
+  scoreDetail: ReturnType<typeof computeRetailExecutionScore>;
+  showOverall: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const scorable = scoreDetail.components.filter((c) => c.score !== null);
+  const totalWeight = scorable.reduce((n, c) => n + (c.weight ?? 0), 0);
+
+  return (
+    <div className="mt-3">
+      {scoreDetail.withhold_reason && (
+        <p className="text-xs text-muted-foreground">{scoreDetail.withhold_reason}</p>
+      )}
+      <button
+        type="button"
+        className="mt-2 text-xs font-medium text-brand underline-offset-2 hover:underline"
+        onClick={() => setOpen((v) => !v)}
+      >
+        {open ? "Hide score breakdown" : "View score breakdown"}
+      </button>
+      {open && (
+        <div className="mt-3 overflow-x-auto rounded-xl border border-border">
+          <table className="w-full min-w-[28rem] text-left text-xs">
+            <thead>
+              <tr className="border-b border-border bg-surface text-muted-foreground">
+                <th className="px-3 py-2 font-medium">KPI</th>
+                <th className="px-3 py-2 font-medium text-right">Result</th>
+                <th className="px-3 py-2 font-medium text-right">Weight</th>
+                {showOverall && <th className="px-3 py-2 font-medium text-right">Contribution</th>}
+                <th className="px-3 py-2 font-medium">State</th>
+              </tr>
+            </thead>
+            <tbody>
+              {scoreDetail.components.map((row) => {
+                const contribution =
+                  showOverall &&
+                  row.score !== null &&
+                  totalWeight > 0 &&
+                  (row.state === "available" || row.state === "estimated" || row.state === "calculated")
+                    ? Math.round((row.score * (row.weight ?? 0)) / totalWeight)
+                    : null;
+                return (
+                  <tr key={row.key} className="border-b border-border/60 last:border-0">
+                    <td className="px-3 py-2 font-medium">{row.label}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">
+                      {row.score !== null ? `${Math.round(row.score)}%` : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-right tabular-nums">{row.weight ?? "—"}%</td>
+                    {showOverall && (
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {contribution !== null ? contribution : "—"}
+                      </td>
+                    )}
+                    <td className="px-3 py-2 capitalize text-muted-foreground">{row.state.replace(/_/g, " ")}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
@@ -484,9 +564,18 @@ export function CompetitorIntelPanel({
               ))}
           </ul>
           <p className="text-xs text-muted-foreground">
-            {snapshot.competitors_detected} of {snapshot.competitors_configured} category competitors
-            present on shelf
+            {snapshot.competitors_detected} of {snapshot.competitors_configured} tracked competitors
+            detected on shelf
           </p>
+          {snapshot.unclassified_facings ? (
+            <p className="text-xs text-muted-foreground">
+              Unclassified: {snapshot.unclassified_facings} facing
+              {snapshot.unclassified_facings === 1 ? "" : "s"}
+              {snapshot.unclassified_share_percent !== undefined
+                ? ` (${snapshot.unclassified_share_percent}% of category facings)`
+                : ""}
+            </p>
+          ) : null}
         </div>
       )}
     </div>
@@ -586,34 +675,69 @@ export function SkuAvailabilityPanel({
   matched?: number | null;
   expected?: number | null;
 }) {
-  const hasAssortment = expected !== null && expected !== undefined && expected > 0;
-  const pct =
-    hasAssortment && matched !== null && matched !== undefined
-      ? Math.round((matched / expected) * 100)
-      : data?.planogram?.sku_match_percent ?? data?.planogram?.percent ?? null;
+  const summary = data?.planogram?.summary as
+    | { expected_sku_count?: number; missing?: number; correct?: number }
+    | undefined;
+  const planExpected = summary?.expected_sku_count ?? expected ?? 0;
+  const planMissing = summary?.missing;
+  const targetDetected =
+    matched ??
+    (planMissing !== undefined ? Math.max(0, planExpected - planMissing) : summary?.correct ?? null);
+  const hasTargetAssortment = planExpected > 0;
+  const targetPct =
+    hasTargetAssortment && targetDetected !== null
+      ? Math.round((targetDetected / planExpected) * 100)
+      : null;
+
+  const categoryOsaConfigured =
+    (data?.retail_intelligence?.assortment as { state?: string } | undefined)?.state === "available";
+  const categoryPct = data?.summary?.availability_percent ?? data?.summary?.osa_percent;
 
   return (
     <div className="card-surface p-5 sm:p-6">
-      <h3 className="text-sm font-semibold tracking-tight">SKU availability</h3>
+      <h3 className="text-sm font-semibold tracking-tight">Availability</h3>
       {loading ? (
         <Skeleton className="mt-3 h-8 w-40" />
-      ) : !hasAssortment && pct === null ? (
+      ) : !hasTargetAssortment ? (
         <div className="mt-3">
           <p className="text-sm text-muted-foreground">
-            Upload or assign a planogram to measure expected vs actual SKU availability.
+            Upload or assign a planogram to measure target SKU availability.
           </p>
           <Button asChild variant="subtle" size="sm" className="mt-3 rounded-xl">
             <Link to="/planogram-management">Configure planogram</Link>
           </Button>
         </div>
       ) : (
-        <div className="mt-3">
-          <p className="text-3xl font-semibold tabular-nums">
-            {hasAssortment ? `${matched}/${expected}` : pct !== null ? `${Math.round(pct)}%` : "—"}
-          </p>
-          {pct !== null && (
-            <p className="mt-1 text-sm text-muted-foreground">{Math.round(pct)}% of expected SKUs detected</p>
-          )}
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="rounded-xl border border-border bg-surface px-4 py-3">
+            <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
+              Target SKU availability
+            </p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums">
+              {targetDetected ?? 0}/{planExpected}
+            </p>
+            {targetPct !== null && (
+              <p className="mt-1 text-sm text-muted-foreground">{targetPct}% of configured target SKUs detected</p>
+            )}
+          </div>
+          <div className="rounded-xl border border-border bg-surface px-4 py-3">
+            <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
+              Category OSA
+            </p>
+            {categoryOsaConfigured && categoryPct !== undefined ? (
+              <>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">{Math.round(categoryPct)}%</p>
+                <p className="mt-1 text-sm text-muted-foreground">Full category assortment configured</p>
+              </>
+            ) : (
+              <>
+                <p className="mt-1 text-lg font-semibold text-muted-foreground">Not configured</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Configure the complete category assortment to measure category OSA.
+                </p>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -800,9 +924,9 @@ function FinancialImpactBody({
       ) : (
         <div className="grid gap-3 sm:grid-cols-3">
           {[
-            { label: "Daily", value: impact.estimated_daily_lost_sales_inr },
-            { label: "Weekly", value: impact.estimated_weekly_lost_sales_inr },
-            { label: "Monthly", value: impact.estimated_monthly_lost_sales_inr },
+            { label: "Daily exposure", value: impact.estimated_daily_lost_sales_inr },
+            { label: "Weekly run-rate", value: impact.estimated_weekly_lost_sales_inr },
+            { label: "30-day run-rate", value: impact.estimated_monthly_lost_sales_inr },
           ].map(({ label, value }) => (
             <div key={label} className="rounded-xl border border-border bg-surface px-4 py-3">
               <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">

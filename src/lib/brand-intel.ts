@@ -40,9 +40,18 @@ export type CompetitorSnapshot = {
   competitor_shares: CompetitorShareRow[];
   competitors_detected: number;
   competitors_configured: number;
+  /** Facings that could not be classified to a known brand. */
+  unclassified_facings?: number;
+  unclassified_share_percent?: number;
   /** Competitors leading shelf share vs the primary brand. */
   upper_hand?: CompetitorUpperHand[];
 };
+
+const UNCLASSIFIED_BRANDS = new Set(["", "unknown", "unidentified", "unclassified"]);
+
+export function isUnclassifiedBrand(brand: string): boolean {
+  return UNCLASSIFIED_BRANDS.has(brand.trim().toLowerCase());
+}
 
 const emptyConfig = (): BrandConfig => ({ primary_brand: "", competitor_brands: [] });
 

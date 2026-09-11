@@ -350,7 +350,7 @@ export function ComplianceAlertCard({
                         <TableHead>Product</TableHead>
                         <TableHead>Detected sub-category</TableHead>
                         <TableHead>Expected</TableHead>
-                        <TableHead className="text-right">Qty</TableHead>
+                        <TableHead className="text-right">Visible facings</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -804,7 +804,7 @@ export function InventoryTable({
               <SortHeader label="Brand" sortKey="brand" />
               <SortHeader label="Product" sortKey="product" />
               <SortHeader label="Variant" sortKey="variant" className="hidden md:table-cell" />
-              <SortHeader label="Qty" sortKey="quantity" numeric className="text-right" />
+              <SortHeader label="Visible facings" sortKey="quantity" numeric className="text-right" />
               <SortHeader label="Confidence" sortKey="confidence" numeric className="text-right" />
               <SortHeader
                 label="Shelf position"

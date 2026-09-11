@@ -14,9 +14,14 @@ import {
   annotateCompetitorCategories,
   brandIsDifferentCategory,
   formatCompetitorBrandLabel,
+  isUnclassifiedBrand,
   type CompetitorSnapshot,
   type CompetitorUpperHand,
 } from "@/lib/brand-intel";
+import {
+  hasExplicitExpectedFacings,
+  hasPlacementRules,
+} from "@/lib/execution-metrics";
 import type { FinancialImpact, ScanRecommendation, ScanResult } from "@/lib/scan-results";
 import { emptyRow, type PlanogramRow } from "@/lib/planogram";
 
@@ -223,10 +228,11 @@ export function computeContextFinancialImpact(
     oos_sku_count: oosSkus,
     at_risk_sku_count: atRiskSkus,
     methodology: hasPlanogramPricing
-      ? "Estimated revenue at risk: price × quantity gap (expected minus actual facings) per planogram SKU."
+      ? "Revenue at risk: average daily sales units × selling price per at-risk SKU. 30-day figure is an illustrative run-rate, not confirmed historical lost sales."
       : "Indicative estimate using category ASP defaults and typical daily velocity.",
     confidence: hasPlanogramPricing ? "priced" : "indicative",
     source: hasPlanogramPricing ? "customer_provided_velocity" : "default_assumption",
+    assumption: hasPlanogramPricing ? "1-day exposure; OOS duration unknown" : undefined,
     assumption: hasPlanogramPricing ? "1 day exposure" : undefined,
   };
 }
@@ -414,8 +420,14 @@ export function buildDemoCompetitorIntel(
     : [];
   const competitorNames = new Set<string>(knownCompetitors);
   for (const row of shares) {
-    if (!brandsMatch(row.brand, primary)) competitorNames.add(row.brand);
+    if (!brandsMatch(row.brand, primary) && !isUnclassifiedBrand(row.brand)) {
+      competitorNames.add(row.brand);
+    }
   }
+
+  const unclassified = shares.filter((s) => isUnclassifiedBrand(s.brand));
+  const unclassifiedFacings = unclassified.reduce((n, s) => n + (s.quantity ?? 0), 0);
+  const unclassifiedShare = unclassified.reduce((n, s) => n + s.share, 0);
 
   const competitorRows = [...competitorNames]
     .map((name) => {
@@ -451,6 +463,11 @@ export function buildDemoCompetitorIntel(
     ? computeProductSharePercent(inventory, primary, focus.product)
     : undefined;
 
+  const trackedDetected = competitorRows.filter(
+    (c) => c.share > 0 && knownCompetitors.includes(c.brand),
+  ).length;
+  const trackedConfigured = knownCompetitors.length || competitorRows.length;
+
   return {
     primary_brand: primary,
     own_brand_share_percent: ownRow.share,
@@ -465,8 +482,13 @@ export function buildDemoCompetitorIntel(
       },
       ...competitorRows,
     ],
-    competitors_detected: competitorRows.filter((c) => c.share > 0).length,
-    competitors_configured: competitorRows.length,
+    competitors_detected: knownCompetitors.length
+      ? trackedDetected
+      : competitorRows.filter((c) => c.share > 0).length,
+    competitors_configured: trackedConfigured,
+    unclassified_facings: unclassifiedFacings || undefined,
+    unclassified_share_percent:
+      unclassifiedShare > 0 ? Math.round(unclassifiedShare * 10) / 10 : undefined,
     upper_hand: upperHand.length ? upperHand : undefined,
   };
 }
@@ -792,12 +814,13 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
     fullInventory.filter((r) => (r.quantity ?? 0) <= 0).length +
     (hasPlanogram ? match.missing_count + match.wrong_product_count : 0);
 
-  const facingPct = hasPlanogram
-    ? match.qty_compliance_percent
-    : result.summary?.facing_compliance_percent;
-  const placementPct = hasPlanogram
-    ? match.sku_match_percent
-    : result.summary?.placement_compliance_percent;
+  const facingPct =
+    hasPlanogram && hasExplicitExpectedFacings(planogramRows)
+      ? match.qty_compliance_percent
+      : undefined;
+  const placementPct = hasPlanogram && hasPlacementRules(planogramRows)
+    ? result.summary?.placement_compliance_percent
+    : undefined;
 
   const demoRecs = buildDemoRecommendations(fullInventory, ctx, match);
   const mergedRecs = [...demoRecs, ...(result.recommendations ?? [])];
