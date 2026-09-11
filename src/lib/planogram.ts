@@ -399,6 +399,10 @@ export async function savePlanogramDraft(input: {
         variant: row.variant || null,
         sku: row.sku || null,
         expected_qty: row.expected_qty,
+        expected_facings: row.expected_facings ?? null,
+        min_facings: row.min_facings ?? null,
+        max_facings: row.max_facings ?? null,
+        expected_shelf_units: row.expected_shelf_units ?? null,
         mrp_inr: row.mrp_inr ?? null,
         avg_daily_sales: row.avg_daily_sales ?? null,
         shelf_position: row.shelf_position || null,
@@ -419,9 +423,10 @@ export async function activatePlanogram(input: {
 }): Promise<PlanogramVersion> {
   const orgId = await requireOrgId();
 
+  const now = new Date().toISOString();
   const { error: archiveError } = await supabase
     .from("planogram_versions")
-    .update({ status: "archived" })
+    .update({ status: "archived", effective_to: now })
     .eq("org_id", orgId)
     .eq("store_id", input.storeId)
     .eq("status", "active");
@@ -431,7 +436,8 @@ export async function activatePlanogram(input: {
     .from("planogram_versions")
     .update({
       status: "active",
-      activated_at: new Date().toISOString(),
+      activated_at: now,
+      effective_from: now,
       row_count: input.rowCount,
       name: `Planogram · ${new Date().toLocaleDateString("en-IN", {
         day: "2-digit",

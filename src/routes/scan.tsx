@@ -67,9 +67,18 @@ import {
 
 
 export const Route = createFileRoute("/scan")({
-  validateSearch: (search: Record<string, unknown>): { assignmentId?: string } => {
-    const raw = search["assignmentId"];
-    return typeof raw === "string" && raw.trim() ? { assignmentId: raw.trim() } : {};
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { assignmentId?: string; verify?: string } => {
+    const assignmentId =
+      typeof search["assignmentId"] === "string" && search["assignmentId"].trim()
+        ? search["assignmentId"].trim()
+        : undefined;
+    const verify =
+      typeof search["verify"] === "string" && search["verify"].trim()
+        ? search["verify"].trim()
+        : undefined;
+    return { ...(assignmentId ? { assignmentId } : {}), ...(verify ? { verify } : {}) };
   },
   head: () => ({
     meta: [
@@ -105,7 +114,7 @@ type Attachment = { id: string; file: File; url: string };
 
 function ScanPage() {
   const navigate = useNavigate();
-  const { assignmentId } = Route.useSearch();
+  const { assignmentId, verify: verifyScanId } = Route.useSearch();
   const [items, setItems] = useState<Attachment[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -433,7 +442,7 @@ function ScanPage() {
                   })),
                 }
               : {}),
-
+          ...(verifyScanId ? { parentScanId: verifyScanId } : {}),
         },
       );
 
@@ -475,6 +484,7 @@ function ScanPage() {
     lockedByAssignment,
     assignment,
     assignmentSubLabel,
+    verifyScanId,
   ]);
 
 
@@ -528,6 +538,17 @@ function ScanPage() {
       ) : (
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-2">
+            {verifyScanId ? (
+              <section className="rounded-2xl border border-brand/30 bg-brand-soft/40 p-4 sm:p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+                  Fix → rescan → verify
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Capture a follow-up photo of the same bay after correcting the shelf. Aislix will
+                  compare execution against your previous scan.
+                </p>
+              </section>
+            ) : null}
             {assignment && (
               <section className="rounded-2xl border border-brand/30 bg-brand-soft/50 p-4 sm:p-5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-brand">
@@ -904,7 +925,8 @@ function ScanPage() {
                 <div>
                   <h2 className="text-sm font-semibold tracking-tight">Step 2 · Shelf images</h2>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Capture with the camera or upload up to {MAX_SCAN_IMAGES} photos.
+                    Capture with the camera or upload up to {MAX_SCAN_IMAGES} photos of the same
+                    bay for wider coverage (merged automatically).
                   </p>
                 </div>
               </div>

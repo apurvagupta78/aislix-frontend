@@ -36,6 +36,11 @@ import {
   PresentabilityPanel,
   VerifiedExecutionPanel,
 } from "@/components/scan-results/RetailIntelligencePanels";
+import {
+  AuditScopePanel,
+  MultiPhotoSummaryPanel,
+  PricingCompliancePanel,
+} from "@/components/scan-results/P2ExecutionPanels";
 
 const INLINE_SKIP_SECTIONS = new Set<ResultSectionKey>([
   "annotated_image",
@@ -194,6 +199,12 @@ export function DemoScanResultsBody({
               ) : null;
             case "image_quality":
               return <ImageQualityPanel key={key} data={data} />;
+            case "multi_photo":
+              return <MultiPhotoSummaryPanel key={key} data={data} />;
+            case "audit_scope":
+              return <AuditScopePanel key={key} data={data} />;
+            case "pricing_compliance":
+              return <PricingCompliancePanel key={key} data={data} />;
             case "assortment":
               return <AssortmentPanel key={key} data={data} />;
             case "opportunity_ledger":

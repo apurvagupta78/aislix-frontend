@@ -50,7 +50,10 @@ export type ResultSectionKey =
   | "verified_execution"
   | "historical_intel"
   | "presentability"
-  | "fix_rescan_cta";
+  | "fix_rescan_cta"
+  | "audit_scope"
+  | "pricing_compliance"
+  | "multi_photo";
 
 export type CustomerContext = {
   customerType: CustomerType;
@@ -218,8 +221,10 @@ const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
   execution: [
     "improvement_banner",
     "verified_execution",
+    "multi_photo",
     "score_hero",
     "image_quality",
+    "audit_scope",
     "kpi_strip",
     "annotated_image",
     "facings_strip",
@@ -230,6 +235,7 @@ const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
     "sku_availability",
     "planogram",
     "presentability",
+    "pricing_compliance",
     "financial_impact",
     "review_queue",
     "recommended_actions",
@@ -249,6 +255,7 @@ const SECTIONS_BY_VIEW: Record<ResultViewMode, ResultSectionKey[]> = {
     "sku_availability",
     "presentability",
     "planogram",
+    "pricing_compliance",
     "analytics",
     "financial_impact",
     "opportunity_ledger",

@@ -1311,6 +1311,51 @@ const COMPLIANT_ISSUE_TYPES = new Set(["ok", "correct", "compliant", "match"]);
  * reconciles corrective actions and applies the M5 completion rule: an
  * assignment only completes at 100% compliance with zero open actions.
  */
+async function persistExecutionOpportunities(
+  supabase: DB,
+  scan: ScanRow,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  const metrics = (payload?.metrics ?? {}) as Record<string, unknown>;
+  const intel = (metrics.retail_intelligence ?? payload.retail_intelligence) as
+    | Record<string, unknown>
+    | undefined;
+  const ledger = intel?.opportunity_ledger;
+  if (!Array.isArray(ledger) || !ledger.length) return;
+
+  const rows = ledger
+    .filter((entry) => entry && typeof entry === "object")
+    .map((entry) => {
+      const row = entry as Record<string, unknown>;
+      return {
+        org_id: scan.org_id,
+        scan_id: scan.id,
+        store_id: scan.store_id,
+        issue_type: str(row.issue) ?? str(row.issue_type) ?? "execution",
+        brand: str(row.brand),
+        product_name: str(row.sku) ?? str(row.product),
+        sku: str(row.sku),
+        severity: str(row.severity) ?? "medium",
+        priority: str(row.priority) ?? "medium",
+        expected_value: str(row.expected),
+        actual_value: str(row.actual),
+        gap_value: str(row.gap),
+        revenue_at_risk_inr: num(row.revenue_at_risk_inr),
+        commercial_impact_score: num(row.commercial_impact_score),
+        confidence: str(row.confidence) ?? "indicative",
+        source: str(row.source) ?? "scan_analysis",
+        recommended_action: str(row.recommended_action),
+        status: str(row.status) ?? "open",
+      };
+    });
+
+  if (!rows.length) return;
+  const { error } = await supabase.from("execution_opportunities").insert(rows as never);
+  if (error) {
+    console.warn("[scan-pipeline] execution_opportunities insert failed:", error.message);
+  }
+}
+
 async function persistPlanogramCompliance(
   supabase: DB,
   scan: ScanRow,
@@ -1812,6 +1857,14 @@ async function persistScanPayload(
     ...(shareOfShelf !== null ? { share_of_shelf_percent: shareOfShelf } : {}),
     ...(metricsSource?.competitor_intel ? { competitor_intel: metricsSource.competitor_intel } : {}),
     ...(metricsSource?.financial_impact ? { financial_impact: metricsSource.financial_impact } : {}),
+    ...(metricsSource?.retail_intelligence
+      ? { retail_intelligence: metricsSource.retail_intelligence }
+      : {}),
+    ...(metricsSource?.audit_scope ? { audit_scope: metricsSource.audit_scope } : {}),
+    ...(Array.isArray(metricsSource?.adjacent_category_findings)
+      ? { adjacent_category_findings: metricsSource.adjacent_category_findings }
+      : {}),
+    ...(metricsSource?.multi_photo ? { multi_photo: metricsSource.multi_photo } : {}),
     ...(Array.isArray(payload?.facings_debug) && payload.facings_debug.length
       ? { facings_debug: payload.facings_debug }
       : {}),
@@ -1858,6 +1911,16 @@ async function persistScanPayload(
   await storeCsvReport(supabase, { id: scan.id, org_id: scan.org_id }, payload);
 
   const planogramCompliance = await persistPlanogramCompliance(supabase, scan, payload);
+  await persistExecutionOpportunities(supabase, scan, payload);
+
+  const multiPhoto = metricsSource?.multi_photo as Record<string, unknown> | undefined;
+  const photoCount =
+    num(multiPhoto?.photo_count) ??
+    (await supabase
+      .from("scan_images")
+      .select("id", { count: "exact", head: true })
+      .eq("scan_id", scan.id)
+      .then(({ count }) => (typeof count === "number" ? count : null)));
 
   // --- Complete the scan ---------------------------------------------------
   const { error: completeError } = await supabase
@@ -1872,6 +1935,7 @@ async function persistScanPayload(
       osa_percent: osa,
       share_of_shelf_percent: shareOfShelf,
       planogram_compliance_percent: planogramCompliance ?? compliance,
+      ...(photoCount && photoCount > 0 ? { photo_count: Math.round(photoCount) } : {}),
       processing_completed_at: completedAt,
       error_message: null,
     })

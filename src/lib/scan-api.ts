@@ -123,6 +123,8 @@ export async function submitScanImages(
      * the scan and forwarded to the vision backend as `planogram_items`.
      */
     planogramItems?: Array<Record<string, string | number | null>>;
+    /** Follow-up scan linked to a prior audit (fix → rescan → verify). */
+    parentScanId?: string;
   } = {},
 ): Promise<ScanResponse> {
   if (!files.length) throw new Error("Add at least one shelf image to scan.");
@@ -172,6 +174,8 @@ export async function submitScanImages(
       adhoc_planogram: options.planogramItems?.length
         ? (options.planogramItems as unknown as Json)
         : null,
+      parent_scan_id: options.parentScanId ?? null,
+      photo_count: files.length,
 
       processing_started_at: new Date().toISOString(),
     })

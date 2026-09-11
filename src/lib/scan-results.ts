@@ -229,6 +229,9 @@ export type ScanResult = {
     email_enabled?: boolean;
     team_sharing_enabled?: boolean;
   };
+  /** Number of shelf photos merged for this audit (P2 multi-photo). */
+  photo_count?: number;
+  parent_scan_id?: string | null;
   navigation?: {
     previous_scan_id?: string | null;
     next_scan_id?: string | null;
@@ -447,7 +450,7 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
   const { data: scan, error: scanError } = await supabase
     .from("shelf_scans")
     .select(
-      "id, org_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, category_selections, created_at, processing_started_at, processing_completed_at, shelf_health_score, osa_percent, share_of_shelf_percent, planogram_compliance_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count, store_id, assignment_id, adhoc_planogram, stores(name)",
+      "id, org_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, category_selections, created_at, processing_started_at, processing_completed_at, shelf_health_score, osa_percent, share_of_shelf_percent, planogram_compliance_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count, store_id, assignment_id, adhoc_planogram, photo_count, parent_scan_id, stores(name)",
     )
     .eq("org_id", orgId)
     .eq("id", scanId)
@@ -886,6 +889,29 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
   if (metricsRetailIntel && typeof metricsRetailIntel === "object") {
     scanResult.retail_intelligence = metricsRetailIntel as ScanResult["retail_intelligence"];
   }
+  const auditScope = metricsObj?.audit_scope;
+  const adjacentFindings = metricsObj?.adjacent_category_findings;
+  const multiPhoto = metricsObj?.multi_photo;
+  if (auditScope || adjacentFindings || multiPhoto) {
+    scanResult.retail_intelligence = {
+      ...(scanResult.retail_intelligence ?? {}),
+      ...(auditScope && typeof auditScope === "object" ? { audit_scope: auditScope as Record<string, unknown> } : {}),
+      ...(Array.isArray(adjacentFindings)
+        ? {
+            adjacent_category_findings: adjacentFindings as NonNullable<
+              ScanResult["retail_intelligence"]
+            >["adjacent_category_findings"],
+          }
+        : {}),
+      ...(multiPhoto && typeof multiPhoto === "object" ? { multi_photo: multiPhoto as NonNullable<ScanResult["retail_intelligence"]>["multi_photo"] } : {}),
+    };
+  }
+  const photoCount = (scan as { photo_count?: number | null }).photo_count;
+  if (typeof photoCount === "number" && photoCount > 0) {
+    scanResult.photo_count = photoCount;
+  }
+  const parentScanId = (scan as { parent_scan_id?: string | null }).parent_scan_id;
+  if (parentScanId) scanResult.parent_scan_id = parentScanId;
   if (metricsExecutionScore && typeof metricsExecutionScore === "object") {
     scanResult.retail_intelligence = {
       ...(scanResult.retail_intelligence ?? {}),

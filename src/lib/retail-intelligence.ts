@@ -141,6 +141,18 @@ export type RetailIntelligencePayload = {
   linear_shelf_share?: MetricValue;
   presentability?: { score?: MetricValue; methodology?: string };
   pricing?: MetricValue | Record<string, unknown>;
+  audit_scope?: Record<string, unknown>;
+  adjacent_category_findings?: Array<{
+    brand?: string;
+    product_name?: string;
+    reason?: string;
+    zone?: string;
+  }>;
+  multi_photo?: {
+    photo_count?: number;
+    merged_facings?: number;
+    facings_per_photo?: number[];
+  };
   promotions?: MetricValue | Record<string, unknown>;
   posm?: MetricValue | Record<string, unknown>;
   freshness?: MetricValue | Record<string, unknown>;

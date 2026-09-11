@@ -182,6 +182,12 @@ function itemPayload(row: DraftRow, orgId: string, storeId: string, versionId: s
     variant: row.variant || null,
     sku: row.sku || null,
     expected_qty: row.expected_qty,
+    expected_facings: row.expected_facings ?? null,
+    min_facings: row.min_facings ?? null,
+    max_facings: row.max_facings ?? null,
+    expected_shelf_units: row.expected_shelf_units ?? null,
+    mrp_inr: row.mrp_inr ?? null,
+    avg_daily_sales: row.avg_daily_sales ?? null,
     shelf_position: row.shelf_position || null,
     match_key: row.match_key || null,
   };
@@ -241,7 +247,7 @@ export async function loadPlanogramForEdit(versionId: string): Promise<{
   const { data: items, error: itemsError } = await supabase
     .from("planogram_items")
     .select(
-      "location, category, sub_category, brand, product_name, variant, sku, expected_qty, shelf_position, match_key",
+      "location, category, sub_category, brand, product_name, variant, sku, expected_qty, expected_facings, min_facings, max_facings, expected_shelf_units, mrp_inr, avg_daily_sales, shelf_position, match_key",
     )
     .eq("version_id", versionId)
     .order("created_at", { ascending: true });
@@ -308,9 +314,10 @@ export async function deleteStorePlanogram(versionId: string): Promise<void> {
 
 /** Marks a planogram as active once it has been assigned. */
 export async function markPlanogramAssigned(versionId: string): Promise<void> {
+  const now = new Date().toISOString();
   await supabase
     .from("planogram_versions")
-    .update({ status: "active", activated_at: new Date().toISOString() })
+    .update({ status: "active", activated_at: now, effective_from: now })
     .eq("id", versionId)
     .eq("status", "draft");
 }

@@ -36,6 +36,11 @@ import {
   VerifiedExecutionPanel,
 } from "@/components/scan-results/RetailIntelligencePanels";
 import {
+  AuditScopePanel,
+  MultiPhotoSummaryPanel,
+  PricingCompliancePanel,
+} from "@/components/scan-results/P2ExecutionPanels";
+import {
   ActionCenterPanel,
   AiSummaryBlock,
   CompetitorIntelPanel,
@@ -539,6 +544,12 @@ function Results() {
                     );
                   case "image_quality":
                     return <ImageQualityPanel key={key} data={display} loading={loading} />;
+                  case "multi_photo":
+                    return <MultiPhotoSummaryPanel key={key} data={display} loading={loading} />;
+                  case "audit_scope":
+                    return <AuditScopePanel key={key} data={display} loading={loading} />;
+                  case "pricing_compliance":
+                    return <PricingCompliancePanel key={key} data={display} loading={loading} />;
                   case "assortment":
                     return <AssortmentPanel key={key} data={display} loading={loading} />;
                   case "opportunity_ledger":
