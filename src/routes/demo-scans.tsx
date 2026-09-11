@@ -48,12 +48,21 @@ function statusTone(status: string | null) {
 
 function DemoScansPage() {
   const [days, setDays] = useState("7");
+  const [sort, setSort] = useState("newest");
   const fetchScans = useServerFn(listLandingDemoScans);
   const query = useQuery({
     queryKey: ["landing-demo-scans", days],
     queryFn: () => fetchScans({ data: { days: Number(days) } }),
     staleTime: 30_000,
   });
+
+  const sortedRows = (query.data?.rows ?? [])
+    .slice()
+    .sort((a, b) =>
+      sort === "oldest"
+        ? new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        : new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
 
   return (
     <AppShell
