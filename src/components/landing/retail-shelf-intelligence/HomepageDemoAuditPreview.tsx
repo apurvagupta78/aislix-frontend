@@ -103,7 +103,7 @@ export function HomepageDemoAuditPreview() {
           <div className="relative overflow-hidden rounded-xl border border-border bg-muted/20 shadow-sm">
             <div className="absolute left-3 top-3 z-10 flex flex-wrap gap-2">
               <Badge className="rounded-md bg-brand px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-brand-foreground">
-                AI Shelf Audit · Demo
+                AI Shelf Audit
               </Badge>
               <Badge
                 variant="outline"

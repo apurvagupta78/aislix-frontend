@@ -104,11 +104,15 @@ export function HomeLeadCapture() {
           ) : (
             <form onSubmit={submit}>
               <div className="text-center">
-                <h2 className="text-2xl font-semibold text-foreground sm:text-3xl">
-                  Get Your Free Workspace Access
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+                  START FREE
+                </p>
+                <h2 className="mt-3 text-2xl font-semibold text-foreground sm:text-3xl">
+                  Start Turning Shelf Visits Into Retail Intelligence.
                 </h2>
                 <p className="mt-3 text-sm text-muted-foreground">
-                  Enter your work email to start scanning. No credit card required.
+                  Create your free Aislix workspace and start analysing shelves. No credit card
+                  required.
                 </p>
               </div>
 
@@ -163,10 +167,11 @@ export function HomeLeadCapture() {
               <div className="mt-7 flex flex-col items-center gap-3">
                 <Button type="submit" size="xl" className="w-full" disabled={saving}>
                   {saving ? <Loader2 className="size-4 animate-spin" /> : null}
-                  Get more free scans
+                  Create My Free Workspace <ArrowRight className="size-4" />
                 </Button>
                 <p className="text-xs text-muted-foreground">
-                  We only use your email to set up your Aislix workspace.
+                  No credit card required. Your workspace keeps your audits, results and shelf history
+                  in one place.
                 </p>
               </div>
             </form>

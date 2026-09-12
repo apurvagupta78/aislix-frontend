@@ -1,27 +1,54 @@
 import { Building2, PackageSearch, ShoppingCart, Store, Truck } from "lucide-react";
 
 const audiences = [
-  { label: "Supermarkets", Icon: ShoppingCart },
-  { label: "Dark Stores", Icon: Building2 },
-  { label: "FMCG Brands", Icon: PackageSearch },
-  { label: "Distributors", Icon: Truck },
-  { label: "Local Stores", Icon: Store },
+  {
+    label: "Supermarkets",
+    Icon: ShoppingCart,
+    body: "Improve availability, assortment, pricing, promotions and shelf execution.",
+  },
+  {
+    label: "Dark Stores",
+    Icon: Building2,
+    body: "Know what is available and whether products are in the right location.",
+  },
+  {
+    label: "FMCG Brands",
+    Icon: PackageSearch,
+    body: "Measure shelf presence, facings, availability, planogram execution and Share of Shelf.",
+  },
+  {
+    label: "Distributors",
+    Icon: Truck,
+    body: "Monitor outlet execution, must-stock compliance, pricing and promotions.",
+  },
+  {
+    label: "Local Stores",
+    Icon: Store,
+    body: "Turn everyday store visits into measurable shelf execution.",
+  },
 ];
 
 export function HomeTrustRow() {
   return (
-    <section className="bg-background py-10">
+    <section className="border-b border-border bg-background py-12 sm:py-14">
       <div className="mx-auto max-w-6xl px-5 text-center sm:px-8">
-        <h2 className="text-2xl font-normal leading-tight tracking-tight text-foreground sm:text-3xl">
-          Built for modern retail teams
+        <h2 className="text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-3xl">
+          Built for Every Retail Shelf.
         </h2>
-        <div className="mx-auto mt-7 grid max-w-5xl grid-cols-2 gap-7 sm:grid-cols-3 lg:grid-cols-5">
-          {audiences.map(({ label, Icon }) => (
-            <div key={label} className="flex flex-col items-center gap-2 text-center">
-              <div className="flex size-6 shrink-0 items-center justify-center rounded-full border border-landing-navy text-landing-navy">
-                <Icon className="size-3" strokeWidth={1.75} aria-hidden="true" />
+        <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          One platform for retailers, brands, distributors and store teams.
+        </p>
+        <div className="mx-auto mt-8 grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          {audiences.map(({ label, Icon, body }) => (
+            <div
+              key={label}
+              className="card-surface flex flex-col items-center p-5 text-center transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift"
+            >
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-landing-navy text-landing-navy">
+                <Icon className="size-3.5" strokeWidth={1.75} aria-hidden="true" />
               </div>
-              <span className="text-sm font-medium text-foreground">{label}</span>
+              <h3 className="mt-3 text-sm font-semibold text-foreground">{label}</h3>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{body}</p>
             </div>
           ))}
         </div>

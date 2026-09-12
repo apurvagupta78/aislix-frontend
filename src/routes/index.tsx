@@ -1,26 +1,29 @@
-import { Suspense, lazy, useState } from "react";
+import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ScanLine,
   BarChart3,
-  Boxes,
-  ShieldCheck,
   ArrowRight,
   Camera,
-  Cpu,
-  FileText,
+  CircleCheck,
+  LayoutGrid,
+  BadgePercent,
+  Wrench,
+  Sparkles,
+  History,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { SiteFooter, SiteHeader } from "@/components/MarketingLayout";
 import { CurrencySelect, CycleToggle, PricingGrid } from "@/components/pricing/PricingPlans";
 import { useDisplayCurrency } from "@/lib/display-currency";
+import { HomeAuditHistory } from "@/components/home/HomeAuditHistory";
+import { HomeLeadCapture } from "@/components/home/HomeLeadCapture";
+import { HomeRetailWorkflows } from "@/components/home/HomeRetailWorkflows";
 import { HomeTrustRow } from "@/components/home/HomeTrustRow";
+import { HomeWhatsAppProblem } from "@/components/home/HomeWhatsAppProblem";
 import { LiveDemoSection } from "@/components/landing/retail-shelf-intelligence/LiveDemoSection";
 
-const HomeLeadCapture = lazy(() =>
-  import("@/components/home/HomeLeadCapture").then((m) => ({ default: m.HomeLeadCapture })),
-);
 import type { BillingCycle, Plan } from "@/lib/pricing";
 
 
@@ -94,30 +97,61 @@ export const Route = createFileRoute("/")({
 const features = [
   {
     icon: ScanLine,
-    title: "One photo, full audit",
-    body: "Upload a shelf image from any phone. Aislix segments facings, reads packs and returns a complete SKU inventory in seconds.",
+    title: "One Photo. Full Shelf Audit.",
+    body: "Upload a shelf photo and let Aislix identify products, brands, facings and visible shelf conditions.",
   },
   {
-    icon: Boxes,
-    title: "Out-of-stock detection",
-    body: "Empty facings and misplaced SKUs are flagged instantly, with severity so store teams know what to refill first.",
+    icon: CircleCheck,
+    title: "Know What's Actually Available.",
+    body: "Measure on-shelf availability and identify products that are missing or need attention.",
+  },
+  {
+    icon: LayoutGrid,
+    title: "Measure Shelf Execution.",
+    body: "Compare actual shelf placement and facings against the expected planogram when one is configured.",
+  },
+  {
+    icon: BadgePercent,
+    title: "Check Prices & Promotions.",
+    body: "Detect visible price and promotional issues and highlight where shelf execution does not match the configured requirements.",
   },
   {
     icon: BarChart3,
-    title: "Share of shelf",
-    body: "Track your brand's facings against competitors across stores, cities and categories over time.",
+    title: "Measure Your Shelf Presence.",
+    body: "For FMCG brands, measure facings and Share of Shelf against relevant competitors and planned allocation.",
   },
   {
-    icon: ShieldCheck,
-    title: "Planogram compliance",
-    body: "Compare live shelves to the approved planogram and score compliance per aisle, per store, per visit.",
+    icon: Wrench,
+    title: "Turn Issues Into Actions.",
+    body: "See what needs to be fixed, review the evidence, rescan the shelf and track whether the issue was resolved.",
   },
 ];
 
 const steps = [
-  { icon: Camera, title: "Capture", body: "Field rep photographs the shelf in the Aislix app." },
-  { icon: Cpu, title: "Detect", body: "Vision models identify every product, brand and empty slot." },
-  { icon: FileText, title: "Act", body: "Get a shelf health score, alerts and a shareable PDF audit." },
+  {
+    icon: Camera,
+    title: "Capture",
+    subtitle: "Take a photo.",
+    body: "Capture the shelf using your phone or upload an existing shelf image.",
+  },
+  {
+    icon: Sparkles,
+    title: "Understand",
+    subtitle: "Let Aislix read the shelf.",
+    body: "Aislix identifies products, brands, facings and visible shelf conditions, then calculates the configured retail KPIs.",
+  },
+  {
+    icon: Wrench,
+    title: "Act",
+    subtitle: "Know what needs attention.",
+    body: "Review issues, inspect the image evidence and see what needs to be fixed.",
+  },
+  {
+    icon: History,
+    title: "Track",
+    subtitle: "Rescan and measure improvement.",
+    body: "Keep every audit, compare previous visits and verify whether the shelf improved after corrective action.",
+  },
 ];
 
 function Landing() {
@@ -173,17 +207,19 @@ function Landing() {
         <LiveDemoSection showWorkspaceCta homepageIntro />
       </section>
 
-      <Suspense fallback={null}>
-        <HomeLeadCapture />
-      </Suspense>
-
       <section id="platform" className="border-t border-border py-24">
         <div className="mx-auto max-w-6xl px-6 text-center">
-          <p className="text-xs font-medium uppercase tracking-widest text-brand">Platform</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-brand">
+            THE AISLIX PLATFORM
+          </p>
           <h2 className="mx-auto mt-3 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">
-            Everything a retail audit team does manually — automated.
+            Turn Shelf Visits Into Structured Retail Intelligence.
           </h2>
-          <div className="mt-12 grid gap-5 text-left sm:grid-cols-2">
+          <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            Stop relying on manual counting, scattered photos and subjective store reports. Aislix
+            turns shelf images into consistent, measurable and actionable retail audits.
+          </p>
+          <div className="mt-12 grid gap-5 text-left sm:grid-cols-2 lg:grid-cols-3">
             {features.map((f) => (
               <div
                 key={f.title}
@@ -200,13 +236,19 @@ function Landing() {
         </div>
       </section>
 
-      <section id="how" className="border-t border-border bg-surface py-24">
+      <HomeRetailWorkflows />
+
+      <HomeWhatsAppProblem />
+
+      <HomeAuditHistory />
+
+      <section id="how" className="border-t border-border bg-background py-24">
         <div className="mx-auto max-w-6xl px-6 text-center">
-          <p className="text-xs font-medium uppercase tracking-widest text-brand">How it works</p>
+          <p className="text-xs font-medium uppercase tracking-widest text-brand">HOW IT WORKS</p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-            From photo to decision in three steps.
+            From Shelf Photo to Retail Action in Four Steps.
           </h2>
-          <div className="mt-12 grid gap-5 text-left md:grid-cols-3">
+          <div className="mt-12 grid gap-5 text-left sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((s, i) => (
               <div key={s.title} className="card-surface card-hover p-7">
                 <div className="flex items-center justify-between">
@@ -216,12 +258,15 @@ function Landing() {
                   <span className="text-sm text-muted-foreground">0{i + 1}</span>
                 </div>
                 <h3 className="mt-5 text-lg font-semibold tracking-tight">{s.title}</h3>
+                <p className="mt-1 text-sm font-medium text-foreground/90">{s.subtitle}</p>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
+
+      <HomeLeadCapture />
 
       <section id="pricing" className="border-t border-border py-24">
         <div className="mx-auto max-w-6xl px-6 text-center">
@@ -263,16 +308,20 @@ function Landing() {
       <section className="border-t border-border bg-surface py-20">
         <div className="mx-auto max-w-4xl px-6 text-center">
           <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            Your shelves are talking. Start listening.
+            Turn Every Shelf Visit Into Measurable Action.
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-            Join retail teams turning every shelf photo into a complete retail audit in seconds.
+          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
+            From one shelf photo to actionable insights, corrective actions and a complete audit
+            history — Aislix helps retail teams see more, act faster and track what changes.
           </p>
           <Button asChild variant="hero" size="xl" className="mt-8">
             <Link to="/signup">
-              Create your workspace <ArrowRight className="size-4" />
+              Create Your Free Workspace <ArrowRight className="size-4" />
             </Link>
           </Button>
+          <p className="mt-4 text-xs text-muted-foreground">
+            No card required · Start with your first shelf audit
+          </p>
         </div>
       </section>
 
