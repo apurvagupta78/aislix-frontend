@@ -50,7 +50,14 @@ import {
 } from "@/lib/planogram-wizard-config";
 import { timezoneSelectOptions } from "@/lib/account";
 import {
+  DEMO_ORAL_CARE_META,
+  DEMO_ORAL_CARE_ROWS,
+} from "@/lib/demo-oral-care-planogram";
+import {
   getBrowserTimezone,
+  HOMEPAGE_DEMO_PRODUCTS_STATUS,
+  HOMEPAGE_PRODUCTS_TABLE_DESCRIPTION,
+  HOMEPAGE_PRODUCTS_TABLE_TITLE,
   HOMEPAGE_WIZARD_STEP_COPY,
 } from "@/lib/planogram-wizard-homepage-copy";
 import { defaultAuditRoleTab, roleTabLabel, type AuditRoleTab } from "@/lib/role-audit-ui";
@@ -74,6 +81,8 @@ type NewPlanogramWizardProps = {
   className?: string;
   /** Simplified copy for homepage demo custom shelf setup */
   homepageIntro?: boolean;
+  /** Homepage demo planogram mode — products step varies by mode */
+  planogramMode?: "demo" | "custom" | "none";
 };
 
 function toDraftRows(rows: PlanogramRow[]): DraftRow[] {
@@ -109,6 +118,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
       compact = false,
       className,
       homepageIntro = false,
+      planogramMode = "custom",
     },
     ref,
   ) {
@@ -558,12 +568,34 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
           );
 
         case "products":
+          if (homepageIntro && planogramMode === "demo") {
+            const demoProductCount = new Set(DEMO_ORAL_CARE_ROWS.map((row) => row.sku)).size;
+            return (
+              <div className="rounded-xl border border-brand/20 bg-brand-soft/20 p-4">
+                <p className="font-medium text-brand">{HOMEPAGE_DEMO_PRODUCTS_STATUS.title}</p>
+                <p className="mt-1 text-sm font-medium text-foreground">
+                  {HOMEPAGE_DEMO_PRODUCTS_STATUS.summary(
+                    demoProductCount,
+                    DEMO_ORAL_CARE_META.shelf_count ?? 5,
+                    DEMO_ORAL_CARE_ROWS.length,
+                  )}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {HOMEPAGE_DEMO_PRODUCTS_STATUS.note}
+                </p>
+              </div>
+            );
+          }
           return (
             <PlanogramBuilder
               rows={draftRows.length ? draftRows : [toDraftRow({})]}
               onRowsChange={setRows}
               categories={categories}
-              tableTitle="Product catalog for this planogram"
+              simplifiedCopy={homepageIntro}
+              tableTitle={
+                homepageIntro ? HOMEPAGE_PRODUCTS_TABLE_TITLE : "Product catalog for this planogram"
+              }
+              tableDescription={homepageIntro ? HOMEPAGE_PRODUCTS_TABLE_DESCRIPTION : undefined}
               context={{
                 location: meta.store_outlet || defaultLocation,
                 category: meta.category || defaultCategory,

@@ -54,6 +54,7 @@ import {
   type DraftRow,
   type PlanogramRow,
 } from "@/lib/planogram";
+import { HOMEPAGE_PRODUCT_FIELD_HELP, HOMEPAGE_PRODUCTS_TAB_HELPER } from "@/lib/planogram-wizard-homepage-copy";
 
 export type PlanogramContext = {
   /** Shelf/aisle code applied to every row. */
@@ -75,6 +76,9 @@ export type PlanogramBuilderProps = {
   /** Optional slot rendered next to the rows table heading. */
   tableActions?: React.ReactNode;
   tableTitle?: string;
+  tableDescription?: string;
+  /** Simplified customer-facing helpers for homepage shelf setup */
+  simplifiedCopy?: boolean;
   /**
    * When set, Location / Category / Sub category are owned by the caller: the
    * manual form only asks product fields and CSV rows are validated against it.
@@ -113,10 +117,12 @@ export function StickyError({
 function Field({
   label,
   required,
+  helper,
   children,
 }: {
   label: string;
   required?: boolean;
+  helper?: string;
   children: React.ReactNode;
 }) {
   return (
@@ -126,6 +132,7 @@ function Field({
         {required ? <span className="text-destructive"> *</span> : null}
       </Label>
       {children}
+      {helper ? <p className="text-[11px] text-muted-foreground">{helper}</p> : null}
     </div>
   );
 }
@@ -138,6 +145,8 @@ export function PlanogramBuilder({
   onSource,
   tableActions,
   tableTitle = "Expected products",
+  tableDescription,
+  simplifiedCopy = false,
   context,
 }: PlanogramBuilderProps) {
   const { currency } = useDisplayCurrency();
@@ -289,6 +298,9 @@ export function PlanogramBuilder({
           <TabsTrigger value="csv">Upload CSV</TabsTrigger>
           <TabsTrigger value="manual">Add manually</TabsTrigger>
         </TabsList>
+        {simplifiedCopy ? (
+          <p className="mt-2 text-[11px] text-muted-foreground">{HOMEPAGE_PRODUCTS_TAB_HELPER}</p>
+        ) : null}
 
         <TabsContent value="csv" className="mt-4 space-y-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -477,21 +489,32 @@ export function PlanogramBuilder({
               </>
             )}
 
-            <Field label="Brand" required>
+            <Field
+              label="Brand"
+              required
+              helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.brand : undefined}
+            >
               <Input
                 className="rounded-xl"
                 value={form.brand}
                 onChange={(e) => setForm({ ...form, brand: e.target.value })}
               />
             </Field>
-            <Field label="Product Name" required>
+            <Field
+              label="Product Name"
+              required
+              helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.productName : undefined}
+            >
               <Input
                 className="rounded-xl"
                 value={form.product_name}
                 onChange={(e) => setForm({ ...form, product_name: e.target.value })}
               />
             </Field>
-            <Field label="Variant (optional)">
+            <Field
+              label={simplifiedCopy ? "Variant" : "Variant (optional)"}
+              helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.variant : undefined}
+            >
               <Input
                 className="rounded-xl"
                 placeholder="e.g. 340ml, 25 bags"
@@ -499,7 +522,11 @@ export function PlanogramBuilder({
                 onChange={(e) => setForm({ ...form, variant: e.target.value })}
               />
             </Field>
-            <Field label="Expected facings" required>
+            <Field
+              label={simplifiedCopy ? "Expected Facings" : "Expected facings"}
+              required
+              helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.expectedFacings : undefined}
+            >
               <Input
                 type="number"
                 min={0}
@@ -515,7 +542,10 @@ export function PlanogramBuilder({
                 }
               />
             </Field>
-            <Field label="Min / max facings (optional)">
+            <Field
+              label={simplifiedCopy ? "Min / Max Facings" : "Min / max facings (optional)"}
+              helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.minMaxFacings : undefined}
+            >
               <div className="flex gap-2">
                 <Input
                   type="number"
@@ -539,7 +569,10 @@ export function PlanogramBuilder({
                 />
               </div>
             </Field>
-            <Field label="Expected shelf units (optional)">
+            <Field
+              label={simplifiedCopy ? "Expected Shelf Units" : "Expected shelf units (optional)"}
+              helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.expectedShelfUnits : undefined}
+            >
               <Input
                 type="number"
                 min={0}
@@ -552,7 +585,10 @@ export function PlanogramBuilder({
                 }}
               />
             </Field>
-            <Field label={`${priceLabel} (optional)`}>
+            <Field
+              label={simplifiedCopy ? "Price" : `${priceLabel} (optional)`}
+              helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.price : undefined}
+            >
               <Input
                 type="number"
                 min={0}
@@ -565,7 +601,10 @@ export function PlanogramBuilder({
                 }
               />
             </Field>
-            <Field label="Daily sales (optional)">
+            <Field
+              label={simplifiedCopy ? "Daily Sales" : "Daily sales (optional)"}
+              helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.dailySales : undefined}
+            >
               <Input
                 type="number"
                 min={0}
@@ -580,14 +619,20 @@ export function PlanogramBuilder({
                 }
               />
             </Field>
-            <Field label="SKU (optional)">
+            <Field
+              label={simplifiedCopy ? "SKU" : "SKU (optional)"}
+              helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.sku : undefined}
+            >
               <Input
                 className="rounded-xl"
                 value={form.sku}
                 onChange={(e) => setForm({ ...form, sku: e.target.value })}
               />
             </Field>
-            <Field label="Shelf Position (optional)">
+            <Field
+              label={simplifiedCopy ? "Shelf Position" : "Shelf Position (optional)"}
+              helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.shelfPosition : undefined}
+            >
               <Input
                 className="rounded-xl"
                 value={form.shelf_position}
@@ -607,7 +652,7 @@ export function PlanogramBuilder({
               ) : (
                 <Plus className="mr-2 size-4" />
               )}
-              Save product
+              {simplifiedCopy ? "Save Product" : "Save product"}
             </Button>
             <Button
               variant="outline"
@@ -615,7 +660,7 @@ export function PlanogramBuilder({
               disabled={normalizeMutation.isPending}
               onClick={() => submitManual(true)}
             >
-              Save &amp; add another
+              {simplifiedCopy ? "Save & Add Another" : "Save & add another"}
             </Button>
           </div>
           {manualError && (
@@ -632,9 +677,14 @@ export function PlanogramBuilder({
 
       <div>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-sm font-semibold text-foreground">
-            {tableTitle} ({rows.length})
-          </h3>
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">
+              {tableTitle} ({rows.length})
+            </h3>
+            {tableDescription ? (
+              <p className="mt-1 text-xs text-muted-foreground">{tableDescription}</p>
+            ) : null}
+          </div>
           {tableActions}
         </div>
         {!rows.length ? (

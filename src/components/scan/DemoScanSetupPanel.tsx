@@ -20,7 +20,12 @@ import {
 } from "@/lib/demo-oral-care-planogram";
 import { EMPTY_PLANOGRAM_META } from "@/lib/planogram-meta";
 import { EMPTY_AUDIT_PACKAGE } from "@/lib/planogram-audit-package";
-import { getBrowserTimezone, HOMEPAGE_SHELF_SETUP_FLOW } from "@/lib/planogram-wizard-homepage-copy";
+import {
+  getBrowserTimezone,
+  HOMEPAGE_DEMO_PRODUCTS_STATUS,
+  HOMEPAGE_NO_PLANOGRAM_PRODUCTS,
+  HOMEPAGE_SHELF_SETUP_FLOW,
+} from "@/lib/planogram-wizard-homepage-copy";
 import type { ScanContextState } from "@/lib/scan-context";
 import { cn } from "@/lib/utils";
 
@@ -191,6 +196,7 @@ export function DemoScanSetupPanel({
       if (!state.categoryName) return;
       onScanContextChange({
         ...scanContext,
+        planogramRows: homepageIntro ? [] : scanContext.planogramRows,
         planogramMeta: {
           ...(scanContext.planogramMeta ?? EMPTY_PLANOGRAM_META),
           category: state.categoryName,
@@ -432,10 +438,16 @@ export function DemoScanSetupPanel({
           </div>
           <div className="space-y-2 p-4 text-xs text-muted-foreground">
             {homepageIntro ? (
-              <p className="font-medium text-foreground">
-                {DEMO_PRODUCT_COUNT} products · {DEMO_ORAL_CARE_META.shelf_count ?? 5} shelves ·{" "}
-                {DEMO_ORAL_CARE_ROWS.length} shelf positions
-              </p>
+              <>
+                <p className="font-medium text-brand">{HOMEPAGE_DEMO_PRODUCTS_STATUS.title}</p>
+                <p className="font-medium text-foreground">
+                  {HOMEPAGE_DEMO_PRODUCTS_STATUS.summary(
+                    DEMO_PRODUCT_COUNT,
+                    DEMO_ORAL_CARE_META.shelf_count ?? 5,
+                    DEMO_ORAL_CARE_ROWS.length,
+                  )}
+                </p>
+              </>
             ) : (
               <p>
                 <span className="font-medium text-foreground">18 demo SKUs</span> ·{" "}
@@ -445,10 +457,28 @@ export function DemoScanSetupPanel({
             <p className="flex items-start gap-1.5 rounded-md border border-border/80 bg-muted/30 px-3 py-2">
               <Info className="mt-0.5 size-3.5 shrink-0 text-brand" />
               {homepageIntro
-                ? "Demo data — fictional reference information, not verified from the photograph."
+                ? HOMEPAGE_DEMO_PRODUCTS_STATUS.note
                 : "Fictional demo reference data — not verified from the photograph."}
             </p>
           </div>
+        </div>
+      ) : null}
+
+      {homepageIntro && planogramMode === "none" ? (
+        <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
+          <p className="text-sm font-semibold text-foreground">{HOMEPAGE_NO_PLANOGRAM_PRODUCTS.title}</p>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            {HOMEPAGE_NO_PLANOGRAM_PRODUCTS.description}
+          </p>
+          <Button
+            type="button"
+            size="lg"
+            className="mt-4 bg-brand"
+            disabled={!canStart}
+            onClick={handleStart}
+          >
+            {HOMEPAGE_NO_PLANOGRAM_PRODUCTS.cta} <ArrowRight className="size-4" />
+          </Button>
         </div>
       ) : null}
 
@@ -482,6 +512,7 @@ export function DemoScanSetupPanel({
             <NewPlanogramWizard
               ref={wizardRef}
               homepageIntro={homepageIntro}
+              planogramMode={planogramMode}
               value={scanContext}
               onChange={onScanContextChange}
               categories={categories}
