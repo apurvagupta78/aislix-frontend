@@ -588,7 +588,7 @@ export function DemoScanSetupPanel({
         >
           {homepageIntro ? (
             <>
-              Start AI Audit <ArrowRight className="size-4" />
+              Start Audit <ArrowRight className="size-4" />
             </>
           ) : (
             <>
