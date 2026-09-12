@@ -11,6 +11,12 @@ import {
   type PlanogramMatchResult,
 } from "@/lib/demo-planogram-match";
 import {
+  compareDemoOralCarePlanogram,
+  demoPriceComplianceLines,
+  demoPromotionalCompliance,
+  isDemoOralCareContext,
+} from "@/lib/demo-oral-care-planogram";
+import {
   annotateCompetitorCategories,
   brandIsDifferentCategory,
   formatCompetitorBrandLabel,
@@ -720,6 +726,30 @@ export function buildDemoRecommendations(
     });
   }
 
+  if (isDemoOralCareContext(ctx)) {
+    for (const priceLine of demoPriceComplianceLines()) {
+      if (priceLine.status === "mismatch") {
+        recs.push({
+          id: `price-${priceLine.sku}`,
+          title: `${priceLine.product} — price mismatch`,
+          detail: `Expected $${priceLine.expected_price.toFixed(2)} — observed $${priceLine.observed_price.toFixed(2)}.`,
+          category: "Pricing",
+          impact: "medium",
+        });
+      }
+    }
+    const promo = demoPromotionalCompliance();
+    if (!promo.passing) {
+      recs.push({
+        id: "promo-maxfresh",
+        title: "Colgate MaxFresh — promotional price mismatch",
+        detail: promo.detail,
+        category: "Promotion",
+        impact: "high",
+      });
+    }
+  }
+
   for (const line of match.lines) {
     if (line.issue_type === "missing") {
       recs.push({
@@ -800,7 +830,9 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
   }
   const threshold = result.summary?.low_stock_threshold ?? OOS_THRESHOLD;
   const match = hasPlanogram
-    ? comparePlanogramToInventory(fullInventory as InventoryFacing[], planogramRows)
+    ? isDemoOralCareContext(ctx)
+      ? compareDemoOralCarePlanogram(planogramRows)
+      : comparePlanogramToInventory(fullInventory as InventoryFacing[], planogramRows)
     : comparePlanogramToInventory([], []);
 
   const financial_impact = computeContextFinancialImpact(
@@ -972,7 +1004,7 @@ function attachAuditKpiDashboards(result: ScanResult, ctx: ScanContextState): Sc
 
   const role = ctx.auditRole ?? "supermarket";
   const auditPackage = autoPopulateAuditPackage(planogramRows, ctx.auditPackage ?? EMPTY_AUDIT_PACKAGE);
-  const dashboards = computeClientAuditDashboards(result);
+  const dashboards = computeClientAuditDashboards(result, auditPackage, ctx);
   return {
     ...result,
     retail_intelligence: {
@@ -1003,7 +1035,9 @@ export function enrichDemoScanResult(result: ScanResult, ctx: ScanContextState):
   });
   const match =
     planogramRows.length > 0
-      ? comparePlanogramToInventory(fullInventory as InventoryFacing[], planogramRows)
+      ? isDemoOralCareContext(ctx)
+        ? compareDemoOralCarePlanogram(planogramRows)
+        : comparePlanogramToInventory(fullInventory as InventoryFacing[], planogramRows)
       : comparePlanogramToInventory([], []);
   const effectiveFocus = effectiveFocusFromContext(ctx);
   const primaryBrand = effectiveFocus.brand || effectiveFocus.company;

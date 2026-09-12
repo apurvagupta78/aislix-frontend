@@ -21,6 +21,7 @@ import {
   runLandingUpload,
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
+import { buildDemoOralCareScanContext } from "@/lib/demo-oral-care-planogram";
 import { EMPTY_SCAN_CONTEXT, type ScanContextState } from "@/lib/scan-context";
 import { LANDING_SAMPLE_EVENT, LANDING_UPLOAD_EVENT } from "./HeroSection";
 import { LeadCaptureSection } from "./LeadCaptureSection";
@@ -77,7 +78,7 @@ export function RetailIntelligenceDemo() {
     setPendingFile(null);
     setSetupMode("sample");
     setPreviewImageUrl(DEFAULT_SAMPLE_IMAGE);
-    setScanContext(EMPTY_SCAN_CONTEXT);
+    setScanContext(buildDemoOralCareScanContext());
     setError(null);
     setResult(null);
     setPhase("idle");

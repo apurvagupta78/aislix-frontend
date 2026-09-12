@@ -10,6 +10,7 @@ import {
   enrichScanResult,
   type ScanContextState,
 } from "@/lib/scan-context";
+import { DEMO_PLANOGRAM_LABEL, isDemoOralCareContext } from "@/lib/demo-oral-care-planogram";
 import { defaultAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { landingToScanResult } from "@/lib/demo-execution";
 import type { LandingScanResult } from "@/lib/landing-scan-api";
@@ -142,6 +143,11 @@ export function DemoRoleResultsPanel({
           <Badge className="gap-1.5 rounded-md bg-brand text-brand-foreground">
             <Sparkles className="size-3" /> Live AI analysis
           </Badge>
+          {isDemoOralCareContext(scanContext) ? (
+            <Badge variant="outline" className="text-[10px]">
+              {DEMO_PLANOGRAM_LABEL}
+            </Badge>
+          ) : null}
           {landing.scanned_at ? (
             <span className="text-[11px] text-muted-foreground">
               {new Date(landing.scanned_at).toLocaleString()}

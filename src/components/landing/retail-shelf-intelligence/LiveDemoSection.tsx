@@ -25,6 +25,7 @@ import {
   useDemoCategory,
 } from "@/components/scan/DemoCategoryPicker";
 import { DemoScanSetupPanel } from "@/components/scan/DemoScanSetupPanel";
+import { buildDemoOralCareScanContext } from "@/lib/demo-oral-care-planogram";
 import { EMPTY_SCAN_CONTEXT, type ScanContextState } from "@/lib/scan-context";
 import { SectionHeading } from "./shared";
 import { networkErrorMessage } from "@/lib/api-errors";
@@ -151,7 +152,7 @@ export function LiveDemoSection({
     setPendingFile(null);
     setSetupMode("sample");
     setPreviewImageUrl(DEFAULT_SAMPLE_IMAGE);
-    setScanContext(EMPTY_SCAN_CONTEXT);
+    setScanContext(buildDemoOralCareScanContext());
     setError(null);
     setResult(null);
     setPhase("idle");

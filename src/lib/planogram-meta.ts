@@ -12,6 +12,11 @@ export type PlanogramMeta = {
   fixture_width?: number;
   fixture_height?: number;
   shelf_count?: number;
+  /** Demo planogram identifier (fictional reference data). */
+  planogram_id?: string;
+  version?: string;
+  fixture_id?: string;
+  is_demo?: boolean;
 };
 
 export type FixtureMeta = {
