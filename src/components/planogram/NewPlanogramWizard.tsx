@@ -49,6 +49,10 @@ import {
   type PlanogramWizardStepId,
 } from "@/lib/planogram-wizard-config";
 import { timezoneSelectOptions } from "@/lib/account";
+import {
+  getBrowserTimezone,
+  HOMEPAGE_WIZARD_STEP_COPY,
+} from "@/lib/planogram-wizard-homepage-copy";
 import { defaultAuditRoleTab, roleTabLabel, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { roleRequiresPricing } from "@/lib/role-planogram-requirements";
 import type { ScanContextState } from "@/lib/scan-context";
@@ -68,6 +72,8 @@ type NewPlanogramWizardProps = {
   defaultLocation?: string;
   compact?: boolean;
   className?: string;
+  /** Simplified copy for homepage demo custom shelf setup */
+  homepageIntro?: boolean;
 };
 
 function toDraftRows(rows: PlanogramRow[]): DraftRow[] {
@@ -102,11 +108,19 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
       defaultLocation = "A-1",
       compact = false,
       className,
+      homepageIntro = false,
     },
     ref,
   ) {
     const role = defaultAuditRoleTab(value.auditRole);
     const steps = useMemo(() => wizardStepsForRole(role), [role]);
+    const displaySteps = useMemo(
+      () =>
+        homepageIntro
+          ? steps.map((step) => ({ ...step, ...HOMEPAGE_WIZARD_STEP_COPY[step.id] }))
+          : steps,
+      [steps, homepageIntro],
+    );
     const [stepIndex, setStepIndex] = useState(0);
     const currentStep = steps[stepIndex]?.id ?? "basics";
 
@@ -138,9 +152,20 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
     }, [defaultCategory, defaultSubCategory, defaultLocation]);
     const draftRows = useMemo(() => toDraftRows(value.planogramRows), [value.planogramRows]);
     const auditPackage = value.auditPackage ?? EMPTY_AUDIT_PACKAGE;
+    const storeTimezone =
+      auditPackage.store_timezone?.trim() ||
+      (homepageIntro ? getBrowserTimezone() : "Asia/Kolkata");
     const allAssortment = mergeAssortmentLists(auditPackage.assortment_skus, auditPackage.msl_skus);
     const jsonInputRef = useRef<HTMLInputElement>(null);
     const [jsonBusy, setJsonBusy] = useState(false);
+
+    useEffect(() => {
+      if (!homepageIntro || auditPackage.store_timezone?.trim()) return;
+      onChange({
+        ...value,
+        auditPackage: { ...auditPackage, store_timezone: getBrowserTimezone() },
+      });
+    }, [homepageIntro]);
 
     const patch = (next: ScanContextState) => onChange(next);
 
@@ -187,25 +212,34 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
             <div className="space-y-5">
               <div className="space-y-2">
                 <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Audit role *
+                  {homepageIntro ? "Who is this audit for?" : "Audit role *"}
                 </Label>
                 <RoleTabSwitcher value={role} onChange={setRole} />
                 <p className="text-xs text-muted-foreground">
-                  Role selection determines which planogram sections and KPIs apply to this audit.
+                  {homepageIntro
+                    ? "Your role determines which shelf checks and KPIs Aislix will use."
+                    : "Role selection determines which planogram sections and KPIs apply to this audit."}
                 </p>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5 sm:col-span-2">
-                  <Label className="text-xs">Planogram name *</Label>
+                  <Label className="text-xs">
+                    {homepageIntro ? "Shelf Setup Name *" : "Planogram name *"}
+                  </Label>
                   <Input
                     className="h-9 rounded-lg"
                     placeholder="Oral Care A-1 — Sep 2026"
                     value={meta.name}
                     onChange={(e) => patch(mergeMeta(value, { name: e.target.value }))}
                   />
-                  {meta.name.trim() ? (
+                  {meta.name.trim() && !homepageIntro ? (
                     <p className="text-[11px] text-muted-foreground">
                       ID: {planogramIdFromName(meta.name)} · Version: 1 · Status: Draft
+                    </p>
+                  ) : null}
+                  {homepageIntro ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      Give this shelf setup a name you&apos;ll recognise later.
                     </p>
                   ) : null}
                 </div>
@@ -217,6 +251,11 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                     value={meta.store_outlet}
                     onChange={(e) => patch(mergeMeta(value, { store_outlet: e.target.value }))}
                   />
+                  {homepageIntro ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      Where will this shelf be audited?
+                    </p>
+                  ) : null}
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Fixture / rack *</Label>
@@ -231,6 +270,11 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                       })
                     }
                   />
+                  {homepageIntro ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      Which rack or display does this setup belong to?
+                    </p>
+                  ) : null}
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Category *</Label>
@@ -239,6 +283,11 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                     value={meta.category}
                     onChange={(e) => patch(mergeMeta(value, { category: e.target.value }))}
                   />
+                  {homepageIntro ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      What type of products are on this shelf?
+                    </p>
+                  ) : null}
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Sub-category</Label>
@@ -247,20 +296,30 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                     value={meta.sub_category ?? ""}
                     onChange={(e) => patch(mergeMeta(value, { sub_category: e.target.value }))}
                   />
+                  {homepageIntro ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      Choose the more specific product group, if needed.
+                    </p>
+                  ) : null}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Valid from *</Label>
+                  <Label className="text-xs">{homepageIntro ? "Start Date *" : "Valid from *"}</Label>
                   <Input
                     type="date"
                     className="h-9 rounded-lg"
                     value={meta.valid_from}
                     onChange={(e) => patch(mergeMeta(value, { valid_from: e.target.value }))}
                   />
+                  {homepageIntro ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      When does this shelf setup become active?
+                    </p>
+                  ) : null}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Store timezone *</Label>
+                  <Label className="text-xs">Store Timezone *</Label>
                   <Select
-                    value={auditPackage.store_timezone ?? "Asia/Kolkata"}
+                    value={storeTimezone}
                     onValueChange={(v) =>
                       patch({
                         ...value,
@@ -272,16 +331,23 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                       <SelectValue placeholder="Select timezone" />
                     </SelectTrigger>
                     <SelectContent className="max-h-72">
-                      {timezoneSelectOptions(auditPackage.store_timezone).map((tz) => (
+                      {timezoneSelectOptions(storeTimezone).map((tz) => (
                         <SelectItem key={tz} value={tz}>
                           {tz.replace(/_/g, " ")}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {homepageIntro ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      Used to evaluate time-sensitive prices and promotions correctly.
+                    </p>
+                  ) : null}
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Measurement unit *</Label>
+                  <Label className="text-xs">
+                    {homepageIntro ? "Shelf Measurement Unit *" : "Measurement unit *"}
+                  </Label>
                   <Select
                     value={meta.measurement_unit}
                     onValueChange={(v) =>
@@ -297,14 +363,25 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                       <SelectItem value="mm">mm</SelectItem>
                     </SelectContent>
                   </Select>
+                  {homepageIntro ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      Choose how shelf and product dimensions are measured.
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <div className="rounded-xl border border-brand/15 bg-brand-soft/20 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
-                    <p className="text-sm font-medium text-foreground">Full planogram package</p>
+                    <p className="text-sm font-medium text-foreground">
+                      {homepageIntro
+                        ? "Import or Export This Shelf Setup"
+                        : "Full planogram package"}
+                    </p>
                     <p className="text-xs text-muted-foreground">
-                      Import or export products, assortment, prices, promotions, and scoring in one JSON file.
+                      {homepageIntro
+                        ? "Move your complete shelf setup in or out as a JSON file."
+                        : "Import or export products, assortment, prices, promotions, and scoring in one JSON file."}
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -321,7 +398,8 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                         )
                       }
                     >
-                      <FileJson className="mr-1.5 size-4" /> Export JSON
+                      <FileJson className="mr-1.5 size-4" />{" "}
+                      {homepageIntro ? "Export Setup" : "Export JSON"}
                     </Button>
                     <Button
                       type="button"
@@ -336,7 +414,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                       ) : (
                         <Upload className="mr-1.5 size-4" />
                       )}
-                      Import JSON
+                      {homepageIntro ? "Import Setup" : "Import JSON"}
                     </Button>
                   </div>
                 </div>
@@ -853,7 +931,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
         {/* Step indicator */}
         <div className="overflow-x-auto pb-1">
           <ol className="flex min-w-max gap-1">
-            {steps.map((step, i) => {
+            {displaySteps.map((step, i) => {
               const active = i === stepIndex;
               const done = i < stepIndex;
               return (
@@ -881,9 +959,11 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
 
         <div className="rounded-xl border border-brand/15 bg-card p-4 sm:p-5">
           <p className="text-sm font-semibold text-foreground">
-            Step {stepIndex + 1} · {steps[stepIndex]?.label}
+            Step {stepIndex + 1} · {displaySteps[stepIndex]?.label}
           </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{steps[stepIndex]?.description}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {displaySteps[stepIndex]?.description}
+          </p>
           <div className="mt-4">{renderStep(currentStep)}</div>
         </div>
 
@@ -900,15 +980,15 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
               <ChevronLeft className="size-4" /> Back
             </Button>
             <span className="text-xs text-muted-foreground">
-              {stepIndex + 1} / {steps.length}
+              {stepIndex + 1} / {displaySteps.length}
             </span>
             <Button
               type="button"
               variant="brand"
               size="sm"
               className="rounded-lg"
-              disabled={stepIndex >= steps.length - 1}
-              onClick={() => setStepIndex((i) => Math.min(steps.length - 1, i + 1))}
+              disabled={stepIndex >= displaySteps.length - 1}
+              onClick={() => setStepIndex((i) => Math.min(displaySteps.length - 1, i + 1))}
             >
               Next <ChevronRight className="size-4" />
             </Button>

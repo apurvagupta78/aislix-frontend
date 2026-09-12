@@ -19,6 +19,8 @@ import {
   DEMO_PLANOGRAM_LABEL,
 } from "@/lib/demo-oral-care-planogram";
 import { EMPTY_PLANOGRAM_META } from "@/lib/planogram-meta";
+import { EMPTY_AUDIT_PACKAGE } from "@/lib/planogram-audit-package";
+import { getBrowserTimezone, HOMEPAGE_SHELF_SETUP_FLOW } from "@/lib/planogram-wizard-homepage-copy";
 import type { ScanContextState } from "@/lib/scan-context";
 import { cn } from "@/lib/utils";
 
@@ -186,7 +188,23 @@ export function DemoScanSetupPanel({
     if (next === "demo" && mode === "sample") {
       onScanContextChange(buildDemoOralCareScanContext(scanContext.auditRole));
     } else if (next === "custom") {
-      syncPlanogramMetaFromPicker(state);
+      if (!state.categoryName) return;
+      onScanContextChange({
+        ...scanContext,
+        planogramMeta: {
+          ...(scanContext.planogramMeta ?? EMPTY_PLANOGRAM_META),
+          category: state.categoryName,
+          sub_category: resolveSubCategoryLabel(state),
+        },
+        ...(homepageIntro
+          ? {
+              auditPackage: {
+                ...(scanContext.auditPackage ?? EMPTY_AUDIT_PACKAGE),
+                store_timezone: getBrowserTimezone(),
+              },
+            }
+          : {}),
+      });
     } else if (next === "none") {
       onScanContextChange({
         ...scanContext,
@@ -437,17 +455,33 @@ export function DemoScanSetupPanel({
       {showWizard ? (
         <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background shadow-sm">
           <div className="flex items-center gap-2 border-b border-brand/20 bg-brand/5 px-4 py-3">
-            <ClipboardList className="size-4 text-brand" />
-            <div>
-              <p className="text-sm font-semibold text-foreground">Custom planogram</p>
-              <p className="text-[11px] text-muted-foreground">
-                Import CSV or enter products manually — role at Step 1 drives KPI requirements
-              </p>
+            <ClipboardList className="size-4 shrink-0 text-brand" />
+            <div className="flex-1">
+              {homepageIntro ? (
+                <>
+                  <p className="text-sm font-semibold text-foreground">Set Up Your Shelf</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                    Tell Aislix what should be on this shelf, where products belong and how the shelf
+                    should be arranged. Aislix will use this setup as the reference for your audit.
+                  </p>
+                  <p className="mt-2 text-[10px] leading-snug text-muted-foreground/90">
+                    {HOMEPAGE_SHELF_SETUP_FLOW}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-foreground">Custom planogram</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Import CSV or enter products manually — role at Step 1 drives KPI requirements
+                  </p>
+                </>
+              )}
             </div>
           </div>
           <div className="p-4">
             <NewPlanogramWizard
               ref={wizardRef}
+              homepageIntro={homepageIntro}
               value={scanContext}
               onChange={onScanContextChange}
               categories={categories}
