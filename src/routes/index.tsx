@@ -194,7 +194,7 @@ function Landing() {
                 document.querySelector("#live-dashboard")?.scrollIntoView({ behavior: "smooth" })
               }
             >
-              Try Your First Audit Free <ArrowRight className="size-4" />
+              Try Your First AI Audit Free <ArrowRight className="size-4" />
             </Button>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
