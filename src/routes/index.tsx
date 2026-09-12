@@ -184,7 +184,7 @@ function Landing() {
             Aislix uses AI to turn shelf photos into retail intelligence — highlighting what needs
             attention while keeping every store visit and audit in one searchable history, so teams
             can track issues, measure improvement and stop losing shelf insights in WhatsApp or
-            Slack.
+            Emails.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <Button
