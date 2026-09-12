@@ -263,10 +263,21 @@ function ChartForKpi({
   role: AuditRoleTab;
   data?: ScanResult;
 }) {
-  if (kpi.state === "not_configured" || kpi.audit_status === "not_configured") {
+  if (
+    (kpi.state === "not_configured" || kpi.audit_status === "not_configured") &&
+    kpi.numeric == null &&
+    kpi.value !== "Not applicable"
+  ) {
     return (
       <div className="rounded-xl border border-dashed border-border bg-muted/30 px-4 py-5 text-center text-xs text-muted-foreground">
-        {kpi.label}: Not configured — add reference data in the planogram package.
+        {kpi.label}: Not configured — add products with SKU, facings, and MRP in the planogram editor.
+      </div>
+    );
+  }
+  if (kpi.audit_status === "not_applicable" || kpi.value === "Not applicable") {
+    return (
+      <div className="rounded-xl border border-border bg-muted/40 px-4 py-5 text-center text-xs text-muted-foreground">
+        {kpi.label}: Not applicable for this audit scope.
       </div>
     );
   }

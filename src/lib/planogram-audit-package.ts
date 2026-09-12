@@ -65,24 +65,111 @@ export const EMPTY_AUDIT_PACKAGE: PlanogramAuditPackage = {
   scoring: {},
 };
 
+/** Derive assortment, MSL, prices, SOS scope from product rows when lists are empty. */
+export function autoPopulateAuditPackage(
+  rows: {
+    sku?: string;
+    brand?: string;
+    product_name?: string;
+    location?: string;
+    category?: string;
+    mrp_inr?: number;
+    shelf_position?: string;
+    match_key?: string;
+  }[],
+  existing: PlanogramAuditPackage = EMPTY_AUDIT_PACKAGE,
+): PlanogramAuditPackage {
+  const pkg: PlanogramAuditPackage = {
+    assortment_skus: [...existing.assortment_skus],
+    msl_skus: [...existing.msl_skus],
+    price_requirements: [...existing.price_requirements],
+    promotions: [...existing.promotions],
+    scoring: { ...existing.scoring },
+    primary_brand: existing.primary_brand,
+    fixture_id: existing.fixture_id,
+    store_timezone: existing.store_timezone || "Asia/Kolkata",
+  };
+
+  const skuFor = (row: (typeof rows)[0]) =>
+    String(row.sku || row.match_key || `${row.brand}::${row.product_name}`).trim();
+
+  if (!pkg.assortment_skus.length && rows.length) {
+    pkg.assortment_skus = rows
+      .filter((r) => skuFor(r))
+      .map((r) => ({
+        sku: skuFor(r),
+        list_type: "mandatory_assortment" as const,
+        outlet_scope: String(r.location || "all"),
+      }));
+  }
+
+  if (!pkg.msl_skus.length && rows.length) {
+    pkg.msl_skus = rows
+      .filter((r) => skuFor(r))
+      .slice(0, Math.max(1, Math.ceil(rows.length * 0.6)))
+      .map((r) => ({
+        sku: skuFor(r),
+        list_type: "msl" as const,
+        outlet_scope: String(r.location || "all"),
+      }));
+  }
+
+  if (!pkg.price_requirements.length) {
+    pkg.price_requirements = rows
+      .filter((r) => r.mrp_inr != null && Number.isFinite(Number(r.mrp_inr)) && skuFor(r))
+      .map((r) => ({
+        sku: skuFor(r),
+        label_location: String(r.shelf_position || "shelf_tag"),
+        expected_price: Number(r.mrp_inr),
+        currency: "INR",
+        price_basis: "item",
+      }));
+  }
+
+  if (!pkg.primary_brand?.trim() && rows.length) {
+    const counts = new Map<string, number>();
+    for (const r of rows) {
+      const b = String(r.brand ?? "").trim();
+      if (b) counts.set(b, (counts.get(b) ?? 0) + 1);
+    }
+    const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+    if (top) pkg.primary_brand = top[0];
+  }
+
+  if (!pkg.fixture_id?.trim() && rows[0]?.location) {
+    pkg.fixture_id = String(rows[0].location);
+  }
+
+  return pkg;
+}
+
 export function computeReadiness(
-  rows: { sku?: string; expected_facings?: number; mrp_inr?: number; shelf_position?: string }[],
+  rows: { sku?: string; expected_facings?: number; mrp_inr?: number; shelf_position?: string; brand?: string }[],
   pkg: PlanogramAuditPackage,
 ): KpiReadiness[] {
+  const effective = autoPopulateAuditPackage(rows, pkg);
   const hasProducts = rows.length > 0;
   const hasFacings = rows.some((r) => r.expected_facings != null);
   const hasPrices =
-    rows.some((r) => r.mrp_inr != null) || pkg.price_requirements.length > 0;
+    rows.some((r) => r.mrp_inr != null) || effective.price_requirements.length > 0;
   return [
     { kpi_id: "osa", ready: hasProducts, label: "Listed SKUs" },
     { kpi_id: "planogram_compliance", ready: hasProducts, label: "Shelf layout" },
-    { kpi_id: "assortment_compliance", ready: pkg.assortment_skus.length > 0, label: "Assortment list" },
-    { kpi_id: "msl_compliance", ready: pkg.msl_skus.length > 0, label: "Must-stock list" },
+    {
+      kpi_id: "assortment_compliance",
+      ready: effective.assortment_skus.length > 0,
+      label: "Assortment list",
+    },
+    { kpi_id: "msl_compliance", ready: effective.msl_skus.length > 0, label: "Must-stock list" },
     { kpi_id: "price_compliance", ready: hasPrices, label: "Price requirements" },
-    { kpi_id: "promotional_compliance", ready: pkg.promotions.length > 0, label: "Promotions" },
+    { kpi_id: "promotional_compliance", ready: effective.promotions.length > 0, label: "Promotions" },
     { kpi_id: "location_accuracy", ready: rows.some((r) => String(r.shelf_position ?? "").trim()), label: "Slot IDs" },
     { kpi_id: "facing_count", ready: hasFacings, label: "Expected facings" },
-    { kpi_id: "share_of_shelf", ready: Boolean(pkg.primary_brand?.trim()), label: "Brand scope" },
+    {
+      kpi_id: "share_of_shelf",
+      ready: Boolean(effective.primary_brand?.trim()),
+      label: "Brand scope",
+    },
   ];
 }
 

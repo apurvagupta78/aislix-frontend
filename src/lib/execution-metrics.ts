@@ -12,6 +12,7 @@ import type {
   ScoreComponent,
 } from "@/lib/retail-intelligence";
 import type { CustomerType } from "@/lib/customer-context";
+import { clientDashboardForRole } from "@/lib/audit-kpi-client";
 import { getRoleProfile, normalizeRoleId } from "@/lib/role-kpi-config";
 import type { ScanResult } from "@/lib/scan-results";
 import { formatPercent } from "@/lib/scan-results";
@@ -372,19 +373,28 @@ export function auditKpiDashboardFromResult(result?: ScanResult | null): AuditKp
   return result?.retail_intelligence?.audit_kpi_dashboard;
 }
 
-/** Role-specific dashboard — prefers multi-role payload when switching tabs. */
+function dashboardHasValues(dashboard?: AuditKpiDashboard): boolean {
+  return Boolean(
+    dashboard?.primary_kpis?.some(
+      (k) => k.status !== "not_configured" && (k.value != null || k.status === "not_applicable"),
+    ),
+  );
+}
+
+/** Role-specific dashboard — backend payload, else client recompute from planogram + inventory. */
 export function auditKpiDashboardForRole(
   result?: ScanResult | null,
   role?: CustomerType | string | null,
 ): AuditKpiDashboard | undefined {
   const roleKey = normalizeRoleId(role);
-  const multi = (
-    result?.retail_intelligence as { audit_kpi_dashboards?: Record<string, AuditKpiDashboard> } | undefined
-  )?.audit_kpi_dashboards;
-  if (multi?.[roleKey]?.primary_kpis?.length === 5) return multi[roleKey];
+  const multi = result?.retail_intelligence?.audit_kpi_dashboards;
+  if (multi?.[roleKey] && dashboardHasValues(multi[roleKey])) return multi[roleKey];
   const single = auditKpiDashboardFromResult(result);
-  if (single && (!role || single.role_id === roleKey)) return single;
-  return single;
+  if (single && single.role_id === roleKey && dashboardHasValues(single)) return single;
+  if (result && (planogramRowsFromResult(result).length || (result.inventory?.length ?? 0) > 0)) {
+    return clientDashboardForRole(result, roleKey);
+  }
+  return single ?? clientDashboardForRole(result, roleKey);
 }
 
 /** Exactly five role-specific KPIs when backend audit dashboard is present; else legacy strip. */

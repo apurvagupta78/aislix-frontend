@@ -795,12 +795,19 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
       : typeof metricsAny["planogram_compliance_percent"] === "number"
         ? Number(metricsAny["planogram_compliance_percent"])
         : null;
-  const planogramSummary = (metricsAny["planogram_summary"] ?? {}) as Record<string, unknown>;
+  let planogramSummary = (metricsAny["planogram_summary"] ?? {}) as Record<string, unknown>;
+  const adhocRows = (scan as any).adhoc_planogram;
+  if (
+    !Array.isArray(planogramSummary.configured_rows) &&
+    Array.isArray(adhocRows) &&
+    adhocRows.length
+  ) {
+    planogramSummary = { ...planogramSummary, configured_rows: adhocRows };
+  }
   const metricNum = (key: string): number | null =>
     typeof metricsAny[key] === "number" ? Number(metricsAny[key]) : null;
   const planogramSkuMatchPercent = metricNum("planogram_sku_match_percent") ?? planogramPercent;
   const planogramQtyCompliancePercent = metricNum("planogram_qty_compliance_percent");
-  const adhocRows = (scan as any).adhoc_planogram;
   const planogramRequested =
     Boolean((scan as any).assignment_id) ||
     (Array.isArray(adhocRows) && adhocRows.length > 0) ||

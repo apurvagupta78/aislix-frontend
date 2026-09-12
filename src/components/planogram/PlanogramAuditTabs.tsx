@@ -16,6 +16,7 @@ import { PlanogramBuilder } from "@/components/planogram/PlanogramBuilder";
 import type { ShelfCategory } from "@/lib/categories.data";
 import type { DraftRow } from "@/lib/planogram";
 import {
+  autoPopulateAuditPackage,
   computeReadiness,
   exportPlanogramPackageJson,
   fetchPackageCsvTemplate,
@@ -222,6 +223,24 @@ export function PlanogramAuditTabs({
               onChange={(e) => patch({ primary_brand: e.target.value })}
             />
           </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="brand"
+            size="sm"
+            className="rounded-lg"
+            disabled={!rows.length}
+            onClick={() => {
+              onAuditPackageChange(autoPopulateAuditPackage(rows, auditPackage));
+              toast.success("KPI reference data filled from product rows");
+            }}
+          >
+            Auto-fill KPI data from products
+          </Button>
+          <p className="self-center text-xs text-muted-foreground">
+            Derives assortment, MSL, prices, and brand scope from the Products tab.
+          </p>
         </div>
         <div className="rounded-xl border border-brand/15 bg-brand-soft/20 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">

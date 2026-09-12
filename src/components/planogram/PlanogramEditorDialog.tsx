@@ -23,6 +23,7 @@ import { toUserMessage } from "@/lib/api/errors";
 import type { ShelfCategory } from "@/lib/categories.data";
 import { dominantScopeFromRows, type DraftRow, type SourceType } from "@/lib/planogram";
 import {
+  autoPopulateAuditPackage,
   EMPTY_AUDIT_PACKAGE,
   type PlanogramAuditPackage,
 } from "@/lib/planogram-audit-package";
@@ -97,6 +98,7 @@ export function PlanogramEditorDialog({
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!rows.length) throw new Error("Add at least one expected product.");
+      const pkg = autoPopulateAuditPackage(rows, auditPackage);
       if (target.mode === "edit") {
         await updateStorePlanogram({
           versionId: target.versionId,
@@ -104,7 +106,7 @@ export function PlanogramEditorDialog({
           rows,
           sourceType,
           name,
-          auditPackage,
+          auditPackage: pkg,
         });
         return "updated" as const;
       }
@@ -114,7 +116,7 @@ export function PlanogramEditorDialog({
         sourceType,
         name,
         sourceFilename: filename,
-        auditPackage,
+        auditPackage: pkg,
       });
       return "created" as const;
     },

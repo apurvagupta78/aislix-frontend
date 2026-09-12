@@ -1065,8 +1065,20 @@ async function loadAssignmentContext(
     versionId = (version?.id as string | null) ?? null;
   }
 
+  let auditPackage: Record<string, unknown> = {};
   let itemsFull: Record<string, unknown>[] = [];
   if (versionId) {
+    const { data: versionRow } = await supabase
+      .from("planogram_versions")
+      .select("audit_package, fixture_id, store_timezone, primary_brand")
+      .eq("id", versionId)
+      .maybeSingle();
+    if (versionRow?.audit_package && typeof versionRow.audit_package === "object") {
+      auditPackage = versionRow.audit_package as Record<string, unknown>;
+    }
+    if (versionRow?.fixture_id) auditPackage.fixture_id = versionRow.fixture_id;
+    if (versionRow?.store_timezone) auditPackage.store_timezone = versionRow.store_timezone;
+
     const { data: rows } = await supabase
       .from("planogram_items")
       .select(PLANOGRAM_FIELDS)
@@ -1109,6 +1121,7 @@ async function loadAssignmentContext(
     scope_type: scopeType,
     scope_values: scopeValues,
     planogram_version_id: versionId,
+    audit_package: auditPackage,
     items,
     items_full: itemsFull,
   };
@@ -1220,6 +1233,7 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
           planogram_version_id: assignment.planogram_version_id,
           planogram_items: assignment.items,
           planogram_items_full: assignment.items_full,
+          audit_package: assignment.audit_package ?? {},
         }
       : adhocItems.length
         ? {

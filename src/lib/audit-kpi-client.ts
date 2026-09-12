@@ -1,0 +1,344 @@
+/**
+ * Client-side audit KPI fallback when stored metrics lack audit_kpi_dashboards
+ * (e.g. scans processed before package synthesis shipped). Uses same formulas as backend.
+ */
+
+import { autoPopulateAuditPackage } from "@/lib/planogram-audit-package";
+import type { PlanogramRow } from "@/lib/planogram";
+import { getRoleProfile, normalizeRoleId } from "@/lib/role-kpi-config";
+import type { AuditKpiDashboard, AuditKpiResult } from "@/lib/retail-intelligence";
+import type { ScanResult } from "@/lib/scan-results";
+
+function planogramRowsFromResult(result?: ScanResult | null): PlanogramRow[] {
+  const summary = result?.planogram?.summary as { configured_rows?: PlanogramRow[] } | undefined;
+  if (Array.isArray(summary?.configured_rows) && summary.configured_rows.length) {
+    return summary.configured_rows;
+  }
+  return (result?.inventory ?? []).map((item, i) => ({
+    location: result?.location ?? result?.aisle ?? "",
+    category: result?.scan_category ?? "",
+    sub_category: result?.scan_sub_category ?? "",
+    brand: String(item.brand ?? ""),
+    product_name: String(item.name ?? item.product ?? "Product"),
+    variant: String(item.variant ?? ""),
+    expected_qty: Number(item.facings ?? item.quantity ?? 1),
+    expected_facings: Number(item.expected_facings ?? item.facings ?? 1),
+    sku: String(item.sku ?? `INV-${i + 1}`),
+    shelf_position: String(item.shelf_position ?? item.shelf_row ?? ""),
+    match_key: String(item.match_key ?? `${item.brand}::${item.name ?? item.product}`),
+    mrp_inr: item.mrp_inr != null ? Number(item.mrp_inr) : undefined,
+  }));
+}
+
+function matchKey(row: PlanogramRow | { brand?: string; product_name?: string; match_key?: string }) {
+  return (
+    String(row.match_key ?? "").trim().toLowerCase() ||
+    `${String(row.brand ?? "").trim().toLowerCase()}|${String(row.product_name ?? "").trim().toLowerCase()}`
+  );
+}
+
+function pct(num: number, den: number): number | null {
+  if (den <= 0) return null;
+  return Math.round((num / den) * 1000) / 10;
+}
+
+function kpiResult(
+  kpi_id: string,
+  label: string,
+  value: number | null,
+  unit: "percent" | "count",
+  numerator: number,
+  denominator: number,
+  eligible: number,
+  status: AuditKpiResult["status"],
+  formula: string,
+  tooltip?: string,
+): AuditKpiResult {
+  const coverage = eligible > 0 ? pct(denominator, eligible) : null;
+  return {
+    kpi_id,
+    label,
+    value,
+    unit,
+    status,
+    numerator,
+    denominator,
+    coverage_percent: coverage,
+    coverage_numerator: denominator,
+    coverage_denominator: eligible,
+    excluded_count: Math.max(0, eligible - denominator),
+    formula,
+    formula_version: "audit-kpi-v1-client",
+    scope: "client_recompute",
+    tooltip: tooltip ?? "",
+    warnings: [],
+  };
+}
+
+function inventoryByKey(result: ScanResult): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const item of result.inventory ?? []) {
+    const key =
+      String(item.match_key ?? "").trim().toLowerCase() ||
+      `${String(item.brand ?? "").trim().toLowerCase()}|${String(item.name ?? item.product ?? "").trim().toLowerCase()}`;
+    if (!key) continue;
+    map.set(key, (map.get(key) ?? 0) + (Number(item.facings) || Number(item.quantity) || 1));
+  }
+  return map;
+}
+
+function computeOsa(rows: PlanogramRow[], inv: Map<string, number>): AuditKpiResult {
+  const eligible = rows.length;
+  if (!eligible) {
+    return kpiResult("osa", "On-Shelf Availability (OSA)", null, "percent", 0, 0, 0, "not_configured", "(available / assessed) × 100");
+  }
+  let available = 0;
+  for (const row of rows) {
+    const qty = inv.get(matchKey(row)) ?? 0;
+    if (qty > 0) available += 1;
+  }
+  const assessed = eligible;
+  return kpiResult(
+    "osa",
+    "On-Shelf Availability (OSA)",
+    pct(available, assessed),
+    "percent",
+    available,
+    assessed,
+    eligible,
+    assessed < eligible ? "partial" : "complete",
+    "(Listed SKUs visibly available / Listed SKUs assessed) × 100",
+    "Listed SKUs in planogram scope.",
+  );
+}
+
+function computePlanogram(rows: PlanogramRow[], summary: Record<string, unknown>): AuditKpiResult {
+  if (!rows.length) {
+    return kpiResult("planogram_compliance", "Planogram Compliance", null, "percent", 0, 0, 0, "not_configured", "(positions passing / assessed) × 100");
+  }
+  const expected = Number(summary.expected_sku_count ?? summary.expected ?? rows.length) || rows.length;
+  const missing = Number(summary.missing ?? 0);
+  const wrong = Number(summary.wrong_product ?? 0);
+  const passing = Math.max(0, expected - missing - wrong);
+  const assessed = expected;
+  return kpiResult(
+    "planogram_compliance",
+    "Planogram Compliance",
+    pct(passing, assessed),
+    "percent",
+    passing,
+    assessed,
+    assessed,
+    "complete",
+    "(Positions passing layout checks / Required positions assessed) × 100",
+  );
+}
+
+function computeAssortment(
+  assortmentSkus: string[],
+  rows: PlanogramRow[],
+  inv: Map<string, number>,
+): AuditKpiResult {
+  const skus = assortmentSkus.length
+    ? assortmentSkus
+    : rows.map((r) => String(r.sku || matchKey(r))).filter(Boolean);
+  if (!skus.length) {
+    return kpiResult("assortment_compliance", "Assortment Compliance", null, "percent", 0, 0, 0, "not_configured", "(present / assessed) × 100");
+  }
+  let present = 0;
+  for (const sku of skus) {
+    const row = rows.find((r) => String(r.sku) === sku || matchKey(r) === sku.toLowerCase());
+    const key = row ? matchKey(row) : sku.toLowerCase();
+    if ((inv.get(key) ?? 0) > 0) present += 1;
+  }
+  return kpiResult(
+    "assortment_compliance",
+    "Assortment Compliance",
+    pct(present, skus.length),
+    "percent",
+    present,
+    skus.length,
+    skus.length,
+    "complete",
+    "(Required assortment SKUs visibly present / assessed) × 100",
+  );
+}
+
+function computeMsl(mslSkus: string[], rows: PlanogramRow[], inv: Map<string, number>): AuditKpiResult {
+  if (!mslSkus.length) {
+    return kpiResult("msl_compliance", "Must-Stock List (MSL) Compliance", null, "percent", 0, 0, 0, "not_configured", "(present / assessed) × 100");
+  }
+  let present = 0;
+  for (const sku of mslSkus) {
+    const row = rows.find((r) => String(r.sku) === sku);
+    const key = row ? matchKey(row) : sku.toLowerCase();
+    if ((inv.get(key) ?? 0) > 0) present += 1;
+  }
+  return kpiResult(
+    "msl_compliance",
+    "Must-Stock List (MSL) Compliance",
+    pct(present, mslSkus.length),
+    "percent",
+    present,
+    mslSkus.length,
+    mslSkus.length,
+    "complete",
+    "(Required MSL SKUs visibly present / assessed) × 100",
+  );
+}
+
+function computePrice(rows: PlanogramRow[]): AuditKpiResult {
+  const withPrice = rows.filter((r) => r.mrp_inr != null && Number.isFinite(Number(r.mrp_inr)));
+  if (!withPrice.length) {
+    return kpiResult("price_compliance", "Price Compliance", null, "percent", 0, 0, 0, "not_configured", "(labels passing / assessed) × 100");
+  }
+  return kpiResult(
+    "price_compliance",
+    "Price Compliance",
+    null,
+    "percent",
+    0,
+    withPrice.length,
+    withPrice.length,
+    "not_assessable",
+    "(Required price-label positions meeting requirements / assessed) × 100",
+    "Price requirements configured; label OCR evidence not re-run on client.",
+  );
+}
+
+function computePromo(promoCount: number): AuditKpiResult {
+  if (promoCount <= 0) {
+    return kpiResult("promotional_compliance", "Promotional Compliance", null, "percent", 0, 0, 0, "not_applicable", "(promotions passing / assessed) × 100");
+  }
+  return kpiResult(
+    "promotional_compliance",
+    "Promotional Compliance",
+    null,
+    "percent",
+    0,
+    promoCount,
+    promoCount,
+    "not_assessable",
+    "(Active promotions passing visual checks / assessed) × 100",
+  );
+}
+
+function computeLocation(rows: PlanogramRow[]): AuditKpiResult {
+  const withPos = rows.filter((r) => String(r.shelf_position ?? "").trim());
+  if (!withPos.length) {
+    return kpiResult("location_accuracy", "Location Accuracy", null, "percent", 0, 0, 0, "not_configured", "(correct locations / assessed) × 100");
+  }
+  return kpiResult(
+    "location_accuracy",
+    "Location Accuracy",
+    null,
+    "percent",
+    0,
+    withPos.length,
+    withPos.length,
+    "not_assessable",
+    "(Occupied locations with approved SKUs / assessed) × 100",
+    "Requires planogram comparison lines from backend.",
+  );
+}
+
+function computeFacing(rows: PlanogramRow[], inv: Map<string, number>, brand?: string): AuditKpiResult {
+  const scoped = brand
+    ? rows.filter((r) => String(r.brand ?? "").toLowerCase() === brand.toLowerCase())
+    : rows;
+  if (!scoped.some((r) => r.expected_facings != null || r.expected_qty)) {
+    return kpiResult("facing_count", "Facing Count", null, "count", 0, 0, 0, "not_configured", "Sum of visible front facings");
+  }
+  let actual = 0;
+  let planned = 0;
+  for (const row of scoped) {
+    actual += inv.get(matchKey(row)) ?? 0;
+    planned += Number(row.expected_facings ?? row.expected_qty ?? 0);
+  }
+  return kpiResult(
+    "facing_count",
+    "Facing Count",
+    actual,
+    "count",
+    actual,
+    planned || scoped.length,
+    scoped.length,
+    "complete",
+    "Sum of visible front facings for assessed SKUs",
+    planned ? `Planned ${planned} facings` : undefined,
+  );
+}
+
+function computeSos(result: ScanResult, brand?: string): AuditKpiResult {
+  const share = result.summary?.brand_share_percent;
+  if (!brand || share == null) {
+    return kpiResult("share_of_shelf", "Share of Shelf (SOS)", null, "percent", 0, 0, 0, "not_configured", "(brand linear / category linear) × 100");
+  }
+  return kpiResult(
+    "share_of_shelf",
+    "Share of Shelf (SOS)",
+    share,
+    "percent",
+    Math.round(share),
+    100,
+    100,
+    "partial",
+    "(Brand occupied linear shelf space / category total) × 100",
+    "bbox_width_proxy unless geometry calibrated",
+  );
+}
+
+function computeRoleDashboard(result: ScanResult, roleId: string): AuditKpiDashboard {
+  const profile = getRoleProfile(roleId);
+  const rows = planogramRowsFromResult(result);
+  const summary = (result.planogram?.summary ?? {}) as Record<string, unknown>;
+  const inv = inventoryByKey(result);
+  const pkg = autoPopulateAuditPackage(rows);
+  const assortmentSkus = pkg.assortment_skus.map((a) => a.sku);
+  const mslSkus = pkg.msl_skus.map((m) => m.sku);
+
+  const calculators: Record<string, () => AuditKpiResult> = {
+    osa: () => computeOsa(rows, inv),
+    planogram_compliance: () => computePlanogram(rows, summary),
+    assortment_compliance: () => computeAssortment(assortmentSkus, rows, inv),
+    price_compliance: () => computePrice(rows),
+    promotional_compliance: () => computePromo(pkg.promotions.length),
+    location_accuracy: () => computeLocation(rows),
+    facing_count: () => computeFacing(rows, inv, roleId === "fmcg" ? pkg.primary_brand : undefined),
+    share_of_shelf: () => computeSos(result, pkg.primary_brand),
+    msl_compliance: () => computeMsl(mslSkus, rows, inv),
+  };
+
+  const primary_kpis = profile.primary_kpis.map((def) => {
+    const calc = calculators[def.kpi_id];
+    const kpi = calc ? calc() : kpiResult(def.kpi_id, def.label, null, "percent", 0, 0, 0, "not_configured", "");
+    return { ...kpi, label: def.label, tooltip: def.tooltip };
+  });
+
+  return {
+    role_id: profile.role_id,
+    role_label: profile.label,
+    introduction: profile.introduction,
+    primary_kpis,
+    kpi_count: primary_kpis.length,
+    formula_version: "audit-kpi-v1-client",
+    readiness: [],
+  };
+}
+
+/** Recompute all five role dashboards from scan inventory + planogram rows. */
+export function computeClientAuditDashboards(result?: ScanResult | null): Partial<Record<string, AuditKpiDashboard>> {
+  if (!result) return {};
+  const roles = ["supermarket", "darkstore", "fmcg", "distributor", "local"] as const;
+  const out: Partial<Record<string, AuditKpiDashboard>> = {};
+  for (const role of roles) {
+    out[role] = computeRoleDashboard(result, role);
+  }
+  return out;
+}
+
+export function clientDashboardForRole(result?: ScanResult | null, role?: string | null): AuditKpiDashboard | undefined {
+  if (!result) return undefined;
+  const roleKey = normalizeRoleId(role);
+  return computeRoleDashboard(result, roleKey);
+}
