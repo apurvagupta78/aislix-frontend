@@ -48,6 +48,7 @@ import {
   wizardStepsForRole,
   type PlanogramWizardStepId,
 } from "@/lib/planogram-wizard-config";
+import { timezoneSelectOptions } from "@/lib/account";
 import { defaultAuditRoleTab, roleTabLabel, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { roleRequiresPricing } from "@/lib/role-planogram-requirements";
 import type { ScanContextState } from "@/lib/scan-context";
@@ -258,17 +259,26 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Store timezone *</Label>
-                  <Input
-                    className="h-9 rounded-lg"
-                    placeholder="Asia/Kolkata"
+                  <Select
                     value={auditPackage.store_timezone ?? "Asia/Kolkata"}
-                    onChange={(e) =>
+                    onValueChange={(v) =>
                       patch({
                         ...value,
-                        auditPackage: { ...auditPackage, store_timezone: e.target.value },
+                        auditPackage: { ...auditPackage, store_timezone: v },
                       })
                     }
-                  />
+                  >
+                    <SelectTrigger className="h-9 rounded-lg">
+                      <SelectValue placeholder="Select timezone" />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {timezoneSelectOptions(auditPackage.store_timezone).map((tz) => (
+                        <SelectItem key={tz} value={tz}>
+                          {tz.replace(/_/g, " ")}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Measurement unit *</Label>

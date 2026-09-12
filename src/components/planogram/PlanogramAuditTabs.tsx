@@ -10,6 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { timezoneSelectOptions } from "@/lib/account";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlanogramBuilder } from "@/components/planogram/PlanogramBuilder";
 import { PlanogramPackageCsvImport } from "@/components/planogram/PlanogramPackageCsvImport";
@@ -121,12 +129,21 @@ export function PlanogramAuditTabs({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Store timezone</Label>
-            <Input
-              className="rounded-xl"
-              placeholder="Asia/Kolkata"
-              value={auditPackage.store_timezone ?? ""}
-              onChange={(e) => patch({ store_timezone: e.target.value })}
-            />
+            <Select
+              value={auditPackage.store_timezone || "Asia/Kolkata"}
+              onValueChange={(v) => patch({ store_timezone: v })}
+            >
+              <SelectTrigger className="rounded-xl">
+                <SelectValue placeholder="Select timezone" />
+              </SelectTrigger>
+              <SelectContent className="max-h-72">
+                {timezoneSelectOptions(auditPackage.store_timezone).map((tz) => (
+                  <SelectItem key={tz} value={tz}>
+                    {tz.replace(/_/g, " ")}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs">Primary brand (SOS / FMCG)</Label>

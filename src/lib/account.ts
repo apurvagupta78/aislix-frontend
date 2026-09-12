@@ -687,16 +687,46 @@ export const countryOptions = [
   "Australia",
   "Germany",
 ];
-export const timezoneOptions = [
+const FALLBACK_TIMEZONE_OPTIONS = [
+  "UTC",
   "Asia/Kolkata",
   "Asia/Dubai",
   "Asia/Singapore",
+  "Asia/Tokyo",
+  "Asia/Shanghai",
   "Europe/London",
   "Europe/Berlin",
+  "Europe/Paris",
   "America/New_York",
+  "America/Chicago",
+  "America/Denver",
   "America/Los_Angeles",
-  "UTC",
+  "America/Bogota",
+  "America/Sao_Paulo",
+  "Australia/Sydney",
+  "Pacific/Auckland",
 ];
+
+function buildTimezoneOptions(): string[] {
+  try {
+    if (typeof Intl !== "undefined" && "supportedValuesOf" in Intl) {
+      return [...Intl.supportedValuesOf("timeZone")].sort((a, b) => a.localeCompare(b));
+    }
+  } catch {
+    /* fall through to curated list */
+  }
+  return FALLBACK_TIMEZONE_OPTIONS;
+}
+
+/** Full IANA timezone list (browser-supported) for profile, store, and planogram forms. */
+export const timezoneOptions = buildTimezoneOptions();
+
+/** Ensures a saved/custom timezone remains selectable even if not in the cached list. */
+export function timezoneSelectOptions(current?: string | null): string[] {
+  const tz = current?.trim();
+  if (!tz || timezoneOptions.includes(tz)) return timezoneOptions;
+  return [tz, ...timezoneOptions];
+}
 
 export function formatDateTime(iso?: string | null): string {
   if (!iso) return "—";
