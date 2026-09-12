@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { ArrowRight, Camera, ClipboardList, ImagePlus, Info, Sparkles } from "lucide-react";
+import { ArrowRight, Camera, Check, ClipboardList, ImagePlus, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,6 @@ import type { ShelfCategory } from "@/lib/categories.data";
 import {
   buildDemoOralCareScanContext,
   DEMO_ORAL_CARE_META,
-  DEMO_ORAL_CARE_PLANNED_FACINGS,
   DEMO_ORAL_CARE_ROWS,
   DEMO_PLANOGRAM_LABEL,
 } from "@/lib/demo-oral-care-planogram";
@@ -24,14 +23,11 @@ import { EMPTY_AUDIT_PACKAGE } from "@/lib/planogram-audit-package";
 import { homepageCustomAuditBlockReason } from "@/lib/planogram-wizard-homepage-readiness";
 import {
   getBrowserTimezone,
-  HOMEPAGE_DEMO_ASSORTMENT_STATUS,
-  HOMEPAGE_DEMO_LAYOUT_STATUS,
-  HOMEPAGE_DEMO_PRICES_STATUS,
-  HOMEPAGE_DEMO_PROMOTIONS_STATUS,
-  HOMEPAGE_DEMO_SCORING_STATUS,
+  HOMEPAGE_DEMO_READY_CARD,
+  HOMEPAGE_DEMO_READY_CHECKLIST,
+  HOMEPAGE_FREE_AUDIT_INTRO,
   HOMEPAGE_NO_PLANOGRAM_PRICES,
   HOMEPAGE_NO_PLANOGRAM_PROMOTIONS,
-  HOMEPAGE_DEMO_PRODUCTS_STATUS,
   HOMEPAGE_NO_PLANOGRAM_ASSORTMENT,
   HOMEPAGE_NO_PLANOGRAM_LAYOUT,
   HOMEPAGE_NO_PLANOGRAM_PRODUCTS,
@@ -290,8 +286,7 @@ export function DemoScanSetupPanel({
             Tell Aislix What You&apos;re Auditing.
           </h3>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            Choose the type of shelf you want to analyse. Aislix will use the sample shelf and its
-            demo reference data to show you how a real retail audit works.
+            {HOMEPAGE_FREE_AUDIT_INTRO}
           </p>
         </div>
       ) : (
@@ -446,10 +441,10 @@ export function DemoScanSetupPanel({
             <div className="flex-1">
               {homepageIntro ? (
                 <>
-                  <p className="text-sm font-semibold text-foreground">Demo Shelf Setup</p>
+                  <p className="text-sm font-semibold text-foreground">{HOMEPAGE_DEMO_READY_CARD.title}</p>
                   <p className="text-xs text-foreground/90">Oral Care · Main Gondola</p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Pre-configured demo reference ready
+                    {HOMEPAGE_DEMO_READY_CARD.subtitle}
                   </p>
                 </>
               ) : (
@@ -468,41 +463,40 @@ export function DemoScanSetupPanel({
               )}
             </div>
           </div>
-          <div className="space-y-2 p-4 text-xs text-muted-foreground">
+          <div className="space-y-3 p-4">
             {homepageIntro ? (
               <>
-                <p className="font-medium text-brand">{HOMEPAGE_DEMO_PRODUCTS_STATUS.title}</p>
-                <p className="font-medium text-foreground">
-                  {HOMEPAGE_DEMO_PRODUCTS_STATUS.summary(
+                <p className="text-sm font-medium text-foreground">
+                  {HOMEPAGE_DEMO_READY_CARD.summary(
                     DEMO_PRODUCT_COUNT,
                     DEMO_ORAL_CARE_META.shelf_count ?? 5,
                     DEMO_ORAL_CARE_ROWS.length,
                   )}
                 </p>
-                <p className="mt-2 font-medium text-brand">{HOMEPAGE_DEMO_LAYOUT_STATUS.title}</p>
-                <p className="font-medium text-foreground">
-                  {HOMEPAGE_DEMO_LAYOUT_STATUS.summary(
-                    DEMO_ORAL_CARE_ROWS.length,
-                    DEMO_ORAL_CARE_PLANNED_FACINGS,
-                  )}
+                <ul className="grid gap-2 sm:grid-cols-2">
+                  {HOMEPAGE_DEMO_READY_CHECKLIST.map((item) => (
+                    <li key={item} className="flex items-center gap-2 text-sm text-foreground">
+                      <Check className="size-4 shrink-0 text-success" aria-hidden />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-sm text-muted-foreground">{HOMEPAGE_DEMO_READY_CARD.ctaHint}</p>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  {HOMEPAGE_DEMO_READY_CARD.disclosure}
                 </p>
-                <p className="mt-2 font-medium text-brand">{HOMEPAGE_DEMO_ASSORTMENT_STATUS.title}</p>
-                <p className="mt-2 font-medium text-brand">{HOMEPAGE_DEMO_PRICES_STATUS.title}</p>
-                <p className="mt-2 font-medium text-brand">{HOMEPAGE_DEMO_PROMOTIONS_STATUS.title}</p>
-                <p className="mt-2 font-medium text-brand">{HOMEPAGE_DEMO_SCORING_STATUS.title}</p>
               </>
             ) : (
-              <p>
-                <span className="font-medium text-foreground">18 demo SKUs</span> ·{" "}
-                {DEMO_ORAL_CARE_ROWS.length} positions · 87 planned facings · 5 shelves
-              </p>
+              <>
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">18 demo SKUs</span> ·{" "}
+                  {DEMO_ORAL_CARE_ROWS.length} positions · 87 planned facings · 5 shelves
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  Fictional demo reference data — not verified from the photograph.
+                </p>
+              </>
             )}
-            <p className="flex items-start gap-1.5 rounded-md border border-border/80 bg-muted/30 px-3 py-2">
-              <Info className="mt-0.5 size-3.5 shrink-0 text-brand" />
-              {homepageIntro
-                ? HOMEPAGE_DEMO_PRODUCTS_STATUS.note
-                : "Fictional demo reference data — not verified from the photograph."}
-            </p>
           </div>
         </div>
       ) : null}
@@ -633,7 +627,8 @@ export function DemoScanSetupPanel({
           >
             {homepageIntro ? (
               <>
-                Start Audit <ArrowRight className="size-4" />
+                {showDemoPlanogram ? "Start AI Audit" : "Start Audit"}{" "}
+                <ArrowRight className="size-4" />
               </>
             ) : (
               <>

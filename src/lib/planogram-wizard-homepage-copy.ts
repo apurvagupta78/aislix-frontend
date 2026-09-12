@@ -91,6 +91,27 @@ export const HOMEPAGE_PRODUCT_FIELD_HELP = {
   shelfPosition: "Where should this product appear?",
 } as const;
 
+export const HOMEPAGE_FREE_AUDIT_INTRO =
+  "Choose the type of shelf you want to analyse. For this free demo, Aislix has already prepared the shelf setup, products and audit rules for you.";
+
+export const HOMEPAGE_DEMO_READY_CARD = {
+  title: "Your Demo Shelf Is Ready",
+  subtitle: "Everything is pre-configured for this demo.",
+  summary: (productCount: number, shelfCount: number, positionCount: number) =>
+    `${productCount} products · ${shelfCount} shelves · ${positionCount} shelf positions`,
+  ctaHint: "Just start the AI audit to see what Aislix finds.",
+  disclosure: "Demo data · Reference information is fictional and created for this sample audit.",
+} as const;
+
+export const HOMEPAGE_DEMO_READY_CHECKLIST = [
+  "Products",
+  "Shelf layout",
+  "Required products",
+  "Prices",
+  "Promotions",
+  "Audit targets",
+] as const;
+
 export const HOMEPAGE_DEMO_PRODUCTS_STATUS = {
   title: "Demo shelf setup loaded",
   summary: (productCount: number, shelfCount: number, positionCount: number) =>
