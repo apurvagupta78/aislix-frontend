@@ -9,12 +9,15 @@ import {
 } from "@/components/scan-results/ResultParts";
 import {
   ActionCenterPanel,
+  CompetitorIntelPanel,
   ExecutionAuditHeader,
   ExecutionKpiStripPanel,
   FinancialImpactPanel,
   RecommendedActionsPanel,
 } from "@/components/scan-results/ExecutionPhase1";
+import { DemoBrandProductAnalysis } from "@/components/scan-results/DemoBrandProductAnalysis";
 import { KpiVisualChartsPanel } from "@/components/scan-results/KpiVisualCharts";
+import { isDemoOralCareResult } from "@/lib/demo-oral-care-planogram";
 import { PlanogramSideBySidePanel } from "@/components/scan-results/PlanogramSideBySidePanel";
 import { RoleTabSwitcher } from "@/components/scan-results/RoleTabSwitcher";
 import { FixRescanCtaPanel } from "@/components/scan-results/RetailIntelligencePanels";
@@ -158,6 +161,13 @@ function SectionBlock({
 
     case "kpi_charts":
       return <KpiVisualChartsPanel data={data} role={activeRole} loading={loading} />;
+
+    case "competitor_analysis":
+      return isDemoOralCareResult(data) || demoMode ? (
+        <DemoBrandProductAnalysis data={data} loading={loading} />
+      ) : (
+        <CompetitorIntelPanel snapshot={data.competitor_intel} loading={loading} />
+      );
 
     case "annotated_image":
       return (

@@ -387,12 +387,26 @@ export function auditKpiDashboardForRole(
   role?: CustomerType | string | null,
 ): AuditKpiDashboard | undefined {
   const roleKey = normalizeRoleId(role);
+  const isDemo =
+    result?.retail_intelligence?.demo_oral_care === true ||
+    (result?.planogram?.summary as { source?: string } | undefined)?.source === "demo_planogram";
   const multi = result?.retail_intelligence?.audit_kpi_dashboards;
+  if (isDemo && multi?.[roleKey]) return multi[roleKey];
   if (multi?.[roleKey] && dashboardHasValues(multi[roleKey])) return multi[roleKey];
   const single = auditKpiDashboardFromResult(result);
   if (single && single.role_id === roleKey && dashboardHasValues(single)) return single;
   if (result && (planogramRowsFromResult(result).length || (result.inventory?.length ?? 0) > 0)) {
-    return clientDashboardForRole(result, roleKey);
+    const rows = planogramRowsFromResult(result);
+    return clientDashboardForRole(
+      result,
+      roleKey,
+      result.retail_intelligence?.audit_package as import("@/lib/planogram-audit-package").PlanogramAuditPackage,
+      {
+        auditRole: roleKey as import("@/lib/role-audit-ui").AuditRoleTab,
+        planogramRows: rows,
+        planogramMeta: { is_demo: isDemo, name: "Demo", store_outlet: "", category: "", valid_from: "", measurement_unit: "cm" },
+      },
+    );
   }
   return single ?? clientDashboardForRole(result, roleKey);
 }

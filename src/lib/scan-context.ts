@@ -12,9 +12,11 @@ import {
 } from "@/lib/demo-planogram-match";
 import {
   compareDemoOralCarePlanogram,
+  DEMO_ORAL_CARE_COMPETITOR_BRANDS,
   demoPriceComplianceLines,
   demoPromotionalCompliance,
   isDemoOralCareContext,
+  isDemoOralCareResult,
 } from "@/lib/demo-oral-care-planogram";
 import {
   annotateCompetitorCategories,
@@ -443,9 +445,11 @@ export function buildDemoCompetitorIntel(
   const auditSubCategory = auditSubCategoryLabel(ctx, audit);
 
   const firstPlanogramRow = ctx.planogramRows[0];
-  const knownCompetitors = firstPlanogramRow
-    ? knownCompetitorsForPlanogramRow(firstPlanogramRow)
-    : [];
+  const knownCompetitors = isDemoOralCareContext(ctx)
+    ? DEMO_ORAL_CARE_COMPETITOR_BRANDS
+    : firstPlanogramRow
+      ? knownCompetitorsForPlanogramRow(firstPlanogramRow)
+      : [];
   const competitorNames = new Set<string>(knownCompetitors);
   for (const row of shares) {
     if (!brandsMatch(row.brand, primary) && !isUnclassifiedBrand(row.brand)) {
@@ -994,21 +998,36 @@ function backendDashboardsHaveValues(result: ScanResult): boolean {
 
 /** Client-side KPI dashboards from planogram rows + inventory when backend payload is missing. */
 function attachAuditKpiDashboards(result: ScanResult, ctx: ScanContextState): ScanResult {
-  if (backendDashboardsHaveValues(result)) return result;
-  const planogramRows = effectivePlanogramRows(ctx, {
-    category: result.scan_category,
-    subCategory: result.scan_sub_category,
-  });
+  const demoMode = isDemoOralCareContext(ctx) || isDemoOralCareResult(result);
+  const planogramRows =
+    effectivePlanogramRows(ctx, {
+      category: result.scan_category,
+      subCategory: result.scan_sub_category,
+    }).length > 0
+      ? effectivePlanogramRows(ctx, {
+          category: result.scan_category,
+          subCategory: result.scan_sub_category,
+        })
+      : ((result.planogram?.summary as { configured_rows?: PlanogramRow[] } | undefined)
+          ?.configured_rows ?? []);
   const hasInputs = planogramRows.length > 0 || (result.inventory?.length ?? 0) > 0;
   if (!hasInputs) return result;
 
+  if (!demoMode && backendDashboardsHaveValues(result)) return result;
+
   const role = ctx.auditRole ?? "supermarket";
-  const auditPackage = autoPopulateAuditPackage(planogramRows, ctx.auditPackage ?? EMPTY_AUDIT_PACKAGE);
+  const auditPackage = autoPopulateAuditPackage(
+    planogramRows,
+    ctx.auditPackage ??
+      (result.retail_intelligence?.audit_package as PlanogramAuditPackage | undefined) ??
+      EMPTY_AUDIT_PACKAGE,
+  );
   const dashboards = computeClientAuditDashboards(result, auditPackage, ctx);
   return {
     ...result,
     retail_intelligence: {
       ...(result.retail_intelligence ?? {}),
+      demo_oral_care: demoMode || undefined,
       audit_kpi_dashboards: dashboards,
       audit_kpi_dashboard: dashboards[role],
       audit_package: auditPackage,
@@ -1026,7 +1045,26 @@ export function enrichDemoScanResult(result: ScanResult, ctx: ScanContextState):
       existing?.brand?.trim() &&
       existing?.executive?.trim(),
   );
-  if (hasFullRoleSummaries) return attachAuditKpiDashboards(applied, ctx);
+  if (hasFullRoleSummaries) {
+    const demoPatch = isDemoOralCareContext(ctx)
+      ? {
+          ...applied,
+          competitor_intel:
+            buildDemoCompetitorIntel(applied.inventory ?? [], ctx, {
+              subCategory: result.scan_sub_category,
+              category: result.scan_category,
+            }) ?? applied.competitor_intel,
+          charts: {
+            ...applied.charts,
+            top_brands:
+              filteredBrandShare(applied.inventory ?? [], {}).length > 0
+                ? filteredBrandShare(applied.inventory ?? [], {})
+                : applied.charts?.top_brands,
+          },
+        }
+      : applied;
+    return attachAuditKpiDashboards(demoPatch, ctx);
+  }
 
   const fullInventory = result.inventory ?? [];
   const planogramRows = effectivePlanogramRows(ctx, {

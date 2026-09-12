@@ -9,6 +9,7 @@ import {
   demoPriceComplianceLines,
   demoPromotionalCompliance,
   isDemoOralCareContext,
+  isDemoOralCareResult,
 } from "@/lib/demo-oral-care-planogram";
 import { autoPopulateAuditPackage, type PlanogramAuditPackage } from "@/lib/planogram-audit-package";
 import type { PlanogramRow } from "@/lib/planogram";
@@ -393,12 +394,16 @@ function computeRoleDashboard(
   result: ScanResult,
   roleId: string,
   auditPackage?: PlanogramAuditPackage,
-  ctx?: ScanContextState,
+  ctx?: ScanContextState | ClientDashboardContext,
 ): AuditKpiDashboard {
   const profile = getRoleProfile(roleId);
-  const rows = planogramRowsFromResult(result);
+  const rows = ctx?.planogramRows?.length
+    ? ctx.planogramRows
+    : planogramRowsFromResult(result);
   const summary = (result.planogram?.summary ?? {}) as Record<string, unknown>;
-  const demoMode = ctx ? isDemoOralCareContext(ctx) : false;
+  const demoMode = ctx
+    ? isDemoOralCareContext(ctx as ScanContextState) || isDemoOralCareResult(result)
+    : isDemoOralCareResult(result);
   const inv = inventoryByKey(result, rows, demoMode);
   const pkg = autoPopulateAuditPackage(rows, auditPackage ?? {});
   const assortmentSkus = pkg.assortment_skus.filter((a) => !a.optional).map((a) => a.sku);
@@ -448,13 +453,18 @@ export function computeClientAuditDashboards(
   return out;
 }
 
+export type ClientDashboardContext = Pick<
+  ScanContextState,
+  "auditRole" | "planogramRows" | "planogramMeta" | "auditPackage"
+>;
+
 export function clientDashboardForRole(
   result?: ScanResult | null,
   role?: string | null,
   auditPackage?: PlanogramAuditPackage,
-  ctx?: ScanContextState,
+  ctx?: ClientDashboardContext | ScanContextState,
 ): AuditKpiDashboard | undefined {
   if (!result) return undefined;
   const roleKey = normalizeRoleId(role);
-  return computeRoleDashboard(result, roleKey, auditPackage, ctx);
+  return computeRoleDashboard(result, roleKey, auditPackage, ctx as ScanContextState);
 }

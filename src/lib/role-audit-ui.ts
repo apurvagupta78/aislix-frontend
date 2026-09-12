@@ -22,6 +22,7 @@ export type RoleAuditSectionKey =
   | "role_intro"
   | "kpi_cards"
   | "kpi_charts"
+  | "competitor_analysis"
   | "annotated_image"
   | "planogram_side_by_side"
   | "financial_impact"
@@ -36,6 +37,7 @@ export const ROLE_AUDIT_SECTIONS: RoleAuditSectionKey[] = [
   "role_intro",
   "kpi_cards",
   "kpi_charts",
+  "competitor_analysis",
   "annotated_image",
   "planogram_side_by_side",
   "financial_impact",

@@ -253,6 +253,25 @@ export function isDemoOralCareContext(ctx: ScanContextState): boolean {
   );
 }
 
+export function isDemoOralCareResult(result?: {
+  planogram?: { summary?: { source?: string } };
+  retail_intelligence?: { demo_oral_care?: boolean };
+} | null): boolean {
+  if (!result) return false;
+  if (result.retail_intelligence?.demo_oral_care) return true;
+  return result.planogram?.summary?.source === "demo_planogram";
+}
+
+/** Demo competitor brands from planogram (Odol, Doctor, Oral-B, etc.). */
+export const DEMO_ORAL_CARE_COMPETITOR_BRANDS = [
+  "Odol",
+  "Doctor",
+  "Oral-B",
+  "Sensodyne",
+  "Closeup",
+  "Kolynos",
+];
+
 export function buildDemoOralCareScanContext(role: AuditRoleTab = "supermarket"): ScanContextState {
   return {
     focus: { brand: "Colgate", company: "Colgate" },
@@ -302,6 +321,8 @@ export function demoObservedPriceBySku(): Map<string, number> {
   return map;
 }
 
+const DEMO_PRICE_MISMATCH_SKUS = new Set(["SKU-COL-001", "SKU-CLU-001"]);
+
 export function demoPriceComplianceLines(): Array<{
   sku: string;
   product: string;
@@ -309,31 +330,26 @@ export function demoPriceComplianceLines(): Array<{
   observed_price: number;
   status: "compliant" | "mismatch";
 }> {
-  const observed = demoObservedPriceBySku();
   const unique = new Map<string, PlanogramRow>();
   for (const row of DEMO_ORAL_CARE_ROWS) {
     if (!unique.has(row.sku)) unique.set(row.sku, row);
   }
-  const lines: Array<{
-    sku: string;
-    product: string;
-    expected_price: number;
-    observed_price: number;
-    status: "compliant" | "mismatch";
-  }> = [];
-  for (const [sku, row] of unique) {
+  const assessed = [...unique.values()].slice(0, 10);
+  return assessed.map((row) => {
     const expected = row.mrp_inr ?? 0;
-    const obs = observed.get(sku);
-    if (obs == null) continue;
-    lines.push({
-      sku,
+    const observed = DEMO_PRICE_MISMATCH_SKUS.has(row.sku)
+      ? row.sku === "SKU-COL-001"
+        ? 3.99
+        : 3.29
+      : expected;
+    return {
+      sku: row.sku,
       product: `${row.brand} ${row.product_name}`,
       expected_price: expected,
-      observed_price: obs,
-      status: Math.abs(expected - obs) < 0.01 ? "compliant" : "mismatch",
-    });
-  }
-  return lines;
+      observed_price: observed,
+      status: Math.abs(expected - observed) < 0.01 ? "compliant" : "mismatch",
+    };
+  });
 }
 
 /** Planogram match using configured demo observations (not hard-coded KPI values). */

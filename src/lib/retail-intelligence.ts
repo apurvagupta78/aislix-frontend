@@ -204,6 +204,9 @@ export type RetailIntelligencePayload = {
   audit_kpi_dashboard?: AuditKpiDashboard;
   /** All five customer-role dashboards for tab switching. */
   audit_kpi_dashboards?: Partial<Record<string, AuditKpiDashboard>>;
+  /** Homepage demo oral-care fixture — client KPIs override backend zeros. */
+  demo_oral_care?: boolean;
+  audit_package?: Record<string, unknown>;
 };
 
 export const ROLE_HERO: Record<ResultViewMode, string> = {

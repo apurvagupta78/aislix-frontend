@@ -5,6 +5,7 @@
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/States";
+import { demoPriceComplianceLines } from "@/lib/demo-oral-care-planogram";
 import { buildRoleKpiMetrics, type KpiMetric } from "@/lib/execution-metrics";
 import {
   KPI_CHART_KIND,
@@ -17,7 +18,44 @@ import type { AuditKpiId } from "@/lib/role-kpi-config";
 import type { ScanResult } from "@/lib/scan-results";
 import { cn } from "@/lib/utils";
 
+function RadialGaugeChart({ kpi, target = 90 }: { kpi: KpiMetric; target?: number }) {
+  const pct = Math.min(100, Math.max(0, kpi.numeric ?? 0));
+  const pass = pct >= target * 0.85;
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div className="relative size-28">
+        <svg viewBox="0 0 36 36" className="size-full -rotate-90">
+          <circle cx="18" cy="18" r="15.5" fill="none" className="stroke-muted" strokeWidth="3" />
+          <circle
+            cx="18"
+            cy="18"
+            r="15.5"
+            fill="none"
+            className={pass ? "stroke-brand" : "stroke-amber-500"}
+            strokeWidth="3"
+            strokeDasharray={`${pct} ${100 - pct}`}
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-lg font-bold tabular-nums text-brand">{kpi.value}</span>
+        </div>
+      </div>
+      <p className="text-center text-xs font-medium text-foreground">{kpi.label}</p>
+      <p className="text-center text-[0.65rem] text-muted-foreground">
+        Target {target}%
+        {kpi.numerator != null && kpi.denominator != null
+          ? ` · ${kpi.numerator}/${kpi.denominator}`
+          : ""}
+      </p>
+    </div>
+  );
+}
+
 function ProgressBarChart({ kpi }: { kpi: KpiMetric }) {
+  if (kpi.numeric != null && kpi.unit !== "count") {
+    return <RadialGaugeChart kpi={kpi} />;
+  }
   const pct = kpi.numeric ?? 0;
   const target = 90;
   return (
@@ -41,14 +79,48 @@ function ProgressBarChart({ kpi }: { kpi: KpiMetric }) {
         <span>{kpi.value}</span>
         {kpi.coverage_label ? <span>{kpi.coverage_label}</span> : null}
       </div>
-      {kpi.formula ? (
-        <p className="text-[0.65rem] text-muted-foreground">
-          {kpi.formula}
-          {kpi.numerator != null && kpi.denominator != null
-            ? ` · ${kpi.numerator}/${kpi.denominator}`
-            : ""}
-        </p>
-      ) : null}
+    </div>
+  );
+}
+
+function PriceComplianceBars({ kpi }: { kpi: KpiMetric }) {
+  const lines = demoPriceComplianceLines();
+  if (!lines.length) return <ProgressBarChart kpi={kpi} />;
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium text-foreground">{kpi.label}</p>
+        <Badge variant="outline" className="tabular-nums text-[10px]">
+          {kpi.value}
+        </Badge>
+      </div>
+      {lines.slice(0, 5).map((line) => (
+        <div key={line.sku} className="space-y-1">
+          <div className="flex justify-between text-[0.65rem]">
+            <span className="truncate pr-2 text-muted-foreground">{line.product}</span>
+            <span
+              className={cn(
+                "shrink-0 font-medium tabular-nums",
+                line.status === "compliant" ? "text-emerald-600" : "text-destructive",
+              )}
+            >
+              ${line.observed_price.toFixed(2)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-[0.6rem] text-muted-foreground">
+            <span>Expected ${line.expected_price.toFixed(2)}</span>
+            {line.status !== "compliant" ? (
+              <Badge variant="destructive" className="h-4 px-1 text-[9px]">
+                Mismatch
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="h-4 px-1 text-[9px]">
+                OK
+              </Badge>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -89,25 +161,25 @@ function ChecklistChart({ kpi, role }: { kpi: KpiMetric; role: AuditRoleTab }) {
 }
 
 function HeatmapChart({ kpi }: { kpi: KpiMetric }) {
-  const cells = 12;
+  const total = Math.max(kpi.denominator ?? 20, 1);
   const passCount = kpi.numerator ?? 0;
-  const total = kpi.denominator ?? cells;
+  const cols = total <= 12 ? 4 : 5;
   return (
     <div className="space-y-2">
       <p className="text-xs font-medium text-foreground">{kpi.label}</p>
-      <div className="grid grid-cols-4 gap-1 sm:grid-cols-6">
-        {Array.from({ length: Math.min(cells, total || cells) }, (_, i) => {
+      <div className={cn("grid gap-1", cols === 5 ? "grid-cols-5" : "grid-cols-4")}>
+        {Array.from({ length: total }, (_, i) => {
           const ok = i < passCount;
           return (
             <div
               key={i}
               className={cn(
-                "aspect-square rounded-md border text-[0.55rem] font-medium flex items-center justify-center",
+                "aspect-square rounded-md border text-[0.5rem] font-medium flex items-center justify-center",
                 ok
-                  ? "border-success/30 bg-success/15 text-success"
-                  : "border-destructive/30 bg-destructive/10 text-destructive",
+                  ? "border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                  : "border-destructive/40 bg-destructive/15 text-destructive",
               )}
-              title={ok ? "Pass" : "Fail"}
+              title={ok ? "Pass" : "Issue"}
             >
               {i + 1}
             </div>
@@ -126,7 +198,7 @@ function StackedPromoChart({ kpi }: { kpi: KpiMetric }) {
   const pass = kpi.numerator ?? 0;
   const total = kpi.denominator ?? 0;
   const fail = Math.max(0, total - pass);
-  const na = kpi.audit_status === "not_assessable" ? 1 : 0;
+  const na = kpi.audit_status === "not_assessable" && kpi.numeric == null ? 1 : 0;
   if (kpi.audit_status === "not_applicable") {
     return (
       <div className="rounded-lg border border-border bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
@@ -283,7 +355,11 @@ function ChartForKpi({
   }
   switch (kind) {
     case "progress_bar":
-      return <ProgressBarChart kpi={kpi} />;
+      return kpiId === "price_compliance" && kpi.numeric != null ? (
+        <PriceComplianceBars kpi={kpi} />
+      ) : (
+        <ProgressBarChart kpi={kpi} />
+      );
     case "checklist":
       return <ChecklistChart kpi={kpi} role={role} />;
     case "heatmap":
@@ -318,13 +394,20 @@ export function KpiVisualChartsPanel({
       <p className="mt-1 text-xs text-muted-foreground">
         Charts for {roleTabLabel(role)} audit metrics — values from deterministic formulas, not AI estimates.
       </p>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {ids.map((id) => {
           const kpi = kpiById[id];
           if (!kpi) return null;
           const kind = KPI_CHART_KIND[id];
+          const wide = id === "planogram_compliance" || id === "share_of_shelf";
           return (
-            <div key={id} className="rounded-xl border border-brand/15 bg-brand-soft/20 p-4">
+            <div
+              key={id}
+              className={cn(
+                "rounded-xl border border-brand/15 bg-gradient-to-br from-brand-soft/30 to-background p-4 shadow-sm",
+                wide && "sm:col-span-2 xl:col-span-1",
+              )}
+            >
               {loading ? (
                 <Skeleton className="h-24 w-full" />
               ) : (
