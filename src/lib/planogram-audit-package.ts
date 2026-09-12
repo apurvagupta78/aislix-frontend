@@ -1,5 +1,6 @@
 /** Planogram audit package — assortment, MSL, prices, promotions, scoring targets. */
 
+import { ASSORTMENT_CSV_TEMPLATE } from "@/lib/planogram-assortment-template";
 import type { DraftRow, PlanogramRow } from "@/lib/planogram";
 import { downloadBlob } from "@/lib/scan-results";
 
@@ -198,7 +199,7 @@ const API_BASE = () =>
 
 export async function fetchPackageCsvTemplate(kind: "assortment" | "prices" | "promotions"): Promise<string> {
   const local: Record<string, string> = {
-    assortment: "sku,list_type,outlet_scope,valid_from,valid_to,substitution_allowed\nCOL-001,mandatory_assortment,all,2026-01-01,2026-12-31,false\n",
+    assortment: `${ASSORTMENT_CSV_TEMPLATE}\n`,
     prices: "sku,label_location,expected_price,currency,price_basis,valid_from,valid_to\nCOL-001,shelf_tag,99,INR,item,2026-01-01,2026-12-31\n",
     promotions:
       'promotion_id,participating_skus,start_date,end_date,required_location,expected_offer_text,expected_promo_price,required_facings\nPROMO-01,"COL-001|COL-002",2026-03-01,2026-03-31,S1,Buy 2 Save 10%,89,4\n',

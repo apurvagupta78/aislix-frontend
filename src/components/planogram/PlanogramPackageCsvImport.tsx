@@ -8,6 +8,12 @@ import { Download, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  ASSORTMENT_CSV_HEADERS,
+  ASSORTMENT_CSV_LIST_TYPE_NOTE,
+  ASSORTMENT_CSV_OPTIONAL_LABEL,
+  ASSORTMENT_CSV_REQUIRED_LABEL,
+} from "@/lib/planogram-assortment-template";
 import { fetchPackageCsvTemplate, parsePackageCsv } from "@/lib/planogram-audit-package";
 
 export type PackageCsvKind = "assortment" | "prices" | "promotions";
@@ -19,6 +25,7 @@ export function PlanogramPackageCsvImport({
   description,
   templateButtonLabel = "Template",
   uploadButtonLabel = "Upload CSV",
+  showAssortmentColumnGuide = false,
 }: {
   label: string;
   kind: PackageCsvKind;
@@ -26,6 +33,7 @@ export function PlanogramPackageCsvImport({
   description?: string;
   templateButtonLabel?: string;
   uploadButtonLabel?: string;
+  showAssortmentColumnGuide?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -108,6 +116,22 @@ export function PlanogramPackageCsvImport({
           e.target.value = "";
         }}
       />
+      {showAssortmentColumnGuide && kind === "assortment" ? (
+        <div className="mt-3 space-y-2 text-xs leading-relaxed text-muted-foreground">
+          <p>
+            <span className="font-medium text-foreground">Required: </span>
+            {ASSORTMENT_CSV_REQUIRED_LABEL}
+          </p>
+          <p>
+            <span className="font-medium text-foreground">Optional: </span>
+            {ASSORTMENT_CSV_OPTIONAL_LABEL}
+          </p>
+          <p className="text-[11px]">{ASSORTMENT_CSV_LIST_TYPE_NOTE}</p>
+          <pre className="overflow-x-auto rounded-md border border-border bg-background/80 p-2 text-[10px] leading-relaxed">
+            {ASSORTMENT_CSV_HEADERS}
+          </pre>
+        </div>
+      ) : null}
       {errors.length > 0 && (
         <Alert variant="destructive" className="mt-3">
           <AlertDescription className="text-xs">{errors.join(" · ")}</AlertDescription>

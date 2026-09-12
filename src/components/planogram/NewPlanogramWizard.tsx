@@ -28,6 +28,10 @@ import { RoleTabSwitcher } from "@/components/scan-results/RoleTabSwitcher";
 import type { ShelfCategory } from "@/lib/categories.data";
 import { toDraftRow, type DraftRow, type PlanogramRow } from "@/lib/planogram";
 import {
+  ASSORTMENT_CSV_OPTIONAL_LABEL,
+  ASSORTMENT_CSV_REQUIRED_LABEL,
+} from "@/lib/planogram-assortment-template";
+import {
   autoPopulateAuditPackage,
   computeReadiness,
   EMPTY_AUDIT_PACKAGE,
@@ -857,12 +861,13 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                 description={
                   homepageIntro
                     ? HOMEPAGE_ASSORTMENT_CSV.supporting
-                    : "Columns: sku, list_type (mandatory_assortment | msl | optional), outlet_scope, valid_from, valid_to"
+                    : `Required: ${ASSORTMENT_CSV_REQUIRED_LABEL}. Optional: ${ASSORTMENT_CSV_OPTIONAL_LABEL}.`
                 }
                 templateButtonLabel={
                   homepageIntro ? HOMEPAGE_ASSORTMENT_CSV.templateButton : undefined
                 }
                 uploadButtonLabel={homepageIntro ? HOMEPAGE_ASSORTMENT_CSV.uploadButton : undefined}
+                showAssortmentColumnGuide={homepageIntro}
                 onImport={(imported) => {
                   const entries = imported as AssortmentEntry[];
                   const split = splitAssortmentRows(entries);

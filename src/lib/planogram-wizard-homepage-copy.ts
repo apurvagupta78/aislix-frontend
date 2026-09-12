@@ -163,7 +163,7 @@ export const HOMEPAGE_ASSORTMENT_FIELD_HELP = {
 
 export const HOMEPAGE_ASSORTMENT_CSV = {
   label: "Add Many Products at Once",
-  supporting: "Upload a CSV when you have a larger product list.",
+  supporting: "Upload a CSV when you have a larger product list. Columns match the manual form above.",
   templateButton: "Download Template",
   uploadButton: "Upload CSV",
 } as const;
