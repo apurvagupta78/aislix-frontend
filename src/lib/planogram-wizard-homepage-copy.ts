@@ -99,7 +99,7 @@ export const HOMEPAGE_DEMO_READY_CARD = {
   subtitle: "Everything is pre-configured for this demo.",
   summary: (productCount: number, shelfCount: number, positionCount: number) =>
     `${productCount} products · ${shelfCount} shelves · ${positionCount} shelf positions`,
-  ctaHint: "Just start the AI audit to see what Aislix finds.",
+  ctaHint: "Just start the audit to see what Aislix finds.",
   disclosure: "Demo data · Reference information is fictional and created for this sample audit.",
 } as const;
 

@@ -627,8 +627,7 @@ export function DemoScanSetupPanel({
           >
             {homepageIntro ? (
               <>
-                {showDemoPlanogram ? "Start AI Audit" : "Start Audit"}{" "}
-                <ArrowRight className="size-4" />
+                Start Audit <ArrowRight className="size-4" />
               </>
             ) : (
               <>
