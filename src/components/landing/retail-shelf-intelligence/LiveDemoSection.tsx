@@ -216,6 +216,7 @@ export function LiveDemoSection({
     setupMode && (phase === "idle" || phase === "error") ? (
       <DemoScanSetupPanel
         mode={setupMode}
+        homepageIntro={homepageIntro}
         state={demoCategory.state}
         onChange={demoCategory.setState}
         categories={demoCategory.categories}

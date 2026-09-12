@@ -71,11 +71,13 @@ export function DemoCategoryPicker({
   onChange,
   categories,
   disabled = false,
+  helperText = "Tell AI what type of shelf you're auditing",
 }: {
   state: DemoCategoryState;
   onChange: (next: DemoCategoryState) => void;
   categories: ShelfCategory[];
   disabled?: boolean;
+  helperText?: string;
 }) {
   const category = categories.find((item) => item.name === state.categoryName);
   const subcategories = category?.subcategories ?? [];
@@ -138,9 +140,7 @@ export function DemoCategoryPicker({
         />
       )}
 
-      <p className="mt-2 text-center text-xs text-muted-foreground">
-        Tell AI what type of shelf you're auditing
-      </p>
+      <p className="mt-2 text-center text-xs text-muted-foreground">{helperText}</p>
     </div>
   );
 }

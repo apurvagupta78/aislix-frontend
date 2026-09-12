@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Camera, ClipboardList, ImagePlus, Info, Sparkles } from "lucide-react";
+import { ArrowRight, Camera, ClipboardList, ImagePlus, Info, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,11 +20,56 @@ import {
 } from "@/lib/demo-oral-care-planogram";
 import { EMPTY_PLANOGRAM_META } from "@/lib/planogram-meta";
 import type { ScanContextState } from "@/lib/scan-context";
+import { cn } from "@/lib/utils";
 
 export type DemoPlanogramMode = "demo" | "custom" | "none";
 
+const DEMO_PRODUCT_COUNT = new Set(DEMO_ORAL_CARE_ROWS.map((row) => row.sku)).size;
+
+const HOMEPAGE_SAMPLE_OPTIONS: Array<{
+  mode: DemoPlanogramMode;
+  label: string;
+  detail: string;
+  recommended?: boolean;
+}> = [
+  {
+    mode: "demo",
+    label: "Use Demo Setup",
+    detail: "Recommended for the free demo.",
+    recommended: true,
+  },
+  {
+    mode: "custom",
+    label: "Use My Planogram",
+    detail: "Compare the shelf against your own planogram.",
+  },
+  {
+    mode: "none",
+    label: "Audit Without Planogram",
+    detail: "Analyse the visible shelf without an expected layout.",
+  },
+];
+
+const HOMEPAGE_UPLOAD_OPTIONS: Array<{
+  mode: DemoPlanogramMode;
+  label: string;
+  detail: string;
+}> = [
+  {
+    mode: "custom",
+    label: "Use My Planogram",
+    detail: "Compare the shelf against your own planogram.",
+  },
+  {
+    mode: "none",
+    label: "Audit Without Planogram",
+    detail: "Analyse the visible shelf without an expected layout.",
+  },
+];
+
 type DemoScanSetupPanelProps = {
   mode: "sample" | "upload";
+  homepageIntro?: boolean;
   state: DemoCategoryState;
   onChange: (next: DemoCategoryState) => void;
   categories: ShelfCategory[];
@@ -44,8 +89,49 @@ type DemoScanSetupPanelProps = {
   onTakeMobilePhoto?: () => void;
 };
 
+function HomepagePlanogramOption({
+  label,
+  detail,
+  selected,
+  recommended,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  detail: string;
+  selected: boolean;
+  recommended?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "rounded-xl border p-3 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+        selected
+          ? "border-brand bg-brand-soft/50 shadow-sm"
+          : "border-border bg-card hover:border-brand/30",
+      )}
+    >
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-sm font-semibold text-foreground">{label}</span>
+        {recommended ? (
+          <Badge variant="secondary" className="text-[10px] font-medium">
+            Recommended
+          </Badge>
+        ) : null}
+      </div>
+      <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{detail}</p>
+    </button>
+  );
+}
+
 export function DemoScanSetupPanel({
   mode,
+  homepageIntro = false,
   state,
   onChange,
   categories,
@@ -118,7 +204,11 @@ export function DemoScanSetupPanel({
   function handleStart() {
     setStartError(null);
     if (mode === "upload" && !hasPhoto) {
-      setStartError("Add a shelf photo before scanning.");
+      setStartError(
+        homepageIntro
+          ? "Add a shelf photo before starting the audit."
+          : "Add a shelf photo before scanning.",
+      );
       return;
     }
     let next: ScanContextState;
@@ -135,20 +225,59 @@ export function DemoScanSetupPanel({
 
   return (
     <div className="py-4 sm:py-6">
-      <p className="mx-auto mb-5 max-w-lg text-center text-sm text-muted-foreground">
-        {mode === "sample"
-          ? "Pick shelf category and role, then scan the sample photo. A pre-built demo planogram loads automatically."
-          : "Pick shelf category, optionally upload your planogram CSV, add a shelf photo, then start the scan."}
-      </p>
+      {homepageIntro ? (
+        <div className="mx-auto mb-5 max-w-lg text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+            SET UP YOUR FREE AI AUDIT
+          </p>
+          <h3 className="mt-3 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+            Tell Aislix What You&apos;re Auditing.
+          </h3>
+          <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+            Choose the type of shelf you want to analyse. Aislix will use the sample shelf and its
+            demo reference data to show you how a real retail audit works.
+          </p>
+        </div>
+      ) : (
+        <p className="mx-auto mb-5 max-w-lg text-center text-sm text-muted-foreground">
+          {mode === "sample"
+            ? "Pick shelf category and role, then scan the sample photo. A pre-built demo planogram loads automatically."
+            : "Pick shelf category, optionally upload your planogram CSV, add a shelf photo, then start the scan."}
+        </p>
+      )}
 
       <DemoCategoryPicker
         state={state}
         onChange={handleCategoryChange}
         categories={categories}
         disabled={disabled}
+        helperText={
+          homepageIntro
+            ? "This helps Aislix understand what it's looking at."
+            : undefined
+        }
       />
 
-      {mode === "sample" ? (
+      {homepageIntro ? (
+        <div
+          className={cn(
+            "mt-5 grid gap-2",
+            mode === "sample" ? "sm:grid-cols-3" : "sm:grid-cols-2",
+          )}
+        >
+          {(mode === "sample" ? HOMEPAGE_SAMPLE_OPTIONS : HOMEPAGE_UPLOAD_OPTIONS).map((option) => (
+            <HomepagePlanogramOption
+              key={option.mode}
+              label={option.label}
+              detail={option.detail}
+              recommended={"recommended" in option ? option.recommended : false}
+              selected={planogramMode === option.mode}
+              disabled={disabled}
+              onClick={() => setPlanogramMode(option.mode)}
+            />
+          ))}
+        </div>
+      ) : mode === "sample" ? (
         <div className="mt-5 flex flex-wrap justify-center gap-2">
           <Button
             type="button"
@@ -259,26 +388,47 @@ export function DemoScanSetupPanel({
           <div className="flex items-center gap-2 border-b border-brand/20 bg-brand/5 px-4 py-3">
             <ClipboardList className="size-4 text-brand" />
             <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-semibold text-foreground">{DEMO_ORAL_CARE_META.name}</p>
-                <Badge variant="secondary" className="text-[10px]">
-                  {DEMO_PLANOGRAM_LABEL}
-                </Badge>
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                {DEMO_ORAL_CARE_META.planogram_id} · {DEMO_ORAL_CARE_META.store_outlet} · Fixture{" "}
-                {DEMO_ORAL_CARE_META.fixture_id}
-              </p>
+              {homepageIntro ? (
+                <>
+                  <p className="text-sm font-semibold text-foreground">Demo Shelf Setup</p>
+                  <p className="text-xs text-foreground/90">Oral Care · Main Gondola</p>
+                  <p className="mt-0.5 text-[11px] text-muted-foreground">
+                    Pre-configured demo reference ready
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold text-foreground">{DEMO_ORAL_CARE_META.name}</p>
+                    <Badge variant="secondary" className="text-[10px]">
+                      {DEMO_PLANOGRAM_LABEL}
+                    </Badge>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {DEMO_ORAL_CARE_META.planogram_id} · {DEMO_ORAL_CARE_META.store_outlet} · Fixture{" "}
+                    {DEMO_ORAL_CARE_META.fixture_id}
+                  </p>
+                </>
+              )}
             </div>
           </div>
           <div className="space-y-2 p-4 text-xs text-muted-foreground">
-            <p>
-              <span className="font-medium text-foreground">18 demo SKUs</span> ·{" "}
-              {DEMO_ORAL_CARE_ROWS.length} positions · 87 planned facings · 5 shelves
-            </p>
+            {homepageIntro ? (
+              <p className="font-medium text-foreground">
+                {DEMO_PRODUCT_COUNT} products · {DEMO_ORAL_CARE_META.shelf_count ?? 5} shelves ·{" "}
+                {DEMO_ORAL_CARE_ROWS.length} shelf positions
+              </p>
+            ) : (
+              <p>
+                <span className="font-medium text-foreground">18 demo SKUs</span> ·{" "}
+                {DEMO_ORAL_CARE_ROWS.length} positions · 87 planned facings · 5 shelves
+              </p>
+            )}
             <p className="flex items-start gap-1.5 rounded-md border border-border/80 bg-muted/30 px-3 py-2">
               <Info className="mt-0.5 size-3.5 shrink-0 text-brand" />
-              Fictional demo reference data — not verified from the photograph.
+              {homepageIntro
+                ? "Demo data — fictional reference information, not verified from the photograph."
+                : "Fictional demo reference data — not verified from the photograph."}
             </p>
           </div>
         </div>
@@ -317,7 +467,9 @@ export function DemoScanSetupPanel({
 
       {mode === "upload" && ready && !hasPhoto ? (
         <p className="mt-3 text-center text-xs text-muted-foreground">
-          Upload or take a shelf photo to enable scanning.
+          {homepageIntro
+            ? "Upload or take a shelf photo to start the audit."
+            : "Upload or take a shelf photo to enable scanning."}
         </p>
       ) : null}
 
@@ -332,7 +484,15 @@ export function DemoScanSetupPanel({
           disabled={!canStart}
           onClick={handleStart}
         >
-          <Sparkles className="size-4" /> Start Scanning
+          {homepageIntro ? (
+            <>
+              Start AI Audit <ArrowRight className="size-4" />
+            </>
+          ) : (
+            <>
+              <Sparkles className="size-4" /> Start Scanning
+            </>
+          )}
         </Button>
       </div>
     </div>
