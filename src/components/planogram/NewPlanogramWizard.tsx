@@ -11,6 +11,7 @@ import {
   CircleDashed,
   FileJson,
   Loader2,
+  Minus,
   Pencil,
   Trash2,
   Upload,
@@ -114,9 +115,19 @@ import {
   HOMEPAGE_NO_PLANOGRAM_PRODUCTS,
   HOMEPAGE_PRODUCTS_TABLE_DESCRIPTION,
   HOMEPAGE_PRODUCTS_TABLE_TITLE,
+  HOMEPAGE_DEMO_READINESS_STATUS,
+  HOMEPAGE_NONE_READINESS_STATUS,
+  HOMEPAGE_READINESS_HEADLINE,
+  HOMEPAGE_READINESS_STATUS_LABELS,
+  HOMEPAGE_READINESS_SUMMARY_LABEL,
+  HOMEPAGE_READINESS_TRUST,
   HOMEPAGE_WIZARD_STEP_COPY,
   homepageRequiredProductTypeLabel,
 } from "@/lib/planogram-wizard-homepage-copy";
+import {
+  computeHomepageShelfChecks,
+  summarizeHomepageReadiness,
+} from "@/lib/planogram-wizard-homepage-readiness";
 import { defaultAuditRoleTab, roleTabLabel, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { roleRequiresPricing } from "@/lib/role-planogram-requirements";
 import type { ScanContextState } from "@/lib/scan-context";
@@ -140,6 +151,12 @@ type NewPlanogramWizardProps = {
   homepageIntro?: boolean;
   /** Homepage demo planogram mode — products step varies by mode */
   planogramMode?: "demo" | "custom" | "none";
+  onStepChange?: (stepId: PlanogramWizardStepId) => void;
+  homepageStartAudit?: {
+    disabled: boolean;
+    disabledReason?: string | null;
+    onStart: () => void;
+  };
 };
 
 function toDraftRows(rows: PlanogramRow[]): DraftRow[] {
@@ -176,6 +193,8 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
       className,
       homepageIntro = false,
       planogramMode = "custom",
+      onStepChange,
+      homepageStartAudit,
     },
     ref,
   ) {
@@ -198,6 +217,10 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
     useEffect(() => {
       setStepIndex((i) => Math.min(i, Math.max(steps.length - 1, 0)));
     }, [steps.length]);
+
+    useEffect(() => {
+      onStepChange?.(currentStep);
+    }, [currentStep, onStepChange]);
 
     const meta = useMemo(() => {
       const stored = value.planogramMeta ?? EMPTY_PLANOGRAM_META;
@@ -1423,7 +1446,122 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
           );
         }
 
-        case "readiness":
+        case "readiness": {
+          if (homepageIntro) {
+            const mode = planogramMode ?? "custom";
+            const shelfChecks = computeHomepageShelfChecks(
+              mode,
+              value.planogramRows,
+              auditPackage,
+            );
+            const summary = summarizeHomepageReadiness(mode, shelfChecks);
+            const blockReason = homepageStartAudit?.disabledReason;
+
+            return (
+              <div className="space-y-4">
+                {mode === "demo" ? (
+                  <div className="rounded-xl border border-brand/20 bg-brand-soft/20 p-4">
+                    <p className="font-medium text-brand">{HOMEPAGE_DEMO_READINESS_STATUS.title}</p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {HOMEPAGE_DEMO_READINESS_STATUS.description}
+                    </p>
+                  </div>
+                ) : mode === "none" ? (
+                  <div className="rounded-xl border border-border bg-muted/20 p-4">
+                    <p className="text-sm font-semibold text-foreground">
+                      {HOMEPAGE_NONE_READINESS_STATUS.title}
+                    </p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      {HOMEPAGE_NONE_READINESS_STATUS.description}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm font-semibold text-foreground">{HOMEPAGE_READINESS_HEADLINE}</p>
+                )}
+
+                <div className="rounded-xl border border-border bg-muted/20 px-4 py-3">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {HOMEPAGE_READINESS_SUMMARY_LABEL}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-foreground">{summary.summaryText}</p>
+                </div>
+
+                {mode !== "demo" ? (
+                  <ul className="grid gap-2 sm:grid-cols-2">
+                    {shelfChecks.map((check) => {
+                      const statusMeta = HOMEPAGE_READINESS_STATUS_LABELS[check.status];
+                      const isReady = check.status === "ready" || check.status === "ready_to_analyse";
+                      return (
+                        <li
+                          key={check.id}
+                          className={cn(
+                            "flex items-start gap-3 rounded-xl border px-3 py-3",
+                            isReady
+                              ? "border-success/30 bg-success/5"
+                              : check.status === "optional"
+                                ? "border-border bg-card"
+                                : check.status === "not_applicable" ||
+                                    check.status === "not_required"
+                                  ? "border-border/80 bg-muted/20"
+                                  : "border-border bg-muted/30",
+                          )}
+                        >
+                          {isReady ? (
+                            <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
+                          ) : check.status === "optional" ? (
+                            <Minus className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                          ) : (
+                            <CircleDashed className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="text-[11px] font-semibold tracking-wide text-foreground">
+                                {check.title}
+                              </p>
+                              <span
+                                className={cn(
+                                  "text-[11px] font-medium uppercase tracking-wide",
+                                  statusMeta?.className,
+                                )}
+                              >
+                                {statusMeta?.label}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                              {check.description}
+                            </p>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : null}
+
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  {HOMEPAGE_READINESS_TRUST}
+                </p>
+
+                {homepageStartAudit ? (
+                  <div className="space-y-2 pt-1">
+                    {homepageStartAudit.disabled && blockReason ? (
+                      <p className="text-xs font-medium text-destructive">{blockReason}</p>
+                    ) : null}
+                    <Button
+                      type="button"
+                      size="lg"
+                      variant="brand"
+                      className="w-full rounded-xl sm:w-auto"
+                      disabled={homepageStartAudit.disabled}
+                      onClick={homepageStartAudit.onStart}
+                    >
+                      Start AI Audit <ChevronRight className="size-4" />
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            );
+          }
+
           return (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
@@ -1459,6 +1597,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
               </p>
             </div>
           );
+        }
 
         default:
           return null;

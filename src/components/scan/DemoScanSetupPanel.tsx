@@ -21,6 +21,8 @@ import {
 } from "@/lib/demo-oral-care-planogram";
 import { EMPTY_PLANOGRAM_META } from "@/lib/planogram-meta";
 import { EMPTY_AUDIT_PACKAGE } from "@/lib/planogram-audit-package";
+import type { PlanogramWizardStepId } from "@/lib/planogram-wizard-config";
+import { homepageCustomAuditBlockReason } from "@/lib/planogram-wizard-homepage-readiness";
 import {
   getBrowserTimezone,
   HOMEPAGE_DEMO_ASSORTMENT_STATUS,
@@ -168,6 +170,7 @@ export function DemoScanSetupPanel({
 }: DemoScanSetupPanelProps) {
   const wizardRef = useRef<NewPlanogramWizardHandle>(null);
   const [startError, setStartError] = useState<string | null>(null);
+  const [wizardStepId, setWizardStepId] = useState<PlanogramWizardStepId>("basics");
   const [internalMode, setInternalMode] = useState<DemoPlanogramMode>(
     mode === "sample" ? "demo" : "none",
   );
@@ -244,7 +247,16 @@ export function DemoScanSetupPanel({
   const showDemoPlanogram = mode === "sample" && planogramMode === "demo";
   const showWizard = planogramMode === "custom";
   const uploadReady = mode === "upload" ? ready && hasPhoto : ready;
-  const canStart = uploadReady && !disabled;
+  const auditBlockReason = homepageIntro
+    ? homepageCustomAuditBlockReason(
+        planogramMode,
+        scanContext.planogramRows,
+        mode === "upload",
+        hasPhoto,
+      )
+    : null;
+  const canStart = uploadReady && !disabled && !auditBlockReason;
+  const hideBottomStartButton = homepageIntro && showWizard && wizardStepId !== "readiness";
 
   function handleStart() {
     setStartError(null);
@@ -575,6 +587,16 @@ export function DemoScanSetupPanel({
               defaultCategory={defaultCategory}
               defaultSubCategory={defaultSubCategory}
               defaultLocation="A-1"
+              onStepChange={setWizardStepId}
+              homepageStartAudit={
+                homepageIntro
+                  ? {
+                      disabled: !canStart,
+                      disabledReason: auditBlockReason ?? startError,
+                      onStart: handleStart,
+                    }
+                  : undefined
+              }
             />
           </div>
         </div>
@@ -598,24 +620,31 @@ export function DemoScanSetupPanel({
         <p className="mt-3 text-center text-xs font-medium text-destructive">{startError}</p>
       ) : null}
 
-      <div className="mt-6 flex justify-center">
-        <Button
-          size="xl"
-          className="min-h-11 w-full bg-brand sm:w-auto"
-          disabled={!canStart}
-          onClick={handleStart}
-        >
-          {homepageIntro ? (
-            <>
-              Start Audit <ArrowRight className="size-4" />
-            </>
-          ) : (
-            <>
-              <Sparkles className="size-4" /> Start Scanning
-            </>
-          )}
-        </Button>
-      </div>
+      {!hideBottomStartButton ? (
+        <div className="mt-6 flex flex-col items-center gap-2">
+          {homepageIntro && auditBlockReason ? (
+            <p className="max-w-md text-center text-xs font-medium text-destructive">
+              {auditBlockReason}
+            </p>
+          ) : null}
+          <Button
+            size="xl"
+            className="min-h-11 w-full bg-brand sm:w-auto"
+            disabled={!canStart}
+            onClick={handleStart}
+          >
+            {homepageIntro ? (
+              <>
+                Start AI Audit <ArrowRight className="size-4" />
+              </>
+            ) : (
+              <>
+                <Sparkles className="size-4" /> Start Scanning
+              </>
+            )}
+          </Button>
+        </div>
+      ) : null}
     </div>
   );
 }

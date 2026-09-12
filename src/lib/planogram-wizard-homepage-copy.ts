@@ -62,7 +62,8 @@ export const HOMEPAGE_WIZARD_STEP_COPY: Record<
   },
   readiness: {
     label: "Ready to Audit",
-    description: "Review what is ready before you run the AI audit.",
+    description:
+      "Aislix checks that it has the information needed to run your audit. Review what's ready and what's still missing before you begin.",
   },
 };
 
@@ -271,6 +272,64 @@ export const HOMEPAGE_SCORING_TARGET_FIELDS = [
 ] as const;
 
 /** Targets that need planogram/reference setup — hidden or read-only in audit-without-planogram mode. */
+export const HOMEPAGE_READINESS_HEADLINE = "Your Audit Is Almost Ready";
+
+export const HOMEPAGE_READINESS_TRUST =
+  "Missing optional information will simply disable the related check. Aislix will never invent a result.";
+
+export const HOMEPAGE_READINESS_SUMMARY_LABEL = "Audit readiness";
+
+export const HOMEPAGE_DEMO_READINESS_STATUS = {
+  title: "Your Demo Is Ready",
+  description: "All required demo data is already configured. Start the AI audit to see Aislix in action.",
+} as const;
+
+export const HOMEPAGE_NONE_READINESS_STATUS = {
+  title: "Your Photo Is Ready for Analysis",
+  description:
+    "Aislix will analyse what is visible in the shelf image. Checks that require an expected shelf setup will not be scored.",
+} as const;
+
+export const HOMEPAGE_READINESS_CHECKS = [
+  {
+    id: "products" as const,
+    title: "PRODUCTS",
+    description: "Products added to this shelf setup.",
+  },
+  {
+    id: "shelf_layout" as const,
+    title: "SHELF LAYOUT",
+    description: "Product positions and expected facings.",
+  },
+  {
+    id: "required_products" as const,
+    title: "REQUIRED PRODUCTS",
+    description: "Products that must be present.",
+  },
+  {
+    id: "prices" as const,
+    title: "PRICES",
+    description: "Expected shelf prices.",
+  },
+  {
+    id: "promotions" as const,
+    title: "PROMOTIONS",
+    description: "Active promotions that should be visible.",
+  },
+] as const;
+
+export const HOMEPAGE_READINESS_STATUS_LABELS: Record<
+  string,
+  { label: string; className: string }
+> = {
+  ready: { label: "Ready", className: "text-success" },
+  not_set: { label: "Not set", className: "text-muted-foreground" },
+  optional: { label: "Optional", className: "text-muted-foreground" },
+  not_required: { label: "Not required", className: "text-muted-foreground" },
+  not_applicable: { label: "Not applicable", className: "text-muted-foreground" },
+  ready_to_analyse: { label: "Ready to Analyse", className: "text-success" },
+};
+
 export const HOMEPAGE_SCORING_NONE_MODE_KEYS = new Set([
   "planogram_target",
   "assortment_target",
