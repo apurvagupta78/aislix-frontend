@@ -181,8 +181,9 @@ function Landing() {
             Turn One Shelf Photo Into Actionable Retail Intelligence.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Aislix uses AI to analyse your shelf photos, identify products, measure shelf
-            performance and instantly highlight what needs attention.
+            Aislix uses AI to analyse shelf photos, measure retail performance, highlight what
+            needs attention, and keep every store visit and audit in one searchable history — so
+            nothing gets lost in WhatsApp.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <Button
