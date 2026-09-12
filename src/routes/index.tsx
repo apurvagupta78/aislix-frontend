@@ -194,11 +194,11 @@ function Landing() {
                 document.querySelector("#live-dashboard")?.scrollIntoView({ behavior: "smooth" })
               }
             >
-              Start Scanning Free <ArrowRight className="size-4" />
+              Try Your First Audit Free <ArrowRight className="size-4" />
             </Button>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            No card required · 5 free scans per day · Results in 60–90 seconds
+            No card required · 5 free audits per day · Results in 60–90 seconds
           </p>
         </div>
       </section>
