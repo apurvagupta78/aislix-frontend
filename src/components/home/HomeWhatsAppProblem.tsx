@@ -30,12 +30,13 @@ export function HomeWhatsAppProblem() {
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <SectionHeading
           eyebrow="STOP LOSING SHELF AUDITS"
-          title="Stop Losing Shelf Audits in WhatsApp."
+          title="Stop Losing Shelf Audits in WhatsApp or Emails"
           subtitle="A shelf visit shouldn't end when the photo is shared."
         />
         <p className="mx-auto mt-4 max-w-2xl text-center text-sm leading-relaxed text-muted-foreground">
           Today, store visits often end with photos, messages and spreadsheets scattered across
-          WhatsApp groups. Aislix turns every shelf visit into a searchable retail record.
+          WhatsApp groups or multiple email threads. Aislix turns every shelf visit into a
+          searchable retail record.
         </p>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_auto_1fr] lg:items-stretch">
