@@ -106,12 +106,22 @@ export type CsvParseResult = {
 export const PLANOGRAM_MANAGER_ROLES = ["owner", "admin", "manager"] as const;
 
 import {
+  FACINGS_CSV_COLUMNS,
+  PLANOGRAM_CSV_OPTIONAL_LABEL,
+  PLANOGRAM_CSV_REQUIRED_LABEL,
   REQUIRED_CSV_COLUMNS,
   SAMPLE_CSV_HEADERS,
   SAMPLE_CSV_TEMPLATE,
 } from "@/lib/planogram-template";
 
-export { REQUIRED_CSV_COLUMNS, SAMPLE_CSV_HEADERS, SAMPLE_CSV_TEMPLATE };
+export {
+  FACINGS_CSV_COLUMNS,
+  PLANOGRAM_CSV_OPTIONAL_LABEL,
+  PLANOGRAM_CSV_REQUIRED_LABEL,
+  REQUIRED_CSV_COLUMNS,
+  SAMPLE_CSV_HEADERS,
+  SAMPLE_CSV_TEMPLATE,
+};
 
 let rowKeySeq = 0;
 export function nextRowKey(): string {
@@ -234,13 +244,21 @@ export async function fetchPlanogramCsvTemplate(): Promise<string> {
   }
 }
 
+function normalizeCsvHeaderCell(cell: string): string {
+  return cell.trim().toLowerCase().replace(/\s+/g, "_").replace(/-/g, "_");
+}
+
 /** Returns the first required CSV column missing from the header row, if any. */
 export function missingCsvColumn(csvText: string): string | null {
   const header = (csvText.split(/\r?\n/)[0] ?? "")
     .split(",")
-    .map((cell) => cell.trim().toLowerCase().replace(/\s+/g, "_"));
+    .map(normalizeCsvHeaderCell);
   for (const column of REQUIRED_CSV_COLUMNS) {
+    if (column === "product_name" && header.includes("product")) continue;
     if (!header.includes(column)) return column;
+  }
+  if (!FACINGS_CSV_COLUMNS.some((column) => header.includes(column))) {
+    return "expected_facings or expected_qty";
   }
   return null;
 }

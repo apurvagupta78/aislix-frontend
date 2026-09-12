@@ -43,6 +43,8 @@ import {
 } from "@/lib/display-currency";
 import type { ShelfCategory } from "@/lib/categories.data";
 import {
+  PLANOGRAM_CSV_OPTIONAL_LABEL,
+  PLANOGRAM_CSV_REQUIRED_LABEL,
   SAMPLE_CSV_HEADERS,
   emptyRow,
   fetchPlanogramCsvTemplate,
@@ -198,7 +200,7 @@ export function PlanogramBuilder({
         setCsvError(
           `CSV has ${result.error_count} error${result.error_count === 1 ? "" : "s"} and no valid rows.${
             details.length ? `\n• ${details.join("\n• ")}` : ""
-          }\nRequired columns: ${SAMPLE_CSV_HEADERS}.`,
+          }\nRequired: ${PLANOGRAM_CSV_REQUIRED_LABEL}.`,
         );
       } else if (result.errors.length) {
         setCsvError(`Some rows could not be read:\n• ${result.errors.slice(0, 5).join("\n• ")}`);
@@ -322,12 +324,20 @@ export function PlanogramBuilder({
               </span>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-xs text-muted-foreground">
-              Columns: {SAMPLE_CSV_HEADERS}. Required: location, category, sub_category, brand,
-              product_name, expected_facings (or legacy expected_qty). Optional: min/max facings, price,
-              avg_daily_sales, shelf_position.
-            </p>
+          <div className="space-y-2">
+            <div className="text-xs leading-relaxed text-muted-foreground">
+              <p>
+                <span className="font-medium text-foreground">Required: </span>
+                {PLANOGRAM_CSV_REQUIRED_LABEL}
+              </p>
+              <p className="mt-1">
+                <span className="font-medium text-foreground">Optional: </span>
+                {PLANOGRAM_CSV_OPTIONAL_LABEL}
+              </p>
+            </div>
+            <pre className="overflow-x-auto rounded-md border border-border bg-muted/30 p-2 text-[10px] leading-relaxed text-muted-foreground">
+              {SAMPLE_CSV_HEADERS}
+            </pre>
             <Button variant="outline" size="sm" className="rounded-xl" onClick={downloadTemplate}>
               <Download className="mr-2 size-4" /> CSV template
             </Button>
