@@ -121,6 +121,7 @@ import {
   HOMEPAGE_READINESS_SUMMARY_LABEL,
   HOMEPAGE_READINESS_TRUST,
   homepageRequiredProductTypeLabel,
+  HOMEPAGE_START_AUDIT_CTA,
 } from "@/lib/planogram-wizard-homepage-copy";
 import {
   computeHomepageShelfChecks,
@@ -1801,7 +1802,10 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                       disabled={homepageStartAudit.disabled}
                       onClick={homepageStartAudit.onStart}
                     >
-                      Start Audit <ChevronRight className="size-4" />
+                      <span className="inline-flex items-center gap-1.5">
+                        {HOMEPAGE_START_AUDIT_CTA}
+                        <ChevronRight className="size-4" aria-hidden />
+                      </span>
                     </Button>
                   </div>
                 ) : null}

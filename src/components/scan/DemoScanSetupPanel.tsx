@@ -46,6 +46,7 @@ import {
   HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM,
   HOMEPAGE_DISTRIBUTOR_SETUP,
   HOMEPAGE_SHELF_SETUP_FLOW,
+  HOMEPAGE_START_AUDIT_CTA,
 } from "@/lib/planogram-wizard-homepage-copy";
 import { HOMEPAGE_DISTRIBUTOR_OUTLET } from "@/lib/planogram-wizard-homepage-role-flow";
 import { defaultAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
@@ -563,7 +564,7 @@ export function DemoScanSetupPanel({
                   onClick={handleStart}
                 >
                   <span className="inline-flex items-center gap-1.5">
-                    {HOMEPAGE_DEMO_READY_CARD.cta}
+                    {HOMEPAGE_START_AUDIT_CTA}
                     <ArrowRight className="size-4" aria-hidden />
                   </span>
                 </Button>
@@ -668,7 +669,10 @@ export function DemoScanSetupPanel({
             disabled={!canStart}
             onClick={handleStart}
           >
-            {HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM.cta} <ArrowRight className="size-4" />
+            <span className="inline-flex items-center gap-1.5">
+              {HOMEPAGE_START_AUDIT_CTA}
+              <ArrowRight className="size-4" aria-hidden />
+            </span>
           </Button>
         </div>
       ) : null}
@@ -756,9 +760,10 @@ export function DemoScanSetupPanel({
             onClick={handleStart}
           >
             {homepageIntro ? (
-              <>
-                Start Audit <ArrowRight className="size-4" />
-              </>
+              <span className="inline-flex items-center gap-1.5">
+                {HOMEPAGE_START_AUDIT_CTA}
+                <ArrowRight className="size-4" aria-hidden />
+              </span>
             ) : (
               <>
                 <Sparkles className="size-4" /> Start Scanning

@@ -102,6 +102,9 @@ export const HOMEPAGE_PRODUCT_FIELD_HELP = {
   shelfPosition: "Where should this product appear?",
 } as const;
 
+/** Shared homepage primary action label — all modes and roles. */
+export const HOMEPAGE_START_AUDIT_CTA = "Start Audit" as const;
+
 export const HOMEPAGE_FREE_AUDIT_INTRO =
   "Choose the type of shelf you want to analyse. For this free demo, Aislix has already prepared the products, shelf layout and audit rules — so you can see how Aislix compares the real shelf with what should be there.";
 
@@ -122,8 +125,8 @@ export const HOMEPAGE_DEMO_READY_CARD = {
     detail: "Sample shelf photo",
   },
   comparisonResult: "Aislix finds the differences.",
-  ctaHint: "Start the AI audit to see how Aislix compares the shelf against the expected setup.",
-  cta: "Start AI Audit",
+  ctaHint: "Start the audit to see how Aislix compares the shelf against the expected setup.",
+  cta: HOMEPAGE_START_AUDIT_CTA,
   disclosure: "Demo data · Reference information is fictional and created for this sample audit.",
 } as const;
 
@@ -172,7 +175,7 @@ export const HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM = {
     "No planogram? No problem. Aislix will analyse what is visible in your shelf photo and show you the retail insights that can be measured from the image.",
   limitation:
     "No expected shelf setup is used, so checks that require a planogram or predefined product list won't be scored.",
-  cta: "Start Audit",
+  cta: HOMEPAGE_START_AUDIT_CTA,
   capabilities: [
     {
       id: "products_brands",
@@ -373,7 +376,7 @@ export const HOMEPAGE_READINESS_SUMMARY_LABEL = "Audit readiness";
 
 export const HOMEPAGE_DEMO_READINESS_STATUS = {
   title: "Your Demo Is Ready",
-  description: "All required demo data is already configured. Start the AI audit to see Aislix in action.",
+  description: "All required demo data is already configured. Start the audit to see Aislix in action.",
 } as const;
 
 export const HOMEPAGE_NONE_READINESS_STATUS = {
