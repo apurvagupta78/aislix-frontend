@@ -26,7 +26,9 @@ import {
   HOMEPAGE_DEMO_ASSORTMENT_STATUS,
   HOMEPAGE_DEMO_LAYOUT_STATUS,
   HOMEPAGE_DEMO_PRICES_STATUS,
+  HOMEPAGE_DEMO_PROMOTIONS_STATUS,
   HOMEPAGE_NO_PLANOGRAM_PRICES,
+  HOMEPAGE_NO_PLANOGRAM_PROMOTIONS,
   HOMEPAGE_DEMO_PRODUCTS_STATUS,
   HOMEPAGE_NO_PLANOGRAM_ASSORTMENT,
   HOMEPAGE_NO_PLANOGRAM_LAYOUT,
@@ -216,6 +218,7 @@ export function DemoScanSetupPanel({
                 assortment_skus: [],
                 msl_skus: [],
                 price_requirements: [],
+                promotions: [],
                 store_timezone: getBrowserTimezone(),
               },
             }
@@ -466,6 +469,7 @@ export function DemoScanSetupPanel({
                 </p>
                 <p className="mt-2 font-medium text-brand">{HOMEPAGE_DEMO_ASSORTMENT_STATUS.title}</p>
                 <p className="mt-2 font-medium text-brand">{HOMEPAGE_DEMO_PRICES_STATUS.title}</p>
+                <p className="mt-2 font-medium text-brand">{HOMEPAGE_DEMO_PROMOTIONS_STATUS.title}</p>
               </>
             ) : (
               <p>
@@ -506,6 +510,12 @@ export function DemoScanSetupPanel({
           </p>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             {HOMEPAGE_NO_PLANOGRAM_PRICES.description}
+          </p>
+          <p className="mt-4 text-sm font-semibold text-foreground">
+            {HOMEPAGE_NO_PLANOGRAM_PROMOTIONS.title}
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            {HOMEPAGE_NO_PLANOGRAM_PROMOTIONS.description}
           </p>
           <Button
             type="button"

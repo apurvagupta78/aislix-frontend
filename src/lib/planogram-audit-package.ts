@@ -2,6 +2,7 @@
 
 import { ASSORTMENT_CSV_TEMPLATE } from "@/lib/planogram-assortment-template";
 import { PRICE_CSV_TEMPLATE } from "@/lib/planogram-price-template";
+import { PROMOTION_CSV_TEMPLATE } from "@/lib/planogram-promotion-template";
 import type { DraftRow, PlanogramRow } from "@/lib/planogram";
 import { downloadBlob } from "@/lib/scan-results";
 
@@ -203,8 +204,7 @@ export async function fetchPackageCsvTemplate(kind: "assortment" | "prices" | "p
   const local: Record<string, string> = {
     assortment: `${ASSORTMENT_CSV_TEMPLATE}\n`,
     prices: `${PRICE_CSV_TEMPLATE}\n`,
-    promotions:
-      'promotion_id,participating_skus,start_date,end_date,required_location,expected_offer_text,expected_promo_price,required_facings\nPROMO-01,"COL-001|COL-002",2026-03-01,2026-03-31,S1,Buy 2 Save 10%,89,4\n',
+    promotions: `${PROMOTION_CSV_TEMPLATE}\n`,
   };
   const base = API_BASE();
   if (base) {

@@ -48,7 +48,8 @@ export const HOMEPAGE_WIZARD_STEP_COPY: Record<
   },
   promotions: {
     label: "Promotions",
-    description: "Add active promotions that should be visible on the shelf.",
+    description:
+      "Add any offers or promotions that should currently be visible on the shelf. Aislix will check the shelf photo against these requirements and flag anything that is missing or incorrect.",
   },
   role_settings: {
     label: "Role Settings",
@@ -201,6 +202,45 @@ export const HOMEPAGE_PRICE_FIELD_HELP = {
 export const HOMEPAGE_PRICES_CSV = {
   label: "Add Many Prices at Once",
   supporting: "Upload a CSV when you have a larger price list.",
+  templateButton: "Download Template",
+  uploadButton: "Upload CSV",
+} as const;
+
+export const HOMEPAGE_PROMOTIONS_HEADLINE = "Set Up Active Promotions";
+
+export const HOMEPAGE_PROMOTIONS_TAB_HELPER =
+  "Add promotions manually or upload a CSV for multiple promotions.";
+
+export const HOMEPAGE_PROMOTIONS_EMPTY = {
+  title: "No promotions added yet.",
+  description: "Add a promotion if this shelf should currently display an offer.",
+} as const;
+
+export const HOMEPAGE_DEMO_PROMOTIONS_STATUS = {
+  title: "Demo promotions are already configured.",
+  description: "The sample audit is ready to check promotional execution.",
+} as const;
+
+export const HOMEPAGE_NO_PLANOGRAM_PROMOTIONS = {
+  title: "No promotion setup required.",
+  description:
+    "Aislix will identify visible promotional signs and offers where they can be detected from the shelf photo.",
+} as const;
+
+export const HOMEPAGE_PROMOTION_FIELD_HELP = {
+  promotionName: "What is this promotion called?",
+  productsIncluded: "Which products are part of the promotion?",
+  startDate: "When does the promotion start?",
+  endDate: "When does it end?",
+  displayLocation: "Where should the promotion appear?",
+  offerText: "What offer should be shown?",
+  promotionalPrice: "What price should be displayed?",
+  requiredFacings: "How many front-facing units should be displayed?",
+} as const;
+
+export const HOMEPAGE_PROMOTIONS_CSV = {
+  label: "Add Multiple Promotions",
+  supporting: "Upload a CSV when you have several promotions to configure.",
   templateButton: "Download Template",
   uploadButton: "Upload CSV",
 } as const;

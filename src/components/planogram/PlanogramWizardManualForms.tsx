@@ -2,7 +2,7 @@
  * Manual entry forms for planogram audit package sections (assortment, prices, promotions).
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,7 @@ import {
 import {
   HOMEPAGE_ASSORTMENT_FIELD_HELP,
   HOMEPAGE_PRICE_FIELD_HELP,
+  HOMEPAGE_PROMOTION_FIELD_HELP,
   homepageRequiredProductTypeLabel,
 } from "@/lib/planogram-wizard-homepage-copy";
 
@@ -393,8 +394,8 @@ export function PriceManualForm({
   );
 }
 
-export function PromotionManualForm({ pkg, onPatch }: { pkg: PlanogramAuditPackage; onPatch: PatchFn }) {
-  const [draft, setDraft] = useState({
+function emptyPromotionDraft() {
+  return {
     promotion_id: "",
     participating_skus: "",
     start_date: "",
@@ -403,7 +404,42 @@ export function PromotionManualForm({ pkg, onPatch }: { pkg: PlanogramAuditPacka
     expected_offer_text: "",
     expected_promo_price: "",
     required_facings: "",
-  });
+  };
+}
+
+export function PromotionManualForm({
+  pkg,
+  onPatch,
+  simplifiedCopy = false,
+  seedDraft,
+  onSeedDraftApplied,
+}: {
+  pkg: PlanogramAuditPackage;
+  onPatch: PatchFn;
+  simplifiedCopy?: boolean;
+  seedDraft?: PromotionEntry | null;
+  onSeedDraftApplied?: () => void;
+}) {
+  const [draft, setDraft] = useState(emptyPromotionDraft);
+  const [editingPromotionId, setEditingPromotionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!seedDraft) return;
+    setEditingPromotionId(seedDraft.promotion_id);
+    setDraft({
+      promotion_id: seedDraft.promotion_id,
+      participating_skus: seedDraft.participating_skus.join(", "),
+      start_date: seedDraft.start_date ?? "",
+      end_date: seedDraft.end_date ?? "",
+      required_location: seedDraft.required_location ?? "",
+      expected_offer_text: seedDraft.expected_offer_text ?? "",
+      expected_promo_price:
+        seedDraft.expected_promo_price != null ? String(seedDraft.expected_promo_price) : "",
+      required_facings:
+        seedDraft.required_facings != null ? String(seedDraft.required_facings) : "",
+    });
+    onSeedDraftApplied?.();
+  }, [seedDraft, onSeedDraftApplied]);
 
   function addEntry() {
     if (!draft.promotion_id.trim()) return;
@@ -420,91 +456,141 @@ export function PromotionManualForm({ pkg, onPatch }: { pkg: PlanogramAuditPacka
       expected_promo_price: draft.expected_promo_price ? Number(draft.expected_promo_price) : null,
       required_facings: draft.required_facings ? Number(draft.required_facings) : null,
     };
-    onPatch({ promotions: [...pkg.promotions, entry] });
-    setDraft({
-      promotion_id: "",
-      participating_skus: "",
-      start_date: "",
-      end_date: "",
-      required_location: "",
-      expected_offer_text: "",
-      expected_promo_price: "",
-      required_facings: "",
-    });
+    const withoutEdited = editingPromotionId
+      ? pkg.promotions.filter((p) => p.promotion_id !== editingPromotionId)
+      : pkg.promotions;
+    onPatch({ promotions: [...withoutEdited, entry] });
+    setEditingPromotionId(null);
+    setDraft(emptyPromotionDraft());
+  }
+
+  function cancelEdit() {
+    setEditingPromotionId(null);
+    setDraft(emptyPromotionDraft());
   }
 
   return (
     <div className="space-y-4 rounded-xl border border-dashed border-border p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Add manually
+      <p
+        className={
+          simplifiedCopy
+            ? "text-sm font-medium text-foreground"
+            : "text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+        }
+      >
+        {simplifiedCopy ? "Add a Promotion" : "Add manually"}
       </p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-1.5">
-          <Label className="text-xs">Promotion ID *</Label>
+          <Label className="text-xs">{simplifiedCopy ? "Promotion Name *" : "Promotion ID *"}</Label>
           <Input
             className="h-9 rounded-lg text-sm"
             value={draft.promotion_id}
             onChange={(e) => setDraft({ ...draft, promotion_id: e.target.value })}
-            placeholder="PROMO-01"
+            placeholder={simplifiedCopy ? "e.g. Summer Sale" : "PROMO-01"}
           />
+          {simplifiedCopy ? (
+            <p className="text-[11px] text-muted-foreground">
+              {HOMEPAGE_PROMOTION_FIELD_HELP.promotionName}
+            </p>
+          ) : null}
         </div>
         <div className="space-y-1.5 sm:col-span-2">
-          <Label className="text-xs">Participating SKUs (comma-separated)</Label>
+          <Label className="text-xs">
+            {simplifiedCopy ? "Products Included" : "Participating SKUs (comma-separated)"}
+          </Label>
           <Input
             className="h-9 rounded-lg text-sm"
             value={draft.participating_skus}
             onChange={(e) => setDraft({ ...draft, participating_skus: e.target.value })}
-            placeholder="COL-001, COL-002"
+            placeholder={simplifiedCopy ? "e.g. COL-MAX-150, PEP-GER-150" : "COL-001, COL-002"}
           />
+          {simplifiedCopy ? (
+            <p className="text-[11px] text-muted-foreground">
+              {HOMEPAGE_PROMOTION_FIELD_HELP.productsIncluded}
+            </p>
+          ) : null}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Start date</Label>
+          <Label className="text-xs">{simplifiedCopy ? "Start Date" : "Start date"}</Label>
           <Input
             type="date"
             className="h-9 rounded-lg text-sm"
             value={draft.start_date}
             onChange={(e) => setDraft({ ...draft, start_date: e.target.value })}
           />
+          {simplifiedCopy ? (
+            <p className="text-[11px] text-muted-foreground">
+              {HOMEPAGE_PROMOTION_FIELD_HELP.startDate}
+            </p>
+          ) : null}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">End date</Label>
+          <Label className="text-xs">{simplifiedCopy ? "End Date" : "End date"}</Label>
           <Input
             type="date"
             className="h-9 rounded-lg text-sm"
             value={draft.end_date}
             onChange={(e) => setDraft({ ...draft, end_date: e.target.value })}
           />
+          {simplifiedCopy ? (
+            <p className="text-[11px] text-muted-foreground">
+              {HOMEPAGE_PROMOTION_FIELD_HELP.endDate}
+            </p>
+          ) : null}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Required location</Label>
+          <Label className="text-xs">
+            {simplifiedCopy ? "Display Location" : "Required location"}
+          </Label>
           <Input
             className="h-9 rounded-lg text-sm"
             value={draft.required_location}
             onChange={(e) => setDraft({ ...draft, required_location: e.target.value })}
-            placeholder="Shelf 2 / end cap"
+            placeholder={simplifiedCopy ? "e.g. Shelf 2 end cap" : "Shelf 2 / end cap"}
           />
+          {simplifiedCopy ? (
+            <p className="text-[11px] text-muted-foreground">
+              {HOMEPAGE_PROMOTION_FIELD_HELP.displayLocation}
+            </p>
+          ) : null}
         </div>
         <div className="space-y-1.5 sm:col-span-2">
-          <Label className="text-xs">Expected offer text</Label>
+          <Label className="text-xs">{simplifiedCopy ? "Offer Text" : "Expected offer text"}</Label>
           <Input
             className="h-9 rounded-lg text-sm"
             value={draft.expected_offer_text}
             onChange={(e) => setDraft({ ...draft, expected_offer_text: e.target.value })}
-            placeholder="Buy 2 Save 10%"
+            placeholder={simplifiedCopy ? "e.g. Buy 2 Save 10%" : "Buy 2 Save 10%"}
           />
+          {simplifiedCopy ? (
+            <p className="text-[11px] text-muted-foreground">
+              {HOMEPAGE_PROMOTION_FIELD_HELP.offerText}
+            </p>
+          ) : null}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Promotional price</Label>
+          <Label className="text-xs">
+            {simplifiedCopy ? "Promotional Price" : "Promotional price"}
+          </Label>
           <Input
             type="number"
             min={0}
+            step="0.01"
             className="h-9 rounded-lg text-sm"
             value={draft.expected_promo_price}
             onChange={(e) => setDraft({ ...draft, expected_promo_price: e.target.value })}
           />
+          {simplifiedCopy ? (
+            <p className="text-[11px] text-muted-foreground">
+              {HOMEPAGE_PROMOTION_FIELD_HELP.promotionalPrice}
+            </p>
+          ) : null}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Required facings</Label>
+          <Label className="text-xs">
+            {simplifiedCopy ? "Required Facings" : "Required facings"}
+          </Label>
           <Input
             type="number"
             min={0}
@@ -512,12 +598,31 @@ export function PromotionManualForm({ pkg, onPatch }: { pkg: PlanogramAuditPacka
             value={draft.required_facings}
             onChange={(e) => setDraft({ ...draft, required_facings: e.target.value })}
           />
+          {simplifiedCopy ? (
+            <p className="text-[11px] text-muted-foreground">
+              {HOMEPAGE_PROMOTION_FIELD_HELP.requiredFacings}
+            </p>
+          ) : null}
         </div>
       </div>
-      <Button type="button" variant="subtle" size="sm" className="rounded-lg" onClick={addEntry}>
-        <Plus className="size-3.5" /> Add promotion
-      </Button>
-      {pkg.promotions.length > 0 && (
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="subtle" size="sm" className="rounded-lg" onClick={addEntry}>
+          <Plus className="size-3.5" />{" "}
+          {editingPromotionId
+            ? simplifiedCopy
+              ? "Save Promotion"
+              : "Save promotion"
+            : simplifiedCopy
+              ? "Add Promotion"
+              : "Add promotion"}
+        </Button>
+        {editingPromotionId ? (
+          <Button type="button" variant="ghost" size="sm" className="rounded-lg" onClick={cancelEdit}>
+            Cancel
+          </Button>
+        ) : null}
+      </div>
+      {!simplifiedCopy && pkg.promotions.length > 0 && (
         <ul className="space-y-2 text-xs">
           {pkg.promotions.map((promo) => (
             <li

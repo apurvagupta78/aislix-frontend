@@ -11,6 +11,7 @@ import {
   CircleDashed,
   FileJson,
   Loader2,
+  Pencil,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -46,6 +47,13 @@ import {
   PRICE_CSV_OPTIONAL_LABEL,
   PRICE_CSV_REQUIRED_LABEL,
 } from "@/lib/planogram-price-template";
+import {
+  formatParticipatingProducts,
+  formatPromotionDateRange,
+  PROMOTION_CSV_OPTIONAL_LABEL,
+  PROMOTION_CSV_REQUIRED_LABEL,
+  promotionStatusLabel,
+} from "@/lib/planogram-promotion-template";
 import {
   autoPopulateAuditPackage,
   computeReadiness,
@@ -85,6 +93,12 @@ import {
   HOMEPAGE_PRICES_CSV,
   HOMEPAGE_PRICES_EMPTY,
   HOMEPAGE_PRICES_TAB_HELPER,
+  HOMEPAGE_DEMO_PROMOTIONS_STATUS,
+  HOMEPAGE_NO_PLANOGRAM_PROMOTIONS,
+  HOMEPAGE_PROMOTIONS_CSV,
+  HOMEPAGE_PROMOTIONS_EMPTY,
+  HOMEPAGE_PROMOTIONS_HEADLINE,
+  HOMEPAGE_PROMOTIONS_TAB_HELPER,
   HOMEPAGE_DEMO_LAYOUT_STATUS,
   HOMEPAGE_DEMO_PRODUCTS_STATUS,
   HOMEPAGE_LAYOUT_EXAMPLE,
@@ -171,6 +185,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
       [steps, homepageIntro],
     );
     const [stepIndex, setStepIndex] = useState(0);
+    const [promotionEditSeed, setPromotionEditSeed] = useState<PromotionEntry | null>(null);
     const currentStep = steps[stepIndex]?.id ?? "basics";
 
     useEffect(() => {
@@ -1112,34 +1127,167 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
           );
         }
 
-        case "promotions":
+        case "promotions": {
+          if (homepageIntro && planogramMode === "demo") {
+            return (
+              <div className="rounded-xl border border-brand/20 bg-brand-soft/20 p-4">
+                <p className="font-medium text-brand">{HOMEPAGE_DEMO_PROMOTIONS_STATUS.title}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {HOMEPAGE_DEMO_PROMOTIONS_STATUS.description}
+                </p>
+              </div>
+            );
+          }
+          if (homepageIntro && planogramMode === "none") {
+            return (
+              <div className="rounded-xl border border-border bg-muted/20 p-4">
+                <p className="text-sm font-semibold text-foreground">
+                  {HOMEPAGE_NO_PLANOGRAM_PROMOTIONS.title}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {HOMEPAGE_NO_PLANOGRAM_PROMOTIONS.description}
+                </p>
+              </div>
+            );
+          }
           return (
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Upload active promotions CSV. Without promotions, Promotional Compliance shows{" "}
-                <strong>Not applicable</strong> — never 0% or 100%.
-              </p>
-              <PromotionManualForm pkg={auditPackage} onPatch={patchPackage} />
+              {homepageIntro ? (
+                <>
+                  <p className="text-sm font-semibold text-foreground">
+                    {HOMEPAGE_PROMOTIONS_HEADLINE}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">{HOMEPAGE_PROMOTIONS_TAB_HELPER}</p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Upload active promotions CSV. Without promotions, Promotional Compliance shows{" "}
+                  <strong>Not applicable</strong> — never 0% or 100%.
+                </p>
+              )}
+              <PromotionManualForm
+                pkg={auditPackage}
+                onPatch={patchPackage}
+                simplifiedCopy={homepageIntro}
+                seedDraft={promotionEditSeed}
+                onSeedDraftApplied={() => setPromotionEditSeed(null)}
+              />
               <PlanogramPackageCsvImport
-                label="Or upload CSV — active promotions"
+                label={
+                  homepageIntro ? HOMEPAGE_PROMOTIONS_CSV.label : "Or upload CSV — active promotions"
+                }
                 kind="promotions"
-                description="Columns: promotion_id, participating_skus, start_date, end_date, expected_offer_text, expected_promo_price, required_facings"
+                description={
+                  homepageIntro
+                    ? HOMEPAGE_PROMOTIONS_CSV.supporting
+                    : `Required: ${PROMOTION_CSV_REQUIRED_LABEL}. Optional: ${PROMOTION_CSV_OPTIONAL_LABEL}.`
+                }
+                templateButtonLabel={
+                  homepageIntro ? HOMEPAGE_PROMOTIONS_CSV.templateButton : undefined
+                }
+                uploadButtonLabel={
+                  homepageIntro ? HOMEPAGE_PROMOTIONS_CSV.uploadButton : undefined
+                }
+                showPromotionColumnGuide={homepageIntro}
                 onImport={(imported) => patchPackage({ promotions: imported as PromotionEntry[] })}
               />
               {auditPackage.promotions.length > 0 ? (
-                <div className="space-y-2">
-                  {auditPackage.promotions.map((promo) => (
-                    <div
-                      key={promo.promotion_id}
-                      className="rounded-xl border border-border bg-card px-4 py-3 text-sm"
-                    >
-                      <p className="font-medium text-brand">{promo.promotion_id}</p>
-                      <p className="text-muted-foreground">{promo.expected_offer_text || "—"}</p>
-                      <p className="mt-1 font-mono text-[10px] text-muted-foreground">
-                        SKUs: {promo.participating_skus.join(", ")}
-                      </p>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto rounded-xl border border-border">
+                  <table className="w-full min-w-[44rem] text-sm">
+                    <thead className="bg-brand text-brand-foreground">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-medium">Promotion</th>
+                        <th className="px-3 py-2 text-left font-medium">Products</th>
+                        <th className="px-3 py-2 text-left font-medium">Active dates</th>
+                        <th className="px-3 py-2 text-left font-medium">Display location</th>
+                        <th className="px-3 py-2 text-left font-medium">Promotional price</th>
+                        <th className="px-3 py-2 text-left font-medium">Status</th>
+                        <th className="px-3 py-2 text-right font-medium">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {auditPackage.promotions.map((promo) => {
+                        const status = promotionStatusLabel(promo.start_date, promo.end_date);
+                        return (
+                          <tr key={promo.promotion_id} className="border-t border-border">
+                            <td className="px-3 py-2">
+                              <span className="font-medium text-foreground">{promo.promotion_id}</span>
+                              {promo.expected_offer_text ? (
+                                <span className="mt-0.5 block text-xs text-muted-foreground">
+                                  {promo.expected_offer_text}
+                                </span>
+                              ) : null}
+                            </td>
+                            <td className="px-3 py-2 text-xs text-muted-foreground">
+                              {formatParticipatingProducts(promo.participating_skus)}
+                            </td>
+                            <td className="px-3 py-2 text-xs text-muted-foreground">
+                              {formatPromotionDateRange(promo.start_date, promo.end_date)}
+                            </td>
+                            <td className="px-3 py-2 text-xs text-muted-foreground">
+                              {promo.required_location || "—"}
+                            </td>
+                            <td className="px-3 py-2 tabular-nums">
+                              {promo.expected_promo_price != null ? promo.expected_promo_price : "—"}
+                            </td>
+                            <td className="px-3 py-2">
+                              {status === "—" ? (
+                                <span className="text-muted-foreground">—</span>
+                              ) : (
+                                <Badge
+                                  variant={
+                                    status === "Active"
+                                      ? "default"
+                                      : status === "Upcoming"
+                                        ? "secondary"
+                                        : "outline"
+                                  }
+                                  className="text-[10px] font-normal"
+                                >
+                                  {status}
+                                </Badge>
+                              )}
+                            </td>
+                            <td className="px-3 py-2 text-right">
+                              <div className="inline-flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center text-muted-foreground hover:text-brand"
+                                  aria-label="Edit promotion"
+                                  onClick={() => setPromotionEditSeed(promo)}
+                                >
+                                  <Pencil className="size-4" />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center text-muted-foreground hover:text-destructive"
+                                  aria-label="Delete promotion"
+                                  onClick={() =>
+                                    patchPackage({
+                                      promotions: auditPackage.promotions.filter(
+                                        (p) => p.promotion_id !== promo.promotion_id,
+                                      ),
+                                    })
+                                  }
+                                >
+                                  <Trash2 className="size-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              ) : homepageIntro ? (
+                <div className="rounded-lg border border-dashed border-border p-4">
+                  <p className="text-sm font-medium text-foreground">
+                    {HOMEPAGE_PROMOTIONS_EMPTY.title}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {HOMEPAGE_PROMOTIONS_EMPTY.description}
+                  </p>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
@@ -1148,6 +1296,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
               )}
             </div>
           );
+        }
 
         case "role_settings":
           return (
