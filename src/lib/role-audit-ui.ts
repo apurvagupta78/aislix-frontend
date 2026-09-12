@@ -38,7 +38,6 @@ export const ROLE_AUDIT_SECTIONS: RoleAuditSectionKey[] = [
   "kpi_cards",
   "kpi_charts",
   "competitor_analysis",
-  "annotated_image",
   "planogram_side_by_side",
   "financial_impact",
   "inventory",

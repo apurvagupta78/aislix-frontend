@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, ImagePlus, Loader2, Sparkles } from "lucide-react";
+import { AlertCircle, Loader2, Sparkles, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -58,6 +58,7 @@ export function RetailIntelligenceDemo() {
   const [resultScanContext, setResultScanContext] = useState<ScanContextState>(EMPTY_SCAN_CONTEXT);
   const objectUrlRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const demoCardRef = useRef<HTMLDivElement>(null);
 
   const subCategoryLabel = demoCategory.categories
@@ -90,9 +91,25 @@ export function RetailIntelligenceDemo() {
     scrollToDemo();
   }
 
+  function beginUploadSetup() {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+    setPendingFile(null);
+    setPreviewImageUrl(null);
+    setSetupMode("upload");
+    setScanContext(EMPTY_SCAN_CONTEXT);
+    setError(null);
+    setResult(null);
+    setPhase("idle");
+    demoCategory.setState(EMPTY_DEMO_CATEGORY_STATE);
+    scrollToDemo();
+  }
+
   useEffect(() => {
     const handleSample = () => beginSampleSetup();
-    const handleUpload = () => fileRef.current?.click();
+    const handleUpload = () => beginUploadSetup();
     window.addEventListener(LANDING_SAMPLE_EVENT, handleSample);
     window.addEventListener(LANDING_UPLOAD_EVENT, handleUpload);
 
@@ -150,8 +167,8 @@ export function RetailIntelligenceDemo() {
   }
 
   function onFile(file: File) {
-    if (!/^image\/(jpeg|png)$/.test(file.type)) {
-      setError("Please upload a JPEG or PNG shelf photo.");
+    if (!file.type.startsWith("image/")) {
+      setError("Please upload or capture a shelf photo (JPEG or PNG).");
       setPhase("error");
       return;
     }
@@ -191,6 +208,10 @@ export function RetailIntelligenceDemo() {
         onScanContextChange={setScanContext}
         defaultCategory={demoCategory.state.categoryName}
         defaultSubCategory={subCategoryLabel}
+        hasPhoto={Boolean(pendingFile)}
+        previewImageUrl={previewImageUrl}
+        onPickUploadPhoto={() => fileRef.current?.click()}
+        onTakeMobilePhoto={() => cameraRef.current?.click()}
         onStart={(ctx) => {
           setResultScanContext(ctx);
           setScanContext(ctx);
@@ -220,31 +241,31 @@ export function RetailIntelligenceDemo() {
             >
               <Sparkles className="size-4" /> Try Sample Shelf
             </Button>
-            {setupMode === "upload" ? (
-              <Button
-                variant="outline"
-                size="xl"
-                className="min-h-11 w-full sm:w-auto"
-                disabled={scanning}
-                onClick={() => fileRef.current?.click()}
-              >
-                <ImagePlus className="size-4" /> Change Photo
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                size="xl"
-                className="min-h-11 w-full sm:w-auto"
-                disabled={scanning}
-                onClick={() => fileRef.current?.click()}
-              >
-                <ImagePlus className="size-4" /> Upload Shelf Photo
-              </Button>
-            )}
+            <Button
+              variant="outline"
+              size="xl"
+              className="min-h-11 w-full sm:w-auto"
+              disabled={scanning}
+              onClick={beginUploadSetup}
+            >
+              <Upload className="size-4" /> Upload Shelf Photo
+            </Button>
             <input
               ref={fileRef}
               type="file"
               accept="image/jpeg,image/png"
+              className="sr-only"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) onFile(f);
+              }}
+            />
+            <input
+              ref={cameraRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
               className="sr-only"
               onChange={(e) => {
                 const f = e.target.files?.[0];

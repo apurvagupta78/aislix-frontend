@@ -3,10 +3,7 @@
  * Replaces the legacy execution/merchandising/brand/executive persona tabs.
  */
 
-import {
-  AnnotatedImageViewer,
-  InventoryTable,
-} from "@/components/scan-results/ResultParts";
+import { InventoryTable } from "@/components/scan-results/ResultParts";
 import {
   ActionCenterPanel,
   CompetitorIntelPanel,
@@ -167,24 +164,6 @@ function SectionBlock({
         <DemoBrandProductAnalysis data={data} loading={loading} />
       ) : (
         <CompetitorIntelPanel snapshot={data.competitor_intel} loading={loading} />
-      );
-
-    case "annotated_image":
-      return (
-        <section className="card-surface p-4 sm:p-6">
-          <h2 className="text-sm font-semibold tracking-tight">Annotated shelf image</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            AI detections overlaid on the shelf photograph — click to zoom.
-          </p>
-          <div className="mt-4">
-            <AnnotatedImageViewer
-              src={imageUrl ?? data.annotated_image_url}
-              originalSrc={data.original_image_url}
-              scanId={data.scan_id}
-              loading={loading}
-            />
-          </div>
-        </section>
       );
 
     case "planogram_side_by_side":
