@@ -87,6 +87,11 @@ export const DEMO_ORAL_CARE_ROWS: PlanogramRow[] = [
   demoRow("S5-P04", "S5", "SKU-KOL-001", "Kolynos", "Kolynos", "90g", 4, 2.39),
 ];
 
+export const DEMO_ORAL_CARE_PLANNED_FACINGS = DEMO_ORAL_CARE_ROWS.reduce(
+  (sum, row) => sum + (row.expected_facings ?? row.expected_qty ?? 0),
+  0,
+);
+
 export const DEMO_ORAL_CARE_META: PlanogramMeta = {
   name: "Oral Care – Main Gondola Demo",
   planogram_id: DEMO_PLANOGRAM_ID,

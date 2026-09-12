@@ -32,8 +32,9 @@ export const HOMEPAGE_WIZARD_STEP_COPY: Record<
       "Tell Aislix which products should appear on this shelf and how they should normally be displayed.",
   },
   layout: {
-    label: "Shelf Layout",
-    description: "Set where each product belongs and how many facings are expected.",
+    label: "Show Aislix Where Products Belong",
+    description:
+      "Set where each product should appear on the shelf and how many front-facing units should normally be visible. Aislix will use this to check shelf placement and facings during your audit.",
   },
   assortment: {
     label: "Required Products",
@@ -97,4 +98,35 @@ export const HOMEPAGE_NO_PLANOGRAM_PRODUCTS = {
   description:
     "Aislix will analyse the products that are visible in your shelf photo and provide the insights that can be determined from the image.",
   cta: "Continue to Audit",
+} as const;
+
+export const HOMEPAGE_LAYOUT_INSTRUCTION =
+  "Choose the shelf position for each product and set its expected facings.";
+
+export const HOMEPAGE_LAYOUT_HELPER =
+  "You can edit the layout here or import it with your product CSV.";
+
+export const HOMEPAGE_LAYOUT_EMPTY =
+  "Add your products first, then assign where each one should go on the shelf.";
+
+export const HOMEPAGE_LAYOUT_EXAMPLE = {
+  title: "Expected shelf layout",
+  lines: [
+    "Colgate MaxFresh → Shelf 1 → 5 facings",
+    "Colgate Total → Shelf 1 → 5 facings",
+  ],
+  note: "Aislix compares this expected layout with the actual shelf photo.",
+} as const;
+
+export const HOMEPAGE_DEMO_LAYOUT_STATUS = {
+  title: "Demo shelf layout ready",
+  summary: (positionCount: number, plannedFacings: number) =>
+    `${positionCount} shelf positions · ${plannedFacings} planned facings`,
+  note: "Aislix Demo Data — pre-configured shelf layout for the sample shelf demo.",
+} as const;
+
+export const HOMEPAGE_NO_PLANOGRAM_LAYOUT = {
+  title: "No shelf layout required.",
+  description:
+    "Aislix will analyse what is visible in the shelf photo without comparing it to an expected layout.",
 } as const;

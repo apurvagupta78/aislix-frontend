@@ -15,6 +15,7 @@ import type { ShelfCategory } from "@/lib/categories.data";
 import {
   buildDemoOralCareScanContext,
   DEMO_ORAL_CARE_META,
+  DEMO_ORAL_CARE_PLANNED_FACINGS,
   DEMO_ORAL_CARE_ROWS,
   DEMO_PLANOGRAM_LABEL,
 } from "@/lib/demo-oral-care-planogram";
@@ -22,7 +23,9 @@ import { EMPTY_PLANOGRAM_META } from "@/lib/planogram-meta";
 import { EMPTY_AUDIT_PACKAGE } from "@/lib/planogram-audit-package";
 import {
   getBrowserTimezone,
+  HOMEPAGE_DEMO_LAYOUT_STATUS,
   HOMEPAGE_DEMO_PRODUCTS_STATUS,
+  HOMEPAGE_NO_PLANOGRAM_LAYOUT,
   HOMEPAGE_NO_PLANOGRAM_PRODUCTS,
   HOMEPAGE_SHELF_SETUP_FLOW,
 } from "@/lib/planogram-wizard-homepage-copy";
@@ -447,6 +450,13 @@ export function DemoScanSetupPanel({
                     DEMO_ORAL_CARE_ROWS.length,
                   )}
                 </p>
+                <p className="mt-2 font-medium text-brand">{HOMEPAGE_DEMO_LAYOUT_STATUS.title}</p>
+                <p className="font-medium text-foreground">
+                  {HOMEPAGE_DEMO_LAYOUT_STATUS.summary(
+                    DEMO_ORAL_CARE_ROWS.length,
+                    DEMO_ORAL_CARE_PLANNED_FACINGS,
+                  )}
+                </p>
               </>
             ) : (
               <p>
@@ -469,6 +479,12 @@ export function DemoScanSetupPanel({
           <p className="text-sm font-semibold text-foreground">{HOMEPAGE_NO_PLANOGRAM_PRODUCTS.title}</p>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             {HOMEPAGE_NO_PLANOGRAM_PRODUCTS.description}
+          </p>
+          <p className="mt-4 text-sm font-semibold text-foreground">
+            {HOMEPAGE_NO_PLANOGRAM_LAYOUT.title}
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            {HOMEPAGE_NO_PLANOGRAM_LAYOUT.description}
           </p>
           <Button
             type="button"
