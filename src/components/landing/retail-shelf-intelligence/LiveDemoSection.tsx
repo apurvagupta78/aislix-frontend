@@ -1,5 +1,19 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowRight, ImagePlus, Loader2, Sparkles, Upload } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowRight,
+  BadgePercent,
+  CircleCheck,
+  Image as ImageIcon,
+  ImagePlus,
+  LayoutGrid,
+  Loader2,
+  Package,
+  Sparkles,
+  TriangleAlert,
+  Upload,
+  Wrench,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { trackLandingEvent } from "@/lib/landing-analytics";
@@ -402,14 +416,68 @@ export function LiveDemoSection({
   );
 }
 
+const HOMEPAGE_PREVIEW_FEATURES = [
+  { icon: Package, label: "Products & Brands" },
+  { icon: CircleCheck, label: "Availability" },
+  { icon: LayoutGrid, label: "Shelf Execution" },
+  { icon: BadgePercent, label: "Prices & Promotions" },
+  { icon: TriangleAlert, label: "Issues" },
+] as const;
+
+const HOMEPAGE_PREVIEW_STEPS = [
+  { icon: ImageIcon, label: "Capture" },
+  { icon: Sparkles, label: "Analyse" },
+  { icon: Wrench, label: "Act" },
+] as const;
+
 function EmptyResults({ homepageIntro = false }: { homepageIntro?: boolean }) {
+  if (!homepageIntro) {
+    return (
+      <div className="grid min-h-48 place-items-center py-6 text-center">
+        <p className="max-w-md text-sm text-muted-foreground">
+          Choose the sample shelf or upload your photo above — then confirm category, optionally add
+          a planogram, and start scanning. Execution, merchandising, brand, and executive views will
+          appear here.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid min-h-48 place-items-center py-6 text-center">
-      <p className="max-w-md text-sm text-muted-foreground">
-        {homepageIntro
-          ? "Choose the sample shelf above or upload your own photo to start your free audit."
-          : "Choose the sample shelf or upload your photo above — then confirm category, optionally add a planogram, and start scanning. Execution, merchandising, brand, and executive views will appear here."}
+    <div className="flex min-h-48 flex-col items-center px-4 py-8 text-center sm:py-10">
+      <h3 className="text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+        From Photo to Shelf Intelligence
+      </h3>
+      <p className="mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground">
+        Upload a shelf photo or try our sample. Aislix analyses the shelf and turns what it sees into
+        actionable retail insights.
       </p>
+
+      <ul className="mt-8 flex max-w-2xl flex-wrap items-center justify-center gap-x-5 gap-y-4 sm:gap-x-7">
+        {HOMEPAGE_PREVIEW_FEATURES.map(({ icon: Icon, label }) => (
+          <li key={label} className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Icon className="size-4 shrink-0 text-brand" strokeWidth={1.75} aria-hidden="true" />
+            <span className="font-medium text-foreground/85">{label}</span>
+          </li>
+        ))}
+      </ul>
+
+      <div
+        className="mt-8 flex flex-wrap items-center justify-center gap-2 text-[11px] text-muted-foreground sm:text-xs"
+        aria-label="Capture, analyse, act"
+      >
+        {HOMEPAGE_PREVIEW_STEPS.map(({ icon: Icon, label }, index) => (
+          <span key={label} className="inline-flex items-center gap-1.5">
+            {index > 0 ? (
+              <span className="px-0.5 text-muted-foreground/50" aria-hidden="true">
+                →
+              </span>
+            ) : null}
+            <Icon className="size-4 text-brand/80" strokeWidth={1.75} aria-hidden="true" />
+            <span>{label}</span>
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
