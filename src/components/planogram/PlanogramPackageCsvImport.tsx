@@ -17,11 +17,15 @@ export function PlanogramPackageCsvImport({
   kind,
   onImport,
   description,
+  templateButtonLabel = "Template",
+  uploadButtonLabel = "Upload CSV",
 }: {
   label: string;
   kind: PackageCsvKind;
   onImport: (rows: unknown[]) => void;
   description?: string;
+  templateButtonLabel?: string;
+  uploadButtonLabel?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -74,7 +78,7 @@ export function PlanogramPackageCsvImport({
             className="rounded-lg border-brand/20"
             onClick={() => void download()}
           >
-            <Download className="mr-1.5 size-4" /> Template
+            <Download className="mr-1.5 size-4" /> {templateButtonLabel}
           </Button>
           <Button
             type="button"
@@ -89,7 +93,7 @@ export function PlanogramPackageCsvImport({
             ) : (
               <Upload className="mr-1.5 size-4" />
             )}
-            Upload CSV
+            {uploadButtonLabel}
           </Button>
         </div>
       </div>

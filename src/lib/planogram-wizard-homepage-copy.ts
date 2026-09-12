@@ -38,7 +38,8 @@ export const HOMEPAGE_WIZARD_STEP_COPY: Record<
   },
   assortment: {
     label: "Required Products",
-    description: "Mark which products must be on the shelf for this audit.",
+    description:
+      "Mark the products that are required for this store or shelf. Aislix will check during the audit whether those products are visibly present.",
   },
   prices: {
     label: "Prices",
@@ -130,3 +131,48 @@ export const HOMEPAGE_NO_PLANOGRAM_LAYOUT = {
   description:
     "Aislix will analyse what is visible in the shelf photo without comparing it to an expected layout.",
 } as const;
+
+export const HOMEPAGE_ASSORTMENT_HEADLINE = "Choose the Products That Must Be on the Shelf";
+
+export const HOMEPAGE_ASSORTMENT_HELP =
+  "Use this for required assortment or must-stock products. Optional products do not affect the required-product score.";
+
+export const HOMEPAGE_ASSORTMENT_EMPTY = {
+  title: "No required products added yet.",
+  description: "Add products manually or upload a CSV to define which products must be available.",
+} as const;
+
+export const HOMEPAGE_DEMO_ASSORTMENT_STATUS = {
+  title: "Demo product requirements are already configured.",
+  description: "The sample audit is ready to use. No setup is required.",
+} as const;
+
+export const HOMEPAGE_NO_PLANOGRAM_ASSORTMENT = {
+  title: "No required product list needed.",
+  description:
+    "Aislix will analyse the products visible in the shelf photo without comparing them against a predefined required-product list.",
+} as const;
+
+export const HOMEPAGE_ASSORTMENT_FIELD_HELP = {
+  sku: "Which product is required?",
+  requirementType: "Required Assortment",
+  outletScope: "Which store or outlet does this requirement apply to?",
+  validFrom: "When does this requirement become active?",
+  validTo: "Optional end date.",
+} as const;
+
+export const HOMEPAGE_ASSORTMENT_CSV = {
+  label: "Add Many Products at Once",
+  supporting: "Upload a CSV when you have a larger product list.",
+  templateButton: "Download Template",
+  uploadButton: "Upload CSV",
+} as const;
+
+/** Customer-facing label for assortment list_type values. */
+export function homepageRequiredProductTypeLabel(
+  listType: "mandatory_assortment" | "msl" | "optional" | string,
+): string {
+  if (listType === "msl") return "Must-Stock";
+  if (listType === "mandatory_assortment") return "Required Assortment";
+  return "Optional";
+}

@@ -56,14 +56,21 @@ import {
 } from "@/lib/demo-oral-care-planogram";
 import {
   getBrowserTimezone,
+  HOMEPAGE_ASSORTMENT_CSV,
+  HOMEPAGE_ASSORTMENT_EMPTY,
+  HOMEPAGE_ASSORTMENT_HEADLINE,
+  HOMEPAGE_ASSORTMENT_HELP,
+  HOMEPAGE_DEMO_ASSORTMENT_STATUS,
   HOMEPAGE_DEMO_LAYOUT_STATUS,
   HOMEPAGE_DEMO_PRODUCTS_STATUS,
   HOMEPAGE_LAYOUT_EXAMPLE,
+  HOMEPAGE_NO_PLANOGRAM_ASSORTMENT,
   HOMEPAGE_NO_PLANOGRAM_LAYOUT,
   HOMEPAGE_NO_PLANOGRAM_PRODUCTS,
   HOMEPAGE_PRODUCTS_TABLE_DESCRIPTION,
   HOMEPAGE_PRODUCTS_TABLE_TITLE,
   HOMEPAGE_WIZARD_STEP_COPY,
+  homepageRequiredProductTypeLabel,
 } from "@/lib/planogram-wizard-homepage-copy";
 import { defaultAuditRoleTab, roleTabLabel, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { roleRequiresPricing } from "@/lib/role-planogram-requirements";
@@ -194,28 +201,47 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
     const patchPackage = (partial: Partial<PlanogramAuditPackage>) =>
       patch({ ...value, auditPackage: { ...auditPackage, ...partial } });
 
+    const homepageAssortmentPopulateOpts = homepageIntro
+      ? { skipAssortment: true, skipMsl: true }
+      : undefined;
+
     const setRole = (nextRole: AuditRoleTab) => {
       setStepIndex(0);
       patch({
         ...value,
         auditRole: nextRole,
-        auditPackage: autoPopulateAuditPackage(value.planogramRows, value.auditPackage ?? EMPTY_AUDIT_PACKAGE),
+        auditPackage: autoPopulateAuditPackage(
+          value.planogramRows,
+          value.auditPackage ?? EMPTY_AUDIT_PACKAGE,
+          homepageAssortmentPopulateOpts,
+        ),
       });
     };
 
     const setRows = (rows: DraftRow[]) => {
       const planogramRows = fromDraftRows(rows);
+      if (homepageIntro) {
+        patch({ ...value, planogramRows });
+        return;
+      }
       patch({
         ...value,
         planogramRows,
-        auditPackage: autoPopulateAuditPackage(planogramRows, value.auditPackage ?? EMPTY_AUDIT_PACKAGE),
+        auditPackage: autoPopulateAuditPackage(
+          planogramRows,
+          value.auditPackage ?? EMPTY_AUDIT_PACKAGE,
+        ),
       });
     };
 
     useImperativeHandle(ref, () => ({
       flush: () => {
         const rows = value.planogramRows;
-        const pkg = autoPopulateAuditPackage(rows, value.auditPackage ?? EMPTY_AUDIT_PACKAGE);
+        const pkg = autoPopulateAuditPackage(
+          rows,
+          value.auditPackage ?? EMPTY_AUDIT_PACKAGE,
+          homepageAssortmentPopulateOpts,
+        );
         const next = { ...value, auditPackage: pkg };
         onChange(next);
         return next;
@@ -765,31 +791,78 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
         }
 
         case "assortment":
+          if (homepageIntro && planogramMode === "demo") {
+            return (
+              <div className="rounded-xl border border-brand/20 bg-brand-soft/20 p-4">
+                <p className="font-medium text-brand">{HOMEPAGE_DEMO_ASSORTMENT_STATUS.title}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {HOMEPAGE_DEMO_ASSORTMENT_STATUS.description}
+                </p>
+              </div>
+            );
+          }
+          if (homepageIntro && planogramMode === "none") {
+            return (
+              <div className="rounded-xl border border-border bg-muted/20 p-4">
+                <p className="text-sm font-semibold text-foreground">
+                  {HOMEPAGE_NO_PLANOGRAM_ASSORTMENT.title}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {HOMEPAGE_NO_PLANOGRAM_ASSORTMENT.description}
+                </p>
+              </div>
+            );
+          }
           return (
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Mandatory assortment for {roleTabLabel(role)}. Upload CSV or auto-fill from product rows.
-                {role === "distributor" ? " MSL rows use list_type=msl in the CSV." : ""}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="brand"
-                  size="sm"
-                  className="rounded-lg"
-                  disabled={!value.planogramRows.length}
-                  onClick={() =>
-                    patchPackage(autoPopulateAuditPackage(value.planogramRows, auditPackage))
-                  }
-                >
-                  Auto-fill assortment &amp; MSL from products
-                </Button>
-              </div>
-              <AssortmentManualForm pkg={auditPackage} onPatch={patchPackage} />
+              {homepageIntro ? (
+                <>
+                  <p className="text-sm font-semibold text-foreground">{HOMEPAGE_ASSORTMENT_HEADLINE}</p>
+                  <p className="text-[11px] text-muted-foreground">{HOMEPAGE_ASSORTMENT_HELP}</p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Mandatory assortment for {roleTabLabel(role)}. Upload CSV or auto-fill from product rows.
+                  {role === "distributor" ? " MSL rows use list_type=msl in the CSV." : ""}
+                </p>
+              )}
+              {!homepageIntro ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="brand"
+                    size="sm"
+                    className="rounded-lg"
+                    disabled={!value.planogramRows.length}
+                    onClick={() =>
+                      patchPackage(autoPopulateAuditPackage(value.planogramRows, auditPackage))
+                    }
+                  >
+                    Auto-fill assortment &amp; MSL from products
+                  </Button>
+                </div>
+              ) : null}
+              <AssortmentManualForm
+                pkg={auditPackage}
+                onPatch={patchPackage}
+                simplifiedCopy={homepageIntro}
+              />
               <PlanogramPackageCsvImport
-                label="Or upload CSV — assortment & must-stock list"
+                label={
+                  homepageIntro
+                    ? HOMEPAGE_ASSORTMENT_CSV.label
+                    : "Or upload CSV — assortment & must-stock list"
+                }
                 kind="assortment"
-                description="Columns: sku, list_type (mandatory_assortment | msl | optional), outlet_scope, valid_from, valid_to"
+                description={
+                  homepageIntro
+                    ? HOMEPAGE_ASSORTMENT_CSV.supporting
+                    : "Columns: sku, list_type (mandatory_assortment | msl | optional), outlet_scope, valid_from, valid_to"
+                }
+                templateButtonLabel={
+                  homepageIntro ? HOMEPAGE_ASSORTMENT_CSV.templateButton : undefined
+                }
+                uploadButtonLabel={homepageIntro ? HOMEPAGE_ASSORTMENT_CSV.uploadButton : undefined}
                 onImport={(imported) => {
                   const entries = imported as AssortmentEntry[];
                   const split = splitAssortmentRows(entries);
@@ -804,9 +877,15 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                   <table className="w-full text-sm">
                     <thead className="bg-brand text-brand-foreground">
                       <tr>
-                        <th className="px-3 py-2 text-left font-medium">SKU</th>
-                        <th className="px-3 py-2 text-left font-medium">List</th>
-                        <th className="px-3 py-2 text-left font-medium">Scope</th>
+                        <th className="px-3 py-2 text-left font-medium">
+                          {homepageIntro ? "Product / SKU" : "SKU"}
+                        </th>
+                        <th className="px-3 py-2 text-left font-medium">
+                          {homepageIntro ? "Requirement" : "List"}
+                        </th>
+                        <th className="px-3 py-2 text-left font-medium">
+                          {homepageIntro ? "Store / Outlet" : "Scope"}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -815,7 +894,9 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                           <td className="px-3 py-2 font-mono text-xs">{row.sku}</td>
                           <td className="px-3 py-2">
                             <Badge variant="secondary" className="capitalize">
-                              {row.list_type.replace(/_/g, " ")}
+                              {homepageIntro
+                                ? homepageRequiredProductTypeLabel(row.list_type)
+                                : row.list_type.replace(/_/g, " ")}
                             </Badge>
                           </td>
                           <td className="px-3 py-2 text-muted-foreground">{row.outlet_scope}</td>
@@ -823,6 +904,13 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                       ))}
                     </tbody>
                   </table>
+                </div>
+              ) : homepageIntro ? (
+                <div className="rounded-lg border border-dashed border-border p-4">
+                  <p className="text-sm font-medium text-foreground">{HOMEPAGE_ASSORTMENT_EMPTY.title}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {HOMEPAGE_ASSORTMENT_EMPTY.description}
+                  </p>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">

@@ -65,6 +65,12 @@ export const EMPTY_AUDIT_PACKAGE: PlanogramAuditPackage = {
   scoring: {},
 };
 
+export type AutoPopulateAuditPackageOptions = {
+  /** Homepage custom setup — user defines required products explicitly in the wizard. */
+  skipAssortment?: boolean;
+  skipMsl?: boolean;
+};
+
 /** Derive assortment, MSL, prices, SOS scope from product rows when lists are empty. */
 export function autoPopulateAuditPackage(
   rows: {
@@ -78,6 +84,7 @@ export function autoPopulateAuditPackage(
     match_key?: string;
   }[],
   existing: PlanogramAuditPackage = EMPTY_AUDIT_PACKAGE,
+  options?: AutoPopulateAuditPackageOptions,
 ): PlanogramAuditPackage {
   const pkg: PlanogramAuditPackage = {
     assortment_skus: [...existing.assortment_skus],
@@ -93,7 +100,7 @@ export function autoPopulateAuditPackage(
   const skuFor = (row: (typeof rows)[0]) =>
     String(row.sku || row.match_key || `${row.brand}::${row.product_name}`).trim();
 
-  if (!pkg.assortment_skus.length && rows.length) {
+  if (!options?.skipAssortment && !pkg.assortment_skus.length && rows.length) {
     pkg.assortment_skus = rows
       .filter((r) => skuFor(r))
       .map((r) => ({
@@ -103,7 +110,7 @@ export function autoPopulateAuditPackage(
       }));
   }
 
-  if (!pkg.msl_skus.length && rows.length) {
+  if (!options?.skipMsl && !pkg.msl_skus.length && rows.length) {
     pkg.msl_skus = rows
       .filter((r) => skuFor(r))
       .slice(0, Math.max(1, Math.ceil(rows.length * 0.6)))

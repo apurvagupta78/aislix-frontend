@@ -20,10 +20,22 @@ import type {
   PriceRequirement,
   PromotionEntry,
 } from "@/lib/planogram-audit-package";
+import {
+  HOMEPAGE_ASSORTMENT_FIELD_HELP,
+  homepageRequiredProductTypeLabel,
+} from "@/lib/planogram-wizard-homepage-copy";
 
 type PatchFn = (partial: Partial<PlanogramAuditPackage>) => void;
 
-export function AssortmentManualForm({ pkg, onPatch }: { pkg: PlanogramAuditPackage; onPatch: PatchFn }) {
+export function AssortmentManualForm({
+  pkg,
+  onPatch,
+  simplifiedCopy = false,
+}: {
+  pkg: PlanogramAuditPackage;
+  onPatch: PatchFn;
+  simplifiedCopy?: boolean;
+}) {
   const [draft, setDraft] = useState<AssortmentEntry>({
     sku: "",
     list_type: "mandatory_assortment",
@@ -67,23 +79,32 @@ export function AssortmentManualForm({ pkg, onPatch }: { pkg: PlanogramAuditPack
 
   return (
     <div className="space-y-4 rounded-xl border border-dashed border-border p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Add manually
+      <p
+        className={
+          simplifiedCopy
+            ? "text-sm font-medium text-foreground"
+            : "text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+        }
+      >
+        {simplifiedCopy ? "Add a Required Product" : "Add manually"}
       </p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-1.5">
-          <Label className="text-xs">SKU *</Label>
+          <Label className="text-xs">{simplifiedCopy ? "Product / SKU *" : "SKU *"}</Label>
           <Input
             className="h-9 rounded-lg text-sm"
             value={draft.sku}
             onChange={(e) => setDraft({ ...draft, sku: e.target.value })}
-            placeholder="COL-MAX-150"
+            placeholder={simplifiedCopy ? "e.g. COL-MAX-150" : "COL-MAX-150"}
           />
+          {simplifiedCopy ? (
+            <p className="text-[11px] text-muted-foreground">{HOMEPAGE_ASSORTMENT_FIELD_HELP.sku}</p>
+          ) : null}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">List type *</Label>
+          <Label className="text-xs">{simplifiedCopy ? "Requirement Type *" : "List type *"}</Label>
           <Select
-            value={draft.list_type}
+            value={draft.list_type === "optional" && simplifiedCopy ? "mandatory_assortment" : draft.list_type}
             onValueChange={(v) =>
               setDraft({ ...draft, list_type: v as AssortmentEntry["list_type"] })
             }
@@ -92,50 +113,66 @@ export function AssortmentManualForm({ pkg, onPatch }: { pkg: PlanogramAuditPack
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="mandatory_assortment">Mandatory assortment</SelectItem>
-              <SelectItem value="msl">Must-stock list (MSL)</SelectItem>
-              <SelectItem value="optional">Optional</SelectItem>
+              <SelectItem value="mandatory_assortment">
+                {simplifiedCopy ? "Required Assortment" : "Mandatory assortment"}
+              </SelectItem>
+              <SelectItem value="msl">{simplifiedCopy ? "Must-Stock" : "Must-stock list (MSL)"}</SelectItem>
+              {!simplifiedCopy ? <SelectItem value="optional">Optional</SelectItem> : null}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Outlet scope</Label>
+          <Label className="text-xs">{simplifiedCopy ? "Store / Outlet" : "Outlet scope"}</Label>
           <Input
             className="h-9 rounded-lg text-sm"
             value={draft.outlet_scope}
             onChange={(e) => setDraft({ ...draft, outlet_scope: e.target.value })}
             placeholder="all"
           />
+          {simplifiedCopy ? (
+            <p className="text-[11px] text-muted-foreground">
+              {HOMEPAGE_ASSORTMENT_FIELD_HELP.outletScope}
+            </p>
+          ) : null}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Valid from</Label>
+          <Label className="text-xs">{simplifiedCopy ? "Start Date" : "Valid from"}</Label>
           <Input
             type="date"
             className="h-9 rounded-lg text-sm"
             value={draft.valid_from ?? ""}
             onChange={(e) => setDraft({ ...draft, valid_from: e.target.value })}
           />
+          {simplifiedCopy ? (
+            <p className="text-[11px] text-muted-foreground">{HOMEPAGE_ASSORTMENT_FIELD_HELP.validFrom}</p>
+          ) : null}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Valid until</Label>
+          <Label className="text-xs">{simplifiedCopy ? "End Date" : "Valid until"}</Label>
           <Input
             type="date"
             className="h-9 rounded-lg text-sm"
             value={draft.valid_to ?? ""}
             onChange={(e) => setDraft({ ...draft, valid_to: e.target.value })}
           />
+          {simplifiedCopy ? (
+            <p className="text-[11px] text-muted-foreground">{HOMEPAGE_ASSORTMENT_FIELD_HELP.validTo}</p>
+          ) : null}
         </div>
       </div>
       <Button type="button" variant="subtle" size="sm" className="rounded-lg" onClick={addEntry}>
-        <Plus className="size-3.5" /> Add assortment row
+        <Plus className="size-3.5" /> {simplifiedCopy ? "Add Required Product" : "Add assortment row"}
       </Button>
       {all.length > 0 && (
         <ul className="space-y-1 text-xs">
           {all.map((row) => (
             <li key={`${row.list_type}-${row.sku}`} className="flex items-center justify-between gap-2">
               <span>
-                <span className="font-mono">{row.sku}</span> — {row.list_type.replace(/_/g, " ")} (
-                {row.outlet_scope})
+                <span className="font-mono">{row.sku}</span> —{" "}
+                {simplifiedCopy
+                  ? homepageRequiredProductTypeLabel(row.list_type)
+                  : row.list_type.replace(/_/g, " ")}{" "}
+                ({row.outlet_scope})
               </span>
               <button
                 type="button"

@@ -23,8 +23,10 @@ import { EMPTY_PLANOGRAM_META } from "@/lib/planogram-meta";
 import { EMPTY_AUDIT_PACKAGE } from "@/lib/planogram-audit-package";
 import {
   getBrowserTimezone,
+  HOMEPAGE_DEMO_ASSORTMENT_STATUS,
   HOMEPAGE_DEMO_LAYOUT_STATUS,
   HOMEPAGE_DEMO_PRODUCTS_STATUS,
+  HOMEPAGE_NO_PLANOGRAM_ASSORTMENT,
   HOMEPAGE_NO_PLANOGRAM_LAYOUT,
   HOMEPAGE_NO_PLANOGRAM_PRODUCTS,
   HOMEPAGE_SHELF_SETUP_FLOW,
@@ -209,6 +211,8 @@ export function DemoScanSetupPanel({
           ? {
               auditPackage: {
                 ...(scanContext.auditPackage ?? EMPTY_AUDIT_PACKAGE),
+                assortment_skus: [],
+                msl_skus: [],
                 store_timezone: getBrowserTimezone(),
               },
             }
@@ -457,6 +461,7 @@ export function DemoScanSetupPanel({
                     DEMO_ORAL_CARE_PLANNED_FACINGS,
                   )}
                 </p>
+                <p className="mt-2 font-medium text-brand">{HOMEPAGE_DEMO_ASSORTMENT_STATUS.title}</p>
               </>
             ) : (
               <p>
@@ -485,6 +490,12 @@ export function DemoScanSetupPanel({
           </p>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             {HOMEPAGE_NO_PLANOGRAM_LAYOUT.description}
+          </p>
+          <p className="mt-4 text-sm font-semibold text-foreground">
+            {HOMEPAGE_NO_PLANOGRAM_ASSORTMENT.title}
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            {HOMEPAGE_NO_PLANOGRAM_ASSORTMENT.description}
           </p>
           <Button
             type="button"
