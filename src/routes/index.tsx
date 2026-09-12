@@ -144,13 +144,11 @@ function Landing() {
             AI-Powered Retail Shelf Intelligence
           </span>
           <h1 className="mt-7 text-4xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-6xl">
-            Audit Every Aisle.
-            <br />
-            <span className="text-brand">From a Single Photo.</span>
+            Turn One Shelf Photo Into Actionable Retail Intelligence.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Aislix turns a single shelf photo into a full retail audit — products detected, brands
-            counted, out-of-stocks flagged and shelf health scored.
+            Aislix uses AI to analyse your shelf photos, identify products, measure shelf
+            performance and instantly highlight what needs attention.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <Button
@@ -160,11 +158,11 @@ function Landing() {
                 document.querySelector("#live-dashboard")?.scrollIntoView({ behavior: "smooth" })
               }
             >
-              Start scanning free <ArrowRight className="size-4" />
+              Start Scanning Free <ArrowRight className="size-4" />
             </Button>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            No card required · 5 free scans per day · Results in 60~90 seconds
+            No card required · 5 free scans per day · Results in 60–90 seconds
           </p>
         </div>
       </section>

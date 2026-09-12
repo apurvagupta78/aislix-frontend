@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
-import { AlertCircle, ImagePlus, Loader2, Sparkles, Upload } from "lucide-react";
+import { AlertCircle, ArrowRight, ImagePlus, Loader2, Sparkles, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { trackLandingEvent } from "@/lib/landing-analytics";
@@ -244,13 +244,17 @@ export function LiveDemoSection({
     >
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <SectionHeading
-          title={homepageIntro ? "See What AI Sees on Every Shelf." : "See What Aislix Sees"}
+          title={
+            homepageIntro
+              ? "See What Aislix Can Find on Your Shelf."
+              : "See What Aislix Sees"
+          }
           subtitle={
             homepageIntro
-              ? "Aislix analyzes a single shelf photo to identify products, brands, stock gaps and placement issues — giving your retail team the intelligence to act faster."
+              ? "Upload a shelf photo or try our sample shelf to see how Aislix detects products, brands, availability, facings, prices, promotions and shelf issues."
               : "Try a real shelf scan — no login required."
           }
-          {...(homepageIntro ? {} : { eyebrow: "Live demo" })}
+          {...(homepageIntro ? { eyebrow: "Try Aislix Free" } : { eyebrow: "Live demo" })}
           className={homepageIntro ? "max-w-3xl" : undefined}
         />
 
@@ -262,7 +266,15 @@ export function LiveDemoSection({
             disabled={scanning}
             onClick={beginSampleSetup}
           >
-            <Sparkles className="size-4" /> Try Sample Shelf Below
+            {homepageIntro ? (
+              <>
+                Try Sample Shelf <ArrowRight className="size-4" />
+              </>
+            ) : (
+              <>
+                <Sparkles className="size-4" /> Try Sample Shelf Below
+              </>
+            )}
           </Button>
           <Button
             variant="outline"
@@ -318,7 +330,9 @@ export function LiveDemoSection({
 
             {!scanning && setupPanel}
 
-            {!scanning && phase === "idle" && !setupMode ? <EmptyResults /> : null}
+            {!scanning && phase === "idle" && !setupMode ? (
+              <EmptyResults homepageIntro={homepageIntro} />
+            ) : null}
 
             {!scanning && phase === "done" && result ? (
               <Suspense
@@ -346,7 +360,11 @@ export function LiveDemoSection({
           {showImagePane ? (
             <div className="relative border-t border-border bg-surface px-4 py-5 sm:px-6 sm:py-6">
               <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {phase === "done" ? "Annotated shelf photo" : "Shelf photo"}
+                {phase === "done"
+                  ? "Annotated shelf photo"
+                  : homepageIntro
+                    ? "Your shelf photo"
+                    : "Shelf photo"}
               </p>
               <div className="relative mx-auto max-w-3xl">
                 <img
@@ -367,18 +385,30 @@ export function LiveDemoSection({
             </div>
           ) : null}
         </div>
+
+        {homepageIntro ? (
+          <div className="mx-auto mt-10 max-w-2xl text-center">
+            <p className="text-base font-medium tracking-tight text-foreground">
+              See your shelf from a completely different perspective.
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Get a structured retail audit from a single shelf photo — with actionable issues you
+              can review and track.
+            </p>
+          </div>
+        ) : null}
       </div>
     </section>
   );
 }
 
-function EmptyResults() {
+function EmptyResults({ homepageIntro = false }: { homepageIntro?: boolean }) {
   return (
     <div className="grid min-h-48 place-items-center py-6 text-center">
       <p className="max-w-md text-sm text-muted-foreground">
-        Choose the sample shelf or upload your photo above — then confirm category, optionally add a
-        planogram, and start scanning. Execution, merchandising, brand, and executive views will
-        appear here.
+        {homepageIntro
+          ? "Choose the sample shelf above or upload your own photo to start your free audit."
+          : "Choose the sample shelf or upload your photo above — then confirm category, optionally add a planogram, and start scanning. Execution, merchandising, brand, and executive views will appear here."}
       </p>
     </div>
   );
