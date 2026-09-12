@@ -796,10 +796,15 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
         ? Number(metricsAny["planogram_compliance_percent"])
         : null;
   let planogramSummary = (metricsAny["planogram_summary"] ?? {}) as Record<string, unknown>;
-  const adhocRows = (scan as any).adhoc_planogram;
+  const adhocRaw = (scan as any).adhoc_planogram;
+  let adhocRows: unknown[] = [];
+  if (Array.isArray(adhocRaw)) {
+    adhocRows = adhocRaw;
+  } else if (adhocRaw && typeof adhocRaw === "object" && Array.isArray((adhocRaw as any).rows)) {
+    adhocRows = (adhocRaw as { rows: unknown[] }).rows;
+  }
   if (
     !Array.isArray(planogramSummary.configured_rows) &&
-    Array.isArray(adhocRows) &&
     adhocRows.length
   ) {
     planogramSummary = { ...planogramSummary, configured_rows: adhocRows };
@@ -810,7 +815,7 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
   const planogramQtyCompliancePercent = metricNum("planogram_qty_compliance_percent");
   const planogramRequested =
     Boolean((scan as any).assignment_id) ||
-    (Array.isArray(adhocRows) && adhocRows.length > 0) ||
+    adhocRows.length > 0 ||
     planogramPercent !== null ||
     Object.keys(planogramSummary).length > 0;
 

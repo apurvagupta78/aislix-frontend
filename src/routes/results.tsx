@@ -136,7 +136,9 @@ function Results() {
     saveStoredScanContext(EMPTY_SCAN_CONTEXT);
   }, [scan, scanHadPlanogram]);
 
-  const activeRole = roleOverride ?? defaultAuditRoleTab(workspace.customerType);
+  const activeRole =
+    roleOverride ??
+    defaultAuditRoleTab(scanContext.auditRole ?? workspace.customerType);
   const display = useMemo(
     () =>
       data

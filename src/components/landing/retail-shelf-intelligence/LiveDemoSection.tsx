@@ -75,6 +75,8 @@ export function LiveDemoSection({
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [setupMode, setSetupMode] = useState<SetupMode>(null);
   const [scanContext, setScanContext] = useState<ScanContextState>(EMPTY_SCAN_CONTEXT);
+  /** Context used for results — set synchronously on Start so KPIs are not lost to React batching. */
+  const [resultScanContext, setResultScanContext] = useState<ScanContextState>(EMPTY_SCAN_CONTEXT);
   const objectUrlRef = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const demoCardRef = useRef<HTMLDivElement>(null);
@@ -209,9 +211,11 @@ export function LiveDemoSection({
         onScanContextChange={setScanContext}
         defaultCategory={demoCategory.state.categoryName}
         defaultSubCategory={subCategoryLabel}
-        onStart={() =>
-          void run(setupMode, setupMode === "upload" ? (pendingFile ?? undefined) : undefined)
-        }
+        onStart={(ctx) => {
+          setResultScanContext(ctx);
+          setScanContext(ctx);
+          void run(setupMode, setupMode === "upload" ? (pendingFile ?? undefined) : undefined);
+        }}
       />
     ) : null;
 
@@ -308,7 +312,7 @@ export function LiveDemoSection({
                   result={result}
                   elapsedSec={elapsedSec}
                   showWorkspaceCta={showWorkspaceCta}
-                  scanContext={scanContext}
+                  scanContext={resultScanContext}
                   onScanContextChange={setScanContext}
                   defaultCategory={demoCategory.state.categoryName}
                   defaultSubCategory={subCategoryLabel}

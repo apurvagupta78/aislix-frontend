@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Maximize2, Sparkles, Timer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import {
   enrichScanResult,
   type ScanContextState,
 } from "@/lib/scan-context";
-import type { AuditRoleTab } from "@/lib/role-audit-ui";
+import { defaultAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { landingToScanResult } from "@/lib/demo-execution";
 import type { LandingScanResult } from "@/lib/landing-scan-api";
 import { trackLandingEvent } from "@/lib/landing-analytics";
@@ -52,11 +52,18 @@ export function DemoRoleResultsPanel({
   defaultSubCategory,
   previewImageUrl,
 }: DemoRoleResultsPanelProps) {
-  const [activeRole, setActiveRole] = useState<AuditRoleTab>("supermarket");
-  const [fullscreen, setFullscreen] = useState(false);
   const [localContext, setLocalContext] = useState<ScanContextState>(EMPTY_SCAN_CONTEXT);
-
   const scanContext = scanContextProp ?? localContext;
+  const [activeRole, setActiveRole] = useState<AuditRoleTab>(() =>
+    defaultAuditRoleTab(scanContext.auditRole),
+  );
+  const [fullscreen, setFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (scanContext.auditRole) {
+      setActiveRole(defaultAuditRoleTab(scanContext.auditRole));
+    }
+  }, [scanContext.auditRole]);
   const setScanContext = onScanContextChange ?? setLocalContext;
 
   const baseResult = useMemo(() => landingToScanResult(landing), [landing]);

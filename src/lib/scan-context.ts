@@ -22,7 +22,16 @@ import {
   hasExplicitExpectedFacings,
   hasPlacementRules,
 } from "@/lib/execution-metrics";
+import { computeClientAuditDashboards } from "@/lib/audit-kpi-client";
 import { buildOpportunityLedger, buildVerificationSnapshot } from "@/lib/opportunity-ledger";
+import {
+  autoPopulateAuditPackage,
+  EMPTY_AUDIT_PACKAGE,
+  type PlanogramAuditPackage,
+} from "@/lib/planogram-audit-package";
+import { EMPTY_PLANOGRAM_META, type PlanogramMeta } from "@/lib/planogram-meta";
+import { defaultAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
+import { roleRequiresPricing } from "@/lib/role-planogram-requirements";
 import type { FinancialImpact, ScanRecommendation, ScanResult } from "@/lib/scan-results";
 import { emptyRow, type PlanogramRow } from "@/lib/planogram";
 
@@ -35,11 +44,19 @@ export type ScanFocusFilter = {
 export type ScanContextState = {
   focus: ScanFocusFilter;
   planogramRows: PlanogramRow[];
+  /** Customer role selected before planogram entry — drives KPI field requirements. */
+  auditRole?: AuditRoleTab;
+  auditPackage?: PlanogramAuditPackage;
+  /** Step 1 planogram metadata (name, store, validity, fixture basics). */
+  planogramMeta?: PlanogramMeta;
 };
 
 export const EMPTY_SCAN_CONTEXT: ScanContextState = {
   focus: {},
   planogramRows: [],
+  auditRole: "supermarket",
+  auditPackage: { ...EMPTY_AUDIT_PACKAGE },
+  planogramMeta: { ...EMPTY_PLANOGRAM_META },
 };
 
 const STORAGE_KEY = "aislix_scan_context";
@@ -58,6 +75,9 @@ export function loadStoredScanContext(): ScanContextState {
     return {
       focus: parsed.focus ?? {},
       planogramRows: Array.isArray(parsed.planogramRows) ? parsed.planogramRows : [],
+      auditRole: defaultAuditRoleTab(parsed.auditRole),
+      auditPackage: parsed.auditPackage ?? { ...EMPTY_AUDIT_PACKAGE },
+      planogramMeta: parsed.planogramMeta ?? { ...EMPTY_PLANOGRAM_META },
     };
   } catch {
     return EMPTY_SCAN_CONTEXT;
@@ -898,23 +918,69 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
 
   const assortment = buildClientAssortment(planogramRows, match);
 
+  const withKpis = attachAuditKpiDashboards(
+    {
+      ...result,
+      inventory: fullInventory,
+      financial_impact,
+      executive_summary,
+      role_summaries,
+      competitor_intel: competitor_intel ?? result.competitor_intel,
+      recommendations: mergedRecs,
+      retail_intelligence: {
+        ...(result.retail_intelligence ?? {}),
+        assortment,
+        opportunity_ledger,
+        ...(execution_verification ? { execution_verification } : {}),
+      } as ScanResult["retail_intelligence"],
+      summary: summaryBlock,
+      charts: topBrands.length ? { ...result.charts, top_brands: topBrands } : result.charts,
+      planogram: planogramBlock,
+    },
+    ctx,
+  );
+
+  return withKpis;
+}
+
+function backendDashboardsHaveValues(result: ScanResult): boolean {
+  const multi = result.retail_intelligence?.audit_kpi_dashboards;
+  if (multi) {
+    return Object.values(multi).some((dash) =>
+      dash?.primary_kpis?.some(
+        (k) => k.status !== "not_configured" && (k.value != null || k.status === "not_applicable"),
+      ),
+    );
+  }
+  const single = result.retail_intelligence?.audit_kpi_dashboard;
+  return Boolean(
+    single?.primary_kpis?.some(
+      (k) => k.status !== "not_configured" && (k.value != null || k.status === "not_applicable"),
+    ),
+  );
+}
+
+/** Client-side KPI dashboards from planogram rows + inventory when backend payload is missing. */
+function attachAuditKpiDashboards(result: ScanResult, ctx: ScanContextState): ScanResult {
+  if (backendDashboardsHaveValues(result)) return result;
+  const planogramRows = effectivePlanogramRows(ctx, {
+    category: result.scan_category,
+    subCategory: result.scan_sub_category,
+  });
+  const hasInputs = planogramRows.length > 0 || (result.inventory?.length ?? 0) > 0;
+  if (!hasInputs) return result;
+
+  const role = ctx.auditRole ?? "supermarket";
+  const auditPackage = autoPopulateAuditPackage(planogramRows, ctx.auditPackage ?? EMPTY_AUDIT_PACKAGE);
+  const dashboards = computeClientAuditDashboards(result);
   return {
     ...result,
-    inventory: fullInventory,
-    financial_impact,
-    executive_summary,
-    role_summaries,
-    competitor_intel: competitor_intel ?? result.competitor_intel,
-    recommendations: mergedRecs,
     retail_intelligence: {
       ...(result.retail_intelligence ?? {}),
-      assortment,
-      opportunity_ledger,
-      ...(execution_verification ? { execution_verification } : {}),
+      audit_kpi_dashboards: dashboards,
+      audit_kpi_dashboard: dashboards[role],
+      audit_package: auditPackage,
     } as ScanResult["retail_intelligence"],
-    summary: summaryBlock,
-    charts: topBrands.length ? { ...result.charts, top_brands: topBrands } : result.charts,
-    planogram: planogramBlock,
   };
 }
 
@@ -928,7 +994,7 @@ export function enrichDemoScanResult(result: ScanResult, ctx: ScanContextState):
       existing?.brand?.trim() &&
       existing?.executive?.trim(),
   );
-  if (hasFullRoleSummaries) return applied;
+  if (hasFullRoleSummaries) return attachAuditKpiDashboards(applied, ctx);
 
   const fullInventory = result.inventory ?? [];
   const planogramRows = effectivePlanogramRows(ctx, {
@@ -978,7 +1044,7 @@ export function enrichDemoScanResult(result: ScanResult, ctx: ScanContextState):
     executive: existing?.executive?.trim() || built.executive,
   };
 
-  return {
+  const enriched = {
     ...applied,
     role_summaries,
     executive_summary:
@@ -992,6 +1058,8 @@ export function enrichDemoScanResult(result: ScanResult, ctx: ScanContextState):
       ...(execution_verification ? { execution_verification } : {}),
     } as ScanResult["retail_intelligence"],
   };
+
+  return attachAuditKpiDashboards(enriched, ctx);
 }
 
 /** Client-side assortment KPIs from user-supplied planogram rows (demo / post-scan context). */
@@ -1027,8 +1095,10 @@ export function hasActiveScanContext(ctx: ScanContextState): boolean {
   );
 }
 
-/** At least one planogram row with MRP/price — required before scan for financial KPIs. */
+/** At least one planogram row with MRP/price when the role calculates Price Compliance. */
 export function hasPricingConfigured(ctx: ScanContextState): boolean {
+  const role = ctx.auditRole ?? "supermarket";
+  if (!roleRequiresPricing(role)) return ctx.planogramRows.length > 0;
   return ctx.planogramRows.some((row) => (row.mrp_inr ?? 0) > 0);
 }
 
@@ -1037,6 +1107,8 @@ export function hasScanPricingConfigured(
   ctx: ScanContextState,
   expectedRows: { mrp_inr?: number | null }[] = [],
 ): boolean {
+  const role = ctx.auditRole ?? "supermarket";
+  if (!roleRequiresPricing(role)) return expectedRows.length > 0 || ctx.planogramRows.length > 0;
   if (hasPricingConfigured(ctx)) return true;
   if (!expectedRows.length) return false;
   return expectedRows.every((row) => (row.mrp_inr ?? 0) > 0);
@@ -1047,6 +1119,12 @@ export function pricingSetupMessage(
   expectedRows: { mrp_inr?: number | null }[] = [],
 ): string | null {
   if (hasScanPricingConfigured(ctx, expectedRows)) return null;
+  const role = ctx.auditRole ?? "supermarket";
+  if (!roleRequiresPricing(role)) {
+    return expectedRows.length
+      ? "Add at least one expected product before scanning."
+      : "Add at least one product to the planogram before scanning.";
+  }
   if (expectedRows.length) {
     return "Add shelf price (MRP) for every expected product before scanning.";
   }

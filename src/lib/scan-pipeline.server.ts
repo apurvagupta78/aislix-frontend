@@ -966,8 +966,8 @@ type ScanRow = {
   notes: string | null;
 
   assignment_id: string | null;
-  /** Optional expected products supplied ad hoc on the New Scan page. */
-  adhoc_planogram: Record<string, unknown>[] | null;
+  /** Optional expected products — array of rows or { rows, audit_role, audit_package }. */
+  adhoc_planogram: unknown;
 };
 
 type AssignmentContext = {
@@ -1004,10 +1004,31 @@ async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
     notes: (scan.notes as string | null) ?? null,
 
     assignment_id: (scan.assignment_id as string | null) ?? null,
-    adhoc_planogram: Array.isArray(scan.adhoc_planogram)
-      ? (scan.adhoc_planogram as Record<string, unknown>[])
-      : null,
+    adhoc_planogram: scan.adhoc_planogram ?? null,
   };
+}
+
+function parseAdhocPlanogram(raw: unknown): {
+  rows: Record<string, unknown>[];
+  audit_role?: string;
+  audit_package?: Record<string, unknown>;
+} {
+  if (!raw) return { rows: [] };
+  if (Array.isArray(raw)) return { rows: raw as Record<string, unknown>[] };
+  if (typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+    if (Array.isArray(obj.rows)) {
+      return {
+        rows: obj.rows as Record<string, unknown>[],
+        audit_role: typeof obj.audit_role === "string" ? obj.audit_role : undefined,
+        audit_package:
+          obj.audit_package && typeof obj.audit_package === "object"
+            ? (obj.audit_package as Record<string, unknown>)
+            : undefined,
+      };
+    }
+  }
+  return { rows: [] };
 }
 
 const PLANOGRAM_FIELDS =
@@ -1159,9 +1180,8 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
   const assignment = await loadAssignmentContext(supabase, scan);
   // No assignment: the scanner may still have supplied expected products
   // inline on the New Scan page.
-  const adhocItems = assignment
-    ? []
-    : (scan.adhoc_planogram ?? []).map((row) => planogramShape(row));
+  const adhocParsed = assignment ? { rows: [] as Record<string, unknown>[] } : parseAdhocPlanogram(scan.adhoc_planogram);
+  const adhocItems = adhocParsed.rows.map((row) => planogramShape(row));
 
   // Every shelf type on this rack must reach the vision backend, otherwise it
   // scopes to one sub-category and reports false mismatches on mixed shelves.
@@ -1241,6 +1261,8 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
             planogram_source: "adhoc",
             planogram_items: adhocItems,
             planogram_items_full: adhocItems,
+            customer_type: adhocParsed.audit_role ?? undefined,
+            audit_package: adhocParsed.audit_package ?? {},
           }
         : {}),
   };

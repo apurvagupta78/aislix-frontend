@@ -123,6 +123,9 @@ export async function submitScanImages(
      * the scan and forwarded to the vision backend as `planogram_items`.
      */
     planogramItems?: Array<Record<string, string | number | null>>;
+    /** Role + audit package wrapper (preferred over bare planogramItems). */
+    planogramPayload?: Record<string, unknown>;
+    auditRole?: string;
     /** Follow-up scan linked to a prior audit (fix → rescan → verify). */
     parentScanId?: string;
   } = {},
@@ -171,9 +174,11 @@ export async function submitScanImages(
         null,
 
       assignment_id: options.assignmentId ?? null,
-      adhoc_planogram: options.planogramItems?.length
-        ? (options.planogramItems as unknown as Json)
-        : null,
+      adhoc_planogram: options.planogramPayload
+        ? (options.planogramPayload as unknown as Json)
+        : options.planogramItems?.length
+          ? (options.planogramItems as unknown as Json)
+          : null,
       parent_scan_id: options.parentScanId ?? null,
       photo_count: files.length,
 

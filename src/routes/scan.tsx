@@ -47,7 +47,15 @@ import { ClipboardList, IndianRupee } from "lucide-react";
 import { fetchActivePlanogram, fetchPlanogramItems, type DraftRow } from "@/lib/planogram";
 import { toUserMessage } from "@/lib/api/errors";
 import { CategorySubcategoryPicker } from "@/components/scan/CategorySubcategoryPicker";
-import { ScanContextPanel, type ScanContextPanelHandle } from "@/components/scan/ScanContextPanel";
+import {
+  NewPlanogramWizard,
+  type NewPlanogramWizardHandle,
+} from "@/components/planogram/NewPlanogramWizard";
+import {
+  autoPopulateAuditPackage,
+  EMPTY_AUDIT_PACKAGE,
+} from "@/lib/planogram-audit-package";
+import { adhocPlanogramPayload } from "@/lib/role-planogram-requirements";
 import {
   hasScanPricingConfigured,
   loadStoredScanContext,
@@ -111,6 +119,9 @@ type Phase = "idle" | "uploading" | "error";
 /** Option 1 = free scan, Option 2 = compliance scan against expected products. */
 type ScanMode = "free" | "with_planogram";
 
+/** ScanContextPanel replaces the legacy PlanogramBuilder for ad-hoc planograms. */
+const SHOW_LEGACY_PLANOGRAM_BUILDER = false;
+
 type Attachment = { id: string; file: File; url: string };
 
 
@@ -136,20 +147,18 @@ function ScanPage() {
   const [showSetupErrors, setShowSetupErrors] = useState(false);
   const [categorySyncNotice, setCategorySyncNotice] = useState<string | null>(null);
   const [scanContext, setScanContext] = useState<ScanContextState>(() => loadStoredScanContext());
-  const scanContextPanelRef = useRef<ScanContextPanelHandle>(null);
+  const planogramWizardRef = useRef<NewPlanogramWizardHandle>(null);
 
   const withPlanogram = scanMode === "with_planogram";
 
   const syncScanContextFromPanel = useCallback((): ScanContextState => {
-    const next = scanContextPanelRef.current?.flushPendingManualRow() ?? scanContext;
+    const next = planogramWizardRef.current?.flush() ?? scanContext;
     if (next !== scanContext) {
       setScanContext(next);
       saveStoredScanContext(next);
     }
     return next;
   }, [scanContext]);
-
-
 
   const storesQuery = useQuery({
     queryKey: ["stores", "scan-setup"],
@@ -302,9 +311,11 @@ function ScanPage() {
 
   const assignmentSubLabel = assignment?.sub_category ?? "";
   const effectiveLocation = shelfLocation.trim() || dominantRowLocation || "";
+  /** With planogram mode uses ScanContextPanel rows; legacy PlanogramBuilder rows are fallback only. */
+  const effectivePlanogramSource = withPlanogram ? scanContext.planogramRows : planogramRows;
   const validPlanogramRows = useMemo(
-    () => planogramRows.filter((row) => row.brand.trim() && row.product_name.trim()),
-    [planogramRows],
+    () => effectivePlanogramSource.filter((row) => row.brand.trim() && row.product_name.trim()),
+    [effectivePlanogramSource],
   );
 
   const setupErrors = useMemo(() => {
@@ -431,9 +442,12 @@ function ScanPage() {
 
   const startScan = useCallback(async () => {
     if (!items.length || phase === "uploading") return;
-    syncScanContextFromPanel();
+    const ctx = syncScanContextFromPanel();
     if (!guardSetup()) return;
 
+    const rowsForSubmit = ctx.planogramRows.filter(
+      (row) => row.brand.trim() && row.product_name.trim(),
+    );
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -461,14 +475,26 @@ function ScanPage() {
           notes: !lockedByAssignment && !withPlanogram ? notes.trim() || undefined : undefined,
           ...(assignment
             ? { assignmentId: assignment.assignment_id, orgId: assignment.org_id }
-            : withPlanogram && validPlanogramRows.length
-              ? {
-                  planogramItems: validPlanogramRows.map(({ key: _key, ...row }) => ({
-                    ...row,
-                    location: shelfLabel || row.location,
-                    aisle: shelfLabel || row.location,
-                  })),
-                }
+            : withPlanogram && rowsForSubmit.length
+              ? (() => {
+                  const rows = rowsForSubmit.map((row) => {
+                    const { key: _key, ...rest } = row as DraftRow & { key?: string };
+                    return {
+                      ...rest,
+                      location: shelfLabel || rest.location,
+                      aisle: shelfLabel || rest.location,
+                    };
+                  });
+                  const auditRole = ctx.auditRole ?? "supermarket";
+                  const auditPackage = autoPopulateAuditPackage(
+                    rows,
+                    ctx.auditPackage ?? EMPTY_AUDIT_PACKAGE,
+                  );
+                  return {
+                    planogramPayload: adhocPlanogramPayload(rows, auditRole, auditPackage),
+                    auditRole,
+                  };
+                })()
               : {}),
           ...(verifyScanId ? { parentScanId: verifyScanId } : {}),
         },
@@ -712,21 +738,28 @@ function ScanPage() {
               <>
                 <div className="overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background shadow-sm">
                   <div className="flex items-center gap-2 border-b border-brand/20 bg-brand/5 px-4 py-3">
-                    <IndianRupee className="size-4 text-brand" />
-                    <p className="text-sm font-semibold">Products &amp; prices (required)</p>
+                    <ClipboardList className="size-4 text-brand" />
+                    <div>
+                      <p className="text-sm font-semibold">New planogram (required)</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Step-by-step — role at Step 1 controls required sections
+                      </p>
+                    </div>
                   </div>
-                  <ScanContextPanel
-                    ref={scanContextPanelRef}
-                    value={scanContext}
-                    onChange={(next) => {
-                      setScanContext(next);
-                      saveStoredScanContext(next);
-                    }}
-                    defaultLocation={shelfLocation}
-                    defaultOpen
-                    requirePricing
-                    embedded
-                  />
+                  <div className="p-4">
+                    <NewPlanogramWizard
+                      ref={planogramWizardRef}
+                      value={scanContext}
+                      onChange={(next) => {
+                        setScanContext(next);
+                        saveStoredScanContext(next);
+                      }}
+                      categories={categories}
+                      defaultLocation={shelfLocation}
+                      defaultCategory={category}
+                      defaultSubCategory={selectedSub?.label}
+                    />
+                  </div>
                 </div>
                 {fieldError("pricing") && (
                   <p className="text-center text-xs font-medium text-amber-700 dark:text-amber-400">
@@ -878,8 +911,8 @@ function ScanPage() {
             )}
 
 
-            {/* OPTION 2 — expected shelf planogram */}
-            {withPlanogram && !lockedByAssignment && (
+            {/* Legacy PlanogramBuilder — hidden when role-aware ScanContextPanel is active above */}
+            {SHOW_LEGACY_PLANOGRAM_BUILDER && withPlanogram && !lockedByAssignment && (
               <section className="card-surface p-4 sm:p-6">
                 <div className="flex items-start gap-3">
                   <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">

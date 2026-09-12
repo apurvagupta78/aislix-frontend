@@ -4,24 +4,22 @@
  */
 
 import { useRef, useState } from "react";
-import { CheckCircle2, Download, FileJson, Loader2, Upload, XCircle } from "lucide-react";
+import { CheckCircle2, FileJson, Loader2, Upload, XCircle } from "lucide-react";
 import { toast } from "sonner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PlanogramBuilder } from "@/components/planogram/PlanogramBuilder";
+import { PlanogramPackageCsvImport } from "@/components/planogram/PlanogramPackageCsvImport";
 import type { ShelfCategory } from "@/lib/categories.data";
 import type { DraftRow } from "@/lib/planogram";
 import {
   autoPopulateAuditPackage,
   computeReadiness,
   exportPlanogramPackageJson,
-  fetchPackageCsvTemplate,
   mergeAssortmentLists,
-  parsePackageCsv,
   parsePlanogramPackageImport,
   splitAssortmentRows,
   type AssortmentEntry,
@@ -31,90 +29,6 @@ import {
   type ScoringTargets,
 } from "@/lib/planogram-audit-package";
 import { cn } from "@/lib/utils";
-
-function CsvImportPanel({
-  label,
-  kind,
-  onImport,
-}: {
-  label: string;
-  kind: "assortment" | "prices" | "promotions";
-  onImport: (rows: unknown[]) => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false);
-  const [errors, setErrors] = useState<string[]>([]);
-
-  const download = async () => {
-    const text = await fetchPackageCsvTemplate(kind);
-    const blob = new Blob([text], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `planogram-${kind}-template.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleFile = async (file: File) => {
-    setBusy(true);
-    setErrors([]);
-    try {
-      const content = await file.text();
-      const result = await parsePackageCsv(kind, content);
-      if (result.errors.length) {
-        setErrors(result.errors.slice(0, 6));
-        toast.error(`Could not import ${label}`, { description: result.errors[0] });
-        return;
-      }
-      const data = result.rows.filter((r) => r.valid && r.data).map((r) => r.data);
-      onImport(data);
-      toast.success(`${label} imported`, { description: `${data.length} row(s) added.` });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="rounded-xl border border-brand/15 bg-brand-soft/20 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" size="sm" className="rounded-lg border-brand/20" onClick={() => void download()}>
-            <Download className="mr-1.5 size-4" /> Template
-          </Button>
-          <Button
-            type="button"
-            variant="brand"
-            size="sm"
-            className="rounded-lg"
-            disabled={busy}
-            onClick={() => inputRef.current?.click()}
-          >
-            {busy ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : <Upload className="mr-1.5 size-4" />}
-            Upload CSV
-          </Button>
-        </div>
-      </div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept=".csv,text/csv"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) void handleFile(file);
-          e.target.value = "";
-        }}
-      />
-      {errors.length > 0 && (
-        <Alert variant="destructive" className="mt-3">
-          <AlertDescription className="text-xs">{errors.join(" · ")}</AlertDescription>
-        </Alert>
-      )}
-    </div>
-  );
-}
 
 function ReadinessPanel({ rows, pkg }: { rows: DraftRow[]; pkg: PlanogramAuditPackage }) {
   const items = computeReadiness(rows, pkg);
@@ -323,7 +237,7 @@ export function PlanogramAuditTabs({
       </TabsContent>
 
       <TabsContent value="assortment" className="space-y-4">
-        <CsvImportPanel
+        <PlanogramPackageCsvImport
           label="Assortment & must-stock list"
           kind="assortment"
           onImport={(imported) => {
@@ -363,7 +277,7 @@ export function PlanogramAuditTabs({
       </TabsContent>
 
       <TabsContent value="prices" className="space-y-4">
-        <CsvImportPanel
+        <PlanogramPackageCsvImport
           label="Price requirements"
           kind="prices"
           onImport={(imported) => patch({ price_requirements: imported as PriceRequirement[] })}
@@ -400,7 +314,7 @@ export function PlanogramAuditTabs({
       </TabsContent>
 
       <TabsContent value="promotions" className="space-y-4">
-        <CsvImportPanel
+        <PlanogramPackageCsvImport
           label="Active promotions"
           kind="promotions"
           onImport={(imported) => patch({ promotions: imported as PromotionEntry[] })}
