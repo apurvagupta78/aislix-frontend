@@ -42,6 +42,7 @@ import {
   type ResultViewMode,
   type RoleFamily,
 } from "@/lib/customer-context";
+import { ROLE_TAB_THEME, normalizeAuditRoleTab } from "@/lib/role-audit-ui";
 import { formatInr } from "@/lib/pricing";
 
 const severityStyles: Record<ActionCenterItem["severity"], string> = {
@@ -287,7 +288,10 @@ export function ExecutionKpiStripPanel({
   customerType?: CustomerType | string | null;
 }) {
   const kpis = buildKpiStrip(data, customerType);
-  const theme = VIEW_MODE_THEME[view];
+  const roleTheme = customerType
+    ? ROLE_TAB_THEME[normalizeAuditRoleTab(String(customerType))]
+    : null;
+  const theme = roleTheme ?? VIEW_MODE_THEME[view];
   const gridCols = compact
     ? "grid-cols-2 sm:grid-cols-3"
     : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5";

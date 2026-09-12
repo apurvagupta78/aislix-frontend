@@ -202,6 +202,8 @@ export type RetailIntelligencePayload = {
     action: string;
   }>;
   audit_kpi_dashboard?: AuditKpiDashboard;
+  /** All five customer-role dashboards for tab switching. */
+  audit_kpi_dashboards?: Partial<Record<string, AuditKpiDashboard>>;
 };
 
 export const ROLE_HERO: Record<ResultViewMode, string> = {

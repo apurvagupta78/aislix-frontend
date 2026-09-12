@@ -10,7 +10,7 @@ import {
   enrichScanResult,
   type ScanContextState,
 } from "@/lib/scan-context";
-import type { ResultViewMode } from "@/lib/customer-context";
+import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import { landingToScanResult } from "@/lib/demo-execution";
 import type { LandingScanResult } from "@/lib/landing-scan-api";
 import { trackLandingEvent } from "@/lib/landing-analytics";
@@ -52,7 +52,7 @@ export function DemoRoleResultsPanel({
   defaultSubCategory,
   previewImageUrl,
 }: DemoRoleResultsPanelProps) {
-  const [view, setView] = useState<ResultViewMode>("execution");
+  const [activeRole, setActiveRole] = useState<AuditRoleTab>("supermarket");
   const [fullscreen, setFullscreen] = useState(false);
   const [localContext, setLocalContext] = useState<ScanContextState>(EMPTY_SCAN_CONTEXT);
 
@@ -73,13 +73,11 @@ export function DemoRoleResultsPanel({
       <DemoScanResultsBody
         data={data}
         rawData={baseResult}
-        view={view}
-        onViewChange={setView}
+        activeRole={activeRole}
+        onRoleChange={setActiveRole}
         compact={!fullscreen}
         demoMode
-        parityLayout
         imageUrl={imageUrl ?? undefined}
-        competitorEnabled
       />
 
       <ScanResultsActionsFooter data={data} />
@@ -157,12 +155,10 @@ export function DemoRoleResultsPanel({
             <DemoScanResultsBody
               data={data}
               rawData={baseResult}
-              view={view}
-              onViewChange={setView}
+              activeRole={activeRole}
+              onRoleChange={setActiveRole}
               imageUrl={imageUrl ?? undefined}
               demoMode
-              parityLayout
-              competitorEnabled
             />
             <ScanResultsActionsFooter data={data} />
           </div>

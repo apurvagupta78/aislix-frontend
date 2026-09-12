@@ -23,8 +23,8 @@ import { ScanResultsActionsFooter } from "@/components/scan/ScanResultsActionsFo
 import { AI_DISCLAIMER } from "@/components/scan/ScanProgressPanel";
 import { planHasFeature } from "@/lib/plan-features";
 import { fetchUsageSummary } from "@/lib/subscription-limits";
-import type { ResultViewMode } from "@/lib/customer-context";
 import { useWorkspaceContext } from "@/hooks/use-customer-context";
+import { defaultAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { ScanContextPanel } from "@/components/scan/ScanContextPanel";
 import { ScanResultsBody } from "@/components/scan/DemoScanResultsBody";
 import {
@@ -122,7 +122,7 @@ function Results() {
   const financialLocked =
     !usageQuery.data?.platform_bypass && !planHasFeature(planCode, "financial_impact");
 
-  const [viewOverride, setViewOverride] = useState<ResultViewMode | undefined>();
+  const [roleOverride, setRoleOverride] = useState<AuditRoleTab | undefined>();
   const [scanContext, setScanContext] = useState<ScanContextState>(() => loadStoredScanContext());
   const [showOptionalPricing, setShowOptionalPricing] = useState(false);
   const assignmentId = assignmentQuery.data ?? null;
@@ -136,7 +136,7 @@ function Results() {
     saveStoredScanContext(EMPTY_SCAN_CONTEXT);
   }, [scan, scanHadPlanogram]);
 
-  const activeView = viewOverride ?? "execution";
+  const activeRole = roleOverride ?? defaultAuditRoleTab(workspace.customerType);
   const display = useMemo(
     () =>
       data
@@ -332,21 +332,13 @@ function Results() {
                     <ScanResultsBody
                       data={display}
                       rawData={data}
-                      view={activeView}
-                      onViewChange={setViewOverride}
+                      activeRole={activeRole}
+                      onRoleChange={setRoleOverride}
                       loading={loading}
                       planogramComparison={comparison}
                       financialLocked={financialLocked}
                       planCode={planCode}
-                      parityLayout
-                      customerType={workspace.customerType}
-                      roleFamily={workspace.roleFamily}
                       imageUrl={imageUrl}
-                      previousScore={data?.navigation?.previous_execution_score ?? undefined}
-                      competitorEnabled
-                      onCorrected={() => {
-                        void query.refetch();
-                      }}
                     />
                     <ScanResultsActionsFooter data={display} loading={loading} />
                     <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">

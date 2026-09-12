@@ -372,12 +372,27 @@ export function auditKpiDashboardFromResult(result?: ScanResult | null): AuditKp
   return result?.retail_intelligence?.audit_kpi_dashboard;
 }
 
+/** Role-specific dashboard — prefers multi-role payload when switching tabs. */
+export function auditKpiDashboardForRole(
+  result?: ScanResult | null,
+  role?: CustomerType | string | null,
+): AuditKpiDashboard | undefined {
+  const roleKey = normalizeRoleId(role);
+  const multi = (
+    result?.retail_intelligence as { audit_kpi_dashboards?: Record<string, AuditKpiDashboard> } | undefined
+  )?.audit_kpi_dashboards;
+  if (multi?.[roleKey]?.primary_kpis?.length === 5) return multi[roleKey];
+  const single = auditKpiDashboardFromResult(result);
+  if (single && (!role || single.role_id === roleKey)) return single;
+  return single;
+}
+
 /** Exactly five role-specific KPIs when backend audit dashboard is present; else legacy strip. */
 export function buildRoleKpiMetrics(
   result?: ScanResult | null,
   customerType?: CustomerType | string | null,
 ): KpiMetric[] {
-  const dashboard = auditKpiDashboardFromResult(result);
+  const dashboard = auditKpiDashboardForRole(result, customerType);
   if (dashboard?.primary_kpis?.length === 5) {
     return dashboard.primary_kpis.map(auditKpiToMetric);
   }
