@@ -14,10 +14,13 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   DemoCategoryPicker,
   type DemoCategoryState,
 } from "@/components/scan/DemoCategoryPicker";
+import { HomepageRolePicker } from "@/components/planogram/HomepageRolePicker";
 import {
   NewPlanogramWizard,
   type NewPlanogramWizardHandle,
@@ -38,8 +41,14 @@ import {
   HOMEPAGE_DEMO_READY_CHECKLIST,
   HOMEPAGE_FREE_AUDIT_INTRO,
   HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM,
+  HOMEPAGE_DISTRIBUTOR_SETUP,
   HOMEPAGE_SHELF_SETUP_FLOW,
 } from "@/lib/planogram-wizard-homepage-copy";
+import {
+  HOMEPAGE_DEMO_ROLE_READY,
+  HOMEPAGE_DISTRIBUTOR_OUTLET,
+} from "@/lib/planogram-wizard-homepage-role-flow";
+import { defaultAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
 import type { ScanContextState } from "@/lib/scan-context";
 import { cn } from "@/lib/utils";
 
@@ -183,6 +192,15 @@ export function DemoScanSetupPanel({
     mode === "sample" ? "demo" : "none",
   );
   const planogramMode = planogramModeProp ?? internalMode;
+  const auditRole = defaultAuditRoleTab(scanContext.auditRole);
+
+  function setAuditRole(nextRole: AuditRoleTab) {
+    if (planogramMode === "demo" && mode === "sample") {
+      onScanContextChange(buildDemoOralCareScanContext(nextRole));
+      return;
+    }
+    onScanContextChange({ ...scanContext, auditRole: nextRole });
+  }
 
   function resolveSubCategoryLabel(next: DemoCategoryState): string {
     if (next.subId === "others") return next.customSub.trim();
@@ -325,6 +343,12 @@ export function DemoScanSetupPanel({
       />
 
       {homepageIntro ? (
+        <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-card p-4 sm:p-5">
+          <HomepageRolePicker value={auditRole} onChange={setAuditRole} />
+        </div>
+      ) : null}
+
+      {homepageIntro ? (
         <div
           className={cn(
             "mt-5 grid gap-2",
@@ -456,10 +480,13 @@ export function DemoScanSetupPanel({
             <div className="flex-1">
               {homepageIntro ? (
                 <>
-                  <p className="text-sm font-semibold text-foreground">{HOMEPAGE_DEMO_READY_CARD.title}</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {HOMEPAGE_DEMO_ROLE_READY[auditRole]?.title ?? HOMEPAGE_DEMO_READY_CARD.title}
+                  </p>
                   <p className="text-xs text-foreground/90">Oral Care · Main Gondola</p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {HOMEPAGE_DEMO_READY_CARD.subtitle}
+                    {HOMEPAGE_DEMO_ROLE_READY[auditRole]?.description ??
+                      HOMEPAGE_DEMO_READY_CARD.subtitle}
                   </p>
                 </>
               ) : (
@@ -550,6 +577,47 @@ export function DemoScanSetupPanel({
           <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
             {HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM.limitation}
           </p>
+          {auditRole === "distributor" ? (
+            <div className="mt-4 space-y-3 rounded-xl border border-border/80 bg-card/80 p-4">
+              <p className="text-sm font-medium text-foreground">
+                {HOMEPAGE_DISTRIBUTOR_OUTLET.heading}
+              </p>
+              <p className="text-xs text-muted-foreground">{HOMEPAGE_DISTRIBUTOR_SETUP.noneModeNote}</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">{HOMEPAGE_DISTRIBUTOR_OUTLET.portfolioLabel}</Label>
+                  <Input
+                    className="h-9 rounded-lg"
+                    placeholder="ABC Distribution"
+                    value={scanContext.focus.company ?? ""}
+                    onChange={(e) =>
+                      onScanContextChange({
+                        ...scanContext,
+                        focus: { ...scanContext.focus, company: e.target.value },
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">{HOMEPAGE_DISTRIBUTOR_OUTLET.outletLabel}</Label>
+                  <Input
+                    className="h-9 rounded-lg"
+                    placeholder="Outlet 102"
+                    value={scanContext.planogramMeta?.store_outlet ?? ""}
+                    onChange={(e) =>
+                      onScanContextChange({
+                        ...scanContext,
+                        planogramMeta: {
+                          ...(scanContext.planogramMeta ?? EMPTY_PLANOGRAM_META),
+                          store_outlet: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
           <Button
             type="button"
             size="lg"
@@ -571,8 +639,8 @@ export function DemoScanSetupPanel({
                 <>
                   <p className="text-sm font-semibold text-foreground">Set Up Your Shelf</p>
                   <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                    Tell Aislix what should be on this shelf, where products belong and how the shelf
-                    should be arranged. Aislix will use this setup as the reference for your audit.
+                    Aislix has tailored these steps for your role. Enter only the information relevant
+                    to your audit — products, layout, and checks that matter to your business.
                   </p>
                   <p className="mt-2 text-[10px] leading-snug text-muted-foreground/90">
                     {HOMEPAGE_SHELF_SETUP_FLOW}

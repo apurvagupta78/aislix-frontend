@@ -17,6 +17,10 @@ export type PlanogramMeta = {
   version?: string;
   fixture_id?: string;
   is_demo?: boolean;
+  /** Distributor outlet territory / area (homepage setup). */
+  territory?: string;
+  /** Optional sales rep for distributor outlet audits. */
+  sales_representative?: string;
 };
 
 export type FixtureMeta = {

@@ -35,6 +35,7 @@ import {
   PriceManualForm,
   PromotionManualForm,
 } from "@/components/planogram/PlanogramWizardManualForms";
+import { HomepageRolePicker } from "@/components/planogram/HomepageRolePicker";
 import { RoleTabSwitcher } from "@/components/scan-results/RoleTabSwitcher";
 import type { ShelfCategory } from "@/lib/categories.data";
 import { toDraftRow, type DraftRow, type PlanogramRow } from "@/lib/planogram";
@@ -109,27 +110,27 @@ import {
   HOMEPAGE_SCORING_TARGET_HELP,
   HOMEPAGE_DEMO_LAYOUT_STATUS,
   HOMEPAGE_DEMO_PRODUCTS_STATUS,
-  HOMEPAGE_LAYOUT_EXAMPLE,
   HOMEPAGE_NO_PLANOGRAM_ASSORTMENT,
   HOMEPAGE_NO_PLANOGRAM_LAYOUT,
   HOMEPAGE_NO_PLANOGRAM_PRODUCTS,
   HOMEPAGE_PRODUCTS_TABLE_DESCRIPTION,
   HOMEPAGE_PRODUCTS_TABLE_TITLE,
-  HOMEPAGE_DEMO_DISTRIBUTOR_STATUS,
   HOMEPAGE_DEMO_READINESS_STATUS,
-  HOMEPAGE_DISTRIBUTOR_SETUP,
   HOMEPAGE_NONE_READINESS_STATUS,
   HOMEPAGE_READINESS_HEADLINE,
   HOMEPAGE_READINESS_STATUS_LABELS,
   HOMEPAGE_READINESS_SUMMARY_LABEL,
   HOMEPAGE_READINESS_TRUST,
-  HOMEPAGE_WIZARD_STEP_COPY,
   homepageRequiredProductTypeLabel,
 } from "@/lib/planogram-wizard-homepage-copy";
 import {
   computeHomepageShelfChecks,
   summarizeHomepageReadiness,
 } from "@/lib/planogram-wizard-homepage-readiness";
+import {
+  HOMEPAGE_DISTRIBUTOR_OUTLET,
+  homepageWizardStepsForRole,
+} from "@/lib/planogram-wizard-homepage-role-flow";
 import { defaultAuditRoleTab, roleTabLabel, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { roleRequiresPricing } from "@/lib/role-planogram-requirements";
 import type { ScanContextState } from "@/lib/scan-context";
@@ -202,19 +203,13 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
   ) {
     const role = defaultAuditRoleTab(value.auditRole);
     const steps = useMemo(
-      () => wizardStepsForRole(role, { omitLayout: homepageIntro }),
+      () => (homepageIntro ? homepageWizardStepsForRole(role) : wizardStepsForRole(role)),
       [role, homepageIntro],
     );
-    const displaySteps = useMemo(
-      () =>
-        homepageIntro
-          ? steps.map((step) => ({ ...step, ...HOMEPAGE_WIZARD_STEP_COPY[step.id] }))
-          : steps,
-      [steps, homepageIntro],
-    );
+    const displaySteps = steps;
     const [stepIndex, setStepIndex] = useState(0);
     const [promotionEditSeed, setPromotionEditSeed] = useState<PromotionEntry | null>(null);
-    const currentStep = steps[stepIndex]?.id ?? "basics";
+    const currentStep = steps[stepIndex]?.id ?? (homepageIntro ? "role" : "basics");
 
     useEffect(() => {
       setStepIndex((i) => Math.min(i, Math.max(steps.length - 1, 0)));
@@ -326,20 +321,23 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
 
     function renderStep(stepId: PlanogramWizardStepId) {
       switch (stepId) {
+        case "role":
+          return <HomepageRolePicker value={role} onChange={setRole} compact />;
+
         case "basics":
           return (
             <div className="space-y-5">
-              <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {homepageIntro ? "Who is this audit for?" : "Audit role *"}
-                </Label>
-                <RoleTabSwitcher value={role} onChange={setRole} />
-                <p className="text-xs text-muted-foreground">
-                  {homepageIntro
-                    ? "Your role determines which shelf checks and KPIs Aislix will use."
-                    : "Role selection determines which planogram sections and KPIs apply to this audit."}
-                </p>
-              </div>
+              {!homepageIntro ? (
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Audit role *
+                  </Label>
+                  <RoleTabSwitcher value={role} onChange={setRole} />
+                  <p className="text-xs text-muted-foreground">
+                    Role selection determines which planogram sections and KPIs apply to this audit.
+                  </p>
+                </div>
+              ) : null}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5 sm:col-span-2">
                   <Label className="text-xs">
@@ -362,65 +360,63 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                     </p>
                   ) : null}
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Store / outlet *</Label>
-                  <Input
-                    className="h-9 rounded-lg"
-                    placeholder={defaultLocation || "Store 102"}
-                    value={meta.store_outlet}
-                    onChange={(e) => patch(mergeMeta(value, { store_outlet: e.target.value }))}
-                  />
-                  {homepageIntro ? (
-                    <p className="text-[11px] text-muted-foreground">
-                      Where will this shelf be audited?
-                    </p>
-                  ) : null}
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Fixture / rack *</Label>
-                  <Input
-                    className="h-9 rounded-lg"
-                    placeholder="A-1-L"
-                    value={auditPackage.fixture_id ?? ""}
-                    onChange={(e) =>
-                      patch({
-                        ...value,
-                        auditPackage: { ...auditPackage, fixture_id: e.target.value },
-                      })
-                    }
-                  />
-                  {homepageIntro ? (
-                    <p className="text-[11px] text-muted-foreground">
-                      Which rack or display does this setup belong to?
-                    </p>
-                  ) : null}
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Category *</Label>
-                  <Input
-                    className="h-9 rounded-lg"
-                    value={meta.category}
-                    onChange={(e) => patch(mergeMeta(value, { category: e.target.value }))}
-                  />
-                  {homepageIntro ? (
-                    <p className="text-[11px] text-muted-foreground">
-                      What type of products are on this shelf?
-                    </p>
-                  ) : null}
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Sub-category</Label>
-                  <Input
-                    className="h-9 rounded-lg"
-                    value={meta.sub_category ?? ""}
-                    onChange={(e) => patch(mergeMeta(value, { sub_category: e.target.value }))}
-                  />
-                  {homepageIntro ? (
-                    <p className="text-[11px] text-muted-foreground">
-                      Choose the more specific product group, if needed.
-                    </p>
-                  ) : null}
-                </div>
+                {!homepageIntro ? (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Store / outlet *</Label>
+                      <Input
+                        className="h-9 rounded-lg"
+                        placeholder={defaultLocation || "Store 102"}
+                        value={meta.store_outlet}
+                        onChange={(e) => patch(mergeMeta(value, { store_outlet: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Fixture / rack *</Label>
+                      <Input
+                        className="h-9 rounded-lg"
+                        placeholder="A-1-L"
+                        value={auditPackage.fixture_id ?? ""}
+                        onChange={(e) =>
+                          patch({
+                            ...value,
+                            auditPackage: { ...auditPackage, fixture_id: e.target.value },
+                          })
+                        }
+                      />
+                    </div>
+                  </>
+                ) : null}
+                {!(homepageIntro && role === "fmcg") ? (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Category *</Label>
+                      <Input
+                        className="h-9 rounded-lg"
+                        value={meta.category}
+                        onChange={(e) => patch(mergeMeta(value, { category: e.target.value }))}
+                      />
+                      {homepageIntro ? (
+                        <p className="text-[11px] text-muted-foreground">
+                          What type of products are on this shelf?
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Sub-category</Label>
+                      <Input
+                        className="h-9 rounded-lg"
+                        value={meta.sub_category ?? ""}
+                        onChange={(e) => patch(mergeMeta(value, { sub_category: e.target.value }))}
+                      />
+                      {homepageIntro ? (
+                        <p className="text-[11px] text-muted-foreground">
+                          Choose the more specific product group, if needed.
+                        </p>
+                      ) : null}
+                    </div>
+                  </>
+                ) : null}
                 <div className="space-y-1.5">
                   <Label className="text-xs">{homepageIntro ? "Start Date *" : "Valid from *"}</Label>
                   <Input
@@ -580,8 +576,159 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
           );
 
         case "fixture":
+          if (homepageIntro && role === "distributor") {
+            return (
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    {HOMEPAGE_DISTRIBUTOR_OUTLET.heading}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {HOMEPAGE_DISTRIBUTOR_OUTLET.description}
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label className="text-xs">{HOMEPAGE_DISTRIBUTOR_OUTLET.portfolioLabel}</Label>
+                    <Input
+                      className="h-9 rounded-lg"
+                      placeholder="ABC Distribution"
+                      value={value.focus.company ?? ""}
+                      onChange={(e) =>
+                        patch({ ...value, focus: { ...value.focus, company: e.target.value } })
+                      }
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      {HOMEPAGE_DISTRIBUTOR_OUTLET.portfolioHelper}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">{HOMEPAGE_DISTRIBUTOR_OUTLET.outletLabel}</Label>
+                    <Input
+                      className="h-9 rounded-lg"
+                      placeholder={defaultLocation || "Outlet 102"}
+                      value={meta.store_outlet}
+                      onChange={(e) => patch(mergeMeta(value, { store_outlet: e.target.value }))}
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      {HOMEPAGE_DISTRIBUTOR_OUTLET.outletHelper}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">{HOMEPAGE_DISTRIBUTOR_OUTLET.territoryLabel}</Label>
+                    <Input
+                      className="h-9 rounded-lg"
+                      placeholder="North Zone"
+                      value={meta.territory ?? ""}
+                      onChange={(e) => patch(mergeMeta(value, { territory: e.target.value }))}
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      {HOMEPAGE_DISTRIBUTOR_OUTLET.territoryHelper}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label className="text-xs">{HOMEPAGE_DISTRIBUTOR_OUTLET.salesRepLabel}</Label>
+                    <Input
+                      className="h-9 rounded-lg"
+                      placeholder="Jane Smith"
+                      value={meta.sales_representative ?? ""}
+                      onChange={(e) =>
+                        patch(mergeMeta(value, { sales_representative: e.target.value }))
+                      }
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      {HOMEPAGE_DISTRIBUTOR_OUTLET.salesRepHelper}{" "}
+                      {HOMEPAGE_DISTRIBUTOR_OUTLET.salesRepOptional}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  {HOMEPAGE_DISTRIBUTOR_OUTLET.footer}
+                </p>
+              </div>
+            );
+          }
+          if (homepageIntro && role === "fmcg") {
+            return (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label className="text-xs">Primary Brand *</Label>
+                  <Input
+                    className="h-9 rounded-lg"
+                    placeholder="Colgate"
+                    value={value.focus.brand ?? ""}
+                    onChange={(e) =>
+                      patch({ ...value, focus: { ...value.focus, brand: e.target.value } })
+                    }
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Which brand is this audit focused on?
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Category *</Label>
+                  <Input
+                    className="h-9 rounded-lg"
+                    value={meta.category}
+                    onChange={(e) => patch(mergeMeta(value, { category: e.target.value }))}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Which product category should Share of Shelf be measured in?
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Sub-category</Label>
+                  <Input
+                    className="h-9 rounded-lg"
+                    value={meta.sub_category ?? ""}
+                    onChange={(e) => patch(mergeMeta(value, { sub_category: e.target.value }))}
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Optional — narrows the product group for this audit.
+                  </p>
+                </div>
+              </div>
+            );
+          }
           return (
             <div className="grid gap-3 sm:grid-cols-2">
+              {homepageIntro ? (
+                <>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label className="text-xs">Store / Outlet *</Label>
+                    <Input
+                      className="h-9 rounded-lg"
+                      placeholder={defaultLocation || "Store 102"}
+                      value={meta.store_outlet}
+                      onChange={(e) => patch(mergeMeta(value, { store_outlet: e.target.value }))}
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      {role === "darkstore"
+                        ? "Which dark store or pick location are you auditing?"
+                        : "Which store or outlet is this shelf in?"}
+                    </p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Fixture / Rack *</Label>
+                    <Input
+                      className="h-9 rounded-lg"
+                      placeholder={role === "darkstore" ? "Pick-A-3" : "A-1-L"}
+                      value={auditPackage.fixture_id ?? ""}
+                      onChange={(e) =>
+                        patch({
+                          ...value,
+                          auditPackage: { ...auditPackage, fixture_id: e.target.value },
+                        })
+                      }
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      {role === "darkstore"
+                        ? "Which pick shelf or bin does this setup belong to?"
+                        : "Which rack or display does this setup belong to?"}
+                    </p>
+                  </div>
+                </>
+              ) : null}
               <div className="space-y-1.5">
                 <Label className="text-xs">
                   {homepageIntro ? "Fixture Type" : "Fixture type"}
@@ -728,17 +875,6 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
           }
           return (
             <div className="space-y-4">
-              {homepageIntro ? (
-                <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
-                  <p className="font-medium text-foreground">{HOMEPAGE_LAYOUT_EXAMPLE.title}</p>
-                  <ul className="mt-1.5 space-y-0.5">
-                    {HOMEPAGE_LAYOUT_EXAMPLE.lines.map((line) => (
-                      <li key={line}>{line}</li>
-                    ))}
-                  </ul>
-                  <p className="mt-2">{HOMEPAGE_LAYOUT_EXAMPLE.note}</p>
-                </div>
-              ) : null}
               <PlanogramBuilder
               rows={draftRows.length ? draftRows : [toDraftRow({})]}
               onRowsChange={setRows}
@@ -1330,62 +1466,154 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
           );
         }
 
+        case "facings": {
+          const updateFacingRow = (index: number, patchRow: Partial<PlanogramRow>) => {
+            const rows = value.planogramRows.map((row, i) =>
+              i === index ? { ...row, ...patchRow } : row,
+            );
+            patch({ ...value, planogramRows: rows });
+          };
+          return (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Review expected front-facing units for each product. Aislix compares these with what
+                is visible in your shelf photo.
+              </p>
+              {value.planogramRows.length ? (
+                <div className="overflow-x-auto rounded-xl border border-border">
+                  <table className="w-full min-w-[32rem] text-left text-xs">
+                    <thead className="bg-muted/50 text-muted-foreground">
+                      <tr>
+                        <th className="px-2 py-2">SKU</th>
+                        <th className="px-2 py-2">Product</th>
+                        <th className="px-2 py-2">Expected facings</th>
+                        <th className="px-2 py-2">Min</th>
+                        <th className="px-2 py-2">Max</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {value.planogramRows.map((row, i) => (
+                        <tr key={i} className="border-t border-border">
+                          <td className="px-2 py-2 font-mono">{row.sku || "—"}</td>
+                          <td className="px-2 py-2 whitespace-nowrap">
+                            {row.brand} {row.product_name}
+                          </td>
+                          <td className="px-2 py-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              className="h-8 w-16 rounded-md text-xs tabular-nums"
+                              value={row.expected_facings ?? row.expected_qty ?? ""}
+                              onChange={(e) => {
+                                const n = e.target.value ? Number(e.target.value) : undefined;
+                                updateFacingRow(i, { expected_facings: n, expected_qty: n });
+                              }}
+                            />
+                          </td>
+                          <td className="px-2 py-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              className="h-8 w-14 rounded-md text-xs"
+                              value={row.min_facings ?? ""}
+                              onChange={(e) =>
+                                updateFacingRow(i, {
+                                  min_facings: e.target.value ? Number(e.target.value) : undefined,
+                                })
+                              }
+                            />
+                          </td>
+                          <td className="px-2 py-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              className="h-8 w-14 rounded-md text-xs"
+                              value={row.max_facings ?? ""}
+                              onChange={(e) =>
+                                updateFacingRow(i, {
+                                  max_facings: e.target.value ? Number(e.target.value) : undefined,
+                                })
+                              }
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
+                  Add products first, then set expected facings here.
+                </p>
+              )}
+            </div>
+          );
+        }
+
         case "role_settings":
-          if (role !== "distributor") {
+          if (role === "distributor" && !homepageIntro) {
+            return (
+              <div className="space-y-4">
+                <p className="text-sm font-medium">{roleSettingsTitle(role)}</p>
+                <p className="text-sm text-muted-foreground">{roleSettingsHint(role)}</p>
+                <div className="space-y-1.5 max-w-sm">
+                  <Label className="text-xs">Distributor / portfolio name</Label>
+                  <Input
+                    className="h-9 rounded-lg"
+                    placeholder="ABC Distribution"
+                    value={value.focus.company ?? ""}
+                    onChange={(e) =>
+                      patch({ ...value, focus: { ...value.focus, company: e.target.value } })
+                    }
+                  />
+                </div>
+              </div>
+            );
+          }
+          if (role !== "fmcg") {
             return null;
           }
           if (homepageIntro && planogramMode === "demo") {
             return (
               <div className="rounded-xl border border-brand/20 bg-brand-soft/20 p-4">
-                <p className="font-medium text-brand">{HOMEPAGE_DEMO_DISTRIBUTOR_STATUS.title}</p>
+                <p className="font-medium text-brand">Demo Share of Shelf setup is ready.</p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  {HOMEPAGE_DEMO_DISTRIBUTOR_STATUS.description}
+                  The sample audit includes brand scope and category competitors for Share of Shelf.
                 </p>
               </div>
             );
           }
           return (
             <div className="space-y-4">
-              {homepageIntro ? (
-                <>
-                  <p className="text-sm font-semibold text-foreground">
-                    {HOMEPAGE_DISTRIBUTOR_SETUP.headline}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {HOMEPAGE_DISTRIBUTOR_SETUP.explanation}
-                  </p>
-                </>
-              ) : (
+              {!homepageIntro ? (
                 <>
                   <p className="text-sm font-medium">{roleSettingsTitle(role)}</p>
                   <p className="text-sm text-muted-foreground">{roleSettingsHint(role)}</p>
                 </>
-              )}
-              {homepageIntro && planogramMode === "none" ? (
-                <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  {HOMEPAGE_DISTRIBUTOR_SETUP.noneModeNote}
-                </p>
               ) : null}
               <div className="space-y-1.5 max-w-sm">
-                <Label className="text-xs">
-                  {homepageIntro
-                    ? HOMEPAGE_DISTRIBUTOR_SETUP.fieldLabel
-                    : "Distributor / portfolio name"}
-                </Label>
+                <Label className="text-xs">Primary brand *</Label>
                 <Input
                   className="h-9 rounded-lg"
-                  placeholder="ABC Distribution"
-                  value={value.focus.company ?? ""}
+                  placeholder="Colgate"
+                  value={value.focus.brand ?? ""}
                   onChange={(e) =>
-                    patch({ ...value, focus: { ...value.focus, company: e.target.value } })
+                    patch({ ...value, focus: { ...value.focus, brand: e.target.value } })
                   }
                 />
                 {homepageIntro ? (
                   <p className="text-[11px] text-muted-foreground">
-                    {HOMEPAGE_DISTRIBUTOR_SETUP.fieldHelper}
+                    Aislix measures your brand&apos;s shelf share against other brands in{" "}
+                    {meta.category || "this category"}.
                   </p>
                 ) : null}
               </div>
+              {homepageIntro ? (
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  Competitor brands are detected from products visible in the shelf photo and
+                  compared against your primary brand scope.
+                </p>
+              ) : null}
             </div>
           );
 

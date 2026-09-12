@@ -17,6 +17,11 @@ export const HOMEPAGE_WIZARD_STEP_COPY: Record<
   PlanogramWizardStepId,
   { label: string; description: string }
 > = {
+  role: {
+    label: "Choose Your Audit Type",
+    description:
+      "Choose your role first. Aislix will customise the audit setup, checks and insights around what matters to your business.",
+  },
   basics: {
     label: "Shelf Basics",
     description: "Start with the basic details of the shelf you want Aislix to audit.",
@@ -51,6 +56,11 @@ export const HOMEPAGE_WIZARD_STEP_COPY: Record<
     description:
       "Add any offers or promotions that should currently be visible on the shelf. Aislix will check the shelf photo against these requirements and flag anything that is missing or incorrect.",
   },
+  facings: {
+    label: "Facings",
+    description:
+      "Confirm how many front-facing units should be visible for each product. Aislix uses this when checking shelf presence.",
+  },
   role_settings: {
     label: "Distributor Setup",
     description:
@@ -77,7 +87,7 @@ export const HOMEPAGE_PRODUCTS_TAB_HELPER =
 export const HOMEPAGE_PRODUCTS_TABLE_TITLE = "Products in This Shelf Setup";
 
 export const HOMEPAGE_PRODUCTS_TABLE_DESCRIPTION =
-  "These are the products Aislix will use as reference when auditing the shelf — including shelf position and expected facings.";
+  "These are the products Aislix will use as reference when auditing the shelf.";
 
 export const HOMEPAGE_PRODUCT_FIELD_HELP = {
   brand: "Which brand is this product?",

@@ -6,6 +6,7 @@ import { primaryKpiIds, type AuditRoleTab } from "@/lib/role-audit-ui";
 import type { AuditKpiId } from "@/lib/role-kpi-config";
 
 export type PlanogramWizardStepId =
+  | "role"
   | "basics"
   | "fixture"
   | "products"
@@ -13,6 +14,7 @@ export type PlanogramWizardStepId =
   | "assortment"
   | "prices"
   | "promotions"
+  | "facings"
   | "role_settings"
   | "scoring"
   | "readiness";
@@ -24,6 +26,11 @@ export type PlanogramWizardStep = {
 };
 
 export const PLANOGRAM_WIZARD_STEPS: Record<PlanogramWizardStepId, PlanogramWizardStep> = {
+  role: {
+    id: "role",
+    label: "Choose your audit type",
+    description: "Select the customer role so Aislix can tailor setup steps and KPIs.",
+  },
   basics: {
     id: "basics",
     label: "Basic details",
@@ -58,6 +65,11 @@ export const PLANOGRAM_WIZARD_STEPS: Record<PlanogramWizardStepId, PlanogramWiza
     id: "promotions",
     label: "Promotions",
     description: "Active promotions, signage, offer text, and required facings.",
+  },
+  facings: {
+    id: "facings",
+    label: "Facings",
+    description: "Expected front-facing unit counts per product for facing KPIs.",
   },
   role_settings: {
     id: "role_settings",
