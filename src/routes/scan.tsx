@@ -57,9 +57,7 @@ import {
 } from "@/lib/planogram-audit-package";
 import { adhocPlanogramPayload } from "@/lib/role-planogram-requirements";
 import {
-  hasScanPricingConfigured,
   loadStoredScanContext,
-  pricingSetupMessage,
   saveStoredScanContext,
   type ScanContextState,
 } from "@/lib/scan-context";
@@ -297,22 +295,13 @@ function ScanPage() {
     setPlanogramRows((rows) => rows.map((row) => ({ ...row, location })));
   }, [shelfLocation, withPlanogram, planogramRows]);
 
-  // Switching mode starts a clean planogram but keeps the store selection.
-  useEffect(() => {
-    if (withPlanogram) return;
-    setPlanogramRows([]);
-    setPlanogramNotice(null);
-    setScanContext((prev) => {
-      const next = { ...prev, planogramRows: [] };
-      saveStoredScanContext(next);
-      return next;
-    });
-  }, [withPlanogram]);
+  // Planogram is optional — keep wizard data when switching scan mode.
 
   const assignmentSubLabel = assignment?.sub_category ?? "";
   const effectiveLocation = shelfLocation.trim() || dominantRowLocation || "";
-  /** With planogram mode uses ScanContextPanel rows; legacy PlanogramBuilder rows are fallback only. */
-  const effectivePlanogramSource = withPlanogram ? scanContext.planogramRows : planogramRows;
+  /** Wizard rows are primary; legacy PlanogramBuilder rows are fallback only. */
+  const effectivePlanogramSource =
+    scanContext.planogramRows.length > 0 ? scanContext.planogramRows : planogramRows;
   const validPlanogramRows = useMemo(
     () => effectivePlanogramSource.filter((row) => row.brand.trim() && row.product_name.trim()),
     [effectivePlanogramSource],
@@ -329,26 +318,12 @@ function ScanPage() {
     if (selections.some((item) => item.sub_category_id === "others" && !item.sub_category_custom)) {
       errors.selections = "Describe every shelf type you marked as Others.";
     }
-    if (withPlanogram && !validPlanogramRows.length) {
-      errors.planogram = "Add at least one expected product.";
-    }
-    if (
-      withPlanogram &&
-      !hasScanPricingConfigured(scanContext, validPlanogramRows)
-    ) {
-      errors.pricing =
-        pricingSetupMessage(scanContext, validPlanogramRows) ??
-        "Add shelf prices before scanning.";
-    }
     return errors;
   }, [
     lockedByAssignment,
     storeId,
     effectiveLocation,
     selections,
-    withPlanogram,
-    validPlanogramRows,
-    scanContext,
   ]);
 
   const setupComplete = Object.keys(setupErrors).length === 0;
@@ -373,11 +348,7 @@ function ScanPage() {
     syncScanContextFromPanel();
     if (setupComplete) return true;
     setShowSetupErrors(true);
-    setFileError(
-      withPlanogram
-        ? "Complete shelf setup, add expected products with prices, then continue."
-        : "Select store, location, and shelf types, then add shelf images.",
-    );
+    setFileError("Select store, location, and shelf types, then add shelf images.");
     return false;
   }, [setupComplete, withPlanogram, syncScanContextFromPanel]);
 
@@ -475,8 +446,7 @@ function ScanPage() {
           notes: !lockedByAssignment && !withPlanogram ? notes.trim() || undefined : undefined,
           ...(assignment
             ? { assignmentId: assignment.assignment_id, orgId: assignment.org_id }
-            : withPlanogram && rowsForSubmit.length
-              ? (() => {
+            : (() => {
                   const rows = rowsForSubmit.map((row) => {
                     const { key: _key, ...rest } = row as DraftRow & { key?: string };
                     return {
@@ -485,17 +455,21 @@ function ScanPage() {
                       aisle: shelfLabel || rest.location,
                     };
                   });
+                  const pkg = ctx.auditPackage ?? EMPTY_AUDIT_PACKAGE;
+                  const hasPlanogramData =
+                    rows.length > 0 ||
+                    pkg.assortment_skus.length > 0 ||
+                    pkg.msl_skus.length > 0 ||
+                    pkg.price_requirements.length > 0 ||
+                    pkg.promotions.length > 0;
+                  if (!hasPlanogramData) return {};
                   const auditRole = ctx.auditRole ?? "supermarket";
-                  const auditPackage = autoPopulateAuditPackage(
-                    rows,
-                    ctx.auditPackage ?? EMPTY_AUDIT_PACKAGE,
-                  );
+                  const auditPackage = autoPopulateAuditPackage(rows, pkg);
                   return {
                     planogramPayload: adhocPlanogramPayload(rows, auditRole, auditPackage),
                     auditRole,
                   };
-                })()
-              : {}),
+                })()),
           ...(verifyScanId ? { parentScanId: verifyScanId } : {}),
         },
       );
@@ -681,13 +655,13 @@ function ScanPage() {
                     [
                       {
                         value: "free" as ScanMode,
-                        title: "Without planogram",
-                        description: "Detect products only, no compliance %",
+                        title: "Quick scan",
+                        description: "Detect products only — planogram optional below",
                       },
                       {
                         value: "with_planogram" as ScanMode,
-                        title: "With planogram",
-                        description: "Compare shelf to expected products",
+                        title: "Compliance focus",
+                        description: "Highlights planogram KPIs when optional planogram is filled",
                       },
                     ] as const
                   ).map((option) => {
@@ -725,48 +699,39 @@ function ScanPage() {
                     );
                   })}
                 </div>
-                {!withPlanogram ? (
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    Detect products on shelf only — no planogram or pricing needed. You can optionally
-                    add products and prices on the results page after scanning.
-                  </p>
-                ) : null}
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Planogram below is optional in both modes. Fill it to enable role-based compliance KPIs;
+                  leave it empty to scan shelf products only.
+                </p>
               </section>
             )}
 
-            {withPlanogram && !lockedByAssignment ? (
-              <>
-                <div className="overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background shadow-sm">
-                  <div className="flex items-center gap-2 border-b border-brand/20 bg-brand/5 px-4 py-3">
-                    <ClipboardList className="size-4 text-brand" />
-                    <div>
-                      <p className="text-sm font-semibold">New planogram (required)</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        Step-by-step — role at Step 1 controls required sections
-                      </p>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <NewPlanogramWizard
-                      ref={planogramWizardRef}
-                      value={scanContext}
-                      onChange={(next) => {
-                        setScanContext(next);
-                        saveStoredScanContext(next);
-                      }}
-                      categories={categories}
-                      defaultLocation={shelfLocation}
-                      defaultCategory={category}
-                      defaultSubCategory={selectedSub?.label}
-                    />
+            {!lockedByAssignment ? (
+              <div className="overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background shadow-sm">
+                <div className="flex items-center gap-2 border-b border-brand/20 bg-brand/5 px-4 py-3">
+                  <ClipboardList className="size-4 text-brand" />
+                  <div>
+                    <p className="text-sm font-semibold">New planogram (optional)</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Same wizard as demo — skip or fill steps for role-based KPIs
+                    </p>
                   </div>
                 </div>
-                {fieldError("pricing") && (
-                  <p className="text-center text-xs font-medium text-amber-700 dark:text-amber-400">
-                    {fieldError("pricing")}
-                  </p>
-                )}
-              </>
+                <div className="p-4">
+                  <NewPlanogramWizard
+                    ref={planogramWizardRef}
+                    value={scanContext}
+                    onChange={(next) => {
+                      setScanContext(next);
+                      saveStoredScanContext(next);
+                    }}
+                    categories={categories}
+                    defaultLocation={shelfLocation}
+                    defaultCategory={category}
+                    defaultSubCategory={selectedSub?.label}
+                  />
+                </div>
+              </div>
             ) : null}
 
             {/* STEP 1 — scan context (shared by both modes) */}

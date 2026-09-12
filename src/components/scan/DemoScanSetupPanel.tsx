@@ -11,7 +11,7 @@ import {
   type NewPlanogramWizardHandle,
 } from "@/components/planogram/NewPlanogramWizard";
 import type { ShelfCategory } from "@/lib/categories.data";
-import { pricingSetupMessage, type ScanContextState } from "@/lib/scan-context";
+import type { ScanContextState } from "@/lib/scan-context";
 
 type DemoScanSetupPanelProps = {
   mode: "sample" | "upload";
@@ -50,11 +50,6 @@ export function DemoScanSetupPanel({
     setStartError(null);
     const next = wizardRef.current?.flush() ?? scanContext;
     onScanContextChange(next);
-    const validation = wizardRef.current?.validate() ?? pricingSetupMessage(next);
-    if (validation) {
-      setStartError(validation);
-      return;
-    }
     onStart(next);
   }
 
@@ -62,8 +57,8 @@ export function DemoScanSetupPanel({
     <div className="py-4 sm:py-6">
       <p className="mx-auto mb-5 max-w-lg text-center text-sm text-muted-foreground">
         {mode === "sample"
-          ? "Pick shelf category, build a role-based planogram (step-by-step), then scan the sample photo."
-          : "Pick shelf category, build a role-based planogram (step-by-step), then upload your shelf photo."}
+          ? "Pick shelf category, optionally configure a planogram, then scan the sample photo."
+          : "Pick shelf category, optionally configure a planogram, then upload your shelf photo."}
       </p>
 
       <DemoCategoryPicker
@@ -77,9 +72,9 @@ export function DemoScanSetupPanel({
         <div className="flex items-center gap-2 border-b border-brand/20 bg-brand/5 px-4 py-3">
           <ClipboardList className="size-4 text-brand" />
           <div>
-            <p className="text-sm font-semibold text-foreground">New planogram (required)</p>
+            <p className="text-sm font-semibold text-foreground">New planogram (optional)</p>
             <p className="text-[11px] text-muted-foreground">
-              Step-by-step — role at Step 1 controls which sections you need
+              Skip entirely or fill steps — role at Step 1 controls which KPIs can be calculated
             </p>
           </div>
         </div>

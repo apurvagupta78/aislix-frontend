@@ -19,6 +19,11 @@ import {
 } from "@/components/ui/select";
 import { PlanogramBuilder } from "@/components/planogram/PlanogramBuilder";
 import { PlanogramPackageCsvImport } from "@/components/planogram/PlanogramPackageCsvImport";
+import {
+  AssortmentManualForm,
+  PriceManualForm,
+  PromotionManualForm,
+} from "@/components/planogram/PlanogramWizardManualForms";
 import { RoleTabSwitcher } from "@/components/scan-results/RoleTabSwitcher";
 import type { ShelfCategory } from "@/lib/categories.data";
 import { toDraftRow, type DraftRow, type PlanogramRow } from "@/lib/planogram";
@@ -147,21 +152,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
         onChange(next);
         return next;
       },
-      validate: () => {
-        const rows = value.planogramRows.filter(
-          (r) => r.brand.trim() && r.product_name.trim(),
-        );
-        if (!rows.length) {
-          return "Add at least one product in the Products step before scanning.";
-        }
-        if (roleRequiresPricing(role) && !rows.some((r) => (r.mrp_inr ?? 0) > 0)) {
-          return "Add shelf price (MRP) for at least one product — required for Price Compliance.";
-        }
-        if (role === "darkstore" && !rows.some((r) => String(r.shelf_position ?? "").trim())) {
-          return "Add shelf position / pick slot for products — required for Location Accuracy.";
-        }
-        return null;
-      },
+      validate: () => null,
     }));
 
     const readiness = computeReadiness(value.planogramRows, auditPackage);
@@ -442,40 +433,96 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
             />
           );
 
-        case "layout":
+        case "layout": {
+          const updateRow = (index: number, patch: Partial<PlanogramRow>) => {
+            const rows = value.planogramRows.map((row, i) =>
+              i === index ? { ...row, ...patch } : row,
+            );
+            patch({ ...value, planogramRows: rows });
+          };
           return (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Each product row should include <strong>shelf position / slot ID</strong> and{" "}
-                <strong>expected facings</strong>. These drive Planogram Compliance, Location Accuracy,
-                and Facing Count.
+                Set shelf position / slot ID and expected facings for each product. Edit manually below
+                or use the Products step CSV.
               </p>
               {value.planogramRows.length ? (
                 <div className="overflow-x-auto rounded-xl border border-border">
-                  <table className="w-full min-w-[32rem] text-left text-xs">
+                  <table className="w-full min-w-[40rem] text-left text-xs">
                     <thead className="bg-muted/50 text-muted-foreground">
                       <tr>
-                        <th className="px-3 py-2">Slot</th>
-                        <th className="px-3 py-2">SKU</th>
-                        <th className="px-3 py-2">Product</th>
-                        <th className="px-3 py-2">H facings</th>
-                        <th className="px-3 py-2">Min</th>
-                        <th className="px-3 py-2">Max</th>
+                        <th className="px-2 py-2">Slot ID</th>
+                        <th className="px-2 py-2">SKU</th>
+                        <th className="px-2 py-2">Product</th>
+                        <th className="px-2 py-2">H facings</th>
+                        <th className="px-2 py-2">Min</th>
+                        <th className="px-2 py-2">Max</th>
+                        <th className="px-2 py-2">Orientation</th>
                       </tr>
                     </thead>
                     <tbody>
                       {value.planogramRows.map((row, i) => (
                         <tr key={i} className="border-t border-border">
-                          <td className="px-3 py-2">{row.shelf_position || "—"}</td>
-                          <td className="px-3 py-2 font-mono">{row.sku || "—"}</td>
-                          <td className="px-3 py-2">
+                          <td className="px-2 py-1">
+                            <Input
+                              className="h-8 min-w-[4rem] rounded-md text-xs"
+                              value={row.shelf_position ?? ""}
+                              onChange={(e) => updateRow(i, { shelf_position: e.target.value })}
+                              placeholder="L3-04"
+                            />
+                          </td>
+                          <td className="px-2 py-2 font-mono">{row.sku || "—"}</td>
+                          <td className="px-2 py-2 whitespace-nowrap">
                             {row.brand} {row.product_name}
                           </td>
-                          <td className="px-3 py-2 tabular-nums">
-                            {row.expected_facings ?? row.expected_qty ?? "—"}
+                          <td className="px-2 py-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              className="h-8 w-16 rounded-md text-xs tabular-nums"
+                              value={row.expected_facings ?? row.expected_qty ?? ""}
+                              onChange={(e) => {
+                                const n = e.target.value ? Number(e.target.value) : undefined;
+                                updateRow(i, { expected_facings: n, expected_qty: n });
+                              }}
+                            />
                           </td>
-                          <td className="px-3 py-2 tabular-nums">{row.min_facings ?? "—"}</td>
-                          <td className="px-3 py-2 tabular-nums">{row.max_facings ?? "—"}</td>
+                          <td className="px-2 py-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              className="h-8 w-14 rounded-md text-xs"
+                              value={row.min_facings ?? ""}
+                              onChange={(e) =>
+                                updateRow(i, {
+                                  min_facings: e.target.value ? Number(e.target.value) : undefined,
+                                })
+                              }
+                            />
+                          </td>
+                          <td className="px-2 py-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              className="h-8 w-14 rounded-md text-xs"
+                              value={row.max_facings ?? ""}
+                              onChange={(e) =>
+                                updateRow(i, {
+                                  max_facings: e.target.value ? Number(e.target.value) : undefined,
+                                })
+                              }
+                            />
+                          </td>
+                          <td className="px-2 py-1">
+                            <Input
+                              className="h-8 min-w-[5rem] rounded-md text-xs"
+                              value={(row as { orientation?: string }).orientation ?? ""}
+                              onChange={(e) =>
+                                updateRow(i, { orientation: e.target.value } as Partial<PlanogramRow>)
+                              }
+                              placeholder="front"
+                            />
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -483,12 +530,12 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                 </div>
               ) : (
                 <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-                  Add products in the previous step, then set shelf_position and expected_facings on each
-                  row (CSV columns: shelf_position, expected_facings, min_facings, max_facings).
+                  Add products in Step 3 first — layout fields are optional until you need placement KPIs.
                 </p>
               )}
             </div>
           );
+        }
 
         case "assortment":
           return (
@@ -511,8 +558,9 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                   Auto-fill assortment &amp; MSL from products
                 </Button>
               </div>
+              <AssortmentManualForm pkg={auditPackage} onPatch={patchPackage} />
               <PlanogramPackageCsvImport
-                label="Assortment & must-stock list"
+                label="Or upload CSV — assortment & must-stock list"
                 kind="assortment"
                 description="Columns: sku, list_type (mandatory_assortment | msl | optional), outlet_scope, valid_from, valid_to"
                 onImport={(imported) => {
@@ -567,8 +615,9 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
               {!roleRequiresPricing(role) ? (
                 <p className="text-xs text-muted-foreground">Optional for {roleTabLabel(role)} audits.</p>
               ) : null}
+              <PriceManualForm pkg={auditPackage} onPatch={patchPackage} />
               <PlanogramPackageCsvImport
-                label="Price requirements"
+                label="Or upload CSV — price requirements"
                 kind="prices"
                 description="Columns: sku, label_location, expected_price, currency, price_basis, valid_from, valid_to"
                 onImport={(imported) =>
@@ -620,8 +669,9 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                 Upload active promotions CSV. Without promotions, Promotional Compliance shows{" "}
                 <strong>Not applicable</strong> — never 0% or 100%.
               </p>
+              <PromotionManualForm pkg={auditPackage} onPatch={patchPackage} />
               <PlanogramPackageCsvImport
-                label="Active promotions"
+                label="Or upload CSV — active promotions"
                 kind="promotions"
                 description="Columns: promotion_id, participating_skus, start_date, end_date, expected_offer_text, expected_promo_price, required_facings"
                 onImport={(imported) => patchPackage({ promotions: imported as PromotionEntry[] })}
