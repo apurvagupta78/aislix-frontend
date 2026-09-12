@@ -22,8 +22,9 @@ export const HOMEPAGE_WIZARD_STEP_COPY: Record<
     description: "Start with the basic details of the shelf you want Aislix to audit.",
   },
   fixture: {
-    label: "Shelves",
-    description: "Describe the rack and shelf structure for this setup.",
+    label: "Describe Your Shelf",
+    description:
+      "Tell Aislix what the shelf looks like — its type, size and number of shelves. This helps Aislix understand the physical space before analysing the products.",
   },
   products: {
     label: "Products",

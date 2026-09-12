@@ -464,7 +464,9 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
           return (
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label className="text-xs">Fixture type</Label>
+                <Label className="text-xs">
+                  {homepageIntro ? "Fixture Type" : "Fixture type"}
+                </Label>
                 <Select
                   value={meta.fixture_type ?? "gondola"}
                   onValueChange={(v) => patch(mergeMeta(value, { fixture_type: v }))}
@@ -482,9 +484,16 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                     )}
                   </SelectContent>
                 </Select>
+                {homepageIntro ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    What kind of shelf or display is this?
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Number of shelves</Label>
+                <Label className="text-xs">
+                  {homepageIntro ? "Number of Shelves" : "Number of shelves"}
+                </Label>
                 <Input
                   type="number"
                   min={1}
@@ -494,9 +503,16 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                     patch(mergeMeta(value, { shelf_count: Number(e.target.value) || undefined }))
                   }
                 />
+                {homepageIntro ? (
+                  <p className="text-[11px] text-muted-foreground">How many shelf levels are there?</p>
+                ) : null}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Fixture width ({meta.measurement_unit})</Label>
+                <Label className="text-xs">
+                  {homepageIntro
+                    ? `Fixture Width (${meta.measurement_unit})`
+                    : `Fixture width (${meta.measurement_unit})`}
+                </Label>
                 <Input
                   type="number"
                   min={0}
@@ -506,9 +522,18 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                     patch(mergeMeta(value, { fixture_width: Number(e.target.value) || undefined }))
                   }
                 />
+                {homepageIntro ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    Enter the total width of the shelf.
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Fixture height ({meta.measurement_unit})</Label>
+                <Label className="text-xs">
+                  {homepageIntro
+                    ? `Fixture Height (${meta.measurement_unit})`
+                    : `Fixture height (${meta.measurement_unit})`}
+                </Label>
                 <Input
                   type="number"
                   min={0}
@@ -518,10 +543,16 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                     patch(mergeMeta(value, { fixture_height: Number(e.target.value) || undefined }))
                   }
                 />
+                {homepageIntro ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    Enter the total height of the shelf.
+                  </p>
+                ) : null}
               </div>
               <p className="sm:col-span-2 text-xs text-muted-foreground">
-                Shelf geometry supports Planogram Compliance, Location Accuracy, and Share of Shelf when
-                calibrated. Leave blank if not yet measured — affected KPIs may show Not assessable.
+                {homepageIntro
+                  ? "Accurate shelf dimensions help Aislix compare product positions and measure shelf space more precisely."
+                  : "Shelf geometry supports Planogram Compliance, Location Accuracy, and Share of Shelf when calibrated. Leave blank if not yet measured — affected KPIs may show Not assessable."}
               </p>
             </div>
           );
