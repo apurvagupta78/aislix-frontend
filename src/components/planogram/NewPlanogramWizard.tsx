@@ -58,11 +58,9 @@ import {
   getBrowserTimezone,
   HOMEPAGE_DEMO_LAYOUT_STATUS,
   HOMEPAGE_DEMO_PRODUCTS_STATUS,
-  HOMEPAGE_LAYOUT_EMPTY,
   HOMEPAGE_LAYOUT_EXAMPLE,
-  HOMEPAGE_LAYOUT_HELPER,
-  HOMEPAGE_LAYOUT_INSTRUCTION,
   HOMEPAGE_NO_PLANOGRAM_LAYOUT,
+  HOMEPAGE_NO_PLANOGRAM_PRODUCTS,
   HOMEPAGE_PRODUCTS_TABLE_DESCRIPTION,
   HOMEPAGE_PRODUCTS_TABLE_TITLE,
   HOMEPAGE_WIZARD_STEP_COPY,
@@ -130,7 +128,10 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
     ref,
   ) {
     const role = defaultAuditRoleTab(value.auditRole);
-    const steps = useMemo(() => wizardStepsForRole(role), [role]);
+    const steps = useMemo(
+      () => wizardStepsForRole(role, { omitLayout: homepageIntro }),
+      [role, homepageIntro],
+    );
     const displaySteps = useMemo(
       () =>
         homepageIntro
@@ -140,6 +141,10 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
     );
     const [stepIndex, setStepIndex] = useState(0);
     const currentStep = steps[stepIndex]?.id ?? "basics";
+
+    useEffect(() => {
+      setStepIndex((i) => Math.min(i, Math.max(steps.length - 1, 0)));
+    }, [steps.length]);
 
     const meta = useMemo(() => {
       const stored = value.planogramMeta ?? EMPTY_PLANOGRAM_META;
@@ -578,23 +583,66 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
           if (homepageIntro && planogramMode === "demo") {
             const demoProductCount = new Set(DEMO_ORAL_CARE_ROWS.map((row) => row.sku)).size;
             return (
-              <div className="rounded-xl border border-brand/20 bg-brand-soft/20 p-4">
-                <p className="font-medium text-brand">{HOMEPAGE_DEMO_PRODUCTS_STATUS.title}</p>
-                <p className="mt-1 text-sm font-medium text-foreground">
-                  {HOMEPAGE_DEMO_PRODUCTS_STATUS.summary(
-                    demoProductCount,
-                    DEMO_ORAL_CARE_META.shelf_count ?? 5,
-                    DEMO_ORAL_CARE_ROWS.length,
-                  )}
-                </p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {HOMEPAGE_DEMO_PRODUCTS_STATUS.note}
-                </p>
+              <div className="space-y-4 rounded-xl border border-brand/20 bg-brand-soft/20 p-4">
+                <div>
+                  <p className="font-medium text-brand">{HOMEPAGE_DEMO_PRODUCTS_STATUS.title}</p>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {HOMEPAGE_DEMO_PRODUCTS_STATUS.summary(
+                      demoProductCount,
+                      DEMO_ORAL_CARE_META.shelf_count ?? 5,
+                      DEMO_ORAL_CARE_ROWS.length,
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-medium text-brand">{HOMEPAGE_DEMO_LAYOUT_STATUS.title}</p>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {HOMEPAGE_DEMO_LAYOUT_STATUS.summary(
+                      DEMO_ORAL_CARE_ROWS.length,
+                      DEMO_ORAL_CARE_PLANNED_FACINGS,
+                    )}
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground">{HOMEPAGE_DEMO_PRODUCTS_STATUS.note}</p>
+              </div>
+            );
+          }
+          if (homepageIntro && planogramMode === "none") {
+            return (
+              <div className="space-y-4">
+                <div className="rounded-xl border border-border bg-muted/20 p-4">
+                  <p className="text-sm font-semibold text-foreground">
+                    {HOMEPAGE_NO_PLANOGRAM_PRODUCTS.title}
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {HOMEPAGE_NO_PLANOGRAM_PRODUCTS.description}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border bg-muted/20 p-4">
+                  <p className="text-sm font-semibold text-foreground">
+                    {HOMEPAGE_NO_PLANOGRAM_LAYOUT.title}
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {HOMEPAGE_NO_PLANOGRAM_LAYOUT.description}
+                  </p>
+                </div>
               </div>
             );
           }
           return (
-            <PlanogramBuilder
+            <div className="space-y-4">
+              {homepageIntro ? (
+                <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
+                  <p className="font-medium text-foreground">{HOMEPAGE_LAYOUT_EXAMPLE.title}</p>
+                  <ul className="mt-1.5 space-y-0.5">
+                    {HOMEPAGE_LAYOUT_EXAMPLE.lines.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-2">{HOMEPAGE_LAYOUT_EXAMPLE.note}</p>
+                </div>
+              ) : null}
+              <PlanogramBuilder
               rows={draftRows.length ? draftRows : [toDraftRow({})]}
               onRowsChange={setRows}
               categories={categories}
@@ -608,7 +656,8 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                 category: meta.category || defaultCategory,
                 subCategoryLabel: meta.sub_category || defaultSubCategory,
               }}
-            />
+              />
+            </div>
           );
 
         case "layout": {
@@ -618,64 +667,21 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
             );
             patch({ ...value, planogramRows: rows });
           };
-          if (homepageIntro && planogramMode === "demo") {
-            return (
-              <div className="rounded-xl border border-brand/20 bg-brand-soft/20 p-4">
-                <p className="font-medium text-brand">{HOMEPAGE_DEMO_LAYOUT_STATUS.title}</p>
-                <p className="mt-1 text-sm font-medium text-foreground">
-                  {HOMEPAGE_DEMO_LAYOUT_STATUS.summary(
-                    DEMO_ORAL_CARE_ROWS.length,
-                    DEMO_ORAL_CARE_PLANNED_FACINGS,
-                  )}
-                </p>
-                <p className="mt-2 text-xs text-muted-foreground">{HOMEPAGE_DEMO_LAYOUT_STATUS.note}</p>
-              </div>
-            );
-          }
-          if (homepageIntro && planogramMode === "none") {
-            return (
-              <div className="rounded-xl border border-border bg-muted/20 p-4">
-                <p className="text-sm font-semibold text-foreground">
-                  {HOMEPAGE_NO_PLANOGRAM_LAYOUT.title}
-                </p>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {HOMEPAGE_NO_PLANOGRAM_LAYOUT.description}
-                </p>
-              </div>
-            );
-          }
           return (
             <div className="space-y-4">
-              <div>
-                <p className="text-sm text-muted-foreground">
-                  {homepageIntro
-                    ? HOMEPAGE_LAYOUT_INSTRUCTION
-                    : "Set shelf position / slot ID and expected facings for each product. Edit manually below or use the Products step CSV."}
-                </p>
-                {homepageIntro ? (
-                  <p className="mt-1 text-[11px] text-muted-foreground">{HOMEPAGE_LAYOUT_HELPER}</p>
-                ) : null}
-              </div>
-              {homepageIntro ? (
-                <div className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
-                  <p className="font-medium text-foreground">{HOMEPAGE_LAYOUT_EXAMPLE.title}</p>
-                  <ul className="mt-1.5 space-y-0.5">
-                    {HOMEPAGE_LAYOUT_EXAMPLE.lines.map((line) => (
-                      <li key={line}>{line}</li>
-                    ))}
-                  </ul>
-                  <p className="mt-2">{HOMEPAGE_LAYOUT_EXAMPLE.note}</p>
-                </div>
-              ) : null}
+              <p className="text-sm text-muted-foreground">
+                Set shelf position / slot ID and expected facings for each product. Edit manually below
+                or use the Products step CSV.
+              </p>
               {value.planogramRows.length ? (
                 <div className="overflow-x-auto rounded-xl border border-border">
                   <table className="w-full min-w-[40rem] text-left text-xs">
                     <thead className="bg-muted/50 text-muted-foreground">
                       <tr>
-                        <th className="px-2 py-2">{homepageIntro ? "Shelf position" : "Slot ID"}</th>
+                        <th className="px-2 py-2">Slot ID</th>
                         <th className="px-2 py-2">SKU</th>
                         <th className="px-2 py-2">Product</th>
-                        <th className="px-2 py-2">{homepageIntro ? "Facings" : "H facings"}</th>
+                        <th className="px-2 py-2">H facings</th>
                         <th className="px-2 py-2">Min</th>
                         <th className="px-2 py-2">Max</th>
                         <th className="px-2 py-2">Orientation</th>
@@ -689,7 +695,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                               className="h-8 min-w-[4rem] rounded-md text-xs"
                               value={row.shelf_position ?? ""}
                               onChange={(e) => updateRow(i, { shelf_position: e.target.value })}
-                              placeholder={homepageIntro ? "Shelf 1" : "L3-04"}
+                              placeholder="L3-04"
                             />
                           </td>
                           <td className="px-2 py-2 font-mono">{row.sku || "—"}</td>
@@ -751,9 +757,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                 </div>
               ) : (
                 <p className="rounded-lg border border-dashed border-border p-4 text-sm text-muted-foreground">
-                  {homepageIntro
-                    ? HOMEPAGE_LAYOUT_EMPTY
-                    : "Add products in Step 3 first — layout fields are optional until you need placement KPIs."}
+                  Add products in the Products step first — then assign shelf positions and facings here.
                 </p>
               )}
             </div>

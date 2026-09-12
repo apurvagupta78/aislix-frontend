@@ -27,9 +27,9 @@ export const HOMEPAGE_WIZARD_STEP_COPY: Record<
       "Tell Aislix what the shelf looks like — its type, size and number of shelves. This helps Aislix understand the physical space before analysing the products.",
   },
   products: {
-    label: "Add the Products on Your Shelf",
+    label: "Add Products & Where They Belong",
     description:
-      "Tell Aislix which products should appear on this shelf and how they should normally be displayed.",
+      "Tell Aislix which products should appear on this shelf, where each one belongs, and how many front-facing units should normally be visible. Aislix will use this as the reference when auditing your shelf photo.",
   },
   layout: {
     label: "Show Aislix Where Products Belong",
@@ -71,7 +71,7 @@ export const HOMEPAGE_PRODUCTS_TAB_HELPER =
 export const HOMEPAGE_PRODUCTS_TABLE_TITLE = "Products in This Shelf Setup";
 
 export const HOMEPAGE_PRODUCTS_TABLE_DESCRIPTION =
-  "These are the products Aislix will use as reference when auditing the shelf.";
+  "These are the products Aislix will use as reference when auditing the shelf — including shelf position and expected facings.";
 
 export const HOMEPAGE_PRODUCT_FIELD_HELP = {
   brand: "Which brand is this product?",

@@ -134,8 +134,19 @@ const ROLE_WIZARD_ORDER: Record<AuditRoleTab, PlanogramWizardStepId[]> = {
   ],
 };
 
-export function wizardStepsForRole(role: AuditRoleTab): PlanogramWizardStep[] {
-  return ROLE_WIZARD_ORDER[role].map((id) => PLANOGRAM_WIZARD_STEPS[id]);
+export type WizardStepsOptions = {
+  /** Homepage flow merges products + layout into one step for all roles. */
+  omitLayout?: boolean;
+};
+
+export function wizardStepsForRole(
+  role: AuditRoleTab,
+  options?: WizardStepsOptions,
+): PlanogramWizardStep[] {
+  const ids = options?.omitLayout
+    ? ROLE_WIZARD_ORDER[role].filter((id) => id !== "layout")
+    : ROLE_WIZARD_ORDER[role];
+  return ids.map((id) => PLANOGRAM_WIZARD_STEPS[id]);
 }
 
 export function roleSettingsTitle(role: AuditRoleTab): string {
