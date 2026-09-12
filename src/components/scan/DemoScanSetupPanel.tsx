@@ -562,7 +562,10 @@ export function DemoScanSetupPanel({
                   disabled={!canStart}
                   onClick={handleStart}
                 >
-                  {HOMEPAGE_DEMO_READY_CARD.cta} <ArrowRight className="size-4" />
+                  <span className="inline-flex items-center gap-1.5">
+                    {HOMEPAGE_DEMO_READY_CARD.cta}
+                    <ArrowRight className="size-4" aria-hidden />
+                  </span>
                 </Button>
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
                   {HOMEPAGE_DEMO_READY_CARD.disclosure}
