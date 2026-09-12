@@ -21,7 +21,6 @@ import {
 } from "@/lib/demo-oral-care-planogram";
 import { EMPTY_PLANOGRAM_META } from "@/lib/planogram-meta";
 import { EMPTY_AUDIT_PACKAGE } from "@/lib/planogram-audit-package";
-import type { PlanogramWizardStepId } from "@/lib/planogram-wizard-config";
 import { homepageCustomAuditBlockReason } from "@/lib/planogram-wizard-homepage-readiness";
 import {
   getBrowserTimezone,
@@ -170,7 +169,6 @@ export function DemoScanSetupPanel({
 }: DemoScanSetupPanelProps) {
   const wizardRef = useRef<NewPlanogramWizardHandle>(null);
   const [startError, setStartError] = useState<string | null>(null);
-  const [wizardStepId, setWizardStepId] = useState<PlanogramWizardStepId>("basics");
   const [internalMode, setInternalMode] = useState<DemoPlanogramMode>(
     mode === "sample" ? "demo" : "none",
   );
@@ -256,7 +254,8 @@ export function DemoScanSetupPanel({
       )
     : null;
   const canStart = uploadReady && !disabled && !auditBlockReason;
-  const hideBottomStartButton = homepageIntro && showWizard && wizardStepId !== "readiness";
+  /** Custom wizard has its own Start Audit CTA on Step 8 — avoid duplicating it below. */
+  const hideBottomStartButton = homepageIntro && showWizard;
 
   function handleStart() {
     setStartError(null);
@@ -587,7 +586,6 @@ export function DemoScanSetupPanel({
               defaultCategory={defaultCategory}
               defaultSubCategory={defaultSubCategory}
               defaultLocation="A-1"
-              onStepChange={setWizardStepId}
               homepageStartAudit={
                 homepageIntro
                   ? {
@@ -635,7 +633,7 @@ export function DemoScanSetupPanel({
           >
             {homepageIntro ? (
               <>
-                Start AI Audit <ArrowRight className="size-4" />
+                Start Audit <ArrowRight className="size-4" />
               </>
             ) : (
               <>

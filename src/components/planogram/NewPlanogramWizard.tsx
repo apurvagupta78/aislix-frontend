@@ -1554,7 +1554,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                       disabled={homepageStartAudit.disabled}
                       onClick={homepageStartAudit.onStart}
                     >
-                      Start AI Audit <ChevronRight className="size-4" />
+                      Start Audit <ChevronRight className="size-4" />
                     </Button>
                   </div>
                 ) : null}
