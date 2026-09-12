@@ -21,7 +21,12 @@ import type {
   PromotionEntry,
 } from "@/lib/planogram-audit-package";
 import {
+  DEFAULT_SHELF_PRICE_CURRENCY,
+  SHELF_PRICE_CURRENCIES,
+} from "@/lib/planogram-price-template";
+import {
   HOMEPAGE_ASSORTMENT_FIELD_HELP,
+  HOMEPAGE_PRICE_FIELD_HELP,
   homepageRequiredProductTypeLabel,
 } from "@/lib/planogram-wizard-homepage-copy";
 
@@ -190,16 +195,29 @@ export function AssortmentManualForm({
   );
 }
 
-export function PriceManualForm({ pkg, onPatch }: { pkg: PlanogramAuditPackage; onPatch: PatchFn }) {
-  const [draft, setDraft] = useState<PriceRequirement>({
+function emptyPriceDraft(currency: string): PriceRequirement {
+  return {
     sku: "",
     label_location: "shelf_tag",
     expected_price: 0,
-    currency: "INR",
+    currency,
     price_basis: "item",
     valid_from: "",
     valid_to: "",
-  });
+  };
+}
+
+export function PriceManualForm({
+  pkg,
+  onPatch,
+  simplifiedCopy = false,
+}: {
+  pkg: PlanogramAuditPackage;
+  onPatch: PatchFn;
+  simplifiedCopy?: boolean;
+}) {
+  const defaultCurrency = simplifiedCopy ? DEFAULT_SHELF_PRICE_CURRENCY : "INR";
+  const [draft, setDraft] = useState<PriceRequirement>(() => emptyPriceDraft(defaultCurrency));
 
   function addEntry() {
     if (!draft.sku.trim() || !draft.expected_price) return;
@@ -213,42 +231,51 @@ export function PriceManualForm({ pkg, onPatch }: { pkg: PlanogramAuditPackage; 
         },
       ],
     });
-    setDraft({
-      sku: "",
-      label_location: "shelf_tag",
-      expected_price: 0,
-      currency: "INR",
-      price_basis: "item",
-      valid_from: "",
-      valid_to: "",
-    });
+    setDraft(emptyPriceDraft(draft.currency || defaultCurrency));
   }
 
   return (
     <div className="space-y-4 rounded-xl border border-dashed border-border p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Add manually
+      <p
+        className={
+          simplifiedCopy
+            ? "text-sm font-medium text-foreground"
+            : "text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+        }
+      >
+        {simplifiedCopy ? "Add a Shelf Price" : "Add manually"}
       </p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="space-y-1.5">
-          <Label className="text-xs">SKU *</Label>
+          <Label className="text-xs">{simplifiedCopy ? "Product / SKU *" : "SKU *"}</Label>
           <Input
             className="h-9 rounded-lg text-sm"
             value={draft.sku}
             onChange={(e) => setDraft({ ...draft, sku: e.target.value })}
+            placeholder={simplifiedCopy ? "e.g. COL-MAX-150" : undefined}
           />
+          {simplifiedCopy ? (
+            <p className="text-[11px] text-muted-foreground">{HOMEPAGE_PRICE_FIELD_HELP.sku}</p>
+          ) : null}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Label location</Label>
+          <Label className="text-xs">
+            {simplifiedCopy ? "Price Label Location" : "Label location"}
+          </Label>
           <Input
             className="h-9 rounded-lg text-sm"
             value={draft.label_location}
             onChange={(e) => setDraft({ ...draft, label_location: e.target.value })}
-            placeholder="shelf_tag"
+            placeholder={simplifiedCopy ? "e.g. shelf tag" : "shelf_tag"}
           />
+          {simplifiedCopy ? (
+            <p className="text-[11px] text-muted-foreground">
+              {HOMEPAGE_PRICE_FIELD_HELP.labelLocation}
+            </p>
+          ) : null}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Expected price *</Label>
+          <Label className="text-xs">{simplifiedCopy ? "Expected Price *" : "Expected price *"}</Label>
           <Input
             type="number"
             min={0}
@@ -259,18 +286,41 @@ export function PriceManualForm({ pkg, onPatch }: { pkg: PlanogramAuditPackage; 
               setDraft({ ...draft, expected_price: e.target.value ? Number(e.target.value) : 0 })
             }
           />
+          {simplifiedCopy ? (
+            <p className="text-[11px] text-muted-foreground">
+              {HOMEPAGE_PRICE_FIELD_HELP.expectedPrice}
+            </p>
+          ) : null}
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs">Currency</Label>
-          <Input
-            className="h-9 rounded-lg text-sm"
-            value={draft.currency}
-            onChange={(e) => setDraft({ ...draft, currency: e.target.value })}
-            placeholder="INR"
-          />
+          {simplifiedCopy ? (
+            <Select value={draft.currency} onValueChange={(v) => setDraft({ ...draft, currency: v })}>
+              <SelectTrigger className="h-9 rounded-lg">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SHELF_PRICE_CURRENCIES.map((c) => (
+                  <SelectItem key={c.code} value={c.code}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input
+              className="h-9 rounded-lg text-sm"
+              value={draft.currency}
+              onChange={(e) => setDraft({ ...draft, currency: e.target.value })}
+              placeholder="INR"
+            />
+          )}
+          {simplifiedCopy ? (
+            <p className="text-[11px] text-muted-foreground">{HOMEPAGE_PRICE_FIELD_HELP.currency}</p>
+          ) : null}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Price basis</Label>
+          <Label className="text-xs">{simplifiedCopy ? "Price Basis" : "Price basis"}</Label>
           <Select
             value={draft.price_basis}
             onValueChange={(v) => setDraft({ ...draft, price_basis: v })}
@@ -283,32 +333,39 @@ export function PriceManualForm({ pkg, onPatch }: { pkg: PlanogramAuditPackage; 
               <SelectItem value="pack">Per pack</SelectItem>
               <SelectItem value="kg">Per kg</SelectItem>
               <SelectItem value="litre">Per litre</SelectItem>
+              {simplifiedCopy ? <SelectItem value="other">Other</SelectItem> : null}
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Valid from</Label>
+          <Label className="text-xs">{simplifiedCopy ? "Start Date" : "Valid from"}</Label>
           <Input
             type="date"
             className="h-9 rounded-lg text-sm"
             value={draft.valid_from ?? ""}
             onChange={(e) => setDraft({ ...draft, valid_from: e.target.value })}
           />
+          {simplifiedCopy ? (
+            <p className="text-[11px] text-muted-foreground">{HOMEPAGE_PRICE_FIELD_HELP.validFrom}</p>
+          ) : null}
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs">Valid until</Label>
+          <Label className="text-xs">{simplifiedCopy ? "End Date" : "Valid until"}</Label>
           <Input
             type="date"
             className="h-9 rounded-lg text-sm"
             value={draft.valid_to ?? ""}
             onChange={(e) => setDraft({ ...draft, valid_to: e.target.value })}
           />
+          {simplifiedCopy ? (
+            <p className="text-[11px] text-muted-foreground">{HOMEPAGE_PRICE_FIELD_HELP.validTo}</p>
+          ) : null}
         </div>
       </div>
       <Button type="button" variant="subtle" size="sm" className="rounded-lg" onClick={addEntry}>
-        <Plus className="size-3.5" /> Add price requirement
+        <Plus className="size-3.5" /> {simplifiedCopy ? "Add Price" : "Add price requirement"}
       </Button>
-      {pkg.price_requirements.length > 0 && (
+      {!simplifiedCopy && pkg.price_requirements.length > 0 && (
         <ul className="space-y-1 text-xs">
           {pkg.price_requirements.map((row) => (
             <li key={`${row.sku}-${row.label_location}`} className="flex justify-between gap-2">

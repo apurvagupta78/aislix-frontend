@@ -42,8 +42,9 @@ export const HOMEPAGE_WIZARD_STEP_COPY: Record<
       "Mark the products that are required for this store or shelf. Aislix will check during the audit whether those products are visibly present.",
   },
   prices: {
-    label: "Prices",
-    description: "Add expected shelf prices where price checks matter.",
+    label: "Set the Expected Shelf Prices",
+    description:
+      "Add the price that should be displayed for each product. Aislix will compare it with the price visible in the shelf photo.",
   },
   promotions: {
     label: "Promotions",
@@ -169,6 +170,41 @@ export const HOMEPAGE_ASSORTMENT_CSV = {
 } as const;
 
 /** Customer-facing label for assortment list_type values. */
+export const HOMEPAGE_PRICES_TAB_HELPER =
+  "Add prices manually or upload a CSV to add many products at once.";
+
+export const HOMEPAGE_PRICES_EMPTY = {
+  title: "No price rules added yet.",
+  description: "Add the expected shelf price for products you want Aislix to check.",
+} as const;
+
+export const HOMEPAGE_DEMO_PRICES_STATUS = {
+  title: "Demo prices are already configured.",
+  description: "The sample audit is ready to check shelf prices.",
+} as const;
+
+export const HOMEPAGE_NO_PLANOGRAM_PRICES = {
+  title: "No price setup required.",
+  description:
+    "Aislix will analyse visible shelf prices when they can be read from the photo, without comparing them against a predefined expected price.",
+} as const;
+
+export const HOMEPAGE_PRICE_FIELD_HELP = {
+  sku: "Which product does this price belong to?",
+  labelLocation: "Where should the price label appear?",
+  expectedPrice: "What price should be shown on the shelf?",
+  currency: "Choose the currency used for this shelf.",
+  validFrom: "When does this price become active?",
+  validTo: "Optional end date.",
+} as const;
+
+export const HOMEPAGE_PRICES_CSV = {
+  label: "Add Many Prices at Once",
+  supporting: "Upload a CSV when you have a larger price list.",
+  templateButton: "Download Template",
+  uploadButton: "Upload CSV",
+} as const;
+
 export function homepageRequiredProductTypeLabel(
   listType: "mandatory_assortment" | "msl" | "optional" | string,
 ): string {

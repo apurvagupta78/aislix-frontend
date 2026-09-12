@@ -14,6 +14,11 @@ import {
   ASSORTMENT_CSV_OPTIONAL_LABEL,
   ASSORTMENT_CSV_REQUIRED_LABEL,
 } from "@/lib/planogram-assortment-template";
+import {
+  PRICE_CSV_HEADERS,
+  PRICE_CSV_OPTIONAL_LABEL,
+  PRICE_CSV_REQUIRED_LABEL,
+} from "@/lib/planogram-price-template";
 import { fetchPackageCsvTemplate, parsePackageCsv } from "@/lib/planogram-audit-package";
 
 export type PackageCsvKind = "assortment" | "prices" | "promotions";
@@ -26,6 +31,7 @@ export function PlanogramPackageCsvImport({
   templateButtonLabel = "Template",
   uploadButtonLabel = "Upload CSV",
   showAssortmentColumnGuide = false,
+  showPriceColumnGuide = false,
 }: {
   label: string;
   kind: PackageCsvKind;
@@ -34,6 +40,7 @@ export function PlanogramPackageCsvImport({
   templateButtonLabel?: string;
   uploadButtonLabel?: string;
   showAssortmentColumnGuide?: boolean;
+  showPriceColumnGuide?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -129,6 +136,21 @@ export function PlanogramPackageCsvImport({
           <p className="text-[11px]">{ASSORTMENT_CSV_LIST_TYPE_NOTE}</p>
           <pre className="overflow-x-auto rounded-md border border-border bg-background/80 p-2 text-[10px] leading-relaxed">
             {ASSORTMENT_CSV_HEADERS}
+          </pre>
+        </div>
+      ) : null}
+      {showPriceColumnGuide && kind === "prices" ? (
+        <div className="mt-3 space-y-2 text-xs leading-relaxed text-muted-foreground">
+          <p>
+            <span className="font-medium text-foreground">Required: </span>
+            {PRICE_CSV_REQUIRED_LABEL}
+          </p>
+          <p>
+            <span className="font-medium text-foreground">Optional: </span>
+            {PRICE_CSV_OPTIONAL_LABEL}
+          </p>
+          <pre className="overflow-x-auto rounded-md border border-border bg-background/80 p-2 text-[10px] leading-relaxed">
+            {PRICE_CSV_HEADERS}
           </pre>
         </div>
       ) : null}

@@ -4,7 +4,16 @@
  */
 
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { CheckCircle2, ChevronLeft, ChevronRight, CircleDashed, FileJson, Loader2, Upload } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  CircleDashed,
+  FileJson,
+  Loader2,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +40,12 @@ import {
   ASSORTMENT_CSV_OPTIONAL_LABEL,
   ASSORTMENT_CSV_REQUIRED_LABEL,
 } from "@/lib/planogram-assortment-template";
+import {
+  formatPriceBasisLabel,
+  formatShelfPriceDate,
+  PRICE_CSV_OPTIONAL_LABEL,
+  PRICE_CSV_REQUIRED_LABEL,
+} from "@/lib/planogram-price-template";
 import {
   autoPopulateAuditPackage,
   computeReadiness,
@@ -65,6 +80,11 @@ import {
   HOMEPAGE_ASSORTMENT_HEADLINE,
   HOMEPAGE_ASSORTMENT_HELP,
   HOMEPAGE_DEMO_ASSORTMENT_STATUS,
+  HOMEPAGE_DEMO_PRICES_STATUS,
+  HOMEPAGE_NO_PLANOGRAM_PRICES,
+  HOMEPAGE_PRICES_CSV,
+  HOMEPAGE_PRICES_EMPTY,
+  HOMEPAGE_PRICES_TAB_HELPER,
   HOMEPAGE_DEMO_LAYOUT_STATUS,
   HOMEPAGE_DEMO_PRODUCTS_STATUS,
   HOMEPAGE_LAYOUT_EXAMPLE,
@@ -205,8 +225,8 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
     const patchPackage = (partial: Partial<PlanogramAuditPackage>) =>
       patch({ ...value, auditPackage: { ...auditPackage, ...partial } });
 
-    const homepageAssortmentPopulateOpts = homepageIntro
-      ? { skipAssortment: true, skipMsl: true }
+    const homepageAuditPackagePopulateOpts = homepageIntro
+      ? { skipAssortment: true, skipMsl: true, skipPrices: true }
       : undefined;
 
     const setRole = (nextRole: AuditRoleTab) => {
@@ -217,7 +237,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
         auditPackage: autoPopulateAuditPackage(
           value.planogramRows,
           value.auditPackage ?? EMPTY_AUDIT_PACKAGE,
-          homepageAssortmentPopulateOpts,
+          homepageAuditPackagePopulateOpts,
         ),
       });
     };
@@ -244,7 +264,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
         const pkg = autoPopulateAuditPackage(
           rows,
           value.auditPackage ?? EMPTY_AUDIT_PACKAGE,
-          homepageAssortmentPopulateOpts,
+          homepageAuditPackagePopulateOpts,
         );
         const next = { ...value, auditPackage: pkg };
         onChange(next);
@@ -925,53 +945,162 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
             </div>
           );
 
-        case "prices":
+        case "prices": {
+          const productLabelForSku = (sku: string) => {
+            const match = value.planogramRows.find((row) => row.sku === sku);
+            if (!match) return sku;
+            const label = [match.brand, match.product_name, match.variant].filter(Boolean).join(" ");
+            return label.trim() || sku;
+          };
+          if (homepageIntro && planogramMode === "demo") {
+            return (
+              <div className="rounded-xl border border-brand/20 bg-brand-soft/20 p-4">
+                <p className="font-medium text-brand">{HOMEPAGE_DEMO_PRICES_STATUS.title}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {HOMEPAGE_DEMO_PRICES_STATUS.description}
+                </p>
+              </div>
+            );
+          }
+          if (homepageIntro && planogramMode === "none") {
+            return (
+              <div className="rounded-xl border border-border bg-muted/20 p-4">
+                <p className="text-sm font-semibold text-foreground">
+                  {HOMEPAGE_NO_PLANOGRAM_PRICES.title}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {HOMEPAGE_NO_PLANOGRAM_PRICES.description}
+                </p>
+              </div>
+            );
+          }
           return (
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Import price requirements CSV or set <code className="text-xs">mrp_inr</code> on product rows.
-                Validity uses capture date and store timezone ({auditPackage.store_timezone || "Asia/Kolkata"}).
-              </p>
-              {!roleRequiresPricing(role) ? (
-                <p className="text-xs text-muted-foreground">Optional for {roleTabLabel(role)} audits.</p>
-              ) : null}
-              <PriceManualForm pkg={auditPackage} onPatch={patchPackage} />
+              {homepageIntro ? (
+                <p className="text-[11px] text-muted-foreground">{HOMEPAGE_PRICES_TAB_HELPER}</p>
+              ) : (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Import price requirements CSV or set <code className="text-xs">mrp_inr</code> on product
+                    rows. Validity uses capture date and store timezone (
+                    {auditPackage.store_timezone || "Asia/Kolkata"}).
+                  </p>
+                  {!roleRequiresPricing(role) ? (
+                    <p className="text-xs text-muted-foreground">
+                      Optional for {roleTabLabel(role)} audits.
+                    </p>
+                  ) : null}
+                </>
+              )}
+              <PriceManualForm
+                pkg={auditPackage}
+                onPatch={patchPackage}
+                simplifiedCopy={homepageIntro}
+              />
               <PlanogramPackageCsvImport
-                label="Or upload CSV — price requirements"
+                label={
+                  homepageIntro ? HOMEPAGE_PRICES_CSV.label : "Or upload CSV — price requirements"
+                }
                 kind="prices"
-                description="Columns: sku, label_location, expected_price, currency, price_basis, valid_from, valid_to"
+                description={
+                  homepageIntro
+                    ? HOMEPAGE_PRICES_CSV.supporting
+                    : `Required: ${PRICE_CSV_REQUIRED_LABEL}. Optional: ${PRICE_CSV_OPTIONAL_LABEL}.`
+                }
+                templateButtonLabel={
+                  homepageIntro ? HOMEPAGE_PRICES_CSV.templateButton : undefined
+                }
+                uploadButtonLabel={homepageIntro ? HOMEPAGE_PRICES_CSV.uploadButton : undefined}
+                showPriceColumnGuide={homepageIntro}
                 onImport={(imported) =>
                   patchPackage({ price_requirements: imported as PriceRequirement[] })
                 }
               />
-              {value.planogramRows.some((r) => r.mrp_inr != null) && (
+              {!homepageIntro && value.planogramRows.some((r) => r.mrp_inr != null) && (
                 <p className="text-xs text-muted-foreground">
                   {value.planogramRows.filter((r) => r.mrp_inr != null).length} product row(s) include MRP
                   from the Products step.
                 </p>
               )}
               {auditPackage.price_requirements.length > 0 ? (
-                <div className="overflow-hidden rounded-xl border border-border">
-                  <table className="w-full text-sm">
+                <div className="overflow-x-auto rounded-xl border border-border">
+                  <table className="w-full min-w-[40rem] text-sm">
                     <thead className="bg-brand text-brand-foreground">
                       <tr>
-                        <th className="px-3 py-2 text-left">SKU</th>
-                        <th className="px-3 py-2 text-left">Expected</th>
-                        <th className="px-3 py-2 text-left">Basis</th>
+                        <th className="px-3 py-2 text-left font-medium">
+                          {homepageIntro ? "Product / SKU" : "SKU"}
+                        </th>
+                        <th className="px-3 py-2 text-left font-medium">Expected Price</th>
+                        <th className="px-3 py-2 text-left font-medium">Currency</th>
+                        <th className="px-3 py-2 text-left font-medium">Price Basis</th>
+                        <th className="px-3 py-2 text-left font-medium">Active From</th>
+                        <th className="px-3 py-2 text-left font-medium">Active Until</th>
+                        <th className="px-3 py-2 text-right font-medium">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {auditPackage.price_requirements.map((row) => (
                         <tr key={`${row.sku}-${row.label_location}`} className="border-t border-border">
-                          <td className="px-3 py-2 font-mono text-xs">{row.sku}</td>
-                          <td className="px-3 py-2">
-                            {row.currency} {row.expected_price}
+                          <td className="px-3 py-2 text-xs">
+                            {homepageIntro ? (
+                              <>
+                                <span className="font-medium text-foreground">
+                                  {productLabelForSku(row.sku)}
+                                </span>
+                                {productLabelForSku(row.sku) !== row.sku ? (
+                                  <span className="mt-0.5 block font-mono text-muted-foreground">
+                                    {row.sku}
+                                  </span>
+                                ) : null}
+                              </>
+                            ) : (
+                              <span className="font-mono">{row.sku}</span>
+                            )}
                           </td>
-                          <td className="px-3 py-2 text-muted-foreground">{row.price_basis}</td>
+                          <td className="px-3 py-2 tabular-nums">{row.expected_price}</td>
+                          <td className="px-3 py-2">{row.currency}</td>
+                          <td className="px-3 py-2 text-muted-foreground">
+                            {homepageIntro
+                              ? formatPriceBasisLabel(row.price_basis)
+                              : row.price_basis}
+                          </td>
+                          <td className="px-3 py-2 text-muted-foreground">
+                            {formatShelfPriceDate(row.valid_from)}
+                          </td>
+                          <td className="px-3 py-2 text-muted-foreground">
+                            {formatShelfPriceDate(row.valid_to)}
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <button
+                              type="button"
+                              className="inline-flex items-center text-muted-foreground hover:text-destructive"
+                              aria-label="Delete price rule"
+                              onClick={() =>
+                                patchPackage({
+                                  price_requirements: auditPackage.price_requirements.filter(
+                                    (r) =>
+                                      !(
+                                        r.sku === row.sku &&
+                                        r.label_location === row.label_location
+                                      ),
+                                  ),
+                                })
+                              }
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                </div>
+              ) : homepageIntro ? (
+                <div className="rounded-lg border border-dashed border-border p-4">
+                  <p className="text-sm font-medium text-foreground">{HOMEPAGE_PRICES_EMPTY.title}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {HOMEPAGE_PRICES_EMPTY.description}
+                  </p>
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
@@ -981,6 +1110,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
               )}
             </div>
           );
+        }
 
         case "promotions":
           return (

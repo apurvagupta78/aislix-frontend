@@ -1,6 +1,7 @@
 /** Planogram audit package — assortment, MSL, prices, promotions, scoring targets. */
 
 import { ASSORTMENT_CSV_TEMPLATE } from "@/lib/planogram-assortment-template";
+import { PRICE_CSV_TEMPLATE } from "@/lib/planogram-price-template";
 import type { DraftRow, PlanogramRow } from "@/lib/planogram";
 import { downloadBlob } from "@/lib/scan-results";
 
@@ -70,6 +71,7 @@ export type AutoPopulateAuditPackageOptions = {
   /** Homepage custom setup — user defines required products explicitly in the wizard. */
   skipAssortment?: boolean;
   skipMsl?: boolean;
+  skipPrices?: boolean;
 };
 
 /** Derive assortment, MSL, prices, SOS scope from product rows when lists are empty. */
@@ -122,7 +124,7 @@ export function autoPopulateAuditPackage(
       }));
   }
 
-  if (!pkg.price_requirements.length) {
+  if (!options?.skipPrices && !pkg.price_requirements.length) {
     pkg.price_requirements = rows
       .filter((r) => r.mrp_inr != null && Number.isFinite(Number(r.mrp_inr)) && skuFor(r))
       .map((r) => ({
@@ -200,7 +202,7 @@ const API_BASE = () =>
 export async function fetchPackageCsvTemplate(kind: "assortment" | "prices" | "promotions"): Promise<string> {
   const local: Record<string, string> = {
     assortment: `${ASSORTMENT_CSV_TEMPLATE}\n`,
-    prices: "sku,label_location,expected_price,currency,price_basis,valid_from,valid_to\nCOL-001,shelf_tag,99,INR,item,2026-01-01,2026-12-31\n",
+    prices: `${PRICE_CSV_TEMPLATE}\n`,
     promotions:
       'promotion_id,participating_skus,start_date,end_date,required_location,expected_offer_text,expected_promo_price,required_facings\nPROMO-01,"COL-001|COL-002",2026-03-01,2026-03-31,S1,Buy 2 Save 10%,89,4\n',
   };
