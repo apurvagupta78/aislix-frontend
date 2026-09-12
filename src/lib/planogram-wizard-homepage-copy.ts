@@ -56,8 +56,9 @@ export const HOMEPAGE_WIZARD_STEP_COPY: Record<
     description: "Add any extra settings needed for your audit role.",
   },
   scoring: {
-    label: "Audit Rules",
-    description: "Set the targets Aislix should use when scoring this audit.",
+    label: "Set Your Targets",
+    description:
+      "Tell Aislix what level of shelf performance you expect. These targets are used to show whether your audit is on track.",
   },
   readiness: {
     label: "Ready to Audit",
@@ -244,6 +245,40 @@ export const HOMEPAGE_PROMOTIONS_CSV = {
   templateButton: "Download Template",
   uploadButton: "Upload CSV",
 } as const;
+
+export const HOMEPAGE_SCORING_HEADLINE = "Set Your Shelf Performance Targets";
+
+export const HOMEPAGE_SCORING_NOTE =
+  "Targets are optional and can be changed for each audit. They are used as your own performance benchmarks, not industry-wide standards.";
+
+export const HOMEPAGE_SCORING_TARGET_HELP = "Target %";
+
+export const HOMEPAGE_SCORING_NOT_CONFIGURED = "Not configured";
+
+export const HOMEPAGE_DEMO_SCORING_STATUS = {
+  title: "Demo targets are already configured.",
+  description: "Aislix will use the sample audit benchmarks for this demo.",
+} as const;
+
+export const HOMEPAGE_SCORING_TARGET_FIELDS = [
+  { key: "osa_target", label: "On-Shelf Availability", placeholder: "e.g. 95" },
+  { key: "planogram_target", label: "Planogram Compliance", placeholder: "e.g. 90" },
+  { key: "assortment_target", label: "Assortment Compliance", placeholder: "e.g. 90" },
+  { key: "price_target", label: "Price Compliance", placeholder: "e.g. 95" },
+  { key: "promotional_target", label: "Promotional Compliance", placeholder: "e.g. 85" },
+  { key: "msl_target", label: "Must-Stock Compliance", placeholder: "e.g. 90" },
+  { key: "share_of_shelf_target", label: "Share of Shelf", placeholder: "e.g. 55" },
+] as const;
+
+/** Targets that need planogram/reference setup — hidden or read-only in audit-without-planogram mode. */
+export const HOMEPAGE_SCORING_NONE_MODE_KEYS = new Set([
+  "planogram_target",
+  "assortment_target",
+  "price_target",
+  "promotional_target",
+  "msl_target",
+  "share_of_shelf_target",
+]);
 
 export function homepageRequiredProductTypeLabel(
   listType: "mandatory_assortment" | "msl" | "optional" | string,

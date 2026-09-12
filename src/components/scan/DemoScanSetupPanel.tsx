@@ -27,6 +27,7 @@ import {
   HOMEPAGE_DEMO_LAYOUT_STATUS,
   HOMEPAGE_DEMO_PRICES_STATUS,
   HOMEPAGE_DEMO_PROMOTIONS_STATUS,
+  HOMEPAGE_DEMO_SCORING_STATUS,
   HOMEPAGE_NO_PLANOGRAM_PRICES,
   HOMEPAGE_NO_PLANOGRAM_PROMOTIONS,
   HOMEPAGE_DEMO_PRODUCTS_STATUS,
@@ -219,6 +220,7 @@ export function DemoScanSetupPanel({
                 msl_skus: [],
                 price_requirements: [],
                 promotions: [],
+                scoring: {},
                 store_timezone: getBrowserTimezone(),
               },
             }
@@ -228,7 +230,13 @@ export function DemoScanSetupPanel({
       onScanContextChange({
         ...scanContext,
         planogramRows: [],
-        auditPackage: { assortment_skus: [], msl_skus: [], price_requirements: [], promotions: [] },
+        auditPackage: {
+          assortment_skus: [],
+          msl_skus: [],
+          price_requirements: [],
+          promotions: [],
+          scoring: {},
+        },
       });
     }
   }
@@ -470,6 +478,7 @@ export function DemoScanSetupPanel({
                 <p className="mt-2 font-medium text-brand">{HOMEPAGE_DEMO_ASSORTMENT_STATUS.title}</p>
                 <p className="mt-2 font-medium text-brand">{HOMEPAGE_DEMO_PRICES_STATUS.title}</p>
                 <p className="mt-2 font-medium text-brand">{HOMEPAGE_DEMO_PROMOTIONS_STATUS.title}</p>
+                <p className="mt-2 font-medium text-brand">{HOMEPAGE_DEMO_SCORING_STATUS.title}</p>
               </>
             ) : (
               <p>

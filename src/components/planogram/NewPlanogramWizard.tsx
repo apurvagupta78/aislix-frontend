@@ -99,6 +99,13 @@ import {
   HOMEPAGE_PROMOTIONS_EMPTY,
   HOMEPAGE_PROMOTIONS_HEADLINE,
   HOMEPAGE_PROMOTIONS_TAB_HELPER,
+  HOMEPAGE_DEMO_SCORING_STATUS,
+  HOMEPAGE_SCORING_HEADLINE,
+  HOMEPAGE_SCORING_NOT_CONFIGURED,
+  HOMEPAGE_SCORING_NONE_MODE_KEYS,
+  HOMEPAGE_SCORING_NOTE,
+  HOMEPAGE_SCORING_TARGET_FIELDS,
+  HOMEPAGE_SCORING_TARGET_HELP,
   HOMEPAGE_DEMO_LAYOUT_STATUS,
   HOMEPAGE_DEMO_PRODUCTS_STATUS,
   HOMEPAGE_LAYOUT_EXAMPLE,
@@ -1336,10 +1343,20 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
             </div>
           );
 
-        case "scoring":
-          return (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {(
+        case "scoring": {
+          if (homepageIntro && planogramMode === "demo") {
+            return (
+              <div className="rounded-xl border border-brand/20 bg-brand-soft/20 p-4">
+                <p className="font-medium text-brand">{HOMEPAGE_DEMO_SCORING_STATUS.title}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {HOMEPAGE_DEMO_SCORING_STATUS.description}
+                </p>
+              </div>
+            );
+          }
+          const scoringFields = homepageIntro
+            ? HOMEPAGE_SCORING_TARGET_FIELDS
+            : (
                 [
                   ["osa_target", "OSA target %"],
                   ["planogram_target", "Planogram target %"],
@@ -1349,31 +1366,62 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                   ["msl_target", "MSL target %"],
                   ["share_of_shelf_target", "Share of shelf target %"],
                 ] as const
-              ).map(([key, label]) => (
-                <div key={key} className="space-y-1.5">
-                  <Label className="text-xs">{label}</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    className="h-9 rounded-lg"
-                    placeholder="Optional"
-                    value={auditPackage.scoring?.[key] ?? ""}
-                    onChange={(e) => {
-                      const v = e.target.value === "" ? undefined : Number(e.target.value);
-                      patch({
-                        ...value,
-                        auditPackage: {
-                          ...auditPackage,
-                          scoring: { ...auditPackage.scoring, [key]: v },
-                        },
-                      });
-                    }}
-                  />
-                </div>
-              ))}
+              ).map(([key, label]) => ({ key, label, placeholder: "Optional" }));
+
+          return (
+            <div className="space-y-4">
+              {homepageIntro ? (
+                <p className="text-sm font-semibold text-foreground">{HOMEPAGE_SCORING_HEADLINE}</p>
+              ) : null}
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {scoringFields.map(({ key, label, placeholder }) => {
+                  const unavailableInNoneMode =
+                    homepageIntro &&
+                    planogramMode === "none" &&
+                    HOMEPAGE_SCORING_NONE_MODE_KEYS.has(key);
+                  if (unavailableInNoneMode) {
+                    return (
+                      <div key={key} className="space-y-1.5 rounded-lg border border-dashed border-border p-3">
+                        <Label className="text-xs">{label}</Label>
+                        <p className="text-sm text-muted-foreground">{HOMEPAGE_SCORING_NOT_CONFIGURED}</p>
+                        <p className="text-[11px] text-muted-foreground">{HOMEPAGE_SCORING_TARGET_HELP}</p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={key} className="space-y-1.5">
+                      <Label className="text-xs">{label}</Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        className="h-9 rounded-lg"
+                        placeholder={placeholder}
+                        value={auditPackage.scoring?.[key] ?? ""}
+                        onChange={(e) => {
+                          const v = e.target.value === "" ? undefined : Number(e.target.value);
+                          patch({
+                            ...value,
+                            auditPackage: {
+                              ...auditPackage,
+                              scoring: { ...auditPackage.scoring, [key]: v },
+                            },
+                          });
+                        }}
+                      />
+                      {homepageIntro ? (
+                        <p className="text-[11px] text-muted-foreground">{HOMEPAGE_SCORING_TARGET_HELP}</p>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+              {homepageIntro ? (
+                <p className="text-[11px] leading-relaxed text-muted-foreground">{HOMEPAGE_SCORING_NOTE}</p>
+              ) : null}
             </div>
           );
+        }
 
         case "readiness":
           return (
