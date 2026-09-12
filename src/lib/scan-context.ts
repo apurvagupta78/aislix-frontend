@@ -430,11 +430,11 @@ export function buildDemoCompetitorIntel(
   audit?: { subCategory?: string; category?: string },
 ): CompetitorSnapshot | null {
   const focus = effectiveFocusFromContext(ctx);
-  const primary = (focus.brand || focus.company || "").trim();
-  if (!primary) return null;
-
   const shares = filteredBrandShare(inventory, {});
   if (!shares.length) return null;
+
+  const primary = (focus.brand || focus.company || shares[0]?.brand || "").trim();
+  if (!primary) return null;
 
   const ownRow = shares.find((s) => brandsMatch(s.brand, primary)) ?? {
     brand: primary,
@@ -979,6 +979,16 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
   return withKpis;
 }
 
+/** True when the user supplied or the scan carried an expected planogram reference. */
+export function hasExplicitPlanogram(ctx: ScanContextState, result?: ScanResult | null): boolean {
+  if (isDemoOralCareContext(ctx)) return true;
+  if (ctx.planogramRows.length > 0) return true;
+  if (result?.planogram?.requested) return true;
+  const configured = (result?.planogram?.summary as { configured_rows?: PlanogramRow[] } | undefined)
+    ?.configured_rows;
+  return Array.isArray(configured) && configured.length > 0;
+}
+
 function backendDashboardsHaveValues(result: ScanResult): boolean {
   const multi = result.retail_intelligence?.audit_kpi_dashboards;
   if (multi) {
@@ -999,30 +1009,29 @@ function backendDashboardsHaveValues(result: ScanResult): boolean {
 /** Client-side KPI dashboards from planogram rows + inventory when backend payload is missing. */
 function attachAuditKpiDashboards(result: ScanResult, ctx: ScanContextState): ScanResult {
   const demoMode = isDemoOralCareContext(ctx) || isDemoOralCareResult(result);
-  const planogramRows =
-    effectivePlanogramRows(ctx, {
-      category: result.scan_category,
-      subCategory: result.scan_sub_category,
-    }).length > 0
-      ? effectivePlanogramRows(ctx, {
-          category: result.scan_category,
-          subCategory: result.scan_sub_category,
-        })
-      : ((result.planogram?.summary as { configured_rows?: PlanogramRow[] } | undefined)
-          ?.configured_rows ?? []);
+  const hasPlanogram = hasExplicitPlanogram(ctx, result);
+  const planogramRows = hasPlanogram
+    ? effectivePlanogramRows(ctx, {
+        category: result.scan_category,
+        subCategory: result.scan_sub_category,
+      })
+    : [];
   const hasInputs = planogramRows.length > 0 || (result.inventory?.length ?? 0) > 0;
   if (!hasInputs) return result;
 
-  if (!demoMode && backendDashboardsHaveValues(result)) return result;
+  const preferClientDashboards =
+    demoMode || !hasPlanogram || !backendDashboardsHaveValues(result);
+  if (!preferClientDashboards) return result;
 
   const role = ctx.auditRole ?? "supermarket";
+  const kpiCtx: ScanContextState = hasPlanogram ? ctx : { ...ctx, planogramRows: [] };
   const auditPackage = autoPopulateAuditPackage(
     planogramRows,
-    ctx.auditPackage ??
+    kpiCtx.auditPackage ??
       (result.retail_intelligence?.audit_package as PlanogramAuditPackage | undefined) ??
       EMPTY_AUDIT_PACKAGE,
   );
-  const dashboards = computeClientAuditDashboards(result, auditPackage, ctx);
+  const dashboards = computeClientAuditDashboards(result, auditPackage, kpiCtx);
   return {
     ...result,
     retail_intelligence: {
@@ -1046,24 +1055,23 @@ export function enrichDemoScanResult(result: ScanResult, ctx: ScanContextState):
       existing?.executive?.trim(),
   );
   if (hasFullRoleSummaries) {
-    const demoPatch = isDemoOralCareContext(ctx)
-      ? {
-          ...applied,
-          competitor_intel:
-            buildDemoCompetitorIntel(applied.inventory ?? [], ctx, {
-              subCategory: result.scan_sub_category,
-              category: result.scan_category,
-            }) ?? applied.competitor_intel,
-          charts: {
-            ...applied.charts,
-            top_brands:
-              filteredBrandShare(applied.inventory ?? [], {}).length > 0
-                ? filteredBrandShare(applied.inventory ?? [], {})
-                : applied.charts?.top_brands,
-          },
-        }
-      : applied;
-    return attachAuditKpiDashboards(demoPatch, ctx);
+    const intel =
+      buildDemoCompetitorIntel(applied.inventory ?? [], ctx, {
+        subCategory: result.scan_sub_category,
+        category: result.scan_category,
+      }) ?? applied.competitor_intel;
+    const withIntel = {
+      ...applied,
+      competitor_intel: intel,
+      charts: {
+        ...applied.charts,
+        top_brands:
+          filteredBrandShare(applied.inventory ?? [], {}).length > 0
+            ? filteredBrandShare(applied.inventory ?? [], {})
+            : applied.charts?.top_brands,
+      },
+    };
+    return attachAuditKpiDashboards(withIntel, ctx);
   }
 
   const fullInventory = result.inventory ?? [];

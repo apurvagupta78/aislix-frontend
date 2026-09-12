@@ -5,7 +5,7 @@
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { formatCompetitorBrandLabel } from "@/lib/brand-intel";
-import { DEMO_PLANOGRAM_LABEL } from "@/lib/demo-oral-care-planogram";
+import { DEMO_PLANOGRAM_LABEL, isDemoOralCareResult } from "@/lib/demo-oral-care-planogram";
 import type { ScanResult } from "@/lib/scan-results";
 import { cn } from "@/lib/utils";
 
@@ -97,9 +97,26 @@ export function DemoBrandProductAnalysis({
     );
   }
 
-  if (!snapshot?.primary_brand) return null;
+  if (!snapshot?.primary_brand && productRows.length === 0) return null;
 
-  const donutSegments = brandBars.slice(0, 7).map((row, i) => ({
+  const isDemo = isDemoOralCareResult(data);
+  const primaryBrand = snapshot?.primary_brand ?? productRows[0]?.brand ?? "Leading brand";
+  const ownShare =
+    snapshot?.own_brand_share_percent ??
+    brandBars.find((b) => b.is_primary)?.share ??
+    brandBars[0]?.share ??
+    0;
+
+  const donutSource =
+    brandBars.length > 0
+      ? brandBars
+      : productRows.map((row) => ({
+          brand: row.brand,
+          share: row.qty,
+          is_primary: row.brand === primaryBrand,
+        }));
+
+  const donutSegments = donutSource.slice(0, 7).map((row, i) => ({
     label: row.brand,
     value: Math.max(row.share ?? 0, row.is_primary ? 0.1 : 0.05),
     color: row.is_primary ? "hsl(var(--brand))" : `var(--chart-${(i % 6) + 1}, #94a3b8)`,
@@ -111,12 +128,16 @@ export function DemoBrandProductAnalysis({
         <div>
           <h2 className="text-sm font-semibold tracking-tight">Competitor brand &amp; product analysis</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Share of facings and product mix on this shelf photograph — compared to demo plan targets.
+            {isDemo
+              ? "Share of facings and product mix on this shelf photograph — compared to demo plan targets."
+              : "Share of facings and product mix detected on this shelf photograph — no planogram required."}
           </p>
         </div>
-        <Badge variant="outline" className="text-[10px]">
-          {DEMO_PLANOGRAM_LABEL}
-        </Badge>
+        {isDemo ? (
+          <Badge variant="outline" className="text-[10px]">
+            {DEMO_PLANOGRAM_LABEL}
+          </Badge>
+        ) : null}
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
@@ -128,15 +149,15 @@ export function DemoBrandProductAnalysis({
             <DonutChart
               segments={donutSegments.map((s, i) => ({
                 ...s,
-                color: brandBars[i]?.is_primary
+                color: donutSource[i]?.is_primary
                   ? "hsl(220 90% 56%)"
                   : ["#0ea5e9", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#64748b"][i % 6],
               }))}
-              centerLabel={snapshot.primary_brand}
-              centerValue={`${snapshot.own_brand_share_percent.toFixed(0)}%`}
+              centerLabel={primaryBrand}
+              centerValue={`${ownShare.toFixed(0)}%`}
             />
             <ul className="w-full flex-1 space-y-2">
-              {brandBars.slice(0, 8).map((row, i) => (
+              {donutSource.slice(0, 8).map((row, i) => (
                 <li key={row.brand} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
                     <span
@@ -165,10 +186,10 @@ export function DemoBrandProductAnalysis({
               ))}
             </ul>
           </div>
-          {snapshot.own_brand_share_percent > 55 ? (
+          {isDemo && snapshot && snapshot.own_brand_share_percent > 55 ? (
             <p className="mt-3 rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
-              Colgate observed ~{snapshot.own_brand_share_percent.toFixed(0)}% vs planned 55% target —
-              above planned share of shelf.
+              {snapshot.primary_brand} observed ~{snapshot.own_brand_share_percent.toFixed(0)}% vs planned
+              55% target — above planned share of shelf.
             </p>
           ) : null}
         </div>
@@ -204,7 +225,7 @@ export function DemoBrandProductAnalysis({
         </div>
       </div>
 
-      {snapshot.upper_hand?.length ? (
+      {snapshot?.upper_hand?.length ? (
         <div className="mt-4 space-y-2">
           <p className="text-xs font-semibold uppercase tracking-widest text-brand">Insights</p>
           {snapshot.upper_hand.map((edge) => (

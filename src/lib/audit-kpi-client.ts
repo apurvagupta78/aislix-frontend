@@ -18,25 +18,10 @@ import type { AuditKpiDashboard, AuditKpiResult } from "@/lib/retail-intelligenc
 import type { ScanContextState } from "@/lib/scan-context";
 import type { ScanResult } from "@/lib/scan-results";
 
+/** Explicit planogram rows only — never treat detected inventory as a planogram. */
 function planogramRowsFromResult(result?: ScanResult | null): PlanogramRow[] {
   const summary = result?.planogram?.summary as { configured_rows?: PlanogramRow[] } | undefined;
-  if (Array.isArray(summary?.configured_rows) && summary.configured_rows.length) {
-    return summary.configured_rows;
-  }
-  return (result?.inventory ?? []).map((item, i) => ({
-    location: result?.location ?? result?.aisle ?? "",
-    category: result?.scan_category ?? "",
-    sub_category: result?.scan_sub_category ?? "",
-    brand: String(item.brand ?? ""),
-    product_name: String(item.name ?? item.product ?? "Product"),
-    variant: String(item.variant ?? ""),
-    expected_qty: Number(item.facings ?? item.quantity ?? 1),
-    expected_facings: Number(item.expected_facings ?? item.facings ?? 1),
-    sku: String(item.sku ?? `INV-${i + 1}`),
-    shelf_position: String(item.shelf_position ?? item.shelf_row ?? ""),
-    match_key: String(item.match_key ?? `${item.brand}::${item.name ?? item.product}`),
-    mrp_inr: item.mrp_inr != null ? Number(item.mrp_inr) : undefined,
-  }));
+  return Array.isArray(summary?.configured_rows) ? summary.configured_rows : [];
 }
 
 function rowKey(row: PlanogramRow): string {
