@@ -35,7 +35,6 @@ import {
   PriceManualForm,
   PromotionManualForm,
 } from "@/components/planogram/PlanogramWizardManualForms";
-import { HomepageRolePicker } from "@/components/planogram/HomepageRolePicker";
 import { RoleTabSwitcher } from "@/components/scan-results/RoleTabSwitcher";
 import type { ShelfCategory } from "@/lib/categories.data";
 import { toDraftRow, type DraftRow, type PlanogramRow } from "@/lib/planogram";
@@ -209,7 +208,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
     const displaySteps = steps;
     const [stepIndex, setStepIndex] = useState(0);
     const [promotionEditSeed, setPromotionEditSeed] = useState<PromotionEntry | null>(null);
-    const currentStep = steps[stepIndex]?.id ?? (homepageIntro ? "role" : "basics");
+    const currentStep = steps[stepIndex]?.id ?? "basics";
 
     useEffect(() => {
       setStepIndex((i) => Math.min(i, Math.max(steps.length - 1, 0)));
@@ -321,9 +320,6 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
 
     function renderStep(stepId: PlanogramWizardStepId) {
       switch (stepId) {
-        case "role":
-          return <HomepageRolePicker value={role} onChange={setRole} compact />;
-
         case "basics":
           return (
             <div className="space-y-5">

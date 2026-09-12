@@ -57,10 +57,9 @@ export const HOMEPAGE_ROLE_STEP = {
   helper: "You can change this before starting the audit.",
 } as const;
 
-/** Role-specific wizard step order for homepage (includes leading role step). */
+/** Role-specific wizard step order for homepage (role chosen on panel before wizard opens). */
 const HOMEPAGE_ROLE_WIZARD_ORDER: Record<AuditRoleTab, PlanogramWizardStepId[]> = {
   supermarket: [
-    "role",
     "basics",
     "fixture",
     "products",
@@ -72,7 +71,6 @@ const HOMEPAGE_ROLE_WIZARD_ORDER: Record<AuditRoleTab, PlanogramWizardStepId[]> 
     "readiness",
   ],
   darkstore: [
-    "role",
     "basics",
     "fixture",
     "products",
@@ -83,7 +81,6 @@ const HOMEPAGE_ROLE_WIZARD_ORDER: Record<AuditRoleTab, PlanogramWizardStepId[]> 
     "readiness",
   ],
   fmcg: [
-    "role",
     "basics",
     "fixture",
     "products",
@@ -94,7 +91,6 @@ const HOMEPAGE_ROLE_WIZARD_ORDER: Record<AuditRoleTab, PlanogramWizardStepId[]> 
     "readiness",
   ],
   distributor: [
-    "role",
     "basics",
     "fixture",
     "products",
@@ -106,7 +102,6 @@ const HOMEPAGE_ROLE_WIZARD_ORDER: Record<AuditRoleTab, PlanogramWizardStepId[]> 
     "readiness",
   ],
   local: [
-    "role",
     "basics",
     "fixture",
     "products",
