@@ -4,15 +4,20 @@
 
 import {
   DEMO_ORAL_CARE_ROWS,
+  buildDemoOralCareScanContext,
   buildDemoPositionInventory,
   compareDemoOralCarePlanogram,
   demoPriceComplianceLines,
 } from "@/lib/demo-oral-care-planogram";
+import { buildDemoCompetitorIntel } from "@/lib/scan-context";
 
 export type HomepageDemoPreviewStats = {
   productsDetected: number;
+  brandsDetected: number;
   osaPercent: number;
   shelfExecutionPercent: number;
+  primaryBrand: string;
+  primaryBrandShelfSharePercent: number;
   priceIssueCount: number;
   actionIssueCount: number;
 };
@@ -21,7 +26,9 @@ export type HomepageDemoPreviewStats = {
 export function getHomepageDemoPreviewStats(): HomepageDemoPreviewStats {
   const match = compareDemoOralCarePlanogram();
   const inventory = buildDemoPositionInventory();
-  const uniqueSkus = new Set(DEMO_ORAL_CARE_ROWS.map((r) => r.sku)).size;
+  const ctx = buildDemoOralCareScanContext();
+  const intel = buildDemoCompetitorIntel(inventory, ctx);
+
   const invSkus = new Set(inventory.map((i) => i.sku).filter(Boolean));
   const expectedSkus = [...new Set(DEMO_ORAL_CARE_ROWS.map((r) => r.sku))];
   const available = expectedSkus.filter((sku) => invSkus.has(sku)).length;
@@ -32,10 +39,18 @@ export function getHomepageDemoPreviewStats(): HomepageDemoPreviewStats {
   const priceIssueCount = demoPriceComplianceLines().filter((l) => l.status === "mismatch").length;
   const actionIssueCount = match.lines.filter((l) => l.issue_type !== "correct").length;
 
+  const productsDetected = invSkus.size;
+  const brandsDetected = new Set(inventory.map((i) => i.brand).filter(Boolean)).size;
+  const primaryBrand = intel?.primary_brand ?? ctx.focus.brand ?? "Colgate";
+  const primaryBrandShelfSharePercent = Math.round(intel?.own_brand_share_percent ?? 0);
+
   return {
-    productsDetected: uniqueSkus,
+    productsDetected,
+    brandsDetected,
     osaPercent,
     shelfExecutionPercent,
+    primaryBrand,
+    primaryBrandShelfSharePercent,
     priceIssueCount,
     actionIssueCount,
   };

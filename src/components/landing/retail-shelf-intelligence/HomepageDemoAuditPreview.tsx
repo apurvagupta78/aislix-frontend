@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import {
   BadgePercent,
+  BarChart3,
   CircleCheck,
   History,
   Image as ImageIcon,
@@ -44,21 +45,28 @@ function IntelligenceRow({
   icon: Icon,
   title,
   value,
+  context,
 }: {
   icon: typeof Package;
   title: string;
   value: string;
+  context?: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg border border-border/80 bg-background/80 px-3 py-2.5 shadow-sm">
-      <span className="grid size-8 shrink-0 place-items-center rounded-md bg-brand-soft text-brand">
-        <Icon className="size-4" strokeWidth={1.75} aria-hidden="true" />
+    <div className="flex items-start gap-2.5 rounded-lg border border-border/80 bg-background/80 px-3 py-2 shadow-sm">
+      <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-md bg-brand-soft text-brand">
+        <Icon className="size-3.5" strokeWidth={1.75} aria-hidden="true" />
       </span>
       <div className="min-w-0 flex-1 text-left">
         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           {title}
         </p>
-        <p className="text-sm font-semibold tabular-nums text-foreground">{value}</p>
+        <p className="text-[13px] font-semibold leading-snug tabular-nums text-foreground">
+          {value}
+        </p>
+        {context ? (
+          <p className="mt-0.5 text-[10px] leading-snug text-muted-foreground">{context}</p>
+        ) : null}
       </div>
     </div>
   );
@@ -71,7 +79,7 @@ export function HomepageDemoAuditPreview() {
     {
       icon: Package,
       title: "Products & Brands",
-      value: `${stats.productsDetected} products detected`,
+      value: `${stats.productsDetected} products · ${stats.brandsDetected} brands detected`,
     },
     {
       icon: CircleCheck,
@@ -82,6 +90,12 @@ export function HomepageDemoAuditPreview() {
       icon: LayoutGrid,
       title: "Shelf Execution",
       value: `${stats.shelfExecutionPercent}% compliant`,
+    },
+    {
+      icon: BarChart3,
+      title: "Brand & Competition",
+      value: `${stats.primaryBrand} ${stats.primaryBrandShelfSharePercent}% shelf share · ${stats.brandsDetected} brands`,
+      context: "Brand presence vs category competition",
     },
     {
       icon: BadgePercent,
@@ -155,15 +169,16 @@ export function HomepageDemoAuditPreview() {
         </div>
 
         {/* Intelligence preview — ~45% on desktop */}
-        <div className="flex flex-col justify-center gap-2.5 lg:w-[45%] lg:py-1">
-          <p className="mb-1 text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-brand lg:text-left">
+        <div className="flex flex-col justify-center gap-2 lg:w-[45%] lg:py-0">
+          <p className="mb-0.5 text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-brand lg:text-left">
             Retail insights preview
           </p>
           {rows.map((row) => (
             <IntelligenceRow key={row.title} {...row} />
           ))}
-          <p className="mt-1 text-center text-[10px] leading-relaxed text-muted-foreground lg:text-left">
-            {DEMO_PLANOGRAM_LABEL} — values computed from the demo shelf reference planogram.
+          <p className="mt-0.5 text-center text-[10px] leading-relaxed text-muted-foreground lg:text-left">
+            {DEMO_PLANOGRAM_LABEL} — example shelf share and competitive metrics for illustration,
+            computed from the demo reference planogram.
           </p>
         </div>
       </div>
