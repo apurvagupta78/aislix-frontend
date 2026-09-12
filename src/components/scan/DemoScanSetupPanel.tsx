@@ -1,11 +1,14 @@
 import { useRef, useState } from "react";
 import {
+  ArrowLeftRight,
   ArrowRight,
   Camera,
   Check,
   ClipboardList,
+  Image as ImageIcon,
   ImagePlus,
   Layers3,
+  LayoutGrid,
   Package,
   Sparkles,
   Tag,
@@ -44,10 +47,7 @@ import {
   HOMEPAGE_DISTRIBUTOR_SETUP,
   HOMEPAGE_SHELF_SETUP_FLOW,
 } from "@/lib/planogram-wizard-homepage-copy";
-import {
-  HOMEPAGE_DEMO_ROLE_READY,
-  HOMEPAGE_DISTRIBUTOR_OUTLET,
-} from "@/lib/planogram-wizard-homepage-role-flow";
+import { HOMEPAGE_DISTRIBUTOR_OUTLET } from "@/lib/planogram-wizard-homepage-role-flow";
 import { defaultAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
 import type { ScanContextState } from "@/lib/scan-context";
 import { cn } from "@/lib/utils";
@@ -282,9 +282,9 @@ export function DemoScanSetupPanel({
       )
     : null;
   const canStart = uploadReady && !disabled && !auditBlockReason;
-  /** Wizard Step 8 and the no-planogram card include their own start actions. */
+  /** Wizard, no-planogram, and demo cards include their own start actions on homepage. */
   const hideBottomStartButton =
-    homepageIntro && (showWizard || planogramMode === "none");
+    homepageIntro && (showWizard || planogramMode === "none" || showDemoPlanogram);
 
   function handleStart() {
     setStartError(null);
@@ -481,12 +481,11 @@ export function DemoScanSetupPanel({
               {homepageIntro ? (
                 <>
                   <p className="text-sm font-semibold text-foreground">
-                    {HOMEPAGE_DEMO_ROLE_READY[auditRole]?.title ?? HOMEPAGE_DEMO_READY_CARD.title}
+                    {HOMEPAGE_DEMO_READY_CARD.title}
                   </p>
                   <p className="text-xs text-foreground/90">Oral Care · Main Gondola</p>
                   <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    {HOMEPAGE_DEMO_ROLE_READY[auditRole]?.description ??
-                      HOMEPAGE_DEMO_READY_CARD.subtitle}
+                    {HOMEPAGE_DEMO_READY_CARD.subtitle}
                   </p>
                 </>
               ) : (
@@ -509,11 +508,7 @@ export function DemoScanSetupPanel({
             {homepageIntro ? (
               <>
                 <p className="text-sm font-medium text-foreground">
-                  {HOMEPAGE_DEMO_READY_CARD.summary(
-                    DEMO_PRODUCT_COUNT,
-                    DEMO_ORAL_CARE_META.shelf_count ?? 5,
-                    DEMO_ORAL_CARE_ROWS.length,
-                  )}
+                  {HOMEPAGE_DEMO_READY_CARD.summaryLine}
                 </p>
                 <ul className="grid gap-2 sm:grid-cols-2">
                   {HOMEPAGE_DEMO_READY_CHECKLIST.map((item) => (
@@ -523,7 +518,52 @@ export function DemoScanSetupPanel({
                     </li>
                   ))}
                 </ul>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  {HOMEPAGE_DEMO_READY_CARD.valueMessage}
+                </p>
+                <div className="rounded-xl border border-border/70 bg-muted/20 px-3 py-3">
+                  <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3">
+                    <div className="flex min-w-[7.5rem] flex-1 items-start gap-2 rounded-lg bg-card/80 px-2.5 py-2">
+                      <LayoutGrid className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground">
+                          {HOMEPAGE_DEMO_READY_CARD.expectedShelf.label}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {HOMEPAGE_DEMO_READY_CARD.expectedShelf.detail}
+                        </p>
+                      </div>
+                    </div>
+                    <ArrowLeftRight
+                      className="size-4 shrink-0 text-muted-foreground"
+                      aria-hidden
+                    />
+                    <div className="flex min-w-[7.5rem] flex-1 items-start gap-2 rounded-lg bg-card/80 px-2.5 py-2">
+                      <ImageIcon className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-foreground">
+                          {HOMEPAGE_DEMO_READY_CARD.actualShelf.label}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {HOMEPAGE_DEMO_READY_CARD.actualShelf.detail}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mt-2.5 text-center text-[11px] font-medium text-foreground">
+                    {HOMEPAGE_DEMO_READY_CARD.comparisonResult}
+                  </p>
+                </div>
                 <p className="text-sm text-muted-foreground">{HOMEPAGE_DEMO_READY_CARD.ctaHint}</p>
+                <Button
+                  type="button"
+                  size="lg"
+                  className="w-full bg-brand sm:w-auto"
+                  disabled={!canStart}
+                  onClick={handleStart}
+                >
+                  {HOMEPAGE_DEMO_READY_CARD.cta} <ArrowRight className="size-4" />
+                </Button>
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
                   {HOMEPAGE_DEMO_READY_CARD.disclosure}
                 </p>

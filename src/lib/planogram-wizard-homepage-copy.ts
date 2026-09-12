@@ -103,14 +103,27 @@ export const HOMEPAGE_PRODUCT_FIELD_HELP = {
 } as const;
 
 export const HOMEPAGE_FREE_AUDIT_INTRO =
-  "Choose the type of shelf you want to analyse. For this free demo, Aislix has already prepared the shelf setup, products and audit rules for you.";
+  "Choose the type of shelf you want to analyse. For this free demo, Aislix has already prepared the products, shelf layout and audit rules — so you can see how Aislix compares the real shelf with what should be there.";
 
 export const HOMEPAGE_DEMO_READY_CARD = {
   title: "Your Demo Shelf Is Ready",
   subtitle: "Everything is pre-configured for this demo.",
+  summaryLine: "17 products · 5 shelves · 20 shelf positions",
   summary: (productCount: number, shelfCount: number, positionCount: number) =>
     `${productCount} products · ${shelfCount} shelves · ${positionCount} shelf positions`,
-  ctaHint: "Just start the audit to see what Aislix finds.",
+  valueMessage:
+    "This demo shows how Aislix can use a planogram and reference data to measure shelf execution, identify issues and show what needs to be fixed.",
+  expectedShelf: {
+    label: "Expected shelf",
+    detail: "Planogram + reference data",
+  },
+  actualShelf: {
+    label: "Actual shelf",
+    detail: "Sample shelf photo",
+  },
+  comparisonResult: "Aislix finds the differences.",
+  ctaHint: "Start the AI audit to see how Aislix compares the shelf against the expected setup.",
+  cta: "Start AI Audit",
   disclosure: "Demo data · Reference information is fictional and created for this sample audit.",
 } as const;
 
