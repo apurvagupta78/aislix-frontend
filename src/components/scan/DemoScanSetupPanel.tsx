@@ -18,6 +18,7 @@ import {
   DEMO_ORAL_CARE_ROWS,
   DEMO_PLANOGRAM_LABEL,
 } from "@/lib/demo-oral-care-planogram";
+import { EMPTY_PLANOGRAM_META } from "@/lib/planogram-meta";
 import type { ScanContextState } from "@/lib/scan-context";
 
 export type DemoPlanogramMode = "demo" | "custom" | "none";
@@ -69,11 +70,37 @@ export function DemoScanSetupPanel({
   );
   const planogramMode = planogramModeProp ?? internalMode;
 
+  function resolveSubCategoryLabel(next: DemoCategoryState): string {
+    if (next.subId === "others") return next.customSub.trim();
+    const category = categories.find((item) => item.name === next.categoryName);
+    const sub = category?.subcategories?.find((item) => item.id === next.subId);
+    return sub?.label ?? "";
+  }
+
+  function syncPlanogramMetaFromPicker(next: DemoCategoryState) {
+    if (!next.categoryName) return;
+    onScanContextChange({
+      ...scanContext,
+      planogramMeta: {
+        ...(scanContext.planogramMeta ?? EMPTY_PLANOGRAM_META),
+        category: next.categoryName,
+        sub_category: resolveSubCategoryLabel(next),
+      },
+    });
+  }
+
+  function handleCategoryChange(next: DemoCategoryState) {
+    onChange(next);
+    syncPlanogramMetaFromPicker(next);
+  }
+
   function setPlanogramMode(next: DemoPlanogramMode) {
     onPlanogramModeChange?.(next);
     if (planogramModeProp == null) setInternalMode(next);
     if (next === "demo" && mode === "sample") {
       onScanContextChange(buildDemoOralCareScanContext(scanContext.auditRole));
+    } else if (next === "custom") {
+      syncPlanogramMetaFromPicker(state);
     } else if (next === "none") {
       onScanContextChange({
         ...scanContext,
@@ -116,7 +143,7 @@ export function DemoScanSetupPanel({
 
       <DemoCategoryPicker
         state={state}
-        onChange={onChange}
+        onChange={handleCategoryChange}
         categories={categories}
         disabled={disabled}
       />

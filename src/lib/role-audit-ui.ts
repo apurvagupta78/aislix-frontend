@@ -78,37 +78,39 @@ export type RoleTabTheme = {
 const TAB_INACTIVE =
   "border border-border bg-background text-muted-foreground hover:border-brand/25 hover:bg-brand-soft/40 hover:text-foreground";
 
+const TAB_ACTIVE = "bg-brand text-brand-foreground shadow-sm";
+
 export const ROLE_TAB_THEME: Record<AuditRoleTab, RoleTabTheme> = {
   supermarket: {
-    tabActive: "bg-brand text-brand-foreground shadow-sm",
+    tabActive: TAB_ACTIVE,
     tabInactive: TAB_INACTIVE,
     accentText: "text-brand",
     accentBorder: "border-brand/20",
     accentSoft: "bg-brand-soft/50",
   },
   darkstore: {
-    tabActive: "bg-brand-muted text-white shadow-sm",
+    tabActive: TAB_ACTIVE,
     tabInactive: TAB_INACTIVE,
-    accentText: "text-brand-muted",
-    accentBorder: "border-brand/15",
-    accentSoft: "bg-brand-soft/35",
+    accentText: "text-brand",
+    accentBorder: "border-brand/20",
+    accentSoft: "bg-brand-soft/50",
   },
   fmcg: {
-    tabActive: "bg-foreground text-background shadow-sm",
+    tabActive: TAB_ACTIVE,
     tabInactive: TAB_INACTIVE,
-    accentText: "text-foreground",
-    accentBorder: "border-border",
-    accentSoft: "bg-muted/60",
+    accentText: "text-brand",
+    accentBorder: "border-brand/20",
+    accentSoft: "bg-brand-soft/50",
   },
   distributor: {
-    tabActive: "bg-primary text-primary-foreground shadow-sm",
+    tabActive: TAB_ACTIVE,
     tabInactive: TAB_INACTIVE,
-    accentText: "text-primary",
-    accentBorder: "border-primary/20",
-    accentSoft: "bg-muted/50",
+    accentText: "text-brand",
+    accentBorder: "border-brand/20",
+    accentSoft: "bg-brand-soft/50",
   },
   local: {
-    tabActive: "bg-brand text-brand-foreground shadow-sm",
+    tabActive: TAB_ACTIVE,
     tabInactive: TAB_INACTIVE,
     accentText: "text-brand",
     accentBorder: "border-brand/20",

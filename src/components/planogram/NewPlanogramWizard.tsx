@@ -3,7 +3,7 @@
  * Used in demo scan and authenticated New Scan (with planogram mode).
  */
 
-import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { CheckCircle2, ChevronLeft, ChevronRight, CircleDashed, FileJson, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -109,12 +109,32 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
     const [stepIndex, setStepIndex] = useState(0);
     const currentStep = steps[stepIndex]?.id ?? "basics";
 
-    const meta = value.planogramMeta ?? {
-      ...EMPTY_PLANOGRAM_META,
-      category: defaultCategory,
-      sub_category: defaultSubCategory,
-      store_outlet: defaultLocation,
-    };
+    const meta = useMemo(() => {
+      const stored = value.planogramMeta ?? EMPTY_PLANOGRAM_META;
+      return {
+        ...EMPTY_PLANOGRAM_META,
+        ...stored,
+        category: stored.category?.trim() || defaultCategory || EMPTY_PLANOGRAM_META.category,
+        sub_category: stored.sub_category?.trim() || defaultSubCategory || "",
+        store_outlet: stored.store_outlet?.trim() || defaultLocation || stored.store_outlet,
+      };
+    }, [value.planogramMeta, defaultCategory, defaultSubCategory, defaultLocation]);
+
+    useEffect(() => {
+      const stored = value.planogramMeta ?? EMPTY_PLANOGRAM_META;
+      const patch: Partial<PlanogramMeta> = {};
+      if (defaultCategory && stored.category !== defaultCategory) {
+        patch.category = defaultCategory;
+      }
+      if (defaultSubCategory && stored.sub_category !== defaultSubCategory) {
+        patch.sub_category = defaultSubCategory;
+      }
+      if (defaultLocation && !stored.store_outlet?.trim()) {
+        patch.store_outlet = defaultLocation;
+      }
+      if (Object.keys(patch).length === 0) return;
+      onChange(mergeMeta(value, patch));
+    }, [defaultCategory, defaultSubCategory, defaultLocation]);
     const draftRows = useMemo(() => toDraftRows(value.planogramRows), [value.planogramRows]);
     const auditPackage = value.auditPackage ?? EMPTY_AUDIT_PACKAGE;
     const allAssortment = mergeAssortmentLists(auditPackage.assortment_skus, auditPackage.msl_skus);
