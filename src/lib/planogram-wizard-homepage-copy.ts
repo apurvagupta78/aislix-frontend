@@ -132,7 +132,7 @@ export const HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM = {
     "No planogram? No problem. Aislix will analyse what is visible in your shelf photo and show you the retail insights that can be measured from the image.",
   limitation:
     "No expected shelf setup is used, so checks that require a planogram or predefined product list won't be scored.",
-  cta: "Start AI Audit",
+  cta: "Start Audit",
   capabilities: [
     {
       id: "products_brands",
