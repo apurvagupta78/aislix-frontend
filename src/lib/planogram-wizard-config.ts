@@ -95,7 +95,6 @@ const ROLE_WIZARD_ORDER: Record<AuditRoleTab, PlanogramWizardStepId[]> = {
     "products",
     "layout",
     "assortment",
-    "role_settings",
     "scoring",
     "readiness",
   ],
@@ -105,7 +104,6 @@ const ROLE_WIZARD_ORDER: Record<AuditRoleTab, PlanogramWizardStepId[]> = {
     "products",
     "layout",
     "promotions",
-    "role_settings",
     "scoring",
     "readiness",
   ],
@@ -156,7 +154,7 @@ export function roleSettingsTitle(role: AuditRoleTab): string {
     case "fmcg":
       return "FMCG brand & Share of Shelf";
     case "distributor":
-      return "Distributor portfolio & outlet MSL";
+      return "Set Up Your Distributor";
     default:
       return "Role-specific settings";
   }
@@ -169,7 +167,7 @@ export function roleSettingsHint(role: AuditRoleTab): string {
     case "fmcg":
       return "Set primary brand and category scope — SOS uses all brands in the category as denominator.";
     case "distributor":
-      return "MSL rows in Assortment step apply to this outlet; portfolio SKUs drive distributor KPIs.";
+      return "This helps Aislix check whether required distributor products are available at the outlet.";
     default:
       return "";
   }

@@ -52,8 +52,9 @@ export const HOMEPAGE_WIZARD_STEP_COPY: Record<
       "Add any offers or promotions that should currently be visible on the shelf. Aislix will check the shelf photo against these requirements and flag anything that is missing or incorrect.",
   },
   role_settings: {
-    label: "Role Settings",
-    description: "Add any extra settings needed for your audit role.",
+    label: "Distributor Setup",
+    description:
+      "Tell Aislix which distributor portfolio this audit belongs to. Aislix will use the distributor's products and must-stock requirements to check outlet execution.",
   },
   scoring: {
     label: "Set Your Targets",
@@ -124,6 +125,22 @@ export const HOMEPAGE_NO_PLANOGRAM_PRODUCTS = {
   description:
     "Aislix will analyse the products that are visible in your shelf photo and provide the insights that can be determined from the image.",
   cta: "Continue to Audit",
+} as const;
+
+export const HOMEPAGE_DISTRIBUTOR_SETUP = {
+  headline: "Set Up Your Distributor",
+  explanation:
+    "This helps Aislix check whether required distributor products are available at the outlet.",
+  fieldLabel: "Distributor / Portfolio",
+  fieldHelper: "Select the distributor or product portfolio being audited.",
+  noneModeNote:
+    "Select the distributor portfolio if you want Aislix to check distributor must-stock requirements.",
+} as const;
+
+export const HOMEPAGE_DEMO_DISTRIBUTOR_STATUS = {
+  title: "Demo distributor setup is ready.",
+  description:
+    "The sample audit already includes a distributor portfolio and must-stock requirements.",
 } as const;
 
 export const HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM = {

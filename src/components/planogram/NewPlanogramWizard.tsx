@@ -115,7 +115,9 @@ import {
   HOMEPAGE_NO_PLANOGRAM_PRODUCTS,
   HOMEPAGE_PRODUCTS_TABLE_DESCRIPTION,
   HOMEPAGE_PRODUCTS_TABLE_TITLE,
+  HOMEPAGE_DEMO_DISTRIBUTOR_STATUS,
   HOMEPAGE_DEMO_READINESS_STATUS,
+  HOMEPAGE_DISTRIBUTOR_SETUP,
   HOMEPAGE_NONE_READINESS_STATUS,
   HOMEPAGE_READINESS_HEADLINE,
   HOMEPAGE_READINESS_STATUS_LABELS,
@@ -1329,40 +1331,61 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
         }
 
         case "role_settings":
+          if (role !== "distributor") {
+            return null;
+          }
+          if (homepageIntro && planogramMode === "demo") {
+            return (
+              <div className="rounded-xl border border-brand/20 bg-brand-soft/20 p-4">
+                <p className="font-medium text-brand">{HOMEPAGE_DEMO_DISTRIBUTOR_STATUS.title}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {HOMEPAGE_DEMO_DISTRIBUTOR_STATUS.description}
+                </p>
+              </div>
+            );
+          }
           return (
             <div className="space-y-4">
-              <p className="text-sm font-medium">{roleSettingsTitle(role)}</p>
-              <p className="text-sm text-muted-foreground">{roleSettingsHint(role)}</p>
-              {(role === "fmcg" || role === "supermarket") && (
-                <div className="space-y-1.5 max-w-sm">
-                  <Label className="text-xs">Primary brand (SOS scope)</Label>
-                  <Input
-                    className="h-9 rounded-lg"
-                    placeholder="Colgate"
-                    value={auditPackage.primary_brand ?? ""}
-                    onChange={(e) =>
-                      patch({
-                        ...value,
-                        auditPackage: { ...auditPackage, primary_brand: e.target.value },
-                        focus: { ...value.focus, brand: e.target.value },
-                      })
-                    }
-                  />
-                </div>
+              {homepageIntro ? (
+                <>
+                  <p className="text-sm font-semibold text-foreground">
+                    {HOMEPAGE_DISTRIBUTOR_SETUP.headline}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {HOMEPAGE_DISTRIBUTOR_SETUP.explanation}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium">{roleSettingsTitle(role)}</p>
+                  <p className="text-sm text-muted-foreground">{roleSettingsHint(role)}</p>
+                </>
               )}
-              {role === "distributor" && (
-                <div className="space-y-1.5 max-w-sm">
-                  <Label className="text-xs">Distributor / portfolio name</Label>
-                  <Input
-                    className="h-9 rounded-lg"
-                    placeholder="ABC Distribution"
-                    value={value.focus.company ?? ""}
-                    onChange={(e) =>
-                      patch({ ...value, focus: { ...value.focus, company: e.target.value } })
-                    }
-                  />
-                </div>
-              )}
+              {homepageIntro && planogramMode === "none" ? (
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  {HOMEPAGE_DISTRIBUTOR_SETUP.noneModeNote}
+                </p>
+              ) : null}
+              <div className="space-y-1.5 max-w-sm">
+                <Label className="text-xs">
+                  {homepageIntro
+                    ? HOMEPAGE_DISTRIBUTOR_SETUP.fieldLabel
+                    : "Distributor / portfolio name"}
+                </Label>
+                <Input
+                  className="h-9 rounded-lg"
+                  placeholder="ABC Distribution"
+                  value={value.focus.company ?? ""}
+                  onChange={(e) =>
+                    patch({ ...value, focus: { ...value.focus, company: e.target.value } })
+                  }
+                />
+                {homepageIntro ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    {HOMEPAGE_DISTRIBUTOR_SETUP.fieldHelper}
+                  </p>
+                ) : null}
+              </div>
             </div>
           );
 
