@@ -1,5 +1,16 @@
 import { useRef, useState } from "react";
-import { ArrowRight, Camera, Check, ClipboardList, ImagePlus, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  Camera,
+  Check,
+  ClipboardList,
+  ImagePlus,
+  Layers3,
+  Package,
+  Sparkles,
+  Tag,
+  TriangleAlert,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,11 +37,7 @@ import {
   HOMEPAGE_DEMO_READY_CARD,
   HOMEPAGE_DEMO_READY_CHECKLIST,
   HOMEPAGE_FREE_AUDIT_INTRO,
-  HOMEPAGE_NO_PLANOGRAM_PRICES,
-  HOMEPAGE_NO_PLANOGRAM_PROMOTIONS,
-  HOMEPAGE_NO_PLANOGRAM_ASSORTMENT,
-  HOMEPAGE_NO_PLANOGRAM_LAYOUT,
-  HOMEPAGE_NO_PLANOGRAM_PRODUCTS,
+  HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM,
   HOMEPAGE_SHELF_SETUP_FLOW,
 } from "@/lib/planogram-wizard-homepage-copy";
 import type { ScanContextState } from "@/lib/scan-context";
@@ -39,6 +46,13 @@ import { cn } from "@/lib/utils";
 export type DemoPlanogramMode = "demo" | "custom" | "none";
 
 const DEMO_PRODUCT_COUNT = new Set(DEMO_ORAL_CARE_ROWS.map((row) => row.sku)).size;
+
+const NO_PLANOGRAM_CAPABILITY_ICONS = {
+  products_brands: Package,
+  availability_facings: Layers3,
+  prices_promotions: Tag,
+  shelf_issues: TriangleAlert,
+} as const;
 
 const HOMEPAGE_SAMPLE_OPTIONS: Array<{
   mode: DemoPlanogramMode;
@@ -250,8 +264,9 @@ export function DemoScanSetupPanel({
       )
     : null;
   const canStart = uploadReady && !disabled && !auditBlockReason;
-  /** Custom wizard has its own Start Audit CTA on Step 8 — avoid duplicating it below. */
-  const hideBottomStartButton = homepageIntro && showWizard;
+  /** Wizard Step 8 and the no-planogram card include their own start actions. */
+  const hideBottomStartButton =
+    homepageIntro && (showWizard || planogramMode === "none");
 
   function handleStart() {
     setStartError(null);
@@ -502,43 +517,47 @@ export function DemoScanSetupPanel({
       ) : null}
 
       {homepageIntro && planogramMode === "none" ? (
-        <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-soft sm:p-6">
-          <p className="text-sm font-semibold text-foreground">{HOMEPAGE_NO_PLANOGRAM_PRODUCTS.title}</p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {HOMEPAGE_NO_PLANOGRAM_PRODUCTS.description}
-          </p>
-          <p className="mt-4 text-sm font-semibold text-foreground">
-            {HOMEPAGE_NO_PLANOGRAM_LAYOUT.title}
+        <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/20 bg-gradient-to-br from-brand-soft/40 to-background p-5 shadow-soft sm:p-6">
+          <p className="text-base font-semibold text-foreground">
+            {HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM.title}
           </p>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {HOMEPAGE_NO_PLANOGRAM_LAYOUT.description}
+            {HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM.introduction}
           </p>
-          <p className="mt-4 text-sm font-semibold text-foreground">
-            {HOMEPAGE_NO_PLANOGRAM_ASSORTMENT.title}
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {HOMEPAGE_NO_PLANOGRAM_ASSORTMENT.description}
-          </p>
-          <p className="mt-4 text-sm font-semibold text-foreground">
-            {HOMEPAGE_NO_PLANOGRAM_PRICES.title}
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {HOMEPAGE_NO_PLANOGRAM_PRICES.description}
-          </p>
-          <p className="mt-4 text-sm font-semibold text-foreground">
-            {HOMEPAGE_NO_PLANOGRAM_PROMOTIONS.title}
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {HOMEPAGE_NO_PLANOGRAM_PROMOTIONS.description}
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM.capabilities.map((item) => {
+              const Icon = NO_PLANOGRAM_CAPABILITY_ICONS[item.id];
+              return (
+                <div
+                  key={item.id}
+                  className="rounded-xl border border-border/80 bg-card/80 p-3"
+                >
+                  <div className="flex items-start gap-2.5">
+                    <Icon className="mt-0.5 size-4 shrink-0 text-brand" aria-hidden />
+                    <div>
+                      <p className="text-[11px] font-semibold tracking-wide text-foreground">
+                        {item.title}
+                      </p>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        {item.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-4 text-[11px] leading-relaxed text-muted-foreground">
+            {HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM.limitation}
           </p>
           <Button
             type="button"
             size="lg"
-            className="mt-4 bg-brand"
+            className="mt-5 w-full bg-brand sm:w-auto"
             disabled={!canStart}
             onClick={handleStart}
           >
-            {HOMEPAGE_NO_PLANOGRAM_PRODUCTS.cta} <ArrowRight className="size-4" />
+            {HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM.cta} <ArrowRight className="size-4" />
           </Button>
         </div>
       ) : null}

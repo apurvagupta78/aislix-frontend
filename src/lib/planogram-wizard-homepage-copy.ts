@@ -126,6 +126,37 @@ export const HOMEPAGE_NO_PLANOGRAM_PRODUCTS = {
   cta: "Continue to Audit",
 } as const;
 
+export const HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM = {
+  title: "Audit Your Shelf Without a Planogram",
+  introduction:
+    "No planogram? No problem. Aislix will analyse what is visible in your shelf photo and show you the retail insights that can be measured from the image.",
+  limitation:
+    "No expected shelf setup is used, so checks that require a planogram or predefined product list won't be scored.",
+  cta: "Start AI Audit",
+  capabilities: [
+    {
+      id: "products_brands",
+      title: "PRODUCTS & BRANDS",
+      description: "See what products and brands are visible on the shelf.",
+    },
+    {
+      id: "availability_facings",
+      title: "AVAILABILITY & FACINGS",
+      description: "Identify visible products and estimate their shelf presence and front facings.",
+    },
+    {
+      id: "prices_promotions",
+      title: "PRICES & PROMOTIONS",
+      description: "Read visible prices and promotional signs when the image is clear enough.",
+    },
+    {
+      id: "shelf_issues",
+      title: "SHELF ISSUES",
+      description: "Highlight visible shelf issues and areas that need attention.",
+    },
+  ],
+} as const;
+
 export const HOMEPAGE_LAYOUT_INSTRUCTION =
   "Choose the shelf position for each product and set its expected facings.";
 
