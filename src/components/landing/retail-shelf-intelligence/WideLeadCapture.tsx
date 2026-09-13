@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trackLandingEvent } from "@/lib/landing-analytics";
-import { captureLandingLead, loadLandingSessionId, signupUrl } from "@/lib/landing-audit-api";
+import { captureLandingLead, loadLandingSessionId, signupUrl } from "@/lib/landing-scan-api";
 
 export function WideLeadCapture({ landingSessionId }: { landingSessionId: string | null }) {
   const [email, setEmail] = useState("");

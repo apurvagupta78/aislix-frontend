@@ -2,7 +2,7 @@ import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import { scrollToSection } from "@/lib/landing-utm";
-import { DEFAULT_SAMPLE_IMAGE } from "@/lib/landing-audit-api";
+import { DEFAULT_SAMPLE_IMAGE } from "@/lib/landing-scan-api";
 
 const TRUST = ["No card required", "5 free audits per day", "Results in seconds"];
 

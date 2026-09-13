@@ -20,7 +20,7 @@ import {
   runLandingSample,
   runLandingUpload,
   type LandingScanResult,
-} from "@/lib/landing-audit-api";
+} from "@/lib/landing-scan-api";
 import { buildDemoOralCareScanContext } from "@/lib/demo-oral-care-planogram";
 import { EMPTY_SCAN_CONTEXT, type ScanContextState } from "@/lib/scan-context";
 import { LANDING_SAMPLE_EVENT, LANDING_UPLOAD_EVENT } from "./HeroSection";

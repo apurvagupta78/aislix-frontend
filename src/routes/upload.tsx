@@ -4,4 +4,5 @@ export const Route = createFileRoute("/upload")({
   beforeLoad: () => {
     throw redirect({ to: "/scan" });
   },
+  component: () => null,
 });

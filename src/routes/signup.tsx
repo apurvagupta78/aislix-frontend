@@ -18,7 +18,7 @@ import {
 import { register } from "@/lib/api/auth";
 import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
 import { toUserMessage } from "@/lib/api/errors";
-import { convertLandingSession, loadLandingSessionId } from "@/lib/landing-audit-api";
+import { convertLandingSession, loadLandingSessionId } from "@/lib/landing-scan-api";
 import { trackWorkspaceSignupConversion } from "@/lib/linkedin-conversion";
 import { trackEvent } from "@/lib/analytics";
 

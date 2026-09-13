@@ -10,7 +10,7 @@
 
 import type { FinancialImpact, ScanResult } from "@/lib/scan-results";
 
-import type { LandingScanResult } from "@/lib/landing-audit-api";
+import type { LandingScanResult } from "@/lib/landing-scan-api";
 
 
 

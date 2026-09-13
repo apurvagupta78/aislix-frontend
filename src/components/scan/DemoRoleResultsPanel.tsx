@@ -13,7 +13,7 @@ import {
 import { isDemoOralCareContext } from "@/lib/demo-oral-care-planogram";
 import { defaultAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { landingToScanResult } from "@/lib/demo-execution";
-import type { LandingScanResult } from "@/lib/landing-audit-api";
+import type { LandingScanResult } from "@/lib/landing-scan-api";
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import { ScanResultsActionsFooter } from "@/components/scan/ScanResultsActionsFooter";
 import { parseDemoAllowance } from "@/lib/demo-allowance";

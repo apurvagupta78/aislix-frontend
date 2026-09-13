@@ -11,7 +11,7 @@ import {
   runLandingSample,
   runLandingUpload,
   type LandingScanResult,
-} from "@/lib/landing-audit-api";
+} from "@/lib/landing-scan-api";
 import { ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
 const DemoRoleResultsPanel = lazy(() =>
   import("@/components/scan/DemoRoleResultsPanel").then((m) => ({

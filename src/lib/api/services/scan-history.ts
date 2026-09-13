@@ -1,2 +1,2 @@
 /** Audit history list, filters and deletion: GET /scans, DELETE /scan/{id}. */
-export * from "../../audit-history";
+export * from "../../scan-history";

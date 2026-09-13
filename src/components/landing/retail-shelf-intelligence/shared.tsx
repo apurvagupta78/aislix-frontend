@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { trackLandingEvent, type LandingEvent } from "@/lib/landing-analytics";
-import { signupUrl } from "@/lib/landing-audit-api";
+import { signupUrl } from "@/lib/landing-scan-api";
 
 /** Primary conversion CTA: always routes to /signup with UTMs + session id. */
 export function SignupCta({
