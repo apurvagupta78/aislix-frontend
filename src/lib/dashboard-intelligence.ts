@@ -14,6 +14,11 @@ import {
   type PriorityCategory,
   PRIORITY_OPPORTUNITY_CATEGORIES,
 } from "@/lib/dashboard-config";
+import {
+  buildPerformanceOverTime,
+  type PerformanceOverTimeData,
+  type PerformancePeriodMetric,
+} from "@/lib/dashboard-performance-trend";
 import { getRoleProfile, type AuditKpiId } from "@/lib/role-kpi-config";
 import {
   buildDashboardFilterSummary,
@@ -102,10 +107,13 @@ export type DashboardIssueRow = {
   href?: string;
 };
 
+/** @deprecated use PerformanceOverTimeData.chart_points */
 export type PerformanceTrendPoint = {
   date: string;
   [kpi: string]: string | number | null;
 };
+
+export type { PerformanceOverTimeData, PerformancePeriodMetric };
 
 export type ImprovementMetric = {
   key: string;
@@ -159,14 +167,6 @@ export type AttentionCard = {
   rank_score: number;
 };
 
-export type PerformancePeriodMetric = {
-  kpi_id: AuditKpiId;
-  label: string;
-  current: number | null;
-  previous: number | null;
-  change: number | null;
-};
-
 export type BrandCompetitionData = {
   segments: ShareOfShelfSegment[];
   insight: string | null;
@@ -196,6 +196,7 @@ export type WorkspaceDashboardData = {
   issue_rows: DashboardIssueRow[];
   attention_cards: AttentionCard[];
   performance_trend: PerformanceTrendPoint[];
+  performance_over_time: PerformanceOverTimeData;
   performance_period: PerformancePeriodMetric[];
   improvement: ImprovementMetric[] | null;
   stores: StorePerformanceRow[];
@@ -784,46 +785,6 @@ function buildAttentionCards(
   return cards.sort((a, b) => b.rank_score - a.rank_score);
 }
 
-function buildPerformancePeriod(
-  audits: ScanRow[],
-  metricsMap: Map<string, RetailIntelligencePayload | null>,
-  effectiveRole: AuditRoleTab,
-  kriFilter: AuditKpiId | "all" = "all",
-): PerformancePeriodMetric[] {
-  if (scans.length < 2) return [];
-  const kpiIds =
-    kriFilter !== "all"
-      ? [kriFilter]
-      : trendKpisForRole(effectiveRole).slice(0, 5);
-  const mid = Math.floor(scans.length / 2);
-  const previous = audits.slice(0, mid);
-  const current = audits.slice(mid);
-
-  return kpiIds.map((kpiId) => {
-    const prevVals: number[] = [];
-    const currVals: number[] = [];
-    for (const scan of previous) {
-      const v = kpiValue(metricsMap.get(scan.id) ?? null, effectiveRole, kpiId, scan);
-      if (v !== null) prevVals.push(v);
-    }
-    for (const scan of current) {
-      const v = kpiValue(metricsMap.get(scan.id) ?? null, effectiveRole, kpiId, scan);
-      if (v !== null) currVals.push(v);
-    }
-    const prevAvg = prevVals.length ? avg(prevVals) : null;
-    const currAvg = currVals.length ? avg(currVals) : null;
-    const change =
-      prevAvg !== null && currAvg !== null ? Math.round(currAvg - prevAvg) : null;
-    return {
-      kpi_id: kpiId,
-      label: KPI_DASHBOARD_LABELS[kpiId],
-      current: currAvg !== null ? Math.round(currAvg) : null,
-      previous: prevAvg !== null ? Math.round(prevAvg) : null,
-      change,
-    };
-  });
-}
-
 function buildBrandCompetition(
   audits: ScanRow[],
   metricsMap: Map<string, RetailIntelligencePayload | null>,
@@ -1217,34 +1178,18 @@ export async function fetchWorkspaceDashboard(
   const issuesTotal = high + medium + low;
   kpis.open_issues = issuesTotal || null;
 
-  // --- Performance trend ---
   const trendKpis: AuditKpiId[] =
     filters.kri !== "all"
       ? [filters.kri as AuditKpiId]
       : trendKpisForRole(effectiveRole);
-  const byDay = new Map<string, Record<string, number[]>>();
-  for (const scan of audits) {
-    const key = dayKey(scan.created_at);
-    const bucket = byDay.get(key) ?? {};
-    const metrics = metricsMap.get(scan.id) ?? null;
+  const performance_over_time = buildPerformanceOverTime(audits, metricsMap, effectiveRole, trendKpis);
+  const performance_trend: PerformanceTrendPoint[] = performance_over_time.chart_points.map((p) => {
+    const legacy: PerformanceTrendPoint = { date: p.date_label };
     for (const kpiId of trendKpis) {
-      const val = kpiValue(metrics, effectiveRole, kpiId, scan);
-      if (val === null) continue;
-      bucket[kpiId] = [...(bucket[kpiId] ?? []), val];
+      legacy[kpiId] = p.values[kpiId] ?? null;
     }
-    byDay.set(key, bucket);
-  }
-  const performance_trend: PerformanceTrendPoint[] = [...byDay.keys()]
-    .sort()
-    .map((date) => {
-      const bucket = byDay.get(date)!;
-      const point: PerformanceTrendPoint = { date: formatDayLabel(date) };
-      for (const kpiId of trendKpis) {
-        const vals = bucket[kpiId];
-        point[kpiId] = vals?.length ? Math.round(avg(vals)!) : null;
-      }
-      return point;
-    });
+    return legacy;
+  });
 
   // --- Improvement (need >= 4 audits) ---
   let improvement: ImprovementMetric[] | null = null;
@@ -1472,7 +1417,7 @@ export async function fetchWorkspaceDashboard(
     filters.kri,
   );
 
-  const performance_period = buildPerformancePeriod(scans, metricsMap, effectiveRole, filters.kri);
+  const performance_period = performance_over_time.period_metrics;
   const brand_competition =
     filters.kri === "all" || filters.kri === "share_of_shelf"
       ? buildBrandCompetition(scans, metricsMap, effectiveRole)
@@ -1484,6 +1429,7 @@ export async function fetchWorkspaceDashboard(
     issue_rows: issueRows,
     attention_cards,
     performance_trend,
+    performance_over_time,
     performance_period,
     improvement,
     stores,

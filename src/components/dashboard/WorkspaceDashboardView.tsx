@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
-  BarChart3,
   ClipboardList,
   Gauge,
   HelpCircle,
@@ -10,16 +9,6 @@ import {
   Store,
   TrendingUp,
 } from "lucide-react";
-import {
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -30,16 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import { CardSkeleton, EmptyState, ErrorState, Skeleton } from "@/components/States";
 import { SectionHeader } from "@/components/dashboard/DashboardParts";
-import {
-  DASHBOARD_CHART_COLORS,
-  DASHBOARD_STATUS_COLORS,
-  KPI_DASHBOARD_LABELS,
-  SHELF_HEALTH_TOOLTIP,
-  effectiveDashboardRole,
-  trendKpisForRole,
-  type DashboardRoleFilter,
-} from "@/lib/dashboard-config";
-import type { AuditKpiId } from "@/lib/role-kpi-config";
+import { DASHBOARD_STATUS_COLORS, SHELF_HEALTH_TOOLTIP } from "@/lib/dashboard-config";
 import { formatNumber, formatPercent, formatQuota, formatScore } from "@/lib/dashboard";
 import type { WorkspaceDashboardData } from "@/lib/dashboard-intelligence";
 import { cn } from "@/lib/utils";
@@ -373,140 +353,10 @@ export function WhatNeedsAttentionSection({ data }: { data: WorkspaceDashboardDa
   );
 }
 
-export function PerformanceOverTimeSection({
-  data,
-  role,
-  kriFilter = "all",
-}: {
-  data: WorkspaceDashboardData;
-  role: DashboardRoleFilter;
-  kriFilter?: AuditKpiId | "all";
-}) {
-  const effectiveRole = effectiveDashboardRole(role, data.effective_role);
-  const availableKpis = trendKpisForRole(effectiveRole);
-  const [activeKpis, setActiveKpis] = useState<AuditKpiId[]>(() => {
-    if (kriFilter !== "all") return [kriFilter];
-    const defaults: AuditKpiId[] = ["osa", "planogram_compliance", "assortment_compliance"];
-    return defaults.filter((k) => availableKpis.includes(k)).length
-      ? defaults.filter((k) => availableKpis.includes(k))
-      : availableKpis.slice(0, 3);
-  });
-
-  useEffect(() => {
-    if (kriFilter !== "all") {
-      setActiveKpis([kriFilter]);
-      return;
-    }
-    const defaults: AuditKpiId[] = ["osa", "planogram_compliance", "assortment_compliance"];
-    const next = defaults.filter((k) => availableKpis.includes(k)).length
-      ? defaults.filter((k) => availableKpis.includes(k))
-      : availableKpis.slice(0, 3);
-    setActiveKpis(next);
-  }, [kriFilter, availableKpis]);
-
-  const toggleKpi = (kpi: AuditKpiId) => {
-    setActiveKpis((current) =>
-      current.includes(kpi) ? current.filter((k) => k !== kpi) : [...current, kpi],
-    );
-  };
-
-  const chartData = data.performance_trend;
-  const periodMetrics = data.performance_period.filter((m) => activeKpis.includes(m.kpi_id));
-
-  return (
-    <section className="mt-8">
-      <CommandSectionHeader
-        eyebrow="Performance over time"
-        description="See whether shelf execution is improving or slipping across audits."
-      />
-      <div className="card-surface p-5 sm:p-6">
-        <div className="mb-4 flex flex-wrap gap-2">
-          {availableKpis.map((kpi) => (
-            <button
-              key={kpi}
-              type="button"
-              onClick={() => toggleKpi(kpi)}
-              className={cn(
-                "rounded-lg border px-2.5 py-1 text-[11px] font-medium transition-colors",
-                activeKpis.includes(kpi)
-                  ? "border-brand bg-brand-soft/60 text-brand"
-                  : "border-border text-muted-foreground hover:border-brand/30",
-              )}
-            >
-              {KPI_DASHBOARD_LABELS[kpi]}
-            </button>
-          ))}
-        </div>
-        {periodMetrics.length ? (
-          <div className="mb-4 grid gap-2 sm:grid-cols-3">
-            {periodMetrics.slice(0, 3).map((m) => (
-              <div key={m.kpi_id} className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {m.label}
-                </p>
-                <p className="mt-1 text-sm font-semibold tabular-nums">
-                  {m.current !== null ? `${m.current}%` : "—"}
-                  {m.previous !== null ? (
-                    <span className="ml-1 text-xs font-normal text-muted-foreground">
-                      vs {m.previous}%
-                    </span>
-                  ) : null}
-                </p>
-                {m.change !== null ? (
-                  <p
-                    className={cn(
-                      "text-[11px] font-medium",
-                      m.change > 0 && "text-accent-green",
-                      m.change < 0 && "text-destructive",
-                      m.change === 0 && "text-muted-foreground",
-                    )}
-                  >
-                    {m.change >= 0 ? "+" : ""}
-                    {m.change} pts
-                  </p>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        ) : null}
-        {chartData.length < 2 ? (
-          <EmptyState
-            title="Not enough trend data"
-            description="Complete more audits to start tracking performance trends."
-            icon={<BarChart3 className="size-5" />}
-          />
-        ) : (
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" unit="%" />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                {activeKpis.map((kpi, i) => (
-                  <Line
-                    key={kpi}
-                    type="monotone"
-                    dataKey={kpi}
-                    name={KPI_DASHBOARD_LABELS[kpi]}
-                    stroke={DASHBOARD_CHART_COLORS[i % DASHBOARD_CHART_COLORS.length]}
-                    strokeWidth={2}
-                    dot={false}
-                    connectNulls
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
+export { PerformanceOverTimeSection } from "@/components/dashboard/PerformanceOverTimeSection";
 
 /** @deprecated use PerformanceOverTimeSection */
-export const ShelfPerformanceSection = PerformanceOverTimeSection;
+export { PerformanceOverTimeSection as ShelfPerformanceSection } from "@/components/dashboard/PerformanceOverTimeSection";
 
 export function BrandCompetitionSection({ data }: { data: WorkspaceDashboardData }) {
   const brand = data.brand_competition;

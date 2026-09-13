@@ -36,7 +36,7 @@ export const DASHBOARD_STATUS_COLORS = {
 export const ROLE_TREND_KPIS: Record<AuditRoleTab, AuditKpiId[]> = {
   supermarket: ["osa", "planogram_compliance", "assortment_compliance", "price_compliance", "promotional_compliance"],
   darkstore: ["osa", "location_accuracy", "planogram_compliance", "assortment_compliance", "facing_count"],
-  fmcg: ["share_of_shelf", "osa", "planogram_compliance", "promotional_compliance"],
+  fmcg: ["share_of_shelf", "osa", "facing_count", "planogram_compliance", "promotional_compliance"],
   distributor: ["osa", "msl_compliance", "planogram_compliance", "price_compliance", "promotional_compliance"],
   local: ["osa", "assortment_compliance", "facing_count", "price_compliance", "promotional_compliance"],
 };
@@ -52,6 +52,21 @@ export const KPI_DASHBOARD_LABELS: Record<AuditKpiId, string> = {
   share_of_shelf: "Share of Shelf",
   msl_compliance: "MSL Compliance",
 };
+
+/** Compact chip labels for performance-over-time metric selector. */
+export const KPI_TREND_CHIP_LABELS: Record<AuditKpiId, string> = {
+  osa: "OSA",
+  planogram_compliance: "Planogram",
+  assortment_compliance: "Assortment",
+  price_compliance: "Price",
+  promotional_compliance: "Promotions",
+  location_accuracy: "Location Accuracy",
+  facing_count: "Facing",
+  share_of_shelf: "Share of Shelf",
+  msl_compliance: "MSL",
+};
+
+export const OPEN_ISSUES_TREND_LABEL = "Open Issues";
 
 export const PRIORITY_OPPORTUNITY_CATEGORIES = [
   { key: "availability", label: "Availability" },
