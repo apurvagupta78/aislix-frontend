@@ -128,14 +128,16 @@ function buildLimitLines(plan: PlanDefinition): LimitLine[] {
 function PlanLimits({ plan }: { plan: PlanDefinition }) {
   const lines = buildLimitLines(plan);
   return (
-    <ul
-      className="mt-4 min-w-0 space-y-1 border-t border-border/40 pt-4"
-      aria-label={`${plan.name} plan limits`}
-    >
+    <ul className="mt-4 min-w-0 space-y-1.5" aria-label={`${plan.name} plan limits`}>
       {lines.map((line) => (
-        <li key={`${line.bold}-${line.label}`} className="min-w-0 text-sm leading-snug">
-          <span className="font-bold tabular-nums text-foreground">{line.bold}</span>{" "}
-          <span className="text-muted-foreground">{line.label}</span>
+        <li
+          key={`${line.bold}-${line.label}`}
+          className="flex min-w-0 gap-2 text-xs leading-snug text-muted-foreground sm:text-sm"
+        >
+          <Check className="mt-0.5 size-3.5 shrink-0 text-accent-green" aria-hidden />
+          <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+            {line.bold} {line.label}
+          </span>
         </li>
       ))}
     </ul>
@@ -186,9 +188,9 @@ export function PlanCard({
   return (
     <article
       className={cn(
-        "relative flex h-full min-w-0 flex-col rounded-2xl border bg-white p-4 shadow-sm sm:p-5",
+        "relative flex h-full min-w-0 flex-col rounded-2xl border bg-white px-5 pb-5 pt-6 shadow-sm sm:px-6 sm:pb-6 sm:pt-7",
         plan.popular
-          ? "z-10 border-2 border-brand shadow-lg ring-4 ring-brand/10 sm:scale-[1.02]"
+          ? "z-10 border-2 border-brand shadow-lg ring-4 ring-brand/10"
           : isPayg
             ? "border-brand/30"
             : "border-border/60",
@@ -232,7 +234,7 @@ export function PlanCard({
         <PlanLimits plan={plan} />
       </div>
 
-      <ul className={cn("mt-4 min-w-0 flex-1 space-y-1.5", FEATURE_AREA_MIN_H)}>
+      <ul className={cn("mt-3 min-w-0 flex-1 space-y-1.5", FEATURE_AREA_MIN_H)}>
         {features.map((feature) => (
           <li key={feature} className="flex min-w-0 gap-2 text-xs leading-snug text-muted-foreground sm:text-sm">
             <Check className="mt-0.5 size-3.5 shrink-0 text-accent-green" aria-hidden />
@@ -241,10 +243,10 @@ export function PlanCard({
         ))}
       </ul>
 
-      <div className="mt-auto min-w-0 pt-4">
+      <div className="mt-auto min-w-0 pt-5">
         <Button
           variant={plan.popular || isPayg ? "brand" : isCurrent ? "soft" : "subtle"}
-          className="h-10 w-full min-w-0 rounded-xl text-xs font-semibold sm:text-sm"
+          className="h-10 w-full min-w-0 rounded-xl px-3 text-xs font-semibold sm:text-sm"
           disabled={isCurrent || pending}
           onClick={() => {
             trackEvent(AnalyticsEvents.PricingPlanClick, {
@@ -276,8 +278,8 @@ export function PricingGrid({
   currency?: CurrencyCode;
 }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/60 bg-white/50 p-3 shadow-sm sm:p-4">
-      <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 xl:gap-3">
+    <div className="overflow-visible rounded-2xl border border-border/60 bg-white/50 p-4 shadow-sm sm:p-6">
+      <div className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 xl:gap-4">
         {SUBSCRIPTION_PLANS.map((plan) => (
           <PlanCard
             key={plan.id}
@@ -339,7 +341,7 @@ export function EnterpriseSection({
           disabled={pending}
           onClick={() => onSelect?.(enterprise)}
         >
-          For Custom Pricing, Talk to Sales
+          Talk to Sales for Custom Pricing
           <ArrowRight className="size-4" aria-hidden />
         </Button>
       </div>
@@ -446,7 +448,7 @@ export function PricingBottomActions({
         <ArrowRight className="size-4" aria-hidden />
       </Button>
       <Button variant="brand" className="rounded-xl text-sm font-semibold" onClick={onSales}>
-        For Custom Pricing, Talk to Sales
+        Talk to Sales for Custom Pricing
         <ArrowRight className="size-4" aria-hidden />
       </Button>
     </div>
