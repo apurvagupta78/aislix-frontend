@@ -101,7 +101,7 @@ const DASHBOARD_LEAF: NavLeaf = {
 const SECTIONS: NavSection[] = [
   {
     id: "scan",
-    label: "Scans",
+    label: "Audits",
     icon: ClipboardCheck,
     items: [
       { kind: "leaf", label: "New Audit", to: "/scan", icon: Plus },
@@ -119,7 +119,7 @@ const SECTIONS: NavSection[] = [
         search: { tab: "assignments" },
         managerOnly: true,
       },
-      { kind: "leaf", label: "Scan History", to: "/history", icon: History },
+      { kind: "leaf", label: "Audit History", to: "/history", icon: History },
     ],
   },
   {
@@ -673,8 +673,8 @@ export function AppShell({
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 name="q"
-                aria-label="Search scans, stores and SKUs"
-                placeholder="Search scans, stores, SKUs…"
+                aria-label="Search audits, stores and SKUs"
+                placeholder="Search audits, stores, SKUs…"
                 className="h-9 rounded-xl border-border bg-surface pl-9"
               />
             </form>

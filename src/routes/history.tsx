@@ -296,8 +296,8 @@ function HistoryPage() {
 
   return (
     <AppShell
-      title="Scan history"
-      description="Every shelf audit run on your workspace, with exports and scan comparison."
+      title="Audit history"
+      description="Every shelf audit run on your workspace, with exports and audit comparison."
     >
       <div className="space-y-5">
         {/* filters */}
@@ -311,9 +311,9 @@ function HistoryPage() {
                   setQ(e.target.value);
                   resetPage();
                 }}
-                placeholder="Search by scan ID or store name"
+                placeholder="Search by audit ID or store name"
                 className="h-11 rounded-xl pl-9"
-                aria-label="Search scans"
+                aria-label="Search audits"
               />
             </div>
 
@@ -436,22 +436,22 @@ function HistoryPage() {
             <TableSkeleton rows={6} cols={6} />
           ) : isError ? (
             <ErrorState
-              title="Couldn't load scan history"
+              title="Couldn't load audit history"
               description={error instanceof Error ? error.message : undefined}
               onRetry={() => void refetch()}
             />
           ) : items.length === 0 ? (
             <EmptyState
               icon={q || date || store !== "all" ? <SearchX className="size-5" /> : undefined}
-              title={q || date || store !== "all" ? "No scans match your filters" : "No scans yet"}
+              title={q || date || store !== "all" ? "No audits match your filters" : "No audits yet"}
               description={
                 q || date || store !== "all"
-                  ? "Try a different scan ID, store or date."
-                  : "Run your first shelf scan and it will appear here."
+                  ? "Try a different audit ID, store or date."
+                  : "Run your first shelf audit and it will appear here."
               }
               action={
                 <Button variant="brand" size="sm" className="rounded-xl" asChild>
-                  <Link to="/scan">New scan</Link>
+                  <Link to="/scan">New audit</Link>
                 </Button>
               }
             />

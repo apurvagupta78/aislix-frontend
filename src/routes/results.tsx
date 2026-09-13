@@ -43,8 +43,8 @@ import { fetchPlanogramComparison } from "@/lib/planogram-compliance";
 
 export const Route = createFileRoute("/results")({
   validateSearch: (search: Record<string, unknown>): { scan?: string } => {
-    const scan = search["scan"];
-    return typeof scan === "string" && scan.length > 0 ? { scan } : {};
+    const raw = search["scan"] ?? search["audit"];
+    return typeof raw === "string" && raw.length > 0 ? { scan: raw } : {};
   },
   head: () => ({
     meta: [
@@ -150,16 +150,16 @@ function Results() {
 
   const goToScan = (id?: string | null) => {
     if (!id) return;
-    navigate({ to: "/results", search: { scan: id } });
+    navigate({ to: "/results", search: { audit: id } });
   };
 
   return (
     <AppShell
-      title="Scan results"
+      title="Audit results"
       description={
         data
           ? [data.scan_id, data.store, data.aisle].filter(Boolean).join(" · ")
-          : "AI breakdown of a single shelf scan."
+          : "AI breakdown of a single shelf audit."
       }
       actions={
         <div className="flex items-center gap-2">
@@ -187,7 +187,7 @@ function Results() {
             </Link>
           </Button>
           <Button asChild variant="subtle" size="sm" className="rounded-xl">
-            <Link to="/history">Scan history</Link>
+            <Link to="/history">Audit history</Link>
           </Button>
           <Button asChild variant="ghost" size="sm" className="rounded-xl">
             <Link to="/dashboard">Dashboard</Link>
@@ -198,26 +198,26 @@ function Results() {
       {!scan ? (
         <EmptyState
           icon={<ScanLine className="size-5" />}
-          title="No scan selected"
-          description="Open a scan from your history, or run a new shelf scan to see results here."
+          title="No audit selected"
+          description="Open an audit from your history, or run a new shelf audit to see results here."
           action={
             <div className="flex flex-wrap justify-center gap-2">
               <Button asChild variant="brand" size="sm" className="rounded-xl">
-                <Link to="/scan">Start a new scan</Link>
+                <Link to="/scan">Start a new audit</Link>
               </Button>
               <Button asChild variant="subtle" size="sm" className="rounded-xl">
-                <Link to="/history">Browse scan history</Link>
+                <Link to="/history">Browse audit history</Link>
               </Button>
             </div>
           }
         />
       ) : query.isError ? (
         <ErrorState
-          title="Couldn't load this scan"
+          title="Couldn't load this audit"
           description={
             query.error instanceof Error
               ? sanitizeUserMessage(query.error.message)
-              : "We couldn't load this scan right now. Please try again."
+              : "We couldn't load this audit right now. Please try again."
           }
           onRetry={() => {
             void query.refetch();
@@ -358,7 +358,7 @@ function FailedState({ scanId, onRetried }: { scanId: string; onRetried: () => v
         <AlertTriangle className="size-5" />
       </span>
       <div>
-        <h2 className="text-base font-semibold tracking-tight">This scan failed to process</h2>
+        <h2 className="text-base font-semibold tracking-tight">This audit failed to process</h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
           The uploaded images are safe in storage. Retrying re-runs the AI analysis without
           re-uploading anything.
@@ -381,7 +381,7 @@ function FailedState({ scanId, onRetried }: { scanId: string; onRetried: () => v
           {retrying ? "Retrying analysis" : "Retry analysis"}
         </Button>
         <Button asChild variant="subtle" size="sm" className="rounded-xl">
-          <Link to="/scan">Start a new scan</Link>
+          <Link to="/scan">Start a new audit</Link>
         </Button>
       </div>
     </div>
