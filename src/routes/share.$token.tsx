@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import {
   AlertTriangle,
   Boxes,
@@ -35,24 +36,48 @@ import { DEMO_PLANOGRAM_LABEL } from "@/lib/demo-oral-care-planogram";
 import { landingToScanResult } from "@/lib/demo-execution";
 import type { LandingScanResult } from "@/lib/landing-scan-api";
 import { defaultAuditRoleTab } from "@/lib/role-audit-ui";
+import { getPublicShare } from "@/lib/scan-share.functions";
 import { formatSharedDate, type SharedScanPayload } from "@/lib/scan-share";
 
-async function loadPublicShare(token: string, requestUrl: string) {
-  const base = new URL(requestUrl).origin;
-  const res = await fetch(`${base}/api/public/share/${encodeURIComponent(token)}`, {
-    headers: { Accept: "application/json" },
-  });
-  if (!res.ok) return { report: null, demoSession: null };
-  return (await res.json()) as {
-    report: SharedScanPayload | null;
-    demoSession: LandingScanResult | null;
-  };
+type ShareLoaderData = {
+  report: SharedScanPayload | null;
+  demoSession: LandingScanResult | null;
+};
+
+/** Resolve share payload on the server — never self-fetch /api (breaks SSR on Lovable). */
+async function loadPublicShare(token: string): Promise<ShareLoaderData> {
+  const trimmed = String(token ?? "").trim();
+  if (!trimmed) return { report: null, demoSession: null };
+  try {
+    const { resolvePublicShare } = await import("@/lib/scan-share.server");
+    return await resolvePublicShare(trimmed);
+  } catch {
+    const backendUrl =
+      (typeof process !== "undefined" && process.env["AISLIX_AI_API_URL"]) ||
+      (typeof process !== "undefined" && process.env["VITE_AISLIX_API_URL"]) ||
+      "https://aislix-backend-production.up.railway.app";
+    try {
+      const res = await fetch(
+        `${String(backendUrl).replace(/\/+$/, "")}/landing/session/${encodeURIComponent(trimmed)}`,
+        { headers: { Accept: "application/json" } },
+      );
+      if (res.ok) {
+        const demoSession = (await res.json()) as LandingScanResult;
+        if (demoSession?.status === "completed") {
+          return { report: null, demoSession };
+        }
+      }
+    } catch {
+      /* fall through */
+    }
+    return { report: null, demoSession: null };
+  }
 }
 
 export const Route = createFileRoute("/share/$token")({
-  loader: async ({ params, request }) => {
+  loader: async ({ params }) => {
     try {
-      return await loadPublicShare(params.token, request.url);
+      return await loadPublicShare(params.token);
     } catch {
       return { report: null, demoSession: null };
     }
@@ -153,10 +178,8 @@ function DemoSharedReport({ session }: { session: LandingScanResult }) {
 
 function SharedReport() {
   const { token } = Route.useParams();
-  const loaderData = Route.useLoaderData() as {
-    report: SharedScanPayload | null;
-    demoSession: LandingScanResult | null;
-  };
+  const loaderData = Route.useLoaderData() as ShareLoaderData;
+  const fetchShare = useServerFn(getPublicShare);
   const [resolved, setResolved] = useState(loaderData);
   const [loading, setLoading] = useState(
     !loaderData.report && !loaderData.demoSession,
@@ -169,13 +192,17 @@ function SharedReport() {
     }
     let cancelled = false;
     setLoading(true);
-    fetch(`/api/public/share/${encodeURIComponent(token)}`, {
-      headers: { Accept: "application/json" },
-    })
-      .then(async (res) => (res.ok ? res.json() : null))
+    fetchShare({ data: { token } })
       .then((payload) => {
-        if (cancelled || !payload) return;
-        setResolved(payload);
+        if (cancelled) return;
+        if (payload.kind === "demo") {
+          setResolved({ report: null, demoSession: payload.demoSession });
+        } else if (payload.kind === "report") {
+          setResolved({ report: payload.report, demoSession: null });
+        }
+      })
+      .catch(() => {
+        /* keep LinkProblem state */
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -183,7 +210,7 @@ function SharedReport() {
     return () => {
       cancelled = true;
     };
-  }, [token, resolved.report, resolved.demoSession]);
+  }, [token, resolved.report, resolved.demoSession, fetchShare]);
 
   const { report, demoSession } = resolved;
   if (loading) {

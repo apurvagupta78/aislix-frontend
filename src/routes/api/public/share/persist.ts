@@ -80,6 +80,21 @@ export const Route = createFileRoute("/api/public/share/persist")({
         }
 
         if (saved) {
+          try {
+            const { resolvePublicShare } = await import("@/lib/scan-share.server");
+            const verified = await resolvePublicShare(sessionToken);
+            if (!verified.report && !verified.demoSession) {
+              return Response.json(
+                { detail: "Share link was saved but could not be verified. Try again." },
+                { status: 503 },
+              );
+            }
+          } catch {
+            return Response.json(
+              { detail: "Share link was saved but could not be verified. Try again." },
+              { status: 503 },
+            );
+          }
           return Response.json(
             { url, token: sessionToken },
             { headers: { "Cache-Control": "no-store" } },

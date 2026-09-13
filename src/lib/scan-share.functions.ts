@@ -365,6 +365,25 @@ export const ensureDemoShareLink = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ url: string; token: string }> => {
     const { persistDemoShareSession, shareUrlForToken } = await import("@/lib/scan-share.server");
     await persistDemoShareSession(data.sessionToken, data.snapshot);
+
+    const backendUrl =
+      process.env["AISLIX_AI_API_URL"] ||
+      process.env["VITE_AISLIX_API_URL"] ||
+      "https://aislix-backend-production.up.railway.app";
+    try {
+      await fetch(`${backendUrl.replace(/\/+$/, "")}/landing/share/persist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          session_token: data.sessionToken,
+          landing_session_id: data.sessionToken,
+          snapshot: data.snapshot,
+        }),
+      });
+    } catch {
+      /* Supabase is primary; Railway mirror is best-effort */
+    }
+
     return { token: data.sessionToken, url: shareUrlForToken(data.sessionToken) };
   });
 
