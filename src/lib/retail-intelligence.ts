@@ -141,6 +141,7 @@ export type AuditKpiResult = {
   scope?: string;
   tooltip?: string;
   warnings?: string[];
+  formula_version?: string;
 };
 
 export type AuditKpiDashboard = {

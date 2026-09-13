@@ -102,7 +102,7 @@ export function BboxAnnotationEditor({
 
   const boxes: EditorBox[] = useMemo(() => {
     const facings = data?.facings ?? [];
-    const base = facings
+    const base: EditorBox[] = facings
       .filter((f) => f.box)
       .map((f) => ({
         id: f.id,

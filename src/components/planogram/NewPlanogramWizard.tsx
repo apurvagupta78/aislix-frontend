@@ -509,7 +509,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                       onClick={() =>
                         exportPlanogramPackageJson(
                           meta.name || "planogram",
-                          value.planogramRows,
+                          draftRows,
                           auditPackage,
                         )
                       }
@@ -897,9 +897,9 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
           );
 
         case "layout": {
-          const updateRow = (index: number, patch: Partial<PlanogramRow>) => {
+          const updateRow = (index: number, rowPatch: Partial<PlanogramRow>) => {
             const rows = value.planogramRows.map((row, i) =>
-              i === index ? { ...row, ...patch } : row,
+              i === index ? { ...row, ...rowPatch } : row,
             );
             patch({ ...value, planogramRows: rows });
           };

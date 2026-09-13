@@ -25,6 +25,7 @@ export type InventoryFacing = {
   variant?: string | null;
   quantity?: number | null;
   sku?: string | null;
+  shelf_position?: string | null;
 };
 
 export type PlanogramMatchLine = {
