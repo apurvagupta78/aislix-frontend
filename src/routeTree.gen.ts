@@ -11,13 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as AdminDemoScansRouteImport } from './routes/admin.demo-scans'
-import { Route as AdminLoginRouteImport } from './routes/admin.login'
-import { Route as AdminOrgsRouteImport } from './routes/admin.orgs'
-import { Route as AdminScansRouteImport } from './routes/admin.scans'
-import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AssignScanRouteImport } from './routes/assign-scan'
 import { Route as AssignedScansRouteImport } from './routes/assigned-scans'
 import { Route as BillingRouteImport } from './routes/billing'
@@ -62,6 +57,11 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as UploadRouteImport } from './routes/upload'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as AdminDemoScansRouteImport } from './routes/admin.demo-scans'
+import { Route as AdminLoginRouteImport } from './routes/admin.login'
+import { Route as AdminOrgsRouteImport } from './routes/admin.orgs'
+import { Route as AdminScansRouteImport } from './routes/admin.scans'
+import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as ApiSendLandingOnboardingRouteImport } from './routes/api/send-landing-onboarding'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
@@ -87,39 +87,14 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminDemoScansRoute = AdminDemoScansRouteImport.update({
-  id: '/admin/demo-scans',
-  path: '/admin/demo-scans',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminLoginRoute = AdminLoginRouteImport.update({
-  id: '/admin/login',
-  path: '/admin/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminOrgsRoute = AdminOrgsRouteImport.update({
-  id: '/admin/orgs',
-  path: '/admin/orgs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminScansRoute = AdminScansRouteImport.update({
-  id: '/admin/scans',
-  path: '/admin/scans',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminUsersRoute = AdminUsersRouteImport.update({
-  id: '/admin/users',
-  path: '/admin/users',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AcceptInviteRoute = AcceptInviteRouteImport.update({
   id: '/accept-invite',
   path: '/accept-invite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssignScanRoute = AssignScanRouteImport.update({
@@ -342,6 +317,31 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
   path: '/verify-email',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminDemoScansRoute = AdminDemoScansRouteImport.update({
+  id: '/demo-scans',
+  path: '/demo-scans',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminOrgsRoute = AdminOrgsRouteImport.update({
+  id: '/orgs',
+  path: '/orgs',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminScansRoute = AdminScansRouteImport.update({
+  id: '/scans',
+  path: '/scans',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminUsersRoute = AdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRoute,
+} as any)
 const ApiScanRoute = ApiScanRouteImport.update({
   id: '/api/scan',
   path: '/api/scan',
@@ -419,13 +419,8 @@ const LovableEmailTransactionalPreviewRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/admin': typeof AdminRoute
-  '/admin/demo-scans': typeof AdminDemoScansRoute
-  '/admin/login': typeof AdminLoginRoute
-  '/admin/orgs': typeof AdminOrgsRoute
-  '/admin/scans': typeof AdminScansRoute
-  '/admin/users': typeof AdminUsersRoute
   '/accept-invite': typeof AcceptInviteRoute
+  '/admin': typeof AdminRouteWithChildren
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
   '/billing': typeof BillingRoute
@@ -470,6 +465,11 @@ export interface FileRoutesByFullPath {
   '/upload': typeof UploadRoute
   '/users': typeof UsersRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/admin/demo-scans': typeof AdminDemoScansRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/orgs': typeof AdminOrgsRoute
+  '/admin/scans': typeof AdminScansRoute
+  '/admin/users': typeof AdminUsersRoute
   '/api/scan': typeof ApiScanRoute
   '/api/send-landing-onboarding': typeof ApiSendLandingOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -488,13 +488,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/admin': typeof AdminRoute
-  '/admin/demo-scans': typeof AdminDemoScansRoute
-  '/admin/login': typeof AdminLoginRoute
-  '/admin/orgs': typeof AdminOrgsRoute
-  '/admin/scans': typeof AdminScansRoute
-  '/admin/users': typeof AdminUsersRoute
   '/accept-invite': typeof AcceptInviteRoute
+  '/admin': typeof AdminRouteWithChildren
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
   '/billing': typeof BillingRoute
@@ -539,6 +534,11 @@ export interface FileRoutesByTo {
   '/upload': typeof UploadRoute
   '/users': typeof UsersRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/admin/demo-scans': typeof AdminDemoScansRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/orgs': typeof AdminOrgsRoute
+  '/admin/scans': typeof AdminScansRoute
+  '/admin/users': typeof AdminUsersRoute
   '/api/scan': typeof ApiScanRoute
   '/api/send-landing-onboarding': typeof ApiSendLandingOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -558,13 +558,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
-  '/admin': typeof AdminRoute
-  '/admin/demo-scans': typeof AdminDemoScansRoute
-  '/admin/login': typeof AdminLoginRoute
-  '/admin/orgs': typeof AdminOrgsRoute
-  '/admin/scans': typeof AdminScansRoute
-  '/admin/users': typeof AdminUsersRoute
   '/accept-invite': typeof AcceptInviteRoute
+  '/admin': typeof AdminRouteWithChildren
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
   '/billing': typeof BillingRoute
@@ -609,6 +604,11 @@ export interface FileRoutesById {
   '/upload': typeof UploadRoute
   '/users': typeof UsersRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/admin/demo-scans': typeof AdminDemoScansRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/orgs': typeof AdminOrgsRoute
+  '/admin/scans': typeof AdminScansRoute
+  '/admin/users': typeof AdminUsersRoute
   '/api/scan': typeof ApiScanRoute
   '/api/send-landing-onboarding': typeof ApiSendLandingOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -629,13 +629,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
-    | '/admin'
-    | '/admin/demo-scans'
-    | '/admin/login'
-    | '/admin/orgs'
-    | '/admin/scans'
-    | '/admin/users'
     | '/accept-invite'
+    | '/admin'
     | '/assign-scan'
     | '/assigned-scans'
     | '/billing'
@@ -680,6 +675,11 @@ export interface FileRouteTypes {
     | '/upload'
     | '/users'
     | '/verify-email'
+    | '/admin/demo-scans'
+    | '/admin/login'
+    | '/admin/orgs'
+    | '/admin/scans'
+    | '/admin/users'
     | '/api/scan'
     | '/api/send-landing-onboarding'
     | '/auth/callback'
@@ -698,13 +698,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
-    | '/admin'
-    | '/admin/demo-scans'
-    | '/admin/login'
-    | '/admin/orgs'
-    | '/admin/scans'
-    | '/admin/users'
     | '/accept-invite'
+    | '/admin'
     | '/assign-scan'
     | '/assigned-scans'
     | '/billing'
@@ -749,6 +744,11 @@ export interface FileRouteTypes {
     | '/upload'
     | '/users'
     | '/verify-email'
+    | '/admin/demo-scans'
+    | '/admin/login'
+    | '/admin/orgs'
+    | '/admin/scans'
+    | '/admin/users'
     | '/api/scan'
     | '/api/send-landing-onboarding'
     | '/auth/callback'
@@ -767,13 +767,8 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
-    | '/admin'
-    | '/admin/demo-scans'
-    | '/admin/login'
-    | '/admin/orgs'
-    | '/admin/scans'
-    | '/admin/users'
     | '/accept-invite'
+    | '/admin'
     | '/assign-scan'
     | '/assigned-scans'
     | '/billing'
@@ -818,6 +813,11 @@ export interface FileRouteTypes {
     | '/upload'
     | '/users'
     | '/verify-email'
+    | '/admin/demo-scans'
+    | '/admin/login'
+    | '/admin/orgs'
+    | '/admin/scans'
+    | '/admin/users'
     | '/api/scan'
     | '/api/send-landing-onboarding'
     | '/auth/callback'
@@ -837,13 +837,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
-  AdminRoute: typeof AdminRoute
-  AdminDemoScansRoute: typeof AdminDemoScansRoute
-  AdminLoginRoute: typeof AdminLoginRoute
-  AdminOrgsRoute: typeof AdminOrgsRoute
-  AdminScansRoute: typeof AdminScansRoute
-  AdminUsersRoute: typeof AdminUsersRoute
   AcceptInviteRoute: typeof AcceptInviteRoute
+  AdminRoute: typeof AdminRouteWithChildren
   AssignScanRoute: typeof AssignScanRoute
   AssignedScansRoute: typeof AssignedScansRoute
   BillingRoute: typeof BillingRoute
@@ -920,53 +915,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/demo-scans': {
-      id: '/admin/demo-scans'
-      path: '/admin/demo-scans'
-      fullPath: '/admin/demo-scans'
-      preLoaderRoute: typeof AdminDemoScansRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/login': {
-      id: '/admin/login'
-      path: '/admin/login'
-      fullPath: '/admin/login'
-      preLoaderRoute: typeof AdminLoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/orgs': {
-      id: '/admin/orgs'
-      path: '/admin/orgs'
-      fullPath: '/admin/orgs'
-      preLoaderRoute: typeof AdminOrgsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/scans': {
-      id: '/admin/scans'
-      path: '/admin/scans'
-      fullPath: '/admin/scans'
-      preLoaderRoute: typeof AdminScansRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin/users': {
-      id: '/admin/users'
-      path: '/admin/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AdminUsersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/accept-invite': {
       id: '/accept-invite'
       path: '/accept-invite'
       fullPath: '/accept-invite'
       preLoaderRoute: typeof AcceptInviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assign-scan': {
@@ -1277,6 +1237,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerifyEmailRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/demo-scans': {
+      id: '/admin/demo-scans'
+      path: '/demo-scans'
+      fullPath: '/admin/demo-scans'
+      preLoaderRoute: typeof AdminDemoScansRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/orgs': {
+      id: '/admin/orgs'
+      path: '/orgs'
+      fullPath: '/admin/orgs'
+      preLoaderRoute: typeof AdminOrgsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/scans': {
+      id: '/admin/scans'
+      path: '/scans'
+      fullPath: '/admin/scans'
+      preLoaderRoute: typeof AdminScansRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/api/scan': {
       id: '/api/scan'
       path: '/api/scan'
@@ -1378,16 +1373,29 @@ declare module '@tanstack/react-router' {
   }
 }
 
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AboutRoute: AboutRoute,
-  AdminRoute: AdminRoute,
+interface AdminRouteChildren {
+  AdminDemoScansRoute: typeof AdminDemoScansRoute
+  AdminLoginRoute: typeof AdminLoginRoute
+  AdminOrgsRoute: typeof AdminOrgsRoute
+  AdminScansRoute: typeof AdminScansRoute
+  AdminUsersRoute: typeof AdminUsersRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
   AdminDemoScansRoute: AdminDemoScansRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminOrgsRoute: AdminOrgsRoute,
   AdminScansRoute: AdminScansRoute,
   AdminUsersRoute: AdminUsersRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
+const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
   AcceptInviteRoute: AcceptInviteRoute,
+  AdminRoute: AdminRouteWithChildren,
   AssignScanRoute: AssignScanRoute,
   AssignedScansRoute: AssignedScansRoute,
   BillingRoute: BillingRoute,

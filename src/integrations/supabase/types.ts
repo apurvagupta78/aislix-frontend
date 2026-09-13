@@ -858,23 +858,35 @@ export type Database = {
       planogram_items: {
         Row: {
           aisle: string | null
+          approved_substitutes: Json
+          authorized_shelf_price: number | null
           avg_daily_sales: number | null
           brand: string
           category: string
           created_at: string
           expected_facings: number | null
+          expected_orientation: string | null
           expected_qty: number
           expected_shelf_units: number | null
           id: string
+          is_mandatory_assortment: boolean
+          is_msl: boolean
+          is_optional: boolean
           location: string
           match_key: string | null
           max_facings: number | null
           min_facings: number | null
           mrp_inr: number | null
           org_id: string
+          price_basis: string | null
+          price_valid_from: string | null
+          price_valid_to: string | null
+          product_height_cm: number | null
           product_name: string
+          product_width_cm: number | null
           shelf_position: string | null
           sku: string | null
+          slot_width_cm: number | null
           store_id: string
           sub_category: string
           updated_at: string
@@ -883,23 +895,35 @@ export type Database = {
         }
         Insert: {
           aisle?: string | null
+          approved_substitutes?: Json
+          authorized_shelf_price?: number | null
           avg_daily_sales?: number | null
           brand: string
           category: string
           created_at?: string
           expected_facings?: number | null
+          expected_orientation?: string | null
           expected_qty?: number
           expected_shelf_units?: number | null
           id?: string
+          is_mandatory_assortment?: boolean
+          is_msl?: boolean
+          is_optional?: boolean
           location: string
           match_key?: string | null
           max_facings?: number | null
           min_facings?: number | null
           mrp_inr?: number | null
           org_id: string
+          price_basis?: string | null
+          price_valid_from?: string | null
+          price_valid_to?: string | null
+          product_height_cm?: number | null
           product_name: string
+          product_width_cm?: number | null
           shelf_position?: string | null
           sku?: string | null
+          slot_width_cm?: number | null
           store_id: string
           sub_category: string
           updated_at?: string
@@ -908,23 +932,35 @@ export type Database = {
         }
         Update: {
           aisle?: string | null
+          approved_substitutes?: Json
+          authorized_shelf_price?: number | null
           avg_daily_sales?: number | null
           brand?: string
           category?: string
           created_at?: string
           expected_facings?: number | null
+          expected_orientation?: string | null
           expected_qty?: number
           expected_shelf_units?: number | null
           id?: string
+          is_mandatory_assortment?: boolean
+          is_msl?: boolean
+          is_optional?: boolean
           location?: string
           match_key?: string | null
           max_facings?: number | null
           min_facings?: number | null
           mrp_inr?: number | null
           org_id?: string
+          price_basis?: string | null
+          price_valid_from?: string | null
+          price_valid_to?: string | null
+          product_height_cm?: number | null
           product_name?: string
+          product_width_cm?: number | null
           shelf_position?: string | null
           sku?: string | null
+          slot_width_cm?: number | null
           store_id?: string
           sub_category?: string
           updated_at?: string
@@ -948,12 +984,73 @@ export type Database = {
           },
         ]
       }
+      planogram_promotions: {
+        Row: {
+          created_at: string
+          ends_at: string
+          expected_offer_text: string | null
+          expected_promo_price: number | null
+          id: string
+          org_id: string
+          participating_skus: Json
+          promotion_id: string
+          reference_signage_url: string | null
+          required_facings: number | null
+          required_location: string | null
+          starts_at: string
+          version_id: string
+          visual_checks: Json
+        }
+        Insert: {
+          created_at?: string
+          ends_at: string
+          expected_offer_text?: string | null
+          expected_promo_price?: number | null
+          id?: string
+          org_id: string
+          participating_skus?: Json
+          promotion_id: string
+          reference_signage_url?: string | null
+          required_facings?: number | null
+          required_location?: string | null
+          starts_at: string
+          version_id: string
+          visual_checks?: Json
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string
+          expected_offer_text?: string | null
+          expected_promo_price?: number | null
+          id?: string
+          org_id?: string
+          participating_skus?: Json
+          promotion_id?: string
+          reference_signage_url?: string | null
+          required_facings?: number | null
+          required_location?: string | null
+          starts_at?: string
+          version_id?: string
+          visual_checks?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "planogram_promotions_version_id_fkey"
+            columns: ["version_id"]
+            isOneToOne: false
+            referencedRelation: "planogram_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       planogram_versions: {
         Row: {
           activated_at: string | null
+          audit_package: Json
           created_at: string
           effective_from: string | null
           effective_to: string | null
+          fixture_id: string | null
           id: string
           name: string
           org_id: string
@@ -963,14 +1060,19 @@ export type Database = {
           status: string
           store_format: string | null
           store_id: string
+          store_timezone: string | null
           updated_at: string
           uploaded_by: string | null
+          valid_from: string | null
+          valid_to: string | null
         }
         Insert: {
           activated_at?: string | null
+          audit_package?: Json
           created_at?: string
           effective_from?: string | null
           effective_to?: string | null
+          fixture_id?: string | null
           id?: string
           name?: string
           org_id: string
@@ -980,14 +1082,19 @@ export type Database = {
           status?: string
           store_format?: string | null
           store_id: string
+          store_timezone?: string | null
           updated_at?: string
           uploaded_by?: string | null
+          valid_from?: string | null
+          valid_to?: string | null
         }
         Update: {
           activated_at?: string | null
+          audit_package?: Json
           created_at?: string
           effective_from?: string | null
           effective_to?: string | null
+          fixture_id?: string | null
           id?: string
           name?: string
           org_id?: string
@@ -997,8 +1104,11 @@ export type Database = {
           status?: string
           store_format?: string | null
           store_id?: string
+          store_timezone?: string | null
           updated_at?: string
           uploaded_by?: string | null
+          valid_from?: string | null
+          valid_to?: string | null
         }
         Relationships: [
           {
