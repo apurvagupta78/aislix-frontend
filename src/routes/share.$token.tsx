@@ -34,17 +34,13 @@ import { DEMO_PLANOGRAM_LABEL } from "@/lib/demo-oral-care-planogram";
 import { landingToScanResult } from "@/lib/demo-execution";
 import type { LandingScanResult } from "@/lib/landing-scan-api";
 import { defaultAuditRoleTab } from "@/lib/role-audit-ui";
-import { getPublicShare } from "@/lib/scan-share.functions";
 import { formatSharedDate, type SharedScanPayload } from "@/lib/scan-share";
 
 export const Route = createFileRoute("/share/$token")({
   loader: async ({ params }) => {
     try {
-      const payload = await getPublicShare({ data: { token: params.token } });
-      if (payload.kind === "demo") {
-        return { report: null, demoSession: payload.demoSession };
-      }
-      return { report: payload.report, demoSession: null as LandingScanResult | null };
+      const { resolvePublicShare } = await import("@/lib/scan-share.server");
+      return await resolvePublicShare(params.token);
     } catch {
       return { report: null, demoSession: null };
     }

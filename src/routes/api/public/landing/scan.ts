@@ -81,12 +81,10 @@ export const Route = createFileRoute("/api/public/landing/scan")({
           }
         }
 
-        let recordId: string | null = null;
         try {
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-          const { data, error } = await supabaseAdmin
-            .from("landing_demo_sessions")
-            .insert({
+          const { error } = await supabaseAdmin.from("landing_demo_sessions").upsert(
+            {
               session_token: attemptToken,
               scan_status: "processing",
               sample_id: sampleId,
@@ -96,13 +94,13 @@ export const Route = createFileRoute("/api/public/landing/scan")({
               user_agent: userAgent,
               referrer,
               ...utm,
-            })
-            .select("id")
-            .single();
-          if (error) console.error("Landing scan record insert failed:", error.message);
-          else recordId = data.id;
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "session_token" },
+          );
+          if (error) console.error("Landing scan record upsert failed:", error.message);
         } catch (error) {
-          console.error("Landing scan record insert failed:", error);
+          console.error("Landing scan record upsert failed:", error);
         }
 
         const forward = new FormData();
@@ -163,28 +161,43 @@ export const Route = createFileRoute("/api/public/landing/scan")({
             payload = null;
           }
 
-          if (recordId) {
-            try {
-              const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-              const payloadRecord = payload && typeof payload === "object" && !Array.isArray(payload)
-                ? payload as Record<string, unknown>
+          try {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            const payloadRecord =
+              payload && typeof payload === "object" && !Array.isArray(payload)
+                ? (payload as Record<string, unknown>)
                 : null;
-              const detail = payloadRecord && typeof payloadRecord.detail === "string" ? payloadRecord.detail : null;
-              const scanId = payloadRecord && typeof payloadRecord.scan_id === "string" ? payloadRecord.scan_id : null;
-              const { error } = await supabaseAdmin
-                .from("landing_demo_sessions")
-                .update({
-                  scan_status: upstream.ok ? "completed" : upstream.status === 429 ? "rate_limited" : "failed",
+            const detail =
+              payloadRecord && typeof payloadRecord.detail === "string" ? payloadRecord.detail : null;
+            const scanId =
+              payloadRecord && typeof payloadRecord.scan_id === "string" ? payloadRecord.scan_id : null;
+            const { error } = await supabaseAdmin
+              .from("landing_demo_sessions")
+              .upsert(
+                {
+                  session_token: attemptToken,
+                  scan_status: upstream.ok
+                    ? "completed"
+                    : upstream.status === 429
+                      ? "rate_limited"
+                      : "failed",
                   scan_error: upstream.ok ? null : detail ?? `AI service returned ${upstream.status}`,
                   scan_id: scanId,
                   scan_result: safeResult(payload),
+                  sample_id: sampleId,
+                  category: file ? "uploaded_shelf" : "sample_shelf",
+                  image_storage_path: imageStoragePath,
+                  ip_hash: ipHash,
+                  user_agent: userAgent,
+                  referrer,
+                  ...utm,
                   updated_at: new Date().toISOString(),
-                })
-                .eq("id", recordId);
-              if (error) console.error("Landing scan record update failed:", error.message);
-            } catch (error) {
-              console.error("Landing scan record update failed:", error);
-            }
+                },
+                { onConflict: "session_token" },
+              );
+            if (error) console.error("Landing scan record finalize failed:", error.message);
+          } catch (error) {
+            console.error("Landing scan record finalize failed:", error);
           }
 
           if (payload && typeof payload === "object" && !Array.isArray(payload)) {
@@ -199,16 +212,21 @@ export const Route = createFileRoute("/api/public/landing/scan")({
           });
         } catch (error) {
           const message = error instanceof Error ? error.message : "Could not reach the shelf analysis service.";
-          if (recordId) {
-            try {
-              const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-              await supabaseAdmin
-                .from("landing_demo_sessions")
-                .update({ scan_status: "failed", scan_error: message, updated_at: new Date().toISOString() })
-                .eq("id", recordId);
-            } catch (updateError) {
-              console.error("Landing scan failure record update failed:", updateError);
-            }
+          try {
+            const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+            await supabaseAdmin.from("landing_demo_sessions").upsert(
+              {
+                session_token: attemptToken,
+                scan_status: "failed",
+                scan_error: message,
+                sample_id: sampleId,
+                category: file ? "uploaded_shelf" : "sample_shelf",
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "session_token" },
+            );
+          } catch (updateError) {
+            console.error("Landing scan failure record update failed:", updateError);
           }
           return Response.json({ detail: "Shelf analysis is temporarily unavailable. Please try again." }, { status: 502 });
         }

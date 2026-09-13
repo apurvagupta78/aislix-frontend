@@ -212,9 +212,94 @@ type DemoLandingSession = {
   compliance_alerts?: Array<Record<string, unknown>>;
 };
 
+function backendApiUrl(): string {
+  return (
+    (typeof process !== "undefined" && process.env["AISLIX_AI_API_URL"]) ||
+    (typeof process !== "undefined" && process.env["VITE_AISLIX_API_URL"]) ||
+    "https://aislix-backend-production.up.railway.app"
+  ).replace(/\/+$/, "");
+}
+
+function normalizeDemoInventory(
+  rows: Array<Record<string, unknown>> | undefined,
+): Array<Record<string, unknown>> {
+  return (rows ?? []).map((row) => ({
+    ...row,
+    product_name:
+      row.product_name ??
+      row.product ??
+      row.name ??
+      "Unknown product",
+  }));
+}
+
+function demoSessionFromStoredRow(row: Record<string, unknown>): DemoLandingSession {
+  const stored =
+    row.scan_result && typeof row.scan_result === "object" && !Array.isArray(row.scan_result)
+      ? (row.scan_result as Record<string, unknown>)
+      : {};
+  const inventory = normalizeDemoInventory(
+    (stored.inventory as Array<Record<string, unknown>> | undefined) ??
+      (stored.products as Array<Record<string, unknown>> | undefined),
+  );
+  return {
+    landing_session_id: row.session_token as string,
+    scan_id: String(row.scan_id ?? stored.scan_id ?? "demo"),
+    status: "completed",
+    scanned_at:
+      (stored.scanned_at as string | undefined) ??
+      (row.updated_at as string | undefined) ??
+      (row.created_at as string | undefined),
+    sample_id: (row.sample_id as string | null) ?? (stored.sample_id as string | null),
+    category: (row.category as string | null) ?? (stored.category as string | undefined),
+    shelf_label: stored.shelf_label as string | undefined,
+    has_planogram: stored.has_planogram as boolean | undefined,
+    metrics: stored.metrics as Record<string, unknown> | undefined,
+    inventory,
+    top_brands: stored.top_brands as DemoLandingSession["top_brands"],
+    brand_share: stored.brand_share as DemoLandingSession["brand_share"],
+    executive_summary: stored.executive_summary as string | undefined,
+    role_summaries: stored.role_summaries as Record<string, string> | undefined,
+    retail_intelligence: stored.retail_intelligence as Record<string, unknown> | undefined,
+    recommendations: stored.recommendations as Array<Record<string, unknown>> | undefined,
+    alerts: stored.alerts as Array<Record<string, unknown>> | undefined,
+    compliance_alerts: stored.compliance_alerts as Array<Record<string, unknown>> | undefined,
+  };
+}
+
+/** Upsert a completed demo session so /share/:token can resolve it later. */
+export async function persistDemoShareSession(
+  sessionToken: string,
+  snapshot: Record<string, unknown>,
+): Promise<void> {
+  const token = sessionToken.trim();
+  if (!token) throw new Error("Missing demo session.");
+
+  const db = await admin();
+  const scanId =
+    typeof snapshot.scan_id === "string" && snapshot.scan_id.trim()
+      ? snapshot.scan_id.trim()
+      : "demo";
+  const now = new Date().toISOString();
+
+  const { error } = await db.from("landing_demo_sessions").upsert(
+    {
+      session_token: token,
+      scan_id: scanId,
+      scan_status: "completed",
+      scan_error: null,
+      scan_result: snapshot as never,
+      sample_id: (snapshot.sample_id as string | null | undefined) ?? null,
+      category: (snapshot.category as string | null | undefined) ?? null,
+      updated_at: now,
+    },
+    { onConflict: "session_token" },
+  );
+  if (error) throw new Error(error.message);
+}
+
 async function fetchBackendLandingSession(token: string): Promise<DemoLandingSession | null> {
-  const backendUrl =
-    (typeof process !== "undefined" && process.env["AISLIX_AI_API_URL"]) || "";
+  const backendUrl = backendApiUrl();
   if (!backendUrl) return null;
   try {
     const res = await fetch(
@@ -242,36 +327,32 @@ export async function loadDemoLandingSession(token: string): Promise<DemoLanding
     .maybeSingle();
 
   if (!error && row?.scan_status === "completed" && row.scan_result) {
-    const stored =
-      row.scan_result && typeof row.scan_result === "object" && !Array.isArray(row.scan_result)
-        ? (row.scan_result as Record<string, unknown>)
-        : {};
-    return {
-      landing_session_id: row.session_token as string,
-      scan_id: String(row.scan_id ?? stored.scan_id ?? "demo"),
-      status: "completed",
-      scanned_at:
-        (stored.scanned_at as string | undefined) ??
-        (row.updated_at as string | undefined) ??
-        (row.created_at as string | undefined),
-      sample_id: (row.sample_id as string | null) ?? (stored.sample_id as string | null),
-      category: (row.category as string | null) ?? (stored.category as string | undefined),
-      shelf_label: stored.shelf_label as string | undefined,
-      has_planogram: stored.has_planogram as boolean | undefined,
-      metrics: stored.metrics as Record<string, unknown> | undefined,
-      inventory: (stored.inventory as Array<Record<string, unknown>> | undefined) ?? [],
-      top_brands: stored.top_brands as DemoLandingSession["top_brands"],
-      brand_share: stored.brand_share as DemoLandingSession["brand_share"],
-      executive_summary: stored.executive_summary as string | undefined,
-      role_summaries: stored.role_summaries as Record<string, string> | undefined,
-      retail_intelligence: stored.retail_intelligence as Record<string, unknown> | undefined,
-      recommendations: stored.recommendations as Array<Record<string, unknown>> | undefined,
-      alerts: stored.alerts as Array<Record<string, unknown>> | undefined,
-      compliance_alerts: stored.compliance_alerts as Array<Record<string, unknown>> | undefined,
-    };
+    return demoSessionFromStoredRow(row as Record<string, unknown>);
   }
 
   return fetchBackendLandingSession(token);
+}
+
+export type PublicShareLoaderData = {
+  report: import("@/lib/scan-share").SharedScanPayload | null;
+  demoSession: import("@/lib/landing-scan-api").LandingScanResult | null;
+};
+
+/** Resolve workspace share tokens and demo landing session tokens for /share/:token. */
+export async function resolvePublicShare(token: string): Promise<PublicShareLoaderData> {
+  try {
+    const report = await loadSharedScan(token);
+    return { report, demoSession: null };
+  } catch {
+    const demoSession = await loadDemoLandingSession(token);
+    if (demoSession) {
+      return {
+        report: null,
+        demoSession: demoSession as import("@/lib/landing-scan-api").LandingScanResult,
+      };
+    }
+    throw new Error("expired_or_invalid");
+  }
 }
 
 /** Full public payload for a share token. Throws on expired / invalid tokens. */

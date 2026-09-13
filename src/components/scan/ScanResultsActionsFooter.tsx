@@ -17,11 +17,11 @@ import {
 import { EmailAuditDialog } from "@/components/scan-results/ShareDialogs";
 import { WorkspaceShareDialog } from "@/components/scan/WorkspaceShareDialog";
 import { DemoAllowanceIndicator } from "@/components/scan/DemoAllowanceIndicator";
-import { createScanShareLink } from "@/lib/scan-share.functions";
+import { createScanShareLink, ensureDemoShareLink } from "@/lib/scan-share.functions";
 import { downloadRoleAuditExcel } from "@/lib/audit-excel-export";
 import type { DemoAllowance } from "@/lib/demo-allowance";
-import { demoAuditShareUrl } from "@/lib/demo-share";
-import { signupUrl } from "@/lib/landing-scan-api";
+import { slimLandingSnapshot } from "@/lib/demo-share-snapshot";
+import { signupUrl, type LandingScanResult } from "@/lib/landing-scan-api";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import {
   downloadDemoFullReportExcel,
@@ -35,6 +35,7 @@ export type ScanResultsActionsFooterProps = {
   demoMode?: boolean;
   activeRole?: AuditRoleTab;
   landingSessionId?: string;
+  landingSnapshot?: LandingScanResult;
   demoAllowance?: DemoAllowance | null;
   hasWorkspace?: boolean;
   signupHref?: string;
@@ -46,6 +47,7 @@ export function ScanResultsActionsFooter({
   demoMode = false,
   activeRole = "supermarket",
   landingSessionId,
+  landingSnapshot,
   demoAllowance,
   hasWorkspace = false,
   signupHref,
@@ -56,15 +58,23 @@ export function ScanResultsActionsFooter({
   const [linkUrl, setLinkUrl] = useState<string | null>(null);
   const scanId = data.scan_id;
   const createLink = useServerFn(createScanShareLink);
+  const ensureDemoLink = useServerFn(ensureDemoShareLink);
   const ready = Boolean(scanId) && !loading;
   const workspaceHref = signupHref ?? signupUrl();
 
   const linkMutation = useMutation({
     mutationFn: async () => {
       if (demoMode) {
-        const url = demoAuditShareUrl(landingSessionId);
-        if (!url) throw new Error("Demo session not found — refresh and try again.");
-        return { url };
+        const sessionToken = landingSessionId ?? landingSnapshot?.landing_session_id;
+        if (!sessionToken) throw new Error("Demo session not found — refresh and try again.");
+        if (!landingSnapshot) throw new Error("Audit data is missing — refresh and try again.");
+        if (linkUrl) return { url: linkUrl };
+        return ensureDemoLink({
+          data: {
+            sessionToken,
+            snapshot: slimLandingSnapshot(landingSnapshot),
+          },
+        });
       }
       if (!scanId) throw new Error("Audit is still loading.");
       if (linkUrl) return { url: linkUrl };

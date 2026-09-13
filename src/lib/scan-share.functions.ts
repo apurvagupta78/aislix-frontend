@@ -337,16 +337,34 @@ export const getPublicShare = createServerFn({ method: "POST" })
     return { token };
   })
   .handler(async ({ data }): Promise<PublicSharePayload> => {
-    const { loadDemoLandingSession, loadSharedScan } = await import("@/lib/scan-share.server");
-    try {
-      const report = await loadSharedScan(data.token);
-      return { kind: "report", report };
-    } catch {
-      const demoSession = await loadDemoLandingSession(data.token);
-      if (demoSession) {
-        return { kind: "demo", demoSession: demoSession as LandingScanResult };
-      }
-      throw new Error("expired_or_invalid");
+    const { resolvePublicShare } = await import("@/lib/scan-share.server");
+    const payload = await resolvePublicShare(data.token);
+    if (payload.demoSession) {
+      return { kind: "demo", demoSession: payload.demoSession };
     }
+    if (payload.report) {
+      return { kind: "report", report: payload.report };
+    }
+    throw new Error("expired_or_invalid");
+  });
+
+/** Persist demo audit snapshot and return a public /share URL. */
+export const ensureDemoShareLink = createServerFn({ method: "POST" })
+  .inputValidator(
+    (input: { sessionToken: string; snapshot: Record<string, unknown> }) => {
+      const sessionToken = String(input?.sessionToken ?? "").trim();
+      if (!sessionToken) throw new Error("Demo session not found — refresh and try again.");
+      const snapshot =
+        input?.snapshot && typeof input.snapshot === "object" && !Array.isArray(input.snapshot)
+          ? input.snapshot
+          : null;
+      if (!snapshot) throw new Error("Audit data is missing — refresh and try again.");
+      return { sessionToken, snapshot };
+    },
+  )
+  .handler(async ({ data }): Promise<{ url: string; token: string }> => {
+    const { persistDemoShareSession, shareUrlForToken } = await import("@/lib/scan-share.server");
+    await persistDemoShareSession(data.sessionToken, data.snapshot);
+    return { token: data.sessionToken, url: shareUrlForToken(data.sessionToken) };
   });
 
