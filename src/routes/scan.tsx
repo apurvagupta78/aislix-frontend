@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Camera,
   Check,
+  ClipboardList,
   ImageIcon,
   Loader2,
   Info,
@@ -43,14 +44,14 @@ import { startAssignment } from "@/lib/assignments";
 import { MAX_SCAN_IMAGES, formatBytes, submitScanImages, validateScanFile } from "@/lib/scan-api";
 import { PlanogramBuilder } from "@/components/planogram/PlanogramBuilder";
 import { Badge } from "@/components/ui/badge";
-import { ClipboardList, IndianRupee } from "lucide-react";
 import { fetchActivePlanogram, fetchPlanogramItems, type DraftRow } from "@/lib/planogram";
 import { toUserMessage } from "@/lib/api/errors";
 import { CategorySubcategoryPicker } from "@/components/scan/CategorySubcategoryPicker";
 import {
-  NewPlanogramWizard,
-  type NewPlanogramWizardHandle,
-} from "@/components/planogram/NewPlanogramWizard";
+  PlanogramSetupSection,
+} from "@/components/planogram/PlanogramSetupSection";
+import type { PlanogramModeChoice } from "@/components/planogram/PlanogramModeOption";
+import type { NewPlanogramWizardHandle } from "@/components/planogram/NewPlanogramWizard";
 import {
   autoPopulateAuditPackage,
   EMPTY_AUDIT_PACKAGE,
@@ -114,8 +115,6 @@ const CATEGORY_QUERY_KEY = ["shelf-categories"] as const;
 
 type Phase = "idle" | "uploading" | "error";
 
-/** Option 1 = free scan, Option 2 = compliance scan against expected products. */
-type ScanMode = "free" | "with_planogram";
 
 /** ScanContextPanel replaces the legacy PlanogramBuilder for ad-hoc planograms. */
 const SHOW_LEGACY_PLANOGRAM_BUILDER = false;
@@ -135,7 +134,7 @@ function ScanPage() {
   const [limitDialog, setLimitDialog] = useState<LimitDialogState>(null);
 
   const [storeId, setStoreId] = useState("");
-  const [scanMode, setScanMode] = useState<ScanMode>("free");
+  const [planogramMode, setPlanogramMode] = useState<PlanogramModeChoice>("none");
   const [planogramRows, setPlanogramRows] = useState<DraftRow[]>([]);
   const [planogramLoading, setPlanogramLoading] = useState(false);
   const [planogramNotice, setPlanogramNotice] = useState<string | null>(null);
@@ -147,7 +146,7 @@ function ScanPage() {
   const [scanContext, setScanContext] = useState<ScanContextState>(() => loadStoredScanContext());
   const planogramWizardRef = useRef<NewPlanogramWizardHandle>(null);
 
-  const withPlanogram = scanMode === "with_planogram";
+  const withPlanogram = planogramMode === "custom";
 
   const syncScanContextFromPanel = useCallback((): ScanContextState => {
     const next = planogramWizardRef.current?.flush() ?? scanContext;
@@ -254,6 +253,29 @@ function ScanPage() {
       `Added shelf types from your planogram: ${formatCategorySelections(added, 3)}`,
     );
   }, [missingPlanogramSelections]);
+
+  const syncCategoryFromPlanogramContext = useCallback(
+    (ctx: ScanContextState) => {
+      const cat = ctx.planogramMeta?.category?.trim();
+      const subLabel = ctx.planogramMeta?.sub_category?.trim();
+      if (!cat || selections.length) return;
+      const matchedCategory = categories.find((item) => item.name === cat);
+      const subMatch = matchedCategory?.subcategories?.find(
+        (item) => item.label === subLabel || item.id === subLabel,
+      );
+      handleSelectionsChange(
+        dedupeSelections([
+          {
+            category_name: cat,
+            sub_category_id: subMatch?.id ?? (subLabel ? "others" : ""),
+            sub_category_label: subMatch?.label ?? subLabel ?? "",
+            sub_category_custom: subMatch ? "" : (subLabel ?? ""),
+          },
+        ]),
+      );
+    },
+    [categories, selections.length, handleSelectionsChange],
+  );
 
   // Clearing the planogram clears the sync notice.
   useEffect(() => {
@@ -644,94 +666,36 @@ function ScanPage() {
               </div>
             </section>
 
-            {/* SCAN MODE */}
-            {!lockedByAssignment && (
-              <section className="card-surface p-4 sm:p-6">
-                <h2 className="text-sm font-semibold tracking-tight">
-                  How are you scanning this shelf?
-                </h2>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  {(
-                    [
-                      {
-                        value: "free" as ScanMode,
-                        title: "Quick scan",
-                        description: "Detect products only — planogram optional below",
-                      },
-                      {
-                        value: "with_planogram" as ScanMode,
-                        title: "Compliance focus",
-                        description: "Highlights planogram KPIs when optional planogram is filled",
-                      },
-                    ] as const
-                  ).map((option) => {
-                    const active = scanMode === option.value;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        role="radio"
-                        aria-checked={active}
-                        disabled={busy}
-                        onClick={() => setScanMode(option.value)}
-                        className={cn(
-                          "flex items-start gap-3 rounded-2xl border p-4 text-left transition-all",
-                          active
-                            ? "border-brand bg-brand-soft/50 shadow-card"
-                            : "border-border bg-surface hover:border-brand/40",
-                        )}
-                      >
-                        <span
-                          className={cn(
-                            "mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border",
-                            active ? "border-brand" : "border-muted-foreground/50",
-                          )}
-                        >
-                          {active && <span className="size-2 rounded-full bg-brand" />}
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block text-sm font-semibold">{option.title}</span>
-                          <span className="mt-1 block text-xs text-muted-foreground">
-                            {option.description}
-                          </span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Planogram below is optional in both modes. Fill it to enable role-based compliance KPIs;
-                  leave it empty to scan shelf products only.
-                </p>
-              </section>
-            )}
-
             {!lockedByAssignment ? (
-              <div className="overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background shadow-sm">
-                <div className="flex items-center gap-2 border-b border-brand/20 bg-brand/5 px-4 py-3">
-                  <ClipboardList className="size-4 text-brand" />
-                  <div>
-                    <p className="text-sm font-semibold">New planogram (optional)</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      Same wizard as demo — skip or fill steps for role-based KPIs
-                    </p>
-                  </div>
-                </div>
-                <div className="p-4">
-                  <NewPlanogramWizard
-                    ref={planogramWizardRef}
-                    value={scanContext}
-                    onChange={(next) => {
+              <section className="card-surface p-4 sm:p-6">
+                <h2 className="text-sm font-semibold tracking-tight">Planogram setup</h2>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Same flow as the homepage demo — pick your role, then use your planogram or audit
+                  without one.
+                </p>
+                <div className="mt-4">
+                  <PlanogramSetupSection
+                    variant="dashboard"
+                    flowMode="upload"
+                    planogramMode={planogramMode}
+                    onPlanogramModeChange={setPlanogramMode}
+                    scanContext={scanContext}
+                    onScanContextChange={(next) => {
                       setScanContext(next);
                       saveStoredScanContext(next);
                     }}
                     categories={categories}
-                    defaultLocation={shelfLocation}
+                    categoryName={category}
+                    subCategoryLabel={selectedSub?.label ?? subCategoryCustom}
+                    onSyncCategoryFromContext={syncCategoryFromPlanogramContext}
+                    disabled={busy}
+                    wizardRef={planogramWizardRef}
                     defaultCategory={category}
                     defaultSubCategory={selectedSub?.label}
+                    defaultLocation={shelfLocation || "A-1"}
                   />
                 </div>
-              </div>
+              </section>
             ) : null}
 
             {/* STEP 1 — scan context (shared by both modes) */}

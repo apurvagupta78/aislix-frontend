@@ -11,12 +11,12 @@ import {
   Loader2,
   RefreshCw,
   ScanLine,
-  Sparkles,
 } from "lucide-react";
 import { fetchScanAssignmentId } from "@/lib/assignments";
 import { AppShell } from "@/components/AppShell";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ScanResultsHeaderBar } from "@/components/scan/ScanResultsHeaderBar";
+import { isDemoOralCareContext } from "@/lib/demo-oral-care-planogram";
 import { EmptyState, ErrorState } from "@/components/States";
 import { FixRescanVerifyPanel } from "@/components/scan-results/FixRescanVerifyPanel";
 import { ScanResultsActionsFooter } from "@/components/scan/ScanResultsActionsFooter";
@@ -246,26 +246,8 @@ function Results() {
                 />
               )}
 
-              {scanHadPlanogram ? (
-                <div className="mb-4 overflow-hidden rounded-2xl border-2 border-brand/25 bg-gradient-to-br from-brand-soft/40 to-background shadow-sm">
-                  <div className="flex items-center gap-2 border-b border-brand/15 bg-brand/5 px-4 py-3">
-                    <IndianRupee className="size-4 text-brand" />
-                    <p className="text-sm font-semibold">Products &amp; prices</p>
-                  </div>
-                  <ScanContextPanel
-                    value={scanContext}
-                    onChange={(next) => {
-                      setScanContext(next);
-                      saveStoredScanContext(next);
-                    }}
-                    defaultCategory={data?.scan_category ?? ""}
-                    defaultSubCategory={data?.scan_sub_category ?? ""}
-                    defaultLocation={data?.location ?? data?.aisle ?? ""}
-                    defaultOpen
-                    embedded
-                  />
-                </div>
-              ) : showOptionalPricing || hasActiveScanContext(scanContext) ? (
+              {!scanHadPlanogram &&
+              (showOptionalPricing || hasActiveScanContext(scanContext)) ? (
                 <div className="mb-4 overflow-hidden rounded-2xl border border-border bg-surface">
                   <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -299,7 +281,7 @@ function Results() {
                     embedded
                   />
                 </div>
-              ) : (
+              ) : !scanHadPlanogram ? (
                 <div className="mb-4 flex justify-end">
                   <Button
                     type="button"
@@ -311,47 +293,35 @@ function Results() {
                     <IndianRupee className="size-4" /> Add optional products &amp; prices
                   </Button>
                 </div>
-              )}
+              ) : null}
 
               {display && (
-                <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-                  <div className="p-4 sm:p-6 lg:p-8">
-                    <div className="mb-3 flex flex-wrap items-center gap-2">
-                      <Badge className="gap-1.5 rounded-md bg-brand text-brand-foreground">
-                        <Sparkles className="size-3" /> Shelf execution report
-                      </Badge>
-                      {data?.created_at ? (
-                        <span className="text-[11px] text-muted-foreground">
-                          {new Date(data.created_at).toLocaleString()}
-                        </span>
-                      ) : null}
-                      {assignmentId ? (
-                        <Badge variant="outline" className="rounded-md font-mono text-xs">
-                          Assignment
-                        </Badge>
-                      ) : null}
-                    </div>
-                    <ScanResultsBody
-                      data={display}
-                      rawData={data}
-                      activeRole={activeRole}
-                      onRoleChange={setRoleOverride}
-                      loading={loading}
-                      planogramComparison={comparison}
-                      financialLocked={financialLocked}
-                      planCode={planCode}
-                      imageUrl={imageUrl}
-                    />
-                    <ScanResultsActionsFooter
-                      data={display}
-                      loading={loading}
-                      activeRole={activeRole}
-                      hasWorkspace
-                    />
-                    <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
-                      {AI_DISCLAIMER}
-                    </p>
-                  </div>
+                <div className="flex min-h-0 flex-col">
+                  <ScanResultsHeaderBar
+                    timestamp={data?.created_at}
+                    showDemoPlanogramBadge={isDemoOralCareContext(scanContext)}
+                    assignmentId={assignmentId}
+                  />
+                  <ScanResultsBody
+                    data={display}
+                    rawData={data}
+                    activeRole={activeRole}
+                    onRoleChange={setRoleOverride}
+                    loading={loading}
+                    planogramComparison={comparison}
+                    financialLocked={financialLocked}
+                    planCode={planCode}
+                    imageUrl={imageUrl}
+                  />
+                  <ScanResultsActionsFooter
+                    data={display}
+                    loading={loading}
+                    activeRole={activeRole}
+                    hasWorkspace
+                  />
+                  <p className="mt-3 shrink-0 text-[11px] leading-relaxed text-muted-foreground">
+                    {AI_DISCLAIMER}
+                  </p>
                 </div>
               )}
             </>

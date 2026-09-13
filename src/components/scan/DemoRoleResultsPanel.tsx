@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Maximize2, Sparkles, Timer } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ArrowRight, Maximize2, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ScanResultsHeaderBar } from "@/components/scan/ScanResultsHeaderBar";
 import { AI_DISCLAIMER } from "@/components/scan/ScanProgressPanel";
 import { DemoScanResultsBody } from "@/components/scan/DemoScanResultsBody";
 import { GuestDemoShell } from "@/components/scan/GuestDemoShell";
@@ -10,7 +10,7 @@ import {
   enrichScanResult,
   type ScanContextState,
 } from "@/lib/scan-context";
-import { DEMO_PLANOGRAM_LABEL, isDemoOralCareContext } from "@/lib/demo-oral-care-planogram";
+import { isDemoOralCareContext } from "@/lib/demo-oral-care-planogram";
 import { defaultAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { landingToScanResult } from "@/lib/demo-execution";
 import type { LandingScanResult } from "@/lib/landing-scan-api";
@@ -141,21 +141,10 @@ export function DemoRoleResultsPanel({
           </div>
         )}
 
-        <div className="mb-3 flex shrink-0 flex-wrap items-center gap-2">
-          <Badge className="gap-1.5 rounded-md bg-brand text-brand-foreground">
-            <Sparkles className="size-3" /> Live AI analysis
-          </Badge>
-          {isDemoOralCareContext(scanContext) ? (
-            <Badge variant="outline" className="text-[10px]">
-              {DEMO_PLANOGRAM_LABEL}
-            </Badge>
-          ) : null}
-          {landing.scanned_at ? (
-            <span className="text-[11px] text-muted-foreground">
-              {new Date(landing.scanned_at).toLocaleString()}
-            </span>
-          ) : null}
-        </div>
+        <ScanResultsHeaderBar
+          timestamp={landing.scanned_at}
+          showDemoPlanogramBadge={isDemoOralCareContext(scanContext)}
+        />
 
         {panelBody}
       </div>
