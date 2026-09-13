@@ -95,6 +95,7 @@ export function KpiVisualChartsPanel({
               result={data}
               loading={loading}
               wide={WIDE_KPIS.has(id)}
+              ctx={ctx}
               onDownload={() => downloadKpiCsv(data, role, id)}
             >
               {ctx && metric ? (

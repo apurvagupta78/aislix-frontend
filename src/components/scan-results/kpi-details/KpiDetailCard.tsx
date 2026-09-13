@@ -7,20 +7,10 @@ import { AUDIT_STATUS_DISPLAY, kpiPlainEnglish } from "@/lib/role-audit-ui";
 import type { KpiMetric } from "@/lib/execution-metrics";
 import type { AuditKpiResult } from "@/lib/retail-intelligence";
 import { KPI_DISPLAY_LABEL } from "@/lib/kpi-results-display";
-import { scoringFromResult } from "@/lib/kpi-results-display";
-import type { ScoringTargets } from "@/lib/planogram-audit-package";
+import type { KpiDetailsContext } from "@/lib/kpi-details-data";
 import type { ScanResult } from "@/lib/scan-results";
+import { KpiCalculationPanel } from "@/components/scan-results/kpi-details/KpiCalculationPanel";
 import { cn } from "@/lib/utils";
-
-const KPI_TARGET_KEY: Partial<Record<AuditKpiId, keyof ScoringTargets>> = {
-  osa: "osa_target",
-  planogram_compliance: "planogram_target",
-  assortment_compliance: "assortment_target",
-  price_compliance: "price_target",
-  promotional_compliance: "promotional_target",
-  msl_compliance: "msl_target",
-  share_of_shelf: "share_of_shelf_target",
-};
 
 const STATUS_BADGE: Record<string, string> = {
   complete: "bg-emerald-500/12 text-emerald-800 dark:text-emerald-300",
@@ -47,77 +37,6 @@ function formatCoverage(metric?: KpiMetric): string | null {
   return `Coverage ${Math.round(metric.coverage_percent)}%`;
 }
 
-function MethodologyPanel({
-  metric,
-  raw,
-  result,
-  kpiId,
-}: {
-  metric?: KpiMetric;
-  raw?: AuditKpiResult;
-  result: ScanResult;
-  kpiId: AuditKpiId;
-}) {
-  const scoring = scoringFromResult(result);
-  const targetKey = KPI_TARGET_KEY[kpiId];
-  const target = targetKey ? scoring[targetKey] : undefined;
-  const resultVal =
-    metric?.unit === "percent" && metric.numeric != null
-      ? `${Math.round(metric.numeric)}%`
-      : metric?.value ?? "—";
-  const num = raw?.numerator ?? metric?.numerator;
-  const den = raw?.denominator ?? metric?.denominator;
-  const formula =
-    num != null && den != null && den > 0
-      ? `${num} ÷ ${den} × 100`
-      : raw?.formula ?? metric?.formula ?? "—";
-
-  return (
-    <details className="mt-3 group">
-      <summary className="cursor-pointer text-[11px] font-medium text-brand hover:underline">
-        How is this calculated?
-      </summary>
-      <dl className="mt-2 space-y-1 rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-[10px] text-muted-foreground">
-        <div className="flex justify-between gap-2">
-          <dt>Result</dt>
-          <dd className="font-medium text-foreground">{resultVal}</dd>
-        </div>
-        <div className="flex justify-between gap-2">
-          <dt>Formula</dt>
-          <dd className="text-right">{formula}</dd>
-        </div>
-        {raw?.coverage_denominator != null ? (
-          <div className="flex justify-between gap-2">
-            <dt>Coverage</dt>
-            <dd>
-              {raw.coverage_numerator ?? den ?? "—"} / {raw.coverage_denominator} assessed
-            </dd>
-          </div>
-        ) : null}
-        <div className="flex justify-between gap-2">
-          <dt>Target</dt>
-          <dd>{target != null ? `${target}%` : "Not configured"}</dd>
-        </div>
-        {raw?.excluded_count ? (
-          <div className="flex justify-between gap-2">
-            <dt>Exclusions</dt>
-            <dd>{raw.excluded_count} not assessable</dd>
-          </div>
-        ) : null}
-        {raw?.tooltip ? (
-          <div>
-            <dt className="mb-0.5">Notes</dt>
-            <dd>{raw.tooltip}</dd>
-          </div>
-        ) : null}
-        <p className="pt-1 text-[9px] italic opacity-80">
-          Values from deterministic audit formulas, not AI estimates.
-        </p>
-      </dl>
-    </details>
-  );
-}
-
 export function KpiDetailCard({
   kpiId,
   metric,
@@ -127,6 +46,7 @@ export function KpiDetailCard({
   wide,
   onDownload,
   children,
+  ctx,
 }: {
   kpiId: AuditKpiId;
   metric?: KpiMetric;
@@ -136,6 +56,7 @@ export function KpiDetailCard({
   wide?: boolean;
   onDownload: () => void;
   children: ReactNode;
+  ctx?: KpiDetailsContext | null;
 }) {
   const status = metric?.audit_status ?? raw?.status;
   const statusLabel = status ? AUDIT_STATUS_DISPLAY[status] ?? status : null;
@@ -184,7 +105,13 @@ export function KpiDetailCard({
       </div>
 
       {!loading && metric ? (
-        <MethodologyPanel metric={metric} raw={raw} result={result} kpiId={kpiId} />
+        <KpiCalculationPanel
+          kpiId={kpiId}
+          result={result}
+          metric={metric}
+          raw={raw}
+          ctx={ctx}
+        />
       ) : null}
     </article>
   );
