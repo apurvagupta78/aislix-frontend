@@ -2223,4 +2223,4 @@ export async function backfillScanAssetsServer(
   if (!done().csv) await storeCsvReport(supabase, target, exported);
   kinds = await existingAssetKinds(supabase, scan.id);
   return done();
-}'
+}

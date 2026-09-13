@@ -500,4 +500,4 @@ export function formatUsageLabel(
       ? `${safe.stores_used} stores · Unlimited`
       : `${safe.stores_used} / ${safe.store_limit} stores`;
   return { audits: scanUsageLabel(safe), stores, seats: seatUsageLabel(safe), cooldown };
-}'
+}

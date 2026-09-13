@@ -53,4 +53,4 @@ export function averageConfidencePercent(result: LandingScanResult): number | un
     .map((v) => (v <= 1 ? v * 100 : v));
   if (!values.length) return undefined;
   return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
-}'
+}

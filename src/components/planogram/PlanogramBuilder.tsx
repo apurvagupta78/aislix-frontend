@@ -603,4 +603,282 @@ export function PlanogramBuilder({
               />
             </Field>
             <Field
-              label={simplifiedCopy ? "Price" : `${priceLabel} (optional)``
+              label={simplifiedCopy ? "Price" : `${priceLabel} (optional)`}
+              helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.price : undefined}
+            >
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                className="rounded-xl"
+                placeholder={currency === "INR" ? "e.g. 299" : "e.g. 3.99"}
+                value={priceDisplay ?? ""}
+                onChange={(e) =>
+                  setPriceDisplay(e.target.value ? Number(e.target.value) : undefined)
+                }
+              />
+            </Field>
+            <Field
+              label={simplifiedCopy ? "Daily Sales" : "Daily sales (optional)"}
+              helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.dailySales : undefined}
+            >
+              <Input
+                type="number"
+                min={0}
+                className="rounded-xl"
+                placeholder="Units per day"
+                value={form.avg_daily_sales ?? ""}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    avg_daily_sales: e.target.value ? Number(e.target.value) : undefined,
+                  })
+                }
+              />
+            </Field>
+            <Field
+              label={simplifiedCopy ? "SKU" : "SKU (optional)"}
+              helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.sku : undefined}
+            >
+              <Input
+                className="rounded-xl"
+                value={form.sku}
+                onChange={(e) => setForm({ ...form, sku: e.target.value })}
+              />
+            </Field>
+            <Field
+              label={simplifiedCopy ? "Shelf Position" : "Shelf Position (optional)"}
+              helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.shelfPosition : undefined}
+            >
+              <Input
+                className="rounded-xl"
+                value={form.shelf_position}
+                onChange={(e) => setForm({ ...form, shelf_position: e.target.value })}
+              />
+            </Field>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button
+              variant="brand"
+              className="rounded-xl"
+              disabled={normalizeMutation.isPending}
+              onClick={() => submitManual(false)}
+            >
+              {normalizeMutation.isPending ? (
+                <Loader2 className="mr-2 size-4 animate-spin" />
+              ) : (
+                <Plus className="mr-2 size-4" />
+              )}
+              {simplifiedCopy ? "Save Product" : "Save product"}
+            </Button>
+            <Button
+              variant="outline"
+              className="rounded-xl"
+              disabled={normalizeMutation.isPending}
+              onClick={() => submitManual(true)}
+            >
+              {simplifiedCopy ? "Save & Add Another" : "Save & add another"}
+            </Button>
+          </div>
+          {manualError && (
+            <div className="mt-4">
+              <StickyError
+                title="Could not add this product"
+                message={manualError}
+                onDismiss={() => setManualError(null)}
+              />
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
+
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">
+              {tableTitle} ({rows.length})
+            </h3>
+            {tableDescription ? (
+              <p className="mt-1 text-xs text-muted-foreground">{tableDescription}</p>
+            ) : null}
+          </div>
+          {tableActions}
+        </div>
+        {!rows.length ? (
+          <div className="mt-4">
+            <EmptyState
+              title="No expected products yet"
+              description={
+                manualEntryOnly
+                  ? "Add products using the form above."
+                  : "Upload a CSV or add products manually."
+              }
+            />
+          </div>
+        ) : (
+          <div className="mt-4 overflow-x-auto rounded-xl border border-border">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2">Location</th>
+                  <th className="px-3 py-2">Category</th>
+                  <th className="px-3 py-2">Sub category</th>
+                  <th className="px-3 py-2">Brand</th>
+                  <th className="px-3 py-2">Product</th>
+                  <th className="px-3 py-2">Variant</th>
+                  <th className="px-3 py-2 text-right">Facings</th>
+                  <th className="px-3 py-2 text-right">Shelf units</th>
+                  <th className="px-3 py-2 text-right">{priceLabel}</th>
+                  <th className="px-3 py-2 text-right">Sales/d</th>
+                  <th className="px-3 py-2">SKU</th>
+                  <th className="px-3 py-2">Shelf position</th>
+                  <th className="px-3 py-2 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => {
+                  const editing = editingKey === row.key;
+                  const cell = (value: string, onChange: (next: string) => void) =>
+                    editing ? (
+                      <Input
+                        className="h-8 rounded-lg"
+                        value={value}
+                        onChange={(e) => onChange(e.target.value)}
+                      />
+                    ) : (
+                      <span>{value || "—"}</span>
+                    );
+                  return (
+                    <tr key={row.key} className="border-t border-border align-middle">
+                      <td className="px-3 py-2">
+                        {cell(row.location, (v) => update(row.key, { location: v }))}
+                      </td>
+                      <td className="px-3 py-2">
+                        {cell(row.category, (v) => update(row.key, { category: v }))}
+                      </td>
+                      <td className="px-3 py-2">
+                        {cell(row.sub_category, (v) => update(row.key, { sub_category: v }))}
+                      </td>
+                      <td className="px-3 py-2">
+                        {cell(row.brand, (v) => update(row.key, { brand: v }))}
+                      </td>
+                      <td className="px-3 py-2">
+                        {cell(row.product_name, (v) => update(row.key, { product_name: v }))}
+                      </td>
+                      <td className="px-3 py-2">
+                        {cell(row.variant, (v) => update(row.key, { variant: v }))}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {editing ? (
+                          <Input
+                            type="number"
+                            min={0}
+                            className="h-8 w-20 rounded-lg text-right"
+                            value={row.expected_facings ?? ""}
+                            onChange={(e) =>
+                              update(row.key, {
+                                expected_facings: e.target.value ? Number(e.target.value) : undefined,
+                              })
+                            }
+                          />
+                        ) : (
+                          row.expected_facings ?? "—"
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {editing ? (
+                          <Input
+                            type="number"
+                            min={0}
+                            className="h-8 w-20 rounded-lg text-right"
+                            value={row.expected_shelf_units ?? row.expected_qty}
+                            onChange={(e) =>
+                              update(row.key, {
+                                expected_shelf_units: e.target.value ? Number(e.target.value) : undefined,
+                                expected_qty: Number(e.target.value) || 0,
+                              })
+                            }
+                          />
+                        ) : (
+                          row.expected_shelf_units ?? row.expected_qty
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {editing ? (
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            className="h-8 w-24 rounded-lg text-right"
+                            value={
+                              row.mrp_inr != null ? inrToDisplayAmount(row.mrp_inr, currency) : ""
+                            }
+                            onChange={(e) =>
+                              update(row.key, {
+                                mrp_inr: e.target.value
+                                  ? convertToInr(Number(e.target.value), currency)
+                                  : undefined,
+                              })
+                            }
+                          />
+                        ) : (
+                          formatStoredPrice(row.mrp_inr, currency)
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-right tabular-nums">
+                        {editing ? (
+                          <Input
+                            type="number"
+                            min={0}
+                            className="h-8 w-20 rounded-lg text-right"
+                            value={row.avg_daily_sales ?? ""}
+                            onChange={(e) =>
+                              update(row.key, {
+                                avg_daily_sales: e.target.value
+                                  ? Number(e.target.value)
+                                  : undefined,
+                              })
+                            }
+                          />
+                        ) : (
+                          row.avg_daily_sales ?? "—"
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        {cell(row.sku, (v) => update(row.key, { sku: v }))}
+                      </td>
+                      <td className="px-3 py-2">
+                        {cell(row.shelf_position, (v) => update(row.key, { shelf_position: v }))}
+                      </td>
+                      <td className="px-3 py-2">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="rounded-lg"
+                            onClick={() => setEditingKey(editing ? null : row.key)}
+                          >
+                            {editing ? "Done" : "Edit"}
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="rounded-lg text-destructive"
+                            aria-label="Delete row"
+                            onClick={() => onRowsChange(rows.filter((r) => r.key !== row.key))}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

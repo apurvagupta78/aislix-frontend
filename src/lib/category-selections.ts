@@ -188,4 +188,4 @@ export function selectionsFromLegacy(
       sub_category_label: String(subCategory ?? "").trim(),
     },
   ];
-}'
+}
