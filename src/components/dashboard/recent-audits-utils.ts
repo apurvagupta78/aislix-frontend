@@ -37,8 +37,8 @@ const STATUS_ORDER: Record<RecentAuditStatus, number> = {
   completed: 4,
 };
 
-function roleForKpis(filters: DashboardFilterState, data: WorkspaceDashboardData): AuditRoleTab {
-  return filters.role !== "all" ? filters.role : data.effective_role;
+function roleForKpis(filters: DashboardFilterState, _data: WorkspaceDashboardData): AuditRoleTab {
+  return filters.role;
 }
 
 function fourthKpiCandidates(role: AuditRoleTab): AuditKpiId[] {

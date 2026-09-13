@@ -1,10 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
+import { DashboardRoleSelector } from "@/components/dashboard/DashboardRoleSelector";
 import { BrandAnalysisSection } from "@/components/dashboard/BrandAnalysisSection";
 import { CommercialImpactSection } from "@/components/dashboard/CommercialImpactSection";
 import { RecentAuditsSection } from "@/components/dashboard/RecentAuditsSection";
@@ -24,9 +25,24 @@ import { DEMO_WORKSPACE_DASHBOARD, DEMO_WORKSPACE_MANAGEMENT, isDemoMode } from 
 import { DEFAULT_DASHBOARD_FILTERS, type DashboardFilterState } from "@/lib/dashboard-filters";
 import { fetchWorkspaceDashboard } from "@/lib/dashboard-intelligence";
 import { fetchWorkspaceManagementData } from "@/lib/dashboard-workspace-management";
+import {
+  applyDashboardRoleChange,
+  dashboardRoleContext,
+  dashboardRoleToSlug,
+  parseDashboardRoleSlug,
+} from "@/lib/dashboard-role-context";
+import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import { supabase } from "@/integrations/supabase/client";
 
+type DashboardSearch = {
+  role?: string;
+};
+
 export const Route = createFileRoute("/dashboard")({
+  validateSearch: (search: Record<string, unknown>): DashboardSearch => {
+    if (typeof search.role !== "string" || !search.role.trim()) return {};
+    return { role: search.role.trim() };
+  },
   head: () => ({
     meta: [
       { title: "Workspace Dashboard — Aislix" },
@@ -48,7 +64,20 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function Dashboard() {
-  const [filters, setFilters] = useState<DashboardFilterState>(DEFAULT_DASHBOARD_FILTERS);
+  const navigate = useNavigate({ from: Route.fullPath });
+  const search = Route.useSearch();
+  const urlRole = parseDashboardRoleSlug(search.role);
+
+  const [filters, setFilters] = useState<DashboardFilterState>(() => ({
+    ...DEFAULT_DASHBOARD_FILTERS,
+    role: urlRole ?? DEFAULT_DASHBOARD_FILTERS.role,
+  }));
+
+  useEffect(() => {
+    if (urlRole && urlRole !== filters.role) {
+      setFilters((current) => applyDashboardRoleChange(current, urlRole));
+    }
+  }, [urlRole, filters.role]);
 
   const session = useQuery({
     queryKey: ["auth-session"],
@@ -89,10 +118,20 @@ function Dashboard() {
   });
   const workspaceManagement = demo ? DEMO_WORKSPACE_MANAGEMENT : workspaceManagementQuery.data;
 
+  const roleContext = useMemo(() => dashboardRoleContext(filters.role), [filters.role]);
+
+  const handleRoleChange = (role: AuditRoleTab) => {
+    setFilters((current) => applyDashboardRoleChange(current, role));
+    void navigate({
+      search: { role: dashboardRoleToSlug(role) },
+      replace: true,
+    });
+  };
+
   return (
     <AppShell
       title={demo ? "Live demo dashboard" : name ? `Welcome back, ${name}` : "Dashboard"}
-      description="See what's happening across your retail operation."
+      description={roleContext.subtitle}
       actions={
         demo ? (
           <>
@@ -117,9 +156,10 @@ function Dashboard() {
         )
       }
     >
-      <p className="-mt-2 mb-4 text-sm text-muted-foreground">
-        Track performance, find issues and see where execution is improving.
-      </p>
+      <div className="-mt-2 mb-4 space-y-1">
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">{roleContext.title}</h2>
+        <p className="text-sm text-muted-foreground">{roleContext.subtitle}</p>
+      </div>
 
       {demo ? (
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand/25 bg-brand-soft px-4 py-3">
@@ -135,6 +175,8 @@ function Dashboard() {
           </Button>
         </div>
       ) : null}
+
+      <DashboardRoleSelector value={filters.role} onChange={handleRoleChange} />
 
       <DashboardFilterBar
         filters={filters}
@@ -191,10 +233,14 @@ function Dashboard() {
       ) : data ? (
         <>
           <div className="mt-4">
-            <RetailPerformanceSection data={data.kpis} isLoading={false} />
+            <RetailPerformanceSection
+              data={data.kpis}
+              role={filters.role}
+              isLoading={false}
+            />
           </div>
 
-          <WhatNeedsAttentionSection data={data} />
+          <WhatNeedsAttentionSection data={data} role={filters.role} />
 
           <PerformanceOverTimeSection data={data} role={filters.role} kriFilter={filters.kri} />
 

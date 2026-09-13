@@ -2,11 +2,9 @@
  * Workspace dashboard filter state — shared between UI and data layer.
  */
 
-import type { DashboardRoleFilter } from "@/lib/dashboard-config";
 import { KPI_DASHBOARD_LABELS } from "@/lib/dashboard-config";
 import type { AuditKpiId } from "@/lib/role-kpi-config";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
-import { roleTabLabel } from "@/lib/role-audit-ui";
 
 export type DashboardDatePreset =
   | "today"
@@ -25,7 +23,8 @@ export type DashboardFilterState = {
   dateTo: string;
   country: string;
   city: string;
-  role: DashboardRoleFilter;
+  /** Primary dashboard context — always one of the five audit roles. */
+  role: AuditRoleTab;
   storeId: string;
   category: string;
   subCategory: string;
@@ -41,7 +40,7 @@ export const DEFAULT_DASHBOARD_FILTERS: DashboardFilterState = {
   dateTo: "",
   country: "all",
   city: "all",
-  role: "all",
+  role: "supermarket",
   storeId: "all",
   category: "all",
   subCategory: "all",
@@ -148,7 +147,6 @@ export function isDefaultDashboardFilters(filters: DashboardFilterState): boolea
     !filters.dateTo &&
     filters.country === "all" &&
     filters.city === "all" &&
-    filters.role === "all" &&
     filters.storeId === "all" &&
     filters.category === "all" &&
     filters.subCategory === "all" &&
@@ -186,13 +184,6 @@ export function dashboardFilterChips(
 
   if (filters.city !== "all") {
     chips.push({ key: "city", label: filters.city });
-  }
-
-  if (filters.role !== "all") {
-    chips.push({
-      key: "role",
-      label: roleTabLabel(filters.role as AuditRoleTab),
-    });
   }
 
   if (filters.storeId !== "all") {

@@ -1,7 +1,6 @@
 import { useMemo, useState, type ComponentType } from "react";
 import { Link } from "@tanstack/react-router";
 import {
-  Briefcase,
   Calendar,
   Check,
   ChevronsUpDown,
@@ -43,17 +42,16 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { DASHBOARD_ROLE_OPTIONS } from "@/lib/dashboard-config";
 import {
   DASHBOARD_ASSIGNMENT_OPTIONS,
   DASHBOARD_DATE_PRESETS,
-  DEFAULT_DASHBOARD_FILTERS,
   clearDashboardFilterChip,
   dashboardFilterChips,
   isDefaultDashboardFilters,
   type DashboardFilterOptions,
   type DashboardFilterState,
 } from "@/lib/dashboard-filters";
+import { clearDashboardFiltersPreservingRole } from "@/lib/dashboard-role-context";
 import { cn } from "@/lib/utils";
 
 type Option = { value: string; label: string };
@@ -420,21 +418,12 @@ function useFilterOptions(filters: DashboardFilterState, options: DashboardFilte
     [options.categories],
   );
 
-  const roleOptions = useMemo(
-    () =>
-      DASHBOARD_ROLE_OPTIONS.filter((o) => o.value !== "all").map((o) => ({
-        value: o.value,
-        label: o.label,
-      })),
-    [],
-  );
-
   const kriOptions = useMemo(
     () => options.kri_options.map((o) => ({ value: o.value, label: o.label })),
     [options.kri_options],
   );
 
-  return { countryOptions, cityOptions, storeOptions, categoryOptions, roleOptions, kriOptions };
+  return { countryOptions, cityOptions, storeOptions, categoryOptions, kriOptions };
 }
 
 function DesktopToolbar({
@@ -447,7 +436,7 @@ function DesktopToolbar({
   options: DashboardFilterOptions;
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
-  const { countryOptions, cityOptions, storeOptions, categoryOptions, roleOptions, kriOptions } =
+  const { countryOptions, cityOptions, storeOptions, categoryOptions, kriOptions } =
     useFilterOptions(filters, options);
 
   const moreActive =
@@ -477,25 +466,6 @@ function DesktopToolbar({
         options={cityOptions}
         allLabel="All cities"
         className="min-w-[110px] max-w-[140px]"
-      />
-      <CompactSelect
-        label="Role"
-        icon={Briefcase}
-        value={filters.role}
-        onValueChange={(v) =>
-          onChange({
-            ...filters,
-            role: v as DashboardFilterState["role"],
-            storeId: "all",
-            category: "all",
-            subCategory: "all",
-            teamMemberId: "all",
-            kri: "all",
-          })
-        }
-        options={roleOptions}
-        allLabel="All roles"
-        className="min-w-[108px] max-w-[130px]"
       />
       {kriOptions.length ? (
         <CompactSelect
@@ -537,7 +507,7 @@ function DesktopToolbar({
       {!isDefaultDashboardFilters(filters) ? (
         <button
           type="button"
-          onClick={() => onChange({ ...DEFAULT_DASHBOARD_FILTERS })}
+          onClick={() => onChange(clearDashboardFiltersPreservingRole(filters))}
           className="inline-flex h-9 shrink-0 items-center gap-1 px-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-brand"
         >
           <X className="size-3.5" />
@@ -561,7 +531,7 @@ function MobileFilters({
 }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(filters);
-  const { countryOptions, cityOptions, storeOptions, categoryOptions, roleOptions, kriOptions } =
+  const { countryOptions, cityOptions, storeOptions, categoryOptions, kriOptions } =
     useFilterOptions(draft, options);
 
   const subCategoryOptions = useMemo(() => {
@@ -613,25 +583,6 @@ function MobileFilters({
             onValueChange={(v) => setDraft({ ...draft, city: v, storeId: "all" })}
             options={cityOptions}
             allLabel="All cities"
-            className="w-full"
-          />
-          <CompactSelect
-            label="Role"
-            icon={Briefcase}
-            value={draft.role}
-            onValueChange={(v) =>
-              setDraft({
-                ...draft,
-                role: v as DashboardFilterState["role"],
-                storeId: "all",
-                category: "all",
-                subCategory: "all",
-                teamMemberId: "all",
-                kri: "all",
-              })
-            }
-            options={roleOptions}
-            allLabel="All roles"
             className="w-full"
           />
           {kriOptions.length ? (
@@ -722,8 +673,9 @@ function MobileFilters({
             variant="subtle"
             className="flex-1 rounded-lg"
             onClick={() => {
-              setDraft(DEFAULT_DASHBOARD_FILTERS);
-              onChange(DEFAULT_DASHBOARD_FILTERS);
+              const next = clearDashboardFiltersPreservingRole(filters);
+              setDraft(next);
+              onChange(next);
               setOpen(false);
             }}
           >

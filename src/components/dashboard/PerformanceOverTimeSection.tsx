@@ -16,13 +16,13 @@ import {
 import { EmptyState } from "@/components/States";
 import {
   DASHBOARD_CHART_COLORS,
-  DEFAULT_TREND_KPIS,
   effectiveDashboardRole,
   KPI_TREND_CHIP_LABELS,
   OPEN_ISSUES_TREND_LABEL,
+  ROLE_DEFAULT_TREND_KPIS,
   trendKpisForRole,
-  type DashboardRoleFilter,
 } from "@/lib/dashboard-config";
+import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import type { PerformanceTrendChartPoint } from "@/lib/dashboard-performance-trend";
 import {
   formatTrendValue,
@@ -203,11 +203,12 @@ export function PerformanceOverTimeSection({
   kriFilter = "all",
 }: {
   data: WorkspaceDashboardData;
-  role: DashboardRoleFilter;
+  role: AuditRoleTab;
   kriFilter?: AuditKpiId | "all";
 }) {
   const effectiveRole = effectiveDashboardRole(role, data.effective_role);
   const availableKpis = trendKpisForRole(effectiveRole);
+  const roleDefaultTrend = ROLE_DEFAULT_TREND_KPIS[effectiveRole];
   const trend = data.performance_over_time ?? {
     audit_count: data.filter_summary.audit_count,
     store_count: data.filter_summary.store_count,
@@ -220,10 +221,10 @@ export function PerformanceOverTimeSection({
 
   const defaultKpis = useMemo(() => {
     if (kriFilter !== "all") return [kriFilter];
-    const preferred = DEFAULT_TREND_KPIS.filter((k) => availableKpis.includes(k));
+    const preferred = roleDefaultTrend.filter((k) => availableKpis.includes(k));
     if (preferred.length >= 3) return preferred.slice(0, 3);
     return availableKpis.slice(0, 3);
-  }, [availableKpis, kriFilter]);
+  }, [availableKpis, kriFilter, roleDefaultTrend]);
 
   const [activeMetrics, setActiveMetrics] = useState<TrendSelection[]>(defaultKpis);
   const [chartMode, setChartMode] = useState<ChartMode>("performance");

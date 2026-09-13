@@ -315,7 +315,7 @@ export function BrandAnalysisSection({
 
   const filtersActive = !isDefaultDashboardFilters(filters) || search.trim().length > 0;
 
-  if (!brand?.visible) return null;
+  if (filters.role !== "fmcg" || !brand?.visible) return null;
 
   const trendData = brand.trend.filter((p) => p.actual_share !== null);
 

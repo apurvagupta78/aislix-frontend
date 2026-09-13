@@ -297,8 +297,8 @@ export function buildBrandAnalysisData(
     );
   });
 
-  const roleRelevant = effectiveRole === "fmcg" || hasCompetitiveData;
-  if (!roleRelevant) return null;
+  if (effectiveRole !== "fmcg") return null;
+  if (!hasCompetitiveData && !audits.length) return null;
 
   const kpi_cards = buildKpiCards(audits, metricsMap, effectiveRole);
   const { segments, detail_rows, target_brand } = aggregateBrandSegments(audits, metricsMap);

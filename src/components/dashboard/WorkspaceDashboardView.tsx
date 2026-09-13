@@ -19,9 +19,11 @@ import {
 } from "@/components/ui/tooltip";
 import { CardSkeleton, EmptyState, ErrorState, Skeleton } from "@/components/States";
 import { SectionHeader } from "@/components/dashboard/DashboardParts";
-import { DASHBOARD_STATUS_COLORS, SHELF_HEALTH_TOOLTIP } from "@/lib/dashboard-config";
+import { DASHBOARD_STATUS_COLORS } from "@/lib/dashboard-config";
+import { dashboardRoleContext } from "@/lib/dashboard-role-context";
 import { formatNumber, formatPercent, formatQuota, formatScore } from "@/lib/dashboard";
 import type { WorkspaceDashboardData } from "@/lib/dashboard-intelligence";
+import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import { cn } from "@/lib/utils";
 
 const tooltipStyle = {
@@ -144,8 +146,8 @@ export function WorkspaceKpiSummary({
 }) {
   if (isLoading) {
     return (
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4">
-        {Array.from({ length: 8 }).map((_, i) => (
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, i) => (
           <CardSkeleton key={i} />
         ))}
       </div>
@@ -158,61 +160,23 @@ export function WorkspaceKpiSummary({
   }
   if (!data) return null;
 
-  const osaValue = data.osa.available ? formatPercent(data.osa.percent ?? undefined) : "Not enough data";
-  const planoValue = data.planogram.available
-    ? formatPercent(data.planogram.percent ?? undefined)
-    : data.planogram.unavailable_reason ?? "Not enough data";
-
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4">
-      <RetailKpiCard
-        title="Audits completed"
-        value={formatNumber(data.audits_completed)}
-        description="Completed shelf audits"
-      />
-      <RetailKpiCard
-        title="Stores covered"
-        value={formatNumber(data.stores_covered)}
-        description="Unique stores audited"
-      />
-      <RetailKpiCard
-        title="On-shelf availability"
-        value={osaValue}
-        detail={data.osa.detail}
-        description="Products visibly available"
-        progress={data.osa.percent}
-        scanId={data.osa.trace_scan_id}
-      />
-      <RetailKpiCard
-        title="Planogram compliance"
-        value={planoValue}
-        detail={data.planogram.detail}
-        description="Shelf matches expected layout"
-        progress={data.planogram.available ? data.planogram.percent : null}
-        scanId={data.planogram.trace_scan_id}
-      />
-      <RetailKpiCard
-        title="Open issues"
-        value={formatNumber(data.open_issues)}
-        description="Issues still needing attention"
-      />
-      <RetailKpiCard
-        title="Issue resolution"
-        value={data.issue_resolution.display}
-        description="Issues resolved after follow-up"
-      />
-      <RetailKpiCard
-        title="Shelf health"
-        value={data.shelf_health.display}
-        description="Overall shelf execution"
-        tooltip={SHELF_HEALTH_TOOLTIP}
-        progress={data.shelf_health.available ? data.shelf_health.score : null}
-      />
-      <RetailKpiCard
-        title="Audits remaining"
-        value={data.audits_unlimited ? "Unlimited" : formatQuota(data.audits_remaining)}
-        description="This month's allowance"
-      />
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      {data.primary_kpi_cards.map((card) => (
+        <RetailKpiCard
+          key={card.kpi_id}
+          title={card.title}
+          value={card.value}
+          detail={
+            [card.detail, card.coverage, card.target !== null ? `Target ${Math.round(card.target)}%` : null, card.status]
+              .filter(Boolean)
+              .join(" · ") || undefined
+          }
+          description={card.description}
+          progress={card.progress}
+          scanId={card.trace_scan_id}
+        />
+      ))}
     </div>
   );
 }
@@ -251,16 +215,23 @@ function AttentionProgress({ percent }: { percent: number | null }) {
   );
 }
 
-export function WhatNeedsAttentionSection({ data }: { data: WorkspaceDashboardData }) {
+export function WhatNeedsAttentionSection({
+  data,
+  role,
+}: {
+  data: WorkspaceDashboardData;
+  role: AuditRoleTab;
+}) {
   const cards = data.attention_cards;
   const { high, medium, low, total } = data.issues;
   const showIssueBar = total > 0;
+  const roleCopy = dashboardRoleContext(role);
 
   return (
     <section className="mt-8">
       <CommandSectionHeader
         eyebrow="What needs attention"
-        description="The five areas with the biggest performance gaps or most important open issues in the selected view."
+        description={roleCopy.attentionDescription}
       />
       {showIssueBar ? (
         <div className="mb-4 rounded-xl border border-border/60 bg-white p-3 shadow-sm">
@@ -449,20 +420,23 @@ export function TrackImprovementSection({ data }: { data: WorkspaceDashboardData
 
 export function RetailPerformanceSection({
   data,
+  role,
   isLoading,
   error,
   onRetry,
 }: {
   data?: WorkspaceDashboardData["kpis"];
+  role: AuditRoleTab;
   isLoading: boolean;
   error?: Error | null;
   onRetry?: () => void;
 }) {
+  const roleCopy = dashboardRoleContext(role);
   return (
     <section>
       <CommandSectionHeader
-        eyebrow="Retail performance"
-        description="Key shelf and audit metrics for the selected stores, categories and time period."
+        eyebrow={roleCopy.performanceEyebrow}
+        description={roleCopy.performanceDescription}
       />
       <WorkspaceKpiSummary data={data} isLoading={isLoading} error={error} onRetry={onRetry} />
     </section>

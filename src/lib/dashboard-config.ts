@@ -9,12 +9,12 @@ import { AUDIT_ROLE_TABS, roleTabLabel } from "@/lib/role-audit-ui";
 /** @deprecated use DashboardDatePreset from dashboard-filters */
 export type DashboardDateRange = import("@/lib/dashboard-filters").DashboardDatePreset;
 
-export type DashboardRoleFilter = AuditRoleTab | "all";
+/** @deprecated Role is primary dashboard context, not a filter. Use AuditRoleTab directly. */
+export type DashboardRoleFilter = AuditRoleTab;
 
-export const DASHBOARD_ROLE_OPTIONS: { value: DashboardRoleFilter; label: string }[] = [
-  { value: "all", label: "All roles" },
-  ...AUDIT_ROLE_TABS.map((role) => ({ value: role, label: roleTabLabel(role) })),
-];
+export const DASHBOARD_ROLE_OPTIONS: { value: AuditRoleTab; label: string }[] = AUDIT_ROLE_TABS.map(
+  (role) => ({ value: role, label: roleTabLabel(role) }),
+);
 
 /** Tonal Aislix chart palette — navy/blue variations only. */
 export const DASHBOARD_CHART_COLORS = [
@@ -99,31 +99,27 @@ export function dateRangeToDays(range: DashboardDateRange): number {
 
 export function effectiveDashboardRole(
   filterRole: DashboardRoleFilter,
-  workspaceRole?: AuditRoleTab | string | null,
+  _workspaceRole?: AuditRoleTab | string | null,
 ): AuditRoleTab {
-  if (filterRole !== "all") return filterRole;
-  const normalized = (workspaceRole ?? "supermarket").toLowerCase();
-  const aliases: Record<string, AuditRoleTab> = {
-    fmcg_brand: "fmcg",
-    brand: "fmcg",
-    dark_store: "darkstore",
-    kirana: "local",
-    local_store: "local",
-  };
-  const key = aliases[normalized] ?? normalized;
-  return (AUDIT_ROLE_TABS as readonly string[]).includes(key) ? (key as AuditRoleTab) : "supermarket";
+  void _workspaceRole;
+  return filterRole;
 }
 
 export function trendKpisForRole(role: AuditRoleTab): AuditKpiId[] {
   return ROLE_TREND_KPIS[role];
 }
 
-/** Default chart toggles for performance-over-time (first three where available). */
-export const DEFAULT_TREND_KPIS: AuditKpiId[] = [
-  "osa",
-  "planogram_compliance",
-  "assortment_compliance",
-];
+/** Default chart toggles for performance-over-time — first three per role. */
+export const ROLE_DEFAULT_TREND_KPIS: Record<AuditRoleTab, AuditKpiId[]> = {
+  supermarket: ["osa", "planogram_compliance", "assortment_compliance"],
+  darkstore: ["osa", "location_accuracy", "planogram_compliance"],
+  fmcg: ["share_of_shelf", "osa", "facing_count"],
+  distributor: ["osa", "msl_compliance", "planogram_compliance"],
+  local: ["osa", "assortment_compliance", "facing_count"],
+};
+
+/** @deprecated use ROLE_DEFAULT_TREND_KPIS[role] */
+export const DEFAULT_TREND_KPIS: AuditKpiId[] = ROLE_DEFAULT_TREND_KPIS.supermarket;
 
 export type RoleAttentionArea = {
   key: string;

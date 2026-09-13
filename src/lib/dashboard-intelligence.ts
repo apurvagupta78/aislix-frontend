@@ -36,7 +36,8 @@ import { roleTabLabel } from "@/lib/role-audit-ui";
 import { getUser, requireOrgId } from "@/lib/db/context";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import type { RetailIntelligencePayload } from "@/lib/retail-intelligence";
-import { normalizePercent } from "@/lib/dashboard";
+import { formatPercent, normalizePercent } from "@/lib/dashboard";
+import { kpiPlainEnglish } from "@/lib/role-audit-ui";
 import {
   aggregateIssueResolution,
   aggregateShelfHealth,
@@ -60,7 +61,21 @@ export type DashboardWeightedKpi = {
   unavailable_reason: string | null;
 };
 
+export type PrimaryKpiCard = {
+  kpi_id: AuditKpiId;
+  title: string;
+  value: string;
+  description: string;
+  detail: string | null;
+  progress: number | null;
+  target: number | null;
+  coverage: string | null;
+  status: string | null;
+  trace_scan_id: string | null;
+};
+
 export type WorkspaceKpis = {
+  primary_kpi_cards: PrimaryKpiCard[];
   audits_completed: number | null;
   stores_covered: number | null;
   osa: DashboardWeightedKpi;
@@ -411,10 +426,9 @@ function mergeCategoryMaster(
   roleFilter: DashboardFilterState["role"],
   metricsMap: Map<string, RetailIntelligencePayload | null>,
 ): { categories: string[]; subcategories: DashboardSubCategoryOption[] } {
-  let scoped = poolScans;
-  if (roleFilter !== "all") {
-    scoped = scoped.filter((s) => scanRole(metricsMap.get(s.id) ?? null) === roleFilter);
-  }
+  const scoped = poolScans.filter(
+    (s) => scanRole(metricsMap.get(s.id) ?? null) === roleFilter,
+  );
   const scanCategorySet = new Set(scoped.map((s) => s.category).filter(Boolean) as string[]);
   const masterNames = categoryMaster.map((c) => c.name);
   const categories = [
@@ -522,14 +536,8 @@ function scanMatchesKri(
   return scanHasOpenIssueInCategories(metrics, kpiIssueCategories(kpiId));
 }
 
-function effectiveRoleForOptions(
-  roleHint: DashboardFilterState["role"],
-  poolScans: ScanRow[],
-  metricsMap: Map<string, RetailIntelligencePayload | null>,
-): AuditRoleTab {
-  if (roleHint !== "all") return roleHint;
-  const latest = poolScans.at(-1);
-  return effectiveDashboardRole("all", latest ? scanRole(metricsMap.get(latest.id) ?? null) : null);
+function effectiveRoleForOptions(roleHint: DashboardFilterState["role"]): AuditRoleTab {
+  return roleHint;
 }
 
 function buildFilterOptions(
@@ -541,10 +549,9 @@ function buildFilterOptions(
   metricsMap: Map<string, RetailIntelligencePayload | null>,
   categoryMaster: ShelfCategory[] = FALLBACK_CATEGORIES,
 ): DashboardFilterOptions {
-  let scoped = poolScans;
-  if (filterHints.role !== "all") {
-    scoped = scoped.filter((s) => scanRole(metricsMap.get(s.id) ?? null) === filterHints.role);
-  }
+  const scoped = poolScans.filter(
+    (s) => scanRole(metricsMap.get(s.id) ?? null) === filterHints.role,
+  );
   const storeIds = new Set(scoped.map((s) => s.store_id).filter(Boolean));
   let stores = allStores.filter((s) => storeIds.has(s.id));
   if (!stores.length) stores = allStores;
@@ -565,7 +572,7 @@ function buildFilterOptions(
   );
   const membersForFilter = activeMembers.length ? activeMembers : teamMembers;
   const { countries, cities } = locationLists(allStores);
-  const kriRole = effectiveRoleForOptions(filterHints.role, poolScans, metricsMap);
+  const kriRole = effectiveRoleForOptions(filterHints.role);
   return {
     stores,
     countries,
@@ -596,6 +603,73 @@ function toDashboardWeightedKpi(
     available: hasData,
     unavailable_reason: hasData ? null : unavailableReason ?? "Not enough data",
   };
+}
+
+function buildPrimaryKpiCards(
+  audits: ScanRow[],
+  metricsMap: Map<string, RetailIntelligencePayload | null>,
+  role: AuditRoleTab,
+): PrimaryKpiCard[] {
+  const profile = getRoleProfile(role);
+
+  return profile.primary_kpis.map((def) => {
+    const kpiId = def.kpi_id;
+    const requirePlanogram = kpiId === "planogram_compliance";
+    const rollup = aggregateWeightedKpi(audits, metricsMap, role, kpiId, { requirePlanogram });
+    const isCountKpi = kpiId === "facing_count";
+    const unit = isCountKpi ? "count" : "percent";
+    const labels =
+      kpiId === "osa"
+        ? { numerator: "available", denominator: "assessed" }
+        : kpiId === "planogram_compliance"
+          ? { numerator: "passing", denominator: "positions" }
+          : undefined;
+    const unavailableReason =
+      kpiId === "planogram_compliance"
+        ? "No planogram-backed audits in this view."
+        : kpiId === "assortment_compliance" || kpiId === "msl_compliance"
+          ? "No required-product audits in this view."
+          : kpiId === "share_of_shelf"
+            ? "Not enough shelf-space measurement data."
+            : "Not enough data";
+    const weighted = toDashboardWeightedKpi(rollup, unit, labels, unavailableReason);
+    const target = averageConfiguredTarget(audits, metricsMap, kpiId);
+
+    let value = weighted.unavailable_reason ?? "Not enough data";
+    let progress: number | null = null;
+    if (weighted.available) {
+      if (isCountKpi && rollup.denominator > 0) {
+        value = `${rollup.numerator.toLocaleString()} / ${rollup.denominator.toLocaleString()}`;
+        progress = Math.min(100, Math.round((rollup.numerator / rollup.denominator) * 100));
+      } else if (weighted.percent !== null) {
+        value = formatPercent(weighted.percent);
+        progress = Math.min(100, Math.max(0, weighted.percent));
+      }
+    }
+
+    let status: string | null = null;
+    if (weighted.available && target !== null && weighted.percent !== null) {
+      status = weighted.percent >= target ? "On target" : "Below target";
+    }
+
+    const coverage =
+      weighted.eligible_audits > 0
+        ? `${weighted.eligible_audits} audit${weighted.eligible_audits === 1 ? "" : "s"}`
+        : null;
+
+    return {
+      kpi_id: kpiId,
+      title: def.label.replace(/\s*\(OSA\)\s*/i, "").replace(/\s*\(SOS\)\s*/i, ""),
+      value,
+      description: kpiPlainEnglish(kpiId) ?? def.tooltip,
+      detail: weighted.detail,
+      progress,
+      target,
+      coverage,
+      status,
+      trace_scan_id: weighted.trace_scan_id,
+    };
+  });
 }
 
 const TERMINAL_ISSUE = new Set(["resolved", "verified", "closed", "fixed", "dismissed"]);
@@ -903,7 +977,7 @@ function applyScanFilters(
   storeById: Map<string, DashboardStoreOption>,
 ): ScanRow[] {
   return audits.filter((scan) => {
-    if (filters.role !== "all" && scanRole(metricsMap.get(scan.id) ?? null) !== filters.role) {
+    if (scanRole(metricsMap.get(scan.id) ?? null) !== filters.role) {
       return false;
     }
     const store = scan.store_id ? storeById.get(scan.store_id) : undefined;
@@ -922,7 +996,7 @@ function applyScanFilters(
 
 /** Filter dropdown options — role-aware, from real workspace data. */
 export async function fetchDashboardFilterOptions(
-  roleHint: DashboardFilterState["role"] = "all",
+  roleHint: DashboardFilterState["role"] = "supermarket",
   signal?: AbortSignal,
 ): Promise<DashboardFilterOptions> {
   void signal;
@@ -1058,10 +1132,7 @@ export async function fetchWorkspaceDashboard(
 
   audits = applyScanFilters(audits, filters, metricsMap, assignmentByScanId, currentUserId, storeById);
 
-  const effectiveRole =
-    filters.role !== "all"
-      ? filters.role
-      : effectiveDashboardRole("all", scanRole(metricsMap.get(audits.at(-1)?.id ?? "") ?? null));
+  const effectiveRole = filters.role;
 
   if (filters.kri !== "all") {
     audits = audits.filter((scan) =>
@@ -1104,7 +1175,10 @@ export async function fetchWorkspaceDashboard(
     "No planogram-backed audits in this view.",
   );
 
+  const primary_kpi_cards = buildPrimaryKpiCards(audits, metricsMap, effectiveRole);
+
   const kpis: WorkspaceKpis = {
+    primary_kpi_cards,
     audits_completed: audits.length || null,
     stores_covered: storeIds.size || null,
     osa: osaKpi,
