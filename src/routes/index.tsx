@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ScanLine,
@@ -15,19 +15,46 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { SiteFooter, SiteHeader } from "@/components/MarketingLayout";
-import { CurrencySelect, CycleToggle, PricingGrid } from "@/components/pricing/PricingPlans";
-import { useDisplayCurrency } from "@/lib/display-currency";
-import { HomeAuditHistory } from "@/components/home/HomeAuditHistory";
-import { HomeLeadCapture } from "@/components/home/HomeLeadCapture";
-import { HomeRetailWorkflows } from "@/components/home/HomeRetailWorkflows";
 import { HomeTrustRow } from "@/components/home/HomeTrustRow";
-import { HomeWhatsAppProblem } from "@/components/home/HomeWhatsAppProblem";
-import { LiveDemoSection } from "@/components/landing/retail-shelf-intelligence/LiveDemoSection";
+import { LazyOnVisible } from "@/components/LazyOnVisible";
 
-import type { BillingCycle, Plan } from "@/lib/pricing";
+const LiveDemoSection = lazy(() =>
+  import("@/components/landing/retail-shelf-intelligence/LiveDemoSection").then((m) => ({
+    default: m.LiveDemoSection,
+  })),
+);
+const HomeRetailWorkflows = lazy(() =>
+  import("@/components/home/HomeRetailWorkflows").then((m) => ({
+    default: m.HomeRetailWorkflows,
+  })),
+);
+const HomeWhatsAppProblem = lazy(() =>
+  import("@/components/home/HomeWhatsAppProblem").then((m) => ({
+    default: m.HomeWhatsAppProblem,
+  })),
+);
+const HomeAuditHistory = lazy(() =>
+  import("@/components/home/HomeAuditHistory").then((m) => ({
+    default: m.HomeAuditHistory,
+  })),
+);
+const HomeLeadCapture = lazy(() =>
+  import("@/components/home/HomeLeadCapture").then((m) => ({
+    default: m.HomeLeadCapture,
+  })),
+);
+const HomePricingIsland = lazy(() =>
+  import("@/components/home/HomePricingIsland").then((m) => ({
+    default: m.HomePricingIsland,
+  })),
+);
 
 
 export const Route = createFileRoute("/")({
+  headers: () => ({
+    "Cache-Control": "public, max-age=0, s-maxage=180, stale-while-revalidate=86400",
+    "CDN-Cache-Control": "public, s-maxage=180, stale-while-revalidate=86400",
+  }),
   head: () => ({
     meta: [
       { property: "og:url", content: "https://aislix.com" },
@@ -155,16 +182,6 @@ const steps = [
 ];
 
 function Landing() {
-  const [cycle, setCycle] = useState<BillingCycle>("monthly");
-  const { currency, setCurrency, isBase, format } = useDisplayCurrency();
-  const navigate = Route.useNavigate();
-
-  const onSelectPlan = (plan: Plan) => {
-    if (plan.contactSales) void navigate({ to: "/contact", search: { subject: "Sales enquiry" } });
-    else void navigate({ to: "/signup" });
-  };
-
-
   return (
     <div className="min-h-screen bg-background">
       <SiteHeader />
@@ -206,7 +223,29 @@ function Landing() {
       <HomeTrustRow />
 
       <section id="live-dashboard">
-        <LiveDemoSection showWorkspaceCta homepageIntro />
+        <LazyOnVisible
+          fallback={
+            <div className="bg-surface py-16 sm:py-20">
+              <div className="mx-auto max-w-6xl px-5 sm:px-8">
+                <p className="text-xs font-medium uppercase tracking-widest text-brand">
+                  TRY AISLIX FREE
+                </p>
+                <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+                  See What Aislix Can Find on Your Shelf.
+                </h2>
+                <div className="mt-8 min-h-[22rem] rounded-xl border border-border bg-card" />
+              </div>
+            </div>
+          }
+        >
+          <Suspense
+            fallback={
+              <div className="min-h-[28rem] bg-surface" aria-hidden="true" />
+            }
+          >
+            <LiveDemoSection showWorkspaceCta homepageIntro />
+          </Suspense>
+        </LazyOnVisible>
       </section>
 
       <section id="platform" className="border-t border-border py-24">
@@ -238,11 +277,23 @@ function Landing() {
         </div>
       </section>
 
-      <HomeRetailWorkflows />
+      <LazyOnVisible fallback={<div className="min-h-[24rem]" aria-hidden="true" />}>
+        <Suspense fallback={null}>
+          <HomeRetailWorkflows />
+        </Suspense>
+      </LazyOnVisible>
 
-      <HomeWhatsAppProblem />
+      <LazyOnVisible fallback={<div className="min-h-[20rem]" aria-hidden="true" />}>
+        <Suspense fallback={null}>
+          <HomeWhatsAppProblem />
+        </Suspense>
+      </LazyOnVisible>
 
-      <HomeAuditHistory />
+      <LazyOnVisible fallback={<div className="min-h-[20rem]" aria-hidden="true" />}>
+        <Suspense fallback={null}>
+          <HomeAuditHistory />
+        </Suspense>
+      </LazyOnVisible>
 
       <section id="how" className="border-t border-border bg-background py-24">
         <div className="mx-auto max-w-6xl px-6 text-center">
@@ -268,45 +319,35 @@ function Landing() {
         </div>
       </section>
 
-      <HomeLeadCapture />
+      <LazyOnVisible fallback={<div className="min-h-[22rem]" aria-hidden="true" />}>
+        <Suspense fallback={null}>
+          <HomeLeadCapture />
+        </Suspense>
+      </LazyOnVisible>
 
-      <section id="pricing" className="border-t border-border py-24">
-        <div className="mx-auto max-w-[90rem] px-6 text-center sm:px-8">
-          <p className="text-xs font-medium uppercase tracking-widest text-brand">Pricing</p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-            Plans that scale from one local store to a national chain.
-          </h2>
-          <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Start free. Paid plans from {format(499)}/month. Unlimited teammates and store records on
-            every paid plan.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <CycleToggle cycle={cycle} onChange={setCycle} />
-            <CurrencySelect currency={currency} onChange={setCurrency} />
-          </div>
-          {!isBase && (
-            <p className="mt-3 text-xs text-muted-foreground">
-              Converted from INR at indicative rates; billed in INR.
-            </p>
-          )}
-          <div className="mt-10 text-left">
-            <PricingGrid cycle={cycle} onSelect={onSelectPlan} currency={currency} />
-          </div>
-
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Button asChild variant="subtle" className="rounded-xl">
-              <Link to="/pricing">
-                Compare every feature <ArrowRight className="size-4" />
-              </Link>
-            </Button>
-            <Button asChild variant="ghost" className="rounded-xl">
-              <Link to="/contact" search={{ subject: "Sales enquiry" }}>
-                Talk to Sales
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
+      <LazyOnVisible
+        fallback={
+          <section id="pricing" className="border-t border-border py-24">
+            <div className="mx-auto max-w-[90rem] px-6 text-center sm:px-8">
+              <p className="text-xs font-medium uppercase tracking-widest text-brand">Pricing</p>
+              <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+                Plans that scale from one local store to a national chain.
+              </h2>
+              <div className="mt-10 min-h-[28rem]" />
+            </div>
+          </section>
+        }
+      >
+        <Suspense
+          fallback={
+            <section id="pricing" className="border-t border-border py-24">
+              <div className="mx-auto min-h-[28rem] max-w-[90rem]" />
+            </section>
+          }
+        >
+          <HomePricingIsland />
+        </Suspense>
+      </LazyOnVisible>
 
 
       <section className="border-t border-border bg-surface py-20">

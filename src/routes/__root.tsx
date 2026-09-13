@@ -110,16 +110,25 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
-      },
+      { rel: "dns-prefetch", href: "https://fonts.gstatic.com" },
       { rel: "icon", href: "/favicon.png?v=3", type: "image/png", sizes: "64x64" },
       { rel: "shortcut icon", href: "/favicon.ico?v=3" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png?v=3", sizes: "180x180" },
 
     ],
     scripts: [
+      {
+        type: "text/javascript",
+        children: `(function(){
+var href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap";
+var l=document.createElement("link");
+l.rel="stylesheet";
+l.href=href;
+l.media="print";
+l.onload=function(){l.media="all"};
+document.head.appendChild(l);
+})();`,
+      },
       {
         type: "text/javascript",
         children: `(function(){
@@ -178,6 +187,10 @@ function RootShell({ children }: { children: ReactNode }) {
         {children}
         <Scripts />
         <noscript>
+          <link
+            rel="stylesheet"
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+          />
           <img
             height="1"
             width="1"

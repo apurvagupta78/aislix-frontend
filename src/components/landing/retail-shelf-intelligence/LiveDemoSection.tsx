@@ -13,23 +13,28 @@ import {
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
 import { ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
-const DemoRoleResultsPanel = lazy(() =>
-  import("@/components/scan/DemoRoleResultsPanel").then((m) => ({
-    default: m.DemoRoleResultsPanel,
-  })),
-);
 import {
   DEFAULT_DEMO_CATEGORY,
   DEFAULT_DEMO_SUBCATEGORY,
   EMPTY_DEMO_CATEGORY_STATE,
   useDemoCategory,
-} from "@/components/scan/DemoCategoryPicker";
-import { DemoScanSetupPanel } from "@/components/scan/DemoScanSetupPanel";
+} from "@/components/scan/use-demo-category";
 import { buildDemoOralCareScanContext } from "@/lib/demo-oral-care-planogram";
 import { EMPTY_SCAN_CONTEXT, type ScanContextState } from "@/lib/scan-context";
 import { HomepageDemoAuditPreview } from "./HomepageDemoAuditPreview";
 import { SectionHeading } from "./shared";
 import { networkErrorMessage } from "@/lib/api-errors";
+
+const DemoRoleResultsPanel = lazy(() =>
+  import("@/components/scan/DemoRoleResultsPanel").then((m) => ({
+    default: m.DemoRoleResultsPanel,
+  })),
+);
+const DemoScanSetupPanel = lazy(() =>
+  import("@/components/scan/DemoScanSetupPanel").then((m) => ({
+    default: m.DemoScanSetupPanel,
+  })),
+);
 
 type Phase = "idle" | "scanning" | "done" | "error";
 type SetupMode = null | "sample" | "upload";
@@ -69,13 +74,13 @@ export function LiveDemoSection({
   homepageIntro?: boolean;
 }) {
   const [phase, setPhase] = useState<Phase>("idle");
-  const demoCategory = useDemoCategory();
+  const [setupMode, setSetupMode] = useState<SetupMode>(null);
+  const demoCategory = useDemoCategory({ enabled: Boolean(setupMode) });
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [result, setResult] = useState<LandingScanResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [elapsedSec, setElapsedSec] = useState<number | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [setupMode, setSetupMode] = useState<SetupMode>(null);
   const [scanContext, setScanContext] = useState<ScanContextState>(EMPTY_SCAN_CONTEXT);
   /** Context used for results — set synchronously on Start so KPIs are not lost to React batching. */
   const [resultScanContext, setResultScanContext] = useState<ScanContextState>(EMPTY_SCAN_CONTEXT);
@@ -214,28 +219,34 @@ export function LiveDemoSection({
 
   const setupPanel =
     setupMode && (phase === "idle" || phase === "error") ? (
-      <DemoScanSetupPanel
-        mode={setupMode}
-        homepageIntro={homepageIntro}
-        state={demoCategory.state}
-        onChange={demoCategory.setState}
-        categories={demoCategory.categories}
-        ready={demoCategory.ready}
-        disabled={scanning}
-        scanContext={scanContext}
-        onScanContextChange={setScanContext}
-        defaultCategory={demoCategory.state.categoryName}
-        defaultSubCategory={subCategoryLabel}
-        hasPhoto={Boolean(pendingFile)}
-        previewImageUrl={previewImageUrl}
-        onPickUploadPhoto={() => fileRef.current?.click()}
-        onTakeMobilePhoto={() => cameraRef.current?.click()}
-        onStart={(ctx) => {
-          setResultScanContext(ctx);
-          setScanContext(ctx);
-          void run(setupMode, setupMode === "upload" ? (pendingFile ?? undefined) : undefined);
-        }}
-      />
+      <Suspense
+        fallback={
+          <div className="py-8 text-center text-sm text-muted-foreground">Loading setup…</div>
+        }
+      >
+        <DemoScanSetupPanel
+          mode={setupMode}
+          homepageIntro={homepageIntro}
+          state={demoCategory.state}
+          onChange={demoCategory.setState}
+          categories={demoCategory.categories}
+          ready={demoCategory.ready}
+          disabled={scanning}
+          scanContext={scanContext}
+          onScanContextChange={setScanContext}
+          defaultCategory={demoCategory.state.categoryName}
+          defaultSubCategory={subCategoryLabel}
+          hasPhoto={Boolean(pendingFile)}
+          previewImageUrl={previewImageUrl}
+          onPickUploadPhoto={() => fileRef.current?.click()}
+          onTakeMobilePhoto={() => cameraRef.current?.click()}
+          onStart={(ctx) => {
+            setResultScanContext(ctx);
+            setScanContext(ctx);
+            void run(setupMode, setupMode === "upload" ? (pendingFile ?? undefined) : undefined);
+          }}
+        />
+      </Suspense>
     ) : null;
 
   return (

@@ -44,12 +44,45 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+const PUBLIC_HTML_CACHE = new Set([
+  "/",
+  "/pricing",
+  "/platform",
+  "/features",
+  "/how-it-works",
+  "/about",
+  "/contact",
+  "/security",
+]);
+
+function withPublicHtmlCache(request: Request, response: Response): Response {
+  if (request.method !== "GET" || response.status !== 200) return response;
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("text/html")) return response;
+  const path = new URL(request.url).pathname;
+  if (!PUBLIC_HTML_CACHE.has(path)) return response;
+
+  const headers = new Headers(response.headers);
+  if (!headers.has("Cache-Control")) {
+    headers.set("Cache-Control", "public, max-age=0, s-maxage=180, stale-while-revalidate=86400");
+  }
+  if (!headers.has("CDN-Cache-Control")) {
+    headers.set("CDN-Cache-Control", "public, s-maxage=180, stale-while-revalidate=86400");
+  }
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      const normalized = await normalizeCatastrophicSsrResponse(response);
+      return withPublicHtmlCache(request, normalized);
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {

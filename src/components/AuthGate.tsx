@@ -44,6 +44,13 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       busy.current = true;
       try {
 
+        // Public marketing pages do not need a network round-trip for anonymous
+        // visitors. getSession() reads local storage; getUser() always hits Auth.
+        if (isPublicPath(path) && !isVerifyPath(path)) {
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (!sessionData.session) return;
+        }
+
         const user = await fetchAuthUser();
         if (cancelled) return;
 
