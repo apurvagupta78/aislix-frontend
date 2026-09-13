@@ -1,6 +1,15 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, ArrowDown, ArrowUp, IndianRupee, Lock, Minus, TrendingUp } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowDown,
+  ArrowUp,
+  Download,
+  IndianRupee,
+  Lock,
+  Minus,
+  TrendingUp,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/States";
@@ -29,7 +38,6 @@ import {
   type ActionCenterItem,
 } from "@/lib/scan-execution";
 import type { FinancialImpact } from "@/lib/scan-results";
-import { PLAN_TIER_LABELS, planTier } from "@/lib/plan-features";
 import type { ScanResult } from "@/lib/scan-results";
 import { formatCompetitorBrandLabel, type CompetitorSnapshot } from "@/lib/brand-intel";
 import {
@@ -53,6 +61,11 @@ import {
   buildAuditHeaderPrimary,
 } from "@/lib/audit-results-display";
 import { formatInr } from "@/lib/pricing";
+import {
+  buildCommercialImpactView,
+  type CommercialImpactView,
+} from "@/lib/commercial-impact-display";
+import { downloadCommercialImpactCsv } from "@/lib/commercial-impact-export";
 
 const severityStyles: Record<ActionCenterItem["severity"], string> = {
   critical: "text-destructive",
@@ -899,12 +912,12 @@ export function FinancialImpactPanel({
   locked?: boolean;
   planCode?: string | null;
 }) {
-  const impact = resolveFinancialImpact(data);
-  const tier = planTier(planCode);
+  const view = data ? buildCommercialImpactView(data) : null;
+  const impact = view?.impact ?? resolveFinancialImpact(data);
 
   if (loading) {
     return (
-      <div className="card-surface p-5 sm:p-6">
+      <div className="rounded-xl border border-border/70 bg-muted/30 p-5 sm:p-6">
         <Skeleton className="h-6 w-48" />
         <Skeleton className="mt-4 h-16 w-full" />
       </div>
@@ -912,26 +925,46 @@ export function FinancialImpactPanel({
   }
 
   const body = impact ? (
-    <FinancialImpactBody impact={impact} competitorIntel={data?.competitor_intel} />
+    <FinancialImpactBody impact={impact} view={view} data={data} />
   ) : (
-    <p className="mt-3 text-sm text-muted-foreground">No revenue-at-risk signals for this scan.</p>
+    <p className="mt-3 text-sm text-muted-foreground">
+      No commercial exposure signals for this scan.
+    </p>
   );
 
   return (
-    <div className="card-surface relative overflow-hidden p-5 sm:p-6">
+    <div className="relative overflow-hidden rounded-xl border border-border/70 bg-muted/30 p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            <IndianRupee className="size-3.5" /> Financial impact
+          <p className="flex items-center gap-2 text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+            <IndianRupee className="size-3.5" /> Commercial impact
           </p>
-          <h3 className="mt-1 text-sm font-semibold tracking-tight">Revenue at risk</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Commercial impact from OOS, low stock, and facing gaps
+          <h3 className="mt-1 text-base font-semibold tracking-tight sm:text-lg">
+            See the Potential Impact of Shelf Issues.
+          </h3>
+          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+            Estimate the potential commercial exposure from visible availability, stock and facing
+            issues using the business inputs you provide.
           </p>
         </div>
-        <Badge variant="outline" className="rounded-full capitalize">
-          {PLAN_TIER_LABELS[tier]} plan
-        </Badge>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <Badge variant="outline" className="rounded-full text-[10px] uppercase tracking-wide">
+            PRO FEATURE
+          </Badge>
+          {data && impact ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="size-8 rounded-lg"
+              title="Download Commercial Impact Data"
+              aria-label="Download Commercial Impact Data"
+              onClick={() => downloadCommercialImpactCsv(data)}
+            >
+              <Download className="size-3.5" />
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       <div className={cn("mt-4", locked && "select-none blur-sm")}>{body}</div>
@@ -939,9 +972,9 @@ export function FinancialImpactPanel({
       {locked && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/70 px-6 text-center backdrop-blur-[2px]">
           <Lock className="size-5 text-muted-foreground" />
-          <p className="text-sm font-medium">Financial impact is available on Pro plans</p>
+          <p className="text-sm font-medium">Commercial impact is available on Pro plans</p>
           <p className="max-w-sm text-xs text-muted-foreground">
-            Upgrade to Growth or Professional to see daily, weekly, and monthly lost-sales estimates.
+            Upgrade to Growth or Professional to see illustrative exposure estimates.
           </p>
           <Button asChild variant="brand" size="sm" className="rounded-xl">
             <Link to="/pricing">View plans</Link>
@@ -952,15 +985,83 @@ export function FinancialImpactPanel({
   );
 }
 
+function ExposureProgressionBar({ daily, weekly, monthly }: { daily: number; weekly: number; monthly: number }) {
+  const total = daily + weekly + monthly || 1;
+  const segments = [
+    { label: "Daily", value: daily, className: "bg-brand" },
+    { label: "7 Days", value: weekly, className: "bg-brand/70" },
+    { label: "30 Days", value: monthly, className: "bg-brand/45" },
+  ];
+  return (
+    <div className="space-y-2">
+      <div className="flex h-2.5 overflow-hidden rounded-full bg-muted">
+        {segments.map(({ label, value, className }) => (
+          <div
+            key={label}
+            className={cn("h-full transition-all", className)}
+            style={{ width: `${Math.max((value / total) * 100, value > 0 ? 4 : 0)}%` }}
+            title={`${label}: ${formatLostSales(value)}`}
+          />
+        ))}
+      </div>
+      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+        <span>Daily</span>
+        <span aria-hidden>→</span>
+        <span>7 Days</span>
+        <span aria-hidden>→</span>
+        <span>30 Days</span>
+      </div>
+    </div>
+  );
+}
+
+function SkuExposureChart({ rows }: { rows: CommercialImpactView["sku_rows"] }) {
+  if (!rows.length) return null;
+  const maxDaily = Math.max(...rows.map((r) => r.daily_loss_inr), 1);
+  return (
+    <div className="rounded-xl border border-border/70 bg-background px-4 py-3">
+      <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+        Estimated exposure by SKU
+      </p>
+      <ul className="mt-3 space-y-2.5">
+        {rows.slice(0, 8).map((row) => {
+          const pct = Math.max((row.daily_loss_inr / maxDaily) * 100, row.daily_loss_inr > 0 ? 6 : 0);
+          return (
+            <li key={`${row.brand}|${row.product}|${row.issue_type}`}>
+              <div className="flex items-baseline justify-between gap-2 text-xs">
+                <span className="truncate font-medium text-foreground">{row.product || row.label}</span>
+                <span className="shrink-0 tabular-nums font-semibold text-brand">
+                  {formatLostSales(row.daily_loss_inr)}
+                </span>
+              </div>
+              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full bg-brand" style={{ width: `${pct}%` }} />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 function FinancialImpactBody({
   impact,
-  competitorIntel,
+  view,
+  data: _data,
 }: {
   impact: FinancialImpact;
-  competitorIntel?: CompetitorSnapshot | null;
+  view: CommercialImpactView | null;
+  data?: ScanResult;
 }) {
   const level = impact.level ?? (impact.estimated_daily_lost_sales_inr > 0 ? 2 : 1);
-  const hasRupeeEstimate = level >= 2 && impact.estimated_daily_lost_sales_inr > 0;
+  const daily = view?.daily ?? impact.estimated_daily_lost_sales_inr;
+  const weekly = view?.weekly ?? impact.estimated_weekly_lost_sales_inr;
+  const monthly = view?.monthly ?? impact.estimated_monthly_lost_sales_inr;
+  const skuRows = view?.sku_rows ?? [];
+  const estimateStatus = view?.estimate_status ?? "Illustrative";
+  const showExposure = level >= 2;
+
   const riskLabel =
     impact.commercial_risk === "critical"
       ? "Critical"
@@ -970,74 +1071,96 @@ function FinancialImpactBody({
           ? "Medium"
           : "Low";
 
+  const exposureMetrics = [
+    {
+      label: "Daily exposure",
+      value: daily,
+      support: "Estimated daily exposure",
+      status: "Estimated" as const,
+    },
+    {
+      label: "7-day exposure",
+      value: weekly,
+      support: "Illustrative weekly run-rate",
+      status: "Illustrative" as const,
+    },
+    {
+      label: "30-day exposure",
+      value: monthly,
+      support: "Illustrative monthly run-rate",
+      status: "Illustrative" as const,
+    },
+  ];
+
   return (
-    <>
-      {level === 1 ? (
-        <div className="rounded-xl border border-border bg-surface px-4 py-3">
-          <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
-            Commercial risk
-          </p>
-          <p className="mt-1 text-xl font-semibold capitalize text-brand">{riskLabel}</p>
-          <p className="mt-2 text-xs text-muted-foreground">{impact.methodology}</p>
-        </div>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-3">
-          {[
-            { label: "Daily exposure", value: impact.estimated_daily_lost_sales_inr },
-            { label: "Weekly run-rate", value: impact.estimated_weekly_lost_sales_inr },
-            { label: "30-day run-rate", value: impact.estimated_monthly_lost_sales_inr },
-          ].map(({ label, value }) => (
-            <div key={label} className="rounded-xl border border-border bg-surface px-4 py-3">
-              <p className="text-[0.65rem] font-medium uppercase tracking-widest text-muted-foreground">
-                {label}
-              </p>
-              <p
-                className={cn(
-                  "mt-1 text-xl font-semibold tabular-nums",
-                  hasRupeeEstimate ? "text-destructive" : "text-accent-green",
-                )}
+    <div className="space-y-4">
+      {showExposure ? (
+        <>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {exposureMetrics.map(({ label, value, support, status }) => (
+              <div
+                key={label}
+                className="rounded-xl border border-border/70 bg-background px-4 py-3"
               >
-                {formatLostSales(value)}
-              </p>
-            </div>
-          ))}
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
+                    {label}
+                  </p>
+                  <span className="rounded-full bg-amber-500/12 px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-amber-800 dark:text-amber-200">
+                    {status}
+                  </span>
+                </div>
+                <p className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-brand">
+                  {formatLostSales(value)}
+                </p>
+                <p className="mt-1 text-[11px] text-muted-foreground">{support}</p>
+              </div>
+            ))}
+          </div>
+
+          <ExposureProgressionBar daily={daily} weekly={weekly} monthly={monthly} />
+        </>
+      ) : (
+        <div className="rounded-xl border border-border/70 bg-background px-4 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
+              Commercial risk
+            </p>
+            <span className="rounded-full bg-amber-500/12 px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-amber-800 dark:text-amber-200">
+              {estimateStatus}
+            </span>
+          </div>
+          <p className="mt-1 text-xl font-semibold capitalize text-brand">{riskLabel}</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Exposure estimates require sales velocity and price inputs for affected SKUs.
+          </p>
         </div>
       )}
-      <div className="mt-4 flex flex-wrap gap-4 text-sm">
-        <p>
-          <span className="text-muted-foreground">OOS SKUs:</span>{" "}
-          <span className="font-semibold tabular-nums">{impact.oos_sku_count}</span>
-        </p>
-        <p>
-          <span className="text-muted-foreground">At-risk SKUs:</span>{" "}
-          <span className="font-semibold tabular-nums">{impact.at_risk_sku_count}</span>
-        </p>
+
+      <div className="flex flex-wrap gap-2">
+        <span className="inline-flex items-center rounded-full border border-border/70 bg-background px-2.5 py-1 text-[11px]">
+          <span className="text-muted-foreground">OOS SKUs:</span>
+          <span className="ml-1 font-semibold tabular-nums text-destructive">{impact.oos_sku_count}</span>
+        </span>
+        <span className="inline-flex items-center rounded-full border border-border/70 bg-background px-2.5 py-1 text-[11px]">
+          <span className="text-muted-foreground">At-risk SKUs:</span>
+          <span className="ml-1 font-semibold tabular-nums">{impact.at_risk_sku_count}</span>
+        </span>
       </div>
-      {competitorIntel?.upper_hand?.length ? (
-        <div className="mt-4 space-y-2 border-t border-border pt-4">
-          <p className="text-xs font-medium uppercase tracking-widest text-brand">Competitor edge</p>
-          {competitorIntel.upper_hand.map((edge) => (
-            <div
-              key={edge.brand}
-              className="rounded-xl border border-brand/15 bg-brand-soft/25 px-4 py-3 text-sm"
-            >
-              <p className="font-medium">
-                {formatCompetitorBrandLabel(edge.brand, edge.different_category)}{" "}
-                <span className="tabular-nums text-muted-foreground">{edge.share.toFixed(1)}% share</span>
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">{edge.note}</p>
-            </div>
-          ))}
-        </div>
-      ) : null}
-      {level >= 2 ? (
-        <p className="mt-3 text-xs text-muted-foreground">
-          {impact.methodology}
-          {impact.source ? ` Source: ${impact.source.replace(/_/g, " ")}.` : ""}
-          {impact.assumption ? ` Assumption: ${impact.assumption}.` : ""}
-        </p>
-      ) : null}
-    </>
+
+      {skuRows.length > 0 ? <SkuExposureChart rows={skuRows} /> : null}
+
+      <p className="text-xs text-muted-foreground">
+        Estimate is based on the shelf issues detected and the sales and price inputs provided for
+        affected products.
+      </p>
+
+      <p className="rounded-lg border border-border/50 bg-muted/20 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+        Illustrative estimate only. This is not confirmed lost revenue. The estimate uses the sales
+        and price assumptions provided for affected products and should not be treated as historical
+        sales data or a sales forecast.
+      </p>
+    </div>
   );
 }
 
