@@ -25,9 +25,14 @@ import {
 } from "@/components/scan/DemoCategoryPicker";
 import { HomepageRolePicker } from "@/components/planogram/HomepageRolePicker";
 import {
+  MasterShelfSetupPanel,
+  type MasterSetupPhase,
+} from "@/components/planogram/MasterShelfSetupPanel";
+import {
   NewPlanogramWizard,
   type NewPlanogramWizardHandle,
 } from "@/components/planogram/NewPlanogramWizard";
+import type { MasterImportResult } from "@/lib/master-shelf-setup";
 import type { ShelfCategory } from "@/lib/categories.data";
 import {
   buildDemoOralCareScanContext,
@@ -54,6 +59,7 @@ import type { ScanContextState } from "@/lib/scan-context";
 import { cn } from "@/lib/utils";
 
 export type DemoPlanogramMode = "demo" | "custom" | "none";
+type CustomSetupPath = "choose" | "master" | "manual";
 
 const DEMO_PRODUCT_COUNT = new Set(DEMO_ORAL_CARE_ROWS.map((row) => row.sku)).size;
 
@@ -189,6 +195,9 @@ export function DemoScanSetupPanel({
 }: DemoScanSetupPanelProps) {
   const wizardRef = useRef<NewPlanogramWizardHandle>(null);
   const [startError, setStartError] = useState<string | null>(null);
+  const [customSetupPath, setCustomSetupPath] = useState<CustomSetupPath>("choose");
+  const [masterPhase, setMasterPhase] = useState<MasterSetupPhase>("upload");
+  const [masterImport, setMasterImport] = useState<MasterImportResult | null>(null);
   const [internalMode, setInternalMode] = useState<DemoPlanogramMode>(
     mode === "sample" ? "demo" : "none",
   );
@@ -233,6 +242,9 @@ export function DemoScanSetupPanel({
     if (next === "demo" && mode === "sample") {
       onScanContextChange(buildDemoOralCareScanContext(scanContext.auditRole));
     } else if (next === "custom") {
+      setCustomSetupPath("choose");
+      setMasterPhase("upload");
+      setMasterImport(null);
       if (!state.categoryName) return;
       onScanContextChange({
         ...scanContext,
@@ -272,7 +284,16 @@ export function DemoScanSetupPanel({
   }
 
   const showDemoPlanogram = mode === "sample" && planogramMode === "demo";
-  const showWizard = planogramMode === "custom";
+  const showMasterSetup =
+    homepageIntro &&
+    planogramMode === "custom" &&
+    customSetupPath !== "manual" &&
+    masterPhase !== "ready";
+  const showMasterReady =
+    homepageIntro && planogramMode === "custom" && masterPhase === "ready" && customSetupPath !== "manual";
+  const showWizard = planogramMode === "custom" && (!homepageIntro || customSetupPath === "manual");
+  const showManualSetupOption =
+    homepageIntro && planogramMode === "custom" && customSetupPath === "choose" && masterPhase === "upload";
   const uploadReady = mode === "upload" ? ready && hasPhoto : ready;
   const auditBlockReason = homepageIntro
     ? homepageCustomAuditBlockReason(
@@ -285,7 +306,8 @@ export function DemoScanSetupPanel({
   const canStart = uploadReady && !disabled && !auditBlockReason;
   /** Wizard, no-planogram, and demo cards include their own start actions on homepage. */
   const hideBottomStartButton =
-    homepageIntro && (showWizard || planogramMode === "none" || showDemoPlanogram);
+    homepageIntro &&
+    (showWizard || planogramMode === "none" || showDemoPlanogram || showMasterReady || showMasterSetup);
 
   function handleStart() {
     setStartError(null);
@@ -302,6 +324,8 @@ export function DemoScanSetupPanel({
       next = buildDemoOralCareScanContext(scanContext.auditRole);
     } else if (showWizard) {
       next = wizardRef.current?.flush() ?? scanContext;
+    } else if (planogramMode === "custom" && masterPhase === "ready") {
+      next = scanContext;
     } else {
       next = { ...scanContext, planogramRows: [] };
     }
@@ -674,6 +698,78 @@ export function DemoScanSetupPanel({
               <ArrowRight className="size-4" aria-hidden />
             </span>
           </Button>
+        </div>
+      ) : null}
+
+      {showMasterSetup ? (
+        <div className="mt-5 space-y-4">
+          <MasterShelfSetupPanel
+            role={auditRole}
+            disabled={disabled || !ready}
+            phase={masterPhase}
+            onPhaseChange={setMasterPhase}
+            importResult={masterImport}
+            onImportResult={setMasterImport}
+            canStartAudit={canStart}
+            onContextReady={(ctx) => {
+              onScanContextChange({
+                ...ctx,
+                auditRole: auditRole,
+                planogramMeta: {
+                  ...(ctx.planogramMeta ?? EMPTY_PLANOGRAM_META),
+                  category: ctx.planogramMeta?.category || state.categoryName,
+                  sub_category: ctx.planogramMeta?.sub_category || resolveSubCategoryLabel(state),
+                },
+              });
+              setCustomSetupPath("master");
+            }}
+            onStartAudit={handleStart}
+            onReviewSetup={() => {
+              setCustomSetupPath("manual");
+            }}
+            onReplace={() => {
+              setMasterPhase("upload");
+              setMasterImport(null);
+              setCustomSetupPath("choose");
+            }}
+          />
+          {showManualSetupOption ? (
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border/80 bg-muted/15 px-4 py-4 text-center">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Or</p>
+              <p className="text-sm text-muted-foreground">Prefer to set it up manually?</p>
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-xl"
+                disabled={disabled || !ready}
+                onClick={() => setCustomSetupPath("manual")}
+              >
+                Configure Step by Step
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {showMasterReady ? (
+        <div className="mt-5">
+          <MasterShelfSetupPanel
+            role={auditRole}
+            disabled={disabled}
+            phase="ready"
+            onPhaseChange={setMasterPhase}
+            importResult={masterImport}
+            onImportResult={setMasterImport}
+            canStartAudit={canStart}
+            onContextReady={onScanContextChange}
+            onStartAudit={handleStart}
+            onReviewSetup={() => setCustomSetupPath("manual")}
+            onReplace={() => {
+              setMasterPhase("upload");
+              setMasterImport(null);
+              setCustomSetupPath("choose");
+            }}
+          />
         </div>
       ) : null}
 
