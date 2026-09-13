@@ -104,7 +104,7 @@ const SECTIONS: NavSection[] = [
     label: "Scans",
     icon: ClipboardCheck,
     items: [
-      { kind: "leaf", label: "New Scan", to: "/scan", icon: Plus },
+      { kind: "leaf", label: "New Audit", to: "/scan", icon: Plus },
       {
         kind: "leaf",
         label: "Assigned to Me",
@@ -114,7 +114,7 @@ const SECTIONS: NavSection[] = [
       },
       {
         kind: "leaf",
-        label: "Scans I Assigned",
+        label: "Audits I Assigned",
         to: "/assigned-scans",
         search: { tab: "assignments" },
         managerOnly: true,

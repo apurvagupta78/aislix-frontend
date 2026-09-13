@@ -93,7 +93,7 @@ function Dashboard() {
         ) : (
           <>
             <Button asChild variant="subtle" size="sm" className="rounded-xl">
-              <Link to="/history">Scan history</Link>
+              <Link to="/history">Audit History</Link>
             </Button>
             <Button asChild variant="brand" size="sm" className="rounded-xl">
               <Link to="/scan">
