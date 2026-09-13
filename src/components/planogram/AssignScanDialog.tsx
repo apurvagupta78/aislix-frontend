@@ -242,4 +242,4 @@ export function AssignScanDialog({
       </DialogContent>
     </Dialog>
   );
-}'
+}

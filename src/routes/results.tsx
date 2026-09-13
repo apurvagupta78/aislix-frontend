@@ -386,4 +386,4 @@ function FailedState({ scanId, onRetried }: { scanId: string; onRetried: () => v
       </div>
     </div>
   );
-}'
+}

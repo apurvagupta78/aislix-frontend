@@ -342,4 +342,4 @@ export async function fetchScanStatus(
       ? { error_message: sanitizeUserMessage(data.error_message as string) }
       : {}),
   };
-}'
+}
