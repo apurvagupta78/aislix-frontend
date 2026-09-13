@@ -33,7 +33,7 @@ export const ROLE_PROFILES: Record<string, RoleProfile> = {
     role_id: "supermarket",
     label: "Supermarket",
     introduction:
-      "Evaluates on-shelf availability, planogram layout, mandatory assortment, shelf price labels, and active promotional execution.",
+      "Check availability, shelf placement, required products, prices and promotions.",
     primary_kpis: [
       { kpi_id: "osa", label: "On-Shelf Availability (OSA)", tooltip: "Listed SKUs visibly available / assessed." },
       { kpi_id: "planogram_compliance", label: "Planogram Compliance", tooltip: "Positions passing layout checks / assessed." },
@@ -45,7 +45,8 @@ export const ROLE_PROFILES: Record<string, RoleProfile> = {
   darkstore: {
     role_id: "darkstore",
     label: "Dark Store",
-    introduction: "Evaluates pick-location accuracy, planogram adherence, assortment, OSA, and facing counts.",
+    introduction:
+      "See whether products are available, in the right location, correctly placed, part of the required range and properly faced.",
     primary_kpis: [
       { kpi_id: "osa", label: "On-Shelf Availability (OSA)", tooltip: "Listed SKUs visibly available / assessed." },
       { kpi_id: "location_accuracy", label: "Location Accuracy", tooltip: "Occupied locations with approved SKUs only / assessed." },
@@ -57,7 +58,8 @@ export const ROLE_PROFILES: Record<string, RoleProfile> = {
   fmcg: {
     role_id: "fmcg",
     label: "FMCG Brand",
-    introduction: "Evaluates share of shelf, OSA, facing counts, planogram compliance, and promotional execution.",
+    introduction:
+      "Measure your brand's shelf presence, availability, facings, placement and promotions.",
     primary_kpis: [
       { kpi_id: "share_of_shelf", label: "Share of Shelf (SOS)", tooltip: "Brand linear shelf space / category total." },
       { kpi_id: "osa", label: "On-Shelf Availability (OSA)", tooltip: "Listed SKUs visibly available / assessed." },
@@ -69,7 +71,8 @@ export const ROLE_PROFILES: Record<string, RoleProfile> = {
   distributor: {
     role_id: "distributor",
     label: "Distributor",
-    introduction: "Evaluates MSL presence, OSA, planogram execution, price labels, and promotional visibility.",
+    introduction:
+      "Check outlet availability, must-stock products, shelf placement, prices and promotions.",
     primary_kpis: [
       { kpi_id: "osa", label: "On-Shelf Availability (OSA)", tooltip: "Listed SKUs visibly available / assessed." },
       { kpi_id: "msl_compliance", label: "Must-Stock List (MSL)", tooltip: "Required MSL SKUs present / assessed." },
@@ -81,7 +84,8 @@ export const ROLE_PROFILES: Record<string, RoleProfile> = {
   local: {
     role_id: "local",
     label: "Local Store",
-    introduction: "Evaluates OSA, mandatory assortment, facing counts, price labels, and promotional visibility.",
+    introduction:
+      "Check availability, required products, facings, prices and promotions.",
     primary_kpis: [
       { kpi_id: "osa", label: "On-Shelf Availability (OSA)", tooltip: "Listed SKUs visibly available / assessed." },
       { kpi_id: "assortment_compliance", label: "Assortment Compliance", tooltip: "Mandatory assortment SKUs present / assessed." },

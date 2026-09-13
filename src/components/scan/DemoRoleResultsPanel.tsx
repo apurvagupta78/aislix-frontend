@@ -133,7 +133,7 @@ export function DemoRoleResultsPanel({
           <div className="mb-3 flex shrink-0 items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
             <Timer className="size-3.5 text-brand" />
             <span>
-              Analysis completed in{" "}
+              AI Audit Complete ·{" "}
               <span className="font-semibold text-foreground">{elapsedSec}s</span>
             </span>
           </div>

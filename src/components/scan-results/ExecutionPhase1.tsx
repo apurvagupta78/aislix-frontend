@@ -32,7 +32,6 @@ import {
 import type { FinancialImpact } from "@/lib/scan-results";
 import { PLAN_TIER_LABELS, planTier } from "@/lib/plan-features";
 import type { ScanResult } from "@/lib/scan-results";
-import { formatScanDate } from "@/lib/scan-results";
 import { formatCompetitorBrandLabel, type CompetitorSnapshot } from "@/lib/brand-intel";
 import {
   allowedViewModes,
@@ -42,7 +41,19 @@ import {
   type ResultViewMode,
   type RoleFamily,
 } from "@/lib/customer-context";
-import { ROLE_TAB_THEME, normalizeAuditRoleTab } from "@/lib/role-audit-ui";
+import {
+  AUDIT_STATUS_DISPLAY,
+  KPI_STRIP_INTRO,
+  KPI_PLAIN_ENGLISH,
+  ROLE_TAB_THEME,
+  normalizeAuditRoleTab,
+  type AuditRoleTab,
+} from "@/lib/role-audit-ui";
+import {
+  buildAuditHeaderId,
+  buildAuditHeaderMeta,
+  buildAuditHeaderPrimary,
+} from "@/lib/audit-results-display";
 import { formatInr } from "@/lib/pricing";
 
 const severityStyles: Record<ActionCenterItem["severity"], string> = {
@@ -62,9 +73,13 @@ const severityDot: Record<ActionCenterItem["severity"], string> = {
 export function ExecutionAuditHeader({
   data,
   loading,
+  activeRole,
+  demoMode = false,
 }: {
   data?: ScanResult;
   loading?: boolean;
+  activeRole?: AuditRoleTab;
+  demoMode?: boolean;
 }) {
   if (loading) {
     return (
@@ -74,18 +89,15 @@ export function ExecutionAuditHeader({
       </div>
     );
   }
-  const context = [data?.store, data?.location, data?.scan_sub_category || data?.scan_category]
-    .filter(Boolean)
-    .join(" · ");
+  const primary = buildAuditHeaderPrimary(data);
+  const meta = buildAuditHeaderMeta(data, { demoMode, activeRole });
+  const auditId = buildAuditHeaderId(data);
   return (
     <div className="card-surface p-5 sm:p-6">
-      <p className="text-xs font-medium uppercase tracking-widest text-brand">Aislix shelf audit</p>
-      <h2 className="mt-2 text-lg font-semibold tracking-tight sm:text-xl">
-        {context || "Shelf scan"}
-      </h2>
-      {data?.created_at && (
-        <p className="mt-1 text-sm text-muted-foreground">{formatScanDate(data.created_at)}</p>
-      )}
+      <p className="text-xs font-medium uppercase tracking-widest text-brand">AI shelf audit</p>
+      <h2 className="mt-2 text-lg font-semibold tracking-tight sm:text-xl">{primary}</h2>
+      {meta ? <p className="mt-1 text-sm text-muted-foreground">{meta}</p> : null}
+      {auditId ? <p className="mt-1 text-[11px] text-muted-foreground/80">{auditId}</p> : null}
     </div>
   );
 }
@@ -280,12 +292,14 @@ export function ExecutionKpiStripPanel({
   compact = false,
   view = "execution",
   customerType,
+  showIntro = false,
 }: {
   data?: ScanResult;
   loading?: boolean;
   compact?: boolean;
   view?: ResultViewMode;
   customerType?: CustomerType | string | null;
+  showIntro?: boolean;
 }) {
   const kpis = buildKpiStrip(data, customerType);
   const roleTheme = customerType
@@ -296,47 +310,78 @@ export function ExecutionKpiStripPanel({
     ? "grid-cols-2 sm:grid-cols-3"
     : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5";
   return (
-    <div className={cn("grid gap-2.5", gridCols)}>
-      {kpis.map((kpi) => (
-        <div
-          key={kpi.key}
-          className={cn(
-            "rounded-xl border border-border border-l-4 px-4 py-3 shadow-sm",
-            KPI_ACCENT[kpi.key] ?? cn(theme.accentSoft, "border-l-brand/60"),
-          )}
-          title={kpi.detail}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
-              {kpi.label}
-            </p>
-            {kpi.audit_status ? (
-              <Badge
-                variant="secondary"
-                className={cn("shrink-0 text-[0.6rem] capitalize", AUDIT_STATUS_BADGE[kpi.audit_status])}
-              >
-                {kpi.audit_status.replace(/_/g, " ")}
-              </Badge>
-            ) : kpi.state && kpi.state !== "available" ? (
-              <Badge variant="secondary" className="shrink-0 text-[0.6rem]">
-                {metricLabel(kpi.state)}
-              </Badge>
-            ) : null}
-          </div>
-          {loading ? (
-            <Skeleton className="mt-2 h-6 w-16" />
-          ) : (
-            <>
-              <p className={cn("mt-1 text-base font-semibold tabular-nums leading-snug sm:text-lg", theme.accentText)}>
-                {kpi.value}
-              </p>
-              {kpi.coverage_label ? (
-                <p className="mt-1 text-[0.65rem] text-muted-foreground">{kpi.coverage_label}</p>
-              ) : null}
-            </>
-          )}
+    <div className="space-y-3">
+      {showIntro ? (
+        <div>
+          <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
+            {KPI_STRIP_INTRO.eyebrow}
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            {KPI_STRIP_INTRO.description}
+          </p>
         </div>
-      ))}
+      ) : null}
+      <div className={cn("grid gap-2.5", gridCols)}>
+        {kpis.map((kpi) => {
+          const plainEnglish = KPI_PLAIN_ENGLISH[kpi.key as keyof typeof KPI_PLAIN_ENGLISH];
+          const statusLabel = kpi.audit_status
+            ? AUDIT_STATUS_DISPLAY[kpi.audit_status] ?? kpi.audit_status.replace(/_/g, " ")
+            : null;
+          return (
+            <div
+              key={kpi.key}
+              className={cn(
+                "rounded-xl border border-border border-l-4 px-4 py-3 shadow-sm",
+                KPI_ACCENT[kpi.key] ?? cn(theme.accentSoft, "border-l-brand/60"),
+              )}
+              title={kpi.detail}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {kpi.label}
+                </p>
+                {statusLabel ? (
+                  <Badge
+                    variant="secondary"
+                    className={cn(
+                      "shrink-0 text-[0.6rem]",
+                      kpi.audit_status ? AUDIT_STATUS_BADGE[kpi.audit_status] : "",
+                    )}
+                  >
+                    {statusLabel}
+                  </Badge>
+                ) : kpi.state && kpi.state !== "available" ? (
+                  <Badge variant="secondary" className="shrink-0 text-[0.6rem]">
+                    {metricLabel(kpi.state)}
+                  </Badge>
+                ) : null}
+              </div>
+              {loading ? (
+                <Skeleton className="mt-2 h-6 w-16" />
+              ) : (
+                <>
+                  <p
+                    className={cn(
+                      "mt-1 text-base font-semibold tabular-nums leading-snug sm:text-lg",
+                      theme.accentText,
+                    )}
+                  >
+                    {kpi.value}
+                  </p>
+                  {plainEnglish ? (
+                    <p className="mt-0.5 text-[0.65rem] leading-snug text-muted-foreground">
+                      {plainEnglish}
+                    </p>
+                  ) : null}
+                  {kpi.coverage_label ? (
+                    <p className="mt-1 text-[0.65rem] text-muted-foreground">{kpi.coverage_label}</p>
+                  ) : null}
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

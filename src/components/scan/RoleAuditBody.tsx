@@ -134,7 +134,14 @@ function SectionBlock({
 }) {
   switch (sectionKey) {
     case "audit_header":
-      return <ExecutionAuditHeader data={data} loading={loading} />;
+      return (
+        <ExecutionAuditHeader
+          data={data}
+          loading={loading}
+          activeRole={activeRole}
+          demoMode={demoMode}
+        />
+      );
 
     case "role_intro":
       return (
@@ -153,6 +160,7 @@ function SectionBlock({
           loading={loading}
           compact={compact}
           customerType={activeRole}
+          showIntro
         />
       );
 

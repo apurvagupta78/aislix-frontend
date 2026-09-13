@@ -287,7 +287,11 @@ export function landingToScanResult(landing: LandingScanResult): ScanResult {
 
     scan_category: landing.category,
 
+    scan_sub_category: landing.sub_category_label ?? landing.sub_category,
+
     location: landing.shelf_label,
+
+    created_at: landing.scanned_at,
 
   };
 

@@ -345,7 +345,21 @@ function formatAuditKpiValue(kpi: AuditKpiResult): string {
   return formatPercent(kpi.value) ?? `${Math.round(kpi.value)}%`;
 }
 
+/** Display-only — align badge with assessment coverage without changing stored KPI status. */
+function resolveDisplayAuditStatus(kpi: AuditKpiResult): AuditKpiResult["status"] {
+  if (
+    kpi.status === "complete" &&
+    kpi.coverage_percent != null &&
+    Number.isFinite(kpi.coverage_percent) &&
+    Math.round(kpi.coverage_percent) !== 100
+  ) {
+    return "partial";
+  }
+  return kpi.status;
+}
+
 function auditKpiToMetric(kpi: AuditKpiResult): KpiMetric {
+  const displayStatus = resolveDisplayAuditStatus(kpi);
   const coverage =
     kpi.coverage_percent != null && Number.isFinite(kpi.coverage_percent)
       ? `Coverage: ${Math.round(kpi.coverage_percent)}%`
@@ -357,7 +371,7 @@ function auditKpiToMetric(kpi: AuditKpiResult): KpiMetric {
     label: kpi.label,
     value: formatAuditKpiValue(kpi),
     numeric: kpi.unit === "percent" && kpi.value != null ? kpi.value : undefined,
-    state: auditStatusToMetricState(kpi.status),
+    state: auditStatusToMetricState(displayStatus),
     detail: kpi.tooltip,
     coverage_percent: kpi.coverage_percent,
     coverage_label: [coverage, excluded].filter(Boolean).join(" · ") || undefined,
@@ -365,7 +379,7 @@ function auditKpiToMetric(kpi: AuditKpiResult): KpiMetric {
     numerator: kpi.numerator,
     denominator: kpi.denominator,
     unit: kpi.unit,
-    audit_status: kpi.status,
+    audit_status: displayStatus,
   };
 }
 

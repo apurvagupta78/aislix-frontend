@@ -126,6 +126,37 @@ export function roleIntroduction(role: AuditRoleTab): string {
   return getRoleProfile(role).introduction;
 }
 
+/** One-line plain-English KPI summaries for the results strip (display only). */
+export const KPI_PLAIN_ENGLISH: Record<AuditKpiId, string> = {
+  osa: "Products visibly available",
+  location_accuracy: "Products in the right location",
+  planogram_compliance: "Shelf matches the expected layout",
+  assortment_compliance: "Required products are present",
+  facing_count: "Visible facings vs expected",
+  share_of_shelf: "Your brand's share of shelf space",
+  price_compliance: "Prices match what should be displayed",
+  promotional_compliance: "Promotions visible as expected",
+  msl_compliance: "Must-stock products are present",
+};
+
+export function kpiPlainEnglish(kpiId: string): string | undefined {
+  return KPI_PLAIN_ENGLISH[kpiId as AuditKpiId];
+}
+
+export const KPI_STRIP_INTRO = {
+  eyebrow: "Your shelf at a glance",
+  description:
+    "These scores show how well the shelf matches the expected setup for this audit. Click any KPI to see the evidence behind the result.",
+} as const;
+
+export const AUDIT_STATUS_DISPLAY: Record<string, string> = {
+  complete: "Complete",
+  partial: "Partial",
+  not_assessable: "Not assessable",
+  not_applicable: "Not applicable",
+  not_configured: "Not configured",
+};
+
 export function primaryKpiIds(role: AuditRoleTab): AuditKpiId[] {
   return getRoleProfile(role).primary_kpis.map((k) => k.kpi_id);
 }

@@ -957,6 +957,8 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
   const withKpis = attachAuditKpiDashboards(
     {
       ...result,
+      scan_category: result.scan_category || ctx.planogramMeta?.category,
+      scan_sub_category: result.scan_sub_category || ctx.planogramMeta?.sub_category,
       inventory: fullInventory,
       financial_impact,
       executive_summary,
