@@ -31,6 +31,7 @@ export function getHomepageDemoPreviewStats(): HomepageDemoPreviewStats {
     inventory.map((item, index) => ({
       ...item,
       id: `demo-${index}`,
+      brand: item.brand ?? "Unknown",
       name: item.product_name ?? item.product ?? "Product",
       quantity: item.quantity ?? 0,
       confidence: 1,
