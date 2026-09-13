@@ -1,7 +1,6 @@
 import { Fragment } from "react";
 import { ArrowRight, Check, Minus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { trackEvent, AnalyticsEvents } from "@/lib/analytics";
 import { currencyList, type CurrencyCode } from "@/lib/display-currency";
@@ -26,7 +25,16 @@ import {
   type PlanId,
 } from "@/lib/plan-entitlements";
 
-const FEATURE_AREA_MIN_H = "min-h-[10.5rem]";
+const SALES_CTA = "Talk to Sales for Custom Package";
+const CARD_FEATURES = 6;
+
+const CARD_BLURB: Record<Exclude<PlanId, "enterprise">, string> = {
+  free: "Try Aislix before you commit.",
+  payg: "Pay only when you audit.",
+  starter: "For local stores and small teams.",
+  growth: "For growing retail and field teams.",
+  professional: "For larger retail and FMCG teams.",
+};
 
 export function CycleToggle({
   cycle,
@@ -40,7 +48,7 @@ export function CycleToggle({
   return (
     <div
       className={cn(
-        "inline-flex min-w-0 items-center gap-0.5 rounded-full border border-border/60 bg-white p-1 shadow-sm",
+        "inline-flex items-center rounded-full border border-border/70 bg-white p-1 shadow-sm",
         className,
       )}
       role="group"
@@ -53,17 +61,15 @@ export function CycleToggle({
           aria-pressed={cycle === c}
           onClick={() => onChange(c)}
           className={cn(
-            "rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all sm:px-4 sm:text-sm",
+            "rounded-full px-4 py-1.5 text-sm font-medium transition-colors",
             cycle === c
-              ? "bg-brand text-brand-foreground shadow-sm"
+              ? "bg-brand text-brand-foreground"
               : "text-muted-foreground hover:text-foreground",
           )}
         >
           {c === "monthly" ? "Monthly" : "Annual"}
           {c === "annual" && cycle === "annual" ? (
-            <span className="ml-1.5 rounded-full bg-white/20 px-1.5 py-0.5 text-[0.65rem] font-semibold">
-              Save {ANNUAL_DISCOUNT_PERCENT}%
-            </span>
+            <span className="ml-1.5 text-xs opacity-90">Save {ANNUAL_DISCOUNT_PERCENT}%</span>
           ) : null}
         </button>
       ))}
@@ -77,70 +83,33 @@ function formatControlValue(value: number | null | undefined): string {
 }
 
 function singularLabel(count: number | null | undefined, singular: string, plural: string): string {
-  if (count === 1) return singular;
-  return plural;
+  return count === 1 ? singular : plural;
 }
 
-type LimitLine = { bold: string; label: string };
-
-function buildLimitLines(plan: PlanDefinition): LimitLine[] {
+function limitLines(plan: PlanDefinition): string[] {
   const { audits, users, stores, masterSetups } = plan.controls;
-
-  if (plan.payAsYouGo) {
-    return [
-      { bold: "Pay per", label: "completed audit" },
-      {
-        bold: formatControlValue(users.value),
-        label: singularLabel(users.value, "user", "users"),
-      },
-      {
-        bold: formatControlValue(stores.value),
-        label: singularLabel(stores.value, "store", "stores"),
-      },
-      {
-        bold: formatControlValue(masterSetups.value),
-        label: singularLabel(masterSetups.value, "master setup", "master setups"),
-      },
-    ];
-  }
+  const first = plan.payAsYouGo
+    ? "Pay per completed audit"
+    : plan.quotaPeriod === "rolling_24h"
+      ? `${formatControlValue(audits.value)} audits / 24 hours`
+      : `${formatControlValue(audits.value)} audits / month`;
 
   return [
-    {
-      bold: formatControlValue(audits.value),
-      label:
-        plan.quotaPeriod === "rolling_24h" ? "AI audits / 24 hours" : "AI audits / month",
-    },
-    {
-      bold: formatControlValue(users.value),
-      label: singularLabel(users.value, "user", "users"),
-    },
-    {
-      bold: formatControlValue(stores.value),
-      label: singularLabel(stores.value, "store", "stores"),
-    },
-    {
-      bold: formatControlValue(masterSetups.value),
-      label: singularLabel(masterSetups.value, "master setup", "master setups"),
-    },
+    first,
+    `${formatControlValue(users.value)} ${singularLabel(users.value, "user", "users")}`,
+    `${formatControlValue(stores.value)} ${singularLabel(stores.value, "store", "stores")}`,
+    `${formatControlValue(masterSetups.value)} ${singularLabel(masterSetups.value, "master setup", "master setups")}`,
   ];
 }
 
-function PlanLimits({ plan }: { plan: PlanDefinition }) {
-  const lines = buildLimitLines(plan);
+function FeatureRow({ text }: { text: string }) {
   return (
-    <ul className="mt-4 min-w-0 space-y-1.5" aria-label={`${plan.name} plan limits`}>
-      {lines.map((line) => (
-        <li
-          key={`${line.bold}-${line.label}`}
-          className="flex min-w-0 gap-2 text-xs leading-snug text-muted-foreground sm:text-sm"
-        >
-          <Check className="mt-0.5 size-3.5 shrink-0 text-accent-green" aria-hidden />
-          <span className="min-w-0 break-words [overflow-wrap:anywhere]">
-            {line.bold} {line.label}
-          </span>
-        </li>
-      ))}
-    </ul>
+    <li className="grid grid-cols-[16px_minmax(0,1fr)] items-start gap-2.5">
+      <Check className="mt-0.5 size-4 shrink-0 text-accent-green" aria-hidden />
+      <span className="text-[13px] leading-5 text-muted-foreground [overflow-wrap:break-word] [word-break:normal] hyphens-none">
+        {text}
+      </span>
+    </li>
   );
 }
 
@@ -154,12 +123,18 @@ function PlanPrice({
   currency: CurrencyCode;
 }) {
   const amount = displayPrice(plan, cycle, currency);
-  const period = plan.payAsYouGo ? "per completed AI audit" : plan.periodLabel.replace(/^\//, "").trim();
+  const period = plan.payAsYouGo ? "per completed audit" : "per month";
+  const saving = annualSavingInr(plan);
 
   return (
-    <div className="mt-4 min-w-0">
-      <p className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">{amount}</p>
-      {period ? <p className="mt-0.5 text-xs text-muted-foreground sm:text-sm">{period}</p> : null}
+    <div className="min-h-[5.75rem]">
+      <p className="text-[2rem] font-semibold leading-none tracking-tight text-foreground">{amount}</p>
+      <p className="mt-2 text-[13px] leading-5 text-muted-foreground">{period}</p>
+      {cycle === "annual" && saving > 0 && !plan.payAsYouGo && !plan.contactSales ? (
+        <p className="mt-1 text-xs text-accent-green">Save {formatPrice(saving, currency)} / year</p>
+      ) : plan.payAsYouGo ? (
+        <p className="mt-1 text-xs text-muted-foreground">Only completed audits are billed.</p>
+      ) : null}
     </div>
   );
 }
@@ -180,73 +155,54 @@ export function PlanCard({
   currency?: CurrencyCode;
 }) {
   const isCurrent = currentPlanId === plan.id;
-  const saving = annualSavingInr(plan);
-  const isPayg = plan.payAsYouGo;
-  const isFree = plan.id === "free";
-  const features = plan.features.slice(0, isFree ? 8 : 10);
+  const isPayg = Boolean(plan.payAsYouGo);
+  const blurb = CARD_BLURB[plan.id as Exclude<PlanId, "enterprise">] ?? plan.description;
+  const features = plan.features.slice(0, CARD_FEATURES);
+  const ctaLabel = isPayg ? "Start Pay as You Go" : plan.cta;
 
   return (
     <article
       className={cn(
-        "relative flex h-full min-w-0 flex-col rounded-2xl border bg-white px-5 pb-5 pt-6 shadow-sm sm:px-6 sm:pb-6 sm:pt-7",
+        "relative flex h-full min-w-0 flex-col rounded-2xl border bg-white px-6 pb-6 pt-8",
         plan.popular
-          ? "z-10 border-2 border-brand shadow-lg ring-4 ring-brand/10"
-          : isPayg
-            ? "border-brand/30"
-            : "border-border/60",
+          ? "border-brand shadow-[0_12px_40px_-20px_rgba(15,23,42,0.35)]"
+          : "border-border/70 shadow-sm",
       )}
     >
-      {plan.popular ? (
-        <Badge className="absolute -top-3 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-brand px-3 py-0.5 text-[10px] font-semibold text-brand-foreground hover:bg-brand">
-          <Sparkles className="mr-1 inline size-3" aria-hidden />
-          Most Popular
-        </Badge>
-      ) : null}
-
-      <div className={cn("flex min-w-0 flex-col", plan.popular && "pt-1")}>
-        <div className="flex min-w-0 items-start justify-between gap-2">
-          <h3 className="text-base font-bold tracking-tight text-foreground">{plan.name}</h3>
-          {isCurrent ? (
-            <Badge variant="secondary" className="shrink-0 rounded-full text-[10px]">
-              Current
-            </Badge>
-          ) : null}
-        </div>
-
-        <p className="mt-1.5 min-h-[2.5rem] text-xs leading-relaxed text-muted-foreground sm:text-sm">
-          {plan.description}
-        </p>
-
-        <PlanPrice plan={plan} cycle={cycle} currency={currency} />
-
-        {cycle === "annual" && saving > 0 && !isPayg && !plan.contactSales ? (
-          <p className="mt-1 text-[11px] font-medium text-accent-green">
-            Save {formatPrice(saving, currency)} a year
-          </p>
+      <div className="mb-4 flex h-6 items-center">
+        {plan.popular ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-0.5 text-[11px] font-medium text-brand-foreground">
+            <Sparkles className="size-3" aria-hidden />
+            Most Popular
+          </span>
+        ) : isCurrent ? (
+          <span className="text-[11px] font-medium text-muted-foreground">Current plan</span>
         ) : null}
-
-        {isPayg ? (
-          <p className="mt-1 text-[11px] text-muted-foreground">Only completed AI audits are billed.</p>
-        ) : (
-          <div className="mt-1 min-h-[1rem]" aria-hidden />
-        )}
-
-        <PlanLimits plan={plan} />
       </div>
 
-      <ul className={cn("mt-3 min-w-0 flex-1 space-y-1.5", FEATURE_AREA_MIN_H)}>
-        {features.map((feature) => (
-          <li key={feature} className="flex min-w-0 gap-2 text-xs leading-snug text-muted-foreground sm:text-sm">
-            <Check className="mt-0.5 size-3.5 shrink-0 text-accent-green" aria-hidden />
-            <span className="min-w-0 break-words [overflow-wrap:anywhere]">{feature}</span>
-          </li>
+      <h3 className="text-lg font-semibold tracking-tight text-foreground">{plan.name}</h3>
+      <p className="mt-2 line-clamp-2 min-h-10 text-[13px] leading-5 text-muted-foreground">{blurb}</p>
+
+      <div className="mt-6">
+        <PlanPrice plan={plan} cycle={cycle} currency={currency} />
+      </div>
+
+      <ul className="mt-6 space-y-2.5" aria-label={`${plan.name} plan limits`}>
+        {limitLines(plan).map((line) => (
+          <FeatureRow key={line} text={line} />
         ))}
       </ul>
 
-      <div className="mt-auto min-w-0 pt-5">
+      <ul className="mt-5 min-h-[9.75rem] flex-1 space-y-2.5 border-t border-border/50 pt-5">
+        {features.map((feature) => (
+          <FeatureRow key={feature} text={feature} />
+        ))}
+      </ul>
+
+      <div className="mt-auto pt-6">
         <Button
-          variant={plan.popular || isPayg ? "brand" : isCurrent ? "soft" : "subtle"}
-          className="h-10 w-full min-w-0 rounded-xl px-3 text-xs font-semibold sm:text-sm"
+          variant={plan.popular || isPayg ? "brand" : "subtle"}
+          className="h-11 w-full rounded-xl px-3 text-sm font-medium"
           disabled={isCurrent || pending}
           onClick={() => {
             trackEvent(AnalyticsEvents.PricingPlanClick, {
@@ -257,7 +213,7 @@ export function PlanCard({
             onSelect?.(plan);
           }}
         >
-          {isCurrent ? "Current plan" : pending ? "Redirecting…" : plan.cta}
+          {isCurrent ? "Current plan" : pending ? "Redirecting…" : ctaLabel}
         </Button>
       </div>
     </article>
@@ -278,20 +234,18 @@ export function PricingGrid({
   currency?: CurrencyCode;
 }) {
   return (
-    <div className="overflow-visible rounded-2xl border border-border/60 bg-white/50 p-4 shadow-sm sm:p-6">
-      <div className="grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 xl:gap-4">
-        {SUBSCRIPTION_PLANS.map((plan) => (
-          <PlanCard
-            key={plan.id}
-            plan={plan}
-            cycle={cycle}
-            currentPlanId={currentPlanId}
-            onSelect={onSelect}
-            pending={pendingPlanId === plan.id}
-            currency={currency}
-          />
-        ))}
-      </div>
+    <div className="grid min-w-0 grid-cols-1 items-stretch gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+      {SUBSCRIPTION_PLANS.map((plan) => (
+        <PlanCard
+          key={plan.id}
+          plan={plan}
+          cycle={cycle}
+          currentPlanId={currentPlanId}
+          onSelect={onSelect}
+          pending={pendingPlanId === plan.id}
+          currency={currency}
+        />
+      ))}
     </div>
   );
 }
@@ -303,48 +257,37 @@ export function EnterpriseSection({
   onSelect?: (plan: PlanDefinition) => void;
   pending?: boolean;
 }) {
-  const enterprise = ENTERPRISE_PLAN;
-
   return (
-    <section className="min-w-0 rounded-2xl border border-border/60 bg-white p-6 shadow-sm sm:p-8">
-      <div className="mx-auto max-w-3xl text-center">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand">Enterprise</p>
-        <h3 className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-          Custom pricing for larger retail operations.
-        </h3>
-        <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Need more audits, stores, users, integrations or custom workflows? Talk to our team about a
-          plan built around your operation.
-        </p>
-      </div>
-
-      <ul className="mx-auto mt-6 grid min-w-0 max-w-3xl gap-x-8 gap-y-1.5 sm:grid-cols-2">
+    <section className="rounded-2xl border border-border/70 bg-white px-6 py-10 text-center shadow-sm sm:px-10">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Enterprise</p>
+      <h3 className="mt-3 text-2xl font-semibold tracking-tight text-foreground">
+        Custom pricing for larger retail operations
+      </h3>
+      <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+        Need more audits, stores, users, integrations or custom workflows? We’ll build a package
+        around your operation.
+      </p>
+      <ul className="mx-auto mt-8 grid max-w-3xl gap-x-10 gap-y-3 text-left sm:grid-cols-2">
         {[
           "Custom AI audit volume",
-          "Custom users, stores and master shelf setups",
+          "Custom users, stores and master setups",
           "Advanced permissions and SSO",
           "API integrations",
           "Custom KPI configuration and reporting",
           "Dedicated onboarding, SLA and account management",
         ].map((line) => (
-          <li key={line} className="flex min-w-0 gap-2 text-sm text-muted-foreground">
-            <Check className="mt-0.5 size-3.5 shrink-0 text-accent-green" aria-hidden />
-            <span>{line}</span>
-          </li>
+          <FeatureRow key={line} text={line} />
         ))}
       </ul>
-
-      <div className="mt-8 flex flex-col items-center gap-2">
-        <Button
-          variant="brand"
-          className="h-11 rounded-xl px-6 text-sm font-semibold"
-          disabled={pending}
-          onClick={() => onSelect?.(enterprise)}
-        >
-          Talk to Sales for Custom Pricing
-          <ArrowRight className="size-4" aria-hidden />
-        </Button>
-      </div>
+      <Button
+        variant="brand"
+        className="mt-8 h-11 rounded-xl px-6 text-sm font-medium"
+        disabled={pending}
+        onClick={() => onSelect?.(ENTERPRISE_PLAN)}
+      >
+        {pending ? "Redirecting…" : SALES_CTA}
+        <ArrowRight className="size-4" aria-hidden />
+      </Button>
     </section>
   );
 }
@@ -358,16 +301,16 @@ function Cell({ value }: { value: string | boolean }) {
 export function ComparisonTable() {
   const ids = PLAN_DEFINITIONS.map((p) => p.id);
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/60 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-border/70 bg-white shadow-sm">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[56rem] border-collapse text-left">
           <thead>
             <tr className="border-b border-border/60 bg-muted/10">
-              <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
                 Feature
               </th>
               {PLAN_DEFINITIONS.map((p) => (
-                <th key={p.id} className="px-3 py-3 text-center text-xs font-semibold">
+                <th key={p.id} className="px-3 py-3 text-center text-sm font-semibold">
                   <span className={p.popular ? "text-brand" : undefined}>{p.name}</span>
                 </th>
               ))}
@@ -379,14 +322,14 @@ export function ComparisonTable() {
                 <tr className="bg-brand-soft/30">
                   <td
                     colSpan={ids.length + 1}
-                    className="px-4 py-2 text-[10px] font-semibold uppercase tracking-widest text-brand"
+                    className="px-4 py-2 text-[11px] font-semibold uppercase tracking-widest text-brand"
                   >
                     {group.group}
                   </td>
                 </tr>
                 {group.rows.map((row) => (
                   <tr key={`${group.group}-${row.label}`} className="border-b border-border/40 last:border-0">
-                    <td className="px-4 py-2.5 text-xs font-medium text-foreground">{row.label}</td>
+                    <td className="px-4 py-2.5 text-sm text-foreground">{row.label}</td>
                     {ids.map((id) => (
                       <td key={id} className="px-3 py-2.5 text-center">
                         <Cell value={row.values[id]} />
@@ -417,7 +360,7 @@ export function CurrencySelect({
       <SelectTrigger
         aria-label="Display currency"
         className={cn(
-          "h-9 w-[7.25rem] shrink-0 rounded-full border-border/60 bg-white text-xs font-semibold shadow-sm",
+          "h-9 w-[7.5rem] rounded-full border-border/70 bg-white text-sm font-medium shadow-sm",
           className,
         )}
       >
@@ -442,13 +385,13 @@ export function PricingBottomActions({
   onSales: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
-      <Button variant="subtle" className="rounded-xl text-sm font-semibold" onClick={onCompare}>
-        Compare Every Feature
+    <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
+      <Button variant="subtle" className="h-11 rounded-xl px-5 text-sm font-medium" onClick={onCompare}>
+        Compare every feature
         <ArrowRight className="size-4" aria-hidden />
       </Button>
-      <Button variant="brand" className="rounded-xl text-sm font-semibold" onClick={onSales}>
-        Talk to Sales for Custom Pricing
+      <Button variant="brand" className="h-11 rounded-xl px-5 text-sm font-medium" onClick={onSales}>
+        {SALES_CTA}
         <ArrowRight className="size-4" aria-hidden />
       </Button>
     </div>

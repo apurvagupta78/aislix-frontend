@@ -271,7 +271,7 @@ function Landing() {
       <HomeLeadCapture />
 
       <section id="pricing" className="border-t border-border py-24">
-        <div className="mx-auto max-w-6xl px-6 text-center">
+        <div className="mx-auto max-w-[90rem] px-6 text-center sm:px-8">
           <p className="text-xs font-medium uppercase tracking-widest text-brand">Pricing</p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
             Plans that scale from one local store to a national chain.
@@ -300,7 +300,9 @@ function Landing() {
               </Link>
             </Button>
             <Button asChild variant="ghost" className="rounded-xl">
-              <Link to="/contact" search={{ subject: "Sales enquiry" }}>Talk to sales</Link>
+              <Link to="/contact" search={{ subject: "Sales enquiry" }}>
+                Talk to Sales for Custom Package
+              </Link>
             </Button>
           </div>
         </div>
