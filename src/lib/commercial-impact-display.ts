@@ -3,16 +3,18 @@
  */
 
 import {
-  compareDemoOralCarePlanogram,
   comparePlanogramToInventory,
   computePlanogramFinancialGaps,
   type FinancialGapLine,
   type InventoryFacing,
   type PlanogramMatchResult,
 } from "@/lib/demo-planogram-match";
+import {
+  compareDemoOralCarePlanogram,
+  DEMO_ORAL_CARE_META,
+  isDemoOralCareResult,
+} from "@/lib/demo-oral-care-planogram";
 import { planogramRowsFromResult } from "@/lib/execution-metrics";
-import { isDemoOralCareResult } from "@/lib/demo-oral-care-planogram";
-import { DEMO_ORAL_CARE_META } from "@/lib/demo-oral-care-planogram";
 import type { PlanogramRow } from "@/lib/planogram";
 import type { FinancialImpact, ScanResult } from "@/lib/scan-results";
 import { resolveFinancialImpact } from "@/lib/scan-execution";

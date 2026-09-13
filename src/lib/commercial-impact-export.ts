@@ -9,12 +9,11 @@ import {
 } from "@/lib/commercial-impact-display";
 import { downloadCsvFile } from "@/lib/kpi-details-csv";
 import { planogramRowsFromResult } from "@/lib/execution-metrics";
+import { comparePlanogramToInventory, type InventoryFacing } from "@/lib/demo-planogram-match";
 import {
   compareDemoOralCarePlanogram,
-  comparePlanogramToInventory,
-  type InventoryFacing,
-} from "@/lib/demo-planogram-match";
-import { isDemoOralCareResult } from "@/lib/demo-oral-care-planogram";
+  isDemoOralCareResult,
+} from "@/lib/demo-oral-care-planogram";
 import type { ScanResult } from "@/lib/scan-results";
 import { resolveFinancialImpact } from "@/lib/scan-execution";
 
