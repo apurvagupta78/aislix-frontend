@@ -70,7 +70,7 @@ export type InventoryItem = {
   shelf_position?: string;
 };
 
-export type BrandShare = { brand: string; share: number };
+export type BrandShare = { brand: string; share: number; quantity?: number };
 export type ConfidenceBucket = { bucket: string; count: number };
 export type CategorySlice = { category: string; count: number };
 export type QuantityBucket = { bucket: string; count: number };

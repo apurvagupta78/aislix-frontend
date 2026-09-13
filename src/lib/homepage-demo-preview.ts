@@ -27,7 +27,16 @@ export function getHomepageDemoPreviewStats(): HomepageDemoPreviewStats {
   const match = compareDemoOralCarePlanogram();
   const inventory = buildDemoPositionInventory();
   const ctx = buildDemoOralCareScanContext();
-  const intel = buildDemoCompetitorIntel(inventory, ctx);
+  const intel = buildDemoCompetitorIntel(
+    inventory.map((item, index) => ({
+      ...item,
+      id: `demo-${index}`,
+      name: item.product_name ?? item.product ?? "Product",
+      quantity: item.quantity ?? 0,
+      confidence: 1,
+    })),
+    ctx,
+  );
 
   const invSkus = new Set(inventory.map((i) => i.sku).filter(Boolean));
   const expectedSkus = [...new Set(DEMO_ORAL_CARE_ROWS.map((r) => r.sku))];

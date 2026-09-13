@@ -697,7 +697,7 @@ function buildAttentionCards(
     let affectedAudits = 0;
     for (const scan of scans) {
       const metrics = metricsMap.get(scan.id);
-      const issues = countOpenIssuesForScan(metrics, issueCategories);
+      const issues = countOpenIssuesForScan(metrics ?? null, issueCategories);
       const kpi = kpiResultFromMetrics(metrics ?? null, effectiveRole, kpiId);
       const hasKpi =
         rollup.eligible_audit_ids.includes(scan.id) ||
@@ -1357,7 +1357,7 @@ export async function fetchWorkspaceDashboard(
     .slice(0, 10)
     .map((scan) => {
       const metrics = metricsMap.get(scan.id);
-      const role = scanRole(metrics) ?? effectiveRole;
+      const role = scanRole(metrics ?? null) ?? effectiveRole;
       const assignment = assignmentByScanId.get(scan.id);
       const issueCount =
         (metrics?.opportunity_ledger ?? []).filter((r) => {
@@ -1442,7 +1442,7 @@ export async function fetchWorkspaceDashboard(
     const locMap = new Map<string, number[]>();
     for (const scan of scans) {
       const metrics = metricsMap.get(scan.id);
-      const loc = kpiValue(metrics, effectiveRole, "location_accuracy", scan);
+      const loc = kpiValue(metrics ?? null, effectiveRole, "location_accuracy", scan);
       const label = scan.stores?.name ?? scan.category ?? "Location";
       if (loc !== null) locMap.set(label, [...(locMap.get(label) ?? []), loc]);
     }
