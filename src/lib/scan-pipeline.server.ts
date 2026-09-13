@@ -976,6 +976,7 @@ type AssignmentContext = {
   scope_type: string;
   scope_values: Record<string, unknown>;
   planogram_version_id: string | null;
+  audit_package: Record<string, unknown>;
   items: Record<string, unknown>[];
   items_full: Record<string, unknown>[];
 };
@@ -1091,7 +1092,7 @@ async function loadAssignmentContext(
   if (versionId) {
     const { data: versionRow } = await supabase
       .from("planogram_versions")
-      .select("audit_package, fixture_id, store_timezone, primary_brand")
+      .select("audit_package, fixture_id, store_timezone")
       .eq("id", versionId)
       .maybeSingle();
     if (versionRow?.audit_package && typeof versionRow.audit_package === "object") {

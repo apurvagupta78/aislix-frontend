@@ -401,7 +401,7 @@ export function DemoScanSetupPanel({
               key={option.mode}
               label={option.label}
               detail={option.detail}
-              recommended={"recommended" in option ? option.recommended : false}
+              recommended={"recommended" in option && option.recommended === true}
               selected={planogramMode === option.mode}
               disabled={disabled}
               onClick={() => setPlanogramMode(option.mode)}

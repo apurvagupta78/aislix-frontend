@@ -220,7 +220,7 @@ export async function fetchPackageCsvTemplate(kind: "assortment" | "prices" | "p
       // fallback
     }
   }
-  return local[kind];
+  return local[kind] ?? "";
 }
 
 export async function parsePackageCsv(

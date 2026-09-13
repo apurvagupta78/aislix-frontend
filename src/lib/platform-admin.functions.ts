@@ -204,7 +204,9 @@ export const listPlatformScans = createServerFn({ method: "POST" })
 
     if (data.userId) query = query.eq("created_by", data.userId);
     if (data.orgId) query = query.eq("org_id", data.orgId);
-    if (data.status && data.status !== "all") query = query.eq("status", data.status);
+    if (data.status && data.status !== "all") {
+      query = query.eq("status", data.status as "completed" | "failed" | "processing" | "queued");
+    }
     if (data.q) {
       query = query.or(
         `id.ilike.%${data.q}%,category.ilike.%${data.q}%,shelf_label.ilike.%${data.q}%,sub_category_label.ilike.%${data.q}%`,

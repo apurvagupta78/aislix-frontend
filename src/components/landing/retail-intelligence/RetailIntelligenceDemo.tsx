@@ -316,12 +316,12 @@ export function RetailIntelligenceDemo() {
             {showImagePane ? (
               <div className="relative border-t border-border bg-surface px-4 py-5 sm:px-6 sm:py-6">
                 <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {phase === "done" ? "Annotated shelf photo" : "Shelf photo"}
+                  Shelf photo
                 </p>
                 <div className="relative mx-auto max-w-3xl">
                   <img
                     src={shownImage ?? previewImageUrl ?? DEFAULT_SAMPLE_IMAGE}
-                    alt={phase === "done" ? "Shelf photo analyzed by Aislix" : "Sample toothpaste shelf"}
+                    alt="Sample toothpaste shelf"
                     className="mx-auto max-h-[min(52vh,520px)] w-full rounded-lg object-contain"
                   />
                   {scanning ? (

@@ -47,7 +47,7 @@ export type ExecutionKpi = {
   state: import("@/lib/retail-intelligence").MetricState;
   coverage_label?: string;
   detail?: string;
-  audit_status?: string;
+  audit_status?: import("@/lib/retail-intelligence").AuditKpiResult["status"];
 };
 
 export function executionScore(result?: ScanResult | null): number | undefined {
