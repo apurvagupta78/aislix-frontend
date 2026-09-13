@@ -160,6 +160,8 @@ type NewPlanogramWizardProps = {
     disabledReason?: string | null;
     onStart: () => void;
   };
+  /** Step-by-step manual path — hide CSV/JSON import; use forms only */
+  manualEntryOnly?: boolean;
 };
 
 function toDraftRows(rows: PlanogramRow[]): DraftRow[] {
@@ -198,6 +200,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
       planogramMode = "custom",
       onStepChange,
       homepageStartAudit,
+      manualEntryOnly = false,
     },
     ref,
   ) {
@@ -482,6 +485,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                   ) : null}
                 </div>
               </div>
+              {!manualEntryOnly ? (
               <div className="rounded-xl border border-brand/15 bg-brand-soft/20 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
@@ -569,6 +573,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                   }}
                 />
               </div>
+              ) : null}
             </div>
           );
 
@@ -877,6 +882,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
               onRowsChange={setRows}
               categories={categories}
               simplifiedCopy={homepageIntro}
+              manualEntryOnly={manualEntryOnly}
               tableTitle={
                 homepageIntro ? HOMEPAGE_PRODUCTS_TABLE_TITLE : "Product catalog for this planogram"
               }
@@ -900,8 +906,8 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
           return (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Set shelf position / slot ID and expected facings for each product. Edit manually below
-                or use the Products step CSV.
+                Set shelf position / slot ID and expected facings for each product.
+                {manualEntryOnly ? " Edit each row below." : " Edit manually below or use the Products step CSV."}
               </p>
               {value.planogramRows.length ? (
                 <div className="overflow-x-auto rounded-xl border border-border">
@@ -1026,8 +1032,9 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                 </>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Mandatory assortment for {roleTabLabel(role)}. Upload CSV or auto-fill from product rows.
-                  {role === "distributor" ? " MSL rows use list_type=msl in the CSV." : ""}
+                  {manualEntryOnly
+                    ? `Mandatory assortment for ${roleTabLabel(role)}. Add required products below or auto-fill from product rows.`
+                    : `Mandatory assortment for ${roleTabLabel(role)}. Upload CSV or auto-fill from product rows.${role === "distributor" ? " MSL rows use list_type=msl in the CSV." : ""}`}
                 </p>
               )}
               {!homepageIntro ? (
@@ -1051,6 +1058,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                 onPatch={patchPackage}
                 simplifiedCopy={homepageIntro}
               />
+              {!manualEntryOnly ? (
               <PlanogramPackageCsvImport
                 label={
                   homepageIntro
@@ -1077,6 +1085,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                   });
                 }}
               />
+              ) : null}
               {allAssortment.length > 0 ? (
                 <div className="overflow-hidden rounded-xl border border-border">
                   <table className="w-full text-sm">
@@ -1119,7 +1128,9 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No assortment or MSL rows yet — upload CSV or use auto-fill.
+                  {manualEntryOnly
+                    ? "No assortment or MSL rows yet — add products above or use auto-fill."
+                    : "No assortment or MSL rows yet — upload CSV or use auto-fill."}
                 </p>
               )}
             </div>
@@ -1177,6 +1188,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                 onPatch={patchPackage}
                 simplifiedCopy={homepageIntro}
               />
+              {!manualEntryOnly ? (
               <PlanogramPackageCsvImport
                 label={
                   homepageIntro ? HOMEPAGE_PRICES_CSV.label : "Or upload CSV — price requirements"
@@ -1196,6 +1208,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                   patchPackage({ price_requirements: imported as PriceRequirement[] })
                 }
               />
+              ) : null}
               {!homepageIntro && value.planogramRows.some((r) => r.mrp_inr != null) && (
                 <p className="text-xs text-muted-foreground">
                   {value.planogramRows.filter((r) => r.mrp_inr != null).length} product row(s) include MRP
@@ -1337,6 +1350,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                 seedDraft={promotionEditSeed}
                 onSeedDraftApplied={() => setPromotionEditSeed(null)}
               />
+              {!manualEntryOnly ? (
               <PlanogramPackageCsvImport
                 label={
                   homepageIntro ? HOMEPAGE_PROMOTIONS_CSV.label : "Or upload CSV — active promotions"
@@ -1356,6 +1370,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                 showPromotionColumnGuide={homepageIntro}
                 onImport={(imported) => patchPackage({ promotions: imported as PromotionEntry[] })}
               />
+              ) : null}
               {auditPackage.promotions.length > 0 ? (
                 <div className="overflow-x-auto rounded-xl border border-border">
                   <table className="w-full min-w-[44rem] text-sm">

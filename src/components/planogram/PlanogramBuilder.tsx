@@ -81,6 +81,8 @@ export type PlanogramBuilderProps = {
   tableDescription?: string;
   /** Simplified customer-facing helpers for homepage shelf setup */
   simplifiedCopy?: boolean;
+  /** Step-by-step manual setup — forms only, no CSV upload tab */
+  manualEntryOnly?: boolean;
   /**
    * When set, Location / Category / Sub category are owned by the caller: the
    * manual form only asks product fields and CSV rows are validated against it.
@@ -149,6 +151,7 @@ export function PlanogramBuilder({
   tableTitle = "Expected products",
   tableDescription,
   simplifiedCopy = false,
+  manualEntryOnly = false,
   context,
 }: PlanogramBuilderProps) {
   const { currency } = useDisplayCurrency();
@@ -295,15 +298,18 @@ export function PlanogramBuilder({
 
   return (
     <div className="space-y-5">
-      <Tabs defaultValue="csv">
-        <TabsList className="rounded-xl">
-          <TabsTrigger value="csv">Upload CSV</TabsTrigger>
-          <TabsTrigger value="manual">Add manually</TabsTrigger>
-        </TabsList>
-        {simplifiedCopy ? (
+      <Tabs defaultValue={manualEntryOnly ? "manual" : "csv"}>
+        {!manualEntryOnly ? (
+          <TabsList className="rounded-xl">
+            <TabsTrigger value="csv">Upload CSV</TabsTrigger>
+            <TabsTrigger value="manual">Add manually</TabsTrigger>
+          </TabsList>
+        ) : null}
+        {simplifiedCopy && !manualEntryOnly ? (
           <p className="mt-2 text-[11px] text-muted-foreground">{HOMEPAGE_PRODUCTS_TAB_HELPER}</p>
         ) : null}
 
+        {!manualEntryOnly ? (
         <TabsContent value="csv" className="mt-4 space-y-4">
           <div className="flex flex-wrap items-center gap-3">
             <Input
@@ -428,8 +434,9 @@ export function PlanogramBuilder({
             </div>
           )}
         </TabsContent>
+        ) : null}
 
-        <TabsContent value="manual" className="mt-4">
+        <TabsContent value="manual" className={manualEntryOnly ? "mt-0" : "mt-4"}>
           {context && (
             <p className="mb-4 rounded-xl border border-border bg-surface px-3 py-2 text-xs text-muted-foreground">
               Applied to every product:{" "}
@@ -701,7 +708,11 @@ export function PlanogramBuilder({
           <div className="mt-4">
             <EmptyState
               title="No expected products yet"
-              description="Upload a CSV or add products manually."
+              description={
+                manualEntryOnly
+                  ? "Add products using the form above."
+                  : "Upload a CSV or add products manually."
+              }
             />
           </div>
         ) : (

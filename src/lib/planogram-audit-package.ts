@@ -45,6 +45,8 @@ export type ScoringTargets = {
   promotional_target?: number;
   msl_target?: number;
   share_of_shelf_target?: number;
+  location_accuracy_target?: number;
+  facing_target?: number;
 };
 
 export type PlanogramAuditPackage = {

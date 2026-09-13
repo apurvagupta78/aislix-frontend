@@ -804,6 +804,7 @@ export function DemoScanSetupPanel({
               ref={wizardRef}
               homepageIntro={homepageIntro}
               planogramMode={planogramMode}
+              manualEntryOnly={homepageIntro && customSetupPath === "manual"}
               value={scanContext}
               onChange={onScanContextChange}
               categories={categories}

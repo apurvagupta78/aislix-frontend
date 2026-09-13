@@ -6,8 +6,9 @@
 import {
   masterColumnKeys,
   masterFieldsForRole,
+  masterTargetColumnKeys,
+  MASTER_FIELD_GUIDE_FILENAMES,
   MASTER_TEMPLATE_FILENAMES,
-  type MasterFieldDef,
 } from "@/lib/master-shelf-setup-config";
 import {
   autoPopulateAuditPackage,
@@ -113,10 +114,11 @@ function parseCsv(content: string): { headers: string[]; rows: Record<string, st
   return { headers, rows };
 }
 
-function isExampleRow(row: Record<string, string>): boolean {
+function isSkippedRow(row: Record<string, string>): boolean {
   const rowType = (row.row_type ?? "").toLowerCase();
+  if (rowType === "example" || rowType === "field_guide") return true;
   const sku = (row.sku ?? "").toUpperCase();
-  return rowType === "example" || sku.startsWith("EXAMPLE-") || sku === "EXAMPLE-SKU";
+  return sku.startsWith("EXAMPLE-") || sku === "EXAMPLE-SKU";
 }
 
 function val(row: Record<string, string>, key: string): string {
@@ -146,6 +148,18 @@ function parseDate(value: string): boolean {
 
 const VALID_CURRENCIES = new Set(["INR", "USD", "EUR", "GBP"]);
 
+function csvEscape(value: string): string {
+  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+function csvLine(headers: string[], row: Record<string, string>): string {
+  return headers.map((key) => csvEscape(row[key] ?? "")).join(",");
+}
+
+/** Clean data template: header row + one example row (row_type=example, ignored on upload). */
 export function buildMasterTemplateCsv(role: AuditRoleTab): string {
   const fields = masterFieldsForRole(role);
   const headers = fields.map((f) => f.key);
@@ -153,30 +167,45 @@ export function buildMasterTemplateCsv(role: AuditRoleTab): string {
   for (const field of fields) {
     if (field.example) example[field.key] = field.example;
   }
-  const exampleLine = headers.map((key) => {
-    const v = example[key] ?? "";
-    return v.includes(",") ? `"${v.replace(/"/g, '""')}"` : v;
-  });
-  const guideLines = [
-    "# Aislix Master Shelf Setup template",
-    "# Remove example rows (row_type=example) before uploading.",
-    "# Required fields are marked in the field guide below.",
-    ...fields
-      .filter((f) => f.required || f.accepted)
-      .map((f) => `# ${f.key}: required=${f.required ? "yes" : "no"} example=${f.example ?? ""} accepted=${f.accepted ?? ""}`),
-  ];
-  return [...guideLines, headers.join(","), exampleLine.join(",")].join("\n");
+  return [headers.join(","), csvLine(headers, example)].join("\n");
 }
 
-export function downloadMasterTemplate(role: AuditRoleTab): void {
-  const csv = buildMasterTemplateCsv(role);
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+/** Field guide CSV: column reference with required/optional and accepted values. */
+export function buildMasterFieldGuideCsv(role: AuditRoleTab): string {
+  const fields = masterFieldsForRole(role);
+  const headers = ["field", "label", "required", "example", "accepted_values", "group"];
+  const lines = [headers.join(",")];
+  for (const field of fields) {
+    lines.push(
+      csvLine(headers, {
+        field: field.key,
+        label: field.label,
+        required: field.required ? "yes" : "no",
+        example: field.example ?? "",
+        accepted_values: field.accepted ?? "",
+        group: field.group,
+      }),
+    );
+  }
+  return lines.join("\n");
+}
+
+function downloadCsv(filename: string, content: string): void {
+  const blob = new Blob(["\uFEFF", content], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = MASTER_TEMPLATE_FILENAMES[role];
+  anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+export function downloadMasterTemplate(role: AuditRoleTab): void {
+  downloadCsv(MASTER_TEMPLATE_FILENAMES[role], buildMasterTemplateCsv(role));
+}
+
+export function downloadMasterFieldGuide(role: AuditRoleTab): void {
+  downloadCsv(MASTER_FIELD_GUIDE_FILENAMES[role], buildMasterFieldGuideCsv(role));
 }
 
 export function downloadMasterErrorReport(issues: MasterValidationIssue[], role: AuditRoleTab): void {
@@ -202,7 +231,7 @@ function validateRows(
 ): MasterValidationResult {
   const issues: MasterValidationIssue[] = [];
   const required = masterFieldsForRole(role).filter((f) => f.required).map((f) => f.key);
-  const dataRows = rows.filter((row) => !isExampleRow(row));
+  const dataRows = rows.filter((row) => !isSkippedRow(row));
 
   for (const col of required) {
     if (!headers.includes(col)) {
@@ -376,26 +405,24 @@ function validateRows(
     });
   });
 
-  const targetFields: (keyof ScoringTargets)[] = [
-    "osa_target",
-    "planogram_target",
-    "assortment_target",
-    "price_target",
-    "promotional_target",
-    "msl_target",
-    "share_of_shelf_target",
-  ];
+  const targetFields = masterTargetColumnKeys(role);
   const first = dataRows[0] ?? {};
   let targetsReady = 0;
   for (const key of targetFields) {
     const raw = val(first, key);
-    if (raw) {
-      const p = pct(raw);
-      if (p == null || p < 0 || p > 100) {
-        issues.push({ severity: "warning", field: key, message: `Target ${key} should be a percentage 0–100.` });
-      } else {
-        targetsReady += 1;
-      }
+    if (!raw) {
+      issues.push({
+        severity: "critical",
+        field: key,
+        message: `Required audit target column "${key}" is missing or empty on the first data row.`,
+      });
+      continue;
+    }
+    const p = pct(raw);
+    if (p == null || p < 0 || p > 100) {
+      issues.push({ severity: "critical", field: key, message: `Target ${key} must be a percentage 0–100.` });
+    } else {
+      targetsReady += 1;
     }
   }
 
@@ -542,6 +569,8 @@ function buildPackage(dataRows: Record<string, string>[], role: AuditRoleTab): P
     promotional_target: pct(val(first, "promotion_target")) ?? undefined,
     msl_target: pct(val(first, "msl_target")) ?? undefined,
     share_of_shelf_target: pct(val(first, "share_of_shelf_target")) ?? pct(val(first, "target_share_of_shelf")) ?? undefined,
+    location_accuracy_target: pct(val(first, "location_accuracy_target")) ?? undefined,
+    facing_target: pct(val(first, "facing_target")) ?? undefined,
   };
 
   const pkg: PlanogramAuditPackage = {

@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { MASTER_TEMPLATE_FILENAMES } from "@/lib/master-shelf-setup-config";
 import {
   downloadMasterErrorReport,
+  downloadMasterFieldGuide,
   downloadMasterTemplate,
   parseAndValidateMasterSetup,
   type MasterImportResult,
@@ -301,11 +302,21 @@ export function MasterShelfSetupPanel({
           >
             <Download className="size-4" /> Download CSV Template
           </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            disabled={disabled}
+            onClick={() => downloadMasterFieldGuide(role)}
+          >
+            <Download className="size-4" /> Field Guide
+          </Button>
         </div>
         <p className="mt-3 flex items-start gap-2 text-[11px] text-muted-foreground">
           <FileSpreadsheet className="mt-0.5 size-3.5 shrink-0" />
-          Use our {MASTER_TEMPLATE_FILENAMES[role]} template. Aislix will validate it before using it.
-          Remove example rows before uploading.
+          Download {MASTER_TEMPLATE_FILENAMES[role]} — header row plus one example row (row_type=example).
+          Replace the example with your data (row_type=data). All KPI target columns for your role are included.
         </p>
         {uploadError ? <p className="mt-2 text-xs text-destructive">{uploadError}</p> : null}
       </div>
