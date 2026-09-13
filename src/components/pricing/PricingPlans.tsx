@@ -1,7 +1,5 @@
 import { Fragment } from "react";
-import { ArrowRight, Check, Minus, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Check, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { trackEvent, AnalyticsEvents } from "@/lib/analytics";
 import { currencyList, type CurrencyCode } from "@/lib/display-currency";
@@ -26,8 +24,7 @@ import {
   type PlanId,
 } from "@/lib/plan-entitlements";
 
-/** Fixed feature-area height so CTAs align across the five main cards. */
-const FEATURE_AREA_MIN_H = "min-h-[13.5rem]";
+const FEATURE_LINES = 10;
 
 export function CycleToggle({
   cycle,
@@ -39,14 +36,7 @@ export function CycleToggle({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "inline-flex min-w-0 items-center gap-0.5 rounded-full border border-border/60 bg-white p-1 shadow-sm",
-        className,
-      )}
-      role="group"
-      aria-label="Billing cycle"
-    >
+    <div className={cn("inline-flex min-w-0 items-center gap-4", className)} role="group" aria-label="Billing cycle">
       {(["monthly", "annual"] as const).map((c) => (
         <button
           key={c}
@@ -54,17 +44,13 @@ export function CycleToggle({
           aria-pressed={cycle === c}
           onClick={() => onChange(c)}
           className={cn(
-            "rounded-full px-3.5 py-1.5 text-xs font-medium transition-all sm:px-4 sm:text-sm",
-            cycle === c
-              ? "bg-brand text-brand-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
+            "text-sm font-semibold transition-colors",
+            cycle === c ? "text-foreground" : "text-muted-foreground hover:text-foreground",
           )}
         >
           {c === "monthly" ? "Monthly" : "Annual"}
           {c === "annual" && cycle === "annual" ? (
-            <span className="ml-1.5 rounded-full bg-white/20 px-1.5 py-0.5 text-[0.65rem] font-semibold">
-              Save {ANNUAL_DISCOUNT_PERCENT}%
-            </span>
+            <span className="ml-1.5 font-medium text-accent-green">· Save {ANNUAL_DISCOUNT_PERCENT}%</span>
           ) : null}
         </button>
       ))}
@@ -82,84 +68,61 @@ function singularLabel(count: number | null | undefined, singular: string, plura
   return plural;
 }
 
-type ControlCell = { value: string; primary: string; secondary?: string };
+type LimitLine = { bold: string; label: string };
 
-function buildControlCells(plan: PlanDefinition): ControlCell[] {
+function buildLimitLines(plan: PlanDefinition): LimitLine[] {
   const { audits, users, stores, masterSetups } = plan.controls;
 
   if (plan.payAsYouGo) {
     return [
-      { value: "Pay per", primary: "Completed audit" },
+      { bold: "Pay per", label: "completed audit" },
       {
-        value: formatControlValue(users.value),
-        primary: singularLabel(users.value, "User", "Users"),
+        bold: formatControlValue(users.value),
+        label: singularLabel(users.value, "user", "users"),
       },
       {
-        value: formatControlValue(stores.value),
-        primary: singularLabel(stores.value, "Store", "Stores"),
+        bold: formatControlValue(stores.value),
+        label: singularLabel(stores.value, "store", "stores"),
       },
       {
-        value: formatControlValue(masterSetups.value),
-        primary: singularLabel(masterSetups.value, "Master setup", "Master setups"),
+        bold: formatControlValue(masterSetups.value),
+        label: singularLabel(masterSetups.value, "master setup", "master setups"),
       },
     ];
   }
 
-  const auditPeriod =
-    plan.quotaPeriod === "rolling_24h"
-      ? "/ 24 hours"
-      : audits.period === "month"
-        ? "/ month"
-        : undefined;
-
   return [
     {
-      value: formatControlValue(audits.value),
-      primary: "AI audits",
-      secondary: auditPeriod,
+      bold: formatControlValue(audits.value),
+      label:
+        plan.quotaPeriod === "rolling_24h" ? "AI audits / 24 hours" : "AI audits / month",
     },
     {
-      value: formatControlValue(users.value),
-      primary: singularLabel(users.value, "User", "Users"),
+      bold: formatControlValue(users.value),
+      label: singularLabel(users.value, "user", "users"),
     },
     {
-      value: formatControlValue(stores.value),
-      primary: singularLabel(stores.value, "Store", "Stores"),
+      bold: formatControlValue(stores.value),
+      label: singularLabel(stores.value, "store", "stores"),
     },
     {
-      value: formatControlValue(masterSetups.value),
-      primary: singularLabel(masterSetups.value, "Master setup", "Master setups"),
+      bold: formatControlValue(masterSetups.value),
+      label: singularLabel(masterSetups.value, "master setup", "master setups"),
     },
   ];
 }
 
-function PlanControls({ plan }: { plan: PlanDefinition }) {
-  const cells = buildControlCells(plan);
-
+function PlanLimits({ plan }: { plan: PlanDefinition }) {
+  const lines = buildLimitLines(plan);
   return (
-    <div
-      className="mt-4 grid min-w-0 grid-cols-2 gap-px overflow-hidden rounded-xl border border-border/50 bg-border/40"
-      aria-label={`${plan.name} plan limits`}
-    >
-      {cells.map((cell, index) => (
-        <div
-          key={`${cell.primary}-${index}`}
-          className="min-w-0 bg-muted/5 px-1.5 py-2.5 text-center sm:px-2 sm:py-3"
-        >
-          <p className="break-words text-sm font-semibold tabular-nums leading-none tracking-tight text-foreground sm:text-base">
-            {cell.value}
-          </p>
-          <p className="mt-1.5 break-words text-[9px] font-medium uppercase leading-snug tracking-wide text-muted-foreground sm:text-[10px]">
-            {cell.primary}
-          </p>
-          {cell.secondary ? (
-            <p className="mt-0.5 text-[9px] uppercase leading-snug text-muted-foreground/80">
-              {cell.secondary}
-            </p>
-          ) : null}
-        </div>
+    <ul className="mt-5 min-w-0 space-y-1.5" aria-label={`${plan.name} plan limits`}>
+      {lines.map((line) => (
+        <li key={`${line.bold}-${line.label}`} className="min-w-0 text-sm leading-snug">
+          <span className="font-bold tabular-nums text-foreground">{line.bold}</span>{" "}
+          <span className="text-muted-foreground">{line.label}</span>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
 
@@ -173,16 +136,12 @@ function PlanPrice({
   currency: CurrencyCode;
 }) {
   const amount = displayPrice(plan, cycle, currency);
-  const period = plan.payAsYouGo ? "/ completed AI audit" : plan.periodLabel;
+  const period = plan.payAsYouGo ? "per completed AI audit" : plan.periodLabel.replace(/^\//, "").trim();
 
   return (
     <div className="mt-4 min-w-0">
-      <p className="break-words text-2xl font-semibold tracking-tight text-foreground sm:text-[1.65rem]">
-        {amount}
-      </p>
-      {period ? (
-        <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{period}</p>
-      ) : null}
+      <p className="text-3xl font-bold tracking-tight text-foreground">{amount}</p>
+      {period ? <p className="mt-0.5 text-sm text-muted-foreground">{period}</p> : null}
     </div>
   );
 }
@@ -206,74 +165,52 @@ export function PlanCard({
   const saving = annualSavingInr(plan);
   const isPayg = plan.payAsYouGo;
   const isFree = plan.id === "free";
-  const featureCount = isFree ? 8 : 10;
+  const features = plan.features.slice(0, isFree ? 8 : FEATURE_LINES);
 
   return (
     <article
       className={cn(
-        "relative flex h-full min-w-0 flex-col rounded-2xl border bg-white p-4 shadow-sm sm:p-5",
-        plan.popular
-          ? "border-2 border-brand shadow-md"
-          : isPayg
-            ? "border-brand/35"
-            : isFree
-              ? "border-border/50"
-              : "border-border/60",
+        "relative flex h-full min-w-0 flex-col py-2 xl:border-l xl:border-border/30 xl:pl-5 xl:first:border-l-0 xl:first:pl-0",
+        plan.popular && "xl:-mx-1 xl:px-1",
       )}
     >
       {plan.popular ? (
-        <Badge className="absolute -top-2.5 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-medium text-brand-foreground hover:bg-brand">
-          <Sparkles className="mr-1 inline size-3" aria-hidden />
-          Most Popular
-        </Badge>
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-brand">Most Popular</p>
+      ) : (
+        <div className="mb-2 h-[1.125rem]" aria-hidden />
+      )}
+
+      <h3 className="text-base font-bold tracking-tight text-foreground">{plan.name}</h3>
+      {isCurrent ? (
+        <p className="mt-0.5 text-xs font-medium text-muted-foreground">Current plan</p>
+      ) : null}
+      <p className="mt-1 min-h-[2.5rem] text-sm leading-snug text-muted-foreground">{plan.description}</p>
+
+      <PlanPrice plan={plan} cycle={cycle} currency={currency} />
+
+      {cycle === "annual" && saving > 0 && !isPayg && !plan.contactSales ? (
+        <p className="mt-1 text-xs font-medium text-accent-green">
+          Save {formatPrice(saving, currency)} a year
+        </p>
       ) : null}
 
-      <div className={cn("flex min-w-0 flex-col", plan.popular && "pt-2")}>
-        <div className="flex min-w-0 items-start justify-between gap-2">
-          <h3 className="text-sm font-semibold tracking-tight text-foreground">{plan.name}</h3>
-          {isCurrent ? (
-            <Badge variant="secondary" className="shrink-0 rounded-full text-[10px]">
-              Current
-            </Badge>
-          ) : null}
-        </div>
+      {isPayg ? (
+        <p className="mt-1 text-xs text-muted-foreground">Only completed AI audits are billed.</p>
+      ) : null}
 
-        <p className="mt-1.5 min-h-[2.75rem] text-xs leading-relaxed text-muted-foreground">
-          {plan.description}
-        </p>
+      <PlanLimits plan={plan} />
 
-        <PlanPrice plan={plan} cycle={cycle} currency={currency} />
-
-        {cycle === "annual" && saving > 0 && !isPayg && !plan.contactSales ? (
-          <p className="mt-1 text-[11px] text-accent-green">
-            Save {formatPrice(saving, currency)} a year
-          </p>
-        ) : null}
-
-        {isPayg ? (
-          <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">
-            Only completed AI audits are billed.
-          </p>
-        ) : (
-          <div className="mt-1.5 min-h-[1rem]" aria-hidden />
-        )}
-
-        <PlanControls plan={plan} />
-      </div>
-
-      <ul className={cn("mt-4 min-w-0 flex-1 space-y-2", FEATURE_AREA_MIN_H)}>
-        {plan.features.slice(0, featureCount).map((feature) => (
-          <li key={feature} className="flex min-w-0 gap-2 text-xs leading-snug text-muted-foreground">
-            <Check className="mt-0.5 size-3.5 shrink-0 text-accent-green" aria-hidden />
-            <span className="min-w-0 break-words [overflow-wrap:anywhere]">{feature}</span>
+      <ul className="mt-5 min-h-[11rem] flex-1 space-y-1.5">
+        {features.map((feature) => (
+          <li key={feature} className="min-w-0 text-sm leading-snug text-muted-foreground">
+            {feature}
           </li>
         ))}
       </ul>
 
-      <div className="mt-auto min-w-0 pt-4">
-        <Button
-          variant={plan.popular || isPayg ? "brand" : isCurrent ? "soft" : "subtle"}
-          className="h-10 w-full min-w-0 rounded-xl text-xs font-medium leading-tight sm:text-sm"
+      <div className="mt-auto min-w-0 pt-6">
+        <button
+          type="button"
           disabled={isCurrent || pending}
           onClick={() => {
             trackEvent(AnalyticsEvents.PricingPlanClick, {
@@ -283,9 +220,13 @@ export function PlanCard({
             });
             onSelect?.(plan);
           }}
+          className={cn(
+            "w-full text-left text-sm font-bold transition-opacity disabled:opacity-50",
+            plan.popular || isPayg ? "text-brand" : "text-foreground hover:text-brand",
+          )}
         >
-          {isCurrent ? "Current plan" : pending ? "Redirecting…" : plan.cta}
-        </Button>
+          {isCurrent ? "Current plan" : pending ? "Redirecting…" : `${plan.cta} →`}
+        </button>
       </div>
     </article>
   );
@@ -305,7 +246,7 @@ export function PricingGrid({
   currency?: CurrencyCode;
 }) {
   return (
-    <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 xl:gap-3">
+    <div className="grid min-w-0 grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 xl:gap-6">
       {SUBSCRIPTION_PLANS.map((plan) => (
         <PlanCard
           key={plan.id}
@@ -321,24 +262,6 @@ export function PricingGrid({
   );
 }
 
-const ENTERPRISE_CONTROLS = [
-  "Custom AI audit volume",
-  "Custom users",
-  "Custom stores",
-  "Custom master shelf setups",
-];
-
-const ENTERPRISE_FEATURES = [
-  "Advanced permissions",
-  "SSO",
-  "API integrations",
-  "Custom KPI configuration",
-  "Custom reporting",
-  "Dedicated onboarding",
-  "SLA and support",
-  "Account management",
-];
-
 export function EnterpriseSection({
   onSelect,
   pending,
@@ -349,51 +272,37 @@ export function EnterpriseSection({
   const enterprise = ENTERPRISE_PLAN;
 
   return (
-    <div className="min-w-0 rounded-2xl border border-border/60 bg-white p-6 shadow-sm sm:p-8">
-      <div className="mx-auto max-w-3xl text-center">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand">Enterprise</p>
-        <h3 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
-          Custom pricing for larger retail operations.
-        </h3>
-        <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Need more audits, stores, users, integrations or custom workflows? Talk to our team about
-          a plan built around your operation.
-        </p>
-      </div>
+    <section className="min-w-0 border-t border-border/40 pt-12 text-center">
+      <h3 className="text-xl font-bold tracking-tight text-foreground">Enterprise</h3>
+      <p className="mx-auto mt-2 max-w-xl text-sm font-medium text-muted-foreground">
+        Custom pricing for larger retail operations.
+      </p>
+      <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+        Need more audits, stores, users, integrations or custom workflows? Talk to our team about a
+        plan built around your operation.
+      </p>
 
-      <div className="mx-auto mt-6 grid min-w-0 max-w-4xl gap-px overflow-hidden rounded-xl border border-border/50 bg-border/40 sm:grid-cols-2 lg:grid-cols-4">
-        {ENTERPRISE_CONTROLS.map((label) => (
-          <div
-            key={label}
-            className="min-w-0 bg-muted/5 px-3 py-3 text-center text-[10px] font-medium uppercase leading-snug tracking-wide text-muted-foreground"
-          >
-            {label}
-          </div>
-        ))}
-      </div>
-
-      <ul className="mx-auto mt-6 grid min-w-0 max-w-3xl gap-x-6 gap-y-2 sm:grid-cols-2">
-        {ENTERPRISE_FEATURES.map((feature) => (
-          <li key={feature} className="flex min-w-0 gap-2 text-xs leading-snug text-muted-foreground">
-            <Check className="mt-0.5 size-3.5 shrink-0 text-accent-green" aria-hidden />
-            <span className="min-w-0 break-words">{feature}</span>
-          </li>
+      <ul className="mx-auto mt-6 max-w-lg space-y-1.5 text-sm text-muted-foreground">
+        {[
+          "Custom AI audit volume",
+          "Custom users, stores and master shelf setups",
+          "Advanced permissions · SSO · API integrations",
+          "Custom KPI configuration and reporting",
+          "Dedicated onboarding · SLA · Account management",
+        ].map((line) => (
+          <li key={line}>{line}</li>
         ))}
       </ul>
 
-      <div className="mt-8 flex flex-col items-center gap-2">
-        <Button
-          variant="brand"
-          className="h-11 rounded-xl px-6 text-sm font-medium"
-          disabled={pending}
-          onClick={() => onSelect?.(enterprise)}
-        >
-          Talk to Sales
-          <ArrowRight className="size-4" aria-hidden />
-        </Button>
-        <p className="text-xs text-muted-foreground">Get Custom Pricing</p>
-      </div>
-    </div>
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => onSelect?.(enterprise)}
+        className="mt-8 text-sm font-bold text-brand hover:underline disabled:opacity-50"
+      >
+        {pending ? "Redirecting…" : "Talk to Sales for Custom Pricing →"}
+      </button>
+    </section>
   );
 }
 
@@ -406,47 +315,45 @@ function Cell({ value }: { value: string | boolean }) {
 export function ComparisonTable() {
   const ids = PLAN_DEFINITIONS.map((p) => p.id);
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/60 bg-white shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[56rem] border-collapse text-left">
-          <thead>
-            <tr className="border-b border-border/60 bg-muted/10">
-              <th className="px-4 py-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Feature
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[56rem] border-collapse text-left">
+        <thead>
+          <tr className="border-b border-border/40">
+            <th className="pb-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              Feature
+            </th>
+            {PLAN_DEFINITIONS.map((p) => (
+              <th key={p.id} className="px-2 pb-3 text-center text-xs font-bold">
+                <span className={p.popular ? "text-brand" : undefined}>{p.name}</span>
               </th>
-              {PLAN_DEFINITIONS.map((p) => (
-                <th key={p.id} className="px-3 py-3 text-center text-xs font-semibold">
-                  <span className={p.popular ? "text-brand" : undefined}>{p.name}</span>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {COMPARISON_GROUPS.map((group) => (
-              <Fragment key={group.group}>
-                <tr className="bg-brand-soft/30">
-                  <td
-                    colSpan={ids.length + 1}
-                    className="px-4 py-2 text-[10px] font-semibold uppercase tracking-widest text-brand"
-                  >
-                    {group.group}
-                  </td>
-                </tr>
-                {group.rows.map((row) => (
-                  <tr key={`${group.group}-${row.label}`} className="border-b border-border/40 last:border-0">
-                    <td className="px-4 py-2.5 text-xs font-medium text-foreground">{row.label}</td>
-                    {ids.map((id) => (
-                      <td key={id} className="px-3 py-2.5 text-center">
-                        <Cell value={row.values[id]} />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </Fragment>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </tr>
+        </thead>
+        <tbody>
+          {COMPARISON_GROUPS.map((group) => (
+            <Fragment key={group.group}>
+              <tr>
+                <td
+                  colSpan={ids.length + 1}
+                  className="pt-5 pb-2 text-xs font-bold uppercase tracking-wide text-brand"
+                >
+                  {group.group}
+                </td>
+              </tr>
+              {group.rows.map((row) => (
+                <tr key={`${group.group}-${row.label}`} className="border-b border-border/20">
+                  <td className="py-2 text-sm text-foreground">{row.label}</td>
+                  {ids.map((id) => (
+                    <td key={id} className="px-2 py-2 text-center">
+                      <Cell value={row.values[id]} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </Fragment>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -464,10 +371,7 @@ export function CurrencySelect({
     <Select value={currency} onValueChange={(v) => onChange(v as CurrencyCode)}>
       <SelectTrigger
         aria-label="Display currency"
-        className={cn(
-          "h-9 w-[7.25rem] shrink-0 rounded-full border-border/60 bg-white text-xs",
-          className,
-        )}
+        className={cn("h-8 w-auto min-w-[5.5rem] border-0 bg-transparent px-0 text-sm font-semibold shadow-none", className)}
       >
         <SelectValue />
       </SelectTrigger>
@@ -490,15 +394,17 @@ export function PricingBottomActions({
   onSales: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-6">
-      <Button variant="subtle" className="rounded-xl text-sm" onClick={onCompare}>
-        Compare Every Feature
-        <ArrowRight className="size-4" aria-hidden />
-      </Button>
-      <Button variant="brand" className="rounded-xl text-sm" onClick={onSales}>
-        Talk to Sales
-        <ArrowRight className="size-4" aria-hidden />
-      </Button>
+    <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-10">
+      <button
+        type="button"
+        onClick={onCompare}
+        className="text-sm font-bold text-foreground hover:text-brand"
+      >
+        Compare Every Feature →
+      </button>
+      <button type="button" onClick={onSales} className="text-sm font-bold text-brand hover:underline">
+        Talk to Sales →
+      </button>
     </div>
   );
 }
