@@ -209,6 +209,10 @@ export async function createStorePlanogram(input: {
 }): Promise<string> {
   const orgId = await requireOrgId();
   const userId = await requireUserId();
+  const { assertCanAddMasterSetup, mapLimitError } = await import("@/lib/subscription-limits");
+  await assertCanAddMasterSetup(orgId).catch(async (err) => {
+    throw await mapLimitError(err, orgId);
+  });
 
   const auditPayload = input.auditPackage ? packageForSave(input.auditPackage) : {};
   const { data: version, error } = await supabase

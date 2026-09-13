@@ -10,7 +10,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ApiError } from "@/lib/api/errors";
 import { requireOrgId } from "@/lib/db/context";
-import { getPlan } from "@/lib/pricing";
+import { getPlanDefinition } from "@/lib/plan-entitlements";
 
 export type QuotaPeriod = "month" | "rolling_24h";
 
@@ -33,11 +33,16 @@ export type UsageSummary = {
   scans_remaining: number | null;
   stores_used: number;
   stores_remaining: number | null;
+  master_setups_used: number;
+  master_setups_included: number | null;
+  master_setups_remaining: number | null;
+  price_per_audit_inr: number | null;
   period_start?: string | null;
   period_end?: string | null;
   cooldown_until?: string | null;
   can_scan: boolean;
   can_add_store: boolean;
+  can_add_master_setup?: boolean;
   status: string;
   cycle: "monthly" | "annual";
   cancel_at_period_end: boolean;
@@ -105,6 +110,10 @@ async function bypassUsageFallback(orgId: string): Promise<UsageSummary> {
     scans_remaining: null,
     stores_used: storesUsed ?? 0,
     stores_remaining: null,
+    master_setups_used: 0,
+    master_setups_included: null,
+    master_setups_remaining: null,
+    price_per_audit_inr: null,
     period_start: subscription?.current_period_start ?? null,
     period_end: subscription?.current_period_end ?? null,
     cooldown_until: null,
@@ -118,7 +127,12 @@ async function bypassUsageFallback(orgId: string): Promise<UsageSummary> {
   };
 }
 
-export type LimitKind = "scan_quota" | "scan_cooldown" | "store_limit" | "seat_limit";
+export type LimitKind =
+  | "scan_quota"
+  | "scan_cooldown"
+  | "store_limit"
+  | "seat_limit"
+  | "master_setup_limit";
 
 /** Thrown when a plan limit blocks an action. Carries data for the limit modal. */
 export class LimitReachedError extends ApiError {
@@ -170,17 +184,11 @@ export class ScanLimitError extends LimitReachedError {
 
 /** Canonical seat allowance per plan, mirroring `subscription_plans.seat_limit`. */
 export function defaultSeatLimit(planCode: string): number | null {
-  switch (planCode) {
-    case "free":
-    case "starter":
-      return 1;
-    case "growth":
-      return 3;
-    case "professional":
-      return 5;
-    default:
-      return null; // enterprise / unknown → unlimited
-  }
+  return getPlanDefinition(planCode)?.controls.users.value ?? null;
+}
+
+export function defaultMasterSetupLimit(planCode: string): number | null {
+  return getPlanDefinition(planCode)?.controls.masterSetups.value ?? null;
 }
 
 export function seatLimitLabel(seatLimit: number | null): string {
@@ -205,19 +213,24 @@ function normalizeUsage(raw: Record<string, unknown>): UsageSummary {
   const isEnterprise = planCode === "enterprise";
   // When the RPC omits limits, fall back to the published plan catalogue so paid
   // tiers never render as "Unlimited" (only Enterprise has no monthly cap).
-  const catalogue = getPlan(planCode);
+  const catalogue = getPlanDefinition(planCode);
   const scanQuota =
     num(raw["scan_quota"] ?? raw["scans_included"]) ??
-    (isEnterprise ? null : (catalogue?.monthlyScanQuota ?? (isFree ? 3 : null)));
+    (isEnterprise || planCode === "payg"
+      ? null
+      : (catalogue?.controls.audits.value ?? (isFree ? 5 : null)));
   const storeLimit =
     num(raw["store_limit"] ?? raw["stores_included"]) ??
-    (isEnterprise ? null : (catalogue?.storeLimit ?? (isFree ? 1 : null)));
+    (isEnterprise ? null : (catalogue?.controls.stores.value ?? (isFree ? 1 : null)));
   const historyDays = num(raw["history_days"]) ?? catalogue?.historyDays ?? (isFree ? 7 : null);
   const seatLimit =
     num(raw["seat_limit"] ?? raw["seats_included"]) ?? defaultSeatLimit(planCode);
+  const masterSetupLimit =
+    num(raw["master_setups_included"]) ?? defaultMasterSetupLimit(planCode);
   const seatsUsed = num(raw["seats_used"]) ?? 1;
   const scansUsed = num(raw["scans_used"]) ?? 0;
   const storesUsed = num(raw["stores_used"]) ?? 0;
+  const masterSetupsUsed = num(raw["master_setups_used"]) ?? 0;
   const blocked = Boolean(raw["blocked"]);
 
   return {
@@ -237,6 +250,11 @@ function normalizeUsage(raw: Record<string, unknown>): UsageSummary {
     scans_remaining: num(raw["scans_remaining"]),
     stores_used: storesUsed,
     stores_remaining: storeLimit === null ? null : Math.max(0, storeLimit - storesUsed),
+    master_setups_used: masterSetupsUsed,
+    master_setups_included: masterSetupLimit,
+    master_setups_remaining:
+      masterSetupLimit === null ? null : Math.max(0, masterSetupLimit - masterSetupsUsed),
+    price_per_audit_inr: num(raw["price_per_audit_inr"]),
     period_start: (raw["period_start"] as string) ?? null,
     period_end: (raw["period_end"] as string) ?? null,
     cooldown_until: (raw["cooldown_until"] as string) ?? null,
@@ -245,6 +263,8 @@ function normalizeUsage(raw: Record<string, unknown>): UsageSummary {
       raw["can_add_store"] !== undefined
         ? Boolean(raw["can_add_store"])
         : storeLimit === null || storesUsed < storeLimit,
+    can_add_master_setup:
+      masterSetupLimit === null || masterSetupsUsed < masterSetupLimit,
     status: (raw["status"] as string) ?? "active",
     cycle: (raw["cycle"] as "monthly" | "annual") ?? "monthly",
     cancel_at_period_end: Boolean(raw["cancel_at_period_end"]),
@@ -305,6 +325,19 @@ export async function assertCanAddStore(orgId?: string): Promise<UsageSummary> {
   throw storeLimitError(usage);
 }
 
+/** Blocks a new master shelf setup when the plan limit is reached. */
+export async function assertCanAddMasterSetup(orgId?: string): Promise<UsageSummary> {
+  const email = await currentUserEmail();
+  const usage = await fetchUsageSummary(undefined, orgId);
+  if (hasPlatformBypass(email) || usage.platform_bypass) return usage;
+  if (usage.can_add_master_setup !== false) return usage;
+  throw new LimitReachedError({
+    limit: "master_setup_limit",
+    usage,
+    message: `You've reached your Master Setup limit on the ${usage.plan_name} plan. Upgrade plan to add more.`,
+  });
+}
+
 /** Blocks a new invite / member when the plan's seats are all taken. */
 export async function assertCanInviteMember(orgId?: string): Promise<UsageSummary> {
   const email = await currentUserEmail();
@@ -346,7 +379,7 @@ export function seatLimitError(usage: UsageSummary): SeatLimitError {
 }
 
 function scanLimitError(usage: UsageSummary): ScanLimitError {
-  const quota = usage.scan_quota ?? (usage.plan_code === "free" ? 3 : usage.scans_used);
+  const quota = usage.scan_quota ?? (usage.plan_code === "free" ? 5 : usage.scans_used);
   if (usage.quota_period === "rolling_24h") {
     return new ScanLimitError({
       usage,
@@ -386,7 +419,8 @@ export async function mapLimitError(error: unknown, orgId?: string): Promise<unk
   const isStore = text.includes("STORE_LIMIT_REACHED");
   const isScan = text.includes("SCAN_LIMIT_REACHED");
   const isSeat = text.includes("SEAT_LIMIT_REACHED");
-  if (!isStore && !isScan && !isSeat) return error;
+  const isMaster = text.includes("MASTER_SETUP_LIMIT_REACHED");
+  if (!isStore && !isScan && !isSeat && !isMaster) return error;
   let usage: UsageSummary;
   try {
     usage = await fetchUsageSummary(undefined, orgId);
@@ -394,6 +428,13 @@ export async function mapLimitError(error: unknown, orgId?: string): Promise<unk
     usage = normalizeUsageSummary(null);
   }
   if (isSeat) return seatLimitError(usage);
+  if (isMaster) {
+    return new LimitReachedError({
+      limit: "master_setup_limit",
+      usage,
+      message: `You've reached your Master Setup limit on the ${usage.plan_name} plan. Upgrade plan to add more.`,
+    });
+  }
   return isStore ? storeLimitError(usage) : scanLimitError(usage);
 }
 
@@ -478,6 +519,30 @@ export function seatUsageLabel(usage: UsageSummary): string {
   return `${usage.seats_used} / ${usage.seats_included} users`;
 }
 
+/** "2 / 5 master setups" or "4 master setups · Unlimited". */
+export function masterSetupUsageLabel(usage: UsageSummary): string {
+  if (usage.master_setups_included === null) {
+    return `${usage.master_setups_used} master setups · Unlimited`;
+  }
+  return `${usage.master_setups_used} / ${usage.master_setups_included} master setups`;
+}
+
+/** Usage ratio 0–100 for limit meters; null when unlimited. */
+export function usageRatio(used: number, limit: number | null | undefined): number | null {
+  if (limit === null || limit === undefined || limit <= 0) return null;
+  return Math.min(100, Math.round((used / limit) * 100));
+}
+
+export type UsageWarningLevel = "none" | "soft" | "strong" | "full";
+
+export function usageWarningLevel(ratio: number | null): UsageWarningLevel {
+  if (ratio === null) return "none";
+  if (ratio >= 100) return "full";
+  if (ratio >= 90) return "strong";
+  if (ratio >= 80) return "soft";
+  return "none";
+}
+
 /**
  * Single label helper for dashboard / billing widgets. Values always come from
  * the normalised usage summary, so `undefined` can never reach the UI.
@@ -488,6 +553,7 @@ export function formatUsageLabel(
   scans: string;
   stores: string;
   seats: string;
+  masterSetups: string;
   cooldown: string | null;
 } {
   const safe = normalizeUsageSummary((usage ?? null) as Record<string, unknown> | null);
@@ -499,5 +565,11 @@ export function formatUsageLabel(
     safe.store_limit === null
       ? `${safe.stores_used} stores · Unlimited`
       : `${safe.stores_used} / ${safe.store_limit} stores`;
-  return { scans: scanUsageLabel(safe), stores, seats: seatUsageLabel(safe), cooldown };
+  return {
+    scans: scanUsageLabel(safe),
+    stores,
+    seats: seatUsageLabel(safe),
+    masterSetups: masterSetupUsageLabel(safe),
+    cooldown,
+  };
 }

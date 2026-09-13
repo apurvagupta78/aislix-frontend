@@ -394,6 +394,10 @@ export async function savePlanogramDraft(input: {
       .eq("version_id", version.id);
     if (deleteError) dbError(deleteError, "Could not update the planogram draft.");
   } else {
+    const { assertCanAddMasterSetup, mapLimitError } = await import("@/lib/subscription-limits");
+    await assertCanAddMasterSetup(orgId).catch(async (err) => {
+      throw await mapLimitError(err, orgId);
+    });
     const { data, error } = await supabase
       .from("planogram_versions")
       .insert({

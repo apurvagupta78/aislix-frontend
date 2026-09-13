@@ -52,7 +52,7 @@ import {
   CycleToggle,
   PricingGrid,
 } from "@/components/pricing/PricingPlans";
-import { addOns, formatPrice, getPlan, type BillingCycle, type Plan } from "@/lib/pricing";
+import { addOns, formatPrice, getPlan, planAuditLimitLabel, type BillingCycle, type Plan } from "@/lib/pricing";
 import { useDisplayCurrency } from "@/lib/display-currency";
 import {
   applyPromoCode,
@@ -291,7 +291,7 @@ function Billing() {
                   )}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {currentPlan?.scanLimitLabel ?? "Plan details sync from your subscription."}
+                  {currentPlan ? planAuditLimitLabel(currentPlan) : "Plan details sync from your subscription."}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">

@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, HelpCircle, Mail, ShieldCheck, Zap } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import { SiteFooter, SiteHeader } from "@/components/MarketingLayout";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
   AccordionContent,
@@ -14,31 +13,23 @@ import {
   ComparisonTable,
   CurrencySelect,
   CycleToggle,
+  EnterpriseSection,
   PricingGrid,
 } from "@/components/pricing/PricingPlans";
-import { addOns, formatPrice } from "@/lib/pricing";
+import { ANNUAL_DISCOUNT_PERCENT } from "@/lib/plan-entitlements";
 import { useDisplayCurrency } from "@/lib/display-currency";
-import type { BillingCycle, Plan } from "@/lib/pricing";
+import type { BillingCycle, PlanDefinition } from "@/lib/plan-entitlements";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
     meta: [
       { property: "og:url", content: "https://aislix.com/pricing" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
       { title: "Pricing — Aislix AI Shelf Intelligence" },
       {
         name: "description",
         content:
-          "Simple scan-based pricing for AI shelf audits. Start free, scale to unlimited scans on Professional, or talk to us about Enterprise.",
+          "Simple pricing for AI shelf audits. Start free, pay as you go, or choose a monthly plan as your retail operation grows.",
       },
-      { property: "og:title", content: "Aislix pricing — pay by shelf scans" },
-      {
-        property: "og:description",
-        content: "Free, Starter ₹999, Professional ₹4,999 or Enterprise. Compare every feature.",
-      },
-      
-      
     ],
     links: [{ rel: "canonical", href: "https://aislix.com/pricing" }],
   }),
@@ -47,111 +38,86 @@ export const Route = createFileRoute("/pricing")({
 
 const faqs = [
   {
-    q: "How is a scan counted?",
-    a: "One shelf image analysed end-to-end counts as one scan. Re-downloading an existing report or viewing past results never consumes a scan.",
+    q: "How is an AI audit counted?",
+    a: "One shelf image analysed end-to-end counts as one AI audit. Only successfully completed AI audits consume your allowance or create a Pay as You Go charge. Failed, cancelled or incomplete processing does not count.",
+  },
+  {
+    q: "Can I try Aislix before paying?",
+    a: "Yes. The Free plan includes 5 completed AI audits in a rolling 24-hour window — no credit card required.",
   },
   {
     q: "What happens when I hit my monthly limit?",
-    a: "Scanning pauses instead of silently charging you. You can upgrade instantly or add a scan pack from the billing page — usage resets on your next billing date.",
+    a: "Auditing pauses until your next billing period or until you upgrade. You can change plans anytime from billing settings.",
   },
   {
-    q: "Do you issue GST invoices?",
-    a: "Yes. Add your GSTIN and billing address in billing settings and every invoice is issued as a GST-compliant tax invoice, downloadable as PDF.",
-  },
-  {
-    q: "Can I change or cancel my plan later?",
-    a: "Upgrade, downgrade, cancel or resume at any time from the billing page. Downgrades and cancellations take effect at the end of the current billing period.",
+    q: "Can I pay only when I use Aislix?",
+    a: "Yes. Pay as You Go charges ₹29 per completed AI audit with no monthly subscription.",
   },
 ];
 
 function Pricing() {
   const [cycle, setCycle] = useState<BillingCycle>("monthly");
   const { currency, setCurrency, isBase } = useDisplayCurrency();
-
   const navigate = Route.useNavigate();
 
-  const onSelect = (plan: Plan) => {
-    // Checkout (Cashfree) is intentionally not wired yet: route to sales or sign-up.
+  const onSelect = (plan: PlanDefinition) => {
     if (plan.contactSales) void navigate({ to: "/contact", search: { subject: "Sales enquiry" } });
     else void navigate({ to: "/signup" });
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-muted/20">
       <SiteHeader />
-
       <main>
-        <section className="mx-auto max-w-7xl px-5 pb-4 pt-14 text-center sm:px-8 sm:pt-20">
-          <Badge className="rounded-full bg-brand-soft text-brand hover:bg-brand-soft">
-            Scan-based pricing
-          </Badge>
-          <h1 className="mx-auto mt-5 max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl">
-            Pay for the shelves you audit — nothing else
+        <section className="mx-auto max-w-4xl px-5 pb-4 pt-14 text-center sm:px-8 sm:pt-20">
+          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            Pricing
+          </p>
+          <h1 className="mx-auto mt-4 max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl">
+            Simple pricing. Pay for the shelf audits you need.
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Every plan includes AI product detection, annotated shelf images and PDF audit reports.
-            Move up only when your scan volume does.
+            Start free, pay only when you audit, or choose a monthly plan as your retail operation
+            grows.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <CycleToggle cycle={cycle} onChange={setCycle} />
             <CurrencySelect currency={currency} onChange={setCurrency} />
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Annual billing is charged for 10 months — two months free.
-            {isBase ? "" : " Converted from INR at indicative rates; billed in INR."}
-          </p>
+          {cycle === "annual" ? (
+            <p className="mt-3 text-xs text-muted-foreground">
+              Annual billing saves {ANNUAL_DISCOUNT_PERCENT}% versus paying monthly.
+              {isBase ? "" : " Converted from INR at indicative rates; billed in INR."}
+            </p>
+          ) : null}
         </section>
 
-        <section className="mx-auto max-w-[90rem] px-5 pb-6 pt-8 sm:px-8">
+        <section className="mx-auto max-w-[90rem] px-5 pb-4 pt-6 sm:px-8">
           <PricingGrid cycle={cycle} onSelect={onSelect} currency={currency} />
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5">
-              <ShieldCheck className="size-3.5 text-accent-green" />{" "}
-              {isBase ? "GST invoices for Indian businesses" : "Tax invoices for every payment"}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Zap className="size-3.5 text-accent-green" /> No setup fee, cancel anytime
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <HelpCircle className="size-3.5 text-accent-green" />{" "}
-              {isBase ? "Prices exclusive of 18% GST" : "Taxes calculated at checkout"}
-            </span>
+        </section>
+
+        <section className="mx-auto max-w-5xl px-5 py-6 sm:px-8">
+          <EnterpriseSection onSelect={onSelect} />
+        </section>
+
+        <section className="mx-auto max-w-3xl px-5 py-6 text-center sm:px-8">
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>No credit card required for Free.</p>
+            <p>For Pay as You Go, you only pay for completed AI audits.</p>
+            <p className="inline-flex items-center justify-center gap-1.5">
+              <ShieldCheck className="size-4 text-brand" />
+              Upgrade or change plans as your retail operation grows.
+            </p>
           </div>
         </section>
 
         <section className="mx-auto max-w-7xl px-5 py-12 sm:px-8">
-          <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">Compare every feature</h2>
+          <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">Compare plans</h2>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            A full breakdown of scanning limits, analytics depth and support across plans.
+            Audit volume, team scale, intelligence features and reports at a glance.
           </p>
           <div className="mt-6">
             <ComparisonTable />
-          </div>
-        </section>
-
-        <section className="mx-auto max-w-7xl px-5 pb-12 sm:px-8">
-          <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">Add-ons</h2>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            Extend any paid plan without changing tiers.
-          </p>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {addOns.map((a) => (
-              <div key={a.id} className="card-surface card-hover p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="text-sm font-semibold">{a.name}</h3>
-                  {!a.available && (
-                    <Badge variant="secondary" className="rounded-full text-[0.65rem]">
-                      Coming soon
-                    </Badge>
-                  )}
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">{a.description}</p>
-                <p className="mt-4 text-sm font-medium">
-                  {a.priceInr === null ? "Custom" : formatPrice(a.priceInr, currency)}{" "}
-                  <span className="text-xs text-muted-foreground">{a.unit}</span>
-                </p>
-              </div>
-            ))}
           </div>
         </section>
 
@@ -167,28 +133,21 @@ function Pricing() {
           </Accordion>
         </section>
 
-        <section className="border-t border-border bg-surface">
+        <section className="border-t border-border/60 bg-white">
           <div className="mx-auto flex max-w-7xl flex-col items-start gap-5 px-5 py-14 sm:flex-row sm:items-center sm:justify-between sm:px-8">
             <div>
               <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
-                Need a multi-location rollout?
+                Ready to audit your first shelf?
               </h2>
               <p className="mt-1.5 text-sm text-muted-foreground">
-                Custom AI models, on-premise deployment and SLAs for national retail groups.
+                Start free — or pay only when you run a completed AI audit.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild variant="subtle" className="rounded-xl">
-                <Link to="/contact" search={{ subject: "Sales enquiry" }}>
-                  <Mail className="size-4" /> Contact sales
-                </Link>
-              </Button>
-              <Button asChild variant="brand" className="rounded-xl">
-                <Link to="/signup">
-                  Start free <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-            </div>
+            <Button asChild variant="brand" className="rounded-xl">
+              <Link to="/signup">
+                Start Free <ArrowRight className="size-4" />
+              </Link>
+            </Button>
           </div>
         </section>
       </main>
