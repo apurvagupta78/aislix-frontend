@@ -16,6 +16,7 @@ import { landingToScanResult } from "@/lib/demo-execution";
 import type { LandingScanResult } from "@/lib/landing-scan-api";
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import { ScanResultsActionsFooter } from "@/components/scan/ScanResultsActionsFooter";
+import { parseDemoAllowance } from "@/lib/demo-allowance";
 
 type DemoRoleResultsPanelProps = {
   result: LandingScanResult;
@@ -88,15 +89,15 @@ export function DemoRoleResultsPanel({
         imageUrl={imageUrl ?? undefined}
       />
 
-      <ScanResultsActionsFooter data={data} />
+      <ScanResultsActionsFooter
+        data={data}
+        demoMode
+        activeRole={activeRole}
+        landingSessionId={landing.landing_session_id}
+        demoAllowance={parseDemoAllowance(landing)}
+      />
 
       <p className="mt-3 shrink-0 text-[11px] leading-relaxed text-muted-foreground">{AI_DISCLAIMER}</p>
-
-      {landing.scans_daily_limit != null && (
-        <p className="mt-2 shrink-0 text-xs text-muted-foreground">
-          {landing.scans_used_today ?? 0} of {landing.scans_daily_limit} free demo scans used today
-        </p>
-      )}
 
       <div className="mt-3 flex shrink-0 flex-col gap-2 sm:flex-row sm:justify-end">
         <Button
@@ -173,7 +174,13 @@ export function DemoRoleResultsPanel({
               imageUrl={imageUrl ?? undefined}
               demoMode
             />
-            <ScanResultsActionsFooter data={data} />
+            <ScanResultsActionsFooter
+              data={data}
+              demoMode
+              activeRole={activeRole}
+              landingSessionId={landing.landing_session_id}
+              demoAllowance={parseDemoAllowance(landing)}
+            />
           </div>
         </GuestDemoShell>
       )}

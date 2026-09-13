@@ -342,7 +342,12 @@ function Results() {
                       planCode={planCode}
                       imageUrl={imageUrl}
                     />
-                    <ScanResultsActionsFooter data={display} loading={loading} />
+                    <ScanResultsActionsFooter
+                      data={display}
+                      loading={loading}
+                      activeRole={activeRole}
+                      hasWorkspace
+                    />
                     <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
                       {AI_DISCLAIMER}
                     </p>

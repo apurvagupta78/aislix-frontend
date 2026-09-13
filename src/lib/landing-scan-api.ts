@@ -103,6 +103,10 @@ export type LandingScanResult = {
   csv_base64?: string;
   scans_used_today?: number;
   scans_daily_limit?: number;
+  demo_audits_used?: number;
+  demo_audits_limit?: number;
+  demo_audits_remaining?: number;
+  demo_next_available_at?: string | null;
 };
 
 
@@ -116,6 +120,14 @@ export class LandingScanError extends Error {
 }
 
 /** Public sample shelf image, shown instantly while the AI runs. */
+export async function fetchLandingSession(sessionToken: string): Promise<LandingScanResult> {
+  const res = await fetch(`${API}/landing/session/${encodeURIComponent(sessionToken)}`);
+  if (!res.ok) {
+    throw new LandingScanError(parseApiDetail(await res.text()) || "Session not found", res.status);
+  }
+  return res.json() as Promise<LandingScanResult>;
+}
+
 export function getSamplePreviewUrl(sampleId = DEFAULT_SAMPLE_ID): string {
   if (!API) throw new Error("VITE_AISLIX_API_URL is not configured");
   return `${API}/landing/samples/${sampleId}/image`;

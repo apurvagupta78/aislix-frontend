@@ -32,6 +32,152 @@ import {
 
 /* ------------------------------ email dialog ------------------------------ */
 
+const API = (
+  import.meta.env.VITE_AISLIX_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  "https://aislix-backend-production.up.railway.app"
+).replace(/\/$/, "");
+
+export function EmailAuditDialog({
+  scanId,
+  open,
+  onOpenChange,
+  demoMode = false,
+  landingSessionId,
+  storeName,
+  auditDate,
+}: {
+  scanId: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  demoMode?: boolean;
+  landingSessionId?: string;
+  storeName?: string;
+  auditDate?: string;
+}) {
+  const [recipient, setRecipient] = useState("");
+  const [message, setMessage] = useState("");
+  const [sent, setSent] = useState(false);
+  const send = useServerFn(emailScanReport);
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const email = recipient.trim().toLowerCase();
+      if (!email || !email.includes("@")) throw new Error("Enter a valid recipient email.");
+      if (demoMode) {
+        const sessionId = landingSessionId;
+        if (!sessionId) throw new Error("Demo session not found.");
+        const res = await fetch(`${API}/landing/email-report`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            landing_session_id: sessionId,
+            recipient: email,
+            message: message || undefined,
+          }),
+        });
+        if (!res.ok) {
+          const detail = await res.json().catch(() => ({}));
+          throw new Error((detail as { detail?: string }).detail || "Could not send the report.");
+        }
+        return { sent: 1, skipped: 0 };
+      }
+      return send({
+        data: {
+          scanId,
+          recipients: [email],
+          message,
+          includePdf: true,
+          includeAnnotated: true,
+          includeCsv: true,
+        },
+      });
+    },
+    onSuccess: (result) => {
+      if (result.sent > 0) {
+        setSent(true);
+        toast.success("Report sent ✓");
+        setTimeout(() => {
+          setRecipient("");
+          setMessage("");
+          setSent(false);
+          onOpenChange(false);
+        }, 1200);
+      } else {
+        toast.info("No emails were delivered.");
+      }
+    },
+    onError: (error: Error) => toast.error(error.message || "Could not send the report."),
+  });
+
+  const store = storeName ?? "Store";
+  const dateLabel = auditDate
+    ? new Date(auditDate).toLocaleDateString(undefined, { dateStyle: "medium" })
+    : new Date().toLocaleDateString(undefined, { dateStyle: "medium" });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Email this audit</DialogTitle>
+          <DialogDescription>
+            Subject: Aislix Shelf Audit Report — {store} — {dateLabel}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="audit-email-recipient">Recipient email *</Label>
+            <Input
+              id="audit-email-recipient"
+              type="email"
+              placeholder="name@company.com"
+              value={recipient}
+              onChange={(event) => setRecipient(event.target.value)}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="audit-email-message">Optional message</Label>
+            <Textarea
+              id="audit-email-message"
+              rows={3}
+              placeholder="Add a note for the recipient…"
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+            />
+          </div>
+
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Your Aislix shelf audit is ready. Review the attached report for KPI results, shelf
+            findings, issues, recommendations and supporting analysis.
+          </p>
+        </div>
+
+        <DialogFooter>
+          <Button variant="subtle" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="brand"
+            onClick={() => mutation.mutate()}
+            disabled={mutation.isPending || sent}
+          >
+            {mutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : sent ? (
+              "Report sent ✓"
+            ) : (
+              <>Send Report →</>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** @deprecated Use EmailAuditDialog */
 export function EmailShareDialog({
   scanId,
   open,
