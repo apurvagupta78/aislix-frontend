@@ -7,7 +7,7 @@ import { buildKpiDetailCsv } from "@/lib/kpi-details-csv";
 import { KPI_DISPLAY_LABEL } from "@/lib/kpi-results-display";
 import { primaryKpiIds, type AuditRoleTab } from "@/lib/role-audit-ui";
 import type { AuditKpiId } from "@/lib/role-kpi-config";
-import type { ScanResult } from "@/lib/scan-results";
+import { downloadBlobBytes, type ScanResult } from "@/lib/scan-results";
 
 function excelSheetName(label: string): string {
   return label.replace(/[\\/?*[\]:]/g, "").slice(0, 31);
@@ -50,12 +50,17 @@ function csvToRows(csv: string): (string | number)[][] {
 
 function appendSheet(wb: XLSX.WorkBook, name: string, rows: (string | number)[][]) {
   if (!rows.length) return;
-  const sheet = XLSX.utils.aoa_to_sheet(rows);
-  const range = XLSX.utils.decode_range(sheet["!ref"] ?? "A1");
-  if (range.e.r >= 1) {
-    sheet["!autofilter"] = { ref: XLSX.utils.encode_range({ r: 0, c: 0, r: 0, e: range.e }) };
+  const sheet = XLSX.utils.aoa_to_sheet(rows.map((row) => row.map((cell) => cell ?? "")));
+  const ref = sheet["!ref"];
+  if (ref) {
+    const range = XLSX.utils.decode_range(ref);
+    sheet["!autofilter"] = {
+      ref: XLSX.utils.encode_range({
+        s: { r: 0, c: 0 },
+        e: { r: range.e.r, c: range.e.c },
+      }),
+    };
   }
-  sheet["!freeze"] = { xSplit: 0, ySplit: 1, topLeftCell: "A2", activePane: "bottomLeft", state: "frozen" };
   XLSX.utils.book_append_sheet(wb, sheet, excelSheetName(name));
 }
 
@@ -124,13 +129,12 @@ export function buildRoleAuditExcel(result: ScanResult, role: AuditRoleTab): Arr
 export function downloadRoleAuditExcel(result: ScanResult, role: AuditRoleTab): void {
   const slug = result.scan_id || "demo";
   const buffer = buildRoleAuditExcel(result, role);
-  const blob = new Blob([buffer], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `aislix-${slug}-audit-report.xlsx`;
-  anchor.click();
-  URL.revokeObjectURL(url);
+  if (!buffer?.byteLength) {
+    throw new Error("Could not generate Excel report — no audit data available.");
+  }
+  downloadBlobBytes(
+    buffer,
+    `aislix-${slug}-audit-report.xlsx`,
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  );
 }

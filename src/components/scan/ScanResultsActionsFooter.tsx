@@ -85,18 +85,17 @@ export function ScanResultsActionsFooter({
   });
 
   const downloadExcel = () => {
-    if (demoMode || !scanId || scanId.startsWith("demo")) {
+    try {
       if (activeRole) {
         downloadRoleAuditExcel(data, activeRole);
       } else {
         downloadDemoFullReportExcel(data);
       }
-    } else if (activeRole) {
-      downloadRoleAuditExcel(data, activeRole);
-    } else {
-      downloadDemoFullReportExcel(data);
+      toast.success("Excel report downloaded");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not download Excel report.";
+      toast.error(message);
     }
-    toast.success("Excel report downloaded");
   };
 
   const showWorkspaceCta = demoMode || !hasWorkspace;
