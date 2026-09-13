@@ -30,19 +30,56 @@ import { getUser, requireOrgId } from "@/lib/db/context";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import type { RetailIntelligencePayload } from "@/lib/retail-intelligence";
 import { normalizePercent } from "@/lib/dashboard";
-
+import {
+  aggregateIssueResolution,
+  aggregateShelfHealth,
+  aggregateWeightedKpi,
+  averageConfiguredTarget,
+  formatWeightedDetail,
+  kpiResultFromMetrics,
+  type WeightedKpiRollup,
+} from "@/lib/dashboard-kpi-aggregation";
 export type DashboardFilters = DashboardFilterState;
+
+export type DashboardWeightedKpi = {
+  percent: number | null;
+  numerator: number | null;
+  denominator: number | null;
+  detail: string | null;
+  eligible_audits: number;
+  trace_scan_id: string | null;
+  available: boolean;
+  unavailable_reason: string | null;
+};
 
 export type WorkspaceKpis = {
   audits_completed: number | null;
   stores_covered: number | null;
+  osa: DashboardWeightedKpi;
+  planogram: DashboardWeightedKpi;
+  /** @deprecated use osa.percent — kept for downstream sections */
   avg_osa: number | null;
+  /** @deprecated use planogram.percent */
   avg_planogram: number | null;
   open_issues: number | null;
+  issue_resolution: {
+    rate: number | null;
+    display: string;
+    resolved_count: number;
+    outcome_count: number;
+  };
+  /** @deprecated use issue_resolution.rate */
   issues_resolved_rate: number | null;
-  shelf_health: number | null;
+  shelf_health: {
+    score: number | null;
+    display: string;
+    available: boolean;
+    audit_count: number;
+  };
+  /** @deprecated use shelf_health.available */
   shelf_health_available: boolean;
   audits_remaining: number | null;
+  audits_unlimited: boolean;
   products_detected: number | null;
   average_confidence: number | null;
   images_processed: number | null;
@@ -108,11 +145,18 @@ export type AttentionCard = {
   score: number | null;
   score_display: string;
   explanation: string;
-  issue_count: number | null;
+  issue_count: number;
+  affected_audits: number;
   variance: string | null;
+  target_percent: number | null;
+  variance_pts: number | null;
+  progress_percent: number | null;
   scan_id: string | null;
   action_label: string;
-  kpi_id: AuditKpiId | null;
+  kpi_id: AuditKpiId;
+  no_data: boolean;
+  no_data_reason: string | null;
+  rank_score: number;
 };
 
 export type PerformancePeriodMetric = {
@@ -497,14 +541,95 @@ function buildFilterOptions(
   };
 }
 
-function scoreExplanation(score: number | null, issueCount: number | null): string {
-  if (score === null) return "Not enough audit data in this view yet.";
-  if (issueCount && issueCount > 0) {
-    return `${issueCount} open issue${issueCount === 1 ? "" : "s"} need attention in this area.`;
+function toDashboardWeightedKpi(
+  rollup: WeightedKpiRollup,
+  unit: "percent" | "count",
+  labels?: { numerator: string; denominator: string },
+  unavailableReason?: string | null,
+): DashboardWeightedKpi {
+  const hasData = rollup.eligible_audit_ids.length > 0 && rollup.percent !== null;
+  return {
+    percent: rollup.percent !== null ? Math.round(rollup.percent) : null,
+    numerator: rollup.denominator > 0 ? rollup.numerator : null,
+    denominator: rollup.denominator > 0 ? rollup.denominator : null,
+    detail: formatWeightedDetail(rollup, unit, labels),
+    eligible_audits: rollup.eligible_audit_ids.length,
+    trace_scan_id: rollup.worst_scan_id,
+    available: hasData,
+    unavailable_reason: hasData ? null : unavailableReason ?? "Not enough data",
+  };
+}
+
+const TERMINAL_ISSUE = new Set(["resolved", "verified", "closed", "fixed", "dismissed"]);
+
+function isOpenIssueStatus(status: string): boolean {
+  const s = status.toLowerCase();
+  return !TERMINAL_ISSUE.has(s);
+}
+
+function countOpenIssuesForScan(
+  metrics: RetailIntelligencePayload | null,
+  categories?: PriorityCategory[],
+): number {
+  if (!metrics) return 0;
+  const catSet = categories?.length ? new Set(categories) : null;
+  let count = 0;
+  for (const row of metrics.opportunity_ledger ?? []) {
+    const status = (row.status ?? "open").toLowerCase();
+    if (!isOpenIssueStatus(status)) continue;
+    if (!catSet || catSet.has(categoryFromIssueType(row.issue ?? ""))) count += 1;
   }
-  if (score >= 90) return "Strong execution — shelves are performing well here.";
-  if (score >= 75) return "Acceptable, but there is room to tighten execution.";
-  return "Below target — review recent audits and corrective actions.";
+  for (const action of metrics.next_best_actions ?? []) {
+    const status = (action.status ?? "open").toLowerCase();
+    if (!isOpenIssueStatus(status)) continue;
+    if (!catSet || catSet.has(categoryFromIssueType(action.issue_type ?? action.title ?? ""))) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function countHighSeverityIssues(
+  scans: ScanRow[],
+  metricsMap: Map<string, RetailIntelligencePayload | null>,
+  categories?: PriorityCategory[],
+): number {
+  const catSet = categories?.length ? new Set(categories) : null;
+  let high = 0;
+  for (const scan of scans) {
+    const metrics = metricsMap.get(scan.id);
+    for (const row of metrics?.opportunity_ledger ?? []) {
+      const status = (row.status ?? "open").toLowerCase();
+      if (TERMINAL_ISSUE.has(status)) continue;
+      if (catSet && !catSet.has(categoryFromIssueType(row.issue ?? ""))) continue;
+      if (priorityFromSeverity(row.severity ?? row.priority) === "high") high += 1;
+    }
+    for (const action of metrics?.next_best_actions ?? []) {
+      const status = (action.status ?? "open").toLowerCase();
+      if (TERMINAL_ISSUE.has(status)) continue;
+      if (catSet && !catSet.has(categoryFromIssueType(action.issue_type ?? action.title ?? ""))) continue;
+      if (priorityFromSeverity(action.severity ?? action.priority) === "high") high += 1;
+    }
+  }
+  return high;
+}
+
+function attentionRankScore(input: {
+  highIssues: number;
+  variancePts: number | null;
+  issueCount: number;
+  affectedAudits: number;
+  noData: boolean;
+}): number {
+  if (input.noData && input.issueCount === 0) return -1;
+  let score = 0;
+  score += input.highIssues * 1000;
+  if (input.variancePts !== null && input.variancePts < 0) {
+    score += Math.abs(input.variancePts) * 10;
+  }
+  score += input.issueCount * 5;
+  score += input.affectedAudits;
+  return score;
 }
 
 function buildAttentionCards(
@@ -523,67 +648,117 @@ function buildAttentionCards(
     );
   }
 
-  return areas.map((area) => {
-    const values: Array<{ scanId: string; value: number }> = [];
-    for (const scan of scans) {
-      const metrics = metricsMap.get(scan.id) ?? null;
-      for (const kpiId of area.kpis) {
-        const val = kpiValue(metrics, effectiveRole, kpiId, scan);
-        if (val !== null) values.push({ scanId: scan.id, value: val });
-      }
-    }
+  const cards: AttentionCard[] = areas.map((area) => {
+    const kpiId = area.kpis[0]!;
+    const requirePlanogram = kpiId === "planogram_compliance";
+    const rollup = aggregateWeightedKpi(scans, metricsMap, effectiveRole, kpiId, {
+      requirePlanogram,
+    });
 
-    let score: number | null = values.length ? avg(values.map((v) => v.value)) : null;
-    let variance: string | null = null;
-    let explanation = scoreExplanation(score, null);
-    let scanId: string | null = null;
+    let score = rollup.percent !== null ? Math.round(rollup.percent) : null;
+    let scanId = rollup.worst_scan_id;
     let actionLabel = "View audits →";
-    let kpiId: AuditKpiId | null = area.kpis[0] ?? null;
-
-    if (values.length) {
-      const worst = values.reduce((a, b) => (a.value <= b.value ? a : b));
-      scanId = worst.scanId;
-      if (score !== null) {
-        const target = 95;
-        const delta = Math.round(score - target);
-        if (delta < 0) variance = `${Math.abs(delta)} pts below target`;
-        else if (delta > 0) variance = `${delta} pts above target`;
-      }
-    }
-
-    let issueCount: number | null = null;
-    if (area.issueCategories?.length) {
-      issueCount = area.issueCategories.reduce((sum, cat) => sum + (categoryCounts[cat] ?? 0), 0);
-      explanation = scoreExplanation(score, issueCount || null);
-    }
+    let explanation = "";
+    let noDataReason: string | null = null;
 
     if (area.competitive) {
       actionLabel = "View Brand Analysis →";
-      const latest = scans.at(-1);
-      if (latest) {
-        const metrics = metricsMap.get(latest.id);
-        const insights = metrics?.competitive_insights ?? [];
-        const primary = insights[0];
-        if (primary?.share_note) {
-          explanation = primary.share_note;
-          const match = primary.share_note.match(/(\d+(?:\.\d+)?)\s*%/);
-          if (match) score = Number(match[1]);
-        } else if (score === null && typeof latest.share_of_shelf_percent === "number") {
-          score = normalizePercent(latest.share_of_shelf_percent) ?? latest.share_of_shelf_percent;
+      area = { ...area, label: "Brand & Competition" };
+      if (rollup.eligible_audit_ids.length === 0 || score === null) {
+        const latest = scans.at(-1);
+        if (latest) {
+          const metrics = metricsMap.get(latest.id);
+          const insights = metrics?.competitive_insights ?? [];
+          const primary = insights[0];
+          if (primary?.share_note) {
+            explanation = primary.share_note;
+            const match = primary.share_note.match(/(\d+(?:\.\d+)?)\s*%/);
+            if (match) score = Math.round(Number(match[1]));
+            scanId = latest.id;
+          }
         }
-        scanId = latest.id;
-        if (primary?.brand && variance === null && score !== null) {
-          variance = `${primary.brand} share tracked`;
+        if (score === null) {
+          noDataReason = "Insufficient shelf-space measurement data in this view.";
         }
       }
     }
 
-    const scoreDisplay =
-      score === null
-        ? "Not enough data"
-        : area.kpis[0] === "facing_count"
-          ? `${Math.round(score)}`
-          : `${Math.round(score)}%`;
+    const targetPercent = averageConfiguredTarget(scans, metricsMap, kpiId);
+    let variancePts: number | null =
+      score !== null && targetPercent !== null ? Math.round(score - targetPercent) : null;
+    let variance: string | null = null;
+    if (variancePts !== null && targetPercent !== null) {
+      const sign = variancePts >= 0 ? "+" : "";
+      variance = `Target ${Math.round(targetPercent)}% · ${sign}${variancePts} pts`;
+    }
+
+    const issueCategories =
+      area.issueCategories?.length ? area.issueCategories : kpiIssueCategories(kpiId);
+    const issueCount = issueCategories.length
+      ? issueCategories.reduce((sum, cat) => sum + (categoryCounts[cat] ?? 0), 0)
+      : 0;
+
+    let affectedAudits = 0;
+    for (const scan of scans) {
+      const metrics = metricsMap.get(scan.id);
+      const issues = countOpenIssuesForScan(metrics, issueCategories);
+      const kpi = kpiResultFromMetrics(metrics ?? null, effectiveRole, kpiId);
+      const hasKpi =
+        rollup.eligible_audit_ids.includes(scan.id) ||
+        (kpi && (kpi.status === "complete" || kpi.status === "partial"));
+      if (issues > 0 || hasKpi) affectedAudits += 1;
+    }
+
+    const highIssues = countHighSeverityIssues(scans, metricsMap, issueCategories);
+
+    const noData = score === null && rollup.eligible_audit_ids.length === 0;
+    if (noData && !noDataReason) {
+      if (kpiId === "planogram_compliance") {
+        noDataReason = "No planogram-backed audits in this view.";
+      } else if (kpiId === "assortment_compliance" || kpiId === "msl_compliance") {
+        noDataReason = "No required-product audits in this view.";
+      } else {
+        noDataReason = "Not enough audit data in this view.";
+      }
+    }
+
+    if (!explanation) {
+      if (noData) {
+        explanation = noDataReason ?? "Not enough data";
+      } else if (issueCount > 0) {
+        explanation = `${issueCount} open issue${issueCount === 1 ? "" : "s"} need attention`;
+      } else if (affectedAudits > 0) {
+        explanation = `${affectedAudits} affected audit${affectedAudits === 1 ? "" : "s"}`;
+      } else {
+        explanation = "No open issues in this area.";
+      }
+    }
+
+    const isCountKpi = kpiId === "facing_count";
+    const scoreDisplay = noData
+      ? "Not enough data"
+      : isCountKpi && rollup.denominator > 0
+        ? `${rollup.numerator} / ${rollup.denominator}`
+        : score !== null
+          ? area.competitive
+            ? `${score}% share of shelf`
+            : `${score}%`
+          : "Not enough data";
+
+    const progressPercent =
+      noData || score === null
+        ? null
+        : isCountKpi && rollup.denominator > 0
+          ? Math.min(100, Math.round((rollup.numerator / rollup.denominator) * 100))
+          : Math.min(100, Math.max(0, score));
+
+    const rankScore = attentionRankScore({
+      highIssues,
+      variancePts,
+      issueCount,
+      affectedAudits,
+      noData,
+    });
 
     return {
       key: area.key,
@@ -592,12 +767,21 @@ function buildAttentionCards(
       score_display: scoreDisplay,
       explanation,
       issue_count: issueCount,
+      affected_audits: affectedAudits,
       variance,
+      target_percent: targetPercent,
+      variance_pts: variancePts,
+      progress_percent: progressPercent,
       scan_id: scanId,
       action_label: actionLabel,
       kpi_id: kpiId,
+      no_data: noData,
+      no_data_reason: noDataReason,
+      rank_score: rankScore,
     };
   });
+
+  return cards.sort((a, b) => b.rank_score - a.rank_score);
 }
 
 function buildPerformancePeriod(
@@ -890,46 +1074,64 @@ export async function fetchWorkspaceDashboard(
   const kriCategories =
     filters.kri !== "all" ? kpiIssueCategories(filters.kri as AuditKpiId) : null;
 
-  // --- KPIs ---
+  // --- KPIs (weighted aggregation from filtered audits) ---
   const storeIds = new Set(scans.map((s) => s.store_id).filter(Boolean));
-  const osaValues = scans.map((s) => s.osa_percent).filter((v): v is number => typeof v === "number");
-  const planoValues = scans
-    .map((s) => s.planogram_compliance_percent)
-    .filter((v): v is number => typeof v === "number");
-  const healthValues = scans
-    .map((s) => s.shelf_health_score)
-    .filter((v): v is number => typeof v === "number");
 
-  const actions = actionsRes.data ?? [];
-  const openActions = actions.filter((a) => a.status === "open" || a.status === "in_progress");
-  const resolvedActions = actions.filter((a) => a.status === "resolved" || a.status === "closed");
-  const totalActions = openActions.length + resolvedActions.length;
-  const resolvedRate = totalActions ? (resolvedActions.length / totalActions) * 100 : null;
+  const osaRollup = aggregateWeightedKpi(scans, metricsMap, effectiveRole, "osa");
+  const planoRollup = aggregateWeightedKpi(scans, metricsMap, effectiveRole, "planogram_compliance", {
+    requirePlanogram: true,
+  });
+  const issueResolution = aggregateIssueResolution(scans, metricsMap);
+  const shelfHealthRollup = aggregateShelfHealth(scans, metricsMap);
 
   const sub = subscriptionRes.data as
     | { scans_used: number; subscription_plans: { scan_quota: number | null } | null }
     | null;
   const quota = sub?.subscription_plans?.scan_quota ?? null;
-  const scansRemaining = quota === null ? null : Math.max(0, quota - (sub?.scans_used ?? 0));
+  const scansUnlimited = quota === null;
+  const scansRemaining = scansUnlimited ? null : Math.max(0, quota - (sub?.scans_used ?? 0));
 
   const confValues = [...confidenceMap.values()];
   const totalProducts = scans.reduce((sum, s) => sum + (s.total_products ?? 0), 0);
   const totalPhotos = scans.reduce((sum, s) => sum + (s.photo_count ?? 0), 0);
 
+  const osaKpi = toDashboardWeightedKpi(osaRollup, "percent", {
+    numerator: "available",
+    denominator: "assessed",
+  });
+  const planoKpi = toDashboardWeightedKpi(
+    planoRollup,
+    "percent",
+    { numerator: "passing", denominator: "positions" },
+    "No planogram-backed audits in this view.",
+  );
+
   const kpis: WorkspaceKpis = {
     audits_completed: scans.length || null,
     stores_covered: storeIds.size || null,
-    avg_osa: avg(osaValues.map((v) => normalizePercent(v) ?? v)),
-    avg_planogram: avg(planoValues.map((v) => normalizePercent(v) ?? v)),
+    osa: osaKpi,
+    planogram: planoKpi,
+    avg_osa: osaKpi.percent,
+    avg_planogram: planoKpi.percent,
     open_issues: null,
-    issues_resolved_rate: resolvedRate,
-    shelf_health: avg(healthValues),
-    shelf_health_available: healthValues.length >= 2,
+    issue_resolution: issueResolution,
+    issues_resolved_rate: issueResolution.rate,
+    shelf_health: {
+      score: shelfHealthRollup.score,
+      display: shelfHealthRollup.display,
+      available: shelfHealthRollup.available,
+      audit_count: shelfHealthRollup.audit_count,
+    },
+    shelf_health_available: shelfHealthRollup.available,
     audits_remaining: scansRemaining,
+    audits_unlimited: scansUnlimited,
     products_detected: scans.length ? totalProducts : null,
     average_confidence: confValues.length ? avg(confValues.map((v) => normalizePercent(v) ?? v)) : null,
     images_processed: scans.length ? totalPhotos : null,
   };
+
+  const actions = actionsRes.data ?? [];
+  const openActions = actions.filter((a) => a.status === "open" || a.status === "in_progress");
 
   // --- Issues from scan metrics + corrective actions ---
   const issueRows: DashboardIssueRow[] = [];

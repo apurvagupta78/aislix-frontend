@@ -76,28 +76,52 @@ function scoreTone(score: number | null): string {
   return "text-destructive";
 }
 
-function KpiCard({
+function KpiProgress({ percent }: { percent: number | null }) {
+  if (percent === null) return null;
+  const clamped = Math.min(100, Math.max(0, percent));
+  const tone =
+    clamped >= 90
+      ? "bg-accent-green"
+      : clamped >= 75
+        ? "bg-brand"
+        : clamped >= 60
+          ? "bg-warning"
+          : "bg-destructive/70";
+  return (
+    <div className="mt-2.5 h-1 overflow-hidden rounded-full bg-muted/50">
+      <div className={cn("h-full rounded-full", tone)} style={{ width: `${clamped}%` }} />
+    </div>
+  );
+}
+
+function RetailKpiCard({
   title,
   value,
   description,
+  detail,
+  progress,
   tooltip,
+  scanId,
 }: {
   title: string;
   value: string;
   description: string;
+  detail?: string | null;
+  progress?: number | null;
   tooltip?: string;
+  scanId?: string | null;
 }) {
-  return (
-    <div className="card-surface p-5">
+  const body = (
+    <div className="flex h-full flex-col rounded-xl border border-border/60 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-muted-foreground">
+        <p className="text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
           {title}
         </p>
         {tooltip ? (
           <TooltipProvider>
             <UiTooltip>
               <TooltipTrigger asChild>
-                <button type="button" className="text-muted-foreground hover:text-foreground">
+                <button type="button" className="text-muted-foreground hover:text-foreground" aria-label="More info">
                   <HelpCircle className="size-3.5" />
                 </button>
               </TooltipTrigger>
@@ -106,10 +130,25 @@ function KpiCard({
           </TooltipProvider>
         ) : null}
       </div>
-      <p className="mt-3 text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{description}</p>
+      <p className="mt-2 text-2xl font-semibold tabular-nums tracking-tight text-brand">{value}</p>
+      {detail ? <p className="mt-0.5 text-[11px] tabular-nums text-muted-foreground">{detail}</p> : null}
+      <p className="mt-1 flex-1 text-[11px] leading-relaxed text-muted-foreground">{description}</p>
+      <KpiProgress percent={progress ?? null} />
     </div>
   );
+
+  if (scanId) {
+    return (
+      <Link
+        to="/results"
+        search={{ scan: scanId }}
+        className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+      >
+        {body}
+      </Link>
+    );
+  }
+  return body;
 }
 
 export function WorkspaceKpiSummary({
@@ -125,7 +164,7 @@ export function WorkspaceKpiSummary({
 }) {
   if (isLoading) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4">
         {Array.from({ length: 8 }).map((_, i) => (
           <CardSkeleton key={i} />
         ))}
@@ -139,53 +178,59 @@ export function WorkspaceKpiSummary({
   }
   if (!data) return null;
 
-  const shelfHealthValue = data.shelf_health_available
-    ? data.shelf_health !== null
-      ? `${formatScore(data.shelf_health)}/100`
-      : "Not enough data"
-    : "Not enough data";
+  const osaValue = data.osa.available ? formatPercent(data.osa.percent ?? undefined) : "Not enough data";
+  const planoValue = data.planogram.available
+    ? formatPercent(data.planogram.percent ?? undefined)
+    : data.planogram.unavailable_reason ?? "Not enough data";
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <KpiCard
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4">
+      <RetailKpiCard
         title="Audits completed"
         value={formatNumber(data.audits_completed)}
         description="Completed shelf audits"
       />
-      <KpiCard
+      <RetailKpiCard
         title="Stores covered"
         value={formatNumber(data.stores_covered)}
-        description="Stores audited"
+        description="Unique stores audited"
       />
-      <KpiCard
+      <RetailKpiCard
         title="On-shelf availability"
-        value={formatPercent(data.avg_osa)}
-        description="Average products available"
+        value={osaValue}
+        detail={data.osa.detail}
+        description="Products visibly available"
+        progress={data.osa.percent}
+        scanId={data.osa.trace_scan_id}
       />
-      <KpiCard
+      <RetailKpiCard
         title="Planogram compliance"
-        value={formatPercent(data.avg_planogram)}
-        description="Average shelf execution"
+        value={planoValue}
+        detail={data.planogram.detail}
+        description="Shelf matches expected layout"
+        progress={data.planogram.available ? data.planogram.percent : null}
+        scanId={data.planogram.trace_scan_id}
       />
-      <KpiCard
+      <RetailKpiCard
         title="Open issues"
         value={formatNumber(data.open_issues)}
-        description="Issues needing attention"
+        description="Issues still needing attention"
       />
-      <KpiCard
+      <RetailKpiCard
         title="Issue resolution"
-        value={data.issues_resolved_rate !== null ? formatPercent(data.issues_resolved_rate) : "—"}
-        description="Resolved after follow-up"
+        value={data.issue_resolution.display}
+        description="Issues resolved after follow-up"
       />
-      <KpiCard
+      <RetailKpiCard
         title="Shelf health"
-        value={shelfHealthValue}
+        value={data.shelf_health.display}
         description="Overall shelf execution"
         tooltip={SHELF_HEALTH_TOOLTIP}
+        progress={data.shelf_health.available ? data.shelf_health.score : null}
       />
-      <KpiCard
+      <RetailKpiCard
         title="Audits remaining"
-        value={formatQuota(data.audits_remaining)}
+        value={data.audits_unlimited ? "Unlimited" : formatQuota(data.audits_remaining)}
         description="This month's allowance"
       />
     </div>
@@ -208,45 +253,108 @@ function PriorityBar({ high, medium, low, total }: { high: number; medium: numbe
   );
 }
 
+function AttentionProgress({ percent }: { percent: number | null }) {
+  if (percent === null) return null;
+  const clamped = Math.min(100, Math.max(0, percent));
+  const tone =
+    clamped >= 90
+      ? "bg-accent-green"
+      : clamped >= 75
+        ? "bg-brand"
+        : clamped >= 60
+          ? "bg-warning"
+          : "bg-destructive/70";
+  return (
+    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted/50">
+      <div className={cn("h-full rounded-full", tone)} style={{ width: `${clamped}%` }} />
+    </div>
+  );
+}
+
 export function WhatNeedsAttentionSection({ data }: { data: WorkspaceDashboardData }) {
   const cards = data.attention_cards;
+  const { high, medium, low, total } = data.issues;
+  const showIssueBar = total > 0;
+
   return (
     <section className="mt-8">
       <CommandSectionHeader
         eyebrow="What needs attention"
-        description="Five areas that need the most attention in the selected view. Click any card to open the audits and evidence behind it."
+        description="The five areas with the biggest performance gaps or most important open issues in the selected view."
       />
+      {showIssueBar ? (
+        <div className="mb-4 rounded-xl border border-border/60 bg-white p-3 shadow-sm">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Open issues
+            </p>
+            <div className="flex gap-3 text-[10px] text-muted-foreground">
+              <span>
+                <span className="font-semibold text-destructive">{high}</span> High
+              </span>
+              <span>
+                <span className="font-semibold text-warning">{medium}</span> Medium
+              </span>
+              <span>
+                <span className="font-semibold text-brand">{low}</span> Low
+              </span>
+            </div>
+          </div>
+          <PriorityBar high={high} medium={medium} low={low} total={total} />
+        </div>
+      ) : null}
       {!cards.length ? (
-        <div className="card-surface p-6">
-          <p className="text-sm text-muted-foreground">
-            No open issues. Your latest audits have no unresolved findings.
-          </p>
+        <div className="rounded-xl border border-border/60 bg-white p-6 shadow-sm">
+          <p className="text-sm text-muted-foreground">No open issues in this view.</p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5">
           {cards.map((card) => {
+            const varianceTone =
+              card.variance_pts !== null && card.variance_pts < 0
+                ? card.variance_pts <= -10
+                  ? "text-destructive"
+                  : "text-warning"
+                : card.variance_pts !== null && card.variance_pts > 0
+                  ? "text-accent-green"
+                  : "text-muted-foreground";
+
             const body = (
-              <div className="flex h-full flex-col rounded-xl border border-border/70 bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-muted-foreground">
+              <div className="flex h-full flex-col rounded-xl border border-border/60 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+                <p className="text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                   {card.area_label}
                 </p>
-                <p className={cn("mt-2 text-2xl font-semibold tabular-nums", scoreTone(card.score))}>
+                <p
+                  className={cn(
+                    "mt-2 text-xl font-semibold tabular-nums leading-tight",
+                    card.no_data ? "text-muted-foreground" : "text-brand",
+                  )}
+                >
                   {card.score_display}
                 </p>
                 {card.variance ? (
-                  <p className="mt-1 text-xs font-medium text-warning">{card.variance}</p>
+                  <p className={cn("mt-1 text-[11px] font-medium", varianceTone)}>{card.variance}</p>
                 ) : null}
-                <p className="mt-2 flex-1 text-xs leading-relaxed text-muted-foreground">
-                  {card.explanation}
+                <AttentionProgress percent={card.progress_percent} />
+                <p className="mt-2 flex-1 text-[11px] leading-relaxed text-muted-foreground">
+                  {card.no_data ? card.no_data_reason ?? card.explanation : card.explanation}
                 </p>
-                {card.issue_count ? (
-                  <p className="mt-2 text-[11px] font-medium text-muted-foreground">
-                    {card.issue_count} open issue{card.issue_count === 1 ? "" : "s"}
+                {card.issue_count > 0 ? (
+                  <p className="mt-1.5 text-[11px] font-medium text-muted-foreground">
+                    {card.issue_count} issue{card.issue_count === 1 ? "" : "s"} need attention
+                  </p>
+                ) : card.affected_audits > 0 && !card.no_data ? (
+                  <p className="mt-1.5 text-[11px] font-medium text-muted-foreground">
+                    {card.affected_audits} affected audit{card.affected_audits === 1 ? "" : "s"}
                   </p>
                 ) : null}
-                <p className="mt-3 text-xs font-semibold text-brand">{card.action_label}</p>
+                <p className="mt-2.5 flex items-center gap-1 text-[11px] font-semibold text-brand">
+                  {card.action_label}
+                  <ArrowRight className="size-3" aria-hidden />
+                </p>
               </div>
             );
+
             if (!card.scan_id) return <div key={card.key}>{body}</div>;
             return (
               <Link
@@ -504,7 +612,7 @@ export function RetailPerformanceSection({
     <section>
       <CommandSectionHeader
         eyebrow="Retail performance"
-        description="Your key shelf and audit metrics for the selected view."
+        description="Key shelf and audit metrics for the selected stores, categories and time period."
       />
       <WorkspaceKpiSummary data={data} isLoading={isLoading} error={error} onRetry={onRetry} />
     </section>

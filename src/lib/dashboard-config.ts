@@ -64,7 +64,7 @@ export const PRIORITY_OPPORTUNITY_CATEGORIES = [
 export type PriorityCategory = (typeof PRIORITY_OPPORTUNITY_CATEGORIES)[number]["key"];
 
 export const SHELF_HEALTH_TOOLTIP =
-  "Composite score based on the role's configured shelf-performance metrics. Averaged from completed audits where a score was calculated — not an AI judgment.";
+  "Composite score based on the eligible role-specific shelf KPIs in the selected view. Calculated from retail execution scores where sufficient audit evidence exists.";
 
 export function dateRangeToDays(range: DashboardDateRange): number {
   switch (range) {
@@ -122,49 +122,39 @@ export type RoleAttentionArea = {
 /** Five attention cards per role — drives the intelligence row on the workspace dashboard. */
 export const ROLE_ATTENTION_AREAS: Record<AuditRoleTab, RoleAttentionArea[]> = {
   supermarket: [
-    { key: "availability", label: "Availability", kpis: ["osa"], issueCategories: ["availability"] },
-    { key: "shelf_execution", label: "Shelf Execution", kpis: ["planogram_compliance"], issueCategories: ["placement"] },
-    { key: "assortment", label: "Assortment", kpis: ["assortment_compliance"], issueCategories: ["assortment"] },
-    {
-      key: "pricing_promotions",
-      label: "Pricing & Promotions",
-      kpis: ["price_compliance", "promotional_compliance"],
-      issueCategories: ["pricing", "promotion"],
-    },
-    {
-      key: "store_issues",
-      label: "Store Issues",
-      kpis: ["osa", "planogram_compliance"],
-      issueCategories: ["availability", "placement", "pricing", "promotion", "assortment"],
-    },
+    { key: "osa", label: "On-Shelf Availability", kpis: ["osa"], issueCategories: ["availability"] },
+    { key: "planogram", label: "Planogram Compliance", kpis: ["planogram_compliance"], issueCategories: ["placement"] },
+    { key: "assortment", label: "Assortment Compliance", kpis: ["assortment_compliance"], issueCategories: ["assortment"] },
+    { key: "price", label: "Price Compliance", kpis: ["price_compliance"], issueCategories: ["pricing"] },
+    { key: "promotion", label: "Promotional Compliance", kpis: ["promotional_compliance"], issueCategories: ["promotion"] },
   ],
   darkstore: [
-    { key: "availability", label: "Availability", kpis: ["osa"], issueCategories: ["availability"] },
+    { key: "osa", label: "On-Shelf Availability", kpis: ["osa"], issueCategories: ["availability"] },
     { key: "location_accuracy", label: "Location Accuracy", kpis: ["location_accuracy"] },
-    { key: "planogram", label: "Planogram", kpis: ["planogram_compliance"], issueCategories: ["placement"] },
-    { key: "assortment", label: "Assortment", kpis: ["assortment_compliance"], issueCategories: ["assortment"] },
-    { key: "facing", label: "Facing", kpis: ["facing_count"] },
+    { key: "planogram", label: "Planogram Compliance", kpis: ["planogram_compliance"], issueCategories: ["placement"] },
+    { key: "assortment", label: "Assortment Compliance", kpis: ["assortment_compliance"], issueCategories: ["assortment"] },
+    { key: "facing", label: "Facing Count", kpis: ["facing_count"] },
   ],
   fmcg: [
-    { key: "share_of_shelf", label: "Share of Shelf", kpis: ["share_of_shelf"], competitive: true },
-    { key: "availability", label: "Availability", kpis: ["osa"], issueCategories: ["availability"] },
-    { key: "facing", label: "Facing", kpis: ["facing_count"] },
-    { key: "planogram", label: "Planogram", kpis: ["planogram_compliance"], issueCategories: ["placement"] },
-    { key: "promotion", label: "Promotion", kpis: ["promotional_compliance"], issueCategories: ["promotion"] },
+    { key: "share_of_shelf", label: "Share of Shelf", kpis: ["share_of_shelf"], issueCategories: ["placement"], competitive: true },
+    { key: "osa", label: "On-Shelf Availability", kpis: ["osa"], issueCategories: ["availability"] },
+    { key: "facing", label: "Facing Count", kpis: ["facing_count"] },
+    { key: "planogram", label: "Planogram Compliance", kpis: ["planogram_compliance"], issueCategories: ["placement"] },
+    { key: "promotion", label: "Promotional Compliance", kpis: ["promotional_compliance"], issueCategories: ["promotion"] },
   ],
   distributor: [
-    { key: "availability", label: "Availability", kpis: ["osa"], issueCategories: ["availability"] },
-    { key: "msl", label: "MSL", kpis: ["msl_compliance"], issueCategories: ["assortment"] },
-    { key: "planogram", label: "Planogram", kpis: ["planogram_compliance"], issueCategories: ["placement"] },
-    { key: "pricing", label: "Pricing", kpis: ["price_compliance"], issueCategories: ["pricing"] },
-    { key: "promotion", label: "Promotion", kpis: ["promotional_compliance"], issueCategories: ["promotion"] },
+    { key: "osa", label: "On-Shelf Availability", kpis: ["osa"], issueCategories: ["availability"] },
+    { key: "msl", label: "MSL Compliance", kpis: ["msl_compliance"], issueCategories: ["assortment"] },
+    { key: "planogram", label: "Planogram Compliance", kpis: ["planogram_compliance"], issueCategories: ["placement"] },
+    { key: "price", label: "Price Compliance", kpis: ["price_compliance"], issueCategories: ["pricing"] },
+    { key: "promotion", label: "Promotional Compliance", kpis: ["promotional_compliance"], issueCategories: ["promotion"] },
   ],
   local: [
-    { key: "availability", label: "Availability", kpis: ["osa"], issueCategories: ["availability"] },
-    { key: "assortment", label: "Assortment", kpis: ["assortment_compliance"], issueCategories: ["assortment"] },
-    { key: "facing", label: "Facing", kpis: ["facing_count"] },
-    { key: "pricing", label: "Pricing", kpis: ["price_compliance"], issueCategories: ["pricing"] },
-    { key: "promotion", label: "Promotion", kpis: ["promotional_compliance"], issueCategories: ["promotion"] },
+    { key: "osa", label: "On-Shelf Availability", kpis: ["osa"], issueCategories: ["availability"] },
+    { key: "assortment", label: "Assortment Compliance", kpis: ["assortment_compliance"], issueCategories: ["assortment"] },
+    { key: "facing", label: "Facing Count", kpis: ["facing_count"] },
+    { key: "price", label: "Price Compliance", kpis: ["price_compliance"], issueCategories: ["pricing"] },
+    { key: "promotion", label: "Promotional Compliance", kpis: ["promotional_compliance"], issueCategories: ["promotion"] },
   ],
 };
 
