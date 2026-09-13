@@ -32,27 +32,20 @@ import { Logo } from "@/components/Logo";
 import { DemoScanResultsBody } from "@/components/scan/DemoScanResultsBody";
 import { DEMO_PLANOGRAM_LABEL } from "@/lib/demo-oral-care-planogram";
 import { landingToScanResult } from "@/lib/demo-execution";
-import { fetchLandingSession, type LandingScanResult } from "@/lib/landing-scan-api";
+import type { LandingScanResult } from "@/lib/landing-scan-api";
 import { defaultAuditRoleTab } from "@/lib/role-audit-ui";
-import { getSharedScan } from "@/lib/scan-share.functions";
+import { getPublicShare } from "@/lib/scan-share.functions";
 import { formatSharedDate, type SharedScanPayload } from "@/lib/scan-share";
 
 export const Route = createFileRoute("/share/$token")({
   loader: async ({ params }) => {
     try {
-      return {
-        report: await getSharedScan({ data: { token: params.token } }),
-        demoSession: null as LandingScanResult | null,
-      };
-    } catch {
-      try {
-        const demoSession = await fetchLandingSession(params.token);
-        if (demoSession.status === "completed") {
-          return { report: null, demoSession };
-        }
-      } catch {
-        /* fall through */
+      const payload = await getPublicShare({ data: { token: params.token } });
+      if (payload.kind === "demo") {
+        return { report: null, demoSession: payload.demoSession };
       }
+      return { report: payload.report, demoSession: null as LandingScanResult | null };
+    } catch {
       return { report: null, demoSession: null };
     }
   },

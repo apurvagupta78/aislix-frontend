@@ -191,6 +191,89 @@ export async function scanShareSummary(scanId: string): Promise<{
   };
 }
 
+type DemoLandingSession = {
+  landing_session_id: string;
+  scan_id: string;
+  status: "completed";
+  scanned_at?: string;
+  sample_id?: string | null;
+  category?: string;
+  shelf_label?: string;
+  has_planogram?: boolean;
+  metrics?: Record<string, unknown>;
+  inventory?: Array<Record<string, unknown>>;
+  top_brands?: Array<{ brand: string; share: number; quantity?: number }>;
+  brand_share?: Array<{ brand: string; share: number; quantity?: number }>;
+  executive_summary?: string;
+  role_summaries?: Record<string, string>;
+  retail_intelligence?: Record<string, unknown>;
+  recommendations?: Array<Record<string, unknown>>;
+  alerts?: Array<Record<string, unknown>>;
+  compliance_alerts?: Array<Record<string, unknown>>;
+};
+
+async function fetchBackendLandingSession(token: string): Promise<DemoLandingSession | null> {
+  const backendUrl =
+    (typeof process !== "undefined" && process.env["AISLIX_AI_API_URL"]) || "";
+  if (!backendUrl) return null;
+  try {
+    const res = await fetch(
+      `${backendUrl.replace(/\/+$/, "")}/landing/session/${encodeURIComponent(token)}`,
+      { headers: { Accept: "application/json" } },
+    );
+    if (!res.ok) return null;
+    const data = (await res.json()) as DemoLandingSession & { status?: string };
+    if (data.status !== "completed") return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+/** Resolve a demo audit by landing session token (Supabase first, then Railway). */
+export async function loadDemoLandingSession(token: string): Promise<DemoLandingSession | null> {
+  const db = await admin();
+  const { data: row, error } = await db
+    .from("landing_demo_sessions")
+    .select(
+      "session_token, scan_id, scan_status, scan_result, sample_id, category, created_at, updated_at",
+    )
+    .eq("session_token", token)
+    .maybeSingle();
+
+  if (!error && row?.scan_status === "completed" && row.scan_result) {
+    const stored =
+      row.scan_result && typeof row.scan_result === "object" && !Array.isArray(row.scan_result)
+        ? (row.scan_result as Record<string, unknown>)
+        : {};
+    return {
+      landing_session_id: row.session_token as string,
+      scan_id: String(row.scan_id ?? stored.scan_id ?? "demo"),
+      status: "completed",
+      scanned_at:
+        (stored.scanned_at as string | undefined) ??
+        (row.updated_at as string | undefined) ??
+        (row.created_at as string | undefined),
+      sample_id: (row.sample_id as string | null) ?? (stored.sample_id as string | null),
+      category: (row.category as string | null) ?? (stored.category as string | undefined),
+      shelf_label: stored.shelf_label as string | undefined,
+      has_planogram: stored.has_planogram as boolean | undefined,
+      metrics: stored.metrics as Record<string, unknown> | undefined,
+      inventory: (stored.inventory as Array<Record<string, unknown>> | undefined) ?? [],
+      top_brands: stored.top_brands as DemoLandingSession["top_brands"],
+      brand_share: stored.brand_share as DemoLandingSession["brand_share"],
+      executive_summary: stored.executive_summary as string | undefined,
+      role_summaries: stored.role_summaries as Record<string, string> | undefined,
+      retail_intelligence: stored.retail_intelligence as Record<string, unknown> | undefined,
+      recommendations: stored.recommendations as Array<Record<string, unknown>> | undefined,
+      alerts: stored.alerts as Array<Record<string, unknown>> | undefined,
+      compliance_alerts: stored.compliance_alerts as Array<Record<string, unknown>> | undefined,
+    };
+  }
+
+  return fetchBackendLandingSession(token);
+}
+
 /** Full public payload for a share token. Throws on expired / invalid tokens. */
 export async function loadSharedScan(token: string): Promise<SharedScanPayload> {
   const db = await admin();

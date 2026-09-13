@@ -8,7 +8,12 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { LandingScanResult } from "@/lib/landing-scan-api";
 import type { ScanShareLink, ShareTarget, SharedScanPayload } from "@/lib/scan-share";
+
+export type PublicSharePayload =
+  | { kind: "report"; report: SharedScanPayload }
+  | { kind: "demo"; demoSession: LandingScanResult };
 
 /* ------------------------------- copy link -------------------------------- */
 
@@ -322,5 +327,26 @@ export const getSharedScan = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<SharedScanPayload> => {
     const { loadSharedScan } = await import("@/lib/scan-share.server");
     return loadSharedScan(data.token);
+  });
+
+/** Resolve workspace share links and demo landing session tokens for /share/:token. */
+export const getPublicShare = createServerFn({ method: "POST" })
+  .inputValidator((input: { token: string }) => {
+    const token = String(input?.token ?? "").trim();
+    if (!token) throw new Error("expired_or_invalid");
+    return { token };
+  })
+  .handler(async ({ data }): Promise<PublicSharePayload> => {
+    const { loadDemoLandingSession, loadSharedScan } = await import("@/lib/scan-share.server");
+    try {
+      const report = await loadSharedScan(data.token);
+      return { kind: "report", report };
+    } catch {
+      const demoSession = await loadDemoLandingSession(data.token);
+      if (demoSession) {
+        return { kind: "demo", demoSession: demoSession as LandingScanResult };
+      }
+      throw new Error("expired_or_invalid");
+    }
   });
 
