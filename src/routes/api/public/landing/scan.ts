@@ -176,11 +176,7 @@ export const Route = createFileRoute("/api/public/landing/scan")({
               .upsert(
                 {
                   session_token: attemptToken,
-                  scan_status: upstream.ok
-                    ? "completed"
-                    : upstream.status === 429
-                      ? "rate_limited"
-                      : "failed",
+                  scan_status: upstream.ok ? "completed" : "failed",
                   scan_error: upstream.ok ? null : detail ?? `AI service returned ${upstream.status}`,
                   scan_id: scanId,
                   scan_result: safeResult(payload),
@@ -198,6 +194,25 @@ export const Route = createFileRoute("/api/public/landing/scan")({
             if (error) console.error("Landing scan record finalize failed:", error.message);
           } catch (error) {
             console.error("Landing scan record finalize failed:", error);
+          }
+
+          if (upstream.ok && payload && typeof payload === "object" && !Array.isArray(payload)) {
+            try {
+              const slimPayload = safeResult(payload);
+              if (slimPayload) {
+                await fetch(`${backendUrl.replace(/\/+$/, "")}/landing/share/persist`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Accept: "application/json" },
+                  body: JSON.stringify({
+                    session_token: attemptToken,
+                    landing_session_id: attemptToken,
+                    snapshot: slimPayload,
+                  }),
+                });
+              }
+            } catch (mirrorError) {
+              console.error("Landing scan backend mirror failed:", mirrorError);
+            }
           }
 
           if (payload && typeof payload === "object" && !Array.isArray(payload)) {

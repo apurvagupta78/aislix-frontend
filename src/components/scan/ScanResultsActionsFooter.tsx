@@ -17,7 +17,7 @@ import {
 import { EmailAuditDialog } from "@/components/scan-results/ShareDialogs";
 import { WorkspaceShareDialog } from "@/components/scan/WorkspaceShareDialog";
 import { DemoAllowanceIndicator } from "@/components/scan/DemoAllowanceIndicator";
-import { createScanShareLink, ensureDemoShareLink } from "@/lib/scan-share.functions";
+import { createScanShareLink } from "@/lib/scan-share.functions";
 import { downloadRoleAuditExcel } from "@/lib/audit-excel-export";
 import type { DemoAllowance } from "@/lib/demo-allowance";
 import { slimLandingSnapshot } from "@/lib/demo-share-snapshot";
@@ -58,7 +58,6 @@ export function ScanResultsActionsFooter({
   const [linkUrl, setLinkUrl] = useState<string | null>(null);
   const scanId = data.scan_id;
   const createLink = useServerFn(createScanShareLink);
-  const ensureDemoLink = useServerFn(ensureDemoShareLink);
   const ready = Boolean(scanId) && !loading;
   const workspaceHref = signupHref ?? signupUrl();
 
@@ -69,12 +68,20 @@ export function ScanResultsActionsFooter({
         if (!sessionToken) throw new Error("Demo session not found — refresh and try again.");
         if (!landingSnapshot) throw new Error("Audit data is missing — refresh and try again.");
         if (linkUrl) return { url: linkUrl };
-        return ensureDemoLink({
-          data: {
+        const res = await fetch("/api/public/share/persist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({
             sessionToken,
             snapshot: slimLandingSnapshot(landingSnapshot),
-          },
+          }),
         });
+        const payload = (await res.json().catch(() => ({}))) as { url?: string; detail?: string };
+        if (!res.ok) {
+          throw new Error(payload.detail || "Could not save share link.");
+        }
+        if (!payload.url) throw new Error("Could not create share link.");
+        return { url: payload.url };
       }
       if (!scanId) throw new Error("Audit is still loading.");
       if (linkUrl) return { url: linkUrl };

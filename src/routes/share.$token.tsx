@@ -6,6 +6,7 @@
  * workspace is exposed beyond this single scan.
  */
 
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   AlertTriangle,
@@ -36,11 +37,22 @@ import type { LandingScanResult } from "@/lib/landing-scan-api";
 import { defaultAuditRoleTab } from "@/lib/role-audit-ui";
 import { formatSharedDate, type SharedScanPayload } from "@/lib/scan-share";
 
+async function loadPublicShare(token: string, requestUrl: string) {
+  const base = new URL(requestUrl).origin;
+  const res = await fetch(`${base}/api/public/share/${encodeURIComponent(token)}`, {
+    headers: { Accept: "application/json" },
+  });
+  if (!res.ok) return { report: null, demoSession: null };
+  return (await res.json()) as {
+    report: SharedScanPayload | null;
+    demoSession: LandingScanResult | null;
+  };
+}
+
 export const Route = createFileRoute("/share/$token")({
-  loader: async ({ params }) => {
+  loader: async ({ params, request }) => {
     try {
-      const { resolvePublicShare } = await import("@/lib/scan-share.server");
-      return await resolvePublicShare(params.token);
+      return await loadPublicShare(params.token, request.url);
     } catch {
       return { report: null, demoSession: null };
     }
@@ -140,10 +152,47 @@ function DemoSharedReport({ session }: { session: LandingScanResult }) {
 }
 
 function SharedReport() {
-  const { report, demoSession } = Route.useLoaderData() as {
+  const { token } = Route.useParams();
+  const loaderData = Route.useLoaderData() as {
     report: SharedScanPayload | null;
     demoSession: LandingScanResult | null;
   };
+  const [resolved, setResolved] = useState(loaderData);
+  const [loading, setLoading] = useState(
+    !loaderData.report && !loaderData.demoSession,
+  );
+
+  useEffect(() => {
+    if (resolved.report || resolved.demoSession) {
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setLoading(true);
+    fetch(`/api/public/share/${encodeURIComponent(token)}`, {
+      headers: { Accept: "application/json" },
+    })
+      .then(async (res) => (res.ok ? res.json() : null))
+      .then((payload) => {
+        if (cancelled || !payload) return;
+        setResolved(payload);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, resolved.report, resolved.demoSession]);
+
+  const { report, demoSession } = resolved;
+  if (loading) {
+    return (
+      <div className="mx-auto flex min-h-screen max-w-lg flex-col items-center justify-center gap-3 px-6 text-center">
+        <p className="text-sm text-muted-foreground">Loading shared audit report…</p>
+      </div>
+    );
+  }
   if (demoSession) return <DemoSharedReport session={demoSession} />;
   if (!report) return <LinkProblem />;
 
