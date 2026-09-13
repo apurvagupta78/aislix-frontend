@@ -48,7 +48,7 @@ import {
 } from "@/lib/assignments";
 
 
-export const Route = createFileRoute("/assign-audit")({
+export const Route = createFileRoute("/assign-scan")({
   validateSearch: (search: Record<string, unknown>) => ({
     store: typeof search.store === "string" ? search.store : undefined,
     scope: search.scope === "planogram" ? ("planogram" as const) : undefined,
@@ -58,13 +58,13 @@ export const Route = createFileRoute("/assign-audit")({
 
   head: () => ({
     meta: [
-      { title: "Assign Audit — Delegate a shelf audit | Aislix" },
+      { title: "Assign Scan â€” Delegate a shelf audit | Aislix" },
       {
         name: "description",
         content:
           "Assign a shelf audit to a team member by category, sub-category, shelf location or an exact planogram product list.",
       },
-      { property: "og:title", content: "Assign Audit — Aislix" },
+      { property: "og:title", content: "Assign Scan â€” Aislix" },
       {
         property: "og:description",
         content: "Delegate shelf audits to your store team and track them to completion in Aislix.",
@@ -99,7 +99,7 @@ function AssignScanPage() {
   const [dueAt, setDueAt] = useState("");
   const [instructions, setInstructions] = useState("");
 
-  // Planogram scope — the assignment's own expected product list.
+  // Planogram scope â€” the assignment's own expected product list.
   const [planogramRows, setPlanogramRows] = useState<DraftRow[]>([]);
   const [sources, setSources] = useState<{ csv: boolean; manual: boolean }>({
     csv: false,
@@ -290,9 +290,9 @@ function AssignScanPage() {
     },
     onSuccess: (assignmentId) => {
       toast.success(
-        `Audit assigned to ${assignee?.name ?? "team member"} — ID: ${formatAssignmentId(assignmentId)}`,
+        `Scan assigned to ${assignee?.name ?? "team member"} â€” ID: ${formatAssignmentId(assignmentId)}`,
       );
-      void navigate({ to: "/assigned-audits" });
+      void navigate({ to: "/assigned-scans" });
     },
     onError: (error) => toast.error(toUserMessage(error)),
   });
@@ -308,7 +308,7 @@ function AssignScanPage() {
     }
     if (planogramMode) {
       if (!planogramRows.length) {
-        setPlanogramError("Add at least one expected product before assigning this audit.");
+        setPlanogramError("Add at least one expected product before assigning this scan.");
         return;
       }
       setPlanogramError(null);
@@ -320,7 +320,7 @@ function AssignScanPage() {
       return;
     }
     if (scopeType === "sub_category" && !subSelections.length) {
-      toast.error("Add at least one shelf type (category · subcategory).");
+      toast.error("Add at least one shelf type (category Â· subcategory).");
       return;
     }
     if (scopeType === "category" && !category) {
@@ -333,10 +333,10 @@ function AssignScanPage() {
 
   if (accessQuery.data === false) {
     return (
-      <AppShell title="Assign Audit" description="Delegate a shelf audit to your team.">
+      <AppShell title="Assign Scan" description="Delegate a shelf audit to your team.">
         <EmptyState
           title="Manager access required"
-          description="Only owners, admins and managers can assign audits. Ask your workspace owner for access."
+          description="Only owners, admins and managers can assign scans. Ask your workspace owner for access."
         />
       </AppShell>
     );
@@ -344,7 +344,7 @@ function AssignScanPage() {
 
   return (
     <AppShell
-      title="Assign Audit"
+      title="Assign Scan"
       description="Send a scoped shelf audit to a team member and track it through to completion."
     >
       <div className="max-w-3xl space-y-6">
@@ -352,7 +352,7 @@ function AssignScanPage() {
           <section className={card}>
             <h2 className="text-sm font-semibold text-foreground">Store &amp; scope</h2>
             <p className="mt-2 text-sm font-medium text-foreground">
-              Store ·{" "}
+              Store Â·{" "}
               {(storesQuery.data ?? []).find((store) => store.id === storeId)?.name ?? "Store"}
             </p>
             <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
@@ -371,13 +371,13 @@ function AssignScanPage() {
               </span>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
-              Read-only — set by this store&apos;s active planogram.
+              Read-only â€” set by this store&apos;s active planogram.
             </p>
           </section>
         ) : (
           <>
             <section className={card}>
-              <h2 className="text-sm font-semibold text-foreground">Step 1 · Select store</h2>
+              <h2 className="text-sm font-semibold text-foreground">Step 1 Â· Select store</h2>
               <div className="mt-3 max-w-xs">
                 {storesQuery.isLoading ? (
                   <Skeleton className="h-10 w-full rounded-xl" />
@@ -390,7 +390,7 @@ function AssignScanPage() {
                       {(storesQuery.data ?? []).map((store) => (
                         <SelectItem key={store.id} value={store.id}>
                           {store.name}
-                          {store.code ? ` · ${store.code}` : ""}
+                          {store.code ? ` Â· ${store.code}` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -400,7 +400,7 @@ function AssignScanPage() {
             </section>
 
             <section className={card}>
-              <h2 className="text-sm font-semibold text-foreground">Step 2 · Scope</h2>
+              <h2 className="text-sm font-semibold text-foreground">Step 2 Â· Scope</h2>
               <Tabs
                 value={scopeType}
                 onValueChange={(value) => setScopeType(value as ScopeType)}
@@ -417,8 +417,8 @@ function AssignScanPage() {
               {planogramMode && (
                 <div className="mt-4 space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Define the exact products this audit must cover — upload a CSV or add rows
-                    manually. The assignee audits against this list only.
+                    Define the exact products this audit must cover â€” upload a CSV or add rows
+                    manually. The assignee scans against this list only.
                   </p>
 
                   {planogramError && (
@@ -484,7 +484,7 @@ function AssignScanPage() {
                   {planogramRows.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 text-xs">
                       <span className="rounded-lg bg-brand-soft px-2 py-1 font-medium text-brand">
-                        {planogramSummary.productCount} products ·{" "}
+                        {planogramSummary.productCount} products Â·{" "}
                         {planogramSummary.facingCount} expected facings
                       </span>
                       {[
@@ -537,7 +537,7 @@ function AssignScanPage() {
                       onChange={setSubSelections}
                       categories={categories}
                       label="Shelf types to audit *"
-                      helper="Add every category · subcategory the assignee should audit on this rack."
+                      helper="Add every category Â· subcategory the assignee should audit on this rack."
                     />
                   </div>
                 )}
@@ -563,7 +563,7 @@ function AssignScanPage() {
 
 
         <section className={card}>
-          <h2 className="text-sm font-semibold text-foreground">Step 3 · Assign to team member</h2>
+          <h2 className="text-sm font-semibold text-foreground">Step 3 Â· Assign to team member</h2>
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Assign to team member</Label>
@@ -578,14 +578,14 @@ function AssignScanPage() {
                     {members.map((member) => (
                       <SelectItem key={member.user_id} value={member.user_id}>
                         {member.name}
-                        {member.email ? ` · ${member.email}` : ""}
+                        {member.email ? ` Â· ${member.email}` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Invite a team member first —{" "}
+                  Invite a team member first â€”{" "}
                   <Link to="/team" className="font-medium text-brand underline">
                     go to Team
                   </Link>
@@ -630,10 +630,10 @@ function AssignScanPage() {
               ) : (
                 <UserPlus className="mr-2 size-4" />
               )}
-              Assign audit
+              Assign scan
             </Button>
             <Button variant="outline" className="rounded-xl" asChild>
-              <Link to="/assigned-audits">View assigned audits</Link>
+              <Link to="/assigned-scans">View assigned scans</Link>
             </Button>
           </div>
           {membersQuery.isError && (

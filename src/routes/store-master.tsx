@@ -151,7 +151,7 @@ function StoreMasterPage() {
 
   function assign(version: PlanogramVersionSummary) {
     void navigate({
-      to: "/assign-audit",
+      to: "/assign-scan",
       search: { store: storeId, scope: "planogram", planogramVersion: version.id },
     });
   }
@@ -384,7 +384,7 @@ function StoreMasterPage() {
                               <td className="px-3 py-2 text-right">
                                 <Button variant="outline" size="sm" className="rounded-xl" asChild>
                                   <Link
-                                    to="/assigned-audits"
+                                    to="/assigned-scans"
                                     search={{ tab: "assignments", store: storeId }}
                                   >
                                     View assignment

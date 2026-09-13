@@ -19,9 +19,9 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-  { label: "New audit", to: "/audit", icon: Plus },
+  { label: "New audit", to: "/scan", icon: Plus },
   { label: "Audit history", to: "/history", icon: History },
-  { label: "Assigned audits", to: "/my-audits", icon: ClipboardCheck },
+  { label: "Assigned audits", to: "/my-scans", icon: ClipboardCheck },
 ];
 
 type GuestDemoShellProps = {

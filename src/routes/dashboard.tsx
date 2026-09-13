@@ -96,7 +96,7 @@ function Dashboard() {
               <Link to="/history">Audit history</Link>
             </Button>
             <Button asChild variant="brand" size="sm" className="rounded-xl">
-              <Link to="/audit">
+              <Link to="/scan">
                 Start new audit <span aria-hidden>→</span>
               </Link>
             </Button>
@@ -157,7 +157,7 @@ function Dashboard() {
             description="Complete an AI shelf audit to start tracking performance, issues and improvement."
             action={
               <Button asChild variant="brand" size="sm" className="rounded-xl">
-                <Link to="/audit">
+                <Link to="/scan">
                   Start new audit <span aria-hidden>→</span>
                 </Link>
               </Button>

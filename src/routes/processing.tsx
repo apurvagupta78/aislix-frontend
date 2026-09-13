@@ -78,7 +78,7 @@ function Processing() {
               <p className="text-sm text-muted-foreground">{error}</p>
               <div className="flex justify-center gap-2">
                 <Button asChild variant="subtle" size="sm" className="rounded-xl">
-                  <Link to="/audit">New audit</Link>
+                  <Link to="/scan">New audit</Link>
                 </Button>
                 {scan ? (
                   <Button

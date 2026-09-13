@@ -101,7 +101,7 @@ function AdminOrgsPage() {
                       <TableCell>{row.store_count}</TableCell>
                       <TableCell>
                         <Link
-                          to="/admin/audits"
+                          to="/admin/scans"
                           search={{ orgId: row.id }}
                           className="font-medium text-brand hover:underline"
                         >

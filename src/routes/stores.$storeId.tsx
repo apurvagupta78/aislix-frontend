@@ -117,7 +117,7 @@ function StoreDashboard() {
             )}
           </Button>
           <Button asChild variant="brand" size="sm" className="rounded-xl">
-            <Link to="/audit">
+            <Link to="/scan">
               <ScanLine className="size-4" /> New audit
             </Link>
           </Button>

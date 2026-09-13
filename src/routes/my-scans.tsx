@@ -20,9 +20,8 @@ import {
 import { markAssignmentNotificationsRead } from "@/lib/notifications";
 import { complianceTone } from "@/lib/planogram-compliance";
 import { AssignmentIdChip } from "@/components/AssignmentId";
-import { formatAssignmentDueDate, statusBadge } from "@/lib/assignment-display";
 
-export const Route = createFileRoute("/my-audits")({
+export const Route = createFileRoute("/my-scans")({
   validateSearch: (search: Record<string, unknown>): { tab?: "assigned" | "completed" } => {
     const raw = search["tab"];
     return raw === "completed" || raw === "assigned" ? { tab: raw } : {};
@@ -30,16 +29,16 @@ export const Route = createFileRoute("/my-audits")({
 
   head: () => ({
     meta: [
-      { title: "My Assigned Audits — Aislix shelf audit tasks" },
+      { title: "My Assigned Scans â€” Aislix shelf audit tasks" },
       {
         name: "description",
         content:
-          "See the shelf audits assigned to you, their scope and due dates, and start an audit in one tap.",
+          "See the shelf scans assigned to you, their scope and due dates, and start an audit in one tap.",
       },
-      { property: "og:title", content: "My Assigned Audits — Aislix" },
+      { property: "og:title", content: "My Assigned Scans â€” Aislix" },
       {
         property: "og:description",
-        content: "Your shelf audit task list: scope, store, due date and one-tap audit start.",
+        content: "Your shelf audit task list: scope, store, due date and one-tap scan start.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -47,6 +46,31 @@ export const Route = createFileRoute("/my-audits")({
   }),
   component: MyScansPage,
 });
+
+export function statusBadge(status: Assignment["status"]) {
+  const map: Record<Assignment["status"], { label: string; className: string }> = {
+    pending: { label: "Pending", className: "bg-warning/10 text-warning" },
+    in_progress: { label: "In progress", className: "bg-brand-soft text-brand" },
+    needs_correction: { label: "Needs correction", className: "bg-warning/15 text-warning" },
+    completed: { label: "Completed", className: "bg-success/10 text-success" },
+    cancelled: { label: "Cancelled", className: "bg-muted text-muted-foreground" },
+  };
+  const item = map[status] ?? map.pending;
+  return (
+    <Badge variant="secondary" className={`rounded-full border-0 ${item.className}`}>
+      {item.label}
+    </Badge>
+  );
+}
+
+export function formatDate(value: string | null) {
+  if (!value) return "No due date";
+  return new Date(value).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
 
 type TabKey = "pending" | "in_progress" | "needs_correction" | "overdue" | "completed";
 
@@ -58,14 +82,14 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "completed", label: "Completed" },
 ];
 
-/** "Test store · A-1-Z · Personal Care · Shampoo · 8 expected products" */
+/** "Test store Â· A-1-Z Â· Personal Care Â· Shampoo Â· 8 expected products" */
 function assignmentLine(assignment: Assignment): string {
   const parts = [assignment.store_name];
   if (assignment.location) parts.push(assignment.location);
   if (assignment.scope_values.category) parts.push(assignment.scope_values.category);
   if (assignment.scope_values.sub_category) parts.push(assignment.scope_values.sub_category);
   parts.push(`${assignment.expected_products} expected products`);
-  return parts.join(" · ");
+  return parts.join(" Â· ");
 }
 
 function MyScansPage() {
@@ -89,7 +113,7 @@ function MyScansPage() {
     onSuccess: (_data, assignment) => {
       void queryClient.invalidateQueries({ queryKey: ["my-assignments"] });
       void queryClient.invalidateQueries({ queryKey: ["my-assignments-pending"] });
-      void navigate({ to: "/audit", search: { assignmentId: assignment.id } });
+      void navigate({ to: "/scan", search: { assignmentId: assignment.id } });
     },
     onError: (error) => toast.error(toUserMessage(error)),
   });
@@ -121,7 +145,7 @@ function MyScansPage() {
   }, [tab, buckets.needs_correction, queryClient]);
 
   return (
-    <AppShell title="My Assigned Audits" description="Shelf audits assigned to you by your manager.">
+    <AppShell title="My Assigned Scans" description="Shelf audits assigned to you by your manager.">
       {query.isLoading ? (
         <div className="space-y-3">
           {[0, 1, 2].map((index) => (
@@ -189,7 +213,7 @@ function MyScansPage() {
                         <MapPin className="size-3.5" /> {assignmentLine(assignment)}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {scopeSummary(assignment.scope_type, assignment.scope_values)} · assigned by{" "}
+                        {scopeSummary(assignment.scope_type, assignment.scope_values)} Â· assigned by{" "}
                         {assignment.assigner_name}
                       </p>
                       {assignment.status === "needs_correction" && (
@@ -200,13 +224,13 @@ function MyScansPage() {
                             )}`}
                           >
                             {assignment.last_compliance_percent === null
-                              ? "—"
+                              ? "â€”"
                               : `${Math.round(assignment.last_compliance_percent)}%`}{" "}
                             compliance
                           </span>
                           <span className="text-muted-foreground">
                             {" "}
-                            · attempt {assignment.scan_attempts} · fix the shelf, then re-audit
+                            Â· attempt {assignment.scan_attempts} Â· fix the shelf, then re-scan
                           </span>
                         </p>
                       )}
@@ -218,7 +242,7 @@ function MyScansPage() {
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <CalendarClock className="size-3.5" /> {formatAssignmentDueDate(assignment.due_at)}
+                        <CalendarClock className="size-3.5" /> {formatDate(assignment.due_at)}
                       </span>
                       {actionable ? (
                         <Button
@@ -233,10 +257,10 @@ function MyScansPage() {
                             <ScanLine className="mr-2 size-4" />
                           )}
                           {assignment.status === "needs_correction"
-                            ? "Fix & re-audit"
+                            ? "Fix & re-scan"
                             : assignment.status === "in_progress"
-                              ? "Continue audit"
-                              : "Start audit"}
+                              ? "Continue scan"
+                              : "Start scan"}
                         </Button>
                       ) : null}
                       {assignment.scan_id && (
@@ -246,7 +270,7 @@ function MyScansPage() {
                           onClick={() =>
                             void navigate({
                               to: "/results",
-                              search: { audit: assignment.scan_id! },
+                              search: { scan: assignment.scan_id! },
                             })
                           }
                         >

@@ -614,7 +614,7 @@ export function FixRescanCtaPanel({
 
   const top = ledger[0];
 
-  const rescanHref = scanId ? `/audit?verify=${encodeURIComponent(scanId)}` : "/audit";
+  const rescanHref = scanId ? `/scan?verify=${encodeURIComponent(scanId)}` : "/scan";
 
 
 

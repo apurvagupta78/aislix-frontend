@@ -62,12 +62,12 @@ export function FieldDashboardPanel() {
       </div>
       <div className="flex flex-wrap gap-2">
         <Button asChild variant="brand" size="sm" className="rounded-xl">
-          <Link to="/my-audits">
+          <Link to="/my-scans">
             <ClipboardList className="mr-2 size-4" /> My assigned audits
           </Link>
         </Button>
         <Button asChild variant="subtle" size="sm" className="rounded-xl">
-          <Link to="/audit">
+          <Link to="/scan">
             <ScanLine className="mr-2 size-4" /> Start audit
           </Link>
         </Button>

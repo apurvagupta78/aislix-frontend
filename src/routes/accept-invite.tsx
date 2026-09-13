@@ -123,7 +123,7 @@ function AcceptInvitePage() {
           <Button
             variant="brand"
             className="rounded-xl"
-            onClick={() => void navigate({ to: "/my-audits", replace: true })}
+            onClick={() => void navigate({ to: "/my-scans", replace: true })}
           >
             Go to my audits
           </Button>
@@ -139,7 +139,7 @@ function AcceptInvitePage() {
           <Button
             variant="brand"
             className="rounded-xl"
-            onClick={() => void navigate({ to: "/my-audits", replace: true })}
+            onClick={() => void navigate({ to: "/my-scans", replace: true })}
           >
             Continue
           </Button>

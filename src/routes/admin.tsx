@@ -180,7 +180,7 @@ function AdminOverviewPage() {
 
             <Button asChild variant="brand" className="rounded-xl">
 
-              <Link to="/admin/audits">
+              <Link to="/admin/scans">
 
                 Browse all audits <ArrowRight className="size-4" />
 
@@ -202,7 +202,7 @@ function AdminOverviewPage() {
 
             <Button asChild variant="outline" className="rounded-xl">
 
-              <Link to="/admin/demo-audits">Demo sessions</Link>
+              <Link to="/admin/demo-scans">Demo sessions</Link>
 
             </Button>
 
@@ -218,7 +218,7 @@ function AdminOverviewPage() {
 
                 <p className="text-sm font-semibold">Recent audits</p>
 
-                <Link to="/admin/audits" className="text-xs text-brand hover:underline">
+                <Link to="/admin/scans" className="text-xs text-brand hover:underline">
 
                   View all
 
@@ -250,7 +250,7 @@ function AdminOverviewPage() {
 
                       <TableCell className="text-xs">
 
-                        <Link to="/admin/audits" className="block">
+                        <Link to="/admin/scans" className="block">
 
                           {new Date(row.created_at).toLocaleString()}
 

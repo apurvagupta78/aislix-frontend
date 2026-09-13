@@ -104,18 +104,18 @@ const SECTIONS: NavSection[] = [
     label: "Audits",
     icon: ClipboardCheck,
     items: [
-      { kind: "leaf", label: "New Audit", to: "/audit", icon: Plus },
+      { kind: "leaf", label: "New Audit", to: "/scan", icon: Plus },
       {
         kind: "leaf",
         label: "Assigned to Me",
-        to: "/my-audits",
+        to: "/my-scans",
         search: { tab: "assigned" },
         badge: "open-tasks",
       },
       {
         kind: "leaf",
         label: "Audits I Assigned",
-        to: "/assigned-audits",
+        to: "/assigned-scans",
         search: { tab: "assignments" },
         managerOnly: true,
       },
@@ -680,7 +680,7 @@ export function AppShell({
             </form>
             <div className="ml-auto flex items-center gap-2">
               <Button asChild variant="brand" size="sm" className="rounded-xl">
-                <Link to="/audit">New audit</Link>
+                <Link to="/scan">New audit</Link>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

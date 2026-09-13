@@ -132,7 +132,7 @@ export function FixRescanVerifyPanel({
             automatically on each attempt.
           </p>
           <Button asChild variant="brand" size="sm" className="mt-3 rounded-xl">
-            <Link to="/audit" search={{ assignmentId: assignment.id }}>
+            <Link to="/scan" search={{ assignmentId: assignment.id }}>
               <RefreshCw className="size-4" /> Fix & re-audit
             </Link>
           </Button>

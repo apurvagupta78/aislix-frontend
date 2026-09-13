@@ -97,7 +97,7 @@ function AdminUsersPage() {
                       <TableCell>{row.org_count}</TableCell>
                       <TableCell>
                         <Link
-                          to="/admin/audits"
+                          to="/admin/scans"
                           search={{ userId: row.id }}
                           className="font-medium text-brand hover:underline"
                         >

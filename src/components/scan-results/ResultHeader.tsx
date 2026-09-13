@@ -163,7 +163,7 @@ export function ScanResultHeader({
             </h2>
             <ScanStatusBadge status={data?.status} />
             {assignmentId ? (
-              <Link to="/assigned-audits" search={{ tab: "assignments" as const }}>
+              <Link to="/assigned-scans" search={{ tab: "assignments" as const }}>
                 <Badge
                   variant="outline"
                   className="rounded-full border-brand/25 bg-brand-soft font-mono text-brand"
@@ -252,7 +252,7 @@ export function ResultNavigation() {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Button asChild variant="brand" size="sm" className="rounded-xl">
-        <Link to="/audit">
+        <Link to="/scan">
           <ScanLine className="size-4" /> Audit again
         </Link>
       </Button>

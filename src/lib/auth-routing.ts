@@ -70,7 +70,7 @@ export async function resolvePostLoginRoute(): Promise<AuthRoute> {
     const { fetchMyPendingCount, isOrgManager } = await import("@/lib/assignments");
     const [manager, pending] = await Promise.all([isOrgManager(), fetchMyPendingCount()]);
     if (!manager) {
-      return pending > 0 ? { to: "/my-audits", search: { tab: "assigned" } } : { to: "/my-audits" };
+      return pending > 0 ? { to: "/my-scans", search: { tab: "assigned" } } : { to: "/my-scans" };
     }
   } catch {
     // fall through to the dashboard
@@ -111,7 +111,7 @@ export async function resolvePostAuthRoute(_user?: MinimalUser): Promise<AuthRou
   } catch {
     // membership activation is retried on the next authenticated read
   }
-  if (activated > 0) return { to: "/my-audits" };
+  if (activated > 0) return { to: "/my-scans" };
 
 
   const { data: profile, error } = await supabase

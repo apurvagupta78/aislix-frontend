@@ -30,30 +30,30 @@ import {
   type Assignment,
 } from "@/lib/assignments";
 import { AssignmentAttemptsList } from "@/components/scan-results/FixRescanVerifyPanel";
-import { formatAssignmentDueDate, statusBadge } from "@/lib/assignment-display";
+import { formatDate, statusBadge } from "@/routes/my-scans";
 import { AssignmentIdChip, formatAssignmentId } from "@/components/AssignmentId";
 
-export const Route = createFileRoute("/assigned-audits")({
+export const Route = createFileRoute("/assigned-scans")({
   validateSearch: (
     search: Record<string, unknown>,
-  ): { tab?: "assignments" | "team-audits"; store?: string } => {
+  ): { tab?: "assignments" | "team-scans"; store?: string } => {
     const raw = search["tab"];
     const store = search["store"];
     return {
-      ...(raw === "team-audits" || raw === "assignments" ? { tab: raw } : {}),
+      ...(raw === "team-scans" || raw === "assignments" ? { tab: raw } : {}),
       ...(typeof store === "string" && store ? { store } : {}),
     };
   },
 
   head: () => ({
     meta: [
-      { title: "Assigned Audits — Track team shelf audits | Aislix" },
+      { title: "Assigned Scans â€” Track team shelf audits | Aislix" },
       {
         name: "description",
         content:
           "Track every shelf audit you assigned: store, scope, assignee, due date, compliance and completion status.",
       },
-      { property: "og:title", content: "Assigned Audits — Aislix" },
+      { property: "og:title", content: "Assigned Scans â€” Aislix" },
       {
         property: "og:description",
         content: "Manager view of all assigned shelf audits across your stores and team.",
@@ -66,19 +66,19 @@ export const Route = createFileRoute("/assigned-audits")({
 });
 
 function compliance(value: number | null) {
-  if (value === null) return <span className="text-xs text-muted-foreground">—</span>;
+  if (value === null) return <span className="text-xs text-muted-foreground">â€”</span>;
   return (
     <span className={`text-sm font-semibold ${complianceTone(value)}`}>{Math.round(value)}%</span>
   );
 }
 
-/** "Test store · A-1-Z · Personal Care · Shampoo" */
+/** "Test store Â· A-1-Z Â· Personal Care Â· Shampoo" */
 function scopeLine(row: Assignment): string {
   const parts = [row.store_name];
   if (row.location) parts.push(row.location);
   if (row.scope_values.category) parts.push(row.scope_values.category);
   if (row.scope_values.sub_category) parts.push(row.scope_values.sub_category);
-  return parts.join(" · ");
+  return parts.join(" Â· ");
 }
 
 function AssignmentAttemptsExpand({ assignmentId }: { assignmentId: string }) {
@@ -97,7 +97,7 @@ function AssignmentAttemptsExpand({ assignmentId }: { assignmentId: string }) {
         onClick={() => setOpen((value) => !value)}
       >
         <ChevronDown className={`size-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
-        {open ? "Hide attempts" : "Show audit attempts"}
+        {open ? "Hide attempts" : "Show scan attempts"}
       </button>
       {open && (
         <div className="mt-2">
@@ -126,7 +126,7 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
 
   const notifyMutation = useMutation({
     mutationFn: (row: Assignment) => requestReScan(row),
-    onSuccess: () => toast.success("Assignee notified to re-audit"),
+    onSuccess: () => toast.success("Assignee notified to re-scan"),
     onError: (error) => toast.error(toUserMessage(error)),
   });
 
@@ -189,7 +189,7 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
           description="Assign a scoped shelf audit to a team member to see it tracked here."
           action={
             <Button variant="brand" className="rounded-xl" asChild>
-              <Link to="/assign-audit" search={{ store: undefined, scope: undefined, planogramVersion: undefined }}>Assign audit</Link>
+              <Link to="/assign-scan" search={{ store: undefined, scope: undefined, planogramVersion: undefined }}>Assign scan</Link>
             </Button>
           }
         />
@@ -205,11 +205,11 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
                       className="uppercase tracking-wide hover:text-foreground"
                       onClick={() => setSortById((value) => !value)}
                     >
-                      Assignment ID {sortById ? "▲" : "▼"}
+                      Assignment ID {sortById ? "â–²" : "â–¼"}
                     </button>
                   </th>
                   <th className="px-4 py-3 text-left font-medium">Assignee</th>
-                  <th className="px-4 py-3 text-left font-medium">Store · Scope</th>
+                  <th className="px-4 py-3 text-left font-medium">Store Â· Scope</th>
                   <th className="px-4 py-3 text-left font-medium">Expected</th>
                   <th className="px-4 py-3 text-left font-medium">Due</th>
                   <th className="px-4 py-3 text-left font-medium">Status</th>
@@ -229,7 +229,7 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
                     <td className="px-4 py-3 text-foreground">{row.assignee_name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{scopeLine(row)}</td>
                     <td className="px-4 py-3 text-muted-foreground">{row.expected_products}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{formatAssignmentDueDate(row.due_at)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{formatDate(row.due_at)}</td>
                     <td className="px-4 py-3">
                       {isOverdue(row) ? (
                         <span className="text-xs font-medium text-destructive">Overdue</span>
@@ -243,7 +243,7 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
                         <div className="flex justify-end gap-1">
                           {row.scan_id && (
                             <Button variant="ghost" size="sm" className="rounded-xl" asChild>
-                              <Link to="/results" search={{ audit: row.scan_id }}>
+                              <Link to="/results" search={{ scan: row.scan_id }}>
                                 View results
                               </Link>
                             </Button>
@@ -260,7 +260,7 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
                         </div>
                       ) : row.scan_id ? (
                         <Button variant="ghost" size="sm" className="rounded-xl" asChild>
-                          <Link to="/results" search={{ audit: row.scan_id }}>
+                          <Link to="/results" search={{ scan: row.scan_id }}>
                             View results
                           </Link>
                         </Button>
@@ -275,7 +275,7 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
                           Cancel
                         </Button>
                       ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
+                        <span className="text-xs text-muted-foreground">â€”</span>
                       )}
                     </td>
                   </tr>
@@ -297,11 +297,11 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
                 )}
                 <p className="mt-1 text-sm text-muted-foreground">{scopeLine(row)}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {row.expected_products} expected · {formatAssignmentDueDate(row.due_at)}
+                  {row.expected_products} expected Â· {formatDate(row.due_at)}
                 </p>
                 {row.status === "needs_correction" && (
                   <p className="mt-1 text-xs font-medium text-destructive">
-                    {row.open_issue_count} open issues · re-audit required
+                    {row.open_issue_count} open issues Â· re-scan required
                   </p>
                 )}
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
@@ -319,7 +319,7 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
                   )}
                   {row.scan_id && (
                     <Button variant="ghost" size="sm" className="rounded-xl" asChild>
-                      <Link to="/results" search={{ audit: row.scan_id }}>
+                      <Link to="/results" search={{ scan: row.scan_id }}>
                         View results
                       </Link>
                     </Button>
@@ -336,7 +336,7 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
 
 function TeamScansTab() {
   const query = useQuery({
-    queryKey: ["team-audits"],
+    queryKey: ["team-scans"],
     queryFn: () => fetchTeamScans(),
     retry: false,
   });
@@ -352,8 +352,8 @@ function TeamScansTab() {
     return (
       <EmptyState
         icon={<ClipboardList className="size-6" />}
-        title="No team audits yet"
-        description="Once a teammate completes an assigned audit, their audit appears here with compliance detail."
+        title="No team scans yet"
+        description="Once a teammate completes an assigned audit, their scan appears here with compliance detail."
       />
     );
 
@@ -363,7 +363,7 @@ function TeamScansTab() {
         <thead className="bg-surface text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
             <th className="px-4 py-3 text-left font-medium">Assignment ID</th>
-            <th className="px-4 py-3 text-left font-medium">Audit date</th>
+            <th className="px-4 py-3 text-left font-medium">Scan date</th>
             <th className="px-4 py-3 text-left font-medium">Assignee</th>
             <th className="px-4 py-3 text-left font-medium">Store</th>
             <th className="px-4 py-3 text-left font-medium">Location</th>
@@ -381,20 +381,20 @@ function TeamScansTab() {
                 {row.assignment_id ? (
                   <AssignmentIdChip id={row.assignment_id} label={false} />
                 ) : (
-                  <span className="text-xs text-muted-foreground">—</span>
+                  <span className="text-xs text-muted-foreground">â€”</span>
                 )}
               </td>
-              <td className="px-4 py-3 text-muted-foreground">{formatAssignmentDueDate(row.created_at)}</td>
+              <td className="px-4 py-3 text-muted-foreground">{formatDate(row.created_at)}</td>
               <td className="px-4 py-3 text-foreground">{row.assignee_name}</td>
               <td className="px-4 py-3 text-foreground">{row.store_name}</td>
-              <td className="px-4 py-3 text-muted-foreground">{row.location ?? "—"}</td>
+              <td className="px-4 py-3 text-muted-foreground">{row.location ?? "â€”"}</td>
               <td className="px-4 py-3">{compliance(row.compliance_percent)}</td>
-              <td className="px-4 py-3 text-muted-foreground">{row.missing ?? "—"}</td>
-              <td className="px-4 py-3 text-muted-foreground">{row.wrong_product ?? "—"}</td>
-              <td className="px-4 py-3 text-muted-foreground">{row.unexpected ?? "—"}</td>
+              <td className="px-4 py-3 text-muted-foreground">{row.missing ?? "â€”"}</td>
+              <td className="px-4 py-3 text-muted-foreground">{row.wrong_product ?? "â€”"}</td>
+              <td className="px-4 py-3 text-muted-foreground">{row.unexpected ?? "â€”"}</td>
               <td className="px-4 py-3 text-right">
                 <Button variant="ghost" size="sm" className="rounded-xl" asChild>
-                  <Link to="/results" search={{ audit: row.scan_id }}>
+                  <Link to="/results" search={{ scan: row.scan_id }}>
                     View
                   </Link>
                 </Button>
@@ -423,12 +423,12 @@ function AssignedScansPage() {
 
   return (
     <AppShell
-      title="Assigned Audits"
+      title="Assigned Scans"
       description="Every shelf audit assigned across your stores and team."
       actions={
         <Button variant="brand" className="rounded-xl" asChild>
-          <Link to="/assign-audit" search={{ store: undefined, scope: undefined, planogramVersion: undefined }}>
-            <UserPlus className="mr-2 size-4" /> Assign audit
+          <Link to="/assign-scan" search={{ store: undefined, scope: undefined, planogramVersion: undefined }}>
+            <UserPlus className="mr-2 size-4" /> Assign scan
           </Link>
         </Button>
       }
@@ -437,21 +437,21 @@ function AssignedScansPage() {
         <EmptyState
           icon={<ClipboardList className="size-6" />}
           title="Manager access required"
-          description="Only workspace owners, admins and managers can review assigned audits. Your own tasks live on My Audits."
+          description="Only workspace owners, admins and managers can review assigned scans. Your own tasks live on My Scans."
           action={
             <Button variant="brand" className="rounded-xl" asChild>
-              <Link to="/my-audits">Go to My Audits</Link>
+              <Link to="/my-scans">Go to My Scans</Link>
             </Button>
           }
         />
       ) : (
-        <Tabs value={tab} onValueChange={(v) => setTab(v as "assignments" | "team-audits")} className="space-y-4">
+        <Tabs value={tab} onValueChange={(v) => setTab(v as "assignments" | "team-scans")} className="space-y-4">
           <TabsList className="rounded-xl">
             <TabsTrigger value="assignments" className="rounded-lg">
               Assignments
             </TabsTrigger>
-            <TabsTrigger value="team-audits" className="rounded-lg">
-              Team Audits
+            <TabsTrigger value="team-scans" className="rounded-lg">
+              Team Scans
             </TabsTrigger>
           </TabsList>
           {tab === "assignments" ? <AssignmentsTab storeId={storeSearch} /> : <TeamScansTab />}

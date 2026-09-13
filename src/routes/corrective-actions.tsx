@@ -237,7 +237,7 @@ function CorrectiveActionsPage() {
                         )}
                         {row.assignment_id && (
                           <Link
-                            to="/assigned-audits"
+                            to="/assigned-scans"
                             search={{ tab: "assignments" as const }}
                             className="block font-mono text-xs text-brand hover:underline"
                           >

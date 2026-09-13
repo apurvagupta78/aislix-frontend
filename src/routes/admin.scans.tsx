@@ -36,13 +36,13 @@ import {
   type PlatformScanRow,
 } from "@/lib/platform-admin.functions";
 
-export const Route = createFileRoute("/admin/audits")({
+export const Route = createFileRoute("/admin/scans")({
   validateSearch: (search: Record<string, unknown>) => ({
     userId: typeof search.userId === "string" ? search.userId : undefined,
     orgId: typeof search.orgId === "string" ? search.orgId : undefined,
   }),
   head: () => ({
-    meta: [{ title: "All Audits — Platform Admin" }, { name: "robots", content: "noindex, nofollow" }],
+    meta: [{ title: "All Scans â€” Platform Admin" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: AdminScansPage,
 });
@@ -64,7 +64,7 @@ function AdminScansPage() {
   const fetchDetail = useServerFn(getPlatformScanDetail);
 
   const query = useQuery({
-    queryKey: ["platform-admin-audits", page, q, status, userId, orgId],
+    queryKey: ["platform-admin-scans", page, q, status, userId, orgId],
     queryFn: () =>
       fetchScans({
         data: { page, pageSize: 25, q: q || undefined, status, userId, orgId },
@@ -73,7 +73,7 @@ function AdminScansPage() {
   });
 
   const detailQuery = useQuery({
-    queryKey: ["platform-admin-audit-detail", selected?.id],
+    queryKey: ["platform-admin-scan-detail", selected?.id],
     queryFn: () => fetchDetail({ data: { scanId: selected!.id } }),
     enabled: Boolean(selected?.id),
   });
@@ -82,8 +82,8 @@ function AdminScansPage() {
 
   return (
     <AdminPage
-      title="All shelf audits"
-      description="Every workspace audit with user id, org, store, uploaded photos and full results."
+      title="All shelf scans"
+      description="Every workspace scan with user id, org, store, uploaded photos and full results."
       actions={
         <Button variant="outline" size="sm" onClick={() => void query.refetch()} disabled={query.isFetching}>
           <RefreshCw className={`mr-2 size-4 ${query.isFetching ? "animate-spin" : ""}`} />
@@ -96,7 +96,7 @@ function AdminScansPage() {
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               className="pl-9"
-              placeholder="Search audit id, category, shelf…"
+              placeholder="Search scan id, category, shelfâ€¦"
               value={q}
               onChange={(e) => {
                 setQ(e.target.value);
@@ -127,7 +127,7 @@ function AdminScansPage() {
         {(userId || orgId) && (
           <p className="mb-3 text-xs text-muted-foreground">
             Filtered by {userId ? `user ${userId}` : ""}
-            {userId && orgId ? " · " : ""}
+            {userId && orgId ? " Â· " : ""}
             {orgId ? `org ${orgId}` : ""}
           </p>
         )}
@@ -136,7 +136,7 @@ function AdminScansPage() {
           <Skeleton className="h-96 w-full rounded-xl" />
         ) : query.isError ? (
           <ErrorState
-            title="Could not load audits"
+            title="Could not load scans"
             description={query.error instanceof Error ? query.error.message : "Try again."}
             onRetry={() => void query.refetch()}
           />
@@ -148,7 +148,7 @@ function AdminScansPage() {
                   <TableRow>
                     <TableHead className="w-16">Photo</TableHead>
                     <TableHead>When</TableHead>
-                    <TableHead>Audit ID</TableHead>
+                    <TableHead>Scan ID</TableHead>
                     <TableHead>User</TableHead>
                     <TableHead>Org</TableHead>
                     <TableHead>Category</TableHead>
@@ -180,22 +180,22 @@ function AdminScansPage() {
                       <TableCell className="whitespace-nowrap text-xs">
                         {new Date(row.created_at).toLocaleString()}
                       </TableCell>
-                      <TableCell className="font-mono text-xs">{row.id.slice(0, 8)}…</TableCell>
+                      <TableCell className="font-mono text-xs">{row.id.slice(0, 8)}â€¦</TableCell>
                       <TableCell className="max-w-[140px] truncate text-xs">
-                        <div>{row.user_email ?? "—"}</div>
+                        <div>{row.user_email ?? "â€”"}</div>
                         <div className="font-mono text-[10px] text-muted-foreground">
-                          {row.created_by?.slice(0, 8) ?? "—"}
+                          {row.created_by?.slice(0, 8) ?? "â€”"}
                         </div>
                       </TableCell>
                       <TableCell className="max-w-[120px] truncate text-xs">
                         {row.org_name ?? row.org_id.slice(0, 8)}
                       </TableCell>
                       <TableCell className="max-w-[140px] truncate text-xs">
-                        {[row.category, row.sub_category].filter(Boolean).join(" · ") || "—"}
+                        {[row.category, row.sub_category].filter(Boolean).join(" Â· ") || "â€”"}
                       </TableCell>
                       <TableCell>{row.total_products}</TableCell>
                       <TableCell>
-                        {row.shelf_health_score != null ? `${Math.round(row.shelf_health_score)}%` : "—"}
+                        {row.shelf_health_score != null ? `${Math.round(row.shelf_health_score)}%` : "â€”"}
                       </TableCell>
                       <TableCell>
                         <Badge variant={statusVariant(row.status)}>{row.status}</Badge>
@@ -208,7 +208,7 @@ function AdminScansPage() {
 
             <div className="mt-4 flex items-center justify-between text-sm">
               <p className="text-muted-foreground">
-                {query.data?.total ?? 0} audits · page {page} of {totalPages}
+                {query.data?.total ?? 0} scans Â· page {page} of {totalPages}
               </p>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
@@ -230,23 +230,23 @@ function AdminScansPage() {
         <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
           <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Audit {selected?.id.slice(0, 8)}…</DialogTitle>
+              <DialogTitle>Scan {selected?.id.slice(0, 8)}â€¦</DialogTitle>
             </DialogHeader>
             {selected ? (
               <div className="space-y-4 text-sm">
                 <div className="grid gap-2 sm:grid-cols-2">
                   <p>
-                    <span className="text-muted-foreground">User:</span> {selected.user_email ?? "—"}
+                    <span className="text-muted-foreground">User:</span> {selected.user_email ?? "â€”"}
                   </p>
                   <p>
                     <span className="text-muted-foreground">User ID:</span>{" "}
-                    <code className="text-xs">{selected.created_by ?? "—"}</code>
+                    <code className="text-xs">{selected.created_by ?? "â€”"}</code>
                   </p>
                   <p>
                     <span className="text-muted-foreground">Org:</span> {selected.org_name ?? selected.org_id}
                   </p>
                   <p>
-                    <span className="text-muted-foreground">Store:</span> {selected.store_name ?? "—"}
+                    <span className="text-muted-foreground">Store:</span> {selected.store_name ?? "â€”"}
                   </p>
                   <p>
                     <span className="text-muted-foreground">Status:</span> {selected.status}
@@ -258,13 +258,13 @@ function AdminScansPage() {
 
                 <div className="flex flex-wrap gap-2">
                   <Button asChild size="sm" variant="brand">
-                    <Link to="/results" search={{ audit: selected.id }}>
+                    <Link to="/results" search={{ scan: selected.id }}>
                       Open full results <ExternalLink className="size-4" />
                     </Link>
                   </Button>
                   {selected.created_by ? (
                     <Button asChild size="sm" variant="outline">
-                      <Link to="/admin/audits" search={{ userId: selected.created_by }}>
+                      <Link to="/admin/scans" search={{ userId: selected.created_by }}>
                         More from this user
                       </Link>
                     </Button>
@@ -336,7 +336,7 @@ function AdminScansPage() {
 
                     {detailQuery.data.scan_result?.metrics ? (
                       <details className="rounded-lg border border-border p-3" open>
-                        <summary className="cursor-pointer text-xs font-medium">Audit metrics</summary>
+                        <summary className="cursor-pointer text-xs font-medium">Scan metrics</summary>
                         <pre className="mt-2 max-h-48 overflow-auto text-[10px]">
                           {JSON.stringify(detailQuery.data.scan_result.metrics, null, 2)}
                         </pre>
@@ -367,14 +367,14 @@ function AdminScansPage() {
                           <TableBody>
                             {detailQuery.data.detected_products.map((p) => (
                               <TableRow key={p.id}>
-                                <TableCell>{p.brand ?? "—"}</TableCell>
+                                <TableCell>{p.brand ?? "â€”"}</TableCell>
                                 <TableCell>
                                   {p.name}
-                                  {p.variant ? ` · ${p.variant}` : ""}
+                                  {p.variant ? ` Â· ${p.variant}` : ""}
                                 </TableCell>
                                 <TableCell>{p.facings}</TableCell>
                                 <TableCell>
-                                  {p.confidence != null ? `${Math.round(p.confidence * 100)}%` : "—"}
+                                  {p.confidence != null ? `${Math.round(p.confidence * 100)}%` : "â€”"}
                                 </TableCell>
                               </TableRow>
                             ))}

@@ -93,7 +93,7 @@ export function TeamAssignmentsPanel() {
           </p>
         </div>
         <Button asChild variant="subtle" size="sm" className="rounded-xl">
-          <Link to="/assigned-audits">View all</Link>
+          <Link to="/assigned-scans">View all</Link>
         </Button>
       </div>
 
@@ -119,7 +119,7 @@ export function TeamAssignmentsPanel() {
             description="Delegate a shelf audit to a team member and track it to 100% compliance."
             action={
               <Button asChild variant="brand" size="sm" className="rounded-xl">
-                <Link to="/assign-audit" search={{ store: undefined, scope: undefined, planogramVersion: undefined }}>Assign an audit</Link>
+                <Link to="/assign-scan" search={{ store: undefined, scope: undefined, planogramVersion: undefined }}>Assign an audit</Link>
               </Button>
             }
           />
@@ -179,7 +179,7 @@ export function TeamAssignmentsPanel() {
                             </Button>
                           ) : (
                             <Button asChild variant="ghost" size="sm" className="rounded-lg">
-                              <Link to="/assigned-audits">Open</Link>
+                              <Link to="/assigned-scans">Open</Link>
                             </Button>
                           )}
                         </TableCell>
@@ -229,7 +229,7 @@ export function TeamAssignmentsPanel() {
                           View results
                         </Link>
                       ) : (
-                        <Link to="/assigned-audits">Open assignment</Link>
+                        <Link to="/assigned-scans">Open assignment</Link>
                       )}
                     </Button>
                   </li>

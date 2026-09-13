@@ -66,7 +66,7 @@ export function UsageOverviewCards() {
         icon={<ScanLine className="size-5" />}
         action={
           <Button asChild variant="brand" size="sm" className="rounded-xl">
-            <Link to="/audit">Start an audit</Link>
+            <Link to="/scan">Start an audit</Link>
           </Button>
         }
       />
