@@ -652,7 +652,7 @@ function buildAttentionCards(
   const cards: AttentionCard[] = areas.map((area) => {
     const kpiId = area.kpis[0]!;
     const requirePlanogram = kpiId === "planogram_compliance";
-    const rollup = aggregateWeightedKpi(scans, metricsMap, effectiveRole, kpiId, {
+    const rollup = aggregateWeightedKpi(audits, metricsMap, effectiveRole, kpiId, {
       requirePlanogram,
     });
 
@@ -684,7 +684,7 @@ function buildAttentionCards(
       }
     }
 
-    const targetPercent = averageConfiguredTarget(scans, metricsMap, kpiId);
+    const targetPercent = averageConfiguredTarget(audits, metricsMap, kpiId);
     let variancePts: number | null =
       score !== null && targetPercent !== null ? Math.round(score - targetPercent) : null;
     let variance: string | null = null;
@@ -710,7 +710,7 @@ function buildAttentionCards(
       if (issues > 0 || hasKpi) affectedAudits += 1;
     }
 
-    const highIssues = countHighSeverityIssues(scans, metricsMap, issueCategories);
+    const highIssues = countHighSeverityIssues(audits, metricsMap, issueCategories);
 
     const noData = score === null && rollup.eligible_audit_ids.length === 0;
     if (noData && !noDataReason) {
@@ -790,8 +790,8 @@ function buildBrandCompetition(
   metricsMap: Map<string, RetailIntelligencePayload | null>,
   effectiveRole: AuditRoleTab,
 ): BrandCompetitionData | null {
-  if (effectiveRole !== "fmcg" || !scans.length) return null;
-  const latest = audits[scans.length - 1]!;
+  if (effectiveRole !== "fmcg" || !audits.length) return null;
+  const latest = audits[audits.length - 1]!;
   const metrics = metricsMap.get(latest.id);
   const insights = metrics?.competitive_insights ?? [];
   if (insights.length) {
@@ -1019,12 +1019,12 @@ export async function fetchWorkspaceDashboard(
   const metricsMap = await fetchMetricsMap(scanIds);
   const confidenceMap = await fetchConfidenceMap(scanIds);
 
-  audits = applyScanFilters(scans, filters, metricsMap, assignmentByScanId, currentUserId, storeById);
+  audits = applyScanFilters(audits, filters, metricsMap, assignmentByScanId, currentUserId, storeById);
 
   const effectiveRole =
     filters.role !== "all"
       ? filters.role
-      : effectiveDashboardRole("all", scanRole(metricsMap.get(scans.at(-1)?.id ?? "") ?? null));
+      : effectiveDashboardRole("all", scanRole(metricsMap.get(audits.at(-1)?.id ?? "") ?? null));
 
   if (filters.kri !== "all") {
     audits = audits.filter((scan) =>
@@ -1036,14 +1036,14 @@ export async function fetchWorkspaceDashboard(
     filters.kri !== "all" ? kpiIssueCategories(filters.kri as AuditKpiId) : null;
 
   // --- KPIs (weighted aggregation from filtered audits) ---
-  const storeIds = new Set(scans.map((s) => s.store_id).filter(Boolean));
+  const storeIds = new Set(audits.map((s) => s.store_id).filter(Boolean));
 
-  const osaRollup = aggregateWeightedKpi(scans, metricsMap, effectiveRole, "osa");
-  const planoRollup = aggregateWeightedKpi(scans, metricsMap, effectiveRole, "planogram_compliance", {
+  const osaRollup = aggregateWeightedKpi(audits, metricsMap, effectiveRole, "osa");
+  const planoRollup = aggregateWeightedKpi(audits, metricsMap, effectiveRole, "planogram_compliance", {
     requirePlanogram: true,
   });
-  const issueResolution = aggregateIssueResolution(scans, metricsMap);
-  const shelfHealthRollup = aggregateShelfHealth(scans, metricsMap);
+  const issueResolution = aggregateIssueResolution(audits, metricsMap);
+  const shelfHealthRollup = aggregateShelfHealth(audits, metricsMap);
 
   const sub = subscriptionRes.data as
     | { audits_used: number; subscription_plans: { scan_quota: number | null } | null }
@@ -1107,7 +1107,7 @@ export async function fetchWorkspaceDashboard(
     assortment: 0,
   };
 
-  for (const scan of [...scans].reverse().slice(0, 40)) {
+  for (const scan of [...audits].reverse().slice(0, 40)) {
     const metrics = metricsMap.get(scan.id);
     const storeName = scan.stores?.name ?? "Unknown store";
     const ledger = metrics?.opportunity_ledger ?? [];
@@ -1193,8 +1193,8 @@ export async function fetchWorkspaceDashboard(
 
   // --- Improvement (need >= 4 audits) ---
   let improvement: ImprovementMetric[] | null = null;
-  if (scans.length >= 4) {
-    const mid = Math.floor(scans.length / 2);
+  if (audits.length >= 4) {
+    const mid = Math.floor(audits.length / 2);
     const previous = audits.slice(0, mid);
     const current = audits.slice(mid);
 
@@ -1301,7 +1301,7 @@ export async function fetchWorkspaceDashboard(
   const memberNameById = new Map(teamMembers.map((m) => [m.user_id, m.name || m.email]));
 
   // --- Recent audits ---
-  const recent_audits: RecentAuditRow[] = [...scans]
+  const recent_audits: RecentAuditRow[] = [...audits]
     .reverse()
     .slice(0, 10)
     .map((scan) => {
@@ -1347,7 +1347,7 @@ export async function fetchWorkspaceDashboard(
   // --- Role-specific visual ---
   let role_visual: RoleVisualData | null = null;
   if (effectiveRole === "fmcg" && audits.length) {
-    const latest = audits[scans.length - 1]!;
+    const latest = audits[audits.length - 1]!;
     const metrics = metricsMap.get(latest.id);
     const insights = metrics?.competitive_insights ?? [];
     if (insights.length) {
@@ -1402,7 +1402,7 @@ export async function fetchWorkspaceDashboard(
     if (locations.length) role_visual = { kind: "location_accuracy", locations };
   }
 
-  const categoryCountInView = new Set(scans.map((s) => s.category).filter(Boolean)).size;
+  const categoryCountInView = new Set(audits.map((s) => s.category).filter(Boolean)).size;
   const filter_summary = buildDashboardFilterSummary(
     audits.length,
     storeIds.size,
@@ -1420,7 +1420,7 @@ export async function fetchWorkspaceDashboard(
   const performance_period = performance_over_time.period_metrics;
   const brand_competition =
     filters.kri === "all" || filters.kri === "share_of_shelf"
-      ? buildBrandCompetition(scans, metricsMap, effectiveRole)
+      ? buildBrandCompetition(audits, metricsMap, effectiveRole)
       : null;
 
   return {
