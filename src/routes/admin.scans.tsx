@@ -42,7 +42,7 @@ export const Route = createFileRoute("/admin/scans")({
     orgId: typeof search.orgId === "string" ? search.orgId : undefined,
   }),
   head: () => ({
-    meta: [{ title: "All Scans â€” Platform Admin" }, { name: "robots", content: "noindex, nofollow" }],
+    meta: [{ title: "All Scans — Platform Admin" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: AdminScansPage,
 });
@@ -96,7 +96,7 @@ function AdminScansPage() {
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               className="pl-9"
-              placeholder="Search scan id, category, shelfâ€¦"
+              placeholder="Search scan id, category, shelf…"
               value={q}
               onChange={(e) => {
                 setQ(e.target.value);
@@ -127,7 +127,7 @@ function AdminScansPage() {
         {(userId || orgId) && (
           <p className="mb-3 text-xs text-muted-foreground">
             Filtered by {userId ? `user ${userId}` : ""}
-            {userId && orgId ? " Â· " : ""}
+            {userId && orgId ? " · " : ""}
             {orgId ? `org ${orgId}` : ""}
           </p>
         )}
@@ -180,22 +180,22 @@ function AdminScansPage() {
                       <TableCell className="whitespace-nowrap text-xs">
                         {new Date(row.created_at).toLocaleString()}
                       </TableCell>
-                      <TableCell className="font-mono text-xs">{row.id.slice(0, 8)}â€¦</TableCell>
+                      <TableCell className="font-mono text-xs">{row.id.slice(0, 8)}…</TableCell>
                       <TableCell className="max-w-[140px] truncate text-xs">
-                        <div>{row.user_email ?? "â€”"}</div>
+                        <div>{row.user_email ?? "—"}</div>
                         <div className="font-mono text-[10px] text-muted-foreground">
-                          {row.created_by?.slice(0, 8) ?? "â€”"}
+                          {row.created_by?.slice(0, 8) ?? "—"}
                         </div>
                       </TableCell>
                       <TableCell className="max-w-[120px] truncate text-xs">
                         {row.org_name ?? row.org_id.slice(0, 8)}
                       </TableCell>
                       <TableCell className="max-w-[140px] truncate text-xs">
-                        {[row.category, row.sub_category].filter(Boolean).join(" Â· ") || "â€”"}
+                        {[row.category, row.sub_category].filter(Boolean).join(" · ") || "—"}
                       </TableCell>
                       <TableCell>{row.total_products}</TableCell>
                       <TableCell>
-                        {row.shelf_health_score != null ? `${Math.round(row.shelf_health_score)}%` : "â€”"}
+                        {row.shelf_health_score != null ? `${Math.round(row.shelf_health_score)}%` : "—"}
                       </TableCell>
                       <TableCell>
                         <Badge variant={statusVariant(row.status)}>{row.status}</Badge>
@@ -208,7 +208,7 @@ function AdminScansPage() {
 
             <div className="mt-4 flex items-center justify-between text-sm">
               <p className="text-muted-foreground">
-                {query.data?.total ?? 0} scans Â· page {page} of {totalPages}
+                {query.data?.total ?? 0} scans · page {page} of {totalPages}
               </p>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
@@ -230,23 +230,23 @@ function AdminScansPage() {
         <Dialog open={Boolean(selected)} onOpenChange={(open) => !open && setSelected(null)}>
           <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Scan {selected?.id.slice(0, 8)}â€¦</DialogTitle>
+              <DialogTitle>Scan {selected?.id.slice(0, 8)}…</DialogTitle>
             </DialogHeader>
             {selected ? (
               <div className="space-y-4 text-sm">
                 <div className="grid gap-2 sm:grid-cols-2">
                   <p>
-                    <span className="text-muted-foreground">User:</span> {selected.user_email ?? "â€”"}
+                    <span className="text-muted-foreground">User:</span> {selected.user_email ?? "—"}
                   </p>
                   <p>
                     <span className="text-muted-foreground">User ID:</span>{" "}
-                    <code className="text-xs">{selected.created_by ?? "â€”"}</code>
+                    <code className="text-xs">{selected.created_by ?? "—"}</code>
                   </p>
                   <p>
                     <span className="text-muted-foreground">Org:</span> {selected.org_name ?? selected.org_id}
                   </p>
                   <p>
-                    <span className="text-muted-foreground">Store:</span> {selected.store_name ?? "â€”"}
+                    <span className="text-muted-foreground">Store:</span> {selected.store_name ?? "—"}
                   </p>
                   <p>
                     <span className="text-muted-foreground">Status:</span> {selected.status}
@@ -367,14 +367,14 @@ function AdminScansPage() {
                           <TableBody>
                             {detailQuery.data.detected_products.map((p) => (
                               <TableRow key={p.id}>
-                                <TableCell>{p.brand ?? "â€”"}</TableCell>
+                                <TableCell>{p.brand ?? "—"}</TableCell>
                                 <TableCell>
                                   {p.name}
-                                  {p.variant ? ` Â· ${p.variant}` : ""}
+                                  {p.variant ? ` · ${p.variant}` : ""}
                                 </TableCell>
                                 <TableCell>{p.facings}</TableCell>
                                 <TableCell>
-                                  {p.confidence != null ? `${Math.round(p.confidence * 100)}%` : "â€”"}
+                                  {p.confidence != null ? `${Math.round(p.confidence * 100)}%` : "—"}
                                 </TableCell>
                               </TableRow>
                             ))}

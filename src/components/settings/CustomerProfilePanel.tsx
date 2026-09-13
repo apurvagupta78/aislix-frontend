@@ -76,7 +76,7 @@ export function CustomerProfilePanel() {
   return (
     <SettingsCard
       title="Retail profile"
-      description="Your customer type and role family drive default result views, dashboard layout, and audit priorities."
+      description="Your customer type and role family drive default result views, dashboard layout, and scan priorities."
       icon={UserCog}
     >
       <div className="grid gap-4 sm:grid-cols-2">
@@ -125,7 +125,7 @@ export function CustomerProfilePanel() {
         <p className="mt-3 text-xs text-muted-foreground">Job title: {query.data.jobTitle}</p>
       ) : null}
       <p className="mt-2 text-xs text-muted-foreground">
-        Scans automatically use this profile — you do not need to re-select role or customer type
+        Audits automatically use this profile — you do not need to re-select role or customer type
         before each audit.
       </p>
       <Button

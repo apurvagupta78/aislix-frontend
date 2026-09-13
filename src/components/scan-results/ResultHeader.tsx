@@ -159,7 +159,7 @@ export function ScanResultHeader({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="truncate text-lg font-semibold tracking-tight">
-              {loading ? "Loading audit…" : (data?.scan_id ?? "Audit")}
+              {loading ? "Loading scan…" : (data?.scan_id ?? "Scan")}
             </h2>
             <ScanStatusBadge status={data?.status} />
             {assignmentId ? (
@@ -213,7 +213,7 @@ export function ScanResultHeader({
         />
         <MetaItem
           icon={<CalendarClock className="size-4" />}
-          label="Audit date & time"
+          label="Scan date & time"
           value={formatScanDate(data?.created_at)}
           loading={loading}
         />
@@ -286,7 +286,7 @@ export function SharePanel({
 
   const linkMutation = useMutation({
     mutationFn: async () => {
-      if (!scanId) throw new Error("Audit is still loading.");
+      if (!scanId) throw new Error("Scan is still loading.");
       if (linkUrl) return { url: linkUrl };
       return createLink({ data: { scanId } });
     },
@@ -395,7 +395,7 @@ export function ProcessingState({ scanId }: { scanId?: string | undefined }) {
       </span>
       <h3 className="text-base font-semibold">Audit is still processing</h3>
       <p className="max-w-md text-sm text-muted-foreground">
-        The vision pipeline is detecting products for {scanId ?? "this audit"}. Results appear here
+        The vision pipeline is detecting products for {scanId ?? "this scan"}. Results appear here
         automatically as soon as processing completes.
       </p>
     </div>

@@ -24,7 +24,7 @@ import {
   updateCorrectiveActionStatus,
   type ActionStatus,
 } from "@/lib/corrective-actions";
-import { formatAssignmentDueDate } from "@/lib/assignment-display";
+import { formatDate } from "@/routes/my-scans";
 import { isOrgManager, requestReScan } from "@/lib/assignments";
 import { formatAssignmentId } from "@/components/AssignmentId";
 
@@ -83,7 +83,7 @@ function CorrectiveActionsPage() {
     mutationFn: async (assignmentIds: string[]) => {
       for (const id of assignmentIds) await requestReScan(id);
     },
-    onSuccess: (_data, ids) => toast.success(`Re-audit requested for ${ids.length} assignment(s)`),
+    onSuccess: (_data, ids) => toast.success(`Re-scan requested for ${ids.length} assignment(s)`),
     onError: (error) => toast.error(toUserMessage(error)),
   });
 
@@ -158,13 +158,13 @@ function CorrectiveActionsPage() {
                   ),
                 ];
                 if (!ids.length) {
-                  toast.error("No open assignments to re-audit.");
+                  toast.error("No open assignments to re-scan.");
                   return;
                 }
                 reScanMutation.mutate(ids);
               }}
             >
-              Request re-audit
+              Request re-scan
             </Button>
           )}
         </div>
@@ -180,7 +180,7 @@ function CorrectiveActionsPage() {
           <EmptyState
             icon={<Wrench className="size-6" />}
             title="No corrective actions"
-            description="Corrective actions appear here once an assigned audit is compared against its planogram."
+            description="Corrective actions appear here once an assigned scan is compared against its planogram."
           />
         ) : (
           <>
@@ -193,7 +193,7 @@ function CorrectiveActionsPage() {
                     <th className="px-4 py-3 text-left font-medium">Suggestion</th>
                     <th className="px-4 py-3 text-left font-medium">Assignee</th>
                     <th className="px-4 py-3 text-left font-medium">Compliance</th>
-                    <th className="px-4 py-3 text-left font-medium">Audit date</th>
+                    <th className="px-4 py-3 text-left font-medium">Scan date</th>
                     <th className="px-4 py-3 text-left font-medium">Status</th>
                   </tr>
                 </thead>
@@ -218,7 +218,7 @@ function CorrectiveActionsPage() {
                         {row.scan_id && (
                           <Link
                             to="/results"
-                            search={{ audit: row.scan_id }}
+                            search={{ scan: row.scan_id }}
                             className="block text-xs text-brand hover:underline"
                           >
                             View results
@@ -246,7 +246,7 @@ function CorrectiveActionsPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
-                        {formatAssignmentDueDate(row.scan_date)}
+                        {formatDate(row.scan_date)}
                       </td>
                       <td className="px-4 py-3">
                         {isManager ? (
@@ -276,7 +276,7 @@ function CorrectiveActionsPage() {
                               {row.status.replace(/_/g, " ")}
                             </Badge>
                             <p className="mt-1 text-xs text-muted-foreground">
-                              Closes automatically when a re-audit shows it fixed.
+                              Closes automatically when a re-scan shows it fixed.
                             </p>
                           </div>
                         )}
@@ -307,12 +307,12 @@ function CorrectiveActionsPage() {
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">{row.suggestion}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {row.assignee_name} · {formatAssignmentDueDate(row.scan_date)}
+                    {row.assignee_name} · {formatDate(row.scan_date)}
                   </p>
                   <div className="mt-3">
                     {!isManager ? (
                       <p className="text-xs text-muted-foreground">
-                        Closes automatically when a re-audit shows it fixed.
+                        Closes automatically when a re-scan shows it fixed.
                       </p>
                     ) : (
                     <Select

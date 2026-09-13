@@ -27,16 +27,16 @@ import { toUserMessage } from "@/lib/api/errors";
 import { ReportsLibrary } from "@/components/reports/ReportsLibrary";
 
 export const Route = createFileRoute("/report")({
-  validateSearch: (search: Record<string, unknown>): { audit?: string } => {
-    const audit = search["audit"] ?? search["scan"];
-    return typeof audit === "string" && audit.length > 0 ? { audit } : {};
+  validateSearch: (search: Record<string, unknown>): { scan?: string } => {
+    const scan = search["scan"];
+    return typeof scan === "string" && scan.length > 0 ? { scan } : {};
   },
   head: () => ({
     meta: [
       { title: "PDF Audit Report — Aislix" },
       {
         name: "description",
-        content: "Preview, download and share the PDF shelf audit report generated from your audit.",
+        content: "Preview, download and share the PDF shelf audit report generated from your scan.",
       },
       { property: "og:title", content: "Shelf audit PDF report — Aislix" },
       { property: "og:description", content: "A shareable, print-ready retail shelf audit." },
@@ -48,23 +48,23 @@ export const Route = createFileRoute("/report")({
 });
 
 function ReportViewer() {
-  const { audit: scanParam } = Route.useSearch();
+  const { scan: scanParam } = Route.useSearch();
   const navigate = useNavigate();
 
-  // Recent completed audits power the picker and the "latest audit" fallback so
-  // that /report without a ?audit= param still renders a report.
+  // Recent completed scans power the picker and the "latest scan" fallback so
+  // that /report without a ?scan= param still renders a report.
   const recent = useQuery({
-    queryKey: ["report-recent-audits"],
+    queryKey: ["report-recent-scans"],
     queryFn: ({ signal }) => fetchScanHistory({ sort: "newest", page: 1, page_size: 25 }, signal),
     retry: false,
   });
 
   const completed = (recent.data?.items ?? []).filter((s) => s.status === "completed");
-  // Without ?audit= the page is the reports library; with it, the single viewer.
+  // Without ?scan= the page is the reports library; with it, the single viewer.
   const scan = scanParam;
 
   const query = useQuery({
-    queryKey: ["audit-result", scan],
+    queryKey: ["scan-result", scan],
     queryFn: ({ signal }) => fetchScanResult(scan!, signal),
     enabled: !!scan,
     retry: false,
@@ -73,10 +73,10 @@ function ReportViewer() {
   const picker = completed.length > 0 && (
     <Select
       value={scan ?? ""}
-      onValueChange={(value) => navigate({ to: "/report", search: { audit: value } })}
+      onValueChange={(value) => navigate({ to: "/report", search: { scan: value } })}
     >
-      <SelectTrigger className="h-9 w-[230px] rounded-xl" aria-label="Choose an audit">
-        <SelectValue placeholder="Choose an audit" />
+      <SelectTrigger className="h-9 w-[230px] rounded-xl" aria-label="Choose a scan">
+        <SelectValue placeholder="Choose a scan" />
       </SelectTrigger>
       <SelectContent>
         {completed.map((s) => (
@@ -171,7 +171,7 @@ function ReportViewer() {
             onClick={() =>
               downloadBlob(
                 inventoryToCsv(inventory),
-                `aislix-${data?.scan_id ?? "audit"}-report.csv`,
+                `aislix-${data?.scan_id ?? "scan"}-report.csv`,
                 "text/csv",
               )
             }
@@ -188,11 +188,11 @@ function ReportViewer() {
         </div>
       ) : !scan ? (
         <EmptyState
-          title="No completed audits yet"
-          description="Run a shelf audit and its audit report will be generated here."
+          title="No completed scans yet"
+          description="Run a shelf scan and its audit report will be generated here."
           action={
             <Button asChild variant="brand" size="sm" className="rounded-xl">
-              <Link to="/history">Open audit history</Link>
+              <Link to="/history">Open scan history</Link>
             </Button>
           }
         />
@@ -208,7 +208,7 @@ function ReportViewer() {
           onRetry={() => void query.refetch()}
         />
       ) : !data ? (
-        <EmptyState title="Report not found" description="This audit no longer exists." />
+        <EmptyState title="Report not found" description="This scan no longer exists." />
       ) : (
         <div className="bg-surface rounded-2xl p-4 sm:p-8">
           <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-card p-8 shadow-card sm:p-12">
@@ -218,7 +218,7 @@ function ReportViewer() {
                   Aislix shelf audit
                 </p>
                 <h2 className="mt-2 text-xl font-semibold tracking-tight">
-                  {[data.store, data.aisle].filter(Boolean).join(" — ") || "Shelf audit"}
+                  {[data.store, data.aisle].filter(Boolean).join(" — ") || "Shelf scan"}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {formatScanDate(data.created_at) ?? "Date unavailable"}
@@ -306,7 +306,7 @@ function ReportViewer() {
             )}
 
             <p className="mt-8 border-t border-border pt-4 text-[0.7rem] text-muted-foreground">
-              Generated automatically by Aislix Retail Shelf Intelligence · Audit {data.scan_id}
+              Generated automatically by Aislix Retail Shelf Intelligence · Scan {data.scan_id}
             </p>
           </div>
 
@@ -315,12 +315,12 @@ function ReportViewer() {
               variant="subtle"
               size="sm"
               className="rounded-xl"
-              onClick={() => navigate({ to: "/results", search: { audit: data.scan_id } })}
+              onClick={() => navigate({ to: "/results", search: { scan: data.scan_id } })}
             >
               Back to results
             </Button>
             <Button asChild variant="brand" size="sm" className="rounded-xl">
-              <Link to="/history">Audit history</Link>
+              <Link to="/history">Scan history</Link>
             </Button>
           </div>
         </div>

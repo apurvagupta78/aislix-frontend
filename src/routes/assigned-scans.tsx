@@ -47,13 +47,13 @@ export const Route = createFileRoute("/assigned-scans")({
 
   head: () => ({
     meta: [
-      { title: "Assigned Scans â€” Track team shelf audits | Aislix" },
+      { title: "Assigned Scans — Track team shelf audits | Aislix" },
       {
         name: "description",
         content:
           "Track every shelf audit you assigned: store, scope, assignee, due date, compliance and completion status.",
       },
-      { property: "og:title", content: "Assigned Scans â€” Aislix" },
+      { property: "og:title", content: "Assigned Scans — Aislix" },
       {
         property: "og:description",
         content: "Manager view of all assigned shelf audits across your stores and team.",
@@ -66,19 +66,19 @@ export const Route = createFileRoute("/assigned-scans")({
 });
 
 function compliance(value: number | null) {
-  if (value === null) return <span className="text-xs text-muted-foreground">â€”</span>;
+  if (value === null) return <span className="text-xs text-muted-foreground">—</span>;
   return (
     <span className={`text-sm font-semibold ${complianceTone(value)}`}>{Math.round(value)}%</span>
   );
 }
 
-/** "Test store Â· A-1-Z Â· Personal Care Â· Shampoo" */
+/** "Test store · A-1-Z · Personal Care · Shampoo" */
 function scopeLine(row: Assignment): string {
   const parts = [row.store_name];
   if (row.location) parts.push(row.location);
   if (row.scope_values.category) parts.push(row.scope_values.category);
   if (row.scope_values.sub_category) parts.push(row.scope_values.sub_category);
-  return parts.join(" Â· ");
+  return parts.join(" · ");
 }
 
 function AssignmentAttemptsExpand({ assignmentId }: { assignmentId: string }) {
@@ -205,11 +205,11 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
                       className="uppercase tracking-wide hover:text-foreground"
                       onClick={() => setSortById((value) => !value)}
                     >
-                      Assignment ID {sortById ? "â–²" : "â–¼"}
+                      Assignment ID {sortById ? "▲" : "▼"}
                     </button>
                   </th>
                   <th className="px-4 py-3 text-left font-medium">Assignee</th>
-                  <th className="px-4 py-3 text-left font-medium">Store Â· Scope</th>
+                  <th className="px-4 py-3 text-left font-medium">Store · Scope</th>
                   <th className="px-4 py-3 text-left font-medium">Expected</th>
                   <th className="px-4 py-3 text-left font-medium">Due</th>
                   <th className="px-4 py-3 text-left font-medium">Status</th>
@@ -275,7 +275,7 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
                           Cancel
                         </Button>
                       ) : (
-                        <span className="text-xs text-muted-foreground">â€”</span>
+                        <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </td>
                   </tr>
@@ -297,11 +297,11 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
                 )}
                 <p className="mt-1 text-sm text-muted-foreground">{scopeLine(row)}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {row.expected_products} expected Â· {formatDate(row.due_at)}
+                  {row.expected_products} expected · {formatDate(row.due_at)}
                 </p>
                 {row.status === "needs_correction" && (
                   <p className="mt-1 text-xs font-medium text-destructive">
-                    {row.open_issue_count} open issues Â· re-scan required
+                    {row.open_issue_count} open issues · re-scan required
                   </p>
                 )}
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
@@ -381,17 +381,17 @@ function TeamScansTab() {
                 {row.assignment_id ? (
                   <AssignmentIdChip id={row.assignment_id} label={false} />
                 ) : (
-                  <span className="text-xs text-muted-foreground">â€”</span>
+                  <span className="text-xs text-muted-foreground">—</span>
                 )}
               </td>
               <td className="px-4 py-3 text-muted-foreground">{formatDate(row.created_at)}</td>
               <td className="px-4 py-3 text-foreground">{row.assignee_name}</td>
               <td className="px-4 py-3 text-foreground">{row.store_name}</td>
-              <td className="px-4 py-3 text-muted-foreground">{row.location ?? "â€”"}</td>
+              <td className="px-4 py-3 text-muted-foreground">{row.location ?? "—"}</td>
               <td className="px-4 py-3">{compliance(row.compliance_percent)}</td>
-              <td className="px-4 py-3 text-muted-foreground">{row.missing ?? "â€”"}</td>
-              <td className="px-4 py-3 text-muted-foreground">{row.wrong_product ?? "â€”"}</td>
-              <td className="px-4 py-3 text-muted-foreground">{row.unexpected ?? "â€”"}</td>
+              <td className="px-4 py-3 text-muted-foreground">{row.missing ?? "—"}</td>
+              <td className="px-4 py-3 text-muted-foreground">{row.wrong_product ?? "—"}</td>
+              <td className="px-4 py-3 text-muted-foreground">{row.unexpected ?? "—"}</td>
               <td className="px-4 py-3 text-right">
                 <Button variant="ghost" size="sm" className="rounded-xl" asChild>
                   <Link to="/results" search={{ scan: row.scan_id }}>

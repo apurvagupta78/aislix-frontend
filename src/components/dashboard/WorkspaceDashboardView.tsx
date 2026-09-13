@@ -584,7 +584,7 @@ export function RecentAuditsSection({ data }: { data: WorkspaceDashboardData }) 
             description="Start your first shelf audit to populate this list."
             action={
               <Button asChild variant="brand" size="sm" className="rounded-xl">
-                <Link to="/scan">Start new audit</Link>
+                <Link to="/audit">Start new audit</Link>
               </Button>
             }
           />

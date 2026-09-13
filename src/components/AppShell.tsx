@@ -100,11 +100,11 @@ const DASHBOARD_LEAF: NavLeaf = {
 
 const SECTIONS: NavSection[] = [
   {
-    id: "audit",
-    label: "Audits",
+    id: "scan",
+    label: "Scans",
     icon: ClipboardCheck,
     items: [
-      { kind: "leaf", label: "New Audit", to: "/scan", icon: Plus },
+      { kind: "leaf", label: "New Scan", to: "/scan", icon: Plus },
       {
         kind: "leaf",
         label: "Assigned to Me",
@@ -114,12 +114,12 @@ const SECTIONS: NavSection[] = [
       },
       {
         kind: "leaf",
-        label: "Audits I Assigned",
+        label: "Scans I Assigned",
         to: "/assigned-scans",
         search: { tab: "assignments" },
         managerOnly: true,
       },
-      { kind: "leaf", label: "Audit History", to: "/history", icon: History },
+      { kind: "leaf", label: "Scan History", to: "/history", icon: History },
     ],
   },
   {
@@ -673,8 +673,8 @@ export function AppShell({
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 name="q"
-                aria-label="Search audits, stores and SKUs"
-                placeholder="Search audits, stores, SKUs…"
+                aria-label="Search scans, stores and SKUs"
+                placeholder="Search scans, stores, SKUs…"
                 className="h-9 rounded-xl border-border bg-surface pl-9"
               />
             </form>
@@ -841,4 +841,4 @@ export function AppShell({
     </TooltipProvider>
   );
 }
-'
+

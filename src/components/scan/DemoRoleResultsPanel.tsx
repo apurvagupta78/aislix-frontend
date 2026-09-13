@@ -142,7 +142,7 @@ export function DemoRoleResultsPanel({
         )}
 
         <ScanResultsHeaderBar
-          timestamp={landing.audited_at}
+          timestamp={landing.scanned_at}
           showDemoPlanogramBadge={isDemoOralCareContext(scanContext)}
         />
 
@@ -152,7 +152,7 @@ export function DemoRoleResultsPanel({
       {fullscreen && (
         <GuestDemoShell
           title="Shelf execution report"
-          description={[landing.category, landing.shelf_label].filter(Boolean).join(" · ") || "Demo audit"}
+          description={[landing.category, landing.shelf_label].filter(Boolean).join(" · ") || "Demo scan"}
           onClose={() => setFullscreen(false)}
         >
           <div className="mx-auto max-w-6xl space-y-4">

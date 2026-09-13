@@ -618,12 +618,12 @@ export async function revokeApiKey(id: string): Promise<void> {
 
 // ---------- account management ----------
 
-/** Builds a real JSON export from the user's profile, org, stores and audits. */
+/** Builds a real JSON export from the user's profile, org, stores and scans. */
 export async function exportAccountData(): Promise<{ download_url?: string; status?: string }> {
   const userId = await requireUserId();
   const membership = await getMembership();
 
-  const [{ data: profile }, org, stores, audits] = await Promise.all([
+  const [{ data: profile }, org, stores, scans] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
     membership
       ? supabase.from("organizations").select("*").eq("id", membership.org_id).maybeSingle()
@@ -641,7 +641,7 @@ export async function exportAccountData(): Promise<{ download_url?: string; stat
     profile,
     organization: org.data,
     stores: stores.data ?? [],
-    shelf_scans: audits.data ?? [],
+    shelf_scans: scans.data ?? [],
   };
 
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -670,9 +670,9 @@ export const roleLabels: Record<TeamRole, string> = {
 
 export const roleDescriptions: Record<TeamRole, string> = {
   owner: "Full access including billing and account deletion",
-  admin: "Manage stores, audits, team and settings",
-  manager: "Run audits and manage assigned stores",
-  viewer: "Read-only access to audits and reports",
+  admin: "Manage stores, scans, team and settings",
+  manager: "Run scans and manage assigned stores",
+  viewer: "Read-only access to scans and reports",
 };
 
 export const currencyOptions = ["INR", "USD", "EUR", "GBP", "AED", "SGD"];

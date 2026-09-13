@@ -113,9 +113,9 @@ export type ScanSummary = {
   placement_issue_count?: number;
   needs_review_facings?: number;
   low_stock_threshold?: number;
-  /** Total learned SKUs in the org catalog after this audit. */
+  /** Total learned SKUs in the org catalog after this scan. */
   learned_catalog_size?: number;
-  /** New SKUs learned during this audit. */
+  /** New SKUs learned during this scan. */
   learned_new_this_scan?: number;
 
   /** Facings detected as belonging to another sub-category. */
@@ -202,7 +202,7 @@ export type ScanResult = {
   financial_impact?: FinancialImpact | null;
   inventory?: InventoryItem[];
   /**
-   * Planogram audit context: `requested` is true when the audit carried expected
+   * Planogram audit context: `requested` is true when the scan carried expected
    * products (assignment or ad-hoc Option 2), so the results page can show the
    * planogram section — or a warning when the backend returned nothing.
    */
@@ -462,8 +462,8 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
     .eq("org_id", orgId)
     .eq("id", scanId)
     .maybeSingle();
-  if (scanError) return dbError(scanError, "Could not load this audit.");
-  if (!scan) notFound("Audit not found.");
+  if (scanError) return dbError(scanError, "Could not load this scan.");
+  if (!scan) notFound("Scan not found.");
 
   const scanStatus = scan.status as ScanStatus;
   if (scanStatus === "processing" || scanStatus === "queued") {
@@ -1090,12 +1090,12 @@ export function buildFullScanReportCsv(result: ScanResult): string {
 
   push(
     "# Aislix Shelf Audit Report",
-    `# Audit ID,${csvEscape(result.scan_id)}`,
+    `# Scan ID,${csvEscape(result.scan_id)}`,
     `# Store,${csvEscape(result.store ?? "")}`,
     `# Location,${csvEscape(result.location ?? result.aisle ?? "")}`,
     `# Category,${csvEscape(result.scan_category ?? "")}`,
     `# Sub-category,${csvEscape(result.scan_sub_category ?? "")}`,
-    `# Audit date,${csvEscape(formatScanDate(result.created_at) ?? "")}`,
+    `# Scan date,${csvEscape(formatScanDate(result.created_at) ?? "")}`,
   );
 
   if (s) {
@@ -1469,7 +1469,7 @@ export function buildFullScanReportExcel(result: ScanResult): ArrayBuffer {
             "",
           ],
         ]
-      : [["—", "No products returned by audit API", "", "", "", "", "", ""]]),
+      : [["—", "No products returned by scan API", "", "", "", "", "", ""]]),
   ]);
 
   append("S5 Core KPIs", [
@@ -1617,7 +1617,7 @@ export function downloadDemoFullReportExcel(result: ScanResult): void {
 export async function downloadScanExcel(scanId: string, _url?: string): Promise<void> {
   const result = await fetchScanResult(scanId);
   if (!result.summary && !result.inventory?.length) {
-    throw new Error("This audit has no report data to export.");
+    throw new Error("This scan has no report data to export.");
   }
   downloadBlobBytes(
     buildFullScanReportExcel(result),
@@ -1635,7 +1635,7 @@ export type ScanAssetUrls = {
   original_image_url?: string;
 };
 
-/** Signed storage URLs for an audit's generated assets (pdf / annotated / csv). */
+/** Signed storage URLs for a scan's generated assets (pdf / annotated / csv). */
 export async function resolveScanAssetUrls(scanId: string): Promise<ScanAssetUrls> {
   const { data: images } = await supabase
     .from("scan_images")
@@ -1693,7 +1693,7 @@ export async function downloadFileFromUrl(url: string, filename: string): Promis
 }
 
 /**
- * Asks the backend to (re)generate this audit's report assets when they are
+ * Asks the backend to (re)generate this scan's report assets when they are
  * missing from storage. Safe to call repeatedly — it is a no-op once the
  * PDF / annotated image / CSV already exist.
  */
@@ -1711,7 +1711,7 @@ async function downloadAsset(
 ): Promise<void> {
   let url = hint ?? (await resolveScanAssetUrls(scanId))[key];
   if (!url) {
-    // Older audits may never have had their exports stored — rebuild them.
+    // Older scans may never have had their exports stored — rebuild them.
     await ensureScanAssets(scanId);
     url = (await resolveScanAssetUrls(scanId))[key];
   }
@@ -1732,7 +1732,7 @@ export function downloadScanPdf(scanId: string, url?: string): Promise<void> {
     "pdf_url",
     `aislix-${scanId}-report.pdf`,
     url,
-    "No PDF report is available for this audit yet.",
+    "No PDF report is available for this scan yet.",
   );
 }
 
@@ -1767,7 +1767,7 @@ export async function downloadScanAnnotatedImage(
     `aislix-${scanId}-annotated.${ext}`,
     annotated,
 
-    "No annotated image is available for this audit yet.",
+    "No annotated image is available for this scan yet.",
   );
 }
 

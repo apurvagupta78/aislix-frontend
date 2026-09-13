@@ -29,13 +29,13 @@ export const Route = createFileRoute("/my-scans")({
 
   head: () => ({
     meta: [
-      { title: "My Assigned Scans â€” Aislix shelf audit tasks" },
+      { title: "My Assigned Scans — Aislix shelf audit tasks" },
       {
         name: "description",
         content:
           "See the shelf scans assigned to you, their scope and due dates, and start an audit in one tap.",
       },
-      { property: "og:title", content: "My Assigned Scans â€” Aislix" },
+      { property: "og:title", content: "My Assigned Scans — Aislix" },
       {
         property: "og:description",
         content: "Your shelf audit task list: scope, store, due date and one-tap scan start.",
@@ -82,14 +82,14 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "completed", label: "Completed" },
 ];
 
-/** "Test store Â· A-1-Z Â· Personal Care Â· Shampoo Â· 8 expected products" */
+/** "Test store · A-1-Z · Personal Care · Shampoo · 8 expected products" */
 function assignmentLine(assignment: Assignment): string {
   const parts = [assignment.store_name];
   if (assignment.location) parts.push(assignment.location);
   if (assignment.scope_values.category) parts.push(assignment.scope_values.category);
   if (assignment.scope_values.sub_category) parts.push(assignment.scope_values.sub_category);
   parts.push(`${assignment.expected_products} expected products`);
-  return parts.join(" Â· ");
+  return parts.join(" · ");
 }
 
 function MyScansPage() {
@@ -213,7 +213,7 @@ function MyScansPage() {
                         <MapPin className="size-3.5" /> {assignmentLine(assignment)}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {scopeSummary(assignment.scope_type, assignment.scope_values)} Â· assigned by{" "}
+                        {scopeSummary(assignment.scope_type, assignment.scope_values)} · assigned by{" "}
                         {assignment.assigner_name}
                       </p>
                       {assignment.status === "needs_correction" && (
@@ -224,13 +224,13 @@ function MyScansPage() {
                             )}`}
                           >
                             {assignment.last_compliance_percent === null
-                              ? "â€”"
+                              ? "—"
                               : `${Math.round(assignment.last_compliance_percent)}%`}{" "}
                             compliance
                           </span>
                           <span className="text-muted-foreground">
                             {" "}
-                            Â· attempt {assignment.scan_attempts} Â· fix the shelf, then re-scan
+                            · attempt {assignment.scan_attempts} · fix the shelf, then re-scan
                           </span>
                         </p>
                       )}

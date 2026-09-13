@@ -81,12 +81,12 @@ export const Route = createFileRoute("/billing")({
       {
         name: "description",
         content:
-          "Manage your Aislix plan, monitor audit usage, switch billing cycles, update payment methods and download GST invoices.",
+          "Manage your Aislix plan, monitor scan usage, switch billing cycles, update payment methods and download GST invoices.",
       },
       { property: "og:title", content: "Subscription & billing — Aislix" },
       {
         property: "og:description",
-        content: "Plans, audit usage, invoices and payment methods for your Aislix workspace.",
+        content: "Plans, scan usage, invoices and payment methods for your Aislix workspace.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -232,7 +232,7 @@ function Billing() {
   return (
     <AppShell
       title="Subscription & billing"
-      description="Track audit usage, manage your plan and download GST invoices."
+      description="Track scan usage, manage your plan and download GST invoices."
       actions={
         <>
           <Button asChild variant="subtle" size="sm" className="rounded-xl">
@@ -316,7 +316,7 @@ function Billing() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Cancel your subscription?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          You keep access until {formatDate(overview.next_billing_date)}. Audit history and
+                          You keep access until {formatDate(overview.next_billing_date)}. Scan history and
                           reports stay available on the Free plan.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
@@ -349,7 +349,7 @@ function Billing() {
                 <div>
                   <div className="flex items-center justify-between gap-3 text-sm">
                     <span className="text-muted-foreground">
-                      {usage?.quota_period === "rolling_24h" ? "Audits used in the last 24 hours" : "Audits used this month"}
+                      {usage?.quota_period === "rolling_24h" ? "Scans used in the last 24 hours" : "Scans used this month"}
                     </span>
                     <span className="font-medium">
                       {formatNumber(usage?.scans_used)} /{" "}
@@ -360,7 +360,7 @@ function Billing() {
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <p className="text-xs text-muted-foreground">Remaining audits</p>
+                    <p className="text-xs text-muted-foreground">Remaining scans</p>
                     <p className="mt-1 text-sm font-medium">
                       {remaining === null ? "Unlimited" : formatNumber(remaining)}
                     </p>
@@ -503,12 +503,12 @@ function Billing() {
         ) : (
           <>
             <StatCard
-              label={usage?.quota_period === "rolling_24h" ? "Audits used in the last 24 hours" : "Total audits this month"}
+              label={usage?.quota_period === "rolling_24h" ? "Scans used in the last 24 hours" : "Total scans this month"}
               value={formatNumber(usage?.scans_used)}
               icon={<ScanLine className="size-4" />}
             />
             <StatCard
-              label="Remaining audits"
+              label="Remaining scans"
               value={!usage ? "—" : remaining === null ? "Unlimited" : formatNumber(remaining)}
               icon={<Package className="size-4" />}
               accent="green"
@@ -554,7 +554,7 @@ function Billing() {
       {/* Add-ons */}
       <Section
         title="Add-ons"
-        description="Audit packs, AI credits, storage and seats — attach any of these to your plan."
+        description="Scan packs, AI credits, storage and seats — attach any of these to your plan."
         className="mt-4"
       >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

@@ -6,7 +6,7 @@ import { signupUrl } from "@/lib/landing-scan-api";
 
 /** Primary conversion CTA: always routes to /signup with UTMs + session id. */
 export function SignupCta({
-  children = "Start auditing free →",
+  children = "Start scanning free →",
   event = "cta_click",
   location,
   className,

@@ -4,7 +4,7 @@
  * Decision order once a session exists:
  *   1. email not confirmed  -> /verify-email  (blocks the rest of the app)
  *   2. first-time setup due -> /onboarding
- *   3. otherwise            -> /dashboard (managers) or /my-audits (members)
+ *   3. otherwise            -> /dashboard (managers) or /my-scans (members)
  *
  * Only `AuthGate` (and the pages that explicitly sign a user in) may call
  * `resolvePostAuthRoute`. No other file should navigate on auth state.
@@ -82,7 +82,7 @@ export async function resolvePostLoginRoute(): Promise<AuthRoute> {
  * Full decision: verification -> pending invite -> onboarding -> landing.
  *
  * An invited member never sees the owner setup wizard: once their email is
- * confirmed the invite is accepted automatically and they land on /my-audits.
+ * confirmed the invite is accepted automatically and they land on /my-scans.
  */
 export async function resolvePostAuthRoute(_user?: MinimalUser): Promise<AuthRoute> {
   if (!(await isEmailVerifiedServer())) {

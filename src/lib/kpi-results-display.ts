@@ -1,5 +1,5 @@
 /**
- * Audit results KPI strip — display helpers only (no calculation changes).
+ * Scan results KPI strip — display helpers only (no calculation changes).
  */
 
 import type { ScoringTargets } from "@/lib/planogram-audit-package";

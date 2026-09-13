@@ -88,7 +88,7 @@ export function HomeLeadCapture() {
               <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
                 {emailSent
                   ? `We sent onboarding instructions to ${email}. You can also create your account directly below.`
-                  : "Your details are saved. Create your free Aislix workspace to unlock 3 shelf audits."}
+                  : "Your details are saved. Create your free Aislix workspace to unlock 3 shelf scans."}
               </p>
               <Button
                 size="xl"

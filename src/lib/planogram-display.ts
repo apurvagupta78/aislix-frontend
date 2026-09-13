@@ -19,7 +19,7 @@ export function planogramComparisonFromResult(
 
   if (configuredRows?.length && inventory.length) {
     const match = comparePlanogramToInventory(inventory, configuredRows);
-    return buildDemoPlanogramComparison(match, data.scan_id ?? "audit");
+    return buildDemoPlanogramComparison(match, data.scan_id ?? "scan");
   }
 
   const planogramPercent =

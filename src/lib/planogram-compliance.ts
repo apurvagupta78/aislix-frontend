@@ -1,7 +1,7 @@
 /**
- * Planogram compliance for assigned audits.
+ * Planogram compliance for assigned scans.
  *
- * Populated by the audit pipeline when an audit was launched from an assignment
+ * Populated by the scan pipeline when a scan was launched from an assignment
  * (`shelf_scans.assignment_id`). Scans without an assignment have no comparison
  * row, and the results page keeps its "Shelf compliance —" behaviour.
  */
@@ -52,7 +52,7 @@ export type PlanogramComparison = {
 const numOrNull = (value: unknown) =>
   value === null || value === undefined ? null : Number(value);
 
-/** Latest comparison for an audit, or null when the audit had no assignment. */
+/** Latest comparison for a scan, or null when the scan had no assignment. */
 export async function fetchPlanogramComparison(
   scanId: string,
 ): Promise<PlanogramComparison | null> {

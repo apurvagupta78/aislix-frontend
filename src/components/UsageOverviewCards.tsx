@@ -62,11 +62,11 @@ export function UsageOverviewCards() {
     return (
       <EmptyState
         title="No usage this period yet"
-        description="Run your first shelf audit to start tracking usage and report volume."
+        description="Run your first shelf scan to start tracking usage and report volume."
         icon={<ScanLine className="size-5" />}
         action={
           <Button asChild variant="brand" size="sm" className="rounded-xl">
-            <Link to="/scan">Start an audit</Link>
+            <Link to="/scan">Start a audit</Link>
           </Button>
         }
       />
@@ -88,12 +88,12 @@ export function UsageOverviewCards() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
       <RingCard
-        label={usage.quota_period === "rolling_24h" ? "Audits used in the last 24 hours" : "Audits used this month"}
+        label={usage.quota_period === "rolling_24h" ? "Scans used in the last 24 hours" : "Scans used this month"}
         ringValue={pct}
         ringLabel={pct === null ? "∞" : `${pct}%`}
         ringSublabel={pct === null ? "unlimited" : "of quota"}
         tone={pct !== null && pct >= 90 ? "warning" : "brand"}
-        footer={formatUsageLabel(usage as unknown as Record<string, unknown>).audits}
+        footer={formatUsageLabel(usage as unknown as Record<string, unknown>).scans}
       />
       <RingCard
         label="Average shelf health"
@@ -101,10 +101,10 @@ export function UsageOverviewCards() {
         ringLabel={health === undefined ? "—" : `${Math.round(health)}`}
         ringSublabel="score"
         tone="green"
-        footer="Across audits in this period"
+        footer="Across scans in this period"
       />
       <StatCard
-        label="Remaining audits"
+        label="Remaining scans"
         value={left === null ? "Unlimited" : formatNumber(left)}
         icon={<Zap className="size-4" />}
         accent="green"

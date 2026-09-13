@@ -125,7 +125,7 @@ function AcceptInvitePage() {
             className="rounded-xl"
             onClick={() => void navigate({ to: "/my-scans", replace: true })}
           >
-            Go to my audits
+            Go to my scans
           </Button>
         </div>
       ) : state.kind === "none" ? (

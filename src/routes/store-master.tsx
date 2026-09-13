@@ -170,7 +170,7 @@ function StoreMasterPage() {
   return (
     <AppShell
       title="Planogram"
-      description="Keep a library of expected shelf data (planograms) per store, then assign a audit to your team."
+      description="Keep a library of expected shelf data (planograms) per store, then assign a scan to your team."
       actions={
         <Button variant="brand" className="rounded-xl" disabled={!storeId} onClick={openCreate}>
           <Plus className="mr-2 size-4" /> Add planogram
@@ -226,7 +226,7 @@ function StoreMasterPage() {
         {!storeId ? (
           <EmptyState
             title="Select a store to manage planograms"
-            description="Choose a store above to see its planogram library and assign audits."
+            description="Choose a store above to see its planogram library and assign scans."
             icon={<LayoutList className="size-5" />}
           />
         ) : libraryQuery.isError ? (
@@ -262,7 +262,7 @@ function StoreMasterPage() {
                 ) : !unassigned.length ? (
                   <EmptyState
                     title="No planograms waiting to assign"
-                    description="Upload expected shelf products, then assign a audit to your team."
+                    description="Upload expected shelf products, then assign a scan to your team."
                     icon={<LayoutList className="size-5" />}
                     action={
                       <Button variant="brand" className="rounded-xl" onClick={openCreate}>
@@ -307,7 +307,7 @@ function StoreMasterPage() {
                             className="rounded-xl"
                             onClick={() => assign(version)}
                           >
-                            <UserPlus className="mr-2 size-4" /> Assign audit
+                            <UserPlus className="mr-2 size-4" /> Assign scan
                           </Button>
                         </div>
                       </div>

@@ -3,10 +3,10 @@
 // Prices are in INR. Annual pricing = 10 months (≈17% saving).
 //
 // Limits mirror the `subscription_plans` table exactly:
-//   free         ₹0      5 audits / rolling 24h   1 store   7-day history
-//   starter      ₹999    300 audits / month       1 store
-//   growth       ₹2,999  3,000 audits / month     3 stores
-//   professional ₹4,999  5,000 audits / month     5 stores
+//   free         ₹0      5 scans / rolling 24h   1 store   7-day history
+//   starter      ₹999    300 scans / month       1 store
+//   growth       ₹2,999  3,000 scans / month     3 stores
+//   professional ₹4,999  5,000 scans / month     5 stores
 //   enterprise   Custom  unlimited               unlimited
 
 import { formatFromInr, type CurrencyCode } from "@/lib/display-currency";
@@ -23,7 +23,7 @@ export type Plan = {
   /** Annual price in INR, billed yearly. `null` = quote-based. */
   annualPrice: number | null;
   scanLimitLabel: string;
-  /** Included audits per period; null = unlimited/quote-based. */
+  /** Included scans per period; null = unlimited/quote-based. */
   monthlyScanQuota: number | null;
   /** Stores included; null = unlimited. */
   storeLimit: number | null;
@@ -46,20 +46,20 @@ export const plans: Plan[] = [
     tagline: "For single-store owners trying shelf audits",
     monthlyPrice: 0,
     annualPrice: 0,
-    scanLimitLabel: "5 audits per 24 hours",
+    scanLimitLabel: "5 scans per 24 hours",
     monthlyScanQuota: 5,
     storeLimit: 1,
     seatLimit: 1,
     historyDays: 7,
     features: [
-      "5 audits per 24 hours",
+      "5 scans per 24 hours",
       "1 store",
       "1 user",
       "AI product detection",
       "Annotated shelf image",
       "PDF audit report",
       "Basic dashboard analytics",
-      "Audit history (last 7 days)",
+      "Scan history (last 7 days)",
     ],
     cta: "Start free",
   },
@@ -69,20 +69,20 @@ export const plans: Plan[] = [
     tagline: "For local stores and boutique retail chains",
     monthlyPrice: 999,
     annualPrice: 999 * ANNUAL_MONTHS_BILLED,
-    scanLimitLabel: "300 audits per month",
+    scanLimitLabel: "300 scans per month",
     monthlyScanQuota: 300,
     storeLimit: 1,
     seatLimit: 1,
     historyDays: null,
     features: [
-      "300 audits per month",
+      "300 scans per month",
       "1 store",
       "1 user",
       "Multi-image upload",
       "AI shelf audit",
       "Annotated shelf image",
       "PDF & CSV reports",
-      "Unlimited audit history",
+      "Unlimited scan history",
       "Dashboard analytics",
       "Email support",
     ],
@@ -94,13 +94,13 @@ export const plans: Plan[] = [
     tagline: "For growing retail chains and distributors",
     monthlyPrice: 2999,
     annualPrice: 2999 * ANNUAL_MONTHS_BILLED,
-    scanLimitLabel: "3,000 audits per month",
+    scanLimitLabel: "3,000 scans per month",
     monthlyScanQuota: 3000,
     storeLimit: 3,
     seatLimit: 3,
     historyDays: null,
     features: [
-      "3,000 audits per month",
+      "3,000 scans per month",
       "Up to 3 stores",
       "Up to 3 team users",
       "Multi-image upload",
@@ -108,7 +108,7 @@ export const plans: Plan[] = [
       "Financial impact estimates",
       "Historical trends",
       "PDF & CSV reports",
-      "Unlimited audit history",
+      "Unlimited scan history",
       "Email support",
     ],
     cta: "Upgrade to Growth",
@@ -119,16 +119,16 @@ export const plans: Plan[] = [
     tagline: "For supermarkets, dark stores and retail chains",
     monthlyPrice: 4999,
     annualPrice: 4999 * ANNUAL_MONTHS_BILLED,
-    scanLimitLabel: "5,000 audits per month",
+    scanLimitLabel: "5,000 scans per month",
     monthlyScanQuota: 5000,
     storeLimit: 5,
     seatLimit: 5,
     historyDays: null,
     features: [
-      "5,000 audits per month",
+      "5,000 scans per month",
       "Up to 5 stores",
       "Up to 5 team users",
-      "Unlimited images per audit",
+      "Unlimited images per scan",
       "Faster AI processing",
       "Advanced shelf analytics",
       "Financial impact estimates",
@@ -148,13 +148,13 @@ export const plans: Plan[] = [
     tagline: "For multi-location retail groups and national brands",
     monthlyPrice: null,
     annualPrice: null,
-    scanLimitLabel: "Unlimited audits, stores & users",
+    scanLimitLabel: "Unlimited scans, stores & users",
     monthlyScanQuota: null,
     storeLimit: null,
     seatLimit: null,
     historyDays: null,
     features: [
-      "Unlimited audits",
+      "Unlimited scans",
       "Unlimited users",
       "Unlimited stores",
       "Multi-location dashboard",
@@ -205,10 +205,10 @@ export const comparisonGroups: {
   rows: { label: string; values: Record<PlanId, string | boolean> }[];
 }[] = [
   {
-    group: "Auditing",
+    group: "Scanning",
     rows: [
       {
-        label: "Audits included",
+        label: "Scans included",
         values: {
           free: "5 / 24 hours",
           starter: "300 / month",
@@ -222,7 +222,7 @@ export const comparisonGroups: {
         values: { free: "1", starter: "1", growth: "3", professional: "5", enterprise: "Unlimited" },
       },
       {
-        label: "Images per audit",
+        label: "Images per scan",
         values: {
           free: "1",
           starter: "Multi-image",
@@ -257,7 +257,7 @@ export const comparisonGroups: {
         values: { free: false, starter: true, growth: true, professional: true, enterprise: true },
       },
       {
-        label: "Audit history",
+        label: "Scan history",
         values: {
           free: "7 days",
           starter: "Unlimited",
@@ -334,9 +334,9 @@ export type AddOn = {
 
 export const addOns: AddOn[] = [
   {
-    id: "audit-pack-500",
-    name: "Extra audit pack",
-    description: "Top up 500 additional shelf audits, valid for 12 months.",
+    id: "scan-pack-500",
+    name: "Extra scan pack",
+    description: "Top up 500 additional shelf scans, valid for 12 months.",
     priceInr: 749,
     unit: "per pack",
     available: true,

@@ -28,7 +28,7 @@ export function FieldDashboardPanel() {
     <section className="mt-8 space-y-4">
       <SectionHeader
         title="Today's execution priorities"
-        description="Assigned stores, open actions, and audits requiring your attention."
+        description="Assigned stores, open actions, and scans requiring your attention."
       />
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="card-surface p-4">
@@ -86,7 +86,7 @@ export function ExecutiveOpportunityPanel() {
     <section className="mt-8">
       <SectionHeader
         title="Execution opportunities"
-        description="Estimated revenue at risk from recent audits — clearly labeled as indicative unless planogram pricing is configured."
+        description="Estimated revenue at risk from recent scans — clearly labeled as indicative unless planogram pricing is configured."
       />
       <Panel title="Top opportunities">
         {opportunities.isPending ? (
@@ -118,7 +118,7 @@ export function ExecutiveOpportunityPanel() {
                     {formatInr(opp.estimated_daily_impact_inr)}/day
                   </p>
                   <Button asChild variant="subtle" size="sm" className="mt-1 h-7 rounded-lg text-xs">
-                    <Link to="/results" search={{ audit: opp.scan_id }}>
+                    <Link to="/results" search={{ scan: opp.scan_id }}>
                       View audit
                     </Link>
                   </Button>

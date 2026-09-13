@@ -29,7 +29,7 @@ export function DownloadsPanel({
     if (data.summary || data.inventory?.length) {
       downloadBlobBytes(
         buildFullScanReportExcel(data),
-        `aislix-${data.scan_id || "audit"}-report.xlsx`,
+        `aislix-${data.scan_id || "scan"}-report.xlsx`,
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       );
       toast.success("Excel report downloaded");
@@ -40,7 +40,7 @@ export function DownloadsPanel({
         await downloadScanExcel(data.scan_id, data.downloads?.csv_url);
         toast.success("Excel report downloaded");
       } catch {
-        toast.error("This audit has no report data to export.");
+        toast.error("This scan has no report data to export.");
       }
     }
   };
@@ -66,7 +66,7 @@ export function DownloadsPanel({
   };
 
   return (
-    <ResultSection title="Downloads" description="Export this audit for sharing or analysis.">
+    <ResultSection title="Downloads" description="Export this scan for sharing or analysis.">
       {loading ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {[0, 1, 2, 3].map((i) => (

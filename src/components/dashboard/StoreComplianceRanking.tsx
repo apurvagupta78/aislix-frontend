@@ -64,7 +64,7 @@ function StoreRow({ row, rank }: { row: StoreComplianceRow; rank: number }) {
         <p className={`font-semibold tabular-nums ${complianceTone(row.avg_compliance)}`}>
           {row.avg_compliance !== null ? `${Math.round(row.avg_compliance)}%` : "—"}
         </p>
-        <p className="text-xs text-muted-foreground">{row.scan_count} audits</p>
+        <p className="text-xs text-muted-foreground">{row.scan_count} scans</p>
       </div>
     </li>
   );

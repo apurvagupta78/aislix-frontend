@@ -3,7 +3,7 @@
  *
  * Anyone holding a live share token can view this page — no session required.
  * All data is resolved server-side from the token, so nothing about the
- * workspace is exposed beyond this single audit.
+ * workspace is exposed beyond this single scan.
  */
 
 import { useEffect, useState } from "react";
@@ -245,7 +245,7 @@ function SharedReport() {
             {context || "AI shelf audit result"}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Audited {formatSharedDate(report.audited_at)} · link expires{" "}
+            Scanned {formatSharedDate(report.scanned_at)} · link expires{" "}
             {formatSharedDate(report.expires_at)}
           </p>
         </section>

@@ -81,7 +81,7 @@ export async function markAssignmentNotificationsRead(assignmentId: string): Pro
     .contains("payload", { assignment_id: assignmentId });
 }
 
-/** Mark unread notifications tied to an audit as read (opened its results). */
+/** Mark unread notifications tied to a scan as read (opened its results). */
 export async function markScanNotificationsRead(scanId: string): Promise<void> {
   const userId = await requireUserId();
   await supabase
@@ -100,7 +100,7 @@ export function notificationHref(notification: InboxNotification): string {
   if (notification.type === "scan_completed") return "/assigned-scans";
   if (notification.type === "scan_shared") {
     const scanId = notification.payload["scan_id"];
-    return typeof scanId === "string" ? `/results?audit=${encodeURIComponent(scanId)}` : "/history";
+    return typeof scanId === "string" ? `/results?scan=${encodeURIComponent(scanId)}` : "/history";
   }
   return "/dashboard";
 }

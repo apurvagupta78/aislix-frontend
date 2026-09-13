@@ -4,7 +4,7 @@ export const SCAN_ENDPOINT = "/scan";
 
 export const ACCEPTED_TYPES = ["image/jpeg", "image/jpg", "image/png"] as const;
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
-/** Maximum shelf images allowed in a single audit. */
+/** Maximum shelf images allowed in a single scan. */
 export const MAX_SCAN_IMAGES = 5;
 
 export type ScanAnalysisResult = {
@@ -89,7 +89,7 @@ function readImageDimensions(file: File): Promise<{ width?: number; height?: num
 /**
 /**
  * Step 1 + 2 of the pipeline: creates one `shelf_scans` row, uploads every
- * image to the `audit-images` bucket and records each as a `scan_images` row.
+ * image to the `scan-images` bucket and records each as a `scan_images` row.
  * `onUploadProgress` reports 0-100 across all files.
  */
 export async function submitScanImages(
@@ -110,17 +110,17 @@ export async function submitScanImages(
     categorySelections?: CategorySelection[];
 
     notes?: string;
-    /** Set when the audit was launched from an assigned task (/my-scans). */
+    /** Set when the scan was launched from an assigned task (/my-scans). */
     assignmentId?: string;
 
     /**
-     * Workspace to record the audit in. Assigned audits pass the assignment's
+     * Workspace to record the scan in. Assigned scans pass the assignment's
      * org so an invited member never depends on workspace bootstrap.
      */
     orgId?: string;
     /**
      * Optional expected products entered inline on the New Scan page. Stored on
-     * the audit and forwarded to the vision backend as `planogram_items`.
+     * the scan and forwarded to the vision backend as `planogram_items`.
      */
     planogramItems?: Array<Record<string, string | number | null>>;
     /** Role + audit package wrapper (preferred over bare planogramItems). */
@@ -130,9 +130,9 @@ export async function submitScanImages(
     parentScanId?: string;
   } = {},
 ): Promise<ScanResponse> {
-  if (!files.length) throw new Error("Add at least one shelf image to audit.");
+  if (!files.length) throw new Error("Add at least one shelf image to scan.");
   if (files.length > MAX_SCAN_IMAGES) {
-    throw new Error(`You can audit up to ${MAX_SCAN_IMAGES} images at a time.`);
+    throw new Error(`You can scan up to ${MAX_SCAN_IMAGES} images at a time.`);
   }
   for (const file of files) {
     const invalid = validateScanFile(file);
@@ -142,8 +142,8 @@ export async function submitScanImages(
   const userId = await requireUserId();
   const orgId = options.orgId ?? (await requireOrgId());
 
-  // Plan limits: Free = 5 audits per rolling 24h, paid plans metered monthly.
-  // The audits_used counter is incremented by a DB trigger on completion.
+  // Plan limits: Free = 5 scans per rolling 24h, paid plans metered monthly.
+  // The scans_used counter is incremented by a DB trigger on completion.
   const { assertCanStartScan, hasPlatformBypass, mapLimitError } =
     await import("@/lib/subscription-limits");
   try {
@@ -191,7 +191,7 @@ export async function submitScanImages(
       const mapped = await mapLimitError(insertError, orgId);
       if (mapped !== insertError) throw mapped;
     }
-    return dbError(insertError, "Could not start the audit.");
+    return dbError(insertError, "Could not start the scan.");
   }
 
   options.onUploadProgress?.(0);
@@ -201,9 +201,9 @@ export async function submitScanImages(
     if (options.signal?.aborted) {
       await supabase
         .from("shelf_scans")
-        .update({ status: "failed", error_message: "Audit cancelled before analysis." })
+        .update({ status: "failed", error_message: "Scan cancelled before analysis." })
         .eq("id", scan.id);
-      throw new DOMException("Audit cancelled", "AbortError");
+      throw new DOMException("Scan cancelled", "AbortError");
     }
 
     const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
@@ -246,7 +246,7 @@ export async function submitScanImages(
     options.onUploadProgress?.(Math.round(((index + 1) / files.length) * 100));
   }
 
-  // No manual usage increment: the database trigger counts the audit once it
+  // No manual usage increment: the database trigger counts the scan once it
   // reaches "completed".
 
   return { scan_id: scan.id as string, status: scan.status as string };
@@ -267,7 +267,7 @@ export async function submitScan(
 /**
  * Steps 3-6: submits the uploaded images to the Railway FastAPI vision backend
  * and then polls with short requests (every 5s, up to 10 minutes) so no single
- * server request blocks for minutes. Resolves once the audit is `completed`.
+ * server request blocks for minutes. Resolves once the scan is `completed`.
  */
 const ANALYSIS_POLL_INTERVAL_MS = 5_000;
 const ANALYSIS_MAX_WAIT_MS = 600_000;
@@ -304,7 +304,7 @@ export async function runScanAnalysis(scanId: string): Promise<ScanAnalysisResul
   }
 }
 
-/** Re-runs the pipeline for an audit that previously failed. */
+/** Re-runs the pipeline for a scan that previously failed. */
 export async function retryScanAnalysis(scanId: string): Promise<ScanAnalysisResult> {
   return runScanAnalysis(scanId);
 }
@@ -315,13 +315,13 @@ function cleanPipelineMessage(error: unknown): string {
       ? error.message
       : typeof error === "string"
         ? error
-        : "The audit could not be completed.";
+        : "The scan could not be completed.";
   const message = raw.replace(/^Error:\s*/i, "").trim();
   if (/unauthorized/i.test(message)) return "Your session expired. Please sign in again.";
   return sanitizeUserMessage(message);
 }
 
-/** Polls the current status of a shelf audit. */
+/** Polls the current status of a shelf scan. */
 export async function fetchScanStatus(
   scanId: string,
   _signal?: AbortSignal,
@@ -333,8 +333,8 @@ export async function fetchScanStatus(
     .eq("org_id", orgId)
     .eq("id", scanId)
     .maybeSingle();
-  if (error) return dbError(error, "Could not load audit status.");
-  if (!data) notFound("Audit not found.");
+  if (error) return dbError(error, "Could not load scan status.");
+  if (!data) notFound("Scan not found.");
   return {
     scan_id: data.id as string,
     status: data.status as string,

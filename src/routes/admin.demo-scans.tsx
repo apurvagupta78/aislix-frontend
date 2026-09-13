@@ -20,7 +20,7 @@ import { listLandingDemoScans } from "@/lib/landing-demo-admin.functions";
 
 export const Route = createFileRoute("/admin/demo-scans")({
   head: () => ({
-    meta: [{ title: "Demo Scans â€” Platform Admin" }, { name: "robots", content: "noindex, nofollow" }],
+    meta: [{ title: "Demo Scans — Platform Admin" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: AdminDemoScansPage,
 });
@@ -43,7 +43,7 @@ function AdminDemoScansPage() {
   return (
     <AdminPage
       title="Landing demo scans"
-      description="Anonymous homepage and campaign scans â€” photos, status and UTM attribution."
+      description="Anonymous homepage and campaign scans — photos, status and UTM attribution."
       actions={
         <div className="flex items-center gap-2">
           <Select value={days} onValueChange={setDays}>

@@ -247,13 +247,13 @@ function recommendedActionText(group: string, review: boolean): string {
     case "price_promotion":
       return "Update shelf price tag to match the configured promotion.";
     case "placement":
-      return "Move the product to the expected shelf position and re-audit.";
+      return "Move the product to the expected shelf position and rescan.";
     case "facings":
-      return "Adjust facings to match the planogram and re-audit.";
+      return "Adjust facings to match the planogram and rescan.";
     case "planogram_compliance":
       return "Review expected vs actual layout and correct placement.";
     default:
-      return "Address the issue and re-audit to verify.";
+      return "Address the issue and rescan to verify.";
   }
 }
 

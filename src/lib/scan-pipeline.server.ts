@@ -1,13 +1,13 @@
 /**
  * Server-only AI scan pipeline.
  *
- * Runs steps 3-6 of the audit flow: send the uploaded shelf images to the
+ * Runs steps 3-6 of the scan flow: send the uploaded shelf images to the
  * Railway FastAPI vision backend, persist every returned product, metric and
- * analytics rollup into Supabase, then flip the audit to `completed`. Any
- * failure marks the audit `failed` with the reason so the UI can offer a retry.
+ * analytics rollup into Supabase, then flip the scan to `completed`. Any
+ * failure marks the scan `failed` with the reason so the UI can offer a retry.
  *
  * There is no mock/fallback path — if the vision API is unreachable or returns
- * an unusable payload, the audit fails.
+ * an unusable payload, the scan fails.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -39,7 +39,7 @@ export type PipelineResult = {
   low_stock_count: number;
   misplaced_count: number;
   shelf_health_score: number | null;
-  /** Number of SKUs persisted into the learned catalog by this audit. */
+  /** Number of SKUs persisted into the learned catalog by this scan. */
   learned_saved?: number;
   /** Set when the learned catalog could not be persisted (surfaced as a toast). */
   learned_error?: string | null;
@@ -377,7 +377,7 @@ async function callVisionApi(body: unknown): Promise<any> {
 
   const payload = parseJson(text);
 
-  // Async backend: 202 Accepted means the audit is queued; poll until it finishes.
+  // Async backend: 202 Accepted means the scan is queued; poll until it finishes.
   const remoteId = str(payload?.scan_id) ?? str(payload?.id) ?? str(payload?.job_id);
   const initialStatus = (str(payload?.status) ?? "").toLowerCase();
   const isAsync =
@@ -470,7 +470,7 @@ function visionHeaders(apiKey: string): Record<string, string> {
 export type SubmitVisionResult =
   { kind: "completed"; payload: any } | { kind: "accepted"; jobId: string };
 
-/** POST /audit only — returns as soon as Railway accepts the job. */
+/** POST /scan only — returns as soon as Railway accepts the job. */
 export async function submitVisionJob(body: unknown): Promise<SubmitVisionResult> {
   const { url, apiKey } = visionConfig();
   const headers = visionHeaders(apiKey);
@@ -598,21 +598,21 @@ async function storeAnnotatedImage(
       bytes = Uint8Array.from(Buffer.from(cleaned, "base64"));
     }
   } catch {
-    return; // annotated render is optional — never fail the audit for it
+    return; // annotated render is optional — never fail the scan for it
   }
   if (!bytes.byteLength) return;
 
   const ext = contentType.includes("png") ? "png" : "jpg";
   const path = `${scan.org_id}/${scan.id}/annotated-${Date.now()}.${ext}`;
   const { error: uploadError } = await supabase.storage
-    .from("audit-images")
+    .from("scan-images")
     .upload(path, bytes, { contentType, upsert: true });
   if (uploadError) return;
 
   await supabase.from("scan_images").insert({
     scan_id: scan.id,
     kind: "annotated",
-    storage_bucket: "audit-images",
+    storage_bucket: "scan-images",
     storage_path: path,
     mime_type: contentType,
     file_size_bytes: bytes.byteLength,
@@ -639,14 +639,14 @@ async function storePdfReport(
 
   const path = `${scan.org_id}/${scan.id}/report-${Date.now()}.pdf`;
   const { error: uploadError } = await supabase.storage
-    .from("audit-images")
+    .from("scan-images")
     .upload(path, bytes, { contentType: "application/pdf", upsert: true });
   if (uploadError) return;
 
   await supabase.from("scan_images").insert({
     scan_id: scan.id,
     kind: "pdf",
-    storage_bucket: "audit-images",
+    storage_bucket: "scan-images",
     storage_path: path,
     mime_type: "application/pdf",
     file_size_bytes: bytes.byteLength,
@@ -673,21 +673,21 @@ async function storeCsvReport(
 
   const path = `${scan.org_id}/${scan.id}/report-${Date.now()}.csv`;
   const { error: uploadError } = await supabase.storage
-    .from("audit-images")
+    .from("scan-images")
     .upload(path, bytes, { contentType: "text/csv", upsert: true });
   if (uploadError) return;
 
   await supabase.from("scan_images").insert({
     scan_id: scan.id,
     kind: "csv",
-    storage_bucket: "audit-images",
+    storage_bucket: "scan-images",
     storage_path: path,
     mime_type: "text/csv",
     file_size_bytes: bytes.byteLength,
   } as never);
 }
 
-/** Recomputes the daily rollup for this org/store from real completed audits. */
+/** Recomputes the daily rollup for this org/store from real completed scans. */
 async function refreshAnalytics(
   supabase: DB,
   scan: { org_id: string; store_id: string | null },
@@ -763,7 +763,7 @@ async function refreshAnalytics(
     org_id: scan.org_id,
     store_id: scan.store_id,
     period_date: periodDate,
-    audits_count: rows.length,
+    scans_count: rows.length,
     avg_shelf_health: avg((r) => num(r.shelf_health_score)),
     avg_osa_percent: avg((r) => num(r.osa_percent)),
     avg_share_of_shelf: avg((r) => num(r.share_of_shelf_percent)),
@@ -904,7 +904,7 @@ export async function persistLearnedUpdates(
       .from("learned_skus")
       .upsert(rows as never, { onConflict: "org_id,sku" });
     if (error) {
-      console.error("[audit-pipeline] learned_skus upsert failed:", {
+      console.error("[scan-pipeline] learned_skus upsert failed:", {
         message: error.message,
         code: (error as any).code,
         details: (error as any).details,
@@ -918,7 +918,7 @@ export async function persistLearnedUpdates(
     }
   } catch (thrown) {
     const message = thrown instanceof Error ? thrown.message : String(thrown);
-    console.error("[audit-pipeline] learned_skus upsert threw:", thrown);
+    console.error("[scan-pipeline] learned_skus upsert threw:", thrown);
     failure = message;
   }
 
@@ -930,7 +930,7 @@ export async function persistLearnedUpdates(
       .from("global_learned_skus")
       .upsert(globalRows as never, { onConflict: "sku" });
     if (error) {
-      console.error("[audit-pipeline] global_learned_skus upsert failed:", {
+      console.error("[scan-pipeline] global_learned_skus upsert failed:", {
         message: error.message,
         code: (error as any).code,
         details: (error as any).details,
@@ -941,7 +941,7 @@ export async function persistLearnedUpdates(
     }
   } catch (thrown) {
     const message = thrown instanceof Error ? thrown.message : String(thrown);
-    console.error("[audit-pipeline] global_learned_skus upsert threw:", thrown);
+    console.error("[scan-pipeline] global_learned_skus upsert threw:", thrown);
     failure = failure ?? message;
   }
 
@@ -990,7 +990,7 @@ async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
     .eq("id", scanId)
     .maybeSingle();
   if (error) throw new PipelineError(error.message, 500);
-  if (!scan) throw new PipelineError("Audit not found.", 404);
+  if (!scan) throw new PipelineError("Scan not found.", 404);
   return {
     id: scan.id as string,
     org_id: scan.org_id as string,
@@ -1059,7 +1059,7 @@ function sameText(a: unknown, b: unknown): boolean {
   );
 }
 
-/** Assignment + scoped planogram rows for audits launched from /my-audits. */
+/** Assignment + scoped planogram rows for scans launched from /my-scans. */
 async function loadAssignmentContext(
   supabase: DB,
   scan: ScanRow,
@@ -1107,7 +1107,7 @@ async function loadAssignmentContext(
     itemsFull = ((rows ?? []) as Record<string, unknown>[]).map(planogramShape);
     if (!itemsFull.length) {
       // Assignees whose membership is still `invited` cannot read planogram rows
-      // under RLS; the assignment already authorized this audit, so read them
+      // under RLS; the assignment already authorized this scan, so read them
       // with the privileged client instead of shipping an empty planogram.
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
       const { data: adminRows } = await supabaseAdmin
@@ -1157,7 +1157,7 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
     .eq("kind", "original")
     .order("created_at", { ascending: true });
   if (imagesError) throw new PipelineError(imagesError.message, 500);
-  if (!images?.length) throw new PipelineError("No shelf images were uploaded for this audit.", 400);
+  if (!images?.length) throw new PipelineError("No shelf images were uploaded for this scan.", 400);
 
   const signedImages: { url: string; path: string; width: number | null; height: number | null }[] =
     [];
@@ -1388,7 +1388,7 @@ async function persistExecutionOpportunities(
   if (!rows.length) return;
   const { error } = await supabase.from("execution_opportunities").insert(rows as never);
   if (error) {
-    console.warn("[audit-pipeline] execution_opportunities insert failed:", error.message);
+    console.warn("[scan-pipeline] execution_opportunities insert failed:", error.message);
   }
 }
 
@@ -1400,7 +1400,7 @@ async function persistPlanogramCompliance(
   const source = payload?.planogram_compliance ?? payload?.result?.planogram_compliance ?? null;
   if (!source) return null;
 
-  /** null for ad-hoc "with planogram" audits started from the New Scan page. */
+  /** null for ad-hoc "with planogram" scans started from the New Scan page. */
   const assignmentId = scan.assignment_id ?? null;
   let assigneeId: string | null = null;
   if (assignmentId) {
@@ -1503,7 +1503,7 @@ async function persistPlanogramCompliance(
   }
 
   // Assignment lifecycle (re-scan reconciliation, status, notifications) only
-  // applies to delegated audits. Ad-hoc planogram audits just keep the comparison.
+  // applies to delegated scans. Ad-hoc planogram scans just keep the comparison.
   if (!assignmentId) return compliance;
 
   await reconcilePreviousActions(supabase, assignmentId, comparisonId, fixedKeys);
@@ -1638,7 +1638,7 @@ async function notifyAssignmentPassed(
       user_id: context.assigner_id,
       org_id: scan.org_id,
       type: "scan_completed",
-      title: "Assigned audit passed — 100% compliance",
+      title: "Assigned scan passed — 100% compliance",
       body: `${context.assignee_name} completed ${context.store_name} · ${context.location} at 100%`,
       payload: {
         assignment_id: context.id,
@@ -1667,7 +1667,7 @@ async function notifyAssigneeNeedsCorrection(
       org_id: scan.org_id,
       type: "scan_needs_correction",
       title: "Shelf audit needs correction",
-      body: `${percentLabel}% compliance — ${openIssues} issue(s) to fix. Re-audit after correcting the shelf.`,
+      body: `${percentLabel}% compliance — ${openIssues} issue(s) to fix. Re-scan after correcting the shelf.`,
       payload: {
         assignment_id: context.id,
         scan_id: scan.id,
@@ -1696,8 +1696,8 @@ async function notifyAssignerOfCompletion(
       user_id: context.assigner_id,
       org_id: scan.org_id,
       type: "scan_needs_correction_manager",
-      title: "Assigned audit needs correction",
-      body: `${context.assignee_name} audited ${context.store_name} · ${context.location} — ${percentLabel}% compliance, ${openIssues} open issue(s)`,
+      title: "Assigned scan needs correction",
+      body: `${context.assignee_name} scanned ${context.store_name} · ${context.location} — ${percentLabel}% compliance, ${openIssues} open issue(s)`,
       payload: {
         assignment_id: context.id,
         scan_id: scan.id,
@@ -1958,7 +1958,7 @@ async function persistScanPayload(
       .eq("scan_id", scan.id)
       .then(({ count }) => (typeof count === "number" ? count : null)));
 
-  // --- Complete the audit ---------------------------------------------------
+  // --- Complete the scan ---------------------------------------------------
   const { error: completeError } = await supabase
     .from("shelf_scans")
     .update({
@@ -2029,7 +2029,7 @@ export async function startScanPipelineServer(
     };
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "The AI audit pipeline failed unexpectedly.";
+      error instanceof Error ? error.message : "The AI scan pipeline failed unexpectedly.";
     await markFailed(supabase, scan.id, message);
     if (error instanceof PipelineError) throw error;
     throw new PipelineError(message, 500);
@@ -2056,7 +2056,7 @@ export async function pollScanPipelineServer(
     .eq("id", scan.id)
     .maybeSingle();
   if (existing?.status === "completed") {
-    // Older audits can be missing their generated PDF / annotated assets.
+    // Older scans can be missing their generated PDF / annotated assets.
     try {
       await backfillScanAssetsServer(supabase, scan.id);
     } catch {
@@ -2080,7 +2080,7 @@ export async function pollScanPipelineServer(
     return await persistScanPayload(supabase, scan, poll.payload, startedAt);
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "The AI audit pipeline failed unexpectedly.";
+      error instanceof Error ? error.message : "The AI scan pipeline failed unexpectedly.";
     await markFailed(supabase, scan.id, message);
     if (error instanceof PipelineError) throw error;
     throw new PipelineError(message, 500);
@@ -2102,7 +2102,7 @@ export async function runScanPipelineServer(supabase: DB, scanId: string): Promi
     return await persistScanPayload(supabase, scan, payload, startedAt);
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "The AI audit pipeline failed unexpectedly.";
+      error instanceof Error ? error.message : "The AI scan pipeline failed unexpectedly.";
     await markFailed(supabase, scan.id, message);
     if (error instanceof PipelineError) throw error;
     throw new PipelineError(message, 500);

@@ -41,7 +41,7 @@ function AdminOrgsPage() {
   return (
     <AdminPage
       title="All organizations"
-      description="Workspaces, plans, members, stores and audit volume."
+      description="Workspaces, plans, members, stores and scan volume."
       actions={
         <Button variant="outline" size="sm" onClick={() => void query.refetch()} disabled={query.isFetching}>
           <RefreshCw className={`mr-2 size-4 ${query.isFetching ? "animate-spin" : ""}`} />
@@ -81,7 +81,7 @@ function AdminOrgsPage() {
                     <TableHead>Plan</TableHead>
                     <TableHead>Members</TableHead>
                     <TableHead>Stores</TableHead>
-                    <TableHead>Audits</TableHead>
+                    <TableHead>Scans</TableHead>
                     <TableHead>Created</TableHead>
                   </TableRow>
                 </TableHeader>

@@ -134,7 +134,7 @@ export function StoreHealthTrend({ storeId }: { storeId: string }) {
         <EmptyState
           icon={<ScanLine className="size-5" />}
           title="No trend data yet"
-          description="Run a few audits in this store to build a shelf health trend."
+          description="Run a few scans in this store to build a shelf health trend."
         />
       ) : (
         <div className="h-64 w-full">
@@ -166,11 +166,11 @@ export function StoreHealthTrend({ storeId }: { storeId: string }) {
   );
 }
 
-/* ------------------------------ recent audits ------------------------------ */
+/* ------------------------------ recent scans ------------------------------ */
 
 export function StoreRecentScans({ storeId }: { storeId: string }) {
   const query = useQuery({
-    queryKey: ["store-audits", storeId],
+    queryKey: ["store-scans", storeId],
     queryFn: ({ signal }) => fetchStoreScans(storeId, 10, signal),
     retry: false,
   });
@@ -178,7 +178,7 @@ export function StoreRecentScans({ storeId }: { storeId: string }) {
 
   return (
     <Panel
-      title="Recent audits"
+      title="Recent scans"
       description="Latest shelf audits captured for this store."
       actions={
         <Button asChild variant="subtle" size="sm" className="rounded-xl">
@@ -190,18 +190,18 @@ export function StoreRecentScans({ storeId }: { storeId: string }) {
         <TableSkeleton rows={5} cols={5} />
       ) : query.isError ? (
         <ErrorState
-          title="Couldn't load audits"
+          title="Couldn't load scans"
           description={query.error instanceof Error ? query.error.message : undefined}
           onRetry={() => void query.refetch()}
         />
       ) : items.length === 0 ? (
         <EmptyState
           icon={<ScanLine className="size-5" />}
-          title="No audits yet"
+          title="No scans yet"
           description="Capture a shelf photo to generate this store's first audit."
           action={
             <Button asChild variant="brand" size="sm" className="rounded-xl">
-              <Link to="/scan">Start an audit</Link>
+              <Link to="/scan">Start a audit</Link>
             </Button>
           }
         />
@@ -225,7 +225,7 @@ export function StoreRecentScans({ storeId }: { storeId: string }) {
                     <TableCell className="font-medium">
                       <Link
                         to="/results"
-                        search={{ audit: scan.scan_id }}
+                        search={{ scan: scan.scan_id }}
                         className="text-brand hover:underline"
                       >
                         {scan.scan_id}
@@ -254,7 +254,7 @@ export function StoreRecentScans({ storeId }: { storeId: string }) {
                 <div className="flex items-center justify-between gap-2">
                   <Link
                     to="/results"
-                    search={{ audit: scan.scan_id }}
+                    search={{ scan: scan.scan_id }}
                     className="truncate text-sm font-medium text-brand"
                   >
                     {scan.scan_id}
@@ -314,7 +314,7 @@ export function StoreRecommendations({ storeId }: { storeId: string }) {
         <EmptyState
           icon={<Lightbulb className="size-5" />}
           title="No recommendations yet"
-          description="Recommendations appear once this store has audit data to analyse."
+          description="Recommendations appear once this store has scan data to analyse."
         />
       ) : (
         <ul className="space-y-3">
@@ -524,7 +524,7 @@ export function StoreTeamPanel({ storeId }: { storeId: string }) {
           <EmptyState
             icon={<UserPlus className="size-5" />}
             title="No one assigned yet"
-            description="Add managers or viewers so they can audit and review this store."
+            description="Add managers or viewers so they can scan and review this store."
           />
         ) : (
           <ul className="divide-y divide-border">

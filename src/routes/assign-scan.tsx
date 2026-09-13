@@ -58,13 +58,13 @@ export const Route = createFileRoute("/assign-scan")({
 
   head: () => ({
     meta: [
-      { title: "Assign Scan â€” Delegate a shelf audit | Aislix" },
+      { title: "Assign Scan — Delegate a shelf audit | Aislix" },
       {
         name: "description",
         content:
           "Assign a shelf audit to a team member by category, sub-category, shelf location or an exact planogram product list.",
       },
-      { property: "og:title", content: "Assign Scan â€” Aislix" },
+      { property: "og:title", content: "Assign Scan — Aislix" },
       {
         property: "og:description",
         content: "Delegate shelf audits to your store team and track them to completion in Aislix.",
@@ -99,7 +99,7 @@ function AssignScanPage() {
   const [dueAt, setDueAt] = useState("");
   const [instructions, setInstructions] = useState("");
 
-  // Planogram scope â€” the assignment's own expected product list.
+  // Planogram scope — the assignment's own expected product list.
   const [planogramRows, setPlanogramRows] = useState<DraftRow[]>([]);
   const [sources, setSources] = useState<{ csv: boolean; manual: boolean }>({
     csv: false,
@@ -290,7 +290,7 @@ function AssignScanPage() {
     },
     onSuccess: (assignmentId) => {
       toast.success(
-        `Scan assigned to ${assignee?.name ?? "team member"} â€” ID: ${formatAssignmentId(assignmentId)}`,
+        `Scan assigned to ${assignee?.name ?? "team member"} — ID: ${formatAssignmentId(assignmentId)}`,
       );
       void navigate({ to: "/assigned-scans" });
     },
@@ -320,7 +320,7 @@ function AssignScanPage() {
       return;
     }
     if (scopeType === "sub_category" && !subSelections.length) {
-      toast.error("Add at least one shelf type (category Â· subcategory).");
+      toast.error("Add at least one shelf type (category · subcategory).");
       return;
     }
     if (scopeType === "category" && !category) {
@@ -352,7 +352,7 @@ function AssignScanPage() {
           <section className={card}>
             <h2 className="text-sm font-semibold text-foreground">Store &amp; scope</h2>
             <p className="mt-2 text-sm font-medium text-foreground">
-              Store Â·{" "}
+              Store ·{" "}
               {(storesQuery.data ?? []).find((store) => store.id === storeId)?.name ?? "Store"}
             </p>
             <div className="mt-2 flex flex-wrap gap-1.5 text-xs">
@@ -371,13 +371,13 @@ function AssignScanPage() {
               </span>
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
-              Read-only â€” set by this store&apos;s active planogram.
+              Read-only — set by this store&apos;s active planogram.
             </p>
           </section>
         ) : (
           <>
             <section className={card}>
-              <h2 className="text-sm font-semibold text-foreground">Step 1 Â· Select store</h2>
+              <h2 className="text-sm font-semibold text-foreground">Step 1 · Select store</h2>
               <div className="mt-3 max-w-xs">
                 {storesQuery.isLoading ? (
                   <Skeleton className="h-10 w-full rounded-xl" />
@@ -390,7 +390,7 @@ function AssignScanPage() {
                       {(storesQuery.data ?? []).map((store) => (
                         <SelectItem key={store.id} value={store.id}>
                           {store.name}
-                          {store.code ? ` Â· ${store.code}` : ""}
+                          {store.code ? ` · ${store.code}` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -400,7 +400,7 @@ function AssignScanPage() {
             </section>
 
             <section className={card}>
-              <h2 className="text-sm font-semibold text-foreground">Step 2 Â· Scope</h2>
+              <h2 className="text-sm font-semibold text-foreground">Step 2 · Scope</h2>
               <Tabs
                 value={scopeType}
                 onValueChange={(value) => setScopeType(value as ScopeType)}
@@ -417,7 +417,7 @@ function AssignScanPage() {
               {planogramMode && (
                 <div className="mt-4 space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Define the exact products this audit must cover â€” upload a CSV or add rows
+                    Define the exact products this audit must cover — upload a CSV or add rows
                     manually. The assignee scans against this list only.
                   </p>
 
@@ -484,7 +484,7 @@ function AssignScanPage() {
                   {planogramRows.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 text-xs">
                       <span className="rounded-lg bg-brand-soft px-2 py-1 font-medium text-brand">
-                        {planogramSummary.productCount} products Â·{" "}
+                        {planogramSummary.productCount} products ·{" "}
                         {planogramSummary.facingCount} expected facings
                       </span>
                       {[
@@ -537,7 +537,7 @@ function AssignScanPage() {
                       onChange={setSubSelections}
                       categories={categories}
                       label="Shelf types to audit *"
-                      helper="Add every category Â· subcategory the assignee should audit on this rack."
+                      helper="Add every category · subcategory the assignee should audit on this rack."
                     />
                   </div>
                 )}
@@ -563,7 +563,7 @@ function AssignScanPage() {
 
 
         <section className={card}>
-          <h2 className="text-sm font-semibold text-foreground">Step 3 Â· Assign to team member</h2>
+          <h2 className="text-sm font-semibold text-foreground">Step 3 · Assign to team member</h2>
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Assign to team member</Label>
@@ -578,14 +578,14 @@ function AssignScanPage() {
                     {members.map((member) => (
                       <SelectItem key={member.user_id} value={member.user_id}>
                         {member.name}
-                        {member.email ? ` Â· ${member.email}` : ""}
+                        {member.email ? ` · ${member.email}` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Invite a team member first â€”{" "}
+                  Invite a team member first —{" "}
                   <Link to="/team" className="font-medium text-brand underline">
                     go to Team
                   </Link>

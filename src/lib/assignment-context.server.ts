@@ -1,9 +1,9 @@
 /**
- * Assignment context for the audit setup form.
+ * Assignment context for the scan setup form.
  *
  * Assignees are frequently org members whose membership row is still `invited`
  * (they were assigned work before accepting), which RLS hides `stores` and
- * `planogram_items` from. The audit form still has to show the store name, the
+ * `planogram_items` from. The scan form still has to show the store name, the
  * scoped category / sub-category and the expected product count, so this loader
  * verifies the caller is the assignee (or an org manager) and then reads the
  * supporting rows with the privileged client.

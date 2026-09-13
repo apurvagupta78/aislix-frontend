@@ -1,10 +1,10 @@
 // Aislix subscription limit enforcement.
 //
 // The single source of truth is the `get_org_usage_summary` RPC: it resolves the
-// org's plan, monthly / rolling-24h audit usage, store usage, the history window
+// org's plan, monthly / rolling-24h scan usage, store usage, the history window
 // and (for Free workspaces that hit the cap) the exact cooldown timestamp.
 //
-// Usage counters are maintained by a database trigger when a audit completes —
+// Usage counters are maintained by a database trigger when a scan completes —
 // never increment them from the client.
 
 import { supabase } from "@/integrations/supabase/client";
@@ -29,8 +29,8 @@ export type UsageSummary = {
   /** e.g. "3 users" / "Unlimited users". */
   seat_limit_label: string;
   history_days: number | null; // null = unlimited history
-  audits_used: number;
-  audits_remaining: number | null;
+  scans_used: number;
+  scans_remaining: number | null;
   stores_used: number;
   stores_remaining: number | null;
   period_start?: string | null;
@@ -63,7 +63,7 @@ async function bypassUsageFallback(orgId: string): Promise<UsageSummary> {
     supabase
       .from("subscriptions")
       .select(
-        "status, cycle, current_period_start, current_period_end, audits_used, cancel_at_period_end, subscription_plans(code, name, scan_quota, store_limit, seat_limit, history_days, quota_period, is_contact_sales, price_monthly_inr)",
+        "status, cycle, current_period_start, current_period_end, scans_used, cancel_at_period_end, subscription_plans(code, name, scan_quota, store_limit, seat_limit, history_days, quota_period, is_contact_sales, price_monthly_inr)",
       )
       .eq("org_id", orgId)
       .maybeSingle(),
@@ -101,8 +101,8 @@ async function bypassUsageFallback(orgId: string): Promise<UsageSummary> {
     seats_used: 0,
     seat_limit_label: seatLimitLabel(plan?.seat_limit ?? null),
     history_days: null,
-    audits_used: subscription?.scans_used ?? 0,
-    audits_remaining: null,
+    scans_used: subscription?.scans_used ?? 0,
+    scans_remaining: null,
     stores_used: storesUsed ?? 0,
     stores_remaining: null,
     period_start: subscription?.current_period_start ?? null,
@@ -155,7 +155,7 @@ export class SeatLimitError extends LimitReachedError {
   }
 }
 
-/** Audit allowance exhausted (client check or DB trigger `SCAN_LIMIT_REACHED`). */
+/** Scan allowance exhausted (client check or DB trigger `SCAN_LIMIT_REACHED`). */
 export class ScanLimitError extends LimitReachedError {
   constructor(input: { usage: UsageSummary; message: string; cooldownUntil?: string; cooldown?: boolean }) {
     super({
@@ -216,7 +216,7 @@ function normalizeUsage(raw: Record<string, unknown>): UsageSummary {
   const seatLimit =
     num(raw["seat_limit"] ?? raw["seats_included"]) ?? defaultSeatLimit(planCode);
   const seatsUsed = num(raw["seats_used"]) ?? 1;
-  const auditsUsed = num(raw["scans_used"]) ?? 0;
+  const scansUsed = num(raw["scans_used"]) ?? 0;
   const storesUsed = num(raw["stores_used"]) ?? 0;
   const blocked = Boolean(raw["blocked"]);
 
@@ -233,8 +233,8 @@ function normalizeUsage(raw: Record<string, unknown>): UsageSummary {
     seats_used: seatsUsed,
     seat_limit_label: (raw["seat_limit_label"] as string) || seatLimitLabel(seatLimit),
     history_days: historyDays,
-    audits_used: auditsUsed,
-    audits_remaining: num(raw["scans_remaining"]),
+    scans_used: scansUsed,
+    scans_remaining: num(raw["scans_remaining"]),
     stores_used: storesUsed,
     stores_remaining: storeLimit === null ? null : Math.max(0, storeLimit - storesUsed),
     period_start: (raw["period_start"] as string) ?? null,
@@ -285,7 +285,7 @@ export async function fetchUsageSummary(signal?: AbortSignal, orgIdOverride?: st
 
 // ---------- enforcement ----------
 
-/** Blocks a new audit when the plan's scan allowance is exhausted. */
+/** Blocks a new scan when the plan's scan allowance is exhausted. */
 export async function assertCanStartScan(orgId?: string): Promise<UsageSummary> {
   const email = await currentUserEmail();
   if (hasPlatformBypass(email)) return fetchUsageSummary(undefined, orgId);
@@ -352,12 +352,12 @@ function scanLimitError(usage: UsageSummary): ScanLimitError {
       usage,
       cooldown: true,
       ...(usage.cooldown_until ? { cooldownUntil: usage.cooldown_until } : {}),
-      message: `You've used all ${quota} audits on the ${usage.plan_name} plan. Auditing unlocks again ${formatCooldown(usage.cooldown_until)}.`,
+      message: `You've used all ${quota} scans on the ${usage.plan_name} plan. Scanning unlocks again ${formatCooldown(usage.cooldown_until)}.`,
     });
   }
   return new ScanLimitError({
     usage,
-    message: `You've used all ${quota} audits included in your ${usage.plan_name} plan this month. Upgrade to keep auditing.`,
+    message: `You've used all ${quota} scans included in your ${usage.plan_name} plan this month. Upgrade to keep scanning.`,
   });
 }
 
@@ -402,7 +402,7 @@ export async function mapLimitError(error: unknown, orgId?: string): Promise<unk
 
 /**
  * ISO cutoff for scan history visibility, or `null` when the plan keeps full
- * history. Data is never deleted — older audits are filtered out of listings.
+ * history. Data is never deleted — older scans are filtered out of listings.
  */
 export function historyCutoffIso(
   usage: Pick<UsageSummary, "history_days" | "platform_bypass"> | null | undefined,
@@ -455,15 +455,15 @@ export function cooldownClock(iso?: string | null, now: number = Date.now()): st
   return `${h}:${m}:${s}`;
 }
 
-/** "127 / 300 audits used this month" · "2 / 5 audits used in the last 24 hours". */
+/** "127 / 300 scans used this month" · "2 / 5 scans used in the last 24 hours". */
 export function scanUsageLabel(usage: UsageSummary): string {
   const window = usage.quota_period === "rolling_24h" ? "in the last 24 hours" : "this month";
   if (usage.scan_quota === null) {
-    return `${usage.scans_used.toLocaleString("en-IN")} audits used ${window} · Unlimited`;
+    return `${usage.scans_used.toLocaleString("en-IN")} scans used ${window} · Unlimited`;
   }
   return `${usage.scans_used.toLocaleString("en-IN")} / ${usage.scan_quota.toLocaleString(
     "en-IN",
-  )} audits used ${window}`;
+  )} scans used ${window}`;
 }
 
 /** "1 / 3 stores used" or "4 stores · Unlimited". */
@@ -485,7 +485,7 @@ export function seatUsageLabel(usage: UsageSummary): string {
 export function formatUsageLabel(
   usage: UsageSummary | Record<string, unknown> | null | undefined,
 ): {
-  audits: string;
+  scans: string;
   stores: string;
   seats: string;
   cooldown: string | null;
@@ -499,5 +499,5 @@ export function formatUsageLabel(
     safe.store_limit === null
       ? `${safe.stores_used} stores · Unlimited`
       : `${safe.stores_used} / ${safe.store_limit} stores`;
-  return { audits: scanUsageLabel(safe), stores, seats: seatUsageLabel(safe), cooldown };
+  return { scans: scanUsageLabel(safe), stores, seats: seatUsageLabel(safe), cooldown };
 }
