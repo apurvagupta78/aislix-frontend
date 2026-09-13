@@ -198,7 +198,7 @@ function Landing() {
             </Button>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            No card required · 5 free audits per day · Results in 60–90 seconds
+            No card required · 30 free scans/month · Up to 5 scans/day
           </p>
         </div>
       </section>
@@ -277,8 +277,8 @@ function Landing() {
             Plans that scale from one local store to a national chain.
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Start free with 5 scans a day. Move to Starter at {format(999)}, 5,000 scans a month on
-            Professional at {format(4999)}, or talk to us about an Enterprise rollout.
+            Start free. Paid plans from {format(499)}/month. Unlimited teammates and store records on
+            every paid plan.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <CycleToggle cycle={cycle} onChange={setCycle} />
@@ -301,7 +301,7 @@ function Landing() {
             </Button>
             <Button asChild variant="ghost" className="rounded-xl">
               <Link to="/contact" search={{ subject: "Sales enquiry" }}>
-                Talk to Sales for Custom Package
+                Talk to Sales
               </Link>
             </Button>
           </div>

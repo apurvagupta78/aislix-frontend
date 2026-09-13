@@ -5,6 +5,7 @@
 
 import {
   ANNUAL_DISCOUNT_PERCENT,
+  annualBilledLabel,
   annualPriceFromMonthly,
   annualSavingInr,
   COMPARISON_GROUPS,
@@ -24,6 +25,7 @@ import {
 export type { BillingCycle, PlanId, PlanDefinition as Plan };
 export {
   ANNUAL_DISCOUNT_PERCENT,
+  annualBilledLabel,
   annualPriceFromMonthly,
   COMPARISON_GROUPS as comparisonGroups,
   displayPrice as priceFor,

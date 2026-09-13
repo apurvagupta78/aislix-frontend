@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import {
   ANNUAL_DISCOUNT_PERCENT,
+  annualBilledLabel,
   annualSavingInr,
   COMPARISON_GROUPS,
   displayPrice,
@@ -25,16 +26,8 @@ import {
   type PlanId,
 } from "@/lib/plan-entitlements";
 
-const SALES_CTA = "Talk to Sales for Custom Package";
+const SALES_CTA = "Talk to Sales";
 const CARD_FEATURES = 6;
-
-const CARD_BLURB: Record<Exclude<PlanId, "enterprise">, string> = {
-  free: "Try Aislix before you commit.",
-  payg: "Pay only when you audit.",
-  starter: "For local stores and small teams.",
-  growth: "For growing retail and field teams.",
-  professional: "For larger retail and FMCG teams.",
-};
 
 export function CycleToggle({
   cycle,
@@ -87,18 +80,19 @@ function singularLabel(count: number | null | undefined, singular: string, plura
 }
 
 function limitLines(plan: PlanDefinition): string[] {
+  if (plan.allowanceBullets?.length) return plan.allowanceBullets;
   const { audits, users, stores, masterSetups } = plan.controls;
   const first = plan.payAsYouGo
-    ? "Pay per completed audit"
-    : plan.quotaPeriod === "rolling_24h"
-      ? `${formatControlValue(audits.value)} audits / 24 hours`
-      : `${formatControlValue(audits.value)} audits / month`;
+    ? "Pay per completed scan"
+    : `${formatControlValue(audits.value)} scans / month`;
 
   return [
     first,
-    `${formatControlValue(users.value)} ${singularLabel(users.value, "user", "users")}`,
-    `${formatControlValue(stores.value)} ${singularLabel(stores.value, "store", "stores")}`,
-    `${formatControlValue(masterSetups.value)} ${singularLabel(masterSetups.value, "master setup", "master setups")}`,
+    users.value === null ? "Unlimited users" : `${formatControlValue(users.value)} ${singularLabel(users.value, "user", "users")}`,
+    stores.value === null ? "Unlimited stores and outlets" : `${formatControlValue(stores.value)} ${singularLabel(stores.value, "store", "stores")}`,
+    masterSetups.value === null
+      ? "Unlimited self-service master setups"
+      : `${formatControlValue(masterSetups.value)} ${singularLabel(masterSetups.value, "master setup", "master setups")}`,
   ];
 }
 
@@ -123,17 +117,20 @@ function PlanPrice({
   currency: CurrencyCode;
 }) {
   const amount = displayPrice(plan, cycle, currency);
-  const period = plan.payAsYouGo ? "per completed audit" : "per month";
+  const period = plan.periodLabel.replace(/^\//, "").trim() || "per month";
+  const billed = cycle === "annual" ? annualBilledLabel(plan, currency) : null;
   const saving = annualSavingInr(plan);
 
   return (
     <div className="min-h-[5.75rem]">
       <p className="text-[2rem] font-semibold leading-none tracking-tight text-foreground">{amount}</p>
       <p className="mt-2 text-[13px] leading-5 text-muted-foreground">{period}</p>
-      {cycle === "annual" && saving > 0 && !plan.payAsYouGo && !plan.contactSales ? (
+      {billed ? (
+        <p className="mt-1 text-xs text-muted-foreground">{billed}</p>
+      ) : cycle === "annual" && saving > 0 && !plan.payAsYouGo && !plan.contactSales ? (
         <p className="mt-1 text-xs text-accent-green">Save {formatPrice(saving, currency)} / year</p>
-      ) : plan.payAsYouGo ? (
-        <p className="mt-1 text-xs text-muted-foreground">Only completed audits are billed.</p>
+      ) : plan.supportingText ? (
+        <p className="mt-1 text-xs text-muted-foreground">{plan.supportingText}</p>
       ) : null}
     </div>
   );
@@ -156,9 +153,9 @@ export function PlanCard({
 }) {
   const isCurrent = currentPlanId === plan.id;
   const isPayg = Boolean(plan.payAsYouGo);
-  const blurb = CARD_BLURB[plan.id as Exclude<PlanId, "enterprise">] ?? plan.description;
+  const blurb = plan.description;
   const features = plan.features.slice(0, CARD_FEATURES);
-  const ctaLabel = isPayg ? "Start Pay as You Go" : plan.cta;
+  const ctaLabel = plan.cta;
 
   return (
     <article
@@ -261,21 +258,13 @@ export function EnterpriseSection({
     <section className="rounded-2xl border border-border/70 bg-white px-6 py-10 text-center shadow-sm sm:px-10">
       <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Enterprise</p>
       <h3 className="mt-3 text-2xl font-semibold tracking-tight text-foreground">
-        Custom pricing for larger retail operations
+        From ₹19,999/month
       </h3>
       <p className="mx-auto mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-        Need more audits, stores, users, integrations or custom workflows? We’ll build a package
-        around your operation.
+        {ENTERPRISE_PLAN.description}
       </p>
       <ul className="mx-auto mt-8 grid max-w-3xl gap-x-10 gap-y-3 text-left sm:grid-cols-2">
-        {[
-          "Custom AI audit volume",
-          "Custom users, stores and master setups",
-          "Advanced permissions and SSO",
-          "API integrations",
-          "Custom KPI configuration and reporting",
-          "Dedicated onboarding, SLA and account management",
-        ].map((line) => (
+        {ENTERPRISE_PLAN.allowanceBullets.concat(ENTERPRISE_PLAN.features.slice(0, 4)).map((line) => (
           <FeatureRow key={line} text={line} />
         ))}
       </ul>

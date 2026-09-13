@@ -40,11 +40,11 @@ export const Route = createFileRoute("/pricing")({
 const faqs = [
   {
     q: "How is an AI audit counted?",
-    a: "One shelf image analysed end-to-end counts as one AI audit. Only successfully completed AI audits consume your allowance or create a Pay as You Go charge. Failed, cancelled or incomplete processing does not count.",
+    a: "One supported shelf photo analysed end-to-end counts as one AI scan. Capacity is reserved on submission and charged only when processing succeeds. A completed scan is attributed to the day and entitlement period in which its reservation was accepted. Failed, cancelled or incomplete processing releases the reservation and does not consume a scan.",
   },
   {
     q: "Can I try Aislix before paying?",
-    a: "Yes. The Free plan includes 5 completed AI audits in a rolling 24-hour window — no credit card required.",
+    a: "Yes. The Free plan includes 30 completed AI scans per calendar month, with up to 5 scans per calendar day (Asia/Kolkata). Both limits apply. No credit card required.",
   },
   {
     q: "What happens when I hit my monthly limit?",
@@ -52,7 +52,7 @@ const faqs = [
   },
   {
     q: "Can I pay only when I use Aislix?",
-    a: "Yes. Pay as You Go charges ₹29 per completed AI audit with no monthly subscription.",
+    a: "Yes. Buy prepaid credits — 11 scans for ₹99 (₹9 per completed scan). Credits expire 180 days after payment and are deducted only when a scan completes successfully.",
   },
 ];
 
@@ -82,17 +82,19 @@ function Pricing() {
         <section className="mx-auto max-w-[90rem] px-6 pb-8 pt-24 text-center sm:px-8 lg:pt-28">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Pricing</p>
           <h1 className="mx-auto mt-5 max-w-3xl text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-            Simple pricing. Pay for the shelf audits you need.
+            Start free. Scale your retail intelligence.
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-            Start free, pay as you go, or choose a monthly plan as your retail operation grows.
+            Get 30 free shelf scans every month. Upgrade from ₹499/month for more scans, unlimited
+            teammates and stores, and deeper retail insights.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <CycleToggle cycle={cycle} onChange={setCycle} />
             <CurrencySelect currency={currency} onChange={setCurrency} />
           </div>
+          <p className="mt-3 text-sm text-muted-foreground">Prices exclude applicable GST.</p>
           {cycle === "annual" ? (
-            <p className="mt-3 text-sm text-muted-foreground">
+            <p className="mt-2 text-sm text-muted-foreground">
               Annual billing saves {ANNUAL_DISCOUNT_PERCENT}% versus paying monthly.
               {isBase ? "" : " Converted from INR at indicative rates; billed in INR."}
             </p>

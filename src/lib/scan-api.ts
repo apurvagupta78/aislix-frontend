@@ -142,7 +142,7 @@ export async function submitScanImages(
   const userId = await requireUserId();
   const orgId = options.orgId ?? (await requireOrgId());
 
-  // Plan limits: Free = 5 scans per rolling 24h, paid plans metered monthly.
+  // Plan limits: Free = 30/month and 5/day (Asia/Kolkata); paid plans metered monthly.
   // The scans_used counter is incremented by a DB trigger on completion.
   const { assertCanStartScan, hasPlatformBypass, mapLimitError } =
     await import("@/lib/subscription-limits");

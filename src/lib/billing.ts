@@ -110,8 +110,9 @@ async function getSubscriptionRow(orgId: string) {
 }
 
 
-/** Free-plan allowance: 5 scans per rolling 24 hours. */
+/** Free-plan daily commercial cap (Asia/Kolkata). Monthly cap is 30. */
 export const FREE_SCAN_LIMIT_24H = 5;
+export const FREE_SCAN_LIMIT_MONTH = 30;
 
 /**
  * Live plan allowance check used before a scan is created. Delegates to the

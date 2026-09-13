@@ -218,11 +218,11 @@ function normalizeUsage(raw: Record<string, unknown>): UsageSummary {
     num(raw["scan_quota"] ?? raw["scans_included"]) ??
     (isEnterprise || planCode === "payg"
       ? null
-      : (catalogue?.controls.audits.value ?? (isFree ? 5 : null)));
+      : (catalogue?.controls.audits.value ?? (isFree ? 30 : null)));
   const storeLimit =
     num(raw["store_limit"] ?? raw["stores_included"]) ??
     (isEnterprise ? null : (catalogue?.controls.stores.value ?? (isFree ? 1 : null)));
-  const historyDays = num(raw["history_days"]) ?? catalogue?.historyDays ?? (isFree ? 7 : null);
+  const historyDays = num(raw["history_days"]) ?? catalogue?.historyDays ?? (isFree ? 30 : null);
   const seatLimit =
     num(raw["seat_limit"] ?? raw["seats_included"]) ?? defaultSeatLimit(planCode);
   const masterSetupLimit =
