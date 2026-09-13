@@ -44,6 +44,7 @@ import {
   kpiResultFromMetrics,
   type WeightedKpiRollup,
 } from "@/lib/dashboard-kpi-aggregation";
+import { buildPerformanceRankingsData } from "@/lib/store-team-performance";
 export type DashboardFilters = DashboardFilterState;
 
 export type DashboardWeightedKpi = {
@@ -205,6 +206,8 @@ export type RoleVisualData =
   | { kind: "outlet_execution"; outlets: Array<{ name: string; osa: number | null; msl: number | null; planogram: number | null }> }
   | { kind: "location_accuracy"; locations: Array<{ label: string; accuracy: number | null }> };
 
+export type { PerformanceRankingsData, PerformanceRankRow, PerformanceRankDimension } from "@/lib/store-team-performance";
+
 export type WorkspaceDashboardData = {
   kpis: WorkspaceKpis;
   issues: IssuesSummary;
@@ -215,6 +218,7 @@ export type WorkspaceDashboardData = {
   performance_period: PerformancePeriodMetric[];
   improvement: ImprovementMetric[] | null;
   stores: StorePerformanceRow[];
+  performance_rankings: PerformanceRankingsData;
   recent_audits: RecentAuditRow[];
   priority_opportunities: PriorityOpportunityRow[];
   role_visual: RoleVisualData | null;
@@ -1473,6 +1477,22 @@ export async function fetchWorkspaceDashboard(
       ? buildBrandCompetition(audits, metricsMap, effectiveRole)
       : null;
 
+  const assignmentRefs = new Map<string, { assignee_id: string; scan_id: string | null }>();
+  for (const row of (assignmentsRes.data ?? []) as AssignmentRow[]) {
+    if (row.scan_id) {
+      assignmentRefs.set(row.scan_id, { assignee_id: row.assignee_id, scan_id: row.scan_id });
+    }
+  }
+
+  const performance_rankings = buildPerformanceRankingsData(
+    audits,
+    metricsMap,
+    effectiveRole,
+    storeById,
+    memberNameById,
+    assignmentRefs,
+  );
+
   return {
     kpis,
     issues: { total: issuesTotal, high, medium, low },
@@ -1483,6 +1503,7 @@ export async function fetchWorkspaceDashboard(
     performance_period,
     improvement,
     stores,
+    performance_rankings,
     recent_audits,
     priority_opportunities,
     role_visual,

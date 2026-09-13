@@ -6,11 +6,11 @@ import { Sparkles } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
 import { RecentAuditsSection } from "@/components/dashboard/RecentAuditsSection";
+import { StoreTeamPerformanceSection } from "@/components/dashboard/StoreTeamPerformanceSection";
 import {
   BrandCompetitionSection,
   PerformanceOverTimeSection,
   RetailPerformanceSection,
-  StorePerformanceSection,
   WhatNeedsAttentionSection,
   WorkspaceDashboardSkeleton,
 } from "@/components/dashboard/WorkspaceDashboardView";
@@ -178,7 +178,11 @@ function Dashboard() {
 
           <RecentAuditsSection data={data} filters={filters} onFiltersChange={setFilters} />
 
-          <StorePerformanceSection data={data} />
+          <StoreTeamPerformanceSection
+            data={data}
+            filters={filters}
+            onFiltersChange={setFilters}
+          />
         </>
       ) : null}
     </AppShell>
