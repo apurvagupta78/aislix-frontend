@@ -1364,7 +1364,7 @@ export async function fetchWorkspaceDashboard(
       date: scan.created_at,
       store_id: scan.store_id,
       store_name: scan.stores?.name ?? "—",
-      store_city: storeMeta?.city ?? scan.stores?.city?.trim() || null,
+      store_city: (storeMeta?.city ?? scan.stores?.city?.trim()) || null,
       store_country: storeMeta?.country ?? null,
       role: roleTabLabel(role),
       category: scan.category,
