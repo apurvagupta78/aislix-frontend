@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureOAuthWorkspace } from "@/lib/api/auth";
 import { goToAuthRoute, resolvePostAuthRoute } from "@/lib/auth-routing";
-import { convertLandingSession, loadLandingSessionId } from "@/lib/landing-scan-api";
+import { convertLandingSession, loadLandingSessionId } from "@/lib/landing-audit-api";
 
 
 export const Route = createFileRoute("/auth/callback")({
@@ -68,4 +68,4 @@ function AuthCallbackPage() {
       </div>
     </main>
   );
-}
+}'

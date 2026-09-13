@@ -25,13 +25,13 @@ export const Route = createFileRoute("/compare")({
   },
   head: () => ({
     meta: [
-      { title: "Compare Scans — Aislix Shelf Intelligence" },
+      { title: "Compare Audits — Aislix Shelf Intelligence" },
       {
         name: "description",
         content:
-          "Compare two shelf scans side by side to see how detected products, stock gaps and confidence changed over time.",
+          "Compare two shelf audits side by side to see how detected products, stock gaps and confidence changed over time.",
       },
-      { property: "og:title", content: "Compare shelf scans — Aislix" },
+      { property: "og:title", content: "Compare shelf audits — Aislix" },
       {
         property: "og:description",
         content: "Track inventory changes between any two Aislix shelf audits.",
@@ -168,7 +168,7 @@ function ComparePage() {
 
   const results = useQueries({
     queries: ids.map((id) => ({
-      queryKey: ["scan-result", id],
+      queryKey: ["audit-result", id],
       queryFn: ({ signal }: { signal: AbortSignal }) => fetchScanResult(id, signal),
       retry: false,
     })),
@@ -180,7 +180,7 @@ function ComparePage() {
 
   return (
     <AppShell
-      title="Compare scans"
+      title="Compare audits"
       description="Side-by-side inventory changes between two shelf audits."
       actions={
         <Button variant="subtle" size="sm" className="rounded-xl" asChild>
@@ -193,11 +193,11 @@ function ComparePage() {
       {ids.length !== 2 ? (
         <EmptyState
           icon={<ArrowLeftRight className="size-5" />}
-          title="Select two scans to compare"
-          description="Pick any two completed scans in scan history, then choose Compare."
+          title="Select two audits to compare"
+          description="Pick any two completed audits in audit history, then choose Compare."
           action={
             <Button variant="brand" size="sm" className="rounded-xl" asChild>
-              <Link to="/history">Go to scan history</Link>
+              <Link to="/history">Go to audit history</Link>
             </Button>
           }
         />
@@ -209,15 +209,15 @@ function ComparePage() {
         </div>
       ) : failed ? (
         <ErrorState
-          title="Couldn't load both scans"
+          title="Couldn't load both audits"
           description={failed.error instanceof Error ? failed.error.message : undefined}
           onRetry={() => results.forEach((r) => void r.refetch())}
         />
       ) : left && right ? (
         <div className="space-y-5">
           <section className="card-surface grid gap-4 p-5 sm:grid-cols-2 sm:p-6">
-            <ScanHeading result={left} side="Baseline scan" />
-            <ScanHeading result={right} side="Comparison scan" />
+            <ScanHeading result={left} side="Baseline audit" />
+            <ScanHeading result={right} side="Comparison audit" />
           </section>
 
           {(() => {
@@ -227,7 +227,7 @@ function ComparePage() {
               <section className="card-surface p-4 sm:p-6">
                 <h2 className="text-sm font-semibold tracking-tight">SKU-level changes</h2>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Products with different facing counts between baseline and comparison scans.
+                  Products with different facing counts between baseline and comparison audits.
                 </p>
                 <div className="mt-4 overflow-x-auto">
                   <table className="w-full min-w-[520px] text-sm">
@@ -264,7 +264,7 @@ function ComparePage() {
           <section className="card-surface p-4 sm:p-6">
             <h2 className="text-sm font-semibold tracking-tight">Execution metrics</h2>
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-              Metrics come straight from each scan payload — no estimates.
+              Metrics come straight from each audit payload — no estimates.
             </p>
 
             <div className="mt-5 overflow-x-auto">
@@ -301,7 +301,7 @@ function ComparePage() {
           <div className="grid gap-4 sm:grid-cols-2">
             {[left, right].map((r, i) => (
               <Button key={r.scan_id} variant="subtle" className="h-11 rounded-xl" asChild>
-                <Link to="/results" search={{ scan: r.scan_id }}>
+                <Link to="/results" search={{ audit: r.scan_id }}>
                   Open {i === 0 ? "baseline" : "comparison"} results
                 </Link>
               </Button>
@@ -309,7 +309,7 @@ function ComparePage() {
           </div>
         </div>
       ) : (
-        <EmptyState title="No comparison data" description="Both scans returned no payload." />
+        <EmptyState title="No comparison data" description="Both audits returned no payload." />
       )}
     </AppShell>
   );

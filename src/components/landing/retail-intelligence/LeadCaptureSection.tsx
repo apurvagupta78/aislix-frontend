@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trackLandingEvent } from "@/lib/landing-analytics";
-import { captureLandingLead, signupUrlWithLanding } from "@/lib/landing-scan-api";
+import { captureLandingLead, signupUrlWithLanding } from "@/lib/landing-audit-api";
 
 export function LeadCaptureSection({ landingSessionId }: { landingSessionId: string | null }) {
   const [email, setEmail] = useState("");
@@ -68,7 +68,7 @@ export function LeadCaptureSection({ landingSessionId }: { landingSessionId: str
             <form onSubmit={submit}>
               <p className="text-xs font-semibold uppercase tracking-wider text-brand">Continue with Aislix</p>
               <h2 className="mt-3 text-2xl font-semibold tracking-normal sm:text-3xl">
-                Save your shelf audit &amp; unlock 5 free scans
+                Save your shelf audit &amp; unlock 5 free audits
               </h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 Enter your work email. No credit card required.

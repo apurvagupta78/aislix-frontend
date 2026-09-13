@@ -21,7 +21,7 @@ export const createScanShareLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { scanId: string }) => {
     const scanId = String(input?.scanId ?? "").trim();
-    if (!scanId) throw new Error("Missing scan.");
+    if (!scanId) throw new Error("Missing audit.");
     return { scanId };
   })
   .handler(async ({ data, context }): Promise<ScanShareLink> => {
@@ -103,7 +103,7 @@ export const emailScanReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: EmailScanReportInput) => {
     const scanId = String(input?.scanId ?? "").trim();
-    if (!scanId) throw new Error("Missing scan.");
+    if (!scanId) throw new Error("Missing audit.");
     const recipients = (input?.recipients ?? [])
       .map((value) => String(value).trim().toLowerCase())
       .filter(Boolean)
@@ -171,7 +171,7 @@ export const emailScanReport = createServerFn({ method: "POST" })
           storeName: summary.store_name,
           location: summary.location,
           category: [summary.category, summary.sub_category].filter(Boolean).join(" · "),
-          scanDate: summary.scanned_at,
+          scanDate: summary.audited_at,
           healthScore: summary.shelf_health_score,
           productsDetected: summary.products_detected,
           compliancePercent: summary.planogram_compliance_percent,
@@ -213,7 +213,7 @@ export const shareScanWithTeam = createServerFn({ method: "POST" })
   .inputValidator((input: ShareWithTeamInput) => {
     const scanId = String(input?.scanId ?? "").trim();
     const userIds = [...new Set((input?.userIds ?? []).map((id) => String(id)).filter(Boolean))];
-    if (!scanId) throw new Error("Missing scan.");
+    if (!scanId) throw new Error("Missing audit.");
     if (!userIds.length) throw new Error("Select at least one team member.");
     return {
       scanId,
@@ -263,7 +263,7 @@ export const shareScanWithTeam = createServerFn({ method: "POST" })
           org_id: orgId,
           type: "scan_shared",
           title: "Shelf audit shared with you",
-          body: data.note || `${sharerName} shared a scan report${context_label ? ` · ${context_label}` : ""}`,
+          body: data.note || `${sharerName} shared an audit report${context_label ? ` · ${context_label}` : ""}`,
           payload: { scan_id: data.scanId, share_url: link.url } as never,
         })),
       );
@@ -290,7 +290,7 @@ export const shareScanWithTeam = createServerFn({ method: "POST" })
             storeName: summary.store_name,
             location: summary.location,
             category: [summary.category, summary.sub_category].filter(Boolean).join(" · "),
-            scanDate: summary.scanned_at,
+            scanDate: summary.audited_at,
             healthScore: summary.shelf_health_score,
             productsDetected: summary.products_detected,
             compliancePercent: summary.planogram_compliance_percent,

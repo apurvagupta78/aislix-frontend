@@ -21,7 +21,7 @@ import { createScanShareLink } from "@/lib/scan-share.functions";
 import { downloadRoleAuditExcel } from "@/lib/audit-excel-export";
 import type { DemoAllowance } from "@/lib/demo-allowance";
 import { slimLandingSnapshot } from "@/lib/demo-share-snapshot";
-import { signupUrl, type LandingScanResult } from "@/lib/landing-scan-api";
+import { signupUrl, type LandingScanResult } from "@/lib/landing-audit-api";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import {
   downloadDemoFullReportExcel,

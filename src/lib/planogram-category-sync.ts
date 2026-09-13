@@ -1,6 +1,6 @@
 /**
  * Keeps the New Scan setup Category / Sub-category in sync with the optional
- * planogram rows, so POST /scan sends the same audit context the planogram
+ * planogram rows, so POST /audit sends the same audit context the planogram
  * expects (bug: ice-cream planogram audited as Beverages · Tea).
  */
 

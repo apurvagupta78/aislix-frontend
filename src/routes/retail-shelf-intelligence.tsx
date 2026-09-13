@@ -17,8 +17,8 @@ import { MobileStickyCta } from "@/components/landing/retail-shelf-intelligence/
 
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import { persistLandingUtm } from "@/lib/landing-utm";
-import { signupUrl } from "@/lib/landing-scan-api";
-import { loadLandingSessionId, type LandingScanResult } from "@/lib/landing-scan-api";
+import { signupUrl } from "@/lib/landing-audit-api";
+import { loadLandingSessionId, type LandingScanResult } from "@/lib/landing-audit-api";
 
 const TITLE = "AI Retail Shelf Intelligence | Aislix";
 const DESCRIPTION =

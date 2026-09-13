@@ -155,7 +155,7 @@ export function TeamManager() {
         )}
       </SettingsCard>
 
-      <SettingsCard title="Team members" description="Roles control access to scans, stores, billing and settings." icon={Users}>
+      <SettingsCard title="Team members" description="Roles control access to audits, stores, billing and settings." icon={Users}>
         {teamQuery.isLoading ? (
           <TableSkeleton rows={4} cols={4} />
         ) : teamQuery.isError ? (

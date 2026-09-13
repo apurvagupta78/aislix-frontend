@@ -71,7 +71,7 @@ export const listLandingDemoScans = createServerFn({ method: "POST" })
     const signed = new Map<string, string>();
     if (paths.length > 0) {
       const { data: urls } = await supabaseAdmin.storage
-        .from("scan-images")
+        .from("audit-images")
         .createSignedUrls(paths, SIGNED_URL_TTL);
       for (const entry of urls ?? []) {
         if (entry.path && entry.signedUrl) signed.set(entry.path, entry.signedUrl);

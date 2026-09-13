@@ -46,8 +46,8 @@ function ViewResultsButton({ scanId, demo, label }: { scanId: string; demo: bool
         size="sm"
         className="rounded-lg"
         onClick={() =>
-          toast("Sign up to view scan history", {
-            description: "Create a free workspace to open full scan results.",
+          toast("Sign up to view audit history", {
+            description: "Create a free workspace to open full audit results.",
             action: { label: "Sign up", onClick: () => { window.location.href = "/signup"; } },
           })
         }
@@ -58,7 +58,7 @@ function ViewResultsButton({ scanId, demo, label }: { scanId: string; demo: bool
   }
   return (
     <Button asChild variant="subtle" size="sm" className="rounded-lg">
-      <Link to="/results" search={{ scan: scanId }}>
+      <Link to="/results" search={{ audit: scanId }}>
         {label}
       </Link>
     </Button>
@@ -89,7 +89,7 @@ export function RecentScansTable({ demoData }: { demoData?: RecentScansResponse 
   const params: RecentScansQuery = { q, store, status, sort, page, page_size: PAGE_SIZE };
 
   const query = useQuery({
-    queryKey: ["recent-scans", params],
+    queryKey: ["recent-audits", params],
     queryFn: ({ signal }) => fetchRecentScans(params, signal),
     retry: false,
     enabled: !demoData,
@@ -122,7 +122,7 @@ export function RecentScansTable({ demoData }: { demoData?: RecentScansResponse 
 
   return (
     <Panel
-      title="Recent scans"
+      title="Recent audits"
       action={
         <Link
           to={demoData ? "/signup" : "/history"}
@@ -138,9 +138,9 @@ export function RecentScansTable({ demoData }: { demoData?: RecentScansResponse 
           <Input
             value={q}
             onChange={(e) => reset(setQ)(e.target.value)}
-            placeholder="Search scan ID or store…"
+            placeholder="Search audit ID or store…"
             className="h-9 rounded-xl pl-9"
-            aria-label="Search recent scans"
+            aria-label="Search recent audits"
           />
         </div>
         <Select value={store} onValueChange={reset(setStore)}>
@@ -172,7 +172,7 @@ export function RecentScansTable({ demoData }: { demoData?: RecentScansResponse 
           </SelectContent>
         </Select>
         <Select value={sort} onValueChange={reset(setSort) as (v: string) => void}>
-          <SelectTrigger className="h-9 w-full rounded-xl sm:w-40" aria-label="Sort scans">
+          <SelectTrigger className="h-9 w-full rounded-xl sm:w-40" aria-label="Sort audits">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -190,18 +190,18 @@ export function RecentScansTable({ demoData }: { demoData?: RecentScansResponse 
           <TableSkeleton rows={6} cols={7} />
         ) : error ? (
           <ErrorState
-            title="Couldn't load recent scans"
+            title="Couldn't load recent audits"
             description={(error as Error).message}
             onRetry={() => void refetch()}
           />
         ) : items.length === 0 ? (
           <EmptyState
-            title="No scans match these filters"
-            description="Adjust your search or filters, or run a new shelf scan."
+            title="No audits match these filters"
+            description="Adjust your search or filters, or run a new shelf audit."
             icon={<SearchX className="size-5" />}
             action={
               <Button asChild variant="brand" size="sm" className="rounded-xl">
-                <Link to="/scan">Start new scan</Link>
+                <Link to="/audit">Start new audit</Link>
               </Button>
             }
           />
@@ -212,7 +212,7 @@ export function RecentScansTable({ demoData }: { demoData?: RecentScansResponse 
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Scan ID</TableHead>
+                    <TableHead>Audit ID</TableHead>
                     <TableHead>Store</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead className="text-right">Shelf health</TableHead>
@@ -306,7 +306,7 @@ export function RecentScansTable({ demoData }: { demoData?: RecentScansResponse 
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs text-muted-foreground">
-                Page {data?.page ?? page} of {pages} · {formatNumber(total)} scans
+                Page {data?.page ?? page} of {pages} · {formatNumber(total)} audits
               </p>
               <div className="flex items-center gap-2">
                 <Button

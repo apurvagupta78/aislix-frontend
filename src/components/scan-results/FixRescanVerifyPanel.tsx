@@ -126,14 +126,14 @@ export function FixRescanVerifyPanel({
 
       {needsFix && (
         <div className="mt-4 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3">
-          <p className="text-sm font-medium text-warning">Fix shelf → re-scan → verify</p>
+          <p className="text-sm font-medium text-warning">Fix shelf → re-audit → verify</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Correct the open issues on shelf, then re-scan the same assignment. Compliance updates
+            Correct the open issues on shelf, then re-audit the same assignment. Compliance updates
             automatically on each attempt.
           </p>
           <Button asChild variant="brand" size="sm" className="mt-3 rounded-xl">
-            <Link to="/scan" search={{ assignmentId: assignment.id }}>
-              <RefreshCw className="size-4" /> Fix & re-scan
+            <Link to="/audit" search={{ assignmentId: assignment.id }}>
+              <RefreshCw className="size-4" /> Fix & re-audit
             </Link>
           </Button>
         </div>
@@ -236,7 +236,7 @@ function AttemptRow({
         <p className="font-medium">
           Attempt {attempt.attempt}
           {isCurrent && (
-            <span className="ml-2 text-xs font-normal text-brand">(this scan)</span>
+            <span className="ml-2 text-xs font-normal text-brand">(this audit)</span>
           )}
         </p>
         <p className="text-xs text-muted-foreground">

@@ -82,7 +82,7 @@ function scanColumnFallbackPercent(
 }
 
 export function aggregateWeightedKpi(
-  scans: ScanRef[],
+  audits: ScanRef[],
   metricsMap: Map<string, RetailIntelligencePayload | null>,
   role: AuditRoleTab,
   kpiId: AuditKpiId,
@@ -95,7 +95,7 @@ export function aggregateWeightedKpi(
   let worstScanId: string | null = null;
   let worstValue = Infinity;
 
-  for (const scan of scans) {
+  for (const scan of audits) {
     const metrics = metricsMap.get(scan.id) ?? null;
     if (options?.requirePlanogram && !planogramConfigured(metrics)) continue;
 
@@ -185,14 +185,14 @@ export function aggregateWeightedKpi(
 }
 
 export function averageConfiguredTarget(
-  scans: ScanRef[],
+  audits: ScanRef[],
   metricsMap: Map<string, RetailIntelligencePayload | null>,
   kpiId: AuditKpiId,
 ): number | null {
   const field = KPI_TARGET_FIELD[kpiId];
   if (!field) return null;
   const targets: number[] = [];
-  for (const scan of scans) {
+  for (const scan of audits) {
     const scoring = scoringTargetsFromMetrics(metricsMap.get(scan.id) ?? null);
     const raw = scoring[field];
     if (raw != null && Number.isFinite(Number(raw))) targets.push(Number(raw));
@@ -212,13 +212,13 @@ const TERMINAL_ISSUE = new Set(["resolved", "verified", "closed", "fixed", "dism
 const RESOLVED_ISSUE = new Set(["resolved", "verified", "closed", "fixed"]);
 
 export function aggregateIssueResolution(
-  scans: ScanRef[],
+  audits: ScanRef[],
   metricsMap: Map<string, RetailIntelligencePayload | null>,
 ): IssueResolutionRollup {
   let resolved = 0;
   let outcome = 0;
 
-  for (const scan of scans) {
+  for (const scan of audits) {
     const metrics = metricsMap.get(scan.id);
     const rows = [...(metrics?.opportunity_ledger ?? []), ...(metrics?.next_best_actions ?? [])];
     for (const row of rows) {
@@ -256,12 +256,12 @@ export type ShelfHealthRollup = {
 };
 
 export function aggregateShelfHealth(
-  scans: ScanRef[],
+  audits: ScanRef[],
   metricsMap: Map<string, RetailIntelligencePayload | null>,
 ): ShelfHealthRollup {
   const scores: Array<{ score: number; weight: number }> = [];
 
-  for (const scan of scans) {
+  for (const scan of audits) {
     const metrics = metricsMap.get(scan.id);
     const exec = metrics?.retail_execution_score as RetailExecutionScore | undefined;
     if (exec?.state === "available" || exec?.state === "calculated") {

@@ -18,7 +18,7 @@ import {
 import { register } from "@/lib/api/auth";
 import { SocialAuthButtons } from "@/components/auth/SocialAuthButtons";
 import { toUserMessage } from "@/lib/api/errors";
-import { convertLandingSession, loadLandingSessionId } from "@/lib/landing-scan-api";
+import { convertLandingSession, loadLandingSessionId } from "@/lib/landing-audit-api";
 import { trackWorkspaceSignupConversion } from "@/lib/linkedin-conversion";
 import { trackEvent } from "@/lib/analytics";
 
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/signup")({
       {
         name: "description",
         content:
-          "Sign up for Aislix and get 3 free AI shelf scans per day — built for supermarkets, dark stores, warehouses, FMCG brands, distributors and local stores.",
+          "Sign up for Aislix and get 3 free AI shelf audits per day — built for supermarkets, dark stores, warehouses, FMCG brands, distributors and local stores.",
       },
       { property: "og:title", content: "Create your Aislix workspace" },
       { property: "og:description", content: "Start auditing retail shelves with AI in minutes." },
@@ -98,7 +98,7 @@ function SignupPage() {
   return (
     <AuthLayout
       title="Create your workspace"
-      subtitle="5 free shelf scans every 24 hours. No card required."
+      subtitle="5 free shelf audits every 24 hours. No card required."
       footer={
         <>
           Already have an account?{" "}

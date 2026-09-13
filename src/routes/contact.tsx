@@ -89,7 +89,7 @@ const faqs = [
   },
   {
     q: "Is there an API for our own systems?",
-    a: "Professional and Enterprise include REST API access so scans, inventory results and alerts can flow into your ERP, BI or replenishment tooling.",
+    a: "Professional and Enterprise include REST API access so audits, inventory results and alerts can flow into your ERP, BI or replenishment tooling.",
   },
   {
     q: "Which regions and languages do you cover?",
@@ -249,7 +249,7 @@ function Contact() {
                 maxLength={2000}
                 value={form.message}
                 onChange={(e) => set("message")(e.target.value)}
-                placeholder="Tell us about your store network, scan volume and what you want to measure on shelf."
+                placeholder="Tell us about your store network, audit volume and what you want to measure on shelf."
               />
             </FormField>
             <p className="mt-2 text-xs text-muted-foreground">

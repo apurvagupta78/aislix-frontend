@@ -18,12 +18,12 @@ export type PaymentMethod = {
 };
 
 export type UsageSummary = {
-  /** "rolling_24h" for the Free plan (5 scans / 24h), "month" for paid quotas. */
+  /** "rolling_24h" for the Free plan (5 audits / 24h), "month" for paid quotas. */
   quota_period?: "rolling_24h" | "month";
   period_start?: string;
   period_end?: string;
-  scans_used: number;
-  scans_included: number | null; // null = unlimited
+  audits_used: number;
+  audits_included: number | null; // null = unlimited
   /** Free plan only: when the rolling window frees up the next scan. */
   cooldown_until?: string | null;
   can_scan?: boolean;
@@ -101,7 +101,7 @@ async function getSubscriptionRow(orgId: string) {
   const { data, error } = await supabase
     .from("subscriptions")
     .select(
-      "id, status, cycle, current_period_start, current_period_end, cancel_at_period_end, scans_used, plan_id, subscription_plans(id, code, name, scan_quota, store_limit, seat_limit, price_monthly_inr, price_annual_inr)",
+      "id, status, cycle, current_period_start, current_period_end, cancel_at_period_end, audits_used, plan_id, subscription_plans(id, code, name, scan_quota, store_limit, seat_limit, price_monthly_inr, price_annual_inr)",
     )
     .eq("org_id", orgId)
     .maybeSingle();
@@ -110,11 +110,11 @@ async function getSubscriptionRow(orgId: string) {
 }
 
 
-/** Free-plan allowance: 5 scans per rolling 24 hours. */
+/** Free-plan allowance: 5 audits per rolling 24 hours. */
 export const FREE_SCAN_LIMIT_24H = 5;
 
 /**
- * Live plan allowance check used before a scan is created. Delegates to the
+ * Live plan allowance check used before an audit is created. Delegates to the
  * `get_org_usage_summary` RPC so Free (rolling 24h) and paid (monthly) plans
  * share one source of truth. Usage counters are maintained by a DB trigger.
  */
@@ -178,8 +178,8 @@ export async function fetchBillingOverview(signal?: AbortSignal): Promise<Billin
       period_start: live.period_start ?? sub.current_period_start,
       period_end: live.period_end ?? sub.current_period_end ?? undefined,
       // Counted by the database: rolling 24h for Free, calendar month otherwise.
-      scans_used: live.scans_used,
-      scans_included: live.scan_quota,
+      audits_used: live.scans_used,
+      audits_included: live.scan_quota,
       cooldown_until: live.cooldown_until ?? null,
       can_scan: live.can_scan,
       stores_used: live.stores_used,

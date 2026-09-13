@@ -29,9 +29,9 @@ export type Organization = {
   active_stores?: number;
   archived_stores?: number;
   active_users?: number;
-  scans_used?: number;
-  scans_included?: number | null; // null = unlimited
-  scans_remaining?: number | null;
+  audits_used?: number;
+  audits_included?: number | null; // null = unlimited
+  audits_remaining?: number | null;
   billing_period_end?: string | null;
   gst_number?: string | null;
 };
@@ -221,7 +221,7 @@ const STORE_SELECT = "*, territories:territory_id (name)";
 async function attachStoreMetrics(stores: OrgStore[]): Promise<OrgStore[]> {
   if (stores.length === 0) return stores;
   const ids = stores.map((s) => s.id);
-  const { data: scans, error } = await supabase
+  const { data: audits, error } = await supabase
     .from("shelf_scans")
     .select(
       "store_id, shelf_health_score, low_stock_count, out_of_stock_count, created_at, status",
@@ -230,8 +230,8 @@ async function attachStoreMetrics(stores: OrgStore[]): Promise<OrgStore[]> {
     .order("created_at", { ascending: false });
   if (error) dbError(error, "Could not load store metrics.");
 
-  const byStore = new Map<string, typeof scans>();
-  for (const scan of scans ?? []) {
+  const byStore = new Map<string, typeof audits>();
+  for (const scan of audits ?? []) {
     if (!scan.store_id) continue;
     const list = byStore.get(scan.store_id) ?? [];
     list.push(scan);
@@ -298,7 +298,7 @@ export async function fetchOrganization(_signal?: AbortSignal): Promise<Organiza
   const { data: subscription } = await supabase
     .from("subscriptions")
     .select(
-      "status, current_period_end, scans_used, plan_id, subscription_plans(id, name, scan_quota)",
+      "status, current_period_end, audits_used, plan_id, subscription_plans(id, name, scan_quota)",
     )
     .eq("org_id", orgId)
     .maybeSingle();
@@ -319,9 +319,9 @@ export async function fetchOrganization(_signal?: AbortSignal): Promise<Organiza
     active_stores: activeStores ?? undefined,
     archived_stores: archivedStores ?? undefined,
     active_users: activeUsers ?? undefined,
-    scans_used: subscription?.scans_used ?? undefined,
-    scans_included: plan?.scan_quota ?? null,
-    scans_remaining:
+    audits_used: subscription?.scans_used ?? undefined,
+    audits_included: plan?.scan_quota ?? null,
+    audits_remaining:
       typeof plan?.scan_quota === "number" && typeof subscription?.scans_used === "number"
         ? Math.max(0, plan.scan_quota - subscription.scans_used)
         : plan?.scan_quota === null
@@ -506,7 +506,7 @@ export async function fetchStoreScans(
     .eq("store_id", id)
     .order("created_at", { ascending: false })
     .limit(limit);
-  if (error) dbError(error, "Could not load store scans.");
+  if (error) dbError(error, "Could not load store audits.");
 
   const items: StoreScan[] = (data ?? []).map((row) => compact({
     scan_id: row.id,
@@ -551,7 +551,7 @@ export async function fetchStoreRecommendations(
   _signal?: AbortSignal,
 ): Promise<{ items: StoreRecommendation[] }> {
   const orgId = await requireOrgId();
-  const { data: scans, error: scansError } = await supabase
+  const { data: audits, error: auditsError } = await supabase
     .from("shelf_scans")
     .select("id")
     .eq("org_id", orgId)
@@ -606,7 +606,7 @@ export async function fetchStoreReports(
 
   const items: StoreReport[] = (data ?? []).map((row) => ({
     id: row.id,
-    label: row.shelf_label ?? "Shelf scan report",
+    label: row.shelf_label ?? "Shelf audit report",
     generated_at: row.created_at,
   }));
 
@@ -954,7 +954,7 @@ export function healthTone(score?: number): "good" | "warn" | "bad" | "unknown" 
   return "bad";
 }
 
-export function scansRemaining(org?: Organization): number | null | undefined {
+export function auditsRemaining(org?: Organization): number | null | undefined {
   if (!org) return undefined;
   if (typeof org.scans_remaining === "number") return org.scans_remaining;
   if (org.scans_included === null) return null; // unlimited

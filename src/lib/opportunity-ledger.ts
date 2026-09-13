@@ -88,7 +88,7 @@ export function buildOpportunityLedger(
           line.detail ??
           (line.issue_type === "missing"
             ? `Replenish ${plan.brand} ${plan.product_name} and capture a follow-up shelf image.`
-            : `Correct ${plan.brand} ${plan.product_name} placement or facings, then rescan.`),
+            : `Correct ${plan.brand} ${plan.product_name} placement or facings, then re-audit.`),
         status: "open",
         commercial_impact_score: commercialImpactScore(dailyInr ?? 0, priority ?? "medium"),
       });
@@ -102,7 +102,7 @@ export function buildOpportunityLedger(
       issue: "Placement violations",
       severity: "medium",
       priority: "medium",
-      recommended_action: "Review misplaced facings in the audited bay and rescan after correction.",
+      recommended_action: "Review misplaced facings in the audited bay and re-audit after correction.",
       status: "open",
       commercial_impact_score: 25,
       source: "scan_analysis",
@@ -153,8 +153,8 @@ export function buildVerificationSnapshot(result?: ScanResult | null): Verificat
     improved,
     verified: improved && (missing === 0 || detected === expected),
     summary: improved
-      ? "Execution improved vs the previous scan at this location."
-      : "Follow-up scan recorded — compare KPIs below to confirm fixes.",
+      ? "Execution improved vs the previous audit at this location."
+      : "Follow-up audit recorded — compare KPIs below to confirm fixes.",
   };
 }
 

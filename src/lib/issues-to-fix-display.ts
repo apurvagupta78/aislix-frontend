@@ -22,7 +22,7 @@ import { DEMO_ORAL_CARE_META } from "@/lib/demo-oral-care-planogram";
 import { planogramRowsFromResult } from "@/lib/execution-metrics";
 import type { ResultViewMode } from "@/lib/customer-context";
 
-export type ActionStatus = "Open" | "In Review" | "Actioned" | "Rescan Required" | "Resolved";
+export type ActionStatus = "Open" | "In Review" | "Actioned" | "Re-audit Required" | "Resolved";
 
 export type IssueItem = {
   id: string;
@@ -126,15 +126,15 @@ function nextStepFor(category: ExceptionCategory, is_review: boolean): string {
     case "availability":
       return "Verify shelf coverage and restock only after confirmation.";
     case "placement":
-      return "Move products to the correct section and rescan.";
+      return "Move products to the correct section and re-audit.";
     case "planogram":
-      return "Correct placement or facings per planogram, then rescan.";
+      return "Correct placement or facings per planogram, then re-audit.";
     case "pricing":
       return "Update shelf price to match the configured value.";
     case "promotion":
       return "Align promotional price with the campaign terms.";
     default:
-      return "Take corrective action and rescan to verify.";
+      return "Take corrective action and re-audit to verify.";
   }
 }
 

@@ -1,5 +1,5 @@
 /**
- * Scan results — re-exports role-based audit body (five customer-role tabs).
+ * Audit results — re-exports role-based audit body (five customer-role tabs).
  */
 
 export {

@@ -123,7 +123,7 @@ const features = [
   {
     icon: Wrench,
     title: "Turn Issues Into Actions.",
-    body: "See what needs to be fixed, review the evidence, rescan the shelf and track whether the issue was resolved.",
+    body: "See what needs to be fixed, review the evidence, re-audit the shelf and track whether the issue was resolved.",
   },
 ];
 
@@ -149,7 +149,7 @@ const steps = [
   {
     icon: History,
     title: "Track",
-    subtitle: "Rescan and measure improvement.",
+    subtitle: "Re-audit and measure improvement.",
     body: "Keep every audit, compare previous visits and verify whether the shelf improved after corrective action.",
   },
 ];
@@ -277,7 +277,7 @@ function Landing() {
             Plans that scale from one local store to a national chain.
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Start free with 5 scans a day. Move to Starter at {format(999)}, 5,000 scans a month on
+            Start free with 5 audits a day. Move to Starter at {format(999)}, 5,000 audits a month on
             Professional at {format(4999)}, or talk to us about an Enterprise rollout.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

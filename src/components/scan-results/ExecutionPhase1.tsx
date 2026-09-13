@@ -458,7 +458,7 @@ export function ActionCenterPanel({
           </h3>
           <p className="mt-2 max-w-2xl text-xs leading-relaxed text-muted-foreground">
             Aislix found these shelf issues and prioritised what needs attention first. Review the
-            evidence, take action and rescan to verify the fix.
+            evidence, take action and re-audit to verify the fix.
           </p>
         </div>
         {data && viewModel && viewModel.total > 0 ? (
@@ -483,7 +483,7 @@ export function ActionCenterPanel({
         </div>
       ) : !viewModel || viewModel.total === 0 ? (
         <p className="mt-4 text-sm text-muted-foreground">
-          No issues requiring action for this scan.
+          No issues requiring action for this audit.
         </p>
       ) : (
         <div className="mt-4 space-y-4">
@@ -812,7 +812,7 @@ export function ShareOfShelfPanel({ data, loading }: { data?: ScanResult; loadin
           ))}
         </div>
       ) : brands.length === 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">No brand share data for this scan.</p>
+        <p className="mt-3 text-sm text-muted-foreground">No brand share data for this audit.</p>
       ) : (
         <ul className="mt-4 space-y-2">
           {brands.slice(0, 8).map((row) => (
@@ -1046,7 +1046,7 @@ export function RecommendedActionsPanel({ data, loading }: { data?: ScanResult; 
           <Skeleton className="h-14 w-full" />
         </div>
       ) : cards.length === 0 ? (
-        <p className="mt-4 text-sm text-muted-foreground">No prioritized actions for this scan.</p>
+        <p className="mt-4 text-sm text-muted-foreground">No prioritized actions for this audit.</p>
       ) : (
         <div className="mt-4 space-y-4">
           <PriorityOverviewBar summary={summary} />
@@ -1133,7 +1133,7 @@ export function ScanDetailsAccordion({
   if (loading) return null;
   return (
     <details className="card-surface p-5 sm:p-6">
-      <summary className="cursor-pointer text-sm font-semibold tracking-tight">Scan details</summary>
+      <summary className="cursor-pointer text-sm font-semibold tracking-tight">Audit details</summary>
       <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
         <div>
           <dt className="text-muted-foreground">Processing time</dt>
@@ -1152,7 +1152,7 @@ export function ScanDetailsAccordion({
           <dd className="font-medium tabular-nums">{s?.shelf_health_score ?? "—"}</dd>
         </div>
         <div>
-          <dt className="text-muted-foreground">Scan ID</dt>
+          <dt className="text-muted-foreground">Audit ID</dt>
           <dd className="font-mono text-xs">{data?.scan_id}</dd>
         </div>
       </dl>
@@ -1192,7 +1192,7 @@ export function FinancialImpactPanel({
     <FinancialImpactBody impact={impact} view={view} data={data} />
   ) : (
     <p className="mt-3 text-sm text-muted-foreground">
-      No commercial exposure signals for this scan.
+      No commercial exposure signals for this audit.
     </p>
   );
 
@@ -1480,7 +1480,7 @@ export function ExecutionImprovementBanner({
         <p className="text-sm font-semibold">Execution improvement</p>
         <p className="text-sm text-muted-foreground">
           {previous} → {current} ({delta > 0 ? "+" : ""}
-          {delta} points vs previous scan at this store)
+          {delta} points vs previous audit at this store)
         </p>
       </div>
     </div>

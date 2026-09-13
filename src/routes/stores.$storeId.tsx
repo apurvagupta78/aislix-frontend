@@ -42,7 +42,7 @@ export const Route = createFileRoute("/stores/$storeId")({
       {
         name: "description",
         content:
-          "Store-level shelf health trend, recent scans, inventory reports, AI recommendations and team access.",
+          "Store-level shelf health trend, recent audits, inventory reports, AI recommendations and team access.",
       },
       { property: "og:title", content: "Store dashboard — Aislix" },
       {
@@ -117,8 +117,8 @@ function StoreDashboard() {
             )}
           </Button>
           <Button asChild variant="brand" size="sm" className="rounded-xl">
-            <Link to="/scan">
-              <ScanLine className="size-4" /> New scan
+            <Link to="/audit">
+              <ScanLine className="size-4" /> New audit
             </Link>
           </Button>
         </div>
@@ -136,7 +136,7 @@ function StoreDashboard() {
         />
       ) : (
         <div className="space-y-5">
-          <Panel title="Store details" description="Used across scans, reports and invoices.">
+          <Panel title="Store details" description="Used across audits, reports and invoices.">
             {storeQuery.isPending ? (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {[0, 1, 2, 3].map((i) => (
@@ -176,7 +176,7 @@ function StoreDashboard() {
               accent
             />
             <OrgStat
-              label="Total scans"
+              label="Total audits"
               value={formatNumber(metrics?.total_scans)}
               loading={metricsQuery.isPending}
             />
@@ -196,7 +196,7 @@ function StoreDashboard() {
               loading={metricsQuery.isPending}
             />
             <OrgStat
-              label="Last scan"
+              label="Last audit"
               value={formatDateTime(metrics?.last_scan_at)}
               loading={metricsQuery.isPending}
             />

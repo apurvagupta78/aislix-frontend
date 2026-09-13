@@ -1,5 +1,5 @@
 /**
- * Share dialogs for a scan report: email recipients and in-app team sharing.
+ * Share dialogs for an audit report: email recipients and in-app team sharing.
  * Both mint (or reuse) the scan's 7-day share link on the server.
  */
 
@@ -394,7 +394,7 @@ export function TeamShareDialog({
                   </span>
                   {target.user_id === assigneeId ? (
                     <Badge variant="outline" className="rounded-full">
-                      Scanned this
+                      Audited this
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="rounded-full capitalize">

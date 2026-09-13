@@ -90,7 +90,7 @@ const Email = ({
               <Text style={cellValue}>{category || '—'}</Text>
             </Column>
             <Column style={cell}>
-              <Text style={cellLabel}>Scanned</Text>
+              <Text style={cellLabel}>Audited</Text>
               <Text style={cellValue}>{formatDate(scanDate) || '—'}</Text>
             </Column>
           </Row>
@@ -166,7 +166,7 @@ export const template = {
   component: Email,
   subject: (data: Record<string, any>) =>
     `Shelf audit report${data?.storeName ? ` — ${data.storeName}` : ''}`,
-  displayName: 'Shared scan report',
+  displayName: 'Shared audit report',
   previewData: {
     sharerName: 'Apurv Gupta',
     storeName: 'Sharma Supermarkets — Andheri',

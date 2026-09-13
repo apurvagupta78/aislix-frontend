@@ -20,14 +20,14 @@ import {
   runLandingSample,
   runLandingUpload,
   type LandingScanResult,
-} from "@/lib/landing-scan-api";
+} from "@/lib/landing-audit-api";
 import { buildDemoOralCareScanContext } from "@/lib/demo-oral-care-planogram";
 import { EMPTY_SCAN_CONTEXT, type ScanContextState } from "@/lib/scan-context";
 import { LANDING_SAMPLE_EVENT, LANDING_UPLOAD_EVENT } from "./HeroSection";
 import { LeadCaptureSection } from "./LeadCaptureSection";
 import { networkErrorMessage } from "@/lib/api-errors";
 
-type Phase = "idle" | "scanning" | "done" | "error";
+type Phase = "idle" | "auditing" | "done" | "error";
 type SetupMode = null | "sample" | "upload";
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -124,7 +124,7 @@ export function RetailIntelligenceDemo() {
     setError(null);
     setResult(null);
     setElapsedSec(null);
-    setPhase("scanning");
+    setPhase("auditing");
     trackLandingEvent("demo_scan_started", { kind });
     const startedAt = Date.now();
     const minVisible = new Promise<void>((resolve) => setTimeout(resolve, MIN_SCAN_MS));
@@ -158,7 +158,7 @@ export function RetailIntelligenceDemo() {
       const status = (err as { status?: number }).status;
       setError(
         status === 429
-          ? "You've used all free demo scans for today. Create a free account to keep scanning."
+          ? "You've used all free demo audits for today. Create a free account to keep auditing."
           : networkErrorMessage(err),
       );
       setPhase("error");
@@ -192,7 +192,7 @@ export function RetailIntelligenceDemo() {
   }
 
   const shownImage = phase === "done" && result ? (imageSrc(result) ?? previewImageUrl) : previewImageUrl;
-  const scanning = phase === "scanning";
+  const auditing = phase === "auditing";
   const showImagePane = Boolean(previewImageUrl) && phase !== "done";
 
   const setupPanel =
@@ -203,7 +203,7 @@ export function RetailIntelligenceDemo() {
         onChange={demoCategory.setState}
         categories={demoCategory.categories}
         ready={demoCategory.ready}
-        disabled={scanning}
+        disabled={auditing}
         scanContext={scanContext}
         onScanContextChange={setScanContext}
         defaultCategory={demoCategory.state.categoryName}
@@ -228,7 +228,7 @@ export function RetailIntelligenceDemo() {
             <p className="text-xs font-semibold uppercase tracking-wider text-brand">Live shelf audit</p>
             <h2 className="mt-3 text-3xl font-semibold tracking-normal sm:text-4xl">See What Aislix Sees</h2>
             <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground">
-              Run a live AI shelf scan right here — no signup, no setup.
+              Run a live AI shelf audit right here — no signup, no setup.
             </p>
           </div>
 
@@ -236,7 +236,7 @@ export function RetailIntelligenceDemo() {
             <Button
               size="xl"
               className="min-h-11 w-full bg-accent-green text-brand-foreground hover:bg-accent-green/90 sm:w-auto"
-              disabled={scanning}
+              disabled={auditing}
               onClick={beginSampleSetup}
             >
               <Sparkles className="size-4" /> Try Sample Shelf
@@ -245,7 +245,7 @@ export function RetailIntelligenceDemo() {
               variant="outline"
               size="xl"
               className="min-h-11 w-full sm:w-auto"
-              disabled={scanning}
+              disabled={auditing}
               onClick={beginUploadSetup}
             >
               <Upload className="size-4" /> Upload Shelf Photo
@@ -280,7 +280,7 @@ export function RetailIntelligenceDemo() {
             className="mt-8 overflow-hidden rounded-lg border border-border bg-card shadow-lift"
           >
             <div className="p-4 sm:p-6 lg:p-8">
-              {scanning && (
+              {auditing && (
                 <div className="grid min-h-48 place-items-center py-8">
                   <ScanProgressPanel active expectedMs={60_000} timingMessage={DEMO_TIMING_MESSAGE} />
                 </div>
@@ -293,11 +293,11 @@ export function RetailIntelligenceDemo() {
                 </div>
               ) : null}
 
-              {!scanning && setupPanel}
+              {!auditing && setupPanel}
 
-              {!scanning && phase === "idle" && !setupMode ? <EmptyResults /> : null}
+              {!auditing && phase === "idle" && !setupMode ? <EmptyResults /> : null}
 
-              {!scanning && phase === "done" && result ? (
+              {!auditing && phase === "done" && result ? (
                 <DemoRoleResultsPanel
                   result={result}
                   elapsedSec={elapsedSec}
@@ -324,7 +324,7 @@ export function RetailIntelligenceDemo() {
                     alt={phase === "done" ? "Shelf photo analyzed by Aislix" : "Sample toothpaste shelf"}
                     className="mx-auto max-h-[min(52vh,520px)] w-full rounded-lg object-contain"
                   />
-                  {scanning ? (
+                  {auditing ? (
                     <div className="absolute inset-0 rounded-lg bg-brand/15">
                       <Badge className="absolute left-3 top-3 gap-2 rounded-md bg-brand px-3 py-2 text-brand-foreground">
                         <Loader2 className="size-3.5 animate-spin" /> Analyzing image…
@@ -348,7 +348,7 @@ function EmptyResults() {
     <div className="grid min-h-48 place-items-center py-8 text-center">
       <p className="max-w-md text-sm text-muted-foreground">
         Choose the sample shelf or upload your photo above — then confirm category, optionally add a
-        planogram, and start scanning. Execution, merchandising, brand, and executive views will
+        planogram, and start auditing. Execution, merchandising, brand, and executive views will
         appear here.
       </p>
     </div>

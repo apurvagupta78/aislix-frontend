@@ -123,11 +123,11 @@ export function PlanogramComparisonSection({ comparison }: { comparison: Planogr
   );
 }
 
-/** Shown when a scan was run "with planogram" but no comparison came back. */
+/** Shown when an audit was run "with planogram" but no comparison came back. */
 export function PlanogramMissingAlert({ demoMode = false }: { demoMode?: boolean }) {
   const detail = demoMode
-    ? "Add at least one expected product with brand, product name, and expected facings in Products & prices above, then rescan."
-    : "Link this scan to expected products before scanning — add rows in Products & prices on the New Scan page (Option 2), or assign from a planogram library entry.";
+    ? "Add at least one expected product with brand, product name, and expected facings in Products & prices above, then re-audit."
+    : "Link this audit to expected products before auditing — add rows in Products & prices on the New Audit page (Option 2), or assign from a planogram library entry.";
   return (
     <section
       role="alert"

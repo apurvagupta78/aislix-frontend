@@ -1,7 +1,7 @@
 /**
  * Accuracy correction loop.
  *
- * Ops fix a wrong SKU on the scan results page; every fix is appended to
+ * Ops fix a wrong SKU on the audit results page; every fix is appended to
  * `scan_corrections` and can be exported as JSON for the backend benchmark
  * importer. Corrections never block scan completion.
  */
@@ -85,7 +85,7 @@ export async function fetchScanCorrections(scanId: string): Promise<ScanCorrecti
     .eq("org_id", orgId)
     .eq("scan_id", scanId)
     .order("created_at", { ascending: false });
-  if (error) dbError(error, "Could not load corrections for this scan.");
+  if (error) dbError(error, "Could not load corrections for this audit.");
   return (data ?? []) as unknown as ScanCorrection[];
 }
 

@@ -181,7 +181,7 @@ export function annotateCompetitorCategories(
   };
 }
 
-/** Build competitor intel from brand share rows + org config (works on old scans). */
+/** Build competitor intel from brand share rows + org config (works on old audits). */
 export function buildCompetitorSnapshot(
   brandRows: { brand: string; share: number }[] | undefined,
   config: BrandConfig,

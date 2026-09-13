@@ -33,7 +33,7 @@ const Email = ({ name, signupUrl = 'https://aislix.com/signup' }: Props) => (
         <Text style={text}>{name ? `Hi ${name},` : 'Hi,'}</Text>
         <Text style={text}>
           Thanks for trying Aislix shelf intelligence. You&apos;re one step away from your free
-          workspace with free shelf scans.
+          workspace with free shelf audits.
         </Text>
         <Section style={{ margin: '0 0 28px' }}>
           <Button style={button} href={signupUrl}>

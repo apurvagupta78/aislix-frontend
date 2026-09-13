@@ -42,7 +42,7 @@ export async function fetchTerritories(): Promise<Territory[]> {
   }
 
   const allStoreIds = (stores ?? []).map((s) => s.id as string);
-  const { data: scans } = allStoreIds.length
+  const { data: audits } = allStoreIds.length
     ? await supabase
         .from("shelf_scans")
         .select("store_id, planogram_compliance_percent")
@@ -53,7 +53,7 @@ export async function fetchTerritories(): Promise<Territory[]> {
     : { data: [] as { store_id: string; planogram_compliance_percent: number | null }[] };
 
   const statsByStore = new Map<string, { count: number; complianceSum: number; complianceN: number }>();
-  for (const scan of scans ?? []) {
+  for (const scan of audits ?? []) {
     const sid = scan.store_id as string;
     const entry = statsByStore.get(sid) ?? { count: 0, complianceSum: 0, complianceN: 0 };
     entry.count += 1;

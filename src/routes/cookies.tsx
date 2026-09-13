@@ -43,7 +43,7 @@ export const Route = createFileRoute("/cookies")({
         {
           heading: "Analytics cookies",
           body: [
-            "Optional. Aggregated, first-party product analytics tell us which screens are used, where scans fail and where the interface causes friction. We do not build advertising profiles and we do not sell analytics data.",
+            "Optional. Aggregated, first-party product analytics tell us which screens are used, where audits fail and where the interface causes friction. We do not build advertising profiles and we do not sell analytics data.",
           ],
         },
         {
@@ -61,7 +61,7 @@ export const Route = createFileRoute("/cookies")({
         {
           heading: "Cookie preferences",
           body: [
-            "You can accept or reject optional cookies at any time; essential cookies remain active. Rejecting analytics and functional cookies does not limit any shelf-scanning feature, but layout and filter preferences will reset between sessions.",
+            "You can accept or reject optional cookies at any time; essential cookies remain active. Rejecting analytics and functional cookies does not limit any shelf-auditing feature, but layout and filter preferences will reset between sessions.",
             "You can also clear or block cookies in your browser settings. Doing so signs you out and clears saved preferences. Questions about cookies: hello@aislix.com.",
           ],
         },

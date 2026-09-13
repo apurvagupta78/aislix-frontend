@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { signupUrl as buildSignupUrl } from "@/lib/landing-scan-api";
+import { signupUrl as buildSignupUrl } from "@/lib/landing-audit-api";
 
 export function WorkspaceShareDialog({
   open,

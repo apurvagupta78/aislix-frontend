@@ -18,7 +18,7 @@ import {
   type LimitReachedError,
 } from "@/lib/subscription-limits";
 
-/** Live HH:MM:SS countdown until the Free-plan rolling window frees a scan. */
+/** Live HH:MM:SS countdown until the Free-plan rolling window frees an audit. */
 function CooldownTimer({ until }: { until: string }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -40,7 +40,7 @@ export function toLimitDialogState(error: unknown): LimitDialogState {
 }
 
 /**
- * Plan-limit modal shown when a scan or store creation is blocked. Enterprise
+ * Plan-limit modal shown when an audit or store creation is blocked. Enterprise
  * workspaces never see an upgrade CTA (they are already unlimited/quote-based).
  */
 export function LimitReachedDialog({
@@ -72,8 +72,8 @@ export function LimitReachedDialog({
             {isStore
               ? "Store limit reached"
               : isCooldown
-                ? "Daily scan limit reached"
-                : "Monthly scan limit reached"}
+                ? "Daily audit limit reached"
+                : "Monthly audit limit reached"}
           </DialogTitle>
           <DialogDescription>{limit?.message}</DialogDescription>
         </DialogHeader>
@@ -85,14 +85,14 @@ export function LimitReachedDialog({
               <span className="font-medium text-foreground">{usage.plan_name}</span>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">{isStore ? "Stores" : "Scans"}</span>
+              <span className="text-muted-foreground">{isStore ? "Stores" : "Audits"}</span>
               <span className="font-medium text-foreground">
                 {isStore ? storeUsageLabel(usage) : scanUsageLabel(usage)}
               </span>
             </div>
             {isCooldown && limit?.cooldownUntil ? (
               <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">Next scan unlocks in</span>
+                <span className="text-muted-foreground">Next audit unlocks in</span>
                 <CooldownTimer until={limit.cooldownUntil} />
               </div>
             ) : null}

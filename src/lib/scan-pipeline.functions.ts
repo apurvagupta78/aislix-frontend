@@ -1,11 +1,11 @@
 /**
  * Server function entrypoints for the AI scan pipeline.
  *
- * Thin wrappers only — all runtime logic lives in `scan-pipeline.server.ts`,
+ * Thin wrappers only — all runtime logic lives in `audit-pipeline.server.ts`,
  * which is imported inside the handler so nothing server-only reaches the
  * client bundle.
  *
- * Large shelf scans can take 5+ minutes, so the flow is split into a fast
+ * Large shelf audits can take 5+ minutes, so the flow is split into a fast
  * `startScanPipeline` (submit to Railway) plus repeated short
  * `pollScanPipeline` calls. `processScan` remains as the legacy one-shot call.
  */
@@ -15,7 +15,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 function validateScanId(input: { scanId: string }) {
   const scanId = typeof input?.scanId === "string" ? input.scanId.trim() : "";
-  if (!/^[0-9a-f-]{36}$/i.test(scanId)) throw new Error("A valid scan id is required.");
+  if (!/^[0-9a-f-]{36}$/i.test(scanId)) throw new Error("A valid audit id is required.");
   return { scanId };
 }
 

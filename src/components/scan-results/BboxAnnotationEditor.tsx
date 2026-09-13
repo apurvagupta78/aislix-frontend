@@ -64,7 +64,7 @@ export function BboxAnnotationEditor({
   const [editing, setEditing] = useState<EditorBox | null>(null);
 
   const correctionsQuery = useQuery({
-    queryKey: ["scan-corrections", scanId],
+    queryKey: ["audit-corrections", scanId],
     queryFn: () => fetchScanCorrections(scanId!),
     enabled: Boolean(scanId),
     retry: false,
@@ -369,7 +369,7 @@ function LabelDialog({
       }),
     onSuccess: () => {
       toast.success("Annotation saved.");
-      void queryClient.invalidateQueries({ queryKey: ["scan-result", data.scan_id] });
+      void queryClient.invalidateQueries({ queryKey: ["audit-result", data.scan_id] });
       onSaved();
       onClose();
     },

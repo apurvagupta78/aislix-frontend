@@ -1,9 +1,9 @@
 /**
- * Multi "Category · Subcategory" shelf types for one shelf scan.
+ * Multi "Category · Subcategory" shelf types for one shelf audit.
  *
- * A retail rack often mixes product types (snacks + bread), so scans carry a
+ * A retail rack often mixes product types (snacks + bread), so audits carry a
  * list of selections. The first entry stays the legacy primary category so old
- * scans and the vision backend keep working.
+ * audits and the vision backend keep working.
  */
 
 import type { ShelfCategory } from "@/lib/categories.data";
@@ -170,7 +170,7 @@ export function selectionsFromPlanogramRows(
   return dedupeSelections(out);
 }
 
-/** Legacy single-field scan/assignment context → one selection. */
+/** Legacy single-field audit/assignment context → one selection. */
 export function selectionsFromLegacy(
   categories: ShelfCategory[],
   category: string | null | undefined,
@@ -188,4 +188,4 @@ export function selectionsFromLegacy(
       sub_category_label: String(subCategory ?? "").trim(),
     },
   ];
-}
+}'

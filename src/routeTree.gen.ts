@@ -13,6 +13,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as AdminRouteImport } from './routes/admin'
+
+import { Route as AssignAuditRouteImport } from './routes/assign-audit'
+import { Route as AssignedAuditsRouteImport } from './routes/assigned-audits'
+import { Route as AuditRouteImport } from './routes/audit'
+import { Route as MyAuditsRouteImport } from './routes/my-audits'
+import { Route as AdminAuditsRouteImport } from './routes/admin.audits'
+import { Route as AdminDemoAuditsRouteImport } from './routes/admin.demo-audits'
 import { Route as AssignScanRouteImport } from './routes/assign-scan'
 import { Route as AssignedScansRouteImport } from './routes/assigned-scans'
 import { Route as BillingRouteImport } from './routes/billing'
@@ -95,6 +102,27 @@ const AcceptInviteRoute = AcceptInviteRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+
+const AssignAuditRoute = AssignAuditRouteImport.update({
+  id: '/assign-audit',
+  path: '/assign-audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssignedAuditsRoute = AssignedAuditsRouteImport.update({
+  id: '/assigned-audits',
+  path: '/assigned-audits',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuditRoute = AuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyAuditsRoute = MyAuditsRouteImport.update({
+  id: '/my-audits',
+  path: '/my-audits',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssignScanRoute = AssignScanRouteImport.update({
@@ -330,6 +358,17 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
 const AdminOrgsRoute = AdminOrgsRouteImport.update({
   id: '/orgs',
   path: '/orgs',
+  getParentRoute: () => AdminRoute,
+} as any)
+
+const AdminAuditsRoute = AdminAuditsRouteImport.update({
+  id: '/audits',
+  path: '/audits',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDemoAuditsRoute = AdminDemoAuditsRouteImport.update({
+  id: '/demo-audits',
+  path: '/demo-audits',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminScansRoute = AdminScansRouteImport.update({
@@ -631,8 +670,10 @@ export interface FileRouteTypes {
     | '/about'
     | '/accept-invite'
     | '/admin'
-    | '/assign-scan'
-    | '/assigned-scans'
+    | '/assign-audit'
+  | '/assign-scan'
+    | '/assigned-audits'
+  | '/assigned-scans'
     | '/billing'
     | '/compare'
     | '/contact'
@@ -647,7 +688,8 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/login'
     | '/logout'
-    | '/my-scans'
+    | '/my-audits'
+  | '/my-scans'
     | '/onboarding'
     | '/organization'
     | '/planogram-management'
@@ -663,7 +705,8 @@ export interface FileRouteTypes {
     | '/results'
     | '/retail-intelligence'
     | '/retail-shelf-intelligence'
-    | '/scan'
+    | '/audit'
+  | '/scan'
     | '/scan-history'
     | '/security'
     | '/settings'
@@ -675,10 +718,12 @@ export interface FileRouteTypes {
     | '/upload'
     | '/users'
     | '/verify-email'
-    | '/admin/demo-scans'
+    | '/admin/demo-audits'
+  | '/admin/demo-scans'
     | '/admin/login'
     | '/admin/orgs'
-    | '/admin/scans'
+    | '/admin/audits'
+  | '/admin/scans'
     | '/admin/users'
     | '/api/scan'
     | '/api/send-landing-onboarding'
@@ -839,7 +884,9 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AcceptInviteRoute: typeof AcceptInviteRoute
   AdminRoute: typeof AdminRouteWithChildren
+  AssignAuditRoute: typeof AssignAuditRoute
   AssignScanRoute: typeof AssignScanRoute
+  AssignedAuditsRoute: typeof AssignedAuditsRoute
   AssignedScansRoute: typeof AssignedScansRoute
   BillingRoute: typeof BillingRoute
   CompareRoute: typeof CompareRoute
@@ -855,6 +902,7 @@ export interface RootRouteChildren {
   HowItWorksRoute: typeof HowItWorksRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
+  MyAuditsRoute: typeof MyAuditsRoute
   MyScansRoute: typeof MyScansRoute
   OnboardingRoute: typeof OnboardingRoute
   OrganizationRoute: typeof OrganizationRoute
@@ -871,6 +919,7 @@ export interface RootRouteChildren {
   ResultsRoute: typeof ResultsRoute
   RetailIntelligenceRoute: typeof RetailIntelligenceRoute
   RetailShelfIntelligenceRoute: typeof RetailShelfIntelligenceRoute
+  AuditRoute: typeof AuditRoute
   ScanRoute: typeof ScanRoute
   ScanHistoryRoute: typeof ScanHistoryRoute
   SecurityRoute: typeof SecurityRoute
@@ -1260,7 +1309,7 @@ declare module '@tanstack/react-router' {
     }
     '/admin/scans': {
       id: '/admin/scans'
-      path: '/scans'
+      path: '/audits'
       fullPath: '/admin/scans'
       preLoaderRoute: typeof AdminScansRouteImport
       parentRoute: typeof AdminRoute
@@ -1377,6 +1426,8 @@ interface AdminRouteChildren {
   AdminDemoScansRoute: typeof AdminDemoScansRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminOrgsRoute: typeof AdminOrgsRoute
+  AdminAuditsRoute: typeof AdminAuditsRoute
+  AdminDemoAuditsRoute: typeof AdminDemoAuditsRoute
   AdminScansRoute: typeof AdminScansRoute
   AdminUsersRoute: typeof AdminUsersRoute
 }
@@ -1385,6 +1436,8 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDemoScansRoute: AdminDemoScansRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminOrgsRoute: AdminOrgsRoute,
+  AdminAuditsRoute: AdminAuditsRoute,
+  AdminDemoAuditsRoute: AdminDemoAuditsRoute,
   AdminScansRoute: AdminScansRoute,
   AdminUsersRoute: AdminUsersRoute,
 }
@@ -1396,7 +1449,9 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AcceptInviteRoute: AcceptInviteRoute,
   AdminRoute: AdminRouteWithChildren,
+  AssignAuditRoute: AssignAuditRoute,
   AssignScanRoute: AssignScanRoute,
+  AssignedAuditsRoute: AssignedAuditsRoute,
   AssignedScansRoute: AssignedScansRoute,
   BillingRoute: BillingRoute,
   CompareRoute: CompareRoute,
@@ -1412,6 +1467,7 @@ const rootRouteChildren: RootRouteChildren = {
   HowItWorksRoute: HowItWorksRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
+  MyAuditsRoute: MyAuditsRoute,
   MyScansRoute: MyScansRoute,
   OnboardingRoute: OnboardingRoute,
   OrganizationRoute: OrganizationRoute,
@@ -1428,6 +1484,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResultsRoute: ResultsRoute,
   RetailIntelligenceRoute: RetailIntelligenceRoute,
   RetailShelfIntelligenceRoute: RetailShelfIntelligenceRoute,
+  AuditRoute: AuditRoute,
   ScanRoute: ScanRoute,
   ScanHistoryRoute: ScanHistoryRoute,
   SecurityRoute: SecurityRoute,

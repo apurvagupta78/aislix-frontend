@@ -474,7 +474,7 @@ function OnboardingPage() {
           {step === 3 && !seats.singleSeat && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Invite the people who will run scans. You can always add more from Team.
+                Invite the people who will run audits. You can always add more from Team.
                 {seats.remaining !== null ? ` ${seats.remaining} seat${seats.remaining === 1 ? "" : "s"} remaining.` : ""}
               </p>
               <div className="space-y-2">

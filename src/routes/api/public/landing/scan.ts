@@ -69,7 +69,7 @@ export const Route = createFileRoute("/api/public/landing/scan")({
             const ext = file.type === "image/png" ? "png" : "jpg";
             imageStoragePath = `landing-demo/${attemptToken}.${ext}`;
             const { error: uploadError } = await supabaseAdmin.storage
-              .from("scan-images")
+              .from("audit-images")
               .upload(imageStoragePath, file, { contentType: file.type, upsert: false });
             if (uploadError) {
               console.error("Landing demo image upload failed:", uploadError.message);
@@ -98,9 +98,9 @@ export const Route = createFileRoute("/api/public/landing/scan")({
             },
             { onConflict: "session_token" },
           );
-          if (error) console.error("Landing scan record upsert failed:", error.message);
+          if (error) console.error("Landing audit record upsert failed:", error.message);
         } catch (error) {
-          console.error("Landing scan record upsert failed:", error);
+          console.error("Landing audit record upsert failed:", error);
         }
 
         const forward = new FormData();
@@ -125,11 +125,11 @@ export const Route = createFileRoute("/api/public/landing/scan")({
           });
           // The public campaign endpoint applies a shared-IP allowance. Incognito
           // visitors on the same office/VPN/mobile network can therefore receive
-          // a 429 despite never scanning before. Fall back to the standard audit
+          // a 429 despite never auditing before. Fall back to the standard audit
           // endpoint so the campaign remains usable; this server route still
           // records the anonymous attempt and result below.
           // 5xx/524 means the campaign endpoint timed out at the edge on a
-          // large visitor photo; the standard /scan endpoint handles the same
+          // large visitor photo; the standard /audit endpoint handles the same
           // image reliably, so retry there before reporting a failure.
           if (upstream.status === 429 || upstream.status >= 500) {
             const fallback = new FormData();
@@ -191,9 +191,9 @@ export const Route = createFileRoute("/api/public/landing/scan")({
                 },
                 { onConflict: "session_token" },
               );
-            if (error) console.error("Landing scan record finalize failed:", error.message);
+            if (error) console.error("Landing audit record finalize failed:", error.message);
           } catch (error) {
-            console.error("Landing scan record finalize failed:", error);
+            console.error("Landing audit record finalize failed:", error);
           }
 
           if (upstream.ok && payload && typeof payload === "object" && !Array.isArray(payload)) {
@@ -211,7 +211,7 @@ export const Route = createFileRoute("/api/public/landing/scan")({
                 });
               }
             } catch (mirrorError) {
-              console.error("Landing scan backend mirror failed:", mirrorError);
+              console.error("Landing audit backend mirror failed:", mirrorError);
             }
           }
 
@@ -241,7 +241,7 @@ export const Route = createFileRoute("/api/public/landing/scan")({
               { onConflict: "session_token" },
             );
           } catch (updateError) {
-            console.error("Landing scan failure record update failed:", updateError);
+            console.error("Landing audit failure record update failed:", updateError);
           }
           return Response.json({ detail: "Shelf analysis is temporarily unavailable. Please try again." }, { status: 502 });
         }

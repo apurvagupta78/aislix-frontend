@@ -93,7 +93,7 @@ export function LearnedCatalogBadge({
           </Badge>
         </TooltipTrigger>
           <TooltipContent className="max-w-xs">
-            AI-identified SKUs saved for faster matching on future scans
+            AI-identified SKUs saved for faster matching on future audits
           </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -159,11 +159,11 @@ export function ScanResultHeader({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="truncate text-lg font-semibold tracking-tight">
-              {loading ? "Loading scan…" : (data?.scan_id ?? "Scan")}
+              {loading ? "Loading audit…" : (data?.scan_id ?? "Audit")}
             </h2>
             <ScanStatusBadge status={data?.status} />
             {assignmentId ? (
-              <Link to="/assigned-scans" search={{ tab: "assignments" as const }}>
+              <Link to="/assigned-audits" search={{ tab: "assignments" as const }}>
                 <Badge
                   variant="outline"
                   className="rounded-full border-brand/25 bg-brand-soft font-mono text-brand"
@@ -213,7 +213,7 @@ export function ScanResultHeader({
         />
         <MetaItem
           icon={<CalendarClock className="size-4" />}
-          label="Scan date & time"
+          label="Audit date & time"
           value={formatScanDate(data?.created_at)}
           loading={loading}
         />
@@ -252,8 +252,8 @@ export function ResultNavigation() {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Button asChild variant="brand" size="sm" className="rounded-xl">
-        <Link to="/scan">
-          <ScanLine className="size-4" /> Scan again
+        <Link to="/audit">
+          <ScanLine className="size-4" /> Audit again
         </Link>
       </Button>
       <Button asChild variant="subtle" size="sm" className="rounded-xl">
@@ -286,7 +286,7 @@ export function SharePanel({
 
   const linkMutation = useMutation({
     mutationFn: async () => {
-      if (!scanId) throw new Error("Scan is still loading.");
+      if (!scanId) throw new Error("Audit is still loading.");
       if (linkUrl) return { url: linkUrl };
       return createLink({ data: { scanId } });
     },
@@ -393,9 +393,9 @@ export function ProcessingState({ scanId }: { scanId?: string | undefined }) {
       <span className="flex size-12 items-center justify-center rounded-2xl bg-brand-soft text-brand">
         <Loader2 className="size-6 animate-spin" />
       </span>
-      <h3 className="text-base font-semibold">Scan is still processing</h3>
+      <h3 className="text-base font-semibold">Audit is still processing</h3>
       <p className="max-w-md text-sm text-muted-foreground">
-        The vision pipeline is detecting products for {scanId ?? "this scan"}. Results appear here
+        The vision pipeline is detecting products for {scanId ?? "this audit"}. Results appear here
         automatically as soon as processing completes.
       </p>
     </div>

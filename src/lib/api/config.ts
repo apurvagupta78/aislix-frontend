@@ -73,7 +73,7 @@ export const apiConfig: ApiConfig = {
   debug: environment !== "production",
 };
 
-/** Absolute URL for an API path (`/scans` → `https://api…/scans`). */
+/** Absolute URL for an API path (`/audits` → `https://api…/audits`). */
 export function apiUrl(path: string): string {
   const suffix = path.startsWith("/") ? path : `/${path}`;
   return `${apiConfig.baseUrl}${suffix}`;

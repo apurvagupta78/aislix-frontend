@@ -141,7 +141,7 @@ function RetailKpiCard({
     return (
       <Link
         to="/results"
-        search={{ scan: scanId }}
+        search={{ audit: scanId }}
         className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
         {body}
@@ -360,7 +360,7 @@ export function WhatNeedsAttentionSection({ data }: { data: WorkspaceDashboardDa
               <Link
                 key={card.key}
                 to="/results"
-                search={{ scan: card.scan_id }}
+                search={{ audit: card.scan_id }}
                 className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               >
                 {body}
@@ -545,7 +545,7 @@ export function BrandCompetitionSection({ data }: { data: WorkspaceDashboardData
         {brand.scan_id ? (
           <div className="mt-4">
             <Button asChild variant="ghost" size="sm" className="rounded-xl text-xs">
-              <Link to="/results" search={{ scan: brand.scan_id }}>
+              <Link to="/results" search={{ audit: brand.scan_id }}>
                 View Brand Analysis <ArrowRight className="size-3.5" />
               </Link>
             </Button>
@@ -734,7 +734,7 @@ export function RecentAuditsSection({ data }: { data: WorkspaceDashboardData }) 
             description="Start your first shelf audit to populate this list."
             action={
               <Button asChild variant="brand" size="sm" className="rounded-xl">
-                <Link to="/scan">Start new audit</Link>
+                <Link to="/audit">Start new audit</Link>
               </Button>
             }
           />
@@ -759,7 +759,7 @@ export function RecentAuditsSection({ data }: { data: WorkspaceDashboardData }) 
                   <tr
                     key={row.scan_id}
                     className="cursor-pointer border-b border-border/50 last:border-0 hover:bg-brand-soft/30"
-                    onClick={() => void navigate({ to: "/results", search: { scan: row.scan_id } })}
+                    onClick={() => void navigate({ to: "/results", search: { audit: row.scan_id } })}
                   >
                     <td className="py-2.5 pr-3 font-medium text-brand">
                       {new Date(row.date).toLocaleDateString(undefined, {

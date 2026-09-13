@@ -14,8 +14,8 @@ export function parseDemoAllowance(raw?: {
   demo_audits_limit?: number;
   demo_audits_remaining?: number;
   demo_next_available_at?: string | null;
-  scans_used_today?: number;
-  scans_daily_limit?: number;
+  audits_used_today?: number;
+  audits_daily_limit?: number;
 } | null): DemoAllowance | null {
   if (!raw) return null;
   const limit = raw.demo_audits_limit ?? raw.scans_daily_limit;

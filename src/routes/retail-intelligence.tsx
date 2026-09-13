@@ -10,7 +10,7 @@ import { persistUtmSession } from "@/lib/utm";
 
 const TITLE = "Aislix | AI-Powered Retail Shelf Intelligence";
 const DESCRIPTION =
-  "Run a live AI shelf scan in your browser. Aislix turns a shelf photo into product detection, SKU counts and availability insights in under a minute.";
+  "Run a live AI shelf audit in your browser. Aislix turns a shelf photo into product detection, SKU counts and availability insights in under a minute.";
 const URL = "https://aislix.com/retail-intelligence";
 
 export const Route = createFileRoute("/retail-intelligence")({

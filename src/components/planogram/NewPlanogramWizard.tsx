@@ -1831,7 +1831,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
           return (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Review KPI readiness for <strong>{roleTabLabel(role)}</strong> before scanning. Missing
+                Review KPI readiness for <strong>{roleTabLabel(role)}</strong> before auditing. Missing
                 optional data marks a KPI as Not configured — never fake scores.
               </p>
               <ul className="grid gap-2 sm:grid-cols-2">

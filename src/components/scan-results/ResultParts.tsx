@@ -239,7 +239,7 @@ export function AnnotatedImageViewer({
           if (!src) return;
           setDownloading(true);
           try {
-            await downloadScanAnnotatedImage(scanId ?? "scan", rawSrc, originalSrc);
+            await downloadScanAnnotatedImage(scanId ?? "audit", rawSrc, originalSrc);
             toast.success("Image downloaded");
           } catch (e) {
             toast.error(e instanceof Error ? e.message : "Download failed");
@@ -281,8 +281,8 @@ export function AnnotatedImageViewer({
               title={scanId ? "Preparing annotated image…" : "No annotated image yet"}
               description={
                 scanId
-                  ? "Aislix is loading or rebuilding the detection overlay for this scan."
-                  : "The annotated shelf image appears here once the scan service returns it."
+                  ? "Aislix is loading or rebuilding the detection overlay for this audit."
+                  : "The annotated shelf image appears here once the audit service returns it."
               }
             />
           </div>
@@ -477,7 +477,7 @@ export function AlertsPanel({
       ) : sorted.length === 0 ? (
         <EmptyState
           title="No alerts"
-          description="Alerts returned by the scan service are listed here by severity."
+          description="Alerts returned by the audit service are listed here by severity."
         />
       ) : (
         <ul className="space-y-3">
@@ -793,7 +793,7 @@ export function InventoryTable({
     const link = document.createElement("a");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     link.href = url;
-    link.download = `aislix-${scanId ?? "scan"}-observed-products.csv`;
+    link.download = `aislix-${scanId ?? "audit"}-observed-products.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -1007,7 +1007,7 @@ export function InventoryTable({
                     title={rows.length === 0 ? "No inventory yet" : "No matching products"}
                     description={
                       rows.length === 0
-                        ? "Detected products appear here once the scan service returns inventory."
+                        ? "Detected products appear here once the audit service returns inventory."
                         : "Try a different search term or clear the filters."
                     }
                   />

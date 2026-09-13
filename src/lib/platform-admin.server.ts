@@ -45,7 +45,7 @@ export type ScanAssetUrls = {
   csv_url?: string;
 };
 
-/** Signed URLs for a scan's stored assets (service role). */
+/** Signed URLs for an audit's stored assets (service role). */
 export async function resolveAdminScanAssetUrls(
   supabaseAdmin: SupabaseClient,
   scanId: string,

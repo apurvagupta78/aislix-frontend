@@ -37,7 +37,7 @@ export const Route = createFileRoute("/privacy")({
           bullets: [
             "Account data: name, work email, phone number, company, role and password hash.",
             "Workspace data: store names, locations, team members and their access roles.",
-            "Scan data: shelf images you upload, detection results, annotations and generated reports.",
+            "Audit data: shelf images you upload, detection results, annotations and generated reports.",
             "Billing data: plan, billing cycle, GSTIN, billing address and invoice records.",
             "Technical data: device, browser, IP address, timestamps and error diagnostics.",
           ],
@@ -45,7 +45,7 @@ export const Route = createFileRoute("/privacy")({
         {
           heading: "User data",
           body: [
-            "Your workspace data belongs to you. We act as a processor for the shelf images and scan results you submit, and as a controller for account and billing records we must keep for legal and tax purposes.",
+            "Your workspace data belongs to you. We act as a processor for the shelf images and audit results you submit, and as a controller for account and billing records we must keep for legal and tax purposes.",
             "We never sell personal data and we never share your shelf images with other customers.",
           ],
         },
@@ -53,13 +53,13 @@ export const Route = createFileRoute("/privacy")({
           heading: "Image storage",
           body: [
             "Shelf images and annotated outputs are stored in encrypted object storage, scoped to your workspace. Access requires an authenticated session belonging to your workspace, enforced by row-level security policies.",
-            "You can delete an individual scan at any time. Deletion removes the original image, annotated image and derived report from active storage, and from backups within 30 days.",
+            "You can delete an individual audit at any time. Deletion removes the original image, annotated image and derived report from active storage, and from backups within 30 days.",
           ],
         },
         {
           heading: "AI processing",
           body: [
-            "Uploaded images are analysed by computer-vision models to detect products, brands, facings, empty space and planogram deviations. Processing is automated; no human reviews your images unless you explicitly ask our support team to investigate a specific scan.",
+            "Uploaded images are analysed by computer-vision models to detect products, brands, facings, empty space and planogram deviations. Processing is automated; no human reviews your images unless you explicitly ask our support team to investigate a specific audit.",
             "We do not use your images to train shared or third-party foundation models. Custom models are trained only on the data of the customer that requested them, under a separate agreement.",
           ],
         },
@@ -93,8 +93,8 @@ export const Route = createFileRoute("/privacy")({
             "Retention follows your plan and legal obligations.",
           ],
           bullets: [
-            "Free plan: scan history retained for 7 days.",
-            "Paid plans: scan history retained for the life of the workspace, or until you delete it.",
+            "Free plan: audit history retained for 7 days.",
+            "Paid plans: audit history retained for the life of the workspace, or until you delete it.",
             "Account records: kept while your workspace is active, then deleted within 90 days of closure.",
             "Invoices and tax records: retained as required by applicable Indian tax law.",
           ],
@@ -107,7 +107,7 @@ export const Route = createFileRoute("/privacy")({
           bullets: [
             "Export a machine-readable copy of your workspace data.",
             "Request correction of inaccurate account information.",
-            "Request deletion of your account and associated scans.",
+            "Request deletion of your account and associated audits.",
             "Object to or restrict specific processing activities.",
             "Withdraw cookie consent at any time.",
           ],

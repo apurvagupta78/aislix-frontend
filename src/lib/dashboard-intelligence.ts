@@ -326,7 +326,7 @@ async function fetchMetricsMap(scanIds: string[]): Promise<Map<string, RetailInt
       .from("scan_results")
       .select("scan_id, metrics, confidence_avg")
       .in("scan_id", chunk);
-    if (error) dbError(error, "Could not load scan metrics.");
+    if (error) dbError(error, "Could not load audit metrics.");
     for (const row of data ?? []) {
       map.set(row.scan_id as string, metricsPayload(row.metrics));
     }
@@ -590,13 +590,13 @@ function countOpenIssuesForScan(
 }
 
 function countHighSeverityIssues(
-  scans: ScanRow[],
+  audits: ScanRow[],
   metricsMap: Map<string, RetailIntelligencePayload | null>,
   categories?: PriorityCategory[],
 ): number {
   const catSet = categories?.length ? new Set(categories) : null;
   let high = 0;
-  for (const scan of scans) {
+  for (const scan of audits) {
     const metrics = metricsMap.get(scan.id);
     for (const row of metrics?.opportunity_ledger ?? []) {
       const status = (row.status ?? "open").toLowerCase();
@@ -633,7 +633,7 @@ function attentionRankScore(input: {
 }
 
 function buildAttentionCards(
-  scans: ScanRow[],
+  audits: ScanRow[],
   metricsMap: Map<string, RetailIntelligencePayload | null>,
   effectiveRole: AuditRoleTab,
   categoryCounts: Record<PriorityCategory, number>,
@@ -665,7 +665,7 @@ function buildAttentionCards(
       actionLabel = "View Brand Analysis →";
       area = { ...area, label: "Brand & Competition" };
       if (rollup.eligible_audit_ids.length === 0 || score === null) {
-        const latest = scans.at(-1);
+        const latest = audits.at(-1);
         if (latest) {
           const metrics = metricsMap.get(latest.id);
           const insights = metrics?.competitive_insights ?? [];
@@ -699,7 +699,7 @@ function buildAttentionCards(
       : 0;
 
     let affectedAudits = 0;
-    for (const scan of scans) {
+    for (const scan of audits) {
       const metrics = metricsMap.get(scan.id);
       const issues = countOpenIssuesForScan(metrics, issueCategories);
       const kpi = kpiResultFromMetrics(metrics ?? null, effectiveRole, kpiId);
@@ -785,7 +785,7 @@ function buildAttentionCards(
 }
 
 function buildPerformancePeriod(
-  scans: ScanRow[],
+  audits: ScanRow[],
   metricsMap: Map<string, RetailIntelligencePayload | null>,
   effectiveRole: AuditRoleTab,
   kriFilter: AuditKpiId | "all" = "all",
@@ -796,8 +796,8 @@ function buildPerformancePeriod(
       ? [kriFilter]
       : trendKpisForRole(effectiveRole).slice(0, 5);
   const mid = Math.floor(scans.length / 2);
-  const previous = scans.slice(0, mid);
-  const current = scans.slice(mid);
+  const previous = audits.slice(0, mid);
+  const current = audits.slice(mid);
 
   return kpiIds.map((kpiId) => {
     const prevVals: number[] = [];
@@ -825,12 +825,12 @@ function buildPerformancePeriod(
 }
 
 function buildBrandCompetition(
-  scans: ScanRow[],
+  audits: ScanRow[],
   metricsMap: Map<string, RetailIntelligencePayload | null>,
   effectiveRole: AuditRoleTab,
 ): BrandCompetitionData | null {
   if (effectiveRole !== "fmcg" || !scans.length) return null;
-  const latest = scans[scans.length - 1]!;
+  const latest = audits[scans.length - 1]!;
   const metrics = metricsMap.get(latest.id);
   const insights = metrics?.competitive_insights ?? [];
   if (insights.length) {
@@ -897,14 +897,14 @@ function passesAssignmentFilters(
 }
 
 function applyScanFilters(
-  scans: ScanRow[],
+  audits: ScanRow[],
   filters: DashboardFilterState,
   metricsMap: Map<string, RetailIntelligencePayload | null>,
   assignmentByScanId: Map<string, AssignmentRow>,
   currentUserId: string | null,
   storeById: Map<string, DashboardStoreOption>,
 ): ScanRow[] {
-  return scans.filter((scan) => {
+  return audits.filter((scan) => {
     if (filters.role !== "all" && scanRole(metricsMap.get(scan.id) ?? null) !== filters.role) {
       return false;
     }
@@ -933,7 +933,7 @@ export async function fetchDashboardFilterOptions(
   const since = new Date();
   since.setDate(since.getDate() - 90);
 
-  const [storesRes, scansRes, teamMembers] = await Promise.all([
+  const [storesRes, auditsRes, teamMembers] = await Promise.all([
     supabase.from("stores").select("id, name, country, city").eq("org_id", orgId).eq("status", "active").order("name"),
     supabase
       .from("shelf_scans")
@@ -991,7 +991,7 @@ export async function fetchWorkspaceDashboard(
     loadTeamMembers(orgId),
   ]);
 
-  let scans: ScanRow[] = [];
+  let audits: ScanRow[] = [];
   let upcomingAssignments: AssignmentRow[] = [];
 
   if (bounds.upcoming) {
@@ -1010,7 +1010,7 @@ export async function fetchWorkspaceDashboard(
         .eq("org_id", orgId)
         .in("id", linkedScanIds);
       if (error) dbError(error, "Could not load upcoming audits.");
-      scans = (data ?? []) as ScanRow[];
+      audits = (data ?? []) as ScanRow[];
     }
   } else {
     let q = supabase
@@ -1023,7 +1023,7 @@ export async function fetchWorkspaceDashboard(
     if (bounds.to) q = q.lt("created_at", bounds.to.toISOString());
     const { data, error } = await q;
     if (error) dbError(error, "Could not load audits.");
-    scans = (data ?? []) as ScanRow[];
+    audits = (data ?? []) as ScanRow[];
   }
 
   const { data: poolScansRes } = await supabase
@@ -1054,11 +1054,11 @@ export async function fetchWorkspaceDashboard(
     poolMetricsMap,
   );
 
-  const scanIds = scans.map((s) => s.id);
+  const scanIds = audits.map((s) => s.id);
   const metricsMap = await fetchMetricsMap(scanIds);
   const confidenceMap = await fetchConfidenceMap(scanIds);
 
-  scans = applyScanFilters(scans, filters, metricsMap, assignmentByScanId, currentUserId, storeById);
+  audits = applyScanFilters(scans, filters, metricsMap, assignmentByScanId, currentUserId, storeById);
 
   const effectiveRole =
     filters.role !== "all"
@@ -1066,7 +1066,7 @@ export async function fetchWorkspaceDashboard(
       : effectiveDashboardRole("all", scanRole(metricsMap.get(scans.at(-1)?.id ?? "") ?? null));
 
   if (filters.kri !== "all") {
-    scans = scans.filter((scan) =>
+    audits = audits.filter((scan) =>
       scanMatchesKri(scan, metricsMap.get(scan.id) ?? null, effectiveRole, filters.kri as AuditKpiId),
     );
   }
@@ -1085,15 +1085,15 @@ export async function fetchWorkspaceDashboard(
   const shelfHealthRollup = aggregateShelfHealth(scans, metricsMap);
 
   const sub = subscriptionRes.data as
-    | { scans_used: number; subscription_plans: { scan_quota: number | null } | null }
+    | { audits_used: number; subscription_plans: { scan_quota: number | null } | null }
     | null;
   const quota = sub?.subscription_plans?.scan_quota ?? null;
-  const scansUnlimited = quota === null;
-  const scansRemaining = scansUnlimited ? null : Math.max(0, quota - (sub?.scans_used ?? 0));
+  const auditsUnlimited = quota === null;
+  const auditsRemaining = auditsUnlimited ? null : Math.max(0, quota - (sub?.scans_used ?? 0));
 
   const confValues = [...confidenceMap.values()];
-  const totalProducts = scans.reduce((sum, s) => sum + (s.total_products ?? 0), 0);
-  const totalPhotos = scans.reduce((sum, s) => sum + (s.photo_count ?? 0), 0);
+  const totalProducts = audits.reduce((sum, s) => sum + (s.total_products ?? 0), 0);
+  const totalPhotos = audits.reduce((sum, s) => sum + (s.photo_count ?? 0), 0);
 
   const osaKpi = toDashboardWeightedKpi(osaRollup, "percent", {
     numerator: "available",
@@ -1107,7 +1107,7 @@ export async function fetchWorkspaceDashboard(
   );
 
   const kpis: WorkspaceKpis = {
-    audits_completed: scans.length || null,
+    audits_completed: audits.length || null,
     stores_covered: storeIds.size || null,
     osa: osaKpi,
     planogram: planoKpi,
@@ -1123,11 +1123,11 @@ export async function fetchWorkspaceDashboard(
       audit_count: shelfHealthRollup.audit_count,
     },
     shelf_health_available: shelfHealthRollup.available,
-    audits_remaining: scansRemaining,
-    audits_unlimited: scansUnlimited,
-    products_detected: scans.length ? totalProducts : null,
+    audits_remaining: auditsRemaining,
+    audits_unlimited: auditsUnlimited,
+    products_detected: audits.length ? totalProducts : null,
     average_confidence: confValues.length ? avg(confValues.map((v) => normalizePercent(v) ?? v)) : null,
-    images_processed: scans.length ? totalPhotos : null,
+    images_processed: audits.length ? totalPhotos : null,
   };
 
   const actions = actionsRes.data ?? [];
@@ -1169,7 +1169,7 @@ export async function fetchWorkspaceDashboard(
           priority,
           status: "Open",
           scan_id: scan.id,
-          href: `/results?scan=${scan.id}`,
+          href: `/results?audit=${scan.id}`,
         });
       }
     }
@@ -1191,7 +1191,7 @@ export async function fetchWorkspaceDashboard(
           priority,
           status: status === "in_progress" ? "In progress" : "Open",
           scan_id: scan.id,
-          href: `/results?scan=${scan.id}`,
+          href: `/results?audit=${scan.id}`,
         });
       }
     }
@@ -1223,7 +1223,7 @@ export async function fetchWorkspaceDashboard(
       ? [filters.kri as AuditKpiId]
       : trendKpisForRole(effectiveRole);
   const byDay = new Map<string, Record<string, number[]>>();
-  for (const scan of scans) {
+  for (const scan of audits) {
     const key = dayKey(scan.created_at);
     const bucket = byDay.get(key) ?? {};
     const metrics = metricsMap.get(scan.id) ?? null;
@@ -1250,8 +1250,8 @@ export async function fetchWorkspaceDashboard(
   let improvement: ImprovementMetric[] | null = null;
   if (scans.length >= 4) {
     const mid = Math.floor(scans.length / 2);
-    const previous = scans.slice(0, mid);
-    const current = scans.slice(mid);
+    const previous = audits.slice(0, mid);
+    const current = audits.slice(mid);
 
     function periodAvg(list: ScanRow[], pick: (s: ScanRow) => number | null): number | null {
       const vals = list.map(pick).filter((v): v is number => typeof v === "number");
@@ -1304,7 +1304,7 @@ export async function fetchWorkspaceDashboard(
     string,
     { name: string; audits: number; osa: number[]; plano: number[]; issues: number; firstOsa: number | null; lastOsa: number | null }
   >();
-  for (const scan of scans) {
+  for (const scan of audits) {
     const sid = scan.store_id ?? "unknown";
     const entry = byStore.get(sid) ?? {
       name: scan.stores?.name ?? "Unknown store",
@@ -1401,8 +1401,8 @@ export async function fetchWorkspaceDashboard(
 
   // --- Role-specific visual ---
   let role_visual: RoleVisualData | null = null;
-  if (effectiveRole === "fmcg" && scans.length) {
-    const latest = scans[scans.length - 1]!;
+  if (effectiveRole === "fmcg" && audits.length) {
+    const latest = audits[scans.length - 1]!;
     const metrics = metricsMap.get(latest.id);
     const insights = metrics?.competitive_insights ?? [];
     if (insights.length) {
@@ -1442,9 +1442,9 @@ export async function fetchWorkspaceDashboard(
         planogram: s.planogram,
       })),
     };
-  } else if (effectiveRole === "darkstore" && scans.length) {
+  } else if (effectiveRole === "darkstore" && audits.length) {
     const locMap = new Map<string, number[]>();
-    for (const scan of scans) {
+    for (const scan of audits) {
       const metrics = metricsMap.get(scan.id);
       const loc = kpiValue(metrics, effectiveRole, "location_accuracy", scan);
       const label = scan.stores?.name ?? scan.category ?? "Location";
@@ -1459,13 +1459,13 @@ export async function fetchWorkspaceDashboard(
 
   const categoryCountInView = new Set(scans.map((s) => s.category).filter(Boolean)).size;
   const filter_summary = buildDashboardFilterSummary(
-    scans.length,
+    audits.length,
     storeIds.size,
     categoryCountInView,
   );
 
   const attention_cards = buildAttentionCards(
-    scans,
+    audits,
     metricsMap,
     effectiveRole,
     categoryCounts,
@@ -1494,6 +1494,6 @@ export async function fetchWorkspaceDashboard(
     filter_options,
     filter_summary,
     effective_role: effectiveRole,
-    has_completed_audits: scans.length > 0,
+    has_completed_audits: audits.length > 0,
   };
 }

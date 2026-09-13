@@ -11,7 +11,7 @@ export function FinalCtaSection() {
           Ready to See What Your Shelves Are Telling You?
         </h2>
         <p className="mt-3 text-sm text-primary-foreground/75">
-          Start with 5 free shelf scans every 24 hours. No credit card required.
+          Start with 5 free shelf audits every 24 hours. No credit card required.
         </p>
 
         <div className="mt-7 flex justify-center">

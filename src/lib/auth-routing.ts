@@ -4,7 +4,7 @@
  * Decision order once a session exists:
  *   1. email not confirmed  -> /verify-email  (blocks the rest of the app)
  *   2. first-time setup due -> /onboarding
- *   3. otherwise            -> /dashboard (managers) or /my-scans (members)
+ *   3. otherwise            -> /dashboard (managers) or /my-audits (members)
  *
  * Only `AuthGate` (and the pages that explicitly sign a user in) may call
  * `resolvePostAuthRoute`. No other file should navigate on auth state.
@@ -70,7 +70,7 @@ export async function resolvePostLoginRoute(): Promise<AuthRoute> {
     const { fetchMyPendingCount, isOrgManager } = await import("@/lib/assignments");
     const [manager, pending] = await Promise.all([isOrgManager(), fetchMyPendingCount()]);
     if (!manager) {
-      return pending > 0 ? { to: "/my-scans", search: { tab: "assigned" } } : { to: "/my-scans" };
+      return pending > 0 ? { to: "/my-audits", search: { tab: "assigned" } } : { to: "/my-audits" };
     }
   } catch {
     // fall through to the dashboard
@@ -82,7 +82,7 @@ export async function resolvePostLoginRoute(): Promise<AuthRoute> {
  * Full decision: verification -> pending invite -> onboarding -> landing.
  *
  * An invited member never sees the owner setup wizard: once their email is
- * confirmed the invite is accepted automatically and they land on /my-scans.
+ * confirmed the invite is accepted automatically and they land on /my-audits.
  */
 export async function resolvePostAuthRoute(_user?: MinimalUser): Promise<AuthRoute> {
   if (!(await isEmailVerifiedServer())) {
@@ -111,7 +111,7 @@ export async function resolvePostAuthRoute(_user?: MinimalUser): Promise<AuthRou
   } catch {
     // membership activation is retried on the next authenticated read
   }
-  if (activated > 0) return { to: "/my-scans" };
+  if (activated > 0) return { to: "/my-audits" };
 
 
   const { data: profile, error } = await supabase

@@ -28,7 +28,7 @@ export function FieldDashboardPanel() {
     <section className="mt-8 space-y-4">
       <SectionHeader
         title="Today's execution priorities"
-        description="Assigned stores, open actions, and scans requiring your attention."
+        description="Assigned stores, open actions, and audits requiring your attention."
       />
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="card-surface p-4">
@@ -62,13 +62,13 @@ export function FieldDashboardPanel() {
       </div>
       <div className="flex flex-wrap gap-2">
         <Button asChild variant="brand" size="sm" className="rounded-xl">
-          <Link to="/my-scans">
-            <ClipboardList className="mr-2 size-4" /> My assigned scans
+          <Link to="/my-audits">
+            <ClipboardList className="mr-2 size-4" /> My assigned audits
           </Link>
         </Button>
         <Button asChild variant="subtle" size="sm" className="rounded-xl">
-          <Link to="/scan">
-            <ScanLine className="mr-2 size-4" /> Start scan
+          <Link to="/audit">
+            <ScanLine className="mr-2 size-4" /> Start audit
           </Link>
         </Button>
       </div>
@@ -86,7 +86,7 @@ export function ExecutiveOpportunityPanel() {
     <section className="mt-8">
       <SectionHeader
         title="Execution opportunities"
-        description="Estimated revenue at risk from recent scans — clearly labeled as indicative unless planogram pricing is configured."
+        description="Estimated revenue at risk from recent audits — clearly labeled as indicative unless planogram pricing is configured."
       />
       <Panel title="Top opportunities">
         {opportunities.isPending ? (
@@ -118,8 +118,8 @@ export function ExecutiveOpportunityPanel() {
                     {formatInr(opp.estimated_daily_impact_inr)}/day
                   </p>
                   <Button asChild variant="subtle" size="sm" className="mt-1 h-7 rounded-lg text-xs">
-                    <Link to="/results" search={{ scan: opp.scan_id }}>
-                      View scan
+                    <Link to="/results" search={{ audit: opp.scan_id }}>
+                      View audit
                     </Link>
                   </Button>
                 </div>

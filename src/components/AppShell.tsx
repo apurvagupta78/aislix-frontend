@@ -100,26 +100,26 @@ const DASHBOARD_LEAF: NavLeaf = {
 
 const SECTIONS: NavSection[] = [
   {
-    id: "scan",
-    label: "Scans",
+    id: "audit",
+    label: "Audits",
     icon: ClipboardCheck,
     items: [
-      { kind: "leaf", label: "New Scan", to: "/scan", icon: Plus },
+      { kind: "leaf", label: "New Audit", to: "/audit", icon: Plus },
       {
         kind: "leaf",
         label: "Assigned to Me",
-        to: "/my-scans",
+        to: "/my-audits",
         search: { tab: "assigned" },
         badge: "open-tasks",
       },
       {
         kind: "leaf",
-        label: "Scans I Assigned",
-        to: "/assigned-scans",
+        label: "Audits I Assigned",
+        to: "/assigned-audits",
         search: { tab: "assignments" },
         managerOnly: true,
       },
-      { kind: "leaf", label: "Scan History", to: "/history", icon: History },
+      { kind: "leaf", label: "Audit History", to: "/history", icon: History },
     ],
   },
   {
@@ -602,7 +602,7 @@ export function AppShell({
             </RailTooltip>
           ) : (
             <div className="rounded-2xl border border-border bg-brand-soft/60 p-4">
-              <p className="text-sm font-medium text-foreground">Need more scans?</p>
+              <p className="text-sm font-medium text-foreground">Need more audits?</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Review your plan, quota and invoices in billing.
               </p>
@@ -673,14 +673,14 @@ export function AppShell({
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 name="q"
-                aria-label="Search scans, stores and SKUs"
-                placeholder="Search scans, stores, SKUs…"
+                aria-label="Search audits, stores and SKUs"
+                placeholder="Search audits, stores, SKUs…"
                 className="h-9 rounded-xl border-border bg-surface pl-9"
               />
             </form>
             <div className="ml-auto flex items-center gap-2">
               <Button asChild variant="brand" size="sm" className="rounded-xl">
-                <Link to="/scan">New scan</Link>
+                <Link to="/audit">New audit</Link>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -841,4 +841,4 @@ export function AppShell({
     </TooltipProvider>
   );
 }
-
+'

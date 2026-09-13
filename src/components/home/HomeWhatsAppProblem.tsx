@@ -21,7 +21,7 @@ const TRACKED = [
   "Promotions",
   "Issues",
   "Corrective Actions",
-  "Rescan Results",
+  "Re-audit Results",
 ];
 
 export function HomeWhatsAppProblem() {

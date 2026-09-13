@@ -2,7 +2,7 @@
  * Public demo audit share links — unguessable session token, no login required.
  */
 
-import { loadLandingSessionId } from "@/lib/landing-scan-api";
+import { loadLandingSessionId } from "@/lib/landing-audit-api";
 
 export function demoAuditShareUrl(sessionToken?: string | null): string | null {
   const token = sessionToken ?? loadLandingSessionId();

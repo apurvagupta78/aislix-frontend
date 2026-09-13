@@ -3,7 +3,7 @@
  *
  * Anyone holding a live share token can view this page — no session required.
  * All data is resolved server-side from the token, so nothing about the
- * workspace is exposed beyond this single scan.
+ * workspace is exposed beyond this single audit.
  */
 
 import { useEffect, useState } from "react";
@@ -34,7 +34,7 @@ import { Logo } from "@/components/Logo";
 import { DemoScanResultsBody } from "@/components/scan/DemoScanResultsBody";
 import { DEMO_PLANOGRAM_LABEL } from "@/lib/demo-oral-care-planogram";
 import { landingToScanResult } from "@/lib/demo-execution";
-import type { LandingScanResult } from "@/lib/landing-scan-api";
+import type { LandingScanResult } from "@/lib/landing-audit-api";
 import { defaultAuditRoleTab } from "@/lib/role-audit-ui";
 import { getPublicShare } from "@/lib/scan-share.functions";
 import { formatSharedDate, type SharedScanPayload } from "@/lib/scan-share";
@@ -245,7 +245,7 @@ function SharedReport() {
             {context || "AI shelf audit result"}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Scanned {formatSharedDate(report.scanned_at)} · link expires{" "}
+            Audited {formatSharedDate(report.audited_at)} · link expires{" "}
             {formatSharedDate(report.expires_at)}
           </p>
         </section>
