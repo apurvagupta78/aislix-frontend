@@ -801,3 +801,16 @@ export function DashboardFilterBar({
     </section>
   );
 }
+
+/** Compact filter toolbar row — shared with Recent Audits section. */
+export function DashboardCompactFilterToolbar({
+  filters,
+  onChange,
+  options,
+}: {
+  filters: DashboardFilterState;
+  onChange: (next: DashboardFilterState) => void;
+  options: DashboardFilterOptions;
+}) {
+  return <DesktopToolbar filters={filters} onChange={onChange} options={options} />;
+}

@@ -176,7 +176,7 @@ function Dashboard() {
 
           <BrandCompetitionSection data={data} />
 
-          <RecentAuditsSection data={data} filters={filters} />
+          <RecentAuditsSection data={data} filters={filters} onFiltersChange={setFilters} />
 
           <StorePerformanceSection data={data} />
         </>

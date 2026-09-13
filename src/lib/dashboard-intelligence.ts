@@ -146,6 +146,8 @@ export type RecentAuditRow = {
   date: string;
   store_id: string | null;
   store_name: string;
+  store_city: string | null;
+  store_country: string | null;
   role: string;
   category: string | null;
   sub_category: string | null;
@@ -153,6 +155,10 @@ export type RecentAuditRow = {
   planogram: number | null;
   issues: number;
   assigned_to: string | null;
+  assigned_by: string | null;
+  audit_source: "assigned" | "adhoc";
+  planogram_used: boolean;
+  export_kpis: Partial<Record<AuditKpiId, number | null>>;
   status: RecentAuditStatus;
 };
 
@@ -1321,43 +1327,65 @@ export async function fetchWorkspaceDashboard(
 
   const memberNameById = new Map(teamMembers.map((m) => [m.user_id, m.name || m.email]));
 
-  // --- Recent audits ---
-  const recent_audits: RecentAuditRow[] = [...audits]
-    .reverse()
-    .slice(0, 10)
-    .map((scan) => {
-      const metrics = metricsMap.get(scan.id);
-      const role = scanRole(metrics) ?? effectiveRole;
-      const assignment = assignmentByScanId.get(scan.id);
-      const issueCount =
-        (metrics?.opportunity_ledger ?? []).filter((r) => {
-          const st = (r.status ?? "open").toLowerCase();
-          return st !== "resolved" && st !== "verified";
-        }).length +
-        (metrics?.next_best_actions ?? []).filter((a) => {
-          const st = (a.status ?? "open").toLowerCase();
-          return st !== "resolved" && st !== "verified";
-        }).length;
-      const assigneeId = assignment?.assignee_id ?? null;
-      const subCategory = scanSubCategoryLabel(scan);
-      return {
-        scan_id: scan.id,
-        date: scan.created_at,
-        store_id: scan.store_id,
-        store_name: scan.stores?.name ?? "—",
-        role: roleTabLabel(role),
-        category: scan.category,
-        sub_category: subCategory || null,
-        osa: typeof scan.osa_percent === "number" ? normalizePercent(scan.osa_percent) ?? scan.osa_percent : null,
-        planogram:
-          typeof scan.planogram_compliance_percent === "number"
-            ? normalizePercent(scan.planogram_compliance_percent) ?? scan.planogram_compliance_percent
-            : null,
-        issues: issueCount,
-        assigned_to: assigneeId ? memberNameById.get(assigneeId) ?? null : null,
-        status: recentAuditStatus(scan, assignment),
-      };
-    });
+  const exportKpiIds: AuditKpiId[] = [
+    "assortment_compliance",
+    "location_accuracy",
+    "share_of_shelf",
+    "facing_count",
+    "msl_compliance",
+    "price_compliance",
+    "promotional_compliance",
+  ];
+
+  // --- Recent audits (all filtered rows for section table/export) ---
+  const recent_audits: RecentAuditRow[] = [...audits].reverse().map((scan) => {
+    const metrics = metricsMap.get(scan.id);
+    const role = scanRole(metrics) ?? effectiveRole;
+    const assignment = assignmentByScanId.get(scan.id);
+    const issueCount =
+      (metrics?.opportunity_ledger ?? []).filter((r) => {
+        const st = (r.status ?? "open").toLowerCase();
+        return st !== "resolved" && st !== "verified";
+      }).length +
+      (metrics?.next_best_actions ?? []).filter((a) => {
+        const st = (a.status ?? "open").toLowerCase();
+        return st !== "resolved" && st !== "verified";
+      }).length;
+    const assigneeId = assignment?.assignee_id ?? null;
+    const assignerId = assignment?.assigner_id ?? null;
+    const subCategory = scanSubCategoryLabel(scan);
+    const storeMeta = scan.store_id ? storeById.get(scan.store_id) : undefined;
+    const export_kpis: Partial<Record<AuditKpiId, number | null>> = {};
+    for (const kpiId of exportKpiIds) {
+      export_kpis[kpiId] = kpiValue(metrics, role, kpiId, scan);
+    }
+    return {
+      scan_id: scan.id,
+      date: scan.created_at,
+      store_id: scan.store_id,
+      store_name: scan.stores?.name ?? "—",
+      store_city: storeMeta?.city ?? scan.stores?.city?.trim() || null,
+      store_country: storeMeta?.country ?? null,
+      role: roleTabLabel(role),
+      category: scan.category,
+      sub_category: subCategory || null,
+      osa: typeof scan.osa_percent === "number" ? normalizePercent(scan.osa_percent) ?? scan.osa_percent : null,
+      planogram:
+        typeof scan.planogram_compliance_percent === "number"
+          ? normalizePercent(scan.planogram_compliance_percent) ?? scan.planogram_compliance_percent
+          : null,
+      issues: issueCount,
+      assigned_to: assigneeId ? memberNameById.get(assigneeId) ?? null : null,
+      assigned_by: assignerId ? memberNameById.get(assignerId) ?? null : null,
+      audit_source: scan.assignment_id ? "assigned" : "adhoc",
+      planogram_used: Boolean(
+        metrics?.planogram_analysis?.status === "configured" ||
+          typeof scan.planogram_compliance_percent === "number",
+      ),
+      export_kpis,
+      status: recentAuditStatus(scan, assignment),
+    };
+  });
 
   // --- Priority opportunities ---
   const priority_opportunities: PriorityOpportunityRow[] = PRIORITY_OPPORTUNITY_CATEGORIES.map((c) => ({
