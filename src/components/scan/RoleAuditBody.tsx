@@ -8,7 +8,6 @@ import {
   ActionCenterPanel,
   CompetitorIntelPanel,
   ExecutionAuditHeader,
-  ExecutionKpiStripPanel,
   FinancialImpactPanel,
   RecommendedActionsPanel,
 } from "@/components/scan-results/ExecutionPhase1";
@@ -151,17 +150,6 @@ function SectionBlock({
           </p>
           <p className="mt-1 text-muted-foreground leading-relaxed">{intro}</p>
         </div>
-      );
-
-    case "kpi_cards":
-      return (
-        <ExecutionKpiStripPanel
-          data={data}
-          loading={loading}
-          compact={compact}
-          customerType={activeRole}
-          showIntro
-        />
       );
 
     case "kpi_charts":

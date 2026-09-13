@@ -20,7 +20,6 @@ export const AUDIT_ROLE_TABS: AuditRoleTab[] = [
 export type RoleAuditSectionKey =
   | "audit_header"
   | "role_intro"
-  | "kpi_cards"
   | "kpi_charts"
   | "competitor_analysis"
   | "annotated_image"
@@ -35,7 +34,6 @@ export type RoleAuditSectionKey =
 export const ROLE_AUDIT_SECTIONS: RoleAuditSectionKey[] = [
   "audit_header",
   "role_intro",
-  "kpi_cards",
   "kpi_charts",
   "competitor_analysis",
   "planogram_side_by_side",
