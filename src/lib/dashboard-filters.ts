@@ -21,6 +21,8 @@ export type DashboardFilterState = {
   datePreset: DashboardDatePreset;
   dateFrom: string;
   dateTo: string;
+  country: string;
+  city: string;
   role: DashboardRoleFilter;
   storeId: string;
   category: string;
@@ -33,12 +35,21 @@ export const DEFAULT_DASHBOARD_FILTERS: DashboardFilterState = {
   datePreset: "7d",
   dateFrom: "",
   dateTo: "",
+  country: "all",
+  city: "all",
   role: "all",
   storeId: "all",
   category: "all",
   subCategory: "all",
   teamMemberId: "all",
   auditAssignment: "all",
+};
+
+export type DashboardStoreOption = {
+  id: string;
+  name: string;
+  country: string | null;
+  city: string | null;
 };
 
 export const DASHBOARD_DATE_PRESETS: { value: DashboardDatePreset; label: string }[] = [
@@ -71,7 +82,9 @@ export type DashboardSubCategoryOption = {
 };
 
 export type DashboardFilterOptions = {
-  stores: Array<{ id: string; name: string }>;
+  stores: DashboardStoreOption[];
+  countries: string[];
+  cities: string[];
   categories: string[];
   subcategories: DashboardSubCategoryOption[];
   team_members: DashboardTeamMember[];
@@ -127,6 +140,8 @@ export function isDefaultDashboardFilters(filters: DashboardFilterState): boolea
     filters.datePreset === DEFAULT_DASHBOARD_FILTERS.datePreset &&
     !filters.dateFrom &&
     !filters.dateTo &&
+    filters.country === "all" &&
+    filters.city === "all" &&
     filters.role === "all" &&
     filters.storeId === "all" &&
     filters.category === "all" &&
@@ -156,6 +171,14 @@ export function dashboardFilterChips(
         : `From ${filters.dateFrom}`;
     }
     chips.push({ key: "date", label });
+  }
+
+  if (filters.country !== "all") {
+    chips.push({ key: "country", label: filters.country });
+  }
+
+  if (filters.city !== "all") {
+    chips.push({ key: "city", label: filters.city });
   }
 
   if (filters.role !== "all") {
@@ -199,6 +222,12 @@ export function clearDashboardFilterChip(
     return { ...filters, datePreset: "7d", dateFrom: "", dateTo: "" };
   }
   const defaults = DEFAULT_DASHBOARD_FILTERS;
+  if (chipKey === "country") {
+    return { ...filters, country: "all", city: "all", storeId: "all" };
+  }
+  if (chipKey === "city") {
+    return { ...filters, city: "all", storeId: "all" };
+  }
   if (chipKey === "category") {
     return { ...filters, category: "all", subCategory: "all" };
   }
@@ -218,7 +247,7 @@ export function buildDashboardFilterSummary(
   categoryCount: number,
 ): DashboardFilterSummary {
   const parts: string[] = [];
-  parts.push(`Showing ${auditCount} audit${auditCount === 1 ? "" : "s"}`);
+  parts.push(`${auditCount} audit${auditCount === 1 ? "" : "s"}`);
   if (storeCount > 0) parts.push(`${storeCount} store${storeCount === 1 ? "" : "s"}`);
   if (categoryCount > 0) parts.push(`${categoryCount} categor${categoryCount === 1 ? "y" : "ies"}`);
   return {

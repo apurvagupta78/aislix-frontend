@@ -130,6 +130,8 @@ function Dashboard() {
         options={
           data?.filter_options ?? {
             stores: [],
+            countries: [],
+            cities: [],
             categories: [],
             subcategories: [],
             team_members: [],
@@ -163,7 +165,7 @@ function Dashboard() {
         </div>
       ) : data ? (
         <>
-          <div className="mt-6">
+          <div className="mt-4">
             <RetailPerformanceSection data={data.kpis} isLoading={false} />
           </div>
 

@@ -20,6 +20,7 @@ import {
   type DashboardFilterOptions,
   type DashboardFilterState,
   type DashboardFilterSummary,
+  type DashboardStoreOption,
   type DashboardSubCategoryOption,
   type DashboardTeamMember,
 } from "@/lib/dashboard-filters";
@@ -363,33 +364,60 @@ function mergeCategoryMaster(
   };
 }
 
+function mapStoreRows(
+  rows: Array<{ id: string; name: string; country?: string | null; city?: string | null }>,
+): DashboardStoreOption[] {
+  return rows.map((s) => ({
+    id: s.id,
+    name: s.name ?? "Store",
+    country: s.country?.trim() || null,
+    city: s.city?.trim() || null,
+  }));
+}
+
+function locationLists(stores: DashboardStoreOption[]): { countries: string[]; cities: string[] } {
+  const countries = [...new Set(stores.map((s) => s.country).filter(Boolean) as string[])].sort();
+  const cities = [...new Set(stores.map((s) => s.city).filter(Boolean) as string[])].sort();
+  return { countries, cities };
+}
+
 function buildFilterOptions(
-  allStores: Array<{ id: string; name: string }>,
+  allStores: DashboardStoreOption[],
   poolScans: ScanRow[],
   teamMembers: DashboardTeamMember[],
   currentUserId: string | null,
-  roleFilter: DashboardFilterState["role"],
+  filterHints: Pick<DashboardFilterState, "role" | "country" | "city">,
   metricsMap: Map<string, RetailIntelligencePayload | null>,
   categoryMaster: ShelfCategory[] = FALLBACK_CATEGORIES,
 ): DashboardFilterOptions {
   let scoped = poolScans;
-  if (roleFilter !== "all") {
-    scoped = scoped.filter((s) => scanRole(metricsMap.get(s.id) ?? null) === roleFilter);
+  if (filterHints.role !== "all") {
+    scoped = scoped.filter((s) => scanRole(metricsMap.get(s.id) ?? null) === filterHints.role);
   }
   const storeIds = new Set(scoped.map((s) => s.store_id).filter(Boolean));
-  const stores = allStores.filter((s) => storeIds.has(s.id));
+  let stores = allStores.filter((s) => storeIds.has(s.id));
+  if (!stores.length) stores = allStores;
+  if (filterHints.country !== "all") {
+    stores = stores.filter((s) => s.country === filterHints.country);
+  }
+  if (filterHints.city !== "all") {
+    stores = stores.filter((s) => s.city === filterHints.city);
+  }
   const { categories, subcategories } = mergeCategoryMaster(
     categoryMaster,
     poolScans,
-    roleFilter,
+    filterHints.role,
     metricsMap,
   );
   const activeMembers = teamMembers.filter((m) =>
     scoped.some((s) => s.created_by === m.user_id),
   );
   const membersForFilter = activeMembers.length ? activeMembers : teamMembers;
+  const { countries, cities } = locationLists(allStores);
   return {
-    stores: stores.length ? stores : allStores,
+    stores,
+    countries,
+    cities,
     categories,
     subcategories,
     team_members: membersForFilter,
@@ -607,11 +635,15 @@ function applyScanFilters(
   metricsMap: Map<string, RetailIntelligencePayload | null>,
   assignmentByScanId: Map<string, AssignmentRow>,
   currentUserId: string | null,
+  storeById: Map<string, DashboardStoreOption>,
 ): ScanRow[] {
   return scans.filter((scan) => {
     if (filters.role !== "all" && scanRole(metricsMap.get(scan.id) ?? null) !== filters.role) {
       return false;
     }
+    const store = scan.store_id ? storeById.get(scan.store_id) : undefined;
+    if (filters.country !== "all" && store?.country !== filters.country) return false;
+    if (filters.city !== "all" && store?.city !== filters.city) return false;
     if (filters.storeId !== "all" && scan.store_id !== filters.storeId) return false;
     if (filters.category !== "all" && scan.category !== filters.category) return false;
     if (filters.subCategory !== "all" && scanSubCategoryLabel(scan) !== filters.subCategory) {
@@ -635,7 +667,7 @@ export async function fetchDashboardFilterOptions(
   since.setDate(since.getDate() - 90);
 
   const [storesRes, scansRes, teamMembers] = await Promise.all([
-    supabase.from("stores").select("id, name").eq("org_id", orgId).eq("status", "active").order("name"),
+    supabase.from("stores").select("id, name, country, city").eq("org_id", orgId).eq("status", "active").order("name"),
     supabase
       .from("shelf_scans")
       .select(SCAN_SELECT)
@@ -647,10 +679,7 @@ export async function fetchDashboardFilterOptions(
   if (storesRes.error) dbError(storesRes.error, "Could not load stores.");
   if (scansRes.error) dbError(scansRes.error, "Could not load audits.");
 
-  const allStores = (storesRes.data ?? []).map((s) => ({
-    id: s.id as string,
-    name: (s.name as string) ?? "Store",
-  }));
+  const allStores = mapStoreRows(storesRes.data ?? []);
   const poolScans = (scansRes.data ?? []) as ScanRow[];
   const metricsMap = await fetchMetricsMap(poolScans.map((s) => s.id));
   return buildFilterOptions(
@@ -658,7 +687,7 @@ export async function fetchDashboardFilterOptions(
     poolScans,
     teamMembers,
     user?.id ?? null,
-    roleHint,
+    { role: roleHint, country: "all", city: "all" },
     metricsMap,
   );
 }
@@ -678,7 +707,7 @@ export async function fetchWorkspaceDashboard(
   optionSince.setDate(optionSince.getDate() - 90);
 
   const [storesRes, subscriptionRes, actionsRes, assignmentsRes, teamMembers] = await Promise.all([
-    supabase.from("stores").select("id, name").eq("org_id", orgId).eq("status", "active").order("name"),
+    supabase.from("stores").select("id, name, country, city").eq("org_id", orgId).eq("status", "active").order("name"),
     supabase
       .from("subscriptions")
       .select("scans_used, subscription_plans(scan_quota)")
@@ -739,10 +768,8 @@ export async function fetchWorkspaceDashboard(
 
   if (storesRes.error) dbError(storesRes.error, "Could not load stores.");
 
-  const allStores = (storesRes.data ?? []).map((s) => ({
-    id: s.id as string,
-    name: (s.name as string) ?? "Store",
-  }));
+  const allStores = mapStoreRows(storesRes.data ?? []);
+  const storeById = new Map(allStores.map((s) => [s.id, s]));
 
   const assignmentByScanId = new Map<string, AssignmentRow>();
   for (const row of (assignmentsRes.data ?? []) as AssignmentRow[]) {
@@ -756,7 +783,7 @@ export async function fetchWorkspaceDashboard(
     poolScans,
     teamMembers,
     currentUserId,
-    filters.role,
+    { role: filters.role, country: filters.country, city: filters.city },
     poolMetricsMap,
   );
 
@@ -764,7 +791,7 @@ export async function fetchWorkspaceDashboard(
   const metricsMap = await fetchMetricsMap(scanIds);
   const confidenceMap = await fetchConfidenceMap(scanIds);
 
-  scans = applyScanFilters(scans, filters, metricsMap, assignmentByScanId, currentUserId);
+  scans = applyScanFilters(scans, filters, metricsMap, assignmentByScanId, currentUserId, storeById);
 
   const effectiveRole =
     filters.role !== "all"

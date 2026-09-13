@@ -6,7 +6,10 @@ import {
   Check,
   ChevronsUpDown,
   ClipboardList,
+  Globe2,
   Layers,
+  MapPin,
+  Plus,
   SlidersHorizontal,
   Store,
   Tag,
@@ -54,14 +57,17 @@ import { cn } from "@/lib/utils";
 
 type Option = { value: string; label: string };
 
-function FilterSelect({
+const CONTROL =
+  "h-9 shrink-0 rounded-lg border border-border/60 bg-white px-2.5 text-xs font-normal text-foreground shadow-none hover:bg-muted/30 focus:ring-1 focus:ring-brand/20";
+
+function CompactSelect({
   label,
   icon: Icon,
   value,
   onValueChange,
   options,
   allLabel,
-  triggerClassName,
+  className,
 }: {
   label: string;
   icon: ComponentType<{ className?: string }>;
@@ -69,24 +75,16 @@ function FilterSelect({
   onValueChange: (v: string) => void;
   options: Option[];
   allLabel: string;
-  triggerClassName?: string;
+  className?: string;
 }) {
   const display =
     value === "all" ? allLabel : options.find((o) => o.value === value)?.label ?? value;
 
   return (
     <Select value={value} onValueChange={onValueChange}>
-      <SelectTrigger
-        className={cn(
-          "h-9 shrink-0 rounded-xl border-border/80 bg-card text-xs shadow-sm",
-          triggerClassName,
-        )}
-        aria-label={label}
-      >
-        <span className="flex items-center gap-1.5 truncate">
-          <Icon className="size-3.5 shrink-0 text-muted-foreground" />
-          <span className="truncate">{display}</span>
-        </span>
+      <SelectTrigger className={cn(CONTROL, "gap-1.5", className)} aria-label={label}>
+        <Icon className="size-3.5 shrink-0 text-muted-foreground" />
+        <span className="truncate">{display}</span>
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="all">{allLabel}</SelectItem>
@@ -100,14 +98,14 @@ function FilterSelect({
   );
 }
 
-function SearchableFilterSelect({
+function SearchableSelect({
   label,
   icon: Icon,
   value,
   onValueChange,
   options,
   allLabel,
-  triggerClassName,
+  className,
 }: {
   label: string;
   icon: ComponentType<{ className?: string }>;
@@ -115,7 +113,7 @@ function SearchableFilterSelect({
   onValueChange: (v: string) => void;
   options: Option[];
   allLabel: string;
-  triggerClassName?: string;
+  className?: string;
 }) {
   const [open, setOpen] = useState(false);
   const searchable = options.length > 8;
@@ -124,14 +122,14 @@ function SearchableFilterSelect({
 
   if (!searchable) {
     return (
-      <FilterSelect
+      <CompactSelect
         label={label}
         icon={Icon}
         value={value}
         onValueChange={onValueChange}
         options={options}
         allLabel={allLabel}
-        triggerClassName={triggerClassName}
+        className={className}
       />
     );
   }
@@ -144,21 +142,18 @@ function SearchableFilterSelect({
           role="combobox"
           aria-expanded={open}
           aria-label={label}
-          className={cn(
-            "h-9 shrink-0 justify-between rounded-xl border-border/80 bg-card px-3 text-xs font-normal shadow-sm hover:bg-card",
-            triggerClassName,
-          )}
+          className={cn(CONTROL, "justify-between gap-1", className)}
         >
           <span className="flex min-w-0 items-center gap-1.5 truncate">
             <Icon className="size-3.5 shrink-0 text-muted-foreground" />
             <span className="truncate">{display}</span>
           </span>
-          <ChevronsUpDown className="ml-1 size-3.5 shrink-0 opacity-50" />
+          <ChevronsUpDown className="size-3 shrink-0 opacity-40" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[220px] p-0" align="start">
         <Command>
-          <CommandInput placeholder={`Search ${label.toLowerCase()}…`} />
+          <CommandInput placeholder={`Search…`} className="h-8 text-xs" />
           <CommandList>
             <CommandEmpty>No results.</CommandEmpty>
             <CommandGroup>
@@ -169,7 +164,7 @@ function SearchableFilterSelect({
                   setOpen(false);
                 }}
               >
-                <Check className={cn("mr-2 size-4", value === "all" ? "opacity-100" : "opacity-0")} />
+                <Check className={cn("mr-2 size-3.5", value === "all" ? "opacity-100" : "opacity-0")} />
                 {allLabel}
               </CommandItem>
               {options.map((o) => (
@@ -182,10 +177,7 @@ function SearchableFilterSelect({
                   }}
                 >
                   <Check
-                    className={cn(
-                      "mr-2 size-4",
-                      value === o.value ? "opacity-100" : "opacity-0",
-                    )}
+                    className={cn("mr-2 size-3.5", value === o.value ? "opacity-100" : "opacity-0")}
                   />
                   {o.label}
                 </CommandItem>
@@ -198,16 +190,75 @@ function SearchableFilterSelect({
   );
 }
 
-function SecondaryFilterControls({
+function DateControl({
+  filters,
+  onChange,
+  stacked,
+}: {
+  filters: DashboardFilterState;
+  onChange: (next: DashboardFilterState) => void;
+  stacked?: boolean;
+}) {
+  return (
+    <div className={stacked ? "space-y-2" : "contents"}>
+      <Select
+        value={filters.datePreset}
+        onValueChange={(v) =>
+          onChange({
+            ...filters,
+            datePreset: v as DashboardFilterState["datePreset"],
+            ...(v !== "custom" ? { dateFrom: "", dateTo: "" } : {}),
+          })
+        }
+      >
+        <SelectTrigger className={cn(CONTROL, "min-w-[118px] gap-1.5")} aria-label="Date">
+          <Calendar className="size-3.5 shrink-0 text-muted-foreground" />
+          <SelectValue placeholder="Last 7 days" />
+        </SelectTrigger>
+        <SelectContent>
+          {DASHBOARD_DATE_PRESETS.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {filters.datePreset === "custom" ? (
+        <div className={cn("flex gap-2", stacked && "w-full")}>
+          <Input
+            type="date"
+            value={filters.dateFrom}
+            onChange={(e) => onChange({ ...filters, dateFrom: e.target.value })}
+            className="h-9 rounded-lg text-xs"
+            aria-label="From date"
+          />
+          <Input
+            type="date"
+            value={filters.dateTo}
+            onChange={(e) => onChange({ ...filters, dateTo: e.target.value })}
+            className="h-9 rounded-lg text-xs"
+            aria-label="To date"
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function MoreFiltersPopover({
   filters,
   onChange,
   options,
-  layout = "row",
+  open,
+  onOpenChange,
+  activeCount,
 }: {
   filters: DashboardFilterState;
   onChange: (next: DashboardFilterState) => void;
   options: DashboardFilterOptions;
-  layout?: "row" | "stack";
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  activeCount: number;
 }) {
   const subCategoryOptions = useMemo(() => {
     const subs =
@@ -222,141 +273,172 @@ function SecondaryFilterControls({
     [options.team_members],
   );
 
-  const wrap = layout === "stack" ? "flex flex-col gap-3" : "flex flex-wrap items-center gap-2";
-
   return (
-    <div className={wrap}>
-      <SearchableFilterSelect
-        label="Sub-category"
-        icon={Layers}
-        value={filters.subCategory}
-        onValueChange={(v) => onChange({ ...filters, subCategory: v })}
-        options={subCategoryOptions}
-        allLabel="All sub-categories"
-        triggerClassName="min-w-[140px] max-w-[190px]"
-      />
-      {options.only_self && options.team_members.length <= 1 ? (
-        <div className="flex h-9 shrink-0 items-center gap-2 rounded-xl border border-border/80 bg-muted/30 px-3 text-xs text-muted-foreground shadow-sm">
-          <Users className="size-3.5 shrink-0" />
-          <span>Only you</span>
-          <Link to="/settings" className="font-medium text-brand hover:underline">
-            Invite teammates →
-          </Link>
-        </div>
-      ) : (
-        <SearchableFilterSelect
-          label="Team member"
-          icon={Users}
-          value={filters.teamMemberId}
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn(CONTROL, "gap-1 px-2.5", activeCount > 0 && "border-brand/30 bg-brand-soft/30")}
+        >
+          <SlidersHorizontal className="size-3.5 text-muted-foreground" />
+          <span>More filters</span>
+          <Plus className="size-3 text-muted-foreground" />
+          {activeCount > 0 ? (
+            <span className="ml-0.5 rounded-full bg-brand px-1.5 text-[10px] font-semibold text-brand-foreground">
+              {activeCount}
+            </span>
+          ) : null}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[min(92vw,320px)] space-y-2 p-3" align="start">
+        <SearchableSelect
+          label="Sub-category"
+          icon={Layers}
+          value={filters.subCategory}
+          onValueChange={(v) => onChange({ ...filters, subCategory: v })}
+          options={subCategoryOptions}
+          allLabel="All sub-categories"
+          className="w-full"
+        />
+        {options.only_self && options.team_members.length <= 1 ? (
+          <div className="flex h-9 items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-2.5 text-xs text-muted-foreground">
+            <Users className="size-3.5" />
+            <span>Only you</span>
+            <Link to="/settings" className="font-medium text-brand hover:underline">
+              Invite teammates →
+            </Link>
+          </div>
+        ) : (
+          <SearchableSelect
+            label="Team member"
+            icon={Users}
+            value={filters.teamMemberId}
+            onValueChange={(v) =>
+              onChange({
+                ...filters,
+                teamMemberId: v,
+                ...(v !== "all" ? { auditAssignment: "all" as const } : {}),
+              })
+            }
+            options={teamOptions}
+            allLabel="All team members"
+            className="w-full"
+          />
+        )}
+        <CompactSelect
+          label="Audit assignment"
+          icon={ClipboardList}
+          value={filters.auditAssignment}
           onValueChange={(v) =>
             onChange({
               ...filters,
-              teamMemberId: v,
-              ...(v !== "all" ? { auditAssignment: "all" as const } : {}),
+              auditAssignment: v as DashboardFilterState["auditAssignment"],
+              ...(v !== "all" ? { teamMemberId: "all" } : {}),
             })
           }
-          options={teamOptions}
-          allLabel="All team members"
-          triggerClassName="min-w-[148px] max-w-[190px]"
+          options={DASHBOARD_ASSIGNMENT_OPTIONS.filter((o) => o.value !== "all").map((o) => ({
+            value: o.value,
+            label: o.label,
+          }))}
+          allLabel="All audits"
+          className="w-full"
         />
-      )}
-      <FilterSelect
-        label="Audit assignment"
-        icon={ClipboardList}
-        value={filters.auditAssignment}
-        onValueChange={(v) =>
-          onChange({
-            ...filters,
-            auditAssignment: v as DashboardFilterState["auditAssignment"],
-            ...(v !== "all" ? { teamMemberId: "all" } : {}),
-          })
-        }
-        options={DASHBOARD_ASSIGNMENT_OPTIONS.filter((o) => o.value !== "all").map((o) => ({
-          value: o.value,
-          label: o.label,
-        }))}
-        allLabel="All audits"
-        triggerClassName="min-w-[148px]"
-      />
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
-function PrimaryFilterControls({
-  filters,
-  onChange,
-  options,
-  layout = "row",
-}: {
-  filters: DashboardFilterState;
-  onChange: (next: DashboardFilterState) => void;
-  options: DashboardFilterOptions;
-  layout?: "row" | "stack";
-}) {
-  const storeOptions = useMemo(
-    () => options.stores.map((s) => ({ value: s.id, label: s.name })),
-    [options.stores],
+function useFilterOptions(filters: DashboardFilterState, options: DashboardFilterOptions) {
+  const countryOptions = useMemo(
+    () => options.countries.map((c) => ({ value: c, label: c })),
+    [options.countries],
   );
+
+  const cityOptions = useMemo(() => {
+    const cities =
+      filters.country === "all"
+        ? options.cities
+        : [
+            ...new Set(
+              options.stores
+                .filter((s) => s.country === filters.country)
+                .map((s) => s.city)
+                .filter(Boolean) as string[],
+            ),
+          ].sort();
+    return cities.map((c) => ({ value: c, label: c }));
+  }, [filters.country, options.cities, options.stores]);
+
+  const storeOptions = useMemo(() => {
+    let stores = options.stores;
+    if (filters.country !== "all") stores = stores.filter((s) => s.country === filters.country);
+    if (filters.city !== "all") stores = stores.filter((s) => s.city === filters.city);
+    return stores.map((s) => ({ value: s.id, label: s.name }));
+  }, [filters.country, filters.city, options.stores]);
+
   const categoryOptions = useMemo(
     () => options.categories.map((c) => ({ value: c, label: c })),
     [options.categories],
   );
 
-  const wrap = layout === "stack" ? "flex flex-col gap-3" : "flex flex-wrap items-center gap-2";
+  const roleOptions = useMemo(
+    () =>
+      DASHBOARD_ROLE_OPTIONS.filter((o) => o.value !== "all").map((o) => ({
+        value: o.value,
+        label: o.label,
+      })),
+    [],
+  );
+
+  return { countryOptions, cityOptions, storeOptions, categoryOptions, roleOptions };
+}
+
+function DesktopToolbar({
+  filters,
+  onChange,
+  options,
+}: {
+  filters: DashboardFilterState;
+  onChange: (next: DashboardFilterState) => void;
+  options: DashboardFilterOptions;
+}) {
+  const [moreOpen, setMoreOpen] = useState(false);
+  const { countryOptions, cityOptions, storeOptions, categoryOptions, roleOptions } =
+    useFilterOptions(filters, options);
+
+  const moreActive =
+    (filters.subCategory !== "all" ? 1 : 0) +
+    (filters.teamMemberId !== "all" ? 1 : 0) +
+    (filters.auditAssignment !== "all" ? 1 : 0);
 
   return (
-    <div className={wrap}>
-      <div className={layout === "stack" ? "space-y-1.5" : undefined}>
-        {layout === "stack" ? (
-          <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-muted-foreground">
-            Date
-          </p>
-        ) : null}
-        <Select
-          value={filters.datePreset}
+    <div className="flex flex-wrap items-center gap-1.5">
+      <DateControl filters={filters} onChange={onChange} />
+      {countryOptions.length ? (
+        <SearchableSelect
+          label="Country"
+          icon={Globe2}
+          value={filters.country}
           onValueChange={(v) =>
-            onChange({
-              ...filters,
-              datePreset: v as DashboardFilterState["datePreset"],
-              ...(v !== "custom" ? { dateFrom: "", dateTo: "" } : {}),
-            })
+            onChange({ ...filters, country: v, city: "all", storeId: "all" })
           }
-        >
-          <SelectTrigger className="h-9 w-full min-w-[148px] shrink-0 rounded-xl border-border/80 bg-card text-xs shadow-sm sm:w-[148px]">
-            <span className="flex items-center gap-1.5 truncate">
-              <Calendar className="size-3.5 shrink-0 text-muted-foreground" />
-              <SelectValue placeholder="Date" />
-            </span>
-          </SelectTrigger>
-          <SelectContent>
-            {DASHBOARD_DATE_PRESETS.map((o) => (
-              <SelectItem key={o.value} value={o.value}>
-                {o.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {filters.datePreset === "custom" ? (
-          <div className={cn("flex gap-2", layout === "stack" ? "mt-2" : "mt-2 w-full basis-full")}>
-            <Input
-              type="date"
-              value={filters.dateFrom}
-              onChange={(e) => onChange({ ...filters, dateFrom: e.target.value })}
-              className="h-9 rounded-xl text-xs"
-              aria-label="From date"
-            />
-            <Input
-              type="date"
-              value={filters.dateTo}
-              onChange={(e) => onChange({ ...filters, dateTo: e.target.value })}
-              className="h-9 rounded-xl text-xs"
-              aria-label="To date"
-            />
-          </div>
-        ) : null}
-      </div>
-
-      <FilterSelect
+          options={countryOptions}
+          allLabel="All countries"
+          className="min-w-[120px] max-w-[150px]"
+        />
+      ) : null}
+      {cityOptions.length ? (
+        <SearchableSelect
+          label="City"
+          icon={MapPin}
+          value={filters.city}
+          onValueChange={(v) => onChange({ ...filters, city: v, storeId: "all" })}
+          options={cityOptions}
+          allLabel="All cities"
+          className="min-w-[110px] max-w-[140px]"
+        />
+      ) : null}
+      <CompactSelect
         label="Role"
         icon={Briefcase}
         value={filters.role}
@@ -370,54 +452,237 @@ function PrimaryFilterControls({
             teamMemberId: "all",
           })
         }
-        options={DASHBOARD_ROLE_OPTIONS.filter((o) => o.value !== "all").map((o) => ({
-          value: o.value,
-          label: o.label,
-        }))}
+        options={roleOptions}
         allLabel="All roles"
-        triggerClassName="min-w-[132px]"
+        className="min-w-[108px] max-w-[130px]"
       />
-
-      <SearchableFilterSelect
+      <SearchableSelect
         label="Store"
         icon={Store}
         value={filters.storeId}
         onValueChange={(v) => onChange({ ...filters, storeId: v })}
         options={storeOptions}
         allLabel="All stores"
-        triggerClassName="min-w-[132px] max-w-[180px]"
+        className="min-w-[108px] max-w-[150px]"
       />
-
-      <SearchableFilterSelect
+      <SearchableSelect
         label="Category"
         icon={Tag}
         value={filters.category}
         onValueChange={(v) => onChange({ ...filters, category: v, subCategory: "all" })}
         options={categoryOptions}
         allLabel="All categories"
-        triggerClassName="min-w-[132px] max-w-[180px]"
+        className="min-w-[118px] max-w-[160px]"
       />
-
+      <MoreFiltersPopover
+        filters={filters}
+        onChange={onChange}
+        options={options}
+        open={moreOpen}
+        onOpenChange={setMoreOpen}
+        activeCount={moreActive}
+      />
+      {!isDefaultDashboardFilters(filters) ? (
+        <button
+          type="button"
+          onClick={() => onChange({ ...DEFAULT_DASHBOARD_FILTERS })}
+          className="inline-flex h-9 shrink-0 items-center gap-1 px-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-brand"
+        >
+          <X className="size-3.5" />
+          Clear
+        </button>
+      ) : null}
     </div>
   );
 }
 
-function FilterControls({
+function MobileFilters({
   filters,
   onChange,
   options,
-  layout = "row",
+  activeCount,
 }: {
   filters: DashboardFilterState;
   onChange: (next: DashboardFilterState) => void;
   options: DashboardFilterOptions;
-  layout?: "row" | "stack";
+  activeCount: number;
 }) {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState(filters);
+  const { countryOptions, cityOptions, storeOptions, categoryOptions, roleOptions } =
+    useFilterOptions(draft, options);
+
+  const subCategoryOptions = useMemo(() => {
+    const subs =
+      draft.category === "all"
+        ? options.subcategories
+        : options.subcategories.filter((s) => s.category === draft.category);
+    return subs.map((s) => ({ value: s.value, label: s.label }));
+  }, [draft.category, options.subcategories]);
+
+  const teamOptions = useMemo(
+    () => options.team_members.map((m) => ({ value: m.user_id, label: m.name || m.email })),
+    [options.team_members],
+  );
+
   return (
-    <>
-      <PrimaryFilterControls filters={filters} onChange={onChange} options={options} layout={layout} />
-      <SecondaryFilterControls filters={filters} onChange={onChange} options={options} layout={layout} />
-    </>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (next) setDraft(filters);
+      }}
+    >
+      <SheetTrigger asChild>
+        <Button variant="outline" className={cn(CONTROL, "gap-1.5")}>
+          <SlidersHorizontal className="size-3.5" />
+          Filters ({activeCount})
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="bottom" className="max-h-[88vh] overflow-y-auto rounded-t-2xl px-4 pb-6 pt-4">
+        <SheetHeader className="pb-2">
+          <SheetTitle className="text-left text-sm font-semibold">Filters</SheetTitle>
+        </SheetHeader>
+        <div className="space-y-3">
+          <DateControl filters={draft} onChange={setDraft} stacked />
+          {countryOptions.length ? (
+            <SearchableSelect
+              label="Country"
+              icon={Globe2}
+              value={draft.country}
+              onValueChange={(v) => setDraft({ ...draft, country: v, city: "all", storeId: "all" })}
+              options={countryOptions}
+              allLabel="All countries"
+              className="w-full"
+            />
+          ) : null}
+          {cityOptions.length ? (
+            <SearchableSelect
+              label="City"
+              icon={MapPin}
+              value={draft.city}
+              onValueChange={(v) => setDraft({ ...draft, city: v, storeId: "all" })}
+              options={cityOptions}
+              allLabel="All cities"
+              className="w-full"
+            />
+          ) : null}
+          <CompactSelect
+            label="Role"
+            icon={Briefcase}
+            value={draft.role}
+            onValueChange={(v) =>
+              setDraft({
+                ...draft,
+                role: v as DashboardFilterState["role"],
+                storeId: "all",
+                category: "all",
+                subCategory: "all",
+                teamMemberId: "all",
+              })
+            }
+            options={roleOptions}
+            allLabel="All roles"
+            className="w-full"
+          />
+          <SearchableSelect
+            label="Store"
+            icon={Store}
+            value={draft.storeId}
+            onValueChange={(v) => setDraft({ ...draft, storeId: v })}
+            options={storeOptions}
+            allLabel="All stores"
+            className="w-full"
+          />
+          <SearchableSelect
+            label="Category"
+            icon={Tag}
+            value={draft.category}
+            onValueChange={(v) => setDraft({ ...draft, category: v, subCategory: "all" })}
+            options={categoryOptions}
+            allLabel="All categories"
+            className="w-full"
+          />
+          <SearchableSelect
+            label="Sub-category"
+            icon={Layers}
+            value={draft.subCategory}
+            onValueChange={(v) => setDraft({ ...draft, subCategory: v })}
+            options={subCategoryOptions}
+            allLabel="All sub-categories"
+            className="w-full"
+          />
+          {options.only_self && options.team_members.length <= 1 ? (
+            <div className="flex h-9 items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-2.5 text-xs text-muted-foreground">
+              <Users className="size-3.5" />
+              <span>Only you</span>
+              <Link to="/settings" className="font-medium text-brand hover:underline">
+                Invite teammates →
+              </Link>
+            </div>
+          ) : (
+            <SearchableSelect
+              label="Team member"
+              icon={Users}
+              value={draft.teamMemberId}
+              onValueChange={(v) =>
+                setDraft({
+                  ...draft,
+                  teamMemberId: v,
+                  ...(v !== "all" ? { auditAssignment: "all" as const } : {}),
+                })
+              }
+              options={teamOptions}
+              allLabel="All team members"
+              className="w-full"
+            />
+          )}
+          <CompactSelect
+            label="Audit assignment"
+            icon={ClipboardList}
+            value={draft.auditAssignment}
+            onValueChange={(v) =>
+              setDraft({
+                ...draft,
+                auditAssignment: v as DashboardFilterState["auditAssignment"],
+                ...(v !== "all" ? { teamMemberId: "all" } : {}),
+              })
+            }
+            options={DASHBOARD_ASSIGNMENT_OPTIONS.filter((o) => o.value !== "all").map((o) => ({
+              value: o.value,
+              label: o.label,
+            }))}
+            allLabel="All audits"
+            className="w-full"
+          />
+        </div>
+        <div className="mt-5 flex gap-2">
+          <Button
+            type="button"
+            variant="subtle"
+            className="flex-1 rounded-lg"
+            onClick={() => {
+              setDraft(DEFAULT_DASHBOARD_FILTERS);
+              onChange(DEFAULT_DASHBOARD_FILTERS);
+              setOpen(false);
+            }}
+          >
+            Reset
+          </Button>
+          <Button
+            type="button"
+            variant="brand"
+            className="flex-1 rounded-lg"
+            onClick={() => {
+              onChange(draft);
+              setOpen(false);
+            }}
+          >
+            Apply filters
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -433,120 +698,44 @@ export function DashboardFilterBar({
   summaryLabel?: string;
 }) {
   const chips = dashboardFilterChips(filters, options);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
-  const activeMoreCount =
-    (filters.subCategory !== "all" ? 1 : 0) +
-    (filters.teamMemberId !== "all" ? 1 : 0) +
-    (filters.auditAssignment !== "all" ? 1 : 0);
+  const activeCount = chips.length;
 
   return (
-    <section className="space-y-3" aria-label="Dashboard filters">
-      <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-        Filter your view
+    <section className="space-y-1.5" aria-label="Dashboard filters">
+      <p className="text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        Filter view
       </p>
 
       <div className="hidden md:block">
-        <div className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-sm">
-          <div className="-mx-1 flex flex-wrap items-center gap-2 overflow-x-auto px-1">
-            <PrimaryFilterControls filters={filters} onChange={onChange} options={options} layout="row" />
-            <Popover open={moreOpen} onOpenChange={setMoreOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 shrink-0 rounded-xl border-border/80 bg-background text-xs font-normal"
-                >
-                  More filters
-                  {activeMoreCount > 0 ? (
-                    <span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-[0.65rem] font-semibold text-brand-foreground">
-                      {activeMoreCount}
-                    </span>
-                  ) : null}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto max-w-[90vw] p-3" align="start">
-                <SecondaryFilterControls
-                  filters={filters}
-                  onChange={onChange}
-                  options={options}
-                  layout="row"
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
+        <DesktopToolbar filters={filters} onChange={onChange} options={options} />
       </div>
 
       <div className="md:hidden">
-        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="sm" className="h-9 rounded-xl text-xs">
-              <SlidersHorizontal className="mr-1.5 size-3.5" />
-              Filters ({chips.length + activeMoreCount})
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl">
-            <SheetHeader>
-              <SheetTitle className="text-left text-base">Filter dashboard</SheetTitle>
-            </SheetHeader>
-            <div className="mt-4">
-              <FilterControls
-                filters={filters}
-                onChange={onChange}
-                options={options}
-                layout="stack"
-              />
-            </div>
-            <div className="mt-6 flex gap-2">
-              <Button
-                type="button"
-                variant="subtle"
-                className="flex-1 rounded-xl"
-                onClick={() => onChange({ ...DEFAULT_DASHBOARD_FILTERS })}
-              >
-                Clear filters
-              </Button>
-              <Button
-                type="button"
-                variant="brand"
-                className="flex-1 rounded-xl"
-                onClick={() => setMobileOpen(false)}
-              >
-                Apply
-              </Button>
-            </div>
-          </SheetContent>
-        </Sheet>
+        <MobileFilters
+          filters={filters}
+          onChange={onChange}
+          options={options}
+          activeCount={activeCount}
+        />
       </div>
 
-      {summaryLabel ? (
-        <p className="text-xs text-muted-foreground">{summaryLabel}</p>
+      {!isDefaultDashboardFilters(filters) && summaryLabel ? (
+        <p className="text-[11px] text-muted-foreground">{summaryLabel}</p>
       ) : null}
 
       {chips.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
           {chips.map((chip) => (
             <button
               key={`${chip.key}-${chip.label}`}
               type="button"
               onClick={() => onChange(clearDashboardFilterChip(filters, chip.key))}
-              className="inline-flex items-center gap-1 rounded-full border border-border/80 bg-brand-soft/50 px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-brand-soft"
+              className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-white px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:border-brand/30 hover:bg-brand-soft/20"
             >
               {chip.label}
-              <X className="size-3 opacity-60" aria-hidden />
-              <span className="sr-only">Remove {chip.label} filter</span>
+              <X className="size-2.5 opacity-50" aria-hidden />
             </button>
           ))}
-          {!isDefaultDashboardFilters(filters) ? (
-            <button
-              type="button"
-              onClick={() => onChange({ ...DEFAULT_DASHBOARD_FILTERS })}
-              className="text-xs font-medium text-brand hover:underline"
-            >
-              Clear all
-            </button>
-          ) : null}
         </div>
       ) : null}
     </section>

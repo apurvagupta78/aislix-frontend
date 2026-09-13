@@ -422,15 +422,17 @@ export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
     audit_count: 42,
     store_count: 5,
     category_count: 3,
-    label: "Showing 42 audits · 5 stores · 3 categories",
+    label: "42 audits · 5 stores · 3 categories",
   },
   effective_role: "supermarket",
   has_completed_audits: true,
   filter_options: {
     stores: [
-      { id: "demo-1", name: "More Mart — Koramangala" },
-      { id: "demo-2", name: "Big Bazaar — Whitefield" },
+      { id: "demo-1", name: "More Mart — Koramangala", country: "India", city: "Bengaluru" },
+      { id: "demo-2", name: "Big Bazaar — Whitefield", country: "India", city: "Bengaluru" },
     ],
+    countries: ["India"],
+    cities: ["Bengaluru", "Mumbai"],
     categories: FALLBACK_CATEGORIES.map((c) => c.name),
     subcategories: [
       { category: "Beverages", value: "Soft drinks", label: "Soft drinks" },
