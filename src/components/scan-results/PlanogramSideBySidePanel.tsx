@@ -184,7 +184,7 @@ export function PlanogramSideBySidePanel({
   if (!hasPlanogram) return null;
 
   return (
-    <section className="rounded-xl border border-border/70 bg-muted/30 p-5 sm:p-6">
+    <section id="audit-section-planogram" className="rounded-xl border border-border/70 bg-muted/30 p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold tracking-tight sm:text-lg">

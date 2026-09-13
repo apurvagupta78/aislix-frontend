@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   ArrowDown,
   ArrowUp,
+  ArrowRight,
   Download,
   IndianRupee,
   Lock,
@@ -29,7 +30,6 @@ import {
   formatLostSales,
   formatScoreDelta,
   formatConfidenceSecondary,
-  priorityRecommendations,
   recognitionCoverage,
   resolveFinancialImpact,
   shareOfShelfTopBrand,
@@ -66,6 +66,14 @@ import {
   type CommercialImpactView,
 } from "@/lib/commercial-impact-display";
 import { downloadCommercialImpactCsv } from "@/lib/commercial-impact-export";
+import {
+  buildIssueTypeCounts,
+  buildPrioritySummary,
+  buildRecommendedActionCards,
+  scrollToActionEvidence,
+  type ActionPriority,
+} from "@/lib/recommended-actions-display";
+import { downloadRecommendedActionsCsv } from "@/lib/recommended-actions-export";
 
 const severityStyles: Record<ActionCenterItem["severity"], string> = {
   critical: "text-destructive",
@@ -816,43 +824,191 @@ export function SkuAvailabilityPanel({
   );
 }
 
-export function RecommendedActionsPanel({ data, loading }: { data?: ScanResult; loading?: boolean }) {
-  const recs = priorityRecommendations(data?.recommendations);
+const ACTION_PRIORITY_PILL: Record<ActionPriority, string> = {
+  high: "border-destructive/30 bg-destructive/10 text-destructive",
+  medium: "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200",
+  low: "border-brand/25 bg-brand-soft text-brand",
+};
+
+const ACTION_PRIORITY_ACCENT: Record<ActionPriority, string> = {
+  high: "border-l-destructive",
+  medium: "border-l-amber-500",
+  low: "border-l-brand",
+};
+
+function PriorityOverviewBar({ summary }: { summary: ReturnType<typeof buildPrioritySummary> }) {
+  const total = summary.high + summary.medium + summary.low || 1;
+  const segments = [
+    { key: "high", count: summary.high, className: "bg-destructive", label: "High" },
+    { key: "medium", count: summary.medium, className: "bg-amber-500", label: "Medium" },
+    { key: "low", count: summary.low, className: "bg-brand", label: "Low" },
+  ];
   return (
-    <div className="card-surface p-5 sm:p-6">
-      <h3 className="text-sm font-semibold tracking-tight">Recommended actions</h3>
+    <div className="rounded-xl border border-border/70 bg-background px-4 py-3">
+      <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+        Priority overview
+      </p>
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+        {segments.map(({ label, count }) => (
+          <span key={label}>
+            <span className="font-semibold tabular-nums">{count}</span>{" "}
+            <span className="text-muted-foreground">{label}</span>
+          </span>
+        ))}
+      </div>
+      <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-muted">
+        {segments.map(({ key, count, className }) =>
+          count > 0 ? (
+            <div
+              key={key}
+              className={cn("h-full", className)}
+              style={{ width: `${(count / total) * 100}%` }}
+            />
+          ) : null,
+        )}
+      </div>
+    </div>
+  );
+}
+
+function IssueTypeBar({ counts }: { counts: ReturnType<typeof buildIssueTypeCounts> }) {
+  if (counts.length < 2) return null;
+  const max = Math.max(...counts.map((c) => c.count), 1);
+  return (
+    <div className="rounded-xl border border-border/70 bg-background px-4 py-3">
+      <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+        Issues by type
+      </p>
+      <ul className="mt-2 space-y-1.5">
+        {counts.slice(0, 5).map((item) => (
+          <li key={item.issue_type}>
+            <div className="flex items-center justify-between gap-2 text-[11px]">
+              <span className="truncate text-muted-foreground">{item.issue_type}</span>
+              <span className="shrink-0 tabular-nums font-medium">{item.count}</span>
+            </div>
+            <div className="mt-0.5 h-1 overflow-hidden rounded-full bg-muted">
+              <div
+                className={cn("h-full rounded-full", item.bar_class)}
+                style={{ width: `${(item.count / max) * 100}%` }}
+              />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export function RecommendedActionsPanel({ data, loading }: { data?: ScanResult; loading?: boolean }) {
+  const cards = data ? buildRecommendedActionCards(data) : [];
+  const summary = buildPrioritySummary(cards);
+  const issueTypes = buildIssueTypeCounts(cards);
+
+  return (
+    <section className="rounded-xl border border-border/70 bg-muted/30 p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+            What to fix next
+          </h3>
+          <p className="mt-2 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+            Aislix prioritises the shelf issues that need attention, so your team knows what to fix
+            first.
+          </p>
+        </div>
+        {data ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="size-8 shrink-0 rounded-lg"
+            title="Download Action List"
+            aria-label="Download Action List"
+            onClick={() => downloadRecommendedActionsCsv(data)}
+            disabled={cards.length === 0}
+          >
+            <Download className="size-3.5" />
+          </Button>
+        ) : null}
+      </div>
+
       {loading ? (
         <div className="mt-4 space-y-3">
           <Skeleton className="h-14 w-full" />
           <Skeleton className="h-14 w-full" />
         </div>
-      ) : recs.length === 0 ? (
-        <p className="mt-3 text-sm text-muted-foreground">No prioritized actions for this scan.</p>
+      ) : cards.length === 0 ? (
+        <p className="mt-4 text-sm text-muted-foreground">No prioritized actions for this scan.</p>
       ) : (
-        <ol className="mt-4 space-y-3">
-          {recs.map((rec, index) => (
-            <li key={rec.id} className="rounded-xl border border-border bg-surface px-4 py-3">
-              <p className="flex items-center gap-2 text-sm font-medium">
-                <span
+        <div className="mt-4 space-y-4">
+          <PriorityOverviewBar summary={summary} />
+          <IssueTypeBar counts={issueTypes} />
+          <ol className="space-y-3">
+            {cards.map((card) => {
+              const contextLine = [
+                card.expected_value && card.observed_value
+                  ? `Expected ${card.expected_value} · Observed ${card.observed_value}`
+                  : card.expected_value
+                    ? `Expected ${card.expected_value}`
+                    : card.observed_value
+                      ? `Observed ${card.observed_value}`
+                      : null,
+                card.shelf ? card.shelf : null,
+              ]
+                .filter(Boolean)
+                .join(" · ");
+              return (
+                <li
+                  key={card.id}
                   className={cn(
-                    "size-2 shrink-0 rounded-full",
-                    rec.impact === "high"
-                      ? "bg-destructive"
-                      : rec.impact === "medium"
-                        ? "bg-warning"
-                        : "bg-muted-foreground",
+                    "rounded-xl border border-border/70 border-l-[3px] bg-background px-4 py-3",
+                    ACTION_PRIORITY_ACCENT[card.priority],
                   )}
-                />
-                {index + 1}. {rec.title}
-              </p>
-              {rec.detail && (
-                <p className="mt-1 text-xs text-muted-foreground">{rec.detail}</p>
-              )}
-            </li>
-          ))}
-        </ol>
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold tracking-tight">{card.title}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "rounded-full text-[10px] capitalize",
+                            ACTION_PRIORITY_PILL[card.priority],
+                          )}
+                        >
+                          {card.priority} priority
+                        </Badge>
+                        <span className="text-[11px] text-muted-foreground">{card.issue_type}</span>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 shrink-0 rounded-lg text-xs text-brand hover:text-brand"
+                      onClick={() => scrollToActionEvidence(card.evidence_target)}
+                    >
+                      {card.evidence_label} <ArrowRight className="ml-1 size-3.5" />
+                    </Button>
+                  </div>
+                  {contextLine ? (
+                    <p className="mt-2 text-xs font-medium text-foreground">{contextLine}</p>
+                  ) : null}
+                  {card.explanation ? (
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      {card.explanation}
+                    </p>
+                  ) : null}
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    → {card.recommended_action}
+                  </p>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       )}
-    </div>
+    </section>
   );
 }
 
