@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
+import { SiteFooter } from "@/components/Footer";
 import { Logo } from "@/components/Logo";
 
 export function AuthLayout({
@@ -14,7 +14,8 @@ export function AuthLayout({
   footer: ReactNode;
 }) {
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
+    <div className="flex min-h-screen flex-col bg-background">
+      <div className="grid flex-1 lg:grid-cols-2">
       <div className="flex flex-col px-6 py-8 sm:px-12">
         <Logo />
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-12">
@@ -23,12 +24,6 @@ export function AuthLayout({
           <div className="mt-8">{children}</div>
           <div className="mt-6 text-sm text-muted-foreground">{footer}</div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          © 2026 Aislix ·{" "}
-          <Link to="/" className="hover:text-foreground">
-            Back to home
-          </Link>
-        </p>
       </div>
 
       <div className="relative hidden overflow-hidden border-l border-border bg-surface lg:block">
@@ -58,6 +53,8 @@ export function AuthLayout({
           </div>
         </div>
       </div>
+      </div>
+      <SiteFooter />
     </div>
   );
 }

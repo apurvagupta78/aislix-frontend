@@ -24,6 +24,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { SiteFooter } from "@/components/Footer";
 import { Logo } from "@/components/Logo";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -836,6 +837,7 @@ export function AppShell({
             <div className="mt-7 animate-fade-in">{children}</div>
           </div>
         </main>
+        <SiteFooter />
       </div>
     </div>
     </TooltipProvider>

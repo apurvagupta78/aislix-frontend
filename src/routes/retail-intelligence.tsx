@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 
+import { SiteFooter } from "@/components/Footer";
 import { RetailIntelligenceNav } from "@/components/landing/retail-intelligence/RetailIntelligenceNav";
 import { HeroSection } from "@/components/landing/retail-intelligence/HeroSection";
 import { RetailIntelligenceDemo } from "@/components/landing/retail-intelligence/RetailIntelligenceDemo";
@@ -42,19 +43,7 @@ function RetailIntelligencePage() {
         <HeroSection />
         <RetailIntelligenceDemo />
       </main>
-      <footer className="border-t border-border bg-card py-8">
-        <div className="mx-auto flex max-w-6xl flex-col items-center gap-3 px-5 text-xs text-muted-foreground sm:flex-row sm:justify-between sm:px-8">
-          <span>© {new Date().getFullYear()} Aislix</span>
-          <span className="flex items-center gap-4">
-            <a href="/privacy" className="hover:text-foreground">
-              Privacy
-            </a>
-            <a href="/terms" className="hover:text-foreground">
-              Terms
-            </a>
-          </span>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

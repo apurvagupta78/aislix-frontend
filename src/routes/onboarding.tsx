@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, Check, Loader2, Plus, Trash2, UploadCloud } from "lucide-react";
 
+import { SiteFooter } from "@/components/Footer";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -588,6 +589,7 @@ function OnboardingPage() {
           </div>
         </div>
       </main>
+      <SiteFooter />
     </div>
   );
 }

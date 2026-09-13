@@ -8,6 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { SiteFooter } from "@/components/Footer";
 import { useServerFn } from "@tanstack/react-start";
 import {
   AlertTriangle,
@@ -411,6 +412,7 @@ function SharedReport() {
           </Link>
         </footer>
       </main>
+      <SiteFooter />
     </div>
   );
 }
