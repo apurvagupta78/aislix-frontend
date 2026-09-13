@@ -219,6 +219,7 @@ function SectionBlock({
           data={data}
           loading={loading}
           demoMode={demoMode}
+          comparison={comparison}
         />
       );
 

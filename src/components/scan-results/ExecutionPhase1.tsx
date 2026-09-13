@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
-  AlertTriangle,
   ArrowDown,
   ArrowUp,
   ArrowRight,
+  ChevronDown,
+  ChevronRight,
   Download,
   IndianRupee,
   Lock,
@@ -18,10 +19,7 @@ import { cn } from "@/lib/utils";
 import type { CustomerType } from "@/lib/customer-context";
 import { auditKpiDashboardFromResult } from "@/lib/execution-metrics";
 import {
-  buildActionCenterItems,
   buildAiSummaryParagraph,
-  buildAllDemoActions,
-  buildDetailedActions,
   buildRoleSummary,
   executiveRollupSections,
   buildKpiStrip,
@@ -33,9 +31,7 @@ import {
   recognitionCoverage,
   resolveFinancialImpact,
   shareOfShelfTopBrand,
-  totalActionCount,
   totalFacings,
-  type ActionCenterItem,
 } from "@/lib/scan-execution";
 import type { FinancialImpact } from "@/lib/scan-results";
 import type { ScanResult } from "@/lib/scan-results";
@@ -74,20 +70,9 @@ import {
   type ActionPriority,
 } from "@/lib/recommended-actions-display";
 import { downloadRecommendedActionsCsv } from "@/lib/recommended-actions-export";
-
-const severityStyles: Record<ActionCenterItem["severity"], string> = {
-  critical: "text-destructive",
-  high: "text-warning",
-  medium: "text-warning",
-  low: "text-muted-foreground",
-};
-
-const severityDot: Record<ActionCenterItem["severity"], string> = {
-  critical: "bg-destructive",
-  high: "bg-warning",
-  medium: "bg-warning",
-  low: "bg-muted-foreground",
-};
+import { buildIssuesToFixView, type IssueGroup } from "@/lib/issues-to-fix-display";
+import { downloadIssuesToFixCsv } from "@/lib/issues-to-fix-export";
+import type { PlanogramComparison } from "@/lib/planogram-compliance";
 
 export function ExecutionAuditHeader({
   data,
@@ -335,127 +320,250 @@ export function ExecutionKpiStripPanel({
   );
 }
 
-const DEMO_ACTION_PREVIEW = 5;
+function IssueGroupCard({
+  group,
+  open,
+  onToggle,
+}: {
+  group: IssueGroup;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const contextLine = (item: IssueGroup["items"][number]) =>
+    [
+      item.expected_value && item.observed_value
+        ? `Expected ${item.expected_value} · Observed ${item.observed_value}`
+        : item.expected
+          ? `Expected ${item.expected}`
+          : null,
+      item.observed ? `Observed ${item.observed}` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
+  return (
+    <li
+      className={cn(
+        "rounded-xl border border-border/70 border-l-[3px] bg-background",
+        ACTION_PRIORITY_ACCENT[group.priority],
+      )}
+    >
+      <div className="px-4 py-3">
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <button
+            type="button"
+            className="flex min-w-0 flex-1 items-start gap-2 text-left"
+            onClick={onToggle}
+            aria-expanded={open}
+          >
+            {open ? (
+              <ChevronDown className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+            )}
+            <div className="min-w-0">
+              <p className="text-sm font-semibold tracking-tight">{group.action_title}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    "rounded-full text-[10px] capitalize",
+                    ACTION_PRIORITY_PILL[group.priority],
+                  )}
+                >
+                  {group.priority} priority
+                </Badge>
+                <span className="text-[11px] text-muted-foreground">{group.issue_type}</span>
+                <span className="text-[11px] tabular-nums text-muted-foreground">
+                  {group.count} item{group.count === 1 ? "" : "s"}
+                </span>
+              </div>
+            </div>
+          </button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 shrink-0 rounded-lg text-xs text-brand hover:text-brand"
+            onClick={() => scrollToActionEvidence(group.evidence_target)}
+          >
+            View Evidence <ArrowRight className="ml-1 size-3.5" />
+          </Button>
+        </div>
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{group.explanation}</p>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Next step: {group.next_step}
+        </p>
+      </div>
+      {open && group.items.length > 0 ? (
+        <ul className="border-t border-border/60 bg-muted/15 px-4 py-2">
+          {group.items.map((item) => (
+            <li
+              key={item.id}
+              className="border-b border-border/40 py-2.5 last:border-b-0"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium">{item.title}</p>
+                  {contextLine(item) ? (
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">{contextLine(item)}</p>
+                  ) : null}
+                  {item.explanation ? (
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">{item.explanation}</p>
+                  ) : null}
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 shrink-0 rounded-lg px-2 text-[10px] text-brand"
+                  onClick={() => scrollToActionEvidence(item.evidence_target)}
+                >
+                  {item.evidence_label} <ArrowRight className="ml-0.5 size-3" />
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  );
+}
 
 export function ActionCenterPanel({
   data,
   loading,
   view,
   demoMode = false,
+  comparison,
 }: {
   data?: ScanResult;
   loading?: boolean;
   view?: ResultViewMode;
-  /** Guest demo — expand actions inline instead of linking to login. */
   demoMode?: boolean;
+  comparison?: PlanogramComparison | null;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  const items = buildActionCenterItems(data);
-  const detailed = demoMode ? buildAllDemoActions(data, view) : buildDetailedActions(data, view);
-  const issueCount = demoMode ? detailed.length : Math.max(totalActionCount(items), detailed.length);
-  const previewCount = demoMode ? (expanded ? detailed.length : DEMO_ACTION_PREVIEW) : 8;
-  const visibleActions = detailed.slice(0, previewCount);
+  const viewModel = data ? buildIssuesToFixView(data, comparison ?? null, demoMode, view) : null;
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
+  const toggleGroup = (id: string) =>
+    setOpenGroups((prev) => ({ ...prev, [id]: !prev[id] }));
 
   return (
-    <div className="card-surface p-5 sm:p-6">
-      <div className="flex items-start justify-between gap-3">
+    <section className="rounded-xl border border-border/70 bg-muted/30 p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold tracking-tight">
-            {issueCount > 0
-              ? `${issueCount} issue${issueCount === 1 ? "" : "s"} require action`
-              : "No critical issues detected"}
+          <h3 className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+            Issues to fix
           </h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Next-best actions from availability, placement, and planogram compliance
+          <p className="mt-2 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+            Aislix found these shelf issues and prioritised what needs attention first. Review the
+            evidence, take action and rescan to verify the fix.
           </p>
         </div>
-        {issueCount > 0 && (
-          <Badge variant="outline" className="rounded-full border-warning/40 text-warning">
-            <AlertTriangle className="mr-1 size-3" /> Action required
-          </Badge>
-        )}
+        {data && viewModel && viewModel.total > 0 ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="size-8 shrink-0 rounded-lg"
+            title="Download Action List"
+            aria-label="Download Action List"
+            onClick={() => downloadIssuesToFixCsv(data, comparison ?? null, demoMode)}
+          >
+            <Download className="size-3.5" />
+          </Button>
+        ) : null}
       </div>
+
       {loading ? (
         <div className="mt-4 space-y-2">
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-10 w-full" />
         </div>
-      ) : visibleActions.length > 0 ? (
-        <>
-        <ol className="mt-4 space-y-3">
-          {visibleActions.map((action, index) => (
-            <li
-              key={action.action_id}
-              className="rounded-xl border border-border bg-surface px-4 py-3"
-            >
-              <p className="flex items-center gap-2 text-sm font-medium">
-                <span
-                  className={cn(
-                    "size-2 shrink-0 rounded-full",
-                    severityDot[action.priority === "critical" ? "critical" : action.priority],
-                  )}
-                />
-                {index + 1}. {action.title}
-              </p>
-              {action.reason ? (
-                <p className="mt-1 text-xs text-muted-foreground">{action.reason}</p>
-              ) : null}
-              {(action.expected_state || action.actual_state) && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Expected: {action.expected_state ?? "—"} · Actual: {action.actual_state ?? "—"}
-                </p>
-              )}
-              {action.estimated_daily_impact_inr ? (
-                <p className="mt-1 text-xs font-medium text-warning">
-                  Est. opportunity: {formatInr(action.estimated_daily_impact_inr)}/day
-                </p>
-              ) : null}
-              <p className="mt-1 text-xs font-medium text-foreground">
-                → {action.recommended_action}
-              </p>
-            </li>
-          ))}
-        </ol>
-        {demoMode && detailed.length > DEMO_ACTION_PREVIEW ? (
-          <Button
-            variant="subtle"
-            size="sm"
-            className="mt-4 rounded-xl"
-            onClick={() => setExpanded((v) => !v)}
-          >
-            {expanded ? "Show fewer actions" : `View all ${detailed.length} actions`}
-          </Button>
-        ) : !demoMode && detailed.length > 8 ? (
-          <Button asChild variant="subtle" size="sm" className="mt-4 rounded-xl">
-            <Link to="/corrective-actions">View all actions</Link>
-          </Button>
-        ) : null}
-        </>
-      ) : items.length === 0 ? (
+      ) : !viewModel || viewModel.total === 0 ? (
         <p className="mt-4 text-sm text-muted-foreground">
-          Shelf execution looks healthy for this scan. Review inventory below for details.
+          No issues requiring action for this scan.
         </p>
       ) : (
-        <ul className="mt-4 space-y-2">
-          {items.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-start justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3"
-            >
-              <div>
-                <p className={cn("flex items-center gap-2 text-sm font-medium", severityStyles[item.severity])}>
-                  <span className={cn("size-2 shrink-0 rounded-full", severityDot[item.severity])} />
-                  {item.count} {item.label}
-                </p>
-                {item.detail && (
-                  <p className="mt-0.5 text-xs text-muted-foreground">{item.detail}</p>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-4 space-y-4">
+          <div className="rounded-xl border border-border/70 bg-background px-4 py-3">
+            <p className="text-xl font-semibold tabular-nums tracking-tight text-brand">
+              {viewModel.total} Issue{viewModel.total === 1 ? "" : "s"} to Fix
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              <span className="font-semibold tabular-nums text-foreground">
+                {viewModel.summary.high}
+              </span>{" "}
+              High ·{" "}
+              <span className="font-semibold tabular-nums text-foreground">
+                {viewModel.summary.medium}
+              </span>{" "}
+              Medium ·{" "}
+              <span className="font-semibold tabular-nums text-foreground">
+                {viewModel.summary.low}
+              </span>{" "}
+              Low
+            </p>
+            <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-muted">
+              {[
+                { count: viewModel.summary.high, className: "bg-destructive/80" },
+                { count: viewModel.summary.medium, className: "bg-amber-500" },
+                { count: viewModel.summary.low, className: "bg-brand" },
+              ].map(({ count, className }, i) =>
+                count > 0 ? (
+                  <div
+                    key={i}
+                    className={cn("h-full", className)}
+                    style={{
+                      width: `${(count / viewModel.total) * 100}%`,
+                    }}
+                  />
+                ) : null,
+              )}
+            </div>
+          </div>
+
+          {viewModel.type_counts.length >= 2 ? (
+            <div className="rounded-xl border border-border/70 bg-background px-4 py-3">
+              <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+                Issues by type
+              </p>
+              <ul className="mt-2 space-y-1.5">
+                {viewModel.type_counts.slice(0, 5).map((item) => {
+                  const max = viewModel.type_counts[0]?.count ?? 1;
+                  return (
+                    <li key={item.label}>
+                      <div className="flex items-center justify-between gap-2 text-[11px]">
+                        <span className="truncate text-muted-foreground">{item.label}</span>
+                        <span className="shrink-0 tabular-nums font-medium">{item.count}</span>
+                      </div>
+                      <div className="mt-0.5 h-1 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={cn("h-full rounded-full", item.bar_class)}
+                          style={{ width: `${(item.count / max) * 100}%` }}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : null}
+
+          <ol className="space-y-3">
+            {viewModel.groups.map((group) => (
+              <IssueGroupCard
+                key={group.id}
+                group={group}
+                open={openGroups[group.id] ?? group.priority === "high"}
+                onToggle={() => toggleGroup(group.id)}
+              />
+            ))}
+          </ol>
+        </div>
       )}
-    </div>
+    </section>
   );
 }
 
