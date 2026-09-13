@@ -205,5 +205,29 @@ export function clearDashboardFilterChip(
   return { ...filters, [chipKey]: defaults[chipKey as keyof DashboardFilterState] };
 }
 
+export type DashboardFilterSummary = {
+  audit_count: number;
+  store_count: number;
+  category_count: number;
+  label: string;
+};
+
+export function buildDashboardFilterSummary(
+  auditCount: number,
+  storeCount: number,
+  categoryCount: number,
+): DashboardFilterSummary {
+  const parts: string[] = [];
+  parts.push(`Showing ${auditCount} audit${auditCount === 1 ? "" : "s"}`);
+  if (storeCount > 0) parts.push(`${storeCount} store${storeCount === 1 ? "" : "s"}`);
+  if (categoryCount > 0) parts.push(`${categoryCount} categor${categoryCount === 1 ? "y" : "ies"}`);
+  return {
+    audit_count: auditCount,
+    store_count: storeCount,
+    category_count: categoryCount,
+    label: parts.join(" · "),
+  };
+}
+
 /** @deprecated use DashboardFilterState.datePreset */
 export type DashboardDateRange = DashboardDatePreset;

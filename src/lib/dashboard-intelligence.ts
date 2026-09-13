@@ -5,19 +5,25 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { dbError } from "@/lib/db/context";
+import { FALLBACK_CATEGORIES, type ShelfCategory } from "@/lib/categories.data";
 import {
+  attentionAreasForRole,
   effectiveDashboardRole,
+  KPI_DASHBOARD_LABELS,
   trendKpisForRole,
   type PriorityCategory,
   PRIORITY_OPPORTUNITY_CATEGORIES,
 } from "@/lib/dashboard-config";
 import {
+  buildDashboardFilterSummary,
   resolveDashboardDateBounds,
   type DashboardFilterOptions,
   type DashboardFilterState,
+  type DashboardFilterSummary,
   type DashboardSubCategoryOption,
   type DashboardTeamMember,
 } from "@/lib/dashboard-filters";
+import { roleTabLabel } from "@/lib/role-audit-ui";
 import { getUser, requireOrgId } from "@/lib/db/context";
 import type { AuditKpiId } from "@/lib/role-kpi-config";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
@@ -87,9 +93,39 @@ export type RecentAuditRow = {
   date: string;
   store_name: string;
   role: string;
+  category: string | null;
   osa: number | null;
   planogram: number | null;
   issues: number;
+  assigned_to: string | null;
+  status: string;
+};
+
+export type AttentionCard = {
+  key: string;
+  area_label: string;
+  score: number | null;
+  score_display: string;
+  explanation: string;
+  issue_count: number | null;
+  variance: string | null;
+  scan_id: string | null;
+  action_label: string;
+  kpi_id: AuditKpiId | null;
+};
+
+export type PerformancePeriodMetric = {
+  kpi_id: AuditKpiId;
+  label: string;
+  current: number | null;
+  previous: number | null;
+  change: number | null;
+};
+
+export type BrandCompetitionData = {
+  segments: ShareOfShelfSegment[];
+  insight: string | null;
+  scan_id: string | null;
 };
 
 export type PriorityOpportunityRow = {
@@ -113,13 +149,19 @@ export type WorkspaceDashboardData = {
   kpis: WorkspaceKpis;
   issues: IssuesSummary;
   issue_rows: DashboardIssueRow[];
+  attention_cards: AttentionCard[];
   performance_trend: PerformanceTrendPoint[];
+  performance_period: PerformancePeriodMetric[];
   improvement: ImprovementMetric[] | null;
   stores: StorePerformanceRow[];
   recent_audits: RecentAuditRow[];
   priority_opportunities: PriorityOpportunityRow[];
   role_visual: RoleVisualData | null;
+  brand_competition: BrandCompetitionData | null;
   filter_options: DashboardFilterOptions;
+  filter_summary: DashboardFilterSummary;
+  effective_role: AuditRoleTab;
+  has_completed_audits: boolean;
 };
 
 type AssignmentRow = {
@@ -280,6 +322,47 @@ async function loadTeamMembers(orgId: string): Promise<DashboardTeamMember[]> {
   });
 }
 
+function mergeCategoryMaster(
+  categoryMaster: ShelfCategory[],
+  poolScans: ScanRow[],
+  roleFilter: DashboardFilterState["role"],
+  metricsMap: Map<string, RetailIntelligencePayload | null>,
+): { categories: string[]; subcategories: DashboardSubCategoryOption[] } {
+  let scoped = poolScans;
+  if (roleFilter !== "all") {
+    scoped = scoped.filter((s) => scanRole(metricsMap.get(s.id) ?? null) === roleFilter);
+  }
+  const scanCategorySet = new Set(scoped.map((s) => s.category).filter(Boolean) as string[]);
+  const masterNames = categoryMaster.map((c) => c.name);
+  const categories = [
+    ...new Set([
+      ...masterNames,
+      ...scanCategorySet,
+    ]),
+  ].sort();
+
+  const subMap = new Map<string, DashboardSubCategoryOption>();
+  for (const cat of categoryMaster) {
+    for (const sub of cat.subcategories ?? []) {
+      subMap.set(`${cat.name}::${sub.label}`, {
+        category: cat.name,
+        value: sub.label,
+        label: sub.label,
+      });
+    }
+  }
+  for (const scan of scoped) {
+    const cat = scan.category?.trim();
+    const label = scanSubCategoryLabel(scan);
+    if (!cat || !label) continue;
+    subMap.set(`${cat}::${label}`, { category: cat, value: label, label });
+  }
+  return {
+    categories,
+    subcategories: [...subMap.values()].sort((a, b) => a.label.localeCompare(b.label)),
+  };
+}
+
 function buildFilterOptions(
   allStores: Array<{ id: string; name: string }>,
   poolScans: ScanRow[],
@@ -287,6 +370,7 @@ function buildFilterOptions(
   currentUserId: string | null,
   roleFilter: DashboardFilterState["role"],
   metricsMap: Map<string, RetailIntelligencePayload | null>,
+  categoryMaster: ShelfCategory[] = FALLBACK_CATEGORIES,
 ): DashboardFilterOptions {
   let scoped = poolScans;
   if (roleFilter !== "all") {
@@ -294,27 +378,200 @@ function buildFilterOptions(
   }
   const storeIds = new Set(scoped.map((s) => s.store_id).filter(Boolean));
   const stores = allStores.filter((s) => storeIds.has(s.id));
-  const categories = [...new Set(scoped.map((s) => s.category).filter(Boolean) as string[])].sort();
-  const subMap = new Map<string, DashboardSubCategoryOption>();
-  for (const scan of scoped) {
-    const cat = scan.category?.trim();
-    const label = scanSubCategoryLabel(scan);
-    if (!cat || !label) continue;
-    subMap.set(`${cat}::${label}`, { category: cat, value: label, label });
-  }
-  const activeMembers = teamMembers.filter((m) => {
-    return scoped.some(
-      (s) => s.created_by === m.user_id,
-    );
-  });
+  const { categories, subcategories } = mergeCategoryMaster(
+    categoryMaster,
+    poolScans,
+    roleFilter,
+    metricsMap,
+  );
+  const activeMembers = teamMembers.filter((m) =>
+    scoped.some((s) => s.created_by === m.user_id),
+  );
   const membersForFilter = activeMembers.length ? activeMembers : teamMembers;
   return {
     stores: stores.length ? stores : allStores,
     categories,
-    subcategories: [...subMap.values()].sort((a, b) => a.label.localeCompare(b.label)),
+    subcategories,
     team_members: membersForFilter,
     only_self: teamMembers.length <= 1,
     current_user_id: currentUserId,
+  };
+}
+
+function scoreExplanation(score: number | null, issueCount: number | null): string {
+  if (score === null) return "Not enough audit data in this view yet.";
+  if (issueCount && issueCount > 0) {
+    return `${issueCount} open issue${issueCount === 1 ? "" : "s"} need attention in this area.`;
+  }
+  if (score >= 90) return "Strong execution — shelves are performing well here.";
+  if (score >= 75) return "Acceptable, but there is room to tighten execution.";
+  return "Below target — review recent audits and corrective actions.";
+}
+
+function buildAttentionCards(
+  scans: ScanRow[],
+  metricsMap: Map<string, RetailIntelligencePayload | null>,
+  effectiveRole: AuditRoleTab,
+  categoryCounts: Record<PriorityCategory, number>,
+): AttentionCard[] {
+  const areas = attentionAreasForRole(effectiveRole);
+
+  return areas.map((area) => {
+    const values: Array<{ scanId: string; value: number }> = [];
+    for (const scan of scans) {
+      const metrics = metricsMap.get(scan.id) ?? null;
+      for (const kpiId of area.kpis) {
+        const val = kpiValue(metrics, effectiveRole, kpiId, scan);
+        if (val !== null) values.push({ scanId: scan.id, value: val });
+      }
+    }
+
+    let score: number | null = values.length ? avg(values.map((v) => v.value)) : null;
+    let variance: string | null = null;
+    let explanation = scoreExplanation(score, null);
+    let scanId: string | null = null;
+    let actionLabel = "View audits →";
+    let kpiId: AuditKpiId | null = area.kpis[0] ?? null;
+
+    if (values.length) {
+      const worst = values.reduce((a, b) => (a.value <= b.value ? a : b));
+      scanId = worst.scanId;
+      if (score !== null) {
+        const target = 95;
+        const delta = Math.round(score - target);
+        if (delta < 0) variance = `${Math.abs(delta)} pts below target`;
+        else if (delta > 0) variance = `${delta} pts above target`;
+      }
+    }
+
+    let issueCount: number | null = null;
+    if (area.issueCategories?.length) {
+      issueCount = area.issueCategories.reduce((sum, cat) => sum + (categoryCounts[cat] ?? 0), 0);
+      explanation = scoreExplanation(score, issueCount || null);
+    }
+
+    if (area.competitive) {
+      actionLabel = "View Brand Analysis →";
+      const latest = scans.at(-1);
+      if (latest) {
+        const metrics = metricsMap.get(latest.id);
+        const insights = metrics?.competitive_insights ?? [];
+        const primary = insights[0];
+        if (primary?.share_note) {
+          explanation = primary.share_note;
+          const match = primary.share_note.match(/(\d+(?:\.\d+)?)\s*%/);
+          if (match) score = Number(match[1]);
+        } else if (score === null && typeof latest.share_of_shelf_percent === "number") {
+          score = normalizePercent(latest.share_of_shelf_percent) ?? latest.share_of_shelf_percent;
+        }
+        scanId = latest.id;
+        if (primary?.brand && variance === null && score !== null) {
+          variance = `${primary.brand} share tracked`;
+        }
+      }
+    }
+
+    const scoreDisplay =
+      score === null
+        ? "Not enough data"
+        : area.kpis[0] === "facing_count"
+          ? `${Math.round(score)}`
+          : `${Math.round(score)}%`;
+
+    return {
+      key: area.key,
+      area_label: area.competitive ? "Brand & Competition" : area.label,
+      score,
+      score_display: scoreDisplay,
+      explanation,
+      issue_count: issueCount,
+      variance,
+      scan_id: scanId,
+      action_label: actionLabel,
+      kpi_id: kpiId,
+    };
+  });
+}
+
+function buildPerformancePeriod(
+  scans: ScanRow[],
+  metricsMap: Map<string, RetailIntelligencePayload | null>,
+  effectiveRole: AuditRoleTab,
+): PerformancePeriodMetric[] {
+  if (scans.length < 2) return [];
+  const kpiIds = trendKpisForRole(effectiveRole).slice(0, 5);
+  const mid = Math.floor(scans.length / 2);
+  const previous = scans.slice(0, mid);
+  const current = scans.slice(mid);
+
+  return kpiIds.map((kpiId) => {
+    const prevVals: number[] = [];
+    const currVals: number[] = [];
+    for (const scan of previous) {
+      const v = kpiValue(metricsMap.get(scan.id) ?? null, effectiveRole, kpiId, scan);
+      if (v !== null) prevVals.push(v);
+    }
+    for (const scan of current) {
+      const v = kpiValue(metricsMap.get(scan.id) ?? null, effectiveRole, kpiId, scan);
+      if (v !== null) currVals.push(v);
+    }
+    const prevAvg = prevVals.length ? avg(prevVals) : null;
+    const currAvg = currVals.length ? avg(currVals) : null;
+    const change =
+      prevAvg !== null && currAvg !== null ? Math.round(currAvg - prevAvg) : null;
+    return {
+      kpi_id: kpiId,
+      label: KPI_DASHBOARD_LABELS[kpiId],
+      current: currAvg !== null ? Math.round(currAvg) : null,
+      previous: prevAvg !== null ? Math.round(prevAvg) : null,
+      change,
+    };
+  });
+}
+
+function buildBrandCompetition(
+  scans: ScanRow[],
+  metricsMap: Map<string, RetailIntelligencePayload | null>,
+  effectiveRole: AuditRoleTab,
+): BrandCompetitionData | null {
+  if (effectiveRole !== "fmcg" || !scans.length) return null;
+  const latest = scans[scans.length - 1]!;
+  const metrics = metricsMap.get(latest.id);
+  const insights = metrics?.competitive_insights ?? [];
+  if (insights.length) {
+    const segments: ShareOfShelfSegment[] = [];
+    for (const [i, row] of insights.entries()) {
+      const match = row.share_note?.match(/(\d+(?:\.\d+)?)\s*%/);
+      const share = match ? Number(match[1]) : null;
+      if (share === null) continue;
+      segments.push({
+        label: row.brand ?? `Brand ${i + 1}`,
+        share,
+        is_primary: i === 0,
+      });
+    }
+    if (segments.length) {
+      return {
+        segments,
+        insight: insights[0]?.share_note ?? null,
+        scan_id: latest.id,
+      };
+    }
+  }
+  const brandShare = metrics?.share_of_facings ?? metrics?.linear_shelf_share;
+  const val =
+    brandShare && typeof brandShare === "object" && "value" in brandShare
+      ? (brandShare as { value?: number }).value
+      : latest.share_of_shelf_percent;
+  if (typeof val !== "number") return null;
+  const primary = Math.round(normalizePercent(val) ?? val);
+  return {
+    segments: [
+      { label: "Target brand", share: primary, is_primary: true },
+      { label: "Competitor brands", share: Math.max(0, 100 - primary), is_primary: false },
+    ],
+    insight: null,
+    scan_id: latest.id,
   };
 }
 
@@ -766,13 +1023,16 @@ export async function fetchWorkspaceDashboard(
     }))
     .sort((a, b) => (b.open_issues - a.open_issues) || (b.audits - a.audits));
 
+  const memberNameById = new Map(teamMembers.map((m) => [m.user_id, m.name || m.email]));
+
   // --- Recent audits ---
   const recent_audits: RecentAuditRow[] = [...scans]
     .reverse()
-    .slice(0, 8)
+    .slice(0, 10)
     .map((scan) => {
       const metrics = metricsMap.get(scan.id);
       const role = scanRole(metrics) ?? effectiveRole;
+      const assignment = assignmentByScanId.get(scan.id);
       const issueCount =
         (metrics?.opportunity_ledger ?? []).filter((r) => {
           const st = (r.status ?? "open").toLowerCase();
@@ -782,17 +1042,23 @@ export async function fetchWorkspaceDashboard(
           const st = (a.status ?? "open").toLowerCase();
           return st !== "resolved" && st !== "verified";
         }).length;
+      const assigneeId = assignment?.assignee_id ?? null;
       return {
         scan_id: scan.id,
         date: scan.created_at,
         store_name: scan.stores?.name ?? "—",
-        role,
+        role: roleTabLabel(role),
+        category: scan.category,
         osa: typeof scan.osa_percent === "number" ? normalizePercent(scan.osa_percent) ?? scan.osa_percent : null,
         planogram:
           typeof scan.planogram_compliance_percent === "number"
             ? normalizePercent(scan.planogram_compliance_percent) ?? scan.planogram_compliance_percent
             : null,
         issues: issueCount,
+        assigned_to: assigneeId ? memberNameById.get(assigneeId) ?? "Assigned" : null,
+        status: assignment?.status
+          ? assignment.status.replace(/_/g, " ")
+          : "Completed",
       };
     });
 
@@ -861,16 +1127,39 @@ export async function fetchWorkspaceDashboard(
     if (locations.length) role_visual = { kind: "location_accuracy", locations };
   }
 
+  const categoryCountInView = new Set(scans.map((s) => s.category).filter(Boolean)).size;
+  const filter_summary = buildDashboardFilterSummary(
+    scans.length,
+    storeIds.size,
+    categoryCountInView,
+  );
+
+  const attention_cards = buildAttentionCards(
+    scans,
+    metricsMap,
+    effectiveRole,
+    categoryCounts,
+  );
+
+  const performance_period = buildPerformancePeriod(scans, metricsMap, effectiveRole);
+  const brand_competition = buildBrandCompetition(scans, metricsMap, effectiveRole);
+
   return {
     kpis,
     issues: { total: issuesTotal, high, medium, low },
     issue_rows: issueRows,
+    attention_cards,
     performance_trend,
+    performance_period,
     improvement,
     stores,
     recent_audits,
     priority_opportunities,
     role_visual,
+    brand_competition,
     filter_options,
+    filter_summary,
+    effective_role: effectiveRole,
+    has_completed_audits: scans.length > 0,
   };
 }

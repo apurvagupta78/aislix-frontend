@@ -102,3 +102,72 @@ export function effectiveDashboardRole(
 export function trendKpisForRole(role: AuditRoleTab): AuditKpiId[] {
   return ROLE_TREND_KPIS[role];
 }
+
+/** Default chart toggles for performance-over-time (first three where available). */
+export const DEFAULT_TREND_KPIS: AuditKpiId[] = [
+  "osa",
+  "planogram_compliance",
+  "assortment_compliance",
+];
+
+export type RoleAttentionArea = {
+  key: string;
+  label: string;
+  kpis: AuditKpiId[];
+  issueCategories?: PriorityCategory[];
+  /** FMCG brand & competition card — uses share-of-shelf + competitive insights when present. */
+  competitive?: boolean;
+};
+
+/** Five attention cards per role — drives the intelligence row on the workspace dashboard. */
+export const ROLE_ATTENTION_AREAS: Record<AuditRoleTab, RoleAttentionArea[]> = {
+  supermarket: [
+    { key: "availability", label: "Availability", kpis: ["osa"], issueCategories: ["availability"] },
+    { key: "shelf_execution", label: "Shelf Execution", kpis: ["planogram_compliance"], issueCategories: ["placement"] },
+    { key: "assortment", label: "Assortment", kpis: ["assortment_compliance"], issueCategories: ["assortment"] },
+    {
+      key: "pricing_promotions",
+      label: "Pricing & Promotions",
+      kpis: ["price_compliance", "promotional_compliance"],
+      issueCategories: ["pricing", "promotion"],
+    },
+    {
+      key: "store_issues",
+      label: "Store Issues",
+      kpis: ["osa", "planogram_compliance"],
+      issueCategories: ["availability", "placement", "pricing", "promotion", "assortment"],
+    },
+  ],
+  darkstore: [
+    { key: "availability", label: "Availability", kpis: ["osa"], issueCategories: ["availability"] },
+    { key: "location_accuracy", label: "Location Accuracy", kpis: ["location_accuracy"] },
+    { key: "planogram", label: "Planogram", kpis: ["planogram_compliance"], issueCategories: ["placement"] },
+    { key: "assortment", label: "Assortment", kpis: ["assortment_compliance"], issueCategories: ["assortment"] },
+    { key: "facing", label: "Facing", kpis: ["facing_count"] },
+  ],
+  fmcg: [
+    { key: "share_of_shelf", label: "Share of Shelf", kpis: ["share_of_shelf"], competitive: true },
+    { key: "availability", label: "Availability", kpis: ["osa"], issueCategories: ["availability"] },
+    { key: "facing", label: "Facing", kpis: ["facing_count"] },
+    { key: "planogram", label: "Planogram", kpis: ["planogram_compliance"], issueCategories: ["placement"] },
+    { key: "promotion", label: "Promotion", kpis: ["promotional_compliance"], issueCategories: ["promotion"] },
+  ],
+  distributor: [
+    { key: "availability", label: "Availability", kpis: ["osa"], issueCategories: ["availability"] },
+    { key: "msl", label: "MSL", kpis: ["msl_compliance"], issueCategories: ["assortment"] },
+    { key: "planogram", label: "Planogram", kpis: ["planogram_compliance"], issueCategories: ["placement"] },
+    { key: "pricing", label: "Pricing", kpis: ["price_compliance"], issueCategories: ["pricing"] },
+    { key: "promotion", label: "Promotion", kpis: ["promotional_compliance"], issueCategories: ["promotion"] },
+  ],
+  local: [
+    { key: "availability", label: "Availability", kpis: ["osa"], issueCategories: ["availability"] },
+    { key: "assortment", label: "Assortment", kpis: ["assortment_compliance"], issueCategories: ["assortment"] },
+    { key: "facing", label: "Facing", kpis: ["facing_count"] },
+    { key: "pricing", label: "Pricing", kpis: ["price_compliance"], issueCategories: ["pricing"] },
+    { key: "promotion", label: "Promotion", kpis: ["promotional_compliance"], issueCategories: ["promotion"] },
+  ],
+};
+
+export function attentionAreasForRole(role: AuditRoleTab): RoleAttentionArea[] {
+  return ROLE_ATTENTION_AREAS[role];
+}

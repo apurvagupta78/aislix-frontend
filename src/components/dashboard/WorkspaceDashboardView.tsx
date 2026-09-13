@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
   BarChart3,
@@ -50,6 +50,31 @@ const tooltipStyle = {
   background: "var(--card)",
   fontSize: 12,
 } as const;
+
+export function CommandSectionHeader({
+  eyebrow,
+  description,
+}: {
+  eyebrow: string;
+  description?: string;
+}) {
+  return (
+    <div className="mb-4">
+      <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        {eyebrow}
+      </p>
+      {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
+    </div>
+  );
+}
+
+function scoreTone(score: number | null): string {
+  if (score === null) return "text-muted-foreground";
+  if (score >= 90) return "text-accent-green";
+  if (score >= 75) return "text-foreground";
+  if (score >= 60) return "text-warning";
+  return "text-destructive";
+}
 
 function KpiCard({
   title,
@@ -148,7 +173,7 @@ export function WorkspaceKpiSummary({
         description="Issues needing attention"
       />
       <KpiCard
-        title="Issues resolved"
+        title="Issue resolution"
         value={data.issues_resolved_rate !== null ? formatPercent(data.issues_resolved_rate) : "—"}
         description="Resolved after follow-up"
       />
@@ -161,7 +186,7 @@ export function WorkspaceKpiSummary({
       <KpiCard
         title="Audits remaining"
         value={formatQuota(data.audits_remaining)}
-        description="This month's audit allowance"
+        description="This month's allowance"
       />
     </div>
   );
@@ -184,112 +209,77 @@ function PriorityBar({ high, medium, low, total }: { high: number; medium: numbe
 }
 
 export function WhatNeedsAttentionSection({ data }: { data: WorkspaceDashboardData }) {
-  const { issues, issue_rows } = data;
+  const cards = data.attention_cards;
   return (
     <section className="mt-8">
-      <SectionHeader
-        title="What needs attention"
-        description="See the stores, shelves and issues that need action first."
+      <CommandSectionHeader
+        eyebrow="What needs attention"
+        description="Five areas that need the most attention in the selected view. Click any card to open the audits and evidence behind it."
       />
-      <div className="card-surface mt-4 p-5 sm:p-6">
-        <div className="grid gap-4 sm:grid-cols-4">
-          <div>
-            <p className="text-xs text-muted-foreground">Total open issues</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums">{issues.total || "—"}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">High priority</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums text-destructive">{issues.high || "—"}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Medium priority</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums text-warning">{issues.medium || "—"}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Low priority</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums text-brand">{issues.low || "—"}</p>
-          </div>
-        </div>
-        <div className="mt-4">
-          <PriorityBar high={issues.high} medium={issues.medium} low={issues.low} total={issues.total} />
-        </div>
-        {issue_rows.length ? (
-          <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[520px] text-left text-xs">
-              <thead>
-                <tr className="border-b border-border text-muted-foreground">
-                  <th className="pb-2 pr-3 font-medium">Store</th>
-                  <th className="pb-2 pr-3 font-medium">Issue</th>
-                  <th className="pb-2 pr-3 font-medium">Priority</th>
-                  <th className="pb-2 pr-3 font-medium">Status</th>
-                  <th className="pb-2 font-medium">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {issue_rows.map((row) => (
-                  <tr key={row.id} className="border-b border-border/50 last:border-0">
-                    <td className="py-2.5 pr-3 font-medium">{row.store_name}</td>
-                    <td className="py-2.5 pr-3 text-muted-foreground">{row.issue}</td>
-                    <td className="py-2.5 pr-3">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "text-[10px] capitalize",
-                          row.priority === "high" && "border-destructive/40 text-destructive",
-                          row.priority === "medium" && "border-warning/40 text-warning",
-                        )}
-                      >
-                        {row.priority}
-                      </Badge>
-                    </td>
-                    <td className="py-2.5 pr-3 text-muted-foreground">{row.status}</td>
-                    <td className="py-2.5">
-                      {row.scan_id ? (
-                        <Link
-                          to="/results"
-                          search={{ scan: row.scan_id }}
-                          className="font-medium text-brand hover:underline"
-                        >
-                          Review
-                        </Link>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="mt-5 text-sm text-muted-foreground">
+      {!cards.length ? (
+        <div className="card-surface p-6">
+          <p className="text-sm text-muted-foreground">
             No open issues. Your latest audits have no unresolved findings.
           </p>
-        )}
-        <div className="mt-4 flex justify-end">
-          <Button asChild variant="ghost" size="sm" className="rounded-xl text-xs">
-            <Link to="/history">
-              View all issues <ArrowRight className="size-3.5" />
-            </Link>
-          </Button>
         </div>
-      </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {cards.map((card) => {
+            const body = (
+              <div className="flex h-full flex-col rounded-xl border border-border/70 bg-card p-4 shadow-sm transition-shadow hover:shadow-md">
+                <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-muted-foreground">
+                  {card.area_label}
+                </p>
+                <p className={cn("mt-2 text-2xl font-semibold tabular-nums", scoreTone(card.score))}>
+                  {card.score_display}
+                </p>
+                {card.variance ? (
+                  <p className="mt-1 text-xs font-medium text-warning">{card.variance}</p>
+                ) : null}
+                <p className="mt-2 flex-1 text-xs leading-relaxed text-muted-foreground">
+                  {card.explanation}
+                </p>
+                {card.issue_count ? (
+                  <p className="mt-2 text-[11px] font-medium text-muted-foreground">
+                    {card.issue_count} open issue{card.issue_count === 1 ? "" : "s"}
+                  </p>
+                ) : null}
+                <p className="mt-3 text-xs font-semibold text-brand">{card.action_label}</p>
+              </div>
+            );
+            if (!card.scan_id) return <div key={card.key}>{body}</div>;
+            return (
+              <Link
+                key={card.key}
+                to="/results"
+                search={{ scan: card.scan_id }}
+                className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              >
+                {body}
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 }
 
-export function ShelfPerformanceSection({
+export function PerformanceOverTimeSection({
   data,
   role,
 }: {
   data: WorkspaceDashboardData;
   role: DashboardRoleFilter;
 }) {
-  const effectiveRole = effectiveDashboardRole(role);
+  const effectiveRole = effectiveDashboardRole(role, data.effective_role);
   const availableKpis = trendKpisForRole(effectiveRole);
-  const [activeKpis, setActiveKpis] = useState<AuditKpiId[]>(() =>
-    availableKpis.slice(0, 3),
-  );
+  const [activeKpis, setActiveKpis] = useState<AuditKpiId[]>(() => {
+    const defaults: AuditKpiId[] = ["osa", "planogram_compliance", "assortment_compliance"];
+    return defaults.filter((k) => availableKpis.includes(k)).length
+      ? defaults.filter((k) => availableKpis.includes(k))
+      : availableKpis.slice(0, 3);
+  });
 
   const toggleKpi = (kpi: AuditKpiId) => {
     setActiveKpis((current) =>
@@ -298,14 +288,15 @@ export function ShelfPerformanceSection({
   };
 
   const chartData = data.performance_trend;
+  const periodMetrics = data.performance_period.filter((m) => activeKpis.includes(m.kpi_id));
 
   return (
     <section className="mt-8">
-      <SectionHeader
-        title="Shelf performance"
-        description="Track how your shelves are performing and whether execution is improving over time."
+      <CommandSectionHeader
+        eyebrow="Performance over time"
+        description="See whether shelf execution is improving or slipping across audits."
       />
-      <div className="card-surface mt-4 p-5 sm:p-6">
+      <div className="card-surface p-5 sm:p-6">
         <div className="mb-4 flex flex-wrap gap-2">
           {availableKpis.map((kpi) => (
             <button
@@ -323,10 +314,42 @@ export function ShelfPerformanceSection({
             </button>
           ))}
         </div>
+        {periodMetrics.length ? (
+          <div className="mb-4 grid gap-2 sm:grid-cols-3">
+            {periodMetrics.slice(0, 3).map((m) => (
+              <div key={m.kpi_id} className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {m.label}
+                </p>
+                <p className="mt-1 text-sm font-semibold tabular-nums">
+                  {m.current !== null ? `${m.current}%` : "—"}
+                  {m.previous !== null ? (
+                    <span className="ml-1 text-xs font-normal text-muted-foreground">
+                      vs {m.previous}%
+                    </span>
+                  ) : null}
+                </p>
+                {m.change !== null ? (
+                  <p
+                    className={cn(
+                      "text-[11px] font-medium",
+                      m.change > 0 && "text-accent-green",
+                      m.change < 0 && "text-destructive",
+                      m.change === 0 && "text-muted-foreground",
+                    )}
+                  >
+                    {m.change >= 0 ? "+" : ""}
+                    {m.change} pts
+                  </p>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        ) : null}
         {chartData.length < 2 ? (
           <EmptyState
             title="Not enough trend data"
-            description="Complete more audits to see performance trends."
+            description="Complete more audits to start tracking performance trends."
             icon={<BarChart3 className="size-5" />}
           />
         ) : (
@@ -354,6 +377,57 @@ export function ShelfPerformanceSection({
             </ResponsiveContainer>
           </div>
         )}
+      </div>
+    </section>
+  );
+}
+
+/** @deprecated use PerformanceOverTimeSection */
+export const ShelfPerformanceSection = PerformanceOverTimeSection;
+
+export function BrandCompetitionSection({ data }: { data: WorkspaceDashboardData }) {
+  const brand = data.brand_competition;
+  if (!brand?.segments.length) return null;
+
+  return (
+    <section className="mt-8">
+      <CommandSectionHeader
+        eyebrow="Brand & competition"
+        description="See how your brand's shelf presence compares with competing brands."
+      />
+      <div className="card-surface p-5 sm:p-6">
+        <div className="flex h-5 overflow-hidden rounded-full border border-border/60">
+          {brand.segments.map((seg, i) => (
+            <div
+              key={seg.label}
+              className={cn("h-full", i === 0 ? "bg-brand" : i === 1 ? "bg-brand/60" : "bg-brand/30")}
+              style={{ width: `${Math.max(0, Math.min(100, seg.share))}%` }}
+              title={`${seg.label} ${Math.round(seg.share)}%`}
+            />
+          ))}
+        </div>
+        <ul className="mt-3 space-y-1.5 text-xs">
+          {brand.segments.map((seg) => (
+            <li key={seg.label} className="flex justify-between gap-2">
+              <span className={seg.is_primary ? "font-medium text-brand" : "text-muted-foreground"}>
+                {seg.label}
+              </span>
+              <span className="tabular-nums">{Math.round(seg.share)}%</span>
+            </li>
+          ))}
+        </ul>
+        {brand.insight ? (
+          <p className="mt-3 text-xs text-muted-foreground">{brand.insight}</p>
+        ) : null}
+        {brand.scan_id ? (
+          <div className="mt-4">
+            <Button asChild variant="ghost" size="sm" className="rounded-xl text-xs">
+              <Link to="/results" search={{ scan: brand.scan_id }}>
+                View Brand Analysis <ArrowRight className="size-3.5" />
+              </Link>
+            </Button>
+          </div>
+        ) : null}
       </div>
     </section>
   );
@@ -400,7 +474,30 @@ export function TrackImprovementSection({ data }: { data: WorkspaceDashboardData
   );
 }
 
+export function RetailPerformanceSection({
+  data,
+  isLoading,
+  error,
+  onRetry,
+}: {
+  data?: WorkspaceDashboardData["kpis"];
+  isLoading: boolean;
+  error?: Error | null;
+  onRetry?: () => void;
+}) {
+  return (
+    <section>
+      <CommandSectionHeader
+        eyebrow="Retail performance"
+        description="Your key shelf and audit metrics for the selected view."
+      />
+      <WorkspaceKpiSummary data={data} isLoading={isLoading} error={error} onRetry={onRetry} />
+    </section>
+  );
+}
+
 export function StorePerformanceSection({ data }: { data: WorkspaceDashboardData }) {
+  const comparable = data.stores.length > 1 || data.stores.some((s) => s.audits > 1);
   const [sortKey, setSortKey] = useState<"store_name" | "audits" | "osa" | "open_issues">("open_issues");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
@@ -425,18 +522,15 @@ export function StorePerformanceSection({ data }: { data: WorkspaceDashboardData
     }
   };
 
+  if (!data.stores.length || !comparable) return null;
+
   return (
     <section className="mt-8">
-      <SectionHeader
-        title="Store performance"
-        description="See which stores are performing well, which need attention and how execution is changing."
+      <CommandSectionHeader
+        eyebrow="Store performance"
+        description="See which stores are performing well and which need attention."
       />
-      <div className="card-surface mt-4 p-5 sm:p-6">
-        {data.stores.length === 1 ? (
-          <p className="mb-4 text-xs text-muted-foreground">
-            Your workspace currently contains one store with audit data in this period.
-          </p>
-        ) : null}
+      <div className="card-surface p-5 sm:p-6">
         {!rows.length ? (
           <EmptyState
             title="No store data yet"
@@ -502,13 +596,15 @@ export function StorePerformanceSection({ data }: { data: WorkspaceDashboardData
 }
 
 export function RecentAuditsSection({ data }: { data: WorkspaceDashboardData }) {
+  const navigate = useNavigate();
+
   return (
     <section className="mt-8">
-      <SectionHeader
-        title="Recent audits"
-        description="Review your latest shelf visits and see what changed."
+      <CommandSectionHeader
+        eyebrow="Recent audits"
+        description="Open any audit to review its results, evidence and action history."
       />
-      <div className="card-surface mt-4 p-5 sm:p-6">
+      <div className="card-surface p-5 sm:p-6">
         {!data.recent_audits.length ? (
           <EmptyState
             title="No audits yet"
@@ -521,42 +617,46 @@ export function RecentAuditsSection({ data }: { data: WorkspaceDashboardData }) 
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-left text-xs">
+            <table className="w-full min-w-[720px] text-left text-xs">
               <thead>
                 <tr className="border-b border-border text-muted-foreground">
                   <th className="pb-2 pr-3 font-medium">Date</th>
                   <th className="pb-2 pr-3 font-medium">Store</th>
                   <th className="pb-2 pr-3 font-medium">Role</th>
+                  <th className="pb-2 pr-3 font-medium">Category</th>
                   <th className="pb-2 pr-3 font-medium">OSA</th>
                   <th className="pb-2 pr-3 font-medium">Planogram</th>
-                  <th className="pb-2 font-medium">Issues</th>
+                  <th className="pb-2 pr-3 font-medium">Issues</th>
+                  <th className="pb-2 pr-3 font-medium">Assigned to</th>
+                  <th className="pb-2 font-medium">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {data.recent_audits.map((row) => (
-                  <tr key={row.scan_id} className="border-b border-border/50 last:border-0">
-                    <td className="py-2.5 pr-3">
-                      <Link
-                        to="/results"
-                        search={{ scan: row.scan_id }}
-                        className="font-medium text-brand hover:underline"
-                      >
-                        {new Date(row.date).toLocaleDateString(undefined, {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </Link>
+                  <tr
+                    key={row.scan_id}
+                    className="cursor-pointer border-b border-border/50 last:border-0 hover:bg-brand-soft/30"
+                    onClick={() => void navigate({ to: "/results", search: { scan: row.scan_id } })}
+                  >
+                    <td className="py-2.5 pr-3 font-medium text-brand">
+                      {new Date(row.date).toLocaleDateString(undefined, {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
                     </td>
                     <td className="py-2.5 pr-3">{row.store_name}</td>
-                    <td className="py-2.5 pr-3 capitalize">{row.role}</td>
+                    <td className="py-2.5 pr-3">{row.role}</td>
+                    <td className="py-2.5 pr-3 text-muted-foreground">{row.category ?? "—"}</td>
                     <td className="py-2.5 pr-3 tabular-nums">
                       {row.osa !== null ? `${Math.round(row.osa)}%` : "—"}
                     </td>
                     <td className="py-2.5 pr-3 tabular-nums">
                       {row.planogram !== null ? `${Math.round(row.planogram)}%` : "—"}
                     </td>
-                    <td className="py-2.5 tabular-nums">{row.issues || "—"}</td>
+                    <td className="py-2.5 pr-3 tabular-nums">{row.issues || "—"}</td>
+                    <td className="py-2.5 pr-3 text-muted-foreground">{row.assigned_to ?? "—"}</td>
+                    <td className="py-2.5 capitalize text-muted-foreground">{row.status}</td>
                   </tr>
                 ))}
               </tbody>

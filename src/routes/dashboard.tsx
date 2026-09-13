@@ -5,21 +5,17 @@ import { Sparkles } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
-import { QuickActions, SectionHeader } from "@/components/dashboard/DashboardParts";
 import {
-  AuditQualitySection,
-  PriorityOpportunitiesSection,
+  BrandCompetitionSection,
+  PerformanceOverTimeSection,
   RecentAuditsSection,
-  RoleVisualSection,
-  ShelfPerformanceSection,
+  RetailPerformanceSection,
   StorePerformanceSection,
-  TrackImprovementSection,
   WhatNeedsAttentionSection,
   WorkspaceDashboardSkeleton,
-  WorkspaceKpiSummary,
 } from "@/components/dashboard/WorkspaceDashboardView";
 import { Button } from "@/components/ui/button";
-import { ErrorState } from "@/components/States";
+import { EmptyState, ErrorState } from "@/components/States";
 import { fetchDashboard } from "@/lib/dashboard";
 import { DEMO_WORKSPACE_DASHBOARD, isDemoMode } from "@/lib/dashboard-demo";
 import { DEFAULT_DASHBOARD_FILTERS, type DashboardFilterState } from "@/lib/dashboard-filters";
@@ -38,7 +34,7 @@ export const Route = createFileRoute("/dashboard")({
       { property: "og:title", content: "Aislix Workspace Dashboard" },
       {
         property: "og:description",
-        content: "See what changed across your shelves — audits, issues, improvement and store performance.",
+        content: "See what's happening across your retail operation — audits, issues, improvement and store performance.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -83,7 +79,7 @@ function Dashboard() {
   return (
     <AppShell
       title={demo ? "Live demo dashboard" : name ? `Welcome back, ${name}` : "Dashboard"}
-      description="See what changed across your shelves."
+      description="See what's happening across your retail operation."
       actions={
         demo ? (
           <>
@@ -108,6 +104,10 @@ function Dashboard() {
         )
       }
     >
+      <p className="-mt-2 mb-4 text-sm text-muted-foreground">
+        Track performance, find issues and see where execution is improving.
+      </p>
+
       {demo ? (
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand/25 bg-brand-soft px-4 py-3">
           <div className="flex items-start gap-2.5">
@@ -126,6 +126,7 @@ function Dashboard() {
       <DashboardFilterBar
         filters={filters}
         onChange={setFilters}
+        summaryLabel={data?.filter_summary.label}
         options={
           data?.filter_options ?? {
             stores: [],
@@ -146,37 +147,35 @@ function Dashboard() {
           description={error.message}
           onRetry={() => void dashboardQuery.refetch()}
         />
+      ) : data && !data.has_completed_audits && !demo ? (
+        <div className="mt-8">
+          <EmptyState
+            title="Your dashboard will come alive after your first audit."
+            description="Complete an AI shelf audit to start tracking performance, issues and improvement."
+            action={
+              <Button asChild variant="brand" size="sm" className="rounded-xl">
+                <Link to="/scan">
+                  Start new audit <span aria-hidden>→</span>
+                </Link>
+              </Button>
+            }
+          />
+        </div>
       ) : data ? (
         <>
           <div className="mt-6">
-            <WorkspaceKpiSummary data={data.kpis} isLoading={false} />
+            <RetailPerformanceSection data={data.kpis} isLoading={false} />
           </div>
 
           <WhatNeedsAttentionSection data={data} />
 
-          <ShelfPerformanceSection data={data} role={filters.role} />
+          <PerformanceOverTimeSection data={data} role={filters.role} />
 
-          <TrackImprovementSection data={data} />
-
-          <StorePerformanceSection data={data} />
+          <BrandCompetitionSection data={data} />
 
           <RecentAuditsSection data={data} />
 
-          <section className="mt-8">
-            <SectionHeader
-              title="Quick actions"
-              description="Go straight to the work your team does most."
-            />
-            <div className="mt-4">
-              <QuickActions />
-            </div>
-          </section>
-
-          <PriorityOpportunitiesSection data={data} />
-
-          <RoleVisualSection data={data} />
-
-          <AuditQualitySection data={data} />
+          <StorePerformanceSection data={data} />
         </>
       ) : null}
     </AppShell>

@@ -198,7 +198,91 @@ function SearchableFilterSelect({
   );
 }
 
-function FilterControls({
+function SecondaryFilterControls({
+  filters,
+  onChange,
+  options,
+  layout = "row",
+}: {
+  filters: DashboardFilterState;
+  onChange: (next: DashboardFilterState) => void;
+  options: DashboardFilterOptions;
+  layout?: "row" | "stack";
+}) {
+  const subCategoryOptions = useMemo(() => {
+    const subs =
+      filters.category === "all"
+        ? options.subcategories
+        : options.subcategories.filter((s) => s.category === filters.category);
+    return subs.map((s) => ({ value: s.value, label: s.label }));
+  }, [filters.category, options.subcategories]);
+
+  const teamOptions = useMemo(
+    () => options.team_members.map((m) => ({ value: m.user_id, label: m.name || m.email })),
+    [options.team_members],
+  );
+
+  const wrap = layout === "stack" ? "flex flex-col gap-3" : "flex flex-wrap items-center gap-2";
+
+  return (
+    <div className={wrap}>
+      <SearchableFilterSelect
+        label="Sub-category"
+        icon={Layers}
+        value={filters.subCategory}
+        onValueChange={(v) => onChange({ ...filters, subCategory: v })}
+        options={subCategoryOptions}
+        allLabel="All sub-categories"
+        triggerClassName="min-w-[140px] max-w-[190px]"
+      />
+      {options.only_self && options.team_members.length <= 1 ? (
+        <div className="flex h-9 shrink-0 items-center gap-2 rounded-xl border border-border/80 bg-muted/30 px-3 text-xs text-muted-foreground shadow-sm">
+          <Users className="size-3.5 shrink-0" />
+          <span>Only you</span>
+          <Link to="/settings" className="font-medium text-brand hover:underline">
+            Invite teammates →
+          </Link>
+        </div>
+      ) : (
+        <SearchableFilterSelect
+          label="Team member"
+          icon={Users}
+          value={filters.teamMemberId}
+          onValueChange={(v) =>
+            onChange({
+              ...filters,
+              teamMemberId: v,
+              ...(v !== "all" ? { auditAssignment: "all" as const } : {}),
+            })
+          }
+          options={teamOptions}
+          allLabel="All team members"
+          triggerClassName="min-w-[148px] max-w-[190px]"
+        />
+      )}
+      <FilterSelect
+        label="Audit assignment"
+        icon={ClipboardList}
+        value={filters.auditAssignment}
+        onValueChange={(v) =>
+          onChange({
+            ...filters,
+            auditAssignment: v as DashboardFilterState["auditAssignment"],
+            ...(v !== "all" ? { teamMemberId: "all" } : {}),
+          })
+        }
+        options={DASHBOARD_ASSIGNMENT_OPTIONS.filter((o) => o.value !== "all").map((o) => ({
+          value: o.value,
+          label: o.label,
+        }))}
+        allLabel="All audits"
+        triggerClassName="min-w-[148px]"
+      />
+    </div>
+  );
+}
+
+function PrimaryFilterControls({
   filters,
   onChange,
   options,
@@ -216,18 +300,6 @@ function FilterControls({
   const categoryOptions = useMemo(
     () => options.categories.map((c) => ({ value: c, label: c })),
     [options.categories],
-  );
-  const subCategoryOptions = useMemo(() => {
-    const subs =
-      filters.category === "all"
-        ? options.subcategories
-        : options.subcategories.filter((s) => s.category === filters.category);
-    return subs.map((s) => ({ value: s.value, label: s.label }));
-  }, [filters.category, options.subcategories]);
-
-  const teamOptions = useMemo(
-    () => options.team_members.map((m) => ({ value: m.user_id, label: m.name || m.email })),
-    [options.team_members],
   );
 
   const wrap = layout === "stack" ? "flex flex-col gap-3" : "flex flex-wrap items-center gap-2";
@@ -326,61 +398,26 @@ function FilterControls({
         triggerClassName="min-w-[132px] max-w-[180px]"
       />
 
-      <SearchableFilterSelect
-        label="Sub-category"
-        icon={Layers}
-        value={filters.subCategory}
-        onValueChange={(v) => onChange({ ...filters, subCategory: v })}
-        options={subCategoryOptions}
-        allLabel="All sub-categories"
-        triggerClassName="min-w-[140px] max-w-[190px]"
-      />
-
-      {options.only_self && options.team_members.length <= 1 ? (
-        <div className="flex h-9 shrink-0 items-center gap-2 rounded-xl border border-border/80 bg-muted/30 px-3 text-xs text-muted-foreground shadow-sm">
-          <Users className="size-3.5 shrink-0" />
-          <span>Only you</span>
-          <Link to="/settings" className="font-medium text-brand hover:underline">
-            Invite teammates →
-          </Link>
-        </div>
-      ) : (
-        <SearchableFilterSelect
-          label="Team member"
-          icon={Users}
-          value={filters.teamMemberId}
-          onValueChange={(v) =>
-            onChange({
-              ...filters,
-              teamMemberId: v,
-              ...(v !== "all" ? { auditAssignment: "all" as const } : {}),
-            })
-          }
-          options={teamOptions}
-          allLabel="All team members"
-          triggerClassName="min-w-[148px] max-w-[190px]"
-        />
-      )}
-
-      <FilterSelect
-        label="Audit assignment"
-        icon={ClipboardList}
-        value={filters.auditAssignment}
-        onValueChange={(v) =>
-          onChange({
-            ...filters,
-            auditAssignment: v as DashboardFilterState["auditAssignment"],
-            ...(v !== "all" ? { teamMemberId: "all" } : {}),
-          })
-        }
-        options={DASHBOARD_ASSIGNMENT_OPTIONS.filter((o) => o.value !== "all").map((o) => ({
-          value: o.value,
-          label: o.label,
-        }))}
-        allLabel="All audits"
-        triggerClassName="min-w-[148px]"
-      />
     </div>
+  );
+}
+
+function FilterControls({
+  filters,
+  onChange,
+  options,
+  layout = "row",
+}: {
+  filters: DashboardFilterState;
+  onChange: (next: DashboardFilterState) => void;
+  options: DashboardFilterOptions;
+  layout?: "row" | "stack";
+}) {
+  return (
+    <>
+      <PrimaryFilterControls filters={filters} onChange={onChange} options={options} layout={layout} />
+      <SecondaryFilterControls filters={filters} onChange={onChange} options={options} layout={layout} />
+    </>
   );
 }
 
@@ -388,52 +425,65 @@ export function DashboardFilterBar({
   filters,
   onChange,
   options,
+  summaryLabel,
 }: {
   filters: DashboardFilterState;
   onChange: (next: DashboardFilterState) => void;
   options: DashboardFilterOptions;
+  summaryLabel?: string;
 }) {
   const chips = dashboardFilterChips(filters, options);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const activeMoreCount =
+    (filters.subCategory !== "all" ? 1 : 0) +
+    (filters.teamMemberId !== "all" ? 1 : 0) +
+    (filters.auditAssignment !== "all" ? 1 : 0);
 
   return (
-    <section className="mt-2 space-y-3" aria-label="Dashboard filters">
-      <p className="text-sm text-muted-foreground">
-        Choose the slice of your retail operation you want to understand.
+    <section className="space-y-3" aria-label="Dashboard filters">
+      <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        Filter your view
       </p>
 
-      {/* Desktop / tablet */}
       <div className="hidden md:block">
-        <div className="-mx-1 overflow-x-auto px-1 pb-1">
-          <div className="flex min-w-max flex-wrap items-center gap-2 lg:flex-nowrap">
-            <FilterControls filters={filters} onChange={onChange} options={options} layout="row" />
-            {!isDefaultDashboardFilters(filters) ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-9 shrink-0 rounded-xl text-xs text-muted-foreground"
-                onClick={() => onChange({ ...DEFAULT_DASHBOARD_FILTERS })}
-              >
-                Clear filters
-              </Button>
-            ) : null}
+        <div className="rounded-xl border border-border/70 bg-card/80 p-3 shadow-sm">
+          <div className="-mx-1 flex flex-wrap items-center gap-2 overflow-x-auto px-1">
+            <PrimaryFilterControls filters={filters} onChange={onChange} options={options} layout="row" />
+            <Popover open={moreOpen} onOpenChange={setMoreOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 shrink-0 rounded-xl border-border/80 bg-background text-xs font-normal"
+                >
+                  More filters
+                  {activeMoreCount > 0 ? (
+                    <span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-[0.65rem] font-semibold text-brand-foreground">
+                      {activeMoreCount}
+                    </span>
+                  ) : null}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto max-w-[90vw] p-3" align="start">
+                <SecondaryFilterControls
+                  filters={filters}
+                  onChange={onChange}
+                  options={options}
+                  layout="row"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </div>
 
-      {/* Mobile drawer */}
       <div className="md:hidden">
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
             <Button variant="outline" size="sm" className="h-9 rounded-xl text-xs">
               <SlidersHorizontal className="mr-1.5 size-3.5" />
-              Filters
-              {!isDefaultDashboardFilters(filters) ? (
-                <span className="ml-1.5 rounded-full bg-brand px-1.5 py-0.5 text-[0.65rem] font-semibold text-brand-foreground">
-                  {chips.length}
-                </span>
-              ) : null}
+              Filters ({chips.length + activeMoreCount})
             </Button>
           </SheetTrigger>
           <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-2xl">
@@ -469,6 +519,10 @@ export function DashboardFilterBar({
           </SheetContent>
         </Sheet>
       </div>
+
+      {summaryLabel ? (
+        <p className="text-xs text-muted-foreground">{summaryLabel}</p>
+      ) : null}
 
       {chips.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2">
