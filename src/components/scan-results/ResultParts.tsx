@@ -10,6 +10,7 @@ import {
   Download,
   Lightbulb,
   Maximize2,
+  Minimize2,
   Minus,
   Plus,
   Search,
@@ -130,11 +131,18 @@ export function AnnotatedImageViewer({
   originalSrc,
   scanId,
   loading,
+  embedded = false,
+  downloadTooltip = "Download image",
+  highlightLabel,
 }: {
   src?: string | undefined;
   originalSrc?: string | undefined;
   scanId?: string | undefined;
   loading?: boolean | undefined;
+  /** Skip outer ResultSection — for embedded side-by-side layouts. */
+  embedded?: boolean;
+  downloadTooltip?: string;
+  highlightLabel?: string;
 }) {
   const [zoom, setZoom] = useState(1);
   const [fullscreen, setFullscreen] = useState(false);
@@ -198,6 +206,17 @@ export function AnnotatedImageViewer({
         size="icon"
         className="rounded-xl"
         disabled={!src}
+        onClick={() => setZoom(1)}
+        aria-label="Fit to view"
+        title="Fit"
+      >
+        <Minimize2 className="size-4" />
+      </Button>
+      <Button
+        variant="subtle"
+        size="icon"
+        className="rounded-xl"
+        disabled={!src}
         onClick={() => setFullscreen(true)}
         aria-label="Open full screen"
       >
@@ -205,9 +224,11 @@ export function AnnotatedImageViewer({
       </Button>
       <Button
         variant="subtle"
-        size="sm"
+        size={embedded ? "icon" : "sm"}
         className="rounded-xl"
         disabled={!src || downloading}
+        title={downloadTooltip}
+        aria-label={downloadTooltip}
         onClick={async () => {
           if (!src) return;
           setDownloading(true);
@@ -221,18 +242,20 @@ export function AnnotatedImageViewer({
           }
         }}
       >
-        <Download className="size-4" /> Image
+        <Download className="size-4" />
+        {!embedded ? " Image" : null}
       </Button>
     </div>
   );
 
-  return (
-    <ResultSection
-      title="Annotated shelf image"
-      description="Detections rendered by the vision model."
-      actions={controls}
-    >
-      <div className="relative max-h-[30rem] overflow-auto rounded-2xl border border-border bg-muted">
+  const imageBody = (
+    <>
+      <div
+        className={cn(
+          "relative max-h-[30rem] overflow-auto rounded-xl border border-border bg-muted/40",
+          highlightLabel && "ring-2 ring-brand/30 ring-offset-2",
+        )}
+      >
         {loading ? (
           <Skeleton className="h-72 w-full rounded-none" />
         ) : src ? (
@@ -258,6 +281,11 @@ export function AnnotatedImageViewer({
             />
           </div>
         )}
+        {highlightLabel ? (
+          <div className="pointer-events-none absolute left-2 top-2 rounded-md bg-brand/90 px-2 py-1 text-[10px] font-medium text-brand-foreground shadow-sm">
+            {highlightLabel}
+          </div>
+        ) : null}
       </div>
 
       {fullscreen && src && (
@@ -286,6 +314,25 @@ export function AnnotatedImageViewer({
           />
         </div>
       )}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-center justify-end gap-1.5">{controls}</div>
+        {imageBody}
+      </div>
+    );
+  }
+
+  return (
+    <ResultSection
+      title="Annotated shelf image"
+      description="Detections rendered by the vision model."
+      actions={controls}
+    >
+      {imageBody}
     </ResultSection>
   );
 }
