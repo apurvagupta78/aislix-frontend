@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Bell,
   Building2,
+  ClipboardList,
   CreditCard,
   Download,
   FileText,
@@ -209,39 +210,45 @@ export function KpiCards({
 const quickActions = [
   {
     to: "/scan",
-    title: "Start new scan",
-    description: "Capture or upload a shelf photo for instant AI analysis.",
+    title: "Start new audit",
+    description: "Capture or upload a shelf photo.",
     icon: ScanLine,
   },
   {
     to: "/history",
-    title: "View scan history",
-    description: "Browse, filter and re-open every audit you've run.",
+    title: "View audit history",
+    description: "Review past visits, issues and results.",
     icon: History,
   },
   {
     to: "/compare",
-    title: "Compare scans",
-    description: "Measure shelf changes between any two audits.",
+    title: "Compare audits",
+    description: "See what changed between visits.",
     icon: ArrowLeftRight,
   },
   {
     to: "/report",
     title: "Download reports",
-    description: "Export executive PDF and CSV reports for your team.",
+    description: "Export audit reports and detailed data.",
     icon: FileText,
   },
   {
     to: "/stores",
     title: "Manage stores",
-    description: "Add outlets, assign managers and track store health.",
+    description: "Add outlets and track store performance.",
     icon: Building2,
   },
   {
     to: "/settings",
     title: "Manage users",
-    description: "Invite teammates and control roles and permissions.",
+    description: "Invite teammates and manage access.",
     icon: Users,
+  },
+  {
+    to: "/scan",
+    title: "Import master shelf setup",
+    description: "Upload a role-specific master setup and configure an audit faster.",
+    icon: ClipboardList,
   },
 ] as const;
 

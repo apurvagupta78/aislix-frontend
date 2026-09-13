@@ -1,283 +1,367 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+
 import { useState } from "react";
+
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Sparkles } from "lucide-react";
+
+import { Sparkles } from "lucide-react";
+
 import { AppShell } from "@/components/AppShell";
-import {
-  AccountSummaryPanel,
-  ActivityTimeline,
-  KpiCards,
-  NotificationsPanel,
-  Panel,
-  QuickActions,
-  SectionHeader,
-} from "@/components/dashboard/DashboardParts";
-import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
-import { RecentScansTable } from "@/components/dashboard/RecentScansTable";
-import { TeamAssignmentsPanel } from "@/components/dashboard/TeamAssignmentsPanel";
-import { StoreComplianceRanking } from "@/components/dashboard/StoreComplianceRanking";
+
+import { QuickActions, SectionHeader } from "@/components/dashboard/DashboardParts";
 
 import { Button } from "@/components/ui/button";
-import { fetchAnalytics, fetchDashboard, fetchNotifications } from "@/lib/dashboard";
-import { fetchTerritories } from "@/lib/territories";
+
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DEMO_ANALYTICS,
-  DEMO_DASHBOARD,
-  DEMO_NOTIFICATIONS,
-  DEMO_RECENT_SCANS,
-  isDemoMode,
-} from "@/lib/dashboard-demo";
+
+  AuditQualitySection,
+
+  DashboardFilterRow,
+
+  PriorityOpportunitiesSection,
+
+  RecentAuditsSection,
+
+  RoleVisualSection,
+
+  ShelfPerformanceSection,
+
+  StorePerformanceSection,
+
+  TrackImprovementSection,
+
+  WhatNeedsAttentionSection,
+
+  WorkspaceDashboardSkeleton,
+
+  WorkspaceKpiSummary,
+
+  type DashboardFilterState,
+
+} from "@/components/dashboard/WorkspaceDashboardView";
+
+import { fetchWorkspaceDashboard } from "@/lib/dashboard-intelligence";
+
+import { DEMO_WORKSPACE_DASHBOARD, isDemoMode } from "@/lib/dashboard-demo";
+
 import { supabase } from "@/integrations/supabase/client";
-import { useWorkspaceContext } from "@/hooks/use-customer-context";
-import { RoleDashboardExtras } from "@/components/dashboard/RoleDashboardPanels";
-import { ROLE_HERO } from "@/lib/customer-context";
+
+import { ErrorState } from "@/components/States";
+import { fetchDashboard } from "@/lib/dashboard";
+
+
 
 export const Route = createFileRoute("/dashboard")({
+
   head: () => ({
+
     meta: [
-      { title: "Admin Dashboard — Aislix Shelf Intelligence" },
+
+      { title: "Workspace Dashboard — Aislix" },
+
       {
+
         name: "description",
+
         content:
-          "Shelf health, scan volume, stock alerts, notifications and plan usage for your retail shelf audits — all in one Aislix dashboard.",
+
+          "Operational home for shelf audits — KPIs, issues, store performance, trends and recent visits across your retail workspace.",
+
       },
-      { property: "og:title", content: "Aislix Admin Dashboard" },
+
+      { property: "og:title", content: "Aislix Workspace Dashboard" },
+
       {
+
         property: "og:description",
-        content: "Monitor shelf health, scans, alerts and plan usage across every store.",
+
+        content: "See what changed across your shelves — audits, issues, improvement and store performance.",
+
       },
+
       { property: "og:type", content: "website" },
+
       { name: "twitter:card", content: "summary_large_image" },
+
     ],
+
   }),
+
   component: Dashboard,
+
 });
 
+
+
 function Dashboard() {
-  const [territoryId, setTerritoryId] = useState("all");
-  const workspace = useWorkspaceContext();
-  const roleFamily = workspace.data?.roleFamily ?? "operations";
-  const defaultView = workspace.data?.viewMode ?? "execution";
+
+  const [filters, setFilters] = useState<DashboardFilterState>({
+
+    dateRange: "7d",
+
+    role: "all",
+
+    storeId: "all",
+
+    category: "all",
+
+  });
+
+
 
   const session = useQuery({
+
     queryKey: ["auth-session"],
+
     queryFn: async () => (await supabase.auth.getSession()).data.session,
+
     retry: false,
+
     staleTime: 30_000,
+
   });
+
   const demo = session.isSuccess && isDemoMode(session.data ?? null);
+
   const live = session.isSuccess && !demo;
 
+
+
   const dashboardQuery = useQuery({
-    queryKey: ["dashboard"],
+
+    queryKey: ["workspace-dashboard", filters],
+
+    queryFn: ({ signal }) =>
+
+      fetchWorkspaceDashboard(
+
+        {
+
+          dateRange: filters.dateRange,
+
+          role: filters.role,
+
+          storeId: filters.storeId,
+
+          category: filters.category,
+
+        },
+
+        signal,
+
+      ),
+
+    retry: false,
+
+    enabled: live,
+
+  });
+
+
+
+  const data = demo ? DEMO_WORKSPACE_DASHBOARD : dashboardQuery.data;
+
+  const isLoading = demo ? false : !session.isSuccess || dashboardQuery.isPending;
+
+  const error = demo ? null : (dashboardQuery.error as Error | null);
+
+
+
+  const greetingQuery = useQuery({
+    queryKey: ["dashboard-greeting"],
     queryFn: ({ signal }) => fetchDashboard(signal),
     retry: false,
     enabled: live,
+    staleTime: 60_000,
   });
+  const name = demo ? undefined : greetingQuery.data?.greeting_name;
 
-  const notificationsQuery = useQuery({
-    queryKey: ["notifications"],
-    queryFn: ({ signal }) => fetchNotifications(signal),
-    retry: false,
-    enabled: live,
-  });
 
-  const territoriesQuery = useQuery({
-    queryKey: ["territories"],
-    queryFn: fetchTerritories,
-    retry: false,
-    enabled: live,
-  });
-
-  const selectedTerritory = territoryId === "all" ? null : territoryId;
-
-  const analyticsQuery = useQuery({
-    queryKey: ["analytics", "30d", territoryId],
-    queryFn: ({ signal }) => fetchAnalytics("30d", signal, selectedTerritory),
-    retry: false,
-    enabled: live,
-  });
-
-  const dashboard = demo
-    ? { data: DEMO_DASHBOARD, isPending: false, error: null, refetch: () => {} }
-    : {
-        data: dashboardQuery.data,
-        isPending: !session.isSuccess || dashboardQuery.isPending,
-        error: dashboardQuery.error,
-        refetch: dashboardQuery.refetch,
-      };
-  const notifications = demo
-    ? { data: DEMO_NOTIFICATIONS, isPending: false, error: null, refetch: () => {} }
-    : {
-        data: notificationsQuery.data,
-        isPending: !session.isSuccess || notificationsQuery.isPending,
-        error: notificationsQuery.error,
-        refetch: notificationsQuery.refetch,
-      };
-  const analytics = demo
-    ? { data: DEMO_ANALYTICS, isPending: false, error: null, refetch: () => {} }
-    : {
-        data: analyticsQuery.data,
-        isPending: !session.isSuccess || analyticsQuery.isPending,
-        error: analyticsQuery.error,
-        refetch: analyticsQuery.refetch,
-      };
-
-  const name = demo ? undefined : dashboard.data?.greeting_name;
 
   return (
+
     <AppShell
+
       title={demo ? "Live demo dashboard" : name ? `Welcome back, ${name}` : "Dashboard"}
-      description={
-        demo
-          ? "Shelf performance, scan activity and account health across your stores."
-          : ROLE_HERO[defaultView === "executive" ? "executive" : defaultView === "brand" ? "brand" : defaultView === "merchandising" ? "merchandising" : "execution"]
-      }
+
+      description="See what changed across your shelves."
+
       actions={
+
         demo ? (
+
           <>
+
             <Button asChild variant="subtle" size="sm" className="rounded-xl">
+
               <Link to="/login">Sign in</Link>
+
             </Button>
+
             <Button asChild variant="brand" size="sm" className="rounded-xl">
+
               <Link to="/signup">Create free account</Link>
+
             </Button>
+
           </>
+
         ) : (
+
           <>
+
             <Button asChild variant="subtle" size="sm" className="rounded-xl">
+
               <Link to="/history">Scan history</Link>
+
             </Button>
+
             <Button asChild variant="brand" size="sm" className="rounded-xl">
-              <Link to="/scan">Start new scan</Link>
+
+              <Link to="/scan">
+
+                Start new audit <span aria-hidden>→</span>
+
+              </Link>
+
             </Button>
+
           </>
+
         )
+
       }
+
     >
+
       {demo ? (
+
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand/25 bg-brand-soft px-4 py-3">
+
           <div className="flex items-start gap-2.5">
+
             <Sparkles className="mt-0.5 size-4 shrink-0 text-brand" />
+
             <p className="text-sm text-brand">
+
               <span className="font-semibold">You're viewing a live demo</span> with sample retail
-              data. Create a free account to scan your own shelves — 5 free scans every day.
+
+              data. Create a free account to scan your own shelves.
+
             </p>
+
           </div>
+
           <Button asChild variant="brand" size="sm" className="rounded-xl">
+
             <Link to="/signup">Get started free</Link>
+
           </Button>
+
         </div>
+
       ) : null}
-      <KpiCards
-        kpis={dashboard.data?.kpis}
-        isLoading={dashboard.isPending}
-        error={dashboard.error as Error | null}
-        onRetry={() => void dashboard.refetch()}
+
+
+
+      <DashboardFilterRow
+
+        filters={filters}
+
+        onChange={setFilters}
+
+        options={data?.filter_options ?? { stores: [], categories: [] }}
+
       />
 
-      <section className="mt-8">
-        <SectionHeader
-          title="Quick actions"
-          description="Jump straight into the workflows your team uses most."
+
+
+      {isLoading ? (
+
+        <WorkspaceDashboardSkeleton />
+
+      ) : error ? (
+
+        <ErrorState
+
+          title="Couldn't load dashboard"
+
+          description={error.message}
+
+          onRetry={() => void dashboardQuery.refetch()}
+
         />
-        <div className="mt-4">
-          <QuickActions />
-        </div>
-      </section>
 
-      {demo ? null : <RoleDashboardExtras roleFamily={roleFamily} />}
+      ) : data ? (
 
-      {demo ? null : roleFamily !== "field" ? <TeamAssignmentsPanel /> : null}
+        <>
 
-      {demo ? null : roleFamily !== "field" ? (
-        <section className="mt-8">
-          <StoreComplianceRanking territoryId={selectedTerritory} />
-        </section>
+          <div className="mt-6">
+
+            <WorkspaceKpiSummary data={data.kpis} isLoading={false} />
+
+          </div>
+
+
+
+          <WhatNeedsAttentionSection data={data} />
+
+
+
+          <ShelfPerformanceSection data={data} role={filters.role} />
+
+
+
+          <TrackImprovementSection data={data} />
+
+
+
+          <StorePerformanceSection data={data} />
+
+
+
+          <RecentAuditsSection data={data} />
+
+
+
+          <section className="mt-8">
+
+            <SectionHeader
+
+              title="Quick actions"
+
+              description="Go straight to the work your team does most."
+
+            />
+
+            <div className="mt-4">
+
+              <QuickActions />
+
+            </div>
+
+          </section>
+
+
+
+          <PriorityOpportunitiesSection data={data} />
+
+
+
+          <RoleVisualSection data={data} />
+
+
+
+          <AuditQualitySection data={data} />
+
+        </>
+
       ) : null}
 
-      <section className="mt-8">
-        <SectionHeader
-          title="Analytics"
-          description="Backend-ready widgets for shelf health, scan volume, brand mix and stock risk."
-          action={
-            !demo && (territoriesQuery.data?.length ?? 0) > 0 ? (
-              <Select value={territoryId} onValueChange={setTerritoryId}>
-                <SelectTrigger className="h-9 w-44 rounded-xl">
-                  <SelectValue placeholder="All territories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All territories</SelectItem>
-                  {(territoriesQuery.data ?? []).map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : undefined
-          }
-        />
-        <div className="mt-4">
-          <DashboardCharts
-            analytics={analytics.data}
-            isLoading={analytics.isPending}
-            error={analytics.error as Error | null}
-            onRetry={() => void analytics.refetch()}
-          />
-        </div>
-      </section>
-
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <RecentScansTable {...(demo ? { demoData: DEMO_RECENT_SCANS } : {})} />
-        </div>
-        <div className="space-y-4" id="notifications">
-          <Panel title="Account summary">
-            <AccountSummaryPanel
-              account={dashboard.data?.account}
-              isLoading={dashboard.isPending}
-              error={dashboard.error as Error | null}
-              onRetry={() => void dashboard.refetch()}
-            />
-          </Panel>
-          <Panel
-            title="Notifications"
-            action={
-              notifications.data?.unread ? (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-2.5 py-1 text-xs font-medium text-brand">
-                  <Bell className="size-3" /> {notifications.data.unread} new
-                </span>
-              ) : undefined
-            }
-          >
-            <NotificationsPanel
-              items={notifications.data?.items}
-              isLoading={notifications.isPending}
-              error={notifications.error as Error | null}
-              onRetry={() => void notifications.refetch()}
-            />
-          </Panel>
-        </div>
-      </div>
-
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <Panel title="Recent activity" className="lg:col-span-2">
-          <ActivityTimeline
-            items={dashboard.data?.activity}
-            isLoading={dashboard.isPending}
-            error={dashboard.error as Error | null}
-            onRetry={() => void dashboard.refetch()}
-          />
-        </Panel>
-      </div>
     </AppShell>
+
   );
+
 }
+
+

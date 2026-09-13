@@ -14,6 +14,7 @@ import type {
   RecentScansResponse,
   SeriesPoint,
 } from "@/lib/dashboard";
+import type { WorkspaceDashboardData } from "@/lib/dashboard-intelligence";
 
 /** True when the dashboard should render the read-only guest demo. */
 export function isDemoMode(session: Session | null): boolean {
@@ -247,4 +248,109 @@ export const DEMO_RECENT_SCANS: RecentScansResponse = {
     "DMart — HSR Layout",
     "Reliance Smart — Jayanagar",
   ],
+};
+
+/** Guest demo workspace dashboard — marketing sample data only. */
+export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
+  kpis: {
+    audits_completed: 42,
+    stores_covered: 5,
+    avg_osa: 91,
+    avg_planogram: 84,
+    open_issues: 12,
+    issues_resolved_rate: 68,
+    shelf_health: 88,
+    shelf_health_available: true,
+    audits_remaining: 4872,
+    products_detected: 4820,
+    average_confidence: 94.6,
+    images_processed: 42,
+  },
+  issues: { total: 12, high: 4, medium: 5, low: 3 },
+  issue_rows: [
+    {
+      id: "demo-i1",
+      store_name: "More Mart — Koramangala",
+      issue: "3 products need availability review",
+      priority: "high",
+      status: "Open",
+      href: "/results?scan=DEMO-8241",
+    },
+    {
+      id: "demo-i2",
+      store_name: "Big Bazaar — Whitefield",
+      issue: "Planogram placement mismatch on Aisle 5",
+      priority: "medium",
+      status: "Open",
+      href: "/results?scan=DEMO-8229",
+    },
+  ],
+  performance_trend: series(14, [82, 84, 83, 86, 85, 88, 87, 89, 90, 88, 91, 92, 90, 91]).map(
+    (p, i) => ({
+      date: p.label,
+      osa: 85 + (i % 5),
+      planogram_compliance: 78 + (i % 6),
+      assortment_compliance: 80 + (i % 4),
+    }),
+  ),
+  improvement: [
+    {
+      key: "osa",
+      label: "OSA",
+      previous: "87%",
+      current: "91%",
+      change: "+4 pts",
+      improved: true,
+    },
+    {
+      key: "planogram",
+      label: "Planogram",
+      previous: "79%",
+      current: "84%",
+      change: "+5 pts",
+      improved: true,
+    },
+  ],
+  stores: [
+    {
+      store_id: "demo-1",
+      store_name: "More Mart — Koramangala",
+      audits: 12,
+      osa: 93,
+      planogram: 88,
+      open_issues: 3,
+      change: 5,
+    },
+    {
+      store_id: "demo-2",
+      store_name: "Big Bazaar — Whitefield",
+      audits: 9,
+      osa: 86,
+      planogram: 79,
+      open_issues: 5,
+      change: -2,
+    },
+  ],
+  recent_audits: DEMO_RECENT_SCANS.items.map((s) => ({
+    scan_id: s.scan_id,
+    date: s.created_at ?? isoAgo(DAY),
+    store_name: s.store ?? "Store",
+    role: "supermarket",
+    osa: s.shelf_health_score ? s.shelf_health_score - 5 : null,
+    planogram: s.shelf_health_score ? s.shelf_health_score - 10 : null,
+    issues: 2,
+  })),
+  priority_opportunities: [
+    { category: "availability", label: "Availability", count: 5 },
+    { category: "placement", label: "Placement", count: 4 },
+    { category: "pricing", label: "Pricing", count: 2 },
+  ],
+  role_visual: null,
+  filter_options: {
+    stores: [
+      { id: "demo-1", name: "More Mart — Koramangala" },
+      { id: "demo-2", name: "Big Bazaar — Whitefield" },
+    ],
+    categories: ["Beverages", "Snacks", "Personal Care"],
+  },
 };
