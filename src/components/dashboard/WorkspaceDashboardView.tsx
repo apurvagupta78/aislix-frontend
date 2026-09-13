@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -268,18 +268,33 @@ export function WhatNeedsAttentionSection({ data }: { data: WorkspaceDashboardDa
 export function PerformanceOverTimeSection({
   data,
   role,
+  kriFilter = "all",
 }: {
   data: WorkspaceDashboardData;
   role: DashboardRoleFilter;
+  kriFilter?: AuditKpiId | "all";
 }) {
   const effectiveRole = effectiveDashboardRole(role, data.effective_role);
   const availableKpis = trendKpisForRole(effectiveRole);
   const [activeKpis, setActiveKpis] = useState<AuditKpiId[]>(() => {
+    if (kriFilter !== "all") return [kriFilter];
     const defaults: AuditKpiId[] = ["osa", "planogram_compliance", "assortment_compliance"];
     return defaults.filter((k) => availableKpis.includes(k)).length
       ? defaults.filter((k) => availableKpis.includes(k))
       : availableKpis.slice(0, 3);
   });
+
+  useEffect(() => {
+    if (kriFilter !== "all") {
+      setActiveKpis([kriFilter]);
+      return;
+    }
+    const defaults: AuditKpiId[] = ["osa", "planogram_compliance", "assortment_compliance"];
+    const next = defaults.filter((k) => availableKpis.includes(k)).length
+      ? defaults.filter((k) => availableKpis.includes(k))
+      : availableKpis.slice(0, 3);
+    setActiveKpis(next);
+  }, [kriFilter, availableKpis]);
 
   const toggleKpi = (kpi: AuditKpiId) => {
     setActiveKpis((current) =>

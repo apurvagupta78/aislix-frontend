@@ -135,6 +135,7 @@ function Dashboard() {
             categories: [],
             subcategories: [],
             team_members: [],
+            kri_options: [],
             only_self: true,
             current_user_id: null,
           }
@@ -171,7 +172,7 @@ function Dashboard() {
 
           <WhatNeedsAttentionSection data={data} />
 
-          <PerformanceOverTimeSection data={data} role={filters.role} />
+          <PerformanceOverTimeSection data={data} role={filters.role} kriFilter={filters.kri} />
 
           <BrandCompetitionSection data={data} />
 

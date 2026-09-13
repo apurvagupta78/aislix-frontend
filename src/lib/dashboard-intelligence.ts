@@ -14,6 +14,7 @@ import {
   type PriorityCategory,
   PRIORITY_OPPORTUNITY_CATEGORIES,
 } from "@/lib/dashboard-config";
+import { getRoleProfile, type AuditKpiId } from "@/lib/role-kpi-config";
 import {
   buildDashboardFilterSummary,
   resolveDashboardDateBounds,
@@ -26,7 +27,6 @@ import {
 } from "@/lib/dashboard-filters";
 import { roleTabLabel } from "@/lib/role-audit-ui";
 import { getUser, requireOrgId } from "@/lib/db/context";
-import type { AuditKpiId } from "@/lib/role-kpi-config";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import type { RetailIntelligencePayload } from "@/lib/retail-intelligence";
 import { normalizePercent } from "@/lib/dashboard";
@@ -381,6 +381,75 @@ function locationLists(stores: DashboardStoreOption[]): { countries: string[]; c
   return { countries, cities };
 }
 
+function buildKriOptions(role: AuditRoleTab): Array<{ value: AuditKpiId; label: string }> {
+  return getRoleProfile(role).primary_kpis.map((k) => ({
+    value: k.kpi_id,
+    label: KPI_DASHBOARD_LABELS[k.kpi_id] ?? k.label,
+  }));
+}
+
+function kpiIssueCategories(kpiId: AuditKpiId): PriorityCategory[] {
+  switch (kpiId) {
+    case "osa":
+      return ["availability"];
+    case "planogram_compliance":
+    case "location_accuracy":
+    case "facing_count":
+    case "share_of_shelf":
+      return ["placement"];
+    case "assortment_compliance":
+    case "msl_compliance":
+      return ["assortment"];
+    case "price_compliance":
+      return ["pricing"];
+    case "promotional_compliance":
+      return ["promotion"];
+    default:
+      return [];
+  }
+}
+
+function scanHasOpenIssueInCategories(
+  metrics: RetailIntelligencePayload | null,
+  categories: PriorityCategory[],
+): boolean {
+  if (!categories.length) return false;
+  const catSet = new Set(categories);
+  for (const row of metrics?.opportunity_ledger ?? []) {
+    const status = (row.status ?? "open").toLowerCase();
+    if (status === "resolved" || status === "verified" || status === "dismissed" || status === "closed") {
+      continue;
+    }
+    if (catSet.has(categoryFromIssueType(row.issue ?? ""))) return true;
+  }
+  for (const action of metrics?.next_best_actions ?? []) {
+    const status = (action.status ?? "open").toLowerCase();
+    if (status === "resolved" || status === "verified" || status === "dismissed") continue;
+    if (catSet.has(categoryFromIssueType(action.issue_type ?? action.title ?? ""))) return true;
+  }
+  return false;
+}
+
+function scanMatchesKri(
+  scan: ScanRow,
+  metrics: RetailIntelligencePayload | null,
+  role: AuditRoleTab,
+  kpiId: AuditKpiId,
+): boolean {
+  if (kpiValue(metrics, role, kpiId, scan) !== null) return true;
+  return scanHasOpenIssueInCategories(metrics, kpiIssueCategories(kpiId));
+}
+
+function effectiveRoleForOptions(
+  roleHint: DashboardFilterState["role"],
+  poolScans: ScanRow[],
+  metricsMap: Map<string, RetailIntelligencePayload | null>,
+): AuditRoleTab {
+  if (roleHint !== "all") return roleHint;
+  const latest = poolScans.at(-1);
+  return effectiveDashboardRole("all", latest ? scanRole(metricsMap.get(latest.id) ?? null) : null);
+}
+
 function buildFilterOptions(
   allStores: DashboardStoreOption[],
   poolScans: ScanRow[],
@@ -414,6 +483,7 @@ function buildFilterOptions(
   );
   const membersForFilter = activeMembers.length ? activeMembers : teamMembers;
   const { countries, cities } = locationLists(allStores);
+  const kriRole = effectiveRoleForOptions(filterHints.role, poolScans, metricsMap);
   return {
     stores,
     countries,
@@ -421,6 +491,7 @@ function buildFilterOptions(
     categories,
     subcategories,
     team_members: membersForFilter,
+    kri_options: buildKriOptions(kriRole),
     only_self: teamMembers.length <= 1,
     current_user_id: currentUserId,
   };
@@ -441,8 +512,16 @@ function buildAttentionCards(
   metricsMap: Map<string, RetailIntelligencePayload | null>,
   effectiveRole: AuditRoleTab,
   categoryCounts: Record<PriorityCategory, number>,
+  kriFilter: AuditKpiId | "all" = "all",
 ): AttentionCard[] {
-  const areas = attentionAreasForRole(effectiveRole);
+  let areas = attentionAreasForRole(effectiveRole);
+  if (kriFilter !== "all") {
+    areas = areas.filter(
+      (area) =>
+        area.kpis.includes(kriFilter) ||
+        (kriFilter === "share_of_shelf" && area.competitive),
+    );
+  }
 
   return areas.map((area) => {
     const values: Array<{ scanId: string; value: number }> = [];
@@ -525,9 +604,13 @@ function buildPerformancePeriod(
   scans: ScanRow[],
   metricsMap: Map<string, RetailIntelligencePayload | null>,
   effectiveRole: AuditRoleTab,
+  kriFilter: AuditKpiId | "all" = "all",
 ): PerformancePeriodMetric[] {
   if (scans.length < 2) return [];
-  const kpiIds = trendKpisForRole(effectiveRole).slice(0, 5);
+  const kpiIds =
+    kriFilter !== "all"
+      ? [kriFilter]
+      : trendKpisForRole(effectiveRole).slice(0, 5);
   const mid = Math.floor(scans.length / 2);
   const previous = scans.slice(0, mid);
   const current = scans.slice(mid);
@@ -798,6 +881,15 @@ export async function fetchWorkspaceDashboard(
       ? filters.role
       : effectiveDashboardRole("all", scanRole(metricsMap.get(scans.at(-1)?.id ?? "") ?? null));
 
+  if (filters.kri !== "all") {
+    scans = scans.filter((scan) =>
+      scanMatchesKri(scan, metricsMap.get(scan.id) ?? null, effectiveRole, filters.kri as AuditKpiId),
+    );
+  }
+
+  const kriCategories =
+    filters.kri !== "all" ? kpiIssueCategories(filters.kri as AuditKpiId) : null;
+
   // --- KPIs ---
   const storeIds = new Set(scans.map((s) => s.store_id).filter(Boolean));
   const osaValues = scans.map((s) => s.osa_percent).filter((v): v is number => typeof v === "number");
@@ -860,11 +952,13 @@ export async function fetchWorkspaceDashboard(
     for (const row of ledger) {
       const status = (row.status ?? "open").toLowerCase();
       if (status === "resolved" || status === "verified" || status === "dismissed" || status === "closed") continue;
+      const issueCat = categoryFromIssueType(row.issue ?? "");
+      if (kriCategories && !kriCategories.includes(issueCat)) continue;
       const priority = priorityFromSeverity(row.severity ?? row.priority);
       if (priority === "high") high += 1;
       else if (priority === "low") low += 1;
       else medium += 1;
-      categoryCounts[categoryFromIssueType(row.issue ?? "")] += 1;
+      categoryCounts[issueCat] += 1;
       if (issueRows.length < 8) {
         issueRows.push({
           id: `ledger-${scan.id}-${issueRows.length}`,
@@ -880,11 +974,13 @@ export async function fetchWorkspaceDashboard(
     for (const action of actionsList) {
       const status = (action.status ?? "open").toLowerCase();
       if (status === "resolved" || status === "verified" || status === "dismissed") continue;
+      const issueCat = categoryFromIssueType(action.issue_type ?? action.title ?? "");
+      if (kriCategories && !kriCategories.includes(issueCat)) continue;
       const priority = priorityFromSeverity(action.severity ?? action.priority);
       if (priority === "high") high += 1;
       else if (priority === "low") low += 1;
       else medium += 1;
-      categoryCounts[categoryFromIssueType(action.issue_type)] += 1;
+      categoryCounts[issueCat] += 1;
       if (issueRows.length < 8) {
         issueRows.push({
           id: `action-${scan.id}-${issueRows.length}`,
@@ -900,11 +996,13 @@ export async function fetchWorkspaceDashboard(
   }
 
   for (const action of openActions.slice(0, 8 - issueRows.length)) {
+    const issueCat = categoryFromIssueType(action.issue_type);
+    if (kriCategories && !kriCategories.includes(issueCat)) continue;
     const priority = priorityFromSeverity(action.issue_type);
     if (priority === "high") high += 1;
     else if (priority === "low") low += 1;
     else medium += 1;
-    categoryCounts[categoryFromIssueType(action.issue_type)] += 1;
+    categoryCounts[issueCat] += 1;
     issueRows.push({
       id: action.id as string,
       store_name: "Workspace",
@@ -918,7 +1016,10 @@ export async function fetchWorkspaceDashboard(
   kpis.open_issues = issuesTotal || null;
 
   // --- Performance trend ---
-  const trendKpis: AuditKpiId[] = trendKpisForRole(effectiveRole);
+  const trendKpis: AuditKpiId[] =
+    filters.kri !== "all"
+      ? [filters.kri as AuditKpiId]
+      : trendKpisForRole(effectiveRole);
   const byDay = new Map<string, Record<string, number[]>>();
   for (const scan of scans) {
     const key = dayKey(scan.created_at);
@@ -1166,10 +1267,14 @@ export async function fetchWorkspaceDashboard(
     metricsMap,
     effectiveRole,
     categoryCounts,
+    filters.kri,
   );
 
-  const performance_period = buildPerformancePeriod(scans, metricsMap, effectiveRole);
-  const brand_competition = buildBrandCompetition(scans, metricsMap, effectiveRole);
+  const performance_period = buildPerformancePeriod(scans, metricsMap, effectiveRole, filters.kri);
+  const brand_competition =
+    filters.kri === "all" || filters.kri === "share_of_shelf"
+      ? buildBrandCompetition(scans, metricsMap, effectiveRole)
+      : null;
 
   return {
     kpis,

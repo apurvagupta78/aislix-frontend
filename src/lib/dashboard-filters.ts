@@ -3,6 +3,8 @@
  */
 
 import type { DashboardRoleFilter } from "@/lib/dashboard-config";
+import { KPI_DASHBOARD_LABELS } from "@/lib/dashboard-config";
+import type { AuditKpiId } from "@/lib/role-kpi-config";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import { roleTabLabel } from "@/lib/role-audit-ui";
 
@@ -29,6 +31,8 @@ export type DashboardFilterState = {
   subCategory: string;
   teamMemberId: string;
   auditAssignment: DashboardAssignmentFilter;
+  /** Role primary KPI focus — "all" shows every KRI area. */
+  kri: AuditKpiId | "all";
 };
 
 export const DEFAULT_DASHBOARD_FILTERS: DashboardFilterState = {
@@ -43,6 +47,7 @@ export const DEFAULT_DASHBOARD_FILTERS: DashboardFilterState = {
   subCategory: "all",
   teamMemberId: "all",
   auditAssignment: "all",
+  kri: "all",
 };
 
 export type DashboardStoreOption = {
@@ -88,6 +93,7 @@ export type DashboardFilterOptions = {
   categories: string[];
   subcategories: DashboardSubCategoryOption[];
   team_members: DashboardTeamMember[];
+  kri_options: Array<{ value: AuditKpiId; label: string }>;
   only_self: boolean;
   current_user_id: string | null;
 };
@@ -147,7 +153,8 @@ export function isDefaultDashboardFilters(filters: DashboardFilterState): boolea
     filters.category === "all" &&
     filters.subCategory === "all" &&
     filters.teamMemberId === "all" &&
-    filters.auditAssignment === "all"
+    filters.auditAssignment === "all" &&
+    filters.kri === "all"
   );
 }
 
@@ -209,6 +216,11 @@ export function dashboardFilterChips(
   if (filters.auditAssignment !== "all") {
     const opt = DASHBOARD_ASSIGNMENT_OPTIONS.find((o) => o.value === filters.auditAssignment);
     chips.push({ key: "auditAssignment", label: opt?.label ?? filters.auditAssignment });
+  }
+
+  if (filters.kri !== "all") {
+    const opt = options.kri_options.find((o) => o.value === filters.kri);
+    chips.push({ key: "kri", label: opt?.label ?? KPI_DASHBOARD_LABELS[filters.kri] });
   }
 
   return chips;

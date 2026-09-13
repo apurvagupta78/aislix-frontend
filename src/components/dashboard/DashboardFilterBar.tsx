@@ -6,6 +6,7 @@ import {
   Check,
   ChevronsUpDown,
   ClipboardList,
+  Gauge,
   Globe2,
   Layers,
   MapPin,
@@ -199,9 +200,66 @@ function DateControl({
   onChange: (next: DashboardFilterState) => void;
   stacked?: boolean;
 }) {
+  if (stacked) {
+    return (
+      <div className="space-y-2">
+        <DatePresetSelect filters={filters} onChange={onChange} />
+        {filters.datePreset === "custom" ? (
+          <div className="flex w-full gap-2">
+            <Input
+              type="date"
+              value={filters.dateFrom}
+              onChange={(e) => onChange({ ...filters, dateFrom: e.target.value })}
+              className="h-9 rounded-lg text-xs"
+              aria-label="From date"
+            />
+            <Input
+              type="date"
+              value={filters.dateTo}
+              onChange={(e) => onChange({ ...filters, dateTo: e.target.value })}
+              className="h-9 rounded-lg text-xs"
+              aria-label="To date"
+            />
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
-    <div className={stacked ? "space-y-2" : "contents"}>
-      <Select
+    <>
+      <DatePresetSelect filters={filters} onChange={onChange} />
+      {filters.datePreset === "custom" ? (
+        <div className="flex gap-2">
+          <Input
+            type="date"
+            value={filters.dateFrom}
+            onChange={(e) => onChange({ ...filters, dateFrom: e.target.value })}
+            className="h-9 rounded-lg text-xs"
+            aria-label="From date"
+          />
+          <Input
+            type="date"
+            value={filters.dateTo}
+            onChange={(e) => onChange({ ...filters, dateTo: e.target.value })}
+            className="h-9 rounded-lg text-xs"
+            aria-label="To date"
+          />
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function DatePresetSelect({
+  filters,
+  onChange,
+}: {
+  filters: DashboardFilterState;
+  onChange: (next: DashboardFilterState) => void;
+}) {
+  return (
+    <Select
         value={filters.datePreset}
         onValueChange={(v) =>
           onChange({
@@ -223,25 +281,6 @@ function DateControl({
           ))}
         </SelectContent>
       </Select>
-      {filters.datePreset === "custom" ? (
-        <div className={cn("flex gap-2", stacked && "w-full")}>
-          <Input
-            type="date"
-            value={filters.dateFrom}
-            onChange={(e) => onChange({ ...filters, dateFrom: e.target.value })}
-            className="h-9 rounded-lg text-xs"
-            aria-label="From date"
-          />
-          <Input
-            type="date"
-            value={filters.dateTo}
-            onChange={(e) => onChange({ ...filters, dateTo: e.target.value })}
-            className="h-9 rounded-lg text-xs"
-            aria-label="To date"
-          />
-        </div>
-      ) : null}
-    </div>
   );
 }
 
@@ -390,7 +429,12 @@ function useFilterOptions(filters: DashboardFilterState, options: DashboardFilte
     [],
   );
 
-  return { countryOptions, cityOptions, storeOptions, categoryOptions, roleOptions };
+  const kriOptions = useMemo(
+    () => options.kri_options.map((o) => ({ value: o.value, label: o.label })),
+    [options.kri_options],
+  );
+
+  return { countryOptions, cityOptions, storeOptions, categoryOptions, roleOptions, kriOptions };
 }
 
 function DesktopToolbar({
@@ -403,7 +447,7 @@ function DesktopToolbar({
   options: DashboardFilterOptions;
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
-  const { countryOptions, cityOptions, storeOptions, categoryOptions, roleOptions } =
+  const { countryOptions, cityOptions, storeOptions, categoryOptions, roleOptions, kriOptions } =
     useFilterOptions(filters, options);
 
   const moreActive =
@@ -414,30 +458,26 @@ function DesktopToolbar({
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <DateControl filters={filters} onChange={onChange} />
-      {countryOptions.length ? (
-        <SearchableSelect
-          label="Country"
-          icon={Globe2}
-          value={filters.country}
-          onValueChange={(v) =>
-            onChange({ ...filters, country: v, city: "all", storeId: "all" })
-          }
-          options={countryOptions}
-          allLabel="All countries"
-          className="min-w-[120px] max-w-[150px]"
-        />
-      ) : null}
-      {cityOptions.length ? (
-        <SearchableSelect
-          label="City"
-          icon={MapPin}
-          value={filters.city}
-          onValueChange={(v) => onChange({ ...filters, city: v, storeId: "all" })}
-          options={cityOptions}
-          allLabel="All cities"
-          className="min-w-[110px] max-w-[140px]"
-        />
-      ) : null}
+      <SearchableSelect
+        label="Country"
+        icon={Globe2}
+        value={filters.country}
+        onValueChange={(v) =>
+          onChange({ ...filters, country: v, city: "all", storeId: "all" })
+        }
+        options={countryOptions}
+        allLabel="All countries"
+        className="min-w-[120px] max-w-[150px]"
+      />
+      <SearchableSelect
+        label="City"
+        icon={MapPin}
+        value={filters.city}
+        onValueChange={(v) => onChange({ ...filters, city: v, storeId: "all" })}
+        options={cityOptions}
+        allLabel="All cities"
+        className="min-w-[110px] max-w-[140px]"
+      />
       <CompactSelect
         label="Role"
         icon={Briefcase}
@@ -450,12 +490,24 @@ function DesktopToolbar({
             category: "all",
             subCategory: "all",
             teamMemberId: "all",
+            kri: "all",
           })
         }
         options={roleOptions}
         allLabel="All roles"
         className="min-w-[108px] max-w-[130px]"
       />
+      {kriOptions.length ? (
+        <CompactSelect
+          label="KRI"
+          icon={Gauge}
+          value={filters.kri}
+          onValueChange={(v) => onChange({ ...filters, kri: v as DashboardFilterState["kri"] })}
+          options={kriOptions}
+          allLabel="All KRIs"
+          className="min-w-[108px] max-w-[150px]"
+        />
+      ) : null}
       <SearchableSelect
         label="Store"
         icon={Store}
@@ -509,7 +561,7 @@ function MobileFilters({
 }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(filters);
-  const { countryOptions, cityOptions, storeOptions, categoryOptions, roleOptions } =
+  const { countryOptions, cityOptions, storeOptions, categoryOptions, roleOptions, kriOptions } =
     useFilterOptions(draft, options);
 
   const subCategoryOptions = useMemo(() => {
@@ -545,28 +597,24 @@ function MobileFilters({
         </SheetHeader>
         <div className="space-y-3">
           <DateControl filters={draft} onChange={setDraft} stacked />
-          {countryOptions.length ? (
-            <SearchableSelect
-              label="Country"
-              icon={Globe2}
-              value={draft.country}
-              onValueChange={(v) => setDraft({ ...draft, country: v, city: "all", storeId: "all" })}
-              options={countryOptions}
-              allLabel="All countries"
-              className="w-full"
-            />
-          ) : null}
-          {cityOptions.length ? (
-            <SearchableSelect
-              label="City"
-              icon={MapPin}
-              value={draft.city}
-              onValueChange={(v) => setDraft({ ...draft, city: v, storeId: "all" })}
-              options={cityOptions}
-              allLabel="All cities"
-              className="w-full"
-            />
-          ) : null}
+          <SearchableSelect
+            label="Country"
+            icon={Globe2}
+            value={draft.country}
+            onValueChange={(v) => setDraft({ ...draft, country: v, city: "all", storeId: "all" })}
+            options={countryOptions}
+            allLabel="All countries"
+            className="w-full"
+          />
+          <SearchableSelect
+            label="City"
+            icon={MapPin}
+            value={draft.city}
+            onValueChange={(v) => setDraft({ ...draft, city: v, storeId: "all" })}
+            options={cityOptions}
+            allLabel="All cities"
+            className="w-full"
+          />
           <CompactSelect
             label="Role"
             icon={Briefcase}
@@ -579,12 +627,24 @@ function MobileFilters({
                 category: "all",
                 subCategory: "all",
                 teamMemberId: "all",
+                kri: "all",
               })
             }
             options={roleOptions}
             allLabel="All roles"
             className="w-full"
           />
+          {kriOptions.length ? (
+            <CompactSelect
+              label="KRI"
+              icon={Gauge}
+              value={draft.kri}
+              onValueChange={(v) => setDraft({ ...draft, kri: v as DashboardFilterState["kri"] })}
+              options={kriOptions}
+              allLabel="All KRIs"
+              className="w-full"
+            />
+          ) : null}
           <SearchableSelect
             label="Store"
             icon={Store}

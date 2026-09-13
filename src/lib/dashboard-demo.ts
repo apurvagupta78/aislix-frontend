@@ -443,6 +443,13 @@ export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
       { user_id: "demo-user-1", name: "Demo Manager", email: "manager@demo.aislix.com" },
       { user_id: "demo-user-2", name: "Field Rep", email: "rep@demo.aislix.com" },
     ],
+    kri_options: [
+      { value: "osa", label: "OSA" },
+      { value: "planogram_compliance", label: "Planogram" },
+      { value: "assortment_compliance", label: "Assortment" },
+      { value: "price_compliance", label: "Price" },
+      { value: "promotional_compliance", label: "Promotion" },
+    ],
     only_self: false,
     current_user_id: "demo-user-1",
   },
