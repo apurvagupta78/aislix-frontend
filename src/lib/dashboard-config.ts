@@ -6,14 +6,8 @@ import type { AuditKpiId } from "@/lib/role-kpi-config";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import { AUDIT_ROLE_TABS, roleTabLabel } from "@/lib/role-audit-ui";
 
-export type DashboardDateRange = "7d" | "30d" | "90d" | "12m";
-
-export const DASHBOARD_DATE_OPTIONS: { value: DashboardDateRange; label: string }[] = [
-  { value: "7d", label: "Last 7 days" },
-  { value: "30d", label: "Last 30 days" },
-  { value: "90d", label: "Last 90 days" },
-  { value: "12m", label: "Last 12 months" },
-];
+/** @deprecated use DashboardDatePreset from dashboard-filters */
+export type DashboardDateRange = import("@/lib/dashboard-filters").DashboardDatePreset;
 
 export type DashboardRoleFilter = AuditRoleTab | "all";
 
@@ -74,14 +68,17 @@ export const SHELF_HEALTH_TOOLTIP =
 
 export function dateRangeToDays(range: DashboardDateRange): number {
   switch (range) {
+    case "today":
+    case "yesterday":
+      return 1;
     case "7d":
       return 7;
+    case "30d":
+      return 30;
     case "90d":
       return 90;
-    case "12m":
-      return 365;
     default:
-      return 30;
+      return 7;
   }
 }
 

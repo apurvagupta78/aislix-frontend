@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowRight,
@@ -23,13 +23,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Tooltip as UiTooltip,
   TooltipContent,
   TooltipProvider,
@@ -39,14 +32,11 @@ import { CardSkeleton, EmptyState, ErrorState, Skeleton } from "@/components/Sta
 import { SectionHeader } from "@/components/dashboard/DashboardParts";
 import {
   DASHBOARD_CHART_COLORS,
-  DASHBOARD_DATE_OPTIONS,
-  DASHBOARD_ROLE_OPTIONS,
   DASHBOARD_STATUS_COLORS,
   KPI_DASHBOARD_LABELS,
   SHELF_HEALTH_TOOLTIP,
   effectiveDashboardRole,
   trendKpisForRole,
-  type DashboardDateRange,
   type DashboardRoleFilter,
 } from "@/lib/dashboard-config";
 import type { AuditKpiId } from "@/lib/role-kpi-config";
@@ -60,90 +50,6 @@ const tooltipStyle = {
   background: "var(--card)",
   fontSize: 12,
 } as const;
-
-export type DashboardFilterState = {
-  dateRange: DashboardDateRange;
-  role: DashboardRoleFilter;
-  storeId: string;
-  category: string;
-};
-
-export function DashboardFilterRow({
-  filters,
-  onChange,
-  options,
-}: {
-  filters: DashboardFilterState;
-  onChange: (next: DashboardFilterState) => void;
-  options: WorkspaceDashboardData["filter_options"];
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      <Select
-        value={filters.dateRange}
-        onValueChange={(v) => onChange({ ...filters, dateRange: v as DashboardDateRange })}
-      >
-        <SelectTrigger className="h-9 w-[140px] rounded-xl text-xs">
-          <SelectValue placeholder="Date" />
-        </SelectTrigger>
-        <SelectContent>
-          {DASHBOARD_DATE_OPTIONS.map((o) => (
-            <SelectItem key={o.value} value={o.value}>
-              {o.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select
-        value={filters.role}
-        onValueChange={(v) => onChange({ ...filters, role: v as DashboardRoleFilter })}
-      >
-        <SelectTrigger className="h-9 w-[140px] rounded-xl text-xs">
-          <SelectValue placeholder="Role" />
-        </SelectTrigger>
-        <SelectContent>
-          {DASHBOARD_ROLE_OPTIONS.map((o) => (
-            <SelectItem key={o.value} value={o.value}>
-              {o.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select
-        value={filters.storeId}
-        onValueChange={(v) => onChange({ ...filters, storeId: v })}
-      >
-        <SelectTrigger className="h-9 w-[140px] rounded-xl text-xs">
-          <SelectValue placeholder="Store" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All stores</SelectItem>
-          {options.stores.map((s) => (
-            <SelectItem key={s.id} value={s.id}>
-              {s.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select
-        value={filters.category}
-        onValueChange={(v) => onChange({ ...filters, category: v })}
-      >
-        <SelectTrigger className="h-9 w-[140px] rounded-xl text-xs">
-          <SelectValue placeholder="Category" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All categories</SelectItem>
-          {options.categories.map((c) => (
-            <SelectItem key={c} value={c}>
-              {c}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
 
 function KpiCard({
   title,

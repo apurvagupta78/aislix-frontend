@@ -352,5 +352,16 @@ export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
       { id: "demo-2", name: "Big Bazaar — Whitefield" },
     ],
     categories: ["Beverages", "Snacks", "Personal Care"],
+    subcategories: [
+      { category: "Beverages", value: "Soft drinks", label: "Soft drinks" },
+      { category: "Snacks", value: "Chips", label: "Chips" },
+      { category: "Personal Care", value: "Oral care", label: "Oral care" },
+    ],
+    team_members: [
+      { user_id: "demo-user-1", name: "Demo Manager", email: "manager@demo.aislix.com" },
+      { user_id: "demo-user-2", name: "Field Rep", email: "rep@demo.aislix.com" },
+    ],
+    only_self: false,
+    current_user_id: "demo-user-1",
   },
 };
