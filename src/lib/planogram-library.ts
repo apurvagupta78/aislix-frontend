@@ -222,7 +222,7 @@ export async function createStorePlanogram(input: {
       uploaded_by: userId,
       source_filename: input.sourceFilename ?? null,
       row_count: input.rows.length,
-      audit_package: auditPayload,
+      audit_package: auditPayload as never,
       fixture_id: input.auditPackage?.fixture_id || null,
       store_timezone: input.auditPackage?.store_timezone || null,
     })
@@ -296,7 +296,7 @@ export async function updateStorePlanogram(input: {
       source_type: input.sourceType,
       row_count: input.rows.length,
       updated_at: new Date().toISOString(),
-      audit_package: auditPayload,
+      audit_package: auditPayload as never,
       fixture_id: input.auditPackage?.fixture_id || null,
       store_timezone: input.auditPackage?.store_timezone || null,
     })

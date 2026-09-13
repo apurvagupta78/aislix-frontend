@@ -547,7 +547,7 @@ export function PerformanceOverTimeSection({
             </div>
             <Link
               to="/results"
-              search={{ audit: focusedPoint.scan_id }}
+              search={{ scan: focusedPoint.scan_id }}
               className="inline-flex items-center gap-1 font-medium text-brand hover:underline"
             >
               Open audit <ArrowRight className="size-3.5" />

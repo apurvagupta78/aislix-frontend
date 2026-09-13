@@ -10,10 +10,10 @@ const NAV: {
   exact?: boolean;
 }[] = [
   { to: "/admin", label: "Overview", icon: LayoutDashboard, exact: true },
-  { to: "/admin/audits", label: "Audits", icon: ScanLine },
+  { to: "/admin/scans", label: "Scans", icon: ScanLine },
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/orgs", label: "Organizations", icon: Database },
-  { to: "/admin/demo-audits", label: "Demo audits", icon: Shield },
+  { to: "/admin/demo-scans", label: "Demo scans", icon: Shield },
 ];
 
 export function AdminShell({

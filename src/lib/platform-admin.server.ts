@@ -45,7 +45,7 @@ export type ScanAssetUrls = {
   csv_url?: string;
 };
 
-/** Signed URLs for an audit's stored assets (service role). */
+/** Signed URLs for a scan's stored assets (service role). */
 export async function resolveAdminScanAssetUrls(
   supabaseAdmin: SupabaseClient,
   scanId: string,
@@ -94,7 +94,8 @@ export async function resolveAdminScanPreviewUrls(
     .in("scan_id", scanIds)
     .in("kind", ["annotated", "original"]);
 
-  const byScan = new Map<string, { annotated?: typeof images[0]; original?: typeof images[0] }>();
+  type PreviewImage = NonNullable<typeof images>[number];
+  const byScan = new Map<string, { annotated?: PreviewImage; original?: PreviewImage }>();
   for (const img of images ?? []) {
     const sid = String(img.scan_id);
     const slot = byScan.get(sid) ?? {};

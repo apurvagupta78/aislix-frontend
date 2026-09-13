@@ -509,7 +509,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                       onClick={() =>
                         exportPlanogramPackageJson(
                           meta.name || "planogram",
-                          value.planogramRows,
+                          draftRows,
                           auditPackage,
                         )
                       }
@@ -897,9 +897,9 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
           );
 
         case "layout": {
-          const updateRow = (index: number, patch: Partial<PlanogramRow>) => {
+          const updateRow = (index: number, rowPatch: Partial<PlanogramRow>) => {
             const rows = value.planogramRows.map((row, i) =>
-              i === index ? { ...row, ...patch } : row,
+              i === index ? { ...row, ...rowPatch } : row,
             );
             patch({ ...value, planogramRows: rows });
           };
@@ -1831,7 +1831,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
           return (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Review KPI readiness for <strong>{roleTabLabel(role)}</strong> before auditing. Missing
+                Review KPI readiness for <strong>{roleTabLabel(role)}</strong> before scanning. Missing
                 optional data marks a KPI as Not configured — never fake scores.
               </p>
               <ul className="grid gap-2 sm:grid-cols-2">

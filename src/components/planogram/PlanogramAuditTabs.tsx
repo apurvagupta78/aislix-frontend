@@ -96,14 +96,14 @@ export function PlanogramAuditTabs({
   return (
     <Tabs defaultValue="products" className="space-y-4">
       <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl border border-brand/15 bg-brand-soft/30 p-1">
-        {[
+        {([
           ["details", "Details"],
           ["products", "Products"],
           ["assortment", "Assortment & MSL"],
           ["prices", "Prices"],
           ["promotions", "Promotions"],
           ["scoring", "Scoring"],
-        ].map(([value, label]) => (
+        ] satisfies Array<[string, string]>).map(([value, label]) => (
           <TabsTrigger
             key={value}
             value={value}

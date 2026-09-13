@@ -13,7 +13,7 @@ import {
 import { isDemoOralCareContext } from "@/lib/demo-oral-care-planogram";
 import { defaultAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { landingToScanResult } from "@/lib/demo-execution";
-import type { LandingScanResult } from "@/lib/landing-audit-api";
+import type { LandingScanResult } from "@/lib/landing-scan-api";
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import { ScanResultsActionsFooter } from "@/components/scan/ScanResultsActionsFooter";
 import { parseDemoAllowance } from "@/lib/demo-allowance";
@@ -142,7 +142,7 @@ export function DemoRoleResultsPanel({
         )}
 
         <ScanResultsHeaderBar
-          timestamp={landing.audited_at}
+          timestamp={landing.scanned_at}
           showDemoPlanogramBadge={isDemoOralCareContext(scanContext)}
         />
 
@@ -152,7 +152,7 @@ export function DemoRoleResultsPanel({
       {fullscreen && (
         <GuestDemoShell
           title="Shelf execution report"
-          description={[landing.category, landing.shelf_label].filter(Boolean).join(" · ") || "Demo audit"}
+          description={[landing.category, landing.shelf_label].filter(Boolean).join(" · ") || "Demo scan"}
           onClose={() => setFullscreen(false)}
         >
           <div className="mx-auto max-w-6xl space-y-4">

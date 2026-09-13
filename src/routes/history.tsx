@@ -80,16 +80,16 @@ export const Route = createFileRoute("/history")({
   },
   head: () => ({
     meta: [
-      { title: "Audit History — Aislix Shelf Audits" },
+      { title: "Scan History — Aislix Shelf Audits" },
       {
         name: "description",
         content:
-          "Search and filter audits by store, location and category, then compare any two shelf audits.",
+          "Search and filter scans by store, location and category, then compare any two shelf audits.",
       },
-      { property: "og:title", content: "Audit history — Aislix" },
+      { property: "og:title", content: "Scan history — Aislix" },
       {
         property: "og:description",
-        content: "A searchable archive of every shelf audit, with exports and audit comparison.",
+        content: "A searchable archive of every shelf audit, with exports and scan comparison.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -159,7 +159,7 @@ function RowActions({
 
   const run = async (kind: "pdf" | "csv" | "image", task: () => Promise<void>) => {
     setBusy(kind);
-    // Reports for older audits are rebuilt on demand and can take a minute.
+    // Reports for older scans are rebuilt on demand and can take a minute.
     const toastId = toast.loading("Preparing download…");
     try {
       await task();
@@ -180,12 +180,12 @@ function RowActions({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52 rounded-xl">
         <DropdownMenuItem asChild>
-          <Link to="/results" search={{ audit: scan.scan_id }}>
+          <Link to="/results" search={{ scan: scan.scan_id }}>
             <FileText className="size-4" /> View results
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link to="/report" search={{ audit: scan.scan_id }}>
+          <Link to="/report" search={{ scan: scan.scan_id }}>
             <FileText className="size-4" /> View report
           </Link>
         </DropdownMenuItem>
@@ -224,7 +224,7 @@ function RowActions({
           className="text-destructive focus:text-destructive"
           onSelect={() => onDelete(scan)}
         >
-          <Trash2 className="size-4" /> Delete audit
+          <Trash2 className="size-4" /> Delete scan
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -253,7 +253,7 @@ function HistoryPage() {
 
 
   const { data, isPending, isError, error, refetch } = useQuery({
-    queryKey: ["audit-history", params],
+    queryKey: ["scan-history", params],
     queryFn: ({ signal }) => fetchScanHistory(params, signal),
     retry: false,
   });
@@ -286,9 +286,9 @@ function HistoryPage() {
       await deleteScan(pendingDelete.scan_id);
       setSelected((prev) => prev.filter((id) => id !== pendingDelete.scan_id));
       setPendingDelete(null);
-      await queryClient.invalidateQueries({ queryKey: ["audit-history"] });
+      await queryClient.invalidateQueries({ queryKey: ["scan-history"] });
     } catch (e) {
-      setDeleteError(e instanceof Error ? e.message : "Could not delete this audit.");
+      setDeleteError(e instanceof Error ? e.message : "Could not delete this scan.");
     } finally {
       setDeleting(false);
     }
@@ -296,8 +296,8 @@ function HistoryPage() {
 
   return (
     <AppShell
-      title="Audit history"
-      description="Every shelf audit run on your workspace, with exports and audit comparison."
+      title="Scan history"
+      description="Every shelf audit run on your workspace, with exports and scan comparison."
     >
       <div className="space-y-5">
         {/* filters */}
@@ -311,9 +311,9 @@ function HistoryPage() {
                   setQ(e.target.value);
                   resetPage();
                 }}
-                placeholder="Search by audit ID or store name"
+                placeholder="Search by scan ID or store name"
                 className="h-11 rounded-xl pl-9"
-                aria-label="Search audits"
+                aria-label="Search scans"
               />
             </div>
 
@@ -358,7 +358,7 @@ function HistoryPage() {
                 resetPage();
               }}
             >
-              <SelectTrigger className="h-11 rounded-xl sm:w-[190px]" aria-label="Sort audits">
+              <SelectTrigger className="h-11 rounded-xl sm:w-[190px]" aria-label="Sort scans">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -375,11 +375,11 @@ function HistoryPage() {
                 resetPage();
               }}
             >
-              <SelectTrigger className="h-11 rounded-xl sm:w-[170px]" aria-label="Filter by audit type">
+              <SelectTrigger className="h-11 rounded-xl sm:w-[170px]" aria-label="Filter by scan type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All audits</SelectItem>
+                <SelectItem value="all">All scans</SelectItem>
                 <SelectItem value="assigned">Assigned only</SelectItem>
                 <SelectItem value="adhoc">Ad hoc only</SelectItem>
               </SelectContent>
@@ -411,9 +411,9 @@ function HistoryPage() {
         {/* compare bar */}
         <section className="card-surface flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div className="min-w-0">
-            <p className="text-sm font-semibold tracking-tight">Compare audits</p>
+            <p className="text-sm font-semibold tracking-tight">Compare scans</p>
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-              Select two audits to compare inventory changes between them.
+              Select two scans to compare inventory changes between them.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-3">
@@ -436,22 +436,22 @@ function HistoryPage() {
             <TableSkeleton rows={6} cols={6} />
           ) : isError ? (
             <ErrorState
-              title="Couldn't load audit history"
+              title="Couldn't load scan history"
               description={error instanceof Error ? error.message : undefined}
               onRetry={() => void refetch()}
             />
           ) : items.length === 0 ? (
             <EmptyState
               icon={q || date || store !== "all" ? <SearchX className="size-5" /> : undefined}
-              title={q || date || store !== "all" ? "No audits match your filters" : "No audits yet"}
+              title={q || date || store !== "all" ? "No scans match your filters" : "No scans yet"}
               description={
                 q || date || store !== "all"
-                  ? "Try a different audit ID, store or date."
-                  : "Run your first shelf audit and it will appear here."
+                  ? "Try a different scan ID, store or date."
+                  : "Run your first shelf scan and it will appear here."
               }
               action={
                 <Button variant="brand" size="sm" className="rounded-xl" asChild>
-                  <Link to="/audit">New audit</Link>
+                  <Link to="/scan">New scan</Link>
                 </Button>
               }
             />
@@ -463,7 +463,7 @@ function HistoryPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-10" />
-                      <TableHead>Audit</TableHead>
+                      <TableHead>Scan</TableHead>
                       <TableHead>Store</TableHead>
                       <TableHead>Date &amp; time</TableHead>
                       <TableHead className="text-right">Products</TableHead>
@@ -490,7 +490,7 @@ function HistoryPage() {
                         <TableCell className="font-mono text-xs">
                           <Link
                             to="/results"
-                            search={{ audit: scan.scan_id }}
+                            search={{ scan: scan.scan_id }}
                             className="font-medium text-foreground hover:text-brand"
                           >
                             {scan.scan_id}
@@ -589,7 +589,7 @@ function HistoryPage() {
                     <div className="mt-4 flex items-center justify-between gap-3">
                       <StatusBadge status={scan.status} />
                       <Button variant="subtle" size="sm" className="rounded-xl" asChild>
-                        <Link to="/results" search={{ audit: scan.scan_id }}>
+                        <Link to="/results" search={{ scan: scan.scan_id }}>
                           View results
                         </Link>
                       </Button>
@@ -601,7 +601,7 @@ function HistoryPage() {
               {/* pagination */}
               <div className="mt-5 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs text-muted-foreground">
-                  Page {page} of {pageCount} · {total.toLocaleString()} audits
+                  Page {page} of {pageCount} · {total.toLocaleString()} scans
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
@@ -640,7 +640,7 @@ function HistoryPage() {
       >
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this audit?</AlertDialogTitle>
+            <AlertDialogTitle>Delete this scan?</AlertDialogTitle>
             <AlertDialogDescription>
               {pendingDelete?.scan_id} for {pendingDelete?.store} will be permanently removed, along
               with its report and exports. This cannot be undone.
@@ -659,7 +659,7 @@ function HistoryPage() {
                 void confirmDelete();
               }}
             >
-              {deleting ? "Deleting…" : "Delete audit"}
+              {deleting ? "Deleting…" : "Delete scan"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

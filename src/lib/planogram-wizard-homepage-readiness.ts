@@ -74,8 +74,6 @@ export function computeHomepageShelfChecks(
         return { ...item, status: hasPriceData ? "ready" : "optional" };
       case "promotions":
         return { ...item, status: hasPromotions ? "ready" : "optional" };
-      default:
-        return { ...item, status: "not_set" };
     }
   });
 }

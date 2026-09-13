@@ -101,10 +101,10 @@ function parseCsv(content: string): { headers: string[]; rows: Record<string, st
     .map((line) => line.trim())
     .filter((line) => line && !line.startsWith("#"));
   if (lines.length < 1) return { headers: [], rows: [] };
-  const headers = parseCsvLine(lines[0]).map((h) => h.toLowerCase().replace(/\s+/g, "_"));
+  const headers = parseCsvLine(lines[0] ?? "").map((h) => h.toLowerCase().replace(/\s+/g, "_"));
   const rows: Record<string, string>[] = [];
   for (let i = 1; i < lines.length; i += 1) {
-    const values = parseCsvLine(lines[i]);
+    const values = parseCsvLine(lines[i] ?? "");
     const row: Record<string, string> = {};
     headers.forEach((header, idx) => {
       row[header] = values[idx] ?? "";

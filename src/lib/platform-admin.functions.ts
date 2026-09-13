@@ -70,7 +70,7 @@ export type PlatformOrgRow = {
   scan_count: number;
   plan_code: string | null;
   plan_name: string | null;
-  audits_used: number | null;
+  scans_used: number | null;
   subscription_status: string | null;
 };
 
@@ -91,13 +91,13 @@ export type PlatformScanDetail = {
     executive_summary: string | null;
     confidence_avg: number | null;
     model_version: string | null;
-    metrics: Record<string, unknown> | null;
-    alerts: unknown[] | null;
-    recommendations: unknown[] | null;
-    brand_share: unknown[] | null;
-    category_breakdown: unknown[] | null;
-    shelf_rows: unknown[] | null;
-    raw_payload: Record<string, unknown> | null;
+    metrics: any;
+    alerts: any;
+    recommendations: any;
+    brand_share: any;
+    category_breakdown: any;
+    shelf_rows: any;
+    raw_payload: any;
   } | null;
 };
 
@@ -139,7 +139,7 @@ export const getPlatformAdminOverview = createServerFn({ method: "POST" })
     const [
       orgs,
       users,
-      audits,
+      scans,
       completed,
       failed,
       demos,
@@ -154,13 +154,13 @@ export const getPlatformAdminOverview = createServerFn({ method: "POST" })
       db.from("stores").select("id", { count: "exact", head: true }),
     ]);
 
-    const err = orgs.error ?? users.error ?? audits.error ?? completed.error ?? failed.error ?? demos.error ?? stores.error;
+    const err = orgs.error ?? users.error ?? scans.error ?? completed.error ?? failed.error ?? demos.error ?? stores.error;
     if (err) throw new Error(err.message);
 
     return {
       organizations: orgs.count ?? 0,
       users: users.count ?? 0,
-      shelf_scans: audits.count ?? 0,
+      shelf_scans: scans.count ?? 0,
       completed_scans: completed.count ?? 0,
       failed_scans: failed.count ?? 0,
       landing_demo_sessions: demos.count ?? 0,
@@ -204,7 +204,9 @@ export const listPlatformScans = createServerFn({ method: "POST" })
 
     if (data.userId) query = query.eq("created_by", data.userId);
     if (data.orgId) query = query.eq("org_id", data.orgId);
-    if (data.status && data.status !== "all") query = query.eq("status", data.status);
+    if (data.status && data.status !== "all") {
+      query = query.eq("status", data.status as "completed" | "failed" | "processing" | "queued");
+    }
     if (data.q) {
       query = query.or(
         `id.ilike.%${data.q}%,category.ilike.%${data.q}%,shelf_label.ilike.%${data.q}%,sub_category_label.ilike.%${data.q}%`,
@@ -370,17 +372,17 @@ export const listPlatformOrgs = createServerFn({ method: "POST" })
     const scanCounts = new Map<string, number>();
     const subsByOrg = new Map<
       string,
-      { plan_code: string | null; plan_name: string | null; audits_used: number | null; status: string | null }
+      { plan_code: string | null; plan_name: string | null; scans_used: number | null; status: string | null }
     >();
 
     if (orgIds.length > 0) {
-      const [{ data: members }, { data: stores }, { data: audits }, { data: subs }] = await Promise.all([
+      const [{ data: members }, { data: stores }, { data: scans }, { data: subs }] = await Promise.all([
         db.from("organization_members").select("org_id").in("org_id", orgIds),
         db.from("stores").select("org_id").in("org_id", orgIds),
         db.from("shelf_scans").select("org_id").in("org_id", orgIds),
         db
           .from("subscriptions")
-          .select("org_id, audits_used, status, subscription_plans(code, name)")
+          .select("org_id, scans_used, status, subscription_plans(code, name)")
           .in("org_id", orgIds),
       ]);
 
@@ -392,7 +394,7 @@ export const listPlatformOrgs = createServerFn({ method: "POST" })
         const id = s.org_id as string;
         storeCounts.set(id, (storeCounts.get(id) ?? 0) + 1);
       }
-      for (const s of audits ?? []) {
+      for (const s of scans ?? []) {
         const id = s.org_id as string;
         scanCounts.set(id, (scanCounts.get(id) ?? 0) + 1);
       }
@@ -401,7 +403,7 @@ export const listPlatformOrgs = createServerFn({ method: "POST" })
         subsByOrg.set(sub.org_id as string, {
           plan_code: plan?.code ?? null,
           plan_name: plan?.name ?? null,
-          audits_used: typeof sub.scans_used === "number" ? sub.scans_used : null,
+          scans_used: typeof sub.scans_used === "number" ? sub.scans_used : null,
           status: (sub.status as string | null) ?? null,
         });
       }
@@ -424,7 +426,7 @@ export const listPlatformOrgs = createServerFn({ method: "POST" })
           scan_count: scanCounts.get(id) ?? 0,
           plan_code: sub?.plan_code ?? null,
           plan_name: sub?.plan_name ?? null,
-          audits_used: sub?.scans_used ?? null,
+          scans_used: sub?.scans_used ?? null,
           subscription_status: sub?.status ?? null,
         };
       }),
@@ -435,7 +437,7 @@ export const getPlatformScanDetail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { scanId?: string } | undefined) => {
     const scanId = input?.scanId?.trim();
-    if (!scanId) throw new Error("Audit id is required.");
+    if (!scanId) throw new Error("Scan id is required.");
     return { scanId };
   })
   .handler(async ({ data, context }): Promise<PlatformScanDetail> => {
@@ -458,7 +460,7 @@ export const getPlatformScanDetail = createServerFn({ method: "POST" })
       .maybeSingle();
 
     if (error) throw new Error(error.message);
-    if (!row) throw new Error("Audit not found.");
+    if (!row) throw new Error("Scan not found.");
 
     const org = row.organizations as { name?: string } | null;
     const profile = row.profiles as { email?: string; full_name?: string } | null;

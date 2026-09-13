@@ -64,8 +64,10 @@ export type LandingScanResult = {
   scan_mode?: "audit_only" | "sample_with_planogram";
   has_planogram?: boolean;
   category?: string;
+  sub_category?: string;
+  sub_category_label?: string;
   shelf_label?: string;
-  metrics?: Record<string, unknown> & {
+  metrics?: Record<string, any> & {
     total_products?: number;
     unique_skus?: number;
     total_skus?: number;
@@ -87,12 +89,12 @@ export type LandingScanResult = {
   brand_share?: LandingBrandShare[];
   brand_share_scope?: "in_audit" | "all";
   brand_share_denominator?: number;
-  audited_at?: string;
+  scanned_at?: string;
   executive_summary?: string;
   role_summaries?: Partial<
     Record<"execution" | "merchandising" | "brand" | "executive", string>
   >;
-  retail_intelligence?: Record<string, unknown>;
+  retail_intelligence?: Record<string, any>;
   recommendations?: LandingRecommendation[];
   alerts?: LandingAlert[];
   compliance_alerts?: LandingComplianceAlert[];
@@ -101,8 +103,8 @@ export type LandingScanResult = {
   original_image_base64?: string;
   original_image_mime?: string;
   csv_base64?: string;
-  audits_used_today?: number;
-  audits_daily_limit?: number;
+  scans_used_today?: number;
+  scans_daily_limit?: number;
   demo_audits_used?: number;
   demo_audits_limit?: number;
   demo_audits_remaining?: number;
@@ -200,7 +202,7 @@ export async function runLandingUpload(
   if (ctx.landingSessionId) form.append("landing_session_id", ctx.landingSessionId);
   appendContext(form, ctx);
   appendUtm(form);
-  return postScan(form, "Audit failed");
+  return postScan(form, "Scan failed");
 }
 
 
@@ -230,7 +232,7 @@ export function downloadLandingCsv(result: LandingScanResult): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `aislix-shelf-audit-${result.scan_id || "demo"}.csv`;
+  a.download = `aislix-shelf-scan-${result.scan_id || "demo"}.csv`;
   a.click();
   URL.revokeObjectURL(url);
 }

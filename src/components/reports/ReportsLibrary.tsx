@@ -213,7 +213,7 @@ export function ReportsLibrary() {
   const Actions = ({ item }: { item: ScanHistoryItem }) => (
     <div className="inline-flex items-center gap-1">
       <Button asChild variant="subtle" size="sm" className="rounded-xl">
-        <Link to="/report" search={{ audit: item.scan_id }}>
+        <Link to="/report" search={{ scan: item.scan_id }}>
           <FileText className="size-4" /> View
         </Link>
       </Button>
@@ -273,15 +273,15 @@ export function ReportsLibrary() {
       <>
         {FilterBar}
         <EmptyState
-          title={filtersActive ? "No reports match these filters" : "No reports yet — run your first audit."}
+          title={filtersActive ? "No reports match these filters" : "No reports yet — run your first scan."}
           description={
             filtersActive
               ? "Try a different assignee, status or date range."
-              : "Run an audit with Store, Location and Category filled in to see reports here."
+              : "Run a scan with Store, Location and Category filled in to see reports here."
           }
           action={
             <Button asChild variant="brand" size="sm" className="rounded-xl">
-              <Link to="/audit">Start an audit</Link>
+              <Link to="/scan">Start a scan</Link>
             </Button>
           }
         />
@@ -298,7 +298,7 @@ export function ReportsLibrary() {
           <TableHeader>
             <TableRow>
               <TableHead className="min-w-[180px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Audit
+                Scan
               </TableHead>
               <TableHead className="min-w-[140px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Store
@@ -330,7 +330,7 @@ export function ReportsLibrary() {
                 <TableCell className="align-middle text-sm">
                   <Link
                     to="/results"
-                    search={{ audit: item.scan_id }}
+                    search={{ scan: item.scan_id }}
                     className="font-medium hover:underline"
                   >
                     {formatScanDate(item.created_at) ?? "Date unavailable"}
@@ -391,7 +391,7 @@ export function ReportsLibrary() {
           >
             <Link
               to="/results"
-              search={{ audit: item.scan_id }}
+              search={{ scan: item.scan_id }}
               className="text-sm font-semibold hover:underline"
             >
               {formatScanDate(item.created_at) ?? "Date unavailable"}

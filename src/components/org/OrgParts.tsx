@@ -74,7 +74,7 @@ import {
   grantStoreAccess,
   healthTone,
   restoreOrgStore,
-  auditsRemaining,
+  scansRemaining,
   storeLocation,
   updateOrgStore,
   usagePercent,
@@ -129,7 +129,7 @@ export function OrganizationOverview({
   org?: Organization | undefined;
   loading?: boolean | undefined;
 }) {
-  const remaining = auditsRemaining(org);
+  const remaining = scansRemaining(org);
   const percent = usagePercent(org);
   const status = org?.account_status;
 
@@ -191,13 +191,13 @@ export function OrganizationOverview({
 
         <div className="mt-5 rounded-xl border border-border bg-surface p-4">
           <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-            <p className="font-medium text-foreground">Monthly audit usage</p>
+            <p className="font-medium text-foreground">Monthly scan usage</p>
             <p className="text-muted-foreground">
               {loading
                 ? "…"
                 : org?.scans_included === null
-                  ? `${formatNumber(org?.scans_used)} audits · unlimited plan`
-                  : `${formatNumber(org?.scans_used)} of ${formatNumber(org?.scans_included)} audits`}
+                  ? `${formatNumber(org?.scans_used)} scans · unlimited plan`
+                  : `${formatNumber(org?.scans_used)} of ${formatNumber(org?.scans_included)} scans`}
             </p>
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-border">
@@ -211,7 +211,7 @@ export function OrganizationOverview({
               ? "Fair usage policy applies on your plan."
               : remaining === undefined
                 ? "Usage syncs once billing data is available."
-                : `${formatNumber(remaining)} audits remaining this cycle.`}
+                : `${formatNumber(remaining)} scans remaining this cycle.`}
           </p>
         </div>
       </div>
@@ -222,13 +222,13 @@ export function OrganizationOverview({
         } />
         <OrgStat label="Active users" value={formatNumber(org?.active_users)} loading={loading} />
         <OrgStat
-          label="Audits used"
+          label="Scans used"
           value={formatNumber(org?.scans_used)}
           loading={loading}
           hint="Current billing cycle"
         />
         <OrgStat
-          label="Remaining audits"
+          label="Remaining scans"
           value={remaining === null ? "Unlimited" : formatNumber(remaining ?? undefined)}
           loading={loading}
           accent
@@ -356,13 +356,13 @@ export function StoreCard({
           <p className="font-medium text-foreground">Shelf health score</p>
           <p className="mt-0.5 flex items-center gap-1 truncate">
             <Clock className="size-3.5 shrink-0" />
-            Last audit {formatDateTime(metrics?.last_scan_at)}
+            Last scan {formatDateTime(metrics?.last_scan_at)}
           </p>
         </div>
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-2">
-        <Metric label="Total audits" value={formatNumber(metrics?.total_scans)} />
+        <Metric label="Total scans" value={formatNumber(metrics?.total_scans)} />
         <Metric label="Avg confidence" value={formatConfidence(metrics?.average_confidence)} />
         <Metric label="Low stock" value={formatNumber(metrics?.low_stock_alerts)} />
         <Metric label="Out of stock" value={formatNumber(metrics?.out_of_stock_alerts)} />
@@ -583,7 +583,7 @@ export function StoreFormDialog({
         <DialogHeader>
           <DialogTitle>{store ? "Edit store" : "Add store"}</DialogTitle>
           <DialogDescription>
-            Store details are used across audits, reports and multi-location dashboards.
+            Store details are used across scans, reports and multi-location dashboards.
           </DialogDescription>
         </DialogHeader>
 
@@ -724,7 +724,7 @@ export function StoreFormDialog({
                 <p className="text-sm font-medium">Team access</p>
               </div>
               <p className="text-xs text-muted-foreground">
-                Members you select can audit and report on this store. Owners, admins and managers
+                Members you select can scan and report on this store. Owners, admins and managers
                 already have access to every store.
               </p>
               {membersQuery.isPending ? (
@@ -834,7 +834,7 @@ export function DeleteStoreDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Delete {store?.name}?</AlertDialogTitle>
           <AlertDialogDescription>
-            Audits and reports linked to this store are removed from the organization dashboard. This
+            Scans and reports linked to this store are removed from the organization dashboard. This
             cannot be undone — archive the store instead if you only want to hide it.
           </AlertDialogDescription>
         </AlertDialogHeader>

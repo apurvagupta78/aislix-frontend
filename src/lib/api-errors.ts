@@ -25,11 +25,11 @@ const SAFE_PREFIXES = [
   "no products detected",
   "select a category",
   "select a sub-category",
-  "daily demo audit limit",
+  "daily demo scan limit",
   "image too large",
   "empty file upload",
-  "audit job not found",
-  "landing audits are temporarily disabled",
+  "scan job not found",
+  "landing scans are temporarily disabled",
   "could not connect",
   "something went wrong",
 ];
@@ -72,7 +72,7 @@ export function sanitizeUserMessage(raw: string, fallback = GENERIC_SCAN): strin
   if (lower.startsWith("no products detected") || /did not detect any products/i.test(lower)) {
     return "No products detected in this shelf image. Try a clearer photo with products facing the camera.";
   }
-  if (lower.includes("daily demo audit limit")) return msg;
+  if (lower.includes("daily demo scan limit")) return msg;
   if (isSafePublicMessage(msg)) return msg;
   if (/timed?\s*out|timeout|took too long|did not finish analys/i.test(lower)) {
     return GENERIC_TIMEOUT;

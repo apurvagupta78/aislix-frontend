@@ -19,16 +19,16 @@ export type DashboardKpis = {
   low_stock_alerts?: number;
   out_of_stock_alerts?: number;
   average_confidence?: number; // 0-1 or 0-100
-  audits_remaining?: number | null; // null = unlimited
+  scans_remaining?: number | null; // null = unlimited
 };
 
 export type AccountSummary = {
   plan_name?: string;
   plan_id?: string;
   status?: string;
-  audits_used?: number;
-  audits_included?: number | null; // null = unlimited
-  audits_remaining?: number | null;
+  scans_used?: number;
+  scans_included?: number | null; // null = unlimited
+  scans_remaining?: number | null;
   renewal_date?: string | null; // ISO
 };
 
@@ -64,7 +64,7 @@ export async function fetchDashboard(signal?: AbortSignal): Promise<DashboardRes
 
   const [
     profileRes,
-    auditsRes,
+    scansRes,
     storesCountRes,
     membersCountRes,
     subscriptionRes,
@@ -107,20 +107,20 @@ export async function fetchDashboard(signal?: AbortSignal): Promise<DashboardRes
       .limit(3),
   ]);
 
-  if (scansRes.error) dbError(scansRes.error, "Could not load audit data.");
+  if (scansRes.error) dbError(scansRes.error, "Could not load scan data.");
   if (storesCountRes.error) dbError(storesCountRes.error, "Could not load stores.");
   if (membersCountRes.error) dbError(membersCountRes.error, "Could not load team data.");
 
-  const audits = auditsRes.data ?? [];
-  const completedScans = audits.filter((s) => s.status === "completed");
-  const totalProducts = audits.reduce((sum, s) => sum + (s.total_products ?? 0), 0);
+  const scans = scansRes.data ?? [];
+  const completedScans = scans.filter((s) => s.status === "completed");
+  const totalProducts = scans.reduce((sum, s) => sum + (s.total_products ?? 0), 0);
   const avgHealth = completedScans.length
     ? completedScans.reduce((sum, s) => sum + (s.shelf_health_score ?? 0), 0) / completedScans.length
     : undefined;
-  const lowStock = audits.reduce((sum, s) => sum + (s.low_stock_count ?? 0), 0);
-  const outOfStock = audits.reduce((sum, s) => sum + (s.out_of_stock_count ?? 0), 0);
+  const lowStock = scans.reduce((sum, s) => sum + (s.low_stock_count ?? 0), 0);
+  const outOfStock = scans.reduce((sum, s) => sum + (s.out_of_stock_count ?? 0), 0);
 
-  const scanIds = audits.map((s) => s.id);
+  const scanIds = scans.map((s) => s.id);
   let averageConfidence: number | undefined;
   if (scanIds.length) {
     const { data: results } = await supabase
@@ -136,25 +136,25 @@ export async function fetchDashboard(signal?: AbortSignal): Promise<DashboardRes
 
   const sub = subscriptionRes.data as
     | {
-        audits_used: number;
+        scans_used: number;
         current_period_end: string | null;
         status: string;
         subscription_plans: { name: string; code: string; scan_quota: number | null } | null;
       }
     | null;
   const scanQuota = sub?.subscription_plans?.scan_quota ?? null;
-  const auditsUsed = sub?.scans_used ?? 0;
-  const auditsRemaining = scanQuota === null ? null : Math.max(0, scanQuota - auditsUsed);
+  const scansUsed = sub?.scans_used ?? 0;
+  const scansRemaining = scanQuota === null ? null : Math.max(0, scanQuota - scansUsed);
 
   const activity: ActivityItem[] = [];
-  for (const scan of audits.slice(0, 5)) {
+  for (const scan of scans.slice(0, 5)) {
     if (scan.status === "completed") {
       activity.push({
-        id: `audit-${scan.id}`,
+        id: `scan-${scan.id}`,
         kind: "scan_completed",
-        title: scan.shelf_label ? `Audit completed — ${scan.shelf_label}` : "Audit completed",
+        title: scan.shelf_label ? `Scan completed — ${scan.shelf_label}` : "Scan completed",
         created_at: scan.created_at,
-        href: `/dashboard/audits/${scan.id}`,
+        href: `/dashboard/scans/${scan.id}`,
       });
     }
   }
@@ -187,23 +187,23 @@ export async function fetchDashboard(signal?: AbortSignal): Promise<DashboardRes
   return {
     greeting_name: (profileRes.data as { full_name?: string } | null)?.full_name ?? undefined,
     kpis: {
-      total_scans: auditsRes.count ?? audits.length,
+      total_scans: scansRes.count ?? scans.length,
       products_detected: totalProducts,
       stores: storesCountRes.count ?? 0,
       shelf_health_score: avgHealth,
       low_stock_alerts: lowStock,
       out_of_stock_alerts: outOfStock,
       average_confidence: averageConfidence,
-      audits_remaining: auditsRemaining,
+      scans_remaining: scansRemaining,
     },
     account: sub
       ? {
           plan_name: sub.subscription_plans?.name,
           plan_id: sub.subscription_plans?.code,
           status: sub.status,
-          audits_used: auditsUsed,
-          audits_included: scanQuota,
-          audits_remaining: auditsRemaining,
+          scans_used: scansUsed,
+          scans_included: scanQuota,
+          scans_remaining: scansRemaining,
           renewal_date: sub.current_period_end,
         }
       : undefined,
@@ -211,7 +211,7 @@ export async function fetchDashboard(signal?: AbortSignal): Promise<DashboardRes
   };
 }
 
-// ---------- recent audits ----------
+// ---------- recent scans ----------
 
 export type RecentScanStatus = "completed" | "processing" | "queued" | "failed";
 
@@ -222,6 +222,7 @@ export type RecentScan = {
   shelf_health_score?: number; // 0-100
   average_confidence?: number; // 0-1 or 0-100
   products_detected?: number;
+  category?: string;
   status: RecentScanStatus;
 };
 
@@ -288,7 +289,7 @@ export async function fetchRecentScans(
 
   const from = (page - 1) * pageSize;
   const { data, error, count } = await query.range(from, from + pageSize - 1);
-  if (error) dbError(error, "Could not load recent audits.");
+  if (error) dbError(error, "Could not load recent scans.");
 
   const scanIds = (data ?? []).map((s) => s.id);
   const confidenceByScan = new Map<string, number>();
@@ -383,10 +384,10 @@ export async function fetchNotifications(signal?: AbortSignal): Promise<Notifica
       id: `failed-${scan.id}`,
       kind: "confidence_warning",
       severity: "critical",
-      title: scan.shelf_label ? `Audit failed — ${scan.shelf_label}` : "A audit failed to process",
+      title: scan.shelf_label ? `Scan failed — ${scan.shelf_label}` : "A scan failed to process",
       message: scan.error_message ? sanitizeUserMessage(scan.error_message) : undefined,
       created_at: scan.created_at,
-      href: `/dashboard/audits/${scan.id}`,
+      href: `/dashboard/scans/${scan.id}`,
     });
   }
 
@@ -407,7 +408,7 @@ export async function fetchNotifications(signal?: AbortSignal): Promise<Notifica
             severity: severity === "critical" ? "critical" : "warning",
             title: String(alert.title ?? alert.message ?? "Shelf alert"),
             message: typeof alert.description === "string" ? alert.description : undefined,
-            href: `/dashboard/audits/${r.scan_id}`,
+            href: `/dashboard/scans/${r.scan_id}`,
           });
         }
       }
@@ -415,7 +416,7 @@ export async function fetchNotifications(signal?: AbortSignal): Promise<Notifica
   }
 
   const sub = subscriptionRes.data as
-    | { audits_used: number; subscription_plans: { scan_quota: number | null } | null }
+    | { scans_used: number; subscription_plans: { scan_quota: number | null } | null }
     | null;
   const quota = sub?.subscription_plans?.scan_quota ?? null;
   if (sub && quota) {
@@ -425,8 +426,8 @@ export async function fetchNotifications(signal?: AbortSignal): Promise<Notifica
         id: "quota-exceeded",
         kind: "subscription",
         severity: "critical",
-        title: "You've used all of your included audits",
-        message: "Upgrade your plan to keep auditing without interruption.",
+        title: "You've used all of your included scans",
+        message: "Upgrade your plan to keep scanning without interruption.",
         href: "/dashboard/billing",
       });
     } else if (pct >= 0.8) {
@@ -434,8 +435,8 @@ export async function fetchNotifications(signal?: AbortSignal): Promise<Notifica
         id: "quota-nearing",
         kind: "subscription",
         severity: "warning",
-        title: "You're nearing your monthly audit quota",
-        message: `${sub.scans_used} of ${quota} audits used.`,
+        title: "You're nearing your monthly scan quota",
+        message: `${sub.scans_used} of ${quota} scans used.`,
         href: "/dashboard/billing",
       });
     }
@@ -453,11 +454,11 @@ export async function fetchNotifications(signal?: AbortSignal): Promise<Notifica
   for (const store of storesRes.data ?? []) {
     if (!storesWithScans.has(store.id)) {
       items.push({
-        id: `no-audits-${store.id}`,
+        id: `no-scans-${store.id}`,
         kind: "announcement",
         severity: "info",
-        title: `${store.name} has no audits yet`,
-        message: "Run your first shelf audit for this store.",
+        title: `${store.name} has no scans yet`,
+        message: "Run your first shelf scan for this store.",
         href: "/dashboard/scan",
       });
     }
@@ -535,13 +536,13 @@ export async function fetchAnalytics(
     .order("created_at", { ascending: true });
   if (storeFilter) scanQuery = scanQuery.in("store_id", storeFilter);
 
-  const { data: audits, error } = await scanQuery;
+  const { data: scans, error } = await scanQuery;
   if (error) dbError(error, "Could not load analytics.");
 
-  const byDay = new Map<string, { audits: number; healthSum: number; healthCount: number; lowStock: number }>();
-  for (const scan of audits ?? []) {
+  const byDay = new Map<string, { scans: number; healthSum: number; healthCount: number; lowStock: number }>();
+  for (const scan of scans ?? []) {
     const key = dayKey(scan.created_at);
-    const bucket = byDay.get(key) ?? { audits: 0, healthSum: 0, healthCount: 0, lowStock: 0 };
+    const bucket = byDay.get(key) ?? { scans: 0, healthSum: 0, healthCount: 0, lowStock: 0 };
     bucket.scans += 1;
     if (typeof scan.shelf_health_score === "number") {
       bucket.healthSum += scan.shelf_health_score;
@@ -619,20 +620,20 @@ export async function fetchStoreComplianceRanking(
   const storeIds = (stores ?? []).map((s) => s.id as string);
   if (!storeIds.length) return [];
 
-  const { data: audits, error: scanError } = await supabase
+  const { data: scans, error: scanError } = await supabase
     .from("shelf_scans")
     .select("store_id, planogram_compliance_percent, shelf_health_score, created_at")
     .eq("org_id", orgId)
     .eq("status", "completed")
     .gte("created_at", since.toISOString())
     .in("store_id", storeIds);
-  if (scanError) dbError(scanError, "Could not load store audit metrics.");
+  if (scanError) dbError(scanError, "Could not load store scan metrics.");
 
   const byStore = new Map<
     string,
     { count: number; complianceSum: number; complianceN: number; healthSum: number; healthN: number }
   >();
-  for (const scan of audits ?? []) {
+  for (const scan of scans ?? []) {
     const sid = scan.store_id as string;
     const entry = byStore.get(sid) ?? {
       count: 0,

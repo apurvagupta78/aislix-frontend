@@ -22,7 +22,7 @@ export type ScanHistoryItem = {
   average_confidence?: number; // 0-1 or 0-100
   processing_time_ms?: number;
   status: ScanStatus;
-  /** Set when the audit was run against a delegated assignment. */
+  /** Set when the scan was run against a delegated assignment. */
   assignment_id?: string | null;
   assignment_status?: ScanAssignmentStatus | null;
   /** Planogram compliance of the assignment attempt, 0-100. */
@@ -57,9 +57,9 @@ export type ScanHistoryQuery = {
   sort?: "newest" | "oldest" | "processing_time";
   page?: number;
   page_size?: number;
-  /** Assigned vs ad-hoc audits. */
+  /** Assigned vs ad-hoc scans. */
   type?: ScanTypeFilter;
-  /** Filter by assignment status (assigned audits only). */
+  /** Filter by assignment status (assigned scans only). */
   assignment_status?: ScanAssignmentStatus | "all";
   /** Filter by the assignee of the linked assignment. */
   assignee?: string | "all";
@@ -119,7 +119,7 @@ export async function fetchScanHistory(
     .eq("org_id", orgId);
 
   // Managers see every scan in the active organization. Members' history is
-  // their completed assigned work, irrespective of who created the audit row.
+  // their completed assigned work, irrespective of who created the scan row.
   if (!isManager) {
     const userId = await requireUserId();
     const { data: myAssignments, error: assignmentError } = await supabase
@@ -127,7 +127,7 @@ export async function fetchScanHistory(
       .select("id")
       .eq("assignee_id", userId)
       .eq("status", "completed");
-    if (assignmentError) dbError(assignmentError, "Could not load your completed audits.");
+    if (assignmentError) dbError(assignmentError, "Could not load your completed scans.");
     const myAssignmentIds = (myAssignments ?? []).map((row) => row.id as string);
     if (myAssignmentIds.length === 0) {
       return { items: [], total: 0, page, page_size: pageSize, stores: [], assignees: [] };
@@ -167,7 +167,7 @@ export async function fetchScanHistory(
   query = query.range(from, to);
 
   const { data, error, count } = await query;
-  if (error) return dbError(error, "Could not load audit history.");
+  if (error) return dbError(error, "Could not load scan history.");
 
 
   let items = (data ?? []).map((row: any): ScanHistoryItem => {
@@ -230,7 +230,7 @@ export async function fetchScanHistory(
     }
   }
 
-  // Attach signed download URLs (PDF report, annotated image, CSV) for these audits.
+  // Attach signed download URLs (PDF report, annotated image, CSV) for these scans.
   const { resolveScanAssetUrls } = await import("@/lib/scan-results");
   await Promise.all(
     items.map(async (item) => {
@@ -283,7 +283,7 @@ export async function fetchScanHistory(
   };
 }
 
-/** Deletes a shelf audit row (and its storage objects, if any). */
+/** Deletes a shelf scan row (and its storage objects, if any). */
 export async function deleteScan(scanId: string): Promise<void> {
   const orgId = await requireOrgId();
 
@@ -306,7 +306,7 @@ export async function deleteScan(scanId: string): Promise<void> {
   }
 
   const { error } = await supabase.from("shelf_scans").delete().eq("id", scanId).eq("org_id", orgId);
-  if (error) return dbError(error, "Could not delete this audit.");
+  if (error) return dbError(error, "Could not delete this scan.");
 }
 
 export function formatScanDate(iso?: string): string {

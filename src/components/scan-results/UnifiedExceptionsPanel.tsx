@@ -135,7 +135,7 @@ export function UnifiedExceptionsPanel({
       {filtered.length === 0 ? (
         <p className="mt-4 rounded-xl border border-border bg-surface px-4 py-8 text-center text-sm text-muted-foreground">
           {all.length === 0
-            ? "No exceptions detected on this audit."
+            ? "No exceptions detected on this scan."
             : "No exceptions match your filters."}
         </p>
       ) : (

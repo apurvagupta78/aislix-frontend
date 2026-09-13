@@ -2,7 +2,7 @@
  * Corrective actions raised by planogram comparisons.
  *
  * Managers (owner / admin / manager) see every action in the workspace; other
- * members only see actions raised by audits they ran themselves.
+ * members only see actions raised by scans they ran themselves.
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -96,7 +96,7 @@ export async function fetchCorrectiveActions(): Promise<CorrectiveActionRow[]> {
     ...new Set(((comparisons ?? []) as { scan_id: string | null }[]).map((c) => c.scan_id ?? "")),
   ].filter(Boolean);
 
-  const { data: audits } = scanIds.length
+  const { data: scans } = scanIds.length
     ? await supabase
         .from("shelf_scans")
         .select("id, created_at, processing_completed_at, created_by, assignment_id")
@@ -125,7 +125,7 @@ export async function fetchCorrectiveActions(): Promise<CorrectiveActionRow[]> {
 
   const scanById = new Map(((scans ?? []) as ScanLite[]).map((scan) => [scan.id, scan]));
 
-  // The audit operator and the assignment assignee are normally the same person,
+  // The scan operator and the assignment assignee are normally the same person,
   // but the assignment is the source of truth for who owns the fix.
   const assignmentIds = [
     ...new Set(

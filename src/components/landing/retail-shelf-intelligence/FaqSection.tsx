@@ -16,8 +16,8 @@ const FAQS = [
     a: "Yes. Take a photo in-store and upload it to Aislix.",
   },
   {
-    q: "How many free audits do I get?",
-    a: "5 free shelf audits every 24 hours when you create a workspace. The live demo on this page includes additional anonymous trial audits per day.",
+    q: "How many free scans do I get?",
+    a: "5 free shelf scans every 24 hours when you create a workspace. The live demo on this page includes additional anonymous trial scans per day.",
   },
   {
     q: "Can my team use Aislix?",

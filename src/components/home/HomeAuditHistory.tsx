@@ -8,7 +8,7 @@ const VISITS = [
   { date: "26 Sep", osa: 98, planogram: 97, issues: 1 },
 ];
 
-const PROCESS = ["Audit", "Fix", "Re-audit", "Verify", "Track"] as const;
+const PROCESS = ["Audit", "Fix", "Rescan", "Verify", "Track"] as const;
 
 export function HomeAuditHistory() {
   return (
@@ -17,7 +17,7 @@ export function HomeAuditHistory() {
         <SectionHeading
           eyebrow="AUDIT HISTORY"
           title="Your Shelf. Your History. One Place."
-          subtitle="Every audit becomes part of your retail history. Compare visits, see what changed, identify recurring issues and verify whether corrective actions actually worked."
+          subtitle="Every scan becomes part of your retail history. Compare visits, see what changed, identify recurring issues and verify whether corrective actions actually worked."
         />
 
         <div className="mx-auto mt-10 max-w-lg">
@@ -81,7 +81,7 @@ export function HomeAuditHistory() {
 
         <div
           className="mt-8 flex flex-wrap items-center justify-center gap-2 text-[11px] text-muted-foreground sm:text-xs"
-          aria-label="Audit, fix, re-audit, verify, track"
+          aria-label="Audit, fix, rescan, verify, track"
         >
           {PROCESS.map((step, index) => (
             <span key={step} className="inline-flex items-center gap-1.5">

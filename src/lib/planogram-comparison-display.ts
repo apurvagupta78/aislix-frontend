@@ -91,9 +91,9 @@ function isMovedProduct(line: PlanogramMatchLine): boolean {
 function observedShelfFromDetail(detail?: string | null): string | undefined {
   if (!detail) return undefined;
   const observed = detail.match(/observed on shelf (\d+)/i);
-  if (observed) return `Shelf ${observed[1]}`;
+  if (observed?.[1]) return `Shelf ${observed[1]}`;
   const observedS = detail.match(/observed on (S\d+)/i);
-  if (observedS) return observedS[1].replace(/^S/i, "Shelf ");
+  if (observedS?.[1]) return observedS[1].replace(/^S/i, "Shelf ");
   return undefined;
 }
 

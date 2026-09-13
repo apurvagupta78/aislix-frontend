@@ -9,9 +9,9 @@ import { ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
 import { networkErrorMessage } from "@/lib/api-errors";
 
 export const Route = createFileRoute("/processing")({
-  validateSearch: (search: Record<string, unknown>): { audit?: string } => {
-    const audit = search["audit"] ?? search["scan"];
-    return typeof audit === "string" && audit.length > 0 ? { audit } : {};
+  validateSearch: (search: Record<string, unknown>): { scan?: string } => {
+    const scan = search["scan"];
+    return typeof scan === "string" && scan.length > 0 ? { scan } : {};
   },
   head: () => ({
     meta: [
@@ -29,14 +29,14 @@ export const Route = createFileRoute("/processing")({
 });
 
 function Processing() {
-  const { audit: scan } = Route.useSearch();
+  const { scan } = Route.useSearch();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
   useEffect(() => {
     if (!scan) {
-      setError("Missing audit id. Start a new audit from the audit page.");
+      setError("Missing scan id. Start a new scan from the scan page.");
       return;
     }
 
@@ -48,7 +48,7 @@ function Processing() {
         setDone(true);
         trackEvent("scan_completed", { scan_id: scan });
         setTimeout(() => {
-          navigate({ to: "/results", search: { audit: scan } });
+          navigate({ to: "/results", search: { scan } });
         }, 700);
       })
       .catch((err) => {
@@ -64,8 +64,8 @@ function Processing() {
 
   return (
     <AppShell
-      title="Processing audit"
-      description={scan ? `Audit ${scan.slice(0, 8)}…` : "Analyzing retail image"}
+      title="Processing scan"
+      description={scan ? `Scan ${scan.slice(0, 8)}…` : "Analyzing retail image"}
     >
       <div className="mx-auto max-w-2xl">
         <div className="card-surface p-9 text-center">
@@ -78,7 +78,7 @@ function Processing() {
               <p className="text-sm text-muted-foreground">{error}</p>
               <div className="flex justify-center gap-2">
                 <Button asChild variant="subtle" size="sm" className="rounded-xl">
-                  <Link to="/audit">New audit</Link>
+                  <Link to="/scan">New scan</Link>
                 </Button>
                 {scan ? (
                   <Button
@@ -116,7 +116,7 @@ function Processing() {
                   showStageList
                   timingMessage={
                     done
-                      ? "Opening your audit results…"
+                      ? "Opening your scan results…"
                       : "This may take a few minutes for larger or more complex images. Please keep this page open."
                   }
                 />

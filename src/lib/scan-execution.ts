@@ -44,10 +44,10 @@ export type ExecutionKpi = {
   label: string;
   value: string;
   numeric?: number;
-  state?: import("@/lib/retail-intelligence").MetricState;
+  state: import("@/lib/retail-intelligence").MetricState;
   coverage_label?: string;
   detail?: string;
-  audit_status?: string;
+  audit_status?: import("@/lib/retail-intelligence").AuditKpiResult["status"];
 };
 
 export function executionScore(result?: ScanResult | null): number | undefined {
@@ -259,7 +259,7 @@ export function buildAllDemoActions(
       priority: severityToPriority[item.severity] ?? "medium",
       title: `Fix ${item.count} ${item.label.toLowerCase()}`,
       reason: item.detail ?? "",
-      recommended_action: item.detail ?? `Address ${item.label} and re-audit to verify.`,
+      recommended_action: item.detail ?? `Address ${item.label} and rescan to verify.`,
     });
   }
 
@@ -345,8 +345,8 @@ export function priorityRecommendations(recs?: ScanRecommendation[]): ScanRecomm
 export function formatScoreDelta(current?: number, previous?: number): string | undefined {
   if (current === undefined || previous === undefined) return undefined;
   const delta = Math.round(current - previous);
-  if (delta === 0) return "No change vs previous audit";
-  return delta > 0 ? `↑ ${delta} points vs previous audit` : `↓ ${Math.abs(delta)} points vs previous audit`;
+  if (delta === 0) return "No change vs previous scan";
+  return delta > 0 ? `↑ ${delta} points vs previous scan` : `↓ ${Math.abs(delta)} points vs previous scan`;
 }
 
 export function formatConfidenceSecondary(value?: number): string | undefined {

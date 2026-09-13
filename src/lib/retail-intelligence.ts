@@ -141,6 +141,7 @@ export type AuditKpiResult = {
   scope?: string;
   tooltip?: string;
   warnings?: string[];
+  formula_version?: string;
 };
 
 export type AuditKpiDashboard = {
@@ -206,7 +207,7 @@ export type RetailIntelligencePayload = {
   audit_kpi_dashboards?: Partial<Record<string, AuditKpiDashboard>>;
   /** Homepage demo oral-care fixture — client KPIs override backend zeros. */
   demo_oral_care?: boolean;
-  audit_package?: Record<string, unknown>;
+  audit_package?: import("@/lib/planogram-audit-package").PlanogramAuditPackage;
 };
 
 export const ROLE_HERO: Record<ResultViewMode, string> = {

@@ -18,11 +18,11 @@ const DEMO_STAGES = [
 ] as const;
 
 type ScanProgressPanelProps = {
-  /** True while the audit is in flight. */
+  /** True while the scan is in flight. */
   active: boolean;
-  /** True once the audit finished — snaps the bar to 100%. */
+  /** True once the scan finished — snaps the bar to 100%. */
   done?: boolean;
-  /** Roughly how long an audit takes; drives the eased progress curve. */
+  /** Roughly how long a scan takes; drives the eased progress curve. */
   expectedMs?: number;
   stages?: readonly string[];
   timingMessage?: string;

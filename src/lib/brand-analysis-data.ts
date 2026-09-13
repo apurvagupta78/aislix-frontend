@@ -93,9 +93,9 @@ export function buildBrandAnalysisMeta(
     audit_date: result.created_at ?? "",
     store: result.store ?? "Demo Supermarket",
     fixture: result.inventory?.[0]?.location ?? DEMO_ORAL_CARE_META.fixture_id ?? "G01",
-    category: result.scan_category ?? DEMO_ORAL_CARE_META.category,
-    sub_category: result.scan_sub_category ?? DEMO_ORAL_CARE_META.sub_category,
-    planogram_version: DEMO_ORAL_CARE_META.version,
+    category: result.scan_category ?? DEMO_ORAL_CARE_META.category ?? "—",
+    sub_category: result.scan_sub_category ?? DEMO_ORAL_CARE_META.sub_category ?? "—",
+    planogram_version: DEMO_ORAL_CARE_META.version ?? "—",
     target_brand: primary,
     planned_share: planned,
     actual_share: actual,
@@ -124,7 +124,7 @@ export function buildShareOfShelfSegments(
     share: row.share ?? 0,
     linear_units: Math.round(((row.share ?? 0) / 100) * totalLinear * 10) / 10,
     is_primary: Boolean(row.is_primary) || row.brand === primaryBrand,
-    bar_class: row.is_primary || row.brand === primaryBrand ? "bg-brand" : COMPETITOR_BAR[i % COMPETITOR_BAR.length],
+    bar_class: row.is_primary || row.brand === primaryBrand ? "bg-brand" : (COMPETITOR_BAR[i % COMPETITOR_BAR.length] ?? "bg-muted"),
   }));
 
   if (othersShare > 0.05) {
@@ -180,7 +180,7 @@ export function buildProductMixRows(
     if (row.is_unknown) bar_class = "bg-muted-foreground/35";
     else if (row.is_primary_brand) bar_class = "bg-brand";
     else {
-      bar_class = PRODUCT_BAR[Math.min(competitorIdx + 1, PRODUCT_BAR.length - 1)];
+      bar_class = PRODUCT_BAR[Math.min(competitorIdx + 1, PRODUCT_BAR.length - 1)] ?? "bg-muted";
       competitorIdx += 1;
     }
     return { ...row, bar_class };

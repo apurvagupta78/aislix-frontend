@@ -524,7 +524,7 @@ function TeamPage() {
         }
         description={
           confirm?.kind === "delete" || confirm?.kind === "bulk-delete"
-            ? "This removes access permanently. Audit history stays with the organization."
+            ? "This removes access permanently. Scan history stays with the organization."
             : "Disabled members keep their history but cannot sign in until re-enabled."
         }
         confirmLabel={

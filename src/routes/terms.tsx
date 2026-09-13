@@ -41,9 +41,9 @@ export const Route = createFileRoute("/terms")({
           body: ["You agree not to use Aislix to:"],
           bullets: [
             "Upload images you do not have the right to capture or process.",
-            "Upload content containing identifiable individuals as the subject of the audit, or any unlawful material.",
+            "Upload content containing identifiable individuals as the subject of the scan, or any unlawful material.",
             "Reverse engineer, resell or white-label the platform without a written agreement.",
-            "Circumvent audit limits, rate limits or the fair usage policy through automation.",
+            "Circumvent scan limits, rate limits or the fair usage policy through automation.",
             "Probe, scan or disrupt platform security or another customer's workspace.",
           ],
         },
@@ -58,7 +58,7 @@ export const Route = createFileRoute("/terms")({
           heading: "Subscription terms",
           body: [
             "Plans are Free, Starter, Professional and Enterprise. Paid plans renew automatically each billing period until cancelled.",
-            "Free and Starter include the audit volumes listed on the pricing page. Professional includes unlimited audits under a fair usage policy: sustained volumes far beyond typical retail workloads may be rate limited after we contact you.",
+            "Free and Starter include the scan volumes listed on the pricing page. Professional includes unlimited scans under a fair usage policy: sustained volumes far beyond typical retail workloads may be rate limited after we contact you.",
             "Upgrades take effect immediately with a prorated charge. Downgrades take effect at the end of the current billing period.",
           ],
         },
@@ -66,7 +66,7 @@ export const Route = createFileRoute("/terms")({
           heading: "Payment terms",
           body: [
             "Prices are in Indian Rupees and exclusive of 18% GST unless stated otherwise. Annual plans are billed for ten months, giving two months free.",
-            "Payments are collected through our payment partner. Failed payments are retried; if payment remains outstanding, auditing may be paused until the balance is cleared. GST tax invoices are issued for every payment when a valid GSTIN is on file.",
+            "Payments are collected through our payment partner. Failed payments are retried; if payment remains outstanding, scanning may be paused until the balance is cleared. GST tax invoices are issued for every payment when a valid GSTIN is on file.",
           ],
         },
         {

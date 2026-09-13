@@ -84,7 +84,7 @@ export const PLANOGRAM_WIZARD_STEPS: Record<PlanogramWizardStepId, PlanogramWiza
   readiness: {
     id: "readiness",
     label: "Readiness check",
-    description: "Review which KPIs can be calculated before you audit or publish.",
+    description: "Review which KPIs can be calculated before you scan or publish.",
   },
 };
 

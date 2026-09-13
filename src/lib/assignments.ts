@@ -1,8 +1,8 @@
 /**
- * Assigned Audits — Milestone 2.
+ * Assigned Scans — Milestone 2.
  *
- * Managers (owner / admin / manager) assign an audit scope to any active member
- * of their organization; assignees see their tasks on /my-audits.
+ * Managers (owner / admin / manager) assign a scan scope to any active member
+ * of their organization; assignees see their tasks on /my-scans.
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -69,7 +69,7 @@ export type Assignment = {
   compliance_percent: number | null;
   /** Compliance of the latest attempt, persisted on the assignment. */
   last_compliance_percent: number | null;
-  /** How many times the assignee has audited this shelf. */
+  /** How many times the assignee has scanned this shelf. */
   scan_attempts: number;
   /** Corrective actions still open across every attempt. */
   open_issue_count: number;
@@ -85,7 +85,7 @@ export type AssignmentAttempt = {
   passed: boolean;
 };
 
-/** Row of the manager "Team Audits" table. */
+/** Row of the manager "Team Scans" table. */
 export type TeamScan = {
   scan_id: string;
   assignment_id: string | null;
@@ -276,7 +276,7 @@ export async function createScanAssignment(input: {
     })
     .select("id")
     .single();
-  if (error) dbError(error, "Could not assign the audit.");
+  if (error) dbError(error, "Could not assign the scan.");
 
   const assignmentId = data!.id as string;
 
@@ -286,13 +286,13 @@ export async function createScanAssignment(input: {
         org_id: orgId,
         user_id: input.assigneeId,
         type: "scan_assigned",
-        title: "New Audit Assigned",
+        title: "New Scan Assigned",
         body:
           input.scopeType === "planogram"
             ? `${[input.scopeValues.location, `${input.scopeValues.product_count ?? 0} products`]
                 .filter(Boolean)
                 .join(" · ")} · planogram audit`
-            : `You have a new shelf audit task: ${scopeSummary(input.scopeType, input.scopeValues)}.`,
+            : `You have a new shelf scan task: ${scopeSummary(input.scopeType, input.scopeValues)}.`,
         payload: { assignment_id: assignmentId, store_id: input.storeId },
       },
     });
@@ -341,7 +341,7 @@ async function fetchNames(ids: string[]): Promise<Map<string, string>> {
   return map;
 }
 
-/** Compliance percentages keyed by scan id, for completed assignment audits. */
+/** Compliance percentages keyed by scan id, for completed assignment scans. */
 async function fetchCompliance(scanIds: string[]): Promise<Map<string, number | null>> {
   const unique = [...new Set(scanIds.filter(Boolean))];
   const map = new Map<string, number | null>();
@@ -468,7 +468,7 @@ export async function fetchAssignmentAttempts(assignmentId: string): Promise<Ass
   });
 }
 
-/** Full assignment context used to pre-fill and lock the audit setup form. */
+/** Full assignment context used to pre-fill and lock the scan setup form. */
 export async function fetchAssignmentById(assignmentId: string): Promise<Assignment | null> {
   const { data, error } = await supabase
     .from("scan_assignments")
@@ -495,7 +495,7 @@ export async function fetchMyAssignments(): Promise<Assignment[]> {
     .select(SELECT)
     .eq("assignee_id", userId)
     .order("created_at", { ascending: false });
-  if (error) dbError(error, "Could not load your assigned audits.");
+  if (error) dbError(error, "Could not load your assigned scans.");
   return mapAssignments((data ?? []) as unknown as AssignmentRow[]);
 }
 
@@ -521,7 +521,7 @@ export async function startAssignment(assignmentId: string): Promise<void> {
     .from("scan_assignments")
     .update({ status: "in_progress" })
     .eq("id", assignmentId);
-  if (error) dbError(error, "Could not start this audit.");
+  if (error) dbError(error, "Could not start this scan.");
 }
 
 export async function cancelAssignment(assignmentId: string): Promise<void> {
@@ -532,7 +532,7 @@ export async function cancelAssignment(assignmentId: string): Promise<void> {
   if (error) dbError(error, "Could not cancel this assignment.");
 }
 
-/** Manager action: re-send the "fix the shelf and re-audit" nudge to the assignee. */
+/** Manager action: re-send the "fix the shelf and re-scan" nudge to the assignee. */
 export async function requestReScan(assignmentOrId: Assignment | string): Promise<void> {
   const assignment =
     typeof assignmentOrId === "string"
@@ -548,7 +548,7 @@ export async function requestReScan(assignmentOrId: Assignment | string): Promis
       user_id: assignment.assignee_id,
       type: "scan_needs_correction",
       title: "Shelf audit needs correction",
-      body: `${percentLabel}% compliance — ${assignment.open_issue_count} issue(s) to fix. Re-audit after correcting the shelf.`,
+      body: `${percentLabel}% compliance — ${assignment.open_issue_count} issue(s) to fix. Re-scan after correcting the shelf.`,
       payload: {
         assignment_id: assignment.id,
         scan_id: assignment.scan_id,
@@ -572,7 +572,7 @@ export async function fetchMyPendingCount(): Promise<number> {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Manager: team audits                                                        */
+/* Manager: team scans                                                        */
 /* -------------------------------------------------------------------------- */
 
 const num = (value: unknown): number | null => {
@@ -592,7 +592,7 @@ export async function fetchTeamScans(): Promise<TeamScan[]> {
     .eq("org_id", orgId)
     .not("assignment_id", "is", null)
     .order("created_at", { ascending: false });
-  if (error) dbError(error, "Could not load team audits.");
+  if (error) dbError(error, "Could not load team scans.");
 
   const rows = (data ?? []) as unknown as {
     id: string;
@@ -686,7 +686,7 @@ export async function verifyAssignmentPass(assignmentId: string): Promise<void> 
   if (error) dbError(error, "Could not verify this assignment.");
 }
 
-/** Assignment an audit was launched from, if any (used for the results badge). */
+/** Assignment a scan was launched from, if any (used for the results badge). */
 export async function fetchScanAssignmentId(scanId: string): Promise<string | null> {
   const { data } = await supabase
     .from("shelf_scans")

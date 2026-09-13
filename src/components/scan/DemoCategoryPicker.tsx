@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { FALLBACK_CATEGORIES, type ShelfCategory } from "@/lib/categories.data";
 import { fetchShelfCategories } from "@/lib/categories.functions";
-import type { LandingScanContext } from "@/lib/landing-audit-api";
+import type { LandingScanContext } from "@/lib/landing-scan-api";
 
 export const DEFAULT_DEMO_CATEGORY = "Personal Care";
 export const DEFAULT_DEMO_SUBCATEGORY = "toothpaste";

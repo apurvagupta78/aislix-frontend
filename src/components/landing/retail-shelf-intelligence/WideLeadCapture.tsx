@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trackLandingEvent } from "@/lib/landing-analytics";
-import { captureLandingLead, loadLandingSessionId, signupUrl } from "@/lib/landing-audit-api";
+import { captureLandingLead, loadLandingSessionId, signupUrl } from "@/lib/landing-scan-api";
 
 export function WideLeadCapture({ landingSessionId }: { landingSessionId: string | null }) {
   const [email, setEmail] = useState("");
@@ -79,7 +79,7 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">
                     We sent onboarding instructions to {email}. Open the email and click the link to
-                    create your free Aislix workspace and unlock 3 shelf audits.
+                    create your free Aislix workspace and unlock 3 shelf scans.
                   </p>
                   <p className="mt-2 text-xs text-muted-foreground">
                     Didn&apos;t receive it? Check spam or wait a minute — or create your account
@@ -93,7 +93,7 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">
                     Your details are saved. Create your free Aislix workspace to unlock 3 shelf
-                    audits.
+                    scans.
                   </p>
                 </>
               )}
@@ -116,7 +116,7 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
                   Get Your Free Shelf Intelligence Access
                 </h2>
                 <p className="mt-3 text-sm text-muted-foreground">
-                  Enter your work email to start auditing. No credit card required.
+                  Enter your work email to start scanning. No credit card required.
                 </p>
               </div>
 
@@ -175,7 +175,7 @@ export function WideLeadCapture({ landingSessionId }: { landingSessionId: string
                   disabled={saving}
                 >
                   {saving ? <Loader2 className="size-4 animate-spin" /> : null}
-                  Get more free audits
+                  Get more free scans
                 </Button>
                 <p className="text-xs text-muted-foreground">
                   We only use your email to set up your Aislix workspace.

@@ -1,6 +1,6 @@
 /**
  * Client-side audit KPI fallback when stored metrics lack audit_kpi_dashboards
- * (e.g. audits processed before package synthesis shipped). Uses same formulas as backend.
+ * (e.g. scans processed before package synthesis shipped). Uses same formulas as backend.
  */
 
 import {
@@ -390,7 +390,7 @@ function computeRoleDashboard(
     ? isDemoOralCareContext(ctx as ScanContextState) || isDemoOralCareResult(result)
     : isDemoOralCareResult(result);
   const inv = inventoryByKey(result, rows, demoMode);
-  const pkg = autoPopulateAuditPackage(rows, auditPackage ?? {});
+  const pkg = autoPopulateAuditPackage(rows, auditPackage);
   const assortmentSkus = pkg.assortment_skus.filter((a) => !a.optional).map((a) => a.sku);
   const mslSkus = pkg.msl_skus.map((m) => m.sku);
 

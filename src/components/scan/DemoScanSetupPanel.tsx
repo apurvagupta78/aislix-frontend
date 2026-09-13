@@ -331,7 +331,7 @@ export function DemoScanSetupPanel({
       setStartError(
         homepageIntro
           ? "Add a shelf photo before starting the audit."
-          : "Add a shelf photo before auditing.",
+          : "Add a shelf photo before scanning.",
       );
       return;
     }
@@ -366,8 +366,8 @@ export function DemoScanSetupPanel({
       ) : (
         <p className="mx-auto mb-5 max-w-lg text-center text-sm text-muted-foreground">
           {mode === "sample"
-            ? "Pick shelf category and role, then audit the sample photo. A pre-built demo planogram loads automatically."
-            : "Pick shelf category, optionally upload your planogram CSV, add a shelf photo, then start the audit."}
+            ? "Pick shelf category and role, then scan the sample photo. A pre-built demo planogram loads automatically."
+            : "Pick shelf category, optionally upload your planogram CSV, add a shelf photo, then start the scan."}
         </p>
       )}
 
@@ -401,7 +401,7 @@ export function DemoScanSetupPanel({
               key={option.mode}
               label={option.label}
               detail={option.detail}
-              recommended={"recommended" in option ? option.recommended : false}
+              recommended={"recommended" in option && option.recommended === true}
               selected={planogramMode === option.mode}
               disabled={disabled}
               onClick={() => setPlanogramMode(option.mode)}
@@ -858,7 +858,7 @@ export function DemoScanSetupPanel({
         <p className="mt-3 text-center text-xs text-muted-foreground">
           {homepageIntro
             ? "Upload or take a shelf photo to start the audit."
-            : "Upload or take a shelf photo to enable auditing."}
+            : "Upload or take a shelf photo to enable scanning."}
         </p>
       ) : null}
 
@@ -886,7 +886,7 @@ export function DemoScanSetupPanel({
               </span>
             ) : (
               <>
-                <Sparkles className="size-4" /> Start Auditing
+                <Sparkles className="size-4" /> Start Scanning
               </>
             )}
           </Button>

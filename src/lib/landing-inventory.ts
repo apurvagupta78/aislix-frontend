@@ -3,7 +3,7 @@
  * Variant is what distinguishes two rows of the same product type
  * (e.g. Lay's Potato Chips — Magic Masala vs Tomato Tango).
  */
-import type { LandingInventoryRow, LandingScanResult } from "@/lib/landing-audit-api";
+import type { LandingInventoryRow, LandingScanResult } from "@/lib/landing-scan-api";
 
 const KNOWN_VARIANTS: [RegExp, string][] = [
   [/magic\s*masala/i, "Magic Masala"],
@@ -53,4 +53,4 @@ export function averageConfidencePercent(result: LandingScanResult): number | un
     .map((v) => (v <= 1 ? v * 100 : v));
   if (!values.length) return undefined;
   return Math.round(values.reduce((a, b) => a + b, 0) / values.length);
-}'
+}
