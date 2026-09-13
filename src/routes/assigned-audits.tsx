@@ -30,7 +30,7 @@ import {
   type Assignment,
 } from "@/lib/assignments";
 import { AssignmentAttemptsList } from "@/components/scan-results/FixRescanVerifyPanel";
-import { formatDate, statusBadge } from "@/routes/my-audits";
+import { formatAssignmentDueDate, statusBadge } from "@/lib/assignment-display";
 import { AssignmentIdChip, formatAssignmentId } from "@/components/AssignmentId";
 
 export const Route = createFileRoute("/assigned-audits")({
@@ -229,7 +229,7 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
                     <td className="px-4 py-3 text-foreground">{row.assignee_name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{scopeLine(row)}</td>
                     <td className="px-4 py-3 text-muted-foreground">{row.expected_products}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{formatDate(row.due_at)}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{formatAssignmentDueDate(row.due_at)}</td>
                     <td className="px-4 py-3">
                       {isOverdue(row) ? (
                         <span className="text-xs font-medium text-destructive">Overdue</span>
@@ -297,7 +297,7 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
                 )}
                 <p className="mt-1 text-sm text-muted-foreground">{scopeLine(row)}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {row.expected_products} expected · {formatDate(row.due_at)}
+                  {row.expected_products} expected · {formatAssignmentDueDate(row.due_at)}
                 </p>
                 {row.status === "needs_correction" && (
                   <p className="mt-1 text-xs font-medium text-destructive">
@@ -384,7 +384,7 @@ function TeamScansTab() {
                   <span className="text-xs text-muted-foreground">—</span>
                 )}
               </td>
-              <td className="px-4 py-3 text-muted-foreground">{formatDate(row.created_at)}</td>
+              <td className="px-4 py-3 text-muted-foreground">{formatAssignmentDueDate(row.created_at)}</td>
               <td className="px-4 py-3 text-foreground">{row.assignee_name}</td>
               <td className="px-4 py-3 text-foreground">{row.store_name}</td>
               <td className="px-4 py-3 text-muted-foreground">{row.location ?? "—"}</td>

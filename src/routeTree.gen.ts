@@ -13,7 +13,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as AdminRouteImport } from './routes/admin'
-
 import { Route as AssignAuditRouteImport } from './routes/assign-audit'
 import { Route as AssignedAuditsRouteImport } from './routes/assigned-audits'
 import { Route as AuditRouteImport } from './routes/audit'
@@ -1309,7 +1308,7 @@ declare module '@tanstack/react-router' {
     }
     '/admin/scans': {
       id: '/admin/scans'
-      path: '/audits'
+      path: '/scans'
       fullPath: '/admin/scans'
       preLoaderRoute: typeof AdminScansRouteImport
       parentRoute: typeof AdminRoute

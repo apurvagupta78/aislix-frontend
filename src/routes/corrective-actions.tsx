@@ -24,7 +24,7 @@ import {
   updateCorrectiveActionStatus,
   type ActionStatus,
 } from "@/lib/corrective-actions";
-import { formatDate } from "@/routes/my-audits";
+import { formatAssignmentDueDate } from "@/lib/assignment-display";
 import { isOrgManager, requestReScan } from "@/lib/assignments";
 import { formatAssignmentId } from "@/components/AssignmentId";
 
@@ -246,7 +246,7 @@ function CorrectiveActionsPage() {
                         )}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
-                        {formatDate(row.scan_date)}
+                        {formatAssignmentDueDate(row.scan_date)}
                       </td>
                       <td className="px-4 py-3">
                         {isManager ? (
@@ -307,7 +307,7 @@ function CorrectiveActionsPage() {
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">{row.suggestion}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {row.assignee_name} · {formatDate(row.scan_date)}
+                    {row.assignee_name} · {formatAssignmentDueDate(row.scan_date)}
                   </p>
                   <div className="mt-3">
                     {!isManager ? (

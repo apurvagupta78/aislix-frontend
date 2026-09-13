@@ -5,4 +5,5 @@ export const Route = createFileRoute("/scan-history")({
   beforeLoad: () => {
     throw redirect({ to: "/history" });
   },
+  component: () => null,
 });

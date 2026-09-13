@@ -20,6 +20,7 @@ import {
 import { markAssignmentNotificationsRead } from "@/lib/notifications";
 import { complianceTone } from "@/lib/planogram-compliance";
 import { AssignmentIdChip } from "@/components/AssignmentId";
+import { formatAssignmentDueDate, statusBadge } from "@/lib/assignment-display";
 
 export const Route = createFileRoute("/my-audits")({
   validateSearch: (search: Record<string, unknown>): { tab?: "assigned" | "completed" } => {
@@ -46,31 +47,6 @@ export const Route = createFileRoute("/my-audits")({
   }),
   component: MyScansPage,
 });
-
-export function statusBadge(status: Assignment["status"]) {
-  const map: Record<Assignment["status"], { label: string; className: string }> = {
-    pending: { label: "Pending", className: "bg-warning/10 text-warning" },
-    in_progress: { label: "In progress", className: "bg-brand-soft text-brand" },
-    needs_correction: { label: "Needs correction", className: "bg-warning/15 text-warning" },
-    completed: { label: "Completed", className: "bg-success/10 text-success" },
-    cancelled: { label: "Cancelled", className: "bg-muted text-muted-foreground" },
-  };
-  const item = map[status] ?? map.pending;
-  return (
-    <Badge variant="secondary" className={`rounded-full border-0 ${item.className}`}>
-      {item.label}
-    </Badge>
-  );
-}
-
-export function formatDate(value: string | null) {
-  if (!value) return "No due date";
-  return new Date(value).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 type TabKey = "pending" | "in_progress" | "needs_correction" | "overdue" | "completed";
 
@@ -242,7 +218,7 @@ function MyScansPage() {
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <CalendarClock className="size-3.5" /> {formatDate(assignment.due_at)}
+                        <CalendarClock className="size-3.5" /> {formatAssignmentDueDate(assignment.due_at)}
                       </span>
                       {actionable ? (
                         <Button

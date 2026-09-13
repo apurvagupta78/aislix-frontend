@@ -4,7 +4,7 @@
 from pathlib import Path
 
 ROUTE_TREE = Path(__file__).resolve().parents[1] / "src" / "routeTree.gen.ts"
-text = ROUTE_TREE.read_text(encoding="utf-8")
+text = ROUTE_TREE.read_text(encoding="utf-8-sig")
 
 IMPORTS = """
 import { Route as AssignAuditRouteImport } from './routes/assign-audit'
@@ -45,11 +45,7 @@ const MyAuditsRoute = MyAuditsRouteImport.update({
 if "const AuditRoute =" not in text:
     text = text.replace("const AssignScanRoute = AssignScanRouteImport.update({", CONST_BLOCK + "const AssignScanRoute = AssignScanRouteImport.update({")
 
-# Fix admin scans route import + add demo audits
-text = text.replace(
-    "import { Route as AdminScansRouteImport } from './routes/admin.scans'",
-    "import { Route as AdminScansRouteImport } from './routes/admin.scans'\nimport { Route as AdminAuditsRouteImport } from './routes/admin.audits'\nimport { Route as AdminDemoAuditsRouteImport } from './routes/admin.demo-audits'",
-)
+# Admin audit imports are added in IMPORTS block above — skip duplicate insertion.
 
 if "const AdminAuditsRoute =" not in text:
     admin_block = """
