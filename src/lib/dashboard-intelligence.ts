@@ -14,6 +14,7 @@ import {
   type PriorityCategory,
   PRIORITY_OPPORTUNITY_CATEGORIES,
 } from "@/lib/dashboard-config";
+import type { PerformanceOverTimeData, PerformancePeriodMetric } from "@/lib/dashboard-performance-trend";
 import { getRoleProfile, type AuditKpiId } from "@/lib/role-kpi-config";
 import {
   buildDashboardFilterSummary,
@@ -159,13 +160,7 @@ export type AttentionCard = {
   rank_score: number;
 };
 
-export type PerformancePeriodMetric = {
-  kpi_id: AuditKpiId;
-  label: string;
-  current: number | null;
-  previous: number | null;
-  change: number | null;
-};
+export type { PerformancePeriodMetric } from "@/lib/dashboard-performance-trend";
 
 export type BrandCompetitionData = {
   segments: ShareOfShelfSegment[];
@@ -196,6 +191,7 @@ export type WorkspaceDashboardData = {
   issue_rows: DashboardIssueRow[];
   attention_cards: AttentionCard[];
   performance_trend: PerformanceTrendPoint[];
+  performance_over_time?: PerformanceOverTimeData;
   performance_period: PerformancePeriodMetric[];
   improvement: ImprovementMetric[] | null;
   stores: StorePerformanceRow[];

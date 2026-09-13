@@ -29,7 +29,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CardSkeleton, EmptyState, ErrorState, Skeleton } from "@/components/States";
-import { KpiCard, SectionHeader } from "@/components/dashboard/DashboardParts";
+import { SectionHeader } from "@/components/dashboard/DashboardParts";
 import {
   DASHBOARD_CHART_COLORS,
   DASHBOARD_STATUS_COLORS,
@@ -838,22 +838,22 @@ export function AuditQualitySection({ data }: { data: WorkspaceDashboardData }) 
         description="Operational metrics from your completed audits — not the primary business KPIs."
       />
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard
+        <RetailKpiCard
           title="Products detected"
           value={formatNumber(k.products_detected)}
           description="Total products across audits"
         />
-        <KpiCard
+        <RetailKpiCard
           title="Average AI confidence"
           value={formatPercent(k.average_confidence ?? undefined)}
           description="Recognition confidence"
         />
-        <KpiCard
+        <RetailKpiCard
           title="Images processed"
           value={formatNumber(k.images_processed)}
           description="Shelf photos analysed"
         />
-        <KpiCard
+        <RetailKpiCard
           title="Audits completed"
           value={formatNumber(k.audits_completed)}
           description="Successfully processed"
