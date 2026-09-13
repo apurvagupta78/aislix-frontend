@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import type { KpiMetric } from "@/lib/execution-metrics";
 import {
@@ -167,52 +166,32 @@ export function OsaDetailVisual({ ctx, metric }: { ctx: KpiDetailsContext; metri
   );
 }
 
-export function LocationDetailVisual({ ctx, metric }: { ctx: KpiDetailsContext; metric?: KpiMetric }) {
+export function LocationDetailVisual({ ctx }: { ctx: KpiDetailsContext; metric?: KpiMetric }) {
   const cells = buildLocationCells(ctx);
-  const coverage = formatCoverage(metric);
-  return (
-    <div className="space-y-3">
-      <p className="text-2xl font-semibold tabular-nums">{metric?.value ?? "—"}</p>
-      <ShelfHeatmap cells={cells} mode="location" />
-      {coverage ? <p className="text-[10px] text-muted-foreground">{coverage}</p> : null}
-    </div>
-  );
+  return <ShelfHeatmap cells={cells} mode="location" />;
 }
 
-export function PlanogramDetailVisual({ ctx, metric }: { ctx: KpiDetailsContext; metric?: KpiMetric }) {
+export function PlanogramDetailVisual({ ctx }: { ctx: KpiDetailsContext; metric?: KpiMetric }) {
   const cells = buildPlanogramCells(ctx);
-  const coverage = formatCoverage(metric);
-  return (
-    <div className="space-y-3">
-      <p className="text-2xl font-semibold tabular-nums">{metric?.value ?? "—"}</p>
-      <ShelfHeatmap cells={cells} mode="planogram" />
-      {coverage ? <p className="text-[10px] text-muted-foreground">{coverage}</p> : null}
-    </div>
-  );
+  return <ShelfHeatmap cells={cells} mode="planogram" />;
 }
 
 export function AssortmentDetailVisual({
   ctx,
-  metric,
   kpiId,
 }: {
   ctx: KpiDetailsContext;
   metric?: KpiMetric;
   kpiId: "assortment_compliance" | "msl_compliance";
 }) {
-  const [showMissing, setShowMissing] = useState(false);
   const rows = kpiId === "msl_compliance" ? buildMslRows(ctx) : buildAssortmentRows(ctx);
   const present = rows.filter((r) => r.present).length;
   const total = rows.length;
   const missing = rows.filter((r) => !r.present);
   const pct = total ? (present / total) * 100 : 0;
-  const coverage = formatCoverage(metric);
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm font-semibold tabular-nums text-foreground">
-        {present} / {total} required products present
-      </p>
+    <div className="space-y-2.5">
       <div className="flex gap-4 text-[11px]">
         <span>
           <span className="font-semibold text-emerald-700 dark:text-emerald-300">{present}</span> Present
@@ -228,15 +207,6 @@ export function AssortmentDetailVisual({
         {present} / {total} = {Math.round(pct)}%
       </p>
       {missing.length > 0 ? (
-        <button
-          type="button"
-          className="text-[11px] font-medium text-brand hover:underline"
-          onClick={() => setShowMissing((v) => !v)}
-        >
-          View missing products →
-        </button>
-      ) : null}
-      {showMissing && missing.length > 0 ? (
         <ul className="space-y-1 rounded-md border border-border/60 bg-muted/20 px-3 py-2 text-[10px]">
           {missing.map((r) => (
             <li key={r.sku} className="text-destructive">
@@ -244,28 +214,20 @@ export function AssortmentDetailVisual({
             </li>
           ))}
         </ul>
-      ) : null}
-      {coverage ? <p className="text-[10px] text-muted-foreground">{coverage}</p> : null}
+      ) : (
+        <p className="text-[10px] text-muted-foreground">All required products are present.</p>
+      )}
     </div>
   );
 }
 
 export function FacingDetailVisual({ ctx, metric }: { ctx: KpiDetailsContext; metric?: KpiMetric }) {
   const brand = ctx.role === "fmcg" ? ctx.auditPackage.primary_brand : undefined;
-  const rows = buildFacingSkuRows(ctx, brand).slice(0, 6);
+  const rows = buildFacingSkuRows(ctx, brand);
   const max = Math.max(1, ...rows.map((r) => Math.max(r.actual, r.planned)));
-  const planned = metric?.denominator ?? rows.reduce((s, r) => s + r.planned, 0);
-  const actual = metric?.numerator ?? rows.reduce((s, r) => s + r.actual, 0);
-  const pctOfPlanned = planned ? Math.round((actual / planned) * 100) : 0;
-  const coverage = formatCoverage(metric);
-  const status = metric?.audit_status;
 
   return (
-    <div className="space-y-3">
-      <p className="text-lg font-semibold tabular-nums">
-        {actual} / {planned} planned
-      </p>
-      <p className="text-[11px] font-medium text-foreground">{pctOfPlanned}% of planned facings</p>
+    <div className="space-y-2.5">
       {rows.map((row) => (
         <div key={row.sku} className="space-y-1">
           <div className="flex justify-between text-[10px] text-muted-foreground">
@@ -297,11 +259,8 @@ export function FacingDetailVisual({ ctx, metric }: { ctx: KpiDetailsContext; me
           </div>
         </div>
       ))}
-      {coverage ? (
-        <p className="text-[10px] text-muted-foreground">
-          {coverage}
-          {status === "partial" ? " · Partial" : ""}
-        </p>
+      {!rows.length ? (
+        <p className="text-[10px] text-muted-foreground">No facing data for this audit.</p>
       ) : null}
     </div>
   );
@@ -492,6 +451,58 @@ export function NotApplicableVisual({ label }: { label: string }) {
   );
 }
 
+function isNotConfigured(metric?: KpiMetric): boolean {
+  return (
+    (metric?.state === "not_configured" || metric?.audit_status === "not_configured") &&
+    metric.numeric == null &&
+    metric.value !== "Not applicable"
+  );
+}
+
+function isNotApplicable(metric?: KpiMetric): boolean {
+  return metric?.audit_status === "not_applicable" || metric?.value === "Not applicable";
+}
+
+/** Heavy drill-down visuals — shown only when the user expands a KPI card. */
+export function KpiDetailExpandedVisual({
+  kpiId,
+  ctx,
+  metric,
+}: {
+  kpiId: AuditKpiId;
+  ctx: KpiDetailsContext;
+  metric?: KpiMetric;
+}) {
+  if (isNotConfigured(metric)) {
+    return <NotConfiguredVisual label={metric!.label} />;
+  }
+  if (isNotApplicable(metric)) {
+    return <NotApplicableVisual label={metric!.label} />;
+  }
+
+  switch (kpiId) {
+    case "location_accuracy":
+      return <LocationDetailVisual ctx={ctx} metric={metric} />;
+    case "planogram_compliance":
+      return <PlanogramDetailVisual ctx={ctx} metric={metric} />;
+    case "assortment_compliance":
+      return <AssortmentDetailVisual ctx={ctx} metric={metric} kpiId="assortment_compliance" />;
+    case "msl_compliance":
+      return <AssortmentDetailVisual ctx={ctx} metric={metric} kpiId="msl_compliance" />;
+    case "facing_count":
+      return <FacingDetailVisual ctx={ctx} metric={metric} />;
+    case "price_compliance":
+      return <PriceDetailVisual ctx={ctx} metric={metric} />;
+    case "promotional_compliance":
+      return <PromoDetailVisual ctx={ctx} metric={metric} />;
+    case "share_of_shelf":
+      return <ShareOfShelfDetailVisual ctx={ctx} metric={metric} />;
+    default:
+      return null;
+  }
+}
+
+/** @deprecated Use KpiDetailSummary + KpiDetailExpandedVisual instead. */
 export function KpiDetailVisualBody({
   kpiId,
   ctx,
@@ -501,15 +512,11 @@ export function KpiDetailVisualBody({
   ctx: KpiDetailsContext;
   metric?: KpiMetric;
 }) {
-  if (
-    (metric?.state === "not_configured" || metric?.audit_status === "not_configured") &&
-    metric.numeric == null &&
-    metric.value !== "Not applicable"
-  ) {
-    return <NotConfiguredVisual label={metric.label} />;
+  if (isNotConfigured(metric)) {
+    return <NotConfiguredVisual label={metric!.label} />;
   }
-  if (metric?.audit_status === "not_applicable" || metric?.value === "Not applicable") {
-    return <NotApplicableVisual label={metric.label} />;
+  if (isNotApplicable(metric)) {
+    return <NotApplicableVisual label={metric!.label} />;
   }
 
   switch (kpiId) {
