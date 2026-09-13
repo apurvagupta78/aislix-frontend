@@ -140,7 +140,7 @@ export function buildUnifiedExceptions(
     pushUnique(out, seen, {
       id: `compliance-${i}-${alert.id ?? i}`,
       category: "compliance",
-      severity: alert.severity === "critical" ? "critical" : alert.severity === "high" ? "high" : "medium",
+      severity: alert.severity === "high" ? "high" : "medium",
       title: alert.title,
       detail: alert.detail ?? alert.interpretation,
       expected: alert.expected_sub_category_label,

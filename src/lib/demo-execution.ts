@@ -291,8 +291,6 @@ export function landingToScanResult(landing: LandingScanResult): ScanResult {
 
     location: landing.shelf_label,
 
-    created_at: landing.scanned_at,
-
   };
 
 }

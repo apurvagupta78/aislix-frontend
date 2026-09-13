@@ -67,7 +67,7 @@ export type LandingScanResult = {
   sub_category?: string;
   sub_category_label?: string;
   shelf_label?: string;
-  metrics?: Record<string, unknown> & {
+  metrics?: Record<string, any> & {
     total_products?: number;
     unique_skus?: number;
     total_skus?: number;
@@ -94,7 +94,7 @@ export type LandingScanResult = {
   role_summaries?: Partial<
     Record<"execution" | "merchandising" | "brand" | "executive", string>
   >;
-  retail_intelligence?: Record<string, unknown>;
+  retail_intelligence?: Record<string, any>;
   recommendations?: LandingRecommendation[];
   alerts?: LandingAlert[];
   compliance_alerts?: LandingComplianceAlert[];

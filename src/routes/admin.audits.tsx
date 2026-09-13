@@ -258,13 +258,13 @@ function AdminScansPage() {
 
                 <div className="flex flex-wrap gap-2">
                   <Button asChild size="sm" variant="brand">
-                    <Link to="/results" search={{ audit: selected.id }}>
+                    <Link to="/results" search={{ scan: selected.id }}>
                       Open full results <ExternalLink className="size-4" />
                     </Link>
                   </Button>
                   {selected.created_by ? (
                     <Button asChild size="sm" variant="outline">
-                      <Link to="/admin/audits" search={{ userId: selected.created_by }}>
+                      <Link to="/admin/audits" search={{ userId: selected.created_by, orgId: undefined }}>
                         More from this user
                       </Link>
                     </Button>

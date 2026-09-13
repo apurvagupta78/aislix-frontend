@@ -95,7 +95,7 @@ export function buildBrandAnalysisMeta(
     fixture: result.inventory?.[0]?.location ?? DEMO_ORAL_CARE_META.fixture_id ?? "G01",
     category: result.scan_category ?? DEMO_ORAL_CARE_META.category ?? "—",
     sub_category: result.scan_sub_category ?? DEMO_ORAL_CARE_META.sub_category ?? "—",
-    planogram_version: DEMO_ORAL_CARE_META.version,
+    planogram_version: DEMO_ORAL_CARE_META.version ?? "—",
     target_brand: primary,
     planned_share: planned,
     actual_share: actual,

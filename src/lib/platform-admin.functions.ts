@@ -91,13 +91,13 @@ export type PlatformScanDetail = {
     executive_summary: string | null;
     confidence_avg: number | null;
     model_version: string | null;
-    metrics: Record<string, unknown> | null;
-    alerts: unknown[] | null;
-    recommendations: unknown[] | null;
-    brand_share: unknown[] | null;
-    category_breakdown: unknown[] | null;
-    shelf_rows: unknown[] | null;
-    raw_payload: Record<string, unknown> | null;
+    metrics: any;
+    alerts: any;
+    recommendations: any;
+    brand_share: any;
+    category_breakdown: any;
+    shelf_rows: any;
+    raw_payload: any;
   } | null;
 };
 
