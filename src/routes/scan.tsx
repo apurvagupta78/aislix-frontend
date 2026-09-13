@@ -10,9 +10,10 @@ import {
   Loader2,
   Info,
   MapPin,
-
   Plus,
   ScanLine,
+  Settings2,
+  Sparkles,
   Trash2,
   UploadCloud,
   X,
@@ -91,17 +92,17 @@ export const Route = createFileRoute("/scan")({
   },
   head: () => ({
     meta: [
-      { title: "Scan a Shelf — Aislix" },
+      { title: "Start a New AI Audit — Aislix" },
       {
         name: "description",
         content:
-          "Set store, location and shelf types, then capture or upload shelf photos for an AI audit.",
+          "Choose the store and audit type, then upload a shelf photo. Aislix will analyse it against your selected setup.",
       },
-      { property: "og:title", content: "Scan a shelf — Aislix" },
+      { property: "og:title", content: "Start a New AI Audit — Aislix" },
       {
         property: "og:description",
         content:
-          "Set store, location and shelf types, then capture or upload shelf photos.",
+          "Choose the store and audit type, then upload a shelf photo for an actionable retail audit.",
       },
 
       { property: "og:type", content: "website" },
@@ -549,8 +550,8 @@ function ScanPage() {
 
   return (
     <AppShell
-      title="Scan"
-      description="Set store, location and shelf types, then capture or upload shelf photos."
+      title="Start a New AI Audit"
+      description="Choose the store and audit type, then upload a shelf photo. Aislix will analyse it against your selected setup."
       actions={
         items.length && !busy ? (
           <Button variant="subtle" size="sm" className="rounded-xl" onClick={reset}>
@@ -1145,23 +1146,84 @@ function ScanPage() {
           </div>
 
           <aside className="space-y-4">
-            <div className="card-surface p-5 sm:p-6">
-              <h2 className="text-sm font-semibold tracking-tight">How it works</h2>
-              <ol className="mt-4 space-y-3 text-sm text-muted-foreground">
-                <li>1. Set store, location and shelf types.</li>
-                <li>2. Capture or upload your shelf photos.</li>
-                <li>3. AI detects products, brands and stock gaps.</li>
-                <li>4. View results, CSV, and PDF report.</li>
+            <div className="card-surface border border-border/60 p-4 shadow-sm sm:p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand">
+                Your audit in 3 steps
+              </p>
+              <ol className="mt-3.5 space-y-3">
+                {[
+                  {
+                    step: "01",
+                    title: "Set up your audit",
+                    body: "Choose the store, role and shelf setup Aislix should use.",
+                    icon: Settings2,
+                  },
+                  {
+                    step: "02",
+                    title: "Capture the shelf",
+                    body: "Take a clear photo showing the shelf from a straight, level view.",
+                    icon: Camera,
+                  },
+                  {
+                    step: "03",
+                    title: "Get actionable results",
+                    body: "Aislix identifies products, brands, availability, facings, prices, promotions and shelf issues — then gives you KPIs and actions to review.",
+                    icon: Sparkles,
+                  },
+                ].map(({ step, title, body, icon: Icon }) => (
+                  <li key={step} className="flex gap-2.5">
+                    <span className="mt-0.5 shrink-0 text-[11px] font-semibold tabular-nums text-muted-foreground">
+                      {step}
+                    </span>
+                    <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-md bg-brand-soft/70 text-brand">
+                      <Icon className="size-3.5" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium tracking-tight text-foreground">{title}</p>
+                      <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{body}</p>
+                    </div>
+                  </li>
+                ))}
               </ol>
             </div>
 
-            <div className="card-surface p-5 sm:p-6">
-              <h2 className="text-sm font-semibold tracking-tight">Capture tips</h2>
-              <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
-                <li>Frame the full shelf height in one shot.</li>
-                <li>Stand 1.5–2 m back and hold the phone level.</li>
-                <li>Avoid glare, shadows and motion blur.</li>
+            <div className="card-surface border border-border/60 p-4 shadow-sm sm:p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-brand">
+                Get a better audit
+              </p>
+              <ul className="mt-3.5 space-y-2.5">
+                {[
+                  {
+                    title: "Keep the full shelf in frame",
+                    body: "Make sure the entire shelf or fixture you want audited is visible.",
+                  },
+                  {
+                    title: "Hold the phone level",
+                    body: "Stand straight in front of the shelf and avoid strong angle or perspective distortion.",
+                  },
+                  {
+                    title: "Keep products sharp",
+                    body: "Tap to focus and hold the phone steady. Avoid motion blur.",
+                  },
+                  {
+                    title: "Avoid glare and blocked products",
+                    body: "Use even lighting and avoid reflections, heavy shadows, hands or other objects covering products.",
+                  },
+                ].map((tip) => (
+                  <li key={tip.title} className="flex gap-2.5">
+                    <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-md bg-accent-green-soft text-accent-green">
+                      <Check className="size-3.5" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium tracking-tight text-foreground">{tip.title}</p>
+                      <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{tip.body}</p>
+                    </div>
+                  </li>
+                ))}
               </ul>
+              <p className="mt-3.5 border-t border-border/60 pt-3 text-xs leading-relaxed text-muted-foreground">
+                One clear photo is best when the entire audit area fits comfortably in the frame.
+              </p>
             </div>
           </aside>
         </div>
