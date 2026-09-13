@@ -841,4 +841,3 @@ export function AppShell({
     </TooltipProvider>
   );
 }
-'
