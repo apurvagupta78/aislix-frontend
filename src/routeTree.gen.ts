@@ -14,7 +14,9 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AssignAuditRouteImport } from './routes/assign-audit'
+import { Route as AssignScanRouteImport } from './routes/assign-scan'
 import { Route as AssignedAuditsRouteImport } from './routes/assigned-audits'
+import { Route as AssignedScansRouteImport } from './routes/assigned-scans'
 import { Route as AuditRouteImport } from './routes/audit'
 import { Route as BillingRouteImport } from './routes/billing'
 import { Route as CompareRouteImport } from './routes/compare'
@@ -23,6 +25,7 @@ import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as CorrectiveActionsRouteImport } from './routes/corrective-actions'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DemoRouteImport } from './routes/demo'
+import { Route as DemoScansRouteImport } from './routes/demo-scans'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as HistoryRouteImport } from './routes/history'
@@ -30,6 +33,7 @@ import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as MyAuditsRouteImport } from './routes/my-audits'
+import { Route as MyScansRouteImport } from './routes/my-scans'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as OrganizationRouteImport } from './routes/organization'
 import { Route as PlanogramManagementRouteImport } from './routes/planogram-management'
@@ -45,6 +49,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ResultsRouteImport } from './routes/results'
 import { Route as RetailIntelligenceRouteImport } from './routes/retail-intelligence'
 import { Route as RetailShelfIntelligenceRouteImport } from './routes/retail-shelf-intelligence'
+import { Route as ScanRouteImport } from './routes/scan'
 import { Route as ScanHistoryRouteImport } from './routes/scan-history'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -58,8 +63,10 @@ import { Route as UsersRouteImport } from './routes/users'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AdminAuditsRouteImport } from './routes/admin.audits'
 import { Route as AdminDemoAuditsRouteImport } from './routes/admin.demo-audits'
+import { Route as AdminDemoScansRouteImport } from './routes/admin.demo-scans'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminOrgsRouteImport } from './routes/admin.orgs'
+import { Route as AdminScansRouteImport } from './routes/admin.scans'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as ApiSendLandingOnboardingRouteImport } from './routes/api/send-landing-onboarding'
@@ -103,9 +110,19 @@ const AssignAuditRoute = AssignAuditRouteImport.update({
   path: '/assign-audit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AssignScanRoute = AssignScanRouteImport.update({
+  id: '/assign-scan',
+  path: '/assign-scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AssignedAuditsRoute = AssignedAuditsRouteImport.update({
   id: '/assigned-audits',
   path: '/assigned-audits',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssignedScansRoute = AssignedScansRouteImport.update({
+  id: '/assigned-scans',
+  path: '/assigned-scans',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuditRoute = AuditRouteImport.update({
@@ -148,6 +165,11 @@ const DemoRoute = DemoRouteImport.update({
   path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DemoScansRoute = DemoScansRouteImport.update({
+  id: '/demo-scans',
+  path: '/demo-scans',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FeaturesRoute = FeaturesRouteImport.update({
   id: '/features',
   path: '/features',
@@ -181,6 +203,11 @@ const LogoutRoute = LogoutRouteImport.update({
 const MyAuditsRoute = MyAuditsRouteImport.update({
   id: '/my-audits',
   path: '/my-audits',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyScansRoute = MyScansRouteImport.update({
+  id: '/my-scans',
+  path: '/my-scans',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -258,6 +285,11 @@ const RetailShelfIntelligenceRoute = RetailShelfIntelligenceRouteImport.update({
   path: '/retail-shelf-intelligence',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ScanRoute = ScanRouteImport.update({
+  id: '/scan',
+  path: '/scan',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ScanHistoryRoute = ScanHistoryRouteImport.update({
   id: '/scan-history',
   path: '/scan-history',
@@ -323,6 +355,11 @@ const AdminDemoAuditsRoute = AdminDemoAuditsRouteImport.update({
   path: '/demo-audits',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminDemoScansRoute = AdminDemoScansRouteImport.update({
+  id: '/demo-scans',
+  path: '/demo-scans',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -331,6 +368,11 @@ const AdminLoginRoute = AdminLoginRouteImport.update({
 const AdminOrgsRoute = AdminOrgsRouteImport.update({
   id: '/orgs',
   path: '/orgs',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminScansRoute = AdminScansRouteImport.update({
+  id: '/scans',
+  path: '/scans',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
@@ -428,7 +470,9 @@ export interface FileRoutesByFullPath {
   '/accept-invite': typeof AcceptInviteRoute
   '/admin': typeof AdminRouteWithChildren
   '/assign-audit': typeof AssignAuditRoute
+  '/assign-scan': typeof AssignScanRoute
   '/assigned-audits': typeof AssignedAuditsRoute
+  '/assigned-scans': typeof AssignedScansRoute
   '/audit': typeof AuditRoute
   '/billing': typeof BillingRoute
   '/compare': typeof CompareRoute
@@ -437,6 +481,7 @@ export interface FileRoutesByFullPath {
   '/corrective-actions': typeof CorrectiveActionsRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
+  '/demo-scans': typeof DemoScansRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/history': typeof HistoryRoute
@@ -444,6 +489,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/my-audits': typeof MyAuditsRoute
+  '/my-scans': typeof MyScansRoute
   '/onboarding': typeof OnboardingRoute
   '/organization': typeof OrganizationRoute
   '/planogram-management': typeof PlanogramManagementRoute
@@ -459,6 +505,7 @@ export interface FileRoutesByFullPath {
   '/results': typeof ResultsRoute
   '/retail-intelligence': typeof RetailIntelligenceRoute
   '/retail-shelf-intelligence': typeof RetailShelfIntelligenceRoute
+  '/scan': typeof ScanRoute
   '/scan-history': typeof ScanHistoryRoute
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
@@ -472,8 +519,10 @@ export interface FileRoutesByFullPath {
   '/verify-email': typeof VerifyEmailRoute
   '/admin/audits': typeof AdminAuditsRoute
   '/admin/demo-audits': typeof AdminDemoAuditsRoute
+  '/admin/demo-scans': typeof AdminDemoScansRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/orgs': typeof AdminOrgsRoute
+  '/admin/scans': typeof AdminScansRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/scan': typeof ApiScanRoute
   '/api/send-landing-onboarding': typeof ApiSendLandingOnboardingRoute
@@ -498,7 +547,9 @@ export interface FileRoutesByTo {
   '/accept-invite': typeof AcceptInviteRoute
   '/admin': typeof AdminRouteWithChildren
   '/assign-audit': typeof AssignAuditRoute
+  '/assign-scan': typeof AssignScanRoute
   '/assigned-audits': typeof AssignedAuditsRoute
+  '/assigned-scans': typeof AssignedScansRoute
   '/audit': typeof AuditRoute
   '/billing': typeof BillingRoute
   '/compare': typeof CompareRoute
@@ -507,6 +558,7 @@ export interface FileRoutesByTo {
   '/corrective-actions': typeof CorrectiveActionsRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
+  '/demo-scans': typeof DemoScansRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/history': typeof HistoryRoute
@@ -514,6 +566,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/my-audits': typeof MyAuditsRoute
+  '/my-scans': typeof MyScansRoute
   '/onboarding': typeof OnboardingRoute
   '/organization': typeof OrganizationRoute
   '/planogram-management': typeof PlanogramManagementRoute
@@ -529,6 +582,7 @@ export interface FileRoutesByTo {
   '/results': typeof ResultsRoute
   '/retail-intelligence': typeof RetailIntelligenceRoute
   '/retail-shelf-intelligence': typeof RetailShelfIntelligenceRoute
+  '/scan': typeof ScanRoute
   '/scan-history': typeof ScanHistoryRoute
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
@@ -542,8 +596,10 @@ export interface FileRoutesByTo {
   '/verify-email': typeof VerifyEmailRoute
   '/admin/audits': typeof AdminAuditsRoute
   '/admin/demo-audits': typeof AdminDemoAuditsRoute
+  '/admin/demo-scans': typeof AdminDemoScansRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/orgs': typeof AdminOrgsRoute
+  '/admin/scans': typeof AdminScansRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/scan': typeof ApiScanRoute
   '/api/send-landing-onboarding': typeof ApiSendLandingOnboardingRoute
@@ -569,7 +625,9 @@ export interface FileRoutesById {
   '/accept-invite': typeof AcceptInviteRoute
   '/admin': typeof AdminRouteWithChildren
   '/assign-audit': typeof AssignAuditRoute
+  '/assign-scan': typeof AssignScanRoute
   '/assigned-audits': typeof AssignedAuditsRoute
+  '/assigned-scans': typeof AssignedScansRoute
   '/audit': typeof AuditRoute
   '/billing': typeof BillingRoute
   '/compare': typeof CompareRoute
@@ -578,6 +636,7 @@ export interface FileRoutesById {
   '/corrective-actions': typeof CorrectiveActionsRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
+  '/demo-scans': typeof DemoScansRoute
   '/features': typeof FeaturesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/history': typeof HistoryRoute
@@ -585,6 +644,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/my-audits': typeof MyAuditsRoute
+  '/my-scans': typeof MyScansRoute
   '/onboarding': typeof OnboardingRoute
   '/organization': typeof OrganizationRoute
   '/planogram-management': typeof PlanogramManagementRoute
@@ -600,6 +660,7 @@ export interface FileRoutesById {
   '/results': typeof ResultsRoute
   '/retail-intelligence': typeof RetailIntelligenceRoute
   '/retail-shelf-intelligence': typeof RetailShelfIntelligenceRoute
+  '/scan': typeof ScanRoute
   '/scan-history': typeof ScanHistoryRoute
   '/security': typeof SecurityRoute
   '/settings': typeof SettingsRoute
@@ -613,8 +674,10 @@ export interface FileRoutesById {
   '/verify-email': typeof VerifyEmailRoute
   '/admin/audits': typeof AdminAuditsRoute
   '/admin/demo-audits': typeof AdminDemoAuditsRoute
+  '/admin/demo-scans': typeof AdminDemoScansRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/orgs': typeof AdminOrgsRoute
+  '/admin/scans': typeof AdminScansRoute
   '/admin/users': typeof AdminUsersRoute
   '/api/scan': typeof ApiScanRoute
   '/api/send-landing-onboarding': typeof ApiSendLandingOnboardingRoute
@@ -641,7 +704,9 @@ export interface FileRouteTypes {
     | '/accept-invite'
     | '/admin'
     | '/assign-audit'
+    | '/assign-scan'
     | '/assigned-audits'
+    | '/assigned-scans'
     | '/audit'
     | '/billing'
     | '/compare'
@@ -650,6 +715,7 @@ export interface FileRouteTypes {
     | '/corrective-actions'
     | '/dashboard'
     | '/demo'
+    | '/demo-scans'
     | '/features'
     | '/forgot-password'
     | '/history'
@@ -657,6 +723,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/my-audits'
+    | '/my-scans'
     | '/onboarding'
     | '/organization'
     | '/planogram-management'
@@ -672,6 +739,7 @@ export interface FileRouteTypes {
     | '/results'
     | '/retail-intelligence'
     | '/retail-shelf-intelligence'
+    | '/scan'
     | '/scan-history'
     | '/security'
     | '/settings'
@@ -685,8 +753,10 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/admin/audits'
     | '/admin/demo-audits'
+    | '/admin/demo-scans'
     | '/admin/login'
     | '/admin/orgs'
+    | '/admin/scans'
     | '/admin/users'
     | '/api/scan'
     | '/api/send-landing-onboarding'
@@ -711,7 +781,9 @@ export interface FileRouteTypes {
     | '/accept-invite'
     | '/admin'
     | '/assign-audit'
+    | '/assign-scan'
     | '/assigned-audits'
+    | '/assigned-scans'
     | '/audit'
     | '/billing'
     | '/compare'
@@ -720,6 +792,7 @@ export interface FileRouteTypes {
     | '/corrective-actions'
     | '/dashboard'
     | '/demo'
+    | '/demo-scans'
     | '/features'
     | '/forgot-password'
     | '/history'
@@ -727,6 +800,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/my-audits'
+    | '/my-scans'
     | '/onboarding'
     | '/organization'
     | '/planogram-management'
@@ -742,6 +816,7 @@ export interface FileRouteTypes {
     | '/results'
     | '/retail-intelligence'
     | '/retail-shelf-intelligence'
+    | '/scan'
     | '/scan-history'
     | '/security'
     | '/settings'
@@ -755,8 +830,10 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/admin/audits'
     | '/admin/demo-audits'
+    | '/admin/demo-scans'
     | '/admin/login'
     | '/admin/orgs'
+    | '/admin/scans'
     | '/admin/users'
     | '/api/scan'
     | '/api/send-landing-onboarding'
@@ -781,7 +858,9 @@ export interface FileRouteTypes {
     | '/accept-invite'
     | '/admin'
     | '/assign-audit'
+    | '/assign-scan'
     | '/assigned-audits'
+    | '/assigned-scans'
     | '/audit'
     | '/billing'
     | '/compare'
@@ -790,6 +869,7 @@ export interface FileRouteTypes {
     | '/corrective-actions'
     | '/dashboard'
     | '/demo'
+    | '/demo-scans'
     | '/features'
     | '/forgot-password'
     | '/history'
@@ -797,6 +877,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/logout'
     | '/my-audits'
+    | '/my-scans'
     | '/onboarding'
     | '/organization'
     | '/planogram-management'
@@ -812,6 +893,7 @@ export interface FileRouteTypes {
     | '/results'
     | '/retail-intelligence'
     | '/retail-shelf-intelligence'
+    | '/scan'
     | '/scan-history'
     | '/security'
     | '/settings'
@@ -825,8 +907,10 @@ export interface FileRouteTypes {
     | '/verify-email'
     | '/admin/audits'
     | '/admin/demo-audits'
+    | '/admin/demo-scans'
     | '/admin/login'
     | '/admin/orgs'
+    | '/admin/scans'
     | '/admin/users'
     | '/api/scan'
     | '/api/send-landing-onboarding'
@@ -852,7 +936,9 @@ export interface RootRouteChildren {
   AcceptInviteRoute: typeof AcceptInviteRoute
   AdminRoute: typeof AdminRouteWithChildren
   AssignAuditRoute: typeof AssignAuditRoute
+  AssignScanRoute: typeof AssignScanRoute
   AssignedAuditsRoute: typeof AssignedAuditsRoute
+  AssignedScansRoute: typeof AssignedScansRoute
   AuditRoute: typeof AuditRoute
   BillingRoute: typeof BillingRoute
   CompareRoute: typeof CompareRoute
@@ -861,6 +947,7 @@ export interface RootRouteChildren {
   CorrectiveActionsRoute: typeof CorrectiveActionsRoute
   DashboardRoute: typeof DashboardRoute
   DemoRoute: typeof DemoRoute
+  DemoScansRoute: typeof DemoScansRoute
   FeaturesRoute: typeof FeaturesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   HistoryRoute: typeof HistoryRoute
@@ -868,6 +955,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
   MyAuditsRoute: typeof MyAuditsRoute
+  MyScansRoute: typeof MyScansRoute
   OnboardingRoute: typeof OnboardingRoute
   OrganizationRoute: typeof OrganizationRoute
   PlanogramManagementRoute: typeof PlanogramManagementRoute
@@ -883,6 +971,7 @@ export interface RootRouteChildren {
   ResultsRoute: typeof ResultsRoute
   RetailIntelligenceRoute: typeof RetailIntelligenceRoute
   RetailShelfIntelligenceRoute: typeof RetailShelfIntelligenceRoute
+  ScanRoute: typeof ScanRoute
   ScanHistoryRoute: typeof ScanHistoryRoute
   SecurityRoute: typeof SecurityRoute
   SettingsRoute: typeof SettingsRoute
@@ -949,11 +1038,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AssignAuditRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/assign-scan': {
+      id: '/assign-scan'
+      path: '/assign-scan'
+      fullPath: '/assign-scan'
+      preLoaderRoute: typeof AssignScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/assigned-audits': {
       id: '/assigned-audits'
       path: '/assigned-audits'
       fullPath: '/assigned-audits'
       preLoaderRoute: typeof AssignedAuditsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assigned-scans': {
+      id: '/assigned-scans'
+      path: '/assigned-scans'
+      fullPath: '/assigned-scans'
+      preLoaderRoute: typeof AssignedScansRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/audit': {
@@ -1012,6 +1115,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/demo-scans': {
+      id: '/demo-scans'
+      path: '/demo-scans'
+      fullPath: '/demo-scans'
+      preLoaderRoute: typeof DemoScansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/features': {
       id: '/features'
       path: '/features'
@@ -1059,6 +1169,13 @@ declare module '@tanstack/react-router' {
       path: '/my-audits'
       fullPath: '/my-audits'
       preLoaderRoute: typeof MyAuditsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-scans': {
+      id: '/my-scans'
+      path: '/my-scans'
+      fullPath: '/my-scans'
+      preLoaderRoute: typeof MyScansRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -1166,6 +1283,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RetailShelfIntelligenceRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/scan': {
+      id: '/scan'
+      path: '/scan'
+      fullPath: '/scan'
+      preLoaderRoute: typeof ScanRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/scan-history': {
       id: '/scan-history'
       path: '/scan-history'
@@ -1257,6 +1381,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDemoAuditsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/demo-scans': {
+      id: '/admin/demo-scans'
+      path: '/demo-scans'
+      fullPath: '/admin/demo-scans'
+      preLoaderRoute: typeof AdminDemoScansRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/login': {
       id: '/admin/login'
       path: '/login'
@@ -1269,6 +1400,13 @@ declare module '@tanstack/react-router' {
       path: '/orgs'
       fullPath: '/admin/orgs'
       preLoaderRoute: typeof AdminOrgsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/scans': {
+      id: '/admin/scans'
+      path: '/scans'
+      fullPath: '/admin/scans'
+      preLoaderRoute: typeof AdminScansRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/users': {
@@ -1396,16 +1534,20 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminAuditsRoute: typeof AdminAuditsRoute
   AdminDemoAuditsRoute: typeof AdminDemoAuditsRoute
+  AdminDemoScansRoute: typeof AdminDemoScansRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminOrgsRoute: typeof AdminOrgsRoute
+  AdminScansRoute: typeof AdminScansRoute
   AdminUsersRoute: typeof AdminUsersRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAuditsRoute: AdminAuditsRoute,
   AdminDemoAuditsRoute: AdminDemoAuditsRoute,
+  AdminDemoScansRoute: AdminDemoScansRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminOrgsRoute: AdminOrgsRoute,
+  AdminScansRoute: AdminScansRoute,
   AdminUsersRoute: AdminUsersRoute,
 }
 
@@ -1417,7 +1559,9 @@ const rootRouteChildren: RootRouteChildren = {
   AcceptInviteRoute: AcceptInviteRoute,
   AdminRoute: AdminRouteWithChildren,
   AssignAuditRoute: AssignAuditRoute,
+  AssignScanRoute: AssignScanRoute,
   AssignedAuditsRoute: AssignedAuditsRoute,
+  AssignedScansRoute: AssignedScansRoute,
   AuditRoute: AuditRoute,
   BillingRoute: BillingRoute,
   CompareRoute: CompareRoute,
@@ -1426,6 +1570,7 @@ const rootRouteChildren: RootRouteChildren = {
   CorrectiveActionsRoute: CorrectiveActionsRoute,
   DashboardRoute: DashboardRoute,
   DemoRoute: DemoRoute,
+  DemoScansRoute: DemoScansRoute,
   FeaturesRoute: FeaturesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   HistoryRoute: HistoryRoute,
@@ -1433,6 +1578,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
   MyAuditsRoute: MyAuditsRoute,
+  MyScansRoute: MyScansRoute,
   OnboardingRoute: OnboardingRoute,
   OrganizationRoute: OrganizationRoute,
   PlanogramManagementRoute: PlanogramManagementRoute,
@@ -1448,6 +1594,7 @@ const rootRouteChildren: RootRouteChildren = {
   ResultsRoute: ResultsRoute,
   RetailIntelligenceRoute: RetailIntelligenceRoute,
   RetailShelfIntelligenceRoute: RetailShelfIntelligenceRoute,
+  ScanRoute: ScanRoute,
   ScanHistoryRoute: ScanHistoryRoute,
   SecurityRoute: SecurityRoute,
   SettingsRoute: SettingsRoute,
