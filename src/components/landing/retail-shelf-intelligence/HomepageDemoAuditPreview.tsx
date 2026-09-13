@@ -12,7 +12,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { DEFAULT_SAMPLE_IMAGE } from "@/lib/landing-audit-api";
+import { DEFAULT_SAMPLE_IMAGE } from "@/lib/landing-scan-api";
 import { DEMO_PLANOGRAM_LABEL } from "@/lib/demo-oral-care-planogram";
 import {
   getHomepageDemoPreviewStats,

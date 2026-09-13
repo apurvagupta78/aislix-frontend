@@ -160,10 +160,10 @@ export function KpiCards({
     return (
       <EmptyState
         title="No metrics yet"
-        description="Run your first shelf audit to start populating dashboard metrics."
+        description="Run your first shelf scan to start populating dashboard metrics."
         action={
           <Button asChild variant="brand" size="sm" className="rounded-xl">
-            <Link to="/audit">Start an audit</Link>
+            <Link to="/scan">Start a scan</Link>
           </Button>
         }
       />
@@ -174,7 +174,7 @@ export function KpiCards({
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <Kpi label="Total audits" value={formatNumber(kpis.total_scans)} icon={ScanLine} />
+      <Kpi label="Total scans" value={formatNumber(kpis.total_scans)} icon={ScanLine} />
       <Kpi label="Products detected" value={formatNumber(kpis.products_detected)} icon={Package} />
       <Kpi label="Stores" value={formatNumber(kpis.stores)} icon={Store} />
       <Kpi
@@ -197,7 +197,7 @@ export function KpiCards({
       />
       <Kpi label="Average AI confidence" value={formatPercent(kpis.average_confidence)} icon={Tags} />
       <Kpi
-        label="Audits remaining this month"
+        label="Scans remaining this month"
         value={formatQuota(kpis.scans_remaining)}
         icon={Timer}
       />
@@ -209,7 +209,7 @@ export function KpiCards({
 
 const quickActions = [
   {
-    to: "/audit",
+    to: "/scan",
     title: "Start new audit",
     description: "Capture or upload a shelf photo.",
     icon: ScanLine,
@@ -245,7 +245,7 @@ const quickActions = [
     icon: Users,
   },
   {
-    to: "/audit",
+    to: "/scan",
     title: "Import master shelf setup",
     description: "Upload a role-specific master setup and configure an audit faster.",
     icon: ClipboardList,
@@ -326,7 +326,7 @@ export function ActivityTimeline({
     return (
       <EmptyState
         title="No activity yet"
-        description="Audits, downloads, store changes and team invites will appear here."
+        description="Scans, downloads, store changes and team invites will appear here."
       />
     );
   }
@@ -506,7 +506,7 @@ export function AccountSummaryPanel({
 
       <div>
         <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">Audits used</span>
+          <span className="text-muted-foreground">Scans used</span>
           <span className="font-medium text-foreground">
             {formatNumber(used)} / {formatQuota(included)}
           </span>
@@ -516,7 +516,7 @@ export function AccountSummaryPanel({
 
       <dl className="grid grid-cols-2 gap-3 text-sm">
         <div className="rounded-xl border border-border bg-surface p-3">
-          <dt className="text-xs text-muted-foreground">Audits remaining</dt>
+          <dt className="text-xs text-muted-foreground">Scans remaining</dt>
           <dd className="mt-1 font-semibold text-foreground">
             {formatQuota(account.scans_remaining)}
           </dd>

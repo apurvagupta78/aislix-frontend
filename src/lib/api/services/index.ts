@@ -8,8 +8,8 @@
 
 export * as authService from "./auth";
 export * as dashboardService from "./dashboard";
-export * as auditsService from "./audits";
-export * as scanHistoryService from "./audit-history";
+export * as scansService from "./scans";
+export * as scanHistoryService from "./scan-history";
 export * as reportsService from "./reports";
 export * as storesService from "./stores";
 export * as organizationService from "./organization";

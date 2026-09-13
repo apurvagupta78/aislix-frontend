@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { DemoAllowance } from "@/lib/demo-allowance";
 import { formatNextAvailable } from "@/lib/demo-allowance";
-import { signupUrl } from "@/lib/landing-audit-api";
+import { signupUrl } from "@/lib/landing-scan-api";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 

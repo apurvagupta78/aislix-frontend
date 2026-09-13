@@ -847,9 +847,9 @@ export function UserDetailDrawer({
                 <DetailRow label="Assigned stores" value={storeAccessLabel(user)} />
                 <DetailRow label="Created" value={formatDate(user.created_at)} />
                 <DetailRow label="Last login" value={formatDateTime(user.last_login_at)} />
-                <DetailRow label="Total audits" value={formatCount(user.scans_total)} />
-                <DetailRow label="Audits (30 days)" value={formatCount(user.scans_last_30_days)} />
-                <DetailRow label="Last audit" value={formatDateTime(user.last_scan_at)} />
+                <DetailRow label="Total scans" value={formatCount(user.scans_total)} />
+                <DetailRow label="Scans (30 days)" value={formatCount(user.scans_last_30_days)} />
+                <DetailRow label="Last scan" value={formatDateTime(user.last_scan_at)} />
               </dl>
 
               <div className="flex flex-wrap gap-2">

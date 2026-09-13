@@ -11,7 +11,7 @@ import {
   runLandingSample,
   runLandingUpload,
   type LandingScanResult,
-} from "@/lib/landing-audit-api";
+} from "@/lib/landing-scan-api";
 import { ScanProgressPanel } from "@/components/scan/ScanProgressPanel";
 const DemoRoleResultsPanel = lazy(() =>
   import("@/components/scan/DemoRoleResultsPanel").then((m) => ({
@@ -31,7 +31,7 @@ import { HomepageDemoAuditPreview } from "./HomepageDemoAuditPreview";
 import { SectionHeading } from "./shared";
 import { networkErrorMessage } from "@/lib/api-errors";
 
-type Phase = "idle" | "auditing" | "done" | "error";
+type Phase = "idle" | "scanning" | "done" | "error";
 type SetupMode = null | "sample" | "upload";
 
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -106,7 +106,7 @@ export function LiveDemoSection({
     setError(null);
     setResult(null);
     setElapsedSec(null);
-    setPhase("auditing");
+    setPhase("scanning");
     trackLandingEvent("demo_scan_started", { mode });
     const startedAt = Date.now();
     const minVisible = new Promise<void>((resolve) => setTimeout(resolve, MIN_SCAN_MS));
@@ -138,7 +138,7 @@ export function LiveDemoSection({
       const status = (err as { status?: number }).status;
       setError(
         status === 429
-          ? "You've used all free demo audits for today. Create a free account to keep auditing."
+          ? "You've used all free demo scans for today. Create a free account to keep scanning."
           : networkErrorMessage(err),
       );
       setPhase("error");
@@ -203,7 +203,7 @@ export function LiveDemoSection({
     scrollToDemo();
   }
 
-  const auditing = phase === "auditing";
+  const scanning = phase === "scanning";
   const homepageIdlePreview = homepageIntro && phase === "idle" && !setupMode;
   const displayImageUrl =
     (phase === "done" && result ? (annotatedSrc(result) ?? previewImageUrl) : null) ??
@@ -221,7 +221,7 @@ export function LiveDemoSection({
         onChange={demoCategory.setState}
         categories={demoCategory.categories}
         ready={demoCategory.ready}
-        disabled={auditing}
+        disabled={scanning}
         scanContext={scanContext}
         onScanContextChange={setScanContext}
         defaultCategory={demoCategory.state.categoryName}
@@ -240,7 +240,7 @@ export function LiveDemoSection({
 
   return (
     <section
-      id={homepageIntro ? "start-auditing" : "demo"}
+      id={homepageIntro ? "start-scanning" : "demo"}
       className="scroll-mt-16 bg-surface py-16 sm:py-20"
     >
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
@@ -253,7 +253,7 @@ export function LiveDemoSection({
           subtitle={
             homepageIntro
               ? "Upload a shelf photo or try our sample shelf. Aislix turns it into a structured retail audit in seconds."
-              : "Try a real shelf audit — no login required."
+              : "Try a real shelf scan — no login required."
           }
           {...(homepageIntro ? { eyebrow: "TRY AISLIX FREE" } : { eyebrow: "Live demo" })}
           className={homepageIntro ? "max-w-3xl" : undefined}
@@ -264,7 +264,7 @@ export function LiveDemoSection({
             size="xl"
             variant="default"
             className="min-h-11 w-full sm:w-auto"
-            disabled={auditing}
+            disabled={scanning}
             onClick={beginSampleSetup}
           >
             {homepageIntro ? (
@@ -281,7 +281,7 @@ export function LiveDemoSection({
             variant="outline"
             size="xl"
             className="min-h-11 w-full sm:w-auto"
-            disabled={auditing}
+            disabled={scanning}
             onClick={beginUploadSetup}
           >
             <Upload className="size-4" /> Upload Your Shelf Photo
@@ -316,7 +316,7 @@ export function LiveDemoSection({
           className="mt-8 overflow-hidden rounded-xl border border-border bg-card shadow-lift"
         >
           <div className="p-4 sm:p-6 lg:p-8">
-            {auditing && (
+            {scanning && (
               <div className="grid min-h-48 place-items-center py-8">
                 <ScanProgressPanel active expectedMs={60_000} timingMessage={DEMO_TIMING_MESSAGE} />
               </div>
@@ -329,15 +329,15 @@ export function LiveDemoSection({
               </div>
             ) : null}
 
-            {!auditing && setupPanel}
+            {!scanning && setupPanel}
 
-            {!auditing && homepageIdlePreview ? <HomepageDemoAuditPreview /> : null}
+            {!scanning && homepageIdlePreview ? <HomepageDemoAuditPreview /> : null}
 
-            {!auditing && phase === "idle" && !setupMode && !homepageIntro ? (
+            {!scanning && phase === "idle" && !setupMode && !homepageIntro ? (
               <EmptyResults />
             ) : null}
 
-            {!auditing && phase === "done" && result ? (
+            {!scanning && phase === "done" && result ? (
               <Suspense
                 fallback={
                   <div className="py-8 text-center text-sm text-muted-foreground">Loading results…</div>
@@ -377,7 +377,7 @@ export function LiveDemoSection({
                   decoding="async"
                   className="mx-auto max-h-[min(52vh,520px)] w-full rounded-lg object-contain"
                 />
-                {auditing ? (
+                {scanning ? (
                   <div className="absolute inset-0 rounded-lg bg-foreground/15">
                     <Badge className="absolute left-3 top-3 gap-2 rounded-md bg-primary px-3 py-2 text-primary-foreground">
                       <Loader2 className="size-3.5 animate-spin" /> Analyzing image…
@@ -399,7 +399,7 @@ function EmptyResults() {
     <div className="grid min-h-48 place-items-center py-6 text-center">
       <p className="max-w-md text-sm text-muted-foreground">
         Choose the sample shelf or upload your photo above — then confirm category, optionally add a
-        planogram, and start auditing. Execution, merchandising, brand, and executive views will
+        planogram, and start scanning. Execution, merchandising, brand, and executive views will
         appear here.
       </p>
     </div>

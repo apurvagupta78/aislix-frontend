@@ -1,6 +1,6 @@
 /**
  * Client-side audit KPI fallback when stored metrics lack audit_kpi_dashboards
- * (e.g. audits processed before package synthesis shipped). Uses same formulas as backend.
+ * (e.g. scans processed before package synthesis shipped). Uses same formulas as backend.
  */
 
 import {
