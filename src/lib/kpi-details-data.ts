@@ -144,7 +144,7 @@ export function buildKpiDetailsContext(result: ScanResult, role: AuditRoleTab): 
   const rows = planogramRowsFromResult(result);
   const auditPackage = autoPopulateAuditPackage(
     rows,
-    (result.retail_intelligence?.audit_package as PlanogramAuditPackage | undefined) ?? {},
+    result.retail_intelligence?.audit_package as PlanogramAuditPackage | undefined,
   );
   const match = resolveMatch(result, rows, demoMode);
   const metricsList = buildRoleKpiMetrics(result, role);

@@ -222,6 +222,7 @@ export type RecentScan = {
   shelf_health_score?: number; // 0-100
   average_confidence?: number; // 0-1 or 0-100
   products_detected?: number;
+  category?: string;
   status: RecentScanStatus;
 };
 

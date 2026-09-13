@@ -56,12 +56,12 @@ export type PerformancePeriodMetric = {
   current: number | null;
   previous: number | null;
   change: number | null;
-  target: number | null;
-  last_audit_value: number | null;
-  variance_vs_target: number | null;
-  unit: "percent" | "count";
-  no_data: boolean;
-  no_data_reason: string | null;
+  target?: number | null;
+  last_audit_value?: number | null;
+  variance_vs_target?: number | null;
+  unit?: "percent" | "count";
+  no_data?: boolean;
+  no_data_reason?: string | null;
 };
 
 export type PerformanceOverTimeData = {

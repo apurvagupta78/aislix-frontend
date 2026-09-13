@@ -44,7 +44,7 @@ export type ExecutionKpi = {
   label: string;
   value: string;
   numeric?: number;
-  state?: import("@/lib/retail-intelligence").MetricState;
+  state: import("@/lib/retail-intelligence").MetricState;
   coverage_label?: string;
   detail?: string;
   audit_status?: string;
