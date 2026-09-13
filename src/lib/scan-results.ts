@@ -50,6 +50,11 @@ export type InventoryItem = {
   id: string;
   brand: string;
   product: string;
+  name?: string;
+  sku?: string;
+  match_key?: string;
+  facings?: number;
+  location?: string;
   variant?: string;
   quantity: number;
   confidence: number; // 0-1 or 0-100, normalized on render

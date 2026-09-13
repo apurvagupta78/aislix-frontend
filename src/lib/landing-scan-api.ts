@@ -64,6 +64,8 @@ export type LandingScanResult = {
   scan_mode?: "audit_only" | "sample_with_planogram";
   has_planogram?: boolean;
   category?: string;
+  sub_category?: string;
+  sub_category_label?: string;
   shelf_label?: string;
   metrics?: Record<string, unknown> & {
     total_products?: number;
