@@ -1,0 +1,3 @@
+ALTER POLICY planogram_promotions_org
+ON public.planogram_promotions
+TO authenticated;
