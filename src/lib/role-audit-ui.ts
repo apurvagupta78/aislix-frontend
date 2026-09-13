@@ -132,7 +132,7 @@ export const KPI_PLAIN_ENGLISH: Record<AuditKpiId, string> = {
   location_accuracy: "Products in the right location",
   planogram_compliance: "Shelf matches the expected layout",
   assortment_compliance: "Required products are present",
-  facing_count: "Visible facings vs expected",
+  facing_count: "Visible vs planned facings",
   share_of_shelf: "Your brand's share of shelf space",
   price_compliance: "Prices match what should be displayed",
   promotional_compliance: "Promotions visible as expected",
@@ -146,7 +146,7 @@ export function kpiPlainEnglish(kpiId: string): string | undefined {
 export const KPI_STRIP_INTRO = {
   eyebrow: "Your shelf at a glance",
   description:
-    "These scores show how well the shelf matches the expected setup for this audit. Click any KPI to see the evidence behind the result.",
+    "See how the shelf performed against the setup for this audit. Click a result to explore the evidence behind it.",
 } as const;
 
 export const AUDIT_STATUS_DISPLAY: Record<string, string> = {

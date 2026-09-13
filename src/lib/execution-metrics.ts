@@ -50,6 +50,7 @@ export type KpiMetric = {
   denominator?: number | null;
   unit?: "percent" | "count";
   audit_status?: AuditKpiResult["status"];
+  excluded_count?: number;
 };
 
 export type PlanogramSummaryShape = {
@@ -380,6 +381,7 @@ function auditKpiToMetric(kpi: AuditKpiResult): KpiMetric {
     denominator: kpi.denominator,
     unit: kpi.unit,
     audit_status: displayStatus,
+    excluded_count: kpi.excluded_count,
   };
 }
 

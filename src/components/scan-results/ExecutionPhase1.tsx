@@ -7,7 +7,6 @@ import { Skeleton } from "@/components/States";
 import { cn } from "@/lib/utils";
 import type { CustomerType } from "@/lib/customer-context";
 import { auditKpiDashboardFromResult } from "@/lib/execution-metrics";
-import { metricLabel } from "@/lib/retail-intelligence";
 import {
   buildActionCenterItems,
   buildAiSummaryParagraph,
@@ -42,13 +41,12 @@ import {
   type RoleFamily,
 } from "@/lib/customer-context";
 import {
-  AUDIT_STATUS_DISPLAY,
   KPI_STRIP_INTRO,
-  KPI_PLAIN_ENGLISH,
-  ROLE_TAB_THEME,
-  normalizeAuditRoleTab,
+  kpiPlainEnglish,
   type AuditRoleTab,
 } from "@/lib/role-audit-ui";
+import { KpiResultCard } from "@/components/scan-results/KpiResultCard";
+import { enrichKpiMetrics, scoringFromResult } from "@/lib/kpi-results-display";
 import {
   buildAuditHeaderId,
   buildAuditHeaderMeta,
@@ -244,33 +242,6 @@ function ScoreBreakdownPanel({
   );
 }
 
-const KPI_ACCENT: Record<string, string> = {
-  osa: "border-l-brand bg-brand-soft/40",
-  target_sku_availability: "border-l-brand bg-brand-soft/40",
-  category_osa: "border-l-brand-muted bg-brand-soft/30",
-  planogram_sku_presence: "border-l-violet-500 bg-violet-500/10",
-  planogram_compliance: "border-l-violet-500 bg-violet-500/10",
-  assortment_compliance: "border-l-indigo-500 bg-indigo-500/10",
-  price_compliance: "border-l-sky-500 bg-sky-500/10",
-  promotional_compliance: "border-l-pink-500 bg-pink-500/10",
-  location_accuracy: "border-l-orange-500 bg-orange-500/10",
-  facing: "border-l-amber-500 bg-amber-500/10",
-  facing_count: "border-l-amber-500 bg-amber-500/10",
-  placement: "border-l-orange-500 bg-orange-500/10",
-  share_of_facings: "border-l-emerald-600 bg-emerald-500/10",
-  share_of_shelf: "border-l-emerald-600 bg-emerald-500/10",
-  product_share: "border-l-teal-600 bg-teal-500/10",
-  msl_compliance: "border-l-cyan-600 bg-cyan-500/10",
-};
-
-const AUDIT_STATUS_BADGE: Record<string, string> = {
-  complete: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  partial: "bg-amber-500/15 text-amber-800 dark:text-amber-200",
-  not_assessable: "bg-muted text-muted-foreground",
-  not_applicable: "bg-muted text-muted-foreground",
-  not_configured: "bg-muted text-muted-foreground",
-};
-
 export function AuditRoleIntroPanel({ data, loading }: { data?: ScanResult; loading?: boolean }) {
   const dashboard = auditKpiDashboardFromResult(data);
   if (!dashboard?.introduction) return null;
@@ -286,11 +257,14 @@ export function AuditRoleIntroPanel({ data, loading }: { data?: ScanResult; load
   );
 }
 
+function scrollToKpiEvidence(kpiKey: string) {
+  document.getElementById(`kpi-evidence-${kpiKey}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 export function ExecutionKpiStripPanel({
   data,
   loading,
   compact = false,
-  view = "execution",
   customerType,
   showIntro = false,
 }: {
@@ -301,86 +275,40 @@ export function ExecutionKpiStripPanel({
   customerType?: CustomerType | string | null;
   showIntro?: boolean;
 }) {
-  const kpis = buildKpiStrip(data, customerType);
-  const roleTheme = customerType
-    ? ROLE_TAB_THEME[normalizeAuditRoleTab(String(customerType))]
-    : null;
-  const theme = roleTheme ?? VIEW_MODE_THEME[view];
+  const rawKpis = buildKpiStrip(data, customerType);
+  const scoring = scoringFromResult(data);
+  const kpis = enrichKpiMetrics(rawKpis, scoring, (key) => kpiPlainEnglish(key) ?? undefined);
+  const brandLabel =
+    data?.retail_intelligence?.audit_package?.primary_brand ??
+    data?.competitor_intel?.primary_brand ??
+    undefined;
   const gridCols = compact
     ? "grid-cols-2 sm:grid-cols-3"
     : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5";
   return (
-    <div className="space-y-3">
-      {showIntro ? (
-        <div>
-          <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
-            {KPI_STRIP_INTRO.eyebrow}
-          </p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            {KPI_STRIP_INTRO.description}
-          </p>
-        </div>
-      ) : null}
-      <div className={cn("grid gap-2.5", gridCols)}>
-        {kpis.map((kpi) => {
-          const plainEnglish = KPI_PLAIN_ENGLISH[kpi.key as keyof typeof KPI_PLAIN_ENGLISH];
-          const statusLabel = kpi.audit_status
-            ? AUDIT_STATUS_DISPLAY[kpi.audit_status] ?? kpi.audit_status.replace(/_/g, " ")
-            : null;
-          return (
-            <div
+    <div className="rounded-xl border border-border/70 bg-muted/30 px-4 py-4 sm:px-5 sm:py-5">
+      <div className="space-y-3">
+        {showIntro ? (
+          <div>
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+              {KPI_STRIP_INTRO.eyebrow}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              {KPI_STRIP_INTRO.description}
+            </p>
+          </div>
+        ) : null}
+        <div className={cn("grid gap-3", gridCols)}>
+          {kpis.map((kpi) => (
+            <KpiResultCard
               key={kpi.key}
-              className={cn(
-                "rounded-xl border border-border border-l-4 px-4 py-3 shadow-sm",
-                KPI_ACCENT[kpi.key] ?? cn(theme.accentSoft, "border-l-brand/60"),
-              )}
-              title={kpi.detail}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {kpi.label}
-                </p>
-                {statusLabel ? (
-                  <Badge
-                    variant="secondary"
-                    className={cn(
-                      "shrink-0 text-[0.6rem]",
-                      kpi.audit_status ? AUDIT_STATUS_BADGE[kpi.audit_status] : "",
-                    )}
-                  >
-                    {statusLabel}
-                  </Badge>
-                ) : kpi.state && kpi.state !== "available" ? (
-                  <Badge variant="secondary" className="shrink-0 text-[0.6rem]">
-                    {metricLabel(kpi.state)}
-                  </Badge>
-                ) : null}
-              </div>
-              {loading ? (
-                <Skeleton className="mt-2 h-6 w-16" />
-              ) : (
-                <>
-                  <p
-                    className={cn(
-                      "mt-1 text-base font-semibold tabular-nums leading-snug sm:text-lg",
-                      theme.accentText,
-                    )}
-                  >
-                    {kpi.value}
-                  </p>
-                  {plainEnglish ? (
-                    <p className="mt-0.5 text-[0.65rem] leading-snug text-muted-foreground">
-                      {plainEnglish}
-                    </p>
-                  ) : null}
-                  {kpi.coverage_label ? (
-                    <p className="mt-1 text-[0.65rem] text-muted-foreground">{kpi.coverage_label}</p>
-                  ) : null}
-                </>
-              )}
-            </div>
-          );
-        })}
+              kpi={kpi}
+              loading={loading}
+              brandLabel={brandLabel}
+              onClick={() => scrollToKpiEvidence(kpi.key)}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

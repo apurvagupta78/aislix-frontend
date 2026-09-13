@@ -403,8 +403,9 @@ export function KpiVisualChartsPanel({
           return (
             <div
               key={id}
+              id={`kpi-evidence-${id}`}
               className={cn(
-                "rounded-xl border border-brand/15 bg-gradient-to-br from-brand-soft/30 to-background p-4 shadow-sm",
+                "scroll-mt-24 rounded-xl border border-brand/15 bg-gradient-to-br from-brand-soft/30 to-background p-4 shadow-sm",
                 wide && "sm:col-span-2 xl:col-span-1",
               )}
             >
