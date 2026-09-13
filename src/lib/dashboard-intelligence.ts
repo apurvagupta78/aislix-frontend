@@ -14,6 +14,8 @@ import {
   type PriorityCategory,
   PRIORITY_OPPORTUNITY_CATEGORIES,
 } from "@/lib/dashboard-config";
+import { buildBrandAnalysisData } from "@/lib/dashboard-brand-analysis";
+import { buildCommercialImpactData } from "@/lib/dashboard-commercial-impact";
 import {
   buildPerformanceOverTime,
   type PerformanceOverTimeData,
@@ -207,6 +209,8 @@ export type RoleVisualData =
   | { kind: "location_accuracy"; locations: Array<{ label: string; accuracy: number | null }> };
 
 export type { PerformanceRankingsData, PerformanceRankRow, PerformanceRankDimension } from "@/lib/store-team-performance";
+export type { BrandAnalysisData } from "@/lib/dashboard-brand-analysis";
+export type { CommercialImpactDashboardData } from "@/lib/dashboard-commercial-impact";
 
 export type WorkspaceDashboardData = {
   kpis: WorkspaceKpis;
@@ -223,6 +227,8 @@ export type WorkspaceDashboardData = {
   priority_opportunities: PriorityOpportunityRow[];
   role_visual: RoleVisualData | null;
   brand_competition: BrandCompetitionData | null;
+  brand_analysis: import("@/lib/dashboard-brand-analysis").BrandAnalysisData | null;
+  commercial_impact: import("@/lib/dashboard-commercial-impact").CommercialImpactDashboardData | null;
   filter_options: DashboardFilterOptions;
   filter_summary: DashboardFilterSummary;
   effective_role: AuditRoleTab;
@@ -1493,6 +1499,9 @@ export async function fetchWorkspaceDashboard(
     assignmentRefs,
   );
 
+  const brand_analysis = buildBrandAnalysisData(audits, metricsMap, effectiveRole);
+  const commercial_impact = buildCommercialImpactData(audits, metricsMap);
+
   return {
     kpis,
     issues: { total: issuesTotal, high, medium, low },
@@ -1508,6 +1517,8 @@ export async function fetchWorkspaceDashboard(
     priority_opportunities,
     role_visual,
     brand_competition,
+    brand_analysis,
+    commercial_impact,
     filter_options,
     filter_summary,
     effective_role: effectiveRole,

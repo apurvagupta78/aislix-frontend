@@ -4,8 +4,12 @@ import {
   ArrowUp,
   Download,
   HelpCircle,
+  Search,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { DashboardCompactFilterToolbar } from "@/components/dashboard/DashboardFilterBar";
 import {
   Select,
   SelectContent,
@@ -22,7 +26,11 @@ import {
 import { EmptyState } from "@/components/States";
 import { KPI_DASHBOARD_LABELS } from "@/lib/dashboard-config";
 import type { WorkspaceDashboardData } from "@/lib/dashboard-intelligence";
-import type { DashboardFilterState } from "@/lib/dashboard-filters";
+import {
+  DEFAULT_DASHBOARD_FILTERS,
+  isDefaultDashboardFilters,
+  type DashboardFilterState,
+} from "@/lib/dashboard-filters";
 import {
   exportPerformanceRankingsCsv,
   type PerformanceRankDimension,
@@ -300,6 +308,7 @@ export function StoreTeamPerformanceSection({
   const [mode, setMode] = useState<PerformanceMode>("best");
   const [sortReverse, setSortReverse] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const rankings = data.performance_rankings;
   const kpiIds = rankings.role_kpi_ids;
@@ -307,10 +316,19 @@ export function StoreTeamPerformanceSection({
   const rawRows = rankings.by_dimension[rankBy] ?? [];
   const hasScores = rawRows.some((r) => r.performance_score !== null);
 
-  const sortedRows = useMemo(
-    () => sortRows(rawRows.filter((r) => r.performance_score !== null), mode, sortReverse),
-    [rawRows, mode, sortReverse],
-  );
+  const sortedRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const scored = rawRows.filter((r) => r.performance_score !== null);
+    const filtered = q ? scored.filter((r) => r.name.toLowerCase().includes(q)) : scored;
+    return sortRows(filtered, mode, sortReverse);
+  }, [rawRows, mode, sortReverse, search]);
+
+  const filtersActive = !isDefaultDashboardFilters(filters) || search.trim().length > 0;
+
+  const clearAll = () => {
+    onFiltersChange({ ...DEFAULT_DASHBOARD_FILTERS });
+    setSearch("");
+  };
 
   const summaryCards = useMemo(
     () => buildSummaryCards(rankBy, rankings),
@@ -377,6 +395,36 @@ export function StoreTeamPerformanceSection({
       </div>
 
       <div className="mt-4 rounded-2xl border border-border/60 bg-card shadow-sm">
+        <div className="space-y-2 border-b border-border/40 p-3 sm:p-4">
+          <DashboardCompactFilterToolbar
+            filters={filters}
+            onChange={onFiltersChange}
+            options={data.filter_options}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative min-w-[180px] flex-1">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={`Search ${DIMENSION_OPTIONS.find((o) => o.value === rankBy)?.label.toLowerCase() ?? "entities"}`}
+                aria-label="Search performance entities"
+                className="h-8 rounded-lg border-border/60 pl-8 text-xs"
+              />
+            </div>
+            {filtersActive ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 rounded-lg text-xs text-muted-foreground"
+                onClick={clearAll}
+              >
+                <X className="size-3.5" />
+                Clear filters
+              </Button>
+            ) : null}
+          </div>
+        </div>
         <div className="flex flex-wrap items-center gap-2 border-b border-border/40 p-3 sm:p-4">
           <div className="flex items-center gap-2">
             <span className="text-[11px] text-muted-foreground">Rank by</span>
@@ -439,11 +487,12 @@ export function StoreTeamPerformanceSection({
                   </button>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs rounded-xl text-xs">
-                  <p>
-                    Combined score across the five KPI measures used for this role. It is calculated
-                    from the selected audit data and configured KPI scoring rules.
+                  <p className="font-medium">How is Performance Score calculated?</p>
+                  <p className="mt-1 text-muted-foreground">
+                    Combined score across the five KPI measures relevant to this role, using configured
+                    weights.
                   </p>
-                  <p className="mt-2 font-medium">How is this calculated?</p>
+                  <p className="mt-2 font-medium">Configured weights</p>
                   <p className="mt-1 text-muted-foreground">{weightText}</p>
                 </TooltipContent>
               </Tooltip>

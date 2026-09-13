@@ -5,10 +5,11 @@ import { Sparkles } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
+import { BrandAnalysisSection } from "@/components/dashboard/BrandAnalysisSection";
+import { CommercialImpactSection } from "@/components/dashboard/CommercialImpactSection";
 import { RecentAuditsSection } from "@/components/dashboard/RecentAuditsSection";
 import { StoreTeamPerformanceSection } from "@/components/dashboard/StoreTeamPerformanceSection";
 import {
-  BrandCompetitionSection,
   PerformanceOverTimeSection,
   RetailPerformanceSection,
   WhatNeedsAttentionSection,
@@ -174,8 +175,6 @@ function Dashboard() {
 
           <PerformanceOverTimeSection data={data} role={filters.role} kriFilter={filters.kri} />
 
-          <BrandCompetitionSection data={data} />
-
           <RecentAuditsSection data={data} filters={filters} onFiltersChange={setFilters} />
 
           <StoreTeamPerformanceSection
@@ -183,6 +182,10 @@ function Dashboard() {
             filters={filters}
             onFiltersChange={setFilters}
           />
+
+          <BrandAnalysisSection data={data} filters={filters} onFiltersChange={setFilters} />
+
+          <CommercialImpactSection data={data} filters={filters} onFiltersChange={setFilters} />
         </>
       ) : null}
     </AppShell>
