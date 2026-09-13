@@ -55,7 +55,7 @@ function AdminLoginPage() {
   return (
     <AuthLayout
       title="Platform admin"
-      subtitle="Sign in with your platform admin account to browse all workspaces, users and audits."
+      subtitle="Sign in with your platform admin account to browse all workspaces, users and scans."
       footer={
         <>
           Not an admin?{" "}

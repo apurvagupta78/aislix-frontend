@@ -50,8 +50,8 @@ export const permissionLabels: Record<PermissionKey, string> = {
   org_settings: "Organization settings",
   manage_users: "Invite & manage users",
   manage_stores: "Create & edit stores",
-  run_scans: "Run shelf audits",
-  view_reports: "View audits & reports",
+  run_scans: "Run shelf scans",
+  view_reports: "View scans & reports",
   export_data: "Export data & PDF reports",
 };
 
@@ -75,10 +75,10 @@ export const rolePermissions: Record<UserRole, PermissionKey[]> = {
 export const roleSummaries: Record<UserRole, string> = {
   owner: "Complete control of the organization, including billing and account deletion.",
   admin: "Manages stores, users and settings. Cannot change billing or delete the account.",
-  manager: "Uploads planograms, assigns audits and reviews reports across stores.",
-  member: "Teammate who completes assigned audits and views their results.",
-  store_manager: "Runs audits and works with reports for the stores assigned to them.",
-  viewer: "Read-only access to audits and reports for assigned stores.",
+  manager: "Uploads planograms, assigns scans and reviews reports across stores.",
+  member: "Teammate who completes assigned scans and views their results.",
+  store_manager: "Runs scans and works with reports for the stores assigned to them.",
+  viewer: "Read-only access to scans and reports for assigned stores.",
 };
 
 export const roleScope: Record<UserRole, "organization" | "assigned_stores"> = {
@@ -129,8 +129,8 @@ export type OrgUser = {
   created_at?: string | null;
   last_login_at?: string | null;
   invited_at?: string | null;
-  audits_total?: number;
-  audits_last_30_days?: number;
+  scans_total?: number;
+  scans_last_30_days?: number;
   last_scan_at?: string | null;
 };
 
@@ -219,19 +219,19 @@ async function mapMembersToUsers(rows: MemberRow[]): Promise<OrgUser[]> {
   const storeById = new Map((stores ?? []).map((s) => [s.id, s]));
   const since30 = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
-  const auditsByUser = new Map<string, { total: number; last30: number; lastAt: string | null }>();
-  for (const audit of scanCounts ?? []) {
-    if (!audit.created_by) continue;
-    const entry = auditsByUser.get(audit.created_by) ?? { total: 0, last30: 0, lastAt: null };
+  const scansByUser = new Map<string, { total: number; last30: number; lastAt: string | null }>();
+  for (const scan of scanCounts ?? []) {
+    if (!scan.created_by) continue;
+    const entry = scansByUser.get(scan.created_by) ?? { total: 0, last30: 0, lastAt: null };
     entry.total += 1;
-    if (new Date(audit.created_at).getTime() >= since30) entry.last30 += 1;
-    if (!entry.lastAt || audit.created_at > entry.lastAt) entry.lastAt = audit.created_at;
-    auditsByUser.set(audit.created_by, entry);
+    if (new Date(scan.created_at).getTime() >= since30) entry.last30 += 1;
+    if (!entry.lastAt || scan.created_at > entry.lastAt) entry.lastAt = scan.created_at;
+    scansByUser.set(scan.created_by, entry);
   }
 
   return rows.map((row) => {
     const profile = profileById.get(row.user_id);
-    const audits = auditsByUser.get(row.user_id);
+    const scans = scansByUser.get(row.user_id);
     const assigned_stores = (row.store_ids ?? [])
       .map((id) => storeById.get(id))
       .filter((s): s is { id: string; name: string } => Boolean(s));
@@ -251,9 +251,9 @@ async function mapMembersToUsers(rows: MemberRow[]): Promise<OrgUser[]> {
       created_at: row.created_at,
       last_login_at: row.last_active_at,
       invited_at: row.status === "invited" ? row.created_at : undefined,
-      audits_total: audits?.total,
-      audits_last_30_days: audits?.last30,
-      last_scan_at: audits?.lastAt ?? null,
+      scans_total: scans?.total,
+      scans_last_30_days: scans?.last30,
+      last_scan_at: scans?.lastAt ?? null,
     };
   });
 }
@@ -489,7 +489,7 @@ export type ActivityResponse = {
 /**
  * There is no dedicated audit-log table. The activity feed is derived from
  * real rows we do have: member invites (organization_members.created_at) and
- * audits run by members (shelf_scans.created_by/created_at). Event kinds with
+ * scans run by members (shelf_scans.created_by/created_at). Event kinds with
  * no backing data (role_changed, store_assigned, password_reset, login, etc.)
  * are simply omitted.
  */
@@ -510,10 +510,10 @@ async function buildActivity(orgId: string, userId?: string, limit = 20): Promis
     .order("created_at", { ascending: false })
     .limit(limit);
   if (userId) scanQuery = scanQuery.eq("created_by", userId);
-  const { data: audits } = await scanQuery;
+  const { data: scans } = await scanQuery;
 
   const actorIds = Array.from(
-    new Set([...(members ?? []).map((m) => m.user_id), ...(audits ?? []).map((s) => s.created_by)]),
+    new Set([...(members ?? []).map((m) => m.user_id), ...(scans ?? []).map((s) => s.created_by)]),
   ).filter((id): id is string => Boolean(id));
   const { data: profiles } = actorIds.length
     ? await supabase.from("profiles").select("id, full_name, email").in("id", actorIds)
@@ -535,14 +535,14 @@ async function buildActivity(orgId: string, userId?: string, limit = 20): Promis
     }
   }
 
-  for (const audit of audits ?? []) {
-    const actor = audit.created_by ? profileById.get(audit.created_by) : undefined;
+  for (const scan of scans ?? []) {
+    const actor = scan.created_by ? profileById.get(scan.created_by) : undefined;
     events.push({
-      id: `audit-${audit.id}`,
+      id: `scan-${scan.id}`,
       kind: "login",
-      message: `Ran a shelf audit (${audit.status})`,
+      message: `Ran a shelf scan (${scan.status})`,
       actor_name: actor?.full_name ?? actor?.email ?? null,
-      created_at: audit.created_at,
+      created_at: scan.created_at,
     });
   }
 
@@ -551,7 +551,7 @@ async function buildActivity(orgId: string, userId?: string, limit = 20): Promis
     .slice(0, limit);
 }
 
-/** GET organization-wide activity, derived from real invite and audit rows. */
+/** GET organization-wide activity, derived from real invite and scan rows. */
 export async function fetchOrgActivity(limit = 20): Promise<ActivityResponse> {
   const orgId = await requireOrgId();
   const items = await buildActivity(orgId, undefined, limit);

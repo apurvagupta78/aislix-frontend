@@ -29,7 +29,7 @@ export type OnboardingStatus = {
  * Reads whether the signed-in user still needs first-time setup.
  *
  * `profiles.onboarding_completed_at` is the only completion signal. Creating
- * stores, audits, planograms, or invitations must never complete the wizard.
+ * stores, scans, planograms, or invitations must never complete the wizard.
  */
 export async function fetchOnboardingStatus(): Promise<OnboardingStatus> {
   const user = await getUser();

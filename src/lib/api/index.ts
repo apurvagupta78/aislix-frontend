@@ -39,7 +39,7 @@ export {
   profileService,
   reportsService,
   scanHistoryService,
-  auditsService,
+  scansService,
   settingsService,
   storesService,
   usersService,

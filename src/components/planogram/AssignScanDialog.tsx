@@ -1,5 +1,5 @@
 /**
- * Inline "assign audit" dialog used on the Planogram page.
+ * Inline "assign scan" dialog used on the Planogram page.
  *
  * The store and the audit scope come from the store's active planogram, so the
  * manager only picks a team member (plus optional due date / instructions).
@@ -134,7 +134,7 @@ export function AssignScanDialog({
       }),
     onSuccess: (assignmentId) => {
       toast.success(
-        `Audit assigned to ${assignee?.name ?? "team member"} — ID: ${formatAssignmentId(assignmentId)}`,
+        `Scan assigned to ${assignee?.name ?? "team member"} — ID: ${formatAssignmentId(assignmentId)}`,
       );
       setAssigneeId("");
       setDueAt("");
@@ -148,7 +148,7 @@ export function AssignScanDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Assign audit</DialogTitle>
+          <DialogTitle>Assign scan</DialogTitle>
           <DialogDescription>
             Scope comes from this store&apos;s active planogram — just pick who audits it.
           </DialogDescription>
@@ -236,7 +236,7 @@ export function AssignScanDialog({
             ) : (
               <UserPlus className="mr-2 size-4" />
             )}
-            Assign audit
+            Assign scan
           </Button>
         </DialogFooter>
       </DialogContent>

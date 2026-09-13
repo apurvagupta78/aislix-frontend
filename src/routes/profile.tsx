@@ -309,7 +309,7 @@ function ProfilePage() {
                     </SelectContent>
                   </Select>
                 </Field>
-                <Field label="Time zone" hint="Audit timestamps and scheduled reports use this zone.">
+                <Field label="Time zone" hint="Scan timestamps and scheduled reports use this zone.">
                   <Select value={form.timezone} onValueChange={(v) => set("timezone", v)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select time zone" />
@@ -427,7 +427,7 @@ function AccountCard({
             <AlertDialogHeader>
               <AlertDialogTitle>Delete your Aislix account?</AlertDialogTitle>
               <AlertDialogDescription>
-                This permanently removes your profile, stores, audit history and reports. This action cannot
+                This permanently removes your profile, stores, scan history and reports. This action cannot
                 be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>

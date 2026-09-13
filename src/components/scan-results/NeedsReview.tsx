@@ -38,7 +38,7 @@ import {
   type ScanResult,
 } from "@/lib/scan-results";
 
-/** Number of facings flagged for human review on this audit. */
+/** Number of facings flagged for human review on this scan. */
 export function reviewCount(data?: ScanResult | undefined): number {
   const q = data?.quality ?? {};
   return Math.max(
@@ -142,7 +142,7 @@ export function NeedsReviewSection({
 
   const scanId = data?.scan_id;
   const correctionsQuery = useQuery({
-    queryKey: ["audit-corrections", scanId],
+    queryKey: ["scan-corrections", scanId],
     queryFn: () => fetchScanCorrections(scanId!),
     enabled: Boolean(scanId),
     retry: false,
@@ -161,7 +161,7 @@ export function NeedsReviewSection({
   return (
     <ResultSection
       title="AI review queue"
-      description="Facings the AI was unsure about. Correcting them updates this audit and feeds the recognition benchmark."
+      description="Facings the AI was unsure about. Correcting them updates this scan and feeds the recognition benchmark."
       actions={
         <div className="flex items-center gap-2">
           <NeedsReviewBadge count={reviewCount(data)} />
@@ -297,7 +297,7 @@ function CorrectionDialog({
       }),
     onSuccess: () => {
       toast.success("Correction saved — it will train the next benchmark run.");
-      void queryClient.invalidateQueries({ queryKey: ["audit-result", data.scan_id] });
+      void queryClient.invalidateQueries({ queryKey: ["scan-result", data.scan_id] });
       onSaved();
       onClose();
     },
@@ -313,7 +313,7 @@ function CorrectionDialog({
           <DialogTitle>Correct this facing</DialogTitle>
           <DialogDescription>
             AI predicted {facing?.brand ?? "—"} · {facing?.product ?? "—"}. Your correction updates
-            this audit's inventory and is exported for benchmark training.
+            this scan's inventory and is exported for benchmark training.
           </DialogDescription>
         </DialogHeader>
 

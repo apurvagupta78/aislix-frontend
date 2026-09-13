@@ -32,15 +32,15 @@ export const Route = createFileRoute("/refunds")({
         {
           heading: "Subscription refunds",
           body: [
-            "Monthly plans are refundable in full within 7 days of the first payment on a new workspace if fewer than 25 audits have been processed.",
+            "Monthly plans are refundable in full within 7 days of the first payment on a new workspace if fewer than 25 scans have been processed.",
             "Annual plans are refundable in full within 14 days of purchase. After that window we refund the unused whole months on a prorated basis if you cancel mid-term for a documented service issue.",
-            "Add-on audit packs and AI credits are refundable only while unused.",
+            "Add-on scan packs and AI credits are refundable only while unused.",
           ],
         },
         {
           heading: "Trial policy",
           body: [
-            "The Free plan is a permanent trial: three audits per day with no card required, so you can validate detection quality on your own shelves before paying.",
+            "The Free plan is a permanent trial: three scans per day with no card required, so you can validate detection quality on your own shelves before paying.",
             "Time-limited trials of paid features, when offered, convert to a paid subscription only after you explicitly confirm. If a trial converts without your confirmation, we refund it in full.",
           ],
         },
@@ -62,7 +62,7 @@ export const Route = createFileRoute("/refunds")({
           heading: "Contact process",
           body: [
             "Email hello@aislix.com with your workspace name, invoice number and the reason for the request. We acknowledge within one business day and confirm the outcome within 5 business days.",
-            "If a request falls outside this policy we will explain why and, where possible, offer audit credits instead.",
+            "If a request falls outside this policy we will explain why and, where possible, offer scan credits instead.",
           ],
         },
       ]}

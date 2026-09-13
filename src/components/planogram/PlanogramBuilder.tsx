@@ -170,7 +170,7 @@ export function PlanogramBuilder({
 
   const norm = (value: unknown) => String(value ?? "").trim().toLowerCase();
 
-  /** Row-level mismatch against the caller's audit context (Option 2 only). */
+  /** Row-level mismatch against the caller's scan context (Option 2 only). */
   const contextIssue = (row: CsvParseRow): string | null => {
     if (!context || !row.data) return null;
     const rowLocation = norm(row.data.location);
@@ -242,7 +242,7 @@ export function PlanogramBuilder({
     if (!valid.length) {
       setCsvError(
         mismatched.length
-          ? `No rows match this audit's location (${context?.location}). Fix the highlighted rows or change the location above.`
+          ? `No rows match this scan's location (${context?.location}). Fix the highlighted rows or change the location above.`
           : "No valid rows to import. Fix the highlighted rows in your CSV and upload again.",
       );
       return;
@@ -270,7 +270,7 @@ export function PlanogramBuilder({
     if (problem) {
       setManualError(
         context && /^(Location|Category|Sub category) is required/.test(problem)
-          ? "Set location, category and subcategory in the audit context above first."
+          ? "Set location, category and subcategory in the scan context above first."
           : problem,
       );
       return;

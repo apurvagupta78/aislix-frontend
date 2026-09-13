@@ -42,9 +42,9 @@ import { networkErrorMessage, sanitizeUserMessage } from "@/lib/api-errors";
 import { fetchPlanogramComparison } from "@/lib/planogram-compliance";
 
 export const Route = createFileRoute("/results")({
-  validateSearch: (search: Record<string, unknown>): { audit?: string } => {
-    const audit = search["audit"] ?? search["scan"];
-    return typeof audit === "string" && audit.length > 0 ? { audit } : {};
+  validateSearch: (search: Record<string, unknown>): { scan?: string } => {
+    const scan = search["scan"];
+    return typeof scan === "string" && scan.length > 0 ? { scan } : {};
   },
   head: () => ({
     meta: [
@@ -67,12 +67,12 @@ export const Route = createFileRoute("/results")({
 });
 
 function Results() {
-  const { audit: scan } = Route.useSearch();
+  const { scan } = Route.useSearch();
   const navigate = useNavigate();
   const workspace = useWorkspaceContext();
 
   const query = useQuery({
-    queryKey: ["audit-result", scan],
+    queryKey: ["scan-result", scan],
     queryFn: ({ signal }) => fetchScanResult(scan!, signal),
     enabled: !!scan,
     retry: 1,
@@ -93,14 +93,14 @@ function Results() {
   const comparison = comparisonQuery.data ?? null;
 
   const assignmentQuery = useQuery({
-    queryKey: ["audit-assignment-id", scan],
+    queryKey: ["scan-assignment-id", scan],
     queryFn: () => fetchScanAssignmentId(scan!),
     enabled: Boolean(scan),
     retry: false,
   });
   const queryClient = useQueryClient();
 
-  // Viewing an audit's results acknowledges its bell notifications.
+  // Viewing a scan's results acknowledges its bell notifications.
   useEffect(() => {
     if (!scan) return;
     void markScanNotificationsRead(scan).then(() => {
@@ -150,16 +150,16 @@ function Results() {
 
   const goToScan = (id?: string | null) => {
     if (!id) return;
-    navigate({ to: "/results", search: { audit: id } });
+    navigate({ to: "/results", search: { scan: id } });
   };
 
   return (
     <AppShell
-      title="Audit results"
+      title="Scan results"
       description={
         data
           ? [data.scan_id, data.store, data.aisle].filter(Boolean).join(" · ")
-          : "AI breakdown of a single shelf audit."
+          : "AI breakdown of a single shelf scan."
       }
       actions={
         <div className="flex items-center gap-2">
@@ -187,7 +187,7 @@ function Results() {
             </Link>
           </Button>
           <Button asChild variant="subtle" size="sm" className="rounded-xl">
-            <Link to="/history">Audit history</Link>
+            <Link to="/history">Scan history</Link>
           </Button>
           <Button asChild variant="ghost" size="sm" className="rounded-xl">
             <Link to="/dashboard">Dashboard</Link>
@@ -198,26 +198,26 @@ function Results() {
       {!scan ? (
         <EmptyState
           icon={<ScanLine className="size-5" />}
-          title="No audit selected"
-          description="Open an audit from your history, or run a new shelf audit to see results here."
+          title="No scan selected"
+          description="Open a scan from your history, or run a new shelf scan to see results here."
           action={
             <div className="flex flex-wrap justify-center gap-2">
               <Button asChild variant="brand" size="sm" className="rounded-xl">
-                <Link to="/audit">Start a new audit</Link>
+                <Link to="/scan">Start a new scan</Link>
               </Button>
               <Button asChild variant="subtle" size="sm" className="rounded-xl">
-                <Link to="/history">Browse audit history</Link>
+                <Link to="/history">Browse scan history</Link>
               </Button>
             </div>
           }
         />
       ) : query.isError ? (
         <ErrorState
-          title="Couldn't load this audit"
+          title="Couldn't load this scan"
           description={
             query.error instanceof Error
               ? sanitizeUserMessage(query.error.message)
-              : "We couldn't load this audit right now. Please try again."
+              : "We couldn't load this scan right now. Please try again."
           }
           onRetry={() => {
             void query.refetch();
@@ -358,7 +358,7 @@ function FailedState({ scanId, onRetried }: { scanId: string; onRetried: () => v
         <AlertTriangle className="size-5" />
       </span>
       <div>
-        <h2 className="text-base font-semibold tracking-tight">This audit failed to process</h2>
+        <h2 className="text-base font-semibold tracking-tight">This scan failed to process</h2>
         <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
           The uploaded images are safe in storage. Retrying re-runs the AI analysis without
           re-uploading anything.
@@ -381,7 +381,7 @@ function FailedState({ scanId, onRetried }: { scanId: string; onRetried: () => v
           {retrying ? "Retrying analysis" : "Retry analysis"}
         </Button>
         <Button asChild variant="subtle" size="sm" className="rounded-xl">
-          <Link to="/audit">Start a new audit</Link>
+          <Link to="/scan">Start a new scan</Link>
         </Button>
       </div>
     </div>

@@ -20,7 +20,7 @@ export function shareUrlForToken(token: string): string {
   return `${serverAppOrigin()}/share/${token}`;
 }
 
-/** Reuses the newest live link for an audit, or mints a new 7-day token. */
+/** Reuses the newest live link for a scan, or mints a new 7-day token. */
 export async function ensureShareLink(
   scanId: string,
   orgId: string,
@@ -87,7 +87,7 @@ export type SignedScanAssets = {
   csv_url?: string;
 };
 
-/** Signed storage URLs for an audit's PDF report, annotated shelf image and CSV. */
+/** Signed storage URLs for a scan's PDF report, annotated shelf image and CSV. */
 export async function signedScanAssets(
   scanId: string,
   expiresIn: number,
@@ -148,7 +148,7 @@ export async function scanShareSummary(scanId: string): Promise<{
   location: string | null;
   category: string | null;
   sub_category: string | null;
-  audited_at: string | null;
+  scanned_at: string | null;
   status: string;
   shelf_health_score: number | null;
   products_detected: number;
@@ -163,7 +163,7 @@ export async function scanShareSummary(scanId: string): Promise<{
     .eq("id", scanId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("Audit not found.");
+  if (!data) throw new Error("Scan not found.");
 
   const row = data as Record<string, any>;
   return {
@@ -176,7 +176,7 @@ export async function scanShareSummary(scanId: string): Promise<{
       (row["sub_category_label"] as string | null) ||
       (row["sub_category"] as string | null) ||
       null,
-    audited_at: (row["created_at"] as string | null) ?? null,
+    scanned_at: (row["created_at"] as string | null) ?? null,
     status: String(row["status"] ?? "queued"),
     shelf_health_score:
       row["shelf_health_score"] === null || row["shelf_health_score"] === undefined
@@ -195,7 +195,7 @@ type DemoLandingSession = {
   landing_session_id: string;
   scan_id: string;
   status: "completed";
-  audited_at?: string;
+  scanned_at?: string;
   sample_id?: string | null;
   category?: string;
   shelf_label?: string;
@@ -246,8 +246,8 @@ function demoSessionFromStoredRow(row: Record<string, unknown>): DemoLandingSess
     landing_session_id: row.session_token as string,
     scan_id: String(row.scan_id ?? stored.scan_id ?? "demo"),
     status: "completed",
-    audited_at:
-      (stored.audited_at as string | undefined) ??
+    scanned_at:
+      (stored.scanned_at as string | undefined) ??
       (row.updated_at as string | undefined) ??
       (row.created_at as string | undefined),
     sample_id: (row.sample_id as string | null) ?? (stored.sample_id as string | null),
@@ -452,7 +452,7 @@ export async function loadSharedScan(token: string): Promise<SharedScanPayload> 
     location: summary.location,
     category: summary.category,
     sub_category: summary.sub_category,
-    audited_at: summary.audited_at,
+    scanned_at: summary.scanned_at,
     status: summary.status,
     shelf_health_score: summary.shelf_health_score,
     shelf_execution_score: executionScore,
@@ -484,7 +484,7 @@ export async function loadSharedScan(token: string): Promise<SharedScanPayload> 
 }
 
 
-/** Confirms the signed-in user can share this audit, returning its org. */
+/** Confirms the signed-in user can share this scan, returning its org. */
 export async function requireScanAccess(
   supabase: { from: (table: string) => any },
   scanId: string,
@@ -495,7 +495,7 @@ export async function requireScanAccess(
     .eq("id", scanId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("You do not have access to this audit.");
+  if (!data) throw new Error("You do not have access to this scan.");
 
   let assigneeId: string | null = null;
   if (data.assignment_id) {

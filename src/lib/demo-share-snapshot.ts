@@ -3,7 +3,7 @@
  * Strips multi-MB image/CSV blobs — the share page renders KPIs and inventory.
  */
 
-import type { LandingScanResult } from "@/lib/landing-audit-api";
+import type { LandingScanResult } from "@/lib/landing-scan-api";
 
 export function slimLandingSnapshot(result: LandingScanResult): Record<string, unknown> {
   const {

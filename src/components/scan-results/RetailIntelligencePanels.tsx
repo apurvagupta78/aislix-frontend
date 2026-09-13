@@ -274,7 +274,7 @@ export function OpportunityLedgerPanel({ data, loading }: { data?: ScanResult; l
 
         </p>
 
-        <p className="mt-3 text-sm text-muted-foreground">No commercial opportunities identified for this audit.</p>
+        <p className="mt-3 text-sm text-muted-foreground">No commercial opportunities identified for this scan.</p>
 
       </div>
 
@@ -408,13 +408,13 @@ export function VerifiedExecutionPanel({
 
       <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-widest text-brand">
 
-        <ShieldCheck className="size-3.5" /> Fix → re-audit → verify
+        <ShieldCheck className="size-3.5" /> Fix → rescan → verify
 
       </p>
 
       <p className="mt-2 text-sm text-muted-foreground">
 
-        {verification?.summary ?? "Before / after comparison with the previous audit at this location."}
+        {verification?.summary ?? "Before / after comparison with the previous scan at this location."}
 
       </p>
 
@@ -482,7 +482,7 @@ export function VerifiedExecutionPanel({
 
             <Badge variant="secondary" className="rounded-full">
 
-              Improved — confirm with another re-audit if needed
+              Improved — confirm with another rescan if needed
 
             </Badge>
 
@@ -614,7 +614,7 @@ export function FixRescanCtaPanel({
 
   const top = ledger[0];
 
-  const rescanHref = scanId ? `/audit?verify=${encodeURIComponent(scanId)}` : "/audit";
+  const rescanHref = scanId ? `/scan?verify=${encodeURIComponent(scanId)}` : "/scan";
 
 
 
@@ -628,7 +628,7 @@ export function FixRescanCtaPanel({
 
           <p className="flex items-center gap-2 text-sm font-semibold">
 
-            <Sparkles className="size-4 text-brand" /> Fix → re-audit → verify
+            <Sparkles className="size-4 text-brand" /> Fix → rescan → verify
 
           </p>
 
@@ -644,7 +644,7 @@ export function FixRescanCtaPanel({
 
         <Button asChild variant="brand" className="shrink-0 rounded-xl">
 
-          <Link to={rescanHref}>Re-audit to verify</Link>
+          <Link to={rescanHref}>Rescan to verify</Link>
 
         </Button>
 

@@ -46,7 +46,7 @@ export type SharedScanPayload = {
   location: string | null;
   category: string | null;
   sub_category: string | null;
-  audited_at: string | null;
+  scanned_at: string | null;
   status: string;
   shelf_health_score: number | null;
   shelf_execution_score: number | null;

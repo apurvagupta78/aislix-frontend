@@ -41,7 +41,7 @@ function AdminUsersPage() {
   return (
     <AdminPage
       title="All users"
-      description="Profiles, workspace memberships and audit counts by user id."
+      description="Profiles, workspace memberships and scan counts by user id."
       actions={
         <Button variant="outline" size="sm" onClick={() => void query.refetch()} disabled={query.isFetching}>
           <RefreshCw className={`mr-2 size-4 ${query.isFetching ? "animate-spin" : ""}`} />
@@ -81,7 +81,7 @@ function AdminUsersPage() {
                     <TableHead>Name</TableHead>
                     <TableHead>Joined</TableHead>
                     <TableHead>Orgs</TableHead>
-                    <TableHead>Audits</TableHead>
+                    <TableHead>Scans</TableHead>
                     <TableHead>Onboarded</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -97,7 +97,7 @@ function AdminUsersPage() {
                       <TableCell>{row.org_count}</TableCell>
                       <TableCell>
                         <Link
-                          to="/admin/audits"
+                          to="/admin/scans"
                           search={{ userId: row.id }}
                           className="font-medium text-brand hover:underline"
                         >

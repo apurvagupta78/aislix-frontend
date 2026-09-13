@@ -1,5 +1,5 @@
 /**
- * Execution opportunity aggregation — ranks revenue-at-risk from recent audits.
+ * Execution opportunity aggregation — ranks revenue-at-risk from recent scans.
  * Never presents estimates as actual revenue; labels clearly when indicative.
  */
 
@@ -29,18 +29,18 @@ function impactFromMetrics(metrics: Record<string, unknown>): FinancialImpact | 
   return row;
 }
 
-/** Top execution opportunities from recent audits with financial impact data. */
+/** Top execution opportunities from recent scans with financial impact data. */
 export async function fetchExecutionOpportunities(limit = 8): Promise<ExecutionOpportunity[]> {
   const orgId = await requireOrgId();
 
-  const { data: audits, error } = await supabase
+  const { data: scans, error } = await supabase
     .from("shelf_scans")
     .select("id, created_at, store_id, stores(name)")
     .eq("org_id", orgId)
     .eq("status", "completed")
     .order("created_at", { ascending: false })
     .limit(40);
-  if (error) dbError(error, "Could not load audits for opportunities.");
+  if (error) dbError(error, "Could not load scans for opportunities.");
 
   const scanIds = (scans ?? []).map((s) => s.id as string);
   if (!scanIds.length) return [];
@@ -49,7 +49,7 @@ export async function fetchExecutionOpportunities(limit = 8): Promise<ExecutionO
     .from("scan_results")
     .select("scan_id, metrics, executive_summary")
     .in("scan_id", scanIds);
-  if (resultsError) dbError(resultsError, "Could not load audit metrics.");
+  if (resultsError) dbError(resultsError, "Could not load scan metrics.");
 
   const metricsByScan = new Map(
     (results ?? []).map((r) => [r.scan_id as string, r.metrics as Record<string, unknown>]),
@@ -57,7 +57,7 @@ export async function fetchExecutionOpportunities(limit = 8): Promise<ExecutionO
 
   const opportunities: ExecutionOpportunity[] = [];
 
-  for (const scan of audits ?? []) {
+  for (const scan of scans ?? []) {
     const scanId = scan.id as string;
     const metrics = metricsByScan.get(scanId) ?? {};
     const fi = impactFromMetrics(metrics);
@@ -81,7 +81,7 @@ export async function fetchExecutionOpportunities(limit = 8): Promise<ExecutionO
         oos > 0
           ? `${oos} OOS SKU(s) — estimated opportunity`
           : `${atRisk} at-risk SKU(s) — estimated opportunity`,
-      detail: fi.methodology ?? "Indicative revenue at risk from latest audit.",
+      detail: fi.methodology ?? "Indicative revenue at risk from latest scan.",
       estimated_daily_impact_inr: fi.estimated_daily_lost_sales_inr || 0,
       confidence: fi.confidence === "priced" ? "priced" : "indicative",
       created_at: scan.created_at as string,

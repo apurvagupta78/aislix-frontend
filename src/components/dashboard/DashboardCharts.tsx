@@ -70,7 +70,7 @@ function ChartFrame({
     body = (
       <EmptyState
         title="No data for this period"
-        description="This widget fills in as audits are processed."
+        description="This widget fills in as scans are processed."
         icon={<BarChart3 className="size-5" />}
       />
     );
@@ -152,7 +152,7 @@ export function DashboardCharts({
       </ChartFrame>
 
       <ChartFrame
-        title="Audit volume"
+        title="Scan volume"
         data={scanSeries}
         action={
           <Tabs value={cadence} onValueChange={(v) => setCadence(v as typeof cadence)}>
@@ -177,7 +177,7 @@ export function DashboardCharts({
             <XAxis dataKey="label" {...axisProps} />
             <YAxis {...axisProps} />
             <Tooltip contentStyle={tooltipStyle} />
-            <Bar dataKey="value" name="Audits" fill="var(--chart-2)" radius={[8, 8, 0, 0]} />
+            <Bar dataKey="value" name="Scans" fill="var(--chart-2)" radius={[8, 8, 0, 0]} />
           </BarChart>
         )}
       </ChartFrame>

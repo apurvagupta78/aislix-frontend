@@ -1,6 +1,6 @@
 /**
 
- * Derive execution-style metrics from anonymous landing demo audits.
+ * Derive execution-style metrics from anonymous landing demo scans.
 
  * Keeps homepage demo aligned with authenticated /results presentation.
 
@@ -10,7 +10,7 @@
 
 import type { FinancialImpact, ScanResult } from "@/lib/scan-results";
 
-import type { LandingScanResult } from "@/lib/landing-audit-api";
+import type { LandingScanResult } from "@/lib/landing-scan-api";
 
 
 
@@ -163,7 +163,7 @@ export function landingToScanResult(landing: LandingScanResult): ScanResult {
 
     scan_id: landing.scan_id,
 
-    created_at: landing.audited_at,
+    created_at: landing.scanned_at,
 
     status: "completed",
 
@@ -291,7 +291,7 @@ export function landingToScanResult(landing: LandingScanResult): ScanResult {
 
     location: landing.shelf_label,
 
-    created_at: landing.audited_at,
+    created_at: landing.scanned_at,
 
   };
 

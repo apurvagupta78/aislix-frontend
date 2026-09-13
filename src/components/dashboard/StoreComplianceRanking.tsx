@@ -28,7 +28,7 @@ export function StoreComplianceRanking({ territoryId }: { territoryId?: string |
           onRetry={() => void query.refetch()}
         />
       ) : !query.data?.length ? (
-        <p className="text-sm text-muted-foreground">No completed audits in the last 30 days.</p>
+        <p className="text-sm text-muted-foreground">No completed scans in the last 30 days.</p>
       ) : (
         <ul className="space-y-2">
           {query.data.map((row, index) => (
@@ -64,7 +64,7 @@ function StoreRow({ row, rank }: { row: StoreComplianceRow; rank: number }) {
         <p className={`font-semibold tabular-nums ${complianceTone(row.avg_compliance)}`}>
           {row.avg_compliance !== null ? `${Math.round(row.avg_compliance)}%` : "—"}
         </p>
-        <p className="text-xs text-muted-foreground">{row.scan_count} audits</p>
+        <p className="text-xs text-muted-foreground">{row.scan_count} scans</p>
       </div>
     </li>
   );

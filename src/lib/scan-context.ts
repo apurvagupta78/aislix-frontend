@@ -624,7 +624,7 @@ function buildDemoRoleSummaries(
     `Field view: ${facings} facings detected across ${s?.unique_skus ?? 0} SKUs.`,
     stockGapsFull,
     (s?.placement_issue_count ?? s?.misplaced_products ?? 0) > 0
-      ? `${s?.placement_issue_count ?? s?.misplaced_products} placement issue(s) — move products to correct section and re-audit.`
+      ? `${s?.placement_issue_count ?? s?.misplaced_products} placement issue(s) — move products to correct section and rescan.`
       : "",
     planogram,
   ].filter(Boolean);
@@ -812,7 +812,7 @@ export function buildDemoRecommendations(
   return recs;
 }
 
-/** Apply focus filter + planogram pricing to an audit result (client-side). */
+/** Apply focus filter + planogram pricing to a scan result (client-side). */
 export function applyScanContext(result: ScanResult, ctx: ScanContextState): ScanResult {
   const hasFocus = Boolean(ctx.focus.company || ctx.focus.brand || ctx.focus.product);
   const planogramRows = effectivePlanogramRows(ctx, {
@@ -981,7 +981,7 @@ export function applyScanContext(result: ScanResult, ctx: ScanContextState): Sca
   return withKpis;
 }
 
-/** True when the user supplied or the audit carried an expected planogram reference. */
+/** True when the user supplied or the scan carried an expected planogram reference. */
 export function hasExplicitPlanogram(ctx: ScanContextState, result?: ScanResult | null): boolean {
   if (isDemoOralCareContext(ctx)) return true;
   if (ctx.planogramRows.length > 0) return true;
@@ -1204,21 +1204,21 @@ export function pricingSetupMessage(
   const role = ctx.auditRole ?? "supermarket";
   if (!roleRequiresPricing(role)) {
     return expectedRows.length
-      ? "Add at least one expected product before auditing."
-      : "Add at least one product to the planogram before auditing.";
+      ? "Add at least one expected product before scanning."
+      : "Add at least one product to the planogram before scanning.";
   }
   if (expectedRows.length) {
-    return "Add shelf price (MRP) for every expected product before auditing.";
+    return "Add shelf price (MRP) for every expected product before scanning.";
   }
-  return "Add at least one product with shelf price (MRP) before auditing.";
+  return "Add at least one product with shelf price (MRP) before scanning.";
 }
 
 /** Dashboard + demo: enrich summaries, competitor intel, and ledger consistently. */
 export const enrichScanResult = enrichDemoScanResult;
 
 /**
- * Enrich an audit for display without applying stale session planogram data to free audits.
- * Client planogram rows apply only when the audit carried a planogram or the user opted in.
+ * Enrich a scan for display without applying stale session planogram data to free scans.
+ * Client planogram rows apply only when the scan carried a planogram or the user opted in.
  */
 export function enrichScanResultForDisplay(
   result: ScanResult,

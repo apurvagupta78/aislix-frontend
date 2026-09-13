@@ -1,5 +1,5 @@
 /**
- * Dashboard widget: the latest delegated audits for the active organization.
+ * Dashboard widget: the latest delegated scans for the active organization.
  * Rendered only for owners / admins / managers.
  */
 
@@ -93,7 +93,7 @@ export function TeamAssignmentsPanel() {
           </p>
         </div>
         <Button asChild variant="subtle" size="sm" className="rounded-xl">
-          <Link to="/assigned-audits">View all</Link>
+          <Link to="/assigned-scans">View all</Link>
         </Button>
       </div>
 
@@ -119,7 +119,7 @@ export function TeamAssignmentsPanel() {
             description="Delegate a shelf audit to a team member and track it to 100% compliance."
             action={
               <Button asChild variant="brand" size="sm" className="rounded-xl">
-                <Link to="/assign-audit" search={{ store: undefined, scope: undefined, planogramVersion: undefined }}>Assign an audit</Link>
+                <Link to="/assign-scan" search={{ store: undefined, scope: undefined, planogramVersion: undefined }}>Assign a scan</Link>
               </Button>
             }
           />
@@ -173,13 +173,13 @@ export function TeamAssignmentsPanel() {
                         <TableCell className="text-right">
                           {assignment.scan_id ? (
                             <Button asChild variant="ghost" size="sm" className="rounded-lg">
-                              <Link to="/results" search={{ audit: assignment.scan_id }}>
+                              <Link to="/results" search={{ scan: assignment.scan_id }}>
                                 View
                               </Link>
                             </Button>
                           ) : (
                             <Button asChild variant="ghost" size="sm" className="rounded-lg">
-                              <Link to="/assigned-audits">Open</Link>
+                              <Link to="/assigned-scans">Open</Link>
                             </Button>
                           )}
                         </TableCell>
@@ -225,11 +225,11 @@ export function TeamAssignmentsPanel() {
                     </div>
                     <Button asChild variant="subtle" size="sm" className="mt-3 w-full rounded-xl">
                       {assignment.scan_id ? (
-                        <Link to="/results" search={{ audit: assignment.scan_id }}>
+                        <Link to="/results" search={{ scan: assignment.scan_id }}>
                           View results
                         </Link>
                       ) : (
-                        <Link to="/assigned-audits">Open assignment</Link>
+                        <Link to="/assigned-scans">Open assignment</Link>
                       )}
                     </Button>
                   </li>

@@ -123,9 +123,9 @@ function AcceptInvitePage() {
           <Button
             variant="brand"
             className="rounded-xl"
-            onClick={() => void navigate({ to: "/my-audits", replace: true })}
+            onClick={() => void navigate({ to: "/my-scans", replace: true })}
           >
-            Go to my audits
+            Go to my scans
           </Button>
         </div>
       ) : state.kind === "none" ? (
@@ -139,7 +139,7 @@ function AcceptInvitePage() {
           <Button
             variant="brand"
             className="rounded-xl"
-            onClick={() => void navigate({ to: "/my-audits", replace: true })}
+            onClick={() => void navigate({ to: "/my-scans", replace: true })}
           >
             Continue
           </Button>

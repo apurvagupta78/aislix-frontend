@@ -30,9 +30,9 @@ export const Route = createFileRoute("/pricing")({
       {
         name: "description",
         content:
-          "Simple audit-based pricing for AI shelf audits. Start free, scale to unlimited audits on Professional, or talk to us about Enterprise.",
+          "Simple scan-based pricing for AI shelf audits. Start free, scale to unlimited scans on Professional, or talk to us about Enterprise.",
       },
-      { property: "og:title", content: "Aislix pricing — pay by shelf audits" },
+      { property: "og:title", content: "Aislix pricing — pay by shelf scans" },
       {
         property: "og:description",
         content: "Free, Starter ₹999, Professional ₹4,999 or Enterprise. Compare every feature.",
@@ -47,12 +47,12 @@ export const Route = createFileRoute("/pricing")({
 
 const faqs = [
   {
-    q: "How is a audit counted?",
-    a: "One shelf image analysed end-to-end counts as one audit. Re-downloading an existing report or viewing past results never consumes a audit.",
+    q: "How is a scan counted?",
+    a: "One shelf image analysed end-to-end counts as one scan. Re-downloading an existing report or viewing past results never consumes a scan.",
   },
   {
     q: "What happens when I hit my monthly limit?",
-    a: "Auditing pauses instead of silently charging you. You can upgrade instantly or add a audit pack from the billing page — usage resets on your next billing date.",
+    a: "Scanning pauses instead of silently charging you. You can upgrade instantly or add a scan pack from the billing page — usage resets on your next billing date.",
   },
   {
     q: "Do you issue GST invoices?",
@@ -83,14 +83,14 @@ function Pricing() {
       <main>
         <section className="mx-auto max-w-7xl px-5 pb-4 pt-14 text-center sm:px-8 sm:pt-20">
           <Badge className="rounded-full bg-brand-soft text-brand hover:bg-brand-soft">
-            Audit-based pricing
+            Scan-based pricing
           </Badge>
           <h1 className="mx-auto mt-5 max-w-3xl text-3xl font-semibold tracking-tight sm:text-5xl">
             Pay for the shelves you audit — nothing else
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
             Every plan includes AI product detection, annotated shelf images and PDF audit reports.
-            Move up only when your audit volume does.
+            Move up only when your scan volume does.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <CycleToggle cycle={cycle} onChange={setCycle} />
@@ -122,7 +122,7 @@ function Pricing() {
         <section className="mx-auto max-w-7xl px-5 py-12 sm:px-8">
           <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">Compare every feature</h2>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            A full breakdown of auditing limits, analytics depth and support across plans.
+            A full breakdown of scanning limits, analytics depth and support across plans.
           </p>
           <div className="mt-6">
             <ComparisonTable />

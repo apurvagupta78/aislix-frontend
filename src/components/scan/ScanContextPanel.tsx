@@ -518,7 +518,7 @@ export const ScanContextPanel = forwardRef<ScanContextPanelHandle, ScanContextPa
     }
 
     const defaultHint = effectiveRequirePricing
-      ? "Select audit role, add products with role-specific fields, then audit."
+      ? "Select audit role, add products with role-specific fields, then scan."
       : "Select audit role and add expected products — optional price for financial estimates";
 
     const panelBody = open ? (
@@ -542,7 +542,7 @@ export const ScanContextPanel = forwardRef<ScanContextPanelHandle, ScanContextPa
 
             <div className="space-y-1.5">
 
-              <Label htmlFor="audit-focus-company" className="text-xs">
+              <Label htmlFor="scan-focus-company" className="text-xs">
 
                 Company
 
@@ -550,7 +550,7 @@ export const ScanContextPanel = forwardRef<ScanContextPanelHandle, ScanContextPa
 
               <Input
 
-                id="audit-focus-company"
+                id="scan-focus-company"
 
                 className="h-9 rounded-lg text-sm"
 
@@ -566,7 +566,7 @@ export const ScanContextPanel = forwardRef<ScanContextPanelHandle, ScanContextPa
 
             <div className="space-y-1.5">
 
-              <Label htmlFor="audit-focus-brand" className="text-xs">
+              <Label htmlFor="scan-focus-brand" className="text-xs">
 
                 Brand
 
@@ -574,7 +574,7 @@ export const ScanContextPanel = forwardRef<ScanContextPanelHandle, ScanContextPa
 
               <Input
 
-                id="audit-focus-brand"
+                id="scan-focus-brand"
 
                 className="h-9 rounded-lg text-sm"
 
@@ -590,7 +590,7 @@ export const ScanContextPanel = forwardRef<ScanContextPanelHandle, ScanContextPa
 
             <div className="space-y-1.5">
 
-              <Label htmlFor="audit-focus-product" className="text-xs">
+              <Label htmlFor="scan-focus-product" className="text-xs">
 
                 Product
 
@@ -598,7 +598,7 @@ export const ScanContextPanel = forwardRef<ScanContextPanelHandle, ScanContextPa
 
               <Input
 
-                id="audit-focus-product"
+                id="scan-focus-product"
 
                 className="h-9 rounded-lg text-sm"
 
@@ -736,7 +736,7 @@ export const ScanContextPanel = forwardRef<ScanContextPanelHandle, ScanContextPa
 
               Fields follow the same order as the CSV template above. Click Add product, or your entry
 
-              is saved automatically when you start auditing.
+              is saved automatically when you start scanning.
 
             </p>
 
