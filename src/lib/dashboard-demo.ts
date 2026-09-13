@@ -16,6 +16,7 @@ import type {
 } from "@/lib/dashboard";
 import { FALLBACK_CATEGORIES } from "@/lib/categories.data";
 import type { WorkspaceDashboardData } from "@/lib/dashboard-intelligence";
+import type { WorkspaceManagementData } from "@/lib/dashboard-workspace-management";
 
 /** True when the dashboard should render the read-only guest demo. */
 export function isDemoMode(session: Session | null): boolean {
@@ -916,5 +917,97 @@ export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
     ],
     only_self: false,
     current_user_id: "demo-user-1",
+  },
+};
+
+/** Guest demo workspace management cards — marketing sample only. */
+export const DEMO_WORKSPACE_MANAGEMENT: WorkspaceManagementData = {
+  planograms: {
+    count: 6,
+    recent: [
+      {
+        id: "demo-plano-1",
+        name: "Oral Care · G01",
+        store_name: "More Mart — Koramangala",
+        category: "Toothpaste",
+        status: "Active",
+      },
+      {
+        id: "demo-plano-2",
+        name: "Beverages · Aisle 3",
+        store_name: "Big Bazaar — Whitefield",
+        category: "Soft drinks",
+        status: "Active",
+      },
+      {
+        id: "demo-plano-3",
+        name: "Snacks end-cap",
+        store_name: "Reliance Smart — Jayanagar",
+        category: "Chips",
+        status: "Draft",
+      },
+    ],
+  },
+  stores: {
+    count: 5,
+    recent: [
+      {
+        id: "demo-1",
+        name: "More Mart — Koramangala",
+        city: "Bengaluru",
+        country: "India",
+        audit_count: 12,
+        status: "Active",
+      },
+      {
+        id: "demo-2",
+        name: "Big Bazaar — Whitefield",
+        city: "Bengaluru",
+        country: "India",
+        audit_count: 9,
+        status: "Active",
+      },
+      {
+        id: "demo-3",
+        name: "Reliance Smart — Jayanagar",
+        city: "Bengaluru",
+        country: "India",
+        audit_count: 7,
+        status: "Active",
+      },
+    ],
+  },
+  team: {
+    count: 4,
+    recent: [
+      { user_id: "demo-user-1", name: "Demo Manager", role: "Manager", status: "Active" },
+      { user_id: "demo-user-2", name: "Field Rep", role: "Member", status: "Active" },
+      { user_id: "demo-user-3", name: "Store Lead", role: "Store Manager", status: "Active" },
+    ],
+  },
+  assigned_audits: {
+    completed: 8,
+    in_progress: 3,
+    needs_action: 1,
+    recent: [
+      {
+        id: "demo-asn-1",
+        store_name: "More Mart — Koramangala",
+        category: "Personal Care",
+        assigned_to: "Field Rep",
+        date: isoAgo(DAY),
+        status: "In progress",
+        status_key: "in_progress",
+      },
+      {
+        id: "demo-asn-2",
+        store_name: "Big Bazaar — Whitefield",
+        category: "Beverages",
+        assigned_to: "Store Lead",
+        date: isoAgo(DAY * 2),
+        status: "Completed",
+        status_key: "completed",
+      },
+    ],
   },
 };

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { ChevronDown, ClipboardList, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
@@ -36,12 +37,14 @@ import { AssignmentIdChip, formatAssignmentId } from "@/components/AssignmentId"
 export const Route = createFileRoute("/assigned-scans")({
   validateSearch: (
     search: Record<string, unknown>,
-  ): { tab?: "assignments" | "team-scans"; store?: string } => {
+  ): { tab?: "assignments" | "team-scans"; store?: string; assigner?: "me" } => {
     const raw = search["tab"];
     const store = search["store"];
+    const assigner = search["assigner"];
     return {
       ...(raw === "team-scans" || raw === "assignments" ? { tab: raw } : {}),
       ...(typeof store === "string" && store ? { store } : {}),
+      ...(assigner === "me" ? { assigner: "me" as const } : {}),
     };
   },
 
@@ -112,11 +115,19 @@ function AssignmentAttemptsExpand({ assignmentId }: { assignmentId: string }) {
   );
 }
 
-function AssignmentsTab({ storeId }: { storeId?: string }) {
+function AssignmentsTab({ storeId, assignerMe }: { storeId?: string; assignerMe?: boolean }) {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [sortById, setSortById] = useState(false);
+
+  const session = useQuery({
+    queryKey: ["auth-session"],
+    queryFn: async () => (await supabase.auth.getSession()).data.session,
+    retry: false,
+    staleTime: 30_000,
+  });
+  const currentUserId = session.data?.user?.id ?? null;
 
   const query = useQuery({
     queryKey: ["org-assignments"],
@@ -141,6 +152,7 @@ function AssignmentsTab({ storeId }: { storeId?: string }) {
 
   const term = search.trim().toLowerCase();
   const filtered = (query.data ?? []).filter((row) => {
+    if (assignerMe && currentUserId && row.assigner_id !== currentUserId) return false;
     if (storeId && row.store_id !== storeId) return false;
     if (status === "overdue" && !isOverdue(row)) return false;
     if (status !== "all" && status !== "overdue" && row.status !== status) return false;
@@ -408,7 +420,7 @@ function TeamScansTab() {
 }
 
 function AssignedScansPage() {
-  const { tab: tabParam, store: storeSearch } = Route.useSearch();
+  const { tab: tabParam, store: storeSearch, assigner: assignerSearch } = Route.useSearch();
   const [tab, setTab] = useState(tabParam ?? "assignments");
   useEffect(() => {
     if (tabParam) setTab(tabParam);
@@ -454,7 +466,11 @@ function AssignedScansPage() {
               Team Scans
             </TabsTrigger>
           </TabsList>
-          {tab === "assignments" ? <AssignmentsTab storeId={storeSearch} /> : <TeamScansTab />}
+          {tab === "assignments" ? (
+            <AssignmentsTab storeId={storeSearch} assignerMe={assignerSearch === "me"} />
+          ) : (
+            <TeamScansTab />
+          )}
         </Tabs>
       )}
     </AppShell>

@@ -9,6 +9,8 @@ import { BrandAnalysisSection } from "@/components/dashboard/BrandAnalysisSectio
 import { CommercialImpactSection } from "@/components/dashboard/CommercialImpactSection";
 import { RecentAuditsSection } from "@/components/dashboard/RecentAuditsSection";
 import { StoreTeamPerformanceSection } from "@/components/dashboard/StoreTeamPerformanceSection";
+import { WorkspaceManagementSection } from "@/components/dashboard/WorkspaceManagementSection";
+import { QuickActions } from "@/components/dashboard/DashboardParts";
 import {
   PerformanceOverTimeSection,
   RetailPerformanceSection,
@@ -18,9 +20,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/States";
 import { fetchDashboard } from "@/lib/dashboard";
-import { DEMO_WORKSPACE_DASHBOARD, isDemoMode } from "@/lib/dashboard-demo";
+import { DEMO_WORKSPACE_DASHBOARD, DEMO_WORKSPACE_MANAGEMENT, isDemoMode } from "@/lib/dashboard-demo";
 import { DEFAULT_DASHBOARD_FILTERS, type DashboardFilterState } from "@/lib/dashboard-filters";
 import { fetchWorkspaceDashboard } from "@/lib/dashboard-intelligence";
+import { fetchWorkspaceManagementData } from "@/lib/dashboard-workspace-management";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/dashboard")({
@@ -76,6 +79,15 @@ function Dashboard() {
     staleTime: 60_000,
   });
   const name = demo ? undefined : greetingQuery.data?.greeting_name;
+
+  const workspaceManagementQuery = useQuery({
+    queryKey: ["workspace-management"],
+    queryFn: () => fetchWorkspaceManagementData(),
+    retry: false,
+    enabled: live,
+    staleTime: 60_000,
+  });
+  const workspaceManagement = demo ? DEMO_WORKSPACE_MANAGEMENT : workspaceManagementQuery.data;
 
   return (
     <AppShell
@@ -152,19 +164,30 @@ function Dashboard() {
           onRetry={() => void dashboardQuery.refetch()}
         />
       ) : data && !data.has_completed_audits && !demo ? (
-        <div className="mt-8">
-          <EmptyState
-            title="Your dashboard will come alive after your first audit."
-            description="Complete an AI shelf audit to start tracking performance, issues and improvement."
-            action={
-              <Button asChild variant="brand" size="sm" className="rounded-xl">
-                <Link to="/scan">
-                  Start new audit <span aria-hidden>→</span>
-                </Link>
-              </Button>
-            }
-          />
-        </div>
+        <>
+          <div className="mt-8">
+            <EmptyState
+              title="Your dashboard will come alive after your first audit."
+              description="Complete an AI shelf audit to start tracking performance, issues and improvement."
+              action={
+                <Button asChild variant="brand" size="sm" className="rounded-xl">
+                  <Link to="/scan">
+                    Start new audit <span aria-hidden>→</span>
+                  </Link>
+                </Button>
+              }
+            />
+          </div>
+          {workspaceManagement ? (
+            <WorkspaceManagementSection data={workspaceManagement} />
+          ) : null}
+          <section className="mt-8">
+            <p className="mb-4 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Quick actions
+            </p>
+            <QuickActions />
+          </section>
+        </>
       ) : data ? (
         <>
           <div className="mt-4">
@@ -186,6 +209,17 @@ function Dashboard() {
           <BrandAnalysisSection data={data} filters={filters} onFiltersChange={setFilters} />
 
           <CommercialImpactSection data={data} filters={filters} onFiltersChange={setFilters} />
+
+          {workspaceManagement ? (
+            <WorkspaceManagementSection data={workspaceManagement} />
+          ) : null}
+
+          <section className="mt-8">
+            <p className="mb-4 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Quick actions
+            </p>
+            <QuickActions />
+          </section>
         </>
       ) : null}
     </AppShell>
