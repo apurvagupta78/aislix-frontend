@@ -4,7 +4,6 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -37,13 +36,10 @@ import {
 } from "@/components/ui/table";
 import { EmptyState, Skeleton } from "@/components/States";
 import { cn } from "@/lib/utils";
-import { rollupByBrand } from "@/lib/brand-rollup";
 import { toast } from "sonner";
 import {
-  COMPLIANCE_INTERPRETATION,
   displayProductName,
   downloadScanAnnotatedImage,
-  downloadScanCsv,
   formatConfidence,
   inventoryToCsv,
   normalizeConfidence,
@@ -52,8 +48,18 @@ import {
   type ScanAlert,
   type ScanRecommendation,
   type Severity,
+  type ScanResult,
   type SubcategoryMismatch,
 } from "@/lib/scan-results";
+import {
+  buildBrandPresenceRows,
+  buildConfidenceDistribution,
+  buildObservedProductsSummary,
+  enrichObservedProductRows,
+  resolvePrimaryBrand,
+  type ObservedProductStatus,
+} from "@/lib/observed-products-display";
+import { downloadObservedProductsCsv } from "@/lib/observed-products-export";
 
 /* ---------------------------------- shell --------------------------------- */
 
@@ -569,16 +575,96 @@ export function RecommendationsPanel({
 type SortKey = "brand" | "product" | "variant" | "quantity" | "confidence" | "shelf_position";
 const PAGE_SIZE = 10;
 
+const STATUS_PILL: Record<ObservedProductStatus, string> = {
+  Observed: "border-brand/25 bg-brand-soft text-brand",
+  Matched: "border-accent-green/30 bg-accent-green-soft text-accent-green",
+  "Needs Review": "border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200",
+  Unknown: "border-border bg-muted/50 text-muted-foreground",
+  "Not Assessed": "border-border bg-muted/30 text-muted-foreground",
+};
+
+function ObservedStatusBadge({ status }: { status: ObservedProductStatus }) {
+  return (
+    <Badge variant="outline" className={cn("rounded-full text-[10px] font-medium", STATUS_PILL[status])}>
+      {status}
+    </Badge>
+  );
+}
+
+function ConfidenceDistributionStrip({ items }: { items: InventoryItem[] }) {
+  const dist = buildConfidenceDistribution(items);
+  const total = dist.high + dist.needs_review + dist.unknown || 1;
+  const segments = [
+    { label: "High confidence", count: dist.high, className: "bg-accent-green" },
+    { label: "Needs review", count: dist.needs_review, className: "bg-amber-500" },
+    { label: "Unknown", count: dist.unknown, className: "bg-muted-foreground/40" },
+  ];
+  return (
+    <div className="rounded-xl border border-border/70 bg-background px-4 py-3">
+      <div className="flex h-1.5 overflow-hidden rounded-full bg-muted">
+        {segments.map(({ label, count, className }) =>
+          count > 0 ? (
+            <div
+              key={label}
+              className={cn("h-full", className)}
+              style={{ width: `${(count / total) * 100}%` }}
+              title={`${label}: ${count}`}
+            />
+          ) : null,
+        )}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-muted-foreground">
+        {segments.map(({ label, count }) => (
+          <span key={label}>
+            {label}: <span className="font-medium tabular-nums text-foreground">{count}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function BrandPresenceChart({
+  rows,
+  maxFacings,
+}: {
+  rows: ReturnType<typeof buildBrandPresenceRows>;
+  maxFacings: number;
+}) {
+  return (
+    <ul className="mt-3 space-y-2.5">
+      {rows.map((row) => {
+        const pct = Math.max((row.facings / maxFacings) * 100, row.facings > 0 ? 4 : 0);
+        return (
+          <li key={row.brand}>
+            <div className="flex items-baseline justify-between gap-2 text-xs">
+              <span className="truncate font-medium">{row.brand}</span>
+              <span className="shrink-0 tabular-nums text-muted-foreground">
+                {row.facings} facing{row.facings === 1 ? "" : "s"}
+              </span>
+            </div>
+            <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-muted">
+              <div className={cn("h-full rounded-full", row.bar_class)} style={{ width: `${pct}%` }} />
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export function InventoryTable({
   items,
   scanId,
   csvUrl,
   loading,
+  scanResult,
 }: {
   items?: InventoryItem[] | undefined;
   scanId?: string | undefined;
   csvUrl?: string | undefined;
   loading?: boolean | undefined;
+  scanResult?: ScanResult | undefined;
 }) {
   const rows = items ?? [];
   const [query, setQuery] = useState("");
@@ -590,8 +676,6 @@ export function InventoryTable({
   });
   const [page, setPage] = useState(1);
   const [view, setView] = useState<"sku" | "brand">("sku");
-  const [openBrands, setOpenBrands] = useState<Record<string, boolean>>({});
-
   const brands = useMemo(
     () => Array.from(new Set(rows.map((r) => r.brand).filter(Boolean))).sort(),
     [rows],
@@ -632,11 +716,37 @@ export function InventoryTable({
   const current = Math.min(page, pageCount);
   const visible = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
 
-  const brandGroups = useMemo(
-    () => rollupByBrand(filtered.map((r) => ({ ...r, product: displayProductName(r) }))),
-    [filtered],
+  const summary = useMemo(() => buildObservedProductsSummary(rows), [rows]);
+
+  const enrichedAll = useMemo(
+    () => (scanResult ? enrichObservedProductRows(scanResult, rows) : rows.map((r) => ({
+      ...r,
+      status: "Observed" as ObservedProductStatus,
+      shelf_label: r.shelf_position ? r.shelf_position.replace(/^S(\d+).*/i, "Shelf $1") : "—",
+      location_label: r.shelf_position ?? "—",
+    }))),
+    [scanResult, rows],
   );
 
+  const enrichedById = useMemo(
+    () => new Map(enrichedAll.map((r) => [r.id, r])),
+    [enrichedAll],
+  );
+
+  const primaryBrand = useMemo(
+    () => (scanResult ? resolvePrimaryBrand(scanResult) : ""),
+    [scanResult],
+  );
+
+  const brandPresence = useMemo(
+    () => buildBrandPresenceRows(filtered, primaryBrand),
+    [filtered, primaryBrand],
+  );
+
+  const maxBrandFacings = useMemo(
+    () => Math.max(...brandPresence.map((b) => b.facings), 1),
+    [brandPresence],
+  );
 
   const toggleSort = useCallback((key: SortKey) => {
     setSort((prev) =>
@@ -674,44 +784,74 @@ export function InventoryTable({
     );
   };
 
-  const unfiltered = !query.trim() && brand === "all" && stock === "all";
-
-  const exportCsv = async () => {
-    // Prefer the backend-generated CSV (it carries the full compliance report)
-    // whenever the table is not filtered down.
-    if (scanId && unfiltered) {
-      try {
-        await downloadScanCsv(scanId, csvUrl);
-        return;
-      } catch {
-        // fall back to the client-side export below
-      }
+  const exportCsv = () => {
+    if (scanResult) {
+      downloadObservedProductsCsv(scanResult, rows);
+      return;
     }
-    const csv = inventoryToCsv(filtered);
+    const csv = inventoryToCsv(rows);
     const link = document.createElement("a");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     link.href = url;
-    link.download = `aislix-${scanId ?? "scan"}-inventory.csv`;
+    link.download = `aislix-${scanId ?? "scan"}-observed-products.csv`;
     link.click();
     URL.revokeObjectURL(url);
   };
 
   return (
-    <ResultSection
-      title="Observed shelf products"
-      description="Visual product groups detected in this capture — visible facings, not store inventory."
-      actions={
+    <section className="rounded-xl border border-border/70 bg-muted/30 p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+            What Aislix found
+          </p>
+          <h2 className="mt-1 text-base font-semibold tracking-tight sm:text-lg">
+            Products Visible on This Shelf
+          </h2>
+          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+            See the products, brands and visible facings Aislix detected in this photo. This is a
+            shelf-level observation — not total store inventory.
+          </p>
+        </div>
         <Button
-          variant="subtle"
-          size="sm"
-          className="rounded-xl"
+          type="button"
+          variant="outline"
+          size="icon"
+          className="size-8 shrink-0 rounded-lg"
+          title="Download Observed Products CSV"
+          aria-label="Download Observed Products CSV"
           onClick={exportCsv}
-          disabled={filtered.length === 0}
+          disabled={rows.length === 0}
         >
-          <Download className="size-4" /> Export CSV
+          <Download className="size-3.5" />
         </Button>
-      }
-    >
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        {[
+          { label: "Products Detected", value: summary.product_count },
+          { label: "Brands Detected", value: summary.brand_count },
+          { label: "Visible Facings", value: summary.visible_facings },
+        ].map(({ label, value }) => (
+          <div
+            key={label}
+            className="rounded-xl border border-border/70 bg-background px-4 py-3"
+          >
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
+              {label}
+            </p>
+            <p className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-brand">
+              {value.toLocaleString()}
+            </p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-[11px] text-muted-foreground">
+        Visible facings are the front-facing units detected in this photograph. They are not total
+        inventory.
+      </p>
+
+      <div className="mt-4">
       <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_10rem_10rem]">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -737,11 +877,11 @@ export function InventoryTable({
           </SelectContent>
         </Select>
         <Select value={stock} onValueChange={setStock}>
-          <SelectTrigger className="h-11 rounded-xl" aria-label="Filter by stock status">
-            <SelectValue placeholder="All stock" />
+          <SelectTrigger className="h-11 rounded-xl" aria-label="Filter by status">
+            <SelectValue placeholder="All status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All stock</SelectItem>
+            <SelectItem value="all">All status</SelectItem>
             <SelectItem value="low">Low stock only</SelectItem>
             <SelectItem value="out">Out of stock only</SelectItem>
             <SelectItem value="ok">In stock only</SelectItem>
@@ -749,12 +889,12 @@ export function InventoryTable({
         </Select>
       </div>
 
-      <div className="mt-4 flex items-center gap-2">
-        <span className="text-xs font-medium text-muted-foreground">View:</span>
-        <div className="inline-flex rounded-xl border border-border bg-surface p-0.5">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-muted-foreground">View by:</span>
+        <div className="inline-flex rounded-xl border border-border bg-background p-0.5">
           {([
-            { key: "sku", label: "By SKU" },
-            { key: "brand", label: "By brand" },
+            { key: "sku", label: "SKU" },
+            { key: "brand", label: "Brand" },
           ] as const).map((o) => (
             <button
               key={o.key}
@@ -775,92 +915,78 @@ export function InventoryTable({
       </div>
 
       {view === "brand" ? (
-        <div className="mt-4 overflow-x-auto rounded-2xl border border-border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-xs font-medium text-muted-foreground">Brand</TableHead>
-                <TableHead className="text-right text-xs font-medium text-muted-foreground">
-                  SKUs
-                </TableHead>
-                <TableHead className="text-right text-xs font-medium text-muted-foreground">
-                  Total qty
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {brandGroups.length === 0 ? (
+        <div className="mt-4 space-y-4">
+          <div className="rounded-xl border border-border/70 bg-background px-4 py-3">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-foreground/70">
+              Brand presence on this shelf
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Visible facings detected by brand.
+            </p>
+            {brandPresence.length === 0 ? (
+              <p className="mt-3 text-sm text-muted-foreground">No matching products.</p>
+            ) : (
+              <BrandPresenceChart rows={brandPresence} maxFacings={maxBrandFacings} />
+            )}
+          </div>
+          <div className="overflow-x-auto rounded-2xl border border-border/70">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={3} className="p-4">
-                    <EmptyState
-                      title="No matching products"
-                      description="Try a different search term or clear the filters."
-                    />
-                  </TableCell>
+                  <TableHead className="text-xs font-medium text-muted-foreground">Brand</TableHead>
+                  <TableHead className="text-right text-xs font-medium text-muted-foreground">
+                    SKUs
+                  </TableHead>
+                  <TableHead className="text-right text-xs font-medium text-muted-foreground">
+                    Visible facings
+                  </TableHead>
                 </TableRow>
-              ) : (
-                brandGroups.map((g) => (
-                  <Fragment key={g.brand}>
-                    <TableRow className="transition-colors hover:bg-muted/50">
-                      <TableCell className="font-medium">
-                        <button
-                          type="button"
-                          className="flex items-center gap-1.5"
-                          aria-expanded={!!openBrands[g.brand]}
-                          onClick={() =>
-                            setOpenBrands((o) => ({ ...o, [g.brand]: !o[g.brand] }))
-                          }
-                        >
-                          {openBrands[g.brand] ? (
-                            <ChevronDown className="size-4" />
-                          ) : (
-                            <ChevronRight className="size-4" />
-                          )}
-                          {g.brand}
-                        </button>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{g.skuCount}</TableCell>
-                      <TableCell className="text-right tabular-nums">{g.totalQty}</TableCell>
+              </TableHeader>
+              <TableBody>
+                {brandPresence.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="p-4">
+                      <EmptyState
+                        title="No matching products"
+                        description="Try a different search term or clear the filters."
+                      />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  brandPresence.map((g) => (
+                    <TableRow key={g.brand} className="transition-colors hover:bg-muted/50">
+                      <TableCell className="font-medium">{g.brand}</TableCell>
+                      <TableCell className="text-right tabular-nums">{g.sku_count}</TableCell>
+                      <TableCell className="text-right tabular-nums">{g.facings}</TableCell>
                     </TableRow>
-                    {openBrands[g.brand] &&
-                      g.items.map((row) => (
-                        <TableRow key={`${g.brand}-${row.id}`} className="bg-muted/30">
-                          <TableCell className="pl-10 text-muted-foreground">
-                            {displayProductName(row)}
-                          </TableCell>
-                          <TableCell className="text-right text-muted-foreground">
-                            {row.variant ?? "—"}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums text-muted-foreground">
-                            {row.quantity}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                  </Fragment>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       ) : (
       <>
-      <div className="mt-4 overflow-x-auto rounded-2xl border border-border">
+      {rows.length > 0 ? (
+        <div className="mt-4">
+          <ConfidenceDistributionStrip items={rows} />
+        </div>
+      ) : null}
+      <div className="mt-4 overflow-x-auto rounded-2xl border border-border/70">
         <Table>
           <TableHeader>
             <TableRow>
               <SortHeader label="Brand" sortKey="brand" />
               <SortHeader label="Product" sortKey="product" />
               <SortHeader label="Variant" sortKey="variant" className="hidden md:table-cell" />
-              <SortHeader label="Visible facings" sortKey="quantity" numeric className="text-right" />
+              <SortHeader label="Visible Facings" sortKey="quantity" numeric className="text-right" />
               <SortHeader label="Confidence" sortKey="confidence" numeric className="text-right" />
               <SortHeader
-                label="Shelf position"
+                label="Shelf / Location"
                 sortKey="shelf_position"
                 className="hidden lg:table-cell"
               />
-              <TableHead className="text-xs font-medium text-muted-foreground">
-                Compliance
-              </TableHead>
+              <TableHead className="text-xs font-medium text-muted-foreground">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -888,61 +1014,32 @@ export function InventoryTable({
                 </TableCell>
               </TableRow>
             ) : (
-              visible.map((row) => (
-                <TableRow key={row.id} className="transition-colors hover:bg-muted/50">
-                  <TableCell className="font-medium">{row.brand}</TableCell>
-                  <TableCell>
-                    <span className="block truncate">{displayProductName(row)}</span>
-                    {row.low_stock && (
-                      <Badge
-                        variant="outline"
-                        className="mt-1 rounded-full border-destructive/25 bg-destructive/10 text-destructive"
-                      >
-                        Low stock
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="hidden text-muted-foreground md:table-cell">
-                    {row.variant ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{row.quantity}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatConfidence(row.confidence)}
-                  </TableCell>
-                  <TableCell className="hidden text-muted-foreground lg:table-cell">
-                    {row.shelf_position ?? "—"}
-                  </TableCell>
-                  <TableCell>
-                    {row.compliance_status === "category_mismatch" ? (
-                      <span
-                        className="block"
-                        title={row.compliance_interpretation ?? COMPLIANCE_INTERPRETATION}
-                      >
-                        <Badge
-                          variant="outline"
-                          className="rounded-full border-destructive/25 bg-destructive/10 text-destructive"
-                        >
-                          Category Mismatch Detected
-                        </Badge>
-                        <span className="mt-1 block text-xs text-muted-foreground">
-                          {row.compliance_interpretation ?? COMPLIANCE_INTERPRETATION}
-                        </span>
-                      </span>
-                    ) : row.compliance_status === "ok" ? (
-                      <Badge
-                        variant="outline"
-                        className="rounded-full border-brand/25 bg-brand-soft text-brand"
-                      >
-                        OK
-                      </Badge>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">—</span>
-                    )}
-
-                  </TableCell>
-                </TableRow>
-              ))
-
+              visible.map((row) => {
+                const enriched = enrichedById.get(row.id);
+                const status = enriched?.status ?? "Observed";
+                const shelfLabel = enriched?.shelf_label ?? row.shelf_position ?? "—";
+                return (
+                  <TableRow key={row.id} className="transition-colors hover:bg-muted/50">
+                    <TableCell className="font-medium">{row.brand}</TableCell>
+                    <TableCell>
+                      <span className="block truncate">{displayProductName(row)}</span>
+                    </TableCell>
+                    <TableCell className="hidden text-muted-foreground md:table-cell">
+                      {row.variant ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums">{row.quantity}</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {formatConfidence(row.confidence)}
+                    </TableCell>
+                    <TableCell className="hidden text-muted-foreground lg:table-cell">
+                      {shelfLabel}
+                    </TableCell>
+                    <TableCell>
+                      <ObservedStatusBadge status={status} />
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -965,7 +1062,7 @@ export function InventoryTable({
             disabled={current <= 1}
             onClick={() => setPage(current - 1)}
           >
-            <ChevronLeft className="size-4" /> Prev
+            <ChevronLeft className="size-4" /> Previous
           </Button>
           <span className="text-xs tabular-nums text-muted-foreground">
             Page {current} of {pageCount}
@@ -984,7 +1081,8 @@ export function InventoryTable({
       </>
       )}
 
-    </ResultSection>
+      </div>
+    </section>
   );
 }
 

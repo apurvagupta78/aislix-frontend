@@ -196,20 +196,13 @@ function SectionBlock({
 
     case "inventory":
       return (
-        <section className="card-surface p-5 sm:p-6">
-          <h2 className="text-sm font-semibold tracking-tight">Observed shelf products</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Visible facings detected in the photograph — not total store inventory.
-          </p>
-          <div className="mt-4">
-            <InventoryTable
-              items={data.inventory?.length ? data.inventory : (source.inventory ?? [])}
-              scanId={data.scan_id}
-              csvUrl={source.downloads?.csv_url ?? data.downloads?.csv_url}
-              loading={loading}
-            />
-          </div>
-        </section>
+        <InventoryTable
+          items={data.inventory?.length ? data.inventory : (source.inventory ?? [])}
+          scanId={data.scan_id}
+          csvUrl={source.downloads?.csv_url ?? data.downloads?.csv_url}
+          loading={loading}
+          scanResult={data}
+        />
       );
 
     case "recommended_actions":
