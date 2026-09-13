@@ -18,7 +18,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CardSkeleton, EmptyState, ErrorState, Skeleton } from "@/components/States";
-import { SectionHeader } from "@/components/dashboard/DashboardParts";
+import { KpiCard, SectionHeader } from "@/components/dashboard/DashboardParts";
 import { DASHBOARD_STATUS_COLORS, SHELF_HEALTH_TOOLTIP } from "@/lib/dashboard-config";
 import { formatNumber, formatPercent, formatQuota, formatScore } from "@/lib/dashboard";
 import type { WorkspaceDashboardData } from "@/lib/dashboard-intelligence";
@@ -695,7 +695,7 @@ export function AuditQualitySection({ data }: { data: WorkspaceDashboardData }) 
         />
         <KpiCard
           title="Average AI confidence"
-          value={formatPercent(k.average_confidence)}
+          value={formatPercent(k.average_confidence ?? undefined)}
           description="Recognition confidence"
         />
         <KpiCard

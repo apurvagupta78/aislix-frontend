@@ -14,11 +14,6 @@ import {
   type PriorityCategory,
   PRIORITY_OPPORTUNITY_CATEGORIES,
 } from "@/lib/dashboard-config";
-import {
-  buildPerformanceOverTime,
-  type PerformanceOverTimeData,
-  type PerformancePeriodMetric,
-} from "@/lib/dashboard-performance-trend";
 import { getRoleProfile, type AuditKpiId } from "@/lib/role-kpi-config";
 import {
   buildDashboardFilterSummary,
@@ -107,13 +102,10 @@ export type DashboardIssueRow = {
   href?: string;
 };
 
-/** @deprecated use PerformanceOverTimeData.chart_points */
 export type PerformanceTrendPoint = {
   date: string;
   [kpi: string]: string | number | null;
 };
-
-export type { PerformanceOverTimeData, PerformancePeriodMetric };
 
 export type ImprovementMetric = {
   key: string;
@@ -167,6 +159,14 @@ export type AttentionCard = {
   rank_score: number;
 };
 
+export type PerformancePeriodMetric = {
+  kpi_id: AuditKpiId;
+  label: string;
+  current: number | null;
+  previous: number | null;
+  change: number | null;
+};
+
 export type BrandCompetitionData = {
   segments: ShareOfShelfSegment[];
   insight: string | null;
@@ -196,7 +196,6 @@ export type WorkspaceDashboardData = {
   issue_rows: DashboardIssueRow[];
   attention_cards: AttentionCard[];
   performance_trend: PerformanceTrendPoint[];
-  performance_over_time: PerformanceOverTimeData;
   performance_period: PerformancePeriodMetric[];
   improvement: ImprovementMetric[] | null;
   stores: StorePerformanceRow[];
@@ -327,7 +326,7 @@ async function fetchMetricsMap(scanIds: string[]): Promise<Map<string, RetailInt
       .from("scan_results")
       .select("scan_id, metrics, confidence_avg")
       .in("scan_id", chunk);
-    if (error) dbError(error, "Could not load audit metrics.");
+    if (error) dbError(error, "Could not load scan metrics.");
     for (const row of data ?? []) {
       map.set(row.scan_id as string, metricsPayload(row.metrics));
     }
@@ -591,13 +590,13 @@ function countOpenIssuesForScan(
 }
 
 function countHighSeverityIssues(
-  audits: ScanRow[],
+  scans: ScanRow[],
   metricsMap: Map<string, RetailIntelligencePayload | null>,
   categories?: PriorityCategory[],
 ): number {
   const catSet = categories?.length ? new Set(categories) : null;
   let high = 0;
-  for (const scan of audits) {
+  for (const scan of scans) {
     const metrics = metricsMap.get(scan.id);
     for (const row of metrics?.opportunity_ledger ?? []) {
       const status = (row.status ?? "open").toLowerCase();
@@ -634,7 +633,7 @@ function attentionRankScore(input: {
 }
 
 function buildAttentionCards(
-  audits: ScanRow[],
+  scans: ScanRow[],
   metricsMap: Map<string, RetailIntelligencePayload | null>,
   effectiveRole: AuditRoleTab,
   categoryCounts: Record<PriorityCategory, number>,
@@ -666,7 +665,7 @@ function buildAttentionCards(
       actionLabel = "View Brand Analysis →";
       area = { ...area, label: "Brand & Competition" };
       if (rollup.eligible_audit_ids.length === 0 || score === null) {
-        const latest = audits.at(-1);
+        const latest = scans.at(-1);
         if (latest) {
           const metrics = metricsMap.get(latest.id);
           const insights = metrics?.competitive_insights ?? [];
@@ -700,7 +699,7 @@ function buildAttentionCards(
       : 0;
 
     let affectedAudits = 0;
-    for (const scan of audits) {
+    for (const scan of scans) {
       const metrics = metricsMap.get(scan.id);
       const issues = countOpenIssuesForScan(metrics, issueCategories);
       const kpi = kpiResultFromMetrics(metrics ?? null, effectiveRole, kpiId);
@@ -785,13 +784,53 @@ function buildAttentionCards(
   return cards.sort((a, b) => b.rank_score - a.rank_score);
 }
 
+function buildPerformancePeriod(
+  scans: ScanRow[],
+  metricsMap: Map<string, RetailIntelligencePayload | null>,
+  effectiveRole: AuditRoleTab,
+  kriFilter: AuditKpiId | "all" = "all",
+): PerformancePeriodMetric[] {
+  if (scans.length < 2) return [];
+  const kpiIds =
+    kriFilter !== "all"
+      ? [kriFilter]
+      : trendKpisForRole(effectiveRole).slice(0, 5);
+  const mid = Math.floor(scans.length / 2);
+  const previous = scans.slice(0, mid);
+  const current = scans.slice(mid);
+
+  return kpiIds.map((kpiId) => {
+    const prevVals: number[] = [];
+    const currVals: number[] = [];
+    for (const scan of previous) {
+      const v = kpiValue(metricsMap.get(scan.id) ?? null, effectiveRole, kpiId, scan);
+      if (v !== null) prevVals.push(v);
+    }
+    for (const scan of current) {
+      const v = kpiValue(metricsMap.get(scan.id) ?? null, effectiveRole, kpiId, scan);
+      if (v !== null) currVals.push(v);
+    }
+    const prevAvg = prevVals.length ? avg(prevVals) : null;
+    const currAvg = currVals.length ? avg(currVals) : null;
+    const change =
+      prevAvg !== null && currAvg !== null ? Math.round(currAvg - prevAvg) : null;
+    return {
+      kpi_id: kpiId,
+      label: KPI_DASHBOARD_LABELS[kpiId],
+      current: currAvg !== null ? Math.round(currAvg) : null,
+      previous: prevAvg !== null ? Math.round(prevAvg) : null,
+      change,
+    };
+  });
+}
+
 function buildBrandCompetition(
-  audits: ScanRow[],
+  scans: ScanRow[],
   metricsMap: Map<string, RetailIntelligencePayload | null>,
   effectiveRole: AuditRoleTab,
 ): BrandCompetitionData | null {
   if (effectiveRole !== "fmcg" || !scans.length) return null;
-  const latest = audits[scans.length - 1]!;
+  const latest = scans[scans.length - 1]!;
   const metrics = metricsMap.get(latest.id);
   const insights = metrics?.competitive_insights ?? [];
   if (insights.length) {
@@ -858,14 +897,14 @@ function passesAssignmentFilters(
 }
 
 function applyScanFilters(
-  audits: ScanRow[],
+  scans: ScanRow[],
   filters: DashboardFilterState,
   metricsMap: Map<string, RetailIntelligencePayload | null>,
   assignmentByScanId: Map<string, AssignmentRow>,
   currentUserId: string | null,
   storeById: Map<string, DashboardStoreOption>,
 ): ScanRow[] {
-  return audits.filter((scan) => {
+  return scans.filter((scan) => {
     if (filters.role !== "all" && scanRole(metricsMap.get(scan.id) ?? null) !== filters.role) {
       return false;
     }
@@ -894,7 +933,7 @@ export async function fetchDashboardFilterOptions(
   const since = new Date();
   since.setDate(since.getDate() - 90);
 
-  const [storesRes, auditsRes, teamMembers] = await Promise.all([
+  const [storesRes, scansRes, teamMembers] = await Promise.all([
     supabase.from("stores").select("id, name, country, city").eq("org_id", orgId).eq("status", "active").order("name"),
     supabase
       .from("shelf_scans")
@@ -952,7 +991,7 @@ export async function fetchWorkspaceDashboard(
     loadTeamMembers(orgId),
   ]);
 
-  let audits: ScanRow[] = [];
+  let scans: ScanRow[] = [];
   let upcomingAssignments: AssignmentRow[] = [];
 
   if (bounds.upcoming) {
@@ -971,7 +1010,7 @@ export async function fetchWorkspaceDashboard(
         .eq("org_id", orgId)
         .in("id", linkedScanIds);
       if (error) dbError(error, "Could not load upcoming audits.");
-      audits = (data ?? []) as ScanRow[];
+      scans = (data ?? []) as ScanRow[];
     }
   } else {
     let q = supabase
@@ -984,7 +1023,7 @@ export async function fetchWorkspaceDashboard(
     if (bounds.to) q = q.lt("created_at", bounds.to.toISOString());
     const { data, error } = await q;
     if (error) dbError(error, "Could not load audits.");
-    audits = (data ?? []) as ScanRow[];
+    scans = (data ?? []) as ScanRow[];
   }
 
   const { data: poolScansRes } = await supabase
@@ -1015,11 +1054,11 @@ export async function fetchWorkspaceDashboard(
     poolMetricsMap,
   );
 
-  const scanIds = audits.map((s) => s.id);
+  const scanIds = scans.map((s) => s.id);
   const metricsMap = await fetchMetricsMap(scanIds);
   const confidenceMap = await fetchConfidenceMap(scanIds);
 
-  audits = applyScanFilters(scans, filters, metricsMap, assignmentByScanId, currentUserId, storeById);
+  scans = applyScanFilters(scans, filters, metricsMap, assignmentByScanId, currentUserId, storeById);
 
   const effectiveRole =
     filters.role !== "all"
@@ -1027,7 +1066,7 @@ export async function fetchWorkspaceDashboard(
       : effectiveDashboardRole("all", scanRole(metricsMap.get(scans.at(-1)?.id ?? "") ?? null));
 
   if (filters.kri !== "all") {
-    audits = audits.filter((scan) =>
+    scans = scans.filter((scan) =>
       scanMatchesKri(scan, metricsMap.get(scan.id) ?? null, effectiveRole, filters.kri as AuditKpiId),
     );
   }
@@ -1046,15 +1085,15 @@ export async function fetchWorkspaceDashboard(
   const shelfHealthRollup = aggregateShelfHealth(scans, metricsMap);
 
   const sub = subscriptionRes.data as
-    | { audits_used: number; subscription_plans: { scan_quota: number | null } | null }
+    | { scans_used: number; subscription_plans: { scan_quota: number | null } | null }
     | null;
   const quota = sub?.subscription_plans?.scan_quota ?? null;
-  const auditsUnlimited = quota === null;
-  const auditsRemaining = auditsUnlimited ? null : Math.max(0, quota - (sub?.scans_used ?? 0));
+  const scansUnlimited = quota === null;
+  const scansRemaining = scansUnlimited ? null : Math.max(0, quota - (sub?.scans_used ?? 0));
 
   const confValues = [...confidenceMap.values()];
-  const totalProducts = audits.reduce((sum, s) => sum + (s.total_products ?? 0), 0);
-  const totalPhotos = audits.reduce((sum, s) => sum + (s.photo_count ?? 0), 0);
+  const totalProducts = scans.reduce((sum, s) => sum + (s.total_products ?? 0), 0);
+  const totalPhotos = scans.reduce((sum, s) => sum + (s.photo_count ?? 0), 0);
 
   const osaKpi = toDashboardWeightedKpi(osaRollup, "percent", {
     numerator: "available",
@@ -1068,7 +1107,7 @@ export async function fetchWorkspaceDashboard(
   );
 
   const kpis: WorkspaceKpis = {
-    audits_completed: audits.length || null,
+    audits_completed: scans.length || null,
     stores_covered: storeIds.size || null,
     osa: osaKpi,
     planogram: planoKpi,
@@ -1084,11 +1123,11 @@ export async function fetchWorkspaceDashboard(
       audit_count: shelfHealthRollup.audit_count,
     },
     shelf_health_available: shelfHealthRollup.available,
-    audits_remaining: auditsRemaining,
-    audits_unlimited: auditsUnlimited,
-    products_detected: audits.length ? totalProducts : null,
+    audits_remaining: scansRemaining,
+    audits_unlimited: scansUnlimited,
+    products_detected: scans.length ? totalProducts : null,
     average_confidence: confValues.length ? avg(confValues.map((v) => normalizePercent(v) ?? v)) : null,
-    images_processed: audits.length ? totalPhotos : null,
+    images_processed: scans.length ? totalPhotos : null,
   };
 
   const actions = actionsRes.data ?? [];
@@ -1130,7 +1169,7 @@ export async function fetchWorkspaceDashboard(
           priority,
           status: "Open",
           scan_id: scan.id,
-          href: `/results?audit=${scan.id}`,
+          href: `/results?scan=${scan.id}`,
         });
       }
     }
@@ -1152,7 +1191,7 @@ export async function fetchWorkspaceDashboard(
           priority,
           status: status === "in_progress" ? "In progress" : "Open",
           scan_id: scan.id,
-          href: `/results?audit=${scan.id}`,
+          href: `/results?scan=${scan.id}`,
         });
       }
     }
@@ -1178,25 +1217,41 @@ export async function fetchWorkspaceDashboard(
   const issuesTotal = high + medium + low;
   kpis.open_issues = issuesTotal || null;
 
+  // --- Performance trend ---
   const trendKpis: AuditKpiId[] =
     filters.kri !== "all"
       ? [filters.kri as AuditKpiId]
       : trendKpisForRole(effectiveRole);
-  const performance_over_time = buildPerformanceOverTime(audits, metricsMap, effectiveRole, trendKpis);
-  const performance_trend: PerformanceTrendPoint[] = performance_over_time.chart_points.map((p) => {
-    const legacy: PerformanceTrendPoint = { date: p.date_label };
+  const byDay = new Map<string, Record<string, number[]>>();
+  for (const scan of scans) {
+    const key = dayKey(scan.created_at);
+    const bucket = byDay.get(key) ?? {};
+    const metrics = metricsMap.get(scan.id) ?? null;
     for (const kpiId of trendKpis) {
-      legacy[kpiId] = p.values[kpiId] ?? null;
+      const val = kpiValue(metrics, effectiveRole, kpiId, scan);
+      if (val === null) continue;
+      bucket[kpiId] = [...(bucket[kpiId] ?? []), val];
     }
-    return legacy;
-  });
+    byDay.set(key, bucket);
+  }
+  const performance_trend: PerformanceTrendPoint[] = [...byDay.keys()]
+    .sort()
+    .map((date) => {
+      const bucket = byDay.get(date)!;
+      const point: PerformanceTrendPoint = { date: formatDayLabel(date) };
+      for (const kpiId of trendKpis) {
+        const vals = bucket[kpiId];
+        point[kpiId] = vals?.length ? Math.round(avg(vals)!) : null;
+      }
+      return point;
+    });
 
   // --- Improvement (need >= 4 audits) ---
   let improvement: ImprovementMetric[] | null = null;
   if (scans.length >= 4) {
     const mid = Math.floor(scans.length / 2);
-    const previous = audits.slice(0, mid);
-    const current = audits.slice(mid);
+    const previous = scans.slice(0, mid);
+    const current = scans.slice(mid);
 
     function periodAvg(list: ScanRow[], pick: (s: ScanRow) => number | null): number | null {
       const vals = list.map(pick).filter((v): v is number => typeof v === "number");
@@ -1249,7 +1304,7 @@ export async function fetchWorkspaceDashboard(
     string,
     { name: string; audits: number; osa: number[]; plano: number[]; issues: number; firstOsa: number | null; lastOsa: number | null }
   >();
-  for (const scan of audits) {
+  for (const scan of scans) {
     const sid = scan.store_id ?? "unknown";
     const entry = byStore.get(sid) ?? {
       name: scan.stores?.name ?? "Unknown store",
@@ -1346,8 +1401,8 @@ export async function fetchWorkspaceDashboard(
 
   // --- Role-specific visual ---
   let role_visual: RoleVisualData | null = null;
-  if (effectiveRole === "fmcg" && audits.length) {
-    const latest = audits[scans.length - 1]!;
+  if (effectiveRole === "fmcg" && scans.length) {
+    const latest = scans[scans.length - 1]!;
     const metrics = metricsMap.get(latest.id);
     const insights = metrics?.competitive_insights ?? [];
     if (insights.length) {
@@ -1387,9 +1442,9 @@ export async function fetchWorkspaceDashboard(
         planogram: s.planogram,
       })),
     };
-  } else if (effectiveRole === "darkstore" && audits.length) {
+  } else if (effectiveRole === "darkstore" && scans.length) {
     const locMap = new Map<string, number[]>();
-    for (const scan of audits) {
+    for (const scan of scans) {
       const metrics = metricsMap.get(scan.id);
       const loc = kpiValue(metrics, effectiveRole, "location_accuracy", scan);
       const label = scan.stores?.name ?? scan.category ?? "Location";
@@ -1404,20 +1459,20 @@ export async function fetchWorkspaceDashboard(
 
   const categoryCountInView = new Set(scans.map((s) => s.category).filter(Boolean)).size;
   const filter_summary = buildDashboardFilterSummary(
-    audits.length,
+    scans.length,
     storeIds.size,
     categoryCountInView,
   );
 
   const attention_cards = buildAttentionCards(
-    audits,
+    scans,
     metricsMap,
     effectiveRole,
     categoryCounts,
     filters.kri,
   );
 
-  const performance_period = performance_over_time.period_metrics;
+  const performance_period = buildPerformancePeriod(scans, metricsMap, effectiveRole, filters.kri);
   const brand_competition =
     filters.kri === "all" || filters.kri === "share_of_shelf"
       ? buildBrandCompetition(scans, metricsMap, effectiveRole)
@@ -1429,7 +1484,6 @@ export async function fetchWorkspaceDashboard(
     issue_rows: issueRows,
     attention_cards,
     performance_trend,
-    performance_over_time,
     performance_period,
     improvement,
     stores,
@@ -1440,6 +1494,6 @@ export async function fetchWorkspaceDashboard(
     filter_options,
     filter_summary,
     effective_role: effectiveRole,
-    has_completed_audits: audits.length > 0,
+    has_completed_audits: scans.length > 0,
   };
 }

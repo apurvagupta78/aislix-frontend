@@ -103,7 +103,7 @@ export function PlanogramAuditTabs({
           ["prices", "Prices"],
           ["promotions", "Promotions"],
           ["scoring", "Scoring"],
-        ].map(([value, label]) => (
+        ] satisfies Array<[string, string]>).map(([value, label]) => (
           <TabsTrigger
             key={value}
             value={value}
