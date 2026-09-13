@@ -5,10 +5,10 @@ import { Sparkles } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
+import { RecentAuditsSection } from "@/components/dashboard/RecentAuditsSection";
 import {
   BrandCompetitionSection,
   PerformanceOverTimeSection,
-  RecentAuditsSection,
   RetailPerformanceSection,
   StorePerformanceSection,
   WhatNeedsAttentionSection,
@@ -176,7 +176,7 @@ function Dashboard() {
 
           <BrandCompetitionSection data={data} />
 
-          <RecentAuditsSection data={data} />
+          <RecentAuditsSection data={data} filters={filters} />
 
           <StorePerformanceSection data={data} />
         </>

@@ -253,6 +253,50 @@ export type DashboardFilterSummary = {
   label: string;
 };
 
+/** Map workspace dashboard filters to audit history URL search params. */
+export function dashboardFiltersToHistorySearch(
+  filters: DashboardFilterState,
+  options: DashboardFilterOptions,
+): {
+  q?: string;
+  store?: string;
+  date?: string;
+  date_from?: string;
+  date_to?: string;
+} {
+  const search: {
+    q?: string;
+    store?: string;
+    date?: string;
+    date_from?: string;
+    date_to?: string;
+  } = {};
+
+  if (filters.storeId !== "all") {
+    search.store = filters.storeId;
+  }
+
+  if (filters.category !== "all") {
+    search.q = filters.category;
+  } else if (filters.subCategory !== "all") {
+    search.q = filters.subCategory;
+  }
+
+  const bounds = resolveDashboardDateBounds(filters);
+  if (filters.datePreset === "today" || filters.datePreset === "yesterday") {
+    if (bounds.from) {
+      search.date = bounds.from.toISOString().slice(0, 10);
+    }
+  } else if (filters.datePreset === "custom") {
+    if (filters.dateFrom) search.date_from = filters.dateFrom;
+    if (filters.dateTo) search.date_to = filters.dateTo;
+  } else if (bounds.from) {
+    search.date_from = bounds.from.toISOString().slice(0, 10);
+  }
+
+  return search;
+}
+
 export function buildDashboardFilterSummary(
   auditCount: number,
   storeCount: number,

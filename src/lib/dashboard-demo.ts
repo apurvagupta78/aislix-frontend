@@ -587,17 +587,19 @@ export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
       no_data_reason: null,
     },
   ],
-  recent_audits: DEMO_RECENT_SCANS.items.map((s) => ({
+  recent_audits: DEMO_RECENT_SCANS.items.map((s, i) => ({
     scan_id: s.scan_id,
     date: s.created_at ?? isoAgo(DAY),
+    store_id: `demo-${(i % 5) + 1}`,
     store_name: s.store ?? "Store",
     role: "Supermarket",
     category: s.category ?? "Beverages",
+    sub_category: i % 2 === 0 ? "Toothpaste" : null,
     osa: s.shelf_health_score ? s.shelf_health_score - 5 : null,
     planogram: s.shelf_health_score ? s.shelf_health_score - 10 : null,
-    issues: 2,
-    assigned_to: "Field Rep",
-    status: "completed",
+    issues: i % 3,
+    assigned_to: i % 4 === 0 ? null : "Field Rep",
+    status: (["completed", "in_progress", "needs_action", "completed"] as const)[i % 4]!,
   })),
   priority_opportunities: [
     { category: "availability", label: "Availability", count: 5 },

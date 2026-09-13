@@ -124,7 +124,7 @@ const SECTIONS: NavSection[] = [
   },
   {
     id: "audit",
-    label: "Audit & Actions",
+    label: "Actions",
     icon: Wrench,
     items: [
       { kind: "leaf", label: "Corrective Actions", to: "/corrective-actions", icon: Wrench },

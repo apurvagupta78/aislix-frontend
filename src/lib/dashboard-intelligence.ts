@@ -134,17 +134,26 @@ export type StorePerformanceRow = {
   change: number | null;
 };
 
+export type RecentAuditStatus =
+  | "completed"
+  | "in_progress"
+  | "needs_action"
+  | "draft"
+  | "failed";
+
 export type RecentAuditRow = {
   scan_id: string;
   date: string;
+  store_id: string | null;
   store_name: string;
   role: string;
   category: string | null;
+  sub_category: string | null;
   osa: number | null;
   planogram: number | null;
   issues: number;
   assigned_to: string | null;
-  status: string;
+  status: RecentAuditStatus;
 };
 
 export type AttentionCard = {
@@ -224,6 +233,7 @@ type AssignmentRow = {
 type ScanRow = {
   id: string;
   created_at: string;
+  status: string | null;
   store_id: string | null;
   category: string | null;
   sub_category: string | null;
@@ -237,7 +247,7 @@ type ScanRow = {
   share_of_shelf_percent: number | null;
   total_products: number | null;
   photo_count: number | null;
-  stores: { name?: string } | null;
+  stores: { name?: string; city?: string | null } | null;
 };
 
 function scanSubCategoryLabel(scan: ScanRow): string {
@@ -349,7 +359,18 @@ async function fetchConfidenceMap(scanIds: string[]): Promise<Map<string, number
 }
 
 const SCAN_SELECT =
-  "id, created_at, store_id, category, sub_category, sub_category_label, sub_category_custom, created_by, assignment_id, osa_percent, planogram_compliance_percent, shelf_health_score, share_of_shelf_percent, total_products, photo_count, stores(name)";
+  "id, created_at, status, store_id, category, sub_category, sub_category_label, sub_category_custom, created_by, assignment_id, osa_percent, planogram_compliance_percent, shelf_health_score, share_of_shelf_percent, total_products, photo_count, stores(name, city)";
+
+function recentAuditStatus(scan: ScanRow, assignment?: AssignmentRow): RecentAuditStatus {
+  const scanSt = (scan.status ?? "").toLowerCase();
+  if (scanSt === "failed") return "failed";
+  if (scanSt === "processing" || scanSt === "queued") return "in_progress";
+  const assignSt = (assignment?.status ?? "").toLowerCase();
+  if (assignSt === "needs_correction") return "needs_action";
+  if (assignSt === "pending") return "draft";
+  if (assignSt === "in_progress") return "in_progress";
+  return "completed";
+}
 
 async function loadTeamMembers(orgId: string): Promise<DashboardTeamMember[]> {
   const { data, error } = await supabase
@@ -1318,22 +1339,23 @@ export async function fetchWorkspaceDashboard(
           return st !== "resolved" && st !== "verified";
         }).length;
       const assigneeId = assignment?.assignee_id ?? null;
+      const subCategory = scanSubCategoryLabel(scan);
       return {
         scan_id: scan.id,
         date: scan.created_at,
+        store_id: scan.store_id,
         store_name: scan.stores?.name ?? "—",
         role: roleTabLabel(role),
         category: scan.category,
+        sub_category: subCategory || null,
         osa: typeof scan.osa_percent === "number" ? normalizePercent(scan.osa_percent) ?? scan.osa_percent : null,
         planogram:
           typeof scan.planogram_compliance_percent === "number"
             ? normalizePercent(scan.planogram_compliance_percent) ?? scan.planogram_compliance_percent
             : null,
         issues: issueCount,
-        assigned_to: assigneeId ? memberNameById.get(assigneeId) ?? "Assigned" : null,
-        status: assignment?.status
-          ? assignment.status.replace(/_/g, " ")
-          : "Completed",
+        assigned_to: assigneeId ? memberNameById.get(assigneeId) ?? null : null,
+        status: recentAuditStatus(scan, assignment),
       };
     });
 

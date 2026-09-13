@@ -73,10 +73,28 @@ import { toast } from "sonner";
 
 const PAGE_SIZE = 10;
 
+type HistorySearch = {
+  q?: string;
+  store?: string;
+  date?: string;
+  date_from?: string;
+  date_to?: string;
+};
+
 export const Route = createFileRoute("/history")({
-  validateSearch: (search: Record<string, unknown>): { q?: string } => {
-    const q = search['q'];
-    return typeof q === "string" && q ? { q } : {};
+  validateSearch: (search: Record<string, unknown>): HistorySearch => {
+    const out: HistorySearch = {};
+    const q = search["q"];
+    if (typeof q === "string" && q) out.q = q;
+    const store = search["store"];
+    if (typeof store === "string" && store) out.store = store;
+    const date = search["date"];
+    if (typeof date === "string" && date) out.date = date;
+    const dateFrom = search["date_from"];
+    if (typeof dateFrom === "string" && dateFrom) out.date_from = dateFrom;
+    const dateTo = search["date_to"];
+    if (typeof dateTo === "string" && dateTo) out.date_to = dateTo;
+    return out;
   },
   head: () => ({
     meta: [
@@ -235,12 +253,18 @@ function RowActions({
 
 function HistoryPage() {
   const navigate = useNavigate();
-  const { q: initialQuery } = Route.useSearch();
+  const {
+    q: initialQuery,
+    store: initialStore,
+    date: initialDate,
+    date_from: initialDateFrom,
+    date_to: initialDateTo,
+  } = Route.useSearch();
   const queryClient = useQueryClient();
 
   const [q, setQ] = useState(initialQuery ?? "");
-  const [store, setStore] = useState("all");
-  const [date, setDate] = useState("");
+  const [store, setStore] = useState(initialStore ?? "all");
+  const [date, setDate] = useState(initialDate ?? "");
   const [sort, setSort] = useState<NonNullable<ScanHistoryQuery["sort"]>>("newest");
   const [type, setType] = useState<NonNullable<ScanHistoryQuery["type"]>>("all");
   const [page, setPage] = useState(1);
@@ -249,7 +273,17 @@ function HistoryPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const params: ScanHistoryQuery = { q, store, date, sort, type, page, page_size: PAGE_SIZE };
+  const params: ScanHistoryQuery = {
+    q,
+    store,
+    date,
+    date_from: initialDateFrom,
+    date_to: initialDateTo,
+    sort,
+    type,
+    page,
+    page_size: PAGE_SIZE,
+  };
 
 
   const { data, isPending, isError, error, refetch } = useQuery({
