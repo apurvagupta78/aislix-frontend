@@ -16,8 +16,22 @@ Object.assign(process.env, serverEnv);
 // Lovable defaults to Cloudflare; only override Nitro preset on Vercel builds.
 const isVercel = Boolean(process.env["VERCEL"]);
 
+/** Legacy scan URLs → audit routes (server redirects; keeps the route tree smaller). */
+const legacyAuditRedirects = {
+  "/scan": { redirect: { to: "/audit", statusCode: 301 } },
+  "/my-scans": { redirect: { to: "/my-audits", statusCode: 301 } },
+  "/assign-scan": { redirect: { to: "/assign-audit", statusCode: 301 } },
+  "/assigned-scans": { redirect: { to: "/assigned-audits", statusCode: 301 } },
+  "/admin/scans": { redirect: { to: "/admin/audits", statusCode: 301 } },
+  "/admin/demo-scans": { redirect: { to: "/admin/demo-audits", statusCode: 301 } },
+  "/demo-scans": { redirect: { to: "/admin/demo-audits", statusCode: 301 } },
+} as const;
+
 export default defineConfig({
-  ...(isVercel ? { nitro: { preset: "vercel" as const } } : {}),
+  nitro: {
+    ...(isVercel ? { preset: "vercel" as const } : {}),
+    routeRules: legacyAuditRedirects,
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
