@@ -1,58 +1,78 @@
 /**
- * Brand & product share analysis for demo oral-care shelf audits.
+ * Brand & competition analysis — Share of Shelf + Product Mix (FMCG / demo audits).
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  buildBrandAnalysisMeta,
+  buildProductMixRows,
+  buildShareOfShelfSegments,
+  formatPlannedActualLine,
+} from "@/lib/brand-analysis-data";
+import {
+  downloadBrandAnalysisCsv,
+  downloadProductMixCsv,
+  downloadShareOfShelfCsv,
+} from "@/lib/brand-analysis-export";
 import { formatCompetitorBrandLabel } from "@/lib/brand-intel";
 import { DEMO_PLANOGRAM_LABEL, isDemoOralCareResult } from "@/lib/demo-oral-care-planogram";
 import type { ScanResult } from "@/lib/scan-results";
 import { cn } from "@/lib/utils";
 
-const BRAND_COLORS = [
-  "bg-brand",
-  "bg-brand-muted",
-  "bg-emerald-500",
-  "bg-amber-500",
-  "bg-sky-500",
-  "bg-violet-500",
-  "bg-rose-400",
-  "bg-slate-400",
-];
+const PRODUCT_PREVIEW = 7;
 
-function DonutChart({
-  segments,
-  centerLabel,
-  centerValue,
-}: {
-  segments: { label: string; value: number; color: string }[];
-  centerLabel: string;
-  centerValue: string;
-}) {
-  const total = segments.reduce((s, x) => s + x.value, 0) || 1;
-  let cumulative = 0;
-  const gradient = segments
-    .map((seg) => {
-      const start = (cumulative / total) * 100;
-      cumulative += seg.value;
-      const end = (cumulative / total) * 100;
-      return `${seg.color} ${start}% ${end}%`;
-    })
-    .join(", ");
-
+function ShareOfShelfStackedBar({ segments }: { segments: ReturnType<typeof buildShareOfShelfSegments> }) {
+  const total = segments.reduce((s, x) => s + x.share, 0) || 1;
   return (
-    <div className="relative mx-auto size-36 sm:size-40">
-      <div
-        className="size-full rounded-full shadow-inner"
-        style={{ background: `conic-gradient(${gradient})` }}
-      />
-      <div className="absolute inset-[18%] flex flex-col items-center justify-center rounded-full bg-card text-center shadow-sm">
-        <span className="text-[0.6rem] uppercase tracking-wider text-muted-foreground">
-          {centerLabel}
-        </span>
-        <span className="text-lg font-bold tabular-nums text-brand">{centerValue}</span>
+    <div className="space-y-3">
+      <div className="flex h-4 overflow-hidden rounded-full border border-border/60 bg-muted/40">
+        {segments.map((seg) => (
+          <div
+            key={seg.brand}
+            className={cn("transition-all", seg.bar_class)}
+            style={{ width: `${(seg.share / total) * 100}%` }}
+            title={`${seg.brand} ${seg.share.toFixed(1)}%`}
+          />
+        ))}
       </div>
+      <ul className="space-y-1.5">
+        {segments.map((seg) => (
+          <li key={seg.brand} className="flex items-center justify-between gap-2 text-[11px]">
+            <span className="flex min-w-0 items-center gap-2">
+              <span className={cn("size-2 shrink-0 rounded-sm", seg.bar_class)} />
+              <span
+                className={cn(
+                  "truncate font-medium",
+                  seg.is_primary ? "text-brand" : "text-foreground",
+                )}
+              >
+                {formatCompetitorBrandLabel(seg.brand, false)}
+              </span>
+            </span>
+            <span className="shrink-0 tabular-nums text-muted-foreground">
+              {Math.round(seg.share)}%
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
+  );
+}
+
+function PanelDownloadButton({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      className="shrink-0 rounded-md border border-border p-1.5 text-muted-foreground transition-colors hover:border-brand/30 hover:bg-muted/50 hover:text-brand"
+      title={label}
+      aria-label={label}
+      onClick={onClick}
+    >
+      <Download className="size-3.5" />
+    </button>
   );
 }
 
@@ -63,35 +83,39 @@ export function DemoBrandProductAnalysis({
   data?: ScanResult;
   loading?: boolean;
 }) {
+  const [showAllProducts, setShowAllProducts] = useState(false);
   const snapshot = data?.competitor_intel;
   const inventory = data?.inventory ?? [];
 
-  const productRows = useMemo(() => {
-    const map = new Map<string, { brand: string; product: string; qty: number }>();
-    for (const item of inventory) {
-      const brand = String(item.brand ?? "Unknown");
-      const product = String(item.name ?? item.product ?? "Product");
-      const key = `${brand}::${product}`;
-      const prev = map.get(key);
-      map.set(key, {
-        brand,
-        product,
-        qty: (prev?.qty ?? 0) + (item.quantity ?? item.facings ?? 1),
-      });
-    }
-    return [...map.values()].sort((a, b) => b.qty - a.qty).slice(0, 12);
-  }, [inventory]);
+  const meta = useMemo(
+    () => (data ? buildBrandAnalysisMeta(data, snapshot) : null),
+    [data, snapshot],
+  );
 
-  const brandBars = snapshot?.competitor_shares ?? [];
-  const maxShare = Math.max(1, ...brandBars.map((b) => b.share ?? 0));
+  const segments = useMemo(
+    () => buildShareOfShelfSegments(snapshot, meta?.total_linear ?? 100),
+    [snapshot, meta?.total_linear],
+  );
+
+  const productRows = useMemo(
+    () => buildProductMixRows(inventory, snapshot?.primary_brand ?? meta?.target_brand ?? ""),
+    [inventory, snapshot?.primary_brand, meta?.target_brand],
+  );
+
+  const visibleProducts = showAllProducts
+    ? productRows
+    : productRows.slice(0, PRODUCT_PREVIEW);
+  const maxFacings = productRows[0]?.facings ?? 1;
 
   if (loading) {
     return (
-      <section className="card-surface animate-pulse p-6">
-        <div className="h-6 w-48 rounded bg-muted" />
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div className="h-40 rounded-xl bg-muted" />
-          <div className="h-40 rounded-xl bg-muted" />
+      <section className="rounded-xl border border-border/70 bg-muted/30 p-5 sm:p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-5 w-40 rounded bg-muted" />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <div className="h-48 rounded-lg bg-muted" />
+            <div className="h-48 rounded-lg bg-muted" />
+          </div>
         </div>
       </section>
     );
@@ -100,140 +124,150 @@ export function DemoBrandProductAnalysis({
   if (!snapshot?.primary_brand && productRows.length === 0) return null;
 
   const isDemo = isDemoOralCareResult(data);
-  const primaryBrand = snapshot?.primary_brand ?? productRows[0]?.brand ?? "Leading brand";
-  const ownShare =
-    snapshot?.own_brand_share_percent ??
-    brandBars.find((b) => b.is_primary)?.share ??
-    brandBars[0]?.share ??
-    0;
-
-  const donutSource =
-    brandBars.length > 0
-      ? brandBars
-      : productRows.map((row) => ({
-          brand: row.brand,
-          share: row.qty,
-          is_primary: row.brand === primaryBrand,
-        }));
-
-  const donutSegments = donutSource.slice(0, 7).map((row, i) => ({
-    label: row.brand,
-    value: Math.max(row.share ?? 0, row.is_primary ? 0.1 : 0.05),
-    color: row.is_primary ? "hsl(var(--brand))" : `var(--chart-${(i % 6) + 1}, #94a3b8)`,
-  }));
+  const primaryBrand = snapshot?.primary_brand ?? productRows[0]?.brand ?? "Your brand";
+  const ownShare = meta?.actual_share ?? snapshot?.own_brand_share_percent ?? 0;
 
   return (
-    <section className="card-surface overflow-hidden p-5 sm:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+    <section className="rounded-xl border border-border/70 bg-muted/30 p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold tracking-tight">Competitor brand &amp; product analysis</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {isDemo
-              ? "Share of facings and product mix on this shelf photograph — compared to demo plan targets."
-              : "Share of facings and product mix detected on this shelf photograph — no planogram required."}
+          <h2 className="text-base font-semibold tracking-tight sm:text-lg">Brand &amp; Competition</h2>
+          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+            See how your brand is positioned on the shelf, how much space competitors occupy and
+            which products make up the category.
           </p>
         </div>
-        {isDemo ? (
-          <Badge variant="outline" className="text-[10px]">
-            {DEMO_PLANOGRAM_LABEL}
-          </Badge>
-        ) : null}
-      </div>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <div className="rounded-xl border border-border bg-surface/80 p-4">
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Brand share of shelf
-          </p>
-          <div className="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-            <DonutChart
-              segments={donutSegments.map((s, i) => ({
-                ...s,
-                color: donutSource[i]?.is_primary
-                  ? "hsl(220 90% 56%)"
-                  : ["#0ea5e9", "#10b981", "#f59e0b", "#8b5cf6", "#ef4444", "#64748b"][i % 6],
-              }))}
-              centerLabel={primaryBrand}
-              centerValue={`${ownShare.toFixed(0)}%`}
-            />
-            <ul className="w-full flex-1 space-y-2">
-              {donutSource.slice(0, 8).map((row, i) => (
-                <li key={row.brand} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span
-                      className={cn(
-                        "font-medium",
-                        row.is_primary ? "text-brand" : "text-foreground",
-                      )}
-                    >
-                      {formatCompetitorBrandLabel(row.brand, row.different_category)}
-                      {row.is_primary ? " (target brand)" : ""}
-                    </span>
-                    <span className="tabular-nums text-muted-foreground">
-                      {(row.share ?? 0).toFixed(1)}%
-                    </span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-all",
-                        row.is_primary ? "bg-brand" : BRAND_COLORS[(i + 1) % BRAND_COLORS.length],
-                      )}
-                      style={{ width: `${((row.share ?? 0) / maxShare) * 100}%` }}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-          {isDemo && snapshot && snapshot.own_brand_share_percent > 55 ? (
-            <p className="mt-3 rounded-lg border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
-              {snapshot.primary_brand} observed ~{snapshot.own_brand_share_percent.toFixed(0)}% vs planned
-              55% target — above planned share of shelf.
-            </p>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {isDemo ? (
+            <Badge variant="outline" className="text-[10px]">
+              {DEMO_PLANOGRAM_LABEL}
+            </Badge>
+          ) : null}
+          {data ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-lg text-xs"
+              onClick={() => downloadBrandAnalysisCsv(data, snapshot)}
+            >
+              <Download className="mr-1.5 size-3.5" />
+              Download Brand Analysis ↓
+            </Button>
           ) : null}
         </div>
+      </div>
 
-        <div className="rounded-xl border border-border bg-surface/80 p-4">
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Product mix (detected)
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        {/* Share of Shelf */}
+        <article className="rounded-lg border border-border/80 border-l-[3px] border-l-brand bg-card px-4 py-4 shadow-sm">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-semibold tracking-tight text-foreground">Share of Shelf</h3>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Your brand&apos;s shelf space compared with competing brands.
+              </p>
+            </div>
+            {data ? (
+              <PanelDownloadButton
+                label="Download Share of Shelf data"
+                onClick={() => downloadShareOfShelfCsv(data, snapshot)}
+              />
+            ) : null}
+          </div>
+
+          <p className="mt-4 text-xl font-semibold tabular-nums tracking-tight text-brand">
+            {primaryBrand} · {Math.round(ownShare)}%
           </p>
-          <div className="mt-4 max-h-64 space-y-2 overflow-y-auto pr-1">
-            {productRows.map((row) => {
-              const maxQty = productRows[0]?.qty ?? 1;
-              return (
-                <div key={`${row.brand}-${row.product}`} className="space-y-1">
-                  <div className="flex justify-between gap-2 text-xs">
-                    <span className="truncate font-medium text-foreground">
-                      {row.brand}{" "}
-                      <span className="font-normal text-muted-foreground">{row.product}</span>
+
+          <div className="mt-3">
+            {segments.length > 0 ? (
+              <ShareOfShelfStackedBar segments={segments} />
+            ) : (
+              <p className="text-xs text-muted-foreground">No brand share data for this audit.</p>
+            )}
+          </div>
+
+          {meta ? (
+            <p className="mt-3 text-[11px] text-muted-foreground">{formatPlannedActualLine(meta)}</p>
+          ) : null}
+        </article>
+
+        {/* Product Mix */}
+        <article className="rounded-lg border border-border/80 border-l-[3px] border-l-brand/60 bg-card px-4 py-4 shadow-sm">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-semibold tracking-tight text-foreground">
+                Product Mix on the Shelf
+              </h3>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                See which products and brands occupy the shelf, and how much visible presence each
+                one has.
+              </p>
+            </div>
+            {data ? (
+              <PanelDownloadButton
+                label="Download Product Mix data"
+                onClick={() => downloadProductMixCsv(data, snapshot)}
+              />
+            ) : null}
+          </div>
+
+          <div className="mt-4 space-y-2.5">
+            {visibleProducts.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No products detected on this shelf.</p>
+            ) : (
+              visibleProducts.map((row) => (
+                <div key={`${row.brand}-${row.product}-${row.sku ?? ""}`} className="space-y-1">
+                  <div className="flex justify-between gap-2 text-[11px]">
+                    <span className="min-w-0 truncate font-medium text-foreground">
+                      {row.is_unknown ? (
+                        <span className="text-muted-foreground">Unknown {row.product}</span>
+                      ) : (
+                        <>
+                          {row.brand}{" "}
+                          <span className="font-normal text-muted-foreground">{row.product}</span>
+                        </>
+                      )}
                     </span>
                     <span className="shrink-0 tabular-nums text-muted-foreground">
-                      {row.qty} facings
+                      {row.facings} facings
                     </span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                     <div
-                      className="h-full rounded-full bg-brand-muted"
-                      style={{ width: `${(row.qty / maxQty) * 100}%` }}
+                      className={cn("h-full rounded-full transition-all", row.bar_class)}
+                      style={{ width: `${(row.facings / maxFacings) * 100}%` }}
                     />
                   </div>
                 </div>
-              );
-            })}
+              ))
+            )}
           </div>
-        </div>
+
+          {productRows.length > PRODUCT_PREVIEW ? (
+            <button
+              type="button"
+              className="mt-3 text-[11px] font-medium text-brand hover:underline"
+              onClick={() => setShowAllProducts((v) => !v)}
+            >
+              {showAllProducts ? "Show fewer products" : "View all products →"}
+            </button>
+          ) : null}
+        </article>
       </div>
 
       {snapshot?.upper_hand?.length ? (
         <div className="mt-4 space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-widest text-brand">Insights</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Insights
+          </p>
           {snapshot.upper_hand.map((edge) => (
             <div
               key={edge.brand}
-              className="rounded-lg border border-brand/15 bg-brand-soft/25 px-3 py-2 text-xs text-muted-foreground"
+              className="rounded-lg border border-border/60 bg-card px-3 py-2 text-[11px] text-muted-foreground"
             >
-              {edge.note}
+              {edge.note.replace(/shelf share/gi, "Share of Shelf").replace(/facing share/gi, "Share of Shelf")}
             </div>
           ))}
         </div>
