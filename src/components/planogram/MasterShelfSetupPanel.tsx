@@ -297,7 +297,6 @@ export function MasterShelfSetupPanel({
           <Button
             type="button"
             variant="outline"
-            disabled={disabled}
             onClick={() => downloadMasterTemplate(role)}
           >
             <Download className="size-4" /> Download CSV Template
@@ -307,7 +306,6 @@ export function MasterShelfSetupPanel({
             variant="ghost"
             size="sm"
             className="text-muted-foreground"
-            disabled={disabled}
             onClick={() => downloadMasterFieldGuide(role)}
           >
             <Download className="size-4" /> Field Guide

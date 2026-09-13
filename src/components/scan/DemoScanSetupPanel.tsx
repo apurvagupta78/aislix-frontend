@@ -245,14 +245,15 @@ export function DemoScanSetupPanel({
       setCustomSetupPath("choose");
       setMasterPhase("upload");
       setMasterImport(null);
-      if (!state.categoryName) return;
       onScanContextChange({
         ...scanContext,
         planogramRows: homepageIntro ? [] : scanContext.planogramRows,
         planogramMeta: {
           ...(scanContext.planogramMeta ?? EMPTY_PLANOGRAM_META),
-          category: state.categoryName,
-          sub_category: resolveSubCategoryLabel(state),
+          category: state.categoryName || scanContext.planogramMeta?.category || "",
+          sub_category: state.categoryName
+            ? resolveSubCategoryLabel(state)
+            : scanContext.planogramMeta?.sub_category || "",
         },
         ...(homepageIntro
           ? {
@@ -308,6 +309,21 @@ export function DemoScanSetupPanel({
   const hideBottomStartButton =
     homepageIntro &&
     (showWizard || planogramMode === "none" || showDemoPlanogram || showMasterReady || showMasterSetup);
+
+  function syncCategoryFromContext(ctx: ScanContextState) {
+    const cat = ctx.planogramMeta?.category?.trim();
+    const subLabel = ctx.planogramMeta?.sub_category?.trim();
+    if (!cat || state.categoryName) return;
+    const category = categories.find((item) => item.name === cat);
+    const subMatch = category?.subcategories?.find(
+      (item) => item.label === subLabel || item.id === subLabel,
+    );
+    onChange({
+      categoryName: cat,
+      subId: subMatch?.id ?? (subLabel ? "others" : ""),
+      customSub: subMatch ? "" : (subLabel ?? ""),
+    });
+  }
 
   function handleStart() {
     setStartError(null);
@@ -705,14 +721,14 @@ export function DemoScanSetupPanel({
         <div className="mt-5 space-y-4">
           <MasterShelfSetupPanel
             role={auditRole}
-            disabled={disabled || !ready}
+            disabled={disabled}
             phase={masterPhase}
             onPhaseChange={setMasterPhase}
             importResult={masterImport}
             onImportResult={setMasterImport}
             canStartAudit={canStart}
             onContextReady={(ctx) => {
-              onScanContextChange({
+              const merged: ScanContextState = {
                 ...ctx,
                 auditRole: auditRole,
                 planogramMeta: {
@@ -720,7 +736,9 @@ export function DemoScanSetupPanel({
                   category: ctx.planogramMeta?.category || state.categoryName,
                   sub_category: ctx.planogramMeta?.sub_category || resolveSubCategoryLabel(state),
                 },
-              });
+              };
+              onScanContextChange(merged);
+              syncCategoryFromContext(merged);
               setCustomSetupPath("master");
             }}
             onStartAudit={handleStart}
@@ -741,7 +759,7 @@ export function DemoScanSetupPanel({
                 type="button"
                 variant="outline"
                 className="rounded-xl"
-                disabled={disabled || !ready}
+                disabled={disabled}
                 onClick={() => setCustomSetupPath("manual")}
               >
                 Configure Step by Step
@@ -825,11 +843,16 @@ export function DemoScanSetupPanel({
         </div>
       ) : null}
 
-      {!ready && (
+      {!ready && showMasterSetup ? (
+        <p className="mt-3 text-center text-xs text-muted-foreground">
+          Select category above before starting the audit — you can download a CSV template, upload
+          your master setup, or configure step by step now.
+        </p>
+      ) : !ready ? (
         <p className="mt-3 text-center text-xs text-muted-foreground">
           Select category and sub-category to continue.
         </p>
-      )}
+      ) : null}
 
       {mode === "upload" && ready && !hasPhoto ? (
         <p className="mt-3 text-center text-xs text-muted-foreground">

@@ -412,15 +412,15 @@ function validateRows(
     const raw = val(first, key);
     if (!raw) {
       issues.push({
-        severity: "critical",
+        severity: "warning",
         field: key,
-        message: `Required audit target column "${key}" is missing or empty on the first data row.`,
+        message: `Audit target "${key}" is empty — add a value on the first data row or set it in Step 7.`,
       });
       continue;
     }
     const p = pct(raw);
     if (p == null || p < 0 || p > 100) {
-      issues.push({ severity: "critical", field: key, message: `Target ${key} must be a percentage 0–100.` });
+      issues.push({ severity: "warning", field: key, message: `Target ${key} should be a percentage 0–100.` });
     } else {
       targetsReady += 1;
     }
