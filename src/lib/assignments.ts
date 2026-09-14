@@ -87,6 +87,8 @@ export type Assignment = {
   /** Corrective actions still open across every attempt. */
   open_issue_count: number;
   verified_at: string | null;
+  template_id: string | null;
+  template_version: number | null;
 };
 
 export type AssignmentAttempt = {
@@ -256,6 +258,10 @@ export async function createScanAssignment(input: {
   /** Planogram scope: the assignment's own draft planogram version. */
   planogramVersionId?: string | null;
   auditMode?: AuditMode;
+  /** Custom audit builder template linkage. */
+  templateId?: string | null;
+  templateVersion?: number | null;
+  templateSnapshot?: Record<string, unknown> | null;
 }): Promise<string> {
   const orgId = await requireOrgId();
   const assignerId = await requireUserId();
@@ -290,6 +296,9 @@ export async function createScanAssignment(input: {
       instructions: input.instructions?.trim() || null,
       audit_mode: auditMode,
       approval_status: "pending",
+      template_id: input.templateId ?? null,
+      template_version: input.templateVersion ?? null,
+      template_snapshot: input.templateSnapshot ?? null,
     } as Record<string, unknown>)
     .select("id")
     .single();
@@ -369,11 +378,13 @@ type AssignmentRow = {
   verified_at: string | null;
   audit_mode?: string | null;
   approval_status?: string | null;
+  template_id?: string | null;
+  template_version?: number | null;
   stores?: { name?: string | null } | null;
 };
 
 const SELECT =
-  "id, org_id, store_id, scope_type, scope_values, status, audit_mode, approval_status, due_at, instructions, created_at, assignee_id, assigner_id, planogram_version_id, scan_id, last_compliance_percent, scan_attempts, verified_at, stores:store_id (name)";
+  "id, org_id, store_id, scope_type, scope_values, status, audit_mode, approval_status, due_at, instructions, created_at, assignee_id, assigner_id, planogram_version_id, scan_id, last_compliance_percent, scan_attempts, verified_at, template_id, template_version, stores:store_id (name)";
 
 /** scan_assignments references auth.users, so profile names are resolved separately. */
 async function fetchNames(ids: string[]): Promise<Map<string, string>> {
@@ -477,6 +488,8 @@ async function mapAssignments(rows: AssignmentRow[]): Promise<Assignment[]> {
           "pending",
         location: meta.location,
         expected_products: meta.count,
+        template_id: row.template_id ?? null,
+        template_version: row.template_version ?? null,
       };
     }),
   );

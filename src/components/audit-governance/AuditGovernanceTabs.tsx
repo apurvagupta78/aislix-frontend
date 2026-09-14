@@ -81,14 +81,14 @@ export function AuditGovernanceTabs({ scanId, scanData, locked: lockedProp, audi
 
       <Tabs defaultValue="overview" className="w-full">
         <TabsList className="h-auto flex-wrap justify-start gap-1 rounded-xl bg-muted/50 p-1">
-          {[
+          {([
             ["overview", "Overview"],
             ["items", "Audit items"],
             ["evidence", "Evidence"],
             ["findings", `Findings (${findings.length})`],
             ["actions", `Corrective actions (${actions.length})`],
             ["activity", "Activity"],
-          ].map(([value, label]) => (
+          ] as Array<[string, string]>).map(([value, label]) => (
             <TabsTrigger key={value} value={value} className="rounded-lg text-xs sm:text-sm">
               {label}
             </TabsTrigger>

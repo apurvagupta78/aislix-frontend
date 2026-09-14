@@ -147,7 +147,10 @@ export function CreateCorrectiveActionModal({
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label>Priority</Label>
-              <Select value={priority} onValueChange={setPriority}>
+              <Select
+                value={priority}
+                onValueChange={(value) => setPriority(value as (typeof PRIORITIES)[number])}
+              >
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {PRIORITIES.map((p) => (

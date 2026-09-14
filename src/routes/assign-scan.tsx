@@ -49,9 +49,18 @@ import {
   type ScopeType,
 } from "@/lib/assignments";
 import { downloadExpectedAuditCsv } from "@/lib/digital-audit";
-import { fetchAuditTemplate } from "@/lib/audit-templates";
+import { fetchAuditTemplate, type AuditTemplate } from "@/lib/audit-templates";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+
+function templateLinkPayload(template: AuditTemplate | null | undefined) {
+  if (!template) return {};
+  return {
+    templateId: template.id,
+    templateVersion: template.version,
+    templateSnapshot: template as unknown as Record<string, unknown>,
+  };
+}
 
 
 export const Route = createFileRoute("/assign-scan")({
@@ -313,6 +322,7 @@ function AssignScanPage() {
           dueAt: dueAt || null,
           instructions,
           auditMode,
+          ...templateLinkPayload(templateQuery.data),
         });
       }
       const scopeValues = fromPlanogram
@@ -358,6 +368,7 @@ function AssignScanPage() {
         dueAt: dueAt || null,
         instructions,
         auditMode,
+        ...templateLinkPayload(templateQuery.data),
       });
     },
     onSuccess: (result) => {

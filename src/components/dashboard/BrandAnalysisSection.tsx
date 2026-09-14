@@ -236,7 +236,7 @@ function ShelfShareTrendCard({ trendData }: { trendData: BrandTrendPoint[] }) {
                   </span>
                   <Link
                     to="/results"
-                    search={{ audit: point.scan_id }}
+                    search={{ scan: point.scan_id }}
                     className="inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap text-[10px] font-medium text-brand transition-colors hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/25 rounded-sm"
                   >
                     Open audit
