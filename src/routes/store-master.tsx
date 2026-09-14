@@ -152,7 +152,7 @@ function StoreMasterPage() {
   function assign(version: PlanogramVersionSummary) {
     void navigate({
       to: "/assign-scan",
-      search: (prev) => ({ ...prev, store: storeId, scope: "planogram", planogramVersion: version.id }),
+      search: { store: storeId, scope: "planogram", planogramVersion: version.id },
     });
   }
 

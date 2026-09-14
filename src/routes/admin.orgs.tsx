@@ -102,7 +102,7 @@ function AdminOrgsPage() {
                       <TableCell>
                         <Link
                           to="/admin/scans"
-                          search={(prev) => ({ ...prev, orgId: row.id })}
+                          search={{ orgId: row.id }}
                           className="font-medium text-brand hover:underline"
                         >
                           {row.scan_count}

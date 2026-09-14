@@ -35,7 +35,7 @@ function AdminOverviewPage() {
 
   const query = useQuery({
     queryKey: ["platform-admin-overview"],
-    queryFn: () => fetchOverview(),
+    queryFn: () => fetchOverview({ data: {} }),
     staleTime: 30_000,
   });
   const recentScans = useQuery({
@@ -89,7 +89,7 @@ function AdminOverviewPage() {
 
           <div className="flex flex-wrap gap-3">
             <Button asChild variant="brand" className="rounded-xl">
-              <Link to="/admin/scans" search={{}}>
+              <Link to="/admin/scans">
                 Browse all audits <ArrowRight className="size-4" />
               </Link>
             </Button>
@@ -108,7 +108,7 @@ function AdminOverviewPage() {
             <div className="overflow-hidden rounded-xl border border-border">
               <div className="flex items-center justify-between border-b border-border px-4 py-3">
                 <p className="text-sm font-semibold">Recent audits</p>
-                <Link to="/admin/scans" search={{}} className="text-xs text-brand hover:underline">
+                <Link to="/admin/scans" className="text-xs text-brand hover:underline">
                   View all
                 </Link>
               </div>
@@ -124,7 +124,7 @@ function AdminOverviewPage() {
                   {(recentScans.data?.rows ?? []).map((row) => (
                     <TableRow key={row.id} className="cursor-pointer hover:bg-muted/50">
                       <TableCell className="text-xs">
-                        <Link to="/admin/scans" search={{}} className="block">
+                        <Link to="/admin/scans" className="block">
                           {new Date(row.created_at).toLocaleString()}
                         </Link>
                       </TableCell>

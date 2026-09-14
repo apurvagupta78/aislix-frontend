@@ -122,7 +122,7 @@ function TeamPage() {
   >(null);
 
   const setSearch = (next: Partial<Search>) => {
-    void navigate({ to: "/team", search: (prev: any) => ({ ...prev, ...next }) });
+    void navigate({ to: "/team", search: (prev: Search) => ({ ...prev, ...next }) });
   };
 
   const usersQuery = useQuery({

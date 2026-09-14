@@ -5,7 +5,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { dbError, requireOrgId, requireUserId } from "@/lib/db/context";
 import type {
-export type { TemplateStatus };
   AiConfig,
   AuditLevel,
   BuilderTemplateType,
@@ -21,7 +20,6 @@ export type { TemplateStatus };
   WorkflowSettings,
 } from "@/lib/audit-builder/types";
 import type { AuditMode, ScopeType, ScopeValues } from "@/lib/assignments";
-export type { TemplateStatus };
 
 export type TemplateType = BuilderTemplateType;
 

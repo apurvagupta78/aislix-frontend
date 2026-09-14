@@ -72,7 +72,7 @@ function AdminScansPage() {
     staleTime: 15_000,
   });
 
-  const detailQuery = useQuery<any>({
+  const detailQuery = useQuery({
     queryKey: ["platform-admin-scan-detail", selected?.id],
     queryFn: () => fetchDetail({ data: { scanId: selected!.id } }),
     enabled: Boolean(selected?.id),
@@ -264,7 +264,7 @@ function AdminScansPage() {
                   </Button>
                   {selected.created_by ? (
                     <Button asChild size="sm" variant="outline">
-                      <Link to="/admin/scans" search={(prev) => ({ ...prev, userId: selected.created_by })}>
+                      <Link to="/admin/scans" search={{ userId: selected.created_by }}>
                         More from this user
                       </Link>
                     </Button>

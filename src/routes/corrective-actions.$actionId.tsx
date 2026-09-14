@@ -91,7 +91,7 @@ function ActionDetailPage() {
 
   const finding = findingQuery.data;
   const resolutionEvidence = evidenceQuery.data ?? [];
-  const afterUrl = resolutionEvidence.find((e) => (e as any).signed_url)?.signed_url ?? null;
+  const afterUrl = resolutionEvidence.find((e) => e.signed_url)?.signed_url ?? null;
 
   return (
     <AppShell title={action?.title ?? "Corrective action"} description="Before → Action → After → Verification">
