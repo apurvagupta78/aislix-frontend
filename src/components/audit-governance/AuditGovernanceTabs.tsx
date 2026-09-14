@@ -88,7 +88,7 @@ export function AuditGovernanceTabs({ scanId, scanData, locked: lockedProp, audi
             ["findings", `Findings (${findings.length})`],
             ["actions", `Corrective actions (${actions.length})`],
             ["activity", "Activity"],
-          ] satisfies Array<[string, string]>).map(([value, label]) => (
+          ] as Array<[string, string]>).map(([value, label]) => (
             <TabsTrigger key={value} value={value} className="rounded-lg text-xs sm:text-sm">
               {label}
             </TabsTrigger>
