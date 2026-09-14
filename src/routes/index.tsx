@@ -150,7 +150,7 @@ const features = [
   {
     icon: Wrench,
     title: "Turn Issues Into Actions.",
-    body: "See what needs to be fixed, review the evidence, rescan the shelf and track whether the issue was resolved.",
+    body: "See what needs to be fixed, review the evidence, re-audit the shelf and track whether the issue was resolved.",
   },
 ];
 
@@ -176,7 +176,7 @@ const steps = [
   {
     icon: History,
     title: "Track",
-    subtitle: "Rescan and measure improvement.",
+    subtitle: "Re-audit and measure improvement.",
     body: "Keep every audit, compare previous visits and verify whether the shelf improved after corrective action.",
   },
 ];
@@ -215,7 +215,7 @@ function Landing() {
             </Button>
           </div>
           <p className="mt-4 text-xs text-muted-foreground">
-            No card required · 30 free scans/month · Up to 5 scans/day
+            No card required · 30 free audits/month · Up to 5 audits/day
           </p>
         </div>
       </section>

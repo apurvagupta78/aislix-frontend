@@ -4,7 +4,7 @@ import { trackLandingEvent } from "@/lib/landing-analytics";
 import { scrollToSection } from "@/lib/landing-utm";
 import { DEFAULT_SAMPLE_IMAGE } from "@/lib/landing-scan-api";
 
-const TRUST = ["No card required", "5 free scans per day", "Results in seconds"];
+const TRUST = ["No card required", "5 free audits per day", "Results in seconds"];
 
 const TOP_ISSUES = [
   { label: "Out of stock" },
@@ -50,7 +50,7 @@ export function LandingHero({ stats }: { stats?: HeroStats }) {
                 scrollToSection("demo");
               }}
             >
-              Start scanning free <ArrowRight className="size-4" />
+              Start auditing free <ArrowRight className="size-4" />
             </Button>
           </div>
 

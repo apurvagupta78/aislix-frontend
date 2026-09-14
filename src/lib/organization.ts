@@ -521,7 +521,7 @@ export async function fetchStoreScans(
     .eq("store_id", id)
     .order("created_at", { ascending: false })
     .limit(limit);
-  if (error) dbError(error, "Could not load store scans.");
+  if (error) dbError(error, "Could not load store audits.");
 
   const items: StoreScan[] = (data ?? []).map((row) => compact({
     scan_id: row.id,
@@ -621,7 +621,7 @@ export async function fetchStoreReports(
 
   const items: StoreReport[] = (data ?? []).map((row) => ({
     id: row.id,
-    label: row.shelf_label ?? "Shelf scan report",
+    label: row.shelf_label ?? "Shelf audit report",
     generated_at: row.created_at,
   }));
 

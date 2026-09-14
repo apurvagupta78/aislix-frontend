@@ -246,7 +246,7 @@ function SharedReport() {
             {context || "AI shelf audit result"}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Scanned {formatSharedDate(report.scanned_at)} · link expires{" "}
+            Audited {formatSharedDate(report.scanned_at)} · link expires{" "}
             {formatSharedDate(report.expires_at)}
           </p>
         </section>

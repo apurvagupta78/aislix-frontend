@@ -21,7 +21,7 @@ export const createScanShareLink = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { scanId: string }) => {
     const scanId = String(input?.scanId ?? "").trim();
-    if (!scanId) throw new Error("Missing scan.");
+    if (!scanId) throw new Error("Missing audit.");
     return { scanId };
   })
   .handler(async ({ data, context }): Promise<ScanShareLink> => {
@@ -103,7 +103,7 @@ export const emailScanReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: EmailScanReportInput) => {
     const scanId = String(input?.scanId ?? "").trim();
-    if (!scanId) throw new Error("Missing scan.");
+    if (!scanId) throw new Error("Missing audit.");
     const recipients = (input?.recipients ?? [])
       .map((value) => String(value).trim().toLowerCase())
       .filter(Boolean)
@@ -213,7 +213,7 @@ export const shareScanWithTeam = createServerFn({ method: "POST" })
   .inputValidator((input: ShareWithTeamInput) => {
     const scanId = String(input?.scanId ?? "").trim();
     const userIds = [...new Set((input?.userIds ?? []).map((id) => String(id)).filter(Boolean))];
-    if (!scanId) throw new Error("Missing scan.");
+    if (!scanId) throw new Error("Missing audit.");
     if (!userIds.length) throw new Error("Select at least one team member.");
     return {
       scanId,

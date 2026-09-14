@@ -99,16 +99,16 @@ export const Route = createFileRoute("/history")({
   },
   head: () => ({
     meta: [
-      { title: "Scan History — Aislix Shelf Audits" },
+      { title: "Audit History — Aislix Shelf Audits" },
       {
         name: "description",
         content:
-          "Search and filter scans by store, location and category, then compare any two shelf audits.",
+          "Search and filter audits by store, location and category, then compare any two shelf audits.",
       },
-      { property: "og:title", content: "Scan history — Aislix" },
+      { property: "og:title", content: "Audit history — Aislix" },
       {
         property: "og:description",
-        content: "A searchable archive of every shelf audit, with exports and scan comparison.",
+        content: "A searchable archive of every shelf audit, with exports and audit comparison.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -178,7 +178,7 @@ function RowActions({
 
   const run = async (kind: "pdf" | "csv" | "image", task: () => Promise<void>) => {
     setBusy(kind);
-    // Reports for older scans are rebuilt on demand and can take a minute.
+    // Reports for older audits are rebuilt on demand and can take a minute.
     const toastId = toast.loading("Preparing download…");
     try {
       await task();
@@ -243,7 +243,7 @@ function RowActions({
           className="text-destructive focus:text-destructive"
           onSelect={() => onDelete(scan)}
         >
-          <Trash2 className="size-4" /> Delete scan
+          <Trash2 className="size-4" /> Delete audit
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -325,7 +325,7 @@ function HistoryPage() {
       setPendingDelete(null);
       await queryClient.invalidateQueries({ queryKey: ["scan-history"] });
     } catch (e) {
-      setDeleteError(e instanceof Error ? e.message : "Could not delete this scan.");
+      setDeleteError(e instanceof Error ? e.message : "Could not delete this audit.");
     } finally {
       setDeleting(false);
     }
@@ -395,7 +395,7 @@ function HistoryPage() {
                 resetPage();
               }}
             >
-              <SelectTrigger className="h-11 rounded-xl sm:w-[190px]" aria-label="Sort scans">
+              <SelectTrigger className="h-11 rounded-xl sm:w-[190px]" aria-label="Sort audits">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -412,11 +412,11 @@ function HistoryPage() {
                 resetPage();
               }}
             >
-              <SelectTrigger className="h-11 rounded-xl sm:w-[170px]" aria-label="Filter by scan type">
+              <SelectTrigger className="h-11 rounded-xl sm:w-[170px]" aria-label="Filter by audit type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All scans</SelectItem>
+                <SelectItem value="all">All audits</SelectItem>
                 <SelectItem value="assigned">Assigned only</SelectItem>
                 <SelectItem value="adhoc">Ad hoc only</SelectItem>
               </SelectContent>
@@ -466,9 +466,9 @@ function HistoryPage() {
         {/* compare bar */}
         <section className="card-surface flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div className="min-w-0">
-            <p className="text-sm font-semibold tracking-tight">Compare scans</p>
+            <p className="text-sm font-semibold tracking-tight">Compare audits</p>
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-              Select two scans to compare inventory changes between them.
+              Select two audits to compare inventory changes between them.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-3">
@@ -518,7 +518,7 @@ function HistoryPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-10" />
-                      <TableHead>Scan</TableHead>
+                      <TableHead>Audit</TableHead>
                       <TableHead>Store</TableHead>
                       <TableHead>Date &amp; time</TableHead>
                       <TableHead className="text-right">Products</TableHead>
@@ -661,7 +661,7 @@ function HistoryPage() {
               {/* pagination */}
               <div className="mt-5 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs text-muted-foreground">
-                  Page {page} of {pageCount} · {total.toLocaleString()} scans
+                  Page {page} of {pageCount} · {total.toLocaleString()} audits
                 </p>
                 <div className="flex items-center gap-2">
                   <Button
@@ -700,7 +700,7 @@ function HistoryPage() {
       >
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this scan?</AlertDialogTitle>
+            <AlertDialogTitle>Delete this audit?</AlertDialogTitle>
             <AlertDialogDescription>
               {pendingDelete?.scan_id} for {pendingDelete?.store} will be permanently removed, along
               with its report and exports. This cannot be undone.
@@ -719,7 +719,7 @@ function HistoryPage() {
                 void confirmDelete();
               }}
             >
-              {deleting ? "Deleting…" : "Delete scan"}
+              {deleting ? "Deleting…" : "Delete audit"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

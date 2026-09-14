@@ -36,7 +36,7 @@ function Processing() {
 
   useEffect(() => {
     if (!scan) {
-      setError("Missing scan id. Start a new scan from the scan page.");
+      setError("Missing audit id. Start a new audit from the audit page.");
       return;
     }
 
@@ -64,8 +64,8 @@ function Processing() {
 
   return (
     <AppShell
-      title="Processing scan"
-      description={scan ? `Scan ${scan.slice(0, 8)}…` : "Analyzing retail image"}
+      title="Processing audit"
+      description={scan ? `Audit ${scan.slice(0, 8)}…` : "Analyzing retail image"}
     >
       <div className="mx-auto max-w-2xl">
         <div className="card-surface p-9 text-center">
@@ -78,7 +78,7 @@ function Processing() {
               <p className="text-sm text-muted-foreground">{error}</p>
               <div className="flex justify-center gap-2">
                 <Button asChild variant="subtle" size="sm" className="rounded-xl">
-                  <Link to="/scan">New scan</Link>
+                  <Link to="/scan">New audit</Link>
                 </Button>
                 {scan ? (
                   <Button
@@ -116,7 +116,7 @@ function Processing() {
                   showStageList
                   timingMessage={
                     done
-                      ? "Opening your scan results…"
+                      ? "Opening your audit results…"
                       : "This may take a few minutes for larger or more complex images. Please keep this page open."
                   }
                 />

@@ -281,8 +281,8 @@ export function AnnotatedImageViewer({
               title={scanId ? "Preparing annotated image…" : "No annotated image yet"}
               description={
                 scanId
-                  ? "Aislix is loading or rebuilding the detection overlay for this scan."
-                  : "The annotated shelf image appears here once the scan service returns it."
+                  ? "Aislix is loading or rebuilding the detection overlay for this audit."
+                  : "The annotated shelf image appears here once the analysis service returns it."
               }
             />
           </div>
@@ -477,7 +477,7 @@ export function AlertsPanel({
       ) : sorted.length === 0 ? (
         <EmptyState
           title="No alerts"
-          description="Alerts returned by the scan service are listed here by severity."
+          description="Alerts returned by the analysis service are listed here by severity."
         />
       ) : (
         <ul className="space-y-3">
@@ -1007,7 +1007,7 @@ export function InventoryTable({
                     title={rows.length === 0 ? "No inventory yet" : "No matching products"}
                     description={
                       rows.length === 0
-                        ? "Detected products appear here once the scan service returns inventory."
+                        ? "Detected products appear here once the analysis service returns inventory."
                         : "Try a different search term or clear the filters."
                     }
                   />

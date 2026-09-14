@@ -60,7 +60,7 @@ export function BrandIntelPanel() {
   return (
     <SettingsCard
       title="Brand & competitor intelligence"
-      description="Configure your primary brand and tracked competitors for share-of-shelf on scan results."
+      description="Configure your primary brand and tracked competitors for share-of-shelf on audit results."
       icon={Target}
     >
       {configQuery.isLoading ? (
@@ -89,7 +89,7 @@ export function BrandIntelPanel() {
             </Field>
             <Field
               label="Competitor brands"
-              hint="Comma-separated. Used for competitor presence and share on scan results."
+              hint="Comma-separated. Used for competitor presence and share on audit results."
               className="sm:col-span-2"
             >
               <Input

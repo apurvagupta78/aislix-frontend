@@ -83,8 +83,8 @@ function limitLines(plan: PlanDefinition): string[] {
   if (plan.allowanceBullets?.length) return plan.allowanceBullets;
   const { audits, users, stores, masterSetups } = plan.controls;
   const first = plan.payAsYouGo
-    ? "Pay per completed scan"
-    : `${formatControlValue(audits.value)} scans / month`;
+    ? "Pay per completed audit"
+    : `${formatControlValue(audits.value)} audits / month`;
 
   return [
     first,

@@ -394,7 +394,7 @@ export function TeamShareDialog({
                   </span>
                   {target.user_id === assigneeId ? (
                     <Badge variant="outline" className="rounded-full">
-                      Scanned this
+                      Audited this
                     </Badge>
                   ) : (
                     <Badge variant="outline" className="rounded-full capitalize">

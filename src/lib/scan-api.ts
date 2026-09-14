@@ -130,9 +130,9 @@ export async function submitScanImages(
     parentScanId?: string;
   } = {},
 ): Promise<ScanResponse> {
-  if (!files.length) throw new Error("Add at least one shelf image to scan.");
+  if (!files.length) throw new Error("Add at least one shelf image to audit.");
   if (files.length > MAX_SCAN_IMAGES) {
-    throw new Error(`You can scan up to ${MAX_SCAN_IMAGES} images at a time.`);
+    throw new Error(`You can audit up to ${MAX_SCAN_IMAGES} images at a time.`);
   }
   for (const file of files) {
     const invalid = validateScanFile(file);
@@ -191,7 +191,7 @@ export async function submitScanImages(
       const mapped = await mapLimitError(insertError, orgId);
       if (mapped !== insertError) throw mapped;
     }
-    return dbError(insertError, "Could not start the scan.");
+    return dbError(insertError, "Could not start the audit.");
   }
 
   options.onUploadProgress?.(0);
@@ -201,9 +201,9 @@ export async function submitScanImages(
     if (options.signal?.aborted) {
       await supabase
         .from("shelf_scans")
-        .update({ status: "failed", error_message: "Scan cancelled before analysis." })
+        .update({ status: "failed", error_message: "Audit cancelled before analysis." })
         .eq("id", scan.id);
-      throw new DOMException("Scan cancelled", "AbortError");
+      throw new DOMException("Audit cancelled", "AbortError");
     }
 
     const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
@@ -315,7 +315,7 @@ function cleanPipelineMessage(error: unknown): string {
       ? error.message
       : typeof error === "string"
         ? error
-        : "The scan could not be completed.";
+        : "The audit could not be completed.";
   const message = raw.replace(/^Error:\s*/i, "").trim();
   if (/unauthorized/i.test(message)) return "Your session expired. Please sign in again.";
   return sanitizeUserMessage(message);
@@ -333,8 +333,8 @@ export async function fetchScanStatus(
     .eq("org_id", orgId)
     .eq("id", scanId)
     .maybeSingle();
-  if (error) return dbError(error, "Could not load scan status.");
-  if (!data) notFound("Scan not found.");
+  if (error) return dbError(error, "Could not load audit status.");
+  if (!data) notFound("Audit not found.");
   return {
     scan_id: data.id as string,
     status: data.status as string,

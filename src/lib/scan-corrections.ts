@@ -85,7 +85,7 @@ export async function fetchScanCorrections(scanId: string): Promise<ScanCorrecti
     .eq("org_id", orgId)
     .eq("scan_id", scanId)
     .order("created_at", { ascending: false });
-  if (error) dbError(error, "Could not load corrections for this scan.");
+  if (error) dbError(error, "Could not load corrections for this audit.");
   return (data ?? []) as unknown as ScanCorrection[];
 }
 

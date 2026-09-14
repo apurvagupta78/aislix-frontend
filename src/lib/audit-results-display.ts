@@ -37,7 +37,7 @@ export function buildAuditHeaderPrimary(data?: ScanResult): string {
   if (category && subCategory) return `${category} · ${subCategory}`;
   if (category) return category;
   if (subCategory) return subCategory;
-  return data?.location?.trim() || "Shelf scan";
+  return data?.location?.trim() || "Shelf audit";
 }
 
 export function buildAuditHeaderMeta(

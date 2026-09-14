@@ -47,7 +47,7 @@ export function HeroSection() {
             </Button>
           </div>
           <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-xs text-brand-foreground/75 sm:text-sm">
-            {["No card required", "5 free scans", "Results in ~60s"].map((item) => (
+            {["No card required", "5 free audits", "Results in ~60s"].map((item) => (
               <span key={item} className="inline-flex items-center gap-2">
                 <CheckCircle2 className="size-4 text-accent-green" /> {item}
               </span>

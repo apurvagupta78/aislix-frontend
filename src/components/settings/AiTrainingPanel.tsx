@@ -31,7 +31,7 @@ export function AiTrainingPanel() {
   return (
     <SettingsCard
       title="AI accuracy corrections"
-      description="Every SKU fix your team makes on scan results, exportable for benchmark training."
+      description="Every SKU fix your team makes on audit results, exportable for benchmark training."
       icon={Sparkles}
       action={
         <Button
@@ -54,7 +54,7 @@ export function AiTrainingPanel() {
         {corrections.isPending
           ? "Counting recorded corrections…"
           : `${count} correction${count === 1 ? "" : "s"} recorded in this workspace.`}{" "}
-        The JSON export feeds the recognition benchmark; corrections never block scan completion.
+        The JSON export feeds the recognition benchmark; corrections never block audit completion.
       </p>
     </SettingsCard>
   );

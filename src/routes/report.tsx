@@ -36,7 +36,7 @@ export const Route = createFileRoute("/report")({
       { title: "PDF Audit Report — Aislix" },
       {
         name: "description",
-        content: "Preview, download and share the PDF shelf audit report generated from your scan.",
+        content: "Preview, download and share the PDF shelf audit report generated from your audit.",
       },
       { property: "og:title", content: "Shelf audit PDF report — Aislix" },
       { property: "og:description", content: "A shareable, print-ready retail shelf audit." },
@@ -51,7 +51,7 @@ function ReportViewer() {
   const { scan: scanParam } = Route.useSearch();
   const navigate = useNavigate();
 
-  // Recent completed scans power the picker and the "latest scan" fallback so
+  // Recent completed audits power the picker and the "latest scan" fallback so
   // that /report without a ?scan= param still renders a report.
   const recent = useQuery({
     queryKey: ["report-recent-scans"],
@@ -75,8 +75,8 @@ function ReportViewer() {
       value={scan ?? ""}
       onValueChange={(value) => navigate({ to: "/report", search: { scan: value } })}
     >
-      <SelectTrigger className="h-9 w-[230px] rounded-xl" aria-label="Choose a scan">
-        <SelectValue placeholder="Choose a scan" />
+      <SelectTrigger className="h-9 w-[230px] rounded-xl" aria-label="Choose an audit">
+        <SelectValue placeholder="Choose an audit" />
       </SelectTrigger>
       <SelectContent>
         {completed.map((s) => (
@@ -188,11 +188,11 @@ function ReportViewer() {
         </div>
       ) : !scan ? (
         <EmptyState
-          title="No completed scans yet"
-          description="Run a shelf scan and its audit report will be generated here."
+          title="No completed audits yet"
+          description="Run a shelf audit and its report will be generated here."
           action={
             <Button asChild variant="brand" size="sm" className="rounded-xl">
-              <Link to="/history">Open scan history</Link>
+              <Link to="/history">Open audit history</Link>
             </Button>
           }
         />
@@ -208,7 +208,7 @@ function ReportViewer() {
           onRetry={() => void query.refetch()}
         />
       ) : !data ? (
-        <EmptyState title="Report not found" description="This scan no longer exists." />
+        <EmptyState title="Report not found" description="This audit no longer exists." />
       ) : (
         <div className="bg-surface rounded-2xl p-4 sm:p-8">
           <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-card p-8 shadow-card sm:p-12">
@@ -218,7 +218,7 @@ function ReportViewer() {
                   Aislix shelf audit
                 </p>
                 <h2 className="mt-2 text-xl font-semibold tracking-tight">
-                  {[data.store, data.aisle].filter(Boolean).join(" — ") || "Shelf scan"}
+                  {[data.store, data.aisle].filter(Boolean).join(" — ") || "Shelf audit"}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {formatScanDate(data.created_at) ?? "Date unavailable"}
@@ -306,7 +306,7 @@ function ReportViewer() {
             )}
 
             <p className="mt-8 border-t border-border pt-4 text-[0.7rem] text-muted-foreground">
-              Generated automatically by Aislix Retail Shelf Intelligence · Scan {data.scan_id}
+              Generated automatically by Aislix Retail Shelf Intelligence · Audit {data.scan_id}
             </p>
           </div>
 
@@ -320,7 +320,7 @@ function ReportViewer() {
               Back to results
             </Button>
             <Button asChild variant="brand" size="sm" className="rounded-xl">
-              <Link to="/history">Scan history</Link>
+              <Link to="/history">Audit history</Link>
             </Button>
           </div>
         </div>

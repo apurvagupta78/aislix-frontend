@@ -273,15 +273,15 @@ export function ReportsLibrary() {
       <>
         {FilterBar}
         <EmptyState
-          title={filtersActive ? "No reports match these filters" : "No reports yet — run your first scan."}
+          title={filtersActive ? "No reports match these filters" : "No reports yet — run your first audit."}
           description={
             filtersActive
               ? "Try a different assignee, status or date range."
-              : "Run a scan with Store, Location and Category filled in to see reports here."
+              : "Run an audit with Store, Location and Category filled in to see reports here."
           }
           action={
             <Button asChild variant="brand" size="sm" className="rounded-xl">
-              <Link to="/scan">Start a audit</Link>
+              <Link to="/scan">Start an audit</Link>
             </Button>
           }
         />

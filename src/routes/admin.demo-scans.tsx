@@ -20,7 +20,7 @@ import { listLandingDemoScans } from "@/lib/landing-demo-admin.functions";
 
 export const Route = createFileRoute("/admin/demo-scans")({
   head: () => ({
-    meta: [{ title: "Demo Scans — Platform Admin" }, { name: "robots", content: "noindex, nofollow" }],
+    meta: [{ title: "Demo Audits — Platform Admin" }, { name: "robots", content: "noindex, nofollow" }],
   }),
   component: AdminDemoScansPage,
 });
@@ -42,8 +42,8 @@ function AdminDemoScansPage() {
 
   return (
     <AdminPage
-      title="Landing demo scans"
-      description="Anonymous homepage and campaign scans — photos, status and UTM attribution."
+      title="Landing demo audits"
+      description="Anonymous homepage and campaign audits — photos, status and UTM attribution."
       actions={
         <div className="flex items-center gap-2">
           <Select value={days} onValueChange={setDays}>
@@ -72,21 +72,21 @@ function AdminDemoScansPage() {
           </div>
         ) : query.isError ? (
           <ErrorState
-            title="Could not load demo scans"
+            title="Could not load demo audits"
             description={query.error instanceof Error ? query.error.message : "Please try again."}
             onRetry={() => void query.refetch()}
           />
         ) : !query.data || query.data.rows.length === 0 ? (
           <EmptyState
             icon={<ImageIcon className="size-5" />}
-            title="No demo scans in this period"
-            description="Anonymous scans from landing pages will appear here."
+            title="No demo audits in this period"
+            description="Anonymous audits from landing pages will appear here."
           />
         ) : (
           <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {[
-                { label: "Scan attempts", value: query.data.totals.attempts },
+                { label: "Audit attempts", value: query.data.totals.attempts },
                 { label: "Completed", value: query.data.totals.completed },
                 { label: "Photo uploads", value: query.data.totals.uploads },
                 { label: "Images stored", value: query.data.totals.withImage },

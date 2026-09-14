@@ -435,7 +435,7 @@ export const getPlatformScanDetail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { scanId?: string } | undefined) => {
     const scanId = input?.scanId?.trim();
-    if (!scanId) throw new Error("Scan id is required.");
+    if (!scanId) throw new Error("Audit id is required.");
     return { scanId };
   })
   .handler(async ({ data, context }): Promise<PlatformScanDetail> => {
@@ -458,7 +458,7 @@ export const getPlatformScanDetail = createServerFn({ method: "POST" })
       .maybeSingle();
 
     if (error) throw new Error(error.message);
-    if (!row) throw new Error("Scan not found.");
+    if (!row) throw new Error("Audit not found.");
 
     const org = row.organizations as { name?: string } | null;
     const profile = row.profiles as { email?: string; full_name?: string } | null;

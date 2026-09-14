@@ -40,11 +40,11 @@ export const Route = createFileRoute("/pricing")({
 const faqs = [
   {
     q: "How is an AI audit counted?",
-    a: "One supported shelf photo analysed end-to-end counts as one AI scan. Capacity is reserved on submission and charged only when processing succeeds. A completed scan is attributed to the day and entitlement period in which its reservation was accepted. Failed, cancelled or incomplete processing releases the reservation and does not consume a scan.",
+    a: "One supported shelf photo analysed end-to-end counts as one AI audit. Capacity is reserved on submission and charged only when processing succeeds. A completed audit is attributed to the day and entitlement period in which its reservation was accepted. Failed, cancelled or incomplete processing releases the reservation and does not consume an audit.",
   },
   {
     q: "Can I try Aislix before paying?",
-    a: "Yes. The Free plan includes 30 completed AI scans per calendar month, with up to 5 scans per calendar day (Asia/Kolkata). Both limits apply. No credit card required.",
+    a: "Yes. The Free plan includes 30 completed AI audits per calendar month, with up to 5 audits per calendar day (Asia/Kolkata). Both limits apply. No credit card required.",
   },
   {
     q: "What happens when I hit my monthly limit?",
@@ -52,7 +52,7 @@ const faqs = [
   },
   {
     q: "Can I pay only when I use Aislix?",
-    a: "Yes. Buy prepaid credits — 11 scans for ₹99 (₹9 per completed scan). Credits expire 180 days after payment and are deducted only when a scan completes successfully.",
+    a: "Yes. Buy prepaid credits — 11 audits for ₹99 (₹9 per completed audit). Credits expire 180 days after payment and are deducted only when an audit completes successfully.",
   },
 ];
 
@@ -85,7 +85,7 @@ function Pricing() {
             Start free. Scale your retail intelligence.
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
-            Get 30 free shelf scans every month. Upgrade from ₹499/month for more scans, unlimited
+            Get 30 free shelf audits every month. Upgrade from ₹499/month for more audits, unlimited
             teammates and stores, and deeper retail insights.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

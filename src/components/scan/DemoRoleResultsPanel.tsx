@@ -152,7 +152,7 @@ export function DemoRoleResultsPanel({
       {fullscreen && (
         <GuestDemoShell
           title="Shelf execution report"
-          description={[landing.category, landing.shelf_label].filter(Boolean).join(" · ") || "Demo scan"}
+          description={[landing.category, landing.shelf_label].filter(Boolean).join(" · ") || "Demo audit"}
           onClose={() => setFullscreen(false)}
         >
           <div className="mx-auto max-w-6xl space-y-4">

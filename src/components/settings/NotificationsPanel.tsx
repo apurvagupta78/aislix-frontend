@@ -29,12 +29,12 @@ const rows: { key: keyof NotificationPreferences; title: string; description: st
   {
     key: "low_stock_alerts",
     title: "Low stock alerts",
-    description: "Notify me as soon as a scan detects out-of-stock or depleted facings.",
+    description: "Notify me as soon as an audit detects out-of-stock or depleted facings.",
   },
   {
     key: "weekly_reports",
     title: "Weekly reports",
-    description: "A Monday digest of shelf health, share of shelf and scan volume.",
+    description: "A Monday digest of shelf health, share of shelf and audit volume.",
   },
   {
     key: "monthly_reports",

@@ -1480,7 +1480,7 @@ export function ExecutionImprovementBanner({
         <p className="text-sm font-semibold">Execution improvement</p>
         <p className="text-sm text-muted-foreground">
           {previous} → {current} ({delta > 0 ? "+" : ""}
-          {delta} points vs previous scan at this store)
+          {delta} points vs previous audit at this store)
         </p>
       </div>
     </div>

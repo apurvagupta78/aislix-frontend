@@ -41,7 +41,7 @@ export function AuthLayout({
           </p>
           <div className="mt-12 grid max-w-md grid-cols-3 gap-3">
             {[
-              { l: "Scans run", v: "1.2M+" },
+              { l: "Audits run", v: "1.2M+" },
               { l: "Avg. accuracy", v: "94.6%" },
               { l: "Audit time saved", v: "90%" },
             ].map((k) => (

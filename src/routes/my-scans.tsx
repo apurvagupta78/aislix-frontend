@@ -117,7 +117,7 @@ function isUpcoming(assignment: Assignment): boolean {
 function startLabel(assignment: Assignment): string {
   const digital = assignment.audit_mode === "digital";
   if (assignment.status === "needs_correction") {
-    return digital ? "Fix & re-audit" : "Fix & re-scan";
+    return digital ? "Fix & re-audit" : "Fix & re-audit";
   }
   if (assignment.status === "in_progress") {
     return digital ? "Continue Digital Audit" : "Continue AI Audit";
@@ -334,7 +334,7 @@ function MyScansPage() {
                           </span>
                           <span className="text-muted-foreground">
                             {" "}
-                            · attempt {assignment.scan_attempts} · fix the shelf, then re-scan
+                            · attempt {assignment.scan_attempts} · fix the shelf, then re-audit
                           </span>
                         </p>
                       )}

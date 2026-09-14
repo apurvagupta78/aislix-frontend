@@ -163,7 +163,7 @@ export async function scanShareSummary(scanId: string): Promise<{
     .eq("id", scanId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("Scan not found.");
+  if (!data) throw new Error("Audit not found.");
 
   const row = data as Record<string, any>;
   return {
@@ -495,7 +495,7 @@ export async function requireScanAccess(
     .eq("id", scanId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("You do not have access to this scan.");
+  if (!data) throw new Error("You do not have access to this audit.");
 
   let assigneeId: string | null = null;
   if (data.assignment_id) {

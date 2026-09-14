@@ -47,7 +47,7 @@ const pillars = [
   {
     icon: DatabaseZap,
     title: "Secure storage",
-    body: "Every image and scan record is scoped to a single workspace and protected by row-level security policies enforced in the database, so one customer can never read another customer's data. Object storage buckets are private with short-lived signed URLs for downloads.",
+    body: "Every image and audit record is scoped to a single workspace and protected by row-level security policies enforced in the database, so one customer can never read another customer's data. Object storage buckets are private with short-lived signed URLs for downloads.",
   },
   {
     icon: Fingerprint,

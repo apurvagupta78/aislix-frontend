@@ -70,7 +70,7 @@ export function TerritoryPanel() {
                   <div>
                     <p className="font-medium">{t.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {t.store_count} store{t.store_count === 1 ? "" : "s"} · {t.scan_count_30d} scans (30d)
+                      {t.store_count} store{t.store_count === 1 ? "" : "s"} · {t.scan_count_30d} audits (30d)
                     </p>
                   </div>
                   {t.avg_compliance_percent !== null && (

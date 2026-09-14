@@ -293,7 +293,7 @@ export async function createScanAssignment(input: {
     } as Record<string, unknown>)
     .select("id")
     .single();
-  if (error) dbError(error, "Could not assign the scan.");
+  if (error) dbError(error, "Could not assign the audit.");
 
   const assignmentId = data!.id as string;
 
@@ -548,7 +548,7 @@ export async function fetchMyAssignments(): Promise<Assignment[]> {
     .select(SELECT)
     .eq("assignee_id", userId)
     .order("created_at", { ascending: false });
-  if (error) dbError(error, "Could not load your assigned scans.");
+  if (error) dbError(error, "Could not load your assigned audits.");
   return mapAssignments((data ?? []) as unknown as AssignmentRow[]);
 }
 
@@ -574,7 +574,7 @@ export async function startAssignment(assignmentId: string): Promise<void> {
     .from("scan_assignments")
     .update({ status: "in_progress" })
     .eq("id", assignmentId);
-  if (error) dbError(error, "Could not start this scan.");
+  if (error) dbError(error, "Could not start this audit.");
 }
 
 export async function cancelAssignment(assignmentId: string): Promise<void> {
@@ -601,7 +601,7 @@ export async function requestReScan(assignmentOrId: Assignment | string): Promis
       user_id: assignment.assignee_id,
       type: "scan_needs_correction",
       title: "Shelf audit needs correction",
-      body: `${percentLabel}% compliance — ${assignment.open_issue_count} issue(s) to fix. Re-scan after correcting the shelf.`,
+      body: `${percentLabel}% compliance — ${assignment.open_issue_count} issue(s) to fix. Re-audit after correcting the shelf.`,
       payload: {
         assignment_id: assignment.id,
         scan_id: assignment.scan_id,
@@ -645,7 +645,7 @@ export async function fetchTeamScans(): Promise<TeamScan[]> {
     .eq("org_id", orgId)
     .not("assignment_id", "is", null)
     .order("created_at", { ascending: false });
-  if (error) dbError(error, "Could not load team scans.");
+  if (error) dbError(error, "Could not load team audits.");
 
   const rows = (data ?? []) as unknown as {
     id: string;

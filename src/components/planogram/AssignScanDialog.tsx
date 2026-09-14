@@ -134,7 +134,7 @@ export function AssignScanDialog({
       }),
     onSuccess: (assignmentId) => {
       toast.success(
-        `Scan assigned to ${assignee?.name ?? "team member"} — ID: ${formatAssignmentId(assignmentId)}`,
+        `Audit assigned to ${assignee?.name ?? "team member"} — ID: ${formatAssignmentId(assignmentId)}`,
       );
       setAssigneeId("");
       setDueAt("");
@@ -236,7 +236,7 @@ export function AssignScanDialog({
             ) : (
               <UserPlus className="mr-2 size-4" />
             )}
-            Assign scan
+            Assign audit
           </Button>
         </DialogFooter>
       </DialogContent>

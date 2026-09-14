@@ -15,7 +15,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 function validateScanId(input: { scanId: string }) {
   const scanId = typeof input?.scanId === "string" ? input.scanId.trim() : "";
-  if (!/^[0-9a-f-]{36}$/i.test(scanId)) throw new Error("A valid scan id is required.");
+  if (!/^[0-9a-f-]{36}$/i.test(scanId)) throw new Error("A valid audit id is required.");
   return { scanId };
 }
 

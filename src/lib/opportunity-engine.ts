@@ -40,7 +40,7 @@ export async function fetchExecutionOpportunities(limit = 8): Promise<ExecutionO
     .eq("status", "completed")
     .order("created_at", { ascending: false })
     .limit(40);
-  if (error) dbError(error, "Could not load scans for opportunities.");
+  if (error) dbError(error, "Could not load audits for opportunities.");
 
   const scanIds = (scans ?? []).map((s) => s.id as string);
   if (!scanIds.length) return [];
@@ -49,7 +49,7 @@ export async function fetchExecutionOpportunities(limit = 8): Promise<ExecutionO
     .from("scan_results")
     .select("scan_id, metrics, executive_summary")
     .in("scan_id", scanIds);
-  if (resultsError) dbError(resultsError, "Could not load scan metrics.");
+  if (resultsError) dbError(resultsError, "Could not load audit metrics.");
 
   const metricsByScan = new Map(
     (results ?? []).map((r) => [r.scan_id as string, r.metrics as Record<string, unknown>]),
@@ -81,7 +81,7 @@ export async function fetchExecutionOpportunities(limit = 8): Promise<ExecutionO
         oos > 0
           ? `${oos} OOS SKU(s) — estimated opportunity`
           : `${atRisk} at-risk SKU(s) — estimated opportunity`,
-      detail: fi.methodology ?? "Indicative revenue at risk from latest scan.",
+      detail: fi.methodology ?? "Indicative revenue at risk from latest audit.",
       estimated_daily_impact_inr: fi.estimated_daily_lost_sales_inr || 0,
       confidence: fi.confidence === "priced" ? "priced" : "indicative",
       created_at: scan.created_at as string,

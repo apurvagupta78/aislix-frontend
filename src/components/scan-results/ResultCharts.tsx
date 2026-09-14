@@ -94,7 +94,7 @@ export function TopBrandsChart({
       description="Share of visible facings per brand."
       loading={loading}
       empty={rows.length === 0}
-      emptyText="Brand shelf share appears here once the scan service returns it."
+      emptyText="Brand shelf share appears here once the analysis service returns it."
     >
       <BarChart data={rows} layout="vertical" margin={{ left: 8, right: 16 }}>
         <CartesianGrid horizontal={false} stroke="var(--border)" />
@@ -185,7 +185,7 @@ export function QuantityDistributionChart({
       description="Detected facings grouped by quantity band."
       loading={loading}
       empty={rows.length === 0}
-      emptyText="Quantity bands appear here once the scan service returns inventory."
+      emptyText="Quantity bands appear here once the analysis service returns inventory."
     >
       <BarChart data={rows} margin={{ left: -12, right: 8 }}>
         <CartesianGrid vertical={false} stroke="var(--border)" />
@@ -241,7 +241,7 @@ export function ShelfHealthChart({
       description="Composite of availability, compliance and detection confidence."
       loading={loading}
       empty={value === undefined}
-      emptyText="The shelf health score appears here once the scan service returns it."
+      emptyText="The shelf health score appears here once the analysis service returns it."
     >
       <RadialBarChart
         data={[{ name: "Shelf health", value: Math.round(value ?? 0), fill: "var(--accent-green)" }]}

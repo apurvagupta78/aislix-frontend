@@ -85,7 +85,7 @@ function CorrectiveActionsPage() {
     mutationFn: async (assignmentIds: string[]) => {
       for (const id of assignmentIds) await requestReScan(id);
     },
-    onSuccess: (_data, ids) => toast.success(`Re-scan requested for ${ids.length} assignment(s)`),
+    onSuccess: (_data, ids) => toast.success(`Re-audit requested for ${ids.length} assignment(s)`),
     onError: (error) => toast.error(toUserMessage(error)),
   });
 
@@ -160,13 +160,13 @@ function CorrectiveActionsPage() {
                   ),
                 ];
                 if (!ids.length) {
-                  toast.error("No open assignments to re-scan.");
+                  toast.error("No open assignments to re-audit.");
                   return;
                 }
                 reScanMutation.mutate(ids);
               }}
             >
-              Request re-scan
+              Request re-audit
             </Button>
           )}
         </div>
@@ -182,7 +182,7 @@ function CorrectiveActionsPage() {
           <EmptyState
             icon={<Wrench className="size-6" />}
             title="No corrective actions"
-            description="Corrective actions appear here once an assigned scan is compared against its planogram."
+            description="Corrective actions appear here once an assigned audit is compared against its planogram."
           />
         ) : (
           <>
@@ -195,7 +195,7 @@ function CorrectiveActionsPage() {
                     <th className="px-4 py-3 text-left font-medium">Suggestion</th>
                     <th className="px-4 py-3 text-left font-medium">Assignee</th>
                     <th className="px-4 py-3 text-left font-medium">Compliance</th>
-                    <th className="px-4 py-3 text-left font-medium">Scan date</th>
+                    <th className="px-4 py-3 text-left font-medium">Audit date</th>
                     <th className="px-4 py-3 text-left font-medium">Status</th>
                   </tr>
                 </thead>
@@ -278,7 +278,7 @@ function CorrectiveActionsPage() {
                               {row.status.replace(/_/g, " ")}
                             </Badge>
                             <p className="mt-1 text-xs text-muted-foreground">
-                              Closes automatically when a re-scan shows it fixed.
+                              Closes automatically when a re-audit shows it fixed.
                             </p>
                           </div>
                         )}
@@ -314,7 +314,7 @@ function CorrectiveActionsPage() {
                   <div className="mt-3">
                     {!isManager ? (
                       <p className="text-xs text-muted-foreground">
-                        Closes automatically when a re-scan shows it fixed.
+                        Closes automatically when a re-audit shows it fixed.
                       </p>
                     ) : (
                     <Select

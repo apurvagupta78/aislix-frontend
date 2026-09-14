@@ -112,7 +112,7 @@ function SettingsPage() {
 const supportLinks = [
   {
     title: "Help center",
-    description: "Guides for scanning, reports and shelf metrics.",
+    description: "Guides for auditing, reports and shelf metrics.",
     icon: LifeBuoy,
     href: "https://docs.lovable.dev",
     cta: "Open help center",

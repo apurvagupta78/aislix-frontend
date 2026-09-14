@@ -335,7 +335,7 @@ function ScanPage() {
   const setupErrors = useMemo(() => {
     const errors: Record<string, string> = {};
     if (lockedByAssignment) return errors;
-    if (!storeId) errors.store = "Select the store for this scan.";
+    if (!storeId) errors.store = "Select the store for this audit.";
     if (!effectiveLocation) errors.location = "Location is required.";
     if (!selections.length) {
       errors.selections = "Add at least one shelf type (category · subcategory).";
@@ -398,7 +398,7 @@ function ScanPage() {
       const next = [...current];
       for (const file of files) {
         if (next.length >= MAX_SCAN_IMAGES) {
-          setFileError(`You can scan up to ${MAX_SCAN_IMAGES} images at a time.`);
+          setFileError(`You can audit up to ${MAX_SCAN_IMAGES} images at a time.`);
           break;
         }
         const problem = validateScanFile(file);
@@ -603,7 +603,7 @@ function ScanPage() {
 
       {loadingAssignment ? (
         <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
-          <Loader2 className="size-4 animate-spin" /> Loading your assigned scan…
+          <Loader2 className="size-4 animate-spin" /> Loading your assigned audit…
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-3">
@@ -611,18 +611,18 @@ function ScanPage() {
             {verifyScanId ? (
               <section className="rounded-2xl border border-brand/30 bg-brand-soft/40 p-4 sm:p-5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-                  Fix → rescan → verify
+                  Fix → re-audit → verify
                 </p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Capture a follow-up photo of the same bay after correcting the shelf. Aislix will
-                  compare execution against your previous scan.
+                  compare execution against your previous audit.
                 </p>
               </section>
             ) : null}
             {assignment && (
               <section className="rounded-2xl border border-brand/30 bg-brand-soft/50 p-4 sm:p-5">
                 <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-                  Assigned scan
+                  Assigned audit
                 </p>
                 <p className="mt-1 text-sm font-semibold text-foreground">
                   Store · {assignment.store_name}
@@ -677,7 +677,7 @@ function ScanPage() {
                   </Select>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Applies to this scan and all planogram rows.
+                  Applies to this audit and all planogram rows.
                 </p>
                 {fieldError("store") && (
                   <p className="text-xs text-destructive">{fieldError("store")}</p>
@@ -729,7 +729,7 @@ function ScanPage() {
                   </h2>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {withPlanogram
-                      ? "Applies to this scan and every expected product below."
+                      ? "Applies to this audit and every expected product below."
                       : "Required before you can add shelf images."}
                   </p>
                 </div>
@@ -789,7 +789,7 @@ function ScanPage() {
                     <Input
                       id="scan-notes"
                       className="rounded-xl"
-                      placeholder="Optional context for this scan"
+                      placeholder="Optional context for this audit"
                       value={notes}
                       disabled={busy}
                       onChange={(e) => setNotes(e.target.value)}
@@ -938,7 +938,7 @@ function ScanPage() {
                     rows={planogramRows}
                     onRowsChange={setPlanogramRows}
                     categories={categories}
-                    tableTitle="Expected products for this scan"
+                    tableTitle="Expected products for this audit"
                     context={{
                       location: shelfLocation.trim(),
                       category,
@@ -1041,7 +1041,7 @@ function ScanPage() {
                   </span>
                   <p className="mt-4 text-sm font-medium">Drag and drop shelf images here</p>
                   <p className="mt-1.5 text-xs text-muted-foreground">
-                    JPG, JPEG or PNG · up to 10 MB each · up to {MAX_SCAN_IMAGES} per scan
+                    JPG, JPEG or PNG · up to 10 MB each · up to {MAX_SCAN_IMAGES} per audit
                   </p>
                 </div>
               )}
@@ -1100,7 +1100,7 @@ function ScanPage() {
 
                 <div className="flex flex-col gap-3 border-t border-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                   <p className="text-sm text-muted-foreground">
-                    {items.length} of {MAX_SCAN_IMAGES} images ready to scan
+                    {items.length} of {MAX_SCAN_IMAGES} images ready to audit
                   </p>
                   <div className="flex gap-2">
                     <Button
@@ -1124,15 +1124,15 @@ function ScanPage() {
                       ) : (
                         <ScanLine className="size-4" />
                       )}
-                      {busy ? "Uploading…" : "Start scan"}
+                      {busy ? "Uploading…" : "Start audit"}
                       {!busy && (
                         <Badge
                           variant="secondary"
                           className="ml-1 rounded-lg text-[11px] font-medium"
                         >
                           {withPlanogram
-                            ? `Compliance scan · ${planogramRows.length} expected product${planogramRows.length === 1 ? "" : "s"}`
-                            : "Free scan"}
+                            ? `Compliance audit · ${planogramRows.length} expected product${planogramRows.length === 1 ? "" : "s"}`
+                            : "Free audit"}
                         </Badge>
                       )}
                     </Button>
@@ -1152,7 +1152,7 @@ function ScanPage() {
                     <AlertTriangle className="size-5" />
                   </span>
                   <div>
-                    <p className="text-sm font-semibold">Scan could not be started</p>
+                    <p className="text-sm font-semibold">Audit could not be started</p>
                     <p className="mt-1 text-sm text-muted-foreground">{errorMessage}</p>
                   </div>
                 </div>

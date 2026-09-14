@@ -107,7 +107,7 @@ export async function fetchDashboard(signal?: AbortSignal): Promise<DashboardRes
       .limit(3),
   ]);
 
-  if (scansRes.error) dbError(scansRes.error, "Could not load scan data.");
+  if (scansRes.error) dbError(scansRes.error, "Could not load audit data.");
   if (storesCountRes.error) dbError(storesCountRes.error, "Could not load stores.");
   if (membersCountRes.error) dbError(membersCountRes.error, "Could not load team data.");
 
@@ -152,7 +152,7 @@ export async function fetchDashboard(signal?: AbortSignal): Promise<DashboardRes
       activity.push({
         id: `scan-${scan.id}`,
         kind: "scan_completed",
-        title: scan.shelf_label ? `Scan completed — ${scan.shelf_label}` : "Scan completed",
+        title: scan.shelf_label ? `Audit completed — ${scan.shelf_label}` : "Audit completed",
         created_at: scan.created_at,
         href: `/dashboard/scans/${scan.id}`,
       });
@@ -288,7 +288,7 @@ export async function fetchRecentScans(
 
   const from = (page - 1) * pageSize;
   const { data, error, count } = await query.range(from, from + pageSize - 1);
-  if (error) dbError(error, "Could not load recent scans.");
+  if (error) dbError(error, "Could not load recent audits.");
 
   const scanIds = (data ?? []).map((s) => s.id);
   const confidenceByScan = new Map<string, number>();
@@ -383,7 +383,7 @@ export async function fetchNotifications(signal?: AbortSignal): Promise<Notifica
       id: `failed-${scan.id}`,
       kind: "confidence_warning",
       severity: "critical",
-      title: scan.shelf_label ? `Scan failed — ${scan.shelf_label}` : "A scan failed to process",
+      title: scan.shelf_label ? `Audit failed — ${scan.shelf_label}` : "An audit failed to process",
       message: scan.error_message ? sanitizeUserMessage(scan.error_message) : undefined,
       created_at: scan.created_at,
       href: `/dashboard/scans/${scan.id}`,
@@ -425,8 +425,8 @@ export async function fetchNotifications(signal?: AbortSignal): Promise<Notifica
         id: "quota-exceeded",
         kind: "subscription",
         severity: "critical",
-        title: "You've used all of your included scans",
-        message: "Upgrade your plan to keep scanning without interruption.",
+        title: "You've used all of your included audits",
+        message: "Upgrade your plan to keep auditing without interruption.",
         href: "/dashboard/billing",
       });
     } else if (pct >= 0.8) {
@@ -434,8 +434,8 @@ export async function fetchNotifications(signal?: AbortSignal): Promise<Notifica
         id: "quota-nearing",
         kind: "subscription",
         severity: "warning",
-        title: "You're nearing your monthly scan quota",
-        message: `${sub.scans_used} of ${quota} scans used.`,
+        title: "You're nearing your monthly audit quota",
+        message: `${sub.scans_used} of ${quota} audits used.`,
         href: "/dashboard/billing",
       });
     }
@@ -456,8 +456,8 @@ export async function fetchNotifications(signal?: AbortSignal): Promise<Notifica
         id: `no-scans-${store.id}`,
         kind: "announcement",
         severity: "info",
-        title: `${store.name} has no scans yet`,
-        message: "Run your first shelf scan for this store.",
+        title: `${store.name} has no audits yet`,
+        message: "Run your first shelf audit for this store.",
         href: "/dashboard/scan",
       });
     }
@@ -626,7 +626,7 @@ export async function fetchStoreComplianceRanking(
     .eq("status", "completed")
     .gte("created_at", since.toISOString())
     .in("store_id", storeIds);
-  if (scanError) dbError(scanError, "Could not load store scan metrics.");
+  if (scanError) dbError(scanError, "Could not load store audit metrics.");
 
   const byStore = new Map<
     string,

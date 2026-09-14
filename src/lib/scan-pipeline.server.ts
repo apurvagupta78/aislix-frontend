@@ -687,7 +687,7 @@ async function storeCsvReport(
   } as never);
 }
 
-/** Recomputes the daily rollup for this org/store from real completed scans. */
+/** Recomputes the daily rollup for this org/store from real completed audits. */
 async function refreshAnalytics(
   supabase: DB,
   scan: { org_id: string; store_id: string | null },
@@ -990,7 +990,7 @@ async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
     .eq("id", scanId)
     .maybeSingle();
   if (error) throw new PipelineError(error.message, 500);
-  if (!scan) throw new PipelineError("Scan not found.", 404);
+  if (!scan) throw new PipelineError("Audit not found.", 404);
   return {
     id: scan.id as string,
     org_id: scan.org_id as string,
@@ -1157,7 +1157,7 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
     .eq("kind", "original")
     .order("created_at", { ascending: true });
   if (imagesError) throw new PipelineError(imagesError.message, 500);
-  if (!images?.length) throw new PipelineError("No shelf images were uploaded for this scan.", 400);
+  if (!images?.length) throw new PipelineError("No shelf images were uploaded for this audit.", 400);
 
   const signedImages: { url: string; path: string; width: number | null; height: number | null }[] =
     [];
@@ -1638,7 +1638,7 @@ async function notifyAssignmentPassed(
       user_id: context.assigner_id,
       org_id: scan.org_id,
       type: "scan_completed",
-      title: "Assigned scan passed — 100% compliance",
+      title: "Assigned audit passed — 100% compliance",
       body: `${context.assignee_name} completed ${context.store_name} · ${context.location} at 100%`,
       payload: {
         assignment_id: context.id,
@@ -1667,7 +1667,7 @@ async function notifyAssigneeNeedsCorrection(
       org_id: scan.org_id,
       type: "scan_needs_correction",
       title: "Shelf audit needs correction",
-      body: `${percentLabel}% compliance — ${openIssues} issue(s) to fix. Re-scan after correcting the shelf.`,
+      body: `${percentLabel}% compliance — ${openIssues} issue(s) to fix. Re-audit after correcting the shelf.`,
       payload: {
         assignment_id: context.id,
         scan_id: scan.id,
@@ -1696,8 +1696,8 @@ async function notifyAssignerOfCompletion(
       user_id: context.assigner_id,
       org_id: scan.org_id,
       type: "scan_needs_correction_manager",
-      title: "Assigned scan needs correction",
-      body: `${context.assignee_name} scanned ${context.store_name} · ${context.location} — ${percentLabel}% compliance, ${openIssues} open issue(s)`,
+      title: "Assigned audit needs correction",
+      body: `${context.assignee_name} audited ${context.store_name} · ${context.location} — ${percentLabel}% compliance, ${openIssues} open issue(s)`,
       payload: {
         assignment_id: context.id,
         scan_id: scan.id,
@@ -2029,7 +2029,7 @@ export async function startScanPipelineServer(
     };
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "The AI scan pipeline failed unexpectedly.";
+      error instanceof Error ? error.message : "The AI audit pipeline failed unexpectedly.";
     await markFailed(supabase, scan.id, message);
     if (error instanceof PipelineError) throw error;
     throw new PipelineError(message, 500);
@@ -2080,7 +2080,7 @@ export async function pollScanPipelineServer(
     return await persistScanPayload(supabase, scan, poll.payload, startedAt);
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "The AI scan pipeline failed unexpectedly.";
+      error instanceof Error ? error.message : "The AI audit pipeline failed unexpectedly.";
     await markFailed(supabase, scan.id, message);
     if (error instanceof PipelineError) throw error;
     throw new PipelineError(message, 500);
@@ -2102,7 +2102,7 @@ export async function runScanPipelineServer(supabase: DB, scanId: string): Promi
     return await persistScanPayload(supabase, scan, payload, startedAt);
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "The AI scan pipeline failed unexpectedly.";
+      error instanceof Error ? error.message : "The AI audit pipeline failed unexpectedly.";
     await markFailed(supabase, scan.id, message);
     if (error instanceof PipelineError) throw error;
     throw new PipelineError(message, 500);

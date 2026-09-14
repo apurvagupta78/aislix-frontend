@@ -462,8 +462,8 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
     .eq("org_id", orgId)
     .eq("id", scanId)
     .maybeSingle();
-  if (scanError) return dbError(scanError, "Could not load this scan.");
-  if (!scan) notFound("Scan not found.");
+  if (scanError) return dbError(scanError, "Could not load this audit.");
+  if (!scan) notFound("Audit not found.");
 
   const scanStatus = scan.status as ScanStatus;
   if (scanStatus === "processing" || scanStatus === "queued") {
@@ -1469,7 +1469,7 @@ export function buildFullScanReportExcel(result: ScanResult): ArrayBuffer {
             "",
           ],
         ]
-      : [["—", "No products returned by scan API", "", "", "", "", "", ""]]),
+      : [["—", "No products returned by analysis API", "", "", "", "", "", ""]]),
   ]);
 
   append("S5 Core KPIs", [
@@ -1617,7 +1617,7 @@ export function downloadDemoFullReportExcel(result: ScanResult): void {
 export async function downloadScanExcel(scanId: string, _url?: string): Promise<void> {
   const result = await fetchScanResult(scanId);
   if (!result.summary && !result.inventory?.length) {
-    throw new Error("This scan has no report data to export.");
+    throw new Error("This audit has no report data to export.");
   }
   downloadBlobBytes(
     buildFullScanReportExcel(result),
@@ -1732,7 +1732,7 @@ export function downloadScanPdf(scanId: string, url?: string): Promise<void> {
     "pdf_url",
     `aislix-${scanId}-report.pdf`,
     url,
-    "No PDF report is available for this scan yet.",
+    "No PDF report is available for this audit yet.",
   );
 }
 
@@ -1767,7 +1767,7 @@ export async function downloadScanAnnotatedImage(
     `aislix-${scanId}-annotated.${ext}`,
     annotated,
 
-    "No annotated image is available for this scan yet.",
+    "No annotated image is available for this audit yet.",
   );
 }
 

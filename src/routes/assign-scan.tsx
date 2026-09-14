@@ -381,7 +381,7 @@ function AssignScanPage() {
     }
     if (planogramMode) {
       if (!multiStore && !planogramRows.length) {
-        setPlanogramError("Add at least one expected product before assigning this scan.");
+        setPlanogramError("Add at least one expected product before assigning this audit.");
         return;
       }
       setPlanogramError(null);
@@ -409,7 +409,7 @@ function AssignScanPage() {
       <AppShell title="Assignments & Schedules" description="Delegate audits to your team.">
         <EmptyState
           title="Manager access required"
-          description="Only owners, admins and managers can assign scans. Ask your workspace owner for access."
+          description="Only owners, admins and managers can assign audits. Ask your workspace owner for access."
         />
       </AppShell>
     );
@@ -807,7 +807,7 @@ function AssignScanPage() {
               ) : (
                 <UserPlus className="mr-2 size-4" />
               )}
-              Assign scan
+              Assign audit
             </Button>
             <Button variant="outline" className="rounded-xl" asChild>
               <Link to="/assigned-scans">View review queue</Link>

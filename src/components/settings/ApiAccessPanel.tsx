@@ -67,7 +67,7 @@ export function ApiAccessPanel() {
     <div className="space-y-4">
       <SettingsCard
         title="API keys"
-        description="Authenticate server-to-server scan requests against the Aislix API."
+        description="Authenticate server-to-server audit requests against the Aislix API."
         icon={KeySquare}
         action={
           <div className="flex gap-2">

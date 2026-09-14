@@ -200,7 +200,7 @@ export async function runLandingUpload(
   if (ctx.landingSessionId) form.append("landing_session_id", ctx.landingSessionId);
   appendContext(form, ctx);
   appendUtm(form);
-  return postScan(form, "Scan failed");
+  return postScan(form, "Audit failed");
 }
 
 

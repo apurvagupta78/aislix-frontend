@@ -518,7 +518,7 @@ export const ScanContextPanel = forwardRef<ScanContextPanelHandle, ScanContextPa
     }
 
     const defaultHint = effectiveRequirePricing
-      ? "Select audit role, add products with role-specific fields, then scan."
+      ? "Select audit role, add products with role-specific fields, then audit."
       : "Select audit role and add expected products — optional price for financial estimates";
 
     const panelBody = open ? (
@@ -736,7 +736,7 @@ export const ScanContextPanel = forwardRef<ScanContextPanelHandle, ScanContextPa
 
               Fields follow the same order as the CSV template above. Click Add product, or your entry
 
-              is saved automatically when you start scanning.
+              is saved automatically when you start auditing.
 
             </p>
 

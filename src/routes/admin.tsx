@@ -52,7 +52,7 @@ function AdminOverviewPage() {
   return (
     <AdminPage
       title="Overview"
-      description="Cross-tenant snapshot of workspaces, users and shelf scans."
+      description="Cross-tenant snapshot of workspaces, users and shelf audits."
     >
       {query.isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -73,9 +73,9 @@ function AdminOverviewPage() {
               { label: "Organizations", value: query.data?.organizations ?? 0 },
               { label: "Users", value: query.data?.users ?? 0 },
               { label: "Stores", value: query.data?.stores ?? 0 },
-              { label: "Shelf scans", value: query.data?.shelf_scans ?? 0 },
-              { label: "Completed scans", value: query.data?.completed_scans ?? 0 },
-              { label: "Failed scans", value: query.data?.failed_scans ?? 0 },
+              { label: "Shelf audits", value: query.data?.shelf_scans ?? 0 },
+              { label: "Completed audits", value: query.data?.completed_scans ?? 0 },
+              { label: "Failed audits", value: query.data?.failed_scans ?? 0 },
               { label: "Landing demo sessions", value: query.data?.landing_demo_sessions ?? 0 },
             ].map((stat) => (
               <Card key={stat.label} className="card-surface">
@@ -90,7 +90,7 @@ function AdminOverviewPage() {
           <div className="flex flex-wrap gap-3">
             <Button asChild variant="brand" className="rounded-xl">
               <Link to="/admin/scans">
-                Browse all scans <ArrowRight className="size-4" />
+                Browse all audits <ArrowRight className="size-4" />
               </Link>
             </Button>
             <Button asChild variant="outline" className="rounded-xl">
@@ -107,7 +107,7 @@ function AdminOverviewPage() {
           <div className="grid gap-6 lg:grid-cols-2">
             <div className="overflow-hidden rounded-xl border border-border">
               <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                <p className="text-sm font-semibold">Recent scans</p>
+                <p className="text-sm font-semibold">Recent audits</p>
                 <Link to="/admin/scans" className="text-xs text-brand hover:underline">
                   View all
                 </Link>
@@ -149,7 +149,7 @@ function AdminOverviewPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Email</TableHead>
-                    <TableHead>Scans</TableHead>
+                    <TableHead>Audits</TableHead>
                     <TableHead>Orgs</TableHead>
                   </TableRow>
                 </TableHeader>

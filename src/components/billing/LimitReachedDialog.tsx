@@ -72,8 +72,8 @@ export function LimitReachedDialog({
             {isStore
               ? "Store limit reached"
               : isCooldown
-                ? "Daily scan limit reached"
-                : "Monthly scan limit reached"}
+                ? "Daily audit limit reached"
+                : "Monthly audit limit reached"}
           </DialogTitle>
           <DialogDescription>{limit?.message}</DialogDescription>
         </DialogHeader>
@@ -85,7 +85,7 @@ export function LimitReachedDialog({
               <span className="font-medium text-foreground">{usage.plan_name}</span>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">{isStore ? "Stores" : "Scans"}</span>
+              <span className="text-muted-foreground">{isStore ? "Stores" : "Audits"}</span>
               <span className="font-medium text-foreground">
                 {isStore ? storeUsageLabel(usage) : scanUsageLabel(usage)}
               </span>

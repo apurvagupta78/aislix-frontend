@@ -385,12 +385,12 @@ function scanLimitError(usage: UsageSummary): ScanLimitError {
       usage,
       cooldown: true,
       ...(usage.cooldown_until ? { cooldownUntil: usage.cooldown_until } : {}),
-      message: `You've used all ${quota} scans on the ${usage.plan_name} plan. Scanning unlocks again ${formatCooldown(usage.cooldown_until)}.`,
+      message: `You've used all ${quota} audits on the ${usage.plan_name} plan. Auditing unlocks again ${formatCooldown(usage.cooldown_until)}.`,
     });
   }
   return new ScanLimitError({
     usage,
-    message: `You've used all ${quota} scans included in your ${usage.plan_name} plan this month. Upgrade to keep scanning.`,
+    message: `You've used all ${quota} audits included in your ${usage.plan_name} plan this month. Upgrade to keep auditing.`,
   });
 }
 
@@ -500,11 +500,11 @@ export function cooldownClock(iso?: string | null, now: number = Date.now()): st
 export function scanUsageLabel(usage: UsageSummary): string {
   const window = usage.quota_period === "rolling_24h" ? "in the last 24 hours" : "this month";
   if (usage.scan_quota === null) {
-    return `${usage.scans_used.toLocaleString("en-IN")} scans used ${window} · Unlimited`;
+    return `${usage.scans_used.toLocaleString("en-IN")} audits used ${window} · Unlimited`;
   }
   return `${usage.scans_used.toLocaleString("en-IN")} / ${usage.scan_quota.toLocaleString(
     "en-IN",
-  )} scans used ${window}`;
+  )} audits used ${window}`;
 }
 
 /** "1 / 3 stores used" or "4 stores · Unlimited". */

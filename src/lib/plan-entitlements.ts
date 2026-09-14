@@ -113,15 +113,15 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
     monthlyPricePaise: 0,
     periodLabel: "forever",
     controls: {
-      audits: { value: 30, label: "AI scans", period: "month" },
+      audits: { value: 30, label: "AI audits", period: "month" },
       users: { value: 1, label: "Users" },
       stores: { value: 1, label: "Stores" },
       masterSetups: { value: 1, label: "Master setups" },
     },
     dailyScanLimit: 5,
     allowanceBullets: [
-      "30 AI shelf scans per month",
-      "Up to 5 scans per day",
+      "30 AI shelf audits per month",
+      "Up to 5 audits per day",
       "1 user",
       "1 store",
       "1 master shelf setup",
@@ -166,14 +166,14 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
   {
     id: "payg",
     name: "Pay as You Go",
-    description: "No subscription. Pay only for the shelf scans you need.",
-    supportingText: "Prepaid credits are valid for 180 days. Credits are deducted only for completed scans.",
+    description: "No subscription. Pay only for the shelf audits you need.",
+    supportingText: "Prepaid credits are valid for 180 days. Credits are deducted only for completed audits.",
     monthlyPriceInr: null,
     perAuditPriceInr: 9,
     perAuditPricePaise: 900,
-    periodLabel: "per completed AI scan",
+    periodLabel: "per completed AI audit",
     controls: {
-      audits: { value: null, label: "Pay per completed scan" },
+      audits: { value: null, label: "Pay per completed audit" },
       users: { value: null, label: "Users" },
       stores: { value: null, label: "Stores" },
       masterSetups: { value: null, label: "Master setups" },
@@ -181,7 +181,7 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
     dailyScanLimit: null,
     allowanceBullets: [
       "No monthly subscription fee",
-      "Buy 11 scans for ₹99",
+      "Buy 11 audits for ₹99",
       "Unlimited users",
       "Unlimited stores and outlets",
       "Unlimited self-service master setups",
@@ -218,7 +218,7 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
       "excel_export",
       "public_share_links",
     ],
-    cta: "Buy Scan Credits",
+    cta: "Buy Audit Credits",
     payAsYouGo: true,
     historyDays: 90,
     quotaPeriod: "pay_per_use",
@@ -228,20 +228,20 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
     id: "starter",
     name: "Starter",
     description: "For local stores and small retail teams building a regular audit habit.",
-    supportingText: "Need more scans? Add 100 for ₹499 or upgrade.",
+    supportingText: "Need more audits? Add 100 for ₹499 or upgrade.",
     monthlyPriceInr: 499,
     monthlyPricePaise: 49900,
     annualPricePaise: 538920,
     periodLabel: "/month",
     controls: {
-      audits: { value: 150, label: "AI scans", period: "month" },
+      audits: { value: 150, label: "AI audits", period: "month" },
       users: { value: null, label: "Users" },
       stores: { value: null, label: "Stores" },
       masterSetups: { value: null, label: "Master setups" },
     },
     dailyScanLimit: null,
     allowanceBullets: [
-      "150 AI shelf scans per month",
+      "150 AI shelf audits per month",
       "Unlimited users",
       "Unlimited stores and outlets",
       "Unlimited self-service master setups",
@@ -288,20 +288,20 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
     id: "growth",
     name: "Growth",
     description: "For growing retail chains, distributors, and field teams.",
-    supportingText: "Need more scans? Add 100 for ₹399 or upgrade.",
+    supportingText: "Need more audits? Add 100 for ₹399 or upgrade.",
     monthlyPriceInr: 1499,
     monthlyPricePaise: 149900,
     annualPricePaise: 1618920,
     periodLabel: "/month",
     controls: {
-      audits: { value: 500, label: "AI scans", period: "month" },
+      audits: { value: 500, label: "AI audits", period: "month" },
       users: { value: null, label: "Users" },
       stores: { value: null, label: "Stores" },
       masterSetups: { value: null, label: "Master setups" },
     },
     dailyScanLimit: null,
     allowanceBullets: [
-      "500 AI shelf scans per month",
+      "500 AI shelf audits per month",
       "Unlimited users",
       "Unlimited stores and outlets",
       "Unlimited self-service master setups",
@@ -357,20 +357,20 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
     id: "professional",
     name: "Professional",
     description: "For supermarkets, dark stores, FMCG brands, and larger retail operations.",
-    supportingText: "Need more scans? Add 500 for ₹1,499.",
+    supportingText: "Need more audits? Add 500 for ₹1,499.",
     monthlyPriceInr: 4999,
     monthlyPricePaise: 499900,
     annualPricePaise: 5398920,
     periodLabel: "/month",
     controls: {
-      audits: { value: 2000, label: "AI scans", period: "month" },
+      audits: { value: 2000, label: "AI audits", period: "month" },
       users: { value: null, label: "Users" },
       stores: { value: null, label: "Stores" },
       masterSetups: { value: null, label: "Master setups" },
     },
     dailyScanLimit: null,
     allowanceBullets: [
-      "2,000 AI shelf scans per month",
+      "2,000 AI shelf audits per month",
       "Unlimited users",
       "Unlimited stores and outlets",
       "Unlimited self-service master setups",
@@ -432,14 +432,14 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
     monthlyPricePaise: 1999900,
     periodLabel: "/month",
     controls: {
-      audits: { value: 8000, label: "AI scans", period: "month" },
+      audits: { value: 8000, label: "AI audits", period: "month" },
       users: { value: null, label: "Users" },
       stores: { value: null, label: "Stores" },
       masterSetups: { value: null, label: "Master setups" },
     },
     dailyScanLimit: null,
     allowanceBullets: [
-      "8,000 AI shelf scans per month in the starting package",
+      "8,000 AI shelf audits per month in the starting package",
       "Unlimited users",
       "Unlimited stores and outlets",
       "Unlimited self-service master setups",
@@ -448,7 +448,7 @@ export const PLAN_DEFINITIONS: PlanDefinition[] = [
     features: [
       "Everything in Professional",
       "Custom rollout planning",
-      "Higher-volume scan packages",
+      "Higher-volume audit packages",
       "Integration requirements scoped to your systems",
       "Security and administration requirements reviewed with your team",
       "Optional assisted onboarding and implementation",
@@ -500,10 +500,10 @@ export function getPlanDefinition(id?: string | null): PlanDefinition | undefine
 
 export function planAuditLimitLabel(plan: PlanDefinition): string {
   const { audits } = plan.controls;
-  if (plan.payAsYouGo) return "Pay per completed AI scan";
-  if (plan.id === "free") return "30 AI scans / month · up to 5 / day";
-  if (audits.value === null) return "Custom AI scan volume";
-  return `${audits.value.toLocaleString("en-IN")} AI scans / month`;
+  if (plan.payAsYouGo) return "Pay per completed AI audit";
+  if (plan.id === "free") return "30 AI audits / month · up to 5 / day";
+  if (audits.value === null) return "Custom AI audit volume";
+  return `${audits.value.toLocaleString("en-IN")} AI audits / month`;
 }
 
 export function formatInr(amount: number): string {
@@ -561,14 +561,14 @@ export const COMPARISON_GROUPS: {
   {
     group: "Pricing and billing",
     rows: [
-      { label: "Monthly price", values: { free: "₹0", payg: "₹9 / scan", starter: "₹499", growth: "₹1,499", professional: "₹4,999", enterprise: "From ₹19,999" } },
+      { label: "Monthly price", values: { free: "₹0", payg: "₹9 / audit", starter: "₹499", growth: "₹1,499", professional: "₹4,999", enterprise: "From ₹19,999" } },
       { label: "Annual (10% off)", values: { free: "—", payg: "—", starter: "₹5,389.20", growth: "₹16,189.20", professional: "₹53,989.20", enterprise: "Quoted" } },
     ],
   },
   {
-    group: "Scan allowances",
+    group: "Audit allowances",
     rows: [
-      { label: "Included AI scans", values: { free: "30 / month", payg: "Prepaid credits", starter: "150 / month", growth: "500 / month", professional: "2,000 / month", enterprise: "8,000 starting" } },
+      { label: "Included AI audits", values: { free: "30 / month", payg: "Prepaid credits", starter: "150 / month", growth: "500 / month", professional: "2,000 / month", enterprise: "8,000 starting" } },
       { label: "Daily commercial limit", values: { free: "5 / day", payg: "None", starter: "None", growth: "None", professional: "None", enterprise: "None" } },
     ],
   },

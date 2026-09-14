@@ -143,7 +143,7 @@ export function LiveDemoSection({
       const status = (err as { status?: number }).status;
       setError(
         status === 429
-          ? "You've used all free demo scans for today. Create a free account to keep scanning."
+          ? "You've used all free demo audits for today. Create a free account to keep auditing."
           : networkErrorMessage(err),
       );
       setPhase("error");
@@ -264,7 +264,7 @@ export function LiveDemoSection({
           subtitle={
             homepageIntro
               ? "Upload a shelf photo or try our sample shelf. Aislix turns it into a structured retail audit in seconds."
-              : "Try a real shelf scan — no login required."
+              : "Try a real shelf audit — no login required."
           }
           {...(homepageIntro ? { eyebrow: "TRY AISLIX FREE" } : { eyebrow: "Live demo" })}
           className={homepageIntro ? "max-w-3xl" : undefined}
@@ -410,7 +410,7 @@ function EmptyResults() {
     <div className="grid min-h-48 place-items-center py-6 text-center">
       <p className="max-w-md text-sm text-muted-foreground">
         Choose the sample shelf or upload your photo above — then confirm category, optionally add a
-        planogram, and start scanning. Execution, merchandising, brand, and executive views will
+        planogram, and start auditing. Execution, merchandising, brand, and executive views will
         appear here.
       </p>
     </div>

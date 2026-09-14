@@ -50,8 +50,8 @@ export const permissionLabels: Record<PermissionKey, string> = {
   org_settings: "Organization settings",
   manage_users: "Invite & manage users",
   manage_stores: "Create & edit stores",
-  run_scans: "Run shelf scans",
-  view_reports: "View scans & reports",
+  run_scans: "Run shelf audits",
+  view_reports: "View audits & reports",
   export_data: "Export data & PDF reports",
 };
 
@@ -75,10 +75,10 @@ export const rolePermissions: Record<UserRole, PermissionKey[]> = {
 export const roleSummaries: Record<UserRole, string> = {
   owner: "Complete control of the organization, including billing and account deletion.",
   admin: "Manages stores, users and settings. Cannot change billing or delete the account.",
-  manager: "Uploads planograms, assigns scans and reviews reports across stores.",
-  member: "Teammate who completes assigned scans and views their results.",
-  store_manager: "Runs scans and works with reports for the stores assigned to them.",
-  viewer: "Read-only access to scans and reports for assigned stores.",
+  manager: "Uploads planograms, assigns audits and reviews reports across stores.",
+  member: "Teammate who completes assigned audits and views their results.",
+  store_manager: "Runs audits and works with reports for the stores assigned to them.",
+  viewer: "Read-only access to audits and reports for assigned stores.",
 };
 
 export const roleScope: Record<UserRole, "organization" | "assigned_stores"> = {
@@ -540,7 +540,7 @@ async function buildActivity(orgId: string, userId?: string, limit = 20): Promis
     events.push({
       id: `scan-${scan.id}`,
       kind: "login",
-      message: `Ran a shelf scan (${scan.status})`,
+      message: `Ran a shelf audit (${scan.status})`,
       actor_name: actor?.full_name ?? actor?.email ?? null,
       created_at: scan.created_at,
     });

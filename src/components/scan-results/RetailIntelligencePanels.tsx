@@ -414,7 +414,7 @@ export function VerifiedExecutionPanel({
 
       <p className="mt-2 text-sm text-muted-foreground">
 
-        {verification?.summary ?? "Before / after comparison with the previous scan at this location."}
+        {verification?.summary ?? "Before / after comparison with the previous audit at this location."}
 
       </p>
 

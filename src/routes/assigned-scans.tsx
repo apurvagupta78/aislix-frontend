@@ -103,7 +103,7 @@ function AssignmentAttemptsExpand({ assignmentId }: { assignmentId: string }) {
         onClick={() => setOpen((value) => !value)}
       >
         <ChevronDown className={`size-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
-        {open ? "Hide attempts" : "Show scan attempts"}
+        {open ? "Hide attempts" : "Show audit attempts"}
       </button>
       {open && (
         <div className="mt-2">
@@ -140,7 +140,7 @@ function AssignmentsTab({ storeId, assignerMe }: { storeId?: string; assignerMe?
 
   const notifyMutation = useMutation({
     mutationFn: (row: Assignment) => requestReScan(row),
-    onSuccess: () => toast.success("Assignee notified to re-scan"),
+    onSuccess: () => toast.success("Assignee notified to re-audit"),
     onError: (error) => toast.error(toUserMessage(error)),
   });
 
@@ -204,7 +204,7 @@ function AssignmentsTab({ storeId, assignerMe }: { storeId?: string; assignerMe?
           description="Assign a scoped shelf audit to a team member to see it tracked here."
           action={
             <Button variant="brand" className="rounded-xl" asChild>
-              <Link to="/assign-scan" search={{ store: undefined, scope: undefined, planogramVersion: undefined }}>Assign scan</Link>
+              <Link to="/assign-scan" search={{ store: undefined, scope: undefined, planogramVersion: undefined }}>Assign audit</Link>
             </Button>
           }
         />
@@ -322,7 +322,7 @@ function AssignmentsTab({ storeId, assignerMe }: { storeId?: string; assignerMe?
                 </p>
                 {row.status === "needs_correction" && (
                   <p className="mt-1 text-xs font-medium text-destructive">
-                    {row.open_issue_count} open issues · re-scan required
+                    {row.open_issue_count} open issues · re-audit required
                   </p>
                 )}
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
@@ -379,8 +379,8 @@ function TeamScansTab() {
     return (
       <EmptyState
         icon={<ClipboardList className="size-6" />}
-        title="No team scans yet"
-        description="Once a teammate completes an assigned audit, their scan appears here with compliance detail."
+        title="No team audits yet"
+        description="Once a teammate completes an assigned audit, their audit appears here with compliance detail."
       />
     );
 
@@ -390,7 +390,7 @@ function TeamScansTab() {
         <thead className="bg-surface text-xs uppercase tracking-wide text-muted-foreground">
           <tr>
             <th className="px-4 py-3 text-left font-medium">Assignment ID</th>
-            <th className="px-4 py-3 text-left font-medium">Scan date</th>
+            <th className="px-4 py-3 text-left font-medium">Audit date</th>
             <th className="px-4 py-3 text-left font-medium">Assignee</th>
             <th className="px-4 py-3 text-left font-medium">Store</th>
             <th className="px-4 py-3 text-left font-medium">Location</th>
@@ -478,7 +478,7 @@ function AssignedScansPage() {
               Assignments
             </TabsTrigger>
             <TabsTrigger value="team-scans" className="rounded-lg">
-              Team Scans
+              Team Audits
             </TabsTrigger>
           </TabsList>
           {tab === "assignments" ? (

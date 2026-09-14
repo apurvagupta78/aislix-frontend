@@ -158,7 +158,7 @@ export function RetailIntelligenceDemo() {
       const status = (err as { status?: number }).status;
       setError(
         status === 429
-          ? "You've used all free demo scans for today. Create a free account to keep scanning."
+          ? "You've used all free demo audits for today. Create a free account to keep auditing."
           : networkErrorMessage(err),
       );
       setPhase("error");
@@ -348,7 +348,7 @@ function EmptyResults() {
     <div className="grid min-h-48 place-items-center py-8 text-center">
       <p className="max-w-md text-sm text-muted-foreground">
         Choose the sample shelf or upload your photo above — then confirm category, optionally add a
-        planogram, and start scanning. Execution, merchandising, brand, and executive views will
+        planogram, and start auditing. Execution, merchandising, brand, and executive views will
         appear here.
       </p>
     </div>

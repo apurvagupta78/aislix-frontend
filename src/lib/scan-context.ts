@@ -624,7 +624,7 @@ function buildDemoRoleSummaries(
     `Field view: ${facings} facings detected across ${s?.unique_skus ?? 0} SKUs.`,
     stockGapsFull,
     (s?.placement_issue_count ?? s?.misplaced_products ?? 0) > 0
-      ? `${s?.placement_issue_count ?? s?.misplaced_products} placement issue(s) — move products to correct section and rescan.`
+      ? `${s?.placement_issue_count ?? s?.misplaced_products} placement issue(s) — move products to correct section and re-audit.`
       : "",
     planogram,
   ].filter(Boolean);
@@ -1204,13 +1204,13 @@ export function pricingSetupMessage(
   const role = ctx.auditRole ?? "supermarket";
   if (!roleRequiresPricing(role)) {
     return expectedRows.length
-      ? "Add at least one expected product before scanning."
-      : "Add at least one product to the planogram before scanning.";
+      ? "Add at least one expected product before auditing."
+      : "Add at least one product to the planogram before auditing.";
   }
   if (expectedRows.length) {
-    return "Add shelf price (MRP) for every expected product before scanning.";
+    return "Add shelf price (MRP) for every expected product before auditing.";
   }
-  return "Add at least one product with shelf price (MRP) before scanning.";
+  return "Add at least one product with shelf price (MRP) before auditing.";
 }
 
 /** Dashboard + demo: enrich summaries, competitor intel, and ledger consistently. */

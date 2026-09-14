@@ -1,6 +1,6 @@
 /**
  * Shared "expected products" builder used by Planogram (Store Master step 2)
- * and by the optional planogram section on the New Scan page.
+ * and by the optional planogram section on the New Audit page.
  *
  * Field order is fixed: Location, Category, Sub category, Brand, Product Name,
  * Variant (optional), Expected qty, SKU (optional), Shelf Position (optional).
@@ -242,7 +242,7 @@ export function PlanogramBuilder({
     if (!valid.length) {
       setCsvError(
         mismatched.length
-          ? `No rows match this scan's location (${context?.location}). Fix the highlighted rows or change the location above.`
+          ? `No rows match this audit's location (${context?.location}). Fix the highlighted rows or change the location above.`
           : "No valid rows to import. Fix the highlighted rows in your CSV and upload again.",
       );
       return;
@@ -270,7 +270,7 @@ export function PlanogramBuilder({
     if (problem) {
       setManualError(
         context && /^(Location|Category|Sub category) is required/.test(problem)
-          ? "Set location, category and subcategory in the scan context above first."
+          ? "Set location, category and subcategory in the audit context above first."
           : problem,
       );
       return;
