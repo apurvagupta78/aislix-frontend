@@ -534,6 +534,7 @@ export type SubmitValidation = {
   missingSkus: string[];
   missingBins: string[];
   missingRca: string[];
+  missingOtherNotes: string[];
 };
 
 export function validateDigitalAuditSubmit(session: DigitalAuditSession): SubmitValidation {

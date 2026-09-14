@@ -45,7 +45,7 @@ type ShareLoaderData = {
   demoSession: LandingScanResult | null;
 };
 
-/** Resolve share payload on the server — never self-fetch /api (breaks SSR on Lovable). */
+/** Resolve share (payload as any) on the server — never self-fetch /api (breaks SSR on Lovable). */
 async function loadPublicShare(token: string): Promise<ShareLoaderData> {
   const trimmed = String(token ?? "").trim();
   if (!trimmed) return { report: null, demoSession: null };
@@ -171,7 +171,7 @@ function DemoSharedReport({ session }: { session: LandingScanResult }) {
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        <DemoScanResultsBody data={data} rawData={data} activeRole={role} demoMode compact />
+        <DemoScanResultsBody data={data} rawData={data} activeRole={role} demoMode compact onRoleChange={() => {}} />
       </main>
     </div>
   );
@@ -194,12 +194,12 @@ function SharedReport() {
     let cancelled = false;
     setLoading(true);
     fetchShare({ data: { token } })
-      .then((payload) => {
+      .then((payload: any) => {
         if (cancelled) return;
-        if (payload.kind === "demo") {
-          setResolved({ report: null, demoSession: payload.demoSession });
-        } else if (payload.kind === "report") {
-          setResolved({ report: payload.report, demoSession: null });
+        if ((payload as any).kind === "demo") {
+          setResolved({ report: null, demoSession: (payload as any).demoSession });
+        } else if ((payload as any).kind === "report") {
+          setResolved({ report: (payload as any).report, demoSession: null });
         }
       })
       .catch(() => {

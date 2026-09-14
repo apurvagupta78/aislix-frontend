@@ -124,13 +124,13 @@ function DigitalAuditPage() {
           toast.success(`Synced ${syncedLines} line(s) and ${syncedPhotos} photo(s).`);
           void queryClient.invalidateQueries({ queryKey: ["digital-audit", assignmentId] });
         }
-        void listPendingCounts().then(setPendingCount);
+        void listPendingCounts().then((c: any) => setPendingCount(c.lines + c.photos));
       });
     };
     const onOffline = () => setOffline(true);
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
-    void listPendingCounts().then(setPendingCount);
+    void listPendingCounts().then((c: any) => setPendingCount(c.lines + c.photos));
     return () => {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
@@ -266,13 +266,13 @@ function DigitalAuditPage() {
   const validation = validateDigitalAuditSubmit(session);
   const activeLines = activeBin ? (linesByBin.get(activeBin) ?? []) : [];
   const binHasPhoto = session.evidence.some((e) => e.bin_key === activeBin);
-  const completedSkus = session.lines.filter((l) => l.actual_qty != null).length;
+  const completedSkus = session?.lines.filter((l) => l.actual_qty != null).length;
   const binsWithPhoto = session.bins.filter((bin) =>
     session.evidence.some((e) => e.bin_key === bin),
   ).length;
 
   function handleBarcodeLookup() {
-    const line = lookupLineByBarcode(session.lines, barcodeInput.trim());
+    const line = lookupLineByBarcode(session?.lines, barcodeInput.trim());
     if (!line) {
       toast.error("No matching SKU for that barcode.");
       return;
@@ -284,12 +284,12 @@ function DigitalAuditPage() {
   return (
     <AppShell
       title="Digital Audit"
-      description={`${session.store_name} · ${session.lines.length} SKUs · ${session.bins.length} shelf/bin(s)`}
+      description={`${session.store_name} · ${session?.lines.length} SKUs · ${session.bins.length} shelf/bin(s)`}
     >
       <div className="mx-auto max-w-3xl space-y-6 pb-28">
         <AuditProgressHeader
           storeName={session.store_name}
-          totalSkus={session.lines.length}
+          totalSkus={session?.lines.length}
           completedSkus={completedSkus}
           binsWithPhoto={binsWithPhoto}
           totalBins={session.bins.length}
@@ -333,7 +333,7 @@ function DigitalAuditPage() {
           onOpenChange={setScanOpen}
           onScan={(code) => {
             setBarcodeInput(code);
-            const line = lookupLineByBarcode(session.lines, code);
+            const line = lookupLineByBarcode(session?.lines, code);
             if (line) {
               setActiveBin(line.bin_key);
               toast.success(`Found ${line.product_name}`);

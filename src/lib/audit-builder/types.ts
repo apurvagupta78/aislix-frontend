@@ -122,6 +122,9 @@ export type FieldConfig = {
   readOnly?: boolean;
 };
 
+export type AuditResponseValue = string | number | boolean | string[] | null;
+export type FieldValues = Record<string, AuditResponseValue>;
+
 export type VisibilityRule = {
   field: string;
   equals?: unknown;
@@ -267,7 +270,6 @@ export type TemplateVersion = {
 };
 
 export type AuditResponseValue = string | number | boolean | string[] | null;
-export type FieldValues = Record<string, AuditResponseValue>;
 
 export type AuditResponse = {
   id: string;

@@ -390,7 +390,7 @@ function computeRoleDashboard(
     ? isDemoOralCareContext(ctx as ScanContextState) || isDemoOralCareResult(result)
     : isDemoOralCareResult(result);
   const inv = inventoryByKey(result, rows, demoMode);
-  const pkg = autoPopulateAuditPackage(rows, auditPackage ?? {});
+  const pkg = autoPopulateAuditPackage(rows, auditPackage ?? ({} as any));
   const assortmentSkus = pkg.assortment_skus.filter((a) => !a.optional).map((a) => a.sku);
   const mslSkus = pkg.msl_skus.map((m) => m.sku);
 

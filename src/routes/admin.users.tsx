@@ -98,7 +98,7 @@ function AdminUsersPage() {
                       <TableCell>
                         <Link
                           to="/admin/scans"
-                          search={{ userId: row.id }}
+                          search={(prev) => ({ ...prev, userId: row.id })}
                           className="font-medium text-brand hover:underline"
                         >
                           {row.scan_count}
