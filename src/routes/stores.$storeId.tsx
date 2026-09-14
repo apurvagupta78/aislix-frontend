@@ -34,6 +34,7 @@ import {
   formatScore,
   storeLocation,
 } from "@/lib/organization";
+import { StoreGovernanceHistory } from "@/components/store/StoreGovernanceHistory";
 
 export const Route = createFileRoute("/stores/$storeId")({
   head: () => ({
@@ -209,6 +210,7 @@ function StoreDashboard() {
           </div>
 
           <StoreHealthTrend storeId={storeId} />
+          <StoreGovernanceHistory storeId={storeId} healthScore={metrics?.shelf_health_score} />
           <StoreRecentScans storeId={storeId} />
 
           <div className="grid gap-5 xl:grid-cols-2">
@@ -244,3 +246,4 @@ function Detail({
     </div>
   );
 }
+

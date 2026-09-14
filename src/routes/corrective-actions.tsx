@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { KpiCard } from "@/components/audit-governance/KpiCard";
+import { SLAIndicator } from "@/components/audit-governance/SLAIndicator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,6 +26,10 @@ import {
   updateCorrectiveActionStatus,
   type ActionStatus,
 } from "@/lib/corrective-actions";
+import {
+  fetchLifecycleActions,
+  lifecycleActionsKpis,
+} from "@/lib/corrective-action-lifecycle";
 import { formatDate } from "@/routes/my-scans";
 import { isOrgManager, requestReScan } from "@/lib/assignments";
 import { useGlobalFilters } from "@/lib/global-filters";
@@ -82,6 +88,23 @@ function CorrectiveActionsMain() {
     retry: false,
   });
 
+  const lifecycleQuery = useQuery({
+    queryKey: ["lifecycle-actions", globalFilters.storeId],
+    queryFn: () =>
+      fetchLifecycleActions({
+        storeId: globalFilters.storeId !== "all" ? globalFilters.storeId : undefined,
+      }),
+    retry: false,
+  });
+  const lifecycleKpis = useMemo(
+    () => lifecycleActionsKpis(lifecycleQuery.data ?? []),
+    [lifecycleQuery.data],
+  );
+  const lifecycleById = useMemo(
+    () => new Map((lifecycleQuery.data ?? []).map((a) => [a.id, a])),
+    [lifecycleQuery.data],
+  );
+
   const mutation = useMutation({
     mutationFn: ({ id, next }: { id: string; next: ActionStatus }) =>
       updateCorrectiveActionStatus(id, next),
@@ -113,6 +136,16 @@ function CorrectiveActionsMain() {
 
   return (
     <div className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <KpiCard label="Open" value={String(lifecycleKpis.open)} />
+          <KpiCard label="Critical" value={String(lifecycleKpis.critical)} />
+          <KpiCard label="Due today" value={String(lifecycleKpis.dueToday)} />
+          <KpiCard label="Overdue" value={String(lifecycleKpis.overdue)} />
+          <KpiCard label="Pending verification" value={String(lifecycleKpis.pending_verification)} />
+          <KpiCard label="Resolved" value={String(lifecycleKpis.resolved)} />
+          <KpiCard label="Closed" value={String(lifecycleKpis.closed)} />
+        </div>
+
         <div className="flex flex-wrap gap-2">
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="w-40 rounded-xl">
@@ -203,15 +236,24 @@ function CorrectiveActionsMain() {
                     <th className="px-4 py-3 text-left font-medium">Assignee</th>
                     <th className="px-4 py-3 text-left font-medium">Compliance</th>
                     <th className="px-4 py-3 text-left font-medium">Audit date</th>
+                    <th className="px-4 py-3 text-left font-medium">SLA</th>
                     <th className="px-4 py-3 text-left font-medium">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((row) => (
+                  {rows.map((row) => {
+                    const lifecycle = lifecycleById.get(row.id);
+                    return (
                     <tr key={row.id} className="border-t border-border align-top">
                       <td className="px-4 py-3 text-foreground">{row.store_name}</td>
                       <td className="px-4 py-3">
-                        <span className="font-medium text-foreground">{row.product ?? "—"}</span>
+                        <Link
+                          to="/corrective-actions/$actionId"
+                          params={{ actionId: row.id }}
+                          className="font-medium text-foreground hover:underline"
+                        >
+                          {row.product ?? "—"}
+                        </Link>
                         <Badge
                           variant="secondary"
                           className="ml-2 rounded-full border-0 text-xs"
@@ -258,6 +300,13 @@ function CorrectiveActionsMain() {
                         {formatDate(row.scan_date)}
                       </td>
                       <td className="px-4 py-3">
+                        {lifecycle?.due_at ? (
+                          <SLAIndicator dueAt={lifecycle.due_at} status={lifecycle.status} />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
                         {isManager ? (
                           <Select
                             value={row.status}
@@ -291,13 +340,15 @@ function CorrectiveActionsMain() {
                         )}
                       </td>
                     </tr>
-                  ))}
+                  );})}
                 </tbody>
               </table>
             </div>
 
             <div className="space-y-3 md:hidden">
-              {rows.map((row) => (
+              {rows.map((row) => {
+                const lifecycle = lifecycleById.get(row.id);
+                return (
                 <div
                   key={row.id}
                   className="rounded-2xl border border-border bg-card p-4 shadow-sm"
@@ -318,6 +369,16 @@ function CorrectiveActionsMain() {
                   <p className="mt-1 text-xs text-muted-foreground">
                     {row.assignee_name} · {formatDate(row.scan_date)}
                   </p>
+                  {lifecycle?.due_at ? (
+                    <SLAIndicator dueAt={lifecycle.due_at} status={lifecycle.status} className="mt-2" />
+                  ) : null}
+                  <Link
+                    to="/corrective-actions/$actionId"
+                    params={{ actionId: row.id }}
+                    className="mt-2 inline-block text-xs text-brand hover:underline"
+                  >
+                    Open detail
+                  </Link>
                   <div className="mt-3">
                     {!isManager ? (
                       <p className="text-xs text-muted-foreground">
@@ -344,7 +405,7 @@ function CorrectiveActionsMain() {
                     )}
                   </div>
                 </div>
-              ))}
+              );})}
             </div>
           </>
         )}

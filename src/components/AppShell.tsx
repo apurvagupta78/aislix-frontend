@@ -22,6 +22,7 @@ import {
   Wrench,
   BarChart3,
   CalendarClock,
+  Clock,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -147,6 +148,7 @@ const SECTIONS: NavSection[] = [
         search: { tab: "assignments" },
       },
       { kind: "leaf", label: "Recurring Audits", to: "/audit-schedules", icon: CalendarClock },
+      { kind: "leaf", label: "SLA & Escalation", to: "/escalation-settings", icon: Clock },
     ],
   },
   {
@@ -155,6 +157,7 @@ const SECTIONS: NavSection[] = [
     icon: Wrench,
     items: [
       { kind: "leaf", label: "Exceptions", to: "/exceptions", icon: AlertTriangle, managerOnly: true },
+      { kind: "leaf", label: "Findings", to: "/findings", icon: AlertTriangle },
       { kind: "leaf", label: "Corrective Actions", to: "/corrective-actions", icon: Wrench },
       {
         kind: "leaf",

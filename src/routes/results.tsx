@@ -19,6 +19,7 @@ import { ScanResultsHeaderBar } from "@/components/scan/ScanResultsHeaderBar";
 import { isDemoOralCareContext } from "@/lib/demo-oral-care-planogram";
 import { EmptyState, ErrorState } from "@/components/States";
 import { FixRescanVerifyPanel } from "@/components/scan-results/FixRescanVerifyPanel";
+import { AuditGovernanceTabs } from "@/components/audit-governance/AuditGovernanceTabs";
 import { ScanResultsActionsFooter } from "@/components/scan/ScanResultsActionsFooter";
 import { AI_DISCLAIMER } from "@/components/scan/ScanProgressPanel";
 import { planHasFeature } from "@/lib/plan-features";
@@ -245,6 +246,9 @@ function Results() {
                   scanId={data?.scan_id}
                 />
               )}
+              {data?.scan_id ? (
+                <AuditGovernanceTabs scanId={data.scan_id} scanData={data} />
+              ) : null}
 
               {!scanHadPlanogram &&
               (showOptionalPricing || hasActiveScanContext(scanContext)) ? (

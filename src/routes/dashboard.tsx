@@ -13,6 +13,8 @@ import { StoreTeamPerformanceSection } from "@/components/dashboard/StoreTeamPer
 import { WorkspaceManagementSection } from "@/components/dashboard/WorkspaceManagementSection";
 import { AuditExecutiveSection } from "@/components/audit/AuditExecutiveSection";
 import { QuickActions } from "@/components/dashboard/DashboardParts";
+import { DashboardCommandCenter } from "@/components/dashboard/DashboardCommandCenter";
+import { FindingsActionsSection } from "@/components/dashboard/FindingsActionsSection";
 import {
   PerformanceOverTimeSection,
   RetailPerformanceSection,
@@ -261,6 +263,13 @@ function DashboardMain({
           </div>
 
           <WhatNeedsAttentionSection data={data} role={filters.role} />
+
+          <DashboardCommandCenter
+            filters={filters}
+            planogramCompliance={data.kpis.planogram?.percent ?? data.kpis.avg_planogram}
+          />
+
+          <FindingsActionsSection filters={filters} />
 
           <PerformanceOverTimeSection data={data} role={filters.role} kriFilter={filters.kri} />
 

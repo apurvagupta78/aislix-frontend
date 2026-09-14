@@ -549,11 +549,13 @@ export function validateDigitalAuditSubmit(session: DigitalAuditSession): Submit
       return v.variance_qty !== 0 && !l.rca_code;
     })
     .map((l) => l.product_name);
+  const missingOtherNotes = session.lines.filter((l) => l.rca_code === "other" && !l.rca_notes?.trim());
   return {
-    ok: missingSkus.length === 0 && missingBins.length === 0 && missingRca.length === 0,
+    ok: missingSkus.length === 0 && missingBins.length === 0 && missingRca.length === 0 && missingOtherNotes.length === 0,
     missingSkus,
     missingBins,
     missingRca,
+    missingOtherNotes: missingOtherNotes.map((l) => l.product_name),
   };
 }
 
@@ -575,6 +577,9 @@ export async function submitDigitalAudit(input: {
     }
     if (validation.missingRca.length) {
       parts.push(`Select a reason for variance on ${validation.missingRca.length} SKU(s).`);
+    }
+    if (validation.missingOtherNotes.length) {
+      parts.push("Notes are required when RCA is Other.");
     }
     throw new Error(parts.join(" "));
   }
@@ -599,6 +604,7 @@ export async function submitDigitalAudit(input: {
       submitted_lat: input.lat ?? null,
       submitted_lng: input.lng ?? null,
       geofence_status: geo,
+      locked_at: now,
       device_info: { userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null },
     } as Record<string, unknown>)
     .eq("id", input.scanId);
@@ -619,6 +625,19 @@ export async function submitDigitalAudit(input: {
     });
   } catch (e) {
     console.error("[digital-audit] submit notification failed", e);
+  }
+
+  try {
+    const { syncFindingsForScan } = await import("@/lib/findings");
+    const { recordActivity } = await import("@/lib/audit-activity");
+    await syncFindingsForScan(input.scanId);
+    await recordActivity({
+      scanId: input.scanId,
+      eventType: "audit_submitted",
+      summary: "Digital audit submitted and locked",
+    });
+  } catch (e) {
+    console.error("[digital-audit] finding sync failed", e);
   }
 }
 
@@ -740,6 +759,18 @@ export async function reviewDigitalAudit(input: {
     }
 
     await computeAndPersistDigitalComparison(input.scanId);
+    try {
+      const { syncFindingsForScan } = await import("@/lib/findings");
+      const { recordActivity } = await import("@/lib/audit-activity");
+      await syncFindingsForScan(input.scanId);
+      await recordActivity({
+        scanId: input.scanId,
+        eventType: "audit_approved",
+        summary: "Manager approved the audit and synced findings",
+      });
+    } catch (e) {
+      console.error("[digital-audit] finding sync after approval failed", e);
+    }
 
     const session = await loadDigitalAuditSession(input.scanId);
     const totalVariance = session.lines.reduce((s, l) => s + Math.abs(l.variance_value_inr ?? 0), 0);

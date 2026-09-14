@@ -102,5 +102,14 @@ export function notificationHref(notification: InboxNotification): string {
     const scanId = notification.payload["scan_id"];
     return typeof scanId === "string" ? `/results?scan=${encodeURIComponent(scanId)}` : "/history";
   }
+  if (notification.type === "action_assigned" || notification.type === "resolution_rejected") {
+    const actionId = notification.payload["action_id"];
+    return typeof actionId === "string" ? `/corrective-actions/${encodeURIComponent(actionId)}` : "/corrective-actions";
+  }
+  if (notification.type === "critical_finding" || notification.type === "resolution_submitted") {
+    const findingId = notification.payload["finding_id"];
+    return typeof findingId === "string" ? `/findings/${encodeURIComponent(findingId)}` : "/findings";
+  }
+  if (notification.type === "reaudit_requested") return "/my-scans";
   return "/dashboard";
 }

@@ -93,6 +93,7 @@ export function useOptionalGlobalFilters(): GlobalFilterContextValue | null {
 /** Pages that should show the global filter bar */
 export const GLOBAL_FILTER_PATHS = [
   "/exceptions",
+  "/findings",
   "/audit-intelligence",
   "/sku-intelligence",
   "/corrective-actions",
