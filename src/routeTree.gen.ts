@@ -19,6 +19,8 @@ import { Route as AuditIntelligenceRouteImport } from './routes/audit-intelligen
 import { Route as AuditReviewScanIdRouteImport } from './routes/audit-review.$scanId'
 import { Route as AuditSchedulesRouteImport } from './routes/audit-schedules'
 import { Route as AuditTemplatesRouteImport } from './routes/audit-templates'
+import { Route as AuditTemplatesTemplateIdRouteImport } from './routes/audit-templates.$templateId'
+import { Route as CustomAuditRouteImport } from './routes/custom-audit'
 import { Route as ExceptionsRouteImport } from './routes/exceptions'
 import { Route as ExceptionsExceptionIdRouteImport } from './routes/exceptions.$exceptionId'
 import { Route as SkuIntelligenceRouteImport } from './routes/sku-intelligence'
@@ -137,6 +139,16 @@ const AuditSchedulesRoute = AuditSchedulesRouteImport.update({
 const AuditTemplatesRoute = AuditTemplatesRouteImport.update({
   id: '/audit-templates',
   path: '/audit-templates',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuditTemplatesTemplateIdRoute = AuditTemplatesTemplateIdRouteImport.update({
+  id: '/audit-templates/$templateId',
+  path: '/audit-templates/$templateId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CustomAuditRoute = CustomAuditRouteImport.update({
+  id: '/custom-audit',
+  path: '/custom-audit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExceptionsRoute = ExceptionsRouteImport.update({
@@ -499,7 +511,9 @@ export interface FileRoutesByFullPath {
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/audit-schedules': typeof AuditSchedulesRoute
   '/audit-templates': typeof AuditTemplatesRoute
+  '/audit-templates/$templateId': typeof AuditTemplatesTemplateIdRoute
   '/billing': typeof BillingRoute
+  '/custom-audit': typeof CustomAuditRoute
   '/digital-audit': typeof DigitalAuditRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
@@ -580,7 +594,9 @@ export interface FileRoutesByTo {
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/audit-schedules': typeof AuditSchedulesRoute
   '/audit-templates': typeof AuditTemplatesRoute
+  '/audit-templates/$templateId': typeof AuditTemplatesTemplateIdRoute
   '/billing': typeof BillingRoute
+  '/custom-audit': typeof CustomAuditRoute
   '/digital-audit': typeof DigitalAuditRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
@@ -662,7 +678,9 @@ export interface FileRoutesById {
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/audit-schedules': typeof AuditSchedulesRoute
   '/audit-templates': typeof AuditTemplatesRoute
+  '/audit-templates/$templateId': typeof AuditTemplatesTemplateIdRoute
   '/billing': typeof BillingRoute
+  '/custom-audit': typeof CustomAuditRoute
   '/digital-audit': typeof DigitalAuditRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
@@ -1089,6 +1107,20 @@ declare module '@tanstack/react-router' {
       path: '/audit-templates'
       fullPath: '/audit-templates'
       preLoaderRoute: typeof AuditTemplatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/audit-templates/$templateId': {
+      id: '/audit-templates/$templateId'
+      path: '/audit-templates/$templateId'
+      fullPath: '/audit-templates/$templateId'
+      preLoaderRoute: typeof AuditTemplatesTemplateIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/custom-audit': {
+      id: '/custom-audit'
+      path: '/custom-audit'
+      fullPath: '/custom-audit'
+      preLoaderRoute: typeof CustomAuditRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/exceptions': {
@@ -1606,7 +1638,9 @@ const rootRouteChildren: RootRouteChildren = {
   AuditReviewScanIdRoute: AuditReviewScanIdRoute,
   AuditSchedulesRoute: AuditSchedulesRoute,
   AuditTemplatesRoute: AuditTemplatesRoute,
+  AuditTemplatesTemplateIdRoute: AuditTemplatesTemplateIdRoute,
   BillingRoute: BillingRoute,
+  CustomAuditRoute: CustomAuditRoute,
   DigitalAuditRoute: DigitalAuditRoute,
   CompareRoute: CompareRoute,
   ContactRoute: ContactRoute,

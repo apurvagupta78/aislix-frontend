@@ -139,7 +139,7 @@ const SECTIONS: NavSection[] = [
     icon: CalendarClock,
     managerOnly: true,
     items: [
-      { kind: "leaf", label: "Templates", to: "/audit-templates", icon: FileBarChart },
+      { kind: "leaf", label: "Audit Templates", to: "/audit-templates", icon: FileBarChart },
       { kind: "leaf", label: "Assign Audit", to: "/assign-scan", icon: Send },
       {
         kind: "leaf",
