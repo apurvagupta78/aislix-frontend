@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { AuditProgressHeader } from "@/components/audit/AuditProgressHeader";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -264,6 +265,10 @@ function DigitalAuditPage() {
   const validation = validateDigitalAuditSubmit(session);
   const activeLines = activeBin ? (linesByBin.get(activeBin) ?? []) : [];
   const binHasPhoto = session.evidence.some((e) => e.bin_key === activeBin);
+  const completedSkus = session.lines.filter((l) => l.actual_qty != null).length;
+  const binsWithPhoto = session.bins.filter((bin) =>
+    session.evidence.some((e) => e.bin_key === bin),
+  ).length;
 
   function handleBarcodeLookup() {
     const line = lookupLineByBarcode(session.lines, barcodeInput.trim());
@@ -280,17 +285,19 @@ function DigitalAuditPage() {
       title="Digital Audit"
       description={`${session.store_name} · ${session.lines.length} SKUs · ${session.bins.length} shelf/bin(s)`}
     >
-      <div className="mx-auto max-w-3xl space-y-6 pb-24">
+      <div className="mx-auto max-w-3xl space-y-6 pb-28">
+        <AuditProgressHeader
+          storeName={session.store_name}
+          totalSkus={session.lines.length}
+          completedSkus={completedSkus}
+          binsWithPhoto={binsWithPhoto}
+          totalBins={session.bins.length}
+          offline={offline}
+          pendingSync={pendingCount}
+        />
+
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">Incomplete until all SKUs + bin photos</Badge>
-          {offline ? (
-            <Badge variant="outline" className="text-warning">
-              Offline mode
-            </Badge>
-          ) : null}
-          {pendingCount > 0 ? (
-            <Badge variant="outline">{pendingCount} pending sync</Badge>
-          ) : null}
           {geo ? (
             <Badge variant="outline" className="gap-1">
               <MapPin className="size-3" /> GPS captured
@@ -457,18 +464,20 @@ function DigitalAuditPage() {
           </div>
         ) : null}
 
-        <Button
-          className="w-full"
-          size="lg"
-          disabled={!validation.ok || submitMutation.isPending}
-          onClick={() => submitMutation.mutate()}
-        >
-          {submitMutation.isPending ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            "Submit audit for review"
-          )}
-        </Button>
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 p-4 backdrop-blur sm:static sm:border-0 sm:bg-transparent sm:p-0">
+          <Button
+            className="w-full shadow-lg sm:shadow-none"
+            size="lg"
+            disabled={!validation.ok || submitMutation.isPending}
+            onClick={() => submitMutation.mutate()}
+          >
+            {submitMutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              "Submit audit for review"
+            )}
+          </Button>
+        </div>
       </div>
     </AppShell>
   );

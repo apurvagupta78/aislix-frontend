@@ -96,33 +96,60 @@ type NavSection = {
 
 const DASHBOARD_LEAF: NavLeaf = {
   kind: "leaf",
-  label: "Dashboard",
+  label: "Executive Overview",
   to: "/dashboard",
   icon: LayoutDashboard,
 };
 
 const SECTIONS: NavSection[] = [
   {
-    id: "scan",
+    id: "locations",
+    label: "Stores & Locations",
+    icon: Store,
+    managerOnly: true,
+    items: [
+      { kind: "leaf", label: "Stores", to: "/stores", icon: Store },
+      { kind: "leaf", label: "Planogram & SKUs", to: "/store-master", icon: LayoutGrid },
+    ],
+  },
+  {
+    id: "audits",
     label: "Audits",
     icon: ClipboardCheck,
     items: [
       { kind: "leaf", label: "New Audit", to: "/scan", icon: Plus },
       {
         kind: "leaf",
-        label: "Assigned to Me",
+        label: "My Work",
         to: "/my-scans",
         search: { tab: "assigned" },
         badge: "open-tasks",
       },
+      { kind: "leaf", label: "Audit History", to: "/history", icon: History },
+    ],
+  },
+  {
+    id: "assignments",
+    label: "Assignments & Schedules",
+    icon: CalendarClock,
+    managerOnly: true,
+    items: [
+      { kind: "leaf", label: "Assign Audit", to: "/assign-scan", icon: Send },
       {
         kind: "leaf",
-        label: "Audits I Assigned",
+        label: "Review & Approvals",
         to: "/assigned-scans",
         search: { tab: "assignments" },
-        managerOnly: true,
       },
-      { kind: "leaf", label: "Audit History", to: "/history", icon: History },
+      { kind: "leaf", label: "Recurring Audits", to: "/audit-schedules", icon: CalendarClock },
+    ],
+  },
+  {
+    id: "exceptions",
+    label: "Exceptions & Actions",
+    icon: Wrench,
+    items: [
+      { kind: "leaf", label: "Corrective Actions", to: "/corrective-actions", icon: Wrench },
       {
         kind: "leaf",
         label: "Audit Intelligence",
@@ -130,39 +157,20 @@ const SECTIONS: NavSection[] = [
         icon: BarChart3,
         managerOnly: true,
       },
-      {
-        kind: "leaf",
-        label: "Recurring Audits",
-        to: "/audit-schedules",
-        icon: CalendarClock,
-        managerOnly: true,
-      },
-    ],
-  },
-  {
-    id: "audit",
-    label: "Actions",
-    icon: Wrench,
-    items: [
-      { kind: "leaf", label: "Corrective Actions", to: "/corrective-actions", icon: Wrench },
       { kind: "leaf", label: "Reports", to: "/reports", icon: FileBarChart, managerOnly: true },
     ],
   },
   {
-    id: "management",
-    label: "Management",
-    icon: LayoutGrid,
+    id: "team",
+    label: "Employees & Teams",
+    icon: Users,
     managerOnly: true,
-    items: [
-      { kind: "leaf", label: "Planogram", to: "/store-master", icon: LayoutGrid },
-      { kind: "leaf", label: "Stores", to: "/stores", icon: Store },
-      { kind: "leaf", label: "Team", to: "/team", icon: Users },
-    ],
+    items: [{ kind: "leaf", label: "Team", to: "/team", icon: Users }],
   },
   {
     id: "account",
-    label: "Account",
-    icon: User,
+    label: "Administration",
+    icon: Settings,
     items: [
       { kind: "leaf", label: "Billing", to: "/billing", icon: CreditCard },
       { kind: "leaf", label: "Profile", to: "/profile", icon: User },
@@ -312,11 +320,11 @@ function SidebarNav({
   if (rail) {
     return (
       <nav className="flex flex-col items-center gap-1">
-        <RailTooltip label="Dashboard">
+        <RailTooltip label="Executive Overview">
           <Link
             to={DASHBOARD_LEAF.to}
             onClick={onNavigate}
-            aria-label="Dashboard"
+            aria-label="Executive Overview"
             className={cn(
               "flex size-10 items-center justify-center rounded-xl transition-colors",
               pathname === DASHBOARD_LEAF.to
@@ -342,7 +350,7 @@ function SidebarNav({
                 )}
               >
                 <section.icon className="size-4" />
-                {section.id === "scan" && openTasks > 0 && (
+                {section.id === "audits" && openTasks > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[0.6rem] font-semibold text-brand-foreground">
                     {openTasks > 9 ? "9+" : openTasks}
                   </span>
@@ -392,7 +400,7 @@ function SidebarNav({
         )}
       >
         <LayoutDashboard className="size-4" />
-        <span className="flex-1 truncate">Dashboard</span>
+        <span className="flex-1 truncate">Executive Overview</span>
       </Link>
       {visibleSections.map((section) => {
         const open = openSection === section.id;
@@ -691,7 +699,7 @@ export function AppShell({
               <Input
                 name="q"
                 aria-label="Search audits, stores and SKUs"
-                placeholder="Search audits, stores, SKUs…"
+                placeholder="Search audit ID, store, SKU, employee…"
                 className="h-9 rounded-xl border-border bg-surface pl-9"
               />
             </form>

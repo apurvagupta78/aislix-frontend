@@ -5,6 +5,8 @@ import { ArrowLeft, Check, Flag, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
+import { EvidenceViewerPanel } from "@/components/audit/EvidenceViewerPanel";
+import { CollectionMethodBadge, WorkflowBadge } from "@/components/audit/AuditStatusBadges";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -38,6 +40,7 @@ function AuditReviewPage() {
   const [comment, setComment] = useState("");
   const [rejectMode, setRejectMode] = useState<"reopen_same" | "new_assignment">("reopen_same");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [selectedBin, setSelectedBin] = useState<string | null>(null);
 
   const accessQuery = useQuery({
     queryKey: ["assignment-manager"],
@@ -133,24 +136,29 @@ function AuditReviewPage() {
     0,
   );
   const varianceLines = session.lines.filter((l) => (l.variance_qty ?? 0) !== 0);
+  const activeBin =
+    selectedBin ?? session.evidence[0]?.bin_key ?? session.bins[0] ?? null;
+  const auditorName =
+    (metaQuery.data?.profiles as { full_name?: string } | null)?.full_name ?? null;
 
   return (
     <AppShell
-      title="Review Digital Audit"
-      description={`${session.store_name} · ${session.lines.length} SKUs`}
+      title="Review & Approval"
+      description={`${session.store_name} · ${session.lines.length} SKUs · Digital Audit`}
     >
       <div className="mb-4">
         <Button asChild variant="ghost" size="sm">
           <Link to="/assigned-scans">
-            <ArrowLeft className="size-4" /> Assigned audits
+            <ArrowLeft className="size-4" /> Back to assignments
           </Link>
         </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-6 xl:grid-cols-[1fr_340px]">
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2">
-            <Badge>{session.submission_status.replace("_", " ")}</Badge>
+            <CollectionMethodBadge mode="digital" />
+            <WorkflowBadge status={session.submission_status} />
             {metaQuery.data?.geofence_status ? (
               <Badge variant="outline">GPS: {String(metaQuery.data.geofence_status)}</Badge>
             ) : null}
@@ -207,15 +215,35 @@ function AuditReviewPage() {
               </thead>
               <tbody>
                 {filtered.map((line) => (
-                  <VarianceRow key={line.id} line={line} />
+                  <VarianceRow
+                    key={line.id}
+                    line={line}
+                    onSelectBin={() => setSelectedBin(line.bin_key)}
+                    selected={line.bin_key === activeBin}
+                  />
                 ))}
               </tbody>
             </table>
           </div>
+
+          <EvidenceViewerPanel
+            evidence={session.evidence}
+            selectedBin={activeBin}
+            onSelectBin={setSelectedBin}
+            meta={{
+              geofence_status: metaQuery.data?.geofence_status as string | null,
+              submitted_at: metaQuery.data?.submitted_at as string | null,
+              auditor_name: auditorName,
+            }}
+          />
         </div>
 
-        <aside className="space-y-4 rounded-xl border border-border bg-card p-4">
-          <h3 className="font-semibold">Manager actions</h3>
+        <aside className="space-y-4 rounded-xl border border-border bg-card p-4 lg:sticky lg:top-4 lg:self-start">
+          <h3 className="font-semibold">Review actions</h3>
+          <p className="text-xs text-muted-foreground">
+            Approving verifies the audit record. Open exceptions and corrective actions remain
+            separate until verified.
+          </p>
           <Textarea
             placeholder="Comment (optional)"
             value={comment}
@@ -273,11 +301,22 @@ function AuditReviewPage() {
   );
 }
 
-function VarianceRow({ line }: { line: DigitalAuditLine }) {
+function VarianceRow({
+  line,
+  onSelectBin,
+  selected,
+}: {
+  line: DigitalAuditLine;
+  onSelectBin?: () => void;
+  selected?: boolean;
+}) {
   const rcaLabel = RCA_OPTIONS.find((o) => o.code === line.rca_code)?.label ?? "—";
   const variance = line.variance_qty ?? 0;
   return (
-    <tr className="border-b border-border/60">
+    <tr
+      className={`border-b border-border/60 ${selected ? "bg-brand-soft/40" : ""} ${onSelectBin ? "cursor-pointer hover:bg-surface/50" : ""}`}
+      onClick={onSelectBin}
+    >
       <td className="p-3">
         <p className="font-medium">{line.product_name}</p>
         <p className="text-xs text-muted-foreground">{line.sku ?? line.item_code ?? "—"}</p>

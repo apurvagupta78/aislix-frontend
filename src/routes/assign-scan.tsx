@@ -62,16 +62,16 @@ export const Route = createFileRoute("/assign-scan")({
 
   head: () => ({
     meta: [
-      { title: "Assign Scan — Delegate a shelf audit | Aislix" },
+      { title: "Assignments & Schedules — Aislix" },
       {
         name: "description",
         content:
-          "Assign a shelf audit to a team member by category, sub-category, shelf location or an exact planogram product list.",
+          "Assign digital or AI shelf audits to team members by store, scope, due date and recurrence.",
       },
-      { property: "og:title", content: "Assign Scan — Aislix" },
+      { property: "og:title", content: "Assignments & Schedules — Aislix" },
       {
         property: "og:description",
-        content: "Delegate shelf audits to your store team and track them to completion in Aislix.",
+        content: "Create and delegate retail audit assignments with evidence requirements and review routing.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -378,7 +378,7 @@ function AssignScanPage() {
 
   if (accessQuery.data === false) {
     return (
-      <AppShell title="Assign Scan" description="Delegate a shelf audit to your team.">
+      <AppShell title="Assignments & Schedules" description="Delegate audits to your team.">
         <EmptyState
           title="Manager access required"
           description="Only owners, admins and managers can assign scans. Ask your workspace owner for access."
@@ -389,8 +389,8 @@ function AssignScanPage() {
 
   return (
     <AppShell
-      title="Assign Scan"
-      description="Send a scoped shelf audit to a team member and track it through to completion."
+      title="Assign Audit"
+      description="Select scope, assignee, due date and collection method — digital or AI-assisted."
     >
       <div className="max-w-3xl space-y-6">
         {fromPlanogram ? (
@@ -774,7 +774,7 @@ function AssignScanPage() {
               Assign scan
             </Button>
             <Button variant="outline" className="rounded-xl" asChild>
-              <Link to="/assigned-scans">View assigned scans</Link>
+              <Link to="/assigned-scans">View review queue</Link>
             </Button>
           </div>
           {membersQuery.isError && (

@@ -60,25 +60,25 @@ export const Route = createFileRoute("/")({
       { property: "og:url", content: "https://aislix.com" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { title: "Aislix — AI Retail Shelf Intelligence & Shelf Auditing" },
+      { title: "Aislix — Retail Audit & Shelf Intelligence Platform" },
       {
         name: "description",
         content:
-          "Aislix audits retail shelves automatically with computer vision — detect products, brands, out-of-stocks and planogram gaps from a single photo.",
+          "Enterprise retail audit management — plan, execute, review and learn from digital, manual and AI-assisted shelf audits in one accountable workflow.",
       },
-      { property: "og:title", content: "Aislix — AI-Powered Retail Shelf Auditing" },
+      { property: "og:title", content: "Aislix — Retail Audit & Shelf Intelligence" },
       {
         property: "og:description",
         content:
-          "Turn a shelf photo into a complete retail audit in ~60 seconds. Product detection, planogram compliance and actionable insights.",
+          "Digital and AI-assisted collection, exception-first management, evidence traceability, and verified corrective actions for retail teams.",
       },
       { property: "og:image", content: "https://aislix.com/og-image.png" },
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
-      { name: "twitter:title", content: "Aislix — AI-Powered Retail Shelf Auditing" },
+      { name: "twitter:title", content: "Aislix — Retail Audit & Shelf Intelligence" },
       {
         name: "twitter:description",
-        content: "Turn a shelf photo into a complete retail audit in ~60 seconds.",
+        content: "One platform for digital, manual and AI-assisted retail audits with accountable follow-through.",
       },
       { name: "twitter:image", content: "https://aislix.com/og-image.png" },
     ],
@@ -95,7 +95,7 @@ export const Route = createFileRoute("/")({
               name: "Aislix",
               url: "https://aislix.com",
               description:
-                "AI Retail Shelf Intelligence — automated shelf audits, out-of-stock detection, share of shelf and planogram compliance from a single photo.",
+                "Retail Audit & Shelf Intelligence — digital and AI-assisted collection, review, exceptions and corrective actions in one platform.",
               publisher: { "@id": "https://aislix.com/#organization" },
             },
             {
@@ -105,7 +105,7 @@ export const Route = createFileRoute("/")({
               url: "https://aislix.com",
               logo: "https://aislix.com/apple-touch-icon.png",
               description:
-                "Aislix is an AI-powered retail shelf intelligence platform for supermarkets, dark stores, warehouses, FMCG brands, distributors and local stores.",
+                "Aislix is a retail audit management and shelf intelligence platform for supermarkets, dark stores, FMCG brands, distributors and local stores.",
               email: "hello@aislix.com",
               sameAs: [
                 "https://www.linkedin.com/company/aislix/",
@@ -192,16 +192,16 @@ function Landing() {
         <div className="relative mx-auto max-w-3xl px-6 pb-14 pt-16 text-center sm:pb-16 sm:pt-20">
           <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs text-muted-foreground shadow-soft">
             <span className="size-1.5 rounded-full bg-brand" />
-            AI-Powered Retail Shelf Intelligence
+            Retail Audit & Shelf Intelligence Platform
           </span>
           <h1 className="mt-7 text-4xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-6xl">
-            Turn One Shelf Photo Into Actionable Retail Intelligence.
+            Plan, Execute, Review and Learn From Every Retail Audit.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Aislix uses AI to turn shelf photos into retail intelligence — highlighting what needs
-            attention while keeping every store visit and audit in one searchable history, so teams
-            can track issues, measure improvement and stop losing shelf insights in WhatsApp or
-            Emails.
+            Aislix is an enterprise audit management platform — digital counts, AI-assisted shelf
+            capture, and guided manual audits in one accountable workflow. Managers get exception-first
+            visibility; auditors get fast execution; every finding links to evidence, ownership and
+            verified corrective action.
           </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <Button

@@ -50,16 +50,16 @@ export const Route = createFileRoute("/assigned-scans")({
 
   head: () => ({
     meta: [
-      { title: "Assigned Scans — Track team shelf audits | Aislix" },
+      { title: "Review & Approvals — Aislix audit queue" },
       {
         name: "description",
         content:
-          "Track every shelf audit you assigned: store, scope, assignee, due date, compliance and completion status.",
+          "Review submitted audits, track pending approvals, and manage assignments across your stores and team.",
       },
-      { property: "og:title", content: "Assigned Scans — Aislix" },
+      { property: "og:title", content: "Review & Approvals — Aislix" },
       {
         property: "og:description",
-        content: "Manager view of all assigned shelf audits across your stores and team.",
+        content: "Manager approval queue and assignment tracking for digital and AI audits.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -450,12 +450,12 @@ function AssignedScansPage() {
 
   return (
     <AppShell
-      title="Assigned Scans"
-      description="Every shelf audit assigned across your stores and team."
+      title="Review & Approvals"
+      description="Pending approvals, submitted audits and assignment status across your workspace."
       actions={
         <Button variant="brand" className="rounded-xl" asChild>
           <Link to="/assign-scan" search={{ store: undefined, scope: undefined, planogramVersion: undefined }}>
-            <UserPlus className="mr-2 size-4" /> Assign scan
+            <UserPlus className="mr-2 size-4" /> Assign audit
           </Link>
         </Button>
       }
@@ -464,10 +464,10 @@ function AssignedScansPage() {
         <EmptyState
           icon={<ClipboardList className="size-6" />}
           title="Manager access required"
-          description="Only workspace owners, admins and managers can review assigned scans. Your own tasks live on My Scans."
+          description="Only workspace owners, admins and managers can review assignments. Your own tasks live on My Work."
           action={
             <Button variant="brand" className="rounded-xl" asChild>
-              <Link to="/my-scans">Go to My Scans</Link>
+              <Link to="/my-scans">Go to My Work</Link>
             </Button>
           }
         />

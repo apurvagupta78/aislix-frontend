@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, ClipboardList, Loader2, MapPin, ScanLine } from "lucide-react";
+import { CollectionMethodBadge } from "@/components/audit/AuditStatusBadges";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
@@ -29,16 +30,16 @@ export const Route = createFileRoute("/my-scans")({
 
   head: () => ({
     meta: [
-      { title: "My Assigned Scans — Aislix shelf audit tasks" },
+      { title: "My Work — Aislix audit assignments" },
       {
         name: "description",
         content:
-          "See the shelf scans assigned to you, their scope and due dates, and start an audit in one tap.",
+          "Your audit work queue — digital and AI assignments with scope, due dates, and one-tap execution.",
       },
-      { property: "og:title", content: "My Assigned Scans — Aislix" },
+      { property: "og:title", content: "My Work — Aislix" },
       {
         property: "og:description",
-        content: "Your shelf audit task list: scope, store, due date and one-tap scan start.",
+        content: "Today, upcoming, overdue and returned audits assigned to you.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -81,6 +82,17 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "overdue", label: "Overdue" },
   { key: "completed", label: "Completed" },
 ];
+
+function startLabel(assignment: Assignment): string {
+  const digital = assignment.audit_mode === "digital";
+  if (assignment.status === "needs_correction") {
+    return digital ? "Fix & re-audit" : "Fix & re-scan";
+  }
+  if (assignment.status === "in_progress") {
+    return digital ? "Continue Digital Audit" : "Continue AI Audit";
+  }
+  return digital ? "Start Digital Audit" : "Start AI Audit";
+}
 
 /** "Test store · A-1-Z · Personal Care · Shampoo · 8 expected products" */
 function assignmentLine(assignment: Assignment): string {
@@ -149,7 +161,10 @@ function MyScansPage() {
   }, [tab, buckets.needs_correction, queryClient]);
 
   return (
-    <AppShell title="My Assigned Scans" description="Shelf audits assigned to you by your manager.">
+    <AppShell
+      title="My Work"
+      description="Digital and AI audit assignments — today, upcoming, overdue and returned for correction."
+    >
       {query.isLoading ? (
         <div className="space-y-3">
           {[0, 1, 2].map((index) => (
@@ -177,7 +192,7 @@ function MyScansPage() {
             <EmptyState
               icon={<ClipboardList className="size-6" />}
               title="Nothing here yet"
-              description="When a manager assigns you a shelf audit, it will appear here."
+              description="When a manager assigns you an audit, it will appear here."
             />
           ) : (
             <div className="space-y-3">
@@ -193,6 +208,7 @@ function MyScansPage() {
                           {assignment.store_name}
                         </p>
                         {statusBadge(assignment.status)}
+                        <CollectionMethodBadge mode={assignment.audit_mode} />
                         {assignment.status === "needs_correction" && (
                           <Badge
                             variant="secondary"
@@ -260,11 +276,7 @@ function MyScansPage() {
                           ) : (
                             <ScanLine className="mr-2 size-4" />
                           )}
-                          {assignment.status === "needs_correction"
-                            ? "Fix & re-scan"
-                            : assignment.status === "in_progress"
-                              ? "Continue scan"
-                              : "Start scan"}
+                          {startLabel(assignment)}
                         </Button>
                       ) : null}
                       {assignment.scan_id && (

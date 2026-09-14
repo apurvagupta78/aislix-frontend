@@ -11,6 +11,7 @@ import { CommercialImpactSection } from "@/components/dashboard/CommercialImpact
 import { RecentAuditsSection } from "@/components/dashboard/RecentAuditsSection";
 import { StoreTeamPerformanceSection } from "@/components/dashboard/StoreTeamPerformanceSection";
 import { WorkspaceManagementSection } from "@/components/dashboard/WorkspaceManagementSection";
+import { AuditExecutiveSection } from "@/components/audit/AuditExecutiveSection";
 import { QuickActions } from "@/components/dashboard/DashboardParts";
 import {
   PerformanceOverTimeSection,
@@ -45,11 +46,11 @@ export const Route = createFileRoute("/dashboard")({
   },
   head: () => ({
     meta: [
-      { title: "Workspace Dashboard — Aislix" },
+      { title: "Executive Overview — Aislix" },
       {
         name: "description",
         content:
-          "Operational home for shelf audits — KPIs, issues, store performance, trends and recent visits across your retail workspace.",
+          "Retail audit management dashboard — operational scorecards, exception queue, store performance and audit intelligence across your workspace.",
       },
       { property: "og:title", content: "Aislix Workspace Dashboard" },
       {
@@ -207,10 +208,12 @@ function Dashboard() {
         />
       ) : data && !data.has_completed_audits && !demo ? (
         <>
+          <AuditExecutiveSection />
+
           <div className="mt-8">
             <EmptyState
               title="Your dashboard will come alive after your first audit."
-              description="Complete an AI shelf audit to start tracking performance, issues and improvement."
+              description="Run a digital or AI-assisted audit to start tracking scorecards, exceptions and store performance."
               action={
                 <Button asChild variant="brand" size="sm" className="rounded-xl">
                   <Link to="/scan">
@@ -232,6 +235,8 @@ function Dashboard() {
         </>
       ) : data ? (
         <>
+          <AuditExecutiveSection />
+
           <div className="mt-4">
             <RetailPerformanceSection
               data={data.kpis}
