@@ -1,7 +1,17 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileStack, Loader2, Plus, Trash2 } from "lucide-react";
+import {
+  Archive,
+  Copy,
+  Eye,
+  FileStack,
+  History,
+  Loader2,
+  MoreHorizontal,
+  Plus,
+  Search,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
@@ -9,8 +19,13 @@ import { CollectionMethodBadge } from "@/components/audit/AuditStatusBadges";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -18,18 +33,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState, ErrorState, Skeleton } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
+import { AUDIT_TYPE_OPTIONS } from "@/lib/audit-builder/field-library";
+import { DuplicateTemplateDialog } from "@/components/audit-builder/DuplicateTemplateDialog";
 import {
   TEMPLATE_TYPES,
-  createAuditTemplate,
-  deleteAuditTemplate,
+  archiveAuditTemplate,
+  duplicateAuditTemplate,
   fetchAuditTemplates,
-  publishAuditTemplate,
-  type TemplateType,
+  fetchTemplateVersions,
+  isCustomBuilderTemplate,
+  seedFnvQcTemplate,
+  updateAuditTemplate,
+  type AuditTemplate,
+  type TemplateStatus,
 } from "@/lib/audit-templates";
-import type { AuditMode, ScopeType } from "@/lib/assignments";
 import { isOrgManager } from "@/lib/assignments";
 
 export const Route = createFileRoute("/audit-templates")({
@@ -39,13 +67,12 @@ export const Route = createFileRoute("/audit-templates")({
 
 function AuditTemplatesPage() {
   const queryClient = useQueryClient();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [templateType, setTemplateType] = useState<TemplateType>("shelf_audit");
-  const [auditMode, setAuditMode] = useState<AuditMode>("digital");
-  const [scopeType, setScopeType] = useState<ScopeType>("planogram");
-  const [instructions, setInstructions] = useState("");
-  const [evidenceRequired, setEvidenceRequired] = useState(true);
+  const [search, setSearch] = useState("");
+  const [statusTab, setStatusTab] = useState<"all" | TemplateStatus>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [activeOnly, setActiveOnly] = useState(false);
+  const [versionTemplateId, setVersionTemplateId] = useState<string | null>(null);
+  const [duplicateTarget, setDuplicateTarget] = useState<AuditTemplate | null>(null);
 
   const managerQuery = useQuery({
     queryKey: ["is-org-manager"],
@@ -53,55 +80,75 @@ function AuditTemplatesPage() {
   });
 
   const templatesQuery = useQuery({
-    queryKey: ["audit-templates"],
-    queryFn: fetchAuditTemplates,
+    queryKey: ["audit-templates", statusTab, typeFilter, activeOnly, search],
+    queryFn: () =>
+      fetchAuditTemplates({
+        search,
+        status: statusTab === "all" ? "all" : statusTab,
+        templateType: typeFilter === "all" ? undefined : typeFilter,
+        activeOnly,
+      }),
     enabled: managerQuery.data === true,
   });
 
-  const createMutation = useMutation({
-    mutationFn: () =>
-      createAuditTemplate({
-        name,
-        description,
-        template_type: templateType,
-        audit_mode: auditMode,
-        scope_type: scopeType,
-        scope_values: {},
-        instructions,
-        evidence_required: evidenceRequired,
-        published: false,
-      }),
+  const versionsQuery = useQuery({
+    queryKey: ["template-versions", versionTemplateId],
+    queryFn: () => fetchTemplateVersions(versionTemplateId!),
+    enabled: Boolean(versionTemplateId),
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: async ({ sourceId, name }: { sourceId: string; name: string }) => {
+      const copy = await duplicateAuditTemplate(sourceId);
+      await updateAuditTemplate(copy.id, { name });
+      return copy;
+    },
+    onSuccess: (t) => {
+      toast.success("Template duplicated as draft.");
+      setDuplicateTarget(null);
+      void queryClient.invalidateQueries({ queryKey: ["audit-templates"] });
+      window.location.href = `/audit-templates/${t.id}`;
+    },
+    onError: (e) => toast.error(toUserMessage(e)),
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: archiveAuditTemplate,
     onSuccess: () => {
-      toast.success("Template saved as draft.");
-      setName("");
-      setDescription("");
-      setInstructions("");
+      toast.success("Template archived.");
       void queryClient.invalidateQueries({ queryKey: ["audit-templates"] });
     },
     onError: (e) => toast.error(toUserMessage(e)),
   });
 
-  const publishMutation = useMutation({
-    mutationFn: publishAuditTemplate,
-    onSuccess: () => {
-      toast.success("Template published — version incremented.");
-      void queryClient.invalidateQueries({ queryKey: ["audit-templates"] });
+  const seedMutation = useMutation({
+    mutationFn: seedFnvQcTemplate,
+    onSuccess: (id) => {
+      if (id) {
+        toast.success("FNV QC sample template created.");
+        void queryClient.invalidateQueries({ queryKey: ["audit-templates"] });
+        window.location.href = `/audit-templates/${id}`;
+      } else {
+        toast.message("Sample template requires the audit builder migration.");
+      }
     },
     onError: (e) => toast.error(toUserMessage(e)),
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteAuditTemplate,
-    onSuccess: () => {
-      toast.success("Template deleted.");
-      void queryClient.invalidateQueries({ queryKey: ["audit-templates"] });
-    },
-    onError: (e) => toast.error(toUserMessage(e)),
-  });
+  const templates = templatesQuery.data ?? [];
+
+  const counts = useMemo(() => {
+    const all = templatesQuery.data ?? [];
+    return {
+      draft: all.filter((t) => t.status === "draft").length,
+      published: all.filter((t) => t.status === "published").length,
+      archived: all.filter((t) => t.status === "archived").length,
+    };
+  }, [templatesQuery.data]);
 
   if (managerQuery.isLoading) {
     return (
-      <AppShell title="Templates">
+      <AppShell title="Audit Templates">
         <Skeleton className="h-48 w-full" />
       </AppShell>
     );
@@ -109,190 +156,296 @@ function AuditTemplatesPage() {
 
   if (!managerQuery.data) {
     return (
-      <AppShell title="Templates">
-        <EmptyState title="Manager access required" description="Only managers can manage audit templates." />
+      <AppShell title="Audit Templates">
+        <EmptyState
+          title="Manager access required"
+          description="Only organization admins and authorized managers can manage audit templates."
+        />
       </AppShell>
     );
   }
 
-  const templates = templatesQuery.data ?? [];
-
   return (
     <AppShell
       title="Audit Templates"
-      description="Versioned templates for shelf, inventory, planogram, pricing and checklist audits."
+      description="Create and manage reusable audit templates for your retail operations."
       actions={
-        <Button asChild variant="outline" size="sm">
-          <Link
-            to="/assign-scan"
-            search={{ store: undefined, scope: undefined, planogramVersion: undefined, templateId: undefined }}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={seedMutation.isPending}
+            onClick={() => seedMutation.mutate()}
           >
-            Assign audit →
-          </Link>
-        </Button>
+            Load FNV QC Sample
+          </Button>
+          <Button asChild variant="brand" size="sm">
+            <Link to="/audit-templates/new">
+              <Plus className="mr-1 size-3" /> Create Audit Template
+            </Link>
+          </Button>
+        </div>
       }
     >
-      <div className="grid gap-8 lg:grid-cols-[1fr_1fr]">
-        <section className="rounded-xl border border-border bg-card p-5">
-          <h2 className="flex items-center gap-2 font-semibold">
-            <Plus className="size-4" /> New template
-          </h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Published edits create a new version. In-flight audits keep their original template.
-          </p>
-          <div className="mt-4 space-y-4">
-            <div>
-              <Label>Name</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Shelf audit — personal care" />
-            </div>
-            <div>
-              <Label>Description</Label>
-              <Textarea
-                rows={2}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="What this template covers"
-              />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Template type</Label>
-                <Select value={templateType} onValueChange={(v) => setTemplateType(v as TemplateType)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TEMPLATE_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Collection method</Label>
-                <Select value={auditMode} onValueChange={(v) => setAuditMode(v as AuditMode)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="digital">Digital Audit</SelectItem>
-                    <SelectItem value="ai">AI Audit</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div>
-              <Label>Scope type</Label>
-              <Select value={scopeType} onValueChange={(v) => setScopeType(v as ScopeType)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="planogram">Planogram product list</SelectItem>
-                  <SelectItem value="category">Category</SelectItem>
-                  <SelectItem value="sub_category">Sub-category</SelectItem>
-                  <SelectItem value="location">Location / aisle</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Default instructions</Label>
-              <Textarea
-                rows={3}
-                value={instructions}
-                onChange={(e) => setInstructions(e.target.value)}
-                placeholder="Evidence requirements, blind count policy, etc."
-              />
-            </div>
-            <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-              <Label className="cursor-pointer">Mandatory evidence</Label>
-              <Switch checked={evidenceRequired} onCheckedChange={setEvidenceRequired} />
-            </div>
-            <Button
-              className="w-full"
-              disabled={!name.trim() || createMutation.isPending}
-              onClick={() => createMutation.mutate()}
-            >
-              {createMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : "Save draft template"}
-            </Button>
-          </div>
-        </section>
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <Tabs
+            value={statusTab}
+            onValueChange={(v) => setStatusTab(v as typeof statusTab)}
+          >
+            <TabsList>
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="draft">Drafts ({counts.draft})</TabsTrigger>
+              <TabsTrigger value="published">Published ({counts.published})</TabsTrigger>
+              <TabsTrigger value="archived">Archived ({counts.archived})</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
 
-        <section className="space-y-3">
-          <h2 className="font-semibold">Saved templates</h2>
-          {templatesQuery.isLoading ? (
-            <Skeleton className="h-40 w-full" />
-          ) : templatesQuery.isError ? (
-            <ErrorState description={toUserMessage(templatesQuery.error)} />
-          ) : !templates.length ? (
-            <EmptyState
-              icon={<FileStack className="size-6" />}
-              title="No templates yet"
-              description="Create a template to speed up recurring assignments."
+        <div className="flex flex-wrap gap-3">
+          <div className="relative min-w-[200px] flex-1">
+            <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              placeholder="Search templates…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
-          ) : (
-            templates.map((t) => (
-              <article
-                key={t.id}
-                className="rounded-xl border border-border bg-card p-4"
-              >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <p className="font-medium">{t.name}</p>
-                    {t.description ? (
-                      <p className="mt-1 text-xs text-muted-foreground">{t.description}</p>
-                    ) : null}
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <CollectionMethodBadge mode={t.audit_mode} />
-                      <Badge variant="outline">v{t.version}</Badge>
-                      {t.published ? (
-                        <Badge variant="secondary">Published</Badge>
-                      ) : (
-                        <Badge variant="outline">Draft</Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    {!t.published ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={publishMutation.isPending}
-                        onClick={() => publishMutation.mutate(t.id)}
-                      >
-                        Publish
-                      </Button>
-                    ) : null}
-                    <Button asChild size="sm" variant="brand">
-                      <Link
-                        to="/assign-scan"
-                        search={{
-                          store: undefined,
-                          scope: undefined,
-                          planogramVersion: undefined,
-                          templateId: t.id,
-                        }}
-                      >
-                        Use
-                      </Link>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={deleteMutation.isPending}
-                      onClick={() => deleteMutation.mutate(t.id)}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
-                </div>
-              </article>
-            ))
-          )}
-        </section>
+          </div>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Audit type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              {AUDIT_TYPE_OPTIONS.map((t) => (
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={activeOnly ? "active" : "all"}
+            onValueChange={(v) => setActiveOnly(v === "active")}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="active">Active only</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {templatesQuery.isLoading ? (
+          <Skeleton className="h-64 w-full" />
+        ) : templatesQuery.isError ? (
+          <ErrorState description={toUserMessage(templatesQuery.error)} />
+        ) : !templates.length ? (
+          <EmptyState
+            icon={<FileStack className="size-6" />}
+            title="No templates yet"
+            description="Create a custom audit template or load the FNV QC sample to get started."
+            action={
+              <Button asChild variant="brand">
+                <Link to="/audit-templates/new">
+                  <Plus className="mr-1 size-4" /> Create your first audit template
+                </Link>
+              </Button>
+            }
+          />
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Template</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Version</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Fields</TableHead>
+                  <TableHead>Last Updated</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {templates.map((t) => (
+                  <TemplateRow
+                    key={t.id}
+                    template={t}
+                    onDuplicate={() => setDuplicateTarget(t)}
+                    onArchive={() => archiveMutation.mutate(t.id)}
+                    onVersionHistory={() =>
+                      setVersionTemplateId(versionTemplateId === t.id ? null : t.id)
+                    }
+                    showVersions={versionTemplateId === t.id}
+                    versions={versionTemplateId === t.id ? versionsQuery.data ?? [] : []}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </div>
+
+      <DuplicateTemplateDialog
+        open={duplicateTarget !== null}
+        onOpenChange={(open) => !open && setDuplicateTarget(null)}
+        defaultName={duplicateTarget ? `${duplicateTarget.name} — Copy` : ""}
+        duplicating={duplicateMutation.isPending}
+        onConfirm={(name) =>
+          duplicateTarget && duplicateMutation.mutate({ sourceId: duplicateTarget.id, name })
+        }
+      />
     </AppShell>
   );
+}
+
+function TemplateRow({
+  template: t,
+  onDuplicate,
+  onArchive,
+  onVersionHistory,
+  showVersions,
+  versions,
+}: {
+  template: AuditTemplate;
+  onDuplicate: () => void;
+  onArchive: () => void;
+  onVersionHistory: () => void;
+  showVersions: boolean;
+  versions: { version: number; change_summary: string | null; created_at: string }[];
+}) {
+  const typeLabel =
+    TEMPLATE_TYPES.find((x) => x.value === t.template_type)?.label ?? t.template_type;
+
+  return (
+    <>
+      <TableRow className={t.status === "draft" ? "bg-muted/20" : undefined}>
+        <TableCell>
+          <div>
+            <Link
+              to="/audit-templates/$templateId"
+              params={{ templateId: t.id }}
+              className="font-medium hover:text-brand"
+            >
+              {t.name}
+            </Link>
+            {t.description ? (
+              <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">{t.description}</p>
+            ) : null}
+            {isCustomBuilderTemplate(t) ? (
+              <Badge variant="outline" className="mt-1 text-[10px]">
+                Custom Builder
+              </Badge>
+            ) : null}
+          </div>
+        </TableCell>
+        <TableCell className="text-sm">{typeLabel}</TableCell>
+        <TableCell>
+          <Badge variant="outline">v{t.version}</Badge>
+        </TableCell>
+        <TableCell>
+          <StatusBadge status={t.status} published={t.published} />
+          <CollectionMethodBadge mode={t.audit_mode} />
+        </TableCell>
+        <TableCell className="text-sm text-muted-foreground">
+          {t.field_definitions.length} fields · {t.rules.length} rules
+        </TableCell>
+        <TableCell className="text-sm text-muted-foreground">
+          {new Date(t.updated_at).toLocaleDateString()}
+        </TableCell>
+        <TableCell className="text-right">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="size-8">
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem asChild>
+                <Link to="/audit-templates/$templateId" params={{ templateId: t.id }}>
+                  Open / Edit
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onDuplicate}>
+                <Copy className="mr-2 size-3.5" /> Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/audit-templates/$templateId/preview" params={{ templateId: t.id }}>
+                  <Eye className="mr-2 size-3.5" /> Preview
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/audit-templates/$templateId/versions" params={{ templateId: t.id }}>
+                  <History className="mr-2 size-3.5" /> Version History
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link
+                  to="/assign-scan"
+                  search={{
+                    store: undefined,
+                    scope: undefined,
+                    planogramVersion: undefined,
+                    templateId: t.id,
+                  }}
+                >
+                  Assign
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onVersionHistory}>
+                <History className="mr-2 size-3.5" /> Quick Version History
+              </DropdownMenuItem>
+              {t.status !== "archived" ? (
+                <DropdownMenuItem onClick={onArchive}>
+                  <Archive className="mr-2 size-3.5" /> Archive
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </TableCell>
+      </TableRow>
+      {showVersions ? (
+        <TableRow>
+          <TableCell colSpan={7} className="bg-muted/30 py-3">
+            <p className="mb-2 text-xs font-semibold">Version History</p>
+            {versions.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No published versions yet.</p>
+            ) : (
+              <ul className="space-y-1 text-xs">
+                {versions.map((v) => (
+                  <li key={v.version} className="flex justify-between gap-4">
+                    <span>
+                      v{v.version} — {v.change_summary ?? "Published"}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {new Date(v.created_at).toLocaleString()}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </TableCell>
+        </TableRow>
+      ) : null}
+    </>
+  );
+}
+
+function StatusBadge({
+  status,
+  published,
+}: {
+  status: TemplateStatus;
+  published: boolean;
+}) {
+  if (status === "archived") return <Badge variant="outline">Archived</Badge>;
+  if (status === "published" || published) {
+    return <Badge variant="secondary">Published</Badge>;
+  }
+  return <Badge variant="outline">Draft</Badge>;
 }
