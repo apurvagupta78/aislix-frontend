@@ -23,6 +23,7 @@ import { Route as CompareRouteImport } from './routes/compare'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as CorrectiveActionsRouteImport } from './routes/corrective-actions'
+import { Route as CustomAuditRouteImport } from './routes/custom-audit'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DemoScansRouteImport } from './routes/demo-scans'
@@ -73,6 +74,8 @@ import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as ApiSendLandingOnboardingRouteImport } from './routes/api/send-landing-onboarding'
 import { Route as AuditReviewScanIdRouteImport } from './routes/audit-review.$scanId'
+import { Route as AuditTemplatesTemplateIdRouteImport } from './routes/audit-templates.$templateId'
+import { Route as AuditTemplatesNewRouteImport } from './routes/audit-templates.new'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as CorrectiveActionsActionIdRouteImport } from './routes/corrective-actions.$actionId'
 import { Route as ExceptionsExceptionIdRouteImport } from './routes/exceptions.$exceptionId'
@@ -84,6 +87,9 @@ import { Route as ApiPlanogramCsvTemplateRouteImport } from './routes/api/planog
 import { Route as ApiPlanogramNormalizeRowRouteImport } from './routes/api/planogram.normalize-row'
 import { Route as ApiPlanogramParseCsvRouteImport } from './routes/api/planogram.parse-csv'
 import { Route as ApiPublicGeoRouteImport } from './routes/api/public/geo'
+import { Route as AuditTemplatesTemplateIdPreviewRouteImport } from './routes/audit-templates.$templateId.preview'
+import { Route as AuditTemplatesTemplateIdTestRouteImport } from './routes/audit-templates.$templateId.test'
+import { Route as AuditTemplatesTemplateIdVersionsRouteImport } from './routes/audit-templates.$templateId.versions'
 import { Route as ApiPublicLandingScanRouteImport } from './routes/api/public/landing/scan'
 import { Route as ApiPublicShareTokenRouteImport } from './routes/api/public/share/$token'
 import { Route as ApiPublicSharePersistRouteImport } from './routes/api/public/share/persist'
@@ -159,6 +165,11 @@ const CookiesRoute = CookiesRouteImport.update({
 const CorrectiveActionsRoute = CorrectiveActionsRouteImport.update({
   id: '/corrective-actions',
   path: '/corrective-actions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CustomAuditRoute = CustomAuditRouteImport.update({
+  id: '/custom-audit',
+  path: '/custom-audit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -412,6 +423,17 @@ const AuditReviewScanIdRoute = AuditReviewScanIdRouteImport.update({
   path: '/audit-review/$scanId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuditTemplatesTemplateIdRoute =
+  AuditTemplatesTemplateIdRouteImport.update({
+    id: '/$templateId',
+    path: '/$templateId',
+    getParentRoute: () => AuditTemplatesRoute,
+  } as any)
+const AuditTemplatesNewRoute = AuditTemplatesNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AuditTemplatesRoute,
+} as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
   path: '/auth/callback',
@@ -469,6 +491,24 @@ const ApiPublicGeoRoute = ApiPublicGeoRouteImport.update({
   path: '/api/public/geo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuditTemplatesTemplateIdPreviewRoute =
+  AuditTemplatesTemplateIdPreviewRouteImport.update({
+    id: '/preview',
+    path: '/preview',
+    getParentRoute: () => AuditTemplatesTemplateIdRoute,
+  } as any)
+const AuditTemplatesTemplateIdTestRoute =
+  AuditTemplatesTemplateIdTestRouteImport.update({
+    id: '/test',
+    path: '/test',
+    getParentRoute: () => AuditTemplatesTemplateIdRoute,
+  } as any)
+const AuditTemplatesTemplateIdVersionsRoute =
+  AuditTemplatesTemplateIdVersionsRouteImport.update({
+    id: '/versions',
+    path: '/versions',
+    getParentRoute: () => AuditTemplatesTemplateIdRoute,
+  } as any)
 const ApiPublicLandingScanRoute = ApiPublicLandingScanRouteImport.update({
   id: '/api/public/landing/scan',
   path: '/api/public/landing/scan',
@@ -510,12 +550,13 @@ export interface FileRoutesByFullPath {
   '/assigned-scans': typeof AssignedScansRoute
   '/audit-intelligence': typeof AuditIntelligenceRoute
   '/audit-schedules': typeof AuditSchedulesRoute
-  '/audit-templates': typeof AuditTemplatesRoute
+  '/audit-templates': typeof AuditTemplatesRouteWithChildren
   '/billing': typeof BillingRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
   '/corrective-actions': typeof CorrectiveActionsRouteWithChildren
+  '/custom-audit': typeof CustomAuditRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
@@ -566,6 +607,8 @@ export interface FileRoutesByFullPath {
   '/api/scan': typeof ApiScanRoute
   '/api/send-landing-onboarding': typeof ApiSendLandingOnboardingRoute
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
+  '/audit-templates/$templateId': typeof AuditTemplatesTemplateIdRouteWithChildren
+  '/audit-templates/new': typeof AuditTemplatesNewRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
   '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
@@ -577,6 +620,9 @@ export interface FileRoutesByFullPath {
   '/api/planogram/normalize-row': typeof ApiPlanogramNormalizeRowRoute
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
   '/api/public/geo': typeof ApiPublicGeoRoute
+  '/audit-templates/$templateId/preview': typeof AuditTemplatesTemplateIdPreviewRoute
+  '/audit-templates/$templateId/test': typeof AuditTemplatesTemplateIdTestRoute
+  '/audit-templates/$templateId/versions': typeof AuditTemplatesTemplateIdVersionsRoute
   '/api/public/landing/scan': typeof ApiPublicLandingScanRoute
   '/api/public/share/$token': typeof ApiPublicShareTokenRoute
   '/api/public/share/persist': typeof ApiPublicSharePersistRoute
@@ -593,12 +639,13 @@ export interface FileRoutesByTo {
   '/assigned-scans': typeof AssignedScansRoute
   '/audit-intelligence': typeof AuditIntelligenceRoute
   '/audit-schedules': typeof AuditSchedulesRoute
-  '/audit-templates': typeof AuditTemplatesRoute
+  '/audit-templates': typeof AuditTemplatesRouteWithChildren
   '/billing': typeof BillingRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
   '/corrective-actions': typeof CorrectiveActionsRouteWithChildren
+  '/custom-audit': typeof CustomAuditRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
@@ -649,6 +696,8 @@ export interface FileRoutesByTo {
   '/api/scan': typeof ApiScanRoute
   '/api/send-landing-onboarding': typeof ApiSendLandingOnboardingRoute
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
+  '/audit-templates/$templateId': typeof AuditTemplatesTemplateIdRouteWithChildren
+  '/audit-templates/new': typeof AuditTemplatesNewRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
   '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
@@ -660,6 +709,9 @@ export interface FileRoutesByTo {
   '/api/planogram/normalize-row': typeof ApiPlanogramNormalizeRowRoute
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
   '/api/public/geo': typeof ApiPublicGeoRoute
+  '/audit-templates/$templateId/preview': typeof AuditTemplatesTemplateIdPreviewRoute
+  '/audit-templates/$templateId/test': typeof AuditTemplatesTemplateIdTestRoute
+  '/audit-templates/$templateId/versions': typeof AuditTemplatesTemplateIdVersionsRoute
   '/api/public/landing/scan': typeof ApiPublicLandingScanRoute
   '/api/public/share/$token': typeof ApiPublicShareTokenRoute
   '/api/public/share/persist': typeof ApiPublicSharePersistRoute
@@ -677,12 +729,13 @@ export interface FileRoutesById {
   '/assigned-scans': typeof AssignedScansRoute
   '/audit-intelligence': typeof AuditIntelligenceRoute
   '/audit-schedules': typeof AuditSchedulesRoute
-  '/audit-templates': typeof AuditTemplatesRoute
+  '/audit-templates': typeof AuditTemplatesRouteWithChildren
   '/billing': typeof BillingRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
   '/corrective-actions': typeof CorrectiveActionsRouteWithChildren
+  '/custom-audit': typeof CustomAuditRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
@@ -733,6 +786,8 @@ export interface FileRoutesById {
   '/api/scan': typeof ApiScanRoute
   '/api/send-landing-onboarding': typeof ApiSendLandingOnboardingRoute
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
+  '/audit-templates/$templateId': typeof AuditTemplatesTemplateIdRouteWithChildren
+  '/audit-templates/new': typeof AuditTemplatesNewRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
   '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
@@ -744,6 +799,9 @@ export interface FileRoutesById {
   '/api/planogram/normalize-row': typeof ApiPlanogramNormalizeRowRoute
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
   '/api/public/geo': typeof ApiPublicGeoRoute
+  '/audit-templates/$templateId/preview': typeof AuditTemplatesTemplateIdPreviewRoute
+  '/audit-templates/$templateId/test': typeof AuditTemplatesTemplateIdTestRoute
+  '/audit-templates/$templateId/versions': typeof AuditTemplatesTemplateIdVersionsRoute
   '/api/public/landing/scan': typeof ApiPublicLandingScanRoute
   '/api/public/share/$token': typeof ApiPublicShareTokenRoute
   '/api/public/share/persist': typeof ApiPublicSharePersistRoute
@@ -768,6 +826,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/cookies'
     | '/corrective-actions'
+    | '/custom-audit'
     | '/dashboard'
     | '/demo'
     | '/demo-scans'
@@ -818,6 +877,8 @@ export interface FileRouteTypes {
     | '/api/scan'
     | '/api/send-landing-onboarding'
     | '/audit-review/$scanId'
+    | '/audit-templates/$templateId'
+    | '/audit-templates/new'
     | '/auth/callback'
     | '/corrective-actions/$actionId'
     | '/exceptions/$exceptionId'
@@ -829,6 +890,9 @@ export interface FileRouteTypes {
     | '/api/planogram/normalize-row'
     | '/api/planogram/parse-csv'
     | '/api/public/geo'
+    | '/audit-templates/$templateId/preview'
+    | '/audit-templates/$templateId/test'
+    | '/audit-templates/$templateId/versions'
     | '/api/public/landing/scan'
     | '/api/public/share/$token'
     | '/api/public/share/persist'
@@ -851,6 +915,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/cookies'
     | '/corrective-actions'
+    | '/custom-audit'
     | '/dashboard'
     | '/demo'
     | '/demo-scans'
@@ -901,6 +966,8 @@ export interface FileRouteTypes {
     | '/api/scan'
     | '/api/send-landing-onboarding'
     | '/audit-review/$scanId'
+    | '/audit-templates/$templateId'
+    | '/audit-templates/new'
     | '/auth/callback'
     | '/corrective-actions/$actionId'
     | '/exceptions/$exceptionId'
@@ -912,6 +979,9 @@ export interface FileRouteTypes {
     | '/api/planogram/normalize-row'
     | '/api/planogram/parse-csv'
     | '/api/public/geo'
+    | '/audit-templates/$templateId/preview'
+    | '/audit-templates/$templateId/test'
+    | '/audit-templates/$templateId/versions'
     | '/api/public/landing/scan'
     | '/api/public/share/$token'
     | '/api/public/share/persist'
@@ -934,6 +1004,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/cookies'
     | '/corrective-actions'
+    | '/custom-audit'
     | '/dashboard'
     | '/demo'
     | '/demo-scans'
@@ -984,6 +1055,8 @@ export interface FileRouteTypes {
     | '/api/scan'
     | '/api/send-landing-onboarding'
     | '/audit-review/$scanId'
+    | '/audit-templates/$templateId'
+    | '/audit-templates/new'
     | '/auth/callback'
     | '/corrective-actions/$actionId'
     | '/exceptions/$exceptionId'
@@ -995,6 +1068,9 @@ export interface FileRouteTypes {
     | '/api/planogram/normalize-row'
     | '/api/planogram/parse-csv'
     | '/api/public/geo'
+    | '/audit-templates/$templateId/preview'
+    | '/audit-templates/$templateId/test'
+    | '/audit-templates/$templateId/versions'
     | '/api/public/landing/scan'
     | '/api/public/share/$token'
     | '/api/public/share/persist'
@@ -1012,12 +1088,13 @@ export interface RootRouteChildren {
   AssignedScansRoute: typeof AssignedScansRoute
   AuditIntelligenceRoute: typeof AuditIntelligenceRoute
   AuditSchedulesRoute: typeof AuditSchedulesRoute
-  AuditTemplatesRoute: typeof AuditTemplatesRoute
+  AuditTemplatesRoute: typeof AuditTemplatesRouteWithChildren
   BillingRoute: typeof BillingRoute
   CompareRoute: typeof CompareRoute
   ContactRoute: typeof ContactRoute
   CookiesRoute: typeof CookiesRoute
   CorrectiveActionsRoute: typeof CorrectiveActionsRouteWithChildren
+  CustomAuditRoute: typeof CustomAuditRoute
   DashboardRoute: typeof DashboardRoute
   DemoRoute: typeof DemoRoute
   DemoScansRoute: typeof DemoScansRoute
@@ -1177,6 +1254,13 @@ declare module '@tanstack/react-router' {
       path: '/corrective-actions'
       fullPath: '/corrective-actions'
       preLoaderRoute: typeof CorrectiveActionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/custom-audit': {
+      id: '/custom-audit'
+      path: '/custom-audit'
+      fullPath: '/custom-audit'
+      preLoaderRoute: typeof CustomAuditRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -1529,6 +1613,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuditReviewScanIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/audit-templates/$templateId': {
+      id: '/audit-templates/$templateId'
+      path: '/$templateId'
+      fullPath: '/audit-templates/$templateId'
+      preLoaderRoute: typeof AuditTemplatesTemplateIdRouteImport
+      parentRoute: typeof AuditTemplatesRoute
+    }
+    '/audit-templates/new': {
+      id: '/audit-templates/new'
+      path: '/new'
+      fullPath: '/audit-templates/new'
+      preLoaderRoute: typeof AuditTemplatesNewRouteImport
+      parentRoute: typeof AuditTemplatesRoute
+    }
     '/auth/callback': {
       id: '/auth/callback'
       path: '/auth/callback'
@@ -1606,6 +1704,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicGeoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/audit-templates/$templateId/preview': {
+      id: '/audit-templates/$templateId/preview'
+      path: '/preview'
+      fullPath: '/audit-templates/$templateId/preview'
+      preLoaderRoute: typeof AuditTemplatesTemplateIdPreviewRouteImport
+      parentRoute: typeof AuditTemplatesTemplateIdRoute
+    }
+    '/audit-templates/$templateId/test': {
+      id: '/audit-templates/$templateId/test'
+      path: '/test'
+      fullPath: '/audit-templates/$templateId/test'
+      preLoaderRoute: typeof AuditTemplatesTemplateIdTestRouteImport
+      parentRoute: typeof AuditTemplatesTemplateIdRoute
+    }
+    '/audit-templates/$templateId/versions': {
+      id: '/audit-templates/$templateId/versions'
+      path: '/versions'
+      fullPath: '/audit-templates/$templateId/versions'
+      preLoaderRoute: typeof AuditTemplatesTemplateIdVersionsRouteImport
+      parentRoute: typeof AuditTemplatesTemplateIdRoute
+    }
     '/api/public/landing/scan': {
       id: '/api/public/landing/scan'
       path: '/api/public/landing/scan'
@@ -1669,6 +1788,39 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface AuditTemplatesTemplateIdRouteChildren {
+  AuditTemplatesTemplateIdPreviewRoute: typeof AuditTemplatesTemplateIdPreviewRoute
+  AuditTemplatesTemplateIdTestRoute: typeof AuditTemplatesTemplateIdTestRoute
+  AuditTemplatesTemplateIdVersionsRoute: typeof AuditTemplatesTemplateIdVersionsRoute
+}
+
+const AuditTemplatesTemplateIdRouteChildren: AuditTemplatesTemplateIdRouteChildren =
+  {
+    AuditTemplatesTemplateIdPreviewRoute: AuditTemplatesTemplateIdPreviewRoute,
+    AuditTemplatesTemplateIdTestRoute: AuditTemplatesTemplateIdTestRoute,
+    AuditTemplatesTemplateIdVersionsRoute:
+      AuditTemplatesTemplateIdVersionsRoute,
+  }
+
+const AuditTemplatesTemplateIdRouteWithChildren =
+  AuditTemplatesTemplateIdRoute._addFileChildren(
+    AuditTemplatesTemplateIdRouteChildren,
+  )
+
+interface AuditTemplatesRouteChildren {
+  AuditTemplatesTemplateIdRoute: typeof AuditTemplatesTemplateIdRouteWithChildren
+  AuditTemplatesNewRoute: typeof AuditTemplatesNewRoute
+}
+
+const AuditTemplatesRouteChildren: AuditTemplatesRouteChildren = {
+  AuditTemplatesTemplateIdRoute: AuditTemplatesTemplateIdRouteWithChildren,
+  AuditTemplatesNewRoute: AuditTemplatesNewRoute,
+}
+
+const AuditTemplatesRouteWithChildren = AuditTemplatesRoute._addFileChildren(
+  AuditTemplatesRouteChildren,
+)
+
 interface CorrectiveActionsRouteChildren {
   CorrectiveActionsActionIdRoute: typeof CorrectiveActionsActionIdRoute
 }
@@ -1713,12 +1865,13 @@ const rootRouteChildren: RootRouteChildren = {
   AssignedScansRoute: AssignedScansRoute,
   AuditIntelligenceRoute: AuditIntelligenceRoute,
   AuditSchedulesRoute: AuditSchedulesRoute,
-  AuditTemplatesRoute: AuditTemplatesRoute,
+  AuditTemplatesRoute: AuditTemplatesRouteWithChildren,
   BillingRoute: BillingRoute,
   CompareRoute: CompareRoute,
   ContactRoute: ContactRoute,
   CookiesRoute: CookiesRoute,
   CorrectiveActionsRoute: CorrectiveActionsRouteWithChildren,
+  CustomAuditRoute: CustomAuditRoute,
   DashboardRoute: DashboardRoute,
   DemoRoute: DemoRoute,
   DemoScansRoute: DemoScansRoute,
