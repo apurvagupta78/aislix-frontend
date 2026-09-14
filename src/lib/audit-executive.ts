@@ -143,6 +143,37 @@ export async function fetchExecutiveScorecards(days = 7): Promise<ExecutiveScore
 
 export async function fetchActionRequiredQueue(limit = 12): Promise<ActionRequiredItem[]> {
   const orgId = await requireOrgId();
+
+  try {
+    const { fetchExceptions } = await import("@/lib/exceptions");
+    const records = await fetchExceptions({});
+    if (records.length) {
+      return records.slice(0, limit).map((row) => ({
+        id: row.id,
+        severity: row.severity,
+        store_name: row.store_name,
+        shelf_label: row.shelf_label ?? "—",
+        sku_label: row.sku_label ?? row.title,
+        issue: row.title,
+        impact: row.impact_label ?? "—",
+        recurrence: "—",
+        owner: row.owner_name,
+        age_due: row.due_at ? new Date(row.due_at).toLocaleDateString() : "—",
+        evidence_state: row.scan_id ? "partial" : "missing",
+        next_action:
+          row.lifecycle === "open" || row.lifecycle === "reopened"
+            ? "assign"
+            : row.source_type === "pending_review"
+              ? "review"
+              : "investigate",
+        scan_id: row.scan_id ?? undefined,
+        assignment_id: row.assignment_id ?? undefined,
+      }));
+    }
+  } catch {
+    /* fall through to legacy queue */
+  }
+
   const items: ActionRequiredItem[] = [];
 
   const { data: pendingReview } = await supabase

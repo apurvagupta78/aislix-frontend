@@ -2,8 +2,12 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, ClipboardList, Loader2, MapPin, ScanLine } from "lucide-react";
-import { CollectionMethodBadge } from "@/components/audit/AuditStatusBadges";
+import { CollectionMethodBadge, SyncBadge } from "@/components/audit/AuditStatusBadges";
 import { toast } from "sonner";
+import {
+  listUnsyncedAssignmentIds,
+  pendingCountForAssignment,
+} from "@/lib/audit-offline";
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -73,15 +77,39 @@ export function formatDate(value: string | null) {
   });
 }
 
-type TabKey = "pending" | "in_progress" | "needs_correction" | "overdue" | "completed";
+type TabKey =
+  | "today"
+  | "upcoming"
+  | "overdue"
+  | "needs_correction"
+  | "unsynced"
+  | "completed";
 
 const TABS: { key: TabKey; label: string }[] = [
-  { key: "pending", label: "Pending" },
-  { key: "in_progress", label: "In progress" },
-  { key: "needs_correction", label: "Needs correction" },
+  { key: "today", label: "Today" },
+  { key: "upcoming", label: "Upcoming" },
   { key: "overdue", label: "Overdue" },
+  { key: "needs_correction", label: "Returned" },
+  { key: "unsynced", label: "Unsynced" },
   { key: "completed", label: "Completed" },
 ];
+
+function isDueToday(dueAt: string | null): boolean {
+  if (!dueAt) return false;
+  const due = new Date(dueAt);
+  const now = new Date();
+  return (
+    due.getFullYear() === now.getFullYear() &&
+    due.getMonth() === now.getMonth() &&
+    due.getDate() === now.getDate()
+  );
+}
+
+function isUpcoming(assignment: Assignment): boolean {
+  if (assignment.status === "completed" || assignment.status === "cancelled") return false;
+  if (!assignment.due_at) return assignment.status === "pending";
+  return new Date(assignment.due_at) > new Date() && !isOverdue(assignment);
+}
 
 function startLabel(assignment: Assignment): string {
   const digital = assignment.audit_mode === "digital";
@@ -108,17 +136,33 @@ function MyScansPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { tab: tabParam } = Route.useSearch();
-  const [tab, setTab] = useState<TabKey>(tabParam === "completed" ? "completed" : "pending");
+  const [tab, setTab] = useState<TabKey>(tabParam === "completed" ? "completed" : "today");
+  const [unsyncedIds, setUnsyncedIds] = useState<string[]>([]);
+  const [pendingByAssignment, setPendingByAssignment] = useState<Record<string, number>>({});
+
   useEffect(() => {
     if (tabParam === "completed") setTab("completed");
-    else if (tabParam === "assigned") setTab("pending");
+    else if (tabParam === "assigned") setTab("today");
   }, [tabParam]);
+
+  useEffect(() => {
+    void listUnsyncedAssignmentIds().then(setUnsyncedIds);
+  }, []);
 
   const query = useQuery({
     queryKey: ["my-assignments"],
     queryFn: () => fetchMyAssignments(),
     retry: false,
   });
+
+  useEffect(() => {
+    const digital = (query.data ?? []).filter((a) => a.audit_mode === "digital");
+    void Promise.all(
+      digital.map(async (a) => [a.id, await pendingCountForAssignment(a.id)] as const),
+    ).then((pairs) => {
+      setPendingByAssignment(Object.fromEntries(pairs));
+    });
+  }, [query.data]);
 
   const startMutation = useMutation({
     mutationFn: (assignment: Assignment) => startAssignment(assignment.id),
@@ -136,18 +180,35 @@ function MyScansPage() {
 
   const all = query.data ?? [];
   const buckets = useMemo(() => {
+    const active = all.filter(
+      (item) => item.status !== "completed" && item.status !== "cancelled",
+    );
     return {
-      pending: all.filter((item) => item.status === "pending"),
-      in_progress: all.filter((item) => item.status === "in_progress"),
+      today: active.filter(
+        (item) =>
+          item.status === "in_progress" ||
+          isDueToday(item.due_at) ||
+          (item.status === "pending" && isDueToday(item.due_at)),
+      ),
+      upcoming: active.filter((item) => isUpcoming(item)),
+      overdue: active.filter((item) => isOverdue(item)),
       needs_correction: all.filter((item) => item.status === "needs_correction"),
-      overdue: all.filter((item) => isOverdue(item)),
+      unsynced: all.filter(
+        (item) =>
+          unsyncedIds.includes(item.id) ||
+          (pendingByAssignment[item.id] ?? 0) > 0,
+      ),
       completed: all.filter((item) => item.status === "completed" || item.status === "cancelled"),
     } satisfies Record<TabKey, Assignment[]>;
-  }, [all]);
+  }, [all, unsyncedIds, pendingByAssignment]);
 
   const visible = buckets[tab];
   const actionable =
-    tab === "pending" || tab === "in_progress" || tab === "overdue" || tab === "needs_correction";
+    tab === "today" ||
+    tab === "upcoming" ||
+    tab === "overdue" ||
+    tab === "needs_correction" ||
+    tab === "unsynced";
 
   // Opening the Needs correction list acknowledges its bell notifications.
   useEffect(() => {
@@ -209,6 +270,12 @@ function MyScansPage() {
                         </p>
                         {statusBadge(assignment.status)}
                         <CollectionMethodBadge mode={assignment.audit_mode} />
+                        {(pendingByAssignment[assignment.id] ?? 0) > 0 ? (
+                          <SyncBadge
+                            state="pending"
+                            pendingCount={pendingByAssignment[assignment.id]}
+                          />
+                        ) : null}
                         {assignment.status === "needs_correction" && (
                           <Badge
                             variant="secondary"

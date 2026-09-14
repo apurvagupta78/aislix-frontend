@@ -149,7 +149,7 @@ function DigitalAuditPage() {
       rca_notes?: string | null;
     }) => {
       if (!isOnline()) {
-        await queueLineUpdate(input);
+        await queueLineUpdate({ ...input, assignmentId: assignmentId! });
         return;
       }
       await updateDigitalAuditLine(input);
@@ -168,6 +168,7 @@ function DigitalAuditPage() {
       if (!isOnline()) {
         await queuePhotoUpload({
           scanId: session!.scan_id,
+          assignmentId: assignmentId!,
           binKey: input.binKey,
           file: input.file,
         });

@@ -26,6 +26,7 @@ import {
 } from "@/lib/corrective-actions";
 import { formatDate } from "@/routes/my-scans";
 import { isOrgManager, requestReScan } from "@/lib/assignments";
+import { useGlobalFilters } from "@/lib/global-filters";
 import { formatAssignmentId } from "@/components/AssignmentId";
 
 export const Route = createFileRoute("/corrective-actions")({
@@ -51,8 +52,9 @@ export const Route = createFileRoute("/corrective-actions")({
 
 function CorrectiveActionsPage() {
   const queryClient = useQueryClient();
+  const { filters: globalFilters } = useGlobalFilters();
   const [status, setStatus] = useState("all");
-  const [store, setStore] = useState("all");
+  const [store, setStore] = useState(globalFilters.storeId !== "all" ? globalFilters.storeId : "all");
   const [assignee, setAssignee] = useState("all");
 
   const managerQuery = useQuery({

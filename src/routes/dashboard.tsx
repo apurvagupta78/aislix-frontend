@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 
@@ -23,7 +23,8 @@ import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/States";
 import { fetchDashboard } from "@/lib/dashboard";
 import { DEMO_WORKSPACE_DASHBOARD, DEMO_WORKSPACE_MANAGEMENT, isDemoMode } from "@/lib/dashboard-demo";
-import { DEFAULT_DASHBOARD_FILTERS, type DashboardFilterState } from "@/lib/dashboard-filters";
+import { type DashboardFilterState } from "@/lib/dashboard-filters";
+import { useGlobalFilters } from "@/lib/global-filters";
 import { fetchWorkspaceDashboard } from "@/lib/dashboard-intelligence";
 import { fetchWorkspaceManagementData } from "@/lib/dashboard-workspace-management";
 import {
@@ -69,16 +70,17 @@ function Dashboard() {
   const search = Route.useSearch();
   const urlRole = parseDashboardRoleSlug(search.role);
 
-  const [filters, setFilters] = useState<DashboardFilterState>(() => ({
-    ...DEFAULT_DASHBOARD_FILTERS,
-    role: urlRole ?? DEFAULT_DASHBOARD_FILTERS.role,
-  }));
+  const { filters: globalFilters, setFilters: setGlobalFilters, options: filterOptionsFromGlobal } =
+    useGlobalFilters();
 
   useEffect(() => {
-    if (urlRole && urlRole !== filters.role) {
-      setFilters((current) => applyDashboardRoleChange(current, urlRole));
+    if (urlRole && urlRole !== globalFilters.role) {
+      setGlobalFilters((current) => applyDashboardRoleChange(current, urlRole));
     }
-  }, [urlRole, filters.role]);
+  }, [urlRole, globalFilters.role, setGlobalFilters]);
+
+  const filters = globalFilters;
+  const setFilters = setGlobalFilters;
 
   const session = useQuery({
     queryKey: ["auth-session"],
@@ -184,7 +186,8 @@ function Dashboard() {
         onChange={setFilters}
         summaryLabel={data?.filter_summary.label}
         options={
-          data?.filter_options ?? {
+          data?.filter_options ??
+          filterOptionsFromGlobal ?? {
             stores: [],
             countries: [],
             cities: [],

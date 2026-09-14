@@ -18,6 +18,9 @@ import { Route as AssignedScansRouteImport } from './routes/assigned-scans'
 import { Route as AuditIntelligenceRouteImport } from './routes/audit-intelligence'
 import { Route as AuditReviewScanIdRouteImport } from './routes/audit-review.$scanId'
 import { Route as AuditSchedulesRouteImport } from './routes/audit-schedules'
+import { Route as AuditTemplatesRouteImport } from './routes/audit-templates'
+import { Route as ExceptionsRouteImport } from './routes/exceptions'
+import { Route as ExceptionsExceptionIdRouteImport } from './routes/exceptions.$exceptionId'
 import { Route as BillingRouteImport } from './routes/billing'
 import { Route as CompareRouteImport } from './routes/compare'
 import { Route as ContactRouteImport } from './routes/contact'
@@ -124,6 +127,21 @@ const AuditReviewScanIdRoute = AuditReviewScanIdRouteImport.update({
 const AuditSchedulesRoute = AuditSchedulesRouteImport.update({
   id: '/audit-schedules',
   path: '/audit-schedules',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuditTemplatesRoute = AuditTemplatesRouteImport.update({
+  id: '/audit-templates',
+  path: '/audit-templates',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExceptionsRoute = ExceptionsRouteImport.update({
+  id: '/exceptions',
+  path: '/exceptions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExceptionsExceptionIdRoute = ExceptionsExceptionIdRouteImport.update({
+  id: '/exceptions/$exceptionId',
+  path: '/exceptions/$exceptionId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BillingRoute = BillingRouteImport.update({
@@ -450,6 +468,7 @@ export interface FileRoutesByFullPath {
   '/audit-intelligence': typeof AuditIntelligenceRoute
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/audit-schedules': typeof AuditSchedulesRoute
+  '/audit-templates': typeof AuditTemplatesRoute
   '/billing': typeof BillingRoute
   '/digital-audit': typeof DigitalAuditRoute
   '/compare': typeof CompareRoute
@@ -457,6 +476,8 @@ export interface FileRoutesByFullPath {
   '/cookies': typeof CookiesRoute
   '/corrective-actions': typeof CorrectiveActionsRoute
   '/dashboard': typeof DashboardRoute
+  '/exceptions': typeof ExceptionsRoute
+  '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
   '/features': typeof FeaturesRoute
@@ -523,6 +544,7 @@ export interface FileRoutesByTo {
   '/audit-intelligence': typeof AuditIntelligenceRoute
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/audit-schedules': typeof AuditSchedulesRoute
+  '/audit-templates': typeof AuditTemplatesRoute
   '/billing': typeof BillingRoute
   '/digital-audit': typeof DigitalAuditRoute
   '/compare': typeof CompareRoute
@@ -530,6 +552,8 @@ export interface FileRoutesByTo {
   '/cookies': typeof CookiesRoute
   '/corrective-actions': typeof CorrectiveActionsRoute
   '/dashboard': typeof DashboardRoute
+  '/exceptions': typeof ExceptionsRoute
+  '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
   '/features': typeof FeaturesRoute
@@ -597,6 +621,7 @@ export interface FileRoutesById {
   '/audit-intelligence': typeof AuditIntelligenceRoute
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/audit-schedules': typeof AuditSchedulesRoute
+  '/audit-templates': typeof AuditTemplatesRoute
   '/billing': typeof BillingRoute
   '/digital-audit': typeof DigitalAuditRoute
   '/compare': typeof CompareRoute
@@ -604,6 +629,8 @@ export interface FileRoutesById {
   '/cookies': typeof CookiesRoute
   '/corrective-actions': typeof CorrectiveActionsRoute
   '/dashboard': typeof DashboardRoute
+  '/exceptions': typeof ExceptionsRoute
+  '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
   '/features': typeof FeaturesRoute
@@ -998,6 +1025,27 @@ declare module '@tanstack/react-router' {
       path: '/audit-schedules'
       fullPath: '/audit-schedules'
       preLoaderRoute: typeof AuditSchedulesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/audit-templates': {
+      id: '/audit-templates'
+      path: '/audit-templates'
+      fullPath: '/audit-templates'
+      preLoaderRoute: typeof AuditTemplatesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exceptions': {
+      id: '/exceptions'
+      path: '/exceptions'
+      fullPath: '/exceptions'
+      preLoaderRoute: typeof ExceptionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exceptions/$exceptionId': {
+      id: '/exceptions/$exceptionId'
+      path: '/exceptions/$exceptionId'
+      fullPath: '/exceptions/$exceptionId'
+      preLoaderRoute: typeof ExceptionsExceptionIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/billing': {
@@ -1465,12 +1513,15 @@ const rootRouteChildren: RootRouteChildren = {
   AuditIntelligenceRoute: AuditIntelligenceRoute,
   AuditReviewScanIdRoute: AuditReviewScanIdRoute,
   AuditSchedulesRoute: AuditSchedulesRoute,
+  AuditTemplatesRoute: AuditTemplatesRoute,
   BillingRoute: BillingRoute,
   DigitalAuditRoute: DigitalAuditRoute,
   CompareRoute: CompareRoute,
   ContactRoute: ContactRoute,
   CookiesRoute: CookiesRoute,
   CorrectiveActionsRoute: CorrectiveActionsRoute,
+  ExceptionsRoute: ExceptionsRoute,
+  ExceptionsExceptionIdRoute: ExceptionsExceptionIdRoute,
   DashboardRoute: DashboardRoute,
   DemoRoute: DemoRoute,
   DemoScansRoute: DemoScansRoute,

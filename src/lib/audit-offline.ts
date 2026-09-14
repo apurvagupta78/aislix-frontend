@@ -5,11 +5,12 @@
 import type { DigitalAuditSession, RcaCode } from "@/lib/digital-audit";
 
 const DB_NAME = "aislix-audit-offline";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 type PendingLine = {
   id: string;
   lineId: string;
+  assignmentId?: string;
   actual_qty: number;
   rca_code?: RcaCode | null;
   rca_notes?: string | null;
@@ -19,6 +20,7 @@ type PendingLine = {
 type PendingPhoto = {
   id: string;
   scanId: string;
+  assignmentId?: string;
   binKey: string;
   blob: Blob;
   fileName: string;
@@ -34,7 +36,7 @@ type CachedSession = {
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
+    req.onupgradeneeded = (event) => {
       const db = req.result;
       if (!db.objectStoreNames.contains("sessions")) {
         db.createObjectStore("sessions", { keyPath: "assignmentId" });
@@ -45,6 +47,7 @@ function openDb(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains("pendingPhotos")) {
         db.createObjectStore("pendingPhotos", { keyPath: "id" });
       }
+      void event;
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error ?? new Error("Could not open offline storage."));
@@ -92,6 +95,7 @@ export async function getCachedAuditSession(assignmentId: string): Promise<Digit
 
 export async function queueLineUpdate(input: {
   lineId: string;
+  assignmentId?: string;
   actual_qty: number;
   rca_code?: RcaCode | null;
   rca_notes?: string | null;
@@ -99,6 +103,7 @@ export async function queueLineUpdate(input: {
   const row: PendingLine = {
     id: `${input.lineId}-${Date.now()}`,
     lineId: input.lineId,
+    assignmentId: input.assignmentId,
     actual_qty: input.actual_qty,
     rca_code: input.rca_code ?? null,
     rca_notes: input.rca_notes ?? null,
@@ -109,12 +114,14 @@ export async function queueLineUpdate(input: {
 
 export async function queuePhotoUpload(input: {
   scanId: string;
+  assignmentId?: string;
   binKey: string;
   file: File;
 }): Promise<void> {
   const row: PendingPhoto = {
     id: `${input.scanId}-${input.binKey}-${Date.now()}`,
     scanId: input.scanId,
+    assignmentId: input.assignmentId,
     binKey: input.binKey,
     blob: input.file,
     fileName: input.file.name,
@@ -129,6 +136,35 @@ export async function listPendingCounts(): Promise<{ lines: number; photos: numb
     txStore<PendingPhoto[]>("pendingPhotos", "readonly", (s) => s.getAll()),
   ]);
   return { lines: lines.length, photos: photos.length };
+}
+
+export async function listUnsyncedAssignmentIds(): Promise<string[]> {
+  const [lines, photos, sessions] = await Promise.all([
+    txStore<PendingLine[]>("pendingLines", "readonly", (s) => s.getAll()),
+    txStore<PendingPhoto[]>("pendingPhotos", "readonly", (s) => s.getAll()),
+    txStore<CachedSession[]>("sessions", "readonly", (s) => s.getAll()),
+  ]);
+  const ids = new Set<string>();
+  for (const row of lines) {
+    if (row.assignmentId) ids.add(row.assignmentId);
+  }
+  for (const row of photos) {
+    if (row.assignmentId) ids.add(row.assignmentId);
+  }
+  for (const row of sessions) {
+    ids.add(row.assignmentId);
+  }
+  return [...ids];
+}
+
+export async function pendingCountForAssignment(assignmentId: string): Promise<number> {
+  const [lines, photos] = await Promise.all([
+    txStore<PendingLine[]>("pendingLines", "readonly", (s) => s.getAll()),
+    txStore<PendingPhoto[]>("pendingPhotos", "readonly", (s) => s.getAll()),
+  ]);
+  const lineCount = lines.filter((l) => l.assignmentId === assignmentId).length;
+  const photoCount = photos.filter((p) => p.assignmentId === assignmentId).length;
+  return lineCount + photoCount;
 }
 
 export async function flushOfflineQueue(handlers: {

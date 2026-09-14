@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import {
   LayoutDashboard,
+  AlertTriangle,
   Plus,
   History,
   FileBarChart,
@@ -60,7 +61,9 @@ import {
   notificationHref,
 } from "@/lib/notifications";
 import { formatAssignmentId } from "@/components/AssignmentId";
+import { GlobalFilterBarShell } from "@/components/filters/GlobalFilterBarShell";
 import { Badge } from "@/components/ui/badge";
+import { GlobalFilterProvider } from "@/lib/global-filters";
 
 type LucideIcon = typeof Bell;
 
@@ -134,6 +137,7 @@ const SECTIONS: NavSection[] = [
     icon: CalendarClock,
     managerOnly: true,
     items: [
+      { kind: "leaf", label: "Templates", to: "/audit-templates", icon: FileBarChart },
       { kind: "leaf", label: "Assign Audit", to: "/assign-scan", icon: Send },
       {
         kind: "leaf",
@@ -149,6 +153,7 @@ const SECTIONS: NavSection[] = [
     label: "Exceptions & Actions",
     icon: Wrench,
     items: [
+      { kind: "leaf", label: "Exceptions", to: "/exceptions", icon: AlertTriangle, managerOnly: true },
       { kind: "leaf", label: "Corrective Actions", to: "/corrective-actions", icon: Wrench },
       {
         kind: "leaf",
@@ -575,6 +580,7 @@ export function AppShell({
     ) : null;
 
   return (
+    <GlobalFilterProvider>
     <TooltipProvider delayDuration={120}>
     <div className="min-h-screen bg-surface">
       <aside
@@ -858,6 +864,7 @@ export function AppShell({
               </div>
               {actions && <div className="flex items-center gap-2">{actions}</div>}
             </div>
+            <GlobalFilterBarShell />
             <div className="mt-7 animate-fade-in">{children}</div>
           </div>
         </main>
@@ -865,6 +872,7 @@ export function AppShell({
       </div>
     </div>
     </TooltipProvider>
+    </GlobalFilterProvider>
   );
 }
 

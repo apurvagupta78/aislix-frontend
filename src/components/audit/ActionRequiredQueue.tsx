@@ -1,9 +1,20 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { SeverityBadge } from "@/components/audit/AuditStatusBadges";
+import { AssignOwnerDialog } from "@/components/exceptions/AssignOwnerDialog";
 import type { ActionRequiredItem } from "@/lib/audit-executive";
+import { fetchExceptionById, type ExceptionRecord } from "@/lib/exceptions";
 
 export function ActionRequiredQueue({ items }: { items: ActionRequiredItem[] }) {
+  const [assignId, setAssignId] = useState<string | null>(null);
+
+  const exceptionQuery = useQuery({
+    queryKey: ["exception-for-assign", assignId],
+    queryFn: () => fetchExceptionById(assignId!),
+    enabled: Boolean(assignId),
+  });
   if (!items.length) {
     return (
       <section className="rounded-xl border border-border bg-card p-6 text-center">
@@ -59,25 +70,41 @@ export function ActionRequiredQueue({ items }: { items: ActionRequiredItem[] }) 
                 </td>
                 <td className="p-3 capitalize text-xs">{row.evidence_state}</td>
                 <td className="p-3 text-right">
-                  {row.next_action === "review" && row.scan_id ? (
-                    <Button asChild size="sm" variant="default">
-                      <Link to="/audit-review/$scanId" params={{ scanId: row.scan_id }}>
-                        Review
+                  <div className="flex justify-end gap-2">
+                    {row.next_action === "review" && row.scan_id ? (
+                      <Button asChild size="sm" variant="default">
+                        <Link to="/audit-review/$scanId" params={{ scanId: row.scan_id }}>
+                          Review
+                        </Link>
+                      </Button>
+                    ) : row.scan_id ? (
+                      <Button asChild size="sm" variant="outline">
+                        <Link to="/audit-review/$scanId" params={{ scanId: row.scan_id }}>
+                          Investigate
+                        </Link>
+                      </Button>
+                    ) : null}
+                    <Button asChild size="sm" variant="ghost">
+                      <Link to="/exceptions/$exceptionId" params={{ exceptionId: row.id }}>
+                        Open
                       </Link>
                     </Button>
-                  ) : row.scan_id ? (
-                    <Button asChild size="sm" variant="outline">
-                      <Link to="/audit-review/$scanId" params={{ scanId: row.scan_id }}>
-                        Investigate
-                      </Link>
+                    <Button size="sm" variant="outline" onClick={() => setAssignId(row.id)}>
+                      Assign owner
                     </Button>
-                  ) : null}
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      <AssignOwnerDialog
+        exception={(exceptionQuery.data as ExceptionRecord | null) ?? null}
+        open={Boolean(assignId)}
+        onOpenChange={(open) => !open && setAssignId(null)}
+      />
     </section>
   );
 }
