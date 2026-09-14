@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Camera, CheckCircle2, AlertTriangle } from "lucide-react";
 
@@ -15,15 +15,18 @@ import {
   expiryTransition,
   fetchAttempt,
   fetchObservations,
+  linkEvidenceToObservation,
   makeIdempotencyKey,
   parseRetailDate,
   uploadEvidence,
+  uploadSessionVideo,
   type ExpiryInspectionAttempt,
 } from "@/lib/expiry-control";
 import { getExpiryOcrAdapter } from "@/lib/expiry-control/adapters/expiry-ocr";
 import { checkEvidenceDuplicate } from "@/lib/expiry-control/adapters/duplicate-evidence";
-import { StubVideoContinuityAdapter } from "@/lib/expiry-control/adapters/video-continuity";
+import { MediaRecorderVideoSession } from "@/lib/expiry-control/adapters/video-continuity";
 import { saveOfflineDraft } from "@/lib/expiry-control/offline-queue";
+import { SessionVideoRecorder } from "@/components/expiry-control/SessionVideoRecorder";
 
 const STEPS = ["Scope", "Areas", "Packets", "Reconcile", "Transfer"];
 
@@ -45,9 +48,14 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
     removalReason: "expired",
   });
   const [submitMessage, setSubmitMessage] = useState("");
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [markerCount, setMarkerCount] = useState(0);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const videoAdapter = useMemo(() => new StubVideoContinuityAdapter(), []);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const videoSessionRef = useRef<MediaRecorderVideoSession | null>(null);
+  const pendingEvidenceIdRef = useRef<string | null>(null);
+  const sessionTimestampRef = useRef<number | null>(null);
 
   const attemptQuery = useQuery({
     queryKey: ["expiry-attempt", attemptId],
@@ -112,10 +120,77 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
     },
   });
 
+  async function finalizeSessionVideo() {
+    const session = videoSessionRef.current;
+    if (!session?.isRecording) return;
+    setUploadingVideo(true);
+    try {
+      const report = await session.stop();
+      setRecording(false);
+      videoSessionRef.current = null;
+      if (report.videoBlob) {
+        await uploadSessionVideo(report.videoBlob, attemptId, {
+          markers: report.markers,
+          durationMs: report.durationMs,
+          missingSegments: report.missingSegments,
+          interrupted: report.missingSegments > 0,
+          mimeType: report.mimeType,
+        });
+      }
+    } catch (e) {
+      setVideoError(e instanceof Error ? e.message : "Video upload failed.");
+    } finally {
+      setUploadingVideo(false);
+    }
+  }
+
   const reconcileMutation = useMutation({
-    mutationFn: () => expiryTransition({ entityType: "attempt", entityId: attemptId, action: "reconcile" }),
+    mutationFn: async () => {
+      await finalizeSessionVideo();
+      await expiryTransition({ entityType: "attempt", entityId: attemptId, action: "reconcile" });
+    },
     onSuccess: () => setStep(5),
   });
+
+  useEffect(() => {
+    return () => {
+      void videoSessionRef.current?.stop().catch(() => undefined);
+    };
+  }, []);
+
+  async function startVideoSession() {
+    setVideoError(null);
+    try {
+      const session = new MediaRecorderVideoSession();
+      await session.start();
+      videoSessionRef.current = session;
+      setRecording(true);
+      setMarkerCount(0);
+      await expiryTransition({
+        entityType: "attempt",
+        entityId: attemptId,
+        action: "set_assurance_fallback",
+        payload: { assurance_fallback: null },
+      });
+    } catch (e) {
+      setVideoError(e instanceof Error ? e.message : "Could not start camera.");
+    }
+  }
+
+  async function chooseLowerAssurance() {
+    if (videoSessionRef.current?.isRecording) {
+      await videoSessionRef.current.stop();
+      videoSessionRef.current = null;
+      setRecording(false);
+    }
+    setAssuranceFallback(true);
+    await expiryTransition({
+      entityType: "attempt",
+      entityId: attemptId,
+      action: "set_assurance_fallback",
+      payload: { assurance_fallback: "lower_assurance_photos_only" },
+    });
+  }
 
   const submitMutation = useMutation({
     mutationFn: async () => {
@@ -138,8 +213,18 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
       return;
     }
     setHashUsed(new Set([...hashUsed, dup.hash]));
+    const session = videoSessionRef.current;
+    if (session?.isRecording) {
+      session.markPacket(currentPacket);
+      setMarkerCount((c) => c + 1);
+      sessionTimestampRef.current = Date.now();
+    }
     try {
-      await uploadEvidence(file, attemptId);
+      const { evidenceId } = await uploadEvidence(file, attemptId, {
+        linkType: "packet_date",
+        sessionTimestampMs: sessionTimestampRef.current ?? undefined,
+      });
+      pendingEvidenceIdRef.current = evidenceId;
     } catch {
       await saveOfflineDraft({
         key: `obs-${currentPacket}`,
@@ -151,7 +236,6 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
     const ocr = getExpiryOcrAdapter();
     const result = await ocr.readDate({ imageBlob: file });
     setOcrState({ label: result.label, date: result.suggestedDate ?? undefined, simulated: result.simulated });
-    if (sessionId) videoAdapter.linkCapture(sessionId, Date.now());
   }
 
   async function confirmReading(kind: "confirm" | "unreadable" | "wrong") {
@@ -183,6 +267,12 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
       wrong_product: kind === "wrong",
       file_hash: null,
     });
+    const obs = await fetchObservations(attemptId);
+    const saved = obs.find((o) => o.packet_ordinal === currentPacket);
+    if (saved && pendingEvidenceIdRef.current) {
+      await linkEvidenceToObservation(pendingEvidenceIdRef.current, saved.id, attemptId);
+      pendingEvidenceIdRef.current = null;
+    }
     setOcrState(null);
     if (fileRef.current) fileRef.current.value = "";
     if (currentPacket < physicalCount) setCurrentPacket((p) => p + 1);
@@ -244,23 +334,46 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">Sellable</div>
             <div className="rounded-lg border border-red-200 bg-red-50 p-3">Remove / hold</div>
           </div>
-          {attempt.assurance_level === "high" && !assuranceFallback ? (
-            <Alert>
-              <AlertDescription>
-                High-assurance session requires live camera. Start session or choose explicit lower-assurance fallback
-                (requires review).
-              </AlertDescription>
-              <div className="mt-2 flex gap-2">
-                <Button size="sm" onClick={async () => setSessionId(await videoAdapter.startSession())}>
-                  Start live session
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setAssuranceFallback(true)}>
-                  Lower-assurance fallback
-                </Button>
-              </div>
-            </Alert>
-          ) : null}
-          <Button className="w-full" onClick={() => setStep(3)}>
+          {(attempt.assurance_level === "high" || recording) && !assuranceFallback ? (
+            <div className="space-y-2">
+              <Alert>
+                <AlertDescription>
+                  Record the inspection session — manager can watch the video later in Review Queue. Start recording
+                  before inspecting packets, or choose explicit lower-assurance fallback (requires review).
+                </AlertDescription>
+              </Alert>
+              {recording ? (
+                <SessionVideoRecorder
+                  session={videoSessionRef.current}
+                  recording={recording}
+                  markerCount={markerCount}
+                />
+              ) : (
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => void startVideoSession()}>
+                    Start session recording
+                  </Button>
+                  {attempt.assurance_level === "high" ? (
+                    <Button size="sm" variant="outline" onClick={() => void chooseLowerAssurance()}>
+                      Lower-assurance fallback
+                    </Button>
+                  ) : null}
+                </div>
+              )}
+              {videoError ? <p className="text-xs text-destructive">{videoError}</p> : null}
+            </div>
+          ) : assuranceFallback ? (
+            <p className="text-xs text-amber-700">Lower-assurance — photos only; extra manager review required.</p>
+          ) : (
+            <Button size="sm" variant="outline" onClick={() => void startVideoSession()}>
+              Optional: record session video
+            </Button>
+          )}
+          <Button
+            className="w-full"
+            disabled={attempt.assurance_level === "high" && !assuranceFallback && !recording}
+            onClick={() => setStep(3)}
+          >
             Continue to packets
           </Button>
         </div>
@@ -268,6 +381,9 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
 
       {step === 3 && (
         <div className="space-y-3 rounded-2xl border p-4">
+          {recording ? (
+            <SessionVideoRecorder session={videoSessionRef.current} recording={recording} markerCount={markerCount} />
+          ) : null}
           <p className="text-sm font-semibold">
             Packet {currentPacket} of {physicalCount || "?"}
           </p>
@@ -335,10 +451,10 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
           <div className="flex gap-2">
             <Button
               className="flex-1"
-              disabled={!reconcile.ok}
+              disabled={!reconcile.ok || uploadingVideo}
               onClick={() => reconcileMutation.mutate()}
             >
-              Continue to transfer
+              {uploadingVideo ? "Uploading session video…" : "Continue to transfer"}
             </Button>
             <Button
               variant="outline"

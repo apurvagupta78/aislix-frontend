@@ -159,6 +159,38 @@ export type ExpiryQuarantineTransfer = {
   quarantine_location?: string;
 };
 
+export type ExpiryEvidenceAsset = {
+  id: string;
+  storage_path: string;
+  file_hash: string;
+  mime_type: string | null;
+  capture_source: string;
+  evidence_status: string;
+  device_metadata: Record<string, unknown>;
+  captured_at: string | null;
+  signedUrl?: string;
+};
+
+export type ExpiryEvidenceLink = {
+  id: string;
+  evidence_id: string;
+  attempt_id: string | null;
+  observation_id: string | null;
+  link_type: string;
+  session_timestamp_ms: number | null;
+};
+
+export type ExpiryAttemptEvidence = {
+  sessionVideo: ExpiryEvidenceAsset | null;
+  packetPhotos: Array<{
+    observationId: string | null;
+    packetOrdinal: number | null;
+    asset: ExpiryEvidenceAsset;
+    sessionTimestampMs: number | null;
+  }>;
+  assuranceFallback: boolean;
+};
+
 export type ExpiryPolicyVersion = {
   id: string;
   name: string;

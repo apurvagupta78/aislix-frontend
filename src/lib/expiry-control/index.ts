@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { dbError, requireOrgId, requireUserId } from "@/lib/db/context";
 import type {
   ExpiryAssignment,
+  ExpiryAttemptEvidence,
   ExpiryException,
   ExpiryInspectionAttempt,
   ExpiryOverviewMetrics,
@@ -239,27 +240,160 @@ export async function createAssignment(input: {
   return attempt!.id as string;
 }
 
-export async function uploadEvidence(file: File, attemptId: string): Promise<{ path: string; hash: string }> {
+export async function getEvidenceSignedUrl(storagePath: string): Promise<string | null> {
+  const { data, error } = await supabase.storage.from("audit-evidence").createSignedUrl(storagePath, 3600);
+  if (error) return null;
+  return data.signedUrl;
+}
+
+export async function uploadEvidence(
+  file: File,
+  attemptId: string,
+  options: {
+    linkType?: "context" | "packet_date" | "quarantine_contents" | "quarantine_seal" | "live_session";
+    observationId?: string;
+    sessionTimestampMs?: number;
+    captureSource?: "in_app" | "imported" | "live_session";
+    deviceMetadata?: Record<string, unknown>;
+  } = {},
+): Promise<{ path: string; hash: string; evidenceId: string | null }> {
   const orgId = await requireOrgId();
   const userId = await requireUserId();
   const { hashFileContent } = await import("@/lib/audit-builder/evidence-validation");
   const hash = await hashFileContent(file);
-  const path = `${orgId}/${attemptId}/${crypto.randomUUID()}-${file.name}`;
-  const { error: upErr } = await supabase.storage.from("audit-evidence").upload(path, file);
+  const path = `${orgId}/${attemptId}/${crypto.randomUUID()}-${file.name.replace(/\s+/g, "_")}`;
+  const { error: upErr } = await supabase.storage.from("audit-evidence").upload(path, file, {
+    contentType: file.type || undefined,
+    upsert: false,
+  });
   if (upErr) dbError(upErr, "Evidence upload failed.");
 
-  const { error: insErr } = await supabase.from("expiry_evidence_assets").insert({
-    org_id: orgId,
-    storage_path: path,
-    file_hash: hash,
-    mime_type: file.type,
-    capture_source: "in_app",
-    evidence_status: "uploaded",
-    uploaded_by: userId,
-    captured_at: new Date().toISOString(),
-  });
+  const { data: asset, error: insErr } = await supabase
+    .from("expiry_evidence_assets")
+    .insert({
+      org_id: orgId,
+      storage_path: path,
+      file_hash: hash,
+      mime_type: file.type,
+      capture_source: options.captureSource ?? "in_app",
+      evidence_status: "uploaded",
+      uploaded_by: userId,
+      captured_at: new Date().toISOString(),
+      device_metadata: options.deviceMetadata ?? {},
+    })
+    .select("id")
+    .single();
+
   if (insErr && insErr.code !== "42P01") dbError(insErr, "Could not record evidence asset.");
-  return { path, hash };
+
+  const evidenceId = (asset?.id as string) ?? null;
+  if (evidenceId) {
+    const { error: linkErr } = await supabase.from("expiry_evidence_links").insert({
+      org_id: orgId,
+      evidence_id: evidenceId,
+      attempt_id: attemptId,
+      observation_id: options.observationId ?? null,
+      link_type: options.linkType ?? "packet_date",
+      session_timestamp_ms: options.sessionTimestampMs ?? null,
+    });
+    if (linkErr && linkErr.code !== "42P01") dbError(linkErr, "Could not link evidence.");
+  }
+
+  return { path, hash, evidenceId };
+}
+
+export async function uploadSessionVideo(
+  blob: Blob,
+  attemptId: string,
+  report: {
+    markers: { packetOrdinal: number; offsetMs: number; label: string }[];
+    durationMs: number;
+    missingSegments: number;
+    interrupted: boolean;
+    mimeType: string;
+  },
+): Promise<string | null> {
+  const ext = report.mimeType.includes("mp4") ? "mp4" : "webm";
+  const file = new File([blob], `session-${attemptId}.${ext}`, { type: report.mimeType });
+  const { evidenceId } = await uploadEvidence(file, attemptId, {
+    linkType: "live_session",
+    captureSource: "live_session",
+    deviceMetadata: {
+      continuity: {
+        durationMs: report.durationMs,
+        missingSegments: report.missingSegments,
+        interrupted: report.interrupted,
+      },
+      markers: report.markers,
+    },
+  });
+  return evidenceId;
+}
+
+export async function linkEvidenceToObservation(evidenceId: string, observationId: string, attemptId: string): Promise<void> {
+  const orgId = await requireOrgId();
+  const { error } = await supabase
+    .from("expiry_evidence_links")
+    .update({ observation_id: observationId })
+    .eq("org_id", orgId)
+    .eq("evidence_id", evidenceId)
+    .eq("attempt_id", attemptId);
+  if (error && error.code !== "42P01") dbError(error, "Could not link evidence to observation.");
+}
+
+export async function fetchAttemptEvidence(attemptId: string): Promise<ExpiryAttemptEvidence> {
+  const orgId = await requireOrgId();
+  const attempt = await fetchAttempt(attemptId);
+
+  const { data: links, error } = await supabase
+    .from("expiry_evidence_links")
+    .select("*, asset:expiry_evidence_assets(*)")
+    .eq("org_id", orgId)
+    .eq("attempt_id", attemptId);
+
+  if (error) {
+    if (error.code === "42P01") {
+      return { sessionVideo: null, packetPhotos: [], assuranceFallback: !!attempt.assurance_fallback };
+    }
+    dbError(error, "Could not load evidence.");
+  }
+
+  let sessionVideo: ExpiryAttemptEvidence["sessionVideo"] = null;
+  const packetPhotos: ExpiryAttemptEvidence["packetPhotos"] = [];
+
+  for (const row of links ?? []) {
+    const asset = row.asset as Record<string, unknown> | null;
+    if (!asset) continue;
+    const signedUrl = (await getEvidenceSignedUrl(asset.storage_path as string)) ?? undefined;
+    const enriched = { ...(asset as object), signedUrl } as ExpiryAttemptEvidence["sessionVideo"] & {
+      signedUrl?: string;
+    };
+
+    if (row.link_type === "live_session") {
+      sessionVideo = enriched;
+    } else if (row.link_type === "packet_date" || row.link_type === "context") {
+      packetPhotos.push({
+        observationId: row.observation_id as string | null,
+        packetOrdinal: null,
+        asset: enriched as ExpiryAttemptEvidence["packetPhotos"][0]["asset"],
+        sessionTimestampMs: row.session_timestamp_ms as number | null,
+      });
+    }
+  }
+
+  const observations = await fetchObservations(attemptId);
+  for (const photo of packetPhotos) {
+    if (photo.observationId) {
+      const obs = observations.find((o) => o.id === photo.observationId);
+      if (obs) photo.packetOrdinal = obs.packet_ordinal;
+    }
+  }
+
+  return {
+    sessionVideo,
+    packetPhotos,
+    assuranceFallback: !!attempt.assurance_fallback,
+  };
 }
 
 export async function createQuarantineTransfer(input: {
