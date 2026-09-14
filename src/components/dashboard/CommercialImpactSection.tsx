@@ -98,7 +98,7 @@ function ProductExposureChart({ rows }: { rows: CommercialImpactDashboardData["b
           <Link
             key={`${row.scan_id}|${row.brand}|${row.product}`}
             to="/results"
-            search={{ audit: row.scan_id }}
+            search={{ scan: row.scan_id }}
             className="group grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] items-center gap-2 rounded-lg px-1 py-1 hover:bg-brand-soft/25"
           >
             <div className="min-w-0 truncate text-xs">

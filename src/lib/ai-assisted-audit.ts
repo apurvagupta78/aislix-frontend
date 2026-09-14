@@ -87,7 +87,7 @@ export async function enrichDigitalLinesWithAiSuggestions(scanId: string): Promi
       .update({
         ai_suggested_qty: aiQty,
         ai_assisted_flag: mismatch,
-      } as Record<string, unknown>)
+      })
       .eq("id", line.id as string);
 
     if (mismatch) flagged++;
