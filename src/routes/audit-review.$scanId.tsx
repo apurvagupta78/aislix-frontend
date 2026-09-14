@@ -23,6 +23,7 @@ import {
   reviewDigitalAudit,
   type DigitalAuditLine,
 } from "@/lib/digital-audit";
+import { fetchAiAssistedFlags } from "@/lib/ai-assisted-audit";
 import { isOrgManager } from "@/lib/assignments";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -47,6 +48,11 @@ function AuditReviewPage() {
     queryKey: ["audit-review", scanId],
     queryFn: () => loadDigitalAuditSession(scanId),
     retry: false,
+  });
+
+  const aiFlagsQuery = useQuery({
+    queryKey: ["ai-assisted-flags", scanId],
+    queryFn: () => fetchAiAssistedFlags(scanId),
   });
 
   const metaQuery = useQuery({
@@ -152,7 +158,25 @@ function AuditReviewPage() {
               Total variance value: ₹{Math.abs(totalVarianceValue).toFixed(2)}
             </Badge>
             <Badge variant="outline">{varianceLines.length} SKU(s) with variance</Badge>
+            {(aiFlagsQuery.data?.length ?? 0) > 0 ? (
+              <Badge variant="destructive">
+                {aiFlagsQuery.data!.length} AI-assisted mismatch(es)
+              </Badge>
+            ) : null}
           </div>
+
+          {(aiFlagsQuery.data?.length ?? 0) > 0 ? (
+            <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
+              <p className="font-medium">AI-Assisted verification</p>
+              <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                {aiFlagsQuery.data!.map((f) => (
+                  <li key={f.line_id}>
+                    {f.product_name}: digital {f.actual_qty} vs AI {f.ai_suggested_qty} (Δ{f.delta})
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           <div className="flex flex-wrap gap-2">
             {categories.map((cat) => (

@@ -11,6 +11,8 @@ export type ScanAssignmentStatus =
   | "completed"
   | "cancelled";
 
+export type AuditModeFilter = "all" | "ai" | "digital";
+
 export type ScanHistoryItem = {
   scan_id: string;
   store: string;
@@ -22,6 +24,7 @@ export type ScanHistoryItem = {
   average_confidence?: number; // 0-1 or 0-100
   processing_time_ms?: number;
   status: ScanStatus;
+  audit_mode?: "ai" | "digital" | "ai_assisted";
   /** Set when the scan was run against a delegated assignment. */
   assignment_id?: string | null;
   assignment_status?: ScanAssignmentStatus | null;
@@ -63,6 +66,8 @@ export type ScanHistoryQuery = {
   assignment_status?: ScanAssignmentStatus | "all";
   /** Filter by the assignee of the linked assignment. */
   assignee?: string | "all";
+  /** Filter by audit execution mode (Wave 5 unified history). */
+  audit_mode?: AuditModeFilter;
 };
 
 import { supabase } from "@/integrations/supabase/client";
@@ -113,10 +118,14 @@ export async function fetchScanHistory(
   let query = supabase
     .from("shelf_scans")
     .select(
-      "id, status, shelf_label, category, total_products, low_stock_count, out_of_stock_count, processing_started_at, processing_completed_at, created_at, store_id, created_by, assignment_id, stores(name)",
+      "id, status, audit_mode, shelf_label, category, total_products, low_stock_count, out_of_stock_count, processing_started_at, processing_completed_at, created_at, store_id, created_by, assignment_id, stores(name)",
       { count: "exact" },
     )
     .eq("org_id", orgId);
+
+  if (params.audit_mode && params.audit_mode !== "all") {
+    query = query.eq("audit_mode", params.audit_mode);
+  }
 
   // Managers see every scan in the active organization. Members' history is
   // their completed assigned work, irrespective of who created the scan row.
@@ -180,6 +189,7 @@ export async function fetchScanHistory(
       store: (row.stores?.name as string | undefined) ?? "—",
       created_at: row.created_at as string,
       status: toApiStatus(row.status as string),
+      audit_mode: ((row as { audit_mode?: string }).audit_mode ?? "ai") as ScanHistoryItem["audit_mode"],
     };
     if (row.shelf_label) item.location = row.shelf_label as string;
     if (row.category) item.category = row.category as string;

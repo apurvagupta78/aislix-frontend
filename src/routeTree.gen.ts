@@ -15,7 +15,9 @@ import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AssignScanRouteImport } from './routes/assign-scan'
 import { Route as AssignedScansRouteImport } from './routes/assigned-scans'
+import { Route as AuditIntelligenceRouteImport } from './routes/audit-intelligence'
 import { Route as AuditReviewScanIdRouteImport } from './routes/audit-review.$scanId'
+import { Route as AuditSchedulesRouteImport } from './routes/audit-schedules'
 import { Route as BillingRouteImport } from './routes/billing'
 import { Route as CompareRouteImport } from './routes/compare'
 import { Route as ContactRouteImport } from './routes/contact'
@@ -109,9 +111,19 @@ const AssignedScansRoute = AssignedScansRouteImport.update({
   path: '/assigned-scans',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuditIntelligenceRoute = AuditIntelligenceRouteImport.update({
+  id: '/audit-intelligence',
+  path: '/audit-intelligence',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuditReviewScanIdRoute = AuditReviewScanIdRouteImport.update({
   id: '/audit-review/$scanId',
   path: '/audit-review/$scanId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuditSchedulesRoute = AuditSchedulesRouteImport.update({
+  id: '/audit-schedules',
+  path: '/audit-schedules',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BillingRoute = BillingRouteImport.update({
@@ -435,7 +447,9 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
+  '/audit-intelligence': typeof AuditIntelligenceRoute
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
+  '/audit-schedules': typeof AuditSchedulesRoute
   '/billing': typeof BillingRoute
   '/digital-audit': typeof DigitalAuditRoute
   '/compare': typeof CompareRoute
@@ -506,7 +520,9 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRouteWithChildren
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
+  '/audit-intelligence': typeof AuditIntelligenceRoute
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
+  '/audit-schedules': typeof AuditSchedulesRoute
   '/billing': typeof BillingRoute
   '/digital-audit': typeof DigitalAuditRoute
   '/compare': typeof CompareRoute
@@ -578,7 +594,9 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
+  '/audit-intelligence': typeof AuditIntelligenceRoute
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
+  '/audit-schedules': typeof AuditSchedulesRoute
   '/billing': typeof BillingRoute
   '/digital-audit': typeof DigitalAuditRoute
   '/compare': typeof CompareRoute
@@ -961,11 +979,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AssignedScansRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/audit-intelligence': {
+      id: '/audit-intelligence'
+      path: '/audit-intelligence'
+      fullPath: '/audit-intelligence'
+      preLoaderRoute: typeof AuditIntelligenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/audit-review/$scanId': {
       id: '/audit-review/$scanId'
       path: '/audit-review/$scanId'
       fullPath: '/audit-review/$scanId'
       preLoaderRoute: typeof AuditReviewScanIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/audit-schedules': {
+      id: '/audit-schedules'
+      path: '/audit-schedules'
+      fullPath: '/audit-schedules'
+      preLoaderRoute: typeof AuditSchedulesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/billing': {
@@ -1430,7 +1462,9 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   AssignScanRoute: AssignScanRoute,
   AssignedScansRoute: AssignedScansRoute,
+  AuditIntelligenceRoute: AuditIntelligenceRoute,
   AuditReviewScanIdRoute: AuditReviewScanIdRoute,
+  AuditSchedulesRoute: AuditSchedulesRoute,
   BillingRoute: BillingRoute,
   DigitalAuditRoute: DigitalAuditRoute,
   CompareRoute: CompareRoute,

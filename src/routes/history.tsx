@@ -60,6 +60,7 @@ import {
   formatScanDate,
   formatScanTime,
   type ScanHistoryItem,
+  type AuditModeFilter,
   type ScanHistoryQuery,
   type ScanStatus,
 } from "@/lib/scan-history";
@@ -267,6 +268,7 @@ function HistoryPage() {
   const [date, setDate] = useState(initialDate ?? "");
   const [sort, setSort] = useState<NonNullable<ScanHistoryQuery["sort"]>>("newest");
   const [type, setType] = useState<NonNullable<ScanHistoryQuery["type"]>>("all");
+  const [auditMode, setAuditMode] = useState<AuditModeFilter>("all");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<string[]>([]);
   const [pendingDelete, setPendingDelete] = useState<ScanHistoryItem | null>(null);
@@ -281,6 +283,7 @@ function HistoryPage() {
     date_to: initialDateTo,
     sort,
     type,
+    audit_mode: auditMode,
     page,
     page_size: PAGE_SIZE,
   };
@@ -418,9 +421,26 @@ function HistoryPage() {
                 <SelectItem value="adhoc">Ad hoc only</SelectItem>
               </SelectContent>
             </Select>
+
+            <Select
+              value={auditMode}
+              onValueChange={(v) => {
+                setAuditMode(v as AuditModeFilter);
+                resetPage();
+              }}
+            >
+              <SelectTrigger className="h-11 rounded-xl sm:w-[170px]" aria-label="Filter by audit mode">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All modes</SelectItem>
+                <SelectItem value="digital">Digital Audit</SelectItem>
+                <SelectItem value="ai">AI Audit</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {(q || date || store !== "all" || type !== "all") && (
+          {(q || date || store !== "all" || type !== "all" || auditMode !== "all") && (
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span>Filters active</span>
               <Button
@@ -432,6 +452,7 @@ function HistoryPage() {
                   setDate("");
                   setStore("all");
                   setType("all");
+                  setAuditMode("all");
                   resetPage();
                 }}
               >
@@ -545,16 +566,21 @@ function HistoryPage() {
                           {scan.category ?? "—"}
                         </TableCell>
                         <TableCell>
-                          <Badge
-                            variant="secondary"
-                            className={`rounded-full border-0 font-medium ${
-                              scan.assignment_id
-                                ? "bg-brand-soft text-brand"
-                                : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            {scan.assignment_id ? "Assigned" : "Ad hoc"}
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge
+                              variant="secondary"
+                              className={`w-fit rounded-full border-0 font-medium ${
+                                scan.assignment_id
+                                  ? "bg-brand-soft text-brand"
+                                  : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {scan.assignment_id ? "Assigned" : "Ad hoc"}
+                            </Badge>
+                            <Badge variant="outline" className="w-fit text-[0.65rem]">
+                              {scan.audit_mode === "digital" ? "Digital" : "AI"}
+                            </Badge>
+                          </div>
                         </TableCell>
                         <TableCell className="text-sm">
                           <AssignmentStatusBadge status={scan.assignment_status ?? null} />

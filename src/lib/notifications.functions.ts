@@ -63,3 +63,66 @@ export const notifyMember = createServerFn({ method: "POST" })
     if (insertError) throw new Error(insertError.message);
     return { ok: true };
   });
+
+/** Notify all managers — callable by assignee after digital audit submit. */
+export const notifyAuditManagers = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (input: {
+      org_id: string;
+      assignment_id: string;
+      type: string;
+      title: string;
+      body?: string | null;
+      payload?: Record<string, unknown>;
+    }) => ({
+      org_id: String(input.org_id),
+      assignment_id: String(input.assignment_id),
+      type: String(input.type),
+      title: String(input.title),
+      body: input.body ? String(input.body) : null,
+      payload: (input.payload ?? {}) as Record<string, unknown>,
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+
+    const { data: assignment } = await supabase
+      .from("scan_assignments")
+      .select("assignee_id, org_id")
+      .eq("id", data.assignment_id)
+      .eq("org_id", data.org_id)
+      .maybeSingle();
+    if (!assignment) throw new Error("Assignment not found.");
+    const isAssignee = assignment.assignee_id === userId;
+
+    const { data: me } = await supabase
+      .from("organization_members")
+      .select("role")
+      .eq("org_id", data.org_id)
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .maybeSingle();
+    const isManager = me && MANAGER_ROLES.includes(String(me.role).toLowerCase());
+    if (!isAssignee && !isManager) throw new Error("Forbidden");
+
+    const { data: managers } = await supabase
+      .from("organization_members")
+      .select("user_id")
+      .eq("org_id", data.org_id)
+      .eq("status", "active")
+      .in("role", MANAGER_ROLES);
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    for (const mgr of managers ?? []) {
+      await supabaseAdmin.from("notifications").insert({
+        user_id: mgr.user_id as string,
+        org_id: data.org_id,
+        type: data.type,
+        title: data.title,
+        body: data.body,
+        payload: data.payload as never,
+      });
+    }
+    return { ok: true, count: managers?.length ?? 0 };
+  });

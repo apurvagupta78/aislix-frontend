@@ -607,6 +607,19 @@ export async function submitDigitalAudit(input: {
     .from("scan_assignments")
     .update({ approval_status: "pending_review" } as Record<string, unknown>)
     .eq("id", input.assignmentId);
+
+  try {
+    const { notifyManagersAuditSubmitted } = await import("@/lib/audit-alerts");
+    const { data: profile } = await supabase.auth.getUser();
+    await notifyManagersAuditSubmitted({
+      assignmentId: input.assignmentId,
+      scanId: input.scanId,
+      storeName: session.store_name,
+      assigneeName: profile.user?.email ?? "Auditor",
+    });
+  } catch (e) {
+    console.error("[digital-audit] submit notification failed", e);
+  }
 }
 
 export async function computeAndPersistDigitalComparison(scanId: string): Promise<number | null> {
@@ -719,7 +732,33 @@ export async function reviewDigitalAudit(input: {
   });
 
   if (input.action === "approved") {
+    try {
+      const { enrichDigitalLinesWithAiSuggestions } = await import("@/lib/ai-assisted-audit");
+      await enrichDigitalLinesWithAiSuggestions(input.scanId);
+    } catch (e) {
+      console.error("[digital-audit] AI-assisted enrichment failed", e);
+    }
+
     await computeAndPersistDigitalComparison(input.scanId);
+
+    const session = await loadDigitalAuditSession(input.scanId);
+    const totalVariance = session.lines.reduce((s, l) => s + Math.abs(l.variance_value_inr ?? 0), 0);
+    const critical = session.lines.filter(
+      (l) => Math.abs(l.variance_value_inr ?? 0) >= 10_000,
+    ).length;
+    try {
+      const { notifyManagersVarianceException } = await import("@/lib/audit-alerts");
+      await notifyManagersVarianceException({
+        assignmentId: input.assignmentId,
+        scanId: input.scanId,
+        storeName: session.store_name,
+        totalVarianceInr: totalVariance,
+        criticalCount: critical,
+      });
+    } catch (e) {
+      console.error("[digital-audit] exception notification failed", e);
+    }
+
     await supabase
       .from("scan_assignments")
       .update({

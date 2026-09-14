@@ -29,7 +29,6 @@ import { toUserMessage } from "@/lib/api/errors";
 import {
   computeLineVariance,
   importActualCsv,
-  loadDigitalAuditSession,
   RCA_OPTIONS,
   startOrResumeDigitalAudit,
   submitDigitalAudit,
@@ -40,6 +39,15 @@ import {
   type DigitalAuditLine,
   type RcaCode,
 } from "@/lib/digital-audit";
+import { BarcodeScannerDialog } from "@/components/digital-audit/BarcodeScannerDialog";
+import {
+  cacheAuditSession,
+  flushOfflineQueue,
+  isOnline,
+  listPendingCounts,
+  queueLineUpdate,
+  queuePhotoUpload,
+} from "@/lib/audit-offline";
 
 export const Route = createFileRoute("/digital-audit")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -60,6 +68,9 @@ function DigitalAuditPage() {
   const csvRef = useRef<HTMLInputElement>(null);
   const [activeBin, setActiveBin] = useState<string | null>(null);
   const [barcodeInput, setBarcodeInput] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
+  const [offline, setOffline] = useState(!isOnline());
+  const [pendingCount, setPendingCount] = useState(0);
   const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
@@ -93,24 +104,86 @@ function DigitalAuditPage() {
     if (!activeBin && session?.bins.length) setActiveBin(session.bins[0] ?? null);
   }, [session?.bins, activeBin]);
 
+  useEffect(() => {
+    const onOnline = () => {
+      setOffline(false);
+      if (!session?.scan_id) return;
+      void flushOfflineQueue({
+        updateLine: (input) => updateDigitalAuditLine(input),
+        uploadPhoto: (input) =>
+          uploadBinEvidence({
+            scanId: input.scanId,
+            binKey: input.binKey,
+            file: input.file,
+            lat: geo?.lat,
+            lng: geo?.lng,
+          }),
+      }).then(({ syncedLines, syncedPhotos }) => {
+        if (syncedLines || syncedPhotos) {
+          toast.success(`Synced ${syncedLines} line(s) and ${syncedPhotos} photo(s).`);
+          void queryClient.invalidateQueries({ queryKey: ["digital-audit", assignmentId] });
+        }
+        void listPendingCounts().then(setPendingCount);
+      });
+    };
+    const onOffline = () => setOffline(true);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    void listPendingCounts().then(setPendingCount);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, [session?.scan_id, assignmentId, geo, queryClient]);
+
+  useEffect(() => {
+    if (session && assignmentId) void cacheAuditSession(assignmentId, session);
+  }, [session, assignmentId]);
+
   const saveLineMutation = useMutation({
-    mutationFn: (input: { lineId: string; actual_qty: number; rca_code?: RcaCode | null; rca_notes?: string | null }) =>
-      updateDigitalAuditLine(input),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["digital-audit", assignmentId] }),
+    mutationFn: async (input: {
+      lineId: string;
+      actual_qty: number;
+      rca_code?: RcaCode | null;
+      rca_notes?: string | null;
+    }) => {
+      if (!isOnline()) {
+        await queueLineUpdate(input);
+        return;
+      }
+      await updateDigitalAuditLine(input);
+    },
+    onSuccess: async () => {
+      const counts = await listPendingCounts();
+      setPendingCount(counts.lines + counts.photos);
+      if (!isOnline()) toast.message("Saved offline — will sync when back online.");
+      void queryClient.invalidateQueries({ queryKey: ["digital-audit", assignmentId] });
+    },
     onError: (e) => toast.error(toUserMessage(e)),
   });
 
   const photoMutation = useMutation({
-    mutationFn: (input: { binKey: string; file: File }) =>
-      uploadBinEvidence({
+    mutationFn: async (input: { binKey: string; file: File }) => {
+      if (!isOnline()) {
+        await queuePhotoUpload({
+          scanId: session!.scan_id,
+          binKey: input.binKey,
+          file: input.file,
+        });
+        return;
+      }
+      await uploadBinEvidence({
         scanId: session!.scan_id,
         binKey: input.binKey,
         file: input.file,
         lat: geo?.lat,
         lng: geo?.lng,
-      }),
-    onSuccess: () => {
-      toast.success("Shelf photo saved.");
+      });
+    },
+    onSuccess: async () => {
+      const counts = await listPendingCounts();
+      setPendingCount(counts.lines + counts.photos);
+      toast.success(isOnline() ? "Shelf photo saved." : "Photo queued offline.");
       void queryClient.invalidateQueries({ queryKey: ["digital-audit", assignmentId] });
     },
     onError: (e) => toast.error(toUserMessage(e)),
@@ -210,6 +283,14 @@ function DigitalAuditPage() {
       <div className="mx-auto max-w-3xl space-y-6 pb-24">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="secondary">Incomplete until all SKUs + bin photos</Badge>
+          {offline ? (
+            <Badge variant="outline" className="text-warning">
+              Offline mode
+            </Badge>
+          ) : null}
+          {pendingCount > 0 ? (
+            <Badge variant="outline">{pendingCount} pending sync</Badge>
+          ) : null}
           {geo ? (
             <Badge variant="outline" className="gap-1">
               <MapPin className="size-3" /> GPS captured
@@ -230,11 +311,29 @@ function DigitalAuditPage() {
               onChange={(e) => setBarcodeInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleBarcodeLookup()}
             />
-            <Button type="button" variant="outline" onClick={handleBarcodeLookup}>
+            <Button type="button" variant="outline" onClick={() => setScanOpen(true)}>
               <ScanBarcode className="size-4" />
+            </Button>
+            <Button type="button" variant="outline" onClick={handleBarcodeLookup}>
+              Find
             </Button>
           </div>
         </section>
+
+        <BarcodeScannerDialog
+          open={scanOpen}
+          onOpenChange={setScanOpen}
+          onScan={(code) => {
+            setBarcodeInput(code);
+            const line = lookupLineByBarcode(session.lines, code);
+            if (line) {
+              setActiveBin(line.bin_key);
+              toast.success(`Found ${line.product_name}`);
+            } else {
+              toast.error("No matching SKU for that barcode.");
+            }
+          }}
+        />
 
         <section className="rounded-xl border border-border bg-card p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
