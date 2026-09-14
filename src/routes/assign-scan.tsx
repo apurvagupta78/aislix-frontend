@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Loader2, RotateCcw, Trash2, UserPlus } from "lucide-react";
+import { Download, Loader2, RotateCcw, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { formatAssignmentId } from "@/components/AssignmentId";
 import { AppShell } from "@/components/AppShell";
@@ -41,11 +41,15 @@ import {
 } from "@/lib/category-selections";
 
 import {
+  createBulkScanAssignments,
   createScanAssignment,
   fetchAssignableMembers,
   isOrgManager,
+  type AuditMode,
   type ScopeType,
 } from "@/lib/assignments";
+import { downloadExpectedAuditCsv } from "@/lib/digital-audit";
+import { Checkbox } from "@/components/ui/checkbox";
 
 
 export const Route = createFileRoute("/assign-scan")({
@@ -86,6 +90,11 @@ function AssignScanPage() {
     planogramVersion: versionFromSearch,
   } = Route.useSearch();
   const [storeId, setStoreId] = useState(storeFromSearch ?? "");
+  const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>(
+    storeFromSearch ? [storeFromSearch] : [],
+  );
+  const [auditMode, setAuditMode] = useState<AuditMode>("digital");
+  const [multiStore, setMultiStore] = useState(false);
 
   const [scopeType, setScopeType] = useState<ScopeType>(
     scopeFromSearch === "planogram" ? "planogram" : "category",
@@ -215,6 +224,12 @@ function AssignScanPage() {
 
   const assignee = members.find((member) => member.user_id === assigneeId);
 
+  const targetStoreIds = multiStore
+    ? selectedStoreIds
+    : storeId
+      ? [storeId]
+      : [];
+
   const assignMutation = useMutation({
     mutationFn: async () => {
       if (planogramMode) {
@@ -238,59 +253,89 @@ function AssignScanPage() {
             sourceFilename: csvFilename,
           });
         }
+        const scopeValues = {
+          ...(planogramSummary.category ? { category: planogramSummary.category } : {}),
+          ...(planogramSummary.sub_category
+            ? { sub_category: planogramSummary.sub_category }
+            : {}),
+          ...(planogramSummary.location ? { location: planogramSummary.location } : {}),
+          product_count: planogramSummary.productCount,
+          facing_count: planogramSummary.facingCount,
+        };
+        if (targetStoreIds.length > 1) {
+          // Multi-store: each store uses its own active planogram (Store Master default).
+          return createBulkScanAssignments({
+            storeIds: targetStoreIds,
+            scopeType: "planogram",
+            scopeValues,
+            assigneeId,
+            assigneeName: assignee?.name ?? "team member",
+            dueAt: dueAt || null,
+            instructions,
+            auditMode,
+          });
+        }
         return createScanAssignment({
-          storeId,
+          storeId: targetStoreIds[0]!,
           scopeType: "planogram",
-          scopeValues: {
-            ...(planogramSummary.category ? { category: planogramSummary.category } : {}),
-            ...(planogramSummary.sub_category
-              ? { sub_category: planogramSummary.sub_category }
-              : {}),
-            ...(planogramSummary.location ? { location: planogramSummary.location } : {}),
-            product_count: planogramSummary.productCount,
-            facing_count: planogramSummary.facingCount,
-          },
+          scopeValues,
           planogramVersionId: versionId,
           assigneeId,
           assigneeName: assignee?.name ?? "team member",
           dueAt: dueAt || null,
           instructions,
+          auditMode,
+        });
+      }
+      const scopeValues = fromPlanogram
+        ? {
+            ...(category ? { category } : {}),
+            ...(subCategory ? { sub_category: subCategory } : {}),
+            ...(location.trim() ? { location: location.trim() } : {}),
+          }
+        : scopeType === "location"
+          ? { location: location.trim() }
+          : scopeType === "sub_category"
+            ? {
+                category: subSelections[0]?.category_name ?? category,
+                sub_category:
+                  subSelections[0]?.sub_category_label ??
+                  subSelections[0]?.sub_category_id ??
+                  subCategory,
+                category_selections: subSelections,
+                categories: subSelections.map((s) => s.category_name),
+                sub_categories: subSelections.map((s) => s.sub_category_id),
+              }
+            : { category };
+
+      if (targetStoreIds.length > 1) {
+        return createBulkScanAssignments({
+          storeIds: targetStoreIds,
+          scopeType,
+          scopeValues,
+          assigneeId,
+          assigneeName: assignee?.name ?? "team member",
+          dueAt: dueAt || null,
+          instructions,
+          auditMode,
         });
       }
       return createScanAssignment({
-        storeId,
+        storeId: targetStoreIds[0]!,
         scopeType,
-        scopeValues: fromPlanogram
-          ? {
-              ...(category ? { category } : {}),
-              ...(subCategory ? { sub_category: subCategory } : {}),
-              ...(location.trim() ? { location: location.trim() } : {}),
-            }
-          : scopeType === "location"
-            ? { location: location.trim() }
-            : scopeType === "sub_category"
-              ? {
-                  category: subSelections[0]?.category_name ?? category,
-                  sub_category:
-                    subSelections[0]?.sub_category_label ??
-                    subSelections[0]?.sub_category_id ??
-                    subCategory,
-                  category_selections: subSelections,
-                  categories: subSelections.map((s) => s.category_name),
-                  sub_categories: subSelections.map((s) => s.sub_category_id),
-                }
-              : { category },
-
+        scopeValues,
         planogramVersionId: fromPlanogram ? activeVersionId : null,
         assigneeId,
         assigneeName: assignee?.name ?? "team member",
         dueAt: dueAt || null,
         instructions,
+        auditMode,
       });
     },
-    onSuccess: (assignmentId) => {
+    onSuccess: (result) => {
+      const ids = Array.isArray(result) ? result : [result];
       toast.success(
-        `Scan assigned to ${assignee?.name ?? "team member"} — ID: ${formatAssignmentId(assignmentId)}`,
+        `${auditMode === "digital" ? "Digital audit" : "AI audit"} assigned to ${assignee?.name ?? "team member"} (${ids.length} store${ids.length === 1 ? "" : "s"}).`,
       );
       void navigate({ to: "/assigned-scans" });
     },
@@ -298,8 +343,8 @@ function AssignScanPage() {
   });
 
   function submit(): void {
-    if (!storeId) {
-      toast.error("Select a store first.");
+    if (!targetStoreIds.length) {
+      toast.error("Select at least one store.");
       return;
     }
     if (!assigneeId) {
@@ -307,7 +352,7 @@ function AssignScanPage() {
       return;
     }
     if (planogramMode) {
-      if (!planogramRows.length) {
+      if (!multiStore && !planogramRows.length) {
         setPlanogramError("Add at least one expected product before assigning this scan.");
         return;
       }
@@ -377,12 +422,74 @@ function AssignScanPage() {
         ) : (
           <>
             <section className={card}>
-              <h2 className="text-sm font-semibold text-foreground">Step 1 · Select store</h2>
-              <div className="mt-3 max-w-xs">
+              <h2 className="text-sm font-semibold text-foreground">Step 1 · Audit mode</h2>
+              <Tabs
+                value={auditMode}
+                onValueChange={(v) => setAuditMode(v as AuditMode)}
+                className="mt-3"
+              >
+                <TabsList className="rounded-xl">
+                  <TabsTrigger value="digital">Digital Audit</TabsTrigger>
+                  <TabsTrigger value="ai">AI Audit</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {auditMode === "digital"
+                  ? "Employee enters counts and shelf photos — no AI processing cost."
+                  : "Employee uploads shelf photos — Aislix AI analyzes the shelf."}
+              </p>
+            </section>
+
+            <section className={card}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-foreground">Step 2 · Select store(s)</h2>
+                <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Checkbox
+                    checked={multiStore}
+                    onCheckedChange={(v) => {
+                      setMultiStore(Boolean(v));
+                      if (!v && storeId) setSelectedStoreIds([storeId]);
+                    }}
+                  />
+                  Assign to multiple stores
+                </label>
+              </div>
+              <div className="mt-3 max-w-xl">
                 {storesQuery.isLoading ? (
                   <Skeleton className="h-10 w-full rounded-xl" />
+                ) : multiStore ? (
+                  <div className="max-h-48 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
+                    {(storesQuery.data ?? []).map((store) => {
+                      const checked = selectedStoreIds.includes(store.id);
+                      return (
+                        <label
+                          key={store.id}
+                          className="flex cursor-pointer items-center gap-2 text-sm"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(v) => {
+                              setSelectedStoreIds((prev) =>
+                                v
+                                  ? [...prev, store.id]
+                                  : prev.filter((id) => id !== store.id),
+                              );
+                            }}
+                          />
+                          {store.name}
+                          {store.code ? ` · ${store.code}` : ""}
+                        </label>
+                      );
+                    })}
+                  </div>
                 ) : (
-                  <Select value={storeId} onValueChange={setStoreId}>
+                  <Select
+                    value={storeId}
+                    onValueChange={(id) => {
+                      setStoreId(id);
+                      setSelectedStoreIds([id]);
+                    }}
+                  >
                     <SelectTrigger className="rounded-xl">
                       <SelectValue placeholder="Choose a store" />
                     </SelectTrigger>
@@ -400,7 +507,7 @@ function AssignScanPage() {
             </section>
 
             <section className={card}>
-              <h2 className="text-sm font-semibold text-foreground">Step 2 · Scope</h2>
+              <h2 className="text-sm font-semibold text-foreground">Step 3 · Scope</h2>
               <Tabs
                 value={scopeType}
                 onValueChange={(value) => setScopeType(value as ScopeType)}
@@ -416,10 +523,18 @@ function AssignScanPage() {
 
               {planogramMode && (
                 <div className="mt-4 space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Define the exact products this audit must cover — upload a CSV or add rows
-                    manually. The assignee scans against this list only.
-                  </p>
+                  {multiStore ? (
+                    <p className="text-sm text-muted-foreground">
+                      Each selected store will use its own active Store Master planogram as the
+                      expected product list. Upload a custom CSV below only when assigning to a
+                      single store.
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Define the exact products this audit must cover — upload a CSV or add rows
+                      manually. The assignee audits against this list only.
+                    </p>
+                  )}
 
                   {planogramError && (
                     <StickyError
@@ -429,11 +544,11 @@ function AssignScanPage() {
                     />
                   )}
 
-                  {!storeId ? (
+                  {!storeId && !multiStore ? (
                     <p className="text-sm text-muted-foreground">
-                      Select a store in Step 1 to build its planogram.
+                      Select a store in Step 2 to build its planogram.
                     </p>
-                  ) : (
+                  ) : multiStore ? null : (
                     <PlanogramBuilder
                       rows={planogramRows}
                       onRowsChange={setPlanogramRows}
@@ -461,20 +576,46 @@ function AssignScanPage() {
                             Load active planogram
                           </Button>
                           {planogramRows.length > 0 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="rounded-xl text-destructive"
-                              onClick={() => {
-                                setPlanogramRows([]);
-                                setSources({ csv: false, manual: false });
-                                setCsvFilename(null);
-                              }}
-                            >
-                              <Trash2 className="mr-2 size-4" />
-                              Clear all
-                            </Button>
+                            <>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="rounded-xl"
+                                onClick={() =>
+                                  downloadExpectedAuditCsv(
+                                    `expected-audit-${storeId || "store"}.csv`,
+                                    planogramRows.map((row) => ({
+                                      location: row.location,
+                                      category: row.category,
+                                      sub_category: row.sub_category,
+                                      brand: row.brand,
+                                      product_name: row.product_name,
+                                      sku: row.sku,
+                                      expected_qty: row.expected_qty,
+                                      mrp_inr: row.mrp_inr,
+                                    })),
+                                  )
+                                }
+                              >
+                                <Download className="mr-2 size-4" />
+                                Download expected CSV
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="rounded-xl text-destructive"
+                                onClick={() => {
+                                  setPlanogramRows([]);
+                                  setSources({ csv: false, manual: false });
+                                  setCsvFilename(null);
+                                }}
+                              >
+                                <Trash2 className="mr-2 size-4" />
+                                Clear all
+                              </Button>
+                            </>
                           )}
                         </div>
                       }

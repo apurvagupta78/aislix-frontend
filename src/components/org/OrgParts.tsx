@@ -494,6 +494,9 @@ const blankStore: StoreInput = {
   manager_name: "",
   contact_number: "",
   timezone: "Asia/Kolkata",
+  latitude: null,
+  longitude: null,
+  geofence_radius_m: 200,
 };
 
 export function StoreFormDialog({
@@ -544,6 +547,9 @@ export function StoreFormDialog({
             contact_number: store.contact_number ?? "",
             timezone: store.timezone ?? "Asia/Kolkata",
             territory_id: store.territory_id ?? null,
+            latitude: store.latitude ?? null,
+            longitude: store.longitude ?? null,
+            geofence_radius_m: store.geofence_radius_m ?? 200,
           }
         : blankStore,
     );
@@ -569,6 +575,30 @@ export function StoreFormDialog({
 
   const set = (key: keyof StoreInput, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  function useCurrentLocation() {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not available in this browser.");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setForm((prev) => ({
+          ...prev,
+          latitude: Math.round(pos.coords.latitude * 1e6) / 1e6,
+          longitude: Math.round(pos.coords.longitude * 1e6) / 1e6,
+        }));
+        toast.success("Store pin set from your current location.");
+      },
+      () => toast.error("Could not read GPS. Enter coordinates manually."),
+      { enableHighAccuracy: true, timeout: 15000 },
+    );
+  }
+
+  const mapPreviewUrl =
+    form.latitude != null && form.longitude != null
+      ? `https://www.openstreetmap.org/export/embed.html?bbox=${form.longitude - 0.01}%2C${form.latitude - 0.01}%2C${form.longitude + 0.01}%2C${form.latitude + 0.01}&layer=mapnik&marker=${form.latitude}%2C${form.longitude}`
+      : null;
 
   const members = membersQuery.data ?? [];
   const toggleMember = (userId: string) =>
@@ -715,6 +745,82 @@ export function StoreFormDialog({
               onChange={(e) => set("contact_number", e.target.value)}
               placeholder="+91 98765 43210"
             />
+          </div>
+
+          <div className="space-y-3 rounded-2xl border border-border bg-surface p-4 sm:col-span-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium">Store pin &amp; geofence</p>
+                <p className="text-xs text-muted-foreground">
+                  Used to verify auditors are at the store during Digital Audits.
+                </p>
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={useCurrentLocation}>
+                <MapPin className="size-4" /> Use my location
+              </Button>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="store-lat">Latitude</Label>
+                <Input
+                  id="store-lat"
+                  type="number"
+                  step="any"
+                  value={form.latitude ?? ""}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      latitude: e.target.value === "" ? null : Number(e.target.value),
+                    }))
+                  }
+                  placeholder="28.6139"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="store-lng">Longitude</Label>
+                <Input
+                  id="store-lng"
+                  type="number"
+                  step="any"
+                  value={form.longitude ?? ""}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      longitude: e.target.value === "" ? null : Number(e.target.value),
+                    }))
+                  }
+                  placeholder="77.2090"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="store-geofence">Geofence radius (m)</Label>
+                <Input
+                  id="store-geofence"
+                  type="number"
+                  min={50}
+                  max={5000}
+                  value={form.geofence_radius_m ?? 200}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      geofence_radius_m: Number(e.target.value) || 200,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+            {mapPreviewUrl ? (
+              <iframe
+                title="Store location preview"
+                src={mapPreviewUrl}
+                className="h-40 w-full rounded-xl border border-border"
+                loading="lazy"
+              />
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Set latitude and longitude to preview the store pin on the map.
+              </p>
+            )}
           </div>
 
           {!store && (

@@ -77,7 +77,10 @@ function compliance(value: number | null) {
 
 /** "Test store · A-1-Z · Personal Care · Shampoo" */
 function scopeLine(row: Assignment): string {
-  const parts = [row.store_name];
+  const parts = [
+    row.audit_mode === "digital" ? "Digital Audit" : "AI Audit",
+    row.store_name,
+  ];
   if (row.location) parts.push(row.location);
   if (row.scope_values.category) parts.push(row.scope_values.category);
   if (row.scope_values.sub_category) parts.push(row.scope_values.sub_category);
@@ -270,6 +273,12 @@ function AssignmentsTab({ storeId, assignerMe }: { storeId?: string; assignerMe?
                             Notify assignee
                           </Button>
                         </div>
+                      ) : row.approval_status === "pending_review" && row.scan_id ? (
+                        <Button variant="default" size="sm" className="rounded-xl" asChild>
+                          <Link to="/audit-review/$scanId" params={{ scanId: row.scan_id }}>
+                            Review audit
+                          </Link>
+                        </Button>
                       ) : row.scan_id ? (
                         <Button variant="ghost" size="sm" className="rounded-xl" asChild>
                           <Link to="/results" search={{ scan: row.scan_id }}>
@@ -329,13 +338,19 @@ function AssignmentsTab({ storeId, assignerMe }: { storeId?: string; assignerMe?
                       Notify assignee
                     </Button>
                   )}
-                  {row.scan_id && (
+                  {row.approval_status === "pending_review" && row.scan_id ? (
+                    <Button variant="default" size="sm" className="rounded-xl" asChild>
+                      <Link to="/audit-review/$scanId" params={{ scanId: row.scan_id }}>
+                        Review audit
+                      </Link>
+                    </Button>
+                  ) : row.scan_id ? (
                     <Button variant="ghost" size="sm" className="rounded-xl" asChild>
                       <Link to="/results" search={{ scan: row.scan_id }}>
                         View results
                       </Link>
                     </Button>
-                  )}
+                  ) : null}
                 </div>
               </div>
             ))}

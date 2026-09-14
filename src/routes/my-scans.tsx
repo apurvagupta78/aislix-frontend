@@ -113,7 +113,11 @@ function MyScansPage() {
     onSuccess: (_data, assignment) => {
       void queryClient.invalidateQueries({ queryKey: ["my-assignments"] });
       void queryClient.invalidateQueries({ queryKey: ["my-assignments-pending"] });
-      void navigate({ to: "/scan", search: { assignmentId: assignment.id } });
+      if (assignment.audit_mode === "digital") {
+        void navigate({ to: "/digital-audit", search: { assignmentId: assignment.id } });
+      } else {
+        void navigate({ to: "/scan", search: { assignmentId: assignment.id } });
+      }
     },
     onError: (error) => toast.error(toUserMessage(error)),
   });

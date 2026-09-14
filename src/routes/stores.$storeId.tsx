@@ -164,6 +164,12 @@ function StoreDashboard() {
                     </Badge>
                   )}
                 </Detail>
+                {store?.latitude != null && store?.longitude != null ? (
+                  <Detail icon={<MapPin className="size-4" />} label="Geofence pin">
+                    {store.latitude.toFixed(5)}, {store.longitude.toFixed(5)}
+                    {store.geofence_radius_m ? ` · ${store.geofence_radius_m}m radius` : ""}
+                  </Detail>
+                ) : null}
               </div>
             )}
           </Panel>

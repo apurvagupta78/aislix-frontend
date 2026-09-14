@@ -1770,6 +1770,7 @@ export type Database = {
           country: string | null
           created_at: string
           id: string
+          geofence_radius_m: number
           latitude: number | null
           longitude: number | null
           manager_id: string | null
@@ -1795,6 +1796,7 @@ export type Database = {
           country?: string | null
           created_at?: string
           id?: string
+          geofence_radius_m?: number
           latitude?: number | null
           longitude?: number | null
           manager_id?: string | null
@@ -1819,6 +1821,7 @@ export type Database = {
           contact_phone?: string | null
           country?: string | null
           created_at?: string
+          geofence_radius_m?: number
           id?: string
           latitude?: number | null
           longitude?: number | null

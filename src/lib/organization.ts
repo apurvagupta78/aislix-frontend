@@ -60,6 +60,9 @@ export type OrgStore = {
   timezone?: string;
   territory_id?: string | null;
   territory_name?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  geofence_radius_m?: number | null;
   status?: StoreStatus;
   created_at?: string;
   metrics?: StoreMetrics;
@@ -76,6 +79,9 @@ export type StoreInput = {
   contact_number?: string;
   timezone?: string;
   territory_id?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  geofence_radius_m?: number | null;
 };
 
 export type StoreFilter = "all" | "active" | "archived" | "healthy" | "alerts";
@@ -182,6 +188,9 @@ function mapStoreRow(row: {
   created_at: string;
   territory_id?: string | null;
   territories?: { name?: string | null } | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  geofence_radius_m?: number | null;
 }): OrgStore {
   const address = [row.address_line1, row.address_line2].filter(Boolean).join(", ") || undefined;
   const territory = row.territories as { name?: string | null } | null | undefined;
@@ -197,6 +206,9 @@ function mapStoreRow(row: {
     contact_number: row.contact_phone ?? undefined,
     territory_id: row.territory_id ?? null,
     territory_name: territory?.name ?? null,
+    latitude: row.latitude ?? null,
+    longitude: row.longitude ?? null,
+    geofence_radius_m: row.geofence_radius_m ?? null,
     status: row.status === "inactive" ? "archived" : "active",
     created_at: row.created_at,
   });
@@ -213,6 +225,9 @@ function storeInputToRow(input: StoreInput) {
     contact_name: input.manager_name ?? null,
     contact_phone: input.contact_number ?? null,
     territory_id: input.territory_id ?? null,
+    latitude: input.latitude ?? null,
+    longitude: input.longitude ?? null,
+    geofence_radius_m: input.geofence_radius_m ?? 200,
   };
 }
 

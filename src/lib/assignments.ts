@@ -45,6 +45,17 @@ export type AssignableMember = {
   status: string;
 };
 
+export type AuditMode = "ai" | "digital";
+
+export type ApprovalStatus =
+  | "pending"
+  | "incomplete"
+  | "submitted"
+  | "pending_review"
+  | "approved"
+  | "rejected"
+  | "flagged";
+
 export type Assignment = {
   id: string;
   org_id: string;
@@ -53,6 +64,8 @@ export type Assignment = {
   scope_type: ScopeType;
   scope_values: ScopeValues;
   status: AssignmentStatus;
+  audit_mode: AuditMode;
+  approval_status: ApprovalStatus;
   due_at: string | null;
   instructions: string | null;
   created_at: string;
@@ -242,6 +255,7 @@ export async function createScanAssignment(input: {
   instructions?: string | null;
   /** Planogram scope: the assignment's own draft planogram version. */
   planogramVersionId?: string | null;
+  auditMode?: AuditMode;
 }): Promise<string> {
   const orgId = await requireOrgId();
   const assignerId = await requireUserId();
@@ -260,6 +274,7 @@ export async function createScanAssignment(input: {
     versionId = (version?.id as string | null) ?? null;
   }
 
+  const auditMode = input.auditMode ?? "ai";
   const { data, error } = await supabase
     .from("scan_assignments")
     .insert({
@@ -273,7 +288,9 @@ export async function createScanAssignment(input: {
       status: "pending",
       due_at: input.dueAt || null,
       instructions: input.instructions?.trim() || null,
-    })
+      audit_mode: auditMode,
+      approval_status: "pending",
+    } as Record<string, unknown>)
     .select("id")
     .single();
   if (error) dbError(error, "Could not assign the scan.");
@@ -286,13 +303,13 @@ export async function createScanAssignment(input: {
         org_id: orgId,
         user_id: input.assigneeId,
         type: "scan_assigned",
-        title: "New Scan Assigned",
+        title: auditMode === "digital" ? "New Digital Audit Assigned" : "New AI Audit Assigned",
         body:
           input.scopeType === "planogram"
             ? `${[input.scopeValues.location, `${input.scopeValues.product_count ?? 0} products`]
                 .filter(Boolean)
-                .join(" · ")} · planogram audit`
-            : `You have a new shelf scan task: ${scopeSummary(input.scopeType, input.scopeValues)}.`,
+                .join(" · ")} · ${auditMode === "digital" ? "digital audit" : "planogram audit"}`
+            : `You have a new ${auditMode === "digital" ? "digital audit" : "AI audit"} task: ${scopeSummary(input.scopeType, input.scopeValues)}.`,
         payload: { assignment_id: assignmentId, store_id: input.storeId },
       },
     });
@@ -301,6 +318,36 @@ export async function createScanAssignment(input: {
   }
 
   return assignmentId;
+}
+
+/** Create the same audit task across multiple stores (digital or AI). */
+export async function createBulkScanAssignments(input: {
+  storeIds: string[];
+  scopeType: ScopeType;
+  scopeValues: ScopeValues;
+  assigneeId: string;
+  assigneeName: string;
+  dueAt?: string | null;
+  instructions?: string | null;
+  auditMode?: AuditMode;
+  planogramVersionIdByStore?: Record<string, string>;
+}): Promise<string[]> {
+  const ids: string[] = [];
+  for (const storeId of input.storeIds) {
+    const id = await createScanAssignment({
+      storeId,
+      scopeType: input.scopeType,
+      scopeValues: input.scopeValues,
+      assigneeId: input.assigneeId,
+      assigneeName: input.assigneeName,
+      dueAt: input.dueAt,
+      instructions: input.instructions,
+      auditMode: input.auditMode,
+      planogramVersionId: input.planogramVersionIdByStore?.[storeId] ?? null,
+    });
+    ids.push(id);
+  }
+  return ids;
 }
 
 type AssignmentRow = {
@@ -320,11 +367,13 @@ type AssignmentRow = {
   last_compliance_percent: number | string | null;
   scan_attempts: number | null;
   verified_at: string | null;
+  audit_mode?: string | null;
+  approval_status?: string | null;
   stores?: { name?: string | null } | null;
 };
 
 const SELECT =
-  "id, org_id, store_id, scope_type, scope_values, status, due_at, instructions, created_at, assignee_id, assigner_id, planogram_version_id, scan_id, last_compliance_percent, scan_attempts, verified_at, stores:store_id (name)";
+  "id, org_id, store_id, scope_type, scope_values, status, audit_mode, approval_status, due_at, instructions, created_at, assignee_id, assigner_id, planogram_version_id, scan_id, last_compliance_percent, scan_attempts, verified_at, stores:store_id (name)";
 
 /** scan_assignments references auth.users, so profile names are resolved separately. */
 async function fetchNames(ids: string[]): Promise<Map<string, string>> {
@@ -422,6 +471,10 @@ async function mapAssignments(rows: AssignmentRow[]): Promise<Assignment[]> {
         scan_attempts: Number(row.scan_attempts ?? 0) || 0,
         open_issue_count: openIssues.get(row.id) ?? 0,
         verified_at: (row as { verified_at?: string | null }).verified_at ?? null,
+        audit_mode: ((row as { audit_mode?: string }).audit_mode as AuditMode) ?? "ai",
+        approval_status:
+          ((row as { approval_status?: string }).approval_status as ApprovalStatus) ??
+          "pending",
         location: meta.location,
         expected_products: meta.count,
       };

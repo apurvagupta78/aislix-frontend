@@ -15,6 +15,7 @@ import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AssignScanRouteImport } from './routes/assign-scan'
 import { Route as AssignedScansRouteImport } from './routes/assigned-scans'
+import { Route as AuditReviewScanIdRouteImport } from './routes/audit-review.$scanId'
 import { Route as BillingRouteImport } from './routes/billing'
 import { Route as CompareRouteImport } from './routes/compare'
 import { Route as ContactRouteImport } from './routes/contact'
@@ -23,6 +24,7 @@ import { Route as CorrectiveActionsRouteImport } from './routes/corrective-actio
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DemoScansRouteImport } from './routes/demo-scans'
+import { Route as DigitalAuditRouteImport } from './routes/digital-audit'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as HistoryRouteImport } from './routes/history'
@@ -107,6 +109,11 @@ const AssignedScansRoute = AssignedScansRouteImport.update({
   path: '/assigned-scans',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuditReviewScanIdRoute = AuditReviewScanIdRouteImport.update({
+  id: '/audit-review/$scanId',
+  path: '/audit-review/$scanId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BillingRoute = BillingRouteImport.update({
   id: '/billing',
   path: '/billing',
@@ -145,6 +152,11 @@ const DemoRoute = DemoRouteImport.update({
 const DemoScansRoute = DemoScansRouteImport.update({
   id: '/demo-scans',
   path: '/demo-scans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DigitalAuditRoute = DigitalAuditRouteImport.update({
+  id: '/digital-audit',
+  path: '/digital-audit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FeaturesRoute = FeaturesRouteImport.update({
@@ -423,7 +435,9 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
+  '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/billing': typeof BillingRoute
+  '/digital-audit': typeof DigitalAuditRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
@@ -492,7 +506,9 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRouteWithChildren
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
+  '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/billing': typeof BillingRoute
+  '/digital-audit': typeof DigitalAuditRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
@@ -562,7 +578,9 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
+  '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/billing': typeof BillingRoute
+  '/digital-audit': typeof DigitalAuditRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
@@ -943,6 +961,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AssignedScansRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/audit-review/$scanId': {
+      id: '/audit-review/$scanId'
+      path: '/audit-review/$scanId'
+      fullPath: '/audit-review/$scanId'
+      preLoaderRoute: typeof AuditReviewScanIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/billing': {
       id: '/billing'
       path: '/billing'
@@ -997,6 +1022,13 @@ declare module '@tanstack/react-router' {
       path: '/demo-scans'
       fullPath: '/demo-scans'
       preLoaderRoute: typeof DemoScansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/digital-audit': {
+      id: '/digital-audit'
+      path: '/digital-audit'
+      fullPath: '/digital-audit'
+      preLoaderRoute: typeof DigitalAuditRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/features': {
@@ -1398,7 +1430,9 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   AssignScanRoute: AssignScanRoute,
   AssignedScansRoute: AssignedScansRoute,
+  AuditReviewScanIdRoute: AuditReviewScanIdRoute,
   BillingRoute: BillingRoute,
+  DigitalAuditRoute: DigitalAuditRoute,
   CompareRoute: CompareRoute,
   ContactRoute: ContactRoute,
   CookiesRoute: CookiesRoute,
