@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
-import { Camera, Loader2, Plus } from "lucide-react";
+import { AlertTriangle, Camera, Loader2, Plus } from "lucide-react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { computeCalculatedValues } from "@/lib/audit-builder/calculated-fields";
 import { isFieldVisible } from "@/lib/audit-builder/rules-engine";
 import { isImageField } from "@/lib/audit-builder/field-library";
+import {
+  buildSessionImageHashSet,
+  hashFileContent,
+  isDuplicateHash,
+  shouldBlockDuplicates,
+  shouldCheckImageQuality,
+  validateImageQuality,
+} from "@/lib/audit-builder/evidence-validation";
 import { computeCompletion } from "@/lib/audit-builder/validation";
 import type { AuditResponseValue, TemplateDefinition, TemplateField } from "@/lib/audit-builder/types";
 import type { ResponseMap } from "@/lib/custom-audit";
@@ -61,6 +70,9 @@ export function AuditExecutionForm({
   } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [activeRecord, setActiveRecord] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  /** Maps uploaded URL → SHA-256 content hash for duplicate detection within session. */
+  const imageHashByUrlRef = useRef<Record<string, string>>({});
 
   const repeatableSection = definition.sections.find((s) => s.repeatable);
   const sectionKey = repeatableSection?.key ?? definition.sections[0]?.key ?? "default";
@@ -120,15 +132,63 @@ export function AuditExecutionForm({
     setActiveRecord(nextIdx);
   };
 
+  const aiImageQuality =
+    definition.ai.enabled && definition.ai.features?.imageQualityCheck?.enabled;
+  const aiDuplicateDetection =
+    definition.ai.enabled && definition.ai.features?.duplicateEvidenceDetection?.enabled;
+
   const handleImageUpload = async (file: File) => {
     if (!uploadTarget) return;
+    const { sectionKey: sec, recordIndex, field } = uploadTarget;
+    setUploadError(null);
     setUploading(true);
+
     try {
+      const checkQuality = shouldCheckImageQuality(
+        field.config,
+        definition.ai.enabled,
+        aiImageQuality,
+      );
+      if (checkQuality) {
+        const quality = await validateImageQuality(
+          file,
+          field.config.imageQualityRequirement ?? "standard",
+        );
+        if (!quality.ok) {
+          setUploadError(quality.reason);
+          toast.error(quality.reason, { duration: 6000 });
+          return;
+        }
+      }
+
+      const fileHash = await hashFileContent(file);
+      const blockDupes = shouldBlockDuplicates(
+        field.config,
+        definition.evidence.preventDuplicates,
+        aiDuplicateDetection,
+      );
+      if (blockDupes) {
+        const known = buildSessionImageHashSet(imageHashByUrlRef.current);
+        if (isDuplicateHash(fileHash, known)) {
+          const msg =
+            "Duplicate evidence detected. This image was already uploaded — it will not count toward required coverage.";
+          setUploadError(msg);
+          toast.error(msg, { duration: 6000 });
+          return;
+        }
+      }
+
       const url = await onUploadImage(file);
-      const { sectionKey: sec, recordIndex, field } = uploadTarget;
+      imageHashByUrlRef.current[url] = fileHash;
+
       const existing = responses[sec]?.[recordIndex]?.[field.key];
       const list = Array.isArray(existing) ? [...existing, url] : [url];
       await setValue(sec, recordIndex, field, list);
+      toast.success("Evidence uploaded.");
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Could not upload image.";
+      setUploadError(msg);
+      toast.error(msg);
     } finally {
       setUploading(false);
       setUploadTarget(null);
@@ -260,6 +320,7 @@ export function AuditExecutionForm({
                 className="size-16"
                 disabled={uploading}
                 onClick={() => {
+                  setUploadError(null);
                   setUploadTarget({ sectionKey: sec, recordIndex: idx, field });
                   fileRef.current?.click();
                 }}
@@ -268,6 +329,34 @@ export function AuditExecutionForm({
               </Button>
             ) : null}
           </div>
+          {uploadTarget?.field.id === field.id &&
+          uploadTarget.sectionKey === sec &&
+          uploadTarget.recordIndex === idx &&
+          uploadError ? (
+            <p className="mt-2 flex items-start gap-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-2 py-1.5 text-xs text-destructive">
+              <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+              {uploadError}
+            </p>
+          ) : null}
+          {(field.config.imageQualityCheck ||
+            field.config.duplicateDetection ||
+            definition.evidence.preventDuplicates) &&
+          !readOnly ? (
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              {field.config.imageQualityCheck || aiImageQuality ? "Quality check on upload" : ""}
+              {(field.config.imageQualityCheck || aiImageQuality) &&
+              (field.config.duplicateDetection ||
+                definition.evidence.preventDuplicates ||
+                aiDuplicateDetection)
+                ? " · "
+                : ""}
+              {field.config.duplicateDetection ||
+              definition.evidence.preventDuplicates ||
+              aiDuplicateDetection
+                ? "Duplicates blocked"
+                : ""}
+            </p>
+          ) : null}
         </div>
       );
     }
