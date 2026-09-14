@@ -361,7 +361,7 @@ export function AuditExecutionForm({
       );
     }
 
-    if (field.type === "long_text" || field.type === "notes" || field.type === "remarks") {
+    if (field.type === "long_text" || field.type === "notes") {
       return (
         <div key={field.id}>
           <Label className="text-sm">

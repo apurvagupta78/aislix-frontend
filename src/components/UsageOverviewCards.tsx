@@ -147,7 +147,7 @@ export function UsageOverviewCards() {
           label="Remaining AI audits"
           value={isPayg ? "Pay per audit" : left === null ? "Unlimited" : formatNumber(left)}
           icon={<Zap className="size-4" />}
-          accent={limitTone(auditWarn) === "warning" ? "amber" : "green"}
+          accent={limitTone(auditWarn) === "warning" ? "brand" : "green"}
         />
         <StatCard
           label="Stores"
