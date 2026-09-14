@@ -194,7 +194,7 @@ function SharedReport() {
     let cancelled = false;
     setLoading(true);
     fetchShare({ data: { token } })
-      .then(((payload as any)) => {
+      .then((payload: any) => {
         if (cancelled) return;
         if ((payload as any).kind === "demo") {
           setResolved({ report: null, demoSession: (payload as any).demoSession });
