@@ -34,6 +34,17 @@ export const Route = createFileRoute("/exceptions")({
 });
 
 function ExceptionsPage() {
+  return (
+    <AppShell
+      title="Exceptions & Corrective Actions"
+      description="Prioritized issues with impact, owner, evidence links and lifecycle state."
+    >
+      <ExceptionsMain />
+    </AppShell>
+  );
+}
+
+function ExceptionsMain() {
   const { filters } = useGlobalFilters();
   const [lifecycle, setLifecycle] = useState<ExceptionLifecycle | "all">("all");
   const [severity, setSeverity] = useState<"all" | "critical" | "attention" | "normal">("all");
@@ -56,29 +67,20 @@ function ExceptionsPage() {
   });
 
   if (managerQuery.isLoading) {
-    return (
-      <AppShell title="Exceptions">
-        <Skeleton className="h-48 w-full" />
-      </AppShell>
-    );
+    return <Skeleton className="h-48 w-full" />;
   }
 
   if (!managerQuery.data) {
     return (
-      <AppShell title="Exceptions">
-        <EmptyState
-          title="Manager access required"
-          description="Exception management is available to managers and admins."
-        />
-      </AppShell>
+      <EmptyState
+        title="Manager access required"
+        description="Exception management is available to managers and admins."
+      />
     );
   }
 
   return (
-    <AppShell
-      title="Exceptions & Corrective Actions"
-      description="Prioritized issues with impact, owner, evidence links and lifecycle state."
-    >
+    <>
       <div className="mb-4 flex flex-wrap gap-2">
         <Select value={severity} onValueChange={(v) => setSeverity(v as typeof severity)}>
           <SelectTrigger className="w-40">
@@ -190,6 +192,6 @@ function ExceptionsPage() {
         open={Boolean(assignTarget)}
         onOpenChange={(open) => !open && setAssignTarget(null)}
       />
-    </AppShell>
+    </>
   );
 }

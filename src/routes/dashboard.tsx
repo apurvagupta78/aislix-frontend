@@ -23,10 +23,12 @@ import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/States";
 import { fetchDashboard } from "@/lib/dashboard";
 import { DEMO_WORKSPACE_DASHBOARD, DEMO_WORKSPACE_MANAGEMENT, isDemoMode } from "@/lib/dashboard-demo";
-import { type DashboardFilterState } from "@/lib/dashboard-filters";
 import { useGlobalFilters } from "@/lib/global-filters";
 import { fetchWorkspaceDashboard } from "@/lib/dashboard-intelligence";
-import { fetchWorkspaceManagementData } from "@/lib/dashboard-workspace-management";
+import {
+  fetchWorkspaceManagementData,
+  type WorkspaceManagementData,
+} from "@/lib/dashboard-workspace-management";
 import {
   applyDashboardRoleChange,
   dashboardRoleContext,
@@ -66,22 +68,6 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function Dashboard() {
-  const navigate = useNavigate({ from: Route.fullPath });
-  const search = Route.useSearch();
-  const urlRole = parseDashboardRoleSlug(search.role);
-
-  const { filters: globalFilters, setFilters: setGlobalFilters, options: filterOptionsFromGlobal } =
-    useGlobalFilters();
-
-  useEffect(() => {
-    if (urlRole && urlRole !== globalFilters.role) {
-      setGlobalFilters((current) => applyDashboardRoleChange(current, urlRole));
-    }
-  }, [urlRole, globalFilters.role, setGlobalFilters]);
-
-  const filters = globalFilters;
-  const setFilters = setGlobalFilters;
-
   const session = useQuery({
     queryKey: ["auth-session"],
     queryFn: async () => (await supabase.auth.getSession()).data.session,
@@ -91,17 +77,6 @@ function Dashboard() {
 
   const demo = session.isSuccess && isDemoMode(session.data ?? null);
   const live = session.isSuccess && !demo;
-
-  const dashboardQuery = useQuery({
-    queryKey: ["workspace-dashboard", filters],
-    queryFn: ({ signal }) => fetchWorkspaceDashboard(filters, signal),
-    retry: false,
-    enabled: live,
-  });
-
-  const data = demo ? DEMO_WORKSPACE_DASHBOARD : dashboardQuery.data;
-  const isLoading = demo ? false : !session.isSuccess || dashboardQuery.isPending;
-  const error = demo ? null : (dashboardQuery.error as Error | null);
 
   const greetingQuery = useQuery({
     queryKey: ["dashboard-greeting"],
@@ -121,20 +96,9 @@ function Dashboard() {
   });
   const workspaceManagement = demo ? DEMO_WORKSPACE_MANAGEMENT : workspaceManagementQuery.data;
 
-  const roleContext = useMemo(() => dashboardRoleContext(filters.role), [filters.role]);
-
-  const handleRoleChange = (role: AuditRoleTab) => {
-    setFilters((current) => applyDashboardRoleChange(current, role));
-    void navigate({
-      search: { role: dashboardRoleToSlug(role) },
-      replace: true,
-    });
-  };
-
   return (
     <AppShell
       title={demo ? "Live demo dashboard" : name ? `Welcome back, ${name}` : "Dashboard"}
-      description={roleContext.subtitle}
       actions={
         demo ? (
           <>
@@ -159,6 +123,54 @@ function Dashboard() {
         )
       }
     >
+      <DashboardMain demo={demo} live={live} workspaceManagement={workspaceManagement} />
+    </AppShell>
+  );
+}
+
+function DashboardMain({
+  demo,
+  live,
+  workspaceManagement,
+}: {
+  demo: boolean;
+  live: boolean;
+  workspaceManagement: WorkspaceManagementData | undefined;
+}) {
+  const navigate = useNavigate({ from: Route.fullPath });
+  const search = Route.useSearch();
+  const urlRole = parseDashboardRoleSlug(search.role);
+
+  const { filters, setFilters, options: filterOptionsFromGlobal } = useGlobalFilters();
+
+  useEffect(() => {
+    if (urlRole && urlRole !== filters.role) {
+      setFilters((current) => applyDashboardRoleChange(current, urlRole));
+    }
+  }, [urlRole, filters.role, setFilters]);
+
+  const dashboardQuery = useQuery({
+    queryKey: ["workspace-dashboard", filters],
+    queryFn: ({ signal }) => fetchWorkspaceDashboard(filters, signal),
+    retry: false,
+    enabled: live,
+  });
+
+  const data = demo ? DEMO_WORKSPACE_DASHBOARD : dashboardQuery.data;
+  const isLoading = demo ? false : dashboardQuery.isPending;
+  const error = demo ? null : (dashboardQuery.error as Error | null);
+  const roleContext = useMemo(() => dashboardRoleContext(filters.role), [filters.role]);
+
+  const handleRoleChange = (role: AuditRoleTab) => {
+    setFilters((current) => applyDashboardRoleChange(current, role));
+    void navigate({
+      search: { role: dashboardRoleToSlug(role) },
+      replace: true,
+    });
+  };
+
+  return (
+    <>
       <div className="-mt-2 mb-4 space-y-1">
         <h2 className="text-lg font-semibold tracking-tight text-foreground">{roleContext.title}</h2>
         <p className="text-sm text-muted-foreground">{roleContext.subtitle}</p>
@@ -276,6 +288,6 @@ function Dashboard() {
           </section>
         </>
       ) : null}
-    </AppShell>
+    </>
   );
 }

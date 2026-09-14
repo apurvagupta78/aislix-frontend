@@ -19,6 +19,17 @@ export const Route = createFileRoute("/sku-intelligence")({
 });
 
 function SkuIntelligencePage() {
+  return (
+    <AppShell
+      title="SKUs & Shelf Intelligence"
+      description="Cross-store variance, shortages, and recurrence — drill down to store, shelf, audit and evidence."
+    >
+      <SkuIntelligenceMain />
+    </AppShell>
+  );
+}
+
+function SkuIntelligenceMain() {
   const { filters } = useGlobalFilters();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<SkuAggregate | null>(null);
@@ -41,17 +52,12 @@ function SkuIntelligencePage() {
 
   if (!managerQuery.data && !managerQuery.isLoading) {
     return (
-      <AppShell title="SKU & Shelf Intelligence">
-        <EmptyState title="Manager access required" description="Cross-store SKU intelligence is for managers." />
-      </AppShell>
+      <EmptyState title="Manager access required" description="Cross-store SKU intelligence is for managers." />
     );
   }
 
   return (
-    <AppShell
-      title="SKUs & Shelf Intelligence"
-      description="Cross-store variance, shortages, and recurrence — drill down to store, shelf, audit and evidence."
-    >
+    <>
       <div className="mb-4 flex flex-wrap gap-2">
         <div className="relative min-w-[240px] flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -154,6 +160,6 @@ function SkuIntelligencePage() {
           )}
         </aside>
       </div>
-    </AppShell>
+    </>
   );
 }

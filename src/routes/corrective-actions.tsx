@@ -51,6 +51,17 @@ export const Route = createFileRoute("/corrective-actions")({
 });
 
 function CorrectiveActionsPage() {
+  return (
+    <AppShell
+      title="Corrective Actions"
+      description="Every fix raised by planogram comparisons, tracked to resolution."
+    >
+      <CorrectiveActionsMain />
+    </AppShell>
+  );
+}
+
+function CorrectiveActionsMain() {
   const queryClient = useQueryClient();
   const { filters: globalFilters } = useGlobalFilters();
   const [status, setStatus] = useState("all");
@@ -101,11 +112,7 @@ function CorrectiveActionsPage() {
   });
 
   return (
-    <AppShell
-      title="Corrective Actions"
-      description="Every fix raised by planogram comparisons, tracked to resolution."
-    >
-      <div className="space-y-4">
+    <div className="space-y-4">
         <div className="flex flex-wrap gap-2">
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="w-40 rounded-xl">
@@ -341,7 +348,6 @@ function CorrectiveActionsPage() {
             </div>
           </>
         )}
-      </div>
-    </AppShell>
+    </div>
   );
 }
