@@ -139,7 +139,7 @@ function Results() {
 
   const activeRole =
     roleOverride ??
-    defaultAuditRoleTab(scanContext.auditRole ?? workspace.customerType);
+    defaultAuditRoleTab(scanContext.auditRole ?? workspace.data?.customerType);
   const display = useMemo(
     () =>
       data
@@ -151,7 +151,7 @@ function Results() {
 
   const goToScan = (id?: string | null) => {
     if (!id) return;
-    navigate({ to: "/results", search: { audit: id } });
+    navigate({ to: "/results", search: { scan: id } });
   };
 
   return (

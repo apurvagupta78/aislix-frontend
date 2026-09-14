@@ -63,9 +63,14 @@ export type InventoryItem = {
   expected_sub_category_label?: string;
   /** Reserved for the shelf-position model (row / bay label). */
   shelf_position?: string;
+  sku?: string;
+  match_key?: string;
+  name?: string;
+  facings?: number;
+  location?: string;
 };
 
-export type BrandShare = { brand: string; share: number };
+export type BrandShare = { brand: string; share: number; quantity?: number };
 export type ConfidenceBucket = { bucket: string; count: number };
 export type CategorySlice = { category: string; count: number };
 export type QuantityBucket = { bucket: string; count: number };

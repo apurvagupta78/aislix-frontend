@@ -19,7 +19,9 @@ export type DashboardKpis = {
   low_stock_alerts?: number;
   out_of_stock_alerts?: number;
   average_confidence?: number; // 0-1 or 0-100
-  scans_remaining?: number | null; // null = unlimited
+  scans_remaining?: number | null;
+  audits_remaining?: number | null;
+  audits_remaining?: number | null; // null = unlimited
 };
 
 export type AccountSummary = {
@@ -27,8 +29,11 @@ export type AccountSummary = {
   plan_id?: string;
   status?: string;
   scans_used?: number;
+  audits_used?: number;
   scans_included?: number | null; // null = unlimited
   scans_remaining?: number | null;
+  audits_remaining?: number | null;
+  audits_remaining?: number | null;
   renewal_date?: string | null; // ISO
 };
 
