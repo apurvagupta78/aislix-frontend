@@ -74,7 +74,7 @@ import {
   grantStoreAccess,
   healthTone,
   restoreOrgStore,
-  auditsRemaining,
+  scansRemaining,
   storeLocation,
   updateOrgStore,
   usagePercent,
@@ -129,7 +129,7 @@ export function OrganizationOverview({
   org?: Organization | undefined;
   loading?: boolean | undefined;
 }) {
-  const remaining = auditsRemaining(org);
+  const remaining = scansRemaining(org);
   const percent = usagePercent(org);
   const status = org?.account_status;
 
