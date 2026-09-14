@@ -93,6 +93,14 @@ function SettingsPage() {
         <TabsContent value="notifications" className="mt-0 space-y-4">
           <NotificationsPanel />
           <AuditDigestPanel />
+          <SettingsCard
+            title="SLA & escalation"
+            description="Default response times by finding severity and who is notified when an SLA is missed."
+          >
+            <Button asChild variant="outline" className="rounded-xl">
+              <Link to="/escalation-settings">Open SLA & escalation settings</Link>
+            </Button>
+          </SettingsCard>
         </TabsContent>
         <TabsContent value="security" className="mt-0">
           <SecurityPanel />

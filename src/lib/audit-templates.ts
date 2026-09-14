@@ -161,7 +161,7 @@ export async function publishAuditTemplate(id: string): Promise<void> {
   const orgId = await requireOrgId();
   const { data: current } = await supabase
     .from("audit_templates")
-    .select("version")
+    .select("*")
     .eq("org_id", orgId)
     .eq("id", id)
     .maybeSingle();
@@ -176,4 +176,15 @@ export async function publishAuditTemplate(id: string): Promise<void> {
     .eq("org_id", orgId)
     .eq("id", id);
   if (error) dbError(error, "Could not publish template.");
+  if (current) {
+    const userId = await requireUserId();
+    await supabase.from("audit_template_versions").insert({
+      template_id: id,
+      org_id: orgId,
+      version: nextVersion,
+      snapshot: current,
+      change_summary: `Published ${String(current.name)} as v${nextVersion}`,
+      created_by: userId,
+    });
+  }
 }

@@ -1502,6 +1502,13 @@ async function persistPlanogramCompliance(
     }
   }
 
+  await supabase.rpc("sync_findings_for_scan", { p_scan_id: scan.id }).then(
+    () => undefined,
+    (err: { message?: string }) => {
+      console.error("[pipeline] finding sync failed", err?.message);
+    },
+  );
+
   // Assignment lifecycle (re-scan reconciliation, status, notifications) only
   // applies to delegated scans. Ad-hoc planogram scans just keep the comparison.
   if (!assignmentId) return compliance;

@@ -26,7 +26,10 @@ import {
   type DigitalAuditLine,
 } from "@/lib/digital-audit";
 import { fetchAiAssistedFlags } from "@/lib/ai-assisted-audit";
-import { isOrgManager } from "@/lib/assignments";
+import { fetchAssignableMembers, isOrgManager } from "@/lib/assignments";
+import { AuditLifecyclePanel } from "@/components/audit/AuditLifecyclePanel";
+import { requestReaudit } from "@/lib/reaudit";
+import { syncFindingsForScan } from "@/lib/findings";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/audit-review/$scanId")({
@@ -41,6 +44,8 @@ function AuditReviewPage() {
   const [rejectMode, setRejectMode] = useState<"reopen_same" | "new_assignment">("reopen_same");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [selectedBin, setSelectedBin] = useState<string | null>(null);
+  const [reauditReason, setReauditReason] = useState("");
+  const [reauditAssignee, setReauditAssignee] = useState("");
 
   const accessQuery = useQuery({
     queryKey: ["assignment-manager"],
@@ -70,6 +75,12 @@ function AuditReviewPage() {
         .maybeSingle();
       return data;
     },
+  });
+
+  const membersQuery = useQuery({
+    queryKey: ["assignable-members"],
+    queryFn: fetchAssignableMembers,
+    enabled: accessQuery.data === true,
   });
 
   const reviewMutation = useMutation({
@@ -295,7 +306,47 @@ function AuditReviewPage() {
               <X className="size-4" /> Reject
             </Button>
           </div>
+          <div className="space-y-2 border-t border-border pt-3">
+            <p className="text-xs font-medium text-muted-foreground">Request re-audit</p>
+            <p className="text-xs text-muted-foreground">The original audit stays locked. A new assignment is created.</p>
+            <Textarea
+              placeholder="Reason (required)"
+              value={reauditReason}
+              onChange={(e) => setReauditReason(e.target.value)}
+              rows={2}
+            />
+            <Select value={reauditAssignee} onValueChange={setReauditAssignee}>
+              <SelectTrigger><SelectValue placeholder="Assign auditor" /></SelectTrigger>
+              <SelectContent>
+                {(membersQuery.data ?? []).map((m) => (
+                  <SelectItem key={m.user_id} value={m.user_id}>{m.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              className="w-full"
+              variant="outline"
+              disabled={!reauditReason.trim() || !reauditAssignee}
+              onClick={() => {
+                const member = (membersQuery.data ?? []).find((m) => m.user_id === reauditAssignee);
+                void requestReaudit({
+                  scanId,
+                  assignmentId: session.assignment_id,
+                  reason: reauditReason,
+                  assigneeId: reauditAssignee,
+                  assigneeName: member?.name ?? "Auditor",
+                })
+                  .then(() => toast.success("Re-audit requested. Original audit is unchanged."))
+                  .catch((e) => toast.error(toUserMessage(e)));
+              }}
+            >
+              Request re-audit
+            </Button>
+          </div>
         </aside>
+      </div>
+      <div className="mt-6">
+        <AuditLifecyclePanel scanId={scanId} />
       </div>
     </AppShell>
   );

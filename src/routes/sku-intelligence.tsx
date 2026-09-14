@@ -9,11 +9,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState, ErrorState, Skeleton } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
+import { SkuHistoryPanel } from "@/components/sku/SkuHistoryPanel";
 import { fetchSkuIntelligence, type SkuAggregate } from "@/lib/sku-intelligence";
 import { useGlobalFilters } from "@/lib/global-filters";
 import { isOrgManager } from "@/lib/assignments";
 
+type SkuSearch = { sku?: string };
+
 export const Route = createFileRoute("/sku-intelligence")({
+  validateSearch: (search: Record<string, unknown>): SkuSearch => {
+    if (typeof search.sku === "string" && search.sku.trim()) return { sku: search.sku.trim() };
+    return {};
+  },
   head: () => ({ meta: [{ title: "SKU & Shelf Intelligence — Aislix" }] }),
   component: SkuIntelligencePage,
 });
@@ -31,7 +38,8 @@ function SkuIntelligencePage() {
 
 function SkuIntelligenceMain() {
   const { filters } = useGlobalFilters();
-  const [search, setSearch] = useState("");
+  const { sku: skuFromUrl } = Route.useSearch();
+  const [search, setSearch] = useState(skuFromUrl ?? "");
   const [selected, setSelected] = useState<SkuAggregate | null>(null);
 
   const managerQuery = useQuery({
@@ -49,6 +57,8 @@ function SkuIntelligenceMain() {
       }),
     enabled: managerQuery.data === true,
   });
+
+  const selectedSku = selected?.sku ?? skuFromUrl ?? null;
 
   if (!managerQuery.data && !managerQuery.isLoading) {
     return (
@@ -132,20 +142,23 @@ function SkuIntelligenceMain() {
                 {selected.category ?? "Uncategorized"} · {selected.finding_count} finding(s) across{" "}
                 {selected.store_count} store(s)
               </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Observed shelf variance — not store-wide inventory or confirmed financial loss.
-              </p>
+              <div className="mt-4">
+                <SkuHistoryPanel sku={selected.sku} />
+              </div>
               <div className="mt-4 space-y-3">
-                {selected.stores.slice(0, 8).map((s, i) => (
+                <Button asChild size="sm" variant="outline" className="rounded-xl">
+                  <Link to="/findings">Open findings for this SKU</Link>
+                </Button>
+                {selected.stores.slice(0, 6).map((s, i) => (
                   <div key={`${s.store_id}-${i}`} className="rounded-lg border border-border/60 p-3 text-xs">
                     <p className="font-medium">{s.store_name}</p>
                     <p className="text-muted-foreground">
                       {s.shelf_label} · Expected {s.expected_qty} · Actual {s.actual_qty} · Δ
                       {s.variance_qty}
                     </p>
-                    <p className="mt-1 tabular-nums">₹{s.variance_value_inr.toFixed(0)} signed value</p>
+                    <p className="mt-1 tabular-nums">₹{s.variance_value_inr.toFixed(0)} potential value variance</p>
                     <Button asChild size="sm" variant="link" className="mt-1 h-auto p-0">
-                      <Link to="/audit-review/$scanId" params={{ scanId: s.scan_id }}>
+                      <Link to="/results" search={{ scan: s.scan_id }}>
                         Open audit & evidence →
                       </Link>
                     </Button>
@@ -153,9 +166,14 @@ function SkuIntelligenceMain() {
                 ))}
               </div>
             </>
+          ) : selectedSku ? (
+            <>
+              <h3 className="font-semibold">{selectedSku}</h3>
+              <SkuHistoryPanel sku={selectedSku} />
+            </>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Select a SKU to see store distribution, shelf locations, and linked audits.
+              Select a SKU to see historical variance, findings, RCA and corrective actions.
             </p>
           )}
         </aside>

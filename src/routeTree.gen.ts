@@ -27,7 +27,11 @@ import { Route as CompareRouteImport } from './routes/compare'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as CorrectiveActionsRouteImport } from './routes/corrective-actions'
+import { Route as CorrectiveActionsActionIdRouteImport } from './routes/corrective-actions.$actionId'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as EscalationSettingsRouteImport } from './routes/escalation-settings'
+import { Route as FindingsRouteImport } from './routes/findings'
+import { Route as FindingsFindingIdRouteImport } from './routes/findings.$findingId'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DemoScansRouteImport } from './routes/demo-scans'
 import { Route as DigitalAuditRouteImport } from './routes/digital-audit'
@@ -173,6 +177,26 @@ const CookiesRoute = CookiesRouteImport.update({
 const CorrectiveActionsRoute = CorrectiveActionsRouteImport.update({
   id: '/corrective-actions',
   path: '/corrective-actions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CorrectiveActionsActionIdRoute = CorrectiveActionsActionIdRouteImport.update({
+  id: '/corrective-actions/$actionId',
+  path: '/corrective-actions/$actionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EscalationSettingsRoute = EscalationSettingsRouteImport.update({
+  id: '/escalation-settings',
+  path: '/escalation-settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FindingsRoute = FindingsRouteImport.update({
+  id: '/findings',
+  path: '/findings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FindingsFindingIdRoute = FindingsFindingIdRouteImport.update({
+  id: '/findings/$findingId',
+  path: '/findings/$findingId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -481,8 +505,12 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
   '/corrective-actions': typeof CorrectiveActionsRoute
+  '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
   '/dashboard': typeof DashboardRoute
+  '/escalation-settings': typeof EscalationSettingsRoute
   '/exceptions': typeof ExceptionsRoute
+  '/findings': typeof FindingsRoute
+  '/findings/$findingId': typeof FindingsFindingIdRoute
   '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
   '/sku-intelligence': typeof SkuIntelligenceRoute
   '/demo': typeof DemoRoute
@@ -558,8 +586,12 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
   '/corrective-actions': typeof CorrectiveActionsRoute
+  '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
   '/dashboard': typeof DashboardRoute
+  '/escalation-settings': typeof EscalationSettingsRoute
   '/exceptions': typeof ExceptionsRoute
+  '/findings': typeof FindingsRoute
+  '/findings/$findingId': typeof FindingsFindingIdRoute
   '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
   '/sku-intelligence': typeof SkuIntelligenceRoute
   '/demo': typeof DemoRoute
@@ -636,8 +668,12 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
   '/corrective-actions': typeof CorrectiveActionsRoute
+  '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
   '/dashboard': typeof DashboardRoute
+  '/escalation-settings': typeof EscalationSettingsRoute
   '/exceptions': typeof ExceptionsRoute
+  '/findings': typeof FindingsRoute
+  '/findings/$findingId': typeof FindingsFindingIdRoute
   '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
   '/sku-intelligence': typeof SkuIntelligenceRoute
   '/demo': typeof DemoRoute
@@ -710,7 +746,11 @@ export interface FileRouteTypes {
     | '/contact'
     | '/cookies'
     | '/corrective-actions'
+    | '/corrective-actions/$actionId'
     | '/dashboard'
+    | '/escalation-settings'
+    | '/findings'
+    | '/findings/$findingId'
     | '/demo'
     | '/demo-scans'
     | '/features'
@@ -779,7 +819,11 @@ export interface FileRouteTypes {
     | '/contact'
     | '/cookies'
     | '/corrective-actions'
+    | '/corrective-actions/$actionId'
     | '/dashboard'
+    | '/escalation-settings'
+    | '/findings'
+    | '/findings/$findingId'
     | '/demo'
     | '/demo-scans'
     | '/features'
@@ -848,7 +892,11 @@ export interface FileRouteTypes {
     | '/contact'
     | '/cookies'
     | '/corrective-actions'
+    | '/corrective-actions/$actionId'
     | '/dashboard'
+    | '/escalation-settings'
+    | '/findings'
+    | '/findings/$findingId'
     | '/demo'
     | '/demo-scans'
     | '/features'
@@ -1097,6 +1145,34 @@ declare module '@tanstack/react-router' {
       path: '/corrective-actions'
       fullPath: '/corrective-actions'
       preLoaderRoute: typeof CorrectiveActionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/corrective-actions/$actionId': {
+      id: '/corrective-actions/$actionId'
+      path: '/corrective-actions/$actionId'
+      fullPath: '/corrective-actions/$actionId'
+      preLoaderRoute: typeof CorrectiveActionsActionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/escalation-settings': {
+      id: '/escalation-settings'
+      path: '/escalation-settings'
+      fullPath: '/escalation-settings'
+      preLoaderRoute: typeof EscalationSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/findings': {
+      id: '/findings'
+      path: '/findings'
+      fullPath: '/findings'
+      preLoaderRoute: typeof FindingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/findings/$findingId': {
+      id: '/findings/$findingId'
+      path: '/findings/$findingId'
+      fullPath: '/findings/$findingId'
+      preLoaderRoute: typeof FindingsFindingIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -1536,6 +1612,10 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   CookiesRoute: CookiesRoute,
   CorrectiveActionsRoute: CorrectiveActionsRoute,
+  CorrectiveActionsActionIdRoute: CorrectiveActionsActionIdRoute,
+  EscalationSettingsRoute: EscalationSettingsRoute,
+  FindingsRoute: FindingsRoute,
+  FindingsFindingIdRoute: FindingsFindingIdRoute,
   ExceptionsRoute: ExceptionsRoute,
   ExceptionsExceptionIdRoute: ExceptionsExceptionIdRoute,
   SkuIntelligenceRoute: SkuIntelligenceRoute,
