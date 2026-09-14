@@ -47,12 +47,17 @@ export function PublishDialog({
         <dl className="grid gap-2 text-sm">
           <Row label="Template" value={templateName} />
           <Row label="Version" value={`v${nextVersion}`} />
+          <Row label="Sections" value={String(definition.sections.length)} />
           <Row label="Fields" value={String(summary.fieldCount)} />
           <Row label="Required fields" value={String(summary.requiredCount)} />
           <Row label="Conditional rules" value={String(summary.ruleCount)} />
           <Row label="Evidence requirements" value={String(summary.evidenceCount)} />
           <Row label="AI features" value={String(summary.aiFeatureCount)} />
         </dl>
+        <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-muted-foreground">
+          Publishing creates a version of this template. Future changes will create a new version
+          and will not alter completed historical audits.
+        </p>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel

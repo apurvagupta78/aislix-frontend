@@ -71,6 +71,13 @@ export function FieldConfigPanel({ field, onChange }: Props) {
           <Label>Required</Label>
           <Switch checked={field.required} onCheckedChange={(v) => onChange({ required: v })} />
         </div>
+        <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+          <Label>Read only (auditor)</Label>
+          <Switch
+            checked={cfg.readOnly ?? field.calculated ?? false}
+            onCheckedChange={(v) => onChange({ config: { ...cfg, readOnly: v } })}
+          />
+        </div>
 
         {isNumericField(field.type) ? (
           <>
@@ -170,6 +177,20 @@ export function FieldConfigPanel({ field, onChange }: Props) {
               <Switch
                 checked={cfg.aiAnalysisEnabled ?? false}
                 onCheckedChange={(v) => onChange({ config: { ...cfg, aiAnalysisEnabled: v } })}
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+              <Label>Duplicate Detection</Label>
+              <Switch
+                checked={cfg.duplicateDetection ?? false}
+                onCheckedChange={(v) => onChange({ config: { ...cfg, duplicateDetection: v } })}
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+              <Label>Image Quality Check</Label>
+              <Switch
+                checked={cfg.imageQualityCheck ?? false}
+                onCheckedChange={(v) => onChange({ config: { ...cfg, imageQualityCheck: v } })}
               />
             </div>
           </>

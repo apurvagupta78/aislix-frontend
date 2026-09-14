@@ -45,15 +45,16 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState, ErrorState, Skeleton } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
 import { AUDIT_TYPE_OPTIONS } from "@/lib/audit-builder/field-library";
+import { DuplicateTemplateDialog } from "@/components/audit-builder/DuplicateTemplateDialog";
 import {
   TEMPLATE_TYPES,
   archiveAuditTemplate,
-  createAuditTemplate,
   duplicateAuditTemplate,
   fetchAuditTemplates,
   fetchTemplateVersions,
   isCustomBuilderTemplate,
   seedFnvQcTemplate,
+  updateAuditTemplate,
   type AuditTemplate,
   type TemplateStatus,
 } from "@/lib/audit-templates";
@@ -71,6 +72,7 @@ function AuditTemplatesPage() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [activeOnly, setActiveOnly] = useState(false);
   const [versionTemplateId, setVersionTemplateId] = useState<string | null>(null);
+  const [duplicateTarget, setDuplicateTarget] = useState<AuditTemplate | null>(null);
 
   const managerQuery = useQuery({
     queryKey: ["is-org-manager"],
@@ -95,25 +97,15 @@ function AuditTemplatesPage() {
     enabled: Boolean(versionTemplateId),
   });
 
-  const createMutation = useMutation({
-    mutationFn: () =>
-      createAuditTemplate({
-        name: "Untitled Audit Template",
-        template_type: "custom",
-        audit_mode: "digital",
-      }),
-    onSuccess: (t) => {
-      toast.success("Template created — open the builder to add fields.");
-      void queryClient.invalidateQueries({ queryKey: ["audit-templates"] });
-      window.location.href = `/audit-templates/${t.id}`;
-    },
-    onError: (e) => toast.error(toUserMessage(e)),
-  });
-
   const duplicateMutation = useMutation({
-    mutationFn: duplicateAuditTemplate,
+    mutationFn: async ({ sourceId, name }: { sourceId: string; name: string }) => {
+      const copy = await duplicateAuditTemplate(sourceId);
+      await updateAuditTemplate(copy.id, { name });
+      return copy;
+    },
     onSuccess: (t) => {
       toast.success("Template duplicated as draft.");
+      setDuplicateTarget(null);
       void queryClient.invalidateQueries({ queryKey: ["audit-templates"] });
       window.location.href = `/audit-templates/${t.id}`;
     },
@@ -187,19 +179,10 @@ function AuditTemplatesPage() {
           >
             Load FNV QC Sample
           </Button>
-          <Button
-            variant="brand"
-            size="sm"
-            disabled={createMutation.isPending}
-            onClick={() => createMutation.mutate()}
-          >
-            {createMutation.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <>
-                <Plus className="mr-1 size-3" /> Create Audit Template
-              </>
-            )}
+          <Button asChild variant="brand" size="sm">
+            <Link to="/audit-templates/new">
+              <Plus className="mr-1 size-3" /> Create Audit Template
+            </Link>
           </Button>
         </div>
       }
@@ -266,8 +249,10 @@ function AuditTemplatesPage() {
             title="No templates yet"
             description="Create a custom audit template or load the FNV QC sample to get started."
             action={
-              <Button variant="brand" onClick={() => createMutation.mutate()}>
-                <Plus className="mr-1 size-4" /> Create Audit Template
+              <Button asChild variant="brand">
+                <Link to="/audit-templates/new">
+                  <Plus className="mr-1 size-4" /> Create your first audit template
+                </Link>
               </Button>
             }
           />
@@ -290,7 +275,7 @@ function AuditTemplatesPage() {
                   <TemplateRow
                     key={t.id}
                     template={t}
-                    onDuplicate={() => duplicateMutation.mutate(t.id)}
+                    onDuplicate={() => setDuplicateTarget(t)}
                     onArchive={() => archiveMutation.mutate(t.id)}
                     onVersionHistory={() =>
                       setVersionTemplateId(versionTemplateId === t.id ? null : t.id)
@@ -304,6 +289,16 @@ function AuditTemplatesPage() {
           </div>
         )}
       </div>
+
+      <DuplicateTemplateDialog
+        open={duplicateTarget !== null}
+        onOpenChange={(open) => !open && setDuplicateTarget(null)}
+        defaultName={duplicateTarget ? `${duplicateTarget.name} — Copy` : ""}
+        duplicating={duplicateMutation.isPending}
+        onConfirm={(name) =>
+          duplicateTarget && duplicateMutation.mutate({ sourceId: duplicateTarget.id, name })
+        }
+      />
     </AppShell>
   );
 }
@@ -379,12 +374,13 @@ function TemplateRow({
                 <Copy className="mr-2 size-3.5" /> Duplicate
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link
-                  to="/audit-templates/$templateId"
-                  params={{ templateId: t.id }}
-                  search={{ tab: "preview" }}
-                >
+                <Link to="/audit-templates/$templateId/preview" params={{ templateId: t.id }}>
                   <Eye className="mr-2 size-3.5" /> Preview
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/audit-templates/$templateId/versions" params={{ templateId: t.id }}>
+                  <History className="mr-2 size-3.5" /> Version History
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -402,7 +398,7 @@ function TemplateRow({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onVersionHistory}>
-                <History className="mr-2 size-3.5" /> Version History
+                <History className="mr-2 size-3.5" /> Quick Version History
               </DropdownMenuItem>
               {t.status !== "archived" ? (
                 <DropdownMenuItem onClick={onArchive}>

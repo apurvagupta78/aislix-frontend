@@ -36,6 +36,8 @@ type Props = {
   ) => Promise<void>;
   onUploadImage: (file: File) => Promise<string>;
   readOnly?: boolean;
+  testMode?: boolean;
+  previewMode?: boolean;
 };
 
 export function AuditExecutionForm({
@@ -48,6 +50,8 @@ export function AuditExecutionForm({
   onSaveField,
   onUploadImage,
   readOnly,
+  testMode,
+  previewMode,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<{
@@ -135,6 +139,17 @@ export function AuditExecutionForm({
     ...(responses[sectionKey]?.[activeRecord] ?? {}),
     ...computeCalculatedValues(definition, responses[sectionKey]?.[activeRecord] ?? {}),
   };
+
+  const physicalQty = Number(currentValues.actual_qty ?? currentValues.expected_qty ?? 0);
+  const imageFields = definition.fields.filter((f) => isImageField(f.type));
+  const verifiedUnits = imageFields.reduce((max, f) => {
+    const imgs = responses[sectionKey]?.[activeRecord]?.[f.key];
+    const count = Array.isArray(imgs) ? imgs.length : imgs ? 1 : 0;
+    return Math.max(max, count);
+  }, 0);
+  const expiryCoverageEnabled = definition.evidence.expiryUnitCoverage && physicalQty > 0;
+  const skuLabel =
+    String(currentValues.item_name ?? currentValues.sku_id ?? "") || `SKU ${activeRecord + 1}`;
 
   const renderField = (field: TemplateField, sec: string, idx: number) => {
     if (field.system) return null;
@@ -311,7 +326,13 @@ export function AuditExecutionForm({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-28">
+      {testMode ? (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-center text-sm font-medium text-amber-800 dark:text-amber-300">
+          TEST MODE — sample data only, not saved to production audits
+        </div>
+      ) : null}
+
       <div className="sticky top-0 z-10 rounded-xl border border-border bg-card p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
@@ -320,40 +341,69 @@ export function AuditExecutionForm({
               {storeName ? `Store: ${storeName}` : null}
               {dueAt ? ` · Due: ${new Date(dueAt).toLocaleString()}` : null}
             </p>
+            {repeatableSection ? (
+              <p className="mt-1 text-sm font-medium">{skuLabel}</p>
+            ) : null}
           </div>
-          <Badge variant={completion.complete ? "secondary" : "outline"}>
-            Completion: {completion.percent}%
-          </Badge>
+          <div className="text-right">
+            <Badge variant={completion.complete ? "secondary" : "outline"}>
+              Audit Completion {completion.percent}%
+            </Badge>
+            {!completion.complete ? (
+              <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                {completion.missing.length} required item(s) remaining
+              </p>
+            ) : null}
+          </div>
         </div>
+        {expiryCoverageEnabled ? (
+          <div className="mt-3 rounded-lg border border-brand/20 bg-brand/5 px-3 py-2 text-xs">
+            <span className="font-medium">Expiry Verification:</span>{" "}
+            {verifiedUnits} / {physicalQty} units verified
+            {verifiedUnits < physicalQty ? (
+              <span className="text-amber-700 dark:text-amber-400">
+                {" "}
+                — each unit needs expiry evidence before completion
+              </span>
+            ) : null}
+          </div>
+        ) : null}
         {!completion.complete ? (
           <ul className="mt-2 space-y-1 text-xs text-amber-700 dark:text-amber-400">
             {completion.missing.slice(0, 5).map((m) => (
               <li key={`${m.sectionKey}-${m.recordIndex}-${m.fieldKey}`}>Missing: {m.label}</li>
             ))}
-            {completion.missing.length > 5 ? (
-              <li>+ {completion.missing.length - 5} more</li>
-            ) : null}
           </ul>
         ) : null}
       </div>
 
       {repeatableSection ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline">
-            SKU {activeRecord + 1} / {records.length}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <Badge variant="outline" className="text-sm">
+            {repeatableSection.repeatBy === "sku" ? "SKU" : "Record"} {activeRecord + 1} of{" "}
+            {records.length}
           </Badge>
-          {records.map((idx) => (
+          <div className="flex gap-2">
             <Button
-              key={idx}
               type="button"
               size="sm"
-              variant={idx === activeRecord ? "brand" : "outline"}
-              onClick={() => setActiveRecord(idx)}
+              variant="outline"
+              disabled={activeRecord === 0}
+              onClick={() => setActiveRecord((r) => Math.max(0, r - 1))}
             >
-              SKU {idx + 1}
+              Previous
             </Button>
-          ))}
-          {!readOnly ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="brand"
+              disabled={activeRecord >= records.length - 1}
+              onClick={() => setActiveRecord((r) => Math.min(records.length - 1, r + 1))}
+            >
+              Next SKU →
+            </Button>
+          </div>
+          {!readOnly && !previewMode ? (
             <Button type="button" size="sm" variant="outline" onClick={addSkuRecord}>
               <Plus className="mr-1 size-3" /> Add Another SKU
             </Button>

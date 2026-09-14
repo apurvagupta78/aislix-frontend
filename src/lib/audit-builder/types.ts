@@ -116,6 +116,10 @@ export type FieldConfig = {
   imageQualityRequirement?: "standard" | "high";
   requireGps?: boolean;
   pattern?: string;
+  duplicateDetection?: boolean;
+  imageQualityCheck?: boolean;
+  visible?: boolean;
+  readOnly?: boolean;
 };
 
 export type VisibilityRule = {
@@ -142,11 +146,14 @@ export type TemplateField = {
   quantityLinked?: boolean;
 };
 
+export type RepeatBy = "sku" | "shelf" | "location" | "product" | "custom";
+
 export type TemplateSection = {
   key: string;
   title: string;
   order: number;
   repeatable?: boolean;
+  repeatBy?: RepeatBy;
   description?: string;
 };
 

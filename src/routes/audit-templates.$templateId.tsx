@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Eye, FlaskConical, Loader2, Save, Send } from "lucide-react";
+import { ArrowLeft, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
-import { AuditExecutionForm } from "@/components/audit-builder/AuditExecutionForm";
 import { BuilderCanvas } from "@/components/audit-builder/BuilderCanvas";
+import { BuilderTopBar } from "@/components/audit-builder/BuilderTopBar";
+import { CalculatedFieldsPanel } from "@/components/audit-builder/CalculatedFieldsPanel";
+import { ExpiryVerificationPanel } from "@/components/audit-builder/ExpiryVerificationPanel";
 import { FieldConfigPanel } from "@/components/audit-builder/FieldConfigPanel";
 import { FieldLibraryPanel } from "@/components/audit-builder/FieldLibraryPanel";
 import { PublishDialog } from "@/components/audit-builder/PublishDialog";
@@ -65,8 +67,9 @@ function TemplateBuilderPage() {
   const queryClient = useQueryClient();
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
-  const [testMode, setTestMode] = useState(false);
-  const [testResponses, setTestResponses] = useState({});
+  const [dirty, setDirty] = useState(false);
+  const [savedSnapshot, setSavedSnapshot] = useState<string>("");
+  const [mobilePanel, setMobilePanel] = useState<"fields" | "canvas" | "settings">("canvas");
 
   const managerQuery = useQuery({
     queryKey: ["is-org-manager"],
@@ -82,8 +85,27 @@ function TemplateBuilderPage() {
   const [draft, setDraft] = useState<AuditTemplate | null>(null);
 
   useEffect(() => {
-    if (templateQuery.data) setDraft(templateQuery.data);
+    if (templateQuery.data) {
+      setDraft(templateQuery.data);
+      setSavedSnapshot(JSON.stringify(templateQuery.data));
+      setDirty(false);
+    }
   }, [templateQuery.data]);
+
+  useEffect(() => {
+    if (!draft || !savedSnapshot) return;
+    setDirty(JSON.stringify(draft) !== savedSnapshot);
+  }, [draft, savedSnapshot]);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
 
   const definition = useMemo<TemplateDefinition | null>(() => {
     if (!draft) return null;
@@ -107,6 +129,8 @@ function TemplateBuilderPage() {
     },
     onSuccess: () => {
       toast.success("Draft saved.");
+      if (draft) setSavedSnapshot(JSON.stringify(draft));
+      setDirty(false);
       void queryClient.invalidateQueries({ queryKey: ["audit-templates"] });
       void queryClient.invalidateQueries({ queryKey: ["audit-template", templateId] });
     },
@@ -135,6 +159,7 @@ function TemplateBuilderPage() {
   const updateDefinition = useCallback((patch: Partial<TemplateDefinition>) => {
     setDraft((prev) => {
       if (!prev) return prev;
+      setDirty(true);
       return {
         ...prev,
         sections: patch.sections ?? prev.sections,
@@ -163,6 +188,45 @@ function TemplateBuilderPage() {
     if (!definition) return;
     updateDefinition({ fields: definition.fields.filter((f) => f.id !== id) });
     if (selectedFieldId === id) setSelectedFieldId(null);
+  };
+
+  const handleDuplicateField = (id: string) => {
+    if (!definition) return;
+    const source = definition.fields.find((f) => f.id === id);
+    if (!source) return;
+    const copy: TemplateField = {
+      ...source,
+      id: crypto.randomUUID(),
+      key: `${source.key}_copy`,
+      label: `${source.label} (copy)`,
+      order: source.order + 1,
+    };
+    updateDefinition({ fields: [...definition.fields, copy] });
+    setSelectedFieldId(copy.id);
+  };
+
+  const handleUpdateSection = (key: string, patch: Partial<TemplateSection>) => {
+    if (!definition) return;
+    updateDefinition({
+      sections: definition.sections.map((s) => (s.key === key ? { ...s, ...patch } : s)),
+    });
+  };
+
+  const handleReorderSection = (key: string, direction: "up" | "down") => {
+    if (!definition) return;
+    const sorted = [...definition.sections].sort((a, b) => a.order - b.order);
+    const idx = sorted.findIndex((s) => s.key === key);
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sorted.length) return;
+    const a = sorted[idx]!;
+    const b = sorted[swapIdx]!;
+    updateDefinition({
+      sections: definition.sections.map((s) => {
+        if (s.key === a.key) return { ...s, order: b.order };
+        if (s.key === b.key) return { ...s, order: a.order };
+        return s;
+      }),
+    });
   };
 
   const handleFieldChange = (patch: Partial<TemplateField>) => {
@@ -234,48 +298,22 @@ function TemplateBuilderPage() {
       title={draft.name}
       description="Custom Audit Builder — configure fields, rules, evidence, AI and workflow."
       actions={
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link to="/audit-templates">
-              <ArrowLeft className="mr-1 size-3" /> Templates
-            </Link>
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={saveMutation.isPending}
-            onClick={() => saveMutation.mutate()}
-          >
-            {saveMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Save className="mr-1 size-3" />}
-            Save Draft
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={() => setTestMode((v) => !v)}>
-            <FlaskConical className="mr-1 size-3" />
-            {testMode ? "Exit Test" : "Test Audit"}
-          </Button>
-          <Button type="button" variant="brand" size="sm" onClick={() => setPublishOpen(true)}>
-            <Send className="mr-1 size-3" /> Publish
-          </Button>
-        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link to="/audit-templates">
+            <ArrowLeft className="mr-1 size-3" /> Templates
+          </Link>
+        </Button>
       }
     >
-      {testMode ? (
-        <div className="mx-auto max-w-lg">
-          <AuditExecutionForm
-            definition={definition}
-            templateName={`${draft.name} (Test)`}
-            storeName="Sample Store #102"
-            dueAt={new Date().toISOString()}
-            responses={testResponses}
-            onChange={setTestResponses}
-            onSaveField={async () => {}}
-            onUploadImage={async () => "https://placehold.co/120x120?text=Photo"}
-            readOnly={false}
-          />
-        </div>
-      ) : (
-        <Tabs defaultValue="builder" className="space-y-4">
+      <BuilderTopBar
+        templateId={templateId}
+        status={draft.status}
+        dirty={dirty}
+        saving={saveMutation.isPending}
+        onSave={() => saveMutation.mutate()}
+        onPublish={() => setPublishOpen(true)}
+      />
+      <Tabs defaultValue="builder" className="space-y-4">
           <TabsList>
             <TabsTrigger value="builder">Field Builder</TabsTrigger>
             <TabsTrigger value="rules">Rules</TabsTrigger>
@@ -360,31 +398,65 @@ function TemplateBuilderPage() {
               </div>
             </section>
 
+            <div className="mb-3 flex gap-2 lg:hidden">
+              {(["fields", "canvas", "settings"] as const).map((p) => (
+                <Button
+                  key={p}
+                  type="button"
+                  size="sm"
+                  variant={mobilePanel === p ? "brand" : "outline"}
+                  className="capitalize"
+                  onClick={() => setMobilePanel(p)}
+                >
+                  {p}
+                </Button>
+              ))}
+            </div>
             <div className="grid h-[min(70vh,720px)] gap-4 lg:grid-cols-[240px_1fr_280px]">
-              <FieldLibraryPanel onAddField={(item) => handleAddField(item)} />
-              <BuilderCanvas
-                sections={definition.sections}
-                fields={definition.fields}
-                selectedFieldId={selectedFieldId}
-                onSelectField={setSelectedFieldId}
-                onRemoveField={handleRemoveField}
-                onAddSection={handleAddSection}
-                onDropField={(item, sectionKey) => handleAddField(item, sectionKey)}
-                onReorderField={handleReorder}
-              />
-              <FieldConfigPanel field={selectedField} onChange={handleFieldChange} />
+              <div className={mobilePanel === "fields" ? "block h-full" : "hidden lg:block"}>
+                <FieldLibraryPanel onAddField={(item) => handleAddField(item)} />
+              </div>
+              <div className={mobilePanel === "canvas" ? "block h-full" : "hidden lg:block"}>
+                <BuilderCanvas
+                  sections={definition.sections}
+                  fields={definition.fields}
+                  selectedFieldId={selectedFieldId}
+                  onSelectField={(id) => {
+                    setSelectedFieldId(id);
+                    setMobilePanel("settings");
+                  }}
+                  onRemoveField={handleRemoveField}
+                  onDuplicateField={handleDuplicateField}
+                  onAddSection={handleAddSection}
+                  onUpdateSection={handleUpdateSection}
+                  onReorderSection={handleReorderSection}
+                  onDropField={(item, sectionKey) => handleAddField(item, sectionKey)}
+                  onReorderField={handleReorder}
+                />
+              </div>
+              <div className={mobilePanel === "settings" ? "block h-full" : "hidden lg:block"}>
+                <FieldConfigPanel field={selectedField} onChange={handleFieldChange} />
+              </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="rules">
+          <TabsContent value="rules" className="space-y-4">
             <RulesBuilder
               rules={definition.rules}
               fields={definition.fields}
               onChange={(rules: TemplateRule[]) => updateDefinition({ rules })}
             />
+            <CalculatedFieldsPanel
+              fields={definition.calculatedFields}
+              onChange={(calculatedFields) => updateDefinition({ calculatedFields })}
+            />
           </TabsContent>
 
-          <TabsContent value="workflow">
+          <TabsContent value="workflow" className="space-y-4">
+            <ExpiryVerificationPanel
+              evidence={definition.evidence}
+              onChange={(evidence) => updateDefinition({ evidence })}
+            />
             <WorkflowSettingsPanel
               workflow={definition.workflow}
               evidence={definition.evidence}
@@ -401,7 +473,6 @@ function TemplateBuilderPage() {
             <TemplatePreview templateName={draft.name} definition={definition} />
           </TabsContent>
         </Tabs>
-      )}
 
       <PublishDialog
         open={publishOpen}

@@ -151,6 +151,7 @@ function CustomAuditPage() {
           onChange={setResponses}
           onSaveField={handleSaveField}
           onUploadImage={(file) => uploadCustomAuditImage(assignmentId!, file)}
+          testMode={test}
         />
       </div>
     </AppShell>

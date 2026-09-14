@@ -19,7 +19,11 @@ import { Route as AuditIntelligenceRouteImport } from './routes/audit-intelligen
 import { Route as AuditReviewScanIdRouteImport } from './routes/audit-review.$scanId'
 import { Route as AuditSchedulesRouteImport } from './routes/audit-schedules'
 import { Route as AuditTemplatesRouteImport } from './routes/audit-templates'
+import { Route as AuditTemplatesNewRouteImport } from './routes/audit-templates.new'
 import { Route as AuditTemplatesTemplateIdRouteImport } from './routes/audit-templates.$templateId'
+import { Route as AuditTemplatesTemplateIdPreviewRouteImport } from './routes/audit-templates.$templateId.preview'
+import { Route as AuditTemplatesTemplateIdTestRouteImport } from './routes/audit-templates.$templateId.test'
+import { Route as AuditTemplatesTemplateIdVersionsRouteImport } from './routes/audit-templates.$templateId.versions'
 import { Route as CustomAuditRouteImport } from './routes/custom-audit'
 import { Route as ExceptionsRouteImport } from './routes/exceptions'
 import { Route as ExceptionsExceptionIdRouteImport } from './routes/exceptions.$exceptionId'
@@ -141,9 +145,29 @@ const AuditTemplatesRoute = AuditTemplatesRouteImport.update({
   path: '/audit-templates',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuditTemplatesNewRoute = AuditTemplatesNewRouteImport.update({
+  id: '/audit-templates/new',
+  path: '/audit-templates/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuditTemplatesTemplateIdRoute = AuditTemplatesTemplateIdRouteImport.update({
   id: '/audit-templates/$templateId',
   path: '/audit-templates/$templateId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuditTemplatesTemplateIdPreviewRoute = AuditTemplatesTemplateIdPreviewRouteImport.update({
+  id: '/audit-templates/$templateId/preview',
+  path: '/audit-templates/$templateId/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuditTemplatesTemplateIdTestRoute = AuditTemplatesTemplateIdTestRouteImport.update({
+  id: '/audit-templates/$templateId/test',
+  path: '/audit-templates/$templateId/test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuditTemplatesTemplateIdVersionsRoute = AuditTemplatesTemplateIdVersionsRouteImport.update({
+  id: '/audit-templates/$templateId/versions',
+  path: '/audit-templates/$templateId/versions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CustomAuditRoute = CustomAuditRouteImport.update({
@@ -511,7 +535,11 @@ export interface FileRoutesByFullPath {
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/audit-schedules': typeof AuditSchedulesRoute
   '/audit-templates': typeof AuditTemplatesRoute
+  '/audit-templates/new': typeof AuditTemplatesNewRoute
   '/audit-templates/$templateId': typeof AuditTemplatesTemplateIdRoute
+  '/audit-templates/$templateId/preview': typeof AuditTemplatesTemplateIdPreviewRoute
+  '/audit-templates/$templateId/test': typeof AuditTemplatesTemplateIdTestRoute
+  '/audit-templates/$templateId/versions': typeof AuditTemplatesTemplateIdVersionsRoute
   '/billing': typeof BillingRoute
   '/custom-audit': typeof CustomAuditRoute
   '/digital-audit': typeof DigitalAuditRoute
@@ -594,7 +622,11 @@ export interface FileRoutesByTo {
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/audit-schedules': typeof AuditSchedulesRoute
   '/audit-templates': typeof AuditTemplatesRoute
+  '/audit-templates/new': typeof AuditTemplatesNewRoute
   '/audit-templates/$templateId': typeof AuditTemplatesTemplateIdRoute
+  '/audit-templates/$templateId/preview': typeof AuditTemplatesTemplateIdPreviewRoute
+  '/audit-templates/$templateId/test': typeof AuditTemplatesTemplateIdTestRoute
+  '/audit-templates/$templateId/versions': typeof AuditTemplatesTemplateIdVersionsRoute
   '/billing': typeof BillingRoute
   '/custom-audit': typeof CustomAuditRoute
   '/digital-audit': typeof DigitalAuditRoute
@@ -678,7 +710,11 @@ export interface FileRoutesById {
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/audit-schedules': typeof AuditSchedulesRoute
   '/audit-templates': typeof AuditTemplatesRoute
+  '/audit-templates/new': typeof AuditTemplatesNewRoute
   '/audit-templates/$templateId': typeof AuditTemplatesTemplateIdRoute
+  '/audit-templates/$templateId/preview': typeof AuditTemplatesTemplateIdPreviewRoute
+  '/audit-templates/$templateId/test': typeof AuditTemplatesTemplateIdTestRoute
+  '/audit-templates/$templateId/versions': typeof AuditTemplatesTemplateIdVersionsRoute
   '/billing': typeof BillingRoute
   '/custom-audit': typeof CustomAuditRoute
   '/digital-audit': typeof DigitalAuditRoute
@@ -1109,11 +1145,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuditTemplatesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/audit-templates/new': {
+      id: '/audit-templates/new'
+      path: '/audit-templates/new'
+      fullPath: '/audit-templates/new'
+      preLoaderRoute: typeof AuditTemplatesNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/audit-templates/$templateId': {
       id: '/audit-templates/$templateId'
       path: '/audit-templates/$templateId'
       fullPath: '/audit-templates/$templateId'
       preLoaderRoute: typeof AuditTemplatesTemplateIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/audit-templates/$templateId/preview': {
+      id: '/audit-templates/$templateId/preview'
+      path: '/audit-templates/$templateId/preview'
+      fullPath: '/audit-templates/$templateId/preview'
+      preLoaderRoute: typeof AuditTemplatesTemplateIdPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/audit-templates/$templateId/test': {
+      id: '/audit-templates/$templateId/test'
+      path: '/audit-templates/$templateId/test'
+      fullPath: '/audit-templates/$templateId/test'
+      preLoaderRoute: typeof AuditTemplatesTemplateIdTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/audit-templates/$templateId/versions': {
+      id: '/audit-templates/$templateId/versions'
+      path: '/audit-templates/$templateId/versions'
+      fullPath: '/audit-templates/$templateId/versions'
+      preLoaderRoute: typeof AuditTemplatesTemplateIdVersionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/custom-audit': {
@@ -1638,7 +1702,11 @@ const rootRouteChildren: RootRouteChildren = {
   AuditReviewScanIdRoute: AuditReviewScanIdRoute,
   AuditSchedulesRoute: AuditSchedulesRoute,
   AuditTemplatesRoute: AuditTemplatesRoute,
+  AuditTemplatesNewRoute: AuditTemplatesNewRoute,
   AuditTemplatesTemplateIdRoute: AuditTemplatesTemplateIdRoute,
+  AuditTemplatesTemplateIdPreviewRoute: AuditTemplatesTemplateIdPreviewRoute,
+  AuditTemplatesTemplateIdTestRoute: AuditTemplatesTemplateIdTestRoute,
+  AuditTemplatesTemplateIdVersionsRoute: AuditTemplatesTemplateIdVersionsRoute,
   BillingRoute: BillingRoute,
   CustomAuditRoute: CustomAuditRoute,
   DigitalAuditRoute: DigitalAuditRoute,
