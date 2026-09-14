@@ -21,6 +21,7 @@ import { Route as AuditSchedulesRouteImport } from './routes/audit-schedules'
 import { Route as AuditTemplatesRouteImport } from './routes/audit-templates'
 import { Route as ExceptionsRouteImport } from './routes/exceptions'
 import { Route as ExceptionsExceptionIdRouteImport } from './routes/exceptions.$exceptionId'
+import { Route as SkuIntelligenceRouteImport } from './routes/sku-intelligence'
 import { Route as BillingRouteImport } from './routes/billing'
 import { Route as CompareRouteImport } from './routes/compare'
 import { Route as ContactRouteImport } from './routes/contact'
@@ -142,6 +143,11 @@ const ExceptionsRoute = ExceptionsRouteImport.update({
 const ExceptionsExceptionIdRoute = ExceptionsExceptionIdRouteImport.update({
   id: '/exceptions/$exceptionId',
   path: '/exceptions/$exceptionId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SkuIntelligenceRoute = SkuIntelligenceRouteImport.update({
+  id: '/sku-intelligence',
+  path: '/sku-intelligence',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BillingRoute = BillingRouteImport.update({
@@ -478,6 +484,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/exceptions': typeof ExceptionsRoute
   '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
+  '/sku-intelligence': typeof SkuIntelligenceRoute
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
   '/features': typeof FeaturesRoute
@@ -554,6 +561,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/exceptions': typeof ExceptionsRoute
   '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
+  '/sku-intelligence': typeof SkuIntelligenceRoute
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
   '/features': typeof FeaturesRoute
@@ -631,6 +639,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/exceptions': typeof ExceptionsRoute
   '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
+  '/sku-intelligence': typeof SkuIntelligenceRoute
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
   '/features': typeof FeaturesRoute
@@ -1046,6 +1055,13 @@ declare module '@tanstack/react-router' {
       path: '/exceptions/$exceptionId'
       fullPath: '/exceptions/$exceptionId'
       preLoaderRoute: typeof ExceptionsExceptionIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sku-intelligence': {
+      id: '/sku-intelligence'
+      path: '/sku-intelligence'
+      fullPath: '/sku-intelligence'
+      preLoaderRoute: typeof SkuIntelligenceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/billing': {
@@ -1522,6 +1538,7 @@ const rootRouteChildren: RootRouteChildren = {
   CorrectiveActionsRoute: CorrectiveActionsRoute,
   ExceptionsRoute: ExceptionsRoute,
   ExceptionsExceptionIdRoute: ExceptionsExceptionIdRoute,
+  SkuIntelligenceRoute: SkuIntelligenceRoute,
   DashboardRoute: DashboardRoute,
   DemoRoute: DemoRoute,
   DemoScansRoute: DemoScansRoute,

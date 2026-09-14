@@ -5,7 +5,7 @@
 import type { DigitalAuditSession, RcaCode } from "@/lib/digital-audit";
 
 const DB_NAME = "aislix-audit-offline";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 type PendingLine = {
   id: string;
@@ -33,6 +33,17 @@ type CachedSession = {
   cachedAt: string;
 };
 
+export type PendingAiScan = {
+  id: string;
+  assignmentId?: string;
+  storeId?: string;
+  shelfLabel?: string;
+  blobs: Blob[];
+  fileNames: string[];
+  payload: Record<string, unknown>;
+  createdAt: string;
+};
+
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -46,6 +57,9 @@ function openDb(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains("pendingPhotos")) {
         db.createObjectStore("pendingPhotos", { keyPath: "id" });
+      }
+      if (!db.objectStoreNames.contains("pendingAiScans")) {
+        db.createObjectStore("pendingAiScans", { keyPath: "id" });
       }
       void event;
     };
@@ -138,11 +152,40 @@ export async function listPendingCounts(): Promise<{ lines: number; photos: numb
   return { lines: lines.length, photos: photos.length };
 }
 
+export async function queueAiScanUpload(input: {
+  assignmentId?: string;
+  storeId?: string;
+  shelfLabel?: string;
+  files: File[];
+  payload: Record<string, unknown>;
+}): Promise<void> {
+  const row: PendingAiScan = {
+    id: `ai-${input.assignmentId ?? "adhoc"}-${Date.now()}`,
+    assignmentId: input.assignmentId,
+    storeId: input.storeId,
+    shelfLabel: input.shelfLabel,
+    blobs: input.files.map((f) => f),
+    fileNames: input.files.map((f) => f.name),
+    payload: input.payload,
+    createdAt: new Date().toISOString(),
+  };
+  await txStore("pendingAiScans", "readwrite", (s) => s.put(row));
+}
+
+export async function listPendingAiScans(): Promise<PendingAiScan[]> {
+  try {
+    return await txStore<PendingAiScan[]>("pendingAiScans", "readonly", (s) => s.getAll());
+  } catch {
+    return [];
+  }
+}
+
 export async function listUnsyncedAssignmentIds(): Promise<string[]> {
-  const [lines, photos, sessions] = await Promise.all([
+  const [lines, photos, sessions, aiScans] = await Promise.all([
     txStore<PendingLine[]>("pendingLines", "readonly", (s) => s.getAll()),
     txStore<PendingPhoto[]>("pendingPhotos", "readonly", (s) => s.getAll()),
     txStore<CachedSession[]>("sessions", "readonly", (s) => s.getAll()),
+    listPendingAiScans(),
   ]);
   const ids = new Set<string>();
   for (const row of lines) {
@@ -154,17 +197,38 @@ export async function listUnsyncedAssignmentIds(): Promise<string[]> {
   for (const row of sessions) {
     ids.add(row.assignmentId);
   }
+  for (const row of aiScans) {
+    if (row.assignmentId) ids.add(row.assignmentId);
+  }
   return [...ids];
 }
 
 export async function pendingCountForAssignment(assignmentId: string): Promise<number> {
-  const [lines, photos] = await Promise.all([
+  const [lines, photos, aiScans] = await Promise.all([
     txStore<PendingLine[]>("pendingLines", "readonly", (s) => s.getAll()),
     txStore<PendingPhoto[]>("pendingPhotos", "readonly", (s) => s.getAll()),
+    listPendingAiScans(),
   ]);
   const lineCount = lines.filter((l) => l.assignmentId === assignmentId).length;
   const photoCount = photos.filter((p) => p.assignmentId === assignmentId).length;
-  return lineCount + photoCount;
+  const aiCount = aiScans.filter((a) => a.assignmentId === assignmentId).length;
+  return lineCount + photoCount + aiCount;
+}
+
+export async function flushAiScanQueue(
+  upload: (files: File[], payload: Record<string, unknown>) => Promise<{ scanId: string }>,
+): Promise<number> {
+  const rows = await listPendingAiScans();
+  let synced = 0;
+  for (const row of rows.sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
+    const files = row.blobs.map(
+      (blob, i) => new File([blob], row.fileNames[i] ?? `scan-${i}.jpg`, { type: blob.type || "image/jpeg" }),
+    );
+    await upload(files, row.payload);
+    await txStore("pendingAiScans", "readwrite", (s) => s.delete(row.id));
+    synced++;
+  }
+  return synced;
 }
 
 export async function flushOfflineQueue(handlers: {

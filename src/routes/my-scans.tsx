@@ -5,9 +5,12 @@ import { CalendarClock, ClipboardList, Loader2, MapPin, ScanLine } from "lucide-
 import { CollectionMethodBadge, SyncBadge } from "@/components/audit/AuditStatusBadges";
 import { toast } from "sonner";
 import {
+  flushAiScanQueue,
+  isOnline,
   listUnsyncedAssignmentIds,
   pendingCountForAssignment,
 } from "@/lib/audit-offline";
+import { submitScanImages } from "@/lib/scan-api";
 import { AppShell } from "@/components/AppShell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -147,6 +150,20 @@ function MyScansPage() {
 
   useEffect(() => {
     void listUnsyncedAssignmentIds().then(setUnsyncedIds);
+  }, []);
+
+  useEffect(() => {
+    if (!isOnline()) return;
+    void flushAiScanQueue((files, payload) =>
+      submitScanImages(files, payload as Parameters<typeof submitScanImages>[1]).then((r) => ({
+        scanId: r.scan_id,
+      })),
+    ).then((count) => {
+      if (count > 0) {
+        toast.success(`Synced ${count} queued AI audit(s).`);
+        void listUnsyncedAssignmentIds().then(setUnsyncedIds);
+      }
+    });
   }, []);
 
   const query = useQuery({

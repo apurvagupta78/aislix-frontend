@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { fetchStores } from "@/lib/account";
 import { FALLBACK_CATEGORIES, type ShelfCategory } from "@/lib/categories.data";
@@ -43,6 +44,7 @@ import { getAssignmentScanContext } from "@/lib/assignment-context.functions";
 import { startAssignment } from "@/lib/assignments";
 
 import { MAX_SCAN_IMAGES, formatBytes, submitScanImages, validateScanFile } from "@/lib/scan-api";
+import { isOnline, queueAiScanUpload } from "@/lib/audit-offline";
 import { PlanogramBuilder } from "@/components/planogram/PlanogramBuilder";
 import { Badge } from "@/components/ui/badge";
 import { fetchActivePlanogram, fetchPlanogramItems, type DraftRow } from "@/lib/planogram";
@@ -451,51 +453,67 @@ function ScanPage() {
     trackEvent("scan_started", { images: items.length, with_planogram: withPlanogram });
 
     try {
-      const response = await submitScanImages(
-        items.map((item) => item.file),
-        {
-          signal: controller.signal,
-          onUploadProgress: setUploadProgress,
+      const submitPayload = {
+        storeId,
+        shelfLabel,
+        category,
+        subCategory: subCategory || undefined,
+        subCategoryLabel: lockedByAssignment
+          ? assignmentSubLabel || undefined
+          : primary?.sub_category_label || undefined,
+        subCategoryCustom: primary?.sub_category_custom?.trim() || undefined,
+        categorySelections: selections,
+        notes: !lockedByAssignment && !withPlanogram ? notes.trim() || undefined : undefined,
+        ...(assignment
+          ? { assignmentId: assignment.assignment_id, orgId: assignment.org_id }
+          : (() => {
+                const rows = rowsForSubmit.map((row) => {
+                  const { key: _key, ...rest } = row as DraftRow & { key?: string };
+                  return {
+                    ...rest,
+                    location: shelfLabel || rest.location,
+                    aisle: shelfLabel || rest.location,
+                  };
+                });
+                const pkg = ctx.auditPackage ?? EMPTY_AUDIT_PACKAGE;
+                const hasPlanogramData =
+                  rows.length > 0 ||
+                  pkg.assortment_skus.length > 0 ||
+                  pkg.msl_skus.length > 0 ||
+                  pkg.price_requirements.length > 0 ||
+                  pkg.promotions.length > 0;
+                if (!hasPlanogramData) return {};
+                const auditRole = ctx.auditRole ?? "supermarket";
+                const auditPackage = autoPopulateAuditPackage(rows, pkg);
+                return {
+                  planogramPayload: adhocPlanogramPayload(rows, auditRole, auditPackage),
+                  auditRole,
+                };
+              })()),
+        ...(verifyScanId ? { parentScanId: verifyScanId } : {}),
+      };
+
+      const files = items.map((item) => item.file);
+
+      if (!isOnline()) {
+        await queueAiScanUpload({
+          assignmentId: assignment?.assignment_id,
           storeId,
           shelfLabel,
-          category,
-          subCategory: subCategory || undefined,
-          subCategoryLabel: lockedByAssignment
-            ? assignmentSubLabel || undefined
-            : primary?.sub_category_label || undefined,
-          subCategoryCustom: primary?.sub_category_custom?.trim() || undefined,
-          categorySelections: selections,
+          files,
+          payload: submitPayload,
+        });
+        setPhase("idle");
+        toast.success("Saved offline — photos will upload when you're back online.");
+        void navigate({ to: "/my-scans" });
+        return;
+      }
 
-          notes: !lockedByAssignment && !withPlanogram ? notes.trim() || undefined : undefined,
-          ...(assignment
-            ? { assignmentId: assignment.assignment_id, orgId: assignment.org_id }
-            : (() => {
-                  const rows = rowsForSubmit.map((row) => {
-                    const { key: _key, ...rest } = row as DraftRow & { key?: string };
-                    return {
-                      ...rest,
-                      location: shelfLabel || rest.location,
-                      aisle: shelfLabel || rest.location,
-                    };
-                  });
-                  const pkg = ctx.auditPackage ?? EMPTY_AUDIT_PACKAGE;
-                  const hasPlanogramData =
-                    rows.length > 0 ||
-                    pkg.assortment_skus.length > 0 ||
-                    pkg.msl_skus.length > 0 ||
-                    pkg.price_requirements.length > 0 ||
-                    pkg.promotions.length > 0;
-                  if (!hasPlanogramData) return {};
-                  const auditRole = ctx.auditRole ?? "supermarket";
-                  const auditPackage = autoPopulateAuditPackage(rows, pkg);
-                  return {
-                    planogramPayload: adhocPlanogramPayload(rows, auditRole, auditPackage),
-                    auditRole,
-                  };
-                })()),
-          ...(verifyScanId ? { parentScanId: verifyScanId } : {}),
-        },
-      );
+      const response = await submitScanImages(files, {
+        signal: controller.signal,
+        onUploadProgress: setUploadProgress,
+        ...submitPayload,
+      });
 
       navigate({
         to: "/processing",

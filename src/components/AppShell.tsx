@@ -113,6 +113,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { kind: "leaf", label: "Stores", to: "/stores", icon: Store },
       { kind: "leaf", label: "Planogram & SKUs", to: "/store-master", icon: LayoutGrid },
+      { kind: "leaf", label: "SKU Intelligence", to: "/sku-intelligence", icon: BarChart3 },
     ],
   },
   {

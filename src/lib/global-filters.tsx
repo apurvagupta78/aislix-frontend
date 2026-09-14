@@ -94,6 +94,7 @@ export function useOptionalGlobalFilters(): GlobalFilterContextValue | null {
 export const GLOBAL_FILTER_PATHS = [
   "/exceptions",
   "/audit-intelligence",
+  "/sku-intelligence",
   "/corrective-actions",
   "/assigned-scans",
   "/history",

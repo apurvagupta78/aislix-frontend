@@ -49,7 +49,9 @@ import {
   type ScopeType,
 } from "@/lib/assignments";
 import { downloadExpectedAuditCsv } from "@/lib/digital-audit";
+import { fetchAuditTemplate } from "@/lib/audit-templates";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 
 
 export const Route = createFileRoute("/assign-scan")({
@@ -58,6 +60,7 @@ export const Route = createFileRoute("/assign-scan")({
     scope: search.scope === "planogram" ? ("planogram" as const) : undefined,
     planogramVersion:
       typeof search.planogramVersion === "string" ? search.planogramVersion : undefined,
+    templateId: typeof search.templateId === "string" ? search.templateId : undefined,
   }),
 
   head: () => ({
@@ -88,6 +91,7 @@ function AssignScanPage() {
     store: storeFromSearch,
     scope: scopeFromSearch,
     planogramVersion: versionFromSearch,
+    templateId: templateFromSearch,
   } = Route.useSearch();
   const [storeId, setStoreId] = useState(storeFromSearch ?? "");
   const [selectedStoreIds, setSelectedStoreIds] = useState<string[]>(
@@ -133,6 +137,13 @@ function AssignScanPage() {
     queryFn: () => fetchAssignableMembers(),
     retry: false,
   });
+  const templateQuery = useQuery({
+    queryKey: ["audit-template-prefill", templateFromSearch],
+    queryFn: () => fetchAuditTemplate(templateFromSearch!),
+    enabled: Boolean(templateFromSearch),
+    retry: false,
+  });
+
   const categoriesQuery = useQuery({
     queryKey: ["shelf-categories"],
     queryFn: () => fetchShelfCategories(),
@@ -169,6 +180,23 @@ function AssignScanPage() {
       ),
     [activeRows],
   );
+
+  const [templateApplied, setTemplateApplied] = useState(false);
+  useEffect(() => {
+    if (templateApplied || !templateQuery.data) return;
+    const t = templateQuery.data;
+    setAuditMode(t.audit_mode);
+    setScopeType(t.scope_type);
+    setInstructions(t.instructions ?? "");
+    if (t.scope_values.category) setCategory(t.scope_values.category);
+    if (t.scope_values.sub_category) setSubCategory(t.scope_values.sub_category);
+    if (t.scope_values.location) setLocation(t.scope_values.location);
+    if (t.scope_values.category_selections?.length) {
+      setSubSelections(t.scope_values.category_selections);
+    }
+    setTemplateApplied(true);
+    toast.success(`Loaded template "${t.name}" (v${t.version}).`);
+  }, [templateQuery.data, templateApplied]);
 
   useEffect(() => {
     if (!fromPlanogram || !activeRows.length) return;
@@ -393,6 +421,14 @@ function AssignScanPage() {
       description="Select scope, assignee, due date and collection method — digital or AI-assisted."
     >
       <div className="max-w-3xl space-y-6">
+        {templateQuery.data ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-brand/30 bg-brand-soft/40 px-4 py-3 text-sm">
+            <Badge variant="outline">Template v{templateQuery.data.version}</Badge>
+            <span>
+              Using <strong>{templateQuery.data.name}</strong> — adjust store and assignee below.
+            </span>
+          </div>
+        ) : null}
         {fromPlanogram ? (
           <section className={card}>
             <h2 className="text-sm font-semibold text-foreground">Store &amp; scope</h2>

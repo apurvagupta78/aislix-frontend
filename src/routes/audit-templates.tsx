@@ -123,7 +123,12 @@ function AuditTemplatesPage() {
       description="Versioned templates for shelf, inventory, planogram, pricing and checklist audits."
       actions={
         <Button asChild variant="outline" size="sm">
-          <Link to="/assign-scan">Assign from template →</Link>
+          <Link
+            to="/assign-scan"
+            search={{ store: undefined, scope: undefined, planogramVersion: undefined, templateId: undefined }}
+          >
+            Assign audit →
+          </Link>
         </Button>
       }
     >
@@ -263,7 +268,12 @@ function AuditTemplatesPage() {
                     <Button asChild size="sm" variant="brand">
                       <Link
                         to="/assign-scan"
-                        search={{ store: undefined, scope: undefined, planogramVersion: undefined }}
+                        search={{
+                          store: undefined,
+                          scope: undefined,
+                          planogramVersion: undefined,
+                          templateId: t.id,
+                        }}
                       >
                         Use
                       </Link>
