@@ -62,7 +62,6 @@ function templateLinkPayload(template: AuditTemplate | null | undefined) {
   };
 }
 
-
 export const Route = createFileRoute("/assign-scan")({
   validateSearch: (search: Record<string, unknown>) => ({
     store: typeof search.store === "string" ? search.store : undefined,

@@ -19,6 +19,7 @@ export type FindingType =
   | "pricing_issue"
   | "damaged_product"
   | "expired_product"
+  | "near_expiry"
   | "missing_product"
   | "receiving_issue"
   | "display_issue"
@@ -93,6 +94,7 @@ export const FINDING_TYPES: { value: FindingType; label: string }[] = [
   { value: "pricing_issue", label: "Pricing issue" },
   { value: "damaged_product", label: "Damaged product" },
   { value: "expired_product", label: "Expired product" },
+  { value: "near_expiry", label: "Near expiry" },
   { value: "missing_product", label: "Missing product" },
   { value: "receiving_issue", label: "Receiving issue" },
   { value: "display_issue", label: "Display issue" },

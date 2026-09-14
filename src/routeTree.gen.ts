@@ -24,6 +24,14 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as CorrectiveActionsRouteImport } from './routes/corrective-actions'
 import { Route as CustomAuditRouteImport } from './routes/custom-audit'
+import { Route as ExpiryControlRouteImport } from './routes/expiry-control'
+import { Route as ExpiryControlMyInspectionsRouteImport } from './routes/expiry-control.my-inspections'
+import { Route as ExpiryControlPlannerRouteImport } from './routes/expiry-control.planner'
+import { Route as ExpiryControlReviewRouteImport } from './routes/expiry-control.review'
+import { Route as ExpiryControlQuarantineRouteImport } from './routes/expiry-control.quarantine'
+import { Route as ExpiryControlHistoryRouteImport } from './routes/expiry-control.history'
+import { Route as ExpiryControlPoliciesRouteImport } from './routes/expiry-control.policies'
+import { Route as ExpiryControlInspectAttemptIdRouteImport } from './routes/expiry-control.inspect.$attemptId'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DemoScansRouteImport } from './routes/demo-scans'
@@ -170,6 +178,46 @@ const CorrectiveActionsRoute = CorrectiveActionsRouteImport.update({
 const CustomAuditRoute = CustomAuditRouteImport.update({
   id: '/custom-audit',
   path: '/custom-audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpiryControlRoute = ExpiryControlRouteImport.update({
+  id: '/expiry-control',
+  path: '/expiry-control',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpiryControlMyInspectionsRoute = ExpiryControlMyInspectionsRouteImport.update({
+  id: '/expiry-control/my-inspections',
+  path: '/expiry-control/my-inspections',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpiryControlPlannerRoute = ExpiryControlPlannerRouteImport.update({
+  id: '/expiry-control/planner',
+  path: '/expiry-control/planner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpiryControlReviewRoute = ExpiryControlReviewRouteImport.update({
+  id: '/expiry-control/review',
+  path: '/expiry-control/review',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpiryControlQuarantineRoute = ExpiryControlQuarantineRouteImport.update({
+  id: '/expiry-control/quarantine',
+  path: '/expiry-control/quarantine',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpiryControlHistoryRoute = ExpiryControlHistoryRouteImport.update({
+  id: '/expiry-control/history',
+  path: '/expiry-control/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpiryControlPoliciesRoute = ExpiryControlPoliciesRouteImport.update({
+  id: '/expiry-control/policies',
+  path: '/expiry-control/policies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpiryControlInspectAttemptIdRoute = ExpiryControlInspectAttemptIdRouteImport.update({
+  id: '/expiry-control/inspect/$attemptId',
+  path: '/expiry-control/inspect/$attemptId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -557,6 +605,14 @@ export interface FileRoutesByFullPath {
   '/cookies': typeof CookiesRoute
   '/corrective-actions': typeof CorrectiveActionsRouteWithChildren
   '/custom-audit': typeof CustomAuditRoute
+  '/expiry-control': typeof ExpiryControlRoute
+  '/expiry-control/history': typeof ExpiryControlHistoryRoute
+  '/expiry-control/inspect/$attemptId': typeof ExpiryControlInspectAttemptIdRoute
+  '/expiry-control/my-inspections': typeof ExpiryControlMyInspectionsRoute
+  '/expiry-control/planner': typeof ExpiryControlPlannerRoute
+  '/expiry-control/policies': typeof ExpiryControlPoliciesRoute
+  '/expiry-control/quarantine': typeof ExpiryControlQuarantineRoute
+  '/expiry-control/review': typeof ExpiryControlReviewRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
@@ -646,6 +702,14 @@ export interface FileRoutesByTo {
   '/cookies': typeof CookiesRoute
   '/corrective-actions': typeof CorrectiveActionsRouteWithChildren
   '/custom-audit': typeof CustomAuditRoute
+  '/expiry-control': typeof ExpiryControlRoute
+  '/expiry-control/history': typeof ExpiryControlHistoryRoute
+  '/expiry-control/inspect/$attemptId': typeof ExpiryControlInspectAttemptIdRoute
+  '/expiry-control/my-inspections': typeof ExpiryControlMyInspectionsRoute
+  '/expiry-control/planner': typeof ExpiryControlPlannerRoute
+  '/expiry-control/policies': typeof ExpiryControlPoliciesRoute
+  '/expiry-control/quarantine': typeof ExpiryControlQuarantineRoute
+  '/expiry-control/review': typeof ExpiryControlReviewRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
@@ -736,6 +800,14 @@ export interface FileRoutesById {
   '/cookies': typeof CookiesRoute
   '/corrective-actions': typeof CorrectiveActionsRouteWithChildren
   '/custom-audit': typeof CustomAuditRoute
+  '/expiry-control': typeof ExpiryControlRoute
+  '/expiry-control/history': typeof ExpiryControlHistoryRoute
+  '/expiry-control/inspect/$attemptId': typeof ExpiryControlInspectAttemptIdRoute
+  '/expiry-control/my-inspections': typeof ExpiryControlMyInspectionsRoute
+  '/expiry-control/planner': typeof ExpiryControlPlannerRoute
+  '/expiry-control/policies': typeof ExpiryControlPoliciesRoute
+  '/expiry-control/quarantine': typeof ExpiryControlQuarantineRoute
+  '/expiry-control/review': typeof ExpiryControlReviewRoute
   '/dashboard': typeof DashboardRoute
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
@@ -827,6 +899,14 @@ export interface FileRouteTypes {
     | '/cookies'
     | '/corrective-actions'
     | '/custom-audit'
+    | '/expiry-control'
+    | '/expiry-control/history'
+    | '/expiry-control/inspect/$attemptId'
+    | '/expiry-control/my-inspections'
+    | '/expiry-control/planner'
+    | '/expiry-control/policies'
+    | '/expiry-control/quarantine'
+    | '/expiry-control/review'
     | '/dashboard'
     | '/demo'
     | '/demo-scans'
@@ -916,6 +996,14 @@ export interface FileRouteTypes {
     | '/cookies'
     | '/corrective-actions'
     | '/custom-audit'
+    | '/expiry-control'
+    | '/expiry-control/history'
+    | '/expiry-control/inspect/$attemptId'
+    | '/expiry-control/my-inspections'
+    | '/expiry-control/planner'
+    | '/expiry-control/policies'
+    | '/expiry-control/quarantine'
+    | '/expiry-control/review'
     | '/dashboard'
     | '/demo'
     | '/demo-scans'
@@ -1005,6 +1093,14 @@ export interface FileRouteTypes {
     | '/cookies'
     | '/corrective-actions'
     | '/custom-audit'
+    | '/expiry-control'
+    | '/expiry-control/history'
+    | '/expiry-control/inspect/$attemptId'
+    | '/expiry-control/my-inspections'
+    | '/expiry-control/planner'
+    | '/expiry-control/policies'
+    | '/expiry-control/quarantine'
+    | '/expiry-control/review'
     | '/dashboard'
     | '/demo'
     | '/demo-scans'
@@ -1261,6 +1357,62 @@ declare module '@tanstack/react-router' {
       path: '/custom-audit'
       fullPath: '/custom-audit'
       preLoaderRoute: typeof CustomAuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expiry-control': {
+      id: '/expiry-control'
+      path: '/expiry-control'
+      fullPath: '/expiry-control'
+      preLoaderRoute: typeof ExpiryControlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expiry-control/history': {
+      id: '/expiry-control/history'
+      path: '/expiry-control/history'
+      fullPath: '/expiry-control/history'
+      preLoaderRoute: typeof ExpiryControlHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expiry-control/inspect/$attemptId': {
+      id: '/expiry-control/inspect/$attemptId'
+      path: '/expiry-control/inspect/$attemptId'
+      fullPath: '/expiry-control/inspect/$attemptId'
+      preLoaderRoute: typeof ExpiryControlInspectAttemptIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expiry-control/my-inspections': {
+      id: '/expiry-control/my-inspections'
+      path: '/expiry-control/my-inspections'
+      fullPath: '/expiry-control/my-inspections'
+      preLoaderRoute: typeof ExpiryControlMyInspectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expiry-control/planner': {
+      id: '/expiry-control/planner'
+      path: '/expiry-control/planner'
+      fullPath: '/expiry-control/planner'
+      preLoaderRoute: typeof ExpiryControlPlannerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expiry-control/policies': {
+      id: '/expiry-control/policies'
+      path: '/expiry-control/policies'
+      fullPath: '/expiry-control/policies'
+      preLoaderRoute: typeof ExpiryControlPoliciesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expiry-control/quarantine': {
+      id: '/expiry-control/quarantine'
+      path: '/expiry-control/quarantine'
+      fullPath: '/expiry-control/quarantine'
+      preLoaderRoute: typeof ExpiryControlQuarantineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expiry-control/review': {
+      id: '/expiry-control/review'
+      path: '/expiry-control/review'
+      fullPath: '/expiry-control/review'
+      preLoaderRoute: typeof ExpiryControlReviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -1872,6 +2024,14 @@ const rootRouteChildren: RootRouteChildren = {
   CookiesRoute: CookiesRoute,
   CorrectiveActionsRoute: CorrectiveActionsRouteWithChildren,
   CustomAuditRoute: CustomAuditRoute,
+  ExpiryControlRoute: ExpiryControlRoute,
+  ExpiryControlHistoryRoute: ExpiryControlHistoryRoute,
+  ExpiryControlInspectAttemptIdRoute: ExpiryControlInspectAttemptIdRoute,
+  ExpiryControlMyInspectionsRoute: ExpiryControlMyInspectionsRoute,
+  ExpiryControlPlannerRoute: ExpiryControlPlannerRoute,
+  ExpiryControlPoliciesRoute: ExpiryControlPoliciesRoute,
+  ExpiryControlQuarantineRoute: ExpiryControlQuarantineRoute,
+  ExpiryControlReviewRoute: ExpiryControlReviewRoute,
   DashboardRoute: DashboardRoute,
   DemoRoute: DemoRoute,
   DemoScansRoute: DemoScansRoute,
