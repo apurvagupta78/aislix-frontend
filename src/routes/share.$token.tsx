@@ -171,7 +171,7 @@ function DemoSharedReport({ session }: { session: LandingScanResult }) {
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        <DemoScanResultsBody data={data} rawData={data} activeRole={role} demoMode compact />
+        <DemoScanResultsBody data={data} rawData={data} activeRole={role} demoMode compact onRoleChange={() => {}} />
       </main>
     </div>
   );
@@ -196,10 +196,10 @@ function SharedReport() {
     fetchShare({ data: { token } })
       .then((payload) => {
         if (cancelled) return;
-        if (payload.kind === "demo") {
-          setResolved({ report: null, demoSession: payload.demoSession });
-        } else if (payload.kind === "report") {
-          setResolved({ report: payload.report, demoSession: null });
+        if (payload as any.kind === "demo") {
+          setResolved({ report: null, demoSession: payload as any.demoSession });
+        } else if (payload as any.kind === "report") {
+          setResolved({ report: payload as any.report, demoSession: null });
         }
       })
       .catch(() => {

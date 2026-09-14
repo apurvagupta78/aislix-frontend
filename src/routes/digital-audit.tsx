@@ -124,13 +124,13 @@ function DigitalAuditPage() {
           toast.success(`Synced ${syncedLines} line(s) and ${syncedPhotos} photo(s).`);
           void queryClient.invalidateQueries({ queryKey: ["digital-audit", assignmentId] });
         }
-        void listPendingCounts().then(setPendingCount);
+        void listPendingCounts().then((c: any) => setPendingCount(c.lines + c.photos));
       });
     };
     const onOffline = () => setOffline(true);
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
-    void listPendingCounts().then(setPendingCount);
+    void listPendingCounts().then((c: any) => setPendingCount(c.lines + c.photos));
     return () => {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
@@ -272,7 +272,7 @@ function DigitalAuditPage() {
   ).length;
 
   function handleBarcodeLookup() {
-    const line = lookupLineByBarcode(session.lines, barcodeInput.trim());
+    const line = lookupLineByBarcode(session?.lines, barcodeInput.trim());
     if (!line) {
       toast.error("No matching SKU for that barcode.");
       return;
