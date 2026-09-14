@@ -61,6 +61,639 @@ export type Database = {
           },
         ]
       }
+      audit_activity_events: {
+        Row: {
+          action_id: string | null
+          actor_id: string | null
+          created_at: string
+          event_type: string
+          finding_id: string | null
+          id: string
+          org_id: string
+          payload: Json
+          scan_id: string | null
+          summary: string
+        }
+        Insert: {
+          action_id?: string | null
+          actor_id?: string | null
+          created_at?: string
+          event_type: string
+          finding_id?: string | null
+          id?: string
+          org_id: string
+          payload?: Json
+          scan_id?: string | null
+          summary: string
+        }
+        Update: {
+          action_id?: string | null
+          actor_id?: string | null
+          created_at?: string
+          event_type?: string
+          finding_id?: string | null
+          id?: string
+          org_id?: string
+          payload?: Json
+          scan_id?: string | null
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_activity_events_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "corrective_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_activity_events_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "findings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_activity_events_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "shelf_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_approvals: {
+        Row: {
+          action: string
+          assignment_id: string | null
+          comment: string | null
+          created_at: string
+          id: string
+          org_id: string
+          reject_mode: string | null
+          reviewer_id: string
+          scan_id: string
+        }
+        Insert: {
+          action: string
+          assignment_id?: string | null
+          comment?: string | null
+          created_at?: string
+          id?: string
+          org_id: string
+          reject_mode?: string | null
+          reviewer_id: string
+          scan_id: string
+        }
+        Update: {
+          action?: string
+          assignment_id?: string | null
+          comment?: string | null
+          created_at?: string
+          id?: string
+          org_id?: string
+          reject_mode?: string | null
+          reviewer_id?: string
+          scan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_approvals_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scan_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_approvals_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "shelf_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_digest_settings: {
+        Row: {
+          cadence: string
+          email_enabled: boolean
+          include_exceptions: boolean
+          include_pending_approvals: boolean
+          include_variance_summary: boolean
+          last_sent_at: string | null
+          last_status: string | null
+          org_id: string
+          send_time_local: string
+          timezone: string
+          updated_at: string
+          whatsapp_enabled: boolean
+          whatsapp_number: string | null
+        }
+        Insert: {
+          cadence?: string
+          email_enabled?: boolean
+          include_exceptions?: boolean
+          include_pending_approvals?: boolean
+          include_variance_summary?: boolean
+          last_sent_at?: string | null
+          last_status?: string | null
+          org_id: string
+          send_time_local?: string
+          timezone?: string
+          updated_at?: string
+          whatsapp_enabled?: boolean
+          whatsapp_number?: string | null
+        }
+        Update: {
+          cadence?: string
+          email_enabled?: boolean
+          include_exceptions?: boolean
+          include_pending_approvals?: boolean
+          include_variance_summary?: boolean
+          last_sent_at?: string | null
+          last_status?: string | null
+          org_id?: string
+          send_time_local?: string
+          timezone?: string
+          updated_at?: string
+          whatsapp_enabled?: boolean
+          whatsapp_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_digest_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_evidence: {
+        Row: {
+          accuracy_m: number | null
+          bin_key: string
+          captured_at: string
+          captured_by: string
+          created_at: string
+          device_info: Json
+          id: string
+          lat: number | null
+          lng: number | null
+          org_id: string
+          scan_id: string
+          storage_path: string
+        }
+        Insert: {
+          accuracy_m?: number | null
+          bin_key: string
+          captured_at?: string
+          captured_by: string
+          created_at?: string
+          device_info?: Json
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          org_id: string
+          scan_id: string
+          storage_path: string
+        }
+        Update: {
+          accuracy_m?: number | null
+          bin_key?: string
+          captured_at?: string
+          captured_by?: string
+          created_at?: string
+          device_info?: Json
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          org_id?: string
+          scan_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_evidence_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "shelf_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_exceptions: {
+        Row: {
+          assignment_id: string | null
+          created_at: string
+          description: string | null
+          due_at: string | null
+          id: string
+          impact_label: string | null
+          lifecycle: string
+          metadata: Json
+          org_id: string
+          owner_id: string | null
+          scan_id: string | null
+          severity: string
+          shelf_label: string | null
+          sku_label: string | null
+          source_id: string
+          source_type: string
+          store_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_id?: string | null
+          created_at?: string
+          description?: string | null
+          due_at?: string | null
+          id?: string
+          impact_label?: string | null
+          lifecycle?: string
+          metadata?: Json
+          org_id: string
+          owner_id?: string | null
+          scan_id?: string | null
+          severity?: string
+          shelf_label?: string | null
+          sku_label?: string | null
+          source_id: string
+          source_type: string
+          store_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string | null
+          created_at?: string
+          description?: string | null
+          due_at?: string | null
+          id?: string
+          impact_label?: string | null
+          lifecycle?: string
+          metadata?: Json
+          org_id?: string
+          owner_id?: string | null
+          scan_id?: string | null
+          severity?: string
+          shelf_label?: string | null
+          sku_label?: string | null
+          source_id?: string
+          source_type?: string
+          store_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_exceptions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scan_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_exceptions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_exceptions_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "shelf_scans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_exceptions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_responses: {
+        Row: {
+          ai_suggested: Json | null
+          assignment_id: string | null
+          created_at: string
+          created_by: string | null
+          field_config: Json
+          field_key: string
+          field_type: string
+          human_confirmed: boolean
+          id: string
+          org_id: string
+          record_index: number
+          scan_id: string | null
+          section_key: string
+          template_id: string
+          template_version: number
+          updated_at: string
+          updated_by: string | null
+          value: Json | null
+        }
+        Insert: {
+          ai_suggested?: Json | null
+          assignment_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          field_config?: Json
+          field_key: string
+          field_type: string
+          human_confirmed?: boolean
+          id?: string
+          org_id: string
+          record_index?: number
+          scan_id?: string | null
+          section_key?: string
+          template_id: string
+          template_version?: number
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json | null
+        }
+        Update: {
+          ai_suggested?: Json | null
+          assignment_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          field_config?: Json
+          field_key?: string
+          field_type?: string
+          human_confirmed?: boolean
+          id?: string
+          org_id?: string
+          record_index?: number
+          scan_id?: string | null
+          section_key?: string
+          template_id?: string
+          template_version?: number
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_responses_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scan_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_responses_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "shelf_scans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_responses_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "audit_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_schedules: {
+        Row: {
+          active: boolean
+          assignee_id: string
+          audit_mode: string
+          cadence: string
+          created_at: string
+          created_by: string
+          day_of_month: number | null
+          day_of_week: number | null
+          id: string
+          instructions: string | null
+          last_run_at: string | null
+          name: string | null
+          next_run_at: string
+          org_id: string
+          scope_type: string
+          scope_values: Json
+          status: string
+          store_id: string
+          store_ids: string[]
+          template_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          assignee_id: string
+          audit_mode?: string
+          cadence?: string
+          created_at?: string
+          created_by: string
+          day_of_month?: number | null
+          day_of_week?: number | null
+          id?: string
+          instructions?: string | null
+          last_run_at?: string | null
+          name?: string | null
+          next_run_at?: string
+          org_id: string
+          scope_type?: string
+          scope_values?: Json
+          status?: string
+          store_id: string
+          store_ids?: string[]
+          template_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          assignee_id?: string
+          audit_mode?: string
+          cadence?: string
+          created_at?: string
+          created_by?: string
+          day_of_month?: number | null
+          day_of_week?: number | null
+          id?: string
+          instructions?: string | null
+          last_run_at?: string | null
+          name?: string | null
+          next_run_at?: string
+          org_id?: string
+          scope_type?: string
+          scope_values?: Json
+          status?: string
+          store_id?: string
+          store_ids?: string[]
+          template_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_schedules_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_schedules_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "audit_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_template_versions: {
+        Row: {
+          change_summary: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          org_id: string
+          snapshot: Json
+          template_id: string
+          version: number
+        }
+        Insert: {
+          change_summary?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          org_id: string
+          snapshot?: Json
+          template_id: string
+          version: number
+        }
+        Update: {
+          change_summary?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          org_id?: string
+          snapshot?: Json
+          template_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_template_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "audit_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_templates: {
+        Row: {
+          ai_config: Json
+          audit_level: string
+          audit_mode: string
+          calculated_fields: Json
+          category: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          evidence_config: Json
+          evidence_required: boolean
+          field_definitions: Json
+          icon: string | null
+          id: string
+          instructions: string | null
+          is_active: boolean
+          name: string
+          org_id: string
+          published: boolean
+          rules: Json
+          scope_type: string
+          scope_values: Json
+          scoring_config: Json
+          sections: Json
+          status: string
+          template_type: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+          workflow_settings: Json
+        }
+        Insert: {
+          ai_config?: Json
+          audit_level?: string
+          audit_mode?: string
+          calculated_fields?: Json
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          evidence_config?: Json
+          evidence_required?: boolean
+          field_definitions?: Json
+          icon?: string | null
+          id?: string
+          instructions?: string | null
+          is_active?: boolean
+          name: string
+          org_id: string
+          published?: boolean
+          rules?: Json
+          scope_type?: string
+          scope_values?: Json
+          scoring_config?: Json
+          sections?: Json
+          status?: string
+          template_type?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+          workflow_settings?: Json
+        }
+        Update: {
+          ai_config?: Json
+          audit_level?: string
+          audit_mode?: string
+          calculated_fields?: Json
+          category?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          evidence_config?: Json
+          evidence_required?: boolean
+          field_definitions?: Json
+          icon?: string | null
+          id?: string
+          instructions?: string | null
+          is_active?: boolean
+          name?: string
+          org_id?: string
+          published?: boolean
+          rules?: Json
+          scope_type?: string
+          scope_values?: Json
+          scoring_config?: Json
+          sections?: Json
+          status?: string
+          template_type?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+          workflow_settings?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_templates_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_submissions: {
         Row: {
           company: string | null
@@ -109,48 +742,99 @@ export type Database = {
       corrective_actions: {
         Row: {
           assigned_to: string | null
-          comparison_id: string
+          closed_at: string | null
+          comparison_id: string | null
           comparison_line_id: string | null
           created_at: string
+          created_by: string | null
+          description: string | null
+          due_at: string | null
+          finding_id: string | null
           id: string
           issue_type: string
           notes: string | null
           org_id: string
+          priority: string | null
+          rejection_reason: string | null
+          resolution_notes: string | null
+          resolution_qty: number | null
           resolved_at: string | null
           resolved_by: string | null
+          scan_id: string | null
+          sku: string | null
+          sla_hours: number | null
+          start_at: string | null
           status: string
+          store_id: string | null
           suggestion: string
+          title: string | null
           updated_at: string
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
           assigned_to?: string | null
-          comparison_id: string
+          closed_at?: string | null
+          comparison_id?: string | null
           comparison_line_id?: string | null
           created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_at?: string | null
+          finding_id?: string | null
           id?: string
           issue_type: string
           notes?: string | null
           org_id: string
+          priority?: string | null
+          rejection_reason?: string | null
+          resolution_notes?: string | null
+          resolution_qty?: number | null
           resolved_at?: string | null
           resolved_by?: string | null
+          scan_id?: string | null
+          sku?: string | null
+          sla_hours?: number | null
+          start_at?: string | null
           status?: string
+          store_id?: string | null
           suggestion: string
+          title?: string | null
           updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
           assigned_to?: string | null
-          comparison_id?: string
+          closed_at?: string | null
+          comparison_id?: string | null
           comparison_line_id?: string | null
           created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_at?: string | null
+          finding_id?: string | null
           id?: string
           issue_type?: string
           notes?: string | null
           org_id?: string
+          priority?: string | null
+          rejection_reason?: string | null
+          resolution_notes?: string | null
+          resolution_qty?: number | null
           resolved_at?: string | null
           resolved_by?: string | null
+          scan_id?: string | null
+          sku?: string | null
+          sla_hours?: number | null
+          start_at?: string | null
           status?: string
+          store_id?: string | null
           suggestion?: string
+          title?: string | null
           updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -165,6 +849,27 @@ export type Database = {
             columns: ["comparison_line_id"]
             isOneToOne: false
             referencedRelation: "planogram_comparison_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "corrective_actions_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "findings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "corrective_actions_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "shelf_scans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "corrective_actions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -236,6 +941,179 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      digital_audit_lines: {
+        Row: {
+          actual_qty: number | null
+          ai_assisted_flag: boolean
+          ai_suggested_qty: number | null
+          assignment_id: string | null
+          barcode: string | null
+          bin_key: string
+          brand: string | null
+          category: string | null
+          created_at: string
+          entered_by: string | null
+          expected_qty: number
+          id: string
+          item_code: string | null
+          location: string
+          match_key: string | null
+          mrp_inr: number | null
+          org_id: string
+          planogram_item_id: string | null
+          product_name: string
+          rca_code: string | null
+          rca_notes: string | null
+          scan_id: string
+          sku: string | null
+          source: string
+          store_id: string
+          sub_category: string | null
+          system_qty: number | null
+          updated_at: string
+          variance_pct: number | null
+          variance_qty: number | null
+          variance_value_inr: number | null
+        }
+        Insert: {
+          actual_qty?: number | null
+          ai_assisted_flag?: boolean
+          ai_suggested_qty?: number | null
+          assignment_id?: string | null
+          barcode?: string | null
+          bin_key?: string
+          brand?: string | null
+          category?: string | null
+          created_at?: string
+          entered_by?: string | null
+          expected_qty?: number
+          id?: string
+          item_code?: string | null
+          location?: string
+          match_key?: string | null
+          mrp_inr?: number | null
+          org_id: string
+          planogram_item_id?: string | null
+          product_name: string
+          rca_code?: string | null
+          rca_notes?: string | null
+          scan_id: string
+          sku?: string | null
+          source?: string
+          store_id: string
+          sub_category?: string | null
+          system_qty?: number | null
+          updated_at?: string
+          variance_pct?: number | null
+          variance_qty?: number | null
+          variance_value_inr?: number | null
+        }
+        Update: {
+          actual_qty?: number | null
+          ai_assisted_flag?: boolean
+          ai_suggested_qty?: number | null
+          assignment_id?: string | null
+          barcode?: string | null
+          bin_key?: string
+          brand?: string | null
+          category?: string | null
+          created_at?: string
+          entered_by?: string | null
+          expected_qty?: number
+          id?: string
+          item_code?: string | null
+          location?: string
+          match_key?: string | null
+          mrp_inr?: number | null
+          org_id?: string
+          planogram_item_id?: string | null
+          product_name?: string
+          rca_code?: string | null
+          rca_notes?: string | null
+          scan_id?: string
+          sku?: string | null
+          source?: string
+          store_id?: string
+          sub_category?: string | null
+          system_qty?: number | null
+          updated_at?: string
+          variance_pct?: number | null
+          variance_qty?: number | null
+          variance_value_inr?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_audit_lines_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scan_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_audit_lines_planogram_item_id_fkey"
+            columns: ["planogram_item_id"]
+            isOneToOne: false
+            referencedRelation: "planogram_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_audit_lines_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "shelf_scans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_audit_lines_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      escalation_rules: {
+        Row: {
+          created_at: string
+          escalate_after_hours: number
+          final_role: string
+          first_role: string
+          id: string
+          notify_in_app: boolean
+          org_id: string
+          second_after_hours: number
+          second_role: string
+          severity: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          escalate_after_hours?: number
+          final_role?: string
+          first_role?: string
+          id?: string
+          notify_in_app?: boolean
+          org_id: string
+          second_after_hours?: number
+          second_role?: string
+          severity: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          escalate_after_hours?: number
+          final_role?: string
+          first_role?: string
+          id?: string
+          notify_in_app?: boolean
+          org_id?: string
+          second_after_hours?: number
+          second_role?: string
+          severity?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       execution_actions: {
         Row: {
@@ -374,6 +1252,156 @@ export type Database = {
           },
           {
             foreignKeyName: "execution_opportunities_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      findings: {
+        Row: {
+          actual_value: number | null
+          assigned_to: string | null
+          assignment_id: string | null
+          audit_origin: string
+          category: string | null
+          closed_at: string | null
+          comparison_line_id: string | null
+          confirmation_state: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          digital_audit_line_id: string | null
+          due_at: string | null
+          expected_value: number | null
+          finding_type: string
+          id: string
+          org_id: string
+          product_name: string | null
+          rca_code: string | null
+          rca_notes: string | null
+          resolved_at: string | null
+          scan_id: string | null
+          severity: string
+          shelf_label: string | null
+          sku: string | null
+          source_id: string | null
+          source_type: string
+          status: string
+          store_id: string | null
+          title: string
+          updated_at: string
+          variance_percentage: number | null
+          variance_units: number | null
+          variance_value_inr: number | null
+          verified_at: string | null
+        }
+        Insert: {
+          actual_value?: number | null
+          assigned_to?: string | null
+          assignment_id?: string | null
+          audit_origin?: string
+          category?: string | null
+          closed_at?: string | null
+          comparison_line_id?: string | null
+          confirmation_state?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          digital_audit_line_id?: string | null
+          due_at?: string | null
+          expected_value?: number | null
+          finding_type: string
+          id?: string
+          org_id: string
+          product_name?: string | null
+          rca_code?: string | null
+          rca_notes?: string | null
+          resolved_at?: string | null
+          scan_id?: string | null
+          severity?: string
+          shelf_label?: string | null
+          sku?: string | null
+          source_id?: string | null
+          source_type?: string
+          status?: string
+          store_id?: string | null
+          title: string
+          updated_at?: string
+          variance_percentage?: number | null
+          variance_units?: number | null
+          variance_value_inr?: number | null
+          verified_at?: string | null
+        }
+        Update: {
+          actual_value?: number | null
+          assigned_to?: string | null
+          assignment_id?: string | null
+          audit_origin?: string
+          category?: string | null
+          closed_at?: string | null
+          comparison_line_id?: string | null
+          confirmation_state?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          digital_audit_line_id?: string | null
+          due_at?: string | null
+          expected_value?: number | null
+          finding_type?: string
+          id?: string
+          org_id?: string
+          product_name?: string | null
+          rca_code?: string | null
+          rca_notes?: string | null
+          resolved_at?: string | null
+          scan_id?: string | null
+          severity?: string
+          shelf_label?: string | null
+          sku?: string | null
+          source_id?: string | null
+          source_type?: string
+          status?: string
+          store_id?: string | null
+          title?: string
+          updated_at?: string
+          variance_percentage?: number | null
+          variance_units?: number | null
+          variance_value_inr?: number | null
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "findings_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scan_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "findings_comparison_line_id_fkey"
+            columns: ["comparison_line_id"]
+            isOneToOne: false
+            referencedRelation: "planogram_comparison_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "findings_digital_audit_line_id_fkey"
+            columns: ["digital_audit_line_id"]
+            isOneToOne: false
+            referencedRelation: "digital_audit_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "findings_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "shelf_scans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "findings_store_id_fkey"
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
@@ -633,6 +1661,33 @@ export type Database = {
         }
         Relationships: []
       }
+      org_sla_defaults: {
+        Row: {
+          critical_hours: number
+          high_hours: number
+          low_hours: number
+          medium_hours: number
+          org_id: string
+          updated_at: string
+        }
+        Insert: {
+          critical_hours?: number
+          high_hours?: number
+          low_hours?: number
+          medium_hours?: number
+          org_id: string
+          updated_at?: string
+        }
+        Update: {
+          critical_hours?: number
+          high_hours?: number
+          low_hours?: number
+          medium_hours?: number
+          org_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       organization_members: {
         Row: {
           created_at: string
@@ -861,6 +1916,7 @@ export type Database = {
           approved_substitutes: Json
           authorized_shelf_price: number | null
           avg_daily_sales: number | null
+          barcode: string | null
           brand: string
           category: string
           created_at: string
@@ -872,6 +1928,7 @@ export type Database = {
           is_mandatory_assortment: boolean
           is_msl: boolean
           is_optional: boolean
+          item_code: string | null
           location: string
           match_key: string | null
           max_facings: number | null
@@ -889,6 +1946,7 @@ export type Database = {
           slot_width_cm: number | null
           store_id: string
           sub_category: string
+          system_qty: number | null
           updated_at: string
           variant: string | null
           version_id: string
@@ -898,6 +1956,7 @@ export type Database = {
           approved_substitutes?: Json
           authorized_shelf_price?: number | null
           avg_daily_sales?: number | null
+          barcode?: string | null
           brand: string
           category: string
           created_at?: string
@@ -909,6 +1968,7 @@ export type Database = {
           is_mandatory_assortment?: boolean
           is_msl?: boolean
           is_optional?: boolean
+          item_code?: string | null
           location: string
           match_key?: string | null
           max_facings?: number | null
@@ -926,6 +1986,7 @@ export type Database = {
           slot_width_cm?: number | null
           store_id: string
           sub_category: string
+          system_qty?: number | null
           updated_at?: string
           variant?: string | null
           version_id: string
@@ -935,6 +1996,7 @@ export type Database = {
           approved_substitutes?: Json
           authorized_shelf_price?: number | null
           avg_daily_sales?: number | null
+          barcode?: string | null
           brand?: string
           category?: string
           created_at?: string
@@ -946,6 +2008,7 @@ export type Database = {
           is_mandatory_assortment?: boolean
           is_msl?: boolean
           is_optional?: boolean
+          item_code?: string | null
           location?: string
           match_key?: string | null
           max_facings?: number | null
@@ -963,6 +2026,7 @@ export type Database = {
           slot_width_cm?: number | null
           store_id?: string
           sub_category?: string
+          system_qty?: number | null
           updated_at?: string
           variant?: string | null
           version_id?: string
@@ -1201,10 +2265,63 @@ export type Database = {
         }
         Relationships: []
       }
+      resolution_evidence: {
+        Row: {
+          action_id: string | null
+          captured_by: string | null
+          created_at: string
+          finding_id: string | null
+          id: string
+          notes: string | null
+          org_id: string
+          resolution_qty: number | null
+          storage_path: string | null
+        }
+        Insert: {
+          action_id?: string | null
+          captured_by?: string | null
+          created_at?: string
+          finding_id?: string | null
+          id?: string
+          notes?: string | null
+          org_id: string
+          resolution_qty?: number | null
+          storage_path?: string | null
+        }
+        Update: {
+          action_id?: string | null
+          captured_by?: string | null
+          created_at?: string
+          finding_id?: string | null
+          id?: string
+          notes?: string | null
+          org_id?: string
+          resolution_qty?: number | null
+          storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resolution_evidence_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "corrective_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resolution_evidence_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "findings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scan_assignments: {
         Row: {
+          approval_status: string
           assignee_id: string
           assigner_id: string
+          audit_mode: string
           completed_at: string | null
           created_at: string
           due_at: string | null
@@ -1219,13 +2336,18 @@ export type Database = {
           scope_values: Json
           status: string
           store_id: string
+          template_id: string | null
+          template_snapshot: Json | null
+          template_version: number | null
           updated_at: string
           verified_at: string | null
           verified_by: string | null
         }
         Insert: {
+          approval_status?: string
           assignee_id: string
           assigner_id: string
+          audit_mode?: string
           completed_at?: string | null
           created_at?: string
           due_at?: string | null
@@ -1240,13 +2362,18 @@ export type Database = {
           scope_values?: Json
           status?: string
           store_id: string
+          template_id?: string | null
+          template_snapshot?: Json | null
+          template_version?: number | null
           updated_at?: string
           verified_at?: string | null
           verified_by?: string | null
         }
         Update: {
+          approval_status?: string
           assignee_id?: string
           assigner_id?: string
+          audit_mode?: string
           completed_at?: string | null
           created_at?: string
           due_at?: string | null
@@ -1261,6 +2388,9 @@ export type Database = {
           scope_values?: Json
           status?: string
           store_id?: string
+          template_id?: string | null
+          template_snapshot?: Json | null
+          template_version?: number | null
           updated_at?: string
           verified_at?: string | null
           verified_by?: string | null
@@ -1285,6 +2415,13 @@ export type Database = {
             columns: ["store_id"]
             isOneToOne: false
             referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scan_assignments_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "audit_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -1630,12 +2767,18 @@ export type Database = {
         Row: {
           adhoc_planogram: Json | null
           assignment_id: string | null
+          audit_mode: string
           category: string | null
           category_selections: Json
           created_at: string
           created_by: string | null
+          device_info: Json
           error_message: string | null
+          finalized_at: string | null
+          finalized_by: string | null
+          geofence_status: string | null
           id: string
+          locked_at: string | null
           low_stock_count: number
           misplaced_count: number
           notes: string | null
@@ -1647,6 +2790,7 @@ export type Database = {
           planogram_compliance_percent: number | null
           processing_completed_at: string | null
           processing_started_at: string | null
+          reaudit_reason: string | null
           share_of_shelf_percent: number | null
           shelf_health_score: number | null
           shelf_label: string | null
@@ -1655,18 +2799,31 @@ export type Database = {
           sub_category: string | null
           sub_category_custom: string | null
           sub_category_label: string | null
+          submission_status: string | null
+          submitted_at: string | null
+          submitted_lat: number | null
+          submitted_lng: number | null
+          template_id: string | null
+          template_snapshot: Json | null
+          template_version: number | null
           total_products: number
           updated_at: string
         }
         Insert: {
           adhoc_planogram?: Json | null
           assignment_id?: string | null
+          audit_mode?: string
           category?: string | null
           category_selections?: Json
           created_at?: string
           created_by?: string | null
+          device_info?: Json
           error_message?: string | null
+          finalized_at?: string | null
+          finalized_by?: string | null
+          geofence_status?: string | null
           id?: string
+          locked_at?: string | null
           low_stock_count?: number
           misplaced_count?: number
           notes?: string | null
@@ -1678,6 +2835,7 @@ export type Database = {
           planogram_compliance_percent?: number | null
           processing_completed_at?: string | null
           processing_started_at?: string | null
+          reaudit_reason?: string | null
           share_of_shelf_percent?: number | null
           shelf_health_score?: number | null
           shelf_label?: string | null
@@ -1686,18 +2844,31 @@ export type Database = {
           sub_category?: string | null
           sub_category_custom?: string | null
           sub_category_label?: string | null
+          submission_status?: string | null
+          submitted_at?: string | null
+          submitted_lat?: number | null
+          submitted_lng?: number | null
+          template_id?: string | null
+          template_snapshot?: Json | null
+          template_version?: number | null
           total_products?: number
           updated_at?: string
         }
         Update: {
           adhoc_planogram?: Json | null
           assignment_id?: string | null
+          audit_mode?: string
           category?: string | null
           category_selections?: Json
           created_at?: string
           created_by?: string | null
+          device_info?: Json
           error_message?: string | null
+          finalized_at?: string | null
+          finalized_by?: string | null
+          geofence_status?: string | null
           id?: string
+          locked_at?: string | null
           low_stock_count?: number
           misplaced_count?: number
           notes?: string | null
@@ -1709,6 +2880,7 @@ export type Database = {
           planogram_compliance_percent?: number | null
           processing_completed_at?: string | null
           processing_started_at?: string | null
+          reaudit_reason?: string | null
           share_of_shelf_percent?: number | null
           shelf_health_score?: number | null
           shelf_label?: string | null
@@ -1717,6 +2889,13 @@ export type Database = {
           sub_category?: string | null
           sub_category_custom?: string | null
           sub_category_label?: string | null
+          submission_status?: string | null
+          submitted_at?: string | null
+          submitted_lat?: number | null
+          submitted_lng?: number | null
+          template_id?: string | null
+          template_snapshot?: Json | null
+          template_version?: number | null
           total_products?: number
           updated_at?: string
         }
@@ -1756,6 +2935,13 @@ export type Database = {
             referencedRelation: "stores"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "shelf_scans_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "audit_templates"
+            referencedColumns: ["id"]
+          },
         ]
       }
       stores: {
@@ -1769,8 +2955,8 @@ export type Database = {
           contact_phone: string | null
           country: string | null
           created_at: string
-          id: string
           geofence_radius_m: number
+          id: string
           latitude: number | null
           longitude: number | null
           manager_id: string | null
@@ -1795,8 +2981,8 @@ export type Database = {
           contact_phone?: string | null
           country?: string | null
           created_at?: string
-          id?: string
           geofence_radius_m?: number
+          id?: string
           latitude?: number | null
           longitude?: number | null
           manager_id?: string | null
@@ -2065,16 +3251,54 @@ export type Database = {
       is_org_member: { Args: { p_org_id: string }; Returns: boolean }
       is_org_owner_or_admin: { Args: { p_org_id: string }; Returns: boolean }
       is_user_email_verified: { Args: { p_user_id?: string }; Returns: boolean }
+      log_audit_activity: {
+        Args: {
+          p_action_id?: string
+          p_event_type: string
+          p_finding_id?: string
+          p_org_id: string
+          p_payload?: Json
+          p_scan_id: string
+          p_summary: string
+        }
+        Returns: string
+      }
+      mark_overdue_corrective_actions: { Args: never; Returns: number }
+      notify_org_role: {
+        Args: {
+          p_body: string
+          p_org_id: string
+          p_payload: Json
+          p_roles: string[]
+          p_title: string
+          p_type: string
+        }
+        Returns: undefined
+      }
+      org_has_plan_feature: {
+        Args: { _feature: string; _org_id: string }
+        Returns: boolean
+      }
       org_has_platform_bypass: { Args: { p_org_id: string }; Returns: boolean }
       org_has_platform_store_bypass: {
         Args: { p_org_id: string }
         Returns: boolean
       }
+      publish_audit_template: {
+        Args: { p_template_id: string }
+        Returns: number
+      }
       reset_subscription_period_if_due: {
         Args: { _org_id: string }
         Returns: undefined
       }
+      seed_fnv_qc_template: { Args: { p_org_id: string }; Returns: string }
       should_show_onboarding: { Args: { p_user_id?: string }; Returns: boolean }
+      sla_hours_for_severity: {
+        Args: { p_org_id: string; p_severity: string }
+        Returns: number
+      }
+      sync_findings_for_scan: { Args: { p_scan_id: string }; Returns: number }
       user_email_has_platform_bypass: {
         Args: { _email: string }
         Returns: boolean

@@ -16,26 +16,21 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AssignScanRouteImport } from './routes/assign-scan'
 import { Route as AssignedScansRouteImport } from './routes/assigned-scans'
 import { Route as AuditIntelligenceRouteImport } from './routes/audit-intelligence'
-import { Route as AuditReviewScanIdRouteImport } from './routes/audit-review.$scanId'
 import { Route as AuditSchedulesRouteImport } from './routes/audit-schedules'
 import { Route as AuditTemplatesRouteImport } from './routes/audit-templates'
-import { Route as ExceptionsRouteImport } from './routes/exceptions'
-import { Route as ExceptionsExceptionIdRouteImport } from './routes/exceptions.$exceptionId'
-import { Route as SkuIntelligenceRouteImport } from './routes/sku-intelligence'
 import { Route as BillingRouteImport } from './routes/billing'
 import { Route as CompareRouteImport } from './routes/compare'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CookiesRouteImport } from './routes/cookies'
 import { Route as CorrectiveActionsRouteImport } from './routes/corrective-actions'
-import { Route as CorrectiveActionsActionIdRouteImport } from './routes/corrective-actions.$actionId'
 import { Route as DashboardRouteImport } from './routes/dashboard'
-import { Route as EscalationSettingsRouteImport } from './routes/escalation-settings'
-import { Route as FindingsRouteImport } from './routes/findings'
-import { Route as FindingsFindingIdRouteImport } from './routes/findings.$findingId'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DemoScansRouteImport } from './routes/demo-scans'
 import { Route as DigitalAuditRouteImport } from './routes/digital-audit'
+import { Route as EscalationSettingsRouteImport } from './routes/escalation-settings'
+import { Route as ExceptionsRouteImport } from './routes/exceptions'
 import { Route as FeaturesRouteImport } from './routes/features'
+import { Route as FindingsRouteImport } from './routes/findings'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
@@ -63,6 +58,7 @@ import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SkuIntelligenceRouteImport } from './routes/sku-intelligence'
 import { Route as StoreMasterRouteImport } from './routes/store-master'
 import { Route as TeamRouteImport } from './routes/team'
 import { Route as TermsRouteImport } from './routes/terms'
@@ -76,7 +72,11 @@ import { Route as AdminScansRouteImport } from './routes/admin.scans'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as ApiSendLandingOnboardingRouteImport } from './routes/api/send-landing-onboarding'
+import { Route as AuditReviewScanIdRouteImport } from './routes/audit-review.$scanId'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as CorrectiveActionsActionIdRouteImport } from './routes/corrective-actions.$actionId'
+import { Route as ExceptionsExceptionIdRouteImport } from './routes/exceptions.$exceptionId'
+import { Route as FindingsFindingIdRouteImport } from './routes/findings.$findingId'
 import { Route as ShareTokenRouteImport } from './routes/share.$token'
 import { Route as StoresIndexRouteImport } from './routes/stores.index'
 import { Route as StoresStoreIdRouteImport } from './routes/stores.$storeId'
@@ -85,6 +85,8 @@ import { Route as ApiPlanogramNormalizeRowRouteImport } from './routes/api/plano
 import { Route as ApiPlanogramParseCsvRouteImport } from './routes/api/planogram.parse-csv'
 import { Route as ApiPublicGeoRouteImport } from './routes/api/public/geo'
 import { Route as ApiPublicLandingScanRouteImport } from './routes/api/public/landing/scan'
+import { Route as ApiPublicShareTokenRouteImport } from './routes/api/public/share/$token'
+import { Route as ApiPublicSharePersistRouteImport } from './routes/api/public/share/persist'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
@@ -124,11 +126,6 @@ const AuditIntelligenceRoute = AuditIntelligenceRouteImport.update({
   path: '/audit-intelligence',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuditReviewScanIdRoute = AuditReviewScanIdRouteImport.update({
-  id: '/audit-review/$scanId',
-  path: '/audit-review/$scanId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuditSchedulesRoute = AuditSchedulesRouteImport.update({
   id: '/audit-schedules',
   path: '/audit-schedules',
@@ -137,21 +134,6 @@ const AuditSchedulesRoute = AuditSchedulesRouteImport.update({
 const AuditTemplatesRoute = AuditTemplatesRouteImport.update({
   id: '/audit-templates',
   path: '/audit-templates',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ExceptionsRoute = ExceptionsRouteImport.update({
-  id: '/exceptions',
-  path: '/exceptions',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ExceptionsExceptionIdRoute = ExceptionsExceptionIdRouteImport.update({
-  id: '/exceptions/$exceptionId',
-  path: '/exceptions/$exceptionId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SkuIntelligenceRoute = SkuIntelligenceRouteImport.update({
-  id: '/sku-intelligence',
-  path: '/sku-intelligence',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BillingRoute = BillingRouteImport.update({
@@ -179,26 +161,6 @@ const CorrectiveActionsRoute = CorrectiveActionsRouteImport.update({
   path: '/corrective-actions',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CorrectiveActionsActionIdRoute = CorrectiveActionsActionIdRouteImport.update({
-  id: '/corrective-actions/$actionId',
-  path: '/corrective-actions/$actionId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EscalationSettingsRoute = EscalationSettingsRouteImport.update({
-  id: '/escalation-settings',
-  path: '/escalation-settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FindingsRoute = FindingsRouteImport.update({
-  id: '/findings',
-  path: '/findings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FindingsFindingIdRoute = FindingsFindingIdRouteImport.update({
-  id: '/findings/$findingId',
-  path: '/findings/$findingId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -219,9 +181,24 @@ const DigitalAuditRoute = DigitalAuditRouteImport.update({
   path: '/digital-audit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EscalationSettingsRoute = EscalationSettingsRouteImport.update({
+  id: '/escalation-settings',
+  path: '/escalation-settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExceptionsRoute = ExceptionsRouteImport.update({
+  id: '/exceptions',
+  path: '/exceptions',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FeaturesRoute = FeaturesRouteImport.update({
   id: '/features',
   path: '/features',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FindingsRoute = FindingsRouteImport.update({
+  id: '/findings',
+  path: '/findings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -359,6 +336,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SkuIntelligenceRoute = SkuIntelligenceRouteImport.update({
+  id: '/sku-intelligence',
+  path: '/sku-intelligence',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StoreMasterRoute = StoreMasterRouteImport.update({
   id: '/store-master',
   path: '/store-master',
@@ -425,10 +407,31 @@ const ApiSendLandingOnboardingRoute =
     path: '/api/send-landing-onboarding',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuditReviewScanIdRoute = AuditReviewScanIdRouteImport.update({
+  id: '/audit-review/$scanId',
+  path: '/audit-review/$scanId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
   path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
+} as any)
+const CorrectiveActionsActionIdRoute =
+  CorrectiveActionsActionIdRouteImport.update({
+    id: '/$actionId',
+    path: '/$actionId',
+    getParentRoute: () => CorrectiveActionsRoute,
+  } as any)
+const ExceptionsExceptionIdRoute = ExceptionsExceptionIdRouteImport.update({
+  id: '/$exceptionId',
+  path: '/$exceptionId',
+  getParentRoute: () => ExceptionsRoute,
+} as any)
+const FindingsFindingIdRoute = FindingsFindingIdRouteImport.update({
+  id: '/$findingId',
+  path: '/$findingId',
+  getParentRoute: () => FindingsRoute,
 } as any)
 const ShareTokenRoute = ShareTokenRouteImport.update({
   id: '/share/$token',
@@ -471,6 +474,16 @@ const ApiPublicLandingScanRoute = ApiPublicLandingScanRouteImport.update({
   path: '/api/public/landing/scan',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicShareTokenRoute = ApiPublicShareTokenRouteImport.update({
+  id: '/api/public/share/$token',
+  path: '/api/public/share/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicSharePersistRoute = ApiPublicSharePersistRouteImport.update({
+  id: '/api/public/share/persist',
+  path: '/api/public/share/persist',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   id: '/lovable/email/auth/preview',
   path: '/lovable/email/auth/preview',
@@ -496,26 +509,21 @@ export interface FileRoutesByFullPath {
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
   '/audit-intelligence': typeof AuditIntelligenceRoute
-  '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/audit-schedules': typeof AuditSchedulesRoute
   '/audit-templates': typeof AuditTemplatesRoute
   '/billing': typeof BillingRoute
-  '/digital-audit': typeof DigitalAuditRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
-  '/corrective-actions': typeof CorrectiveActionsRoute
-  '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
+  '/corrective-actions': typeof CorrectiveActionsRouteWithChildren
   '/dashboard': typeof DashboardRoute
-  '/escalation-settings': typeof EscalationSettingsRoute
-  '/exceptions': typeof ExceptionsRoute
-  '/findings': typeof FindingsRoute
-  '/findings/$findingId': typeof FindingsFindingIdRoute
-  '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
-  '/sku-intelligence': typeof SkuIntelligenceRoute
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
+  '/digital-audit': typeof DigitalAuditRoute
+  '/escalation-settings': typeof EscalationSettingsRoute
+  '/exceptions': typeof ExceptionsRouteWithChildren
   '/features': typeof FeaturesRoute
+  '/findings': typeof FindingsRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/history': typeof HistoryRoute
   '/how-it-works': typeof HowItWorksRoute
@@ -543,6 +551,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sku-intelligence': typeof SkuIntelligenceRoute
   '/store-master': typeof StoreMasterRoute
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
@@ -556,7 +565,11 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRoute
   '/api/scan': typeof ApiScanRoute
   '/api/send-landing-onboarding': typeof ApiSendLandingOnboardingRoute
+  '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
+  '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
+  '/findings/$findingId': typeof FindingsFindingIdRoute
   '/share/$token': typeof ShareTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
@@ -565,6 +578,8 @@ export interface FileRoutesByFullPath {
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
   '/api/public/geo': typeof ApiPublicGeoRoute
   '/api/public/landing/scan': typeof ApiPublicLandingScanRoute
+  '/api/public/share/$token': typeof ApiPublicShareTokenRoute
+  '/api/public/share/persist': typeof ApiPublicSharePersistRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -577,26 +592,21 @@ export interface FileRoutesByTo {
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
   '/audit-intelligence': typeof AuditIntelligenceRoute
-  '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/audit-schedules': typeof AuditSchedulesRoute
   '/audit-templates': typeof AuditTemplatesRoute
   '/billing': typeof BillingRoute
-  '/digital-audit': typeof DigitalAuditRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
-  '/corrective-actions': typeof CorrectiveActionsRoute
-  '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
+  '/corrective-actions': typeof CorrectiveActionsRouteWithChildren
   '/dashboard': typeof DashboardRoute
-  '/escalation-settings': typeof EscalationSettingsRoute
-  '/exceptions': typeof ExceptionsRoute
-  '/findings': typeof FindingsRoute
-  '/findings/$findingId': typeof FindingsFindingIdRoute
-  '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
-  '/sku-intelligence': typeof SkuIntelligenceRoute
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
+  '/digital-audit': typeof DigitalAuditRoute
+  '/escalation-settings': typeof EscalationSettingsRoute
+  '/exceptions': typeof ExceptionsRouteWithChildren
   '/features': typeof FeaturesRoute
+  '/findings': typeof FindingsRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/history': typeof HistoryRoute
   '/how-it-works': typeof HowItWorksRoute
@@ -624,6 +634,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sku-intelligence': typeof SkuIntelligenceRoute
   '/store-master': typeof StoreMasterRoute
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
@@ -637,7 +648,11 @@ export interface FileRoutesByTo {
   '/admin/users': typeof AdminUsersRoute
   '/api/scan': typeof ApiScanRoute
   '/api/send-landing-onboarding': typeof ApiSendLandingOnboardingRoute
+  '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
+  '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
+  '/findings/$findingId': typeof FindingsFindingIdRoute
   '/share/$token': typeof ShareTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores': typeof StoresIndexRoute
@@ -646,6 +661,8 @@ export interface FileRoutesByTo {
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
   '/api/public/geo': typeof ApiPublicGeoRoute
   '/api/public/landing/scan': typeof ApiPublicLandingScanRoute
+  '/api/public/share/$token': typeof ApiPublicShareTokenRoute
+  '/api/public/share/persist': typeof ApiPublicSharePersistRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -659,26 +676,21 @@ export interface FileRoutesById {
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
   '/audit-intelligence': typeof AuditIntelligenceRoute
-  '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/audit-schedules': typeof AuditSchedulesRoute
   '/audit-templates': typeof AuditTemplatesRoute
   '/billing': typeof BillingRoute
-  '/digital-audit': typeof DigitalAuditRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
   '/cookies': typeof CookiesRoute
-  '/corrective-actions': typeof CorrectiveActionsRoute
-  '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
+  '/corrective-actions': typeof CorrectiveActionsRouteWithChildren
   '/dashboard': typeof DashboardRoute
-  '/escalation-settings': typeof EscalationSettingsRoute
-  '/exceptions': typeof ExceptionsRoute
-  '/findings': typeof FindingsRoute
-  '/findings/$findingId': typeof FindingsFindingIdRoute
-  '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
-  '/sku-intelligence': typeof SkuIntelligenceRoute
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
+  '/digital-audit': typeof DigitalAuditRoute
+  '/escalation-settings': typeof EscalationSettingsRoute
+  '/exceptions': typeof ExceptionsRouteWithChildren
   '/features': typeof FeaturesRoute
+  '/findings': typeof FindingsRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/history': typeof HistoryRoute
   '/how-it-works': typeof HowItWorksRoute
@@ -706,6 +718,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/sku-intelligence': typeof SkuIntelligenceRoute
   '/store-master': typeof StoreMasterRoute
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
@@ -719,7 +732,11 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRoute
   '/api/scan': typeof ApiScanRoute
   '/api/send-landing-onboarding': typeof ApiSendLandingOnboardingRoute
+  '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
+  '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
+  '/findings/$findingId': typeof FindingsFindingIdRoute
   '/share/$token': typeof ShareTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
@@ -728,6 +745,8 @@ export interface FileRoutesById {
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
   '/api/public/geo': typeof ApiPublicGeoRoute
   '/api/public/landing/scan': typeof ApiPublicLandingScanRoute
+  '/api/public/share/$token': typeof ApiPublicShareTokenRoute
+  '/api/public/share/persist': typeof ApiPublicSharePersistRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
@@ -741,19 +760,22 @@ export interface FileRouteTypes {
     | '/admin'
     | '/assign-scan'
     | '/assigned-scans'
+    | '/audit-intelligence'
+    | '/audit-schedules'
+    | '/audit-templates'
     | '/billing'
     | '/compare'
     | '/contact'
     | '/cookies'
     | '/corrective-actions'
-    | '/corrective-actions/$actionId'
     | '/dashboard'
-    | '/escalation-settings'
-    | '/findings'
-    | '/findings/$findingId'
     | '/demo'
     | '/demo-scans'
+    | '/digital-audit'
+    | '/escalation-settings'
+    | '/exceptions'
     | '/features'
+    | '/findings'
     | '/forgot-password'
     | '/history'
     | '/how-it-works'
@@ -781,6 +803,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/sitemap.xml'
+    | '/sku-intelligence'
     | '/store-master'
     | '/team'
     | '/terms'
@@ -794,7 +817,11 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/scan'
     | '/api/send-landing-onboarding'
+    | '/audit-review/$scanId'
     | '/auth/callback'
+    | '/corrective-actions/$actionId'
+    | '/exceptions/$exceptionId'
+    | '/findings/$findingId'
     | '/share/$token'
     | '/stores/$storeId'
     | '/stores/'
@@ -803,6 +830,8 @@ export interface FileRouteTypes {
     | '/api/planogram/parse-csv'
     | '/api/public/geo'
     | '/api/public/landing/scan'
+    | '/api/public/share/$token'
+    | '/api/public/share/persist'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
@@ -814,19 +843,22 @@ export interface FileRouteTypes {
     | '/admin'
     | '/assign-scan'
     | '/assigned-scans'
+    | '/audit-intelligence'
+    | '/audit-schedules'
+    | '/audit-templates'
     | '/billing'
     | '/compare'
     | '/contact'
     | '/cookies'
     | '/corrective-actions'
-    | '/corrective-actions/$actionId'
     | '/dashboard'
-    | '/escalation-settings'
-    | '/findings'
-    | '/findings/$findingId'
     | '/demo'
     | '/demo-scans'
+    | '/digital-audit'
+    | '/escalation-settings'
+    | '/exceptions'
     | '/features'
+    | '/findings'
     | '/forgot-password'
     | '/history'
     | '/how-it-works'
@@ -854,6 +886,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/sitemap.xml'
+    | '/sku-intelligence'
     | '/store-master'
     | '/team'
     | '/terms'
@@ -867,7 +900,11 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/scan'
     | '/api/send-landing-onboarding'
+    | '/audit-review/$scanId'
     | '/auth/callback'
+    | '/corrective-actions/$actionId'
+    | '/exceptions/$exceptionId'
+    | '/findings/$findingId'
     | '/share/$token'
     | '/stores/$storeId'
     | '/stores'
@@ -876,6 +913,8 @@ export interface FileRouteTypes {
     | '/api/planogram/parse-csv'
     | '/api/public/geo'
     | '/api/public/landing/scan'
+    | '/api/public/share/$token'
+    | '/api/public/share/persist'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
@@ -887,19 +926,22 @@ export interface FileRouteTypes {
     | '/admin'
     | '/assign-scan'
     | '/assigned-scans'
+    | '/audit-intelligence'
+    | '/audit-schedules'
+    | '/audit-templates'
     | '/billing'
     | '/compare'
     | '/contact'
     | '/cookies'
     | '/corrective-actions'
-    | '/corrective-actions/$actionId'
     | '/dashboard'
-    | '/escalation-settings'
-    | '/findings'
-    | '/findings/$findingId'
     | '/demo'
     | '/demo-scans'
+    | '/digital-audit'
+    | '/escalation-settings'
+    | '/exceptions'
     | '/features'
+    | '/findings'
     | '/forgot-password'
     | '/history'
     | '/how-it-works'
@@ -927,6 +969,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/signup'
     | '/sitemap.xml'
+    | '/sku-intelligence'
     | '/store-master'
     | '/team'
     | '/terms'
@@ -940,7 +983,11 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/api/scan'
     | '/api/send-landing-onboarding'
+    | '/audit-review/$scanId'
     | '/auth/callback'
+    | '/corrective-actions/$actionId'
+    | '/exceptions/$exceptionId'
+    | '/findings/$findingId'
     | '/share/$token'
     | '/stores/$storeId'
     | '/stores/'
@@ -949,6 +996,8 @@ export interface FileRouteTypes {
     | '/api/planogram/parse-csv'
     | '/api/public/geo'
     | '/api/public/landing/scan'
+    | '/api/public/share/$token'
+    | '/api/public/share/persist'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/transactional/preview'
@@ -961,15 +1010,22 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   AssignScanRoute: typeof AssignScanRoute
   AssignedScansRoute: typeof AssignedScansRoute
+  AuditIntelligenceRoute: typeof AuditIntelligenceRoute
+  AuditSchedulesRoute: typeof AuditSchedulesRoute
+  AuditTemplatesRoute: typeof AuditTemplatesRoute
   BillingRoute: typeof BillingRoute
   CompareRoute: typeof CompareRoute
   ContactRoute: typeof ContactRoute
   CookiesRoute: typeof CookiesRoute
-  CorrectiveActionsRoute: typeof CorrectiveActionsRoute
+  CorrectiveActionsRoute: typeof CorrectiveActionsRouteWithChildren
   DashboardRoute: typeof DashboardRoute
   DemoRoute: typeof DemoRoute
   DemoScansRoute: typeof DemoScansRoute
+  DigitalAuditRoute: typeof DigitalAuditRoute
+  EscalationSettingsRoute: typeof EscalationSettingsRoute
+  ExceptionsRoute: typeof ExceptionsRouteWithChildren
   FeaturesRoute: typeof FeaturesRoute
+  FindingsRoute: typeof FindingsRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   HistoryRoute: typeof HistoryRoute
   HowItWorksRoute: typeof HowItWorksRoute
@@ -997,6 +1053,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  SkuIntelligenceRoute: typeof SkuIntelligenceRoute
   StoreMasterRoute: typeof StoreMasterRoute
   TeamRoute: typeof TeamRoute
   TermsRoute: typeof TermsRoute
@@ -1005,6 +1062,7 @@ export interface RootRouteChildren {
   VerifyEmailRoute: typeof VerifyEmailRoute
   ApiScanRoute: typeof ApiScanRoute
   ApiSendLandingOnboardingRoute: typeof ApiSendLandingOnboardingRoute
+  AuditReviewScanIdRoute: typeof AuditReviewScanIdRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   ShareTokenRoute: typeof ShareTokenRoute
   StoresStoreIdRoute: typeof StoresStoreIdRoute
@@ -1014,6 +1072,8 @@ export interface RootRouteChildren {
   ApiPlanogramParseCsvRoute: typeof ApiPlanogramParseCsvRoute
   ApiPublicGeoRoute: typeof ApiPublicGeoRoute
   ApiPublicLandingScanRoute: typeof ApiPublicLandingScanRoute
+  ApiPublicShareTokenRoute: typeof ApiPublicShareTokenRoute
+  ApiPublicSharePersistRoute: typeof ApiPublicSharePersistRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
@@ -1070,13 +1130,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuditIntelligenceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/audit-review/$scanId': {
-      id: '/audit-review/$scanId'
-      path: '/audit-review/$scanId'
-      fullPath: '/audit-review/$scanId'
-      preLoaderRoute: typeof AuditReviewScanIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/audit-schedules': {
       id: '/audit-schedules'
       path: '/audit-schedules'
@@ -1089,27 +1142,6 @@ declare module '@tanstack/react-router' {
       path: '/audit-templates'
       fullPath: '/audit-templates'
       preLoaderRoute: typeof AuditTemplatesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/exceptions': {
-      id: '/exceptions'
-      path: '/exceptions'
-      fullPath: '/exceptions'
-      preLoaderRoute: typeof ExceptionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/exceptions/$exceptionId': {
-      id: '/exceptions/$exceptionId'
-      path: '/exceptions/$exceptionId'
-      fullPath: '/exceptions/$exceptionId'
-      preLoaderRoute: typeof ExceptionsExceptionIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sku-intelligence': {
-      id: '/sku-intelligence'
-      path: '/sku-intelligence'
-      fullPath: '/sku-intelligence'
-      preLoaderRoute: typeof SkuIntelligenceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/billing': {
@@ -1147,34 +1179,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CorrectiveActionsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/corrective-actions/$actionId': {
-      id: '/corrective-actions/$actionId'
-      path: '/corrective-actions/$actionId'
-      fullPath: '/corrective-actions/$actionId'
-      preLoaderRoute: typeof CorrectiveActionsActionIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/escalation-settings': {
-      id: '/escalation-settings'
-      path: '/escalation-settings'
-      fullPath: '/escalation-settings'
-      preLoaderRoute: typeof EscalationSettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/findings': {
-      id: '/findings'
-      path: '/findings'
-      fullPath: '/findings'
-      preLoaderRoute: typeof FindingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/findings/$findingId': {
-      id: '/findings/$findingId'
-      path: '/findings/$findingId'
-      fullPath: '/findings/$findingId'
-      preLoaderRoute: typeof FindingsFindingIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -1203,11 +1207,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DigitalAuditRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/escalation-settings': {
+      id: '/escalation-settings'
+      path: '/escalation-settings'
+      fullPath: '/escalation-settings'
+      preLoaderRoute: typeof EscalationSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exceptions': {
+      id: '/exceptions'
+      path: '/exceptions'
+      fullPath: '/exceptions'
+      preLoaderRoute: typeof ExceptionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/features': {
       id: '/features'
       path: '/features'
       fullPath: '/features'
       preLoaderRoute: typeof FeaturesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/findings': {
+      id: '/findings'
+      path: '/findings'
+      fullPath: '/findings'
+      preLoaderRoute: typeof FindingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -1399,6 +1424,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sku-intelligence': {
+      id: '/sku-intelligence'
+      path: '/sku-intelligence'
+      fullPath: '/sku-intelligence'
+      preLoaderRoute: typeof SkuIntelligenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/store-master': {
       id: '/store-master'
       path: '/store-master'
@@ -1490,12 +1522,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSendLandingOnboardingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/audit-review/$scanId': {
+      id: '/audit-review/$scanId'
+      path: '/audit-review/$scanId'
+      fullPath: '/audit-review/$scanId'
+      preLoaderRoute: typeof AuditReviewScanIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/callback': {
       id: '/auth/callback'
       path: '/auth/callback'
       fullPath: '/auth/callback'
       preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/corrective-actions/$actionId': {
+      id: '/corrective-actions/$actionId'
+      path: '/$actionId'
+      fullPath: '/corrective-actions/$actionId'
+      preLoaderRoute: typeof CorrectiveActionsActionIdRouteImport
+      parentRoute: typeof CorrectiveActionsRoute
+    }
+    '/exceptions/$exceptionId': {
+      id: '/exceptions/$exceptionId'
+      path: '/$exceptionId'
+      fullPath: '/exceptions/$exceptionId'
+      preLoaderRoute: typeof ExceptionsExceptionIdRouteImport
+      parentRoute: typeof ExceptionsRoute
+    }
+    '/findings/$findingId': {
+      id: '/findings/$findingId'
+      path: '/$findingId'
+      fullPath: '/findings/$findingId'
+      preLoaderRoute: typeof FindingsFindingIdRouteImport
+      parentRoute: typeof FindingsRoute
     }
     '/share/$token': {
       id: '/share/$token'
@@ -1553,6 +1613,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicLandingScanRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/share/$token': {
+      id: '/api/public/share/$token'
+      path: '/api/public/share/$token'
+      fullPath: '/api/public/share/$token'
+      preLoaderRoute: typeof ApiPublicShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/share/persist': {
+      id: '/api/public/share/persist'
+      path: '/api/public/share/persist'
+      fullPath: '/api/public/share/persist'
+      preLoaderRoute: typeof ApiPublicSharePersistRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/auth/preview': {
       id: '/lovable/email/auth/preview'
       path: '/lovable/email/auth/preview'
@@ -1595,6 +1669,41 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface CorrectiveActionsRouteChildren {
+  CorrectiveActionsActionIdRoute: typeof CorrectiveActionsActionIdRoute
+}
+
+const CorrectiveActionsRouteChildren: CorrectiveActionsRouteChildren = {
+  CorrectiveActionsActionIdRoute: CorrectiveActionsActionIdRoute,
+}
+
+const CorrectiveActionsRouteWithChildren =
+  CorrectiveActionsRoute._addFileChildren(CorrectiveActionsRouteChildren)
+
+interface ExceptionsRouteChildren {
+  ExceptionsExceptionIdRoute: typeof ExceptionsExceptionIdRoute
+}
+
+const ExceptionsRouteChildren: ExceptionsRouteChildren = {
+  ExceptionsExceptionIdRoute: ExceptionsExceptionIdRoute,
+}
+
+const ExceptionsRouteWithChildren = ExceptionsRoute._addFileChildren(
+  ExceptionsRouteChildren,
+)
+
+interface FindingsRouteChildren {
+  FindingsFindingIdRoute: typeof FindingsFindingIdRoute
+}
+
+const FindingsRouteChildren: FindingsRouteChildren = {
+  FindingsFindingIdRoute: FindingsFindingIdRoute,
+}
+
+const FindingsRouteWithChildren = FindingsRoute._addFileChildren(
+  FindingsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
@@ -1603,26 +1712,21 @@ const rootRouteChildren: RootRouteChildren = {
   AssignScanRoute: AssignScanRoute,
   AssignedScansRoute: AssignedScansRoute,
   AuditIntelligenceRoute: AuditIntelligenceRoute,
-  AuditReviewScanIdRoute: AuditReviewScanIdRoute,
   AuditSchedulesRoute: AuditSchedulesRoute,
   AuditTemplatesRoute: AuditTemplatesRoute,
   BillingRoute: BillingRoute,
-  DigitalAuditRoute: DigitalAuditRoute,
   CompareRoute: CompareRoute,
   ContactRoute: ContactRoute,
   CookiesRoute: CookiesRoute,
-  CorrectiveActionsRoute: CorrectiveActionsRoute,
-  CorrectiveActionsActionIdRoute: CorrectiveActionsActionIdRoute,
-  EscalationSettingsRoute: EscalationSettingsRoute,
-  FindingsRoute: FindingsRoute,
-  FindingsFindingIdRoute: FindingsFindingIdRoute,
-  ExceptionsRoute: ExceptionsRoute,
-  ExceptionsExceptionIdRoute: ExceptionsExceptionIdRoute,
-  SkuIntelligenceRoute: SkuIntelligenceRoute,
+  CorrectiveActionsRoute: CorrectiveActionsRouteWithChildren,
   DashboardRoute: DashboardRoute,
   DemoRoute: DemoRoute,
   DemoScansRoute: DemoScansRoute,
+  DigitalAuditRoute: DigitalAuditRoute,
+  EscalationSettingsRoute: EscalationSettingsRoute,
+  ExceptionsRoute: ExceptionsRouteWithChildren,
   FeaturesRoute: FeaturesRoute,
+  FindingsRoute: FindingsRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   HistoryRoute: HistoryRoute,
   HowItWorksRoute: HowItWorksRoute,
@@ -1650,6 +1754,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  SkuIntelligenceRoute: SkuIntelligenceRoute,
   StoreMasterRoute: StoreMasterRoute,
   TeamRoute: TeamRoute,
   TermsRoute: TermsRoute,
@@ -1658,6 +1763,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyEmailRoute: VerifyEmailRoute,
   ApiScanRoute: ApiScanRoute,
   ApiSendLandingOnboardingRoute: ApiSendLandingOnboardingRoute,
+  AuditReviewScanIdRoute: AuditReviewScanIdRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   ShareTokenRoute: ShareTokenRoute,
   StoresStoreIdRoute: StoresStoreIdRoute,
@@ -1667,6 +1773,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPlanogramParseCsvRoute: ApiPlanogramParseCsvRoute,
   ApiPublicGeoRoute: ApiPublicGeoRoute,
   ApiPublicLandingScanRoute: ApiPublicLandingScanRoute,
+  ApiPublicShareTokenRoute: ApiPublicShareTokenRoute,
+  ApiPublicSharePersistRoute: ApiPublicSharePersistRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
