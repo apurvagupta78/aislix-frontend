@@ -123,7 +123,7 @@ function RetailKpiCard({
     return (
       <Link
         to="/results"
-        search={{ scan: scanId }}
+        search={{ audit: scanId }}
         className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
       >
         {body}
@@ -311,7 +311,7 @@ export function WhatNeedsAttentionSection({
               <Link
                 key={card.key}
                 to="/results"
-                search={{ scan: card.scan_id }}
+                search={{ audit: card.scan_id }}
                 className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
               >
                 {body}
@@ -366,7 +366,7 @@ export function BrandCompetitionSection({ data }: { data: WorkspaceDashboardData
         {brand.scan_id ? (
           <div className="mt-4">
             <Button asChild variant="ghost" size="sm" className="rounded-xl text-xs">
-              <Link to="/results" search={{ scan: brand.scan_id }}>
+              <Link to="/results" search={{ audit: brand.scan_id }}>
                 View Brand Analysis <ArrowRight className="size-3.5" />
               </Link>
             </Button>
