@@ -25,6 +25,14 @@ import { Route as AuditTemplatesTemplateIdPreviewRouteImport } from './routes/au
 import { Route as AuditTemplatesTemplateIdTestRouteImport } from './routes/audit-templates.$templateId.test'
 import { Route as AuditTemplatesTemplateIdVersionsRouteImport } from './routes/audit-templates.$templateId.versions'
 import { Route as CustomAuditRouteImport } from './routes/custom-audit'
+import { Route as ExpiryControlRouteImport } from './routes/expiry-control'
+import { Route as ExpiryControlMyInspectionsRouteImport } from './routes/expiry-control.my-inspections'
+import { Route as ExpiryControlPlannerRouteImport } from './routes/expiry-control.planner'
+import { Route as ExpiryControlReviewRouteImport } from './routes/expiry-control.review'
+import { Route as ExpiryControlQuarantineRouteImport } from './routes/expiry-control.quarantine'
+import { Route as ExpiryControlHistoryRouteImport } from './routes/expiry-control.history'
+import { Route as ExpiryControlPoliciesRouteImport } from './routes/expiry-control.policies'
+import { Route as ExpiryControlInspectAttemptIdRouteImport } from './routes/expiry-control.inspect.$attemptId'
 import { Route as ExceptionsRouteImport } from './routes/exceptions'
 import { Route as ExceptionsExceptionIdRouteImport } from './routes/exceptions.$exceptionId'
 import { Route as SkuIntelligenceRouteImport } from './routes/sku-intelligence'
@@ -173,6 +181,46 @@ const AuditTemplatesTemplateIdVersionsRoute = AuditTemplatesTemplateIdVersionsRo
 const CustomAuditRoute = CustomAuditRouteImport.update({
   id: '/custom-audit',
   path: '/custom-audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpiryControlRoute = ExpiryControlRouteImport.update({
+  id: '/expiry-control',
+  path: '/expiry-control',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpiryControlMyInspectionsRoute = ExpiryControlMyInspectionsRouteImport.update({
+  id: '/expiry-control/my-inspections',
+  path: '/expiry-control/my-inspections',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpiryControlPlannerRoute = ExpiryControlPlannerRouteImport.update({
+  id: '/expiry-control/planner',
+  path: '/expiry-control/planner',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpiryControlReviewRoute = ExpiryControlReviewRouteImport.update({
+  id: '/expiry-control/review',
+  path: '/expiry-control/review',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpiryControlQuarantineRoute = ExpiryControlQuarantineRouteImport.update({
+  id: '/expiry-control/quarantine',
+  path: '/expiry-control/quarantine',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpiryControlHistoryRoute = ExpiryControlHistoryRouteImport.update({
+  id: '/expiry-control/history',
+  path: '/expiry-control/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpiryControlPoliciesRoute = ExpiryControlPoliciesRouteImport.update({
+  id: '/expiry-control/policies',
+  path: '/expiry-control/policies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExpiryControlInspectAttemptIdRoute = ExpiryControlInspectAttemptIdRouteImport.update({
+  id: '/expiry-control/inspect/$attemptId',
+  path: '/expiry-control/inspect/$attemptId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExceptionsRoute = ExceptionsRouteImport.update({
@@ -542,6 +590,14 @@ export interface FileRoutesByFullPath {
   '/audit-templates/$templateId/versions': typeof AuditTemplatesTemplateIdVersionsRoute
   '/billing': typeof BillingRoute
   '/custom-audit': typeof CustomAuditRoute
+  '/expiry-control': typeof ExpiryControlRoute
+  '/expiry-control/history': typeof ExpiryControlHistoryRoute
+  '/expiry-control/inspect/$attemptId': typeof ExpiryControlInspectAttemptIdRoute
+  '/expiry-control/my-inspections': typeof ExpiryControlMyInspectionsRoute
+  '/expiry-control/planner': typeof ExpiryControlPlannerRoute
+  '/expiry-control/policies': typeof ExpiryControlPoliciesRoute
+  '/expiry-control/quarantine': typeof ExpiryControlQuarantineRoute
+  '/expiry-control/review': typeof ExpiryControlReviewRoute
   '/digital-audit': typeof DigitalAuditRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
@@ -629,6 +685,14 @@ export interface FileRoutesByTo {
   '/audit-templates/$templateId/versions': typeof AuditTemplatesTemplateIdVersionsRoute
   '/billing': typeof BillingRoute
   '/custom-audit': typeof CustomAuditRoute
+  '/expiry-control': typeof ExpiryControlRoute
+  '/expiry-control/history': typeof ExpiryControlHistoryRoute
+  '/expiry-control/inspect/$attemptId': typeof ExpiryControlInspectAttemptIdRoute
+  '/expiry-control/my-inspections': typeof ExpiryControlMyInspectionsRoute
+  '/expiry-control/planner': typeof ExpiryControlPlannerRoute
+  '/expiry-control/policies': typeof ExpiryControlPoliciesRoute
+  '/expiry-control/quarantine': typeof ExpiryControlQuarantineRoute
+  '/expiry-control/review': typeof ExpiryControlReviewRoute
   '/digital-audit': typeof DigitalAuditRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
@@ -717,6 +781,14 @@ export interface FileRoutesById {
   '/audit-templates/$templateId/versions': typeof AuditTemplatesTemplateIdVersionsRoute
   '/billing': typeof BillingRoute
   '/custom-audit': typeof CustomAuditRoute
+  '/expiry-control': typeof ExpiryControlRoute
+  '/expiry-control/history': typeof ExpiryControlHistoryRoute
+  '/expiry-control/inspect/$attemptId': typeof ExpiryControlInspectAttemptIdRoute
+  '/expiry-control/my-inspections': typeof ExpiryControlMyInspectionsRoute
+  '/expiry-control/planner': typeof ExpiryControlPlannerRoute
+  '/expiry-control/policies': typeof ExpiryControlPoliciesRoute
+  '/expiry-control/quarantine': typeof ExpiryControlQuarantineRoute
+  '/expiry-control/review': typeof ExpiryControlReviewRoute
   '/digital-audit': typeof DigitalAuditRoute
   '/compare': typeof CompareRoute
   '/contact': typeof ContactRoute
@@ -1185,6 +1257,62 @@ declare module '@tanstack/react-router' {
       path: '/custom-audit'
       fullPath: '/custom-audit'
       preLoaderRoute: typeof CustomAuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expiry-control': {
+      id: '/expiry-control'
+      path: '/expiry-control'
+      fullPath: '/expiry-control'
+      preLoaderRoute: typeof ExpiryControlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expiry-control/history': {
+      id: '/expiry-control/history'
+      path: '/expiry-control/history'
+      fullPath: '/expiry-control/history'
+      preLoaderRoute: typeof ExpiryControlHistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expiry-control/inspect/$attemptId': {
+      id: '/expiry-control/inspect/$attemptId'
+      path: '/expiry-control/inspect/$attemptId'
+      fullPath: '/expiry-control/inspect/$attemptId'
+      preLoaderRoute: typeof ExpiryControlInspectAttemptIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expiry-control/my-inspections': {
+      id: '/expiry-control/my-inspections'
+      path: '/expiry-control/my-inspections'
+      fullPath: '/expiry-control/my-inspections'
+      preLoaderRoute: typeof ExpiryControlMyInspectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expiry-control/planner': {
+      id: '/expiry-control/planner'
+      path: '/expiry-control/planner'
+      fullPath: '/expiry-control/planner'
+      preLoaderRoute: typeof ExpiryControlPlannerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expiry-control/policies': {
+      id: '/expiry-control/policies'
+      path: '/expiry-control/policies'
+      fullPath: '/expiry-control/policies'
+      preLoaderRoute: typeof ExpiryControlPoliciesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expiry-control/quarantine': {
+      id: '/expiry-control/quarantine'
+      path: '/expiry-control/quarantine'
+      fullPath: '/expiry-control/quarantine'
+      preLoaderRoute: typeof ExpiryControlQuarantineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/expiry-control/review': {
+      id: '/expiry-control/review'
+      path: '/expiry-control/review'
+      fullPath: '/expiry-control/review'
+      preLoaderRoute: typeof ExpiryControlReviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/exceptions': {
@@ -1709,6 +1837,14 @@ const rootRouteChildren: RootRouteChildren = {
   AuditTemplatesTemplateIdVersionsRoute: AuditTemplatesTemplateIdVersionsRoute,
   BillingRoute: BillingRoute,
   CustomAuditRoute: CustomAuditRoute,
+  ExpiryControlRoute: ExpiryControlRoute,
+  ExpiryControlHistoryRoute: ExpiryControlHistoryRoute,
+  ExpiryControlInspectAttemptIdRoute: ExpiryControlInspectAttemptIdRoute,
+  ExpiryControlMyInspectionsRoute: ExpiryControlMyInspectionsRoute,
+  ExpiryControlPlannerRoute: ExpiryControlPlannerRoute,
+  ExpiryControlPoliciesRoute: ExpiryControlPoliciesRoute,
+  ExpiryControlQuarantineRoute: ExpiryControlQuarantineRoute,
+  ExpiryControlReviewRoute: ExpiryControlReviewRoute,
   DigitalAuditRoute: DigitalAuditRoute,
   CompareRoute: CompareRoute,
   ContactRoute: ContactRoute,

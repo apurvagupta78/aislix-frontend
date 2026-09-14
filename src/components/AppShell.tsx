@@ -23,6 +23,7 @@ import {
   BarChart3,
   CalendarClock,
   Clock,
+  PackageSearch,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -149,6 +150,20 @@ const SECTIONS: NavSection[] = [
       },
       { kind: "leaf", label: "Recurring Audits", to: "/audit-schedules", icon: CalendarClock },
       { kind: "leaf", label: "SLA & Escalation", to: "/escalation-settings", icon: Clock },
+    ],
+  },
+  {
+    id: "expiry",
+    label: "Expiry Control",
+    icon: PackageSearch,
+    items: [
+      { kind: "leaf", label: "Overview", to: "/expiry-control", icon: LayoutDashboard },
+      { kind: "leaf", label: "My Inspections", to: "/expiry-control/my-inspections", icon: ClipboardCheck },
+      { kind: "leaf", label: "Inspection Planner", to: "/expiry-control/planner", icon: CalendarClock, managerOnly: true },
+      { kind: "leaf", label: "Review Queue", to: "/expiry-control/review", icon: Send, managerOnly: true },
+      { kind: "leaf", label: "Quarantine & Disposition", to: "/expiry-control/quarantine", icon: AlertTriangle },
+      { kind: "leaf", label: "Expiry History", to: "/expiry-control/history", icon: History },
+      { kind: "leaf", label: "Policies", to: "/expiry-control/policies", icon: Settings, managerOnly: true },
     ],
   },
   {

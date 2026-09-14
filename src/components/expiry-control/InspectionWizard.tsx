@@ -1,0 +1,449 @@
+import { useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Camera, CheckCircle2, AlertTriangle } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ClassificationBadge } from "@/components/expiry-control/SeverityBadge";
+import {
+  checkReconciliation,
+  classifyByPolicy,
+  createQuarantineTransfer,
+  expiryTransition,
+  fetchAttempt,
+  fetchObservations,
+  makeIdempotencyKey,
+  parseRetailDate,
+  uploadEvidence,
+  type ExpiryInspectionAttempt,
+} from "@/lib/expiry-control";
+import { getExpiryOcrAdapter } from "@/lib/expiry-control/adapters/expiry-ocr";
+import { checkEvidenceDuplicate } from "@/lib/expiry-control/adapters/duplicate-evidence";
+import { StubVideoContinuityAdapter } from "@/lib/expiry-control/adapters/video-continuity";
+import { saveOfflineDraft } from "@/lib/expiry-control/offline-queue";
+
+const STEPS = ["Scope", "Areas", "Packets", "Reconcile", "Transfer"];
+
+type Props = { attemptId: string; onDone?: () => void };
+
+export function InspectionWizard({ attemptId, onDone }: Props) {
+  const qc = useQueryClient();
+  const [step, setStep] = useState(1);
+  const [actualQty, setActualQty] = useState("");
+  const [discrepancyReason, setDiscrepancyReason] = useState("");
+  const [assuranceFallback, setAssuranceFallback] = useState(false);
+  const [currentPacket, setCurrentPacket] = useState(1);
+  const [ocrState, setOcrState] = useState<{ label?: string; date?: string; simulated?: boolean } | null>(null);
+  const [hashUsed, setHashUsed] = useState<Set<string>>(new Set());
+  const [transferForm, setTransferForm] = useState({
+    containerCode: "",
+    quarantineLocation: "Returns holding area",
+    quantity: "2",
+    removalReason: "expired",
+  });
+  const [submitMessage, setSubmitMessage] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
+  const videoAdapter = useMemo(() => new StubVideoContinuityAdapter(), []);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+
+  const attemptQuery = useQuery({
+    queryKey: ["expiry-attempt", attemptId],
+    queryFn: () => fetchAttempt(attemptId),
+  });
+  const obsQuery = useQuery({
+    queryKey: ["expiry-observations", attemptId],
+    queryFn: () => fetchObservations(attemptId),
+  });
+
+  const attempt = attemptQuery.data;
+  const observations = obsQuery.data ?? [];
+  const physicalCount = Number(actualQty || attempt?.physical_count || 0);
+
+  const reconcile = useMemo(
+    () =>
+      checkReconciliation({
+        physicalCount: physicalCount || null,
+        sellable: attempt?.sellable_count ?? observations.filter((o) => o.classification === "sellable").length,
+        remove: attempt?.remove_count ?? observations.filter((o) => ["expired", "near_expiry"].includes(o.classification)).length,
+        unresolved: attempt?.unresolved_count ?? observations.filter((o) => o.classification === "unresolved").length,
+        observationsRecorded: observations.length,
+      }),
+    [attempt, observations, physicalCount],
+  );
+
+  const startMutation = useMutation({
+    mutationFn: () => expiryTransition({ entityType: "attempt", entityId: attemptId, action: "start" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["expiry-attempt", attemptId] }),
+  });
+
+  const scopeMutation = useMutation({
+    mutationFn: () =>
+      expiryTransition({
+        entityType: "attempt",
+        entityId: attemptId,
+        action: "confirm_scope",
+        payload: {
+          actual_quantity: Number(actualQty),
+          physical_count: Number(actualQty),
+          quantity_discrepancy_reason: discrepancyReason || null,
+        },
+      }),
+    onSuccess: () => {
+      setStep(2);
+      qc.invalidateQueries({ queryKey: ["expiry-attempt", attemptId] });
+    },
+  });
+
+  const recordObsMutation = useMutation({
+    mutationFn: (payload: Record<string, unknown>) =>
+      expiryTransition({
+        entityType: "attempt",
+        entityId: attemptId,
+        action: "record_observation",
+        payload,
+        idempotencyKey: makeIdempotencyKey(`obs-${payload.packet_ordinal}`),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["expiry-observations", attemptId] });
+      qc.invalidateQueries({ queryKey: ["expiry-attempt", attemptId] });
+    },
+  });
+
+  const reconcileMutation = useMutation({
+    mutationFn: () => expiryTransition({ entityType: "attempt", entityId: attemptId, action: "reconcile" }),
+    onSuccess: () => setStep(5),
+  });
+
+  const submitMutation = useMutation({
+    mutationFn: async () => {
+      await expiryTransition({ entityType: "attempt", entityId: attemptId, action: "report_quarantine_transfer" });
+      await expiryTransition({ entityType: "attempt", entityId: attemptId, action: "submit" });
+    },
+    onSuccess: () => {
+      const pending = (attempt?.remove_count ?? 0) + (attempt?.unresolved_count ?? 0);
+      setSubmitMessage(`Inspection submitted — ${pending} units awaiting quarantine receipt.`);
+      onDone?.();
+    },
+  });
+
+  async function handleCapture() {
+    const file = fileRef.current?.files?.[0];
+    if (!file || !attempt) return;
+    const dup = await checkEvidenceDuplicate(file, hashUsed);
+    if (dup.status === "duplicate_slot") {
+      alert(dup.message);
+      return;
+    }
+    setHashUsed(new Set([...hashUsed, dup.hash]));
+    try {
+      await uploadEvidence(file, attemptId);
+    } catch {
+      await saveOfflineDraft({
+        key: `obs-${currentPacket}`,
+        attemptId,
+        payload: { packet: currentPacket },
+        savedAt: new Date().toISOString(),
+      });
+    }
+    const ocr = getExpiryOcrAdapter();
+    const result = await ocr.readDate({ imageBlob: file });
+    setOcrState({ label: result.label, date: result.suggestedDate ?? undefined, simulated: result.simulated });
+    if (sessionId) videoAdapter.linkCapture(sessionId, Date.now());
+  }
+
+  async function confirmReading(kind: "confirm" | "unreadable" | "wrong") {
+    if (!attempt) return;
+    const parsed = ocrState?.date ? parseRetailDate(ocrState.date) : { ok: false as const, reason: "No date" };
+    const confirmedDate = parsed.ok ? parsed.date : null;
+    const classification =
+      kind === "unreadable" || kind === "wrong"
+        ? "unresolved"
+        : classifyByPolicy({
+            confirmedDate,
+            dateType: "expiry",
+            unreadable: kind === "unreadable",
+            nearExpiryDays: 7,
+          });
+
+    await recordObsMutation.mutateAsync({
+      packet_ordinal: currentPacket,
+      sku: attempt.sku,
+      raw_date_text: ocrState?.date ?? "",
+      parsed_date: confirmedDate,
+      ai_suggested_date: ocrState?.date ?? null,
+      ai_confidence: ocrState?.simulated ? 0.75 : null,
+      ai_simulated: ocrState?.simulated ?? false,
+      human_confirmed_date: kind === "confirm" ? confirmedDate : null,
+      classification,
+      placement: classification === "sellable" ? "sellable" : classification === "unresolved" ? "unresolved" : "remove",
+      unreadable: kind === "unreadable",
+      wrong_product: kind === "wrong",
+      file_hash: null,
+    });
+    setOcrState(null);
+    if (fileRef.current) fileRef.current.value = "";
+    if (currentPacket < physicalCount) setCurrentPacket((p) => p + 1);
+    else setStep(4);
+  }
+
+  async function handleTransfer() {
+    if (!attempt) return;
+    await createQuarantineTransfer({
+      attemptId,
+      storeId: attempt.store_id,
+      containerCode: transferForm.containerCode,
+      quarantineLocation: transferForm.quarantineLocation,
+      sku: attempt.sku,
+      quantity: Number(transferForm.quantity),
+      removalReason: transferForm.removalReason,
+    });
+    await submitMutation.mutateAsync();
+  }
+
+  if (attemptQuery.isLoading) return <p className="text-sm text-muted-foreground">Loading inspection…</p>;
+  if (!attempt) return <p className="text-sm text-destructive">Inspection not found.</p>;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-1">
+        {STEPS.map((label, i) => (
+          <div
+            key={label}
+            className={`flex-1 rounded-lg border px-2 py-1 text-center text-xs ${
+              step === i + 1 ? "border-brand bg-brand-soft font-semibold" : "border-border text-muted-foreground"
+            }`}
+          >
+            {label}
+          </div>
+        ))}
+      </div>
+
+      {step === 1 && (
+        <ScopeStep
+          attempt={attempt}
+          actualQty={actualQty}
+          setActualQty={setActualQty}
+          discrepancyReason={discrepancyReason}
+          setDiscrepancyReason={setDiscrepancyReason}
+          onStart={() => startMutation.mutate()}
+          onNext={() => scopeMutation.mutate()}
+        />
+      )}
+
+      {step === 2 && (
+        <div className="space-y-3 rounded-2xl border p-4">
+          <p className="text-sm font-medium">Prepare inspection areas</p>
+          <p className="text-xs text-muted-foreground">
+            Move each packet only once from Unchecked to its final area. Keep inspected packets separate.
+          </p>
+          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+            <div className="rounded-lg border bg-muted/40 p-3">Unchecked</div>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">Sellable</div>
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3">Remove / hold</div>
+          </div>
+          {attempt.assurance_level === "high" && !assuranceFallback ? (
+            <Alert>
+              <AlertDescription>
+                High-assurance session requires live camera. Start session or choose explicit lower-assurance fallback
+                (requires review).
+              </AlertDescription>
+              <div className="mt-2 flex gap-2">
+                <Button size="sm" onClick={async () => setSessionId(await videoAdapter.startSession())}>
+                  Start live session
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setAssuranceFallback(true)}>
+                  Lower-assurance fallback
+                </Button>
+              </div>
+            </Alert>
+          ) : null}
+          <Button className="w-full" onClick={() => setStep(3)}>
+            Continue to packets
+          </Button>
+        </div>
+      )}
+
+      {step === 3 && (
+        <div className="space-y-3 rounded-2xl border p-4">
+          <p className="text-sm font-semibold">
+            Packet {currentPacket} of {physicalCount || "?"}
+          </p>
+          <div className="flex gap-3 text-xs">
+            <span>Sellable: {attempt.sellable_count}</span>
+            <span>Remove: {attempt.remove_count}</span>
+            <span>Unresolved: {attempt.unresolved_count}</span>
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" />
+          <Button className="w-full gap-2" size="lg" onClick={() => fileRef.current?.click()}>
+            <Camera className="h-5 w-5" /> Capture expiry
+          </Button>
+          {ocrState ? (
+            <div className="space-y-2 rounded-xl border bg-muted/30 p-3">
+              <p className="text-sm">
+                AI suggested <strong>{ocrState.date ?? "—"}</strong>. Check the printed marking before confirming.
+              </p>
+              {ocrState.simulated ? (
+                <p className="text-xs font-medium text-amber-700">Simulated — development only</p>
+              ) : null}
+              <div className="grid grid-cols-2 gap-2">
+                <Button size="sm" onClick={() => confirmReading("confirm")}>
+                  Confirm reading
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => confirmReading("unreadable")}>
+                  Mark unreadable
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()}>
+                  Retake
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => confirmReading("wrong")}>
+                  Wrong product
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          {observations.length > 0 ? (
+            <div className="space-y-1">
+              {observations.map((o) => (
+                <div key={o.id} className="flex items-center justify-between text-xs">
+                  <span>Packet {o.packet_ordinal}</span>
+                  <ClassificationBadge value={o.classification} />
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {step === 4 && (
+        <div className="space-y-3 rounded-2xl border p-4">
+          <p className="font-medium">Reconcile quantities</p>
+          <p className="text-sm tabular-nums">{reconcile.equation}</p>
+          {!reconcile.ok ? (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>{reconcile.reason}</AlertDescription>
+            </Alert>
+          ) : (
+            <Alert>
+              <CheckCircle2 className="h-4 w-4" />
+              <AlertDescription>All units accounted for.</AlertDescription>
+            </Alert>
+          )}
+          <div className="flex gap-2">
+            <Button
+              className="flex-1"
+              disabled={!reconcile.ok}
+              onClick={() => reconcileMutation.mutate()}
+            >
+              Continue to transfer
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() =>
+                expiryTransition({
+                  entityType: "attempt",
+                  entityId: attemptId,
+                  action: "submit_incomplete",
+                  payload: { reason: "Quantity mismatch — escalated" },
+                }).then(onDone)
+              }
+            >
+              Submit incomplete
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {step === 5 && (
+        <div className="space-y-3 rounded-2xl border p-4">
+          <p className="font-medium">Transfer removed / held stock</p>
+          <div className="space-y-2">
+            <Label>Container / bag ID</Label>
+            <Input
+              value={transferForm.containerCode}
+              onChange={(e) => setTransferForm({ ...transferForm, containerCode: e.target.value })}
+              placeholder="Q-BAG-001"
+            />
+            <Label>Quarantine location</Label>
+            <Input
+              value={transferForm.quarantineLocation}
+              onChange={(e) => setTransferForm({ ...transferForm, quarantineLocation: e.target.value })}
+            />
+            <Label>Quantity to transfer</Label>
+            <Input
+              value={transferForm.quantity}
+              onChange={(e) => setTransferForm({ ...transferForm, quantity: e.target.value })}
+            />
+          </div>
+          <Button className="w-full" disabled={!transferForm.containerCode} onClick={handleTransfer}>
+            Submit inspection
+          </Button>
+          {submitMessage ? <p className="text-sm font-medium text-amber-800">{submitMessage}</p> : null}
+          <p className="text-xs text-muted-foreground">
+            POS blocking: not configured — inventory non-saleable marking requires separate integration.
+          </p>
+        </div>
+      )}
+
+      <div className="sticky bottom-0 border-t bg-background/95 py-3 backdrop-blur">
+        <p className="text-center text-xs text-muted-foreground">
+          Coverage: point-in-time only — {attempt.store_fully_checked ? "locations verified" : attempt.coverage_statement ?? "partial location coverage"}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ScopeStep({
+  attempt,
+  actualQty,
+  setActualQty,
+  discrepancyReason,
+  setDiscrepancyReason,
+  onStart,
+  onNext,
+}: {
+  attempt: ExpiryInspectionAttempt;
+  actualQty: string;
+  setActualQty: (v: string) => void;
+  discrepancyReason: string;
+  setDiscrepancyReason: (v: string) => void;
+  onStart: () => void;
+  onNext: () => void;
+}) {
+  const mismatch = actualQty && Number(actualQty) !== attempt.expected_quantity;
+  return (
+    <div className="space-y-3 rounded-2xl border p-4">
+      <div className="grid gap-2 text-sm">
+        <p>
+          <span className="text-muted-foreground">SKU:</span> {attempt.sku || "—"}
+        </p>
+        <p>
+          <span className="text-muted-foreground">Expected qty:</span> {attempt.expected_quantity}
+        </p>
+      </div>
+      <div className="space-y-1">
+        <Label>Actual physical quantity</Label>
+        <Input inputMode="numeric" value={actualQty} onChange={(e) => setActualQty(e.target.value)} />
+      </div>
+      {mismatch ? (
+        <div className="space-y-1">
+          <Label>Quantity discrepancy reason</Label>
+          <Textarea value={discrepancyReason} onChange={(e) => setDiscrepancyReason(e.target.value)} />
+        </div>
+      ) : null}
+      <div className="flex gap-2">
+        <Button variant="outline" className="flex-1" onClick={onStart}>
+          Start
+        </Button>
+        <Button className="flex-1" disabled={!actualQty} onClick={onNext}>
+          Confirm scope
+        </Button>
+      </div>
+    </div>
+  );
+}
