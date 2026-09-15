@@ -6,13 +6,16 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { formatCategorySelections, type CategorySelection } from "@/lib/category-selections";
 import {
-  formatCategorySelections,
-  type CategorySelection,
-} from "@/lib/category-selections";
-import { dbError, getMembership, requireOrgId, requireUserId, unauthorized } from "@/lib/db/context";
+  dbError,
+  getMembership,
+  requireOrgId,
+  requireUserId,
+  unauthorized,
+} from "@/lib/db/context";
 import { notifyMember } from "@/lib/notifications.functions";
-
+import type { AuditEvidencePolicy } from "@/lib/audit-evidence-policy";
 
 export type ScopeType = "category" | "sub_category" | "location" | "planogram";
 
@@ -29,13 +32,8 @@ export type ScopeValues = {
   sub_categories?: string[];
 };
 
-
 export type AssignmentStatus =
-  | "pending"
-  | "in_progress"
-  | "needs_correction"
-  | "completed"
-  | "cancelled";
+  "pending" | "in_progress" | "needs_correction" | "completed" | "cancelled";
 
 export type AssignableMember = {
   user_id: string;
@@ -48,13 +46,7 @@ export type AssignableMember = {
 export type AuditMode = "ai" | "digital";
 
 export type ApprovalStatus =
-  | "pending"
-  | "incomplete"
-  | "submitted"
-  | "pending_review"
-  | "approved"
-  | "rejected"
-  | "flagged";
+  "pending" | "incomplete" | "submitted" | "pending_review" | "approved" | "rejected" | "flagged";
 
 export type Assignment = {
   id: string;
@@ -141,7 +133,6 @@ export function scopeSummary(type: ScopeType, values: ScopeValues): string {
     return `${values.category ?? "—"} · ${values.sub_category ?? "—"}`;
   }
   return `Category · ${values.category ?? "—"}`;
-
 }
 
 export async function isOrgManager(): Promise<boolean> {
@@ -242,8 +233,7 @@ async function scopeMeta(
     null;
   // Planogram assignments never show "0 expected products": fall back to the
   // product count captured on the assignment when rows are not readable.
-  const count =
-    scoped.length || (type === "planogram" ? Number(values.product_count) || 0 : 0);
+  const count = scoped.length || (type === "planogram" ? Number(values.product_count) || 0 : 0);
   return { count, location: location || null };
 }
 
@@ -262,6 +252,12 @@ export async function createScanAssignment(input: {
   templateId?: string | null;
   templateVersion?: number | null;
   templateSnapshot?: Record<string, unknown> | null;
+  reviewerId?: string | null;
+  evidencePolicy?: AuditEvidencePolicy | null;
+  requireRca?: boolean;
+  creationSource?: "legacy" | "unified_new_audit" | "schedule" | "api";
+  inputSource?:
+    "manual_rows" | "csv_upload" | "existing_planogram" | "camera" | "photo_upload" | "template";
 }): Promise<string> {
   const orgId = await requireOrgId();
   const assignerId = await requireUserId();
@@ -299,6 +295,11 @@ export async function createScanAssignment(input: {
       template_id: input.templateId ?? null,
       template_version: input.templateVersion ?? null,
       template_snapshot: input.templateSnapshot ?? null,
+      reviewer_id: input.reviewerId ?? null,
+      evidence_policy: input.evidencePolicy ?? undefined,
+      require_rca: input.requireRca ?? true,
+      creation_source: input.creationSource ?? "legacy",
+      input_source: input.inputSource ?? null,
     } as Record<string, unknown>)
     .select("id")
     .single();
@@ -420,9 +421,7 @@ async function fetchCompliance(scanIds: string[]): Promise<Map<string, number | 
 }
 
 /** Open (or in-progress) corrective actions per assignment, across all attempts. */
-export async function fetchOpenIssueCounts(
-  assignmentIds: string[],
-): Promise<Map<string, number>> {
+export async function fetchOpenIssueCounts(assignmentIds: string[]): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
   const unique = [...new Set(assignmentIds.filter(Boolean))];
   if (!unique.length) return counts;
@@ -438,7 +437,10 @@ export async function fetchOpenIssueCounts(
   const { data: actions } = await supabase
     .from("corrective_actions")
     .select("id, comparison_id, status")
-    .in("comparison_id", rows.map((row) => row.id))
+    .in(
+      "comparison_id",
+      rows.map((row) => row.id),
+    )
     .in("status", ["open", "in_progress"]);
 
   for (const action of (actions ?? []) as { comparison_id: string }[]) {
@@ -459,7 +461,7 @@ async function mapAssignments(rows: AssignmentRow[]): Promise<Assignment[]> {
       const scopeValues = (row.scope_values ?? {}) as ScopeValues;
       const meta = await scopeMeta(row.planogram_version_id, scopeType, scopeValues);
       const last = num(row.last_compliance_percent);
-      const scanCompliance = row.scan_id ? compliance.get(row.scan_id) ?? null : null;
+      const scanCompliance = row.scan_id ? (compliance.get(row.scan_id) ?? null) : null;
       return {
         id: row.id,
         org_id: row.org_id,
@@ -484,8 +486,7 @@ async function mapAssignments(rows: AssignmentRow[]): Promise<Assignment[]> {
         verified_at: (row as { verified_at?: string | null }).verified_at ?? null,
         audit_mode: ((row as { audit_mode?: string }).audit_mode as AuditMode) ?? "ai",
         approval_status:
-          ((row as { approval_status?: string }).approval_status as ApprovalStatus) ??
-          "pending",
+          ((row as { approval_status?: string }).approval_status as ApprovalStatus) ?? "pending",
         location: meta.location,
         expected_products: meta.count,
         template_id: row.template_id ?? null,
@@ -601,12 +602,9 @@ export async function cancelAssignment(assignmentId: string): Promise<void> {
 /** Manager action: re-send the "fix the shelf and re-scan" nudge to the assignee. */
 export async function requestReScan(assignmentOrId: Assignment | string): Promise<void> {
   const assignment =
-    typeof assignmentOrId === "string"
-      ? await fetchAssignmentById(assignmentOrId)
-      : assignmentOrId;
+    typeof assignmentOrId === "string" ? await fetchAssignmentById(assignmentOrId) : assignmentOrId;
   if (!assignment) return;
-  const percent =
-    assignment.last_compliance_percent ?? assignment.compliance_percent ?? null;
+  const percent = assignment.last_compliance_percent ?? assignment.compliance_percent ?? null;
   const percentLabel = percent === null ? "—" : `${Math.round(percent)}`;
   await notifyMember({
     data: {
@@ -674,7 +672,10 @@ export async function fetchTeamScans(): Promise<TeamScan[]> {
     supabase
       .from("planogram_comparisons")
       .select("scan_id, compliance_percent, summary, created_at")
-      .in("scan_id", rows.map((row) => row.id))
+      .in(
+        "scan_id",
+        rows.map((row) => row.id),
+      )
       .order("created_at", { ascending: true }),
     supabase
       .from("scan_assignments")
@@ -728,7 +729,7 @@ export async function fetchTeamScans(): Promise<TeamScan[]> {
       created_at: row.created_at,
       assignee_name: names.get(row.created_by ?? "") ?? "Team member",
       store_name: row.stores?.name ?? "Store",
-      location: row.assignment_id ? locations.get(row.assignment_id) ?? null : null,
+      location: row.assignment_id ? (locations.get(row.assignment_id) ?? null) : null,
       compliance_percent: comparison?.percent ?? null,
       missing: pick(summary, ["missing_products", "missing"]),
       wrong_product: pick(summary, ["wrong_products", "wrong_product"]),
