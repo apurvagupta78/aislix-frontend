@@ -1,6 +1,7 @@
 import type { OperatingModel } from "@/lib/audit-builder/types";
 import { getTerminology } from "@/lib/audit-engine/operating-model-catalog";
 import { resolveKpiCatalog, templateCategoriesForModel, templateCountForModel } from "./kpi-catalog";
+import { resolveKpiEngine } from "@/lib/kpi-engine";
 import type {
   ControlTowerDemoPayload,
   ControlTowerKpi,
@@ -100,6 +101,12 @@ const DEMO_VALUES: Record<
   execution_score: { value: "74", detail: "Weighted execution index", tone: "brand" },
   store_health: { value: "81", detail: "Composite store health", tone: "brand" },
   warehouse_health: { value: "78", detail: "Composite warehouse health", tone: "brand" },
+  facing_compliance: { value: "88%", detail: "Actual / expected facings", tone: "good", progressPct: 88 },
+  stacking_compliance: { value: "75%", detail: "Compliant stacking checks", tone: "warn", progressPct: 75 },
+  visible_unit_compliance: { value: "82%", detail: "Actual / expected visible units", tone: "brand", progressPct: 82 },
+  qc_pass_rate: { value: "91%", detail: "QC pass rate", tone: "good", progressPct: 91 },
+  expired_units: { value: "24", detail: "Units already expired", tone: "bad" },
+  near_expiry_units: { value: "156", detail: "Units within near-expiry threshold", tone: "warn" },
 };
 
 function demoKpi(id: string, label: string, available: boolean): ControlTowerKpi {
@@ -338,12 +345,14 @@ function buildFullEvidence(loc: string, count: number) {
 
 export function buildControlTowerDemo(model: ControlTowerModelFilter): ControlTowerDemoPayload {
   const catalog = resolveKpiCatalog(model);
+  const engine = resolveKpiEngine(model);
   const terminology = getTerminology(primaryModel(model));
   const loc = terminology.location;
   const opTrend = buildOperationalTrend(model);
 
   const universalKpis = catalog.universal.map((d) => demoKpi(d.id, d.label, true));
   const contextualKpis = catalog.contextual.map((d) => demoKpi(d.id, d.label, true));
+  const auditSpecificKpis = engine.auditSpecific.map((d) => demoKpi(d.id, d.name, true));
 
   const riskLocationsFull = buildFullRiskLocations(loc, 10);
   const riskSkusFull = buildFullRiskSkus(loc, 10);
@@ -361,6 +370,7 @@ export function buildControlTowerDemo(model: ControlTowerModelFilter): ControlTo
     templateCategories: templateCategoriesForModel(model),
     universalKpis,
     contextualKpis,
+    auditSpecificKpis,
     auditStatus: [
       { name: "Assigned", value: 12, color: "hsl(var(--muted-foreground))" },
       { name: "In Progress", value: 8, color: "hsl(var(--brand))" },

@@ -11,7 +11,11 @@ export type AuditExecutionContext = {
   templateType?: string | null;
   operatingModel?: string | null;
   creationSource?: string | null;
+  /** True when assignment uses Universal Audit Engine field definitions */
+  hasFieldDefinitions?: boolean;
 };
+
+const LEGACY_PLANOGRAM_TYPES = new Set(["planogram", "general", "fnv"]);
 
 /** Resolve which execution adapter handles this assignment. Legacy routes redirect here. */
 export function resolveAuditExecutionRoute(ctx: AuditExecutionContext): AuditExecutionRoute {
@@ -21,10 +25,16 @@ export function resolveAuditExecutionRoute(ctx: AuditExecutionContext): AuditExe
   if (ctx.method === "ai" || ctx.method === "ai_assisted") {
     return "ai_scan";
   }
-  if (ctx.templateType && ctx.templateType !== "custom") {
+  if (ctx.hasFieldDefinitions || ctx.templateType === "custom") {
+    return "universal";
+  }
+  if (ctx.templateType && LEGACY_PLANOGRAM_TYPES.has(ctx.templateType)) {
     return "digital";
   }
-  return "universal";
+  if (ctx.templateType) {
+    return "universal";
+  }
+  return "digital";
 }
 
 export function auditExecutionPath(

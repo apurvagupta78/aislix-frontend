@@ -4,6 +4,7 @@ import { Area, AreaChart, ResponsiveContainer } from "recharts";
 import { cn } from "@/lib/utils";
 import type { ControlTowerKpi, KpiTone } from "@/lib/control-tower";
 import { Progress } from "@/components/ui/progress";
+import { KpiInfoPopover } from "./KpiInfoPopover";
 
 const TONE_STYLES: Record<
   KpiTone,
@@ -44,9 +45,13 @@ const TONE_STYLES: Record<
 export function KpiCardVisual({
   kpi,
   onDrill,
+  scopeLabel,
+  periodLabel,
 }: {
   kpi: ControlTowerKpi;
   onDrill?: (kpi: ControlTowerKpi) => void;
+  scopeLabel?: string;
+  periodLabel?: string;
 }) {
   const tone = TONE_STYLES[kpi.tone];
   const sparkData = kpi.trend?.map((v, i) => ({ i, v })) ?? [];
@@ -67,9 +72,12 @@ export function KpiCardVisual({
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
-          {kpi.label}
-        </p>
+        <div className="flex min-w-0 items-start gap-1">
+          <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+            {kpi.label}
+          </p>
+          <KpiInfoPopover kpi={kpi} scopeLabel={scopeLabel} periodLabel={periodLabel} />
+        </div>
         {kpi.source?.includes("demo") || kpi.source?.includes("Illustrative") ? (
           <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-medium text-amber-800 dark:bg-amber-950/60 dark:text-amber-200">
             Demo

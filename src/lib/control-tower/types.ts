@@ -134,6 +134,7 @@ export type ControlTowerDemoPayload = {
   templateCategories: string[];
   universalKpis: ControlTowerKpi[];
   contextualKpis: ControlTowerKpi[];
+  auditSpecificKpis: ControlTowerKpi[];
   auditStatus: AuditStatusBucket[];
   riskLocations: RiskLocation[];
   riskSkus: RiskSku[];

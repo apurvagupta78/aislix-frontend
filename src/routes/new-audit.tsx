@@ -59,7 +59,10 @@ import {
   type AuditDataType,
   type AuditInputDataset,
 } from "@/lib/audit-input-dataset";
-import type { AuditPurpose, OperatingModel } from "@/lib/audit-builder/types";
+import type { AuditPurpose, AuditSubjectType, OperatingModel } from "@/lib/audit-builder/types";
+import { ColumnConfigurationPanel } from "@/components/audit-builder/ColumnConfigurationPanel";
+import type { InputSchema } from "@/lib/audit-builder/field-roles";
+import { buildDefaultColumnMappings, buildInputSchema } from "@/lib/audit-builder/input-schema";
 import {
   getFmcgDimensions,
   getOperatingModelCard,
@@ -117,6 +120,9 @@ function NewAuditPage() {
   const [category, setCategory] = useState("");
   const [sku, setSku] = useState("");
   const [dataset, setDataset] = useState<AuditInputDataset>(createManualAuditDataset);
+  const [inputSchema, setInputSchema] = useState<InputSchema>(() =>
+    buildInputSchema(createManualAuditDataset()),
+  );
   const [inputError, setInputError] = useState<string | null>(null);
   const [evidenceLevel, setEvidenceLevel] = useState<EvidenceLevel>("standard");
   const [evidencePolicy, setEvidencePolicy] = useState<AuditEvidencePolicy>(
@@ -211,11 +217,28 @@ function NewAuditPage() {
 
   async function parseCsv(file: File) {
     try {
-      setDataset(parseAuditCsv(await file.text(), file.name));
+      const parsed = parseAuditCsv(await file.text(), file.name);
+      const schema = buildInputSchema(parsed);
+      setDataset({ ...parsed, inputSchema: schema });
+      setInputSchema(schema);
       setInputError(null);
     } catch (error) {
       setInputError(error instanceof Error ? error.message : "Could not read this CSV.");
     }
+  }
+
+  function updateDataset(next: AuditInputDataset) {
+    setDataset(next);
+    setInputSchema((current) => {
+      const mappings = current.columnMappings.filter((m) =>
+        next.columns.some((c) => c.id === m.columnId),
+      );
+      const existingIds = new Set(mappings.map((m) => m.columnId));
+      const added = next.columns
+        .filter((c) => !existingIds.has(c.id))
+        .map((col) => buildDefaultColumnMappings({ ...next, columns: [col] })[0]!);
+      return buildInputSchema(next, current.subjectType, [...mappings, ...added]);
+    });
   }
 
   const createMutation = useMutation({
@@ -297,13 +320,25 @@ function NewAuditPage() {
                 predefined_type: templateChoice,
                 evidence_policy: effectivePolicy,
               }),
-          ...(assignmentRows.length
+          ...(assignmentRows.length || inputSchema.columnMappings.length
             ? {
                 input_dataset: {
                   source: dataset.source,
                   filename: dataset.filename,
                   columns: dataset.columns,
                   rows: dataset.rows,
+                  inputSchema,
+                },
+                purpose_config: {
+                  ...(templateForAssignment?.purpose_config ?? {}),
+                  inputSchema,
+                  input_dataset: {
+                    source: dataset.source,
+                    filename: dataset.filename,
+                    columns: dataset.columns,
+                    rows: dataset.rows,
+                    inputSchema,
+                  },
                 },
               }
             : {}),
@@ -538,11 +573,13 @@ function NewAuditPage() {
             {method === "digital" ? (
               <DatasetEditor
                 dataset={dataset}
+                inputSchema={inputSchema}
                 error={inputError}
                 onChange={(next) => {
-                  setDataset(next);
+                  updateDataset(next);
                   setInputError(null);
                 }}
+                onInputSchemaChange={setInputSchema}
                 onUpload={parseCsv}
               />
             ) : (
@@ -817,13 +854,17 @@ function NewAuditPage() {
 
 function DatasetEditor({
   dataset,
+  inputSchema,
   error,
   onChange,
+  onInputSchemaChange,
   onUpload,
 }: {
   dataset: AuditInputDataset;
+  inputSchema: InputSchema;
   error: string | null;
   onChange: (dataset: AuditInputDataset) => void;
+  onInputSchemaChange: (schema: InputSchema) => void;
   onUpload: (file: File) => Promise<void>;
 }) {
   const updateColumn = (
@@ -1046,6 +1087,21 @@ function DatasetEditor({
         CSV uploads retain every heading and cell. Column names and inferred data types can be
         corrected before assignment.
       </p>
+
+      {dataset.columns.length > 0 ? (
+        <div className="mt-6">
+          <ColumnConfigurationPanel
+            columnMappings={inputSchema.columnMappings}
+            subjectType={inputSchema.subjectType}
+            onChange={(mappings) =>
+              onInputSchemaChange({ ...inputSchema, columnMappings: mappings })
+            }
+            onSubjectTypeChange={(subjectType: AuditSubjectType) =>
+              onInputSchemaChange({ ...inputSchema, subjectType })
+            }
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

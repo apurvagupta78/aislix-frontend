@@ -136,6 +136,13 @@ export type StandardFieldConcept =
   | "sales_target"
   | "target_achievement"
   | "growth_percent"
+  | "stacking_compliance"
+  | "visible_unit_compliance"
+  | "placement_compliance"
+  | "expired_units"
+  | "near_expiry_units"
+  | "expiry_coverage"
+  | "qc_pass_rate"
   | "custom";
 
 export type HierarchyLevelConfig = {
@@ -287,6 +294,15 @@ export type VisibilityRule = {
   in?: unknown[];
 };
 
+export type FieldRole =
+  | "reference"
+  | "auditor_input"
+  | "calculated"
+  | "system"
+  | "evidence"
+  | "ai_suggested"
+  | "human_confirmed";
+
 export type TemplateField = {
   id: string;
   key: string;
@@ -297,6 +313,8 @@ export type TemplateField = {
   order: number;
   required: boolean;
   config: FieldConfig;
+  /** Explicit role — who fills this field during execution */
+  fieldRole?: FieldRole;
   system?: boolean;
   calculated?: boolean;
   formula?: string;

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { computeCalculatedValues } from "@/lib/audit-builder/calculated-fields";
+import { isFieldReadOnlyForAuditor } from "@/lib/audit-builder/field-roles";
 import { isFieldVisible } from "@/lib/audit-builder/rules-engine";
 import { isImageField } from "@/lib/audit-builder/field-library";
 import {
@@ -216,6 +217,17 @@ export function AuditExecutionForm({
     if (!isFieldVisible(field, currentValues as Record<string, string | number>)) return null;
 
     const val = responses[sec]?.[idx]?.[field.key];
+    const fieldReadOnly = readOnly || isFieldReadOnlyForAuditor(field);
+    const roleBadge =
+      field.fieldRole === "reference" ? (
+        <Badge variant="outline" className="ml-2 text-[9px]">
+          Manager provided
+        </Badge>
+      ) : field.fieldRole === "ai_suggested" ? (
+        <Badge variant="outline" className="ml-2 text-[9px]">
+          AI suggested
+        </Badge>
+      ) : null;
 
     if (field.calculated) {
       const computed = computeCalculatedValues(definition, responses[sec]?.[idx] ?? {});
@@ -245,7 +257,7 @@ export function AuditExecutionForm({
             {field.required ? <span className="text-destructive"> *</span> : null}
           </Label>
           <Select
-            disabled={readOnly}
+            disabled={fieldReadOnly}
             value={String(val ?? "")}
             onValueChange={(v) => void setValue(sec, idx, field, v)}
           >
@@ -270,9 +282,10 @@ export function AuditExecutionForm({
           <Label className="text-sm">
             {field.label}
             {field.required ? <span className="text-destructive"> *</span> : null}
+            {roleBadge}
           </Label>
           <Select
-            disabled={readOnly}
+            disabled={fieldReadOnly}
             value={String(val ?? "")}
             onValueChange={(v) => void setValue(sec, idx, field, v)}
           >
@@ -313,7 +326,7 @@ export function AuditExecutionForm({
                 className="size-16 rounded-md border border-border object-cover"
               />
             ))}
-            {!readOnly && images.length < max ? (
+            {!fieldReadOnly && images.length < max ? (
               <Button
                 type="button"
                 variant="outline"
@@ -369,7 +382,7 @@ export function AuditExecutionForm({
             {field.required ? <span className="text-destructive"> *</span> : null}
           </Label>
           <Textarea
-            disabled={readOnly}
+            disabled={fieldReadOnly}
             className="mt-1"
             rows={3}
             value={String(val ?? "")}
@@ -391,11 +404,13 @@ export function AuditExecutionForm({
         <Label className="text-sm">
           {field.label}
           {field.required ? <span className="text-destructive"> *</span> : null}
+          {roleBadge}
         </Label>
         <Input
-          disabled={readOnly}
+          disabled={fieldReadOnly}
+          readOnly={fieldReadOnly && field.fieldRole === "reference"}
           type={inputType}
-          className="mt-1"
+          className={fieldReadOnly && field.fieldRole === "reference" ? "mt-1 bg-muted/40" : "mt-1"}
           placeholder={field.config.placeholder}
           value={String(val ?? "")}
           onChange={(e) =>

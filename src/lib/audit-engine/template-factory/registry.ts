@@ -27,6 +27,7 @@ import {
   buildPromotionAudit,
   buildReconciliationAudit,
   buildShelfAudit,
+  buildShelfStackingAudit,
   buildStockAgeingAudit,
   buildStoreVisit,
   buildSupermarketPlanogramShelf,
@@ -148,11 +149,13 @@ const LOCAL_STORE: SystemTemplateSpec[] = [
   spec("local_store_fnv_qc", "Local Store FNV / QC Audit", "Fresh/near-expiry quality control.", "local_store", "fnv_qc", "sku", "fnv_qc_audit", "QC", () => buildFnvQcAudit("local_store")),
   spec("local_store_price", "Local Store Price Audit", "Price compliance check.", "local_store", "pricing", "sku", "custom", "Pricing", () => buildPriceAudit("local_store")),
   spec("local_store_shelf", "Local Store Shelf Audit", "Shelf presence and facing audit.", "local_store", "shelf", "shelf", "shelf_audit", "Shelf", () => buildShelfAudit("local_store")),
+  spec("local_store_shelf_stacking", "Local Store Shelf Stacking Audit", "Verify product stacking and arrangement on shelves.", "local_store", "shelf", "shelf", "shelf_stacking_audit", "Shelf Stacking", () => buildShelfStackingAudit("local_store"), { recommended: true, flagship: true }),
 ];
 
 const SUPERMARKET: SystemTemplateSpec[] = [
   spec("supermarket_planogram_shelf", "Supermarket Planogram + Shelf Execution Audit", "Combined planogram and shelf execution.", "supermarket", "planogram", "shelf", "planogram_audit", "Planogram", buildSupermarketPlanogramShelf, { recommended: true, flagship: true }),
   spec("supermarket_shelf_execution", "Supermarket Shelf Execution Audit", "Shelf presence, facing and OOS checks.", "supermarket", "shelf", "shelf", "shelf_audit", "Shelf", () => buildShelfAudit("supermarket")),
+  spec("supermarket_shelf_stacking", "Supermarket Shelf Stacking Audit", "Verify how products are stacked and arranged on shelves.", "supermarket", "shelf", "shelf", "shelf_stacking_audit", "Shelf Stacking", () => buildShelfStackingAudit("supermarket"), { recommended: true, flagship: true }),
   spec("supermarket_planogram", "Supermarket Planogram Audit", "Planogram compliance audit.", "supermarket", "planogram", "shelf", "planogram_audit", "Planogram", () => buildPlanogramAudit("supermarket")),
   spec("supermarket_inventory", "Supermarket Inventory Audit", "SKU inventory variance.", "supermarket", "inventory", "sku", "inventory_audit", "Inventory", () => buildInventoryAudit("supermarket")),
   spec("supermarket_expiry", "Supermarket Expiry Audit", "Expiry verification with evidence.", "supermarket", "expiry", "sku", "expiry_audit", "Expiry", () => buildExpiryAudit("supermarket", "sku")),
@@ -177,6 +180,7 @@ const DARK_STORE: SystemTemplateSpec[] = [
   spec("dark_store_picking", "Dark Store Picking Accuracy Audit", "Pick accuracy verification.", "dark_store", "picking", "sku", "warehouse_audit", "Picking", () => buildWarehouseOpsAudit("picking", "Picking", "dark_store"), { recommended: true }),
   spec("dark_store_damage", "Dark Store Damaged Inventory Audit", "Damage reporting.", "dark_store", "custom", "sku", "custom", "Damage", () => buildDamageAudit("dark_store")),
   spec("dark_store_shelf_location", "Dark Store Shelf / Location Audit", "Shelf and pick-face compliance.", "dark_store", "shelf", "bin", "shelf_audit", "Location", buildDarkStoreLocationAudit),
+  spec("dark_store_shelf_stacking", "Dark Store Shelf Stacking Audit", "Verify stacking arrangement on pick-face shelves.", "dark_store", "shelf", "shelf", "shelf_stacking_audit", "Shelf Stacking", () => buildShelfStackingAudit("dark_store"), { recommended: true }),
   spec("dark_store_opening", "Dark Store Opening Audit", "Opening readiness.", "dark_store", "custom", "store", "store_visit_audit", "Operations", () => buildOpeningClosingAudit("dark_store", "custom")),
   spec("dark_store_closing", "Dark Store Closing Audit", "Closing checklist.", "dark_store", "custom", "store", "store_visit_audit", "Operations", () => buildOpeningClosingAudit("dark_store", "custom")),
   spec("dark_store_bin_location", "Dark Store Bin / Location Accuracy Audit", "Bin-level location accuracy.", "dark_store", "inventory", "bin", "warehouse_audit", "Location", buildDarkStoreLocationAudit),

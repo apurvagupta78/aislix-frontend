@@ -12,6 +12,9 @@ import {
   type AuditTemplate,
 } from "@/lib/audit-templates";
 import { syncFindingsForScan } from "@/lib/findings";
+import type { InputSchema } from "@/lib/audit-builder/field-roles";
+import type { AuditInputDataset } from "@/lib/audit-input-dataset";
+import { hydrateReferenceValuesFromDataset } from "@/lib/audit-builder/input-schema";
 
 export type CustomAuditSession = {
   assignmentId: string;
@@ -20,6 +23,8 @@ export type CustomAuditSession = {
   storeName: string | null;
   dueAt: string | null;
   status: string;
+  inputSchema?: InputSchema;
+  inputDataset?: AuditInputDataset;
 };
 
 export type ResponseMap = Record<string, Record<number, Record<string, AuditResponseValue>>>;
@@ -61,6 +66,11 @@ export async function loadCustomAuditSession(
   if (!template) return null;
 
   const storeRow = assignment.stores as { name?: string } | null;
+  const purposeConfig = (template.purpose_config ?? {}) as Record<string, unknown>;
+  const inputSchema = purposeConfig.inputSchema as InputSchema | undefined;
+  const inputDataset =
+    (purposeConfig.input_dataset as AuditInputDataset | undefined) ??
+    ((templateSnapshot?.input_dataset as AuditInputDataset | undefined) ?? undefined);
 
   return {
     assignmentId,
@@ -69,7 +79,35 @@ export async function loadCustomAuditSession(
     storeName: storeRow?.name ?? null,
     dueAt: (assignment.due_at as string) ?? null,
     status: assignment.status as string,
+    inputSchema,
+    inputDataset,
   };
+}
+
+/** Merge manager-provided CSV reference values into saved responses. */
+export function mergeInputDatasetIntoResponses(
+  session: CustomAuditSession,
+  responses: ResponseMap,
+): ResponseMap {
+  if (!session.inputSchema || !session.inputDataset?.rows.length) return responses;
+
+  const sectionKey = session.definition.sections.find((s) => s.repeatable)?.key ?? "records";
+  const hydrated = hydrateReferenceValuesFromDataset(
+    session.inputSchema,
+    session.inputDataset,
+    sectionKey,
+  );
+  const merged: ResponseMap = { ...responses };
+
+  for (const [idxStr, values] of Object.entries(hydrated[sectionKey] ?? {})) {
+    const idx = Number(idxStr);
+    merged[sectionKey] = merged[sectionKey] ?? {};
+    merged[sectionKey][idx] = {
+      ...(merged[sectionKey][idx] ?? {}),
+      ...values,
+    };
+  }
+  return merged;
 }
 
 export async function fetchCustomAuditResponses(assignmentId: string): Promise<ResponseMap> {

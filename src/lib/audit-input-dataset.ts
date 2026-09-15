@@ -1,4 +1,5 @@
 import type { DraftRow } from "@/lib/planogram";
+import type { InputSchema } from "@/lib/audit-builder/field-roles";
 
 export type AuditDataType = "text" | "integer" | "number" | "boolean" | "date" | "datetime";
 
@@ -18,6 +19,7 @@ export type AuditInputDataset = {
   filename: string | null;
   columns: AuditDataColumn[];
   rows: AuditDataRow[];
+  inputSchema?: InputSchema;
 };
 
 export const AUDIT_DATA_TYPES: Array<{ value: AuditDataType; label: string }> = [

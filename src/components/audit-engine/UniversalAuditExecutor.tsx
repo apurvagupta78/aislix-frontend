@@ -19,6 +19,7 @@ import {
 import {
   fetchCustomAuditResponses,
   loadCustomAuditSession,
+  mergeInputDatasetIntoResponses,
   saveCustomAuditField,
   submitCustomAudit,
   uploadCustomAuditImage,
@@ -46,8 +47,9 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
   });
 
   useEffect(() => {
-    if (responsesQuery.data) setResponses(responsesQuery.data);
-  }, [responsesQuery.data]);
+    if (!responsesQuery.data || !sessionQuery.data) return;
+    setResponses(mergeInputDatasetIntoResponses(sessionQuery.data, responsesQuery.data));
+  }, [responsesQuery.data, sessionQuery.data]);
 
   const session = sessionQuery.data;
 
@@ -64,6 +66,7 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
       templateType: session.template.template_type,
       operatingModel: session.template.operating_model,
       creationSource: null,
+      hasFieldDefinitions: (session.template.field_definitions?.length ?? 0) > 0,
     };
     const route = resolveAuditExecutionRoute(ctx);
     if (route !== "universal" && route !== "custom") {

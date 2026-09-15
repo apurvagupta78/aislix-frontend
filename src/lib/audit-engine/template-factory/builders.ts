@@ -813,6 +813,68 @@ export function buildReconciliationAudit(model: OperatingModel) {
   });
 }
 
+/** Flagship shelf stacking / arrangement audit — distinct from general shelf audit. */
+export function buildShelfStackingAudit(model: OperatingModel = "supermarket") {
+  resetFieldCounter();
+  const s = "stacking";
+  return assembleTemplate({
+    sections: [sec(s, "Shelf Stacking Record", 0, { repeatable: true, repeatBy: "shelf" })],
+    fields: [
+      storeField(s, 0, model),
+      field(s, 1, "short_text", "Department", { fieldRole: "reference" }),
+      field(s, 2, "short_text", "Aisle", { fieldRole: "reference" }),
+      field(s, 3, "shelf", "Shelf", { required: true, fieldRole: "reference" }),
+      field(s, 4, "short_text", "Shelf ID", { fieldRole: "reference" }),
+      field(s, 5, "sku_id", "SKU ID", { required: true, fieldRole: "reference", standardConcept: "sku_id" }),
+      field(s, 6, "item_name", "Product Name", { fieldRole: "reference", standardConcept: "product_name" }),
+      field(s, 7, "brand", "Brand", { fieldRole: "reference" }),
+      field(s, 8, "category", "Category", { fieldRole: "reference" }),
+      field(s, 9, "short_text", "Expected SKU Position", { key: "expected_sku_position", fieldRole: "reference" }),
+      field(s, 10, "number", "Expected Rows", { key: "expected_rows", fieldRole: "reference" }),
+      field(s, 11, "number", "Expected Columns", { key: "expected_columns", fieldRole: "reference" }),
+      field(s, 12, "number", "Expected Facings", { key: "expected_facing", fieldRole: "reference", standardConcept: "expected_facing" }),
+      field(s, 13, "number", "Expected Units Per Row", { key: "expected_units_per_row", fieldRole: "reference" }),
+      field(s, 14, "number", "Expected Total Visible Units", { key: "expected_visible_units", fieldRole: "reference" }),
+      field(s, 15, "short_text", "Expected Shelf Level", { key: "expected_shelf_level", fieldRole: "reference" }),
+      field(s, 16, "short_text", "Actual SKU Position", { key: "actual_sku_position", fieldRole: "auditor_input" }),
+      field(s, 17, "number", "Actual Rows", { key: "actual_rows", fieldRole: "auditor_input" }),
+      field(s, 18, "number", "Actual Columns", { key: "actual_columns", fieldRole: "auditor_input" }),
+      field(s, 19, "number", "Actual Facings", { key: "actual_facing", fieldRole: "auditor_input", standardConcept: "actual_facing" }),
+      field(s, 20, "number", "Actual Units Per Row", { key: "actual_units_per_row", fieldRole: "auditor_input" }),
+      field(s, 21, "number", "Actual Total Visible Units", { key: "actual_visible_units", fieldRole: "auditor_input" }),
+      field(s, 22, "short_text", "Actual Shelf Level", { key: "actual_shelf_level", fieldRole: "auditor_input" }),
+      field(s, 23, "pass_fail", "Stacking Compliance", { key: "stacking_compliance", fieldRole: "auditor_input", standardConcept: "stacking_compliance" }),
+      field(s, 24, "pass_fail", "Facing Compliance", { key: "facing_compliance", fieldRole: "calculated", standardConcept: "facing_compliance" }),
+      field(s, 25, "pass_fail", "Placement Compliance", { key: "placement_compliance", fieldRole: "auditor_input", standardConcept: "placement_compliance" }),
+      field(s, 26, "yes_no", "Wrong Placement", { key: "wrong_placement", fieldRole: "auditor_input" }),
+      field(s, 27, "yes_no", "Overflow", { key: "overflow", fieldRole: "auditor_input" }),
+      field(s, 28, "yes_no", "Under-filled", { key: "under_filled", fieldRole: "auditor_input" }),
+      field(s, 29, "yes_no", "Mixed SKU", { key: "mixed_sku", fieldRole: "auditor_input" }),
+      field(s, 30, "yes_no", "Brand Blocked", { key: "brand_blocked", fieldRole: "auditor_input" }),
+      field(s, 31, "yes_no", "Competitor Intrusion", { key: "competitor_intrusion", fieldRole: "auditor_input" }),
+      field(s, 32, "number", "Visible Unit Compliance %", { key: "visible_unit_compliance", calculated: true, fieldRole: "calculated", standardConcept: "visible_unit_compliance" }),
+      field(s, 33, "multiple_images", "Shelf Image", { required: true, fieldRole: "evidence", config: { minImages: 1, cameraRequired: true } }),
+      field(s, 34, "single_image", "Close-up Image", { fieldRole: "evidence" }),
+      field(s, 35, "single_image", "Before Image", { fieldRole: "evidence" }),
+      field(s, 36, "single_image", "After Image", { fieldRole: "evidence" }),
+      field(s, 37, "pass_fail", "Pass/Fail", { key: "pass_fail", fieldRole: "calculated" }),
+      field(s, 38, "quality_score", "Score", { fieldRole: "calculated" }),
+      field(s, 39, "finding_type", "Finding", { fieldRole: "system" }),
+      field(s, 40, "dropdown", "Severity", { fieldRole: "auditor_input", config: { options: ["Critical", "High", "Medium", "Low"] } }),
+      field(s, 41, "rca", "RCA", { fieldRole: "auditor_input", standardConcept: "rca" }),
+      field(s, 42, "notes", "Notes", { fieldRole: "auditor_input" }),
+    ],
+    rules: planogramFailRules(),
+    ai: baseAi({ planogram: true, skuDetect: true }),
+    scoring: { enabled: true, passThreshold: 75 },
+    evidence: baseEvidence(false, 1),
+    auditLevel: "one_per_shelf",
+    operatingModel: model,
+    purpose: "shelf",
+    subjectType: "shelf",
+  });
+}
+
 export function buildFmcgGenericAudit(
   purpose: AuditPurpose,
   sectionTitle: string,
