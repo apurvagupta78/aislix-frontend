@@ -2,12 +2,15 @@ import { useMemo, useState, type ReactNode } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  AlertTriangle,
   ArrowRight,
   CheckCircle2,
   ClipboardCheck,
   FileSpreadsheet,
+  Plus,
   ShieldCheck,
   Sparkles,
+  Trash2,
   Upload,
   Users,
 } from "lucide-react";
@@ -57,6 +60,21 @@ export const Route = createFileRoute("/new-audit")({
 
 type Method = "digital" | "ai";
 type TemplateChoice = "general" | "fnv" | "expiry" | "planogram" | string;
+type ManualProduct = {
+  key: string;
+  productName: string;
+  sku: string;
+  expectedQuantity: string;
+};
+
+function createManualProduct(): ManualProduct {
+  return {
+    key: crypto.randomUUID(),
+    productName: "",
+    sku: "",
+    expectedQuantity: "0",
+  };
+}
 
 const steps = [
   { id: 1, label: "Method & template", icon: Sparkles },
@@ -74,8 +92,9 @@ function NewAuditPage() {
   const [location, setLocation] = useState("Main shelf");
   const [category, setCategory] = useState("");
   const [sku, setSku] = useState("");
-  const [productName, setProductName] = useState("");
-  const [expectedQuantity, setExpectedQuantity] = useState("0");
+  const [manualProducts, setManualProducts] = useState<ManualProduct[]>(() => [
+    createManualProduct(),
+  ]);
   const [csvName, setCsvName] = useState<string | null>(null);
   const [rows, setRows] = useState<DraftRow[]>([]);
   const [csvErrors, setCsvErrors] = useState<string[]>([]);
@@ -125,6 +144,28 @@ function NewAuditPage() {
       ),
     [evidencePolicy, selectedTemplate],
   );
+  const manualProductsValid =
+    manualProducts.length > 0 &&
+    manualProducts.every((product) => {
+      const quantity = Number(product.expectedQuantity);
+      return (
+        product.productName.trim() &&
+        product.sku.trim() &&
+        product.expectedQuantity !== "" &&
+        Number.isFinite(quantity) &&
+        quantity >= 0
+      );
+    });
+
+  function updateManualProduct(
+    key: string,
+    field: keyof Omit<ManualProduct, "key">,
+    value: string,
+  ) {
+    setManualProducts((current) =>
+      current.map((product) => (product.key === key ? { ...product, [field]: value } : product)),
+    );
+  }
 
   function selectEvidenceLevel(level: EvidenceLevel) {
     setEvidenceLevel(level);
@@ -200,32 +241,37 @@ function NewAuditPage() {
         return { assignmentId: attemptId, self: assignToSelf, expiry: true };
       }
 
+      if (method === "digital" && !rows.length && !selectedTemplate && !manualProductsValid) {
+        throw new Error("Complete every manually added product before continuing.");
+      }
+
       const assignmentRows =
         rows.length || method !== "digital" || selectedTemplate
           ? rows
-          : [
-              {
-                key: crypto.randomUUID(),
-                location,
-                category,
-                sub_category: "",
-                brand: "",
-                product_name: productName,
-                variant: "",
-                expected_qty: Number(expectedQuantity),
-                sku,
-                shelf_position: "",
-                match_key: "",
-              } satisfies DraftRow,
-            ];
+          : manualProducts.map(
+              (product) =>
+                ({
+                  key: product.key,
+                  location,
+                  category,
+                  sub_category: "",
+                  brand: "",
+                  product_name: product.productName.trim(),
+                  variant: "",
+                  expected_qty: Number(product.expectedQuantity),
+                  sku: product.sku.trim(),
+                  shelf_position: "",
+                  match_key: "",
+                }) satisfies DraftRow,
+            );
 
       let planogramVersionId: string | null = null;
       if (assignmentRows.length) {
         planogramVersionId = await createAssignmentPlanogramVersion({
           storeId,
           rows: assignmentRows,
-          sourceType: csvName ? "csv" : "manual",
-          sourceFilename: csvName,
+          sourceType: rows.length ? "csv" : "manual",
+          sourceFilename: rows.length ? csvName : null,
         });
       }
 
@@ -261,7 +307,7 @@ function NewAuditPage() {
         requireRca,
         creationSource: "unified_new_audit",
         inputSource: assignmentRows.length
-          ? csvName
+          ? rows.length
             ? "csv_upload"
             : "manual_rows"
           : selectedTemplate
@@ -311,7 +357,7 @@ function NewAuditPage() {
               rows.length > 0 ||
               selectedTemplate ||
               templateChoice === "expiry" ||
-              (sku.trim() && productName.trim() && Number(expectedQuantity) >= 0)),
+              manualProductsValid),
           )
         : step === 3
           ? effectivePolicy.requiredProof.length > 0
@@ -362,8 +408,8 @@ function NewAuditPage() {
             >
               <MethodCard
                 value="digital"
-                title="Digital / Manual"
-                description="Auditor records actual SKU quantities manually or imports CSV."
+                title="Digital"
+                description="Auditor records actual SKU quantities in the app or imports CSV."
               />
               <MethodCard
                 value="ai"
@@ -395,7 +441,11 @@ function NewAuditPage() {
 
         {step === 2 ? (
           <section className="card-surface space-y-5 p-6">
-            <div className="grid gap-4 md:grid-cols-4">
+            <div
+              className={`grid gap-4 ${
+                method === "ai" || templateChoice === "expiry" ? "md:grid-cols-4" : "md:grid-cols-3"
+              }`}
+            >
               <Field label="Store">
                 <Select value={storeId} onValueChange={setStoreId}>
                   <SelectTrigger>
@@ -420,13 +470,15 @@ function NewAuditPage() {
                   placeholder="Optional"
                 />
               </Field>
-              <Field label="SKU / barcode">
-                <Input
-                  value={sku}
-                  onChange={(e) => setSku(e.target.value)}
-                  placeholder="Optional"
-                />
-              </Field>
+              {method === "ai" || templateChoice === "expiry" ? (
+                <Field label="Scope SKU / barcode">
+                  <Input
+                    value={sku}
+                    onChange={(e) => setSku(e.target.value)}
+                    placeholder="Optional"
+                  />
+                </Field>
+              ) : null}
             </div>
 
             {method === "digital" ? (
@@ -486,29 +538,77 @@ function NewAuditPage() {
                   </div>
                 ) : null}
                 {!rows.length ? (
-                  <div className="mt-4 grid gap-3 border-t pt-4 sm:grid-cols-3">
-                    <Field label="Or add one product manually">
-                      <Input
-                        value={productName}
-                        onChange={(e) => setProductName(e.target.value)}
-                        placeholder="Product name"
-                      />
-                    </Field>
-                    <Field label="SKU">
-                      <Input
-                        value={sku}
-                        onChange={(e) => setSku(e.target.value)}
-                        placeholder="SKU code"
-                      />
-                    </Field>
-                    <Field label="Expected quantity">
-                      <Input
-                        type="number"
-                        min={0}
-                        value={expectedQuantity}
-                        onChange={(e) => setExpectedQuantity(e.target.value)}
-                      />
-                    </Field>
+                  <div className="mt-4 space-y-3 border-t pt-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-medium">Or add products manually</p>
+                        <p className="text-xs text-muted-foreground">
+                          Add every product the auditor must count.
+                        </p>
+                      </div>
+                      <Badge variant="secondary">
+                        {manualProducts.length} product{manualProducts.length === 1 ? "" : "s"}
+                      </Badge>
+                    </div>
+                    {manualProducts.map((product, index) => (
+                      <div
+                        key={product.key}
+                        className="grid gap-3 rounded-xl border bg-background p-3 sm:grid-cols-[1.4fr_1fr_160px_auto]"
+                      >
+                        <Field label={`Product ${index + 1} name`}>
+                          <Input
+                            value={product.productName}
+                            onChange={(e) =>
+                              updateManualProduct(product.key, "productName", e.target.value)
+                            }
+                            placeholder="Product name"
+                          />
+                        </Field>
+                        <Field label="SKU">
+                          <Input
+                            value={product.sku}
+                            onChange={(e) =>
+                              updateManualProduct(product.key, "sku", e.target.value)
+                            }
+                            placeholder="SKU code"
+                          />
+                        </Field>
+                        <Field label="Expected quantity">
+                          <Input
+                            type="number"
+                            min={0}
+                            value={product.expectedQuantity}
+                            onChange={(e) =>
+                              updateManualProduct(product.key, "expectedQuantity", e.target.value)
+                            }
+                          />
+                        </Field>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="self-end text-muted-foreground hover:text-destructive"
+                          aria-label={`Remove product ${index + 1}`}
+                          disabled={manualProducts.length === 1}
+                          onClick={() =>
+                            setManualProducts((current) =>
+                              current.filter((item) => item.key !== product.key),
+                            )
+                          }
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() =>
+                        setManualProducts((current) => [...current, createManualProduct()])
+                      }
+                    >
+                      <Plus className="size-4" /> Add another product
+                    </Button>
                   </div>
                 ) : null}
               </div>
@@ -521,6 +621,24 @@ function NewAuditPage() {
                 </AlertDescription>
               </Alert>
             )}
+            {!storeId ||
+            !location.trim() ||
+            (method === "digital" &&
+              !rows.length &&
+              !selectedTemplate &&
+              templateChoice !== "expiry" &&
+              !manualProductsValid) ? (
+              <Alert>
+                <AlertTriangle className="size-4" />
+                <AlertDescription>
+                  {!storeId
+                    ? "Select a store to continue."
+                    : !location.trim()
+                      ? "Enter the audit location to continue."
+                      : "Complete the product name, SKU and expected quantity for every manual product."}
+                </AlertDescription>
+              </Alert>
+            ) : null}
           </section>
         ) : null}
 
@@ -709,10 +827,7 @@ function NewAuditPage() {
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Assignment preview
               </p>
-              <Summary
-                label="Method"
-                value={method === "digital" ? "Digital / Manual" : "AI-assisted"}
-              />
+              <Summary label="Method" value={method === "digital" ? "Digital" : "AI-assisted"} />
               <Summary label="Template" value={selectedTemplate?.name ?? String(templateChoice)} />
               <Summary
                 label="Store"
@@ -725,7 +840,9 @@ function NewAuditPage() {
                     ? `${rows.length} CSV SKU rows`
                     : method === "ai"
                       ? "Camera / photos"
-                      : "Manual"
+                      : `${manualProducts.length} manually added product${
+                          manualProducts.length === 1 ? "" : "s"
+                        }`
                 }
               />
               <Summary
