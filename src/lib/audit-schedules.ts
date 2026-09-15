@@ -5,6 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { dbError, requireOrgId, requireUserId } from "@/lib/db/context";
 import { createScanAssignment, type AuditMode, type ScopeType, type ScopeValues } from "@/lib/assignments";
+import { processUniversalSchedules } from "@/lib/assignment-engine/publish";
 
 export type ScheduleCadence = "daily" | "weekly" | "monthly" | "special";
 
@@ -152,6 +153,13 @@ export async function deleteAuditSchedule(id: string): Promise<void> {
 
 /** Create assignments for all due schedules (call on dashboard/schedules page load). */
 export async function processDueAuditSchedules(): Promise<number> {
+  try {
+    const universal = await processUniversalSchedules();
+    if (universal > 0) return universal;
+  } catch {
+    // Fall through to legacy schedules if universal migration not applied.
+  }
+
   const orgId = await requireOrgId();
   const now = new Date().toISOString();
 

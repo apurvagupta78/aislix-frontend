@@ -55,7 +55,8 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
     items: [
       { kind: "leaf", label: "All Audits", to: "/history" },
       { kind: "leaf", label: "Assignments", to: "/assigned-scans" },
-      { kind: "leaf", label: "Audit Calendar", to: "/audit-schedules" },
+      { kind: "leaf", label: "Audit Calendar", to: "/audit-calendar" },
+      { kind: "leaf", label: "Recurring Schedules", to: "/audit-schedules" },
       { kind: "leaf", label: "Audit Templates", to: "/audit-templates", managerOnly: true },
       { kind: "leaf", label: "Audit History", to: "/history" },
     ],

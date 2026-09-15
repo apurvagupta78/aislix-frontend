@@ -73,6 +73,27 @@ import {
 import { NewAuditTemplatePicker } from "@/components/audit-engine/NewAuditTemplatePicker";
 import { ensureSystemTemplate } from "@/lib/audit-engine/seed-templates";
 import { getRecommendedTemplates, getSystemTemplateSpec } from "@/lib/audit-engine/template-factory";
+import { AssignmentPreviewPanel } from "@/components/assignment-engine/AssignmentPreviewPanel";
+import { AssignmentSchedulePanel } from "@/components/assignment-engine/AssignmentSchedulePanel";
+import { LocationScopePicker } from "@/components/assignment-engine/LocationScopePicker";
+import { TeamAssignmentPanel } from "@/components/assignment-engine/TeamAssignmentPanel";
+import {
+  buildAssignmentPreview,
+  detectAssignmentConflicts,
+  distributeAssignments,
+  hasBlockingConflicts,
+  publishAssignmentPlan,
+  resolveSelectedAssignees,
+  saveAssignmentDraft,
+  type AssignmentMode,
+  type AssignmentPlan,
+  type DistributionStrategy,
+  type DueConfig,
+  type LocationScope,
+  type RecurrenceRule,
+  type TeamScope,
+} from "@/lib/assignment-engine";
+import { fetchOrgAssignments } from "@/lib/assignments";
 
 export const Route = createFileRoute("/new-audit")({
   head: () => ({ meta: [{ title: "New Audit — Aislix" }] }),
@@ -134,6 +155,22 @@ function NewAuditPage() {
   const [dueAt, setDueAt] = useState("");
   const [instructions, setInstructions] = useState("");
   const [assignToSelf, setAssignToSelf] = useState(false);
+  const [assignmentMode, setAssignmentMode] = useState<AssignmentMode>("assign_now");
+  const [locationScope, setLocationScope] = useState<LocationScope>({ storeIds: [], stores: [] });
+  const [teamScope, setTeamScope] = useState<TeamScope>({ assigneeIds: [] });
+  const [distributionStrategy, setDistributionStrategy] =
+    useState<DistributionStrategy>("equal");
+  const [campaignName, setCampaignName] = useState("");
+  const [publishAt, setPublishAt] = useState("");
+  const [dueConfig, setDueConfig] = useState<DueConfig>({});
+  const [recurrence, setRecurrence] = useState<RecurrenceRule>({
+    frequency: "weekly",
+    interval: 1,
+    daysOfWeek: [1],
+    startDate: new Date().toISOString().slice(0, 10),
+    startTime: "09:00",
+    timezone: "Asia/Kolkata",
+  });
 
   const storesQuery = useQuery({
     queryKey: ["stores", "new-audit"],
@@ -198,6 +235,118 @@ function NewAuditPage() {
     [evidencePolicy, selectedTemplate, systemTemplateDefinition],
   );
   const datasetError = validateAuditDataset(dataset, { manualColumnLimit: 10 });
+
+  useEffect(() => {
+    if (storeId && !locationScope.storeIds.includes(storeId)) {
+      const store = storesQuery.data?.find((s) => s.id === storeId);
+      if (store) {
+        setLocationScope({
+          storeIds: [store.id],
+          stores: [
+            { id: store.id, name: store.name, city: store.city, country: store.country },
+          ],
+        });
+      }
+    }
+  }, [storeId, storesQuery.data, locationScope.storeIds]);
+
+  useEffect(() => {
+    if (assignToSelf && assigneeId) return;
+    if (assigneeId && !teamScope.assigneeIds.includes(assigneeId)) {
+      setTeamScope({ assigneeIds: [assigneeId] });
+    }
+  }, [assigneeId, assignToSelf, teamScope.assigneeIds]);
+
+  const existingAssignmentsQuery = useQuery({
+    queryKey: ["org-assignments", "conflicts"],
+    queryFn: fetchOrgAssignments,
+    enabled: step === 4,
+  });
+
+  const assignmentPlan = useMemo((): AssignmentPlan | null => {
+    const storeIds =
+      locationScope.storeIds.length > 0 ? locationScope.storeIds : storeId ? [storeId] : [];
+    const assignees = assignToSelf
+      ? [{ user_id: "self", name: "Me", role: "member", email: "", status: "active" }]
+      : resolveSelectedAssignees(teamScope, membersQuery.data ?? []);
+    if (!storeIds.length || !assignees.length) return null;
+
+    const distribution = distributeAssignments({
+      storeIds,
+      assignees,
+      strategy: distributionStrategy,
+      manualMapping: teamScope.manualMapping,
+      storeNames: Object.fromEntries(
+        (locationScope.stores ?? []).map((s) => [s.id, s.name]),
+      ),
+    });
+
+    return {
+      mode: assignmentMode,
+      operatingModel,
+      purpose: auditPurpose,
+      templateId: selectedTemplate?.id ?? null,
+      templateVersion: selectedTemplate?.version ?? null,
+      templateName: selectedTemplate?.name ?? systemTemplateSpec?.name ?? String(templateChoice),
+      auditMode: method,
+      scopeType:
+        method === "digital" && dataset.rows.length ? "planogram" : location ? "location" : "category",
+      scopeValues: { location, category, product_count: dataset.rows.length },
+      locationScope: { ...locationScope, storeIds },
+      teamScope,
+      distributionStrategy,
+      distribution,
+      recurrence: assignmentMode === "recurring" ? recurrence : undefined,
+      dueConfig: {
+        dueDate: dueConfig.dueDate ?? dueAt?.slice(0, 10),
+        dueTime: dueConfig.dueTime ?? dueAt?.slice(11, 16),
+        dueOffsetHours: dueConfig.dueOffsetHours,
+      },
+      publishAt: assignmentMode === "schedule_once" ? publishAt : null,
+      evidencePolicy: effectivePolicy,
+      requireRca,
+      reviewerId: reviewerId || null,
+      instructions,
+      campaignName: campaignName || null,
+      inputSource: dataset.rows.length ? "csv_upload" : "template",
+      creationSource: "unified_new_audit",
+    };
+  }, [
+    locationScope,
+    storeId,
+    assignToSelf,
+    teamScope,
+    membersQuery.data,
+    distributionStrategy,
+    assignmentMode,
+    operatingModel,
+    auditPurpose,
+    selectedTemplate,
+    systemTemplateSpec,
+    templateChoice,
+    method,
+    dataset.rows.length,
+    location,
+    category,
+    recurrence,
+    dueConfig,
+    dueAt,
+    publishAt,
+    effectivePolicy,
+    requireRca,
+    reviewerId,
+    instructions,
+    campaignName,
+  ]);
+
+  const assignmentPreview = useMemo(() => {
+    if (!assignmentPlan) return null;
+    const conflicts = detectAssignmentConflicts({
+      plan: assignmentPlan,
+      existingAssignments: existingAssignmentsQuery.data ?? [],
+    });
+    return buildAssignmentPreview(assignmentPlan, conflicts);
+  }, [assignmentPlan, existingAssignmentsQuery.data]);
 
   function selectEvidenceLevel(level: EvidenceLevel) {
     setEvidenceLevel(level);
@@ -292,8 +441,88 @@ function NewAuditPage() {
         });
       }
 
+      const templateSnapshot = {
+        ...(templateForAssignment
+          ? (templateForAssignment as unknown as Record<string, unknown>)
+          : {
+              predefined_type: templateChoice,
+              evidence_policy: effectivePolicy,
+            }),
+        ...(assignmentRows.length || inputSchema.columnMappings.length
+          ? {
+              input_dataset: {
+                source: dataset.source,
+                filename: dataset.filename,
+                columns: dataset.columns,
+                rows: dataset.rows,
+                inputSchema,
+              },
+              purpose_config: {
+                ...(templateForAssignment?.purpose_config ?? {}),
+                inputSchema,
+                input_dataset: {
+                  source: dataset.source,
+                  filename: dataset.filename,
+                  columns: dataset.columns,
+                  rows: dataset.rows,
+                  inputSchema,
+                },
+              },
+            }
+          : {}),
+      };
+
+      const storeIds =
+        locationScope.storeIds.length > 0 ? locationScope.storeIds : storeId ? [storeId] : [];
+      const useUniversalEngine =
+        storeIds.length > 1 ||
+        teamScope.assigneeIds.length > 1 ||
+        assignmentMode !== "assign_now";
+
+      if (useUniversalEngine && assignmentPlan) {
+        if (hasBlockingConflicts(assignmentPreview?.conflicts ?? [])) {
+          throw new Error("Resolve blocking scheduling conflicts before publishing.");
+        }
+        const plan: AssignmentPlan = {
+          ...assignmentPlan,
+          templateId: templateForAssignment?.id ?? null,
+          templateVersion: templateForAssignment?.version ?? null,
+          templateSnapshot,
+          planogramVersionId,
+          teamScope: assignToSelf
+            ? { assigneeIds: [userId] }
+            : assignmentPlan.teamScope,
+          distribution: distributeAssignments({
+            storeIds,
+            assignees: assignToSelf
+              ? [
+                  {
+                    user_id: userId,
+                    name: "Me",
+                    role: "member",
+                    email: "",
+                    status: "active",
+                  },
+                ]
+              : resolveSelectedAssignees(teamScope, membersQuery.data ?? []),
+            strategy: distributionStrategy,
+          }),
+        };
+        const result = await publishAssignmentPlan(plan);
+        if (assignToSelf && result.assignmentIds[0]) {
+          await startAssignment(result.assignmentIds[0]);
+        }
+        return {
+          assignmentId: result.assignmentIds[0] ?? result.scheduleId ?? "",
+          self: assignToSelf,
+          expiry: false,
+          bulk: result.assignmentIds.length,
+          scheduled: Boolean(result.scheduleId),
+        };
+      }
+
       const assignmentId = await createScanAssignment({
-        storeId,
+        storeId: storeIds[0] ?? storeId,
         scopeType:
           assignmentRows.length || templateChoice === "planogram"
             ? "planogram"
@@ -313,36 +542,7 @@ function NewAuditPage() {
         auditMode: method,
         templateId: templateForAssignment?.id ?? null,
         templateVersion: templateForAssignment?.version ?? null,
-        templateSnapshot: {
-          ...(templateForAssignment
-            ? (templateForAssignment as unknown as Record<string, unknown>)
-            : {
-                predefined_type: templateChoice,
-                evidence_policy: effectivePolicy,
-              }),
-          ...(assignmentRows.length || inputSchema.columnMappings.length
-            ? {
-                input_dataset: {
-                  source: dataset.source,
-                  filename: dataset.filename,
-                  columns: dataset.columns,
-                  rows: dataset.rows,
-                  inputSchema,
-                },
-                purpose_config: {
-                  ...(templateForAssignment?.purpose_config ?? {}),
-                  inputSchema,
-                  input_dataset: {
-                    source: dataset.source,
-                    filename: dataset.filename,
-                    columns: dataset.columns,
-                    rows: dataset.rows,
-                    inputSchema,
-                  },
-                },
-              }
-            : {}),
-        },
+        templateSnapshot,
         reviewerId: reviewerId || null,
         evidencePolicy: effectivePolicy,
         requireRca,
@@ -359,10 +559,12 @@ function NewAuditPage() {
       });
 
       if (assignToSelf) await startAssignment(assignmentId);
-      return { assignmentId, self: assignToSelf, expiry: false };
+      return { assignmentId, self: assignToSelf, expiry: false, bulk: 1, scheduled: false };
     },
-    onSuccess: ({ assignmentId, self, expiry }) => {
-      toast.success(self ? "Audit created and started." : "Audit assigned successfully.");
+    onSuccess: ({ assignmentId, self, expiry, bulk, scheduled }) => {
+      if (scheduled) toast.success("Audit schedule created.");
+      else if (bulk && bulk > 1) toast.success(`${bulk} assignments created.`);
+      else toast.success(self ? "Audit created and started." : "Audit assigned successfully.");
       if (expiry && self) {
         void navigate({
           to: "/expiry-control/inspect/$attemptId",
@@ -407,8 +609,11 @@ function NewAuditPage() {
         : step === 3
           ? effectivePolicy.requiredProof.length > 0
           : Boolean(
-              (assignToSelf || assigneeId) &&
-              (effectivePolicy.reviewMode !== "independent" || reviewerId),
+              (assignToSelf || teamScope.assigneeIds.length > 0 || assigneeId) &&
+              (locationScope.storeIds.length > 0 || storeId) &&
+              (effectivePolicy.reviewMode !== "independent" || reviewerId) &&
+              (assignmentMode !== "schedule_once" || publishAt) &&
+              !hasBlockingConflicts(assignmentPreview?.conflicts ?? []),
             );
 
   return (
@@ -734,95 +939,86 @@ function NewAuditPage() {
 
         {step === 4 ? (
           <section className="grid gap-5 lg:grid-cols-[1fr_360px]">
-            <div className="card-surface space-y-4 p-6">
-              <Field label="Auditor">
-                <Select
-                  value={assigneeId}
-                  onValueChange={(value) => {
-                    setAssigneeId(value);
-                    if (reviewerId === value) setReviewerId("");
-                  }}
-                  disabled={assignToSelf}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select auditor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(membersQuery.data ?? []).map((member) => (
-                      <SelectItem key={member.user_id} value={member.user_id}>
-                        {member.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Label className="flex items-center gap-2">
-                <Checkbox
-                  checked={assignToSelf}
-                  onCheckedChange={(v) => setAssignToSelf(v === true)}
-                />
-                Assign to myself and start now
-              </Label>
-              <Field label="Reviewer">
-                <Select value={reviewerId} onValueChange={setReviewerId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Optional reviewer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(membersQuery.data ?? []).map((member) => (
-                      <SelectItem
-                        key={member.user_id}
-                        value={member.user_id}
-                        disabled={!assignToSelf && member.user_id === assigneeId}
-                      >
-                        {member.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label="Due date and time">
-                <Input
-                  type="datetime-local"
-                  value={dueAt}
-                  onChange={(e) => setDueAt(e.target.value)}
-                />
-              </Field>
-              <Field label="Instructions">
-                <Textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} />
-              </Field>
+            <div className="space-y-4">
+              <AssignmentSchedulePanel
+                mode={assignmentMode}
+                onModeChange={setAssignmentMode}
+                publishAt={publishAt}
+                onPublishAtChange={setPublishAt}
+                dueConfig={dueConfig}
+                onDueConfigChange={setDueConfig}
+                recurrence={recurrence}
+                onRecurrenceChange={setRecurrence}
+              />
+              <LocationScopePicker
+                operatingModel={operatingModel}
+                value={locationScope}
+                onChange={setLocationScope}
+                singleStore={locationScope.storeIds.length <= 1 && operatingModel === "local_store"}
+              />
+              <TeamAssignmentPanel
+                members={membersQuery.data ?? []}
+                teamScope={teamScope}
+                distributionStrategy={distributionStrategy}
+                onTeamChange={setTeamScope}
+                onStrategyChange={setDistributionStrategy}
+                singleAssignee={assignToSelf}
+              />
+              <div className="card-surface space-y-4 p-6">
+                <Label className="flex items-center gap-2">
+                  <Checkbox
+                    checked={assignToSelf}
+                    onCheckedChange={(v) => setAssignToSelf(v === true)}
+                  />
+                  Assign to myself and start now
+                </Label>
+                <Field label="Campaign name (optional)">
+                  <Input
+                    value={campaignName}
+                    onChange={(e) => setCampaignName(e.target.value)}
+                    placeholder="e.g. September 2026 FMCG Outlet Audit — North India"
+                  />
+                </Field>
+                <Field label="Reviewer">
+                  <Select value={reviewerId} onValueChange={setReviewerId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Optional reviewer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(membersQuery.data ?? []).map((member) => (
+                        <SelectItem key={member.user_id} value={member.user_id}>
+                          {member.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="Instructions">
+                  <Textarea
+                    value={instructions}
+                    onChange={(e) => setInstructions(e.target.value)}
+                  />
+                </Field>
+              </div>
             </div>
-            <aside className="card-surface space-y-3 p-5">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Assignment preview
-              </p>
-              <Summary label="Method" value={method === "digital" ? "Digital" : "AI-assisted"} />
-              <Summary label="Template" value={selectedTemplate?.name ?? String(templateChoice)} />
-              <Summary
-                label="Store"
-                value={storesQuery.data?.find((s) => s.id === storeId)?.name ?? "Not selected"}
-              />
-              <Summary
-                label="Input"
-                value={
-                  dataset.source === "csv"
-                    ? `${dataset.rows.length} CSV rows · ${dataset.columns.length} columns`
-                    : method === "ai"
-                      ? "Camera / photos"
-                      : `${dataset.rows.length} manual rows · ${dataset.columns.length} columns`
-                }
-              />
-              <Summary
-                label="Evidence"
-                value={`${effectivePolicy.level} · ${effectivePolicy.requiredProof.length} required proof types`}
-              />
-              <Summary label="RCA" value={requireRca ? "Mandatory for variance" : "Optional"} />
-              <div className="flex flex-wrap gap-1">
-                {effectivePolicy.requiredProof.map((proof) => (
-                  <Badge key={proof} variant="secondary">
-                    {proof.replaceAll("_", " ")}
-                  </Badge>
-                ))}
+            <aside className="space-y-4">
+              {assignmentPreview ? (
+                <AssignmentPreviewPanel preview={assignmentPreview} />
+              ) : (
+                <div className="card-surface p-5 text-sm text-muted-foreground">
+                  Select at least one location and one auditor to preview assignments.
+                </div>
+              )}
+              <div className="card-surface space-y-3 p-5">
+                <Summary label="Method" value={method === "digital" ? "Digital" : "AI-assisted"} />
+                <Summary
+                  label="Template"
+                  value={selectedTemplate?.name ?? systemTemplateSpec?.name ?? String(templateChoice)}
+                />
+                <Summary
+                  label="Evidence"
+                  value={`${effectivePolicy.level} · ${effectivePolicy.requiredProof.length} required proof types`}
+                />
               </div>
             </aside>
           </section>
@@ -837,14 +1033,37 @@ function NewAuditPage() {
               Continue <ArrowRight className="size-4" />
             </Button>
           ) : (
-            <Button
-              variant="brand"
-              disabled={!canNext || createMutation.isPending}
-              onClick={() => createMutation.mutate()}
-            >
-              <CheckCircle2 className="size-4" />
-              {assignToSelf ? "Create & start audit" : "Assign audit"}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                disabled={!assignmentPlan || createMutation.isPending}
+                onClick={async () => {
+                  if (!assignmentPlan) return;
+                  try {
+                    await saveAssignmentDraft(assignmentPlan);
+                    toast.success("Draft saved.");
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Could not save draft.");
+                  }
+                }}
+              >
+                Save Draft
+              </Button>
+              <Button
+                variant="brand"
+                disabled={!canNext || createMutation.isPending}
+                onClick={() => createMutation.mutate()}
+              >
+                <CheckCircle2 className="size-4" />
+                {assignmentMode === "assign_now"
+                  ? assignToSelf
+                    ? "Create & start audit"
+                    : "Assign Now"
+                  : assignmentMode === "schedule_once"
+                    ? "Schedule"
+                    : "Create Recurring Schedule"}
+              </Button>
+            </div>
           )}
         </div>
       </div>

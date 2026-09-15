@@ -16,6 +16,7 @@ import { Route as ActionsRouteImport } from './routes/actions'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AssignScanRouteImport } from './routes/assign-scan'
 import { Route as AssignedScansRouteImport } from './routes/assigned-scans'
+import { Route as AuditCalendarRouteImport } from './routes/audit-calendar'
 import { Route as AuditIntelligenceRouteImport } from './routes/audit-intelligence'
 import { Route as AuditSchedulesRouteImport } from './routes/audit-schedules'
 import { Route as AuditTemplatesRouteImport } from './routes/audit-templates'
@@ -155,6 +156,11 @@ const AssignScanRoute = AssignScanRouteImport.update({
 const AssignedScansRoute = AssignedScansRouteImport.update({
   id: '/assigned-scans',
   path: '/assigned-scans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuditCalendarRoute = AuditCalendarRouteImport.update({
+  id: '/audit-calendar',
+  path: '/audit-calendar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuditIntelligenceRoute = AuditIntelligenceRouteImport.update({
@@ -704,6 +710,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
+  '/audit-calendar': typeof AuditCalendarRoute
   '/audit-intelligence': typeof AuditIntelligenceRoute
   '/audit-schedules': typeof AuditSchedulesRoute
   '/audit-templates': typeof AuditTemplatesRouteWithChildren
@@ -818,6 +825,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRouteWithChildren
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
+  '/audit-calendar': typeof AuditCalendarRoute
   '/audit-intelligence': typeof AuditIntelligenceRoute
   '/audit-schedules': typeof AuditSchedulesRoute
   '/audit-templates': typeof AuditTemplatesRouteWithChildren
@@ -933,6 +941,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
+  '/audit-calendar': typeof AuditCalendarRoute
   '/audit-intelligence': typeof AuditIntelligenceRoute
   '/audit-schedules': typeof AuditSchedulesRoute
   '/audit-templates': typeof AuditTemplatesRouteWithChildren
@@ -1049,6 +1058,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/assign-scan'
     | '/assigned-scans'
+    | '/audit-calendar'
     | '/audit-intelligence'
     | '/audit-schedules'
     | '/audit-templates'
@@ -1163,6 +1173,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/assign-scan'
     | '/assigned-scans'
+    | '/audit-calendar'
     | '/audit-intelligence'
     | '/audit-schedules'
     | '/audit-templates'
@@ -1277,6 +1288,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/assign-scan'
     | '/assigned-scans'
+    | '/audit-calendar'
     | '/audit-intelligence'
     | '/audit-schedules'
     | '/audit-templates'
@@ -1392,6 +1404,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   AssignScanRoute: typeof AssignScanRoute
   AssignedScansRoute: typeof AssignedScansRoute
+  AuditCalendarRoute: typeof AuditCalendarRoute
   AuditIntelligenceRoute: typeof AuditIntelligenceRoute
   AuditSchedulesRoute: typeof AuditSchedulesRoute
   AuditTemplatesRoute: typeof AuditTemplatesRouteWithChildren
@@ -1519,6 +1532,13 @@ declare module '@tanstack/react-router' {
       path: '/assigned-scans'
       fullPath: '/assigned-scans'
       preLoaderRoute: typeof AssignedScansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/audit-calendar': {
+      id: '/audit-calendar'
+      path: '/audit-calendar'
+      fullPath: '/audit-calendar'
+      preLoaderRoute: typeof AuditCalendarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/audit-intelligence': {
@@ -2414,6 +2434,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   AssignScanRoute: AssignScanRoute,
   AssignedScansRoute: AssignedScansRoute,
+  AuditCalendarRoute: AuditCalendarRoute,
   AuditIntelligenceRoute: AuditIntelligenceRoute,
   AuditSchedulesRoute: AuditSchedulesRoute,
   AuditTemplatesRoute: AuditTemplatesRouteWithChildren,
