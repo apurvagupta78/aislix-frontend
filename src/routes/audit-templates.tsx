@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Archive,
@@ -69,7 +69,14 @@ import {
   getPurposesForModel,
   OPERATING_MODEL_CARDS,
 } from "@/lib/audit-engine/operating-model-catalog";
-import { seedSystemTemplatesForOrg } from "@/lib/audit-engine/seed-templates";
+import { TemplateCatalogCard } from "@/components/audit-engine/TemplateCatalogCard";
+import { TemplatePreviewSheet } from "@/components/audit-engine/TemplatePreviewSheet";
+import { UseTemplateConfirmDialog } from "@/components/audit-engine/UseTemplateConfirmDialog";
+import { ensureSystemTemplate, seedSystemTemplatesForOrg } from "@/lib/audit-engine/seed-templates";
+import {
+  getDiscoverySections,
+  purposeOptionsForFilter,
+} from "@/lib/audit-engine/template-catalog-ui";
 import {
   STARTER_TEMPLATE_LIBRARY,
   type SystemTemplateSpec,
@@ -86,7 +93,11 @@ type SourceFilter = "all" | "system" | "customer";
 
 function AuditTemplatesPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [libraryTab, setLibraryTab] = useState<LibraryTab>("system_catalog");
+  const [previewSpec, setPreviewSpec] = useState<SystemTemplateSpec | null>(null);
+  const [useSpec, setUseSpec] = useState<SystemTemplateSpec | null>(null);
+  const [browseAllExpanded, setBrowseAllExpanded] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("cards");
   const [search, setSearch] = useState("");
   const [statusTab, setStatusTab] = useState<"all" | TemplateStatus>("all");
@@ -190,45 +201,48 @@ function AuditTemplatesPage() {
     [dbTemplates],
   );
 
-  const filteredCatalog = useMemo(() => {
-    let rows = STARTER_TEMPLATE_LIBRARY;
-    if (operatingModelFilter !== "all") {
-      rows = rows.filter((s) => s.operatingModel === operatingModelFilter);
-    }
-    if (purposeFilter !== "all") {
-      rows = rows.filter((s) => s.purpose === purposeFilter);
-    }
-    if (search.trim()) {
-      const q = search.trim().toLowerCase();
-      rows = rows.filter(
-        (s) =>
-          s.name.toLowerCase().includes(q) ||
-          s.shortDescription.toLowerCase().includes(q) ||
-          s.category.toLowerCase().includes(q),
-      );
-    }
-    if (aiEnabledOnly) {
-      rows = rows.filter((s) => s.build().ai?.enabled);
-    }
-    if (evidenceRequiredOnly) {
-      rows = rows.filter((s) => s.build().evidence?.photoRequired);
-    }
-    return rows;
-  }, [operatingModelFilter, purposeFilter, search, aiEnabledOnly, evidenceRequiredOnly]);
+  const discovery = useMemo(
+    () =>
+      getDiscoverySections(
+        operatingModelFilter,
+        purposeFilter,
+        search,
+        aiEnabledOnly,
+        evidenceRequiredOnly,
+      ),
+    [operatingModelFilter, purposeFilter, search, aiEnabledOnly, evidenceRequiredOnly],
+  );
 
-  const purposeOptions = useMemo(() => {
-    if (operatingModelFilter === "all") {
-      const seen = new Set<string>();
-      return OPERATING_MODEL_CARDS.filter((c) => c.id !== "custom").flatMap((c) =>
-        getPurposesForModel(c.id).filter((p) => {
-          if (seen.has(p.value)) return false;
-          seen.add(p.value);
-          return true;
-        }),
-      );
-    }
-    return getPurposesForModel(operatingModelFilter);
-  }, [operatingModelFilter]);
+  const purposeOptions = useMemo(
+    () => purposeOptionsForFilter(operatingModelFilter),
+    [operatingModelFilter],
+  );
+
+  const useTemplateMutation = useMutation({
+    mutationFn: async (spec: SystemTemplateSpec) => {
+      const template = await ensureSystemTemplate(spec.key);
+      if (!template) throw new Error("Could not seed template");
+      return template;
+    },
+    onSuccess: (template) => {
+      toast.success("Template ready for assignment.");
+      setUseSpec(null);
+      void queryClient.invalidateQueries({ queryKey: ["audit-templates"] });
+      void navigate({
+        to: "/new-audit",
+        search: { templateId: template.id, systemKey: undefined },
+      });
+    },
+    onError: (e) => toast.error(toUserMessage(e)),
+  });
+
+  const resolveDbTemplate = (spec: SystemTemplateSpec) =>
+    dbTemplates.find(
+      (t) =>
+        t.is_system_template &&
+        (t.purpose_config?.systemTemplateKey === spec.key ||
+          (t.operating_model === spec.operatingModel && t.name === spec.name)),
+    );
 
   const counts = useMemo(() => {
     return {
@@ -327,25 +341,106 @@ function AuditTemplatesPage() {
           templatesQuery.isLoading ? (
             <Skeleton className="h-64 w-full" />
           ) : (
-            <div className="space-y-6">
-              {filteredCatalog.some((s) => s.recommended) ? (
-                <div>
-                  <h3 className="mb-3 text-sm font-semibold">Recommended templates</h3>
-                  <SystemCatalogGrid
-                    specs={filteredCatalog.filter((s) => s.recommended)}
-                    seededKeySet={seededKeySet}
-                    dbTemplates={dbTemplates}
-                  />
-                </div>
+            <div className="space-y-8">
+              {discovery.recommended.length > 0 ? (
+                <section>
+                  <h3 className="mb-1 text-sm font-semibold">Recommended for You</h3>
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    Flagship and recommended templates for your selected scope.
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {discovery.recommended.map((spec) => {
+                      const dedupeKey = `${spec.operatingModel}:${spec.name}`;
+                      return (
+                        <TemplateCatalogCard
+                          key={spec.key}
+                          spec={spec}
+                          seeded={seededKeySet.has(dedupeKey)}
+                          dbTemplate={resolveDbTemplate(spec)}
+                          onPreview={() => setPreviewSpec(spec)}
+                          onUse={() => setUseSpec(spec)}
+                        />
+                      );
+                    })}
+                  </div>
+                </section>
               ) : null}
-              <div>
-                <h3 className="mb-3 text-sm font-semibold">Browse all</h3>
-                <SystemCatalogGrid
-                  specs={filteredCatalog.filter((s) => !s.recommended)}
-                  seededKeySet={seededKeySet}
-                  dbTemplates={dbTemplates}
-                />
-              </div>
+
+              {operatingModelFilter === "all"
+                ? discovery.byModel.map((group) => (
+                    <section key={group.model}>
+                      <h3 className="mb-3 text-sm font-semibold">By Operating Model — {group.label}</h3>
+                      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                        {group.templates.slice(0, 6).map((spec) => {
+                          const dedupeKey = `${spec.operatingModel}:${spec.name}`;
+                          return (
+                            <TemplateCatalogCard
+                              key={spec.key}
+                              spec={spec}
+                              seeded={seededKeySet.has(dedupeKey)}
+                              dbTemplate={resolveDbTemplate(spec)}
+                              onPreview={() => setPreviewSpec(spec)}
+                              onUse={() => setUseSpec(spec)}
+                              compact
+                            />
+                          );
+                        })}
+                      </div>
+                    </section>
+                  ))
+                : null}
+
+              {discovery.byPurpose.slice(0, 6).map((group) => (
+                <section key={group.purpose}>
+                  <h3 className="mb-3 text-sm font-semibold">By Audit Purpose — {group.label}</h3>
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {group.templates.slice(0, 3).map((spec) => {
+                      const dedupeKey = `${spec.operatingModel}:${spec.name}`;
+                      return (
+                        <TemplateCatalogCard
+                          key={spec.key}
+                          spec={spec}
+                          seeded={seededKeySet.has(dedupeKey)}
+                          dbTemplate={resolveDbTemplate(spec)}
+                          onPreview={() => setPreviewSpec(spec)}
+                          onUse={() => setUseSpec(spec)}
+                          compact
+                        />
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
+
+              <section>
+                <button
+                  type="button"
+                  className="mb-3 flex w-full items-center justify-between rounded-lg border border-border px-3 py-2 text-sm font-semibold"
+                  onClick={() => setBrowseAllExpanded((v) => !v)}
+                >
+                  Browse All Templates ({discovery.browseAll.length})
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {browseAllExpanded ? "Collapse" : "Expand full library"}
+                  </span>
+                </button>
+                {browseAllExpanded ? (
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {discovery.browseAll.map((spec) => {
+                      const dedupeKey = `${spec.operatingModel}:${spec.name}`;
+                      return (
+                        <TemplateCatalogCard
+                          key={spec.key}
+                          spec={spec}
+                          seeded={seededKeySet.has(dedupeKey)}
+                          dbTemplate={resolveDbTemplate(spec)}
+                          onPreview={() => setPreviewSpec(spec)}
+                          onUse={() => setUseSpec(spec)}
+                        />
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </section>
             </div>
           )
         ) : templatesQuery.isLoading ? (
@@ -416,6 +511,26 @@ function AuditTemplatesPage() {
         onConfirm={(name) =>
           duplicateTarget && duplicateMutation.mutate({ sourceId: duplicateTarget.id, name })
         }
+      />
+
+      <TemplatePreviewSheet
+        spec={previewSpec}
+        open={previewSpec !== null}
+        onOpenChange={(open) => !open && setPreviewSpec(null)}
+      />
+
+      <UseTemplateConfirmDialog
+        spec={useSpec}
+        open={useSpec !== null}
+        onOpenChange={(open) => !open && setUseSpec(null)}
+        seeded={
+          useSpec
+            ? seededKeySet.has(`${useSpec.operatingModel}:${useSpec.name}`)
+            : false
+        }
+        existingVersion={useSpec ? resolveDbTemplate(useSpec)?.version : undefined}
+        loading={useTemplateMutation.isPending}
+        onConfirm={() => useSpec && useTemplateMutation.mutate(useSpec)}
       />
     </AppShell>
   );
@@ -570,120 +685,6 @@ function FilterBar({
           </div>
         ) : null}
       </div>
-    </div>
-  );
-}
-
-function SystemCatalogGrid({
-  specs,
-  seededKeySet,
-  dbTemplates,
-}: {
-  specs: SystemTemplateSpec[];
-  seededKeySet: Set<string>;
-  dbTemplates: AuditTemplate[];
-}) {
-  if (!specs.length) {
-    return (
-      <EmptyState
-        title="No system templates match"
-        description="Try clearing filters to browse the full Aislix starter library."
-      />
-    );
-  }
-
-  return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {specs.map((spec) => {
-        const def = spec.build();
-        const dedupeKey = `${spec.operatingModel}:${spec.name}`;
-        const seeded = seededKeySet.has(dedupeKey);
-        const dbTemplate = dbTemplates.find(
-          (t) =>
-            t.is_system_template &&
-            (t.purpose_config?.systemTemplateKey === spec.key ||
-              (t.operating_model === spec.operatingModel && t.name === spec.name)),
-        );
-
-        return (
-          <div key={spec.key} className="flex flex-col rounded-xl border border-border bg-card p-4">
-            <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <Badge variant="secondary" className="mb-2 text-[10px]">
-                  Aislix System Template
-                </Badge>
-                <h3 className="font-medium leading-snug">{spec.name}</h3>
-                <p className="mt-1 text-xs text-muted-foreground">{spec.shortDescription}</p>
-              </div>
-              {seeded ? (
-                <Badge variant="outline" className="text-[10px]">
-                  Seeded
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="text-[10px] text-muted-foreground">
-                  Catalog
-                </Badge>
-              )}
-            </div>
-            <div className="mb-3 flex flex-wrap gap-1">
-              <Badge variant="outline" className="text-[10px]">
-                {OPERATING_MODEL_CARDS.find((c) => c.id === spec.operatingModel)?.title ??
-                  spec.operatingModel}
-              </Badge>
-              <Badge variant="outline" className="text-[10px]">
-                {spec.category}
-              </Badge>
-              {def.ai?.enabled ? (
-                <Badge variant="outline" className="text-[10px]">
-                  <Bot className="mr-0.5 size-3" /> AI
-                </Badge>
-              ) : null}
-              {def.evidence?.photoRequired ? (
-                <Badge variant="outline" className="text-[10px]">
-                  <Camera className="mr-0.5 size-3" /> Evidence
-                </Badge>
-              ) : null}
-            </div>
-            <p className="mb-4 text-xs text-muted-foreground">
-              {def.fields.length} fields · {def.rules.length} rules · {def.sections.length} sections
-            </p>
-            <div className="mt-auto flex flex-wrap gap-2">
-              <Button asChild size="sm" variant="brand">
-                <Link
-                  to="/new-audit"
-                  search={
-                    dbTemplate
-                      ? { templateId: dbTemplate.id, systemKey: undefined }
-                      : { systemKey: spec.key, templateId: undefined }
-                  }
-                >
-                  <Play className="mr-1 size-3" /> Use Template
-                </Link>
-              </Button>
-              {dbTemplate ? (
-                <>
-                  <Button asChild size="sm" variant="outline">
-                    <Link to="/audit-templates/$templateId/preview" params={{ templateId: dbTemplate.id }}>
-                      <Eye className="mr-1 size-3" /> Preview
-                    </Link>
-                  </Button>
-                  <Button asChild size="sm" variant="outline">
-                    <Link
-                      to="/new-audit"
-                      search={{ templateId: dbTemplate.id, systemKey: undefined }}
-                    >
-                      <Copy className="mr-1 size-3" /> Duplicate via Use
-                    </Link>
-                  </Button>
-                </>
-              ) : null}
-            </div>
-            <p className="mt-2 text-[10px] text-muted-foreground">
-              System templates are read-only. Duplicate to create an editable customer copy.
-            </p>
-          </div>
-        );
-      })}
     </div>
   );
 }

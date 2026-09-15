@@ -84,8 +84,14 @@ import { Route as AuditTemplatesNewRouteImport } from './routes/audit-templates.
 import { Route as AuditAssignmentIdRouteImport } from './routes/audit.$assignmentId'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as CorrectiveActionsActionIdRouteImport } from './routes/corrective-actions.$actionId'
+import { Route as DashboardAuditExecutionRouteImport } from './routes/dashboard.audit-execution'
+import { Route as DashboardEvidenceCoverageRouteImport } from './routes/dashboard.evidence-coverage'
 import { Route as DashboardExecutiveRouteImport } from './routes/dashboard.executive'
+import { Route as DashboardKpisRouteImport } from './routes/dashboard.kpis'
 import { Route as DashboardMyPerformanceRouteImport } from './routes/dashboard.my-performance'
+import { Route as DashboardOperationalTrendRouteImport } from './routes/dashboard.operational-trend'
+import { Route as DashboardRiskLocationsRouteImport } from './routes/dashboard.risk-locations'
+import { Route as DashboardRiskSkusRouteImport } from './routes/dashboard.risk-skus'
 import { Route as ExceptionsExceptionIdRouteImport } from './routes/exceptions.$exceptionId'
 import { Route as ExpiryControlHistoryRouteImport } from './routes/expiry-control.history'
 import { Route as ExpiryControlMyInspectionsRouteImport } from './routes/expiry-control.my-inspections'
@@ -494,14 +500,46 @@ const CorrectiveActionsActionIdRoute =
     path: '/$actionId',
     getParentRoute: () => CorrectiveActionsRoute,
   } as any)
+const DashboardAuditExecutionRoute = DashboardAuditExecutionRouteImport.update({
+  id: '/audit-execution',
+  path: '/audit-execution',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardEvidenceCoverageRoute =
+  DashboardEvidenceCoverageRouteImport.update({
+    id: '/evidence-coverage',
+    path: '/evidence-coverage',
+    getParentRoute: () => DashboardRoute,
+  } as any)
 const DashboardExecutiveRoute = DashboardExecutiveRouteImport.update({
   id: '/executive',
   path: '/executive',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardKpisRoute = DashboardKpisRouteImport.update({
+  id: '/kpis',
+  path: '/kpis',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardMyPerformanceRoute = DashboardMyPerformanceRouteImport.update({
   id: '/my-performance',
   path: '/my-performance',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardOperationalTrendRoute =
+  DashboardOperationalTrendRouteImport.update({
+    id: '/operational-trend',
+    path: '/operational-trend',
+    getParentRoute: () => DashboardRoute,
+  } as any)
+const DashboardRiskLocationsRoute = DashboardRiskLocationsRouteImport.update({
+  id: '/risk-locations',
+  path: '/risk-locations',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardRiskSkusRoute = DashboardRiskSkusRouteImport.update({
+  id: '/risk-skus',
+  path: '/risk-skus',
   getParentRoute: () => DashboardRoute,
 } as any)
 const ExceptionsExceptionIdRoute = ExceptionsExceptionIdRouteImport.update({
@@ -734,8 +772,14 @@ export interface FileRoutesByFullPath {
   '/audit/$assignmentId': typeof AuditAssignmentIdRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
+  '/dashboard/audit-execution': typeof DashboardAuditExecutionRoute
+  '/dashboard/evidence-coverage': typeof DashboardEvidenceCoverageRoute
   '/dashboard/executive': typeof DashboardExecutiveRoute
+  '/dashboard/kpis': typeof DashboardKpisRoute
   '/dashboard/my-performance': typeof DashboardMyPerformanceRoute
+  '/dashboard/operational-trend': typeof DashboardOperationalTrendRoute
+  '/dashboard/risk-locations': typeof DashboardRiskLocationsRoute
+  '/dashboard/risk-skus': typeof DashboardRiskSkusRoute
   '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
   '/expiry-control/history': typeof ExpiryControlHistoryRoute
   '/expiry-control/my-inspections': typeof ExpiryControlMyInspectionsRoute
@@ -842,8 +886,14 @@ export interface FileRoutesByTo {
   '/audit/$assignmentId': typeof AuditAssignmentIdRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
+  '/dashboard/audit-execution': typeof DashboardAuditExecutionRoute
+  '/dashboard/evidence-coverage': typeof DashboardEvidenceCoverageRoute
   '/dashboard/executive': typeof DashboardExecutiveRoute
+  '/dashboard/kpis': typeof DashboardKpisRoute
   '/dashboard/my-performance': typeof DashboardMyPerformanceRoute
+  '/dashboard/operational-trend': typeof DashboardOperationalTrendRoute
+  '/dashboard/risk-locations': typeof DashboardRiskLocationsRoute
+  '/dashboard/risk-skus': typeof DashboardRiskSkusRoute
   '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
   '/expiry-control/history': typeof ExpiryControlHistoryRoute
   '/expiry-control/my-inspections': typeof ExpiryControlMyInspectionsRoute
@@ -951,8 +1001,14 @@ export interface FileRoutesById {
   '/audit/$assignmentId': typeof AuditAssignmentIdRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
+  '/dashboard/audit-execution': typeof DashboardAuditExecutionRoute
+  '/dashboard/evidence-coverage': typeof DashboardEvidenceCoverageRoute
   '/dashboard/executive': typeof DashboardExecutiveRoute
+  '/dashboard/kpis': typeof DashboardKpisRoute
   '/dashboard/my-performance': typeof DashboardMyPerformanceRoute
+  '/dashboard/operational-trend': typeof DashboardOperationalTrendRoute
+  '/dashboard/risk-locations': typeof DashboardRiskLocationsRoute
+  '/dashboard/risk-skus': typeof DashboardRiskSkusRoute
   '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
   '/expiry-control/history': typeof ExpiryControlHistoryRoute
   '/expiry-control/my-inspections': typeof ExpiryControlMyInspectionsRoute
@@ -1061,8 +1117,14 @@ export interface FileRouteTypes {
     | '/audit/$assignmentId'
     | '/auth/callback'
     | '/corrective-actions/$actionId'
+    | '/dashboard/audit-execution'
+    | '/dashboard/evidence-coverage'
     | '/dashboard/executive'
+    | '/dashboard/kpis'
     | '/dashboard/my-performance'
+    | '/dashboard/operational-trend'
+    | '/dashboard/risk-locations'
+    | '/dashboard/risk-skus'
     | '/exceptions/$exceptionId'
     | '/expiry-control/history'
     | '/expiry-control/my-inspections'
@@ -1169,8 +1231,14 @@ export interface FileRouteTypes {
     | '/audit/$assignmentId'
     | '/auth/callback'
     | '/corrective-actions/$actionId'
+    | '/dashboard/audit-execution'
+    | '/dashboard/evidence-coverage'
     | '/dashboard/executive'
+    | '/dashboard/kpis'
     | '/dashboard/my-performance'
+    | '/dashboard/operational-trend'
+    | '/dashboard/risk-locations'
+    | '/dashboard/risk-skus'
     | '/exceptions/$exceptionId'
     | '/expiry-control/history'
     | '/expiry-control/my-inspections'
@@ -1277,8 +1345,14 @@ export interface FileRouteTypes {
     | '/audit/$assignmentId'
     | '/auth/callback'
     | '/corrective-actions/$actionId'
+    | '/dashboard/audit-execution'
+    | '/dashboard/evidence-coverage'
     | '/dashboard/executive'
+    | '/dashboard/kpis'
     | '/dashboard/my-performance'
+    | '/dashboard/operational-trend'
+    | '/dashboard/risk-locations'
+    | '/dashboard/risk-skus'
     | '/exceptions/$exceptionId'
     | '/expiry-control/history'
     | '/expiry-control/my-inspections'
@@ -1923,6 +1997,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CorrectiveActionsActionIdRouteImport
       parentRoute: typeof CorrectiveActionsRoute
     }
+    '/dashboard/audit-execution': {
+      id: '/dashboard/audit-execution'
+      path: '/audit-execution'
+      fullPath: '/dashboard/audit-execution'
+      preLoaderRoute: typeof DashboardAuditExecutionRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/evidence-coverage': {
+      id: '/dashboard/evidence-coverage'
+      path: '/evidence-coverage'
+      fullPath: '/dashboard/evidence-coverage'
+      preLoaderRoute: typeof DashboardEvidenceCoverageRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/executive': {
       id: '/dashboard/executive'
       path: '/executive'
@@ -1930,11 +2018,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardExecutiveRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/kpis': {
+      id: '/dashboard/kpis'
+      path: '/kpis'
+      fullPath: '/dashboard/kpis'
+      preLoaderRoute: typeof DashboardKpisRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/my-performance': {
       id: '/dashboard/my-performance'
       path: '/my-performance'
       fullPath: '/dashboard/my-performance'
       preLoaderRoute: typeof DashboardMyPerformanceRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/operational-trend': {
+      id: '/dashboard/operational-trend'
+      path: '/operational-trend'
+      fullPath: '/dashboard/operational-trend'
+      preLoaderRoute: typeof DashboardOperationalTrendRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/risk-locations': {
+      id: '/dashboard/risk-locations'
+      path: '/risk-locations'
+      fullPath: '/dashboard/risk-locations'
+      preLoaderRoute: typeof DashboardRiskLocationsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/risk-skus': {
+      id: '/dashboard/risk-skus'
+      path: '/risk-skus'
+      fullPath: '/dashboard/risk-skus'
+      preLoaderRoute: typeof DashboardRiskSkusRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/exceptions/$exceptionId': {
@@ -2206,13 +2322,25 @@ const CorrectiveActionsRouteWithChildren =
   CorrectiveActionsRoute._addFileChildren(CorrectiveActionsRouteChildren)
 
 interface DashboardRouteChildren {
+  DashboardAuditExecutionRoute: typeof DashboardAuditExecutionRoute
+  DashboardEvidenceCoverageRoute: typeof DashboardEvidenceCoverageRoute
   DashboardExecutiveRoute: typeof DashboardExecutiveRoute
+  DashboardKpisRoute: typeof DashboardKpisRoute
   DashboardMyPerformanceRoute: typeof DashboardMyPerformanceRoute
+  DashboardOperationalTrendRoute: typeof DashboardOperationalTrendRoute
+  DashboardRiskLocationsRoute: typeof DashboardRiskLocationsRoute
+  DashboardRiskSkusRoute: typeof DashboardRiskSkusRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardAuditExecutionRoute: DashboardAuditExecutionRoute,
+  DashboardEvidenceCoverageRoute: DashboardEvidenceCoverageRoute,
   DashboardExecutiveRoute: DashboardExecutiveRoute,
+  DashboardKpisRoute: DashboardKpisRoute,
   DashboardMyPerformanceRoute: DashboardMyPerformanceRoute,
+  DashboardOperationalTrendRoute: DashboardOperationalTrendRoute,
+  DashboardRiskLocationsRoute: DashboardRiskLocationsRoute,
+  DashboardRiskSkusRoute: DashboardRiskSkusRoute,
 }
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(

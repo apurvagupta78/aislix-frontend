@@ -92,6 +92,7 @@ export function useOptionalGlobalFilters(): GlobalFilterContextValue | null {
 
 /** Pages that should show the global filter bar */
 export const GLOBAL_FILTER_PATHS = [
+  "/dashboard",
   "/exceptions",
   "/findings",
   "/audit-intelligence",

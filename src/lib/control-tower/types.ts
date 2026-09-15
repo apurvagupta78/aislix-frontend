@@ -35,11 +35,13 @@ export type ControlTowerKpi = {
   detail: string;
   tone: KpiTone;
   trend?: number[];
+  trendLabel?: string;
+  progressPct?: number;
   available: boolean;
   source?: string;
 };
 
-export type AuditStatusBucket = { name: string; value: number };
+export type AuditStatusBucket = { name: string; value: number; color?: string };
 
 export type RiskLocation = {
   id: string;
@@ -49,6 +51,15 @@ export type RiskLocation = {
   trend: "up" | "down" | "flat";
 };
 
+export type RiskSku = {
+  id: string;
+  sku: string;
+  product: string;
+  location: string;
+  metric: string;
+  score: number;
+};
+
 export type FindingRow = {
   id: string;
   severity: string;
@@ -56,6 +67,7 @@ export type FindingRow = {
   sku: string;
   issue: string;
   status: string;
+  detectedAt?: string;
 };
 
 export type ActionRow = {
@@ -76,6 +88,39 @@ export type RecurringIssueRow = {
   valueImpact: string;
 };
 
+export type AuditExecutionRow = {
+  auditId: string;
+  status: string;
+  location: string;
+  template: string;
+  assignedTo: string;
+  dueDate: string;
+  operatingModel: string;
+};
+
+export type EvidenceCoverageRow = {
+  unitId: string;
+  auditId: string;
+  location: string;
+  evidenceType: string;
+  required: boolean;
+  verified: boolean;
+  status: string;
+};
+
+export type CorrectiveActionHealth = {
+  open: number;
+  dueToday: number;
+  overdue: number;
+  pendingVerification: number;
+  closed: number;
+};
+
+export type OperationalTrendPoint = {
+  date: string;
+  [metric: string]: string | number;
+};
+
 export type ControlTowerDemoPayload = {
   labeledDemo: true;
   operatingModel: ControlTowerModelFilter;
@@ -91,8 +136,10 @@ export type ControlTowerDemoPayload = {
   contextualKpis: ControlTowerKpi[];
   auditStatus: AuditStatusBucket[];
   riskLocations: RiskLocation[];
+  riskSkus: RiskSku[];
   criticalFindings: FindingRow[];
   correctiveActions: ActionRow[];
+  correctiveActionHealth: CorrectiveActionHealth;
   sla: {
     compliancePct: number;
     overdue: number;
@@ -107,4 +154,14 @@ export type ControlTowerDemoPayload = {
   };
   recurringIssues: RecurringIssueRow[];
   auditTrend: { date: string; completed: number; findings: number }[];
+  operationalTrend: OperationalTrendPoint[];
+  operationalTrendMetrics: { key: string; label: string; color: string }[];
+  /** Full datasets for CSV export and View All pages */
+  auditExecutionFull: AuditExecutionRow[];
+  riskLocationsFull: RiskLocation[];
+  riskSkusFull: RiskSku[];
+  criticalFindingsFull: FindingRow[];
+  correctiveActionsFull: ActionRow[];
+  recurringIssuesFull: RecurringIssueRow[];
+  evidenceCoverageFull: EvidenceCoverageRow[];
 };

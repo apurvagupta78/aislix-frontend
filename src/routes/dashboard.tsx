@@ -49,7 +49,7 @@ function DashboardPage() {
   return (
     <AppShell
       title="Control Tower"
-      description="Executive and operational command center for audit execution, exceptions and retail intelligence."
+      description="Operational visibility across audits, inventory, expiry, shelf execution and corrective actions."
       actions={
         <div className="flex gap-2">
           <Button asChild variant="outline" size="sm">
