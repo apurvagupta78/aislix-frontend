@@ -6,8 +6,9 @@ import {
   ArrowRight,
   CheckCircle2,
   ClipboardCheck,
+  Columns3,
   FileSpreadsheet,
-  Plus,
+  Rows3,
   ShieldCheck,
   Sparkles,
   Trash2,
@@ -43,15 +44,21 @@ import {
   type EvidenceLevel,
   type EvidenceProof,
 } from "@/lib/audit-evidence-policy";
-import {
-  createAssignmentPlanogramVersion,
-  parsePlanogramCsv,
-  type DraftRow,
-  type PlanogramRow,
-} from "@/lib/planogram";
+import { createAssignmentPlanogramVersion } from "@/lib/planogram";
 import { requireUserId } from "@/lib/db/context";
 import { startAssignment } from "@/lib/assignments";
 import { createAssignment as createExpiryAssignment } from "@/lib/expiry-control";
+import {
+  AUDIT_DATA_TYPES,
+  createAuditColumn,
+  createAuditRow,
+  createManualAuditDataset,
+  datasetToDraftRows,
+  parseAuditCsv,
+  validateAuditDataset,
+  type AuditDataType,
+  type AuditInputDataset,
+} from "@/lib/audit-input-dataset";
 
 export const Route = createFileRoute("/new-audit")({
   head: () => ({ meta: [{ title: "New Audit — Aislix" }] }),
@@ -60,21 +67,6 @@ export const Route = createFileRoute("/new-audit")({
 
 type Method = "digital" | "ai";
 type TemplateChoice = "general" | "fnv" | "expiry" | "planogram" | string;
-type ManualProduct = {
-  key: string;
-  productName: string;
-  sku: string;
-  expectedQuantity: string;
-};
-
-function createManualProduct(): ManualProduct {
-  return {
-    key: crypto.randomUUID(),
-    productName: "",
-    sku: "",
-    expectedQuantity: "0",
-  };
-}
 
 const steps = [
   { id: 1, label: "Method & template", icon: Sparkles },
@@ -92,12 +84,8 @@ function NewAuditPage() {
   const [location, setLocation] = useState("Main shelf");
   const [category, setCategory] = useState("");
   const [sku, setSku] = useState("");
-  const [manualProducts, setManualProducts] = useState<ManualProduct[]>(() => [
-    createManualProduct(),
-  ]);
-  const [csvName, setCsvName] = useState<string | null>(null);
-  const [rows, setRows] = useState<DraftRow[]>([]);
-  const [csvErrors, setCsvErrors] = useState<string[]>([]);
+  const [dataset, setDataset] = useState<AuditInputDataset>(createManualAuditDataset);
+  const [inputError, setInputError] = useState<string | null>(null);
   const [evidenceLevel, setEvidenceLevel] = useState<EvidenceLevel>("standard");
   const [evidencePolicy, setEvidencePolicy] = useState<AuditEvidencePolicy>(
     policyForLevel("standard"),
@@ -144,28 +132,7 @@ function NewAuditPage() {
       ),
     [evidencePolicy, selectedTemplate],
   );
-  const manualProductsValid =
-    manualProducts.length > 0 &&
-    manualProducts.every((product) => {
-      const quantity = Number(product.expectedQuantity);
-      return (
-        product.productName.trim() &&
-        product.sku.trim() &&
-        product.expectedQuantity !== "" &&
-        Number.isFinite(quantity) &&
-        quantity >= 0
-      );
-    });
-
-  function updateManualProduct(
-    key: string,
-    field: keyof Omit<ManualProduct, "key">,
-    value: string,
-  ) {
-    setManualProducts((current) =>
-      current.map((product) => (product.key === key ? { ...product, [field]: value } : product)),
-    );
-  }
+  const datasetError = validateAuditDataset(dataset, { manualColumnLimit: 10 });
 
   function selectEvidenceLevel(level: EvidenceLevel) {
     setEvidenceLevel(level);
@@ -184,36 +151,12 @@ function NewAuditPage() {
   }
 
   async function parseCsv(file: File) {
-    setCsvName(file.name);
-    const result = await parsePlanogramCsv(file);
-    setCsvErrors([...result.errors, ...result.rows.flatMap((r) => r.errors ?? [])]);
-    const validRows = result.rows
-      .filter((r) => r.valid && r.data)
-      .map((r, index) => {
-        const data = r.data as Partial<PlanogramRow>;
-        return {
-          key: crypto.randomUUID(),
-          location: data.location ?? location,
-          category: data.category ?? category,
-          sub_category: data.sub_category ?? "",
-          brand: data.brand ?? "",
-          product_name: data.product_name ?? `Product ${index + 1}`,
-          variant: data.variant ?? "",
-          expected_qty: Number(data.expected_qty ?? data.expected_facings ?? 0),
-          expected_facings: data.expected_facings,
-          expected_shelf_units: data.expected_shelf_units,
-          expected_shelf_level: data.expected_shelf_level,
-          expected_position: data.expected_position,
-          min_facings: data.min_facings,
-          max_facings: data.max_facings,
-          mrp_inr: data.mrp_inr,
-          avg_daily_sales: data.avg_daily_sales,
-          sku: data.sku ?? "",
-          shelf_position: data.shelf_position ?? "",
-          match_key: data.match_key ?? "",
-        } satisfies DraftRow;
-      });
-    setRows(validRows);
+    try {
+      setDataset(parseAuditCsv(await file.text(), file.name));
+      setInputError(null);
+    } catch (error) {
+      setInputError(error instanceof Error ? error.message : "Could not read this CSV.");
+    }
   }
 
   const createMutation = useMutation({
@@ -241,37 +184,22 @@ function NewAuditPage() {
         return { assignmentId: attemptId, self: assignToSelf, expiry: true };
       }
 
-      if (method === "digital" && !rows.length && !selectedTemplate && !manualProductsValid) {
-        throw new Error("Complete every manually added product before continuing.");
+      if (method === "digital" && !selectedTemplate && datasetError) {
+        throw new Error(datasetError);
       }
 
       const assignmentRows =
-        rows.length || method !== "digital" || selectedTemplate
-          ? rows
-          : manualProducts.map(
-              (product) =>
-                ({
-                  key: product.key,
-                  location,
-                  category,
-                  sub_category: "",
-                  brand: "",
-                  product_name: product.productName.trim(),
-                  variant: "",
-                  expected_qty: Number(product.expectedQuantity),
-                  sku: product.sku.trim(),
-                  shelf_position: "",
-                  match_key: "",
-                }) satisfies DraftRow,
-            );
+        method === "digital" && !datasetError
+          ? datasetToDraftRows(dataset, { location, category })
+          : [];
 
       let planogramVersionId: string | null = null;
       if (assignmentRows.length) {
         planogramVersionId = await createAssignmentPlanogramVersion({
           storeId,
           rows: assignmentRows,
-          sourceType: rows.length ? "csv" : "manual",
-          sourceFilename: rows.length ? csvName : null,
+          sourceType: dataset.source === "csv" ? "csv" : "manual",
+          sourceFilename: dataset.filename,
         });
       }
 
@@ -296,18 +224,30 @@ function NewAuditPage() {
         auditMode: method,
         templateId: selectedTemplate?.id ?? null,
         templateVersion: selectedTemplate?.version ?? null,
-        templateSnapshot: selectedTemplate
-          ? (selectedTemplate as unknown as Record<string, unknown>)
-          : {
-              predefined_type: templateChoice,
-              evidence_policy: effectivePolicy,
-            },
+        templateSnapshot: {
+          ...(selectedTemplate
+            ? (selectedTemplate as unknown as Record<string, unknown>)
+            : {
+                predefined_type: templateChoice,
+                evidence_policy: effectivePolicy,
+              }),
+          ...(assignmentRows.length
+            ? {
+                input_dataset: {
+                  source: dataset.source,
+                  filename: dataset.filename,
+                  columns: dataset.columns,
+                  rows: dataset.rows,
+                },
+              }
+            : {}),
+        },
         reviewerId: reviewerId || null,
         evidencePolicy: effectivePolicy,
         requireRca,
         creationSource: "unified_new_audit",
         inputSource: assignmentRows.length
-          ? rows.length
+          ? dataset.source === "csv"
             ? "csv_upload"
             : "manual_rows"
           : selectedTemplate
@@ -353,11 +293,7 @@ function NewAuditPage() {
         ? Boolean(
             storeId &&
             location &&
-            (method === "ai" ||
-              rows.length > 0 ||
-              selectedTemplate ||
-              templateChoice === "expiry" ||
-              manualProductsValid),
+            (method === "ai" || !datasetError || selectedTemplate || templateChoice === "expiry"),
           )
         : step === 3
           ? effectivePolicy.requiredProof.length > 0
@@ -482,136 +418,15 @@ function NewAuditPage() {
             </div>
 
             {method === "digital" ? (
-              <div className="rounded-xl border border-dashed p-5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="font-medium">Expected SKU list</p>
-                    <p className="text-sm text-muted-foreground">
-                      Upload CSV now; the auditor receives this list and records actual quantities.
-                    </p>
-                  </div>
-                  <Button variant="outline" asChild>
-                    <label>
-                      <Upload className="size-4" /> Upload CSV
-                      <input
-                        className="hidden"
-                        type="file"
-                        accept=".csv,text/csv"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) void parseCsv(file);
-                        }}
-                      />
-                    </label>
-                  </Button>
-                </div>
-                {csvName ? (
-                  <p className="mt-3 text-sm">
-                    <strong>{csvName}</strong> · {rows.length} valid SKU rows
-                  </p>
-                ) : null}
-                {csvErrors.length ? (
-                  <Alert variant="destructive" className="mt-3">
-                    <AlertDescription>{csvErrors.slice(0, 3).join(" · ")}</AlertDescription>
-                  </Alert>
-                ) : null}
-                {rows.length ? (
-                  <div className="mt-3 max-h-52 overflow-auto rounded-lg border">
-                    <table className="w-full text-left text-xs">
-                      <thead className="sticky top-0 bg-muted">
-                        <tr>
-                          <th className="p-2">SKU</th>
-                          <th>Product</th>
-                          <th>Expected</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {rows.slice(0, 20).map((row) => (
-                          <tr key={row.key} className="border-t">
-                            <td className="p-2">{row.sku || "—"}</td>
-                            <td>{row.product_name}</td>
-                            <td>{row.expected_qty}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : null}
-                {!rows.length ? (
-                  <div className="mt-4 space-y-3 border-t pt-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-medium">Or add products manually</p>
-                        <p className="text-xs text-muted-foreground">
-                          Add every product the auditor must count.
-                        </p>
-                      </div>
-                      <Badge variant="secondary">
-                        {manualProducts.length} product{manualProducts.length === 1 ? "" : "s"}
-                      </Badge>
-                    </div>
-                    {manualProducts.map((product, index) => (
-                      <div
-                        key={product.key}
-                        className="grid gap-3 rounded-xl border bg-background p-3 sm:grid-cols-[1.4fr_1fr_160px_auto]"
-                      >
-                        <Field label={`Product ${index + 1} name`}>
-                          <Input
-                            value={product.productName}
-                            onChange={(e) =>
-                              updateManualProduct(product.key, "productName", e.target.value)
-                            }
-                            placeholder="Product name"
-                          />
-                        </Field>
-                        <Field label="SKU">
-                          <Input
-                            value={product.sku}
-                            onChange={(e) =>
-                              updateManualProduct(product.key, "sku", e.target.value)
-                            }
-                            placeholder="SKU code"
-                          />
-                        </Field>
-                        <Field label="Expected quantity">
-                          <Input
-                            type="number"
-                            min={0}
-                            value={product.expectedQuantity}
-                            onChange={(e) =>
-                              updateManualProduct(product.key, "expectedQuantity", e.target.value)
-                            }
-                          />
-                        </Field>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="self-end text-muted-foreground hover:text-destructive"
-                          aria-label={`Remove product ${index + 1}`}
-                          disabled={manualProducts.length === 1}
-                          onClick={() =>
-                            setManualProducts((current) =>
-                              current.filter((item) => item.key !== product.key),
-                            )
-                          }
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() =>
-                        setManualProducts((current) => [...current, createManualProduct()])
-                      }
-                    >
-                      <Plus className="size-4" /> Add another product
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
+              <DatasetEditor
+                dataset={dataset}
+                error={inputError}
+                onChange={(next) => {
+                  setDataset(next);
+                  setInputError(null);
+                }}
+                onUpload={parseCsv}
+              />
             ) : (
               <Alert>
                 <Sparkles className="size-4" />
@@ -624,10 +439,9 @@ function NewAuditPage() {
             {!storeId ||
             !location.trim() ||
             (method === "digital" &&
-              !rows.length &&
               !selectedTemplate &&
               templateChoice !== "expiry" &&
-              !manualProductsValid) ? (
+              datasetError) ? (
               <Alert>
                 <AlertTriangle className="size-4" />
                 <AlertDescription>
@@ -635,7 +449,7 @@ function NewAuditPage() {
                     ? "Select a store to continue."
                     : !location.trim()
                       ? "Enter the audit location to continue."
-                      : "Complete the product name, SKU and expected quantity for every manual product."}
+                      : datasetError}
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -836,13 +650,11 @@ function NewAuditPage() {
               <Summary
                 label="Input"
                 value={
-                  rows.length
-                    ? `${rows.length} CSV SKU rows`
+                  dataset.source === "csv"
+                    ? `${dataset.rows.length} CSV rows · ${dataset.columns.length} columns`
                     : method === "ai"
                       ? "Camera / photos"
-                      : `${manualProducts.length} manually added product${
-                          manualProducts.length === 1 ? "" : "s"
-                        }`
+                      : `${dataset.rows.length} manual rows · ${dataset.columns.length} columns`
                 }
               />
               <Summary
@@ -882,6 +694,290 @@ function NewAuditPage() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+function DatasetEditor({
+  dataset,
+  error,
+  onChange,
+  onUpload,
+}: {
+  dataset: AuditInputDataset;
+  error: string | null;
+  onChange: (dataset: AuditInputDataset) => void;
+  onUpload: (file: File) => Promise<void>;
+}) {
+  const updateColumn = (
+    columnId: string,
+    patch: Partial<{ name: string; type: AuditDataType }>,
+  ) => {
+    onChange({
+      ...dataset,
+      columns: dataset.columns.map((column) =>
+        column.id === columnId ? { ...column, ...patch } : column,
+      ),
+    });
+  };
+
+  const removeColumn = (columnId: string) => {
+    if (dataset.columns.length === 1) return;
+    onChange({
+      ...dataset,
+      columns: dataset.columns.filter((column) => column.id !== columnId),
+      rows: dataset.rows.map((row) => {
+        const values = { ...row.values };
+        delete values[columnId];
+        return { ...row, values };
+      }),
+    });
+  };
+
+  const addColumn = () => {
+    if (dataset.source !== "manual" || dataset.columns.length >= 10) return;
+    const column = createAuditColumn(dataset.columns.length + 1);
+    onChange({
+      ...dataset,
+      columns: [...dataset.columns, column],
+      rows: dataset.rows.map((row) => ({
+        ...row,
+        values: { ...row.values, [column.id]: "" },
+      })),
+    });
+  };
+
+  const updateCell = (rowId: string, columnId: string, value: string) => {
+    onChange({
+      ...dataset,
+      rows: dataset.rows.map((row) =>
+        row.id === rowId ? { ...row, values: { ...row.values, [columnId]: value } } : row,
+      ),
+    });
+  };
+
+  return (
+    <div className="rounded-xl border border-dashed p-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-medium">Audit input data</p>
+          <p className="text-sm text-muted-foreground">
+            Upload any CSV or define your own columns and data types.
+          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <Badge variant="secondary">{dataset.columns.length} columns</Badge>
+            <Badge variant="secondary">{dataset.rows.length} rows</Badge>
+            <Badge variant="outline">{dataset.source === "csv" ? "CSV upload" : "Manual"}</Badge>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {dataset.source === "csv" ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onChange(createManualAuditDataset())}
+            >
+              Clear & enter manually
+            </Button>
+          ) : null}
+          <Button variant="outline" asChild>
+            <label>
+              <Upload className="size-4" />{" "}
+              {dataset.source === "csv" ? "Replace CSV" : "Upload CSV"}
+              <input
+                className="hidden"
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void onUpload(file);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+          </Button>
+        </div>
+      </div>
+
+      {dataset.filename ? (
+        <p className="mt-3 text-sm">
+          <strong>{dataset.filename}</strong> · all {dataset.columns.length} headings and{" "}
+          {dataset.rows.length} data rows captured
+        </p>
+      ) : null}
+      {error ? (
+        <Alert variant="destructive" className="mt-3">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="mt-4 max-h-[420px] overflow-auto rounded-xl border">
+        <table
+          className="text-left text-xs"
+          style={{ minWidth: Math.max(640, dataset.columns.length * 220 + 64) }}
+        >
+          <thead className="sticky top-0 z-10 bg-muted">
+            <tr>
+              <th className="w-14 border-r p-2 text-center">#</th>
+              {dataset.columns.map((column, index) => (
+                <th key={column.id} className="min-w-[220px] border-r p-2 align-top">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1">
+                      <Input
+                        value={column.name}
+                        onChange={(event) => updateColumn(column.id, { name: event.target.value })}
+                        placeholder={`Column ${index + 1} name`}
+                        aria-label={`Column ${index + 1} name`}
+                        className="h-8 bg-background"
+                      />
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="size-8 shrink-0"
+                        disabled={dataset.columns.length === 1}
+                        aria-label={`Remove ${column.name || `column ${index + 1}`}`}
+                        onClick={() => removeColumn(column.id)}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                    <Select
+                      value={column.type}
+                      onValueChange={(value) =>
+                        updateColumn(column.id, { type: value as AuditDataType })
+                      }
+                    >
+                      <SelectTrigger className="h-8 bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {AUDIT_DATA_TYPES.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {dataset.rows.map((row, rowIndex) => (
+              <tr key={row.id} className="border-t">
+                <td className="border-r p-2 text-center align-middle">
+                  <div className="flex flex-col items-center gap-1">
+                    <span>{rowIndex + 1}</span>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="size-7 text-muted-foreground hover:text-destructive"
+                      disabled={dataset.rows.length === 1}
+                      aria-label={`Remove row ${rowIndex + 1}`}
+                      onClick={() =>
+                        onChange({
+                          ...dataset,
+                          rows: dataset.rows.filter((item) => item.id !== row.id),
+                        })
+                      }
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                </td>
+                {dataset.columns.map((column) => (
+                  <td key={column.id} className="border-r p-2">
+                    <DatasetCell
+                      columnType={column.type}
+                      value={row.values[column.id] ?? ""}
+                      label={`${column.name || "Column"} row ${rowIndex + 1}`}
+                      onChange={(value) => updateCell(row.id, column.id, value)}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {dataset.source === "manual" ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={dataset.columns.length >= 10}
+            onClick={addColumn}
+          >
+            <Columns3 className="size-4" /> Add column ({dataset.columns.length}/10)
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            onChange({ ...dataset, rows: [...dataset.rows, createAuditRow(dataset.columns)] })
+          }
+        >
+          <Rows3 className="size-4" /> Add row
+        </Button>
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        CSV uploads retain every heading and cell. Column names and inferred data types can be
+        corrected before assignment.
+      </p>
+    </div>
+  );
+}
+
+function DatasetCell({
+  columnType,
+  value,
+  label,
+  onChange,
+}: {
+  columnType: AuditDataType;
+  value: string;
+  label: string;
+  onChange: (value: string) => void;
+}) {
+  if (columnType === "boolean") {
+    return (
+      <Select
+        value={value || "__empty"}
+        onValueChange={(next) => onChange(next === "__empty" ? "" : next)}
+      >
+        <SelectTrigger aria-label={label}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__empty">Not set</SelectItem>
+          <SelectItem value="true">True</SelectItem>
+          <SelectItem value="false">False</SelectItem>
+        </SelectContent>
+      </Select>
+    );
+  }
+
+  const inputType =
+    columnType === "date"
+      ? "date"
+      : columnType === "datetime"
+        ? "datetime-local"
+        : columnType === "integer" || columnType === "number"
+          ? "number"
+          : "text";
+
+  return (
+    <Input
+      type={inputType}
+      step={columnType === "integer" ? 1 : columnType === "number" ? "any" : undefined}
+      value={value}
+      aria-label={label}
+      onChange={(event) => onChange(event.target.value)}
+    />
   );
 }
 
