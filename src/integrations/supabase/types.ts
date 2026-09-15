@@ -595,6 +595,7 @@ export type Database = {
           ai_config: Json
           audit_level: string
           audit_mode: string
+          audit_purpose: string | null
           calculated_fields: Json
           category: string | null
           created_at: string
@@ -603,19 +604,26 @@ export type Database = {
           evidence_config: Json
           evidence_required: boolean
           field_definitions: Json
+          hierarchy_bindings: Json
+          hierarchy_profile_id: string | null
           icon: string | null
           id: string
           instructions: string | null
           is_active: boolean
+          is_system_template: boolean
           name: string
+          operating_model: string | null
           org_id: string
           published: boolean
+          purpose_config: Json
           rules: Json
           scope_type: string
           scope_values: Json
           scoring_config: Json
           sections: Json
+          short_description: string | null
           status: string
+          subject_type: string | null
           template_type: string
           updated_at: string
           updated_by: string | null
@@ -626,6 +634,7 @@ export type Database = {
           ai_config?: Json
           audit_level?: string
           audit_mode?: string
+          audit_purpose?: string | null
           calculated_fields?: Json
           category?: string | null
           created_at?: string
@@ -634,19 +643,26 @@ export type Database = {
           evidence_config?: Json
           evidence_required?: boolean
           field_definitions?: Json
+          hierarchy_bindings?: Json
+          hierarchy_profile_id?: string | null
           icon?: string | null
           id?: string
           instructions?: string | null
           is_active?: boolean
+          is_system_template?: boolean
           name: string
+          operating_model?: string | null
           org_id: string
           published?: boolean
+          purpose_config?: Json
           rules?: Json
           scope_type?: string
           scope_values?: Json
           scoring_config?: Json
           sections?: Json
+          short_description?: string | null
           status?: string
+          subject_type?: string | null
           template_type?: string
           updated_at?: string
           updated_by?: string | null
@@ -657,6 +673,7 @@ export type Database = {
           ai_config?: Json
           audit_level?: string
           audit_mode?: string
+          audit_purpose?: string | null
           calculated_fields?: Json
           category?: string | null
           created_at?: string
@@ -665,19 +682,26 @@ export type Database = {
           evidence_config?: Json
           evidence_required?: boolean
           field_definitions?: Json
+          hierarchy_bindings?: Json
+          hierarchy_profile_id?: string | null
           icon?: string | null
           id?: string
           instructions?: string | null
           is_active?: boolean
+          is_system_template?: boolean
           name?: string
+          operating_model?: string | null
           org_id?: string
           published?: boolean
+          purpose_config?: Json
           rules?: Json
           scope_type?: string
           scope_values?: Json
           scoring_config?: Json
           sections?: Json
+          short_description?: string | null
           status?: string
+          subject_type?: string | null
           template_type?: string
           updated_at?: string
           updated_by?: string | null
@@ -685,6 +709,13 @@ export type Database = {
           workflow_settings?: Json
         }
         Relationships: [
+          {
+            foreignKeyName: "audit_templates_hierarchy_profile_id_fkey"
+            columns: ["hierarchy_profile_id"]
+            isOneToOne: false
+            referencedRelation: "hierarchy_profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "audit_templates_org_id_fkey"
             columns: ["org_id"]
@@ -1259,6 +1290,1154 @@ export type Database = {
           },
         ]
       }
+      expiry_audit_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          org_id: string
+          payload: Json
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          org_id: string
+          payload?: Json
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          org_id?: string
+          payload?: Json
+        }
+        Relationships: []
+      }
+      expiry_disposition_actions: {
+        Row: {
+          action_type: string
+          created_at: string
+          disposition_status: string
+          due_at: string | null
+          id: string
+          notes: string | null
+          org_id: string
+          owner_id: string | null
+          pos_integration_status: string
+          transfer_id: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          disposition_status?: string
+          due_at?: string | null
+          id?: string
+          notes?: string | null
+          org_id: string
+          owner_id?: string | null
+          pos_integration_status?: string
+          transfer_id: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          disposition_status?: string
+          due_at?: string | null
+          id?: string
+          notes?: string | null
+          org_id?: string
+          owner_id?: string | null
+          pos_integration_status?: string
+          transfer_id?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expiry_disposition_actions_transfer_id_fkey"
+            columns: ["transfer_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_quarantine_transfers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expiry_evidence_assets: {
+        Row: {
+          capture_source: string
+          captured_at: string | null
+          created_at: string
+          device_metadata: Json
+          evidence_status: string
+          file_hash: string
+          gps_accuracy_m: number | null
+          gps_available: boolean
+          id: string
+          mime_type: string | null
+          org_id: string
+          perceptual_hash: string | null
+          received_at: string
+          retention_until: string | null
+          storage_path: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          capture_source?: string
+          captured_at?: string | null
+          created_at?: string
+          device_metadata?: Json
+          evidence_status?: string
+          file_hash: string
+          gps_accuracy_m?: number | null
+          gps_available?: boolean
+          id?: string
+          mime_type?: string | null
+          org_id: string
+          perceptual_hash?: string | null
+          received_at?: string
+          retention_until?: string | null
+          storage_path: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          capture_source?: string
+          captured_at?: string | null
+          created_at?: string
+          device_metadata?: Json
+          evidence_status?: string
+          file_hash?: string
+          gps_accuracy_m?: number | null
+          gps_available?: boolean
+          id?: string
+          mime_type?: string | null
+          org_id?: string
+          perceptual_hash?: string | null
+          received_at?: string
+          retention_until?: string | null
+          storage_path?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
+      expiry_evidence_links: {
+        Row: {
+          attempt_id: string | null
+          created_at: string
+          evidence_id: string
+          id: string
+          link_type: string
+          observation_id: string | null
+          org_id: string
+          session_timestamp_ms: number | null
+        }
+        Insert: {
+          attempt_id?: string | null
+          created_at?: string
+          evidence_id: string
+          id?: string
+          link_type: string
+          observation_id?: string | null
+          org_id: string
+          session_timestamp_ms?: number | null
+        }
+        Update: {
+          attempt_id?: string | null
+          created_at?: string
+          evidence_id?: string
+          id?: string
+          link_type?: string
+          observation_id?: string | null
+          org_id?: string
+          session_timestamp_ms?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expiry_evidence_links_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_inspection_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expiry_evidence_links_evidence_id_fkey"
+            columns: ["evidence_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_evidence_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expiry_evidence_links_observation_id_fkey"
+            columns: ["observation_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_packet_observations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expiry_exceptions: {
+        Row: {
+          attempt_id: string | null
+          created_at: string
+          due_at: string | null
+          id: string
+          issue_type: string
+          location_id: string | null
+          observation_id: string | null
+          org_id: string
+          owner_id: string | null
+          quantity: number
+          severity: string
+          sku: string | null
+          sort_priority: number
+          status: string
+          store_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          attempt_id?: string | null
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          issue_type: string
+          location_id?: string | null
+          observation_id?: string | null
+          org_id: string
+          owner_id?: string | null
+          quantity?: number
+          severity?: string
+          sku?: string | null
+          sort_priority?: number
+          status?: string
+          store_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          attempt_id?: string | null
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          issue_type?: string
+          location_id?: string | null
+          observation_id?: string | null
+          org_id?: string
+          owner_id?: string | null
+          quantity?: number
+          severity?: string
+          sku?: string | null
+          sort_priority?: number
+          status?: string
+          store_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expiry_exceptions_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_inspection_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expiry_exceptions_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expiry_exceptions_observation_id_fkey"
+            columns: ["observation_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_packet_observations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expiry_exceptions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expiry_future_actions: {
+        Row: {
+          action_type: string
+          created_at: string
+          due_at: string | null
+          id: string
+          metadata: Json
+          org_id: string
+          sku: string | null
+          status: string
+          store_id: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          metadata?: Json
+          org_id: string
+          sku?: string | null
+          status?: string
+          store_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          metadata?: Json
+          org_id?: string
+          sku?: string | null
+          status?: string
+          store_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expiry_future_actions_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expiry_idempotency_keys: {
+        Row: {
+          created_at: string
+          entity_type: string
+          id: string
+          idempotency_key: string
+          org_id: string
+          result: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          entity_type: string
+          id?: string
+          idempotency_key: string
+          org_id: string
+          result?: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          entity_type?: string
+          id?: string
+          idempotency_key?: string
+          org_id?: string
+          result?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
+      expiry_inspection_assignments: {
+        Row: {
+          assurance_level: string
+          auditor_id: string
+          category_filters: Json
+          created_at: string
+          created_by: string | null
+          due_at: string | null
+          expected_stock_snapshot_at: string | null
+          expected_stock_source: string
+          id: string
+          instructions: string | null
+          location_ids: string[]
+          org_id: string
+          policy_snapshot: Json
+          policy_version_id: string | null
+          required_location_ids: string[]
+          reviewer_id: string | null
+          schedule_cron: string | null
+          schedule_type: string
+          sku_filters: Json
+          status: string
+          store_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assurance_level?: string
+          auditor_id: string
+          category_filters?: Json
+          created_at?: string
+          created_by?: string | null
+          due_at?: string | null
+          expected_stock_snapshot_at?: string | null
+          expected_stock_source?: string
+          id?: string
+          instructions?: string | null
+          location_ids?: string[]
+          org_id: string
+          policy_snapshot?: Json
+          policy_version_id?: string | null
+          required_location_ids?: string[]
+          reviewer_id?: string | null
+          schedule_cron?: string | null
+          schedule_type?: string
+          sku_filters?: Json
+          status?: string
+          store_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assurance_level?: string
+          auditor_id?: string
+          category_filters?: Json
+          created_at?: string
+          created_by?: string | null
+          due_at?: string | null
+          expected_stock_snapshot_at?: string | null
+          expected_stock_source?: string
+          id?: string
+          instructions?: string | null
+          location_ids?: string[]
+          org_id?: string
+          policy_snapshot?: Json
+          policy_version_id?: string | null
+          required_location_ids?: string[]
+          reviewer_id?: string | null
+          schedule_cron?: string | null
+          schedule_type?: string
+          sku_filters?: Json
+          status?: string
+          store_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expiry_inspection_assignments_policy_version_id_fkey"
+            columns: ["policy_version_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_policy_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expiry_inspection_assignments_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expiry_inspection_attempts: {
+        Row: {
+          actual_quantity: number | null
+          assignment_id: string
+          assurance_fallback: string | null
+          assurance_level: string
+          attempt_number: number
+          auditor_id: string
+          barcode: string | null
+          coverage_statement: string | null
+          created_at: string
+          disposition_status: string
+          due_at: string | null
+          expected_quantity: number
+          id: string
+          inspection_status: string
+          location_coverage: Json
+          location_id: string | null
+          observations_count: number
+          org_id: string
+          parent_attempt_id: string | null
+          physical_count: number | null
+          policy_snapshot: Json
+          product_name: string | null
+          quantity_discrepancy_reason: string | null
+          removal_status: string
+          remove_count: number
+          reviewer_id: string | null
+          sellable_count: number
+          sku: string
+          store_fully_checked: boolean
+          store_id: string
+          submitted_at: string | null
+          sync_status: string
+          unable_to_inspect_reason: string | null
+          unresolved_count: number
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+          version: number
+          wizard_step: number
+        }
+        Insert: {
+          actual_quantity?: number | null
+          assignment_id: string
+          assurance_fallback?: string | null
+          assurance_level?: string
+          attempt_number?: number
+          auditor_id: string
+          barcode?: string | null
+          coverage_statement?: string | null
+          created_at?: string
+          disposition_status?: string
+          due_at?: string | null
+          expected_quantity?: number
+          id?: string
+          inspection_status?: string
+          location_coverage?: Json
+          location_id?: string | null
+          observations_count?: number
+          org_id: string
+          parent_attempt_id?: string | null
+          physical_count?: number | null
+          policy_snapshot?: Json
+          product_name?: string | null
+          quantity_discrepancy_reason?: string | null
+          removal_status?: string
+          remove_count?: number
+          reviewer_id?: string | null
+          sellable_count?: number
+          sku?: string
+          store_fully_checked?: boolean
+          store_id: string
+          submitted_at?: string | null
+          sync_status?: string
+          unable_to_inspect_reason?: string | null
+          unresolved_count?: number
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          version?: number
+          wizard_step?: number
+        }
+        Update: {
+          actual_quantity?: number | null
+          assignment_id?: string
+          assurance_fallback?: string | null
+          assurance_level?: string
+          attempt_number?: number
+          auditor_id?: string
+          barcode?: string | null
+          coverage_statement?: string | null
+          created_at?: string
+          disposition_status?: string
+          due_at?: string | null
+          expected_quantity?: number
+          id?: string
+          inspection_status?: string
+          location_coverage?: Json
+          location_id?: string | null
+          observations_count?: number
+          org_id?: string
+          parent_attempt_id?: string | null
+          physical_count?: number | null
+          policy_snapshot?: Json
+          product_name?: string | null
+          quantity_discrepancy_reason?: string | null
+          removal_status?: string
+          remove_count?: number
+          reviewer_id?: string | null
+          sellable_count?: number
+          sku?: string
+          store_fully_checked?: boolean
+          store_id?: string
+          submitted_at?: string | null
+          sync_status?: string
+          unable_to_inspect_reason?: string | null
+          unresolved_count?: number
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          version?: number
+          wizard_step?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expiry_inspection_attempts_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_inspection_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expiry_inspection_attempts_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expiry_inspection_attempts_parent_attempt_id_fkey"
+            columns: ["parent_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_inspection_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expiry_inspection_attempts_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expiry_locations: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          location_type: string
+          org_id: string
+          store_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          location_type: string
+          org_id: string
+          store_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          location_type?: string
+          org_id?: string
+          store_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expiry_locations_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expiry_packet_observations: {
+        Row: {
+          ai_confidence: number | null
+          ai_simulated: boolean
+          ai_suggested_date: string | null
+          attempt_id: string
+          batch_lot: string | null
+          classification: string
+          created_at: string
+          created_by: string | null
+          date_type: string | null
+          duplicate_hash_flag: boolean
+          human_confirmed_date: string | null
+          human_correction: string | null
+          id: string
+          org_id: string
+          packet_ordinal: number
+          parsed_date: string | null
+          placement: string | null
+          raw_date_text: string | null
+          review_status: string
+          similarity_flag: boolean
+          sku: string
+          unreadable: boolean
+          updated_at: string
+          wrong_product: boolean
+        }
+        Insert: {
+          ai_confidence?: number | null
+          ai_simulated?: boolean
+          ai_suggested_date?: string | null
+          attempt_id: string
+          batch_lot?: string | null
+          classification?: string
+          created_at?: string
+          created_by?: string | null
+          date_type?: string | null
+          duplicate_hash_flag?: boolean
+          human_confirmed_date?: string | null
+          human_correction?: string | null
+          id?: string
+          org_id: string
+          packet_ordinal: number
+          parsed_date?: string | null
+          placement?: string | null
+          raw_date_text?: string | null
+          review_status?: string
+          similarity_flag?: boolean
+          sku?: string
+          unreadable?: boolean
+          updated_at?: string
+          wrong_product?: boolean
+        }
+        Update: {
+          ai_confidence?: number | null
+          ai_simulated?: boolean
+          ai_suggested_date?: string | null
+          attempt_id?: string
+          batch_lot?: string | null
+          classification?: string
+          created_at?: string
+          created_by?: string | null
+          date_type?: string | null
+          duplicate_hash_flag?: boolean
+          human_confirmed_date?: string | null
+          human_correction?: string | null
+          id?: string
+          org_id?: string
+          packet_ordinal?: number
+          parsed_date?: string | null
+          placement?: string | null
+          raw_date_text?: string | null
+          review_status?: string
+          similarity_flag?: boolean
+          sku?: string
+          unreadable?: boolean
+          updated_at?: string
+          wrong_product?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expiry_packet_observations_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_inspection_attempts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expiry_policy_versions: {
+        Row: {
+          assurance_levels: string[]
+          created_at: string
+          created_by: string | null
+          date_types: string[]
+          id: string
+          name: string
+          near_expiry_days: number
+          org_id: string
+          published_at: string | null
+          quarantine_sla_hours: number
+          required_evidence: Json
+          retention_days: number
+          rules: Json
+          status: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          assurance_levels?: string[]
+          created_at?: string
+          created_by?: string | null
+          date_types?: string[]
+          id?: string
+          name: string
+          near_expiry_days?: number
+          org_id: string
+          published_at?: string | null
+          quarantine_sla_hours?: number
+          required_evidence?: Json
+          retention_days?: number
+          rules?: Json
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          assurance_levels?: string[]
+          created_at?: string
+          created_by?: string | null
+          date_types?: string[]
+          id?: string
+          name?: string
+          near_expiry_days?: number
+          org_id?: string
+          published_at?: string | null
+          quarantine_sla_hours?: number
+          required_evidence?: Json
+          retention_days?: number
+          rules?: Json
+          status?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      expiry_quarantine_containers: {
+        Row: {
+          container_code: string
+          created_at: string
+          id: string
+          org_id: string
+          quarantine_location: string
+          seal_id: string | null
+          store_id: string
+        }
+        Insert: {
+          container_code: string
+          created_at?: string
+          id?: string
+          org_id: string
+          quarantine_location: string
+          seal_id?: string | null
+          store_id: string
+        }
+        Update: {
+          container_code?: string
+          created_at?: string
+          id?: string
+          org_id?: string
+          quarantine_location?: string
+          seal_id?: string | null
+          store_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expiry_quarantine_containers_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expiry_quarantine_receipts: {
+        Row: {
+          created_at: string
+          id: string
+          mismatch_quantity: number | null
+          mismatch_reason: string | null
+          org_id: string
+          received_at: string
+          received_quantity: number
+          receiver_id: string
+          transfer_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mismatch_quantity?: number | null
+          mismatch_reason?: string | null
+          org_id: string
+          received_at?: string
+          received_quantity: number
+          receiver_id: string
+          transfer_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mismatch_quantity?: number | null
+          mismatch_reason?: string | null
+          org_id?: string
+          received_at?: string
+          received_quantity?: number
+          receiver_id?: string
+          transfer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expiry_quarantine_receipts_transfer_id_fkey"
+            columns: ["transfer_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_quarantine_transfers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expiry_quarantine_transfers: {
+        Row: {
+          attempt_id: string
+          container_id: string
+          created_at: string
+          id: string
+          org_id: string
+          quantity: number
+          receiver_id: string | null
+          removal_reason: string
+          sender_id: string
+          sku: string
+          transfer_status: string
+          transferred_at: string
+        }
+        Insert: {
+          attempt_id: string
+          container_id: string
+          created_at?: string
+          id?: string
+          org_id: string
+          quantity: number
+          receiver_id?: string | null
+          removal_reason: string
+          sender_id: string
+          sku: string
+          transfer_status?: string
+          transferred_at?: string
+        }
+        Update: {
+          attempt_id?: string
+          container_id?: string
+          created_at?: string
+          id?: string
+          org_id?: string
+          quantity?: number
+          receiver_id?: string | null
+          removal_reason?: string
+          sender_id?: string
+          sku?: string
+          transfer_status?: string
+          transferred_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expiry_quarantine_transfers_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_inspection_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expiry_quarantine_transfers_container_id_fkey"
+            columns: ["container_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_quarantine_containers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expiry_recheck_assignments: {
+        Row: {
+          assigned_to: string
+          created_at: string
+          created_by: string | null
+          id: string
+          new_attempt_id: string | null
+          org_id: string
+          original_attempt_id: string
+          reason: string | null
+        }
+        Insert: {
+          assigned_to: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_attempt_id?: string | null
+          org_id: string
+          original_attempt_id: string
+          reason?: string | null
+        }
+        Update: {
+          assigned_to?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_attempt_id?: string | null
+          org_id?: string
+          original_attempt_id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expiry_recheck_assignments_new_attempt_id_fkey"
+            columns: ["new_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_inspection_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expiry_recheck_assignments_original_attempt_id_fkey"
+            columns: ["original_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_inspection_attempts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expiry_review_decisions: {
+        Row: {
+          attempt_id: string
+          comment: string | null
+          created_at: string
+          decided_by: string
+          decision_type: string
+          id: string
+          observation_id: string | null
+          org_id: string
+        }
+        Insert: {
+          attempt_id: string
+          comment?: string | null
+          created_at?: string
+          decided_by: string
+          decision_type: string
+          id?: string
+          observation_id?: string | null
+          org_id: string
+        }
+        Update: {
+          attempt_id?: string
+          comment?: string | null
+          created_at?: string
+          decided_by?: string
+          decision_type?: string
+          id?: string
+          observation_id?: string | null
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expiry_review_decisions_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_inspection_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expiry_review_decisions_observation_id_fkey"
+            columns: ["observation_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_packet_observations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expiry_role_grants: {
+        Row: {
+          created_at: string
+          grant_role: string
+          id: string
+          org_id: string
+          store_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          grant_role: string
+          id?: string
+          org_id: string
+          store_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          grant_role?: string
+          id?: string
+          org_id?: string
+          store_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expiry_role_grants_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expiry_stock_baselines: {
+        Row: {
+          attempt_id: string
+          created_at: string
+          expected_quantity: number
+          id: string
+          metadata: Json
+          org_id: string
+          snapshot_at: string
+          source: string
+        }
+        Insert: {
+          attempt_id: string
+          created_at?: string
+          expected_quantity?: number
+          id?: string
+          metadata?: Json
+          org_id: string
+          snapshot_at?: string
+          source?: string
+        }
+        Update: {
+          attempt_id?: string
+          created_at?: string
+          expected_quantity?: number
+          id?: string
+          metadata?: Json
+          org_id?: string
+          snapshot_at?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expiry_stock_baselines_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_inspection_attempts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expiry_stock_movement_adjustments: {
+        Row: {
+          adjustment_type: string
+          attempt_id: string
+          id: string
+          org_id: string
+          quantity_delta: number
+          reason: string | null
+          recorded_at: string
+          recorded_by: string | null
+        }
+        Insert: {
+          adjustment_type: string
+          attempt_id: string
+          id?: string
+          org_id: string
+          quantity_delta: number
+          reason?: string | null
+          recorded_at?: string
+          recorded_by?: string | null
+        }
+        Update: {
+          adjustment_type?: string
+          attempt_id?: string
+          id?: string
+          org_id?: string
+          quantity_delta?: number
+          reason?: string | null
+          recorded_at?: string
+          recorded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expiry_stock_movement_adjustments_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "expiry_inspection_attempts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       findings: {
         Row: {
           actual_value: number | null
@@ -1447,6 +2626,153 @@ export type Database = {
           variant?: string
         }
         Relationships: []
+      }
+      hierarchy_nodes: {
+        Row: {
+          active: boolean
+          address: string | null
+          city: string | null
+          code: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          external_id: string | null
+          external_type: string | null
+          id: string
+          latitude: number | null
+          level_key: string
+          longitude: number | null
+          metadata: Json
+          name: string
+          org_id: string
+          parent_id: string | null
+          postal_code: string | null
+          profile_id: string
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          address?: string | null
+          city?: string | null
+          code?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          external_id?: string | null
+          external_type?: string | null
+          id?: string
+          latitude?: number | null
+          level_key: string
+          longitude?: number | null
+          metadata?: Json
+          name: string
+          org_id: string
+          parent_id?: string | null
+          postal_code?: string | null
+          profile_id: string
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          address?: string | null
+          city?: string | null
+          code?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          external_id?: string | null
+          external_type?: string | null
+          id?: string
+          latitude?: number | null
+          level_key?: string
+          longitude?: number | null
+          metadata?: Json
+          name?: string
+          org_id?: string
+          parent_id?: string | null
+          postal_code?: string | null
+          profile_id?: string
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hierarchy_nodes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hierarchy_nodes_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "hierarchy_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hierarchy_nodes_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "hierarchy_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hierarchy_profiles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_default: boolean
+          is_system: boolean
+          levels: Json
+          name: string
+          operating_model: string
+          org_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          is_system?: boolean
+          levels?: Json
+          name: string
+          operating_model: string
+          org_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_default?: boolean
+          is_system?: boolean
+          levels?: Json
+          name?: string
+          operating_model?: string
+          org_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hierarchy_profiles_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       landing_demo_sessions: {
         Row: {
@@ -2324,12 +3650,17 @@ export type Database = {
           audit_mode: string
           completed_at: string | null
           created_at: string
+          creation_source: string
           due_at: string | null
+          evidence_policy: Json
           id: string
+          input_source: string | null
           instructions: string | null
           last_compliance_percent: number | null
           org_id: string
           planogram_version_id: string | null
+          require_rca: boolean
+          reviewer_id: string | null
           scan_attempts: number
           scan_id: string | null
           scope_type: string
@@ -2350,12 +3681,17 @@ export type Database = {
           audit_mode?: string
           completed_at?: string | null
           created_at?: string
+          creation_source?: string
           due_at?: string | null
+          evidence_policy?: Json
           id?: string
+          input_source?: string | null
           instructions?: string | null
           last_compliance_percent?: number | null
           org_id: string
           planogram_version_id?: string | null
+          require_rca?: boolean
+          reviewer_id?: string | null
           scan_attempts?: number
           scan_id?: string | null
           scope_type: string
@@ -2376,12 +3712,17 @@ export type Database = {
           audit_mode?: string
           completed_at?: string | null
           created_at?: string
+          creation_source?: string
           due_at?: string | null
+          evidence_policy?: Json
           id?: string
+          input_source?: string | null
           instructions?: string | null
           last_compliance_percent?: number | null
           org_id?: string
           planogram_version_id?: string | null
+          require_rca?: boolean
+          reviewer_id?: string | null
           scan_attempts?: number
           scan_id?: string | null
           scope_type?: string
@@ -3226,6 +4567,33 @@ export type Database = {
         Args: { p_org_id: string }
         Returns: undefined
       }
+      expiry_demo_clock: { Args: never; Returns: string }
+      expiry_is_reviewer: {
+        Args: { p_org_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      expiry_is_supervisor: {
+        Args: { p_org_id: string; p_store_id?: string; p_user_id: string }
+        Returns: boolean
+      }
+      expiry_overview_metrics: {
+        Args: { p_org_id: string; p_store_id?: string }
+        Returns: Json
+      }
+      expiry_reconciliation_ok: {
+        Args: { p_attempt_id: string }
+        Returns: boolean
+      }
+      expiry_transition: {
+        Args: {
+          p_action: string
+          p_entity_id: string
+          p_entity_type: string
+          p_idempotency_key?: string
+          p_payload?: Json
+        }
+        Returns: Json
+      }
       free_plan_scan_status: {
         Args: { _org_id: string }
         Returns: {
@@ -3292,16 +4660,72 @@ export type Database = {
         Args: { _org_id: string }
         Returns: undefined
       }
+      search_hierarchy_nodes: {
+        Args: {
+          p_active_only?: boolean
+          p_level_key?: string
+          p_limit?: number
+          p_parent_id?: string
+          p_profile_id: string
+          p_query?: string
+        }
+        Returns: {
+          active: boolean
+          address: string | null
+          city: string | null
+          code: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          external_id: string | null
+          external_type: string | null
+          id: string
+          latitude: number | null
+          level_key: string
+          longitude: number | null
+          metadata: Json
+          name: string
+          org_id: string
+          parent_id: string | null
+          postal_code: string | null
+          profile_id: string
+          state: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "hierarchy_nodes"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      seed_expiry_demo_scenario: {
+        Args: { p_org_id: string; p_user_id: string }
+        Returns: Json
+      }
       seed_fnv_qc_template: { Args: { p_org_id: string }; Returns: string }
+      seed_hierarchy_profiles: { Args: { p_org_id: string }; Returns: Json }
       should_show_onboarding: { Args: { p_user_id?: string }; Returns: boolean }
       sla_hours_for_severity: {
         Args: { p_org_id: string; p_severity: string }
         Returns: number
       }
+      sync_expiry_findings: {
+        Args: { p_attempt_id: string }
+        Returns: undefined
+      }
       sync_findings_for_scan: { Args: { p_scan_id: string }; Returns: number }
+      sync_stores_to_hierarchy: {
+        Args: { p_org_id: string; p_profile_id: string }
+        Returns: number
+      }
       user_email_has_platform_bypass: {
         Args: { _email: string }
         Returns: boolean
+      }
+      validate_assignment_rca: {
+        Args: { p_assignment_id: string }
+        Returns: Json
       }
     }
     Enums: {
