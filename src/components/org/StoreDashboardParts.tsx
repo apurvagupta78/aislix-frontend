@@ -201,7 +201,7 @@ export function StoreRecentScans({ storeId }: { storeId: string }) {
           description="Capture a shelf photo to generate this store's first audit."
           action={
             <Button asChild variant="brand" size="sm" className="rounded-xl">
-              <Link to="/scan">Start an audit</Link>
+              <Link to="/new-audit">Start an audit</Link>
             </Button>
           }
         />

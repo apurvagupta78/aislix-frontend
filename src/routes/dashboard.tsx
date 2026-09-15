@@ -143,7 +143,7 @@ function Dashboard() {
               <Link to="/history">Audit History</Link>
             </Button>
             <Button asChild variant="brand" size="sm" className="rounded-xl">
-              <Link to="/scan">
+              <Link to="/new-audit">
                 Start new audit <span aria-hidden>→</span>
               </Link>
             </Button>
@@ -276,7 +276,7 @@ function DashboardMain({
               description="Run a digital or AI-assisted audit to start tracking scorecards, exceptions and store performance."
               action={
                 <Button asChild variant="brand" size="sm" className="rounded-xl">
-                  <Link to="/scan">
+                  <Link to="/new-audit">
                     Start new audit <span aria-hidden>→</span>
                   </Link>
                 </Button>

@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard },
-  { label: "New audit", to: "/scan", icon: Plus },
+  { label: "New audit", to: "/new-audit", icon: Plus },
   { label: "Audit history", to: "/history", icon: History },
   { label: "Assigned audits", to: "/my-scans", icon: ClipboardCheck },
 ];

@@ -163,7 +163,7 @@ export function KpiCards({
         description="Run your first shelf audit to start populating dashboard metrics."
         action={
           <Button asChild variant="brand" size="sm" className="rounded-xl">
-            <Link to="/scan">Start an audit</Link>
+            <Link to="/new-audit">Start an audit</Link>
           </Button>
         }
       />
@@ -209,7 +209,7 @@ export function KpiCards({
 
 const quickActions = [
   {
-    to: "/scan",
+    to: "/new-audit",
     title: "Start new audit",
     description: "Capture or upload a shelf photo.",
     icon: ScanLine,
@@ -245,7 +245,7 @@ const quickActions = [
     icon: Users,
   },
   {
-    to: "/scan",
+    to: "/new-audit",
     title: "Import master shelf setup",
     description: "Upload a role-specific master setup and configure an audit faster.",
     icon: ClipboardList,

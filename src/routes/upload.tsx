@@ -2,6 +2,6 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/upload")({
   beforeLoad: () => {
-    throw redirect({ to: "/scan" });
+    throw redirect({ to: "/new-audit" });
   },
 });

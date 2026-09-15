@@ -451,7 +451,7 @@ export function RecentAuditsSection({
               description="Try changing your filters or complete a new shelf audit."
               action={
                 <Button asChild variant="brand" size="sm" className="rounded-xl">
-                  <Link to="/scan">
+                  <Link to="/new-audit">
                     Start New Audit <ArrowRight className="size-3.5" />
                   </Link>
                 </Button>

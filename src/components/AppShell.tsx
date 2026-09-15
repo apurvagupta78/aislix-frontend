@@ -658,7 +658,7 @@ export function AppShell({
                 </form>
                 <div className="ml-auto flex items-center gap-2">
                   <Button asChild variant="brand" size="sm" className="rounded-xl">
-                    <Link to="/scan">New audit</Link>
+                    <Link to="/new-audit">New audit</Link>
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

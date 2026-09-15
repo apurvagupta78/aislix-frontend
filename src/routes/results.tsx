@@ -204,7 +204,7 @@ function Results() {
           action={
             <div className="flex flex-wrap justify-center gap-2">
               <Button asChild variant="brand" size="sm" className="rounded-xl">
-                <Link to="/scan">Start a new audit</Link>
+                <Link to="/new-audit">Start a new audit</Link>
               </Button>
               <Button asChild variant="subtle" size="sm" className="rounded-xl">
                 <Link to="/history">Browse audit history</Link>
@@ -385,7 +385,7 @@ function FailedState({ scanId, onRetried }: { scanId: string; onRetried: () => v
           {retrying ? "Retrying analysis" : "Retry analysis"}
         </Button>
         <Button asChild variant="subtle" size="sm" className="rounded-xl">
-          <Link to="/scan">Start a new audit</Link>
+          <Link to="/new-audit">Start a new audit</Link>
         </Button>
       </div>
     </div>

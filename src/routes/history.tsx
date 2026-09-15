@@ -506,7 +506,7 @@ function HistoryPage() {
               }
               action={
                 <Button variant="brand" size="sm" className="rounded-xl" asChild>
-                  <Link to="/scan">New audit</Link>
+                  <Link to="/new-audit">New audit</Link>
                 </Button>
               }
             />

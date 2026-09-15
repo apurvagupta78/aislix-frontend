@@ -281,7 +281,7 @@ export function ReportsLibrary() {
           }
           action={
             <Button asChild variant="brand" size="sm" className="rounded-xl">
-              <Link to="/scan">Start an audit</Link>
+              <Link to="/new-audit">Start an audit</Link>
             </Button>
           }
         />

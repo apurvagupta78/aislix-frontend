@@ -201,7 +201,7 @@ export function RecentScansTable({ demoData }: { demoData?: RecentScansResponse 
             icon={<SearchX className="size-5" />}
             action={
               <Button asChild variant="brand" size="sm" className="rounded-xl">
-                <Link to="/scan">Start new audit</Link>
+                <Link to="/new-audit">Start new audit</Link>
               </Button>
             }
           />

@@ -67,7 +67,7 @@ export function FieldDashboardPanel() {
           </Link>
         </Button>
         <Button asChild variant="subtle" size="sm" className="rounded-xl">
-          <Link to="/scan">
+          <Link to="/new-audit">
             <ScanLine className="mr-2 size-4" /> Start audit
           </Link>
         </Button>

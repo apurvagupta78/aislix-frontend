@@ -252,7 +252,7 @@ export function ResultNavigation() {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Button asChild variant="brand" size="sm" className="rounded-xl">
-        <Link to="/scan">
+        <Link to="/new-audit">
           <ScanLine className="size-4" /> Audit again
         </Link>
       </Button>
