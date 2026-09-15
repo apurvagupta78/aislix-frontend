@@ -61,82 +61,15 @@ import { formatAssignmentId } from "@/components/AssignmentId";
 import { GlobalFilterBarShell } from "@/components/filters/GlobalFilterBarShell";
 import { Badge } from "@/components/ui/badge";
 import { GlobalFilterProvider } from "@/lib/global-filters";
+import { APP_NAV_SECTIONS, type NavItemConfig, type NavLeafConfig, type NavSectionConfig } from "@/lib/navigation/app-nav";
 
 type LucideIcon = typeof Bell;
+type NavLeaf = NavLeafConfig & { icon?: LucideIcon };
+type NavParent = Extract<NavItemConfig, { kind: "parent" }>;
+type NavItem = NavItemConfig;
+type NavSection = NavSectionConfig;
 
-type NavLeaf = {
-  kind: "leaf";
-  label: string;
-  to: string;
-  search?: Record<string, string>;
-  icon?: LucideIcon;
-  managerOnly?: boolean;
-  /** Badge only renders when the resolved count is > 0. */
-  badge?: "open-tasks";
-};
-
-type NavParent = {
-  kind: "parent";
-  label: string;
-  icon?: LucideIcon;
-  managerOnly?: boolean;
-  badge?: "open-tasks";
-  children: NavLeaf[];
-};
-
-type NavItem = NavLeaf | NavParent;
-
-type NavSection = {
-  id: string;
-  label: string;
-  icon: LucideIcon;
-  managerOnly?: boolean;
-  items: NavItem[];
-};
-
-const DASHBOARD_LEAF: NavLeaf = {
-  kind: "leaf",
-  label: "Dashboard",
-  to: "/dashboard",
-  icon: LayoutDashboard,
-};
-
-const SECTIONS: NavSection[] = [
-  {
-    id: "new-audit",
-    label: "New Audit",
-    icon: Plus,
-    items: [{ kind: "leaf", label: "Create or assign audit", to: "/new-audit", icon: Plus }],
-  },
-  {
-    id: "audits",
-    label: "Audits",
-    icon: ClipboardCheck,
-    items: [
-      {
-        kind: "leaf",
-        label: "Audit workspace",
-        to: "/audits",
-        badge: "open-tasks",
-      },
-    ],
-  },
-  {
-    id: "actions",
-    label: "Actions",
-    icon: Wrench,
-    items: [
-      { kind: "leaf", label: "Findings & action workspace", to: "/actions", icon: AlertTriangle },
-    ],
-  },
-  {
-    id: "manage",
-    label: "Manage",
-    icon: Settings,
-    managerOnly: true,
-    items: [{ kind: "leaf", label: "Management workspace", to: "/manage", icon: Store }],
-  },
-];
+const SECTIONS: NavSection[] = APP_NAV_SECTIONS;
 
 const OPEN_SECTION_KEY = "nav_open_section";
 
@@ -183,12 +116,16 @@ function SidebarNav({
   const activeTab = new URLSearchParams(searchStr).get("tab");
 
   const leafActive = (leaf: NavLeaf) => {
-    if (pathname !== leaf.to) return false;
-    const tab = leaf.search?.["tab"];
-    if (!tab) return true;
-    if (activeTab) return activeTab === tab;
-    // No tab in the URL: the first child is the default landing tab.
-    return tab === "assigned" || tab === "assignments";
+    if (leaf.to === "/dashboard") {
+      return pathname === "/dashboard" || pathname === "/dashboard/";
+    }
+    if (pathname === leaf.to) {
+      const tab = leaf.search?.["tab"];
+      if (!tab) return true;
+      if (activeTab) return activeTab === tab;
+      return tab === "assigned" || tab === "assignments";
+    }
+    return pathname.startsWith(`${leaf.to}/`);
   };
 
   const itemActive = (item: NavItem): boolean =>
@@ -279,21 +216,6 @@ function SidebarNav({
   if (rail) {
     return (
       <nav className="flex flex-col items-center gap-1">
-        <RailTooltip label="Dashboard">
-          <Link
-            to={DASHBOARD_LEAF.to}
-            onClick={onNavigate}
-            aria-label="Dashboard"
-            className={cn(
-              "flex size-10 items-center justify-center rounded-xl transition-colors",
-              pathname === DASHBOARD_LEAF.to
-                ? "bg-brand-soft text-brand"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground",
-            )}
-          >
-            <LayoutDashboard className="size-4" />
-          </Link>
-        </RailTooltip>
         {visibleSections.map((section) => (
           <Popover key={section.id}>
             <PopoverTrigger asChild>
@@ -348,19 +270,6 @@ function SidebarNav({
 
   return (
     <nav className="flex flex-col gap-0.5">
-      <Link
-        to={DASHBOARD_LEAF.to}
-        onClick={onNavigate}
-        className={cn(
-          "flex items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm transition-colors",
-          pathname === DASHBOARD_LEAF.to
-            ? "font-medium text-brand"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground",
-        )}
-      >
-        <LayoutDashboard className="size-4" />
-        <span className="flex-1 truncate">Dashboard</span>
-      </Link>
       {visibleSections.map((section) => {
         const open = openSection === section.id;
         return (

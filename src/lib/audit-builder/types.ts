@@ -4,6 +4,153 @@
 
 export type TemplateStatus = "draft" | "published" | "archived";
 
+export type OperatingModel =
+  | "local_store"
+  | "supermarket"
+  | "dark_store"
+  | "warehouse"
+  | "fmcg_distributor"
+  | "custom";
+
+export type AuditMethod = "digital" | "ai" | "ai_assisted";
+
+export type AuditPurpose =
+  | "outlet_visit"
+  | "distributor"
+  | "stock"
+  | "inventory"
+  | "availability"
+  | "oos"
+  | "retail_execution"
+  | "merchandising"
+  | "shelf"
+  | "planogram"
+  | "pricing"
+  | "promotion"
+  | "posm"
+  | "visibility"
+  | "expiry"
+  | "fnv_qc"
+  | "competitor"
+  | "new_product_launch"
+  | "order_distribution"
+  | "scheme_compliance"
+  | "outlet_compliance"
+  | "receiving"
+  | "putaway"
+  | "picking"
+  | "dispatch"
+  | "custom";
+
+export type AuditSubjectType =
+  | "audit"
+  | "store"
+  | "outlet"
+  | "distributor"
+  | "warehouse"
+  | "sku"
+  | "product"
+  | "batch"
+  | "shelf"
+  | "rack"
+  | "bin"
+  | "shipment"
+  | "purchase_order"
+  | "order"
+  | "unit"
+  | "custom";
+
+export type FieldCategoryId =
+  | "organization_hierarchy"
+  | "audit_metadata"
+  | "people"
+  | "location"
+  | "outlet"
+  | "product_sku"
+  | "brand"
+  | "inventory"
+  | "sales"
+  | "availability"
+  | "shelf_merchandising"
+  | "planogram"
+  | "pricing"
+  | "promotion"
+  | "posm_visibility"
+  | "expiry_batch"
+  | "quality_fnv"
+  | "warehouse"
+  | "receiving"
+  | "picking_dispatch"
+  | "evidence"
+  | "identification"
+  | "investigation"
+  | "corrective_action"
+  | "scoring"
+  | "calculated"
+  | "system"
+  | "ai";
+
+export type MasterDataSource =
+  | "organization"
+  | "hierarchy"
+  | "employee"
+  | "store"
+  | "outlet"
+  | "distributor"
+  | "warehouse"
+  | "product"
+  | "brand"
+  | "category"
+  | "promotion"
+  | "custom";
+
+export type StandardFieldConcept =
+  | "expected_quantity"
+  | "actual_quantity"
+  | "physical_quantity"
+  | "variance_units"
+  | "variance_percent"
+  | "mrp"
+  | "potential_value_variance"
+  | "expiry_date"
+  | "days_remaining"
+  | "expiry_status"
+  | "sku_id"
+  | "product_name"
+  | "availability"
+  | "oos"
+  | "expected_facing"
+  | "actual_facing"
+  | "facing_variance"
+  | "planogram_compliance"
+  | "price_compliance"
+  | "promotion_compliance"
+  | "posm_compliance"
+  | "qc_status"
+  | "finding_type"
+  | "rca"
+  | "evidence"
+  | "gps"
+  | "audit_status"
+  | "sales_value"
+  | "sales_target"
+  | "target_achievement"
+  | "growth_percent"
+  | "custom";
+
+export type HierarchyLevelConfig = {
+  key: string;
+  label: string;
+  order: number;
+  required?: boolean;
+  masterDataSource?: MasterDataSource;
+};
+
+export type AuditHierarchyConfig = {
+  definitionId?: string | null;
+  levels: HierarchyLevelConfig[];
+};
+
 export type AuditLevel =
   | "one_per_audit"
   | "one_per_sku"
@@ -120,6 +267,14 @@ export type FieldConfig = {
   imageQualityCheck?: boolean;
   visible?: boolean;
   readOnly?: boolean;
+  masterDataSource?: MasterDataSource;
+  searchable?: boolean;
+  filterable?: boolean;
+  reportInclusion?: boolean;
+  sensitivity?: "standard" | "business_sensitive";
+  standardConcept?: StandardFieldConcept | string;
+  aiFeature?: string;
+  requireHumanConfirmation?: boolean;
 };
 
 export type AuditResponseValue = string | number | boolean | string[] | null;
@@ -147,9 +302,32 @@ export type TemplateField = {
   formula?: string;
   visibleWhen?: VisibilityRule;
   quantityLinked?: boolean;
+  category?: FieldCategoryId;
+  standardConcept?: StandardFieldConcept | string;
+  masterDataSource?: MasterDataSource;
+  searchable?: boolean;
+  filterable?: boolean;
+  reportInclusion?: boolean;
 };
 
-export type RepeatBy = "sku" | "shelf" | "location" | "product" | "custom";
+export type RepeatBy =
+  | "audit"
+  | "store"
+  | "outlet"
+  | "distributor"
+  | "warehouse"
+  | "sku"
+  | "product"
+  | "batch"
+  | "shelf"
+  | "rack"
+  | "bin"
+  | "shipment"
+  | "purchase_order"
+  | "order"
+  | "unit"
+  | "location"
+  | "custom";
 
 export type TemplateSection = {
   key: string;
@@ -200,6 +378,10 @@ export type WorkflowSettings = {
   correctiveAction?: "auto" | "manual";
   slaEnabled?: boolean;
   slaHours?: number;
+  slaBySeverity?: Partial<Record<"critical" | "high" | "medium" | "low", number>>;
+  requireRcaOnVariance?: boolean;
+  requireResolutionVerification?: boolean;
+  allowIncompleteEscalation?: boolean;
 };
 
 export type ScoringBand = { min: number; label: string };
@@ -257,6 +439,15 @@ export type TemplateDefinition = {
   evidence: EvidenceConfig;
   calculatedFields: CalculatedFieldDef[];
   auditLevel: AuditLevel;
+  operatingModel?: OperatingModel;
+  purpose?: AuditPurpose;
+  method?: AuditMethod;
+  subjectType?: AuditSubjectType;
+  hierarchy?: AuditHierarchyConfig;
+  channels?: string[];
+  outletTypes?: string[];
+  findingTypes?: string[];
+  rcaOptions?: string[];
 };
 
 export type TemplateVersion = {

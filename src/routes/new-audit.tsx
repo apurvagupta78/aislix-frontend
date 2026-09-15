@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
@@ -59,9 +59,24 @@ import {
   type AuditDataType,
   type AuditInputDataset,
 } from "@/lib/audit-input-dataset";
+import type { AuditPurpose, OperatingModel } from "@/lib/audit-builder/types";
+import {
+  getFmcgDimensions,
+  getOperatingModelCard,
+  getPurposesForModel,
+  getTerminology,
+  OPERATING_MODEL_CARDS,
+} from "@/lib/audit-engine/operating-model-catalog";
+import { NewAuditTemplatePicker } from "@/components/audit-engine/NewAuditTemplatePicker";
+import { ensureSystemTemplate } from "@/lib/audit-engine/seed-templates";
+import { getRecommendedTemplates, getSystemTemplateSpec } from "@/lib/audit-engine/template-factory";
 
 export const Route = createFileRoute("/new-audit")({
   head: () => ({ meta: [{ title: "New Audit — Aislix" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    templateId: typeof search.templateId === "string" ? search.templateId : undefined,
+    systemKey: typeof search.systemKey === "string" ? search.systemKey : undefined,
+  }),
   component: NewAuditPage,
 });
 
@@ -69,17 +84,34 @@ type Method = "digital" | "ai";
 type TemplateChoice = "general" | "fnv" | "expiry" | "planogram" | string;
 
 const steps = [
-  { id: 1, label: "Method & template", icon: Sparkles },
-  { id: 2, label: "Scope & input", icon: FileSpreadsheet },
-  { id: 3, label: "Evidence & RCA", icon: ShieldCheck },
-  { id: 4, label: "Assign & review", icon: Users },
+  { id: 1, label: "What are you auditing?", icon: Sparkles },
+  { id: 2, label: "Scope", icon: FileSpreadsheet },
+  { id: 3, label: "Verification", icon: ShieldCheck },
+  { id: 4, label: "Assign & Review", icon: Users },
 ];
 
 function NewAuditPage() {
   const navigate = useNavigate();
+  const { templateId: initialTemplateId, systemKey: initialSystemKey } = Route.useSearch();
   const [step, setStep] = useState(1);
+  const [operatingModel, setOperatingModel] = useState<OperatingModel>(() => {
+    if (initialSystemKey) {
+      return getSystemTemplateSpec(initialSystemKey)?.operatingModel ?? "local_store";
+    }
+    return "local_store";
+  });
+  const [auditPurpose, setAuditPurpose] = useState<AuditPurpose>(() => {
+    if (initialSystemKey) {
+      return getSystemTemplateSpec(initialSystemKey)?.purpose ?? "inventory";
+    }
+    return "inventory";
+  });
   const [method, setMethod] = useState<Method>("digital");
-  const [templateChoice, setTemplateChoice] = useState<TemplateChoice>("general");
+  const [templateChoice, setTemplateChoice] = useState<TemplateChoice>(() => {
+    if (initialSystemKey) return `system:${initialSystemKey}`;
+    if (initialTemplateId) return initialTemplateId;
+    return "general";
+  });
   const [storeId, setStoreId] = useState("");
   const [location, setLocation] = useState("Main shelf");
   const [category, setCategory] = useState("");
@@ -110,27 +142,54 @@ function NewAuditPage() {
     queryFn: () => fetchAuditTemplates({ status: "published", activeOnly: true }),
   });
 
+  const purposeOptions = getPurposesForModel(operatingModel);
+  const terminology = getTerminology(operatingModel);
+  const filteredPublishedTemplates = (templatesQuery.data ?? []).filter(
+    (t) => !t.operating_model || t.operating_model === operatingModel,
+  );
+
+  useEffect(() => {
+    if (initialSystemKey || initialTemplateId) return;
+    const recommended = getRecommendedTemplates(operatingModel, auditPurpose);
+    const first = recommended[0];
+    if (first) setTemplateChoice(`system:${first.key}`);
+  }, [operatingModel, auditPurpose, initialSystemKey, initialTemplateId]);
+
+  const systemTemplateKey = templateChoice.startsWith("system:")
+    ? templateChoice.slice("system:".length)
+    : null;
+  const systemTemplateSpec = systemTemplateKey
+    ? getSystemTemplateSpec(systemTemplateKey)
+    : null;
   const selectedTemplate =
     templateChoice === "fnv"
-      ? templatesQuery.data?.find(
+      ? filteredPublishedTemplates.find(
           (t) => t.template_type === "fnv_qc_audit" || t.name.toLowerCase().includes("fnv"),
         )
       : templateChoice === "planogram"
-        ? templatesQuery.data?.find((t) => t.name.toLowerCase().includes("planogram"))
-        : templatesQuery.data?.find((t) => t.id === templateChoice);
+        ? filteredPublishedTemplates.find((t) => t.name.toLowerCase().includes("planogram"))
+        : templateChoice.startsWith("system:")
+          ? null
+          : filteredPublishedTemplates.find((t) => t.id === templateChoice);
+  const systemTemplateDefinition = useMemo(
+    () => (systemTemplateSpec ? systemTemplateSpec.build() : null),
+    [systemTemplateSpec],
+  );
   const effectivePolicy = useMemo(
     () =>
       mergeTemplateMinimum(
         evidencePolicy,
-        selectedTemplate?.evidence_config
+        selectedTemplate?.evidence_config || systemTemplateDefinition?.evidence
           ? {
-              requiredProof: selectedTemplate.evidence_required
-                ? ["context_photo" as EvidenceProof]
-                : [],
+              requiredProof:
+                selectedTemplate?.evidence_required ||
+                systemTemplateDefinition?.evidence?.photoRequired
+                  ? ["context_photo" as EvidenceProof]
+                  : [],
             }
           : null,
       ),
-    [evidencePolicy, selectedTemplate],
+    [evidencePolicy, selectedTemplate, systemTemplateDefinition],
   );
   const datasetError = validateAuditDataset(dataset, { manualColumnLimit: 10 });
 
@@ -184,7 +243,14 @@ function NewAuditPage() {
         return { assignmentId: attemptId, self: assignToSelf, expiry: true };
       }
 
-      if (method === "digital" && !selectedTemplate && datasetError) {
+      let templateForAssignment = selectedTemplate;
+      if (systemTemplateKey) {
+        const ensured = await ensureSystemTemplate(systemTemplateKey);
+        if (!ensured) throw new Error("Could not load the selected system template.");
+        templateForAssignment = ensured;
+      }
+
+      if (method === "digital" && !templateForAssignment && datasetError) {
         throw new Error(datasetError);
       }
 
@@ -222,11 +288,11 @@ function NewAuditPage() {
         instructions,
         planogramVersionId,
         auditMode: method,
-        templateId: selectedTemplate?.id ?? null,
-        templateVersion: selectedTemplate?.version ?? null,
+        templateId: templateForAssignment?.id ?? null,
+        templateVersion: templateForAssignment?.version ?? null,
         templateSnapshot: {
-          ...(selectedTemplate
-            ? (selectedTemplate as unknown as Record<string, unknown>)
+          ...(templateForAssignment
+            ? (templateForAssignment as unknown as Record<string, unknown>)
             : {
                 predefined_type: templateChoice,
                 evidence_policy: effectivePolicy,
@@ -250,7 +316,7 @@ function NewAuditPage() {
           ? dataset.source === "csv"
             ? "csv_upload"
             : "manual_rows"
-          : selectedTemplate
+          : templateForAssignment
             ? "template"
             : method === "ai"
               ? "camera"
@@ -271,10 +337,10 @@ function NewAuditPage() {
       }
       if (!self) {
         void navigate({ to: "/audits", search: { tab: "reviews" } });
-      } else if (selectedTemplate) {
+      } else if (selectedTemplate || systemTemplateKey) {
         void navigate({
-          to: "/custom-audit",
-          search: { assignmentId, test: false },
+          to: "/audit/$assignmentId",
+          params: { assignmentId },
         });
       } else if (method === "digital") {
         void navigate({ to: "/digital-audit", search: { assignmentId } });
@@ -286,14 +352,22 @@ function NewAuditPage() {
       toast.error(error instanceof Error ? error.message : "Could not create audit."),
   });
 
+  const hasTemplate =
+    templateChoice !== "general" &&
+    (templateChoice.startsWith("system:") || Boolean(selectedTemplate));
+
   const canNext =
     step === 1
-      ? Boolean(method && templateChoice)
+      ? Boolean(operatingModel && auditPurpose && method && hasTemplate)
       : step === 2
         ? Boolean(
             storeId &&
             location &&
-            (method === "ai" || !datasetError || selectedTemplate || templateChoice === "expiry"),
+            (method === "ai" ||
+              !datasetError ||
+              selectedTemplate ||
+              systemTemplateKey ||
+              templateChoice === "expiry"),
           )
         : step === 3
           ? effectivePolicy.requiredProof.length > 0
@@ -332,46 +406,90 @@ function NewAuditPage() {
         {step === 1 ? (
           <section className="card-surface space-y-6 p-6">
             <div>
-              <h2 className="font-semibold">Choose audit method</h2>
+              <h2 className="font-semibold">What are you auditing?</h2>
               <p className="text-sm text-muted-foreground">
-                The evidence policy applies to both methods.
+                Choose operating model, purpose, template and capture method.
               </p>
             </div>
-            <RadioGroup
-              value={method}
-              onValueChange={(v) => setMethod(v as Method)}
-              className="grid gap-3 md:grid-cols-2"
-            >
-              <MethodCard
-                value="digital"
-                title="Digital"
-                description="Auditor records actual SKU quantities in the app or imports CSV."
-              />
-              <MethodCard
-                value="ai"
-                title="AI-assisted"
-                description="Shelf photos and camera analysis assist the auditor; human review remains visible."
-              />
-            </RadioGroup>
             <div className="space-y-2">
-              <Label>Audit template</Label>
-              <Select value={templateChoice} onValueChange={setTemplateChoice}>
+              <Label>Operating model</Label>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {OPERATING_MODEL_CARDS.map((card) => (
+                  <button
+                    key={card.id}
+                    type="button"
+                    onClick={() => {
+                      setOperatingModel(card.id);
+                      const purposes = getPurposesForModel(card.id);
+                      setAuditPurpose(purposes[0]?.value ?? "custom");
+                      setTemplateChoice("general");
+                    }}
+                    className={`rounded-xl border p-4 text-left transition ${
+                      operatingModel === card.id
+                        ? "border-brand bg-brand-soft/40"
+                        : "border-border hover:border-brand/40"
+                    }`}
+                  >
+                    <p className="font-semibold">{card.title}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{card.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {operatingModel === "fmcg_distributor" && (
+              <p className="text-xs text-muted-foreground">
+                FMCG dimensions: {getFmcgDimensions(operatingModel).join(" · ")}
+              </p>
+            )}
+            <div className="space-y-2">
+              <Label>Audit purpose</Label>
+              <Select
+                value={auditPurpose}
+                onValueChange={(v) => setAuditPurpose(v as AuditPurpose)}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="general">General audit — no template</SelectItem>
-                  <SelectItem value="fnv">Predefined — FNV quality control</SelectItem>
-                  <SelectItem value="expiry">Predefined — Expiry control</SelectItem>
-                  <SelectItem value="planogram">Predefined — Planogram compliance</SelectItem>
-                  {(templatesQuery.data ?? []).map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      Custom — {template.name} v{template.version}
+                  {purposeOptions.map((purpose) => (
+                    <SelectItem key={purpose.value} value={purpose.value}>
+                      {purpose.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+            <NewAuditTemplatePicker
+              operatingModel={operatingModel}
+              auditPurpose={auditPurpose}
+              templateChoice={templateChoice}
+              onTemplateChoice={setTemplateChoice}
+              publishedTemplates={filteredPublishedTemplates}
+            />
+            <div className="space-y-2">
+              <Label>Method</Label>
+              <RadioGroup
+                value={method}
+                onValueChange={(v) => setMethod(v as Method)}
+                className="grid gap-3 md:grid-cols-2"
+              >
+                <MethodCard
+                  value="digital"
+                  title="Digital"
+                  description="Auditor records data in the app or via CSV import."
+                />
+                <MethodCard
+                  value="ai"
+                  title="AI-assisted"
+                  description="Camera and AI assist the auditor; human confirmation required."
+                />
+              </RadioGroup>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Context: {getOperatingModelCard(operatingModel)?.title} uses{" "}
+              <strong>{terminology.location}</strong> and <strong>{terminology.subLocation}</strong>{" "}
+              terminology.
+            </p>
           </section>
         ) : null}
 

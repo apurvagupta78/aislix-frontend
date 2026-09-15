@@ -7,9 +7,12 @@ import { dbError, requireOrgId, requireUserId } from "@/lib/db/context";
 import type {
   AiConfig,
   AuditLevel,
+  AuditPurpose,
+  AuditSubjectType,
   BuilderTemplateType,
   CalculatedFieldDef,
   EvidenceConfig,
+  OperatingModel,
   ScoringConfig,
   TemplateDefinition,
   TemplateField,
@@ -50,6 +53,14 @@ export type AuditTemplate = {
   ai_config: AiConfig;
   evidence_config: EvidenceConfig;
   calculated_fields: CalculatedFieldDef[];
+  operating_model: OperatingModel | null;
+  audit_purpose: AuditPurpose | null;
+  subject_type: AuditSubjectType | null;
+  hierarchy_profile_id: string | null;
+  hierarchy_bindings: Record<string, string>;
+  is_system_template: boolean;
+  purpose_config: Record<string, unknown>;
+  short_description: string | null;
   created_by: string | null;
   updated_by: string | null;
   created_at: string;
@@ -79,12 +90,24 @@ export type AuditTemplateInput = {
   ai_config?: AiConfig;
   evidence_config?: EvidenceConfig;
   calculated_fields?: CalculatedFieldDef[];
+  operating_model?: OperatingModel | null;
+  audit_purpose?: AuditPurpose | null;
+  subject_type?: AuditSubjectType | null;
+  hierarchy_profile_id?: string | null;
+  hierarchy_bindings?: Record<string, string>;
+  is_system_template?: boolean;
+  purpose_config?: Record<string, unknown>;
+  short_description?: string | null;
 };
 
 export type TemplateListFilters = {
   search?: string;
   status?: TemplateStatus | "all";
   templateType?: string;
+  operatingModel?: OperatingModel | "all";
+  auditPurpose?: AuditPurpose | "all";
+  aiEnabled?: boolean;
+  evidenceRequired?: boolean;
   activeOnly?: boolean;
 };
 
@@ -127,6 +150,14 @@ function mapRow(row: Record<string, unknown>): AuditTemplate {
     ai_config: (row.ai_config as AiConfig) ?? {},
     evidence_config: (row.evidence_config as EvidenceConfig) ?? {},
     calculated_fields: (row.calculated_fields as CalculatedFieldDef[]) ?? [],
+    operating_model: (row.operating_model as OperatingModel) ?? null,
+    audit_purpose: (row.audit_purpose as AuditPurpose) ?? null,
+    subject_type: (row.subject_type as AuditSubjectType) ?? null,
+    hierarchy_profile_id: (row.hierarchy_profile_id as string) ?? null,
+    hierarchy_bindings: (row.hierarchy_bindings as Record<string, string>) ?? {},
+    is_system_template: Boolean(row.is_system_template),
+    purpose_config: (row.purpose_config as Record<string, unknown>) ?? {},
+    short_description: (row.short_description as string) ?? null,
     created_by: (row.created_by as string) ?? null,
     updated_by: (row.updated_by as string) ?? null,
     created_at: row.created_at as string,
@@ -145,6 +176,16 @@ export function templateToDefinition(t: AuditTemplate): TemplateDefinition {
     evidence: t.evidence_config,
     calculatedFields: t.calculated_fields,
     auditLevel: t.audit_level,
+    operatingModel: t.operating_model ?? undefined,
+    purpose: t.audit_purpose ?? undefined,
+    subjectType: t.subject_type ?? undefined,
+    hierarchy: t.hierarchy_profile_id
+      ? { definitionId: t.hierarchy_profile_id, levels: [] }
+      : undefined,
+    findingTypes: (t.purpose_config.findingTypes as string[]) ?? undefined,
+    rcaOptions: (t.purpose_config.rcaOptions as string[]) ?? undefined,
+    channels: (t.purpose_config.channels as string[]) ?? undefined,
+    outletTypes: (t.purpose_config.outletTypes as string[]) ?? undefined,
   };
 }
 
@@ -159,6 +200,16 @@ export function definitionToPatch(def: TemplateDefinition): Partial<AuditTemplat
     evidence_config: def.evidence,
     calculated_fields: def.calculatedFields,
     audit_level: def.auditLevel,
+    operating_model: def.operatingModel ?? null,
+    audit_purpose: def.purpose ?? null,
+    subject_type: def.subjectType ?? null,
+    hierarchy_profile_id: def.hierarchy?.definitionId ?? null,
+    purpose_config: {
+      findingTypes: def.findingTypes,
+      rcaOptions: def.rcaOptions,
+      channels: def.channels,
+      outletTypes: def.outletTypes,
+    },
   };
 }
 
@@ -181,6 +232,12 @@ export async function fetchAuditTemplates(
   if (filters?.activeOnly) {
     query = query.eq("is_active", true);
   }
+  if (filters?.operatingModel && filters.operatingModel !== "all") {
+    query = query.eq("operating_model", filters.operatingModel);
+  }
+  if (filters?.auditPurpose && filters.auditPurpose !== "all") {
+    query = query.eq("audit_purpose", filters.auditPurpose);
+  }
 
   const { data, error } = await query;
   if (error) {
@@ -195,8 +252,15 @@ export async function fetchAuditTemplates(
       (t) =>
         t.name.toLowerCase().includes(q) ||
         (t.description?.toLowerCase().includes(q) ?? false) ||
+        (t.short_description?.toLowerCase().includes(q) ?? false) ||
         (t.category?.toLowerCase().includes(q) ?? false),
     );
+  }
+  if (filters?.aiEnabled) {
+    rows = rows.filter((t) => Boolean(t.ai_config?.enabled));
+  }
+  if (filters?.evidenceRequired) {
+    rows = rows.filter((t) => t.evidence_required || Boolean(t.evidence_config?.photoRequired));
   }
   return rows;
 }
@@ -244,6 +308,14 @@ export async function createAuditTemplate(input: AuditTemplateInput): Promise<Au
       ai_config: input.ai_config ?? { enabled: false, features: {} },
       evidence_config: input.evidence_config ?? { photoRequired: true },
       calculated_fields: input.calculated_fields ?? [],
+      operating_model: input.operating_model ?? null,
+      audit_purpose: input.audit_purpose ?? null,
+      subject_type: input.subject_type ?? null,
+      hierarchy_profile_id: input.hierarchy_profile_id ?? null,
+      hierarchy_bindings: input.hierarchy_bindings ?? {},
+      is_system_template: input.is_system_template ?? false,
+      purpose_config: input.purpose_config ?? {},
+      short_description: input.short_description?.trim() || null,
       created_by: userId,
     })
     .select("*")
@@ -288,6 +360,14 @@ export async function updateAuditTemplate(
   if (input.ai_config !== undefined) patch.ai_config = input.ai_config;
   if (input.evidence_config !== undefined) patch.evidence_config = input.evidence_config;
   if (input.calculated_fields !== undefined) patch.calculated_fields = input.calculated_fields;
+  if (input.operating_model !== undefined) patch.operating_model = input.operating_model;
+  if (input.audit_purpose !== undefined) patch.audit_purpose = input.audit_purpose;
+  if (input.subject_type !== undefined) patch.subject_type = input.subject_type;
+  if (input.hierarchy_profile_id !== undefined) patch.hierarchy_profile_id = input.hierarchy_profile_id;
+  if (input.hierarchy_bindings !== undefined) patch.hierarchy_bindings = input.hierarchy_bindings;
+  if (input.is_system_template !== undefined) patch.is_system_template = input.is_system_template;
+  if (input.purpose_config !== undefined) patch.purpose_config = input.purpose_config;
+  if (input.short_description !== undefined) patch.short_description = input.short_description?.trim() || null;
 
   const { error } = await supabase
     .from("audit_templates")
@@ -303,6 +383,7 @@ export async function duplicateAuditTemplate(id: string): Promise<AuditTemplate>
   return createAuditTemplate({
     name: `${source.name} — Copy`,
     description: source.description ?? undefined,
+    short_description: source.short_description ?? undefined,
     template_type: source.template_type,
     audit_mode: source.audit_mode,
     scope_type: source.scope_type,
@@ -320,6 +401,13 @@ export async function duplicateAuditTemplate(id: string): Promise<AuditTemplate>
     ai_config: source.ai_config,
     evidence_config: source.evidence_config,
     calculated_fields: source.calculated_fields,
+    operating_model: source.operating_model ?? undefined,
+    audit_purpose: source.audit_purpose ?? undefined,
+    subject_type: source.subject_type ?? undefined,
+    hierarchy_profile_id: source.hierarchy_profile_id ?? undefined,
+    hierarchy_bindings: source.hierarchy_bindings,
+    purpose_config: source.purpose_config,
+    is_system_template: false,
   });
 }
 

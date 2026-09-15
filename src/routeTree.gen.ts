@@ -81,8 +81,11 @@ import { Route as ApiSendLandingOnboardingRouteImport } from './routes/api/send-
 import { Route as AuditReviewScanIdRouteImport } from './routes/audit-review.$scanId'
 import { Route as AuditTemplatesTemplateIdRouteImport } from './routes/audit-templates.$templateId'
 import { Route as AuditTemplatesNewRouteImport } from './routes/audit-templates.new'
+import { Route as AuditAssignmentIdRouteImport } from './routes/audit.$assignmentId'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as CorrectiveActionsActionIdRouteImport } from './routes/corrective-actions.$actionId'
+import { Route as DashboardExecutiveRouteImport } from './routes/dashboard.executive'
+import { Route as DashboardMyPerformanceRouteImport } from './routes/dashboard.my-performance'
 import { Route as ExceptionsExceptionIdRouteImport } from './routes/exceptions.$exceptionId'
 import { Route as ExpiryControlHistoryRouteImport } from './routes/expiry-control.history'
 import { Route as ExpiryControlMyInspectionsRouteImport } from './routes/expiry-control.my-inspections'
@@ -91,6 +94,10 @@ import { Route as ExpiryControlPoliciesRouteImport } from './routes/expiry-contr
 import { Route as ExpiryControlQuarantineRouteImport } from './routes/expiry-control.quarantine'
 import { Route as ExpiryControlReviewRouteImport } from './routes/expiry-control.review'
 import { Route as FindingsFindingIdRouteImport } from './routes/findings.$findingId'
+import { Route as IntelligenceInventoryVarianceRouteImport } from './routes/intelligence.inventory-variance'
+import { Route as ManageRulesRouteImport } from './routes/manage.rules'
+import { Route as OperationsDistributorsRouteImport } from './routes/operations.distributors'
+import { Route as OperationsWarehousesRouteImport } from './routes/operations.warehouses'
 import { Route as ShareTokenRouteImport } from './routes/share.$token'
 import { Route as StoresIndexRouteImport } from './routes/stores.index'
 import { Route as StoresStoreIdRouteImport } from './routes/stores.$storeId'
@@ -471,6 +478,11 @@ const AuditTemplatesNewRoute = AuditTemplatesNewRouteImport.update({
   path: '/new',
   getParentRoute: () => AuditTemplatesRoute,
 } as any)
+const AuditAssignmentIdRoute = AuditAssignmentIdRouteImport.update({
+  id: '/audit/$assignmentId',
+  path: '/audit/$assignmentId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
   path: '/auth/callback',
@@ -482,6 +494,16 @@ const CorrectiveActionsActionIdRoute =
     path: '/$actionId',
     getParentRoute: () => CorrectiveActionsRoute,
   } as any)
+const DashboardExecutiveRoute = DashboardExecutiveRouteImport.update({
+  id: '/executive',
+  path: '/executive',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardMyPerformanceRoute = DashboardMyPerformanceRouteImport.update({
+  id: '/my-performance',
+  path: '/my-performance',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const ExceptionsExceptionIdRoute = ExceptionsExceptionIdRouteImport.update({
   id: '/$exceptionId',
   path: '/$exceptionId',
@@ -522,6 +544,27 @@ const FindingsFindingIdRoute = FindingsFindingIdRouteImport.update({
   id: '/$findingId',
   path: '/$findingId',
   getParentRoute: () => FindingsRoute,
+} as any)
+const IntelligenceInventoryVarianceRoute =
+  IntelligenceInventoryVarianceRouteImport.update({
+    id: '/intelligence/inventory-variance',
+    path: '/intelligence/inventory-variance',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ManageRulesRoute = ManageRulesRouteImport.update({
+  id: '/rules',
+  path: '/rules',
+  getParentRoute: () => ManageRoute,
+} as any)
+const OperationsDistributorsRoute = OperationsDistributorsRouteImport.update({
+  id: '/operations/distributors',
+  path: '/operations/distributors',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OperationsWarehousesRoute = OperationsWarehousesRouteImport.update({
+  id: '/operations/warehouses',
+  path: '/operations/warehouses',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ShareTokenRoute = ShareTokenRouteImport.update({
   id: '/share/$token',
@@ -633,7 +676,7 @@ export interface FileRoutesByFullPath {
   '/cookies': typeof CookiesRoute
   '/corrective-actions': typeof CorrectiveActionsRouteWithChildren
   '/custom-audit': typeof CustomAuditRoute
-  '/dashboard': typeof DashboardRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
   '/digital-audit': typeof DigitalAuditRoute
@@ -647,7 +690,7 @@ export interface FileRoutesByFullPath {
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
-  '/manage': typeof ManageRoute
+  '/manage': typeof ManageRouteWithChildren
   '/my-scans': typeof MyScansRoute
   '/new-audit': typeof NewAuditRoute
   '/onboarding': typeof OnboardingRoute
@@ -688,8 +731,11 @@ export interface FileRoutesByFullPath {
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/audit-templates/$templateId': typeof AuditTemplatesTemplateIdRouteWithChildren
   '/audit-templates/new': typeof AuditTemplatesNewRoute
+  '/audit/$assignmentId': typeof AuditAssignmentIdRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
+  '/dashboard/executive': typeof DashboardExecutiveRoute
+  '/dashboard/my-performance': typeof DashboardMyPerformanceRoute
   '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
   '/expiry-control/history': typeof ExpiryControlHistoryRoute
   '/expiry-control/my-inspections': typeof ExpiryControlMyInspectionsRoute
@@ -698,6 +744,10 @@ export interface FileRoutesByFullPath {
   '/expiry-control/quarantine': typeof ExpiryControlQuarantineRoute
   '/expiry-control/review': typeof ExpiryControlReviewRoute
   '/findings/$findingId': typeof FindingsFindingIdRoute
+  '/intelligence/inventory-variance': typeof IntelligenceInventoryVarianceRoute
+  '/manage/rules': typeof ManageRulesRoute
+  '/operations/distributors': typeof OperationsDistributorsRoute
+  '/operations/warehouses': typeof OperationsWarehousesRoute
   '/share/$token': typeof ShareTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
@@ -734,7 +784,7 @@ export interface FileRoutesByTo {
   '/cookies': typeof CookiesRoute
   '/corrective-actions': typeof CorrectiveActionsRouteWithChildren
   '/custom-audit': typeof CustomAuditRoute
-  '/dashboard': typeof DashboardRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
   '/digital-audit': typeof DigitalAuditRoute
@@ -748,7 +798,7 @@ export interface FileRoutesByTo {
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
-  '/manage': typeof ManageRoute
+  '/manage': typeof ManageRouteWithChildren
   '/my-scans': typeof MyScansRoute
   '/new-audit': typeof NewAuditRoute
   '/onboarding': typeof OnboardingRoute
@@ -789,8 +839,11 @@ export interface FileRoutesByTo {
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/audit-templates/$templateId': typeof AuditTemplatesTemplateIdRouteWithChildren
   '/audit-templates/new': typeof AuditTemplatesNewRoute
+  '/audit/$assignmentId': typeof AuditAssignmentIdRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
+  '/dashboard/executive': typeof DashboardExecutiveRoute
+  '/dashboard/my-performance': typeof DashboardMyPerformanceRoute
   '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
   '/expiry-control/history': typeof ExpiryControlHistoryRoute
   '/expiry-control/my-inspections': typeof ExpiryControlMyInspectionsRoute
@@ -799,6 +852,10 @@ export interface FileRoutesByTo {
   '/expiry-control/quarantine': typeof ExpiryControlQuarantineRoute
   '/expiry-control/review': typeof ExpiryControlReviewRoute
   '/findings/$findingId': typeof FindingsFindingIdRoute
+  '/intelligence/inventory-variance': typeof IntelligenceInventoryVarianceRoute
+  '/manage/rules': typeof ManageRulesRoute
+  '/operations/distributors': typeof OperationsDistributorsRoute
+  '/operations/warehouses': typeof OperationsWarehousesRoute
   '/share/$token': typeof ShareTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores': typeof StoresIndexRoute
@@ -836,7 +893,7 @@ export interface FileRoutesById {
   '/cookies': typeof CookiesRoute
   '/corrective-actions': typeof CorrectiveActionsRouteWithChildren
   '/custom-audit': typeof CustomAuditRoute
-  '/dashboard': typeof DashboardRoute
+  '/dashboard': typeof DashboardRouteWithChildren
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
   '/digital-audit': typeof DigitalAuditRoute
@@ -850,7 +907,7 @@ export interface FileRoutesById {
   '/how-it-works': typeof HowItWorksRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
-  '/manage': typeof ManageRoute
+  '/manage': typeof ManageRouteWithChildren
   '/my-scans': typeof MyScansRoute
   '/new-audit': typeof NewAuditRoute
   '/onboarding': typeof OnboardingRoute
@@ -891,8 +948,11 @@ export interface FileRoutesById {
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/audit-templates/$templateId': typeof AuditTemplatesTemplateIdRouteWithChildren
   '/audit-templates/new': typeof AuditTemplatesNewRoute
+  '/audit/$assignmentId': typeof AuditAssignmentIdRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
+  '/dashboard/executive': typeof DashboardExecutiveRoute
+  '/dashboard/my-performance': typeof DashboardMyPerformanceRoute
   '/exceptions/$exceptionId': typeof ExceptionsExceptionIdRoute
   '/expiry-control/history': typeof ExpiryControlHistoryRoute
   '/expiry-control/my-inspections': typeof ExpiryControlMyInspectionsRoute
@@ -901,6 +961,10 @@ export interface FileRoutesById {
   '/expiry-control/quarantine': typeof ExpiryControlQuarantineRoute
   '/expiry-control/review': typeof ExpiryControlReviewRoute
   '/findings/$findingId': typeof FindingsFindingIdRoute
+  '/intelligence/inventory-variance': typeof IntelligenceInventoryVarianceRoute
+  '/manage/rules': typeof ManageRulesRoute
+  '/operations/distributors': typeof OperationsDistributorsRoute
+  '/operations/warehouses': typeof OperationsWarehousesRoute
   '/share/$token': typeof ShareTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
@@ -994,8 +1058,11 @@ export interface FileRouteTypes {
     | '/audit-review/$scanId'
     | '/audit-templates/$templateId'
     | '/audit-templates/new'
+    | '/audit/$assignmentId'
     | '/auth/callback'
     | '/corrective-actions/$actionId'
+    | '/dashboard/executive'
+    | '/dashboard/my-performance'
     | '/exceptions/$exceptionId'
     | '/expiry-control/history'
     | '/expiry-control/my-inspections'
@@ -1004,6 +1071,10 @@ export interface FileRouteTypes {
     | '/expiry-control/quarantine'
     | '/expiry-control/review'
     | '/findings/$findingId'
+    | '/intelligence/inventory-variance'
+    | '/manage/rules'
+    | '/operations/distributors'
+    | '/operations/warehouses'
     | '/share/$token'
     | '/stores/$storeId'
     | '/stores/'
@@ -1095,8 +1166,11 @@ export interface FileRouteTypes {
     | '/audit-review/$scanId'
     | '/audit-templates/$templateId'
     | '/audit-templates/new'
+    | '/audit/$assignmentId'
     | '/auth/callback'
     | '/corrective-actions/$actionId'
+    | '/dashboard/executive'
+    | '/dashboard/my-performance'
     | '/exceptions/$exceptionId'
     | '/expiry-control/history'
     | '/expiry-control/my-inspections'
@@ -1105,6 +1179,10 @@ export interface FileRouteTypes {
     | '/expiry-control/quarantine'
     | '/expiry-control/review'
     | '/findings/$findingId'
+    | '/intelligence/inventory-variance'
+    | '/manage/rules'
+    | '/operations/distributors'
+    | '/operations/warehouses'
     | '/share/$token'
     | '/stores/$storeId'
     | '/stores'
@@ -1196,8 +1274,11 @@ export interface FileRouteTypes {
     | '/audit-review/$scanId'
     | '/audit-templates/$templateId'
     | '/audit-templates/new'
+    | '/audit/$assignmentId'
     | '/auth/callback'
     | '/corrective-actions/$actionId'
+    | '/dashboard/executive'
+    | '/dashboard/my-performance'
     | '/exceptions/$exceptionId'
     | '/expiry-control/history'
     | '/expiry-control/my-inspections'
@@ -1206,6 +1287,10 @@ export interface FileRouteTypes {
     | '/expiry-control/quarantine'
     | '/expiry-control/review'
     | '/findings/$findingId'
+    | '/intelligence/inventory-variance'
+    | '/manage/rules'
+    | '/operations/distributors'
+    | '/operations/warehouses'
     | '/share/$token'
     | '/stores/$storeId'
     | '/stores/'
@@ -1243,7 +1328,7 @@ export interface RootRouteChildren {
   CookiesRoute: typeof CookiesRoute
   CorrectiveActionsRoute: typeof CorrectiveActionsRouteWithChildren
   CustomAuditRoute: typeof CustomAuditRoute
-  DashboardRoute: typeof DashboardRoute
+  DashboardRoute: typeof DashboardRouteWithChildren
   DemoRoute: typeof DemoRoute
   DemoScansRoute: typeof DemoScansRoute
   DigitalAuditRoute: typeof DigitalAuditRoute
@@ -1257,7 +1342,7 @@ export interface RootRouteChildren {
   HowItWorksRoute: typeof HowItWorksRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
-  ManageRoute: typeof ManageRoute
+  ManageRoute: typeof ManageRouteWithChildren
   MyScansRoute: typeof MyScansRoute
   NewAuditRoute: typeof NewAuditRoute
   OnboardingRoute: typeof OnboardingRoute
@@ -1291,7 +1376,11 @@ export interface RootRouteChildren {
   ApiScanRoute: typeof ApiScanRoute
   ApiSendLandingOnboardingRoute: typeof ApiSendLandingOnboardingRoute
   AuditReviewScanIdRoute: typeof AuditReviewScanIdRoute
+  AuditAssignmentIdRoute: typeof AuditAssignmentIdRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
+  IntelligenceInventoryVarianceRoute: typeof IntelligenceInventoryVarianceRoute
+  OperationsDistributorsRoute: typeof OperationsDistributorsRoute
+  OperationsWarehousesRoute: typeof OperationsWarehousesRoute
   ShareTokenRoute: typeof ShareTokenRoute
   StoresStoreIdRoute: typeof StoresStoreIdRoute
   StoresIndexRoute: typeof StoresIndexRoute
@@ -1813,6 +1902,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuditTemplatesNewRouteImport
       parentRoute: typeof AuditTemplatesRoute
     }
+    '/audit/$assignmentId': {
+      id: '/audit/$assignmentId'
+      path: '/audit/$assignmentId'
+      fullPath: '/audit/$assignmentId'
+      preLoaderRoute: typeof AuditAssignmentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/callback': {
       id: '/auth/callback'
       path: '/auth/callback'
@@ -1826,6 +1922,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/corrective-actions/$actionId'
       preLoaderRoute: typeof CorrectiveActionsActionIdRouteImport
       parentRoute: typeof CorrectiveActionsRoute
+    }
+    '/dashboard/executive': {
+      id: '/dashboard/executive'
+      path: '/executive'
+      fullPath: '/dashboard/executive'
+      preLoaderRoute: typeof DashboardExecutiveRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/my-performance': {
+      id: '/dashboard/my-performance'
+      path: '/my-performance'
+      fullPath: '/dashboard/my-performance'
+      preLoaderRoute: typeof DashboardMyPerformanceRouteImport
+      parentRoute: typeof DashboardRoute
     }
     '/exceptions/$exceptionId': {
       id: '/exceptions/$exceptionId'
@@ -1882,6 +1992,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/findings/$findingId'
       preLoaderRoute: typeof FindingsFindingIdRouteImport
       parentRoute: typeof FindingsRoute
+    }
+    '/intelligence/inventory-variance': {
+      id: '/intelligence/inventory-variance'
+      path: '/intelligence/inventory-variance'
+      fullPath: '/intelligence/inventory-variance'
+      preLoaderRoute: typeof IntelligenceInventoryVarianceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/manage/rules': {
+      id: '/manage/rules'
+      path: '/rules'
+      fullPath: '/manage/rules'
+      preLoaderRoute: typeof ManageRulesRouteImport
+      parentRoute: typeof ManageRoute
+    }
+    '/operations/distributors': {
+      id: '/operations/distributors'
+      path: '/operations/distributors'
+      fullPath: '/operations/distributors'
+      preLoaderRoute: typeof OperationsDistributorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/operations/warehouses': {
+      id: '/operations/warehouses'
+      path: '/operations/warehouses'
+      fullPath: '/operations/warehouses'
+      preLoaderRoute: typeof OperationsWarehousesRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/share/$token': {
       id: '/share/$token'
@@ -2067,6 +2205,20 @@ const CorrectiveActionsRouteChildren: CorrectiveActionsRouteChildren = {
 const CorrectiveActionsRouteWithChildren =
   CorrectiveActionsRoute._addFileChildren(CorrectiveActionsRouteChildren)
 
+interface DashboardRouteChildren {
+  DashboardExecutiveRoute: typeof DashboardExecutiveRoute
+  DashboardMyPerformanceRoute: typeof DashboardMyPerformanceRoute
+}
+
+const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardExecutiveRoute: DashboardExecutiveRoute,
+  DashboardMyPerformanceRoute: DashboardMyPerformanceRoute,
+}
+
+const DashboardRouteWithChildren = DashboardRoute._addFileChildren(
+  DashboardRouteChildren,
+)
+
 interface ExceptionsRouteChildren {
   ExceptionsExceptionIdRoute: typeof ExceptionsExceptionIdRoute
 }
@@ -2115,6 +2267,17 @@ const FindingsRouteWithChildren = FindingsRoute._addFileChildren(
   FindingsRouteChildren,
 )
 
+interface ManageRouteChildren {
+  ManageRulesRoute: typeof ManageRulesRoute
+}
+
+const ManageRouteChildren: ManageRouteChildren = {
+  ManageRulesRoute: ManageRulesRoute,
+}
+
+const ManageRouteWithChildren =
+  ManageRoute._addFileChildren(ManageRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
@@ -2133,7 +2296,7 @@ const rootRouteChildren: RootRouteChildren = {
   CookiesRoute: CookiesRoute,
   CorrectiveActionsRoute: CorrectiveActionsRouteWithChildren,
   CustomAuditRoute: CustomAuditRoute,
-  DashboardRoute: DashboardRoute,
+  DashboardRoute: DashboardRouteWithChildren,
   DemoRoute: DemoRoute,
   DemoScansRoute: DemoScansRoute,
   DigitalAuditRoute: DigitalAuditRoute,
@@ -2147,7 +2310,7 @@ const rootRouteChildren: RootRouteChildren = {
   HowItWorksRoute: HowItWorksRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
-  ManageRoute: ManageRoute,
+  ManageRoute: ManageRouteWithChildren,
   MyScansRoute: MyScansRoute,
   NewAuditRoute: NewAuditRoute,
   OnboardingRoute: OnboardingRoute,
@@ -2181,7 +2344,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiScanRoute: ApiScanRoute,
   ApiSendLandingOnboardingRoute: ApiSendLandingOnboardingRoute,
   AuditReviewScanIdRoute: AuditReviewScanIdRoute,
+  AuditAssignmentIdRoute: AuditAssignmentIdRoute,
   AuthCallbackRoute: AuthCallbackRoute,
+  IntelligenceInventoryVarianceRoute: IntelligenceInventoryVarianceRoute,
+  OperationsDistributorsRoute: OperationsDistributorsRoute,
+  OperationsWarehousesRoute: OperationsWarehousesRoute,
   ShareTokenRoute: ShareTokenRoute,
   StoresStoreIdRoute: StoresStoreIdRoute,
   StoresIndexRoute: StoresIndexRoute,

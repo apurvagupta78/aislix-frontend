@@ -6,7 +6,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { dbError, requireOrgId, requireUserId } from "@/lib/db/context";
 import { applyRuleActions, computeCompletion, validateRecord } from "@/lib/audit-builder/validation";
 import type { AuditResponseValue, FieldConfig, TemplateDefinition, TemplateField } from "@/lib/audit-builder/types";
-import { templateToDefinition, type AuditTemplate } from "@/lib/audit-templates";
+import {
+  fetchAuditTemplate,
+  templateToDefinition,
+  type AuditTemplate,
+} from "@/lib/audit-templates";
 import { syncFindingsForScan } from "@/lib/findings";
 
 export type CustomAuditSession = {
@@ -51,43 +55,7 @@ export async function loadCustomAuditSession(
   if (templateSnapshot && templateSnapshot.id) {
     template = templateSnapshot as unknown as AuditTemplate;
   } else if (assignment.template_id) {
-    const { data: tpl } = await supabase
-      .from("audit_templates")
-      .select("*")
-      .eq("id", assignment.template_id)
-      .maybeSingle();
-    if (tpl) {
-      template = {
-        id: tpl.id as string,
-        name: tpl.name as string,
-        description: (tpl.description as string) ?? null,
-        template_type: tpl.template_type as AuditTemplate["template_type"],
-        audit_mode: tpl.audit_mode as AuditTemplate["audit_mode"],
-        scope_type: tpl.scope_type as AuditTemplate["scope_type"],
-        scope_values: (tpl.scope_values as AuditTemplate["scope_values"]) ?? {},
-        instructions: (tpl.instructions as string) ?? null,
-        evidence_required: Boolean(tpl.evidence_required),
-        version: Number(tpl.version) || 1,
-        published: Boolean(tpl.published),
-        status: (tpl.status as AuditTemplate["status"]) ?? "draft",
-        category: (tpl.category as string) ?? null,
-        icon: (tpl.icon as string) ?? null,
-        audit_level: (tpl.audit_level as AuditTemplate["audit_level"]) ?? "one_per_audit",
-        is_active: tpl.is_active !== false,
-        sections: (tpl.sections as AuditTemplate["sections"]) ?? [],
-        field_definitions: (tpl.field_definitions as TemplateField[]) ?? [],
-        rules: (tpl.rules as AuditTemplate["rules"]) ?? [],
-        workflow_settings: (tpl.workflow_settings as AuditTemplate["workflow_settings"]) ?? {},
-        scoring_config: (tpl.scoring_config as AuditTemplate["scoring_config"]) ?? {},
-        ai_config: (tpl.ai_config as AuditTemplate["ai_config"]) ?? {},
-        evidence_config: (tpl.evidence_config as AuditTemplate["evidence_config"]) ?? {},
-        calculated_fields: (tpl.calculated_fields as AuditTemplate["calculated_fields"]) ?? [],
-        created_by: (tpl.created_by as string) ?? null,
-        updated_by: (tpl.updated_by as string) ?? null,
-        created_at: tpl.created_at as string,
-        updated_at: tpl.updated_at as string,
-      };
-    }
+    template = await fetchAuditTemplate(assignment.template_id as string);
   }
 
   if (!template) return null;
