@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronDown, ClipboardList, UserPlus } from "lucide-react";
+import { ChevronDown, ClipboardList, Download, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import { toUserMessage } from "@/lib/api/errors";
 import { complianceTone } from "@/lib/planogram-compliance";
 import {
   cancelAssignment,
+  fetchAssignableMembers,
   fetchAssignmentAttempts,
   fetchOrgAssignments,
   requestReScan,
@@ -33,6 +34,12 @@ import {
 import { AssignmentAttemptsList } from "@/components/scan-results/FixRescanVerifyPanel";
 import { formatDate, statusBadge } from "@/routes/my-scans";
 import { AssignmentIdChip, formatAssignmentId } from "@/components/AssignmentId";
+import {
+  bulkCancelAssignments,
+  bulkReassignAssignments,
+  exportAssignmentsCsv,
+} from "@/lib/assignment-engine";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const Route = createFileRoute("/assigned-scans")({
   validateSearch: (
@@ -123,6 +130,8 @@ function AssignmentsTab({ storeId, assignerMe }: { storeId?: string; assignerMe?
   const [status, setStatus] = useState("all");
   const [search, setSearch] = useState("");
   const [sortById, setSortById] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [reassignTo, setReassignTo] = useState("");
 
   const session = useQuery({
     queryKey: ["auth-session"],
@@ -138,6 +147,11 @@ function AssignmentsTab({ storeId, assignerMe }: { storeId?: string; assignerMe?
     retry: false,
   });
 
+  const membersQuery = useQuery({
+    queryKey: ["assignable-members", "bulk"],
+    queryFn: fetchAssignableMembers,
+  });
+
   const notifyMutation = useMutation({
     mutationFn: (row: Assignment) => requestReScan(row),
     onSuccess: () => toast.success("Assignee notified to re-audit"),
@@ -148,6 +162,34 @@ function AssignmentsTab({ storeId, assignerMe }: { storeId?: string; assignerMe?
     mutationFn: (id: string) => cancelAssignment(id),
     onSuccess: () => {
       toast.success("Assignment cancelled");
+      void queryClient.invalidateQueries({ queryKey: ["org-assignments"] });
+    },
+    onError: (error) => toast.error(toUserMessage(error)),
+  });
+
+  const bulkCancelMutation = useMutation({
+    mutationFn: () => bulkCancelAssignments(selectedIds),
+    onSuccess: () => {
+      toast.success(`${selectedIds.length} assignment(s) cancelled`);
+      setSelectedIds([]);
+      void queryClient.invalidateQueries({ queryKey: ["org-assignments"] });
+    },
+    onError: (error) => toast.error(toUserMessage(error)),
+  });
+
+  const bulkReassignMutation = useMutation({
+    mutationFn: async () => {
+      const member = (await fetchAssignableMembers()).find((m) => m.user_id === reassignTo);
+      if (!member) throw new Error("Select a team member to reassign to.");
+      return bulkReassignAssignments({
+        assignmentIds: selectedIds,
+        newAssigneeId: member.user_id,
+        newAssigneeName: member.name,
+      });
+    },
+    onSuccess: () => {
+      toast.success(`${selectedIds.length} assignment(s) reassigned`);
+      setSelectedIds([]);
       void queryClient.invalidateQueries({ queryKey: ["org-assignments"] });
     },
     onError: (error) => toast.error(toUserMessage(error)),
@@ -191,7 +233,48 @@ function AssignmentsTab({ storeId, assignerMe }: { storeId?: string; assignerMe?
             <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => exportAssignmentsCsv(filtered)}
+        >
+          <Download className="size-4" /> Export CSV
+        </Button>
       </div>
+
+      {selectedIds.length > 0 ? (
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/20 p-3">
+          <span className="text-sm font-medium">{selectedIds.length} selected</span>
+          <Select value={reassignTo} onValueChange={setReassignTo}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Reassign to…" />
+            </SelectTrigger>
+            <SelectContent>
+              {(membersQuery.data ?? []).map((m) => (
+                <SelectItem key={m.user_id} value={m.user_id}>
+                  {m.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!reassignTo || bulkReassignMutation.isPending}
+            onClick={() => bulkReassignMutation.mutate()}
+          >
+            Bulk Reassign
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={bulkCancelMutation.isPending}
+            onClick={() => bulkCancelMutation.mutate()}
+          >
+            Bulk Cancel
+          </Button>
+        </div>
+      ) : null}
 
       {query.isLoading ? (
         <Skeleton className="h-64 w-full rounded-2xl" />
@@ -214,6 +297,14 @@ function AssignmentsTab({ storeId, assignerMe }: { storeId?: string; assignerMe?
             <table className="w-full text-sm">
               <thead className="bg-surface text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
+                  <th className="w-10 px-2 py-3">
+                    <Checkbox
+                      checked={rows.length > 0 && selectedIds.length === rows.length}
+                      onCheckedChange={(checked) =>
+                        setSelectedIds(checked === true ? rows.map((r) => r.id) : [])
+                      }
+                    />
+                  </th>
                   <th className="px-4 py-3 text-left font-medium">
                     <button
                       type="button"
@@ -235,6 +326,18 @@ function AssignmentsTab({ storeId, assignerMe }: { storeId?: string; assignerMe?
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id} className="border-t border-border align-top">
+                    <td className="px-2 py-3">
+                      <Checkbox
+                        checked={selectedIds.includes(row.id)}
+                        onCheckedChange={(checked) =>
+                          setSelectedIds((current) =>
+                            checked === true
+                              ? [...current, row.id]
+                              : current.filter((id) => id !== row.id),
+                          )
+                        }
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <AssignmentIdChip id={row.id} label={false} />
                       {(row.scan_attempts > 0 || row.status === "needs_correction" || row.status === "completed") && (
