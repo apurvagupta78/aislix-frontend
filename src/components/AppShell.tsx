@@ -44,12 +44,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 import { fetchProfile } from "@/lib/account";
@@ -101,105 +96,45 @@ type NavSection = {
 
 const DASHBOARD_LEAF: NavLeaf = {
   kind: "leaf",
-  label: "Executive Overview",
+  label: "Dashboard",
   to: "/dashboard",
   icon: LayoutDashboard,
 };
 
 const SECTIONS: NavSection[] = [
   {
-    id: "locations",
-    label: "Stores & Locations",
-    icon: Store,
-    managerOnly: true,
-    items: [
-      { kind: "leaf", label: "Stores", to: "/stores", icon: Store },
-      { kind: "leaf", label: "Planogram & SKUs", to: "/store-master", icon: LayoutGrid },
-      { kind: "leaf", label: "SKU Intelligence", to: "/sku-intelligence", icon: BarChart3 },
-    ],
+    id: "new-audit",
+    label: "New Audit",
+    icon: Plus,
+    items: [{ kind: "leaf", label: "Create or assign audit", to: "/new-audit", icon: Plus }],
   },
   {
     id: "audits",
     label: "Audits",
     icon: ClipboardCheck,
     items: [
-      { kind: "leaf", label: "New Audit", to: "/scan", icon: Plus },
       {
         kind: "leaf",
-        label: "My Work",
-        to: "/my-scans",
-        search: { tab: "assigned" },
+        label: "Audit workspace",
+        to: "/audits",
         badge: "open-tasks",
       },
-      { kind: "leaf", label: "Audit History", to: "/history", icon: History },
     ],
   },
   {
-    id: "assignments",
-    label: "Assignments & Schedules",
-    icon: CalendarClock,
-    managerOnly: true,
-    items: [
-      { kind: "leaf", label: "Audit Templates", to: "/audit-templates", icon: FileBarChart },
-      { kind: "leaf", label: "Assign Audit", to: "/assign-scan", icon: Send },
-      {
-        kind: "leaf",
-        label: "Review & Approvals",
-        to: "/assigned-scans",
-        search: { tab: "assignments" },
-      },
-      { kind: "leaf", label: "Recurring Audits", to: "/audit-schedules", icon: CalendarClock },
-      { kind: "leaf", label: "SLA & Escalation", to: "/escalation-settings", icon: Clock },
-    ],
-  },
-  {
-    id: "expiry",
-    label: "Expiry Control",
-    icon: PackageSearch,
-    items: [
-      { kind: "leaf", label: "Overview", to: "/expiry-control", icon: LayoutDashboard },
-      { kind: "leaf", label: "My Inspections", to: "/expiry-control/my-inspections", icon: ClipboardCheck },
-      { kind: "leaf", label: "Inspection Planner", to: "/expiry-control/planner", icon: CalendarClock, managerOnly: true },
-      { kind: "leaf", label: "Review Queue", to: "/expiry-control/review", icon: Send, managerOnly: true },
-      { kind: "leaf", label: "Quarantine & Disposition", to: "/expiry-control/quarantine", icon: AlertTriangle },
-      { kind: "leaf", label: "Expiry History", to: "/expiry-control/history", icon: History },
-      { kind: "leaf", label: "Policies", to: "/expiry-control/policies", icon: Settings, managerOnly: true },
-    ],
-  },
-  {
-    id: "exceptions",
-    label: "Exceptions & Actions",
+    id: "actions",
+    label: "Actions",
     icon: Wrench,
     items: [
-      { kind: "leaf", label: "Exceptions", to: "/exceptions", icon: AlertTriangle, managerOnly: true },
-      { kind: "leaf", label: "Findings", to: "/findings", icon: AlertTriangle },
-      { kind: "leaf", label: "Corrective Actions", to: "/corrective-actions", icon: Wrench },
-      {
-        kind: "leaf",
-        label: "Audit Intelligence",
-        to: "/audit-intelligence",
-        icon: BarChart3,
-        managerOnly: true,
-      },
-      { kind: "leaf", label: "Reports", to: "/reports", icon: FileBarChart, managerOnly: true },
+      { kind: "leaf", label: "Findings & action workspace", to: "/actions", icon: AlertTriangle },
     ],
   },
   {
-    id: "team",
-    label: "Employees & Teams",
-    icon: Users,
-    managerOnly: true,
-    items: [{ kind: "leaf", label: "Team", to: "/team", icon: Users }],
-  },
-  {
-    id: "account",
-    label: "Administration",
+    id: "manage",
+    label: "Manage",
     icon: Settings,
-    items: [
-      { kind: "leaf", label: "Billing", to: "/billing", icon: CreditCard },
-      { kind: "leaf", label: "Profile", to: "/profile", icon: User },
-      { kind: "leaf", label: "Settings", to: "/settings", icon: Settings },
-    ],
+    managerOnly: true,
+    items: [{ kind: "leaf", label: "Management workspace", to: "/manage", icon: Store }],
   },
 ];
 
@@ -344,11 +279,11 @@ function SidebarNav({
   if (rail) {
     return (
       <nav className="flex flex-col items-center gap-1">
-        <RailTooltip label="Executive Overview">
+        <RailTooltip label="Dashboard">
           <Link
             to={DASHBOARD_LEAF.to}
             onClick={onNavigate}
-            aria-label="Executive Overview"
+            aria-label="Dashboard"
             className={cn(
               "flex size-10 items-center justify-center rounded-xl transition-colors",
               pathname === DASHBOARD_LEAF.to
@@ -424,7 +359,7 @@ function SidebarNav({
         )}
       >
         <LayoutDashboard className="size-4" />
-        <span className="flex-1 truncate">Executive Overview</span>
+        <span className="flex-1 truncate">Dashboard</span>
       </Link>
       {visibleSections.map((section) => {
         const open = openSection === section.id;
@@ -457,7 +392,6 @@ function SidebarNav({
   );
 }
 
-
 const SIDEBAR_STORAGE_KEY = "sidebar_collapsed";
 
 function useSidebarCollapsed(): [boolean, (next: boolean) => void] {
@@ -472,7 +406,6 @@ function useSidebarCollapsed(): [boolean, (next: boolean) => void] {
   };
   return [collapsed, update];
 }
-
 
 export function AppShell({
   title,
@@ -518,7 +451,6 @@ export function AppShell({
   });
   const activeMembership = activeMembershipQuery.data ?? null;
   const inboxQuery = useQuery({
-
     queryKey: ["inbox"],
     queryFn: () => fetchInbox(15),
     retry: false,
@@ -566,7 +498,6 @@ export function AppShell({
           <button className="mt-4 flex w-full items-center justify-between gap-2 rounded-xl border border-border bg-surface px-3 py-2 text-left text-xs text-muted-foreground transition-colors hover:bg-muted">
             <span className="min-w-0 flex-1 truncate font-medium text-foreground">
               {activeMembership?.org_name ?? memberships[0]?.org_name ?? "Workspace"}
-
             </span>
             <ChevronDown className="size-3.5 shrink-0" />
           </button>
@@ -600,298 +531,297 @@ export function AppShell({
 
   return (
     <GlobalFilterProvider>
-    <TooltipProvider delayDuration={120}>
-    <div className="min-h-screen bg-surface">
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-40 hidden h-full flex-col border-r border-border bg-card py-5 lg:flex",
-          sidebarCollapsed ? "w-16 items-center px-2" : "w-64 px-4",
-        )}
-      >
-        <div
-          className={cn(
-            "flex shrink-0 items-center",
-            sidebarCollapsed ? "flex-col gap-2" : "justify-between gap-2",
-          )}
-        >
-          {sidebarCollapsed ? <Logo compact to="/dashboard" /> : <Logo to="/dashboard" />}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-xl"
-            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          >
-            {sidebarCollapsed ? (
-              <ChevronRight className="size-4" />
-            ) : (
-              <ChevronLeft className="size-4" />
+      <TooltipProvider delayDuration={120}>
+        <div className="min-h-screen bg-surface">
+          <aside
+            className={cn(
+              "fixed inset-y-0 left-0 z-40 hidden h-full flex-col border-r border-border bg-card py-5 lg:flex",
+              sidebarCollapsed ? "w-16 items-center px-2" : "w-64 px-4",
             )}
-          </Button>
-        </div>
-        {!sidebarCollapsed && workspaceSwitcher}
-        <div className="mt-5 flex min-h-0 flex-1 flex-col justify-start gap-1 overflow-hidden">
-          <SidebarNav
-            showManagerNav={showManagerNav}
-            openTasks={pendingCount}
-            rail={sidebarCollapsed}
-          />
-        </div>
-        <div className={cn("mt-auto shrink-0", sidebarCollapsed ? "pt-2" : "pt-2 pb-2")}>
-
-          <div className="pt-4">
-          {sidebarCollapsed ? (
-            <RailTooltip label="Manage plan">
-              <Link
-                to="/billing"
-                aria-label="Manage plan"
-                className="flex size-10 items-center justify-center rounded-xl bg-brand-soft text-brand"
-              >
-                <CreditCard className="size-4" />
-              </Link>
-            </RailTooltip>
-          ) : (
-            <div className="rounded-2xl border border-border bg-brand-soft/60 p-4">
-              <p className="text-sm font-medium text-foreground">Need more audits?</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Review your plan, quota and invoices in billing.
-              </p>
-              <Button asChild size="sm" variant="brand" className="mt-3 w-full rounded-lg">
-                <Link to="/billing">Manage plan</Link>
-              </Button>
-            </div>
-          )}
-          </div>
-        </div>
-      </aside>
-
-
-      <div className={sidebarCollapsed ? "lg:pl-16" : "lg:pl-64"}>
-
-        <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur-xl">
-          <div className="flex h-16 items-center gap-3 px-5 sm:px-8">
-            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="rounded-xl lg:hidden"
-                  aria-label="Open navigation menu"
-                >
-                  <Menu className="size-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent
-                side="left"
-                className="flex h-full w-[85vw] max-w-xs flex-col gap-0 overflow-hidden bg-card p-0"
-              >
-                <div className="shrink-0 border-b border-border px-4 py-4">
-                  <Logo to="/dashboard" />
-                  {workspaceSwitcher}
-                </div>
-                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-3">
-                  <SidebarNav
-                    showManagerNav={showManagerNav}
-                    openTasks={pendingCount}
-                    onNavigate={() => setMenuOpen(false)}
-                  />
-                </div>
-                <div className="shrink-0 border-t border-border px-4 py-4">
-                  <Button asChild size="sm" variant="brand" className="w-full rounded-lg">
-                    <Link to="/billing" onClick={() => setMenuOpen(false)}>
-                      Manage plan
-                    </Link>
-                  </Button>
-                </div>
-              </SheetContent>
-            </Sheet>
-            <div className="lg:hidden">
-              <Logo compact to="/dashboard" />
-            </div>
-
-            <form
-              className="relative hidden max-w-sm flex-1 md:block"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const q = new FormData(e.currentTarget).get("q");
-                navigate({
-                  to: "/history",
-                  search: typeof q === "string" && q ? { q } : {},
-                });
-              }}
+          >
+            <div
+              className={cn(
+                "flex shrink-0 items-center",
+                sidebarCollapsed ? "flex-col gap-2" : "justify-between gap-2",
+              )}
             >
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                name="q"
-                aria-label="Search audits, stores and SKUs"
-                placeholder="Search audit ID, store, SKU, employee…"
-                className="h-9 rounded-xl border-border bg-surface pl-9"
-              />
-            </form>
-            <div className="ml-auto flex items-center gap-2">
-              <Button asChild variant="brand" size="sm" className="rounded-xl">
-                <Link to="/scan">New audit</Link>
+              {sidebarCollapsed ? <Logo compact to="/dashboard" /> : <Logo to="/dashboard" />}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-xl"
+                aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              >
+                {sidebarCollapsed ? (
+                  <ChevronRight className="size-4" />
+                ) : (
+                  <ChevronLeft className="size-4" />
+                )}
               </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className="relative rounded-xl p-2 text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-brand/40"
-                    aria-label={
-                      unread > 0 ? `Notifications, ${unread} unread` : "Notifications"
-                    }
-                  >
-                    <Bell className="size-4" />
-                    {unread > 0 && (
-                      <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[0.6rem] font-semibold text-destructive-foreground">
-                        {unread > 9 ? "9+" : unread}
-                      </span>
-                    )}
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80 rounded-xl">
-                  <DropdownMenuLabel className="flex items-center justify-between font-normal">
-                    <span className="text-sm font-medium">Notifications</span>
-                    {unread > 0 && (
-                      <button
-                        className="text-xs text-brand hover:underline"
-                        onClick={async () => {
-                          await markAllNotificationsRead();
-                          void queryClient.invalidateQueries({ queryKey: ["inbox"] });
-                          void queryClient.invalidateQueries({ queryKey: ["inbox-unread"] });
-                        }}
-                      >
-                        Mark all read
-                      </button>
-                    )}
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {!inbox.length ? (
-                    <p className="px-2 py-4 text-xs text-muted-foreground">
-                      You have no notifications yet.
-                    </p>
-                  ) : (
-                    inbox.map((n) => (
-                      <DropdownMenuItem
-                        key={n.id}
-                        className="flex-col items-start gap-0.5 whitespace-normal rounded-lg"
-                        onClick={async () => {
-                          if (!n.read_at) {
-                            await markNotificationRead(n.id);
-                            void queryClient.invalidateQueries({ queryKey: ["inbox"] });
-                          void queryClient.invalidateQueries({ queryKey: ["inbox-unread"] });
-                          }
-                          void navigate({ to: notificationHref(n) });
-                        }}
-                      >
-                        <span className="flex w-full items-center gap-2 text-sm font-medium">
-                          {!n.read_at && <span className="size-1.5 rounded-full bg-brand" />}
-                          {n.title}
-                        </span>
-                        {n.body && (
-                          <span className="text-xs text-muted-foreground">{n.body}</span>
-                        )}
-                        {typeof n.payload["assignment_id"] === "string" && (
-                          <span className="font-mono text-xs text-muted-foreground">
-                            Assignment {formatAssignmentId(n.payload["assignment_id"] as string)}
-                          </span>
-                        )}
-                      </DropdownMenuItem>
-                    ))
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="rounded-full outline-none ring-brand/40 focus-visible:ring-2">
-                    <Avatar className="size-8">
-                      {profile?.avatar_url ? (
-                        <AvatarImage src={profile.avatar_url} alt={displayName} />
-                      ) : null}
-                      <AvatarFallback className="bg-brand-soft text-xs font-medium uppercase text-brand">
-                        {initials.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52 rounded-xl">
-                  <DropdownMenuLabel className="font-normal">
-                    <p className="text-sm font-medium">{displayName}</p>
-                    {displayEmail && (
-                      <p className="text-xs text-muted-foreground">{displayEmail}</p>
-                    )}
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {memberships.length > 1 && (
-                    <>
-                      <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                        Workspace
-                      </DropdownMenuLabel>
-                      {memberships.map((m) => (
-                        <DropdownMenuItem
-                          key={m.org_id}
-                          onClick={() => switchWorkspace(m.org_id)}
-                          className="flex items-start justify-between gap-2 text-sm"
-                        >
-                          <span className="min-w-0">
-                            <span className="block truncate">{m.org_name ?? "Workspace"}</span>
-                            {m.org_hint && (
-                              <span className="block truncate text-xs text-muted-foreground">
-                                {m.org_hint}
-                              </span>
-                            )}
-                          </span>
-                          {(m.pending_count ?? 0) > 0 && (
-                            <span className="mt-0.5 shrink-0 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
-                              {m.pending_count}
-                            </span>
-                          )}
-                        </DropdownMenuItem>
-                      ))}
-
-                      <DropdownMenuSeparator />
-                    </>
-                  )}
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile">Profile</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/settings">Settings</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/billing">Billing</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/logout">
-                      <LogOut className="mr-2 size-4" /> Sign out
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
-          </div>
-        </header>
-
-        <main className="px-5 py-8 sm:px-8">
-          <div className="mx-auto max-w-7xl">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
-                {description && (
-                  <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>
+            {!sidebarCollapsed && workspaceSwitcher}
+            <div className="mt-5 flex min-h-0 flex-1 flex-col justify-start gap-1 overflow-hidden">
+              <SidebarNav
+                showManagerNav={showManagerNav}
+                openTasks={pendingCount}
+                rail={sidebarCollapsed}
+              />
+            </div>
+            <div className={cn("mt-auto shrink-0", sidebarCollapsed ? "pt-2" : "pt-2 pb-2")}>
+              <div className="pt-4">
+                {sidebarCollapsed ? (
+                  <RailTooltip label="Manage plan">
+                    <Link
+                      to="/billing"
+                      aria-label="Manage plan"
+                      className="flex size-10 items-center justify-center rounded-xl bg-brand-soft text-brand"
+                    >
+                      <CreditCard className="size-4" />
+                    </Link>
+                  </RailTooltip>
+                ) : (
+                  <div className="rounded-2xl border border-border bg-brand-soft/60 p-4">
+                    <p className="text-sm font-medium text-foreground">Need more audits?</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Review your plan, quota and invoices in billing.
+                    </p>
+                    <Button asChild size="sm" variant="brand" className="mt-3 w-full rounded-lg">
+                      <Link to="/billing">Manage plan</Link>
+                    </Button>
+                  </div>
                 )}
               </div>
-              {actions && <div className="flex items-center gap-2">{actions}</div>}
             </div>
-            <GlobalFilterBarShell />
-            <div className="mt-7 animate-fade-in">{children}</div>
+          </aside>
+
+          <div className={sidebarCollapsed ? "lg:pl-16" : "lg:pl-64"}>
+            <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur-xl">
+              <div className="flex h-16 items-center gap-3 px-5 sm:px-8">
+                <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+                  <SheetTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="rounded-xl lg:hidden"
+                      aria-label="Open navigation menu"
+                    >
+                      <Menu className="size-5" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent
+                    side="left"
+                    className="flex h-full w-[85vw] max-w-xs flex-col gap-0 overflow-hidden bg-card p-0"
+                  >
+                    <div className="shrink-0 border-b border-border px-4 py-4">
+                      <Logo to="/dashboard" />
+                      {workspaceSwitcher}
+                    </div>
+                    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-3 py-3">
+                      <SidebarNav
+                        showManagerNav={showManagerNav}
+                        openTasks={pendingCount}
+                        onNavigate={() => setMenuOpen(false)}
+                      />
+                    </div>
+                    <div className="shrink-0 border-t border-border px-4 py-4">
+                      <Button asChild size="sm" variant="brand" className="w-full rounded-lg">
+                        <Link to="/billing" onClick={() => setMenuOpen(false)}>
+                          Manage plan
+                        </Link>
+                      </Button>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+                <div className="lg:hidden">
+                  <Logo compact to="/dashboard" />
+                </div>
+
+                <form
+                  className="relative hidden max-w-sm flex-1 md:block"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const q = new FormData(e.currentTarget).get("q");
+                    navigate({
+                      to: "/history",
+                      search: typeof q === "string" && q ? { q } : {},
+                    });
+                  }}
+                >
+                  <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    name="q"
+                    aria-label="Search audits, stores and SKUs"
+                    placeholder="Search audit ID, store, SKU, employee…"
+                    className="h-9 rounded-xl border-border bg-surface pl-9"
+                  />
+                </form>
+                <div className="ml-auto flex items-center gap-2">
+                  <Button asChild variant="brand" size="sm" className="rounded-xl">
+                    <Link to="/scan">New audit</Link>
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className="relative rounded-xl p-2 text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-brand/40"
+                        aria-label={
+                          unread > 0 ? `Notifications, ${unread} unread` : "Notifications"
+                        }
+                      >
+                        <Bell className="size-4" />
+                        {unread > 0 && (
+                          <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[0.6rem] font-semibold text-destructive-foreground">
+                            {unread > 9 ? "9+" : unread}
+                          </span>
+                        )}
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-80 rounded-xl">
+                      <DropdownMenuLabel className="flex items-center justify-between font-normal">
+                        <span className="text-sm font-medium">Notifications</span>
+                        {unread > 0 && (
+                          <button
+                            className="text-xs text-brand hover:underline"
+                            onClick={async () => {
+                              await markAllNotificationsRead();
+                              void queryClient.invalidateQueries({ queryKey: ["inbox"] });
+                              void queryClient.invalidateQueries({ queryKey: ["inbox-unread"] });
+                            }}
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {!inbox.length ? (
+                        <p className="px-2 py-4 text-xs text-muted-foreground">
+                          You have no notifications yet.
+                        </p>
+                      ) : (
+                        inbox.map((n) => (
+                          <DropdownMenuItem
+                            key={n.id}
+                            className="flex-col items-start gap-0.5 whitespace-normal rounded-lg"
+                            onClick={async () => {
+                              if (!n.read_at) {
+                                await markNotificationRead(n.id);
+                                void queryClient.invalidateQueries({ queryKey: ["inbox"] });
+                                void queryClient.invalidateQueries({ queryKey: ["inbox-unread"] });
+                              }
+                              void navigate({ to: notificationHref(n) });
+                            }}
+                          >
+                            <span className="flex w-full items-center gap-2 text-sm font-medium">
+                              {!n.read_at && <span className="size-1.5 rounded-full bg-brand" />}
+                              {n.title}
+                            </span>
+                            {n.body && (
+                              <span className="text-xs text-muted-foreground">{n.body}</span>
+                            )}
+                            {typeof n.payload["assignment_id"] === "string" && (
+                              <span className="font-mono text-xs text-muted-foreground">
+                                Assignment{" "}
+                                {formatAssignmentId(n.payload["assignment_id"] as string)}
+                              </span>
+                            )}
+                          </DropdownMenuItem>
+                        ))
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="rounded-full outline-none ring-brand/40 focus-visible:ring-2">
+                        <Avatar className="size-8">
+                          {profile?.avatar_url ? (
+                            <AvatarImage src={profile.avatar_url} alt={displayName} />
+                          ) : null}
+                          <AvatarFallback className="bg-brand-soft text-xs font-medium uppercase text-brand">
+                            {initials.toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-52 rounded-xl">
+                      <DropdownMenuLabel className="font-normal">
+                        <p className="text-sm font-medium">{displayName}</p>
+                        {displayEmail && (
+                          <p className="text-xs text-muted-foreground">{displayEmail}</p>
+                        )}
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {memberships.length > 1 && (
+                        <>
+                          <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                            Workspace
+                          </DropdownMenuLabel>
+                          {memberships.map((m) => (
+                            <DropdownMenuItem
+                              key={m.org_id}
+                              onClick={() => switchWorkspace(m.org_id)}
+                              className="flex items-start justify-between gap-2 text-sm"
+                            >
+                              <span className="min-w-0">
+                                <span className="block truncate">{m.org_name ?? "Workspace"}</span>
+                                {m.org_hint && (
+                                  <span className="block truncate text-xs text-muted-foreground">
+                                    {m.org_hint}
+                                  </span>
+                                )}
+                              </span>
+                              {(m.pending_count ?? 0) > 0 && (
+                                <span className="mt-0.5 shrink-0 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                                  {m.pending_count}
+                                </span>
+                              )}
+                            </DropdownMenuItem>
+                          ))}
+
+                          <DropdownMenuSeparator />
+                        </>
+                      )}
+                      <DropdownMenuItem asChild>
+                        <Link to="/profile">Profile</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/settings">Settings</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/billing">Billing</Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem asChild>
+                        <Link to="/logout">
+                          <LogOut className="mr-2 size-4" /> Sign out
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            </header>
+
+            <main className="px-5 py-8 sm:px-8">
+              <div className="mx-auto max-w-7xl">
+                <div className="flex flex-wrap items-end justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+                      {title}
+                    </h1>
+                    {description && (
+                      <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>
+                    )}
+                  </div>
+                  {actions && <div className="flex items-center gap-2">{actions}</div>}
+                </div>
+                <GlobalFilterBarShell />
+                <div className="mt-7 animate-fade-in">{children}</div>
+              </div>
+            </main>
+            <SiteFooter />
           </div>
-        </main>
-        <SiteFooter />
-      </div>
-    </div>
-    </TooltipProvider>
+        </div>
+      </TooltipProvider>
     </GlobalFilterProvider>
   );
 }
-

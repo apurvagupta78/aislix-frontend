@@ -24,7 +24,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState } from "@/components/States";
 import { fetchDashboard } from "@/lib/dashboard";
-import { DEMO_WORKSPACE_DASHBOARD, DEMO_WORKSPACE_MANAGEMENT, isDemoMode } from "@/lib/dashboard-demo";
+import {
+  DEMO_WORKSPACE_DASHBOARD,
+  DEMO_WORKSPACE_MANAGEMENT,
+  isDemoMode,
+} from "@/lib/dashboard-demo";
 import { useGlobalFilters } from "@/lib/global-filters";
 import { fetchWorkspaceDashboard } from "@/lib/dashboard-intelligence";
 import {
@@ -39,15 +43,22 @@ import {
 } from "@/lib/dashboard-role-context";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import { supabase } from "@/integrations/supabase/client";
+import { DashboardCommandCenterV2 } from "@/components/dashboard-v2/DashboardCommandCenterV2";
 
 type DashboardSearch = {
   role?: string;
+  sample?: boolean;
 };
 
 export const Route = createFileRoute("/dashboard")({
   validateSearch: (search: Record<string, unknown>): DashboardSearch => {
-    if (typeof search.role !== "string" || !search.role.trim()) return {};
-    return { role: search.role.trim() };
+    const role =
+      typeof search.role === "string" && search.role.trim() ? { role: search.role.trim() } : {};
+    const sample =
+      search.sample === true || search.sample === "true" || search.sample === "1"
+        ? { sample: true }
+        : {};
+    return { ...role, ...sample };
   },
   head: () => ({
     meta: [
@@ -60,7 +71,8 @@ export const Route = createFileRoute("/dashboard")({
       { property: "og:title", content: "Aislix Workspace Dashboard" },
       {
         property: "og:description",
-        content: "See what's happening across your retail operation — audits, issues, improvement and store performance.",
+        content:
+          "See what's happening across your retail operation — audits, issues, improvement and store performance.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -70,6 +82,7 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function Dashboard() {
+  const search = Route.useSearch();
   const session = useQuery({
     queryKey: ["auth-session"],
     queryFn: async () => (await supabase.auth.getSession()).data.session,
@@ -113,6 +126,19 @@ function Dashboard() {
           </>
         ) : (
           <>
+            <Button
+              asChild
+              variant={search.sample ? "brand" : "subtle"}
+              size="sm"
+              className="rounded-xl"
+            >
+              <Link
+                to="/dashboard"
+                search={{ ...(search.role ? { role: search.role } : {}), sample: !search.sample }}
+              >
+                {search.sample ? "View live dashboard" : "Preview redesigned dashboard"}
+              </Link>
+            </Button>
             <Button asChild variant="subtle" size="sm" className="rounded-xl">
               <Link to="/history">Audit History</Link>
             </Button>
@@ -166,7 +192,10 @@ function DashboardMain({
   const handleRoleChange = (role: AuditRoleTab) => {
     setFilters((current) => applyDashboardRoleChange(current, role));
     void navigate({
-      search: { role: dashboardRoleToSlug(role) },
+      search: {
+        role: dashboardRoleToSlug(role),
+        ...(search.sample ? { sample: true } : {}),
+      },
       replace: true,
     });
   };
@@ -174,7 +203,9 @@ function DashboardMain({
   return (
     <>
       <div className="-mt-2 mb-4 space-y-1">
-        <h2 className="text-lg font-semibold tracking-tight text-foreground">{roleContext.title}</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-foreground">
+          {roleContext.title}
+        </h2>
         <p className="text-sm text-muted-foreground">{roleContext.subtitle}</p>
       </div>
 
@@ -215,7 +246,19 @@ function DashboardMain({
         }
       />
 
-      {isLoading ? (
+      {search.sample ? (
+        <DashboardCommandCenterV2
+          sampleMode
+          onExitSample={() =>
+            void navigate({
+              search: {
+                ...(search.role ? { role: search.role } : {}),
+                sample: false,
+              },
+            })
+          }
+        />
+      ) : isLoading ? (
         <WorkspaceDashboardSkeleton />
       ) : error ? (
         <ErrorState
@@ -240,9 +283,7 @@ function DashboardMain({
               }
             />
           </div>
-          {workspaceManagement ? (
-            <WorkspaceManagementSection data={workspaceManagement} />
-          ) : null}
+          {workspaceManagement ? <WorkspaceManagementSection data={workspaceManagement} /> : null}
           <section className="mt-8">
             <p className="mb-4 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               Quick actions
@@ -255,11 +296,7 @@ function DashboardMain({
           <AuditExecutiveSection />
 
           <div className="mt-4">
-            <RetailPerformanceSection
-              data={data.kpis}
-              role={filters.role}
-              isLoading={false}
-            />
+            <RetailPerformanceSection data={data.kpis} role={filters.role} isLoading={false} />
           </div>
 
           <WhatNeedsAttentionSection data={data} role={filters.role} />
@@ -275,19 +312,13 @@ function DashboardMain({
 
           <RecentAuditsSection data={data} filters={filters} onFiltersChange={setFilters} />
 
-          <StoreTeamPerformanceSection
-            data={data}
-            filters={filters}
-            onFiltersChange={setFilters}
-          />
+          <StoreTeamPerformanceSection data={data} filters={filters} onFiltersChange={setFilters} />
 
           <BrandAnalysisSection data={data} filters={filters} onFiltersChange={setFilters} />
 
           <CommercialImpactSection data={data} filters={filters} onFiltersChange={setFilters} />
 
-          {workspaceManagement ? (
-            <WorkspaceManagementSection data={workspaceManagement} />
-          ) : null}
+          {workspaceManagement ? <WorkspaceManagementSection data={workspaceManagement} /> : null}
 
           <section className="mt-8">
             <p className="mb-4 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
