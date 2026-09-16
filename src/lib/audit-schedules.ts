@@ -5,7 +5,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { dbError, requireOrgId, requireUserId } from "@/lib/db/context";
 import { createScanAssignment, type AuditMode, type ScopeType, type ScopeValues } from "@/lib/assignments";
-import { processUniversalSchedules } from "@/lib/assignment-engine/publish";
+import { triggerScheduleRun } from "@/lib/assignment-engine/scheduler";
 
 export type ScheduleCadence = "daily" | "weekly" | "monthly" | "special";
 
@@ -151,15 +151,18 @@ export async function deleteAuditSchedule(id: string): Promise<void> {
   if (error) dbError(error, "Could not delete the schedule.");
 }
 
-/** Create assignments for all due schedules (call on dashboard/schedules page load). */
+/**
+ * Manual manager trigger — delegates to server-side idempotent RPC.
+ * Recurring audits are processed by pg_cron or the schedule-runner Edge Function;
+ * this is not called automatically on page load (avoids duplicate client-side runs).
+ */
 export async function processDueAuditSchedules(): Promise<number> {
-  try {
-    const universal = await processUniversalSchedules();
-    if (universal > 0) return universal;
-  } catch {
-    // Fall through to legacy schedules if universal migration not applied.
+  const result = await triggerScheduleRun();
+  if (result.source === "rpc") {
+    return result.assignmentsCreated;
   }
 
+  // Legacy fallback when scheduler migration is not applied yet.
   const orgId = await requireOrgId();
   const now = new Date().toISOString();
 
@@ -174,13 +177,12 @@ export async function processDueAuditSchedules(): Promise<number> {
 
   let created = 0;
   for (const row of due) {
-    const assigneeName = "team member";
     await createScanAssignment({
       storeId: row.store_id as string,
       scopeType: row.scope_type as ScopeType,
       scopeValues: (row.scope_values ?? {}) as ScopeValues,
       assigneeId: row.assignee_id as string,
-      assigneeName,
+      assigneeName: "team member",
       instructions: row.instructions as string | null,
       auditMode: (row.audit_mode as AuditMode) ?? "digital",
     });

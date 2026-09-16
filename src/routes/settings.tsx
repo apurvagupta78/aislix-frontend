@@ -26,6 +26,7 @@ import { BrandIntelPanel } from "@/components/settings/BrandIntelPanel";
 import { TerritoryPanel } from "@/components/settings/TerritoryPanel";
 import { CustomerProfilePanel } from "@/components/settings/CustomerProfilePanel";
 import { AuditDigestPanel } from "@/components/settings/AuditDigestPanel";
+import { AssignmentReminderSettingsPanel } from "@/components/settings/AssignmentReminderSettingsPanel";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -92,6 +93,7 @@ function SettingsPage() {
         </TabsContent>
         <TabsContent value="notifications" className="mt-0 space-y-4">
           <NotificationsPanel />
+          <AssignmentReminderSettingsPanel />
           <AuditDigestPanel />
           <SettingsCard
             title="SLA & escalation"

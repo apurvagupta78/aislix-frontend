@@ -12,6 +12,7 @@ import type {
 
 export * from "./types";
 export * from "./presets";
+export * from "./routing";
 
 function mapProfile(row: Record<string, unknown>): HierarchyProfile {
   return {

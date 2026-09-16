@@ -235,97 +235,14 @@ async function createUniversalSchedule(plan: AssignmentPlan): Promise<string> {
   return data!.id as string;
 }
 
-/** Process due universal schedules — multi-store, multi-assignee. */
+/**
+ * @deprecated Use server-side process_due_audit_schedules RPC via triggerScheduleRun().
+ * Kept for backward compatibility — delegates to server RPC.
+ */
 export async function processUniversalSchedules(): Promise<number> {
-  const orgId = await requireOrgId();
-  const now = new Date().toISOString();
-
-  const { data: due, error } = await supabase
-    .from("audit_schedules")
-    .select("*")
-    .eq("org_id", orgId)
-    .in("status", ["active", "scheduled"])
-    .lte("next_run_at", now);
-  if (error) dbError(error, "Could not check due schedules.");
-  if (!due?.length) return 0;
-
-  let created = 0;
-  for (const row of due) {
-    const storeIds = (row.store_ids as string[])?.length
-      ? (row.store_ids as string[])
-      : [row.store_id as string];
-    const assigneeIds = (row.assignee_ids as string[])?.length
-      ? (row.assignee_ids as string[])
-      : [row.assignee_id as string];
-    const distribution = (row.distribution_plan as Array<{
-      assigneeId: string;
-      assigneeName: string;
-      storeIds: string[];
-    }>) ?? [];
-
-    const pairs =
-      distribution.length > 0
-        ? distribution.flatMap((d) =>
-            d.storeIds.map((storeId) => ({
-              storeId,
-              assigneeId: d.assigneeId,
-              assigneeName: d.assigneeName,
-            })),
-          )
-        : storeIds.map((storeId, i) => ({
-            storeId,
-            assigneeId: assigneeIds[i % assigneeIds.length]!,
-            assigneeName: "team member",
-          }));
-
-    const timezone = (row.timezone as string) ?? "Asia/Kolkata";
-    const dueConfig = (row.due_config as Record<string, unknown>) ?? {};
-    const dueAt = computeDueAt(new Date(), dueConfig as never, timezone);
-
-    for (const pair of pairs) {
-      await createScanAssignment({
-        storeId: pair.storeId,
-        scopeType: row.scope_type as ScopeType,
-        scopeValues: (row.scope_values ?? {}) as ScopeValues,
-        assigneeId: pair.assigneeId,
-        assigneeName: pair.assigneeName,
-        dueAt,
-        instructions: row.instructions as string | null,
-        auditMode: (row.audit_mode as "ai" | "digital") ?? "digital",
-        templateId: row.template_id as string | null,
-        templateVersion: row.template_version as number | null,
-        templateSnapshot: row.template_snapshot as Record<string, unknown> | null,
-        creationSource: "schedule",
-      });
-      created++;
-    }
-
-    const recurrence = row.recurrence_config as Record<string, unknown> | null;
-    const nextRun = recurrence
-      ? computeNextOccurrence(recurrence as never, new Date())
-      : null;
-
-    await supabase
-      .from("audit_schedules")
-      .update({
-        last_run_at: now,
-        next_run_at: nextRun?.toISOString() ?? null,
-        occurrence_count: ((row.occurrence_count as number) ?? 0) + 1,
-        status: row.assignment_mode === "schedule_once" ? "completed" : row.status,
-        updated_at: now,
-      } as Record<string, unknown>)
-      .eq("id", row.id as string);
-
-    await notifyMember({
-      userId: row.assignee_id as string,
-      type: "scan_assigned",
-      title: "Recurring audit generated",
-      body: `New assignments were created from schedule "${row.name ?? "Recurring audit"}".`,
-      payload: { schedule_id: row.id },
-    });
-  }
-
-  return created;
+  const { triggerScheduleRun } = await import("./scheduler");
+  const result = await triggerScheduleRun();
+  return result.assignmentsCreated;
 }
 
 export async function bulkReassignAssignments(input: {

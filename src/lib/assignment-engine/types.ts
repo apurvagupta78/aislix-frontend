@@ -144,6 +144,7 @@ export type OrgAssignmentSettings = {
   estimatedAuditDurationMinutes?: number | null;
   reminderHours: number[];
   blockOnConflict: boolean;
+  escalationUserId?: string | null;
 };
 
 export const TIMEZONE_OPTIONS = [

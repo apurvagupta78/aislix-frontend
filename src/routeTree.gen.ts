@@ -16,6 +16,7 @@ import { Route as ActionsRouteImport } from './routes/actions'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AssignScanRouteImport } from './routes/assign-scan'
 import { Route as AssignedScansRouteImport } from './routes/assigned-scans'
+import { Route as AssignmentGridRouteImport } from './routes/assignment-grid'
 import { Route as AuditCalendarRouteImport } from './routes/audit-calendar'
 import { Route as AuditIntelligenceRouteImport } from './routes/audit-intelligence'
 import { Route as AuditSchedulesRouteImport } from './routes/audit-schedules'
@@ -112,6 +113,7 @@ import { Route as ApiPlanogramCsvTemplateRouteImport } from './routes/api/planog
 import { Route as ApiPlanogramNormalizeRowRouteImport } from './routes/api/planogram.normalize-row'
 import { Route as ApiPlanogramParseCsvRouteImport } from './routes/api/planogram.parse-csv'
 import { Route as ApiPublicGeoRouteImport } from './routes/api/public/geo'
+import { Route as AuditTemplatesTemplateIdIntelligenceRouteImport } from './routes/audit-templates.$templateId.intelligence'
 import { Route as AuditTemplatesTemplateIdPreviewRouteImport } from './routes/audit-templates.$templateId.preview'
 import { Route as AuditTemplatesTemplateIdTestRouteImport } from './routes/audit-templates.$templateId.test'
 import { Route as AuditTemplatesTemplateIdVersionsRouteImport } from './routes/audit-templates.$templateId.versions'
@@ -156,6 +158,11 @@ const AssignScanRoute = AssignScanRouteImport.update({
 const AssignedScansRoute = AssignedScansRouteImport.update({
   id: '/assigned-scans',
   path: '/assigned-scans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AssignmentGridRoute = AssignmentGridRouteImport.update({
+  id: '/assignment-grid',
+  path: '/assignment-grid',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuditCalendarRoute = AuditCalendarRouteImport.update({
@@ -646,6 +653,12 @@ const ApiPublicGeoRoute = ApiPublicGeoRouteImport.update({
   path: '/api/public/geo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuditTemplatesTemplateIdIntelligenceRoute =
+  AuditTemplatesTemplateIdIntelligenceRouteImport.update({
+    id: '/intelligence',
+    path: '/intelligence',
+    getParentRoute: () => AuditTemplatesTemplateIdRoute,
+  } as any)
 const AuditTemplatesTemplateIdPreviewRoute =
   AuditTemplatesTemplateIdPreviewRouteImport.update({
     id: '/preview',
@@ -710,6 +723,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
+  '/assignment-grid': typeof AssignmentGridRoute
   '/audit-calendar': typeof AuditCalendarRoute
   '/audit-intelligence': typeof AuditIntelligenceRoute
   '/audit-schedules': typeof AuditSchedulesRoute
@@ -806,6 +820,7 @@ export interface FileRoutesByFullPath {
   '/api/planogram/normalize-row': typeof ApiPlanogramNormalizeRowRoute
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
   '/api/public/geo': typeof ApiPublicGeoRoute
+  '/audit-templates/$templateId/intelligence': typeof AuditTemplatesTemplateIdIntelligenceRoute
   '/audit-templates/$templateId/preview': typeof AuditTemplatesTemplateIdPreviewRoute
   '/audit-templates/$templateId/test': typeof AuditTemplatesTemplateIdTestRoute
   '/audit-templates/$templateId/versions': typeof AuditTemplatesTemplateIdVersionsRoute
@@ -825,6 +840,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRouteWithChildren
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
+  '/assignment-grid': typeof AssignmentGridRoute
   '/audit-calendar': typeof AuditCalendarRoute
   '/audit-intelligence': typeof AuditIntelligenceRoute
   '/audit-schedules': typeof AuditSchedulesRoute
@@ -921,6 +937,7 @@ export interface FileRoutesByTo {
   '/api/planogram/normalize-row': typeof ApiPlanogramNormalizeRowRoute
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
   '/api/public/geo': typeof ApiPublicGeoRoute
+  '/audit-templates/$templateId/intelligence': typeof AuditTemplatesTemplateIdIntelligenceRoute
   '/audit-templates/$templateId/preview': typeof AuditTemplatesTemplateIdPreviewRoute
   '/audit-templates/$templateId/test': typeof AuditTemplatesTemplateIdTestRoute
   '/audit-templates/$templateId/versions': typeof AuditTemplatesTemplateIdVersionsRoute
@@ -941,6 +958,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
+  '/assignment-grid': typeof AssignmentGridRoute
   '/audit-calendar': typeof AuditCalendarRoute
   '/audit-intelligence': typeof AuditIntelligenceRoute
   '/audit-schedules': typeof AuditSchedulesRoute
@@ -1037,6 +1055,7 @@ export interface FileRoutesById {
   '/api/planogram/normalize-row': typeof ApiPlanogramNormalizeRowRoute
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
   '/api/public/geo': typeof ApiPublicGeoRoute
+  '/audit-templates/$templateId/intelligence': typeof AuditTemplatesTemplateIdIntelligenceRoute
   '/audit-templates/$templateId/preview': typeof AuditTemplatesTemplateIdPreviewRoute
   '/audit-templates/$templateId/test': typeof AuditTemplatesTemplateIdTestRoute
   '/audit-templates/$templateId/versions': typeof AuditTemplatesTemplateIdVersionsRoute
@@ -1058,6 +1077,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/assign-scan'
     | '/assigned-scans'
+    | '/assignment-grid'
     | '/audit-calendar'
     | '/audit-intelligence'
     | '/audit-schedules'
@@ -1154,6 +1174,7 @@ export interface FileRouteTypes {
     | '/api/planogram/normalize-row'
     | '/api/planogram/parse-csv'
     | '/api/public/geo'
+    | '/audit-templates/$templateId/intelligence'
     | '/audit-templates/$templateId/preview'
     | '/audit-templates/$templateId/test'
     | '/audit-templates/$templateId/versions'
@@ -1173,6 +1194,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/assign-scan'
     | '/assigned-scans'
+    | '/assignment-grid'
     | '/audit-calendar'
     | '/audit-intelligence'
     | '/audit-schedules'
@@ -1269,6 +1291,7 @@ export interface FileRouteTypes {
     | '/api/planogram/normalize-row'
     | '/api/planogram/parse-csv'
     | '/api/public/geo'
+    | '/audit-templates/$templateId/intelligence'
     | '/audit-templates/$templateId/preview'
     | '/audit-templates/$templateId/test'
     | '/audit-templates/$templateId/versions'
@@ -1288,6 +1311,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/assign-scan'
     | '/assigned-scans'
+    | '/assignment-grid'
     | '/audit-calendar'
     | '/audit-intelligence'
     | '/audit-schedules'
@@ -1384,6 +1408,7 @@ export interface FileRouteTypes {
     | '/api/planogram/normalize-row'
     | '/api/planogram/parse-csv'
     | '/api/public/geo'
+    | '/audit-templates/$templateId/intelligence'
     | '/audit-templates/$templateId/preview'
     | '/audit-templates/$templateId/test'
     | '/audit-templates/$templateId/versions'
@@ -1404,6 +1429,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   AssignScanRoute: typeof AssignScanRoute
   AssignedScansRoute: typeof AssignedScansRoute
+  AssignmentGridRoute: typeof AssignmentGridRoute
   AuditCalendarRoute: typeof AuditCalendarRoute
   AuditIntelligenceRoute: typeof AuditIntelligenceRoute
   AuditSchedulesRoute: typeof AuditSchedulesRoute
@@ -1532,6 +1558,13 @@ declare module '@tanstack/react-router' {
       path: '/assigned-scans'
       fullPath: '/assigned-scans'
       preLoaderRoute: typeof AssignedScansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/assignment-grid': {
+      id: '/assignment-grid'
+      path: '/assignment-grid'
+      fullPath: '/assignment-grid'
+      preLoaderRoute: typeof AssignmentGridRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/audit-calendar': {
@@ -2206,6 +2239,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicGeoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/audit-templates/$templateId/intelligence': {
+      id: '/audit-templates/$templateId/intelligence'
+      path: '/intelligence'
+      fullPath: '/audit-templates/$templateId/intelligence'
+      preLoaderRoute: typeof AuditTemplatesTemplateIdIntelligenceRouteImport
+      parentRoute: typeof AuditTemplatesTemplateIdRoute
+    }
     '/audit-templates/$templateId/preview': {
       id: '/audit-templates/$templateId/preview'
       path: '/preview'
@@ -2298,6 +2338,7 @@ const AdminRouteChildren: AdminRouteChildren = {
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface AuditTemplatesTemplateIdRouteChildren {
+  AuditTemplatesTemplateIdIntelligenceRoute: typeof AuditTemplatesTemplateIdIntelligenceRoute
   AuditTemplatesTemplateIdPreviewRoute: typeof AuditTemplatesTemplateIdPreviewRoute
   AuditTemplatesTemplateIdTestRoute: typeof AuditTemplatesTemplateIdTestRoute
   AuditTemplatesTemplateIdVersionsRoute: typeof AuditTemplatesTemplateIdVersionsRoute
@@ -2305,6 +2346,8 @@ interface AuditTemplatesTemplateIdRouteChildren {
 
 const AuditTemplatesTemplateIdRouteChildren: AuditTemplatesTemplateIdRouteChildren =
   {
+    AuditTemplatesTemplateIdIntelligenceRoute:
+      AuditTemplatesTemplateIdIntelligenceRoute,
     AuditTemplatesTemplateIdPreviewRoute: AuditTemplatesTemplateIdPreviewRoute,
     AuditTemplatesTemplateIdTestRoute: AuditTemplatesTemplateIdTestRoute,
     AuditTemplatesTemplateIdVersionsRoute:
@@ -2434,6 +2477,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   AssignScanRoute: AssignScanRoute,
   AssignedScansRoute: AssignedScansRoute,
+  AssignmentGridRoute: AssignmentGridRoute,
   AuditCalendarRoute: AuditCalendarRoute,
   AuditIntelligenceRoute: AuditIntelligenceRoute,
   AuditSchedulesRoute: AuditSchedulesRoute,

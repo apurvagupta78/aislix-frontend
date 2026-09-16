@@ -126,7 +126,7 @@ function AuditSchedulesPage() {
   return (
     <AppShell
       title="Recurring Audits"
-      description="Daily, weekly or monthly digital audit schedules auto-generate assignments."
+      description="Recurring audits generate assignments server-side (pg_cron or schedule-runner Edge Function). Use Run now for a manual idempotent trigger."
     >
       <div className="mx-auto max-w-3xl space-y-6">
         <section className="rounded-xl border border-border bg-card p-5">

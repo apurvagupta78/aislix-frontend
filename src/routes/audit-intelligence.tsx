@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -26,8 +26,6 @@ import { toUserMessage } from "@/lib/api/errors";
 import { fetchAuditIntelligence } from "@/lib/audit-intelligence";
 import { fetchAuditorPerformance } from "@/lib/auditor-performance";
 import { isOrgManager } from "@/lib/assignments";
-import { processDueAuditSchedules } from "@/lib/audit-schedules";
-
 export const Route = createFileRoute("/audit-intelligence")({
   head: () => ({ meta: [{ title: "Audit Intelligence — Aislix" }] }),
   component: AuditIntelligencePage,
@@ -38,10 +36,6 @@ function AuditIntelligencePage() {
     queryKey: ["assignment-manager"],
     queryFn: () => isOrgManager(),
   });
-
-  useEffect(() => {
-    if (accessQuery.data) void processDueAuditSchedules().catch(() => undefined);
-  }, [accessQuery.data]);
 
   const intelQuery = useQuery({
     queryKey: ["audit-intelligence"],

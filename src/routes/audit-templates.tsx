@@ -3,6 +3,7 @@ import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Archive,
+  BarChart3,
   Bot,
   Camera,
   Copy,
@@ -871,6 +872,11 @@ function TemplateRow({
               <DropdownMenuItem asChild>
                 <Link to="/audit-templates/$templateId/preview" params={{ templateId: t.id }}>
                   <Eye className="mr-2 size-3.5" /> Preview
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/audit-templates/$templateId/intelligence" params={{ templateId: t.id }}>
+                  <BarChart3 className="mr-2 size-3.5" /> View Audit Intelligence
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
