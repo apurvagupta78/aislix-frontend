@@ -278,6 +278,15 @@ export function ControlTowerShell({
 
       </section>
 
+      <section className="space-y-3">
+        <DashboardSectionHeader
+          title="Visual overview"
+          description="Four different views: health dials, strengths radar, risk heatmap and audits vs problems."
+        />
+        <DashboardVisualBoard data={data} />
+      </section>
+
+
 
 
       {data.contextualKpis.length > 0 ? (
