@@ -462,10 +462,11 @@ export function AppShell({
         <div className="play-canvas">
           <aside
             className={cn(
-              "fixed inset-y-0 left-0 z-40 hidden h-full flex-col border-r border-border/80 bg-card/95 py-5 backdrop-blur-sm lg:flex",
+              "nav-dark nav-panel fixed inset-y-4 left-4 z-40 hidden h-[calc(100vh-2rem)] flex-col rounded-[2rem] py-6 lg:flex",
               sidebarCollapsed ? "w-16 items-center px-2" : "w-64 px-4",
             )}
           >
+
             <div
               className={cn(
                 "flex shrink-0 items-center",
