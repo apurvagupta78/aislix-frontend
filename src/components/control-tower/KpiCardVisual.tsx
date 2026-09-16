@@ -57,6 +57,7 @@ export function KpiCardVisual({
   const trendUp = kpi.trend && kpi.trend.length >= 2 && kpi.trend.at(-1)! > kpi.trend[0]!;
   const Icon = iconFor(kpi.label);
   const isSample = kpi.source?.includes("demo") || kpi.source?.includes("Illustrative");
+  const isDarkTile = kpi.tone === "brand" || kpi.tone === "good";
 
   return (
     <button
@@ -71,29 +72,32 @@ export function KpiCardVisual({
     >
       <span
         aria-hidden
-        className="pointer-events-none absolute -right-8 -top-8 size-28 rounded-full bg-white/10 blur-2xl transition-colors group-hover:bg-white/20"
+        className={cn(
+          "pointer-events-none absolute -right-8 -top-8 size-28 rounded-full blur-2xl transition-colors",
+          isDarkTile ? "bg-white/10 group-hover:bg-white/20" : "bg-white/40 group-hover:bg-white/60",
+        )}
       />
 
       <div className="relative flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-1">
-          <p className="text-[0.7rem] font-bold uppercase tracking-wide text-white/80">
+          <p className={cn("text-[0.7rem] font-bold uppercase tracking-wide", isDarkTile ? "text-white/80" : "text-foreground/70")}>
             {kpi.label}
           </p>
-          <span className="text-white/70">
+          <span className={isDarkTile ? "text-white/70" : "text-foreground/60"}>
             <KpiInfoPopover kpi={kpi} scopeLabel={scopeLabel} periodLabel={periodLabel} />
           </span>
         </div>
-        <span className="glass-badge flex size-10 shrink-0 items-center justify-center">
-          <Icon className="size-5 text-white" />
+        <span className={cn("glass-badge flex size-10 shrink-0 items-center justify-center", !isDarkTile && "bg-white/70")}>
+          <Icon className={cn("size-5", isDarkTile ? "text-white" : "text-foreground")} />
         </span>
       </div>
 
-      <p className="relative mt-4 text-4xl font-extrabold tracking-tight text-white">{kpi.value}</p>
+      <p className={cn("relative mt-4 text-4xl font-extrabold tracking-tight", isDarkTile ? "text-white" : "text-foreground")}>{kpi.value}</p>
 
-      <p className="relative mt-1 line-clamp-2 text-xs font-medium text-white/75">{kpi.detail}</p>
+      <p className={cn("relative mt-1 line-clamp-2 text-xs font-medium", isDarkTile ? "text-white/75" : "text-foreground/65")}>{kpi.detail}</p>
 
       {kpi.trendLabel ? (
-        <p className="relative mt-3 inline-flex w-fit items-center gap-1 rounded-lg bg-white/20 px-2 py-0.5 text-[0.7rem] font-bold text-white">
+        <p className={cn("relative mt-3 inline-flex w-fit items-center gap-1 rounded-lg px-2 py-0.5 text-[0.7rem] font-bold", isDarkTile ? "bg-white/20 text-white" : "bg-white/70 text-foreground")}>
           {kpi.trend ? (
             trendUp ? (
               <TrendingUp className="size-3" />
@@ -106,9 +110,9 @@ export function KpiCardVisual({
       ) : null}
 
       {kpi.progressPct != null ? (
-        <div className="relative mt-3 h-2 w-full overflow-hidden rounded-full bg-white/25">
+        <div className={cn("relative mt-3 h-2 w-full overflow-hidden rounded-full", isDarkTile ? "bg-white/25" : "bg-foreground/10")}>
           <div
-            className="h-full rounded-full bg-white"
+            className={cn("h-full rounded-full", isDarkTile ? "bg-white" : "bg-foreground")}
             style={{ width: `${Math.max(0, Math.min(100, kpi.progressPct))}%` }}
           />
         </div>
@@ -121,8 +125,8 @@ export function KpiCardVisual({
               <Area
                 type="monotone"
                 dataKey="v"
-                stroke="#ffffff"
-                fill="#ffffff"
+                stroke="currentColor"
+                fill="currentColor"
                 fillOpacity={0.25}
                 strokeWidth={2}
                 dot={false}
@@ -134,14 +138,14 @@ export function KpiCardVisual({
 
       <div className="relative mt-3 flex items-center justify-between gap-2">
         {kpi.available ? (
-          <span className="inline-flex items-center text-[0.7rem] font-bold text-white/85 group-hover:text-white">
+          <span className={cn("inline-flex items-center text-[0.7rem] font-bold", isDarkTile ? "text-white/85 group-hover:text-white" : "text-foreground/70 group-hover:text-foreground")}>
             Drill down <ArrowRight className="ml-1 size-3" />
           </span>
         ) : (
           <span />
         )}
         {isSample ? (
-          <span className="rounded-full bg-white/20 px-2 py-0.5 text-[9px] font-bold uppercase text-white">
+          <span className={cn("rounded-full px-2 py-0.5 text-[9px] font-bold uppercase", isDarkTile ? "bg-white/20 text-white" : "bg-white/70 text-foreground")}>
             Sample
           </span>
         ) : null}

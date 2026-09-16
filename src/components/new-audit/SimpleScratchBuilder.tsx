@@ -96,7 +96,7 @@ export function SimpleScratchBuilder({
   };
 
   return (
-    <div className="space-y-4 rounded-2xl border border-violet-200 bg-violet-50/40 p-5">
+    <div className="space-y-4 rounded-2xl border border-status-evidence/30 bg-status-evidence-soft/40 p-5">
       <div>
         <h3 className="font-semibold">Create your audit</h3>
         <p className="text-sm text-muted-foreground">Tap fields to add them to your audit.</p>
@@ -113,14 +113,14 @@ export function SimpleScratchBuilder({
         ))}
       </div>
 
-      <div className="rounded-xl border border-dashed border-violet-300 bg-background p-4">
+      <div className="rounded-xl border border-dashed border-status-evidence/50 bg-background p-4">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Your audit
         </p>
         {!inputSchema.columnMappings.length ? (
           <button
             type="button"
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-8 text-sm text-muted-foreground hover:border-violet-400 hover:text-foreground"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed py-8 text-sm text-muted-foreground hover:border-status-evidence hover:text-foreground"
             onClick={() => addField("Actual Quantity", "auditor_input")}
           >
             <Plus className="size-4" /> Add field

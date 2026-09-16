@@ -38,8 +38,8 @@ const OPTIONS: {
     description: "Bring your own product or audit data.",
     action: "Upload CSV",
     icon: FileSpreadsheet,
-    card: "border-emerald-200 bg-emerald-50/70 hover:border-emerald-300",
-    selected: "border-emerald-500 bg-emerald-50 ring-2 ring-emerald-200",
+    card: "border-status-good/30 bg-status-good-soft hover:border-status-good/50",
+    selected: "border-status-good bg-status-good-soft ring-2 ring-status-good/25",
   },
   {
     value: "custom",
@@ -47,8 +47,8 @@ const OPTIONS: {
     description: "Build a completely custom audit.",
     action: "Create Custom",
     icon: Plus,
-    card: "border-violet-200 bg-violet-50/70 hover:border-violet-300",
-    selected: "border-violet-500 bg-violet-50 ring-2 ring-violet-200",
+    card: "border-status-evidence/30 bg-status-evidence-soft hover:border-status-evidence/50",
+    selected: "border-status-evidence bg-status-evidence-soft ring-2 ring-status-evidence/25",
   },
 ];
 

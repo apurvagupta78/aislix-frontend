@@ -76,7 +76,7 @@ function Pricing() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f8fb]">
+    <div className="min-h-screen bg-background">
       <SiteHeader />
       <main>
         <section className="mx-auto max-w-[90rem] px-6 pb-8 pt-24 text-center sm:px-8 lg:pt-28">
