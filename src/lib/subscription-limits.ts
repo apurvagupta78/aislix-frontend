@@ -305,13 +305,66 @@ export async function fetchUsageSummary(signal?: AbortSignal, orgIdOverride?: st
 
 // ---------- enforcement ----------
 
+/** RPC used for scan-start gates — matches shelf_scans_enforce_limit trigger logic. */
+export const SCAN_START_GATE_RPC = "can_org_start_scan" as const;
+
+/** Pure scan-start decision for tests — must not depend on get_org_usage_summary. */
+export function resolveScanStartGate(input: {
+  platformBypass: boolean;
+  rpcAllowed: boolean | null;
+  rpcError: string | null;
+}): "allow" | "deny" | "rpc_error" {
+  if (input.platformBypass) return "allow";
+  if (input.rpcError) return "rpc_error";
+  if (input.rpcAllowed === false) return "deny";
+  return "allow";
+}
+
+async function scanLimitErrorForOrg(orgId: string): Promise<never> {
+  try {
+    const usage = await fetchUsageSummary(undefined, orgId);
+    throw scanLimitError(usage);
+  } catch (error) {
+    if (error instanceof ScanLimitError || isLimitReachedError(error)) throw error;
+    throw new ScanLimitError({
+      usage: normalizeUsageSummary({ plan_code: "free", blocked: true }),
+      message: "Your plan scan allowance is exhausted. Upgrade to keep auditing.",
+    });
+  }
+}
+
 /** Blocks a new scan when the plan's scan allowance is exhausted. */
 export async function assertCanStartScan(orgId?: string): Promise<UsageSummary> {
   const email = await currentUserEmail();
-  if (hasPlatformBypass(email)) return fetchUsageSummary(undefined, orgId);
-  const usage = await fetchUsageSummary(undefined, orgId);
-  if (usage.can_scan || usage.platform_bypass) return usage;
-  throw scanLimitError(usage);
+  const resolvedOrgId = orgId ?? (await requireOrgId());
+  if (hasPlatformBypass(email)) {
+    return fetchUsageSummary(undefined, resolvedOrgId).catch(() =>
+      bypassUsageFallback(resolvedOrgId),
+    );
+  }
+
+  const { data: allowed, error: rpcError } = await supabase.rpc(SCAN_START_GATE_RPC, {
+    p_org_id: resolvedOrgId,
+  });
+  const gate = resolveScanStartGate({
+    platformBypass: false,
+    rpcAllowed: allowed ?? null,
+    rpcError: rpcError?.message ?? null,
+  });
+  if (gate === "rpc_error") {
+    throw new ApiError({
+      message: rpcError?.message || "Could not verify scan allowance.",
+      kind: "server",
+      status: 500,
+    });
+  }
+  if (gate === "deny") {
+    await scanLimitErrorForOrg(resolvedOrgId);
+  }
+
+  return fetchUsageSummary(undefined, resolvedOrgId).catch(() =>
+    bypassUsageFallback(resolvedOrgId),
+  );
 }
 
 /** Blocks a new store when the plan's store allowance is exhausted. */
@@ -425,7 +478,12 @@ export async function mapLimitError(error: unknown, orgId?: string): Promise<unk
   try {
     usage = await fetchUsageSummary(undefined, orgId);
   } catch {
-    usage = normalizeUsageSummary(null);
+    usage = normalizeUsageSummary({
+      plan_code: "free",
+      blocked: isScan,
+      scans_used: 0,
+      scans_included: 5,
+    });
   }
   if (isSeat) return seatLimitError(usage);
   if (isMaster) {
