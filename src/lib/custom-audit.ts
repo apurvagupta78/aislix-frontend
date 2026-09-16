@@ -4,6 +4,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { dbError, requireOrgId, requireUserId } from "@/lib/db/context";
+import { isImageField } from "@/lib/audit-builder/field-library";
 import { applyRuleActions, computeCompletion, validateRecord } from "@/lib/audit-builder/validation";
 import type { AuditResponseValue, FieldConfig, TemplateDefinition, TemplateField } from "@/lib/audit-builder/types";
 import {
@@ -168,6 +169,28 @@ export async function saveCustomAuditField(input: {
 /** Obsolete shelf_scans columns — must never appear on custom audit submit payloads. */
 export const OBSOLETE_SHELF_SCAN_SUBMIT_COLUMNS = ["collection_method", "user_id"] as const;
 
+/** Live shelf_scans.photo_count CHECK requires >= 1. */
+export const MIN_SHELF_SCAN_PHOTO_COUNT = 1;
+
+/** Count uploaded evidence images across all custom audit response rows. */
+export function countEvidencePhotosInResponses(
+  definition: TemplateDefinition,
+  responses: ResponseMap,
+): number {
+  let count = 0;
+  for (const field of definition.fields) {
+    if (!isImageField(field.type)) continue;
+    const sectionData = responses[field.section] ?? {};
+    for (const recordValues of Object.values(sectionData)) {
+      const val = recordValues[field.key];
+      if (!val) continue;
+      if (Array.isArray(val)) count += val.filter((item) => Boolean(item)).length;
+      else if (typeof val === "string" && val.trim()) count += 1;
+    }
+  }
+  return count;
+}
+
 /** Build a shelf_scans insert row for custom/universal audit submission (live schema). */
 export function buildCustomAuditShelfScanInsert(input: {
   orgId: string;
@@ -178,6 +201,7 @@ export function buildCustomAuditShelfScanInsert(input: {
   templateVersion: number;
   templateSnapshot: Record<string, unknown>;
   workflowSubmission?: "direct" | "manager_approval" | "regional_approval";
+  evidencePhotoCount?: number;
 }): Record<string, unknown> {
   const submittedAt = new Date().toISOString();
   const directApproval = input.workflowSubmission === "direct";
@@ -193,7 +217,7 @@ export function buildCustomAuditShelfScanInsert(input: {
     template_id: input.templateId,
     template_version: input.templateVersion,
     template_snapshot: input.templateSnapshot,
-    photo_count: 0,
+    photo_count: Math.max(MIN_SHELF_SCAN_PHOTO_COUNT, input.evidencePhotoCount ?? 0),
     category_selections: {},
     device_info: {},
   };
@@ -261,6 +285,7 @@ export async function submitCustomAudit(input: {
       .single();
 
     const directApproval = session.definition.workflow.submission === "direct";
+    const evidencePhotoCount = countEvidencePhotosInResponses(session.definition, responses);
     const scanInsert = buildCustomAuditShelfScanInsert({
       orgId,
       storeId: assignmentRow?.store_id as string | null | undefined,
@@ -270,6 +295,7 @@ export async function submitCustomAudit(input: {
       templateVersion: session.template.version,
       templateSnapshot: session.template as unknown as Record<string, unknown>,
       workflowSubmission: session.definition.workflow.submission,
+      evidencePhotoCount,
     });
 
     const { data: scan, error: scanErr } = await supabase

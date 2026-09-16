@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import type { Database } from "@/integrations/supabase/types";
+import type { TemplateDefinition } from "@/lib/audit-builder/types";
 import {
+  MIN_SHELF_SCAN_PHOTO_COUNT,
   OBSOLETE_SHELF_SCAN_SUBMIT_COLUMNS,
   buildCustomAuditShelfScanInsert,
+  countEvidencePhotosInResponses,
+  type ResponseMap,
 } from "@/lib/custom-audit";
 
 type ShelfScanInsert = Database["public"]["Tables"]["shelf_scans"]["Insert"];
@@ -54,6 +58,22 @@ describe("buildCustomAuditShelfScanInsert", () => {
     expect(row.submission_status).toBe("approved");
   });
 
+  it("never inserts photo_count below the live shelf_scans check constraint", () => {
+    const row = buildCustomAuditShelfScanInsert({
+      ...SAMPLE_SUBMIT_INPUT,
+      evidencePhotoCount: 0,
+    });
+    expect(row.photo_count).toBe(MIN_SHELF_SCAN_PHOTO_COUNT);
+  });
+
+  it("persists the counted evidence photo total when provided", () => {
+    const row = buildCustomAuditShelfScanInsert({
+      ...SAMPLE_SUBMIT_INPUT,
+      evidencePhotoCount: 3,
+    });
+    expect(row.photo_count).toBe(3);
+  });
+
   it("only includes keys accepted by the live shelf_scans Insert schema", () => {
     const row = buildCustomAuditShelfScanInsert(SAMPLE_SUBMIT_INPUT);
     const allowed: Array<keyof ShelfScanInsert> = [
@@ -77,5 +97,24 @@ describe("buildCustomAuditShelfScanInsert", () => {
     for (const obsolete of OBSOLETE_SHELF_SCAN_SUBMIT_COLUMNS) {
       expect(Object.keys(row)).not.toContain(obsolete);
     }
+  });
+});
+
+describe("countEvidencePhotosInResponses", () => {
+  const definition = {
+    fields: [
+      { key: "evidence", section: "records", type: "single_image", label: "Photo" },
+      { key: "sku", section: "records", type: "sku_id", label: "SKU" },
+    ],
+  } as TemplateDefinition;
+
+  it("counts string and array image values across records", () => {
+    const responses: ResponseMap = {
+      records: {
+        0: { evidence: "audit-evidence://org/a.jpg" },
+        1: { evidence: ["audit-evidence://org/b.jpg", "audit-evidence://org/c.jpg"] },
+      },
+    };
+    expect(countEvidencePhotosInResponses(definition, responses)).toBe(3);
   });
 });

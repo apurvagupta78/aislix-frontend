@@ -283,7 +283,7 @@ export async function startOrResumeDigitalAudit(assignmentId: string): Promise<D
       status: "processing",
       audit_mode: "digital",
       submission_status: "incomplete",
-      photo_count: 0,
+      photo_count: 1,
       processing_started_at: new Date().toISOString(),
     } as Record<string, unknown>)
     .select("id")
