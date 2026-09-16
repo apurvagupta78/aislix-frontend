@@ -236,6 +236,24 @@
   --success: oklch(0.68 0.14 154);
   --warning: oklch(0.78 0.14 70);
 
+  --status-good: oklch(0.702 0.132 158.5);
+  --status-good-soft: oklch(0.288 0.052 158.5);
+  --status-good-strong: oklch(0.862 0.062 158.5);
+  --status-warn: oklch(0.812 0.132 78);
+  --status-warn-soft: oklch(0.302 0.058 68);
+  --status-warn-strong: oklch(0.888 0.068 82);
+  --status-danger: oklch(0.702 0.158 27.5);
+  --status-danger-soft: oklch(0.292 0.062 25);
+  --status-danger-strong: oklch(0.872 0.062 24);
+  --status-info: oklch(0.712 0.108 236);
+  --status-info-soft: oklch(0.288 0.052 238);
+  --status-info-strong: oklch(0.878 0.048 236);
+  --status-ai: oklch(0.722 0.112 292);
+  --status-ai-soft: oklch(0.292 0.058 292);
+  --status-ai-strong: oklch(0.882 0.052 292);
+  --status-evidence: oklch(0.732 0.108 348);
+  --status-evidence-soft: oklch(0.298 0.058 348);
+  --status-evidence-strong: oklch(0.888 0.048 348);
 }
 
 @layer base {
