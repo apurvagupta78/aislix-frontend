@@ -9,6 +9,7 @@ import {
 } from "./field-roles";
 import { field, resetFieldCounter, sec } from "@/lib/audit-engine/template-factory/helpers";
 import { assembleTemplate } from "@/lib/audit-engine/template-factory/helpers";
+import { ensureFieldRoles } from "./ensure-field-roles";
 
 export const STANDARD_FIELD_OPTIONS: Array<{ value: StandardFieldConcept | "custom"; label: string }> = [
   { value: "sku_id", label: "SKU ID" },
@@ -46,6 +47,8 @@ export function buildDefaultColumnMappings(dataset: AuditInputDataset): ColumnMa
       auditorFills: defaultAuditorFills(role),
       required: role === "reference" || role === "auditor_input",
       evidenceRequired: false,
+      autoSuggested: true,
+      aiEnabled: inferred.mapping === "expiry_date",
     };
   });
 }
@@ -113,7 +116,7 @@ export function buildTemplateFromInputSchema(
 
   return assembleTemplate({
     sections: [sec(sectionKey, "Audit Records", 0, { repeatable: true, repeatBy: inputSchema.subjectType })],
-    fields,
+    fields: ensureFieldRoles(fields),
     auditLevel: inputSchema.subjectType === "store" ? "one_per_audit" : `one_per_${inputSchema.subjectType}` as TemplateDefinition["auditLevel"],
     operatingModel: opts.operatingModel,
     purpose: "custom",
@@ -121,30 +124,49 @@ export function buildTemplateFromInputSchema(
   });
 }
 
-/** Pre-fill reference values from manager CSV into response map. */
+function resolveFieldKey(
+  mapping: ColumnMapping,
+  inputSchema: InputSchema,
+): string {
+  const binding = inputSchema.templateFieldBindings?.find((b) => b.columnId === mapping.columnId);
+  if (binding?.templateFieldKey) return binding.templateFieldKey;
+  if (mapping.aislixMapping !== "custom") {
+    return (
+      mappingToTemplateFieldKey(mapping.aislixMapping) ||
+      mapping.columnName.toLowerCase().replace(/\s+/g, "_")
+    );
+  }
+  return mapping.columnName.toLowerCase().replace(/\s+/g, "_");
+}
+
+/** Pre-fill manager CSV values into response map (reference + optional auditor pre-fill). */
 export function hydrateReferenceValuesFromDataset(
   inputSchema: InputSchema,
   dataset: AuditInputDataset,
   sectionKey = "records",
 ): Record<string, Record<number, Record<string, unknown>>> {
-  const responses: Record<string, Record<number, Record<string, unknown>>> = { [sectionKey]: {} };
+  const targetSection = inputSchema.sectionKey ?? sectionKey;
+  const responses: Record<string, Record<number, Record<string, unknown>>> = {
+    [targetSection]: {},
+  };
 
   dataset.rows.forEach((row, recordIndex) => {
     const record: Record<string, unknown> = {};
     for (const mapping of inputSchema.columnMappings) {
       const raw = row.values[mapping.columnId]?.trim() ?? "";
-      const key =
-        mapping.aislixMapping !== "custom"
-          ? mappingToTemplateFieldKey(mapping.aislixMapping) || mapping.columnName.toLowerCase().replace(/\s+/g, "_")
-          : mapping.columnName.toLowerCase().replace(/\s+/g, "_");
+      if (!raw) continue;
 
-      if (mapping.fieldRole === "reference" || mapping.fieldRole === "system") {
-        if (raw) record[key] = raw;
-      } else if (mapping.fieldRole === "reference" && !raw) {
-        // Blank reference cells stay blank — not treated as missing data error
+      const key = resolveFieldKey(mapping, inputSchema);
+
+      if (
+        mapping.fieldRole === "reference" ||
+        mapping.fieldRole === "system" ||
+        mapping.fieldRole === "auditor_input"
+      ) {
+        record[key] = raw;
       }
     }
-    responses[sectionKey]![recordIndex] = record;
+    responses[targetSection]![recordIndex] = record;
   });
 
   return responses;

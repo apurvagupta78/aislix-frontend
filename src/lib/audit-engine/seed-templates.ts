@@ -96,6 +96,7 @@ async function createFromSpec(spec: SystemTemplateSpec): Promise<AuditTemplate> 
     audit_purpose: spec.purpose,
     subject_type: spec.subjectType,
     is_system_template: true,
+    visibility: "organization" as const,
     evidence_required: Boolean(definition.evidence?.photoRequired),
     hierarchy_profile_id: hierarchyProfileId,
     hierarchy_bindings: defaultHierarchyBindings(spec.operatingModel),

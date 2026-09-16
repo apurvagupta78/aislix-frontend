@@ -4,6 +4,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import type { TemplateField } from "@/lib/audit-builder/types";
 import { isImageField, isNumericField } from "@/lib/audit-builder/field-library";
+import { FIELD_ROLE_LABELS, type FieldRole } from "@/lib/audit-builder/field-roles";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type Props = {
   field: TemplateField | null;
@@ -66,6 +74,36 @@ export function FieldConfigPanel({ field, onChange }: Props) {
             value={cfg.helpText ?? ""}
             onChange={(e) => onChange({ config: { ...cfg, helpText: e.target.value } })}
           />
+        </div>
+        <div>
+          <Label>Field role</Label>
+          <Select
+            value={field.fieldRole ?? "auditor_input"}
+            onValueChange={(v) => {
+              const role = v as FieldRole;
+              onChange({
+                fieldRole: role,
+                calculated: role === "calculated",
+                system: role === "system",
+                config: {
+                  ...cfg,
+                  readOnly:
+                    role === "reference" || role === "calculated" || role === "system",
+                },
+              });
+            }}
+          >
+            <SelectTrigger className="mt-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.entries(FIELD_ROLE_LABELS) as [FieldRole, string][]).map(([role, label]) => (
+                <SelectItem key={role} value={role}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
           <Label>Required</Label>

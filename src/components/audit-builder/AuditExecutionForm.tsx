@@ -16,6 +16,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { computeCalculatedValues } from "@/lib/audit-builder/calculated-fields";
 import { isFieldReadOnlyForAuditor } from "@/lib/audit-builder/field-roles";
+import {
+  FIELD_ROLE_BADGE_LABELS,
+  resolveFieldRole,
+} from "@/lib/audit-builder/ensure-field-roles";
+import { RequiredInputsSummary } from "@/components/audit-builder/RequiredInputsSummary";
 import { isFieldVisible } from "@/lib/audit-builder/rules-engine";
 import { isImageField } from "@/lib/audit-builder/field-library";
 import {
@@ -219,16 +224,12 @@ export function AuditExecutionForm({
 
     const val = responses[sec]?.[idx]?.[field.key];
     const fieldReadOnly = readOnly || isFieldReadOnlyForAuditor(field);
-    const roleBadge =
-      field.fieldRole === "reference" ? (
-        <Badge variant="outline" className="ml-2 text-[9px]">
-          Manager provided
-        </Badge>
-      ) : field.fieldRole === "ai_suggested" ? (
-        <Badge variant="outline" className="ml-2 text-[9px]">
-          AI suggested
-        </Badge>
-      ) : null;
+    const role = resolveFieldRole(field);
+    const roleBadge = (
+      <Badge variant="outline" className="ml-2 text-[9px]">
+        {FIELD_ROLE_BADGE_LABELS[role]}
+      </Badge>
+    );
 
     if (field.calculated) {
       const computed = computeCalculatedValues(definition, responses[sec]?.[idx] ?? {});
@@ -237,7 +238,7 @@ export function AuditExecutionForm({
           <Label className="text-sm">
             {field.label}
             <Badge variant="outline" className="ml-2 text-[9px]">
-              Auto
+              CALCULATED
             </Badge>
           </Label>
           <Input
@@ -437,6 +438,8 @@ export function AuditExecutionForm({
           TEST MODE — sample data only, not saved to production audits
         </div>
       ) : null}
+
+      <RequiredInputsSummary definition={definition} />
 
       {definition.purpose === "shelf_stacking_audit" ? (
         <ShelfStackingVisual

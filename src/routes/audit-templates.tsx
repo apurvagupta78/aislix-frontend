@@ -59,12 +59,15 @@ import {
   archiveAuditTemplate,
   duplicateAuditTemplate,
   fetchAuditTemplates,
+  fetchTemplateUsageCounts,
   fetchTemplateVersions,
   isCustomBuilderTemplate,
+  shareAuditTemplateWithOrganization,
   updateAuditTemplate,
   type AuditTemplate,
   type TemplateStatus,
 } from "@/lib/audit-templates";
+import { requireUserId } from "@/lib/db/context";
 import { isOrgManager } from "@/lib/assignments";
 import {
   getPurposesForModel,
@@ -89,7 +92,7 @@ export const Route = createFileRoute("/audit-templates")({
 });
 
 type ViewMode = "cards" | "table";
-type LibraryTab = "organization" | "system_catalog";
+type LibraryTab = "system_catalog" | "my_templates" | "organization";
 type SourceFilter = "all" | "system" | "customer";
 
 function AuditTemplatesPage() {
@@ -170,6 +173,21 @@ function AuditTemplatesPage() {
     onError: (e) => toast.error(toUserMessage(e)),
   });
 
+  const shareMutation = useMutation({
+    mutationFn: shareAuditTemplateWithOrganization,
+    onSuccess: () => {
+      toast.success("Template shared with your organization.");
+      void queryClient.invalidateQueries({ queryKey: ["audit-templates"] });
+    },
+    onError: (e) => toast.error(toUserMessage(e)),
+  });
+
+  const currentUserQuery = useQuery({
+    queryKey: ["current-user-id"],
+    queryFn: requireUserId,
+    enabled: managerQuery.data === true,
+  });
+
   const seedAllMutation = useMutation({
     mutationFn: () => seedSystemTemplatesForOrg(),
     onSuccess: ({ created, skipped, errors }) => {
@@ -186,11 +204,39 @@ function AuditTemplatesPage() {
 
   const dbTemplates = templatesQuery.data ?? [];
 
+  const myTemplates = useMemo(() => {
+    const userId = currentUserQuery.data;
+    return dbTemplates.filter(
+      (t) =>
+        !t.is_system_template &&
+        t.visibility === "private" &&
+        (!userId || t.owner_user_id === userId),
+    );
+  }, [dbTemplates, currentUserQuery.data]);
+
+  const organizationTemplates = useMemo(
+    () =>
+      dbTemplates.filter((t) => !t.is_system_template && t.visibility === "organization"),
+    [dbTemplates],
+  );
+
   const filteredDbTemplates = useMemo(() => {
-    if (sourceFilter === "system") return dbTemplates.filter((t) => t.is_system_template);
-    if (sourceFilter === "customer") return dbTemplates.filter((t) => !t.is_system_template);
-    return dbTemplates;
-  }, [dbTemplates, sourceFilter]);
+    const base =
+      libraryTab === "my_templates"
+        ? myTemplates
+        : libraryTab === "organization"
+          ? organizationTemplates
+          : dbTemplates;
+    if (sourceFilter === "system") return base.filter((t) => t.is_system_template);
+    if (sourceFilter === "customer") return base.filter((t) => !t.is_system_template);
+    return base;
+  }, [dbTemplates, sourceFilter, libraryTab, myTemplates, organizationTemplates]);
+
+  const usageQuery = useQuery({
+    queryKey: ["template-usage", filteredDbTemplates.map((t) => t.id).join(",")],
+    queryFn: () => fetchTemplateUsageCounts(filteredDbTemplates.map((t) => t.id)),
+    enabled: libraryTab !== "system_catalog" && filteredDbTemplates.length > 0,
+  });
 
   const seededKeySet = useMemo(
     () =>
@@ -307,8 +353,9 @@ function AuditTemplatesPage() {
             <TabsTrigger value="system_catalog">
               Aislix System Library ({STARTER_TEMPLATE_LIBRARY.length})
             </TabsTrigger>
+            <TabsTrigger value="my_templates">My Templates ({myTemplates.length})</TabsTrigger>
             <TabsTrigger value="organization">
-              Organization Templates ({dbTemplates.length})
+              Organization Templates ({organizationTemplates.length})
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -323,14 +370,14 @@ function AuditTemplatesPage() {
           purposeOptions={purposeOptions}
           sourceFilter={sourceFilter}
           onSourceFilterChange={setSourceFilter}
-          showSourceFilter={libraryTab === "organization"}
+          showSourceFilter={libraryTab === "organization" || libraryTab === "my_templates"}
           aiEnabledOnly={aiEnabledOnly}
           onAiEnabledChange={setAiEnabledOnly}
           evidenceRequiredOnly={evidenceRequiredOnly}
           onEvidenceRequiredChange={setEvidenceRequiredOnly}
           activeOnly={activeOnly}
           onActiveOnlyChange={setActiveOnly}
-          showStatusFilters={libraryTab === "organization"}
+          showStatusFilters={libraryTab === "organization" || libraryTab === "my_templates"}
           statusTab={statusTab}
           onStatusTabChange={setStatusTab}
           counts={counts}
@@ -451,12 +498,26 @@ function AuditTemplatesPage() {
         ) : !filteredDbTemplates.length ? (
           <EmptyState
             icon={<FileStack className="size-6" />}
-            title="No organization templates match"
-            description="Seed the Aislix system library or create a custom template."
+            title={
+              libraryTab === "my_templates"
+                ? "No personal templates yet"
+                : "No organization templates match"
+            }
+            description={
+              libraryTab === "my_templates"
+                ? "Save a CSV audit as a template from New Audit, or duplicate an existing template."
+                : "Seed the Aislix system library, share a personal template, or create a custom template."
+            }
             action={
-              <Button variant="brand" onClick={() => seedAllMutation.mutate()}>
-                Seed System Library
-              </Button>
+              libraryTab === "my_templates" ? (
+                <Button asChild variant="brand">
+                  <Link to="/new-audit">Create from New Audit</Link>
+                </Button>
+              ) : (
+                <Button variant="brand" onClick={() => seedAllMutation.mutate()}>
+                  Seed System Library
+                </Button>
+              )
             }
           />
         ) : viewMode === "cards" ? (
@@ -465,8 +526,14 @@ function AuditTemplatesPage() {
               <OrganizationTemplateCard
                 key={t.id}
                 template={t}
+                usageCount={usageQuery.data?.[t.id] ?? 0}
                 onDuplicate={() => setDuplicateTarget(t)}
                 onArchive={() => archiveMutation.mutate(t.id)}
+                onShare={
+                  t.visibility === "private"
+                    ? () => shareMutation.mutate(t.id)
+                    : undefined
+                }
               />
             ))}
           </div>
@@ -692,12 +759,16 @@ function FilterBar({
 
 function OrganizationTemplateCard({
   template: t,
+  usageCount = 0,
   onDuplicate,
   onArchive,
+  onShare,
 }: {
   template: AuditTemplate;
+  usageCount?: number;
   onDuplicate: () => void;
   onArchive: () => void;
+  onShare?: () => void;
 }) {
   const typeLabel =
     TEMPLATE_TYPES.find((x) => x.value === t.template_type)?.label ?? t.template_type;
@@ -708,12 +779,19 @@ function OrganizationTemplateCard({
     <div className="flex flex-col rounded-xl border border-border bg-card p-4">
       <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <Badge
-            variant={t.is_system_template ? "secondary" : "outline"}
-            className="mb-2 text-[10px]"
-          >
-            {t.is_system_template ? "Aislix System" : "Customer Template"}
-          </Badge>
+          <div className="mb-2 flex flex-wrap gap-1">
+            <Badge
+              variant={t.is_system_template ? "secondary" : "outline"}
+              className="text-[10px]"
+            >
+              {t.is_system_template ? "Aislix System" : "Customer Template"}
+            </Badge>
+            {!t.is_system_template ? (
+              <Badge variant="outline" className="text-[10px] uppercase">
+                {t.visibility === "private" ? "Private" : "Organization"}
+              </Badge>
+            ) : null}
+          </div>
           <Link
             to="/audit-templates/$templateId"
             params={{ templateId: t.id }}
@@ -750,7 +828,8 @@ function OrganizationTemplateCard({
         ) : null}
       </div>
       <p className="mb-4 text-xs text-muted-foreground">
-        v{t.version} · {t.field_definitions.length} fields · {t.rules.length} rules
+        v{t.version} · {t.field_definitions.length} fields · {t.rules.length} rules · Used{" "}
+        {usageCount}× · Updated {new Date(t.updated_at).toLocaleDateString()}
       </p>
       <div className="mt-auto flex flex-wrap gap-2">
         <Button asChild size="sm" variant="brand">
@@ -766,6 +845,11 @@ function OrganizationTemplateCard({
         <Button size="sm" variant="outline" onClick={onDuplicate}>
           <Copy className="mr-1 size-3" /> Duplicate
         </Button>
+        {onShare ? (
+          <Button size="sm" variant="outline" onClick={onShare}>
+            Share with Organization
+          </Button>
+        ) : null}
         {!t.is_system_template && t.status !== "archived" ? (
           <Button size="sm" variant="ghost" onClick={onArchive}>
             Archive

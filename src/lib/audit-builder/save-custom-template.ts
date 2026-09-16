@@ -60,6 +60,7 @@ export async function saveCustomCsvAsTemplate(input: {
   const patch = definitionToPatch(def);
   patch.name = input.name.trim();
   patch.template_type = "custom";
+  patch.visibility = "private";
   patch.purpose_config = mergeInputSchemaIntoSnapshot(
     (patch.purpose_config as Record<string, unknown>) ?? {},
     input.inputSchema,

@@ -31,6 +31,16 @@ export type ColumnMapping = {
   auditorFills: boolean;
   required: boolean;
   evidenceRequired: boolean;
+  /** True when role/mapping was inferred from header — manager should confirm */
+  autoSuggested?: boolean;
+  /** Optional AI assist (e.g. OCR on expiry) during execution */
+  aiEnabled?: boolean;
+};
+
+export type TemplateFieldBinding = {
+  columnId: string;
+  templateFieldKey: string;
+  standardConcept?: string;
 };
 
 export type InputSchema = {
@@ -38,6 +48,9 @@ export type InputSchema = {
   columnMappings: ColumnMapping[];
   /** Preserve raw CSV columns even when unmapped */
   preserveAllColumns: boolean;
+  /** Repeatable section key from the selected template */
+  sectionKey?: string;
+  templateFieldBindings?: TemplateFieldBinding[];
 };
 
 export function defaultAuditorFills(role: FieldRole): boolean {
@@ -92,6 +105,10 @@ export function inferColumnRole(columnName: string): {
     expected_facing: "expected_facing",
     batch: "custom",
     target_temperature: "custom",
+    store: "store",
+    store_name: "store",
+    outlet: "outlet",
+    location: "custom",
   };
 
   const auditor: Record<string, StandardFieldConcept | string> = {

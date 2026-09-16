@@ -14,6 +14,10 @@ import type {
 import { evaluateCondition, getEffectiveRequiredFields } from "./rules-engine";
 import { computeCalculatedValues } from "./calculated-fields";
 import { isImageField } from "./field-library";
+import {
+  isNonExecutableFieldRole,
+  resolveFieldRole,
+} from "./ensure-field-roles";
 
 export type FieldValues = Record<string, AuditResponseValue>;
 
@@ -123,7 +127,11 @@ export function computeCompletion(
 
   for (const section of definition.sections) {
     const sectionFields = definition.fields
-      .filter((f) => f.section === section.key && !f.system && !f.calculated)
+      .filter((f) => {
+        if (f.section !== section.key) return false;
+        const role = resolveFieldRole(f);
+        return !isNonExecutableFieldRole(role);
+      })
       .sort((a, b) => a.order - b.order);
 
     const sectionRecords = records.filter((r) => r.sectionKey === section.key);
@@ -196,7 +204,8 @@ export function validateRecord(
 
   for (const field of definition.fields) {
     if (field.section !== record.sectionKey) continue;
-    if (field.calculated || field.system) continue;
+    const role = resolveFieldRole(field);
+    if (isNonExecutableFieldRole(role)) continue;
 
     if (field.visibleWhen) {
       const visible = evaluateCondition(

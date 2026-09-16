@@ -6,18 +6,12 @@ import {
   ArrowRight,
   CheckCircle2,
   ClipboardCheck,
-  Columns3,
   FileSpreadsheet,
-  Rows3,
   ShieldCheck,
   Sparkles,
-  Trash2,
-  Upload,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import { toUserMessage } from "@/lib/api/errors";
-
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -32,7 +26,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { fetchStores } from "@/lib/account";
 import { createScanAssignment, fetchAssignableMembers } from "@/lib/assignments";
@@ -50,21 +43,28 @@ import { requireUserId } from "@/lib/db/context";
 import { startAssignment } from "@/lib/assignments";
 import { createAssignment as createExpiryAssignment } from "@/lib/expiry-control";
 import {
-  AUDIT_DATA_TYPES,
-  createAuditColumn,
-  createAuditRow,
   createManualAuditDataset,
   datasetToDraftRows,
-  parseAuditCsv,
+  parseAuditSpreadsheet,
   validateAuditDataset,
-  type AuditDataType,
   type AuditInputDataset,
 } from "@/lib/audit-input-dataset";
-import type { AuditPurpose, AuditSubjectType, OperatingModel } from "@/lib/audit-builder/types";
-import { ColumnConfigurationPanel } from "@/components/audit-builder/ColumnConfigurationPanel";
+import type { AuditPurpose, OperatingModel } from "@/lib/audit-builder/types";
+import { AuditDataDefinitionStep } from "@/components/audit-builder/AuditDataDefinitionStep";
 import type { InputSchema } from "@/lib/audit-builder/field-roles";
-import { buildDefaultColumnMappings, buildInputSchema } from "@/lib/audit-builder/input-schema";
-import { saveCustomCsvAsTemplate } from "@/lib/audit-builder/save-custom-template";
+import {
+  defaultDataInputMode,
+  validateDataDefinition,
+  type AuditDataInputMode,
+} from "@/lib/audit-builder/audit-data-modes";
+import {
+  buildDefaultColumnMappings,
+  buildInputSchema,
+  buildTemplateFromInputSchema,
+  mergeInputSchemaIntoSnapshot,
+} from "@/lib/audit-builder/input-schema";
+import { buildMergedTemplateSnapshot } from "@/lib/audit-builder/template-csv-merge";
+import { definitionToPatch, templateToDefinition } from "@/lib/audit-templates";
 import { fetchHierarchyProfiles } from "@/lib/hierarchy";
 import { buildHierarchyDistribution, resolveHierarchyOutlets } from "@/lib/hierarchy/routing";
 import {
@@ -113,7 +113,7 @@ type TemplateChoice = "general" | "fnv" | "expiry" | "planogram" | string;
 
 const steps = [
   { id: 1, label: "What are you auditing?", icon: Sparkles },
-  { id: 2, label: "Scope", icon: FileSpreadsheet },
+  { id: 2, label: "Define the audit data", icon: FileSpreadsheet },
   { id: 3, label: "Verification", icon: ShieldCheck },
   { id: 4, label: "Assign & Review", icon: Users },
 ];
@@ -149,6 +149,7 @@ function NewAuditPage() {
     buildInputSchema(createManualAuditDataset()),
   );
   const [inputError, setInputError] = useState<string | null>(null);
+  const [dataInputMode, setDataInputMode] = useState<AuditDataInputMode>("upload_csv");
   const [evidenceLevel, setEvidenceLevel] = useState<EvidenceLevel>("standard");
   const [evidencePolicy, setEvidencePolicy] = useState<AuditEvidencePolicy>(
     policyForLevel("standard"),
@@ -222,6 +223,19 @@ function NewAuditPage() {
     () => (systemTemplateSpec ? systemTemplateSpec.build() : null),
     [systemTemplateSpec],
   );
+  const activeTemplateDefinition = useMemo(() => {
+    if (selectedTemplate) return templateToDefinition(selectedTemplate);
+    return systemTemplateDefinition;
+  }, [selectedTemplate, systemTemplateDefinition]);
+  const activeTemplateName =
+    selectedTemplate?.name ?? systemTemplateSpec?.name ?? undefined;
+  const hasTemplate =
+    templateChoice !== "general" &&
+    (templateChoice.startsWith("system:") || Boolean(selectedTemplate));
+
+  useEffect(() => {
+    setDataInputMode(defaultDataInputMode(hasTemplate));
+  }, [hasTemplate, templateChoice]);
   const effectivePolicy = useMemo(
     () =>
       mergeTemplateMinimum(
@@ -239,6 +253,14 @@ function NewAuditPage() {
     [evidencePolicy, selectedTemplate, systemTemplateDefinition],
   );
   const datasetError = validateAuditDataset(dataset, { manualColumnLimit: 10 });
+  const dataDefinitionError = validateDataDefinition({
+    mode: dataInputMode,
+    method,
+    datasetError,
+    hasTemplate,
+    inputSchema,
+    rowCount: dataset.rows.length,
+  });
 
   useEffect(() => {
     if (storeId && !locationScope.storeIds.includes(storeId)) {
@@ -419,15 +441,15 @@ function NewAuditPage() {
     }));
   }
 
-  async function parseCsv(file: File) {
+  async function parseSpreadsheet(file: File) {
     try {
-      const parsed = parseAuditCsv(await file.text(), file.name);
+      const parsed = await parseAuditSpreadsheet(file);
       const schema = buildInputSchema(parsed);
       setDataset({ ...parsed, inputSchema: schema });
       setInputSchema(schema);
       setInputError(null);
     } catch (error) {
-      setInputError(error instanceof Error ? error.message : "Could not read this CSV.");
+      setInputError(error instanceof Error ? error.message : "Could not read this file.");
     }
   }
 
@@ -477,12 +499,17 @@ function NewAuditPage() {
         templateForAssignment = ensured;
       }
 
-      if (method === "digital" && !templateForAssignment && datasetError) {
-        throw new Error(datasetError);
+      if (method === "digital" && dataDefinitionError) {
+        throw new Error(dataDefinitionError);
       }
 
+      const hasInputData =
+        dataInputMode !== "template_only" &&
+        dataInputMode !== "master_data" &&
+        dataset.rows.length > 0;
+
       const assignmentRows =
-        method === "digital" && !datasetError
+        method === "digital" && hasInputData && !datasetError
           ? datasetToDraftRows(dataset, { location, category })
           : [];
 
@@ -496,36 +523,38 @@ function NewAuditPage() {
         });
       }
 
-      const templateSnapshot = {
-        ...(templateForAssignment
-          ? (templateForAssignment as unknown as Record<string, unknown>)
-          : {
-              predefined_type: templateChoice,
-              evidence_policy: effectivePolicy,
-            }),
-        ...(assignmentRows.length || inputSchema.columnMappings.length
-          ? {
-              input_dataset: {
-                source: dataset.source,
-                filename: dataset.filename,
-                columns: dataset.columns,
-                rows: dataset.rows,
-                inputSchema,
-              },
-              purpose_config: {
-                ...(templateForAssignment?.purpose_config ?? {}),
-                inputSchema,
-                input_dataset: {
-                  source: dataset.source,
-                  filename: dataset.filename,
-                  columns: dataset.columns,
-                  rows: dataset.rows,
-                  inputSchema,
-                },
-              },
-            }
-          : {}),
-      };
+      let templateSnapshot: Record<string, unknown>;
+
+      if (templateForAssignment && hasInputData) {
+        templateSnapshot = buildMergedTemplateSnapshot({
+          template: templateForAssignment,
+          inputSchema,
+          dataset,
+          dataInputMode,
+        });
+      } else if (templateForAssignment) {
+        templateSnapshot = templateForAssignment as unknown as Record<string, unknown>;
+      } else if (hasInputData || inputSchema.columnMappings.length) {
+        const csvDef = buildTemplateFromInputSchema(inputSchema, dataset, {
+          name: campaignName || `Custom Audit ${new Date().toLocaleDateString()}`,
+          operatingModel,
+        });
+        templateSnapshot = mergeInputSchemaIntoSnapshot(
+          {
+            ...definitionToPatch(csvDef),
+            predefined_type: templateChoice,
+            evidence_policy: effectivePolicy,
+            name: csvDef.sections[0]?.label ?? "Custom CSV Audit",
+          } as Record<string, unknown>,
+          inputSchema,
+          dataset,
+        );
+      } else {
+        templateSnapshot = {
+          predefined_type: templateChoice,
+          evidence_policy: effectivePolicy,
+        };
+      }
 
       const storeIds =
         locationScope.storeIds.length > 0 ? locationScope.storeIds : storeId ? [storeId] : [];
@@ -602,7 +631,7 @@ function NewAuditPage() {
         evidencePolicy: effectivePolicy,
         requireRca,
         creationSource: "unified_new_audit",
-        inputSource: assignmentRows.length
+        inputSource: hasInputData
           ? dataset.source === "csv"
             ? "csv_upload"
             : "manual_rows"
@@ -644,22 +673,19 @@ function NewAuditPage() {
       toast.error(error instanceof Error ? error.message : "Could not create audit."),
   });
 
-  const hasTemplate =
-    templateChoice !== "general" &&
-    (templateChoice.startsWith("system:") || Boolean(selectedTemplate));
-
   const canNext =
     step === 1
-      ? Boolean(operatingModel && auditPurpose && method && hasTemplate)
+      ? Boolean(
+          operatingModel &&
+            auditPurpose &&
+            method &&
+            (hasTemplate || templateChoice === "general"),
+        )
       : step === 2
         ? Boolean(
             storeId &&
-            location &&
-            (method === "ai" ||
-              !datasetError ||
-              selectedTemplate ||
-              systemTemplateKey ||
-              templateChoice === "expiry"),
+            location.trim() &&
+            (method === "ai" || templateChoice === "expiry" || !dataDefinitionError),
           )
         : step === 3
           ? effectivePolicy.requiredProof.length > 0
@@ -830,20 +856,25 @@ function NewAuditPage() {
               ) : null}
             </div>
 
-            {method === "digital" ? (
-              <DatasetEditor
+            {method === "digital" && templateChoice !== "expiry" ? (
+              <AuditDataDefinitionStep
+                dataInputMode={dataInputMode}
+                onDataInputModeChange={setDataInputMode}
+                hasTemplate={hasTemplate}
+                templateName={activeTemplateName}
+                templateDefinition={activeTemplateDefinition}
                 dataset={dataset}
                 inputSchema={inputSchema}
                 operatingModel={operatingModel}
-                error={inputError}
-                onChange={(next) => {
+                error={inputError ?? dataDefinitionError}
+                onDatasetChange={(next) => {
                   updateDataset(next);
                   setInputError(null);
                 }}
                 onInputSchemaChange={setInputSchema}
-                onUpload={parseCsv}
+                onUpload={parseSpreadsheet}
               />
-            ) : (
+            ) : method === "ai" ? (
               <Alert>
                 <Sparkles className="size-4" />
                 <AlertDescription>
@@ -851,13 +882,8 @@ function NewAuditPage() {
                   selected next.
                 </AlertDescription>
               </Alert>
-            )}
-            {!storeId ||
-            !location.trim() ||
-            (method === "digital" &&
-              !selectedTemplate &&
-              templateChoice !== "expiry" &&
-              datasetError) ? (
+            ) : null}
+            {!storeId || !location.trim() || (method === "digital" && dataDefinitionError) ? (
               <Alert>
                 <AlertTriangle className="size-4" />
                 <AlertDescription>
@@ -865,7 +891,7 @@ function NewAuditPage() {
                     ? "Select a store to continue."
                     : !location.trim()
                       ? "Enter the audit location to continue."
-                      : datasetError}
+                      : dataDefinitionError}
                 </AlertDescription>
               </Alert>
             ) : null}
@@ -1124,342 +1150,6 @@ function NewAuditPage() {
         </div>
       </div>
     </AppShell>
-  );
-}
-
-function DatasetEditor({
-  dataset,
-  inputSchema,
-  operatingModel,
-  error,
-  onChange,
-  onInputSchemaChange,
-  onUpload,
-}: {
-  dataset: AuditInputDataset;
-  inputSchema: InputSchema;
-  operatingModel: OperatingModel;
-  error: string | null;
-  onChange: (dataset: AuditInputDataset) => void;
-  onInputSchemaChange: (schema: InputSchema) => void;
-  onUpload: (file: File) => Promise<void>;
-}) {
-  const [templateName, setTemplateName] = useState("");
-  const saveTemplateMutation = useMutation({
-    mutationFn: () =>
-      saveCustomCsvAsTemplate({
-        name: templateName.trim() || `Custom CSV Audit ${new Date().toLocaleDateString()}`,
-        inputSchema,
-        dataset,
-        operatingModel,
-        publish: false,
-      }),
-    onSuccess: (tpl) => toast.success(`Saved template "${tpl.name}" to your library.`),
-    onError: (e) => toast.error(toUserMessage(e)),
-  });
-  const updateColumn = (
-    columnId: string,
-    patch: Partial<{ name: string; type: AuditDataType }>,
-  ) => {
-    onChange({
-      ...dataset,
-      columns: dataset.columns.map((column) =>
-        column.id === columnId ? { ...column, ...patch } : column,
-      ),
-    });
-  };
-
-  const removeColumn = (columnId: string) => {
-    if (dataset.columns.length === 1) return;
-    onChange({
-      ...dataset,
-      columns: dataset.columns.filter((column) => column.id !== columnId),
-      rows: dataset.rows.map((row) => {
-        const values = { ...row.values };
-        delete values[columnId];
-        return { ...row, values };
-      }),
-    });
-  };
-
-  const addColumn = () => {
-    if (dataset.source !== "manual" || dataset.columns.length >= 10) return;
-    const column = createAuditColumn(dataset.columns.length + 1);
-    onChange({
-      ...dataset,
-      columns: [...dataset.columns, column],
-      rows: dataset.rows.map((row) => ({
-        ...row,
-        values: { ...row.values, [column.id]: "" },
-      })),
-    });
-  };
-
-  const updateCell = (rowId: string, columnId: string, value: string) => {
-    onChange({
-      ...dataset,
-      rows: dataset.rows.map((row) =>
-        row.id === rowId ? { ...row, values: { ...row.values, [columnId]: value } } : row,
-      ),
-    });
-  };
-
-  return (
-    <div className="rounded-xl border border-dashed p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="font-medium">Audit input data</p>
-          <p className="text-sm text-muted-foreground">
-            Upload any CSV or define your own columns and data types.
-          </p>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            <Badge variant="secondary">{dataset.columns.length} columns</Badge>
-            <Badge variant="secondary">{dataset.rows.length} rows</Badge>
-            <Badge variant="outline">{dataset.source === "csv" ? "CSV upload" : "Manual"}</Badge>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {dataset.source === "csv" ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onChange(createManualAuditDataset())}
-            >
-              Clear & enter manually
-            </Button>
-          ) : null}
-          <Button variant="outline" asChild>
-            <label>
-              <Upload className="size-4" />{" "}
-              {dataset.source === "csv" ? "Replace CSV" : "Upload CSV"}
-              <input
-                className="hidden"
-                type="file"
-                accept=".csv,text/csv"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) void onUpload(file);
-                  event.target.value = "";
-                }}
-              />
-            </label>
-          </Button>
-        </div>
-      </div>
-
-      {dataset.filename ? (
-        <p className="mt-3 text-sm">
-          <strong>{dataset.filename}</strong> · all {dataset.columns.length} headings and{" "}
-          {dataset.rows.length} data rows captured
-        </p>
-      ) : null}
-      {error ? (
-        <Alert variant="destructive" className="mt-3">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      ) : null}
-
-      <div className="mt-4 max-h-[420px] overflow-auto rounded-xl border">
-        <table
-          className="text-left text-xs"
-          style={{ minWidth: Math.max(640, dataset.columns.length * 220 + 64) }}
-        >
-          <thead className="sticky top-0 z-10 bg-muted">
-            <tr>
-              <th className="w-14 border-r p-2 text-center">#</th>
-              {dataset.columns.map((column, index) => (
-                <th key={column.id} className="min-w-[220px] border-r p-2 align-top">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-1">
-                      <Input
-                        value={column.name}
-                        onChange={(event) => updateColumn(column.id, { name: event.target.value })}
-                        placeholder={`Column ${index + 1} name`}
-                        aria-label={`Column ${index + 1} name`}
-                        className="h-8 bg-background"
-                      />
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="size-8 shrink-0"
-                        disabled={dataset.columns.length === 1}
-                        aria-label={`Remove ${column.name || `column ${index + 1}`}`}
-                        onClick={() => removeColumn(column.id)}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </div>
-                    <Select
-                      value={column.type}
-                      onValueChange={(value) =>
-                        updateColumn(column.id, { type: value as AuditDataType })
-                      }
-                    >
-                      <SelectTrigger className="h-8 bg-background">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {AUDIT_DATA_TYPES.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {dataset.rows.map((row, rowIndex) => (
-              <tr key={row.id} className="border-t">
-                <td className="border-r p-2 text-center align-middle">
-                  <div className="flex flex-col items-center gap-1">
-                    <span>{rowIndex + 1}</span>
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className="size-7 text-muted-foreground hover:text-destructive"
-                      disabled={dataset.rows.length === 1}
-                      aria-label={`Remove row ${rowIndex + 1}`}
-                      onClick={() =>
-                        onChange({
-                          ...dataset,
-                          rows: dataset.rows.filter((item) => item.id !== row.id),
-                        })
-                      }
-                    >
-                      <Trash2 className="size-3.5" />
-                    </Button>
-                  </div>
-                </td>
-                {dataset.columns.map((column) => (
-                  <td key={column.id} className="border-r p-2">
-                    <DatasetCell
-                      columnType={column.type}
-                      value={row.values[column.id] ?? ""}
-                      label={`${column.name || "Column"} row ${rowIndex + 1}`}
-                      onChange={(value) => updateCell(row.id, column.id, value)}
-                    />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        {dataset.source === "manual" ? (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={dataset.columns.length >= 10}
-            onClick={addColumn}
-          >
-            <Columns3 className="size-4" /> Add column ({dataset.columns.length}/10)
-          </Button>
-        ) : null}
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() =>
-            onChange({ ...dataset, rows: [...dataset.rows, createAuditRow(dataset.columns)] })
-          }
-        >
-          <Rows3 className="size-4" /> Add row
-        </Button>
-      </div>
-      <p className="mt-2 text-xs text-muted-foreground">
-        CSV uploads retain every heading and cell. Column names and inferred data types can be
-        corrected before assignment.
-      </p>
-
-      {dataset.columns.length > 0 ? (
-        <div className="mt-6">
-          <ColumnConfigurationPanel
-            columnMappings={inputSchema.columnMappings}
-            subjectType={inputSchema.subjectType}
-            onChange={(mappings) =>
-              onInputSchemaChange({ ...inputSchema, columnMappings: mappings })
-            }
-            onSubjectTypeChange={(subjectType: AuditSubjectType) =>
-              onInputSchemaChange({ ...inputSchema, subjectType })
-            }
-          />
-          <div className="mt-4 flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-3">
-            <div className="min-w-[200px] flex-1">
-              <Label className="text-xs">Save as reusable template</Label>
-              <Input
-                value={templateName}
-                onChange={(e) => setTemplateName(e.target.value)}
-                placeholder="e.g. Kirana SKU Count Audit"
-              />
-            </div>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={!inputSchema.columnMappings.length || saveTemplateMutation.isPending}
-              onClick={() => saveTemplateMutation.mutate()}
-            >
-              Save as Template
-            </Button>
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function DatasetCell({
-  columnType,
-  value,
-  label,
-  onChange,
-}: {
-  columnType: AuditDataType;
-  value: string;
-  label: string;
-  onChange: (value: string) => void;
-}) {
-  if (columnType === "boolean") {
-    return (
-      <Select
-        value={value || "__empty"}
-        onValueChange={(next) => onChange(next === "__empty" ? "" : next)}
-      >
-        <SelectTrigger aria-label={label}>
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="__empty">Not set</SelectItem>
-          <SelectItem value="true">True</SelectItem>
-          <SelectItem value="false">False</SelectItem>
-        </SelectContent>
-      </Select>
-    );
-  }
-
-  const inputType =
-    columnType === "date"
-      ? "date"
-      : columnType === "datetime"
-        ? "datetime-local"
-        : columnType === "integer" || columnType === "number"
-          ? "number"
-          : "text";
-
-  return (
-    <Input
-      type={inputType}
-      step={columnType === "integer" ? 1 : columnType === "number" ? "any" : undefined}
-      value={value}
-      aria-label={label}
-      onChange={(event) => onChange(event.target.value)}
-    />
   );
 }
 

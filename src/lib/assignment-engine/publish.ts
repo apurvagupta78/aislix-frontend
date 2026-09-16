@@ -8,6 +8,9 @@ import { createScanAssignment, type ScopeType, type ScopeValues } from "@/lib/as
 import { notifyMember } from "@/lib/notifications.functions";
 import type { AssignmentPlan, AssignmentMode, ScheduleStatus } from "./types";
 import { computeDueAt, computeNextOccurrence, zonedDateTimeToUtc } from "./recurrence";
+import { filterDatasetForStore } from "@/lib/audit-builder/template-csv-merge";
+import type { InputSchema } from "@/lib/audit-builder/field-roles";
+import type { AuditInputDataset } from "@/lib/audit-input-dataset";
 
 export type PublishResult = {
   campaignId?: string;
@@ -27,13 +30,30 @@ function cloneTemplateSnapshot(
 function snapshotForStore(
   base: Record<string, unknown> | null | undefined,
   storeId: string,
+  storeName?: string,
 ): Record<string, unknown> | null {
   const snap = cloneTemplateSnapshot(base);
   if (!snap) return null;
-  if (snap.input_dataset && typeof snap.input_dataset === "object") {
+
+  const purposeConfig = (snap.purpose_config ?? {}) as Record<string, unknown>;
+  const inputSchema = purposeConfig.inputSchema as InputSchema | undefined;
+  const inputDataset = (purposeConfig.input_dataset ?? snap.input_dataset) as
+    | AuditInputDataset
+    | undefined;
+
+  if (inputDataset && inputSchema) {
+    const filtered = filterDatasetForStore(inputDataset, inputSchema, storeId, storeName);
+    const nextDataset = { ...filtered, store_id: storeId };
+    snap.input_dataset = nextDataset;
+    snap.purpose_config = {
+      ...purposeConfig,
+      input_dataset: nextDataset,
+    };
+  } else if (snap.input_dataset && typeof snap.input_dataset === "object") {
     const dataset = snap.input_dataset as Record<string, unknown>;
     snap.input_dataset = { ...dataset, store_id: storeId };
   }
+
   return snap;
 }
 
@@ -80,7 +100,11 @@ export async function publishAssignmentPlan(plan: AssignmentPlan): Promise<Publi
         auditMode: plan.auditMode,
         templateId: plan.templateId,
         templateVersion: plan.templateVersion,
-        templateSnapshot: snapshotForStore(plan.templateSnapshot ?? undefined, storeId),
+        templateSnapshot: snapshotForStore(
+          plan.templateSnapshot ?? undefined,
+          storeId,
+          storeMeta?.name,
+        ),
         reviewerId: plan.reviewerId,
         evidencePolicy: plan.evidencePolicy,
         requireRca: plan.requireRca,

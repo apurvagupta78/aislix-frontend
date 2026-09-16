@@ -13,6 +13,7 @@ import {
   STANDARD_FINDING_TYPES,
   UNIVERSAL_RCA_OPTIONS,
 } from "@/lib/audit-engine/operating-model-catalog";
+import { ensureFieldRoles } from "@/lib/audit-builder/ensure-field-roles";
 
 let fieldCounter = 0;
 
@@ -184,7 +185,7 @@ export type TemplateBuildConfig = {
 export function assembleTemplate(config: TemplateBuildConfig): TemplateDefinition {
   return {
     sections: config.sections,
-    fields: config.fields,
+    fields: ensureFieldRoles(config.fields),
     rules: config.rules ?? [],
     workflow: config.workflow ?? baseWorkflow(),
     scoring: config.scoring ?? { enabled: false },

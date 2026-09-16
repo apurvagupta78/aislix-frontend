@@ -127,27 +127,59 @@ function uniqueHeaderNames(headers: string[]): string[] {
   });
 }
 
-export function parseAuditCsv(text: string, filename: string): AuditInputDataset {
-  const matrix = parseCsvMatrix(text);
-  if (matrix.length < 2)
-    throw new Error("CSV must contain a heading row and at least one data row.");
+function matrixToDataset(matrix: string[][], filename: string): AuditInputDataset {
+  if (matrix.length < 2) {
+    throw new Error("Spreadsheet must contain a heading row and at least one data row.");
+  }
 
-  const headers = uniqueHeaderNames(matrix[0] ?? []);
+  const headers = uniqueHeaderNames(
+    (matrix[0] ?? []).map((cell) => (cell == null ? "" : String(cell))),
+  );
   const body = matrix.slice(1);
   const columns: AuditDataColumn[] = headers.map((name, columnIndex) => ({
     id: crypto.randomUUID(),
     name,
-    type: inferType(body.map((row) => row[columnIndex] ?? "")),
+    type: inferType(body.map((row) => String(row[columnIndex] ?? ""))),
   }));
 
   const rows: AuditDataRow[] = body.map((cells) => ({
     id: crypto.randomUUID(),
     values: Object.fromEntries(
-      columns.map((column, columnIndex) => [column.id, cells[columnIndex] ?? ""]),
+      columns.map((column, columnIndex) => [column.id, String(cells[columnIndex] ?? "").trim()]),
     ),
   }));
 
   return { source: "csv", filename, columns, rows };
+}
+
+export async function parseAuditSpreadsheet(file: File): Promise<AuditInputDataset> {
+  const lower = file.name.toLowerCase();
+  if (lower.endsWith(".csv") || file.type === "text/csv") {
+    return parseAuditCsv(await file.text(), file.name);
+  }
+
+  if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
+    const XLSX = await import("xlsx");
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]!];
+    if (!sheet) throw new Error("Workbook has no sheets.");
+    const matrix = XLSX.utils.sheet_to_json<(string | number | boolean | null)[]>(sheet, {
+      header: 1,
+      defval: "",
+      raw: false,
+    });
+    const normalized = matrix.map((row) =>
+      (row ?? []).map((cell) => (cell == null ? "" : String(cell))),
+    );
+    return matrixToDataset(normalized, file.name);
+  }
+
+  throw new Error("Upload a CSV or XLSX file.");
+}
+
+export function parseAuditCsv(text: string, filename: string): AuditInputDataset {
+  return matrixToDataset(parseCsvMatrix(text), filename);
 }
 
 export function validateAuditDataset(

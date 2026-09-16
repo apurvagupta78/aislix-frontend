@@ -303,6 +303,9 @@ export type FieldRole =
   | "ai_suggested"
   | "human_confirmed";
 
+/** Who can discover and reuse a saved audit template. */
+export type TemplateVisibility = "private" | "organization";
+
 export type TemplateField = {
   id: string;
   key: string;

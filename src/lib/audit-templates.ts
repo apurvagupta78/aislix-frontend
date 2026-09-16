@@ -20,8 +20,10 @@ import type {
   TemplateSection,
   TemplateStatus,
   TemplateVersion,
+  TemplateVisibility,
   WorkflowSettings,
 } from "@/lib/audit-builder/types";
+import { ensureDefinitionFieldRoles, ensureFieldRoles } from "@/lib/audit-builder/ensure-field-roles";
 import type { AuditMode, ScopeType, ScopeValues } from "@/lib/assignments";
 
 export type { TemplateStatus };
@@ -61,6 +63,8 @@ export type AuditTemplate = {
   is_system_template: boolean;
   purpose_config: Record<string, unknown>;
   short_description: string | null;
+  owner_user_id: string | null;
+  visibility: TemplateVisibility;
   created_by: string | null;
   updated_by: string | null;
   created_at: string;
@@ -98,6 +102,8 @@ export type AuditTemplateInput = {
   is_system_template?: boolean;
   purpose_config?: Record<string, unknown>;
   short_description?: string | null;
+  owner_user_id?: string | null;
+  visibility?: TemplateVisibility;
 };
 
 export type TemplateListFilters = {
@@ -109,6 +115,10 @@ export type TemplateListFilters = {
   aiEnabled?: boolean;
   evidenceRequired?: boolean;
   activeOnly?: boolean;
+  /** Client-side filter after RLS — my private templates only */
+  mineOnly?: boolean;
+  visibility?: TemplateVisibility | "all";
+  excludeSystem?: boolean;
 };
 
 export const TEMPLATE_TYPES: { value: TemplateType; label: string }[] = [
@@ -143,7 +153,7 @@ function mapRow(row: Record<string, unknown>): AuditTemplate {
     audit_level: (row.audit_level as AuditLevel) ?? "one_per_audit",
     is_active: row.is_active !== false,
     sections: (row.sections as TemplateSection[]) ?? [],
-    field_definitions: (row.field_definitions as TemplateField[]) ?? [],
+    field_definitions: ensureFieldRoles((row.field_definitions as TemplateField[]) ?? []),
     rules: (row.rules as TemplateRule[]) ?? [],
     workflow_settings: (row.workflow_settings as WorkflowSettings) ?? {},
     scoring_config: (row.scoring_config as ScoringConfig) ?? {},
@@ -158,6 +168,8 @@ function mapRow(row: Record<string, unknown>): AuditTemplate {
     is_system_template: Boolean(row.is_system_template),
     purpose_config: (row.purpose_config as Record<string, unknown>) ?? {},
     short_description: (row.short_description as string) ?? null,
+    owner_user_id: (row.owner_user_id as string) ?? (row.created_by as string) ?? null,
+    visibility: (row.visibility as TemplateVisibility) ?? "organization",
     created_by: (row.created_by as string) ?? null,
     updated_by: (row.updated_by as string) ?? null,
     created_at: row.created_at as string,
@@ -166,7 +178,7 @@ function mapRow(row: Record<string, unknown>): AuditTemplate {
 }
 
 export function templateToDefinition(t: AuditTemplate): TemplateDefinition {
-  return {
+  return ensureDefinitionFieldRoles({
     sections: t.sections,
     fields: t.field_definitions,
     rules: t.rules,
@@ -186,7 +198,7 @@ export function templateToDefinition(t: AuditTemplate): TemplateDefinition {
     rcaOptions: (t.purpose_config.rcaOptions as string[]) ?? undefined,
     channels: (t.purpose_config.channels as string[]) ?? undefined,
     outletTypes: (t.purpose_config.outletTypes as string[]) ?? undefined,
-  };
+  });
 }
 
 export function definitionToPatch(def: TemplateDefinition): Partial<AuditTemplateInput> {
@@ -262,6 +274,16 @@ export async function fetchAuditTemplates(
   if (filters?.evidenceRequired) {
     rows = rows.filter((t) => t.evidence_required || Boolean(t.evidence_config?.photoRequired));
   }
+  if (filters?.visibility && filters.visibility !== "all") {
+    rows = rows.filter((t) => t.visibility === filters.visibility);
+  }
+  if (filters?.excludeSystem) {
+    rows = rows.filter((t) => !t.is_system_template);
+  }
+  if (filters?.mineOnly) {
+    const userId = await requireUserId();
+    rows = rows.filter((t) => t.owner_user_id === userId && t.visibility === "private");
+  }
   return rows;
 }
 
@@ -301,7 +323,7 @@ export async function createAuditTemplate(input: AuditTemplateInput): Promise<Au
       icon: input.icon ?? "clipboard",
       audit_level: input.audit_level ?? "one_per_audit",
       sections: input.sections ?? [{ key: "default", title: "Audit Form", order: 0 }],
-      field_definitions: input.field_definitions ?? [],
+      field_definitions: ensureFieldRoles(input.field_definitions ?? []),
       rules: input.rules ?? [],
       workflow_settings: input.workflow_settings ?? { submission: "manager_approval" },
       scoring_config: input.scoring_config ?? { enabled: false },
@@ -316,6 +338,10 @@ export async function createAuditTemplate(input: AuditTemplateInput): Promise<Au
       is_system_template: input.is_system_template ?? false,
       purpose_config: input.purpose_config ?? {},
       short_description: input.short_description?.trim() || null,
+      owner_user_id: input.owner_user_id ?? userId,
+      visibility: input.is_system_template
+        ? "organization"
+        : (input.visibility ?? "private"),
       created_by: userId,
     })
     .select("*")
@@ -353,7 +379,9 @@ export async function updateAuditTemplate(
   if (input.audit_level !== undefined) patch.audit_level = input.audit_level;
   if (input.is_active !== undefined) patch.is_active = input.is_active;
   if (input.sections !== undefined) patch.sections = input.sections;
-  if (input.field_definitions !== undefined) patch.field_definitions = input.field_definitions;
+  if (input.field_definitions !== undefined) {
+    patch.field_definitions = ensureFieldRoles(input.field_definitions);
+  }
   if (input.rules !== undefined) patch.rules = input.rules;
   if (input.workflow_settings !== undefined) patch.workflow_settings = input.workflow_settings;
   if (input.scoring_config !== undefined) patch.scoring_config = input.scoring_config;
@@ -368,6 +396,8 @@ export async function updateAuditTemplate(
   if (input.is_system_template !== undefined) patch.is_system_template = input.is_system_template;
   if (input.purpose_config !== undefined) patch.purpose_config = input.purpose_config;
   if (input.short_description !== undefined) patch.short_description = input.short_description?.trim() || null;
+  if (input.visibility !== undefined) patch.visibility = input.visibility;
+  if (input.owner_user_id !== undefined) patch.owner_user_id = input.owner_user_id;
 
   const { error } = await supabase
     .from("audit_templates")
@@ -408,7 +438,46 @@ export async function duplicateAuditTemplate(id: string): Promise<AuditTemplate>
     hierarchy_bindings: source.hierarchy_bindings,
     purpose_config: source.purpose_config,
     is_system_template: false,
+    visibility: "private",
   });
+}
+
+export async function shareAuditTemplateWithOrganization(id: string): Promise<void> {
+  const userId = await requireUserId();
+  const { error } = await supabase.rpc("share_audit_template_with_org", {
+    p_template_id: id,
+  });
+  if (error) {
+    const template = await fetchAuditTemplate(id);
+    if (!template) throw new Error("Template not found.");
+    if (template.owner_user_id !== userId) {
+      throw new Error("Only the template owner can share this template.");
+    }
+    await updateAuditTemplate(id, { visibility: "organization" });
+    return;
+  }
+}
+
+export async function fetchTemplateUsageCounts(
+  templateIds: string[],
+): Promise<Record<string, number>> {
+  if (!templateIds.length) return {};
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("scan_assignments")
+    .select("template_id")
+    .eq("org_id", orgId)
+    .in("template_id", templateIds);
+  if (error) {
+    if (error.code === "42P01") return {};
+    return {};
+  }
+  const counts: Record<string, number> = {};
+  for (const row of data ?? []) {
+    const id = row.template_id as string;
+    if (id) counts[id] = (counts[id] ?? 0) + 1;
+  }
+  return counts;
 }
 
 export async function archiveAuditTemplate(id: string): Promise<void> {

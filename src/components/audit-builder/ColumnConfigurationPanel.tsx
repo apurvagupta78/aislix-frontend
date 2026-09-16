@@ -22,11 +22,12 @@ import {
   type FieldRole,
 } from "@/lib/audit-builder/field-roles";
 import { STANDARD_FIELD_OPTIONS } from "@/lib/audit-builder/input-schema";
-import { AUDIT_DATA_TYPES, type AuditDataType } from "@/lib/audit-input-dataset";
+import { AUDIT_DATA_TYPES, type AuditDataType, type AuditInputDataset } from "@/lib/audit-input-dataset";
 
 type Props = {
   columnMappings: ColumnMapping[];
   subjectType: AuditSubjectType;
+  dataset?: AuditInputDataset;
   onChange: (mappings: ColumnMapping[]) => void;
   onSubjectTypeChange: (subject: AuditSubjectType) => void;
 };
@@ -47,9 +48,16 @@ const SUBJECT_OPTIONS: { value: AuditSubjectType; label: string }[] = [
 export function ColumnConfigurationPanel({
   columnMappings,
   subjectType,
+  dataset,
   onChange,
   onSubjectTypeChange,
 }: Props) {
+  const exampleForColumn = (columnId: string): string => {
+    if (!dataset?.rows.length) return "—";
+    const first = dataset.rows.find((row) => (row.values[columnId] ?? "").trim());
+    return first ? (first.values[columnId] ?? "").trim() : "—";
+  };
+
   const updateMapping = (columnId: string, patch: Partial<ColumnMapping>) => {
     onChange(
       columnMappings.map((m) => {
@@ -59,6 +67,9 @@ export function ColumnConfigurationPanel({
           next.auditorFills =
             patch.auditorFills ??
             (patch.fieldRole === "auditor_input" || patch.fieldRole === "human_confirmed");
+        }
+        if (patch.aislixMapping !== undefined || patch.fieldRole !== undefined) {
+          next.autoSuggested = false;
         }
         return next;
       }),
@@ -103,12 +114,21 @@ export function ColumnConfigurationPanel({
               <TableHead className="text-center">Auditor Fills?</TableHead>
               <TableHead className="text-center">Required?</TableHead>
               <TableHead className="text-center">Evidence?</TableHead>
+              <TableHead className="text-center">AI?</TableHead>
+              <TableHead>Example</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {columnMappings.map((mapping) => (
               <TableRow key={mapping.columnId}>
-                <TableCell className="font-medium">{mapping.columnName}</TableCell>
+                <TableCell className="font-medium">
+                  {mapping.columnName}
+                  {mapping.autoSuggested ? (
+                    <Badge variant="outline" className="ml-2 text-[9px]">
+                      Auto suggested
+                    </Badge>
+                  ) : null}
+                </TableCell>
                 <TableCell>
                   <Select
                     value={mapping.dataType}
@@ -187,6 +207,17 @@ export function ColumnConfigurationPanel({
                       updateMapping(mapping.columnId, { evidenceRequired: v === true })
                     }
                   />
+                </TableCell>
+                <TableCell className="text-center">
+                  <Checkbox
+                    checked={mapping.aiEnabled ?? false}
+                    onCheckedChange={(v) =>
+                      updateMapping(mapping.columnId, { aiEnabled: v === true })
+                    }
+                  />
+                </TableCell>
+                <TableCell className="max-w-[140px] truncate text-xs text-muted-foreground">
+                  {exampleForColumn(mapping.columnId)}
                 </TableCell>
               </TableRow>
             ))}
