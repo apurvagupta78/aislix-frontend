@@ -138,7 +138,7 @@ function FindingsMain() {
         <Select value={severity} onValueChange={setSeverity}>
           <SelectTrigger className="w-40" aria-label="Priority"><SelectValue placeholder="Priority" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All severities</SelectItem>
+            <SelectItem value="all">All priorities</SelectItem>
             {FINDING_SEVERITIES.map((s) => (
               <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
             ))}
