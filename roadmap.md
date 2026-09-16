@@ -1,11 +1,34 @@
-# Redesign implementation roadmap
+# Aislix redesign roadmap
 
-- [ ] Foundation: semantic tokens, Sora/Manrope, controls, status/state primitives
-- [ ] Shell: grouped navigation, header, context, mobile behavior
+## Non-negotiable UX principles
+1. Feels exceptionally simple and visually obvious; usable with almost no training.
+2. 8-year-old test on every screen: one obvious primary action, plain-English labels, large controls,
+   icons + text, clear progress, clear status, minimal jargon, obvious next step.
+3. New Audit screen is the visual reference: colourful cards, generous whitespace, rounded surfaces,
+   simple navigation, strong hierarchy.
+4. Same visual language on every page, public and authenticated.
+5. Visual components used with purpose only — every chart answers a business question.
+6. Drag-and-drop only where it genuinely helps (CSV upload, field mapping, template config,
+   assignment/calendar, hierarchy).
+7. Pattern per workflow inside one product: command center, guided flow, focused workspace,
+   visual modules.
+8. Apple-like = simplicity, polish, clarity, whitespace, hierarchy, delight. Not Apple branding.
+9. Playful = approachable and colourful, never childish.
+10. Keep professional information density behind progressive disclosure.
+11. Every major page answers: Where am I? What is happening? What should I do next?
+12. Shared design system first, then consistent application.
+13. Route/workflow inventory is the source of truth (complete).
+14. UI/UX only — no schema, API, auth, RLS, logic, calculation, permission or data-contract changes.
+
+## Implementation
+- [x] Architecture and route/workflow inventory
+- [ ] Foundation: tokens, Sora/Manrope, status colours, touch targets, shared primitives
+- [ ] Shell: grouped navigation, header, context answers, mobile behaviour
 - [ ] Page framework and global filters
-- [ ] Control Tower and dashboard visual system
-- [ ] Audits, templates, assignments, execution, evidence and review
-- [ ] Findings, corrective actions, SLA and recurring issues
-- [ ] Intelligence, operations, reports, team, settings and billing
-- [ ] Public site and campaign pages
-- [ ] Responsive, accessibility, route metadata and release verification
+- [ ] Control Tower and dashboard
+- [ ] Audits, templates, assignments, calendar, execution, review
+- [ ] Findings, corrective actions, SLA, recurring issues
+- [ ] Intelligence, operations, master data
+- [ ] Reports, team, manage, settings, billing
+- [ ] Public site, product pages, login/signup
+- [ ] Responsive, accessibility, route metadata, release verification

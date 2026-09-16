@@ -19,7 +19,26 @@
  */
 
 @theme inline {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Sora", "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --color-status-good: var(--status-good);
+  --color-status-good-soft: var(--status-good-soft);
+  --color-status-good-strong: var(--status-good-strong);
+  --color-status-warn: var(--status-warn);
+  --color-status-warn-soft: var(--status-warn-soft);
+  --color-status-warn-strong: var(--status-warn-strong);
+  --color-status-danger: var(--status-danger);
+  --color-status-danger-soft: var(--status-danger-soft);
+  --color-status-danger-strong: var(--status-danger-strong);
+  --color-status-info: var(--status-info);
+  --color-status-info-soft: var(--status-info-soft);
+  --color-status-info-strong: var(--status-info-strong);
+  --color-status-ai: var(--status-ai);
+  --color-status-ai-soft: var(--status-ai-soft);
+  --color-status-ai-strong: var(--status-ai-strong);
+  --color-status-evidence: var(--status-evidence);
+  --color-status-evidence-soft: var(--status-evidence-soft);
+  --color-status-evidence-strong: var(--status-evidence-strong);
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
   --color-brand-soft: var(--brand-soft);

@@ -1,6 +1,9 @@
 import type { FieldRole } from "@/lib/audit-builder/field-roles";
 
-/** Soft pastel tints for cards, pills, and badges — not full-screen fills. */
+/**
+ * Soft semantic tints for cards, pills, and badges — not full-screen fills.
+ * All values are design tokens declared in src/styles.css; never raw palette colors.
+ */
 export const SEMANTIC_PALETTE = {
   brand: {
     bg: "bg-brand-soft/60",
@@ -9,52 +12,52 @@ export const SEMANTIC_PALETTE = {
     ring: "ring-brand/25",
   },
   success: {
-    bg: "bg-emerald-50",
-    border: "border-emerald-200",
-    text: "text-emerald-800",
-    ring: "ring-emerald-200",
+    bg: "bg-status-good-soft",
+    border: "border-status-good/30",
+    text: "text-status-good-strong",
+    ring: "ring-status-good/25",
   },
   warning: {
-    bg: "bg-amber-50",
-    border: "border-amber-200",
-    text: "text-amber-900",
-    ring: "ring-amber-200",
+    bg: "bg-status-warn-soft",
+    border: "border-status-warn/35",
+    text: "text-status-warn-strong",
+    ring: "ring-status-warn/25",
   },
   critical: {
-    bg: "bg-red-50",
-    border: "border-red-200",
-    text: "text-red-800",
-    ring: "ring-red-200",
+    bg: "bg-status-danger-soft",
+    border: "border-status-danger/30",
+    text: "text-status-danger-strong",
+    ring: "ring-status-danger/25",
   },
   info: {
-    bg: "bg-sky-50",
-    border: "border-sky-200",
-    text: "text-sky-900",
-    ring: "ring-sky-200",
+    bg: "bg-status-info-soft",
+    border: "border-status-info/30",
+    text: "text-status-info-strong",
+    ring: "ring-status-info/25",
   },
   ai: {
-    bg: "bg-violet-50",
-    border: "border-violet-200",
-    text: "text-violet-900",
-    ring: "ring-violet-200",
+    bg: "bg-status-ai-soft",
+    border: "border-status-ai/30",
+    text: "text-status-ai-strong",
+    ring: "ring-status-ai/25",
   },
   evidence: {
-    bg: "bg-pink-50",
-    border: "border-pink-200",
-    text: "text-pink-900",
-    ring: "ring-pink-200",
+    bg: "bg-status-evidence-soft",
+    border: "border-status-evidence/30",
+    text: "text-status-evidence-strong",
+    ring: "ring-status-evidence/25",
   },
   calculated: {
-    bg: "bg-purple-50",
-    border: "border-purple-200",
-    text: "text-purple-900",
-    ring: "ring-purple-200",
+    bg: "bg-status-ai-soft",
+    border: "border-status-ai/25",
+    text: "text-status-ai-strong",
+    ring: "ring-status-ai/20",
   },
   neutral: {
-    bg: "bg-slate-50",
-    border: "border-slate-200",
-    text: "text-slate-700",
-    ring: "ring-slate-200",
+    bg: "bg-muted",
+    border: "border-border",
+    text: "text-muted-foreground",
+    ring: "ring-border",
   },
 } as const;
 
