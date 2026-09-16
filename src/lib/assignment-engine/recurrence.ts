@@ -1,8 +1,24 @@
 import type { DueConfig, RecurrenceRule } from "./types";
 
+function readZonedParts(formatter: Intl.DateTimeFormat, ms: number) {
+  const parts = formatter.formatToParts(new Date(ms));
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return {
+    year: get("year"),
+    month: get("month"),
+    day: get("day"),
+    hour: get("hour"),
+    minute: get("minute"),
+    second: get("second"),
+  };
+}
+
 /** Parse YYYY-MM-DD + HH:mm in a given IANA timezone into UTC Date. */
 export function zonedDateTimeToUtc(date: string, time: string, timezone: string): Date {
-  const localIso = `${date}T${time}:00`;
+  const [year, month, day] = date.split("-").map(Number);
+  const [hour, minute] = time.split(":").map(Number);
+
   try {
     const formatter = new Intl.DateTimeFormat("en-US", {
       timeZone: timezone,
@@ -14,22 +30,22 @@ export function zonedDateTimeToUtc(date: string, time: string, timezone: string)
       second: "2-digit",
       hour12: false,
     });
-    const target = new Date(localIso);
-    const parts = formatter.formatToParts(target);
-    const get = (type: Intl.DateTimeFormatPartTypes) =>
-      Number(parts.find((p) => p.type === type)?.value ?? 0);
-    const asUtc = Date.UTC(
-      get("year"),
-      get("month") - 1,
-      get("day"),
-      get("hour"),
-      get("minute"),
-      get("second"),
-    );
-    const offset = asUtc - target.getTime();
-    return new Date(new Date(localIso).getTime() - offset);
+
+    const targetMs = Date.UTC(year, month - 1, day, hour, minute, 0);
+    let utcMs = targetMs;
+
+    // Converge wall-clock in `timezone` to the requested local date/time.
+    for (let i = 0; i < 4; i++) {
+      const zoned = readZonedParts(formatter, utcMs);
+      const zonedMs = Date.UTC(zoned.year, zoned.month - 1, zoned.day, zoned.hour, zoned.minute, zoned.second);
+      const delta = targetMs - zonedMs;
+      if (delta === 0) break;
+      utcMs += delta;
+    }
+
+    return new Date(utcMs);
   } catch {
-    return new Date(localIso);
+    return new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
   }
 }
 

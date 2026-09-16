@@ -5,9 +5,29 @@ import {
   DueDateResolutionError,
   mergeDueConfig,
   resolveAssignmentDueAt,
+  zonedDateTimeToUtc,
 } from "./recurrence";
 
+describe("zonedDateTimeToUtc", () => {
+  it("converts 18:00 Asia/Kolkata to 12:30 UTC", () => {
+    const result = zonedDateTimeToUtc("2026-09-17", "18:00", "Asia/Kolkata");
+    expect(result.toISOString()).toBe("2026-09-17T12:30:00.000Z");
+  });
+
+  it("converts 14:00 America/New_York (EDT) to 18:00 UTC", () => {
+    const result = zonedDateTimeToUtc("2026-09-17", "14:00", "America/New_York");
+    expect(result.toISOString()).toBe("2026-09-17T18:00:00.000Z");
+  });
+});
+
 describe("resolveAssignmentDueAt", () => {
+  it("stores Gate 4 due_at as 12:30 UTC for 18:00 IST", () => {
+    const dueAt = resolveAssignmentDueAt({
+      dueConfig: { dueDate: "2026-09-17", dueTime: "18:00" },
+      timezone: "Asia/Kolkata",
+    });
+    expect(dueAt).toBe("2026-09-17T12:30:00.000Z");
+  });
   it("returns ISO UTC when due date and time are set (never null)", () => {
     const dueConfig = { dueDate: "2026-09-17", dueTime: "18:00" };
     const publishAt = new Date("2026-09-16T08:00:00.000Z");

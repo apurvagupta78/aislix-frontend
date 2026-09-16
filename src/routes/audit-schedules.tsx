@@ -217,10 +217,15 @@ function AuditSchedulesPage() {
               >
                 <div>
                   <p className="font-medium">
-                    {s.store_name} · {s.cadence} · {s.audit_mode === "digital" ? "Digital" : "AI"}
+                    {s.name ?? s.store_name ?? "Scheduled audit"} · {s.cadence}
+                    {s.assignment_mode ? ` · ${s.assignment_mode.replace("_", " ")}` : ""}
+                    {" · "}
+                    {s.audit_mode === "digital" ? "Digital" : "AI"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {s.assignee_name} · Next: {new Date(s.next_run_at).toLocaleString()}
+                    {s.assignee_name ?? "Unassigned"} · Next:{" "}
+                    {new Date(s.next_run_at).toLocaleString()}
+                    {s.status ? ` · ${s.status}` : ""}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">

@@ -68,7 +68,7 @@ export function FmcgHierarchyScopePicker({ value, onChange, onResolvedStoreCount
 
   const outletCount = resolveQuery.data?.length ?? 0;
 
-  useMemo(() => {
+  useEffect(() => {
     onResolvedStoreCount?.(outletCount);
   }, [outletCount, onResolvedStoreCount]);
 
