@@ -154,6 +154,26 @@
   --semantic-info: oklch(0.92 0.04 240);
   --semantic-ai: oklch(0.93 0.04 290);
   --semantic-evidence: oklch(0.94 0.04 350);
+
+  /* Status colours — one meaning per colour, used with an icon and a word */
+  --status-good: oklch(0.598 0.126 158.5);
+  --status-good-soft: oklch(0.958 0.028 158.5);
+  --status-good-strong: oklch(0.405 0.088 158.5);
+  --status-warn: oklch(0.79 0.132 72);
+  --status-warn-soft: oklch(0.968 0.038 82);
+  --status-warn-strong: oklch(0.468 0.098 62);
+  --status-danger: oklch(0.642 0.163 27.5);
+  --status-danger-soft: oklch(0.962 0.026 22);
+  --status-danger-strong: oklch(0.474 0.152 27.5);
+  --status-info: oklch(0.628 0.104 236);
+  --status-info-soft: oklch(0.962 0.023 236);
+  --status-info-strong: oklch(0.418 0.088 240);
+  --status-ai: oklch(0.628 0.118 292);
+  --status-ai-soft: oklch(0.963 0.024 292);
+  --status-ai-strong: oklch(0.432 0.112 292);
+  --status-evidence: oklch(0.652 0.118 348);
+  --status-evidence-soft: oklch(0.964 0.024 348);
+  --status-evidence-strong: oklch(0.452 0.112 348);
   --gradient-brand: linear-gradient(135deg, var(--brand), var(--brand-glow));
   --gradient-hero: radial-gradient(1200px 600px at 50% -20%, color-mix(in oklab, var(--brand) 14%, transparent), transparent 70%);
   --shadow-soft: 0 1px 2px 0 oklch(0.267 0.055 243.7 / 0.06);
