@@ -19,6 +19,7 @@ import {
   type EvidenceProof,
 } from "@/lib/audit-evidence-policy";
 import { createAssignmentPlanogramVersion } from "@/lib/planogram";
+import { toUserMessage } from "@/lib/api/errors";
 import { requireUserId } from "@/lib/db/context";
 import { startAssignment } from "@/lib/assignments";
 import { createAssignment as createExpiryAssignment } from "@/lib/expiry-control";
@@ -420,6 +421,14 @@ function NewAuditPage() {
     }
   }, [assigneeId, assignToSelf, teamScope.assigneeIds]);
 
+  useEffect(() => {
+    if (assignToSelf) return;
+    const primary = teamScope.assigneeIds[0];
+    if (primary && primary !== assigneeId) {
+      setAssigneeId(primary);
+    }
+  }, [assignToSelf, teamScope.assigneeIds, assigneeId]);
+
   const hierarchyProfileQuery = useQuery({
     queryKey: ["hierarchy-profiles", operatingModel],
     queryFn: () => fetchHierarchyProfiles(operatingModel),
@@ -636,13 +645,22 @@ function NewAuditPage() {
   const createMutation = useMutation({
     mutationFn: async () => {
       const userId = await requireUserId();
+      const resolvedAssigneeId = assignToSelf
+        ? userId
+        : assigneeId || teamScope.assigneeIds[0] || "";
       const assignee = assignToSelf
         ? { id: userId, name: "Me" }
         : {
-            id: assigneeId,
-            name: membersQuery.data?.find((m) => m.user_id === assigneeId)?.name ?? "Auditor",
+            id: resolvedAssigneeId,
+            name:
+              membersQuery.data?.find((m) => m.user_id === resolvedAssigneeId)?.name ??
+              "Auditor",
           };
-      if (!assignee.id) throw new Error("Choose an auditor or assign the audit to yourself.");
+      if (!assignee.id) {
+        throw new Error(
+          "Choose an auditor or assign the audit to yourself before publishing.",
+        );
+      }
 
       if (templateChoice === "expiry") {
         const attemptId = await createExpiryAssignment({
@@ -843,8 +861,13 @@ function NewAuditPage() {
         void navigate({ to: "/scan", search: { assignmentId } });
       }
     },
-    onError: (error) =>
-      toast.error(error instanceof Error ? error.message : "Could not create audit."),
+    onError: (error) => {
+      console.error("[new-audit] assignment creation failed:", error);
+      toast.error(
+        toUserMessage(error) ||
+          "Could not create the assignment. Please check the assignment setup or permissions.",
+      );
+    },
   });
 
   const setupValid = setupCompletedThrough === 4;

@@ -119,7 +119,7 @@ export type PlanogramScopeItem = {
   match_key: string;
 };
 
-export const MANAGER_ROLES = ["owner", "admin", "manager"] as const;
+export const MANAGER_ROLES = ["owner", "admin", "manager", "store_manager"] as const;
 
 export function scopeSummary(type: ScopeType, values: ScopeValues): string {
   if (type === "planogram") {
@@ -303,7 +303,10 @@ export async function createScanAssignment(input: {
     } as Record<string, unknown>)
     .select("id")
     .single();
-  if (error) dbError(error, "Could not assign the audit.");
+  if (error) {
+    console.error("[createScanAssignment] scan_assignments insert failed:", error);
+    dbError(error, "Could not create the assignment. Please check the assignment setup or permissions.");
+  }
 
   const assignmentId = data!.id as string;
 
