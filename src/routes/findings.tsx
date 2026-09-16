@@ -1,7 +1,17 @@
 import { useMemo, useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle } from "lucide-react";
+import {
+  AlertCircle,
+  AlertTriangle,
+  Archive,
+  CheckCircle2,
+  CircleDot,
+  Clock,
+  Eye,
+  IndianRupee,
+  ListChecks,
+} from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 import { Input } from "@/components/ui/input";
@@ -46,8 +56,9 @@ export const Route = createFileRoute("/findings")({
 function FindingsPage() {
   return (
     <AppShell
-      title="Findings"
-      description="What went wrong on the shelf — inventory variance, planogram gaps and RCA, linked to corrective actions."
+      title="Problems found"
+      description="What went wrong on the shelf — missing stock, wrong placement and why it happened."
+      nextStep="Start with the red cards: fix critical and overdue problems first."
     >
       <FindingsMain />
     </AppShell>
@@ -84,30 +95,39 @@ function FindingsMain() {
   return (
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <KpiCard label="Total findings" value={String(kpis.total)} />
-        <KpiCard label="Open" value={String(kpis.open)} />
-        <KpiCard label="Critical" value={String(kpis.critical)} />
-        <KpiCard label="High" value={String(rows.filter((r) => r.severity === "high").length)} />
-        <KpiCard label="Overdue" value={String(kpis.overdue)} />
-        <KpiCard label="Pending verification" value={String(kpis.pending_verification)} />
-        <KpiCard label="Resolved" value={String(kpis.resolved)} />
-        <KpiCard label="Closed" value={String(kpis.closed)} />
+        <KpiCard label="All problems" value={String(kpis.total)} icon={ListChecks} />
+        <KpiCard label="Still open" value={String(kpis.open)} icon={CircleDot} tone="warn" />
+        <KpiCard label="Fix first" value={String(kpis.critical)} icon={AlertTriangle} tone="danger" hint="Critical" />
         <KpiCard
-          label="Potential inventory value variance"
+          label="Fix soon"
+          value={String(rows.filter((r) => r.severity === "high").length)}
+          icon={AlertCircle}
+          tone="warn"
+          hint="High priority"
+        />
+        <KpiCard label="Past due" value={String(kpis.overdue)} icon={Clock} tone="danger" />
+        <KpiCard label="Waiting for check" value={String(kpis.pending_verification)} icon={Eye} tone="info" />
+        <KpiCard label="Fixed" value={String(kpis.resolved)} icon={CheckCircle2} tone="good" />
+        <KpiCard label="Closed" value={String(kpis.closed)} icon={Archive} tone="good" />
+        <KpiCard
+          label="Stock value at risk"
           value={`₹${Math.round(kpis.value_at_risk).toLocaleString("en-IN")}`}
-          hint="Not confirmed financial loss"
+          icon={IndianRupee}
+          tone="info"
+          hint="Estimate only — not a confirmed loss"
         />
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card p-3">
         <Input
           value={sku}
           onChange={(e) => setSku(e.target.value)}
-          placeholder="SKU or product"
-          className="h-9 w-40"
+          placeholder="Search product or SKU"
+          aria-label="Search product or SKU"
+          className="w-48"
         />
         <Select value={type} onValueChange={setType}>
-          <SelectTrigger className="h-9 w-44"><SelectValue placeholder="Type" /></SelectTrigger>
+          <SelectTrigger className="w-44" aria-label="Problem type"><SelectValue placeholder="Type" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All types</SelectItem>
             {FINDING_TYPES.map((t) => (
@@ -116,16 +136,16 @@ function FindingsMain() {
           </SelectContent>
         </Select>
         <Select value={severity} onValueChange={setSeverity}>
-          <SelectTrigger className="h-9 w-36"><SelectValue placeholder="Severity" /></SelectTrigger>
+          <SelectTrigger className="w-40" aria-label="Priority"><SelectValue placeholder="Priority" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All severities</SelectItem>
+            <SelectItem value="all">All priorities</SelectItem>
             {FINDING_SEVERITIES.map((s) => (
               <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
             ))}
           </SelectContent>
         </Select>
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="h-9 w-44"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger className="w-44" aria-label="Status"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
             {FINDING_STATUSES.map((s) => (
@@ -134,9 +154,9 @@ function FindingsMain() {
           </SelectContent>
         </Select>
         <Select value={rca} onValueChange={setRca}>
-          <SelectTrigger className="h-9 w-44"><SelectValue placeholder="RCA" /></SelectTrigger>
+          <SelectTrigger className="w-48" aria-label="Reason"><SelectValue placeholder="Reason" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All RCA</SelectItem>
+            <SelectItem value="all">All reasons</SelectItem>
             {RCA_OPTIONS.map((s) => (
               <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>
             ))}
@@ -144,10 +164,16 @@ function FindingsMain() {
         </Select>
         <button
           type="button"
+          aria-pressed={overdueOnly}
           onClick={() => setOverdueOnly((v) => !v)}
-          className={`h-9 rounded-md border px-3 text-xs ${overdueOnly ? "border-destructive bg-destructive/10 text-destructive" : "border-border"}`}
+          className={`inline-flex h-10 items-center gap-1.5 rounded-xl border px-3.5 text-sm font-medium transition-colors ${
+            overdueOnly
+              ? "border-status-danger/40 bg-status-danger-soft text-status-danger-strong"
+              : "border-border text-muted-foreground hover:bg-muted"
+          }`}
         >
-          Overdue
+          <Clock className="size-4" aria-hidden />
+          Past due only
         </button>
       </div>
 

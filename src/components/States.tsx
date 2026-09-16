@@ -9,7 +9,7 @@ export function Skeleton({ className = "" }: { className?: string }) {
 export function TableSkeleton({ rows = 6, cols = 5 }: { rows?: number; cols?: number }) {
   return (
     <div className="space-y-3" aria-busy="true" aria-live="polite">
-      <Skeleton className="h-9 w-full" />
+      <Skeleton className="h-11 w-full" />
       {Array.from({ length: rows }).map((_, r) => (
         <div key={r} className="grid gap-3" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))` }}>
           {Array.from({ length: cols }).map((_, c) => (
@@ -23,8 +23,8 @@ export function TableSkeleton({ rows = 6, cols = 5 }: { rows?: number; cols?: nu
 
 export function CardSkeleton() {
   return (
-    <div className="card-surface space-y-3 p-5">
-      <Skeleton className="h-4 w-24" />
+    <div className="metric-tile space-y-3 p-5" aria-busy="true">
+      <Skeleton className="h-9 w-9 rounded-xl" />
       <Skeleton className="h-7 w-32" />
       <Skeleton className="h-3 w-20" />
     </div>
@@ -43,11 +43,11 @@ export function EmptyState({
   icon?: ReactNode | undefined;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface px-6 py-14 text-center">
-      <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
-        {icon ?? <Inbox className="size-5" />}
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card px-6 py-14 text-center">
+      <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand">
+        {icon ?? <Inbox className="size-6" aria-hidden />}
       </span>
-      <p className="mt-4 text-sm font-medium text-foreground">{title}</p>
+      <p className="mt-4 text-base font-semibold text-foreground">{title}</p>
       {description && (
         <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
       )}
@@ -57,7 +57,7 @@ export function EmptyState({
 }
 
 export function ErrorState({
-  title = "Something went wrong",
+  title = "This didn't load",
   description = "We couldn't load this data. Try again in a moment.",
   onRetry,
 }: {
@@ -66,15 +66,18 @@ export function ErrorState({
   onRetry?: () => void | undefined;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-destructive/25 bg-destructive/5 px-6 py-14 text-center">
-      <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-destructive/10 text-destructive">
-        <AlertTriangle className="size-5" />
+    <div
+      role="alert"
+      className="flex flex-col items-center justify-center rounded-2xl border border-status-danger/25 bg-status-danger-soft px-6 py-14 text-center"
+    >
+      <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-card text-status-danger-strong shadow-soft">
+        <AlertTriangle className="size-6" aria-hidden />
       </span>
-      <p className="mt-4 text-sm font-medium text-foreground">{title}</p>
+      <p className="mt-4 text-base font-semibold text-foreground">{title}</p>
       <p className="mt-1 max-w-sm text-sm text-muted-foreground">{description}</p>
       {onRetry && (
         <Button variant="subtle" size="sm" className="mt-5 rounded-xl" onClick={onRetry}>
-          <RefreshCw className="size-4" /> Retry
+          <RefreshCw className="size-4" aria-hidden /> Try again
         </Button>
       )}
     </div>

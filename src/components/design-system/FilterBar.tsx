@@ -33,6 +33,7 @@ export function FilterSearch({
     <div className={cn("relative min-w-[200px] flex-1", className)}>
       <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
       <Input
+        aria-label={placeholder}
         className="rounded-xl pl-9"
         placeholder={placeholder}
         value={value}

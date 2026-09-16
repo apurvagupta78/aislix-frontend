@@ -9,9 +9,9 @@ type Props = {
 
 export function SuccessState({ title, description, action }: Props) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-emerald-200/80 bg-emerald-50/50 px-6 py-12 text-center">
-      <span className="grid size-12 place-items-center rounded-full bg-emerald-100 text-emerald-700">
-        <CircleCheck className="size-6" />
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-status-good/25 bg-status-good-soft px-6 py-12 text-center">
+      <span className="grid size-12 place-items-center rounded-full bg-card text-status-good-strong shadow-soft">
+        <CircleCheck className="size-6" aria-hidden />
       </span>
       <p className="mt-4 text-base font-semibold text-foreground">{title}</p>
       {description ? (

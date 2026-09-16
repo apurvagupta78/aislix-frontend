@@ -11,34 +11,34 @@ const TONE_STYLES: Record<
   { border: string; bg: string; value: string; spark: string; badge?: string }
 > = {
   brand: {
-    border: "border-brand/25",
-    bg: "bg-brand-soft/20",
+    border: "border-brand/20",
+    bg: "bg-brand-soft/40",
     value: "text-brand",
-    spark: "hsl(var(--brand))",
+    spark: "var(--brand)",
   },
   good: {
-    border: "border-success/25",
-    bg: "bg-success/5",
-    value: "text-success",
-    spark: "hsl(var(--success))",
+    border: "border-status-good/25",
+    bg: "bg-status-good-soft",
+    value: "text-status-good-strong",
+    spark: "var(--status-good)",
   },
   warn: {
-    border: "border-warning/30",
-    bg: "bg-warning/5",
-    value: "text-warning",
-    spark: "hsl(var(--warning))",
+    border: "border-status-warn/30",
+    bg: "bg-status-warn-soft",
+    value: "text-status-warn-strong",
+    spark: "var(--status-warn)",
   },
   bad: {
-    border: "border-destructive/25",
-    bg: "bg-destructive/5",
-    value: "text-destructive",
-    spark: "hsl(var(--destructive))",
+    border: "border-status-danger/25",
+    bg: "bg-status-danger-soft",
+    value: "text-status-danger-strong",
+    spark: "var(--status-danger)",
   },
   neutral: {
     border: "border-border",
     bg: "bg-card",
     value: "text-foreground",
-    spark: "hsl(var(--muted-foreground))",
+    spark: "var(--muted-foreground)",
   },
 };
 
@@ -79,13 +79,13 @@ export function KpiCardVisual({
           <KpiInfoPopover kpi={kpi} scopeLabel={scopeLabel} periodLabel={periodLabel} />
         </div>
         {kpi.source?.includes("demo") || kpi.source?.includes("Illustrative") ? (
-          <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-medium text-amber-800 dark:bg-amber-950/60 dark:text-amber-200">
-            Demo
+          <span className="rounded-full bg-status-warn-soft px-1.5 py-0.5 text-[9px] font-semibold text-status-warn-strong">
+            Sample
           </span>
         ) : null}
       </div>
 
-      <p className={cn("mt-1 text-2xl font-semibold tracking-tight", tone.value)}>{kpi.value}</p>
+      <p className={cn("mt-1 text-3xl font-semibold tracking-tight", tone.value)}>{kpi.value}</p>
 
       <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{kpi.detail}</p>
 

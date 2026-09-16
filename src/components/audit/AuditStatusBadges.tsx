@@ -28,12 +28,12 @@ export function CollectionMethodBadge({
     ai: {
       label: "AI Audit",
       icon: Bot,
-      className: "bg-violet-500/10 text-violet-700 dark:text-violet-300",
+      className: "bg-status-ai-soft text-status-ai-strong border-status-ai/25",
     },
     ai_assisted: {
       label: "AI-Assisted",
       icon: Bot,
-      className: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+      className: "bg-status-warn-soft text-status-warn-strong border-status-warn/25",
     },
     hybrid: {
       label: "Hybrid",

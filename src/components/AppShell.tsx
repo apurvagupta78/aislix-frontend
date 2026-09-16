@@ -164,10 +164,10 @@ function SidebarNav({
         search={leaf.search ?? {}}
         onClick={onNavigate}
         className={cn(
-          "flex items-center gap-2 rounded-lg py-1.5 pr-3 text-sm transition-colors",
+          "flex min-h-11 items-center gap-2 rounded-xl py-2 pr-3 text-sm transition-colors lg:min-h-9",
           depth === 1 ? "pl-6" : "pl-10",
           active
-            ? "bg-brand-soft/70 font-medium text-brand"
+            ? "bg-brand-soft font-semibold text-brand"
             : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
         )}
       >
@@ -251,9 +251,9 @@ function SidebarNav({
                     search={child.search ?? {}}
                     onClick={onNavigate}
                     className={cn(
-                      "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors",
+                      "flex min-h-10 items-center gap-2 rounded-xl px-2.5 py-2 text-sm transition-colors",
                       leafActive(child)
-                        ? "font-medium text-brand"
+                        ? "bg-brand-soft font-semibold text-brand"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground",
                     )}
                   >
@@ -280,9 +280,9 @@ function SidebarNav({
               aria-expanded={open}
               onClick={() => toggleSection(section.id)}
               className={cn(
-                "flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm transition-colors",
+                "flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors lg:min-h-10",
                 activeSectionId === section.id
-                  ? "bg-brand-soft/50 font-medium text-brand"
+                  ? "bg-brand-soft text-brand"
                   : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
               )}
             >
@@ -321,16 +321,33 @@ export function AppShell({
   title,
   description,
   actions,
+  eyebrow,
+  nextStep,
   children,
 }: {
   title: string;
   description?: string;
   actions?: ReactNode;
+  /** "Where am I?" — defaults to the active navigation section. */
+  eyebrow?: string;
+  /** "What should I do next?" — one short plain-English line. */
+  nextStep?: ReactNode;
   children: ReactNode;
 }) {
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useSidebarCollapsed();
+
+  const sectionLabel =
+    SECTIONS.find((section) =>
+      section.items.some((item) =>
+        item.kind === "leaf"
+          ? pathname === item.to || pathname.startsWith(`${item.to}/`)
+          : item.children.some((c) => pathname === c.to || pathname.startsWith(`${c.to}/`)),
+      ),
+    )?.label ?? null;
+  const headerEyebrow = eyebrow ?? sectionLabel ?? undefined;
 
   const profileQuery = useQuery({
     queryKey: ["profile"],
@@ -713,9 +730,16 @@ export function AppShell({
               </div>
             </header>
 
-            <main className="px-5 py-6 sm:px-8 sm:py-8">
+            <main id="main-content" className="px-5 py-6 sm:px-8 sm:py-8">
               <div className="mx-auto max-w-7xl space-y-6">
-                <PageHeader title={title} description={description} actions={actions} />
+                <PageHeader
+                  title={title}
+                  {...(description ? { description } : {})}
+                  {...(actions ? { actions } : {})}
+                  {...(headerEyebrow ? { eyebrow: headerEyebrow } : {})}
+                  {...(nextStep ? { nextStep } : {})}
+                />
+
                 <GlobalFilterBarShell />
                 <div className="animate-fade-in">{children}</div>
               </div>
