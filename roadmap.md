@@ -22,12 +22,13 @@
 
 ## Implementation
 - [x] Architecture and route/workflow inventory
-- [ ] Foundation: tokens, Sora/Manrope, status colours, touch targets, shared primitives
-- [ ] Shell: grouped navigation, header, context answers, mobile behaviour
-- [ ] Page framework and global filters
-- [ ] Control Tower and dashboard
+- [x] Foundation: tokens, Sora/Manrope, status colours, touch targets, shared primitives
+- [x] Shell: grouped navigation, header, section eyebrow + next-step line, mobile behaviour
+- [x] Page framework (PageHeader / SectionCard / KpiCard with icons + tone / states)
+- [x] Control Tower and dashboard (inherit KPI + status language)
 - [ ] Audits, templates, assignments, calendar, execution, review
-- [ ] Findings, corrective actions, SLA, recurring issues
+- [x] Findings (plain-English KPIs, priority language, grouped filter bar)
+- [ ] Corrective actions, SLA, recurring issues
 - [ ] Intelligence, operations, master data
 - [ ] Reports, team, manage, settings, billing
 - [ ] Public site, product pages, login/signup
