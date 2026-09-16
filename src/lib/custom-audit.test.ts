@@ -1,19 +1,27 @@
 import { describe, expect, it } from "vitest";
 
-import { buildCustomAuditShelfScanInsert } from "@/lib/custom-audit";
+import type { Database } from "@/integrations/supabase/types";
+import {
+  OBSOLETE_SHELF_SCAN_SUBMIT_COLUMNS,
+  buildCustomAuditShelfScanInsert,
+} from "@/lib/custom-audit";
+
+type ShelfScanInsert = Database["public"]["Tables"]["shelf_scans"]["Insert"];
+
+const SAMPLE_SUBMIT_INPUT = {
+  orgId: "org-1",
+  storeId: "store-1",
+  userId: "user-1",
+  assignmentId: "asn-1",
+  templateId: "tpl-1",
+  templateVersion: 2,
+  templateSnapshot: { name: "Local Store Inventory Audit" },
+  workflowSubmission: "manager_approval" as const,
+};
 
 describe("buildCustomAuditShelfScanInsert", () => {
   it("uses live shelf_scans columns (audit_mode, created_by, assignment_id)", () => {
-    const row = buildCustomAuditShelfScanInsert({
-      orgId: "org-1",
-      storeId: "store-1",
-      userId: "user-1",
-      assignmentId: "asn-1",
-      templateId: "tpl-1",
-      templateVersion: 2,
-      templateSnapshot: { name: "Local Store Inventory Audit" },
-      workflowSubmission: "manager_approval",
-    });
+    const row = buildCustomAuditShelfScanInsert(SAMPLE_SUBMIT_INPUT);
 
     expect(row).toMatchObject({
       org_id: "org-1",
@@ -25,24 +33,49 @@ describe("buildCustomAuditShelfScanInsert", () => {
       template_id: "tpl-1",
       template_version: 2,
       status: "completed",
+      category_selections: {},
+      device_info: {},
     });
-    expect(row).not.toHaveProperty("collection_method");
-    expect(row).not.toHaveProperty("user_id");
+    for (const obsolete of OBSOLETE_SHELF_SCAN_SUBMIT_COLUMNS) {
+      expect(row).not.toHaveProperty(obsolete);
+    }
     expect(typeof row.submitted_at).toBe("string");
   });
 
   it("marks direct workflow submissions approved", () => {
     const row = buildCustomAuditShelfScanInsert({
-      orgId: "org-1",
+      ...SAMPLE_SUBMIT_INPUT,
       storeId: null,
-      userId: "user-1",
-      assignmentId: "asn-1",
-      templateId: "tpl-1",
       templateVersion: 1,
       templateSnapshot: {},
       workflowSubmission: "direct",
     });
 
     expect(row.submission_status).toBe("approved");
+  });
+
+  it("only includes keys accepted by the live shelf_scans Insert schema", () => {
+    const row = buildCustomAuditShelfScanInsert(SAMPLE_SUBMIT_INPUT);
+    const allowed: Array<keyof ShelfScanInsert> = [
+      "org_id",
+      "store_id",
+      "created_by",
+      "assignment_id",
+      "status",
+      "audit_mode",
+      "submission_status",
+      "submitted_at",
+      "template_id",
+      "template_version",
+      "template_snapshot",
+      "photo_count",
+      "category_selections",
+      "device_info",
+    ];
+
+    expect(Object.keys(row).sort()).toEqual(allowed.sort());
+    for (const obsolete of OBSOLETE_SHELF_SCAN_SUBMIT_COLUMNS) {
+      expect(Object.keys(row)).not.toContain(obsolete);
+    }
   });
 });

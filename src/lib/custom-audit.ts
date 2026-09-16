@@ -165,6 +165,9 @@ export async function saveCustomAuditField(input: {
   }
 }
 
+/** Obsolete shelf_scans columns — must never appear on custom audit submit payloads. */
+export const OBSOLETE_SHELF_SCAN_SUBMIT_COLUMNS = ["collection_method", "user_id"] as const;
+
 /** Build a shelf_scans insert row for custom/universal audit submission (live schema). */
 export function buildCustomAuditShelfScanInsert(input: {
   orgId: string;
@@ -191,6 +194,8 @@ export function buildCustomAuditShelfScanInsert(input: {
     template_version: input.templateVersion,
     template_snapshot: input.templateSnapshot,
     photo_count: 0,
+    category_selections: {},
+    device_info: {},
   };
 }
 
@@ -240,6 +245,15 @@ export async function submitCustomAudit(input: {
   let scanId: string | null = null;
 
   if (!testMode) {
+    const { assertCanStartScan, hasPlatformBypass, mapLimitError } =
+      await import("@/lib/subscription-limits");
+    try {
+      await assertCanStartScan(orgId);
+    } catch (error) {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!hasPlatformBypass(auth.user?.email)) throw error;
+    }
+
     const { data: assignmentRow } = await supabase
       .from("scan_assignments")
       .select("store_id")
@@ -247,23 +261,27 @@ export async function submitCustomAudit(input: {
       .single();
 
     const directApproval = session.definition.workflow.submission === "direct";
+    const scanInsert = buildCustomAuditShelfScanInsert({
+      orgId,
+      storeId: assignmentRow?.store_id as string | null | undefined,
+      userId,
+      assignmentId,
+      templateId: session.template.id,
+      templateVersion: session.template.version,
+      templateSnapshot: session.template as unknown as Record<string, unknown>,
+      workflowSubmission: session.definition.workflow.submission,
+    });
+
     const { data: scan, error: scanErr } = await supabase
       .from("shelf_scans")
-      .insert(
-        buildCustomAuditShelfScanInsert({
-          orgId,
-          storeId: assignmentRow?.store_id as string | null | undefined,
-          userId,
-          assignmentId,
-          templateId: session.template.id,
-          templateVersion: session.template.version,
-          templateSnapshot: session.template as unknown as Record<string, unknown>,
-          workflowSubmission: session.definition.workflow.submission,
-        }),
-      )
+      .insert(scanInsert)
       .select("id")
       .single();
-    if (scanErr) dbError(scanErr, "Could not create audit record.");
+    if (scanErr) {
+      const mapped = await mapLimitError(scanErr, orgId);
+      if (mapped !== scanErr) throw mapped;
+      dbError(scanErr, "Could not create audit record.");
+    }
     scanId = scan!.id as string;
 
     await supabase
