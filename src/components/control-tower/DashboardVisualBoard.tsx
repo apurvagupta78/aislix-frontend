@@ -130,8 +130,8 @@ export function DashboardVisualBoard({ data }: { data: ControlTowerDemoPayload }
                 key={row.id}
                 className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm"
                 style={{
-                  backgroundColor: `color-mix(in oklab, var(--chart-1) ${Math.round(intensity * 78)}%, white)`,
-                  color: intensity > 0.55 ? "#fff" : "var(--foreground)",
+                  backgroundColor: `color-mix(in oklab, var(--chart-2) ${Math.round(intensity * 78)}%, white)`,
+                  color: intensity > 0.55 ? "white" : "var(--foreground)",
                 }}
               >
                 <span className="truncate font-medium">{row.name}</span>

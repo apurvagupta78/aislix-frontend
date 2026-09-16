@@ -23,9 +23,9 @@ type EventTone = "scheduled" | "assigned" | "due_today" | "overdue" | "recurring
 const LEGEND: { tone: EventTone; label: string; className: string }[] = [
   { tone: "scheduled", label: "Scheduled", className: "bg-sky-50 text-sky-900" },
   { tone: "assigned", label: "Assigned", className: "bg-brand-soft text-brand" },
-  { tone: "due_today", label: "Due today", className: "bg-amber-50 text-amber-900" },
-  { tone: "overdue", label: "Overdue", className: "bg-red-50 text-red-800" },
-  { tone: "recurring", label: "Recurring", className: "bg-violet-50 text-violet-900" },
+  { tone: "due_today", label: "Due today", className: "bg-status-evidence-soft text-status-evidence-strong" },
+  { tone: "overdue", label: "Overdue", className: "bg-status-danger-soft text-status-danger-strong" },
+  { tone: "recurring", label: "Recurring", className: "bg-status-good-soft text-status-good-strong" },
   { tone: "done", label: "Completed", className: "bg-slate-100 text-slate-600" },
 ];
 

@@ -32,12 +32,12 @@ export const CAPTURE_METHOD_OPTIONS: {
 
 export const ROLE_PILL_CLASS: Record<FieldRole, string> = {
   reference: "bg-sky-100 text-sky-800 border-sky-200",
-  auditor_input: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  calculated: "bg-violet-100 text-violet-800 border-violet-200",
+  auditor_input: "bg-status-good-soft text-status-good-strong border-status-good/30",
+  calculated: "bg-status-info-soft text-status-info-strong border-status-info/30",
   system: "bg-slate-100 text-slate-700 border-slate-200",
-  evidence: "bg-pink-100 text-pink-800 border-pink-200",
-  ai_suggested: "bg-purple-100 text-purple-800 border-purple-200",
-  human_confirmed: "bg-amber-100 text-amber-800 border-amber-200",
+  evidence: "bg-status-evidence-soft text-status-evidence-strong border-status-evidence/30",
+  ai_suggested: "bg-status-info-soft text-status-info-strong border-status-info/30",
+  human_confirmed: "bg-status-good-soft text-status-good-strong border-status-good/30",
 };
 
 export function mapCaptureMethodToAuditMode(method: CaptureMethod): "digital" | "ai" {

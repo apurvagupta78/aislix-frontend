@@ -19,6 +19,8 @@
 12. Shared design system first, then consistent application.
 13. Route/workflow inventory is the source of truth (complete).
 14. UI/UX only — no schema, API, auth, RLS, logic, calculation, permission or data-contract changes.
+15. Approved palette only: white, sky blue, navy blue, dark grey, light grey, olive green,
+    light pink and black. The result must feel elegant and modern SaaS, never lavender or purple.
 
 ## Implementation
 - [x] Architecture and route/workflow inventory
