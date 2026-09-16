@@ -111,6 +111,8 @@ import {
 import { DashboardSectionHeader } from "./DashboardSectionHeader";
 
 import { KpiCardVisual } from "./KpiCardVisual";
+import { DashboardVisualBoard } from "./DashboardVisualBoard";
+
 
 
 
