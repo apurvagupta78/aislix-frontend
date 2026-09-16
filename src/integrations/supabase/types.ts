@@ -61,6 +61,131 @@ export type Database = {
           },
         ]
       }
+      assignment_campaigns: {
+        Row: {
+          assignment_mode: string
+          audit_purpose: string | null
+          created_at: string
+          created_by: string | null
+          distribution_plan: Json
+          distribution_strategy: string
+          evidence_policy: Json | null
+          expected_assignment_count: number
+          id: string
+          instructions: string | null
+          location_scope: Json
+          name: string
+          operating_model: string | null
+          org_id: string
+          require_rca: boolean
+          reviewer_id: string | null
+          schedule_config: Json
+          status: string
+          team_scope: Json
+          template_id: string | null
+          template_snapshot: Json
+          template_version: number | null
+          updated_at: string
+        }
+        Insert: {
+          assignment_mode?: string
+          audit_purpose?: string | null
+          created_at?: string
+          created_by?: string | null
+          distribution_plan?: Json
+          distribution_strategy?: string
+          evidence_policy?: Json | null
+          expected_assignment_count?: number
+          id?: string
+          instructions?: string | null
+          location_scope?: Json
+          name: string
+          operating_model?: string | null
+          org_id: string
+          require_rca?: boolean
+          reviewer_id?: string | null
+          schedule_config?: Json
+          status?: string
+          team_scope?: Json
+          template_id?: string | null
+          template_snapshot?: Json
+          template_version?: number | null
+          updated_at?: string
+        }
+        Update: {
+          assignment_mode?: string
+          audit_purpose?: string | null
+          created_at?: string
+          created_by?: string | null
+          distribution_plan?: Json
+          distribution_strategy?: string
+          evidence_policy?: Json | null
+          expected_assignment_count?: number
+          id?: string
+          instructions?: string | null
+          location_scope?: Json
+          name?: string
+          operating_model?: string | null
+          org_id?: string
+          require_rca?: boolean
+          reviewer_id?: string | null
+          schedule_config?: Json
+          status?: string
+          team_scope?: Json
+          template_id?: string | null
+          template_snapshot?: Json
+          template_version?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_campaigns_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_campaigns_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "audit_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignment_reminder_log: {
+        Row: {
+          assignment_id: string
+          id: string
+          reminder_hours: number | null
+          reminder_type: string
+          sent_at: string
+        }
+        Insert: {
+          assignment_id: string
+          id?: string
+          reminder_hours?: number | null
+          reminder_type: string
+          sent_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          id?: string
+          reminder_hours?: number | null
+          reminder_type?: string
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_reminder_log_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "scan_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_activity_events: {
         Row: {
           action_id: string | null
@@ -466,73 +591,137 @@ export type Database = {
         Row: {
           active: boolean
           assignee_id: string
+          assignee_ids: string[] | null
+          assignment_mode: string | null
           audit_mode: string
           cadence: string
+          campaign_id: string | null
           created_at: string
           created_by: string
           day_of_month: number | null
           day_of_week: number | null
+          distribution_plan: Json | null
+          distribution_strategy: string | null
+          due_config: Json | null
+          end_at: string | null
+          evidence_policy: Json | null
+          hierarchy_node_ids: string[] | null
           id: string
           instructions: string | null
           last_run_at: string | null
+          max_occurrences: number | null
           name: string | null
           next_run_at: string
+          occurrence_count: number | null
+          operating_model: string | null
           org_id: string
+          publish_at: string | null
+          recurrence_config: Json | null
+          require_rca: boolean | null
+          reviewer_id: string | null
           scope_type: string
           scope_values: Json
           status: string
           store_id: string
           store_ids: string[]
           template_id: string | null
+          template_snapshot: Json | null
+          template_version: number | null
+          timezone: string | null
           updated_at: string
         }
         Insert: {
           active?: boolean
           assignee_id: string
+          assignee_ids?: string[] | null
+          assignment_mode?: string | null
           audit_mode?: string
           cadence?: string
+          campaign_id?: string | null
           created_at?: string
           created_by: string
           day_of_month?: number | null
           day_of_week?: number | null
+          distribution_plan?: Json | null
+          distribution_strategy?: string | null
+          due_config?: Json | null
+          end_at?: string | null
+          evidence_policy?: Json | null
+          hierarchy_node_ids?: string[] | null
           id?: string
           instructions?: string | null
           last_run_at?: string | null
+          max_occurrences?: number | null
           name?: string | null
           next_run_at?: string
+          occurrence_count?: number | null
+          operating_model?: string | null
           org_id: string
+          publish_at?: string | null
+          recurrence_config?: Json | null
+          require_rca?: boolean | null
+          reviewer_id?: string | null
           scope_type?: string
           scope_values?: Json
           status?: string
           store_id: string
           store_ids?: string[]
           template_id?: string | null
+          template_snapshot?: Json | null
+          template_version?: number | null
+          timezone?: string | null
           updated_at?: string
         }
         Update: {
           active?: boolean
           assignee_id?: string
+          assignee_ids?: string[] | null
+          assignment_mode?: string | null
           audit_mode?: string
           cadence?: string
+          campaign_id?: string | null
           created_at?: string
           created_by?: string
           day_of_month?: number | null
           day_of_week?: number | null
+          distribution_plan?: Json | null
+          distribution_strategy?: string | null
+          due_config?: Json | null
+          end_at?: string | null
+          evidence_policy?: Json | null
+          hierarchy_node_ids?: string[] | null
           id?: string
           instructions?: string | null
           last_run_at?: string | null
+          max_occurrences?: number | null
           name?: string | null
           next_run_at?: string
+          occurrence_count?: number | null
+          operating_model?: string | null
           org_id?: string
+          publish_at?: string | null
+          recurrence_config?: Json | null
+          require_rca?: boolean | null
+          reviewer_id?: string | null
           scope_type?: string
           scope_values?: Json
           status?: string
           store_id?: string
           store_ids?: string[]
           template_id?: string | null
+          template_snapshot?: Json | null
+          template_version?: number | null
+          timezone?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "audit_schedules_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_campaigns"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "audit_schedules_store_id_fkey"
             columns: ["store_id"]
@@ -614,6 +803,7 @@ export type Database = {
           name: string
           operating_model: string | null
           org_id: string
+          owner_user_id: string | null
           published: boolean
           purpose_config: Json
           rules: Json
@@ -628,6 +818,7 @@ export type Database = {
           updated_at: string
           updated_by: string | null
           version: number
+          visibility: string
           workflow_settings: Json
         }
         Insert: {
@@ -653,6 +844,7 @@ export type Database = {
           name: string
           operating_model?: string | null
           org_id: string
+          owner_user_id?: string | null
           published?: boolean
           purpose_config?: Json
           rules?: Json
@@ -667,6 +859,7 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           version?: number
+          visibility?: string
           workflow_settings?: Json
         }
         Update: {
@@ -692,6 +885,7 @@ export type Database = {
           name?: string
           operating_model?: string | null
           org_id?: string
+          owner_user_id?: string | null
           published?: boolean
           purpose_config?: Json
           rules?: Json
@@ -706,6 +900,7 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           version?: number
+          visibility?: string
           workflow_settings?: Json
         }
         Relationships: [
@@ -2987,6 +3182,47 @@ export type Database = {
         }
         Relationships: []
       }
+      org_assignment_settings: {
+        Row: {
+          block_on_conflict: boolean
+          escalation_user_id: string | null
+          estimated_audit_duration_minutes: number | null
+          max_concurrent_audits: number | null
+          max_daily_assignments_per_employee: number | null
+          org_id: string
+          reminder_hours: number[]
+          updated_at: string
+        }
+        Insert: {
+          block_on_conflict?: boolean
+          escalation_user_id?: string | null
+          estimated_audit_duration_minutes?: number | null
+          max_concurrent_audits?: number | null
+          max_daily_assignments_per_employee?: number | null
+          org_id: string
+          reminder_hours?: number[]
+          updated_at?: string
+        }
+        Update: {
+          block_on_conflict?: boolean
+          escalation_user_id?: string | null
+          estimated_audit_duration_minutes?: number | null
+          max_concurrent_audits?: number | null
+          max_daily_assignments_per_employee?: number | null
+          org_id?: string
+          reminder_hours?: number[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_assignment_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_sla_defaults: {
         Row: {
           critical_hours: number
@@ -3647,12 +3883,15 @@ export type Database = {
           approval_status: string
           assignee_id: string
           assigner_id: string
+          assignment_state: string | null
           audit_mode: string
+          campaign_id: string | null
           completed_at: string | null
           created_at: string
           creation_source: string
           due_at: string | null
           evidence_policy: Json
+          hierarchy_node_id: string | null
           id: string
           input_source: string | null
           instructions: string | null
@@ -3663,6 +3902,8 @@ export type Database = {
           reviewer_id: string | null
           scan_attempts: number
           scan_id: string | null
+          schedule_id: string | null
+          scheduled_at: string | null
           scope_type: string
           scope_values: Json
           status: string
@@ -3678,12 +3919,15 @@ export type Database = {
           approval_status?: string
           assignee_id: string
           assigner_id: string
+          assignment_state?: string | null
           audit_mode?: string
+          campaign_id?: string | null
           completed_at?: string | null
           created_at?: string
           creation_source?: string
           due_at?: string | null
           evidence_policy?: Json
+          hierarchy_node_id?: string | null
           id?: string
           input_source?: string | null
           instructions?: string | null
@@ -3694,6 +3938,8 @@ export type Database = {
           reviewer_id?: string | null
           scan_attempts?: number
           scan_id?: string | null
+          schedule_id?: string | null
+          scheduled_at?: string | null
           scope_type: string
           scope_values?: Json
           status?: string
@@ -3709,12 +3955,15 @@ export type Database = {
           approval_status?: string
           assignee_id?: string
           assigner_id?: string
+          assignment_state?: string | null
           audit_mode?: string
+          campaign_id?: string | null
           completed_at?: string | null
           created_at?: string
           creation_source?: string
           due_at?: string | null
           evidence_policy?: Json
+          hierarchy_node_id?: string | null
           id?: string
           input_source?: string | null
           instructions?: string | null
@@ -3725,6 +3974,8 @@ export type Database = {
           reviewer_id?: string | null
           scan_attempts?: number
           scan_id?: string | null
+          schedule_id?: string | null
+          scheduled_at?: string | null
           scope_type?: string
           scope_values?: Json
           status?: string
@@ -3738,6 +3989,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "scan_assignments_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "assignment_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scan_assignments_hierarchy_node_id_fkey"
+            columns: ["hierarchy_node_id"]
+            isOneToOne: false
+            referencedRelation: "hierarchy_nodes"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "scan_assignments_planogram_version_id_fkey"
             columns: ["planogram_version_id"]
             isOneToOne: false
@@ -3749,6 +4014,13 @@ export type Database = {
             columns: ["scan_id"]
             isOneToOne: false
             referencedRelation: "shelf_scans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scan_assignments_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "audit_schedules"
             referencedColumns: ["id"]
           },
           {
@@ -4031,6 +4303,51 @@ export type Database = {
             columns: ["scan_id"]
             isOneToOne: false
             referencedRelation: "shelf_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_occurrences: {
+        Row: {
+          assignments_created: number
+          created_at: string
+          id: string
+          occurrence_key: string
+          org_id: string
+          schedule_id: string
+          scheduled_for: string
+        }
+        Insert: {
+          assignments_created?: number
+          created_at?: string
+          id?: string
+          occurrence_key: string
+          org_id: string
+          schedule_id: string
+          scheduled_for: string
+        }
+        Update: {
+          assignments_created?: number
+          created_at?: string
+          id?: string
+          occurrence_key?: string
+          org_id?: string
+          schedule_id?: string
+          scheduled_for?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_occurrences_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_occurrences_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "audit_schedules"
             referencedColumns: ["id"]
           },
         ]
@@ -4392,14 +4709,17 @@ export type Database = {
         Row: {
           code: string
           created_at: string
+          entitlements: Json
           features: Json
           history_days: number | null
           id: string
           is_active: boolean
           is_contact_sales: boolean
+          master_setup_limit: number | null
           name: string
           price_annual_inr: number
           price_monthly_inr: number
+          price_per_audit_inr: number | null
           quota_period: string
           scan_quota: number | null
           seat_limit: number | null
@@ -4411,14 +4731,17 @@ export type Database = {
         Insert: {
           code: string
           created_at?: string
+          entitlements?: Json
           features?: Json
           history_days?: number | null
           id?: string
           is_active?: boolean
           is_contact_sales?: boolean
+          master_setup_limit?: number | null
           name: string
           price_annual_inr?: number
           price_monthly_inr?: number
+          price_per_audit_inr?: number | null
           quota_period?: string
           scan_quota?: number | null
           seat_limit?: number | null
@@ -4430,14 +4753,17 @@ export type Database = {
         Update: {
           code?: string
           created_at?: string
+          entitlements?: Json
           features?: Json
           history_days?: number | null
           id?: string
           is_active?: boolean
           is_contact_sales?: boolean
+          master_setup_limit?: number | null
           name?: string
           price_annual_inr?: number
           price_monthly_inr?: number
+          price_per_audit_inr?: number | null
           quota_period?: string
           scan_quota?: number | null
           seat_limit?: number | null
@@ -4558,10 +4884,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_org_add_master_setup: { Args: { _org_id: string }; Returns: boolean }
       can_org_add_member: { Args: { p_org_id: string }; Returns: boolean }
       can_org_add_store: { Args: { p_org_id: string }; Returns: boolean }
       can_org_start_scan: { Args: { p_org_id: string }; Returns: boolean }
       complete_onboarding: { Args: { p_user_id?: string }; Returns: string }
+      compute_schedule_next_run: {
+        Args: {
+          p_cadence: string
+          p_day_of_month: number
+          p_day_of_week: number
+          p_from?: string
+        }
+        Returns: string
+      }
+      count_org_master_setups: { Args: { _org_id: string }; Returns: number }
       count_org_seats: { Args: { p_org_id: string }; Returns: number }
       ensure_org_free_subscription: {
         Args: { p_org_id: string }
@@ -4652,6 +4989,11 @@ export type Database = {
         Args: { p_org_id: string }
         Returns: boolean
       }
+      process_assignment_reminders: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
+      process_due_audit_schedules: { Args: { p_limit?: number }; Returns: Json }
       publish_audit_template: {
         Args: { p_template_id: string }
         Returns: number
@@ -4659,6 +5001,30 @@ export type Database = {
       reset_subscription_period_if_due: {
         Args: { _org_id: string }
         Returns: undefined
+      }
+      resolve_hierarchy_assignees: {
+        Args: {
+          p_level_key?: string
+          p_node_id: string
+          p_org_id: string
+          p_profile_id: string
+        }
+        Returns: {
+          level_key: string
+          node_id: string
+          node_name: string
+          user_id: string
+        }[]
+      }
+      resolve_hierarchy_outlet_stores: {
+        Args: { p_node_id: string; p_org_id: string; p_profile_id: string }
+        Returns: {
+          level_key: string
+          node_id: string
+          node_name: string
+          sales_rep_id: string
+          store_id: string
+        }[]
       }
       search_hierarchy_nodes: {
         Args: {
@@ -4705,6 +5071,10 @@ export type Database = {
       }
       seed_fnv_qc_template: { Args: { p_org_id: string }; Returns: string }
       seed_hierarchy_profiles: { Args: { p_org_id: string }; Returns: Json }
+      share_audit_template_with_org: {
+        Args: { p_template_id: string }
+        Returns: undefined
+      }
       should_show_onboarding: { Args: { p_user_id?: string }; Returns: boolean }
       sla_hours_for_severity: {
         Args: { p_org_id: string; p_severity: string }
@@ -4718,6 +5088,57 @@ export type Database = {
       sync_stores_to_hierarchy: {
         Args: { p_org_id: string; p_profile_id: string }
         Returns: number
+      }
+      update_assignment_grid_row: {
+        Args: {
+          p_assignee_id?: string
+          p_assignment_id: string
+          p_assignment_state?: string
+          p_due_at?: string
+          p_status?: string
+        }
+        Returns: {
+          approval_status: string
+          assignee_id: string
+          assigner_id: string
+          assignment_state: string | null
+          audit_mode: string
+          campaign_id: string | null
+          completed_at: string | null
+          created_at: string
+          creation_source: string
+          due_at: string | null
+          evidence_policy: Json
+          hierarchy_node_id: string | null
+          id: string
+          input_source: string | null
+          instructions: string | null
+          last_compliance_percent: number | null
+          org_id: string
+          planogram_version_id: string | null
+          require_rca: boolean
+          reviewer_id: string | null
+          scan_attempts: number
+          scan_id: string | null
+          schedule_id: string | null
+          scheduled_at: string | null
+          scope_type: string
+          scope_values: Json
+          status: string
+          store_id: string
+          template_id: string | null
+          template_snapshot: Json | null
+          template_version: number | null
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "scan_assignments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       user_email_has_platform_bypass: {
         Args: { _email: string }
