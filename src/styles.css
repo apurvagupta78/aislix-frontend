@@ -273,7 +273,40 @@
     -webkit-font-smoothing: antialiased;
   }
   h1, h2, h3, h4 {
+    font-family: var(--font-display);
     letter-spacing: -0.02em;
+  }
+  :focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--color-brand) 65%, transparent);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/** Large, obvious tap target — mobile-first controls */
+@utility tap-target {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+
+/** Colourful metric tile used across dashboards and intelligence modules */
+@utility metric-tile {
+  background-color: var(--color-card);
+  border: 1px solid color-mix(in oklab, var(--color-border) 85%, transparent);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-soft);
+  transition: box-shadow 200ms ease, transform 200ms ease;
+  &:hover {
+    box-shadow: var(--shadow-card);
+    transform: translateY(-1px);
   }
 }
 
