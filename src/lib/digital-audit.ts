@@ -322,6 +322,9 @@ export async function startOrResumeDigitalAudit(assignmentId: string): Promise<D
 }
 
 export async function loadDigitalAuditSession(scanId: string): Promise<DigitalAuditSession> {
+  const { ensureCustomAuditReviewData } = await import("@/lib/custom-audit-review");
+  await ensureCustomAuditReviewData(scanId).catch(() => false);
+
   const { data: scan, error } = await supabase
     .from("shelf_scans")
     .select(
@@ -342,12 +345,19 @@ export async function loadDigitalAuditSession(scanId: string): Promise<DigitalAu
   const evidenceRows = await Promise.all(
     (evidence ?? []).map(async (row) => {
       const path = row.storage_path as string;
-      const { data: signed } = await supabase.storage.from("scan-images").createSignedUrl(path, 3600);
+      let signedUrl: string | undefined;
+      for (const bucket of ["audit-evidence", "scan-images"] as const) {
+        const { data: signed } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+        if (signed?.signedUrl) {
+          signedUrl = signed.signedUrl;
+          break;
+        }
+      }
       return {
         id: row.id as string,
         bin_key: row.bin_key as string,
         storage_path: path,
-        signed_url: signed?.signedUrl,
+        signed_url: signedUrl,
         captured_at: row.captured_at as string,
       };
     }),

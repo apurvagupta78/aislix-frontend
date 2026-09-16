@@ -12,6 +12,7 @@ import {
   templateToDefinition,
   type AuditTemplate,
 } from "@/lib/audit-templates";
+import { persistCustomAuditReviewData } from "@/lib/custom-audit-review";
 import { syncFindingsForScan } from "@/lib/findings";
 import type { InputSchema } from "@/lib/audit-builder/field-roles";
 import type { AuditInputDataset } from "@/lib/audit-input-dataset";
@@ -315,6 +316,18 @@ export async function submitCustomAudit(input: {
       .update({ scan_id: scanId })
       .eq("assignment_id", assignmentId);
 
+    await persistCustomAuditReviewData({
+      definition: session.definition,
+      responses,
+      ctx: {
+        scanId,
+        assignmentId,
+        orgId,
+        storeId: (assignmentRow?.store_id as string) ?? "",
+        userId,
+      },
+    });
+
     await supabase
       .from("scan_assignments")
       .update({
@@ -323,20 +336,18 @@ export async function submitCustomAudit(input: {
         approval_status: directApproval ? "approved" : "pending_review",
       })
       .eq("id", assignmentId);
+
+    try {
+      await syncFindingsForScan(scanId);
+    } catch {
+      /* findings sync is best-effort */
+    }
   }
 
   let findingsCount = 0;
   for (const rec of records) {
     const { findings } = applyRuleActions(session.definition.rules, rec.values);
     findingsCount += findings.length;
-  }
-
-  if (scanId && findingsCount > 0) {
-    try {
-      await syncFindingsForScan(scanId);
-    } catch {
-      /* findings sync is best-effort */
-    }
   }
 
   return { scanId, findingsCount };
