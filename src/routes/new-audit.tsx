@@ -76,6 +76,8 @@ import {
   distributeAssignments,
   hasBlockingConflicts,
   publishAssignmentPlan,
+  DueDateResolutionError,
+  resolveAssignmentDueAt,
   resolveSelectedAssignees,
   saveAssignmentDraft,
   type AssignmentMode,
@@ -662,13 +664,21 @@ function NewAuditPage() {
         );
       }
 
+      const assignmentTimezone = recurrence.timezone || "Asia/Kolkata";
+      const resolvedDueAt = resolveAssignmentDueAt({
+        dueConfig,
+        legacyDueAt: dueAt || undefined,
+        timezone: assignmentTimezone,
+        publishAt: new Date(),
+      });
+
       if (templateChoice === "expiry") {
         const attemptId = await createExpiryAssignment({
           storeId,
           title: `Expiry inspection — ${sku || category || location}`,
           auditorId: assignee.id,
           reviewerId: reviewerId || undefined,
-          dueAt: dueAt || undefined,
+          dueAt: resolvedDueAt || undefined,
           sku: sku || undefined,
           assuranceLevel: effectivePolicy.level === "high" ? "high" : "standard",
           instructions: instructions || undefined,
@@ -812,7 +822,7 @@ function NewAuditPage() {
         },
         assigneeId: assignee.id,
         assigneeName: assignee.name,
-        dueAt: dueAt || null,
+        dueAt: resolvedDueAt,
         instructions,
         planogramVersionId,
         auditMode,
@@ -863,6 +873,10 @@ function NewAuditPage() {
     },
     onError: (error) => {
       console.error("[new-audit] assignment creation failed:", error);
+      if (error instanceof DueDateResolutionError) {
+        toast.error(error.message);
+        return;
+      }
       toast.error(
         toUserMessage(error) ||
           "Could not create the assignment. Please check the assignment setup or permissions.",

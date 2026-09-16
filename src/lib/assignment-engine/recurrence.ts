@@ -117,6 +117,52 @@ export function computeNextOccurrence(rule: RecurrenceRule, from: Date = new Dat
   return fallback;
 }
 
+export function mergeDueConfig(dueConfig: DueConfig, legacyDueAt?: string): DueConfig {
+  return {
+    ...dueConfig,
+    dueDate: dueConfig.dueDate ?? legacyDueAt?.slice(0, 10),
+    dueTime: dueConfig.dueTime ?? legacyDueAt?.slice(11, 16),
+  };
+}
+
+export class DueDateResolutionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DueDateResolutionError";
+  }
+}
+
+/** Resolve due_at for assignment insert using the same logic as the universal engine. */
+export function resolveAssignmentDueAt(input: {
+  dueConfig: DueConfig;
+  legacyDueAt?: string;
+  timezone: string;
+  publishAt?: Date;
+}): string | null {
+  const merged = mergeDueConfig(input.dueConfig, input.legacyDueAt);
+  const hasDate = Boolean(merged.dueDate?.trim());
+  const hasTime = Boolean(merged.dueTime?.trim());
+
+  if (hasDate && !hasTime) {
+    throw new DueDateResolutionError(
+      "Enter a due time so the assignment deadline can be saved correctly.",
+    );
+  }
+  if (hasTime && !hasDate) {
+    throw new DueDateResolutionError(
+      "Select a due date so the assignment deadline can be saved correctly.",
+    );
+  }
+
+  const resolved = computeDueAt(input.publishAt ?? new Date(), merged, input.timezone);
+  if (hasDate && hasTime && !resolved) {
+    throw new DueDateResolutionError(
+      "Could not resolve the due date and time. Check the values and try again.",
+    );
+  }
+  return resolved;
+}
+
 export function computeDueAt(
   publishAt: Date,
   dueConfig: DueConfig,
