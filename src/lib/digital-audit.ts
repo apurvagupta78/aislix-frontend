@@ -322,8 +322,12 @@ export async function startOrResumeDigitalAudit(assignmentId: string): Promise<D
 }
 
 export async function loadDigitalAuditSession(scanId: string): Promise<DigitalAuditSession> {
-  const { ensureCustomAuditReviewData } = await import("@/lib/custom-audit-review");
-  await ensureCustomAuditReviewData(scanId).catch(() => false);
+  try {
+    const { ensureCustomAuditReviewData } = await import("@/lib/custom-audit-review");
+    await ensureCustomAuditReviewData(scanId).catch(() => false);
+  } catch {
+    /* backfill module unavailable — still load the scan session */
+  }
 
   const { data: scan, error } = await supabase
     .from("shelf_scans")

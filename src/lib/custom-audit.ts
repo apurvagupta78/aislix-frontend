@@ -12,7 +12,13 @@ import {
   templateToDefinition,
   type AuditTemplate,
 } from "@/lib/audit-templates";
-import { persistCustomAuditReviewData } from "@/lib/custom-audit-review";
+import {
+  AUDIT_EVIDENCE_BUCKET,
+  AUDIT_EVIDENCE_REF_PREFIX,
+  buildRecordContexts,
+  isAuditEvidenceRef,
+  type ResponseMap,
+} from "@/lib/custom-audit-shared";
 import { syncFindingsForScan } from "@/lib/findings";
 import type { InputSchema } from "@/lib/audit-builder/field-roles";
 import type { AuditInputDataset } from "@/lib/audit-input-dataset";
@@ -29,7 +35,13 @@ export type CustomAuditSession = {
   inputDataset?: AuditInputDataset;
 };
 
-export type ResponseMap = Record<string, Record<number, Record<string, AuditResponseValue>>>;
+export type { ResponseMap } from "@/lib/custom-audit-shared";
+export {
+  AUDIT_EVIDENCE_BUCKET,
+  AUDIT_EVIDENCE_REF_PREFIX,
+  buildRecordContexts,
+  isAuditEvidenceRef,
+} from "@/lib/custom-audit-shared";
 
 function responsesToMap(
   rows: { section_key: string; record_index: number; field_key: string; value: unknown }[],
@@ -224,27 +236,6 @@ export function buildCustomAuditShelfScanInsert(input: {
   };
 }
 
-export function buildRecordContexts(
-  definition: TemplateDefinition,
-  responses: ResponseMap,
-) {
-  const records: { sectionKey: string; recordIndex: number; values: Record<string, AuditResponseValue> }[] = [];
-
-  for (const section of definition.sections) {
-    const sectionData = responses[section.key] ?? { 0: {} };
-    const indices = Object.keys(sectionData).map(Number).sort((a, b) => a - b);
-    const idxList = indices.length ? indices : [0];
-    for (const idx of idxList) {
-      records.push({
-        sectionKey: section.key,
-        recordIndex: idx,
-        values: sectionData[idx] ?? {},
-      });
-    }
-  }
-  return records;
-}
-
 export async function submitCustomAudit(input: {
   assignmentId: string;
   session: CustomAuditSession;
@@ -311,11 +302,13 @@ export async function submitCustomAudit(input: {
     }
     scanId = scan!.id as string;
 
-    await supabase
+    const { error: linkErr } = await supabase
       .from("audit_responses")
       .update({ scan_id: scanId })
       .eq("assignment_id", assignmentId);
+    if (linkErr) dbError(linkErr, "Could not link audit responses to scan.");
 
+    const { persistCustomAuditReviewData } = await import("@/lib/custom-audit-review");
     await persistCustomAuditReviewData({
       definition: session.definition,
       responses,
@@ -351,15 +344,6 @@ export async function submitCustomAudit(input: {
   }
 
   return { scanId, findingsCount };
-}
-
-/** Supabase Storage bucket for universal/custom audit evidence uploads. */
-export const AUDIT_EVIDENCE_BUCKET = "audit-evidence";
-/** Persisted reference prefix — private bucket paths are re-signed on display. */
-export const AUDIT_EVIDENCE_REF_PREFIX = "audit-evidence://";
-
-export function isAuditEvidenceRef(value: string): boolean {
-  return value.startsWith(AUDIT_EVIDENCE_REF_PREFIX);
 }
 
 export async function resolveAuditEvidenceUrl(stored: string): Promise<string> {

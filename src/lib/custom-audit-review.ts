@@ -12,8 +12,8 @@ import {
   buildRecordContexts,
   isAuditEvidenceRef,
   type ResponseMap,
-} from "@/lib/custom-audit";
-import { templateToDefinition, type AuditTemplate } from "@/lib/audit-templates";
+} from "@/lib/custom-audit-shared";
+import { fetchAuditTemplate, templateToDefinition, type AuditTemplate } from "@/lib/audit-templates";
 import { syncFindingsForScan } from "@/lib/findings";
 import {
   RCA_OPTIONS,
@@ -287,6 +287,48 @@ export async function persistCustomAuditReviewData(input: {
   return { lineCount: lineDrafts.length, evidenceCount: evidenceDrafts.length };
 }
 
+async function fetchAuditResponsesForScan(
+  scanId: string,
+  assignmentId: string,
+): Promise<{ section_key: string; record_index: number; field_key: string; value: unknown }[]> {
+  const byScan = await supabase
+    .from("audit_responses")
+    .select("section_key, record_index, field_key, value")
+    .eq("scan_id", scanId);
+  if (byScan.error) dbError(byScan.error, "Could not load audit responses.");
+  if (byScan.data?.length) return byScan.data;
+
+  const byAssignment = await supabase
+    .from("audit_responses")
+    .select("section_key, record_index, field_key, value")
+    .eq("assignment_id", assignmentId);
+  if (byAssignment.error) dbError(byAssignment.error, "Could not load audit responses.");
+  return byAssignment.data ?? [];
+}
+
+function definitionFromTemplateSnapshot(snapshot: AuditTemplate | null): TemplateDefinition | null {
+  if (!snapshot) return null;
+  if (snapshot.field_definitions?.length) return templateToDefinition(snapshot);
+  if (snapshot.sections?.length) {
+    return templateToDefinition({
+      ...snapshot,
+      field_definitions: snapshot.field_definitions ?? [],
+    });
+  }
+  return null;
+}
+
+async function resolveReviewDefinition(input: {
+  templateSnapshot: AuditTemplate | null;
+  templateId: string | null;
+}): Promise<TemplateDefinition | null> {
+  const fromSnapshot = definitionFromTemplateSnapshot(input.templateSnapshot);
+  if (fromSnapshot?.fields.length) return fromSnapshot;
+  if (!input.templateId) return fromSnapshot;
+  const template = await fetchAuditTemplate(input.templateId);
+  return template ? templateToDefinition(template) : fromSnapshot;
+}
+
 /** Backfill review tables for scans submitted before materialization existed. */
 export async function ensureCustomAuditReviewData(scanId: string): Promise<boolean> {
   const { data: existingLines } = await supabase
@@ -298,20 +340,31 @@ export async function ensureCustomAuditReviewData(scanId: string): Promise<boole
 
   const { data: scan, error: scanErr } = await supabase
     .from("shelf_scans")
-    .select("id, org_id, store_id, assignment_id, template_snapshot, created_by")
+    .select("id, org_id, store_id, assignment_id, template_id, template_snapshot, created_by")
     .eq("id", scanId)
     .maybeSingle();
-  if (scanErr || !scan?.assignment_id || !scan.store_id) return false;
+  if (scanErr || !scan?.assignment_id) return false;
 
-  const { data: responses, error: respErr } = await supabase
-    .from("audit_responses")
-    .select("section_key, record_index, field_key, value")
-    .eq("scan_id", scanId);
-  if (respErr || !responses?.length) return false;
+  let storeId = scan.store_id as string | null;
+  if (!storeId) {
+    const { data: assignment } = await supabase
+      .from("scan_assignments")
+      .select("store_id")
+      .eq("id", scan.assignment_id)
+      .maybeSingle();
+    storeId = (assignment?.store_id as string | null) ?? null;
+  }
+  if (!storeId) return false;
+
+  const responses = await fetchAuditResponsesForScan(scanId, scan.assignment_id as string);
+  if (!responses.length) return false;
 
   const snapshot = scan.template_snapshot as AuditTemplate | null;
-  if (!snapshot?.field_definitions?.length) return false;
-  const definition = templateToDefinition(snapshot);
+  const definition = await resolveReviewDefinition({
+    templateSnapshot: snapshot,
+    templateId: (scan.template_id as string | null) ?? null,
+  });
+  if (!definition?.fields.length) return false;
 
   const responseMap: ResponseMap = {};
   for (const row of responses) {
@@ -329,7 +382,7 @@ export async function ensureCustomAuditReviewData(scanId: string): Promise<boole
       scanId,
       assignmentId: scan.assignment_id as string,
       orgId: scan.org_id as string,
-      storeId: scan.store_id as string,
+      storeId,
       userId: (scan.created_by as string) ?? "",
     },
   });
