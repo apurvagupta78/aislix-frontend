@@ -541,9 +541,10 @@ export function AppShell({
                   </SheetTrigger>
                   <SheetContent
                     side="left"
-                    className="flex h-full w-[85vw] max-w-xs flex-col gap-0 overflow-hidden bg-card p-0"
+                    className="nav-dark nav-panel flex h-full w-[85vw] max-w-xs flex-col gap-0 overflow-hidden border-0 p-0"
                   >
-                    <div className="shrink-0 border-b border-border px-4 py-4">
+                    <div className="shrink-0 border-b border-white/15 px-4 py-4">
+
                       <Logo to="/dashboard" />
                       {workspaceSwitcher}
                     </div>
