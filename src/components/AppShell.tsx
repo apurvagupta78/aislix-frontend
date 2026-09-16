@@ -509,15 +509,16 @@ export function AppShell({
                     </Link>
                   </RailTooltip>
                 ) : (
-                  <div className="rounded-2xl border border-border bg-brand-soft/60 p-4">
-                    <p className="text-sm font-medium text-foreground">Need more audits?</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                  <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-4">
+                    <p className="text-sm font-bold text-white">Need more audits?</p>
+                    <p className="mt-1 text-xs text-white/60">
                       Review your plan, quota and invoices in billing.
                     </p>
-                    <Button asChild size="sm" variant="brand" className="mt-3 w-full rounded-lg">
+                    <Button asChild size="sm" variant="brand" className="mt-3 w-full rounded-xl">
                       <Link to="/billing">Manage plan</Link>
                     </Button>
                   </div>
+
                 )}
               </div>
             </div>
