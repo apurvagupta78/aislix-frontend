@@ -321,14 +321,21 @@ export function AppShell({
   title,
   description,
   actions,
+  eyebrow,
+  nextStep,
   children,
 }: {
   title: string;
   description?: string;
   actions?: ReactNode;
+  /** "Where am I?" — defaults to the active navigation section. */
+  eyebrow?: string;
+  /** "What should I do next?" — one short plain-English line. */
+  nextStep?: ReactNode;
   children: ReactNode;
 }) {
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useSidebarCollapsed();
 
