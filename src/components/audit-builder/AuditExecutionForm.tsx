@@ -30,6 +30,7 @@ import { computeCompletion } from "@/lib/audit-builder/validation";
 import type { AuditResponseValue, TemplateDefinition, TemplateField } from "@/lib/audit-builder/types";
 import type { ResponseMap } from "@/lib/custom-audit";
 import { RCA_OPTIONS } from "@/lib/digital-audit";
+import { ShelfStackingVisual } from "@/components/audit-builder/ShelfStackingVisual";
 
 type Props = {
   definition: TemplateDefinition;
@@ -435,6 +436,18 @@ export function AuditExecutionForm({
         <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-2 text-center text-sm font-medium text-amber-800 dark:text-amber-300">
           TEST MODE — sample data only, not saved to production audits
         </div>
+      ) : null}
+
+      {definition.purpose === "shelf_stacking_audit" ? (
+        <ShelfStackingVisual
+          expectedRows={3}
+          expectedCols={4}
+          expectedSku={String(recordContexts[activeRecord]?.values.sku_id ?? "SKU")}
+          actualCells={[]}
+          expectedTotal={Number(recordContexts[activeRecord]?.values.expected_facing ?? 0) || undefined}
+          actualTotal={Number(recordContexts[activeRecord]?.values.actual_facing ?? 0) || undefined}
+          className="mb-4"
+        />
       ) : null}
 
       <div className="sticky top-0 z-10 rounded-xl border border-border bg-card p-4 shadow-sm">

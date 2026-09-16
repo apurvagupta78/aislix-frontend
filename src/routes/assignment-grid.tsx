@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Grid3X3, Loader2, UserPlus } from "lucide-react";
+import { Download, Grid3X3, Loader2, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
@@ -27,6 +27,7 @@ import { EmptyState, ErrorState, Skeleton } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
 import { fetchAssignableMembers, isOrgManager } from "@/lib/assignments";
 import {
+  bulkCancelAssignments,
   bulkUpdateAssignmentGrid,
   exportAssignmentGridCsv,
   fetchAssignmentGridRows,
@@ -87,6 +88,16 @@ function AssignmentGridPage() {
     mutationFn: bulkUpdateAssignmentGrid,
     onSuccess: () => {
       toast.success("Bulk update applied.");
+      setSelected(new Set());
+      void queryClient.invalidateQueries({ queryKey: ["assignment-grid"] });
+    },
+    onError: (e) => toast.error(toUserMessage(e)),
+  });
+
+  const bulkCancelMutation = useMutation({
+    mutationFn: bulkCancelAssignments,
+    onSuccess: () => {
+      toast.success("Selected assignments cancelled.");
       setSelected(new Set());
       void queryClient.invalidateQueries({ queryKey: ["assignment-grid"] });
     },
@@ -157,7 +168,7 @@ function AssignmentGridPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => exportAssignmentGridCsv(rows)}
+          onClick={() => exportAssignmentGridCsv(rows, "aislix-assignment-grid.csv", statusFilter)}
           disabled={!rows.length}
         >
           <Download className="mr-1 size-4" />
@@ -203,6 +214,21 @@ function AssignmentGridPage() {
               <>
                 <UserPlus className="mr-1 size-4" />
                 Bulk apply
+              </>
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={bulkCancelMutation.isPending}
+            onClick={() => bulkCancelMutation.mutate([...selected])}
+          >
+            {bulkCancelMutation.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <>
+                <Trash2 className="mr-1 size-4" />
+                Bulk cancel
               </>
             )}
           </Button>

@@ -20,6 +20,7 @@ export function exportAssignmentGridCsv(
     assignment_state: string;
   }>,
   filename = "aislix-assignment-grid.csv",
+  filterLabel = "all",
 ): void {
   const header = row([
     "Assignment ID",
@@ -32,6 +33,8 @@ export function exportAssignmentGridCsv(
   const lines = [
     "# Aislix Assignment Grid Export",
     row(["Exported At", new Date().toISOString()]),
+    row(["Status Filter", filterLabel]),
+    row(["Total Records", rows.length]),
     "",
     header,
     ...rows.map((r) =>

@@ -16,6 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
+import { toUserMessage } from "@/lib/api/errors";
 
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,9 @@ import type { AuditPurpose, AuditSubjectType, OperatingModel } from "@/lib/audit
 import { ColumnConfigurationPanel } from "@/components/audit-builder/ColumnConfigurationPanel";
 import type { InputSchema } from "@/lib/audit-builder/field-roles";
 import { buildDefaultColumnMappings, buildInputSchema } from "@/lib/audit-builder/input-schema";
+import { saveCustomCsvAsTemplate } from "@/lib/audit-builder/save-custom-template";
+import { fetchHierarchyProfiles } from "@/lib/hierarchy";
+import { buildHierarchyDistribution, resolveHierarchyOutlets } from "@/lib/hierarchy/routing";
 import {
   getFmcgDimensions,
   getOperatingModelCard,
@@ -256,6 +260,57 @@ function NewAuditPage() {
       setTeamScope({ assigneeIds: [assigneeId] });
     }
   }, [assigneeId, assignToSelf, teamScope.assigneeIds]);
+
+  const hierarchyProfileQuery = useQuery({
+    queryKey: ["hierarchy-profiles", operatingModel],
+    queryFn: () => fetchHierarchyProfiles(operatingModel),
+    enabled: operatingModel === "fmcg_distributor" && step === 4,
+  });
+
+  useEffect(() => {
+    const nodeId = locationScope.hierarchyNodeIds?.[0];
+    const profileId = hierarchyProfileQuery.data?.[0]?.id;
+    if (
+      operatingModel !== "fmcg_distributor" ||
+      !nodeId ||
+      !profileId ||
+      !(membersQuery.data ?? []).length
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const outlets = await resolveHierarchyOutlets(profileId, nodeId);
+      if (cancelled || !outlets.length) return;
+      const { manualMapping, storeIds, distribution } = buildHierarchyDistribution({
+        outlets,
+        assignees: membersQuery.data ?? [],
+      });
+      if (!storeIds.length || !distribution.length) return;
+      setLocationScope((prev) => ({
+        ...prev,
+        storeIds,
+        stores: outlets.map((o) => ({ id: o.storeId, name: o.nodeName })),
+      }));
+      setTeamScope((prev) => ({
+        ...prev,
+        assigneeIds: [...new Set(Object.values(manualMapping))],
+        manualMapping,
+      }));
+      setDistributionStrategy("manual");
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    locationScope.hierarchyNodeIds,
+    hierarchyProfileQuery.data,
+    operatingModel,
+    membersQuery.data,
+    step,
+  ]);
 
   const existingAssignmentsQuery = useQuery({
     queryKey: ["org-assignments", "conflicts"],
@@ -779,6 +834,7 @@ function NewAuditPage() {
               <DatasetEditor
                 dataset={dataset}
                 inputSchema={inputSchema}
+                operatingModel={operatingModel}
                 error={inputError}
                 onChange={(next) => {
                   updateDataset(next);
@@ -1074,6 +1130,7 @@ function NewAuditPage() {
 function DatasetEditor({
   dataset,
   inputSchema,
+  operatingModel,
   error,
   onChange,
   onInputSchemaChange,
@@ -1081,11 +1138,25 @@ function DatasetEditor({
 }: {
   dataset: AuditInputDataset;
   inputSchema: InputSchema;
+  operatingModel: OperatingModel;
   error: string | null;
   onChange: (dataset: AuditInputDataset) => void;
   onInputSchemaChange: (schema: InputSchema) => void;
   onUpload: (file: File) => Promise<void>;
 }) {
+  const [templateName, setTemplateName] = useState("");
+  const saveTemplateMutation = useMutation({
+    mutationFn: () =>
+      saveCustomCsvAsTemplate({
+        name: templateName.trim() || `Custom CSV Audit ${new Date().toLocaleDateString()}`,
+        inputSchema,
+        dataset,
+        operatingModel,
+        publish: false,
+      }),
+    onSuccess: (tpl) => toast.success(`Saved template "${tpl.name}" to your library.`),
+    onError: (e) => toast.error(toUserMessage(e)),
+  });
   const updateColumn = (
     columnId: string,
     patch: Partial<{ name: string; type: AuditDataType }>,
@@ -1319,6 +1390,24 @@ function DatasetEditor({
               onInputSchemaChange({ ...inputSchema, subjectType })
             }
           />
+          <div className="mt-4 flex flex-wrap items-end gap-2 rounded-lg border border-dashed p-3">
+            <div className="min-w-[200px] flex-1">
+              <Label className="text-xs">Save as reusable template</Label>
+              <Input
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                placeholder="e.g. Kirana SKU Count Audit"
+              />
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!inputSchema.columnMappings.length || saveTemplateMutation.isPending}
+              onClick={() => saveTemplateMutation.mutate()}
+            >
+              Save as Template
+            </Button>
+          </div>
         </div>
       ) : null}
     </div>

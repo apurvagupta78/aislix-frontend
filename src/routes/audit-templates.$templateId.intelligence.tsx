@@ -61,8 +61,29 @@ function TemplateIntelligencePage() {
     if (!tpl) return { universal: [], auditSpecific: [] as KpiDefinition[] };
     const def = templateToDefinition(tpl);
     const auditSpecific = resolveKpisForTemplate(def);
-    const universal = KPI_CATALOG.filter((k) => k.layer === "universal").slice(0, 6);
-    return { universal, auditSpecific, templateName: tpl.name, operatingModel: tpl.operating_model };
+    const concepts = new Set(
+      def.fields.flatMap((f) => [f.standardConcept, f.key].filter(Boolean) as string[]),
+    );
+    const universal = KPI_CATALOG.filter(
+      (k) =>
+        k.layer === "universal" &&
+        (!k.requiredConcepts?.length ||
+          k.requiredConcepts.some((c) => concepts.has(String(c)))),
+    );
+    const operatingModel = KPI_CATALOG.filter(
+      (k) =>
+        k.layer === "operating_model" &&
+        (!tpl.operating_model || k.operatingModels?.includes(tpl.operating_model)) &&
+        (!k.requiredConcepts?.length ||
+          k.requiredConcepts.some((c) => concepts.has(String(c)))),
+    );
+    return {
+      universal,
+      operatingModel,
+      auditSpecific,
+      templateName: tpl.name,
+      operatingModelKey: tpl.operating_model,
+    };
   }, [templateQuery.data]);
 
   if (templateQuery.isLoading) {
@@ -121,20 +142,48 @@ function TemplateIntelligencePage() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {catalog.auditSpecific.map((kpi) => (
-              <KpiCard key={kpi.id} kpi={kpi} templateName={tpl.name} />
+              <KpiCard
+                key={kpi.id}
+                kpi={kpi}
+                templateName={tpl.name}
+                onViewAll={() => setExpandedKpi(kpi.id)}
+              />
             ))}
           </div>
         )}
       </section>
 
-      <section className="mb-8">
-        <h2 className="mb-3 text-lg font-semibold">Universal KPIs (active for this template)</h2>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {catalog.universal.map((kpi) => (
-            <KpiCard key={kpi.id} kpi={kpi} templateName={tpl.name} />
-          ))}
-        </div>
-      </section>
+      {catalog.operatingModel.length > 0 ? (
+        <section className="mb-8">
+          <h2 className="mb-3 text-lg font-semibold">Operating model KPIs</h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {catalog.operatingModel.map((kpi) => (
+              <KpiCard
+                key={kpi.id}
+                kpi={kpi}
+                templateName={tpl.name}
+                onViewAll={() => setExpandedKpi(kpi.id)}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {catalog.universal.length > 0 ? (
+        <section className="mb-8">
+          <h2 className="mb-3 text-lg font-semibold">Universal KPIs (supported by this template)</h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {catalog.universal.map((kpi) => (
+              <KpiCard
+                key={kpi.id}
+                kpi={kpi}
+                templateName={tpl.name}
+                onViewAll={() => setExpandedKpi(kpi.id)}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="grid gap-4 md:grid-cols-2">
         <Card>
@@ -199,7 +248,15 @@ function TemplateIntelligencePage() {
   );
 }
 
-function KpiCard({ kpi, templateName }: { kpi: KpiDefinition; templateName: string }) {
+function KpiCard({
+  kpi,
+  templateName,
+  onViewAll,
+}: {
+  kpi: KpiDefinition;
+  templateName: string;
+  onViewAll?: () => void;
+}) {
   const towerKpi = toControlTowerKpi(kpi);
   return (
     <Card className="overflow-hidden">
@@ -221,7 +278,7 @@ function KpiCard({ kpi, templateName }: { kpi: KpiDefinition; templateName: stri
           Trend (7d illustrative)
         </div>
         <div className="mt-3 flex gap-2">
-          <Button size="sm" variant="ghost" className="h-7 text-xs">
+          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onViewAll}>
             View All
           </Button>
           <Button
