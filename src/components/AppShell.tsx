@@ -61,6 +61,7 @@ import { formatAssignmentId } from "@/components/AssignmentId";
 import { GlobalFilterBarShell } from "@/components/filters/GlobalFilterBarShell";
 import { Badge } from "@/components/ui/badge";
 import { GlobalFilterProvider } from "@/lib/global-filters";
+import { PageHeader } from "@/components/design-system";
 import { APP_NAV_SECTIONS, type NavItemConfig, type NavLeafConfig, type NavSectionConfig } from "@/lib/navigation/app-nav";
 
 type LucideIcon = typeof Bell;
@@ -166,8 +167,8 @@ function SidebarNav({
           "flex items-center gap-2 rounded-lg py-1.5 pr-3 text-sm transition-colors",
           depth === 1 ? "pl-6" : "pl-10",
           active
-            ? "font-medium text-brand"
-            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            ? "bg-brand-soft/70 font-medium text-brand"
+            : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
         )}
       >
         <span className="flex-1 truncate">{leaf.label}</span>
@@ -281,11 +282,11 @@ function SidebarNav({
               className={cn(
                 "flex w-full items-center gap-2.5 rounded-lg px-3 py-1.5 text-sm transition-colors",
                 activeSectionId === section.id
-                  ? "font-medium text-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  ? "bg-brand-soft/50 font-medium text-brand"
+                  : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
               )}
             >
-              <section.icon className="size-4" />
+              <section.icon className="size-4 shrink-0" />
               <span className="flex-1 truncate text-left">{section.label}</span>
               <ChevronDown className={cn("size-3.5 transition-transform", !open && "-rotate-90")} />
             </button>
@@ -441,10 +442,10 @@ export function AppShell({
   return (
     <GlobalFilterProvider>
       <TooltipProvider delayDuration={120}>
-        <div className="min-h-screen bg-surface">
+        <div className="play-canvas">
           <aside
             className={cn(
-              "fixed inset-y-0 left-0 z-40 hidden h-full flex-col border-r border-border bg-card py-5 lg:flex",
+              "fixed inset-y-0 left-0 z-40 hidden h-full flex-col border-r border-border/80 bg-card/95 py-5 backdrop-blur-sm lg:flex",
               sidebarCollapsed ? "w-16 items-center px-2" : "w-64 px-4",
             )}
           >
@@ -566,8 +567,10 @@ export function AppShell({
                   />
                 </form>
                 <div className="ml-auto flex items-center gap-2">
-                  <Button asChild variant="brand" size="sm" className="rounded-xl">
-                    <Link to="/new-audit">New audit</Link>
+                  <Button asChild variant="brand" size="sm" className="rounded-xl shadow-sm">
+                    <Link to="/new-audit">
+                      <Plus className="size-4" /> New audit
+                    </Link>
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -710,21 +713,11 @@ export function AppShell({
               </div>
             </header>
 
-            <main className="px-5 py-8 sm:px-8">
-              <div className="mx-auto max-w-7xl">
-                <div className="flex flex-wrap items-end justify-between gap-4">
-                  <div>
-                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                      {title}
-                    </h1>
-                    {description && (
-                      <p className="mt-1.5 text-sm text-muted-foreground">{description}</p>
-                    )}
-                  </div>
-                  {actions && <div className="flex items-center gap-2">{actions}</div>}
-                </div>
+            <main className="px-5 py-6 sm:px-8 sm:py-8">
+              <div className="mx-auto max-w-7xl space-y-6">
+                <PageHeader title={title} description={description} actions={actions} />
                 <GlobalFilterBarShell />
-                <div className="mt-7 animate-fade-in">{children}</div>
+                <div className="animate-fade-in">{children}</div>
               </div>
             </main>
             <SiteFooter />

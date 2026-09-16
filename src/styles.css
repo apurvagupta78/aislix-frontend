@@ -37,6 +37,9 @@
   --color-surface: var(--surface);
   --color-warning: var(--warning);
   --color-success: var(--success);
+  --color-semantic-info: var(--semantic-info);
+  --color-semantic-ai: var(--semantic-ai);
+  --color-semantic-evidence: var(--semantic-evidence);
 
   --shadow-soft: var(--shadow-soft);
   --shadow-card: var(--shadow-card);
@@ -129,6 +132,9 @@
   --surface: oklch(0.98 0.006 240);
   --success: oklch(0.571 0.143 153.3);
   --warning: oklch(0.75 0.15 70);
+  --semantic-info: oklch(0.92 0.04 240);
+  --semantic-ai: oklch(0.93 0.04 290);
+  --semantic-evidence: oklch(0.94 0.04 350);
   --gradient-brand: linear-gradient(135deg, var(--brand), var(--brand-glow));
   --gradient-hero: radial-gradient(1200px 600px at 50% -20%, color-mix(in oklab, var(--brand) 14%, transparent), transparent 70%);
   --shadow-soft: 0 1px 2px 0 oklch(0.267 0.055 243.7 / 0.06);
@@ -242,6 +248,31 @@
     box-shadow: var(--shadow-lift);
     border-color: color-mix(in oklab, var(--color-brand) 22%, var(--color-border));
     transform: translateY(-2px);
+  }
+}
+
+/** Soft app canvas — authenticated pages */
+@utility play-canvas {
+  background-color: var(--color-surface);
+  min-height: 100vh;
+}
+
+/** White grouped panel */
+@utility play-surface {
+  background-color: var(--color-card);
+  border: 1px solid color-mix(in oklab, var(--color-border) 85%, transparent);
+  box-shadow: var(--shadow-soft);
+}
+
+/** Interactive option / selection card */
+@utility play-card {
+  background-color: var(--color-card);
+  border: 1px solid color-mix(in oklab, var(--color-border) 90%, transparent);
+  box-shadow: var(--shadow-soft);
+  transition: box-shadow 200ms ease, transform 200ms ease, border-color 200ms ease;
+  &:hover:not(:disabled) {
+    box-shadow: var(--shadow-card);
+    transform: translateY(-1px);
   }
 }
 
