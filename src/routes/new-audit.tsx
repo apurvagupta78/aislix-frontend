@@ -29,7 +29,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { fetchStores } from "@/lib/account";
 import { createScanAssignment, fetchAssignableMembers } from "@/lib/assignments";
-import { fetchAuditTemplates } from "@/lib/audit-templates";
+import { fetchAuditTemplate, fetchAuditTemplates } from "@/lib/audit-templates";
+import { hydrateFromSavedTemplate } from "@/lib/audit-builder/load-saved-template-audit";
 import {
   EVIDENCE_PROOF_OPTIONS,
   mergeTemplateMinimum,
@@ -104,6 +105,11 @@ export const Route = createFileRoute("/new-audit")({
   validateSearch: (search: Record<string, unknown>) => ({
     templateId: typeof search.templateId === "string" ? search.templateId : undefined,
     systemKey: typeof search.systemKey === "string" ? search.systemKey : undefined,
+    assign:
+      search.assign === true ||
+      search.assign === "true" ||
+      search.assign === "1" ||
+      search.assign === 1,
   }),
   component: NewAuditPage,
 });
@@ -120,7 +126,11 @@ const steps = [
 
 function NewAuditPage() {
   const navigate = useNavigate();
-  const { templateId: initialTemplateId, systemKey: initialSystemKey } = Route.useSearch();
+  const {
+    templateId: initialTemplateId,
+    systemKey: initialSystemKey,
+    assign: initialAssign,
+  } = Route.useSearch();
   const [step, setStep] = useState(1);
   const [operatingModel, setOperatingModel] = useState<OperatingModel>(() => {
     if (initialSystemKey) {
@@ -176,6 +186,7 @@ function NewAuditPage() {
     startTime: "09:00",
     timezone: "Asia/Kolkata",
   });
+  const [templateHydrated, setTemplateHydrated] = useState(false);
 
   const storesQuery = useQuery({
     queryKey: ["stores", "new-audit"],
@@ -188,6 +199,11 @@ function NewAuditPage() {
   const templatesQuery = useQuery({
     queryKey: ["audit-templates", "new-audit"],
     queryFn: () => fetchAuditTemplates({ status: "published", activeOnly: true }),
+  });
+  const initialTemplateQuery = useQuery({
+    queryKey: ["audit-template", "new-audit", initialTemplateId],
+    queryFn: () => fetchAuditTemplate(initialTemplateId!),
+    enabled: Boolean(initialTemplateId),
   });
 
   const purposeOptions = getPurposesForModel(operatingModel);
@@ -209,16 +225,27 @@ function NewAuditPage() {
   const systemTemplateSpec = systemTemplateKey
     ? getSystemTemplateSpec(systemTemplateKey)
     : null;
-  const selectedTemplate =
-    templateChoice === "fnv"
-      ? filteredPublishedTemplates.find(
+  const selectedTemplate = useMemo(() => {
+    if (templateChoice.startsWith("system:")) return null;
+    if (templateChoice === "fnv") {
+      return (
+        filteredPublishedTemplates.find(
           (t) => t.template_type === "fnv_qc_audit" || t.name.toLowerCase().includes("fnv"),
-        )
-      : templateChoice === "planogram"
-        ? filteredPublishedTemplates.find((t) => t.name.toLowerCase().includes("planogram"))
-        : templateChoice.startsWith("system:")
-          ? null
-          : filteredPublishedTemplates.find((t) => t.id === templateChoice);
+        ) ?? null
+      );
+    }
+    if (templateChoice === "planogram") {
+      return filteredPublishedTemplates.find((t) => t.name.toLowerCase().includes("planogram")) ?? null;
+    }
+    const fromPublished = filteredPublishedTemplates.find((t) => t.id === templateChoice);
+    if (fromPublished) return fromPublished;
+    if (initialTemplateQuery.data?.id === templateChoice) return initialTemplateQuery.data;
+    return null;
+  }, [
+    templateChoice,
+    filteredPublishedTemplates,
+    initialTemplateQuery.data,
+  ]);
   const systemTemplateDefinition = useMemo(
     () => (systemTemplateSpec ? systemTemplateSpec.build() : null),
     [systemTemplateSpec],
@@ -231,11 +258,44 @@ function NewAuditPage() {
     selectedTemplate?.name ?? systemTemplateSpec?.name ?? undefined;
   const hasTemplate =
     templateChoice !== "general" &&
-    (templateChoice.startsWith("system:") || Boolean(selectedTemplate));
+    (templateChoice.startsWith("system:") ||
+      Boolean(selectedTemplate) ||
+      (Boolean(initialTemplateId) &&
+        templateChoice === initialTemplateId &&
+        Boolean(initialTemplateQuery.data)));
 
   useEffect(() => {
+    const template = initialTemplateQuery.data;
+    if (!template || template.id !== initialTemplateId || templateHydrated) return;
+
+    const hydration = hydrateFromSavedTemplate(template);
+    if (hydration.operatingModel) setOperatingModel(hydration.operatingModel);
+    if (hydration.auditPurpose) setAuditPurpose(hydration.auditPurpose);
+    setMethod(hydration.method);
+    if (hydration.inputSchema) setInputSchema(hydration.inputSchema);
+    if (hydration.dataset) setDataset(hydration.dataset);
+    if (hydration.dataInputMode) setDataInputMode(hydration.dataInputMode);
+    if (template.instructions) setInstructions(template.instructions);
+    setTemplateHydrated(true);
+
+    if (initialAssign) {
+      setStep(2);
+      toast.success(`Loaded "${template.name}" — select store and assign.`);
+    }
+  }, [initialTemplateQuery.data, initialTemplateId, initialAssign, templateHydrated]);
+
+  useEffect(() => {
+    if (!initialAssign || initialTemplateId || !initialSystemKey || templateHydrated) return;
+    setStep(2);
+    setTemplateHydrated(true);
+    const spec = getSystemTemplateSpec(initialSystemKey);
+    if (spec) toast.success(`Loaded "${spec.name}" — select store and assign.`);
+  }, [initialAssign, initialSystemKey, initialTemplateId, templateHydrated]);
+
+  useEffect(() => {
+    if (initialTemplateId || initialSystemKey) return;
     setDataInputMode(defaultDataInputMode(hasTemplate));
-  }, [hasTemplate, templateChoice]);
+  }, [hasTemplate, templateChoice, initialTemplateId, initialSystemKey]);
   const effectivePolicy = useMemo(
     () =>
       mergeTemplateMinimum(

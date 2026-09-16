@@ -18,6 +18,7 @@ import {
   Plus,
   Search,
   Sparkles,
+  UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -67,6 +68,7 @@ import {
   type AuditTemplate,
   type TemplateStatus,
 } from "@/lib/audit-templates";
+import { templateHasSavedCsvConfig } from "@/lib/audit-builder/load-saved-template-audit";
 import { requireUserId } from "@/lib/db/context";
 import { isOrgManager } from "@/lib/assignments";
 import {
@@ -793,8 +795,8 @@ function OrganizationTemplateCard({
             ) : null}
           </div>
           <Link
-            to="/audit-templates/$templateId"
-            params={{ templateId: t.id }}
+            to="/new-audit"
+            search={{ templateId: t.id, systemKey: undefined, assign: true }}
             className="font-medium hover:text-brand"
           >
             {t.name}
@@ -833,6 +835,14 @@ function OrganizationTemplateCard({
       </p>
       <div className="mt-auto flex flex-wrap gap-2">
         <Button asChild size="sm" variant="brand">
+          <Link
+            to="/new-audit"
+            search={{ templateId: t.id, systemKey: undefined, assign: true }}
+          >
+            <UserPlus className="mr-1 size-3" /> Assign
+          </Link>
+        </Button>
+        <Button asChild size="sm" variant="outline">
           <Link to="/new-audit" search={{ templateId: t.id, systemKey: undefined }}>
             <Play className="mr-1 size-3" /> Use
           </Link>
@@ -861,13 +871,13 @@ function OrganizationTemplateCard({
               View
             </Link>
           </Button>
-        ) : (
+        ) : isCustomBuilderTemplate(t) && !templateHasSavedCsvConfig(t) ? (
           <Button asChild size="sm" variant="outline">
             <Link to="/audit-templates/$templateId" params={{ templateId: t.id }}>
-              Edit
+              Configure
             </Link>
           </Button>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -938,18 +948,33 @@ function TemplateRow({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem asChild>
+                <Link
+                  to="/new-audit"
+                  search={{ templateId: t.id, systemKey: undefined, assign: true }}
+                >
+                  <UserPlus className="mr-2 size-3.5" /> Assign Audit
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
                 <Link to="/new-audit" search={{ templateId: t.id, systemKey: undefined }}>
                   <Play className="mr-2 size-3.5" /> Use Template
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link
-                  to="/audit-templates/$templateId"
-                  params={{ templateId: t.id }}
-                >
-                  {t.is_system_template ? "View" : "Open / Edit"}
-                </Link>
-              </DropdownMenuItem>
+              {!t.is_system_template &&
+              isCustomBuilderTemplate(t) &&
+              !templateHasSavedCsvConfig(t) ? (
+                <DropdownMenuItem asChild>
+                  <Link to="/audit-templates/$templateId" params={{ templateId: t.id }}>
+                    Configure Template
+                  </Link>
+                </DropdownMenuItem>
+              ) : t.is_system_template ? (
+                <DropdownMenuItem asChild>
+                  <Link to="/audit-templates/$templateId" params={{ templateId: t.id }}>
+                    View Template
+                  </Link>
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem onClick={onDuplicate}>
                 <Copy className="mr-2 size-3.5" /> Duplicate
               </DropdownMenuItem>

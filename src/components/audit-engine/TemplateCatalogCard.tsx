@@ -1,4 +1,5 @@
-import { Bot, Camera, Eye, Play } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Bot, Camera, Eye, Play, UserPlus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -86,11 +87,23 @@ export function TemplateCatalogCard({
       </p>
 
       <div className="mt-auto flex flex-wrap gap-2">
+        <Button asChild size="sm" variant="brand">
+          <Link
+            to="/new-audit"
+            search={{
+              templateId: dbTemplate?.id,
+              systemKey: dbTemplate ? undefined : spec.key,
+              assign: true,
+            }}
+          >
+            <UserPlus className="mr-1 size-3" /> Assign
+          </Link>
+        </Button>
         <Button size="sm" variant="outline" onClick={onPreview}>
           <Eye className="mr-1 size-3" /> Preview
         </Button>
-        <Button size="sm" variant="brand" onClick={onUse}>
-          <Play className="mr-1 size-3" /> Use Template
+        <Button size="sm" variant="outline" onClick={onUse}>
+          <Play className="mr-1 size-3" /> Use
         </Button>
       </div>
     </div>
