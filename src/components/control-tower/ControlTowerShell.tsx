@@ -111,6 +111,8 @@ import {
 import { DashboardSectionHeader } from "./DashboardSectionHeader";
 
 import { KpiCardVisual } from "./KpiCardVisual";
+import { DashboardVisualBoard } from "./DashboardVisualBoard";
+
 
 
 
@@ -277,6 +279,15 @@ export function ControlTowerShell({
         <KpiGrid kpis={data.universalKpis} onDrill={(kpi) => drillTo("kpi", kpi.label)} />
 
       </section>
+
+      <section className="space-y-3">
+        <DashboardSectionHeader
+          title="Visual overview"
+          description="Four different views: health dials, strengths radar, risk heatmap and audits vs problems."
+        />
+        <DashboardVisualBoard data={data} />
+      </section>
+
 
 
 
