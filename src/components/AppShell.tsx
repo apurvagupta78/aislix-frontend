@@ -730,9 +730,16 @@ export function AppShell({
               </div>
             </header>
 
-            <main className="px-5 py-6 sm:px-8 sm:py-8">
+            <main id="main-content" className="px-5 py-6 sm:px-8 sm:py-8">
               <div className="mx-auto max-w-7xl space-y-6">
-                <PageHeader title={title} description={description} actions={actions} />
+                <PageHeader
+                  title={title}
+                  {...(description ? { description } : {})}
+                  {...(actions ? { actions } : {})}
+                  {...(headerEyebrow ? { eyebrow: headerEyebrow } : {})}
+                  {...(nextStep ? { nextStep } : {})}
+                />
+
                 <GlobalFilterBarShell />
                 <div className="animate-fade-in">{children}</div>
               </div>
