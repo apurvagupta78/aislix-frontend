@@ -103,6 +103,62 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Legacy utility aliases are intentionally constrained to the approved palette. */
+  --color-violet-50: var(--status-info-soft);
+  --color-violet-100: var(--status-info-soft);
+  --color-violet-200: var(--brand-glow);
+  --color-violet-300: var(--brand-glow);
+  --color-violet-400: var(--status-info);
+  --color-violet-500: var(--brand);
+  --color-violet-800: var(--landing-navy);
+  --color-violet-900: var(--landing-navy);
+  --color-purple-50: var(--status-info-soft);
+  --color-purple-100: var(--status-info-soft);
+  --color-purple-200: var(--brand-glow);
+  --color-purple-300: var(--brand-glow);
+  --color-purple-500: var(--brand);
+  --color-purple-800: var(--landing-navy);
+  --color-indigo-50: var(--status-info-soft);
+  --color-indigo-100: var(--status-info-soft);
+  --color-indigo-200: var(--brand-glow);
+  --color-indigo-300: var(--brand-glow);
+  --color-indigo-400: var(--status-info);
+  --color-indigo-500: var(--brand);
+  --color-indigo-600: var(--landing-navy);
+  --color-indigo-700: var(--landing-navy);
+  --color-indigo-800: var(--landing-navy);
+  --color-indigo-900: var(--landing-navy);
+  --color-emerald-50: var(--status-good-soft);
+  --color-emerald-100: var(--status-good-soft);
+  --color-emerald-200: var(--status-good-soft);
+  --color-emerald-300: var(--status-good);
+  --color-emerald-400: var(--status-good);
+  --color-emerald-500: var(--status-good);
+  --color-emerald-600: var(--status-good-strong);
+  --color-emerald-700: var(--status-good-strong);
+  --color-emerald-800: var(--status-good-strong);
+  --color-emerald-900: var(--status-good-strong);
+  --color-emerald-950: var(--status-good-strong);
+  --color-amber-50: var(--status-warn-soft);
+  --color-amber-100: var(--status-warn-soft);
+  --color-amber-200: var(--status-warn-soft);
+  --color-amber-300: var(--status-warn);
+  --color-amber-400: var(--status-warn);
+  --color-amber-500: var(--status-warn);
+  --color-amber-600: var(--status-warn-strong);
+  --color-amber-700: var(--status-warn-strong);
+  --color-amber-800: var(--status-warn-strong);
+  --color-amber-900: var(--status-warn-strong);
+  --color-amber-950: var(--status-warn-strong);
+  --color-orange-500: var(--status-danger);
+  --color-orange-700: var(--status-danger-strong);
+  --color-red-50: var(--status-danger-soft);
+  --color-red-100: var(--status-danger-soft);
+  --color-red-200: var(--status-danger-soft);
+  --color-red-600: var(--status-danger);
+  --color-red-800: var(--status-danger-strong);
+  --color-red-950: var(--status-danger-strong);
 }
 
 :root {
