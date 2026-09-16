@@ -68,7 +68,7 @@ function CustomAuditPage() {
         `Audit submitted${findingsCount ? ` — ${findingsCount} finding(s) flagged` : ""}.`,
       );
       void queryClient.invalidateQueries({ queryKey: ["my-scans"] });
-      if (scanId) navigate({ to: "/results", search: { scanId } });
+      if (scanId) navigate({ to: "/results", search: { scan: scanId } });
       else navigate({ to: "/my-scans" });
     },
     onError: (e) => toast.error(toUserMessage(e)),
