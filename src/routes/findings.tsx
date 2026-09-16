@@ -118,15 +118,16 @@ function FindingsMain() {
         />
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card p-3">
         <Input
           value={sku}
           onChange={(e) => setSku(e.target.value)}
-          placeholder="SKU or product"
-          className="h-9 w-40"
+          placeholder="Search product or SKU"
+          aria-label="Search product or SKU"
+          className="w-48"
         />
         <Select value={type} onValueChange={setType}>
-          <SelectTrigger className="h-9 w-44"><SelectValue placeholder="Type" /></SelectTrigger>
+          <SelectTrigger className="w-44" aria-label="Problem type"><SelectValue placeholder="Type" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All types</SelectItem>
             {FINDING_TYPES.map((t) => (
@@ -135,7 +136,7 @@ function FindingsMain() {
           </SelectContent>
         </Select>
         <Select value={severity} onValueChange={setSeverity}>
-          <SelectTrigger className="h-9 w-36"><SelectValue placeholder="Severity" /></SelectTrigger>
+          <SelectTrigger className="w-40" aria-label="Priority"><SelectValue placeholder="Priority" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All severities</SelectItem>
             {FINDING_SEVERITIES.map((s) => (
@@ -144,7 +145,7 @@ function FindingsMain() {
           </SelectContent>
         </Select>
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="h-9 w-44"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectTrigger className="w-44" aria-label="Status"><SelectValue placeholder="Status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
             {FINDING_STATUSES.map((s) => (
@@ -153,9 +154,9 @@ function FindingsMain() {
           </SelectContent>
         </Select>
         <Select value={rca} onValueChange={setRca}>
-          <SelectTrigger className="h-9 w-44"><SelectValue placeholder="RCA" /></SelectTrigger>
+          <SelectTrigger className="w-48" aria-label="Reason"><SelectValue placeholder="Reason" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All RCA</SelectItem>
+            <SelectItem value="all">All reasons</SelectItem>
             {RCA_OPTIONS.map((s) => (
               <SelectItem key={s.code} value={s.code}>{s.label}</SelectItem>
             ))}
@@ -163,10 +164,16 @@ function FindingsMain() {
         </Select>
         <button
           type="button"
+          aria-pressed={overdueOnly}
           onClick={() => setOverdueOnly((v) => !v)}
-          className={`h-9 rounded-md border px-3 text-xs ${overdueOnly ? "border-destructive bg-destructive/10 text-destructive" : "border-border"}`}
+          className={`inline-flex h-10 items-center gap-1.5 rounded-xl border px-3.5 text-sm font-medium transition-colors ${
+            overdueOnly
+              ? "border-status-danger/40 bg-status-danger-soft text-status-danger-strong"
+              : "border-border text-muted-foreground hover:bg-muted"
+          }`}
         >
-          Overdue
+          <Clock className="size-4" aria-hidden />
+          Past due only
         </button>
       </div>
 
