@@ -339,6 +339,16 @@ export function AppShell({
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useSidebarCollapsed();
 
+  const sectionLabel =
+    SECTIONS.find((section) =>
+      section.items.some((item) =>
+        item.kind === "leaf"
+          ? pathname === item.to || pathname.startsWith(`${item.to}/`)
+          : item.children.some((c) => pathname === c.to || pathname.startsWith(`${c.to}/`)),
+      ),
+    )?.label ?? null;
+  const headerEyebrow = eyebrow ?? sectionLabel ?? undefined;
+
   const profileQuery = useQuery({
     queryKey: ["profile"],
     queryFn: () => fetchProfile(),
