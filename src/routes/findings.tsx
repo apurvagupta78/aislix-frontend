@@ -46,8 +46,9 @@ export const Route = createFileRoute("/findings")({
 function FindingsPage() {
   return (
     <AppShell
-      title="Findings"
-      description="What went wrong on the shelf — inventory variance, planogram gaps and RCA, linked to corrective actions."
+      title="Problems found"
+      description="What went wrong on the shelf — missing stock, wrong placement and why it happened."
+      nextStep="Start with the red cards: fix critical and overdue problems first."
     >
       <FindingsMain />
     </AppShell>
