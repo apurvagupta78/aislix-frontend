@@ -1,8 +1,14 @@
 import { Link } from "@tanstack/react-router";
-import { Bot, Camera, Eye, Play, UserPlus } from "lucide-react";
+import { Bot, Camera, Eye, MoreHorizontal, Play, UserPlus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { OPERATING_MODEL_CARDS } from "@/lib/audit-engine/operating-model-catalog";
 import { PURPOSE_SECTION_LABELS } from "@/lib/audit-engine/template-catalog-ui";
 import type { AuditTemplate } from "@/lib/audit-templates";
@@ -30,7 +36,7 @@ export function TemplateCatalogCard({
 
   return (
     <div
-      className={`flex flex-col rounded-2xl border border-border bg-card transition-shadow hover:shadow-md ${compact ? "p-3" : "p-4"}`}
+      className={`play-card flex flex-col rounded-2xl transition-shadow hover:shadow-md ${compact ? "p-3" : "p-4"}`}
     >
       <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
@@ -86,25 +92,41 @@ export function TemplateCatalogCard({
         {dbTemplate?.version ?? "1.0"}
       </p>
 
-      <div className="mt-auto flex flex-wrap gap-2">
-        <Button asChild size="sm" variant="brand">
-          <Link
-            to="/new-audit"
-            search={{
-              templateId: dbTemplate?.id,
-              systemKey: dbTemplate ? undefined : spec.key,
-              assign: true,
-            }}
-          >
-            <UserPlus className="mr-1 size-3" /> Assign
-          </Link>
-        </Button>
+      <div className="mt-auto flex flex-wrap items-center gap-2">
         <Button size="sm" variant="outline" onClick={onPreview}>
           <Eye className="mr-1 size-3" /> Preview
         </Button>
-        <Button size="sm" variant="outline" onClick={onUse}>
-          <Play className="mr-1 size-3" /> Use
+        <Button size="sm" variant="brand" onClick={onUse}>
+          <Play className="mr-1 size-3" /> Use Template
         </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="size-8">
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild>
+              <Link
+                to="/new-audit"
+                search={{
+                  templateId: dbTemplate?.id,
+                  systemKey: dbTemplate ? undefined : spec.key,
+                  assign: true,
+                }}
+              >
+                <UserPlus className="mr-2 size-3.5" /> Assign
+              </Link>
+            </DropdownMenuItem>
+            {dbTemplate ? (
+              <DropdownMenuItem asChild>
+                <Link to="/audit-templates/$templateId/preview" params={{ templateId: dbTemplate.id }}>
+                  Full preview
+                </Link>
+              </DropdownMenuItem>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );

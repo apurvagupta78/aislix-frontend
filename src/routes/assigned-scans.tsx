@@ -2,11 +2,19 @@ import { useEffect, useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronDown, ClipboardList, Download, UserPlus } from "lucide-react";
+import { ChevronDown, ClipboardList, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import {
+  AssignmentWorkCard,
+  DownloadCsvButton,
+  EmptyState,
+  FilterBar,
+  FilterRow,
+  FilterSearch,
+  PageHeader,
+} from "@/components/design-system";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -16,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { EmptyState, ErrorState } from "@/components/States";
+import { ErrorState } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
 import { complianceTone } from "@/lib/planogram-compliance";
 import {
@@ -212,35 +220,34 @@ function AssignmentsTab({ storeId, assignerMe }: { storeId?: string; assignerMe?
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        <Input
-          className="max-w-xs rounded-xl"
-          placeholder="Search assignment ID, store, assignee or scope"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-44 rounded-xl">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="in_progress">In progress</SelectItem>
-            <SelectItem value="needs_correction">Needs correction</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="overdue">Overdue</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => exportAssignmentsCsv(filtered)}
-        >
-          <Download className="size-4" /> Export CSV
-        </Button>
-      </div>
+      <FilterBar>
+        <FilterRow>
+          <FilterSearch
+            value={search}
+            onChange={setSearch}
+            placeholder="Search store, assignee, or scope…"
+          />
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger className="w-44 rounded-xl">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="in_progress">In progress</SelectItem>
+              <SelectItem value="needs_correction">Needs correction</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="overdue">Overdue</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+          <DownloadCsvButton
+            label="Export CSV"
+            onClick={() => exportAssignmentsCsv(filtered)}
+            disabled={!filtered.length}
+          />
+        </FilterRow>
+      </FilterBar>
 
       {selectedIds.length > 0 ? (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/20 p-3">
@@ -292,173 +299,51 @@ function AssignmentsTab({ storeId, assignerMe }: { storeId?: string; assignerMe?
           }
         />
       ) : (
-        <>
-          <div className="hidden overflow-hidden rounded-2xl border border-border bg-card md:block">
-            <table className="w-full text-sm">
-              <thead className="bg-surface text-xs uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="w-10 px-2 py-3">
-                    <Checkbox
-                      checked={rows.length > 0 && selectedIds.length === rows.length}
-                      onCheckedChange={(checked) =>
-                        setSelectedIds(checked === true ? rows.map((r) => r.id) : [])
-                      }
-                    />
-                  </th>
-                  <th className="px-4 py-3 text-left font-medium">
-                    <button
-                      type="button"
-                      className="uppercase tracking-wide hover:text-foreground"
-                      onClick={() => setSortById((value) => !value)}
-                    >
-                      Assignment ID {sortById ? "▲" : "▼"}
-                    </button>
-                  </th>
-                  <th className="px-4 py-3 text-left font-medium">Assignee</th>
-                  <th className="px-4 py-3 text-left font-medium">Store · Scope</th>
-                  <th className="px-4 py-3 text-left font-medium">Expected</th>
-                  <th className="px-4 py-3 text-left font-medium">Due</th>
-                  <th className="px-4 py-3 text-left font-medium">Status</th>
-                  <th className="px-4 py-3 text-left font-medium">Compliance</th>
-                  <th className="px-4 py-3 text-right font-medium">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id} className="border-t border-border align-top">
-                    <td className="px-2 py-3">
-                      <Checkbox
-                        checked={selectedIds.includes(row.id)}
-                        onCheckedChange={(checked) =>
-                          setSelectedIds((current) =>
-                            checked === true
-                              ? [...current, row.id]
-                              : current.filter((id) => id !== row.id),
-                          )
-                        }
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <AssignmentIdChip id={row.id} label={false} />
-                      {(row.scan_attempts > 0 || row.status === "needs_correction" || row.status === "completed") && (
-                        <AssignmentAttemptsExpand assignmentId={row.id} />
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-foreground">{row.assignee_name}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{scopeLine(row)}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{row.expected_products}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{formatDate(row.due_at)}</td>
-                    <td className="px-4 py-3">
-                      {isOverdue(row) ? (
-                        <span className="text-xs font-medium text-destructive">Overdue</span>
-                      ) : (
-                        statusBadge(row.status)
-                      )}
-                    </td>
-                    <td className="px-4 py-3">{compliance(row.compliance_percent)}</td>
-                    <td className="px-4 py-3 text-right">
-                      {row.status === "needs_correction" ? (
-                        <div className="flex justify-end gap-1">
-                          {row.scan_id && (
-                            <Button variant="ghost" size="sm" className="rounded-xl" asChild>
-                              <Link to="/results" search={{ scan: row.scan_id }}>
-                                View results
-                              </Link>
-                            </Button>
-                          )}
-                          <Button
-                            variant="subtle"
-                            size="sm"
-                            className="rounded-xl"
-                            disabled={notifyMutation.isPending}
-                            onClick={() => notifyMutation.mutate(row)}
-                          >
-                            Notify assignee
-                          </Button>
-                        </div>
-                      ) : row.approval_status === "pending_review" && row.scan_id ? (
-                        <Button variant="default" size="sm" className="rounded-xl" asChild>
-                          <Link to="/audit-review/$scanId" params={{ scanId: row.scan_id }}>
-                            Review audit
-                          </Link>
-                        </Button>
-                      ) : row.scan_id ? (
-                        <Button variant="ghost" size="sm" className="rounded-xl" asChild>
-                          <Link to="/results" search={{ scan: row.scan_id }}>
-                            View results
-                          </Link>
-                        </Button>
-                      ) : row.status === "pending" || row.status === "in_progress" ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="rounded-xl"
-                          disabled={cancelMutation.isPending}
-                          onClick={() => cancelMutation.mutate(row.id)}
-                        >
-                          Cancel
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="space-y-3 md:hidden">
-            {rows.map((row) => (
-              <div key={row.id} className="rounded-2xl border border-border bg-card p-4 shadow-sm">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-foreground">{row.assignee_name}</p>
-                  {statusBadge(row.status)}
-                </div>
-                <AssignmentIdChip id={row.id} className="mt-1" />
-                {(row.scan_attempts > 0 || row.status === "needs_correction" || row.status === "completed") && (
-                  <AssignmentAttemptsExpand assignmentId={row.id} />
-                )}
-                <p className="mt-1 text-sm text-muted-foreground">{scopeLine(row)}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {row.expected_products} expected · {formatDate(row.due_at)}
-                </p>
-                {row.status === "needs_correction" && (
-                  <p className="mt-1 text-xs font-medium text-destructive">
-                    {row.open_issue_count} open issues · re-audit required
-                  </p>
-                )}
-                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {rows.map((row) => (
+            <AssignmentWorkCard
+              key={row.id}
+              assignment={row}
+              scopeLine={scopeLine(row)}
+              showCheckbox
+              selected={selectedIds.includes(row.id)}
+              onSelect={(checked) =>
+                setSelectedIds((current) =>
+                  checked ? [...current, row.id] : current.filter((id) => id !== row.id),
+                )
+              }
+              footer={
+                <>
+                  <AssignmentIdChip id={row.id} label={false} />
                   {compliance(row.compliance_percent)}
-                  {row.status === "needs_correction" && (
-                    <Button
-                      variant="subtle"
-                      size="sm"
-                      className="rounded-xl"
-                      disabled={notifyMutation.isPending}
-                      onClick={() => notifyMutation.mutate(row)}
-                    >
-                      Notify assignee
-                    </Button>
-                  )}
                   {row.approval_status === "pending_review" && row.scan_id ? (
-                    <Button variant="default" size="sm" className="rounded-xl" asChild>
+                    <Button variant="brand" size="sm" className="rounded-xl" asChild>
                       <Link to="/audit-review/$scanId" params={{ scanId: row.scan_id }}>
-                        Review audit
+                        Review
                       </Link>
                     </Button>
                   ) : row.scan_id ? (
-                    <Button variant="ghost" size="sm" className="rounded-xl" asChild>
+                    <Button variant="outline" size="sm" className="rounded-xl" asChild>
                       <Link to="/results" search={{ scan: row.scan_id }}>
-                        View results
+                        View
                       </Link>
                     </Button>
+                  ) : row.status === "pending" || row.status === "in_progress" ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-xl"
+                      disabled={cancelMutation.isPending}
+                      onClick={() => cancelMutation.mutate(row.id)}
+                    >
+                      Cancel
+                    </Button>
                   ) : null}
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
+                </>
+              }
+            />
+          ))}
+        </div>
       )}
     </div>
   );
@@ -552,17 +437,32 @@ function AssignedScansPage() {
   });
 
   return (
-    <AppShell
-      title="Review & Approvals"
-      description="Pending approvals, submitted audits and assignment status across your workspace."
-      actions={
-        <Button variant="brand" className="rounded-xl" asChild>
-          <Link to="/assign-scan" search={(prev) => ({ ...prev, store: undefined, scope: undefined, planogramVersion: undefined })}>
-            <UserPlus className="mr-2 size-4" /> Assign audit
-          </Link>
-        </Button>
-      }
-    >
+    <AppShell title="Assignments">
+      <div className="play-canvas space-y-5">
+        <PageHeader
+          title="Assignments"
+          description="Who is auditing what, where, and when — across your stores."
+          actions={
+            <>
+              <Button variant="outline" size="sm" className="rounded-xl" asChild>
+                <Link to="/assignment-grid">Assignment Grid</Link>
+              </Button>
+              <Button variant="brand" className="rounded-xl" asChild>
+                <Link
+                  to="/assign-scan"
+                  search={(prev) => ({
+                    ...prev,
+                    store: undefined,
+                    scope: undefined,
+                    planogramVersion: undefined,
+                  })}
+                >
+                  <UserPlus className="mr-2 size-4" /> Assign
+                </Link>
+              </Button>
+            </>
+          }
+        />
       {managerQuery.data === false ? (
         <EmptyState
           icon={<ClipboardList className="size-6" />}
@@ -591,6 +491,7 @@ function AssignedScansPage() {
           )}
         </Tabs>
       )}
+      </div>
     </AppShell>
   );
 }

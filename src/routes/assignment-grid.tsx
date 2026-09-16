@@ -1,10 +1,18 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Grid3X3, Loader2, Trash2, UserPlus } from "lucide-react";
+import { Grid3X3, Loader2, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
+import {
+  DownloadCsvButton,
+  EmptyState,
+  FilterBar,
+  FilterRow,
+  PageHeader,
+  StatusBadge,
+} from "@/components/design-system";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -15,15 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { EmptyState, ErrorState, Skeleton } from "@/components/States";
+import { ErrorState, Skeleton } from "@/components/States";
+import type { AssignmentStatus } from "@/lib/assignments";
 import { toUserMessage } from "@/lib/api/errors";
 import { fetchAssignableMembers, isOrgManager } from "@/lib/assignments";
 import {
@@ -143,38 +144,42 @@ function AssignmentGridPage() {
   }
 
   return (
-    <AppShell
-      title="Assignment Grid"
-      description="Override location → employee → due date → status for every generated assignment. Supports bulk reassignment."
-    >
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Button variant="outline" size="sm" asChild>
-          <Link to="/assigned-scans">Review & Approvals</Link>
-        </Button>
-        <Button variant="outline" size="sm" asChild>
-          <Link to="/audit-schedules">Recurring Schedules</Link>
-        </Button>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="in_progress">In progress</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => exportAssignmentGridCsv(rows, "aislix-assignment-grid.csv", statusFilter)}
-          disabled={!rows.length}
-        >
-          <Download className="mr-1 size-4" />
-          Download CSV
-        </Button>
-      </div>
+    <AppShell title="Assignment Grid">
+      <div className="play-canvas space-y-5">
+        <PageHeader
+          title="Assignment Grid"
+          description="Reassign, reschedule, and update status in bulk."
+          actions={
+            <>
+              <Button variant="outline" size="sm" className="rounded-xl" asChild>
+                <Link to="/assigned-scans">Assignments</Link>
+              </Button>
+              <Button variant="outline" size="sm" className="rounded-xl" asChild>
+                <Link to="/audit-schedules">Schedules</Link>
+              </Button>
+            </>
+          }
+        />
+
+        <FilterBar>
+          <FilterRow>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-44 rounded-xl">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="in_progress">In progress</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+            <DownloadCsvButton
+              onClick={() => exportAssignmentGridCsv(rows, "aislix-assignment-grid.csv", statusFilter)}
+              disabled={!rows.length}
+            />
+          </FilterRow>
+        </FilterBar>
 
       {selected.size > 0 ? (
         <div className="mb-4 flex flex-wrap items-end gap-3 rounded-xl border bg-muted/30 p-4">
@@ -244,35 +249,31 @@ function AssignmentGridPage() {
           description="Assignments from campaigns and recurring schedules appear here for manager overrides."
         />
       ) : (
-        <div className="overflow-x-auto rounded-xl border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">
-                  <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
-                </TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Employee</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>State</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell>
-                    <Checkbox checked={selected.has(row.id)} onCheckedChange={() => toggleOne(row.id)} />
-                  </TableCell>
-                  <TableCell className="font-medium">{row.store_name}</TableCell>
-                  <TableCell>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 px-1">
+            <Checkbox checked={allSelected} onCheckedChange={toggleAll} />
+            <span className="text-sm text-muted-foreground">Select all</span>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            {rows.map((row) => (
+              <article key={row.id} className="play-card space-y-3 rounded-2xl p-4">
+                <div className="flex items-start gap-3">
+                  <Checkbox checked={selected.has(row.id)} onCheckedChange={() => toggleOne(row.id)} />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold">{row.store_name}</p>
+                    <StatusBadge kind="assignment" status={row.status as AssignmentStatus} />
+                  </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <p className="mb-1 text-xs text-muted-foreground">Assigned to</p>
                     <Select
                       value={row.assignee_id}
                       onValueChange={(v) =>
                         updateMutation.mutate({ assignmentId: row.id, assigneeId: v })
                       }
                     >
-                      <SelectTrigger className="h-8 min-w-[140px]">
+                      <SelectTrigger className="h-9 rounded-xl">
                         <SelectValue>{memberMap.get(row.assignee_id) ?? row.assignee_name}</SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -283,11 +284,12 @@ function AssignmentGridPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </TableCell>
-                  <TableCell>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-xs text-muted-foreground">Due</p>
                     <Input
                       type="datetime-local"
-                      className="h-8 w-44"
+                      className="h-9 rounded-xl"
                       defaultValue={row.due_at?.slice(0, 16) ?? ""}
                       onBlur={(e) => {
                         const val = e.target.value;
@@ -298,15 +300,16 @@ function AssignmentGridPage() {
                         }
                       }}
                     />
-                  </TableCell>
-                  <TableCell>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-xs text-muted-foreground">Status</p>
                     <Select
                       value={row.status}
                       onValueChange={(v) =>
                         updateMutation.mutate({ assignmentId: row.id, status: v })
                       }
                     >
-                      <SelectTrigger className="h-8 w-32">
+                      <SelectTrigger className="h-9 rounded-xl">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -316,8 +319,9 @@ function AssignmentGridPage() {
                         <SelectItem value="cancelled">Cancelled</SelectItem>
                       </SelectContent>
                     </Select>
-                  </TableCell>
-                  <TableCell>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-xs text-muted-foreground">Workflow state</p>
                     <Select
                       value={row.assignment_state}
                       onValueChange={(v) =>
@@ -327,7 +331,7 @@ function AssignmentGridPage() {
                         })
                       }
                     >
-                      <SelectTrigger className="h-8 w-36">
+                      <SelectTrigger className="h-9 rounded-xl">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -338,13 +342,14 @@ function AssignmentGridPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
       )}
+      </div>
     </AppShell>
   );
 }

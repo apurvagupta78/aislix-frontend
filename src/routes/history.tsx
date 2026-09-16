@@ -10,13 +10,20 @@ import {
   FileText,
   ImageDown,
   MoreHorizontal,
-  Search,
   SearchX,
   Sheet as SheetIcon,
   Trash2,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { EmptyState, ErrorState, TableSkeleton } from "@/components/States";
+import {
+  EmptyState,
+  FilterBar,
+  FilterRow,
+  FilterSearch,
+  PageHeader,
+  StatusBadge,
+} from "@/components/design-system";
+import { ErrorState, TableSkeleton } from "@/components/States";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -119,39 +126,13 @@ export const Route = createFileRoute("/history")({
 
 /* --------------------------------- helpers -------------------------------- */
 
-function StatusBadge({ status }: { status: ScanStatus }) {
-  const map: Record<ScanStatus, { label: string; className: string }> = {
-    completed: { label: "Completed", className: "bg-accent-green/12 text-accent-green" },
-    processing: { label: "Processing", className: "bg-brand-soft text-brand" },
-    failed: { label: "Failed", className: "bg-destructive/10 text-destructive" },
-  };
-  const s = map[status];
-  return (
-    <Badge variant="secondary" className={`rounded-full border-0 font-medium ${s.className}`}>
-      {s.label}
-    </Badge>
-  );
-}
-
-const assignmentStatusMeta: Record<string, { label: string; className: string }> = {
-  pending: { label: "Pending", className: "bg-muted text-muted-foreground" },
-  in_progress: { label: "In progress", className: "bg-brand-soft text-brand" },
-  needs_correction: { label: "Needs correction", className: "bg-amber-500/12 text-amber-600" },
-  completed: { label: "Completed", className: "bg-accent-green/12 text-accent-green" },
-  cancelled: { label: "Cancelled", className: "bg-muted text-muted-foreground" },
-};
-
 function AssignmentStatusBadge({ status }: { status: string | null }) {
   if (!status) return <span className="text-muted-foreground">—</span>;
-  const meta = assignmentStatusMeta[status] ?? {
-    label: status,
-    className: "bg-muted text-muted-foreground",
-  };
-  return (
-    <Badge variant="secondary" className={`rounded-full border-0 font-medium ${meta.className}`}>
-      {meta.label}
-    </Badge>
-  );
+  const known = ["pending", "in_progress", "needs_correction", "completed", "cancelled"] as const;
+  if (known.includes(status as (typeof known)[number])) {
+    return <StatusBadge kind="assignment" status={status as (typeof known)[number]} />;
+  }
+  return <Badge variant="outline">{status}</Badge>;
 }
 
 function complianceTone(value: number | null): string {
@@ -332,27 +313,23 @@ function HistoryPage() {
   };
 
   return (
-    <AppShell
-      title="Audit history"
-      description="Every shelf audit run on your workspace, with exports and audit comparison."
-    >
-      <div className="space-y-5">
-        {/* filters */}
-        <section className="card-surface p-4 sm:p-5">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
-            <div className="relative min-w-0">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={q}
-                onChange={(e) => {
-                  setQ(e.target.value);
-                  resetPage();
-                }}
-                placeholder="Search by audit ID or store name"
-                className="h-11 rounded-xl pl-9"
-                aria-label="Search audits"
-              />
-            </div>
+    <AppShell title="Audit History">
+      <div className="play-canvas space-y-5">
+        <PageHeader
+          title="Audit History"
+          description="Past audits with scores, findings, and exports."
+        />
+
+        <FilterBar>
+          <FilterRow>
+            <FilterSearch
+              value={q}
+              onChange={(value) => {
+                setQ(value);
+                resetPage();
+              }}
+              placeholder="Search store or audit…"
+            />
 
             <div className="relative">
               <CalendarDays className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -438,10 +415,9 @@ function HistoryPage() {
                 <SelectItem value="ai">AI Audit</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-
+          </FilterRow>
           {(q || date || store !== "all" || type !== "all" || auditMode !== "all") && (
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               <span>Filters active</span>
               <Button
                 variant="ghost"
@@ -460,8 +436,7 @@ function HistoryPage() {
               </Button>
             </div>
           )}
-
-        </section>
+        </FilterBar>
 
         {/* compare bar */}
         <section className="card-surface flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
@@ -593,7 +568,7 @@ function HistoryPage() {
                           {formatCompliance(scan.planogram_compliance ?? null)}
                         </TableCell>
                         <TableCell>
-                          <StatusBadge status={scan.status} />
+                          <StatusBadge kind="scan" status={scan.status} />
                         </TableCell>
 
                         <TableCell className="text-right">
@@ -647,7 +622,7 @@ function HistoryPage() {
                     </dl>
 
                     <div className="mt-4 flex items-center justify-between gap-3">
-                      <StatusBadge status={scan.status} />
+                      <StatusBadge kind="scan" status={scan.status} />
                       <Button variant="subtle" size="sm" className="rounded-xl" asChild>
                         <Link to="/results" search={{ scan: scan.scan_id }}>
                           View results

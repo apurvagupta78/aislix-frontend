@@ -4,36 +4,33 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Archive,
   BarChart3,
-  Bot,
-  Camera,
   Copy,
   Eye,
   FileStack,
   History,
-  LayoutGrid,
-  List,
   Loader2,
-  MoreHorizontal,
-  Play,
+  Pencil,
   Plus,
-  Search,
+  Share2,
   Sparkles,
   UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
-import { CollectionMethodBadge } from "@/components/audit/AuditStatusBadges";
-import { Badge } from "@/components/ui/badge";
+import {
+  EmptyState,
+  FilterBar,
+  FilterRow,
+  FilterSearch,
+  PageHeader,
+  TemplateLibraryCard,
+} from "@/components/design-system";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
   Select,
@@ -42,26 +39,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { EmptyState, ErrorState, Skeleton } from "@/components/States";
+import { ErrorState, Skeleton } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
 import type { AuditPurpose, OperatingModel } from "@/lib/audit-builder/types";
 import { DuplicateTemplateDialog } from "@/components/audit-builder/DuplicateTemplateDialog";
 import {
-  TEMPLATE_TYPES,
   archiveAuditTemplate,
   duplicateAuditTemplate,
   fetchAuditTemplates,
   fetchTemplateUsageCounts,
-  fetchTemplateVersions,
   isCustomBuilderTemplate,
   shareAuditTemplateWithOrganization,
   updateAuditTemplate,
@@ -71,10 +58,7 @@ import {
 import { templateHasSavedCsvConfig } from "@/lib/audit-builder/load-saved-template-audit";
 import { requireUserId } from "@/lib/db/context";
 import { isOrgManager } from "@/lib/assignments";
-import {
-  getPurposesForModel,
-  OPERATING_MODEL_CARDS,
-} from "@/lib/audit-engine/operating-model-catalog";
+import { OPERATING_MODEL_CARDS } from "@/lib/audit-engine/operating-model-catalog";
 import { TemplateCatalogCard } from "@/components/audit-engine/TemplateCatalogCard";
 import { TemplatePreviewSheet } from "@/components/audit-engine/TemplatePreviewSheet";
 import { UseTemplateConfirmDialog } from "@/components/audit-engine/UseTemplateConfirmDialog";
@@ -93,18 +77,16 @@ export const Route = createFileRoute("/audit-templates")({
   component: AuditTemplatesPage,
 });
 
-type ViewMode = "cards" | "table";
-type LibraryTab = "system_catalog" | "my_templates" | "organization";
+type LibraryTab = "recommended" | "my_templates" | "organization" | "aislix_system";
 type SourceFilter = "all" | "system" | "customer";
 
 function AuditTemplatesPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [libraryTab, setLibraryTab] = useState<LibraryTab>("system_catalog");
+  const [libraryTab, setLibraryTab] = useState<LibraryTab>("recommended");
   const [previewSpec, setPreviewSpec] = useState<SystemTemplateSpec | null>(null);
   const [useSpec, setUseSpec] = useState<SystemTemplateSpec | null>(null);
   const [browseAllExpanded, setBrowseAllExpanded] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("cards");
   const [search, setSearch] = useState("");
   const [statusTab, setStatusTab] = useState<"all" | TemplateStatus>("all");
   const [operatingModelFilter, setOperatingModelFilter] = useState<OperatingModel | "all">("all");
@@ -113,7 +95,6 @@ function AuditTemplatesPage() {
   const [aiEnabledOnly, setAiEnabledOnly] = useState(false);
   const [evidenceRequiredOnly, setEvidenceRequiredOnly] = useState(false);
   const [activeOnly, setActiveOnly] = useState(false);
-  const [versionTemplateId, setVersionTemplateId] = useState<string | null>(null);
   const [duplicateTarget, setDuplicateTarget] = useState<AuditTemplate | null>(null);
 
   const managerQuery = useQuery({
@@ -143,12 +124,6 @@ function AuditTemplatesPage() {
         activeOnly,
       }),
     enabled: managerQuery.data === true,
-  });
-
-  const versionsQuery = useQuery({
-    queryKey: ["template-versions", versionTemplateId],
-    queryFn: () => fetchTemplateVersions(versionTemplateId!),
-    enabled: Boolean(versionTemplateId),
   });
 
   const duplicateMutation = useMutation({
@@ -237,7 +212,9 @@ function AuditTemplatesPage() {
   const usageQuery = useQuery({
     queryKey: ["template-usage", filteredDbTemplates.map((t) => t.id).join(",")],
     queryFn: () => fetchTemplateUsageCounts(filteredDbTemplates.map((t) => t.id)),
-    enabled: libraryTab !== "system_catalog" && filteredDbTemplates.length > 0,
+    enabled:
+      (libraryTab === "my_templates" || libraryTab === "organization") &&
+      filteredDbTemplates.length > 0,
   });
 
   const seededKeySet = useMemo(
@@ -322,72 +299,243 @@ function AuditTemplatesPage() {
     );
   }
 
-  return (
-    <AppShell
-      title="Audit Templates"
-      description="Discover Aislix system templates or manage your organization's custom audit templates."
-      actions={
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={seedAllMutation.isPending}
-            onClick={() => seedAllMutation.mutate()}
-          >
-            {seedAllMutation.isPending ? (
-              <Loader2 className="mr-1 size-3 animate-spin" />
-            ) : (
-              <Sparkles className="mr-1 size-3" />
-            )}
-            Seed System Library ({STARTER_TEMPLATE_LIBRARY.length})
-          </Button>
-          <Button asChild variant="brand" size="sm">
-            <Link to="/audit-templates/new">
-              <Plus className="mr-1 size-3" /> Create Audit Template
-            </Link>
-          </Button>
-        </div>
+  const renderDbTemplateCard = (t: AuditTemplate) => (
+    <TemplateLibraryCard
+      key={t.id}
+      template={t}
+      usageCount={usageQuery.data?.[t.id] ?? 0}
+      sourceLabel={t.is_system_template ? "Aislix System" : "Organization"}
+      onPreview={() =>
+        void navigate({
+          to: "/audit-templates/$templateId/preview",
+          params: { templateId: t.id },
+        })
       }
-    >
-      <div className="space-y-4">
+      onUse={() =>
+        void navigate({
+          to: "/new-audit",
+          search: { templateId: t.id, systemKey: undefined },
+        })
+      }
+      advancedMenu={
+        <>
+          <DropdownMenuItem asChild>
+            <Link
+              to="/new-audit"
+              search={{ templateId: t.id, systemKey: undefined, assign: true }}
+            >
+              <UserPlus className="mr-2 size-3.5" /> Assign
+            </Link>
+          </DropdownMenuItem>
+          {!t.is_system_template &&
+          isCustomBuilderTemplate(t) &&
+          !templateHasSavedCsvConfig(t) ? (
+            <DropdownMenuItem asChild>
+              <Link to="/audit-templates/$templateId" params={{ templateId: t.id }}>
+                <Pencil className="mr-2 size-3.5" /> Edit
+              </Link>
+            </DropdownMenuItem>
+          ) : t.is_system_template ? (
+            <DropdownMenuItem asChild>
+              <Link to="/audit-templates/$templateId" params={{ templateId: t.id }}>
+                <Eye className="mr-2 size-3.5" /> View
+              </Link>
+            </DropdownMenuItem>
+          ) : null}
+          <DropdownMenuItem onClick={() => setDuplicateTarget(t)}>
+            <Copy className="mr-2 size-3.5" /> Duplicate
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/audit-templates/$templateId/versions" params={{ templateId: t.id }}>
+              <History className="mr-2 size-3.5" /> Version History
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/audit-templates/$templateId/intelligence" params={{ templateId: t.id }}>
+              <BarChart3 className="mr-2 size-3.5" /> Audit Intelligence
+            </Link>
+          </DropdownMenuItem>
+          {t.visibility === "private" ? (
+            <DropdownMenuItem onClick={() => shareMutation.mutate(t.id)}>
+              <Share2 className="mr-2 size-3.5" /> Share with Organization
+            </DropdownMenuItem>
+          ) : null}
+          <DropdownMenuSeparator />
+          {!t.is_system_template && t.status !== "archived" ? (
+            <DropdownMenuItem onClick={() => archiveMutation.mutate(t.id)}>
+              <Archive className="mr-2 size-3.5" /> Archive
+            </DropdownMenuItem>
+          ) : null}
+        </>
+      }
+    />
+  );
+
+  return (
+    <AppShell title="Audit Templates">
+      <div className="play-canvas space-y-5">
+        <PageHeader
+          title="Audit Templates"
+          description="Browse ready-made audits or manage your team's template library."
+          actions={
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={seedAllMutation.isPending}
+                onClick={() => seedAllMutation.mutate()}
+              >
+                {seedAllMutation.isPending ? (
+                  <Loader2 className="mr-1 size-3 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-1 size-3" />
+                )}
+                Seed System Library
+              </Button>
+              <Button asChild variant="brand" size="sm">
+                <Link to="/audit-templates/new">
+                  <Plus className="mr-1 size-3" /> Create Template
+                </Link>
+              </Button>
+            </>
+          }
+        />
+
         <Tabs value={libraryTab} onValueChange={(v) => setLibraryTab(v as LibraryTab)}>
-          <TabsList>
-            <TabsTrigger value="system_catalog">
-              Aislix System Library ({STARTER_TEMPLATE_LIBRARY.length})
+          <TabsList className="rounded-xl">
+            <TabsTrigger value="recommended" className="rounded-lg">
+              Recommended
             </TabsTrigger>
-            <TabsTrigger value="my_templates">My Templates ({myTemplates.length})</TabsTrigger>
-            <TabsTrigger value="organization">
-              Organization Templates ({organizationTemplates.length})
+            <TabsTrigger value="my_templates" className="rounded-lg">
+              My Templates ({myTemplates.length})
+            </TabsTrigger>
+            <TabsTrigger value="organization" className="rounded-lg">
+              Organization ({organizationTemplates.length})
+            </TabsTrigger>
+            <TabsTrigger value="aislix_system" className="rounded-lg">
+              Aislix System ({STARTER_TEMPLATE_LIBRARY.length})
             </TabsTrigger>
           </TabsList>
         </Tabs>
 
-        <FilterBar
-          search={search}
-          onSearchChange={setSearch}
-          operatingModelFilter={operatingModelFilter}
-          onOperatingModelChange={setOperatingModelFilter}
-          purposeFilter={purposeFilter}
-          onPurposeChange={setPurposeFilter}
-          purposeOptions={purposeOptions}
-          sourceFilter={sourceFilter}
-          onSourceFilterChange={setSourceFilter}
-          showSourceFilter={libraryTab === "organization" || libraryTab === "my_templates"}
-          aiEnabledOnly={aiEnabledOnly}
-          onAiEnabledChange={setAiEnabledOnly}
-          evidenceRequiredOnly={evidenceRequiredOnly}
-          onEvidenceRequiredChange={setEvidenceRequiredOnly}
-          activeOnly={activeOnly}
-          onActiveOnlyChange={setActiveOnly}
-          showStatusFilters={libraryTab === "organization" || libraryTab === "my_templates"}
-          statusTab={statusTab}
-          onStatusTabChange={setStatusTab}
-          counts={counts}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-        />
+        <FilterBar>
+          {(libraryTab === "organization" || libraryTab === "my_templates") && (
+            <Tabs value={statusTab} onValueChange={(v) => setStatusTab(v as typeof statusTab)}>
+              <TabsList className="h-8">
+                <TabsTrigger value="all" className="text-xs">
+                  All
+                </TabsTrigger>
+                <TabsTrigger value="draft" className="text-xs">
+                  Drafts ({counts.draft})
+                </TabsTrigger>
+                <TabsTrigger value="published" className="text-xs">
+                  Published ({counts.published})
+                </TabsTrigger>
+                <TabsTrigger value="archived" className="text-xs">
+                  Archived ({counts.archived})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+          <FilterRow>
+            <FilterSearch
+              value={search}
+              onChange={setSearch}
+              placeholder="Search templates…"
+            />
+            <Select
+              value={operatingModelFilter}
+              onValueChange={(v) => setOperatingModelFilter(v as OperatingModel | "all")}
+            >
+              <SelectTrigger className="w-[180px] rounded-xl">
+                <SelectValue placeholder="Operating model" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All operating models</SelectItem>
+                {OPERATING_MODEL_CARDS.filter((c) => c.id !== "custom").map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={purposeFilter}
+              onValueChange={(v) => setPurposeFilter(v as AuditPurpose | "all")}
+            >
+              <SelectTrigger className="w-[180px] rounded-xl">
+                <SelectValue placeholder="Purpose" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All purposes</SelectItem>
+                {purposeOptions.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(libraryTab === "organization" || libraryTab === "my_templates") && (
+              <Select
+                value={sourceFilter}
+                onValueChange={(v) => setSourceFilter(v as SourceFilter)}
+              >
+                <SelectTrigger className="w-[160px] rounded-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All sources</SelectItem>
+                  <SelectItem value="system">Aislix System</SelectItem>
+                  <SelectItem value="customer">Customer</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={aiEnabledOnly} onCheckedChange={(c) => setAiEnabledOnly(Boolean(c))} />
+              AI enabled
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={evidenceRequiredOnly}
+                onCheckedChange={(c) => setEvidenceRequiredOnly(Boolean(c))}
+              />
+              Evidence required
+            </label>
+          </FilterRow>
+        </FilterBar>
 
-        {libraryTab === "system_catalog" ? (
+        {libraryTab === "recommended" ? (
+          templatesQuery.isLoading ? (
+            <Skeleton className="h-64 w-full" />
+          ) : discovery.recommended.length === 0 ? (
+            <EmptyState
+              icon={<FileStack className="size-6" />}
+              title="No recommended templates match"
+              description="Try clearing filters or browse the full Aislix system library."
+              action={
+                <Button variant="brand" onClick={() => setLibraryTab("aislix_system")}>
+                  Browse Aislix System
+                </Button>
+              }
+            />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {discovery.recommended.map((spec) => {
+                const dedupeKey = `${spec.operatingModel}:${spec.name}`;
+                return (
+                  <TemplateCatalogCard
+                    key={spec.key}
+                    spec={spec}
+                    seeded={seededKeySet.has(dedupeKey)}
+                    dbTemplate={resolveDbTemplate(spec)}
+                    onPreview={() => setPreviewSpec(spec)}
+                    onUse={() => setUseSpec(spec)}
+                  />
+                );
+              })}
+            </div>
+          )
+        ) : libraryTab === "aislix_system" ? (
           templatesQuery.isLoading ? (
             <Skeleton className="h-64 w-full" />
           ) : (
@@ -522,53 +670,9 @@ function AuditTemplatesPage() {
               )
             }
           />
-        ) : viewMode === "cards" ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {filteredDbTemplates.map((t) => (
-              <OrganizationTemplateCard
-                key={t.id}
-                template={t}
-                usageCount={usageQuery.data?.[t.id] ?? 0}
-                onDuplicate={() => setDuplicateTarget(t)}
-                onArchive={() => archiveMutation.mutate(t.id)}
-                onShare={
-                  t.visibility === "private"
-                    ? () => shareMutation.mutate(t.id)
-                    : undefined
-                }
-              />
-            ))}
-          </div>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-border bg-card">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Template</TableHead>
-                  <TableHead>Operating Model</TableHead>
-                  <TableHead>Purpose</TableHead>
-                  <TableHead>Version</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Fields</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredDbTemplates.map((t) => (
-                  <TemplateRow
-                    key={t.id}
-                    template={t}
-                    onDuplicate={() => setDuplicateTarget(t)}
-                    onArchive={() => archiveMutation.mutate(t.id)}
-                    onVersionHistory={() =>
-                      setVersionTemplateId(versionTemplateId === t.id ? null : t.id)
-                    }
-                    showVersions={versionTemplateId === t.id}
-                    versions={versionTemplateId === t.id ? versionsQuery.data ?? [] : []}
-                  />
-                ))}
-              </TableBody>
-            </Table>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {filteredDbTemplates.map((t) => renderDbTemplateCard(t))}
           </div>
         )}
       </div>
@@ -604,439 +708,4 @@ function AuditTemplatesPage() {
       />
     </AppShell>
   );
-}
-
-function FilterBar({
-  search,
-  onSearchChange,
-  operatingModelFilter,
-  onOperatingModelChange,
-  purposeFilter,
-  onPurposeChange,
-  purposeOptions,
-  sourceFilter,
-  onSourceFilterChange,
-  showSourceFilter,
-  aiEnabledOnly,
-  onAiEnabledChange,
-  evidenceRequiredOnly,
-  onEvidenceRequiredChange,
-  activeOnly,
-  onActiveOnlyChange,
-  showStatusFilters,
-  statusTab,
-  onStatusTabChange,
-  counts,
-  viewMode,
-  onViewModeChange,
-}: {
-  search: string;
-  onSearchChange: (v: string) => void;
-  operatingModelFilter: OperatingModel | "all";
-  onOperatingModelChange: (v: OperatingModel | "all") => void;
-  purposeFilter: AuditPurpose | "all";
-  onPurposeChange: (v: AuditPurpose | "all") => void;
-  purposeOptions: { value: AuditPurpose; label: string }[];
-  sourceFilter: SourceFilter;
-  onSourceFilterChange: (v: SourceFilter) => void;
-  showSourceFilter: boolean;
-  aiEnabledOnly: boolean;
-  onAiEnabledChange: (v: boolean) => void;
-  evidenceRequiredOnly: boolean;
-  onEvidenceRequiredChange: (v: boolean) => void;
-  activeOnly: boolean;
-  onActiveOnlyChange: (v: boolean) => void;
-  showStatusFilters: boolean;
-  statusTab: "all" | TemplateStatus;
-  onStatusTabChange: (v: "all" | TemplateStatus) => void;
-  counts: { draft: number; published: number; archived: number };
-  viewMode: ViewMode;
-  onViewModeChange: (v: ViewMode) => void;
-}) {
-  return (
-    <div className="space-y-3 rounded-xl border border-border bg-card p-4">
-      {showStatusFilters ? (
-        <Tabs value={statusTab} onValueChange={(v) => onStatusTabChange(v as typeof statusTab)}>
-          <TabsList>
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="draft">Drafts ({counts.draft})</TabsTrigger>
-            <TabsTrigger value="published">Published ({counts.published})</TabsTrigger>
-            <TabsTrigger value="archived">Archived ({counts.archived})</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      ) : null}
-
-      <div className="flex flex-wrap gap-3">
-        <div className="relative min-w-[200px] flex-1">
-          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-          <Input
-            className="pl-9"
-            placeholder="Search templates…"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-        </div>
-        <Select
-          value={operatingModelFilter}
-          onValueChange={(v) => onOperatingModelChange(v as OperatingModel | "all")}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Operating model" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All operating models</SelectItem>
-            {OPERATING_MODEL_CARDS.filter((c) => c.id !== "custom").map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={purposeFilter} onValueChange={(v) => onPurposeChange(v as AuditPurpose | "all")}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Audit purpose" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All purposes</SelectItem>
-            {purposeOptions.map((p) => (
-              <SelectItem key={p.value} value={p.value}>
-                {p.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {showSourceFilter ? (
-          <Select value={sourceFilter} onValueChange={(v) => onSourceFilterChange(v as SourceFilter)}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All sources</SelectItem>
-              <SelectItem value="system">Aislix System</SelectItem>
-              <SelectItem value="customer">Customer</SelectItem>
-            </SelectContent>
-          </Select>
-        ) : null}
-        <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox checked={aiEnabledOnly} onCheckedChange={(c) => onAiEnabledChange(Boolean(c))} />
-            AI enabled
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={evidenceRequiredOnly}
-              onCheckedChange={(c) => onEvidenceRequiredChange(Boolean(c))}
-            />
-            Evidence required
-          </label>
-          {showSourceFilter ? (
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox checked={activeOnly} onCheckedChange={(c) => onActiveOnlyChange(Boolean(c))} />
-              Active only
-            </label>
-          ) : null}
-        </div>
-        {showSourceFilter ? (
-          <div className="flex gap-1">
-            <Button
-              variant={viewMode === "cards" ? "secondary" : "ghost"}
-              size="icon"
-              onClick={() => onViewModeChange("cards")}
-            >
-              <LayoutGrid className="size-4" />
-            </Button>
-            <Button
-              variant={viewMode === "table" ? "secondary" : "ghost"}
-              size="icon"
-              onClick={() => onViewModeChange("table")}
-            >
-              <List className="size-4" />
-            </Button>
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function OrganizationTemplateCard({
-  template: t,
-  usageCount = 0,
-  onDuplicate,
-  onArchive,
-  onShare,
-}: {
-  template: AuditTemplate;
-  usageCount?: number;
-  onDuplicate: () => void;
-  onArchive: () => void;
-  onShare?: () => void;
-}) {
-  const typeLabel =
-    TEMPLATE_TYPES.find((x) => x.value === t.template_type)?.label ?? t.template_type;
-  const modelLabel =
-    OPERATING_MODEL_CARDS.find((c) => c.id === t.operating_model)?.title ?? t.operating_model;
-
-  return (
-    <div className="flex flex-col rounded-xl border border-border bg-card p-4">
-      <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <div className="mb-2 flex flex-wrap gap-1">
-            <Badge
-              variant={t.is_system_template ? "secondary" : "outline"}
-              className="text-[10px]"
-            >
-              {t.is_system_template ? "Aislix System" : "Customer Template"}
-            </Badge>
-            {!t.is_system_template ? (
-              <Badge variant="outline" className="text-[10px] uppercase">
-                {t.visibility === "private" ? "Private" : "Organization"}
-              </Badge>
-            ) : null}
-          </div>
-          <Link
-            to="/new-audit"
-            search={{ templateId: t.id, systemKey: undefined, assign: true }}
-            className="font-medium hover:text-brand"
-          >
-            {t.name}
-          </Link>
-          {t.short_description || t.description ? (
-            <p className="mt-1 text-xs text-muted-foreground">
-              {t.short_description ?? t.description}
-            </p>
-          ) : null}
-        </div>
-        <StatusBadge status={t.status} published={t.published} />
-      </div>
-      <div className="mb-3 flex flex-wrap gap-1">
-        {modelLabel ? (
-          <Badge variant="outline" className="text-[10px]">
-            {modelLabel}
-          </Badge>
-        ) : null}
-        <Badge variant="outline" className="text-[10px]">
-          {typeLabel}
-        </Badge>
-        {t.ai_config?.enabled ? (
-          <Badge variant="outline" className="text-[10px]">
-            AI
-          </Badge>
-        ) : null}
-        {t.evidence_required ? (
-          <Badge variant="outline" className="text-[10px]">
-            Evidence
-          </Badge>
-        ) : null}
-      </div>
-      <p className="mb-4 text-xs text-muted-foreground">
-        v{t.version} · {t.field_definitions.length} fields · {t.rules.length} rules · Used{" "}
-        {usageCount}× · Updated {new Date(t.updated_at).toLocaleDateString()}
-      </p>
-      <div className="mt-auto flex flex-wrap gap-2">
-        <Button asChild size="sm" variant="brand">
-          <Link
-            to="/new-audit"
-            search={{ templateId: t.id, systemKey: undefined, assign: true }}
-          >
-            <UserPlus className="mr-1 size-3" /> Assign
-          </Link>
-        </Button>
-        <Button asChild size="sm" variant="outline">
-          <Link to="/new-audit" search={{ templateId: t.id, systemKey: undefined }}>
-            <Play className="mr-1 size-3" /> Use
-          </Link>
-        </Button>
-        <Button asChild size="sm" variant="outline">
-          <Link to="/audit-templates/$templateId/preview" params={{ templateId: t.id }}>
-            Preview
-          </Link>
-        </Button>
-        <Button size="sm" variant="outline" onClick={onDuplicate}>
-          <Copy className="mr-1 size-3" /> Duplicate
-        </Button>
-        {onShare ? (
-          <Button size="sm" variant="outline" onClick={onShare}>
-            Share with Organization
-          </Button>
-        ) : null}
-        {!t.is_system_template && t.status !== "archived" ? (
-          <Button size="sm" variant="ghost" onClick={onArchive}>
-            Archive
-          </Button>
-        ) : null}
-        {t.is_system_template ? (
-          <Button asChild size="sm" variant="outline">
-            <Link to="/audit-templates/$templateId" params={{ templateId: t.id }}>
-              View
-            </Link>
-          </Button>
-        ) : isCustomBuilderTemplate(t) && !templateHasSavedCsvConfig(t) ? (
-          <Button asChild size="sm" variant="outline">
-            <Link to="/audit-templates/$templateId" params={{ templateId: t.id }}>
-              Configure
-            </Link>
-          </Button>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function TemplateRow({
-  template: t,
-  onDuplicate,
-  onArchive,
-  onVersionHistory,
-  showVersions,
-  versions,
-}: {
-  template: AuditTemplate;
-  onDuplicate: () => void;
-  onArchive: () => void;
-  onVersionHistory: () => void;
-  showVersions: boolean;
-  versions: { version: number; change_summary: string | null; created_at: string }[];
-}) {
-  const typeLabel =
-    TEMPLATE_TYPES.find((x) => x.value === t.template_type)?.label ?? t.template_type;
-  const modelLabel =
-    OPERATING_MODEL_CARDS.find((c) => c.id === t.operating_model)?.title ?? "—";
-
-  return (
-    <>
-      <TableRow className={t.status === "draft" ? "bg-muted/20" : undefined}>
-        <TableCell>
-          <div>
-            <Link
-              to="/audit-templates/$templateId"
-              params={{ templateId: t.id }}
-              className="font-medium hover:text-brand"
-            >
-              {t.name}
-            </Link>
-            <div className="mt-1 flex flex-wrap gap-1">
-              <Badge variant={t.is_system_template ? "secondary" : "outline"} className="text-[10px]">
-                {t.is_system_template ? "System" : "Customer"}
-              </Badge>
-              {isCustomBuilderTemplate(t) ? (
-                <Badge variant="outline" className="text-[10px]">
-                  Custom Builder
-                </Badge>
-              ) : null}
-            </div>
-          </div>
-        </TableCell>
-        <TableCell className="text-sm">{modelLabel}</TableCell>
-        <TableCell className="text-sm">{t.audit_purpose ?? "—"}</TableCell>
-        <TableCell>
-          <Badge variant="outline">v{t.version}</Badge>
-        </TableCell>
-        <TableCell>
-          <StatusBadge status={t.status} published={t.published} />
-          <CollectionMethodBadge mode={t.audit_mode} />
-        </TableCell>
-        <TableCell className="text-sm text-muted-foreground">
-          {t.field_definitions.length} fields · {t.rules.length} rules
-        </TableCell>
-        <TableCell className="text-right">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-8">
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem asChild>
-                <Link
-                  to="/new-audit"
-                  search={{ templateId: t.id, systemKey: undefined, assign: true }}
-                >
-                  <UserPlus className="mr-2 size-3.5" /> Assign Audit
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/new-audit" search={{ templateId: t.id, systemKey: undefined }}>
-                  <Play className="mr-2 size-3.5" /> Use Template
-                </Link>
-              </DropdownMenuItem>
-              {!t.is_system_template &&
-              isCustomBuilderTemplate(t) &&
-              !templateHasSavedCsvConfig(t) ? (
-                <DropdownMenuItem asChild>
-                  <Link to="/audit-templates/$templateId" params={{ templateId: t.id }}>
-                    Configure Template
-                  </Link>
-                </DropdownMenuItem>
-              ) : t.is_system_template ? (
-                <DropdownMenuItem asChild>
-                  <Link to="/audit-templates/$templateId" params={{ templateId: t.id }}>
-                    View Template
-                  </Link>
-                </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuItem onClick={onDuplicate}>
-                <Copy className="mr-2 size-3.5" /> Duplicate
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/audit-templates/$templateId/preview" params={{ templateId: t.id }}>
-                  <Eye className="mr-2 size-3.5" /> Preview
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/audit-templates/$templateId/intelligence" params={{ templateId: t.id }}>
-                  <BarChart3 className="mr-2 size-3.5" /> View Audit Intelligence
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/audit-templates/$templateId/versions" params={{ templateId: t.id }}>
-                  <History className="mr-2 size-3.5" /> Version History
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onVersionHistory}>
-                <History className="mr-2 size-3.5" /> Quick Version History
-              </DropdownMenuItem>
-              {!t.is_system_template && t.status !== "archived" ? (
-                <DropdownMenuItem onClick={onArchive}>
-                  <Archive className="mr-2 size-3.5" /> Archive
-                </DropdownMenuItem>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </TableCell>
-      </TableRow>
-      {showVersions ? (
-        <TableRow>
-          <TableCell colSpan={7} className="bg-muted/30 py-3">
-            <p className="mb-2 text-xs font-semibold">Version History</p>
-            {versions.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No published versions yet.</p>
-            ) : (
-              <ul className="space-y-1 text-xs">
-                {versions.map((v) => (
-                  <li key={v.version} className="flex justify-between gap-4">
-                    <span>
-                      v{v.version} — {v.change_summary ?? "Published"}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {new Date(v.created_at).toLocaleString()}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </TableCell>
-        </TableRow>
-      ) : null}
-    </>
-  );
-}
-
-function StatusBadge({ status, published }: { status: TemplateStatus; published: boolean }) {
-  if (status === "archived") return <Badge variant="outline">Archived</Badge>;
-  if (status === "published" || published) {
-    return <Badge variant="secondary">Published</Badge>;
-  }
-  return <Badge variant="outline">Draft</Badge>;
 }
