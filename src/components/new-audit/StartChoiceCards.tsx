@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Check, FileSpreadsheet, LayoutTemplate, Plus } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { StartChoice } from "@/lib/new-audit/summary";
 
@@ -10,6 +11,7 @@ type Props = {
   selectedTemplateName?: string;
   error?: string | null;
   children?: ReactNode;
+  onOpenTemplatePicker?: () => void;
 };
 
 const OPTIONS: {
@@ -56,6 +58,7 @@ export function StartChoiceCards({
   selectedTemplateName,
   error,
   children,
+  onOpenTemplatePicker,
 }: Props) {
   return (
     <section className="space-y-4">
@@ -73,7 +76,10 @@ export function StartChoiceCards({
             <button
               key={option.value}
               type="button"
-              onClick={() => onChange(option.value)}
+              onClick={() => {
+                onChange(option.value);
+                if (option.value === "template") onOpenTemplatePicker?.();
+              }}
               className={cn(
                 "relative flex flex-col rounded-2xl border p-4 text-left transition-all",
                 selected ? option.selected : option.card,
@@ -101,7 +107,12 @@ export function StartChoiceCards({
           Selected: <strong>{selectedTemplateName}</strong>
         </p>
       ) : null}
-      {value === "template" ? children : null}
+      {value === "template" && selectedTemplateName ? (
+        <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={onOpenTemplatePicker}>
+          Change template
+        </Button>
+      ) : null}
+      {value === "csv" || value === "custom" ? children : null}
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </section>
   );

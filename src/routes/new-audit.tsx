@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/design-system";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { fetchStores } from "@/lib/account";
@@ -47,8 +48,11 @@ import { definitionToPatch, templateToDefinition } from "@/lib/audit-templates";
 import { fetchHierarchyProfiles } from "@/lib/hierarchy";
 import { buildHierarchyDistribution, resolveHierarchyOutlets } from "@/lib/hierarchy/routing";
 import { getPurposesForModel } from "@/lib/audit-engine/operating-model-catalog";
-import { NewAuditTemplatePicker } from "@/components/audit-engine/NewAuditTemplatePicker";
 import { AdvancedSettingsPanel } from "@/components/new-audit/AdvancedSettingsPanel";
+import { SimpleCsvUploadStep } from "@/components/new-audit/SimpleCsvUploadStep";
+import { SimpleScratchBuilder } from "@/components/new-audit/SimpleScratchBuilder";
+import { SimpleTemplatePicker } from "@/components/new-audit/SimpleTemplatePicker";
+import { recordRecentTemplate } from "@/lib/new-audit/recent-templates";
 import { AuditMethodCards } from "@/components/new-audit/AuditMethodCards";
 import { AuditorFillPills } from "@/components/new-audit/AuditorFillPills";
 import { NewAuditProgress } from "@/components/new-audit/NewAuditProgress";
@@ -166,6 +170,12 @@ function NewAuditPage() {
     timezone: "Asia/Kolkata",
   });
   const [templateHydrated, setTemplateHydrated] = useState(false);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+
+  const userQuery = useQuery({
+    queryKey: ["current-user-id", "new-audit"],
+    queryFn: requireUserId,
+  });
 
   const storesQuery = useQuery({
     queryKey: ["stores", "new-audit"],
@@ -176,8 +186,8 @@ function NewAuditPage() {
     queryFn: fetchAssignableMembers,
   });
   const templatesQuery = useQuery({
-    queryKey: ["audit-templates", "new-audit"],
-    queryFn: () => fetchAuditTemplates({ status: "published", activeOnly: true }),
+    queryKey: ["audit-templates", "new-audit", "all"],
+    queryFn: () => fetchAuditTemplates({ status: "all", activeOnly: false }),
   });
   const initialTemplateQuery = useQuery({
     queryKey: ["audit-template", "new-audit", initialTemplateId],
@@ -185,8 +195,25 @@ function NewAuditPage() {
     enabled: Boolean(initialTemplateId),
   });
 
-  const filteredPublishedTemplates = (templatesQuery.data ?? []).filter(
-    (t) => !t.operating_model || t.operating_model === operatingModel,
+  const userId = userQuery.data;
+  const allTemplates = templatesQuery.data ?? [];
+  const myTemplates = useMemo(
+    () =>
+      allTemplates.filter(
+        (t) =>
+          !t.is_system_template &&
+          t.visibility === "private" &&
+          (!userId || t.owner_user_id === userId),
+      ),
+    [allTemplates, userId],
+  );
+  const filteredPublishedTemplates = allTemplates.filter(
+    (t) =>
+      (t.status === "published" || t.published) &&
+      (!t.operating_model || t.operating_model === operatingModel) &&
+      (t.is_system_template ||
+        t.visibility === "organization" ||
+        (t.visibility === "private" && t.owner_user_id === userId)),
   );
 
   useEffect(() => {
@@ -315,25 +342,43 @@ function NewAuditPage() {
     locationScope.storeIds.length > 0 ||
     (locationScope.hierarchyNodeIds?.length ?? 0) > 0;
 
-  const templateReady =
-    startChoice === "template"
-      ? hasTemplate || templateChoice !== "general"
-      : Boolean(startChoice);
+  const startReady = useMemo(() => {
+    if (!startChoice) return false;
+    if (startChoice === "template") {
+      return hasTemplate && templateChoice !== "general";
+    }
+    if (startChoice === "csv") {
+      if (auditMode === "ai") return true;
+      return dataset.columns.length > 0 && !dataDefinitionError;
+    }
+    if (startChoice === "custom") {
+      return inputSchema.columnMappings.length > 0 && !dataDefinitionError;
+    }
+    return false;
+  }, [
+    startChoice,
+    hasTemplate,
+    templateChoice,
+    auditMode,
+    dataset.columns.length,
+    dataDefinitionError,
+    inputSchema.columnMappings.length,
+  ]);
 
   const setupCompletedThrough = useMemo(() => {
     let completed = 0;
     if (operatingModel) completed = 1;
     if (hasLocations) completed = 2;
     if (method) completed = 3;
-    if (templateReady) completed = 4;
+    if (startReady) completed = 4;
     return completed;
-  }, [operatingModel, hasLocations, method, templateReady]);
+  }, [operatingModel, hasLocations, method, startReady]);
 
   const setupErrors = {
     model: !operatingModel ? "Choose where you are auditing." : null,
     location: !hasLocations ? "Select at least one location." : null,
     method: !method ? "Choose how the audit will be performed." : null,
-    start: !templateReady ? "Choose a template or upload your own data." : null,
+    start: !startReady ? "Choose a template, upload data, or build a custom audit." : null,
   };
 
   const auditorFillItems = useMemo(
@@ -544,8 +589,33 @@ function NewAuditPage() {
       setDataset({ ...parsed, inputSchema: schema });
       setInputSchema(schema);
       setInputError(null);
+      if (hasTemplate) setDataInputMode("template_plus_csv");
+      else setDataInputMode("upload_csv");
     } catch (error) {
-      setInputError(error instanceof Error ? error.message : "Could not read this file.");
+      const message = error instanceof Error ? error.message : "Could not read this file.";
+      if (message.toLowerCase().includes("xlsx") || message.toLowerCase().includes("csv")) {
+        setInputError(message);
+      } else if (message.toLowerCase().includes("empty")) {
+        setInputError("Could not read the spreadsheet — the file appears empty.");
+      } else {
+        setInputError(message);
+      }
+    }
+  }
+
+  function handleTemplateSelect(
+    choice: string,
+    meta?: { name: string; systemKey?: string },
+  ) {
+    setTemplateChoice(choice);
+    setStartChoice("template");
+    if (userId && meta?.name) {
+      recordRecentTemplate(userId, {
+        id: choice.startsWith("system:") ? choice : choice,
+        name: meta.name,
+        systemKey: meta.systemKey,
+        operatingModel,
+      });
     }
   }
 
@@ -778,8 +848,12 @@ function NewAuditPage() {
   });
 
   const setupValid = setupCompletedThrough === 4;
+  const configuredOnSetup =
+    (startChoice === "csv" && dataset.columns.length > 0 && !dataDefinitionError) ||
+    (startChoice === "custom" && inputSchema.columnMappings.length > 0 && !dataDefinitionError);
   const skipsConfigure =
     auditMode === "ai" ||
+    configuredOnSetup ||
     (startChoice === "template" && dataInputMode === "template_only" && !dataDefinitionError);
   const configureValid = Boolean(
     hasLocations && (auditMode === "ai" || templateChoice === "expiry" || !dataDefinitionError),
@@ -821,11 +895,12 @@ function NewAuditPage() {
     phase === "setup" ? setupValid : phase === "configure" ? configureValid : assignValid;
 
   return (
-    <AppShell
-      title="New Audit"
-      description="Create and assign an audit in minutes."
-    >
-      <div className="mx-auto max-w-6xl space-y-6 pb-24">
+    <AppShell title="New Audit">
+      <div className="play-canvas mx-auto max-w-6xl space-y-6 pb-24">
+        <PageHeader
+          title="New Audit"
+          description="Create and assign an audit in minutes."
+        />
         <NewAuditProgress completedThrough={setupCompletedThrough} phase={phase} />
         <MobileSetupSummary
           operatingModel={operatingModel}
@@ -864,24 +939,47 @@ function NewAuditPage() {
                   value={startChoice}
                   onChange={(choice) => {
                     setStartChoice(choice);
-                    if (choice === "csv" || choice === "custom") setTemplateChoice("general");
+                    if (choice === "csv") {
+                      setDataInputMode(hasTemplate ? "template_plus_csv" : "upload_csv");
+                    } else if (choice === "custom") {
+                      setTemplateChoice("general");
+                      setDataInputMode("manual");
+                    }
                   }}
                   selectedTemplateName={activeTemplateName}
                   error={setupErrors.start}
+                  onOpenTemplatePicker={() => setTemplatePickerOpen(true)}
                 >
-                  <div className="rounded-2xl border border-border bg-muted/10 p-4">
-                    <NewAuditTemplatePicker
-                      operatingModel={operatingModel}
-                      auditPurpose={auditPurpose}
-                      templateChoice={templateChoice}
-                      onTemplateChoice={(choice) => {
-                        setTemplateChoice(choice);
-                        setStartChoice("template");
-                      }}
-                      publishedTemplates={filteredPublishedTemplates}
+                  {startChoice === "csv" ? (
+                    <SimpleCsvUploadStep
+                      dataset={dataset}
+                      inputSchema={inputSchema}
+                      templateName={activeTemplateName}
+                      templateDefinition={activeTemplateDefinition}
+                      error={inputError ?? dataDefinitionError}
+                      onUpload={parseSpreadsheet}
                     />
-                  </div>
+                  ) : null}
+                  {startChoice === "custom" ? (
+                    <SimpleScratchBuilder
+                      dataset={dataset}
+                      inputSchema={inputSchema}
+                      onDatasetChange={updateDataset}
+                      onInputSchemaChange={setInputSchema}
+                    />
+                  ) : null}
                 </StartChoiceCards>
+                <SimpleTemplatePicker
+                  open={templatePickerOpen}
+                  onOpenChange={setTemplatePickerOpen}
+                  operatingModel={operatingModel}
+                  auditPurpose={auditPurpose}
+                  templateChoice={templateChoice}
+                  userId={userId}
+                  publishedTemplates={filteredPublishedTemplates}
+                  myTemplates={myTemplates}
+                  onSelect={handleTemplateSelect}
+                />
               </>
             ) : null}
 
