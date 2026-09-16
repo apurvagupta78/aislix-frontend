@@ -424,3 +424,33 @@
   backdrop-filter: blur(8px);
   border-radius: 1rem;
 }
+
+/** Dark navigation panel theming — applied to the floating sidebar */
+.nav-dark {
+  color: #fff;
+}
+.nav-dark a,
+.nav-dark button {
+  color: rgb(255 255 255 / 0.62);
+}
+.nav-dark a:hover,
+.nav-dark button:hover {
+  color: #fff;
+  background-color: rgb(255 255 255 / 0.08);
+}
+.nav-dark .bg-brand-soft {
+  background-color: rgb(255 255 255 / 0.14);
+}
+.nav-dark .text-brand,
+.nav-dark .text-foreground {
+  color: #fff;
+}
+.nav-dark .text-muted-foreground {
+  color: rgb(255 255 255 / 0.55);
+}
+.nav-dark .border-border {
+  border-color: rgb(255 255 255 / 0.14);
+}
+.nav-dark .bg-surface {
+  background-color: rgb(255 255 255 / 0.06);
+}
