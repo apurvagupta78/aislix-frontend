@@ -524,9 +524,10 @@ export function AppShell({
             </div>
           </aside>
 
-          <div className={sidebarCollapsed ? "lg:pl-16" : "lg:pl-64"}>
-            <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur-xl">
-              <div className="flex h-16 items-center gap-3 px-5 sm:px-8">
+          <div className={sidebarCollapsed ? "lg:pl-24" : "lg:pl-72"}>
+            <header className="sticky top-0 z-30 px-3 pt-3 sm:px-5">
+              <div className="play-surface flex h-16 items-center gap-3 rounded-[1.75rem] px-4 backdrop-blur-xl sm:px-6">
+
                 <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
                   <SheetTrigger asChild>
                     <Button
