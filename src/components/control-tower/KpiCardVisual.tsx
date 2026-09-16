@@ -1,46 +1,46 @@
-import { ArrowRight, TrendingDown, TrendingUp } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  BadgeCheck,
+  BarChart3,
+  CheckCircle2,
+  Clock,
+  Image as ImageIcon,
+  IndianRupee,
+  PackageSearch,
+  TrendingDown,
+  TrendingUp,
+  Wrench,
+} from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 
 import { cn } from "@/lib/utils";
 import type { ControlTowerKpi, KpiTone } from "@/lib/control-tower";
-import { Progress } from "@/components/ui/progress";
 import { KpiInfoPopover } from "./KpiInfoPopover";
 
-const TONE_STYLES: Record<
-  KpiTone,
-  { border: string; bg: string; value: string; spark: string; badge?: string }
-> = {
-  brand: {
-    border: "border-brand/20",
-    bg: "bg-brand-soft/40",
-    value: "text-brand",
-    spark: "var(--brand)",
-  },
-  good: {
-    border: "border-status-good/25",
-    bg: "bg-status-good-soft",
-    value: "text-status-good-strong",
-    spark: "var(--status-good)",
-  },
-  warn: {
-    border: "border-status-warn/30",
-    bg: "bg-status-warn-soft",
-    value: "text-status-warn-strong",
-    spark: "var(--status-warn)",
-  },
-  bad: {
-    border: "border-status-danger/25",
-    bg: "bg-status-danger-soft",
-    value: "text-status-danger-strong",
-    spark: "var(--status-danger)",
-  },
-  neutral: {
-    border: "border-border",
-    bg: "bg-card",
-    value: "text-foreground",
-    spark: "var(--muted-foreground)",
-  },
+const TONE_TILE: Record<KpiTone, string> = {
+  brand: "kpi-tile-brand",
+  good: "kpi-tile-good",
+  warn: "kpi-tile-warn",
+  bad: "kpi-tile-bad",
+  neutral: "kpi-tile-neutral",
 };
+
+/** Icon chosen from the metric name so every tile reads at a glance. */
+function iconFor(label: string) {
+  const l = label.toLowerCase();
+  if (l.includes("evidence") || l.includes("photo") || l.includes("image")) return ImageIcon;
+  if (l.includes("sla") || l.includes("overdue") || l.includes("ageing") || l.includes("time"))
+    return Clock;
+  if (l.includes("critical") || l.includes("risk") || l.includes("expiry")) return AlertTriangle;
+  if (l.includes("action") || l.includes("fix")) return Wrench;
+  if (l.includes("finding") || l.includes("issue")) return AlertTriangle;
+  if (l.includes("value") || l.includes("variance") || l.includes("revenue")) return IndianRupee;
+  if (l.includes("inventory") || l.includes("stock") || l.includes("oos")) return PackageSearch;
+  if (l.includes("pass") || l.includes("compliance")) return BadgeCheck;
+  if (l.includes("completion") || l.includes("complete")) return CheckCircle2;
+  return BarChart3;
+}
 
 export function KpiCardVisual({
   kpi,
@@ -53,9 +53,10 @@ export function KpiCardVisual({
   scopeLabel?: string;
   periodLabel?: string;
 }) {
-  const tone = TONE_STYLES[kpi.tone];
   const sparkData = kpi.trend?.map((v, i) => ({ i, v })) ?? [];
   const trendUp = kpi.trend && kpi.trend.length >= 2 && kpi.trend.at(-1)! > kpi.trend[0]!;
+  const Icon = iconFor(kpi.label);
+  const isSample = kpi.source?.includes("demo") || kpi.source?.includes("Illustrative");
 
   return (
     <button
@@ -63,39 +64,41 @@ export function KpiCardVisual({
       disabled={!kpi.available}
       onClick={() => kpi.available && onDrill?.(kpi)}
       className={cn(
-        "group relative flex min-h-[148px] flex-col overflow-hidden rounded-2xl border p-4 text-left transition-all",
-        tone.border,
-        tone.bg,
-        kpi.available
-          ? "hover:-translate-y-0.5 hover:shadow-md hover:shadow-brand/5"
-          : "cursor-not-allowed opacity-60",
+        "kpi-tile group flex min-h-[178px] flex-col p-6 text-left",
+        TONE_TILE[kpi.tone],
+        !kpi.available && "cursor-not-allowed opacity-60",
       )}
     >
-      <div className="flex items-start justify-between gap-2">
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -right-8 -top-8 size-28 rounded-full bg-white/10 blur-2xl transition-colors group-hover:bg-white/20"
+      />
+
+      <div className="relative flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-1">
-          <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="text-[0.7rem] font-bold uppercase tracking-wide text-white/80">
             {kpi.label}
           </p>
-          <KpiInfoPopover kpi={kpi} scopeLabel={scopeLabel} periodLabel={periodLabel} />
-        </div>
-        {kpi.source?.includes("demo") || kpi.source?.includes("Illustrative") ? (
-          <span className="rounded-full bg-status-warn-soft px-1.5 py-0.5 text-[9px] font-semibold text-status-warn-strong">
-            Sample
+          <span className="text-white/70">
+            <KpiInfoPopover kpi={kpi} scopeLabel={scopeLabel} periodLabel={periodLabel} />
           </span>
-        ) : null}
+        </div>
+        <span className="glass-badge flex size-10 shrink-0 items-center justify-center">
+          <Icon className="size-5 text-white" />
+        </span>
       </div>
 
-      <p className={cn("mt-1 text-3xl font-semibold tracking-tight", tone.value)}>{kpi.value}</p>
+      <p className="relative mt-4 text-4xl font-extrabold tracking-tight text-white">{kpi.value}</p>
 
-      <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{kpi.detail}</p>
+      <p className="relative mt-1 line-clamp-2 text-xs font-medium text-white/75">{kpi.detail}</p>
 
       {kpi.trendLabel ? (
-        <p className="mt-1 flex items-center gap-1 text-[0.65rem] text-muted-foreground">
+        <p className="relative mt-3 inline-flex w-fit items-center gap-1 rounded-lg bg-white/20 px-2 py-0.5 text-[0.7rem] font-bold text-white">
           {kpi.trend ? (
             trendUp ? (
-              <TrendingUp className="size-3 text-success" />
+              <TrendingUp className="size-3" />
             ) : (
-              <TrendingDown className="size-3 text-warning" />
+              <TrendingDown className="size-3" />
             )
           ) : null}
           {kpi.trendLabel}
@@ -103,20 +106,25 @@ export function KpiCardVisual({
       ) : null}
 
       {kpi.progressPct != null ? (
-        <Progress value={kpi.progressPct} className="mt-2 h-1.5" />
+        <div className="relative mt-3 h-2 w-full overflow-hidden rounded-full bg-white/25">
+          <div
+            className="h-full rounded-full bg-white"
+            style={{ width: `${Math.max(0, Math.min(100, kpi.progressPct))}%` }}
+          />
+        </div>
       ) : null}
 
       {sparkData.length > 1 ? (
-        <div className="mt-auto h-8 w-full pt-2 opacity-70">
+        <div className="relative mt-auto h-10 w-full pt-3">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={sparkData}>
               <Area
                 type="monotone"
                 dataKey="v"
-                stroke={tone.spark}
-                fill={tone.spark}
-                fillOpacity={0.15}
-                strokeWidth={1.5}
+                stroke="#ffffff"
+                fill="#ffffff"
+                fillOpacity={0.25}
+                strokeWidth={2}
                 dot={false}
               />
             </AreaChart>
@@ -124,11 +132,20 @@ export function KpiCardVisual({
         </div>
       ) : null}
 
-      {kpi.available ? (
-        <span className="mt-2 inline-flex items-center text-[0.65rem] font-medium text-brand opacity-80 group-hover:opacity-100">
-          Drill down <ArrowRight className="ml-0.5 size-3" />
-        </span>
-      ) : null}
+      <div className="relative mt-3 flex items-center justify-between gap-2">
+        {kpi.available ? (
+          <span className="inline-flex items-center text-[0.7rem] font-bold text-white/85 group-hover:text-white">
+            Drill down <ArrowRight className="ml-1 size-3" />
+          </span>
+        ) : (
+          <span />
+        )}
+        {isSample ? (
+          <span className="rounded-full bg-white/20 px-2 py-0.5 text-[9px] font-bold uppercase text-white">
+            Sample
+          </span>
+        ) : null}
+      </div>
     </button>
   );
 }

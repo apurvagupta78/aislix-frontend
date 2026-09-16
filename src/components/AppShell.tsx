@@ -462,10 +462,11 @@ export function AppShell({
         <div className="play-canvas">
           <aside
             className={cn(
-              "fixed inset-y-0 left-0 z-40 hidden h-full flex-col border-r border-border/80 bg-card/95 py-5 backdrop-blur-sm lg:flex",
+              "nav-dark nav-panel fixed inset-y-4 left-4 z-40 hidden h-[calc(100vh-2rem)] flex-col rounded-[2rem] py-6 lg:flex",
               sidebarCollapsed ? "w-16 items-center px-2" : "w-64 px-4",
             )}
           >
+
             <div
               className={cn(
                 "flex shrink-0 items-center",
@@ -508,23 +509,25 @@ export function AppShell({
                     </Link>
                   </RailTooltip>
                 ) : (
-                  <div className="rounded-2xl border border-border bg-brand-soft/60 p-4">
-                    <p className="text-sm font-medium text-foreground">Need more audits?</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
+                  <div className="rounded-[1.5rem] border border-white/15 bg-white/10 p-4">
+                    <p className="text-sm font-bold text-white">Need more audits?</p>
+                    <p className="mt-1 text-xs text-white/60">
                       Review your plan, quota and invoices in billing.
                     </p>
-                    <Button asChild size="sm" variant="brand" className="mt-3 w-full rounded-lg">
+                    <Button asChild size="sm" variant="brand" className="mt-3 w-full rounded-xl">
                       <Link to="/billing">Manage plan</Link>
                     </Button>
                   </div>
+
                 )}
               </div>
             </div>
           </aside>
 
-          <div className={sidebarCollapsed ? "lg:pl-16" : "lg:pl-64"}>
-            <header className="sticky top-0 z-30 border-b border-border bg-card/80 backdrop-blur-xl">
-              <div className="flex h-16 items-center gap-3 px-5 sm:px-8">
+          <div className={sidebarCollapsed ? "lg:pl-24" : "lg:pl-72"}>
+            <header className="sticky top-0 z-30 px-3 pt-3 sm:px-5">
+              <div className="play-surface flex h-16 items-center gap-3 rounded-[1.75rem] px-4 backdrop-blur-xl sm:px-6">
+
                 <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
                   <SheetTrigger asChild>
                     <Button
@@ -538,9 +541,10 @@ export function AppShell({
                   </SheetTrigger>
                   <SheetContent
                     side="left"
-                    className="flex h-full w-[85vw] max-w-xs flex-col gap-0 overflow-hidden bg-card p-0"
+                    className="nav-dark nav-panel flex h-full w-[85vw] max-w-xs flex-col gap-0 overflow-hidden border-0 p-0"
                   >
-                    <div className="shrink-0 border-b border-border px-4 py-4">
+                    <div className="shrink-0 border-b border-white/15 px-4 py-4">
+
                       <Logo to="/dashboard" />
                       {workspaceSwitcher}
                     </div>
