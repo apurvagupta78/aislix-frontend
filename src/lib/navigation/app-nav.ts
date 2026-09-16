@@ -59,7 +59,6 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
       { kind: "leaf", label: "Audit Calendar", to: "/audit-calendar" },
       { kind: "leaf", label: "Recurring Schedules", to: "/audit-schedules" },
       { kind: "leaf", label: "Audit Templates", to: "/audit-templates", managerOnly: true },
-      { kind: "leaf", label: "Audit History", to: "/history" },
     ],
   },
   {
@@ -116,7 +115,6 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
     icon: Settings,
     managerOnly: true,
     items: [
-      { kind: "leaf", label: "Audit Templates", to: "/audit-templates" },
       { kind: "leaf", label: "Rules", to: "/manage/rules" },
       { kind: "leaf", label: "SLA", to: "/escalation-settings" },
       { kind: "leaf", label: "Users & Roles", to: "/team" },

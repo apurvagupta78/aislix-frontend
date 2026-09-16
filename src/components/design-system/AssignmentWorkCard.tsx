@@ -108,9 +108,9 @@ export function AssignmentWorkCard({
             className={cn(
               "h-full rounded-full transition-all",
               assignment.status === "completed"
-                ? "bg-emerald-500"
+                ? "bg-status-good"
                 : overdue
-                  ? "bg-red-500"
+                  ? "bg-status-danger"
                   : "bg-brand",
             )}
             style={{ width: `${progress}%` }}
