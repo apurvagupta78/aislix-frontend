@@ -165,6 +165,35 @@ export async function saveCustomAuditField(input: {
   }
 }
 
+/** Build a shelf_scans insert row for custom/universal audit submission (live schema). */
+export function buildCustomAuditShelfScanInsert(input: {
+  orgId: string;
+  storeId: string | null | undefined;
+  userId: string;
+  assignmentId: string;
+  templateId: string;
+  templateVersion: number;
+  templateSnapshot: Record<string, unknown>;
+  workflowSubmission?: "direct" | "manager_approval" | "regional_approval";
+}): Record<string, unknown> {
+  const submittedAt = new Date().toISOString();
+  const directApproval = input.workflowSubmission === "direct";
+  return {
+    org_id: input.orgId,
+    store_id: input.storeId ?? null,
+    created_by: input.userId,
+    assignment_id: input.assignmentId,
+    status: "completed",
+    audit_mode: "digital",
+    submission_status: directApproval ? "approved" : "pending_review",
+    submitted_at: submittedAt,
+    template_id: input.templateId,
+    template_version: input.templateVersion,
+    template_snapshot: input.templateSnapshot,
+    photo_count: 0,
+  };
+}
+
 export function buildRecordContexts(
   definition: TemplateDefinition,
   responses: ResponseMap,
@@ -217,18 +246,21 @@ export async function submitCustomAudit(input: {
       .eq("id", assignmentId)
       .single();
 
+    const directApproval = session.definition.workflow.submission === "direct";
     const { data: scan, error: scanErr } = await supabase
       .from("shelf_scans")
-      .insert({
-        org_id: orgId,
-        store_id: assignmentRow?.store_id,
-        user_id: userId,
-        status: "completed",
-        template_id: session.template.id,
-        template_version: session.template.version,
-        template_snapshot: session.template as unknown as Record<string, unknown>,
-        collection_method: "digital",
-      })
+      .insert(
+        buildCustomAuditShelfScanInsert({
+          orgId,
+          storeId: assignmentRow?.store_id as string | null | undefined,
+          userId,
+          assignmentId,
+          templateId: session.template.id,
+          templateVersion: session.template.version,
+          templateSnapshot: session.template as unknown as Record<string, unknown>,
+          workflowSubmission: session.definition.workflow.submission,
+        }),
+      )
       .select("id")
       .single();
     if (scanErr) dbError(scanErr, "Could not create audit record.");
@@ -243,8 +275,8 @@ export async function submitCustomAudit(input: {
       .from("scan_assignments")
       .update({
         status: "completed",
-        approval_status:
-          session.definition.workflow.submission === "direct" ? "approved" : "pending",
+        scan_id: scanId,
+        approval_status: directApproval ? "approved" : "pending_review",
       })
       .eq("id", assignmentId);
   }
