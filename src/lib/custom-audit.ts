@@ -266,6 +266,25 @@ export async function submitCustomAudit(input: {
   return { scanId, findingsCount };
 }
 
+/** Supabase Storage bucket for universal/custom audit evidence uploads. */
+export const AUDIT_EVIDENCE_BUCKET = "audit-evidence";
+/** Persisted reference prefix — private bucket paths are re-signed on display. */
+export const AUDIT_EVIDENCE_REF_PREFIX = "audit-evidence://";
+
+export function isAuditEvidenceRef(value: string): boolean {
+  return value.startsWith(AUDIT_EVIDENCE_REF_PREFIX);
+}
+
+export async function resolveAuditEvidenceUrl(stored: string): Promise<string> {
+  if (!isAuditEvidenceRef(stored)) return stored;
+  const path = stored.slice(AUDIT_EVIDENCE_REF_PREFIX.length);
+  const { data, error } = await supabase.storage
+    .from(AUDIT_EVIDENCE_BUCKET)
+    .createSignedUrl(path, 3600);
+  if (error || !data?.signedUrl) return stored;
+  return data.signedUrl;
+}
+
 export async function uploadCustomAuditImage(
   assignmentId: string,
   file: File,
@@ -273,11 +292,10 @@ export async function uploadCustomAuditImage(
   const orgId = await requireOrgId();
   const ext = file.name.split(".").pop() ?? "jpg";
   const path = `${orgId}/custom-audit/${assignmentId}/${crypto.randomUUID()}.${ext}`;
-  const { error } = await supabase.storage.from("audit-evidence").upload(path, file, {
+  const { error } = await supabase.storage.from(AUDIT_EVIDENCE_BUCKET).upload(path, file, {
     upsert: false,
     contentType: file.type,
   });
   if (error) dbError(error, "Could not upload image.");
-  const { data } = supabase.storage.from("audit-evidence").getPublicUrl(path);
-  return data.publicUrl;
+  return `${AUDIT_EVIDENCE_REF_PREFIX}${path}`;
 }

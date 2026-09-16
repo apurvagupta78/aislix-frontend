@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, Camera, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -23,6 +23,7 @@ import {
 import { RequiredInputsSummary } from "@/components/audit-builder/RequiredInputsSummary";
 import { isFieldVisible } from "@/lib/audit-builder/rules-engine";
 import { isImageField } from "@/lib/audit-builder/field-library";
+import { resolveAuditEvidenceUrl } from "@/lib/custom-audit";
 import {
   buildSessionImageHashSet,
   hashFileContent,
@@ -321,12 +322,7 @@ export function AuditExecutionForm({
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {images.map((url, i) => (
-              <img
-                key={i}
-                src={url}
-                alt=""
-                className="size-16 rounded-md border border-border object-cover"
-              />
+              <EvidenceImage key={i} stored={url} />
             ))}
             {!fieldReadOnly && images.length < max ? (
               <Button
@@ -562,5 +558,27 @@ export function AuditExecutionForm({
         }}
       />
     </div>
+  );
+}
+
+function EvidenceImage({ stored }: { stored: string }) {
+  const [src, setSrc] = useState(stored);
+
+  useEffect(() => {
+    let active = true;
+    void resolveAuditEvidenceUrl(stored).then((url) => {
+      if (active) setSrc(url);
+    });
+    return () => {
+      active = false;
+    };
+  }, [stored]);
+
+  return (
+    <img
+      src={src}
+      alt=""
+      className="size-16 rounded-md border border-border object-cover"
+    />
   );
 }
