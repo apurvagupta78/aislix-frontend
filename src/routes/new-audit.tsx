@@ -1,38 +1,16 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import {
-  AlertTriangle,
-  ArrowRight,
-  CheckCircle2,
-  ClipboardCheck,
-  FileSpreadsheet,
-  ShieldCheck,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { AlertTriangle, ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { fetchStores } from "@/lib/account";
 import { createScanAssignment, fetchAssignableMembers } from "@/lib/assignments";
 import { fetchAuditTemplate, fetchAuditTemplates } from "@/lib/audit-templates";
 import { hydrateFromSavedTemplate } from "@/lib/audit-builder/load-saved-template-audit";
 import {
-  EVIDENCE_PROOF_OPTIONS,
   mergeTemplateMinimum,
   policyForLevel,
   type AuditEvidencePolicy,
@@ -68,20 +46,25 @@ import { buildMergedTemplateSnapshot } from "@/lib/audit-builder/template-csv-me
 import { definitionToPatch, templateToDefinition } from "@/lib/audit-templates";
 import { fetchHierarchyProfiles } from "@/lib/hierarchy";
 import { buildHierarchyDistribution, resolveHierarchyOutlets } from "@/lib/hierarchy/routing";
-import {
-  getFmcgDimensions,
-  getOperatingModelCard,
-  getPurposesForModel,
-  getTerminology,
-  OPERATING_MODEL_CARDS,
-} from "@/lib/audit-engine/operating-model-catalog";
+import { getPurposesForModel } from "@/lib/audit-engine/operating-model-catalog";
 import { NewAuditTemplatePicker } from "@/components/audit-engine/NewAuditTemplatePicker";
+import { AdvancedSettingsPanel } from "@/components/new-audit/AdvancedSettingsPanel";
+import { AuditMethodCards } from "@/components/new-audit/AuditMethodCards";
+import { AuditorFillPills } from "@/components/new-audit/AuditorFillPills";
+import { NewAuditProgress } from "@/components/new-audit/NewAuditProgress";
+import { OperatingModelCards } from "@/components/new-audit/OperatingModelCards";
+import { SetupSummaryPanel, MobileSetupSummary } from "@/components/new-audit/SetupSummaryPanel";
+import { SimpleAssignmentPanel } from "@/components/new-audit/SimpleAssignmentPanel";
+import { SimpleLocationStep } from "@/components/new-audit/SimpleLocationStep";
+import { StartChoiceCards } from "@/components/new-audit/StartChoiceCards";
+import {
+  mapCaptureMethodToAuditMode,
+  resolveAuditorFillItems,
+  type CaptureMethod,
+  type StartChoice,
+} from "@/lib/new-audit/summary";
 import { ensureSystemTemplate } from "@/lib/audit-engine/seed-templates";
 import { getRecommendedTemplates, getSystemTemplateSpec } from "@/lib/audit-engine/template-factory";
-import { AssignmentPreviewPanel } from "@/components/assignment-engine/AssignmentPreviewPanel";
-import { AssignmentSchedulePanel } from "@/components/assignment-engine/AssignmentSchedulePanel";
-import { LocationScopePicker } from "@/components/assignment-engine/LocationScopePicker";
-import { TeamAssignmentPanel } from "@/components/assignment-engine/TeamAssignmentPanel";
 import {
   buildAssignmentPreview,
   detectAssignmentConflicts,
@@ -114,15 +97,8 @@ export const Route = createFileRoute("/new-audit")({
   component: NewAuditPage,
 });
 
-type Method = "digital" | "ai";
 type TemplateChoice = "general" | "fnv" | "expiry" | "planogram" | string;
-
-const steps = [
-  { id: 1, label: "What are you auditing?", icon: Sparkles },
-  { id: 2, label: "Define the audit data", icon: FileSpreadsheet },
-  { id: 3, label: "Verification", icon: ShieldCheck },
-  { id: 4, label: "Assign & Review", icon: Users },
-];
+type Phase = "setup" | "configure" | "assign";
 
 function NewAuditPage() {
   const navigate = useNavigate();
@@ -131,7 +107,10 @@ function NewAuditPage() {
     systemKey: initialSystemKey,
     assign: initialAssign,
   } = Route.useSearch();
-  const [step, setStep] = useState(1);
+  const [phase, setPhase] = useState<Phase>("setup");
+  const [startChoice, setStartChoice] = useState<StartChoice>(() =>
+    initialTemplateId || initialSystemKey ? "template" : null,
+  );
   const [operatingModel, setOperatingModel] = useState<OperatingModel>(() => {
     if (initialSystemKey) {
       return getSystemTemplateSpec(initialSystemKey)?.operatingModel ?? "local_store";
@@ -144,7 +123,7 @@ function NewAuditPage() {
     }
     return "inventory";
   });
-  const [method, setMethod] = useState<Method>("digital");
+  const [method, setMethod] = useState<CaptureMethod>("digital");
   const [templateChoice, setTemplateChoice] = useState<TemplateChoice>(() => {
     if (initialSystemKey) return `system:${initialSystemKey}`;
     if (initialTemplateId) return initialTemplateId;
@@ -206,8 +185,6 @@ function NewAuditPage() {
     enabled: Boolean(initialTemplateId),
   });
 
-  const purposeOptions = getPurposesForModel(operatingModel);
-  const terminology = getTerminology(operatingModel);
   const filteredPublishedTemplates = (templatesQuery.data ?? []).filter(
     (t) => !t.operating_model || t.operating_model === operatingModel,
   );
@@ -279,23 +256,34 @@ function NewAuditPage() {
     setTemplateHydrated(true);
 
     if (initialAssign) {
-      setStep(2);
-      toast.success(`Loaded "${template.name}" — select store and assign.`);
+      setStartChoice("template");
+      toast.success(`Loaded "${template.name}" — choose locations and assign.`);
     }
   }, [initialTemplateQuery.data, initialTemplateId, initialAssign, templateHydrated]);
 
   useEffect(() => {
     if (!initialAssign || initialTemplateId || !initialSystemKey || templateHydrated) return;
-    setStep(2);
+    setStartChoice("template");
     setTemplateHydrated(true);
     const spec = getSystemTemplateSpec(initialSystemKey);
-    if (spec) toast.success(`Loaded "${spec.name}" — select store and assign.`);
+    if (spec) toast.success(`Loaded "${spec.name}" — choose locations and assign.`);
   }, [initialAssign, initialSystemKey, initialTemplateId, templateHydrated]);
 
   useEffect(() => {
-    if (initialTemplateId || initialSystemKey) return;
-    setDataInputMode(defaultDataInputMode(hasTemplate));
-  }, [hasTemplate, templateChoice, initialTemplateId, initialSystemKey]);
+    if (startChoice === "csv") setDataInputMode("upload_csv");
+    else if (startChoice === "custom") setDataInputMode("manual");
+    else if (startChoice === "template") setDataInputMode(defaultDataInputMode(hasTemplate));
+  }, [startChoice, hasTemplate]);
+
+  useEffect(() => {
+    if (selectedTemplate?.audit_purpose) setAuditPurpose(selectedTemplate.audit_purpose);
+    if (systemTemplateSpec?.purpose) setAuditPurpose(systemTemplateSpec.purpose);
+  }, [selectedTemplate?.id, systemTemplateSpec?.key]);
+
+  useEffect(() => {
+    const firstStoreId = locationScope.storeIds[0];
+    if (firstStoreId && storeId !== firstStoreId) setStoreId(firstStoreId);
+  }, [locationScope.storeIds, storeId]);
   const effectivePolicy = useMemo(
     () =>
       mergeTemplateMinimum(
@@ -313,14 +301,58 @@ function NewAuditPage() {
     [evidencePolicy, selectedTemplate, systemTemplateDefinition],
   );
   const datasetError = validateAuditDataset(dataset, { manualColumnLimit: 10 });
+  const auditMode = mapCaptureMethodToAuditMode(method);
   const dataDefinitionError = validateDataDefinition({
     mode: dataInputMode,
-    method,
+    method: auditMode,
     datasetError,
     hasTemplate,
     inputSchema,
     rowCount: dataset.rows.length,
   });
+
+  const hasLocations =
+    locationScope.storeIds.length > 0 ||
+    (locationScope.hierarchyNodeIds?.length ?? 0) > 0;
+
+  const templateReady =
+    startChoice === "template"
+      ? hasTemplate || templateChoice !== "general"
+      : Boolean(startChoice);
+
+  const setupCompletedThrough = useMemo(() => {
+    let completed = 0;
+    if (operatingModel) completed = 1;
+    if (hasLocations) completed = 2;
+    if (method) completed = 3;
+    if (templateReady) completed = 4;
+    return completed;
+  }, [operatingModel, hasLocations, method, templateReady]);
+
+  const setupErrors = {
+    model: !operatingModel ? "Choose where you are auditing." : null,
+    location: !hasLocations ? "Select at least one location." : null,
+    method: !method ? "Choose how the audit will be performed." : null,
+    start: !templateReady ? "Choose a template or upload your own data." : null,
+  };
+
+  const auditorFillItems = useMemo(
+    () =>
+      resolveAuditorFillItems({
+        inputSchema,
+        templateDefinition: activeTemplateDefinition,
+      }),
+    [inputSchema, activeTemplateDefinition],
+  );
+
+  const locationPreview = (locationScope.stores ?? [])
+    .slice(0, 2)
+    .map((s) => s.name)
+    .join(", ");
+  const locationOverflow =
+    (locationScope.stores?.length ?? locationScope.storeIds.length) > 2
+      ? ` +${(locationScope.stores?.length ?? locationScope.storeIds.length) - 2}`
+      : "";
 
   useEffect(() => {
     if (storeId && !locationScope.storeIds.includes(storeId)) {
@@ -346,7 +378,7 @@ function NewAuditPage() {
   const hierarchyProfileQuery = useQuery({
     queryKey: ["hierarchy-profiles", operatingModel],
     queryFn: () => fetchHierarchyProfiles(operatingModel),
-    enabled: operatingModel === "fmcg_distributor" && step === 4,
+    enabled: operatingModel === "fmcg_distributor" && phase === "assign",
   });
 
   useEffect(() => {
@@ -391,13 +423,13 @@ function NewAuditPage() {
     hierarchyProfileQuery.data,
     operatingModel,
     membersQuery.data,
-    step,
+    phase,
   ]);
 
   const existingAssignmentsQuery = useQuery({
     queryKey: ["org-assignments", "conflicts"],
     queryFn: fetchOrgAssignments,
-    enabled: step === 4,
+    enabled: phase === "assign",
   });
 
   const assignmentPlan = useMemo((): AssignmentPlan | null => {
@@ -425,9 +457,13 @@ function NewAuditPage() {
       templateId: selectedTemplate?.id ?? null,
       templateVersion: selectedTemplate?.version ?? null,
       templateName: selectedTemplate?.name ?? systemTemplateSpec?.name ?? String(templateChoice),
-      auditMode: method,
+      auditMode,
       scopeType:
-        method === "digital" && dataset.rows.length ? "planogram" : location ? "location" : "category",
+        auditMode === "digital" && dataset.rows.length
+          ? "planogram"
+          : location
+            ? "location"
+            : "category",
       scopeValues: { location, category, product_count: dataset.rows.length },
       locationScope: { ...locationScope, storeIds },
       teamScope,
@@ -461,7 +497,7 @@ function NewAuditPage() {
     selectedTemplate,
     systemTemplateSpec,
     templateChoice,
-    method,
+    auditMode,
     dataset.rows.length,
     location,
     category,
@@ -559,7 +595,7 @@ function NewAuditPage() {
         templateForAssignment = ensured;
       }
 
-      if (method === "digital" && dataDefinitionError) {
+      if (auditMode === "digital" && dataDefinitionError) {
         throw new Error(dataDefinitionError);
       }
 
@@ -569,7 +605,7 @@ function NewAuditPage() {
         dataset.rows.length > 0;
 
       const assignmentRows =
-        method === "digital" && hasInputData && !datasetError
+        auditMode === "digital" && hasInputData && !datasetError
           ? datasetToDraftRows(dataset, { location, category })
           : [];
 
@@ -613,6 +649,14 @@ function NewAuditPage() {
         templateSnapshot = {
           predefined_type: templateChoice,
           evidence_policy: effectivePolicy,
+        };
+      }
+
+      if (method === "ai_assisted") {
+        templateSnapshot = {
+          ...templateSnapshot,
+          ai_assisted: true,
+          capture_method: "ai_assisted",
         };
       }
 
@@ -683,7 +727,7 @@ function NewAuditPage() {
         dueAt: dueAt || null,
         instructions,
         planogramVersionId,
-        auditMode: method,
+        auditMode,
         templateId: templateForAssignment?.id ?? null,
         templateVersion: templateForAssignment?.version ?? null,
         templateSnapshot,
@@ -697,7 +741,7 @@ function NewAuditPage() {
             : "manual_rows"
           : templateForAssignment
             ? "template"
-            : method === "ai"
+            : auditMode === "ai"
               ? "camera"
               : "manual_rows",
       });
@@ -723,7 +767,7 @@ function NewAuditPage() {
           to: "/audit/$assignmentId",
           params: { assignmentId },
         });
-      } else if (method === "digital") {
+      } else if (auditMode === "digital") {
         void navigate({ to: "/digital-audit", search: { assignmentId } });
       } else {
         void navigate({ to: "/scan", search: { assignmentId } });
@@ -733,520 +777,275 @@ function NewAuditPage() {
       toast.error(error instanceof Error ? error.message : "Could not create audit."),
   });
 
-  const canNext =
-    step === 1
-      ? Boolean(
-          operatingModel &&
-            auditPurpose &&
-            method &&
-            (hasTemplate || templateChoice === "general"),
-        )
-      : step === 2
-        ? Boolean(
-            storeId &&
-            location.trim() &&
-            (method === "ai" || templateChoice === "expiry" || !dataDefinitionError),
-          )
-        : step === 3
-          ? effectivePolicy.requiredProof.length > 0
-          : Boolean(
-              (assignToSelf || teamScope.assigneeIds.length > 0 || assigneeId) &&
-              (locationScope.storeIds.length > 0 || storeId) &&
-              (effectivePolicy.reviewMode !== "independent" || reviewerId) &&
-              (assignmentMode !== "schedule_once" || publishAt) &&
-              !hasBlockingConflicts(assignmentPreview?.conflicts ?? []),
-            );
+  const setupValid = setupCompletedThrough === 4;
+  const skipsConfigure =
+    auditMode === "ai" ||
+    (startChoice === "template" && dataInputMode === "template_only" && !dataDefinitionError);
+  const configureValid = Boolean(
+    hasLocations && (auditMode === "ai" || templateChoice === "expiry" || !dataDefinitionError),
+  );
+  const assignValid = Boolean(
+    (assignToSelf || teamScope.assigneeIds.length > 0 || assigneeId) &&
+      hasLocations &&
+      (effectivePolicy.reviewMode !== "independent" || reviewerId) &&
+      (assignmentMode !== "schedule_once" || publishAt) &&
+      !hasBlockingConflicts(assignmentPreview?.conflicts ?? []),
+  );
+
+  function handleContinue() {
+    if (phase === "setup") {
+      if (!setupValid) {
+        toast.error(
+          setupErrors.start ??
+            setupErrors.location ??
+            setupErrors.method ??
+            "Complete all four choices before continuing.",
+        );
+        return;
+      }
+      setPhase(skipsConfigure ? "assign" : "configure");
+      return;
+    }
+    if (phase === "configure") {
+      if (!configureValid) return;
+      setPhase("assign");
+    }
+  }
+
+  function handleBack() {
+    if (phase === "assign") setPhase(skipsConfigure ? "setup" : "configure");
+    else if (phase === "configure") setPhase("setup");
+  }
+
+  const canContinue =
+    phase === "setup" ? setupValid : phase === "configure" ? configureValid : assignValid;
 
   return (
     <AppShell
       title="New Audit"
-      description="One place to configure evidence, upload expected data and assign Digital, AI-assisted or template audits."
+      description="Create and assign an audit in minutes."
     >
-      <div className="mx-auto max-w-5xl space-y-5">
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-          {steps.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => item.id <= step && setStep(item.id)}
-                className={`rounded-xl border p-3 text-left ${
-                  step === item.id ? "border-brand bg-brand-soft/40" : "border-border"
-                }`}
-              >
-                <Icon className="mb-2 size-4" />
-                <p className="text-xs font-semibold">
-                  {item.id}. {item.label}
-                </p>
-              </button>
-            );
-          })}
+      <div className="mx-auto max-w-6xl space-y-6 pb-24">
+        <NewAuditProgress completedThrough={setupCompletedThrough} phase={phase} />
+        <MobileSetupSummary
+          operatingModel={operatingModel}
+          locationCount={locationScope.storeIds.length}
+          method={method}
+          templateName={activeTemplateName}
+        />
+
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          <div className="space-y-10">
+            {phase === "setup" ? (
+              <>
+                <OperatingModelCards
+                  value={operatingModel}
+                  onChange={(model) => {
+                    setOperatingModel(model);
+                    const purposes = getPurposesForModel(model);
+                    setAuditPurpose(purposes[0]?.value ?? "custom");
+                    setTemplateChoice("general");
+                    setStartChoice(null);
+                  }}
+                  error={setupErrors.model}
+                />
+                <SimpleLocationStep
+                  operatingModel={operatingModel}
+                  value={locationScope}
+                  onChange={setLocationScope}
+                  error={setupErrors.location}
+                />
+                <AuditMethodCards
+                  value={method}
+                  onChange={setMethod}
+                  error={setupErrors.method}
+                />
+                <StartChoiceCards
+                  value={startChoice}
+                  onChange={(choice) => {
+                    setStartChoice(choice);
+                    if (choice === "csv" || choice === "custom") setTemplateChoice("general");
+                  }}
+                  selectedTemplateName={activeTemplateName}
+                  error={setupErrors.start}
+                >
+                  <div className="rounded-2xl border border-border bg-muted/10 p-4">
+                    <NewAuditTemplatePicker
+                      operatingModel={operatingModel}
+                      auditPurpose={auditPurpose}
+                      templateChoice={templateChoice}
+                      onTemplateChoice={(choice) => {
+                        setTemplateChoice(choice);
+                        setStartChoice("template");
+                      }}
+                      publishedTemplates={filteredPublishedTemplates}
+                    />
+                  </div>
+                </StartChoiceCards>
+              </>
+            ) : null}
+
+            {phase === "configure" ? (
+              <section className="space-y-6">
+                <div>
+                  <h2 className="text-lg font-semibold">Configure your audit data</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Upload or review the data your team will work from.
+                  </p>
+                </div>
+                {auditMode === "digital" && templateChoice !== "expiry" ? (
+                  <AuditDataDefinitionStep
+                    dataInputMode={dataInputMode}
+                    onDataInputModeChange={setDataInputMode}
+                    hasTemplate={hasTemplate}
+                    templateName={activeTemplateName}
+                    templateDefinition={activeTemplateDefinition}
+                    dataset={dataset}
+                    inputSchema={inputSchema}
+                    operatingModel={operatingModel}
+                    error={inputError ?? dataDefinitionError}
+                    onDatasetChange={(next) => {
+                      updateDataset(next);
+                      setInputError(null);
+                    }}
+                    onInputSchemaChange={setInputSchema}
+                    onUpload={parseSpreadsheet}
+                  />
+                ) : (
+                  <Alert>
+                    <Sparkles className="size-4" />
+                    <AlertDescription>
+                      AI audits use photos and on-site capture. You can fine-tune evidence in
+                      advanced settings on the next step.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <div className="rounded-2xl border border-border bg-card p-5">
+                  <p className="mb-3 text-sm font-semibold">What your auditor will fill</p>
+                  <AuditorFillPills items={auditorFillItems} />
+                </div>
+                {dataDefinitionError ? (
+                  <Alert variant="destructive">
+                    <AlertTriangle className="size-4" />
+                    <AlertDescription>{dataDefinitionError}</AlertDescription>
+                  </Alert>
+                ) : null}
+              </section>
+            ) : null}
+
+            {phase === "assign" ? (
+              <section className="space-y-6">
+                <SimpleAssignmentPanel
+                  locationCount={locationScope.storeIds.length}
+                  members={membersQuery.data ?? []}
+                  teamScope={teamScope}
+                  distributionStrategy={distributionStrategy}
+                  assignToSelf={assignToSelf}
+                  assignmentMode={assignmentMode}
+                  publishAt={publishAt}
+                  dueConfig={dueConfig}
+                  recurrence={recurrence}
+                  reviewerId={reviewerId}
+                  instructions={instructions}
+                  campaignName={campaignName}
+                  preview={assignmentPreview}
+                  onTeamChange={setTeamScope}
+                  onStrategyChange={setDistributionStrategy}
+                  onAssignToSelfChange={setAssignToSelf}
+                  onAssignmentModeChange={setAssignmentMode}
+                  onPublishAtChange={setPublishAt}
+                  onDueConfigChange={setDueConfig}
+                  onRecurrenceChange={setRecurrence}
+                  onReviewerChange={setReviewerId}
+                  onInstructionsChange={setInstructions}
+                  onCampaignNameChange={setCampaignName}
+                />
+                <AdvancedSettingsPanel
+                  evidenceLevel={evidenceLevel}
+                  evidencePolicy={effectivePolicy}
+                  requireRca={requireRca}
+                  onEvidenceLevelChange={selectEvidenceLevel}
+                  onToggleProof={toggleProof}
+                  onEvidencePolicyChange={(patch) =>
+                    setEvidencePolicy((current) => ({ ...current, ...patch }))
+                  }
+                  onRequireRcaChange={setRequireRca}
+                />
+              </section>
+            ) : null}
+          </div>
+
+          <SetupSummaryPanel
+            className="hidden lg:block"
+            operatingModel={operatingModel}
+            locationCount={locationScope.storeIds.length}
+            locationPreview={
+              locationPreview ? `${locationPreview}${locationOverflow}` : undefined
+            }
+            method={method}
+            startChoice={startChoice}
+            templateName={activeTemplateName}
+            auditorItems={auditorFillItems}
+            evidenceCount={effectivePolicy.requiredProof.length}
+            onEdit={() => setPhase("setup")}
+          />
         </div>
 
-        {step === 1 ? (
-          <section className="card-surface space-y-6 p-6">
-            <div>
-              <h2 className="font-semibold">What are you auditing?</h2>
-              <p className="text-sm text-muted-foreground">
-                Choose operating model, purpose, template and capture method.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label>Operating model</Label>
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {OPERATING_MODEL_CARDS.map((card) => (
-                  <button
-                    key={card.id}
-                    type="button"
-                    onClick={() => {
-                      setOperatingModel(card.id);
-                      const purposes = getPurposesForModel(card.id);
-                      setAuditPurpose(purposes[0]?.value ?? "custom");
-                      setTemplateChoice("general");
-                    }}
-                    className={`rounded-xl border p-4 text-left transition ${
-                      operatingModel === card.id
-                        ? "border-brand bg-brand-soft/40"
-                        : "border-border hover:border-brand/40"
-                    }`}
-                  >
-                    <p className="font-semibold">{card.title}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{card.description}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
-            {operatingModel === "fmcg_distributor" && (
-              <p className="text-xs text-muted-foreground">
-                FMCG dimensions: {getFmcgDimensions(operatingModel).join(" · ")}
-              </p>
-            )}
-            <div className="space-y-2">
-              <Label>Audit purpose</Label>
-              <Select
-                value={auditPurpose}
-                onValueChange={(v) => setAuditPurpose(v as AuditPurpose)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {purposeOptions.map((purpose) => (
-                    <SelectItem key={purpose.value} value={purpose.value}>
-                      {purpose.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <NewAuditTemplatePicker
-              operatingModel={operatingModel}
-              auditPurpose={auditPurpose}
-              templateChoice={templateChoice}
-              onTemplateChoice={setTemplateChoice}
-              publishedTemplates={filteredPublishedTemplates}
-            />
-            <div className="space-y-2">
-              <Label>Method</Label>
-              <RadioGroup
-                value={method}
-                onValueChange={(v) => setMethod(v as Method)}
-                className="grid gap-3 md:grid-cols-2"
-              >
-                <MethodCard
-                  value="digital"
-                  title="Digital"
-                  description="Auditor records data in the app or via CSV import."
-                />
-                <MethodCard
-                  value="ai"
-                  title="AI-assisted"
-                  description="Camera and AI assist the auditor; human confirmation required."
-                />
-              </RadioGroup>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Context: {getOperatingModelCard(operatingModel)?.title} uses{" "}
-              <strong>{terminology.location}</strong> and <strong>{terminology.subLocation}</strong>{" "}
-              terminology.
-            </p>
-          </section>
-        ) : null}
-
-        {step === 2 ? (
-          <section className="card-surface space-y-5 p-6">
-            <div
-              className={`grid gap-4 ${
-                method === "ai" || templateChoice === "expiry" ? "md:grid-cols-4" : "md:grid-cols-3"
-              }`}
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:px-6">
+          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
+            <Button
+              variant="ghost"
+              onClick={() => void navigate({ to: "/audits" })}
             >
-              <Field label="Store">
-                <Select value={storeId} onValueChange={setStoreId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select store" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(storesQuery.data ?? []).map((store) => (
-                      <SelectItem key={store.id} value={store.id}>
-                        {store.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label="Location">
-                <Input value={location} onChange={(e) => setLocation(e.target.value)} />
-              </Field>
-              <Field label="Category">
-                <Input
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  placeholder="Optional"
-                />
-              </Field>
-              {method === "ai" || templateChoice === "expiry" ? (
-                <Field label="Scope SKU / barcode">
-                  <Input
-                    value={sku}
-                    onChange={(e) => setSku(e.target.value)}
-                    placeholder="Optional"
-                  />
-                </Field>
-              ) : null}
-            </div>
-
-            {method === "digital" && templateChoice !== "expiry" ? (
-              <AuditDataDefinitionStep
-                dataInputMode={dataInputMode}
-                onDataInputModeChange={setDataInputMode}
-                hasTemplate={hasTemplate}
-                templateName={activeTemplateName}
-                templateDefinition={activeTemplateDefinition}
-                dataset={dataset}
-                inputSchema={inputSchema}
-                operatingModel={operatingModel}
-                error={inputError ?? dataDefinitionError}
-                onDatasetChange={(next) => {
-                  updateDataset(next);
-                  setInputError(null);
-                }}
-                onInputSchemaChange={setInputSchema}
-                onUpload={parseSpreadsheet}
-              />
-            ) : method === "ai" ? (
-              <Alert>
-                <Sparkles className="size-4" />
-                <AlertDescription>
-                  The auditor will capture shelf photos or use the camera. Evidence requirements are
-                  selected next.
-                </AlertDescription>
-              </Alert>
-            ) : null}
-            {!storeId || !location.trim() || (method === "digital" && dataDefinitionError) ? (
-              <Alert>
-                <AlertTriangle className="size-4" />
-                <AlertDescription>
-                  {!storeId
-                    ? "Select a store to continue."
-                    : !location.trim()
-                      ? "Enter the audit location to continue."
-                      : dataDefinitionError}
-                </AlertDescription>
-              </Alert>
-            ) : null}
-          </section>
-        ) : null}
-
-        {step === 3 ? (
-          <section className="card-surface space-y-6 p-6">
-            <div>
-              <h2 className="font-semibold">Evidence and RCA controls</h2>
-              <p className="text-sm text-muted-foreground">
-                CSV quantities alone are not evidence. These requirements are snapshotted with the
-                assignment.
-              </p>
-            </div>
-            <RadioGroup
-              value={evidenceLevel}
-              onValueChange={(v) => selectEvidenceLevel(v as EvidenceLevel)}
-              className="grid grid-cols-2 gap-2 md:grid-cols-4"
-            >
-              {(["basic", "standard", "high", "custom"] as EvidenceLevel[]).map((level) => (
-                <Label
-                  key={level}
-                  className="flex cursor-pointer items-center gap-2 rounded-xl border p-3 capitalize"
-                >
-                  <RadioGroupItem value={level} /> {level === "high" ? "High assurance" : level}
-                </Label>
-              ))}
-            </RadioGroup>
-            <div className="grid gap-2 md:grid-cols-2">
-              {EVIDENCE_PROOF_OPTIONS.map((proof) => {
-                const checked = effectivePolicy.requiredProof.includes(proof.value);
-                return (
-                  <Label
-                    key={proof.value}
-                    className="flex cursor-pointer items-start gap-3 rounded-xl border p-3"
-                  >
-                    <Checkbox
-                      checked={checked}
-                      onCheckedChange={(value) => toggleProof(proof.value, value === true)}
-                    />
-                    <span>
-                      <span className="block text-sm font-medium">{proof.label}</span>
-                      <span className="block text-xs font-normal text-muted-foreground">
-                        {proof.description}
-                      </span>
-                    </span>
-                  </Label>
-                );
-              })}
-            </div>
-            <div className="grid gap-4 md:grid-cols-3">
-              <Field label="Minimum photos per SKU/finding">
-                <Select
-                  value={String(evidencePolicy.minimumPhotos)}
-                  onValueChange={(v) =>
-                    setEvidencePolicy((p) => ({ ...p, minimumPhotos: Number(v) }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[1, 2, 3, 4].map((n) => (
-                      <SelectItem key={n} value={String(n)}>
-                        {n}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label="Capture source">
-                <Select
-                  value={evidencePolicy.captureSource}
-                  onValueChange={(v) =>
-                    setEvidencePolicy((p) => ({
-                      ...p,
-                      captureSource: v as AuditEvidencePolicy["captureSource"],
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="in_app_only">In-app capture only</SelectItem>
-                    <SelectItem value="import_allowed">Imported files allowed</SelectItem>
-                    <SelectItem value="either">Either</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label="Review requirement">
-                <Select
-                  value={evidencePolicy.reviewMode}
-                  onValueChange={(v) =>
-                    setEvidencePolicy((p) => ({
-                      ...p,
-                      reviewMode: v as AuditEvidencePolicy["reviewMode"],
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="manager">Manager review</SelectItem>
-                    <SelectItem value="independent">Independent reviewer</SelectItem>
-                    <SelectItem value="supervisor_receipt">Supervisor receipt</SelectItem>
-                    <SelectItem value="none">No additional review</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
-            <Label className="flex items-start gap-3 rounded-xl border border-brand/30 bg-brand-soft/30 p-4">
-              <Checkbox checked={requireRca} onCheckedChange={(v) => setRequireRca(v === true)} />
-              <span>
-                <span className="block text-sm font-semibold">
-                  Require RCA for every non-zero variance
-                </span>
-                <span className="block text-xs font-normal text-muted-foreground">
-                  Auditor cannot successfully submit unexplained shortage or excess quantities.
-                </span>
-              </span>
-            </Label>
-          </section>
-        ) : null}
-
-        {step === 4 ? (
-          <section className="grid gap-5 lg:grid-cols-[1fr_360px]">
-            <div className="space-y-4">
-              <AssignmentSchedulePanel
-                mode={assignmentMode}
-                onModeChange={setAssignmentMode}
-                publishAt={publishAt}
-                onPublishAtChange={setPublishAt}
-                dueConfig={dueConfig}
-                onDueConfigChange={setDueConfig}
-                recurrence={recurrence}
-                onRecurrenceChange={setRecurrence}
-              />
-              <LocationScopePicker
-                operatingModel={operatingModel}
-                value={locationScope}
-                onChange={setLocationScope}
-                singleStore={locationScope.storeIds.length <= 1 && operatingModel === "local_store"}
-              />
-              <TeamAssignmentPanel
-                members={membersQuery.data ?? []}
-                teamScope={teamScope}
-                distributionStrategy={distributionStrategy}
-                onTeamChange={setTeamScope}
-                onStrategyChange={setDistributionStrategy}
-                singleAssignee={assignToSelf}
-              />
-              <div className="card-surface space-y-4 p-6">
-                <Label className="flex items-center gap-2">
-                  <Checkbox
-                    checked={assignToSelf}
-                    onCheckedChange={(v) => setAssignToSelf(v === true)}
-                  />
-                  Assign to myself and start now
-                </Label>
-                <Field label="Campaign name (optional)">
-                  <Input
-                    value={campaignName}
-                    onChange={(e) => setCampaignName(e.target.value)}
-                    placeholder="e.g. September 2026 FMCG Outlet Audit — North India"
-                  />
-                </Field>
-                <Field label="Reviewer">
-                  <Select value={reviewerId} onValueChange={setReviewerId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Optional reviewer" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(membersQuery.data ?? []).map((member) => (
-                        <SelectItem key={member.user_id} value={member.user_id}>
-                          {member.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-                <Field label="Instructions">
-                  <Textarea
-                    value={instructions}
-                    onChange={(e) => setInstructions(e.target.value)}
-                  />
-                </Field>
-              </div>
-            </div>
-            <aside className="space-y-4">
-              {assignmentPreview ? (
-                <AssignmentPreviewPanel preview={assignmentPreview} />
-              ) : (
-                <div className="card-surface p-5 text-sm text-muted-foreground">
-                  Select at least one location and one auditor to preview assignments.
-                </div>
-              )}
-              <div className="card-surface space-y-3 p-5">
-                <Summary label="Method" value={method === "digital" ? "Digital" : "AI-assisted"} />
-                <Summary
-                  label="Template"
-                  value={selectedTemplate?.name ?? systemTemplateSpec?.name ?? String(templateChoice)}
-                />
-                <Summary
-                  label="Evidence"
-                  value={`${effectivePolicy.level} · ${effectivePolicy.requiredProof.length} required proof types`}
-                />
-              </div>
-            </aside>
-          </section>
-        ) : null}
-
-        <div className="sticky bottom-3 flex items-center justify-between rounded-2xl border bg-background/95 p-3 shadow-lg backdrop-blur">
-          <Button variant="outline" disabled={step === 1} onClick={() => setStep((s) => s - 1)}>
-            Back
-          </Button>
-          {step < 4 ? (
-            <Button disabled={!canNext} onClick={() => setStep((s) => s + 1)}>
-              Continue <ArrowRight className="size-4" />
+              Cancel
             </Button>
-          ) : (
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                disabled={!assignmentPlan || createMutation.isPending}
-                onClick={async () => {
-                  if (!assignmentPlan) return;
-                  try {
-                    await saveAssignmentDraft(assignmentPlan);
-                    toast.success("Draft saved.");
-                  } catch (e) {
-                    toast.error(e instanceof Error ? e.message : "Could not save draft.");
-                  }
-                }}
-              >
-                Save Draft
-              </Button>
-              <Button
-                variant="brand"
-                disabled={!canNext || createMutation.isPending}
-                onClick={() => createMutation.mutate()}
-              >
-                <CheckCircle2 className="size-4" />
-                {assignmentMode === "assign_now"
-                  ? assignToSelf
-                    ? "Create & start audit"
-                    : "Assign Now"
-                  : assignmentMode === "schedule_once"
-                    ? "Schedule"
-                    : "Create Recurring Schedule"}
-              </Button>
+            <div className="flex items-center gap-2">
+              {phase !== "setup" ? (
+                <Button variant="outline" onClick={handleBack}>
+                  Back
+                </Button>
+              ) : null}
+              {phase === "assign" ? (
+                <>
+                  <Button
+                    variant="outline"
+                    disabled={!assignmentPlan || createMutation.isPending}
+                    onClick={async () => {
+                      if (!assignmentPlan) return;
+                      try {
+                        await saveAssignmentDraft(assignmentPlan);
+                        toast.success("Draft saved.");
+                      } catch (e) {
+                        toast.error(e instanceof Error ? e.message : "Could not save draft.");
+                      }
+                    }}
+                  >
+                    Save Draft
+                  </Button>
+                  <Button
+                    variant="brand"
+                    disabled={!canContinue || createMutation.isPending}
+                    onClick={() => createMutation.mutate()}
+                  >
+                    <CheckCircle2 className="size-4" />
+                    {assignmentMode === "assign_now"
+                      ? assignToSelf
+                        ? "Create & start"
+                        : "Assign Now"
+                      : assignmentMode === "schedule_once"
+                        ? "Schedule"
+                        : "Create Schedule"}
+                  </Button>
+                </>
+              ) : (
+                <Button disabled={!canContinue} onClick={handleContinue}>
+                  Continue <ArrowRight className="size-4" />
+                </Button>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </AppShell>
-  );
-}
-
-function MethodCard({
-  value,
-  title,
-  description,
-}: {
-  value: Method;
-  title: string;
-  description: string;
-}) {
-  return (
-    <Label className="flex cursor-pointer items-start gap-3 rounded-xl border p-4">
-      <RadioGroupItem value={value} />
-      <span>
-        <span className="block font-semibold">{title}</span>
-        <span className="block text-sm font-normal text-muted-foreground">{description}</span>
-      </span>
-    </Label>
-  );
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <Label>{label}</Label>
-      {children}
-    </div>
-  );
-}
-
-function Summary({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between gap-3 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-medium capitalize">{value}</span>
-    </div>
   );
 }

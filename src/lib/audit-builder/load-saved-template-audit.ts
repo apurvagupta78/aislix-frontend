@@ -2,6 +2,7 @@ import type { AuditInputDataset } from "@/lib/audit-input-dataset";
 import type { AuditTemplate } from "@/lib/audit-templates";
 import type { AuditDataInputMode } from "./audit-data-modes";
 import type { InputSchema } from "./field-roles";
+import type { CaptureMethod } from "@/lib/new-audit/summary";
 import type { AuditPurpose, OperatingModel } from "./types";
 
 export function extractSavedInputSchema(template: AuditTemplate): InputSchema | null {
@@ -22,7 +23,7 @@ export function templateHasSavedCsvConfig(template: AuditTemplate): boolean {
 export type SavedTemplateHydration = {
   operatingModel?: OperatingModel;
   auditPurpose?: AuditPurpose;
-  method: "digital" | "ai";
+  method: CaptureMethod;
   inputSchema?: InputSchema;
   dataset?: AuditInputDataset;
   dataInputMode?: AuditDataInputMode;
@@ -36,7 +37,12 @@ export function hydrateFromSavedTemplate(template: AuditTemplate): SavedTemplate
   return {
     operatingModel: template.operating_model ?? undefined,
     auditPurpose: template.audit_purpose ?? undefined,
-    method: template.audit_mode === "ai" ? "ai" : "digital",
+    method:
+      template.audit_mode === "ai_assisted"
+        ? "ai_assisted"
+        : template.audit_mode === "ai"
+          ? "ai"
+          : "digital",
     inputSchema: inputSchema ?? undefined,
     dataset: dataset ?? undefined,
     dataInputMode: inputSchema
