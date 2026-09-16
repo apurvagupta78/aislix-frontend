@@ -6,9 +6,17 @@ import { cn } from "@/lib/utils";
 export type PriorityLevel = "high" | "medium" | "low";
 
 const meta: Record<PriorityLevel, { label: string; className: string; Icon: typeof ArrowUp }> = {
-  high: { label: "High", className: "bg-red-50 text-red-800", Icon: ArrowUp },
-  medium: { label: "Medium", className: "bg-amber-50 text-amber-900", Icon: Minus },
-  low: { label: "Low", className: "bg-slate-100 text-slate-600", Icon: ArrowDown },
+  high: {
+    label: "Fix first",
+    className: "bg-status-danger-soft text-status-danger-strong",
+    Icon: ArrowUp,
+  },
+  medium: {
+    label: "Fix soon",
+    className: "bg-status-warn-soft text-status-warn-strong",
+    Icon: Minus,
+  },
+  low: { label: "Can wait", className: "bg-muted text-muted-foreground", Icon: ArrowDown },
 };
 
 type Props = {
@@ -20,8 +28,16 @@ export function PriorityBadge({ level, className }: Props) {
   const item = meta[level];
   const Icon = item.Icon;
   return (
-    <Badge variant="secondary" className={cn("gap-1 rounded-full border-0 font-medium", item.className, className)}>
-      <Icon className="size-3" aria-hidden />
+    <Badge
+      role="status"
+      variant="secondary"
+      className={cn(
+        "gap-1.5 rounded-full border-0 px-2.5 py-1 text-xs font-semibold",
+        item.className,
+        className,
+      )}
+    >
+      <Icon className="size-3.5" aria-hidden />
       {item.label}
     </Badge>
   );

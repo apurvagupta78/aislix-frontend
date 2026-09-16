@@ -1,3 +1,15 @@
+import {
+  AlertTriangle,
+  Archive,
+  CheckCircle2,
+  CircleSlash,
+  Clock,
+  Loader2,
+  PencilLine,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { AssignmentStatus } from "@/lib/assignments";
@@ -5,28 +17,33 @@ import type { TemplateStatus } from "@/lib/audit-templates";
 
 type ScanStatus = "completed" | "processing" | "failed";
 
-const assignmentMeta: Record<
-  AssignmentStatus | "overdue",
-  { label: string; className: string }
-> = {
-  pending: { label: "Pending", className: "bg-amber-50 text-amber-900" },
-  in_progress: { label: "In progress", className: "bg-brand-soft text-brand" },
-  needs_correction: { label: "Needs correction", className: "bg-amber-50 text-amber-900" },
-  completed: { label: "Completed", className: "bg-emerald-50 text-emerald-800" },
-  cancelled: { label: "Cancelled", className: "bg-slate-100 text-slate-600" },
-  overdue: { label: "Overdue", className: "bg-red-50 text-red-800" },
+type Meta = { label: string; className: string; Icon: LucideIcon };
+
+const GOOD = "bg-status-good-soft text-status-good-strong";
+const WARN = "bg-status-warn-soft text-status-warn-strong";
+const DANGER = "bg-status-danger-soft text-status-danger-strong";
+const INFO = "bg-status-info-soft text-status-info-strong";
+const NEUTRAL = "bg-muted text-muted-foreground";
+
+const assignmentMeta: Record<AssignmentStatus | "overdue", Meta> = {
+  pending: { label: "Not started", className: WARN, Icon: Clock },
+  in_progress: { label: "In progress", className: INFO, Icon: Loader2 },
+  needs_correction: { label: "Needs a fix", className: WARN, Icon: Wrench },
+  completed: { label: "Done", className: GOOD, Icon: CheckCircle2 },
+  cancelled: { label: "Cancelled", className: NEUTRAL, Icon: CircleSlash },
+  overdue: { label: "Overdue", className: DANGER, Icon: AlertTriangle },
 };
 
-const scanMeta: Record<ScanStatus, { label: string; className: string }> = {
-  completed: { label: "Completed", className: "bg-emerald-50 text-emerald-800" },
-  processing: { label: "Processing", className: "bg-brand-soft text-brand" },
-  failed: { label: "Failed", className: "bg-red-50 text-red-800" },
+const scanMeta: Record<ScanStatus, Meta> = {
+  completed: { label: "Done", className: GOOD, Icon: CheckCircle2 },
+  processing: { label: "Working on it", className: INFO, Icon: Loader2 },
+  failed: { label: "Failed", className: DANGER, Icon: AlertTriangle },
 };
 
-const templateMeta: Record<TemplateStatus, { label: string; className: string }> = {
-  draft: { label: "Draft", className: "bg-slate-100 text-slate-700" },
-  published: { label: "Published", className: "bg-emerald-50 text-emerald-800" },
-  archived: { label: "Archived", className: "bg-slate-100 text-slate-500" },
+const templateMeta: Record<TemplateStatus, Meta> = {
+  draft: { label: "Draft", className: NEUTRAL, Icon: PencilLine },
+  published: { label: "Live", className: GOOD, Icon: CheckCircle2 },
+  archived: { label: "Archived", className: NEUTRAL, Icon: Archive },
 };
 
 type Props = {
@@ -37,26 +54,34 @@ type Props = {
   | { kind: "template"; status: TemplateStatus; published?: boolean }
 );
 
-/** Unified visual status pill — assignments, scans, templates. */
+function Pill({ meta, className }: { meta: Meta; className?: string }) {
+  const { Icon } = meta;
+  return (
+    <Badge
+      role="status"
+      variant="secondary"
+      className={cn(
+        "gap-1.5 rounded-full border-0 px-2.5 py-1 text-xs font-semibold",
+        meta.className,
+        className,
+      )}
+    >
+      <Icon className="size-3.5 shrink-0" aria-hidden />
+      {meta.label}
+    </Badge>
+  );
+}
+
+/** Unified visual status pill — icon + plain word + colour, never colour alone. */
 export function StatusBadge(props: Props) {
   const { className } = props;
 
   if (props.kind === "assignment") {
-    const meta = assignmentMeta[props.status] ?? assignmentMeta.pending;
-    return (
-      <Badge variant="secondary" className={cn("rounded-full border-0 font-medium", meta.className, className)}>
-        {meta.label}
-      </Badge>
-    );
+    return <Pill meta={assignmentMeta[props.status] ?? assignmentMeta.pending} className={className} />;
   }
 
   if (props.kind === "scan") {
-    const meta = scanMeta[props.status];
-    return (
-      <Badge variant="secondary" className={cn("rounded-full border-0 font-medium", meta.className, className)}>
-        {meta.label}
-      </Badge>
-    );
+    return <Pill meta={scanMeta[props.status]} className={className} />;
   }
 
   const status =
@@ -65,10 +90,5 @@ export function StatusBadge(props: Props) {
       : props.status === "published" || props.published
         ? "published"
         : "draft";
-  const meta = templateMeta[status];
-  return (
-    <Badge variant="secondary" className={cn("rounded-full border-0 font-medium", meta.className, className)}>
-      {meta.label}
-    </Badge>
-  );
+  return <Pill meta={templateMeta[status]} className={className} />;
 }
