@@ -5,6 +5,15 @@ import { Package, Search } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 import { SeverityBadge } from "@/components/audit/AuditStatusBadges";
+import { MpFilterCard } from "@/components/design-system/MpFilterCard";
+import { PageHeader } from "@/components/design-system/PageHeader";
+import {
+  MpTableShell,
+  mpTableCellClassName,
+  mpTableClassName,
+  mpTableHeadClassName,
+  mpTableRowClassName,
+} from "@/components/design-system/MpTableShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState, ErrorState, Skeleton } from "@/components/States";
@@ -27,11 +36,15 @@ export const Route = createFileRoute("/sku-intelligence")({
 
 function SkuIntelligencePage() {
   return (
-    <AppShell
-      title="SKUs & Shelf Intelligence"
-      description="Cross-store variance, shortages, and recurrence — drill down to store, shelf, audit and evidence."
-    >
-      <SkuIntelligenceMain />
+    <AppShell title="" hidePageHeader>
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Intelligence"
+          title="SKUs & Shelf Intelligence"
+          description="Cross-store variance, shortages, and recurrence — drill down to store, shelf, audit and evidence."
+        />
+        <SkuIntelligenceMain />
+      </div>
     </AppShell>
   );
 }
@@ -68,17 +81,17 @@ function SkuIntelligenceMain() {
 
   return (
     <>
-      <div className="mb-4 flex flex-wrap gap-2">
+      <MpFilterCard>
         <div className="relative min-w-[240px] flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-mp-muted" />
           <Input
-            className="pl-9"
+            className="rounded-lg border-line pl-9"
             placeholder="Search SKU, product name, barcode…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-      </div>
+      </MpFilterCard>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <div>
@@ -93,9 +106,9 @@ function SkuIntelligenceMain() {
               description="Digital audit line variances appear here once audits are submitted."
             />
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-border">
-              <table className="w-full min-w-[720px] text-left text-sm">
-                <thead className="border-b border-border bg-muted/40 text-xs uppercase text-muted-foreground">
+            <MpTableShell title="SKU variances" description="90-day cross-store rollup">
+              <table className={mpTableClassName()}>
+                <thead className={mpTableHeadClassName()}>
                   <tr>
                     <th className="p-3">SKU / Product</th>
                     <th className="p-3">Stores</th>
@@ -108,37 +121,37 @@ function SkuIntelligenceMain() {
                   {query.data.map((row) => (
                     <tr
                       key={row.sku}
-                      className={`cursor-pointer border-b border-border/60 hover:bg-surface/50 ${selected?.sku === row.sku ? "bg-brand-soft/30" : ""}`}
+                      className={`${mpTableRowClassName()} cursor-pointer ${selected?.sku === row.sku ? "bg-local-bg" : ""}`}
                       onClick={() => setSelected(row)}
                     >
-                      <td className="p-3">
+                      <td className={mpTableCellClassName()}>
                         <p className="font-medium">{row.product_name}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-mp-muted">
                           {row.sku}
                           {row.barcode ? ` · ${row.barcode}` : ""}
                         </p>
                       </td>
-                      <td className="p-3 tabular-nums">{row.store_count}</td>
-                      <td className="p-3 tabular-nums">{row.total_variance_qty}</td>
-                      <td className="p-3 tabular-nums">
+                      <td className={`${mpTableCellClassName()} tabular-nums`}>{row.store_count}</td>
+                      <td className={`${mpTableCellClassName()} tabular-nums`}>{row.total_variance_qty}</td>
+                      <td className={`${mpTableCellClassName()} tabular-nums`}>
                         ₹{Math.abs(row.total_variance_value_inr).toLocaleString("en-IN")}
                       </td>
-                      <td className="p-3">
+                      <td className={mpTableCellClassName()}>
                         <SeverityBadge tier={row.worst_tier} />
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            </div>
+            </MpTableShell>
           )}
         </div>
 
-        <aside className="rounded-xl border border-border bg-card p-4 lg:sticky lg:top-4 lg:self-start">
+        <aside className="overflow-hidden rounded-xl border border-line bg-white p-4 shadow-card lg:sticky lg:top-4 lg:self-start">
           {selected ? (
             <>
-              <h3 className="font-semibold">{selected.product_name}</h3>
-              <p className="text-xs text-muted-foreground">
+              <h3 className="font-display text-[15px] font-semibold text-navy">{selected.product_name}</h3>
+              <p className="text-xs text-mp-muted">
                 {selected.category ?? "Uncategorized"} · {selected.finding_count} finding(s) across{" "}
                 {selected.store_count} store(s)
               </p>
@@ -150,9 +163,9 @@ function SkuIntelligenceMain() {
                   <Link to="/findings">Open findings for this SKU</Link>
                 </Button>
                 {selected.stores.slice(0, 6).map((s, i) => (
-                  <div key={`${s.store_id}-${i}`} className="rounded-lg border border-border/60 p-3 text-xs">
-                    <p className="font-medium">{s.store_name}</p>
-                    <p className="text-muted-foreground">
+                  <div key={`${s.store_id}-${i}`} className="rounded-lg border border-line bg-canvas p-3 text-xs">
+                    <p className="font-medium text-navy">{s.store_name}</p>
+                    <p className="text-mp-muted">
                       {s.shelf_label} · Expected {s.expected_qty} · Actual {s.actual_qty} · Δ
                       {s.variance_qty}
                     </p>

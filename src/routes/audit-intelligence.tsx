@@ -1,4 +1,3 @@
-import { type ReactNode } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -20,12 +19,22 @@ import {
 } from "recharts";
 
 import { AppShell } from "@/components/AppShell";
-import { Badge } from "@/components/ui/badge";
+import { KpiCard } from "@/components/audit-governance/KpiCard";
+import { MpBadge } from "@/components/design-system/MpBadge";
+import { PageHeader } from "@/components/design-system/PageHeader";
+import {
+  MpTableShell,
+  mpTableCellClassName,
+  mpTableClassName,
+  mpTableHeadClassName,
+  mpTableRowClassName,
+} from "@/components/design-system/MpTableShell";
 import { Skeleton, ErrorState, EmptyState } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
 import { fetchAuditIntelligence } from "@/lib/audit-intelligence";
 import { fetchAuditorPerformance } from "@/lib/auditor-performance";
 import { isOrgManager } from "@/lib/assignments";
+
 export const Route = createFileRoute("/audit-intelligence")({
   head: () => ({ meta: [{ title: "Audit Intelligence — Aislix" }] }),
   component: AuditIntelligencePage,
@@ -53,15 +62,17 @@ function AuditIntelligencePage() {
 
   if (accessQuery.isLoading) {
     return (
-      <AppShell title="Audit Intelligence">
-        <Skeleton className="h-48 w-full" />
+      <AppShell title="" hidePageHeader>
+        <PageHeader eyebrow="Intelligence" title="Audit Intelligence" />
+        <Skeleton className="mt-6 h-48 w-full" />
       </AppShell>
     );
   }
 
   if (!accessQuery.data) {
     return (
-      <AppShell title="Audit Intelligence">
+      <AppShell title="" hidePageHeader>
+        <PageHeader eyebrow="Intelligence" title="Audit Intelligence" />
         <ErrorState title="Manager access required" description="Only managers can view audit intelligence." />
       </AppShell>
     );
@@ -69,7 +80,8 @@ function AuditIntelligencePage() {
 
   if (intelQuery.isError) {
     return (
-      <AppShell title="Audit Intelligence">
+      <AppShell title="" hidePageHeader>
+        <PageHeader eyebrow="Intelligence" title="Audit Intelligence" />
         <ErrorState title="Could not load" description={toUserMessage(intelQuery.error)} />
       </AppShell>
     );
@@ -78,7 +90,12 @@ function AuditIntelligencePage() {
   const data = intelQuery.data;
   if (!data?.total_audits) {
     return (
-      <AppShell title="Audit Intelligence" description="Variance, health scores and auditor performance.">
+      <AppShell title="" hidePageHeader>
+        <PageHeader
+          eyebrow="Intelligence"
+          title="Audit Intelligence"
+          description="Variance, health scores and auditor performance."
+        />
         <EmptyState
           title="No audit data yet"
           description="Complete and approve digital audits to populate intelligence dashboards."
@@ -99,39 +116,51 @@ function AuditIntelligencePage() {
   }));
 
   return (
-    <AppShell
-      title="Audit Intelligence"
-      description="Variance by store and SKU, health scores, trends and auditor performance."
-    >
+    <AppShell title="" hidePageHeader>
       <div className="space-y-6">
+        <PageHeader
+          eyebrow="Intelligence"
+          title="Audit Intelligence"
+          description="Variance by store and SKU, health scores, trends and auditor performance."
+          meta={
+            <MpBadge tone="healthy" dot>
+              90-day window
+            </MpBadge>
+          }
+        />
+
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard
-            icon={<BarChart3 className="size-4 text-brand" />}
+          <KpiCard
+            icon={BarChart3}
             label="Total audits (90d)"
             value={String(data.total_audits)}
-            sub={`${data.digital_audits} digital · ${data.ai_audits} AI`}
+            hint={`${data.digital_audits} digital · ${data.ai_audits} AI`}
+            tone="info"
           />
-          <StatCard
-            icon={<TrendingUp className="size-4 text-brand" />}
+          <KpiCard
+            icon={TrendingUp}
             label="Total variance"
             value={`₹${Math.abs(data.total_variance_inr).toLocaleString("en-IN")}`}
+            tone="neutral"
           />
-          <StatCard
-            icon={<AlertTriangle className="size-4 text-warning" />}
+          <KpiCard
+            icon={AlertTriangle}
             label="Critical exceptions"
             value={String(data.critical_exceptions)}
-            sub={`${data.attention_exceptions} attention`}
+            hint={`${data.attention_exceptions} attention`}
+            tone="danger"
           />
-          <StatCard
-            icon={<Store className="size-4 text-brand" />}
+          <KpiCard
+            icon={Store}
             label="Stores with variance"
             value={String(data.by_store.filter((s) => s.sku_variance_count > 0).length)}
+            tone="warn"
           />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <section className="rounded-xl border border-border bg-card p-4">
-            <h3 className="font-semibold">Compliance trend</h3>
+          <section className="overflow-hidden rounded-xl border border-line bg-white p-4 shadow-card sm:p-5">
+            <h3 className="font-display text-[15px] font-semibold text-navy">Compliance trend</h3>
             <div className="mt-4 h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={trendChart}>
@@ -145,8 +174,8 @@ function AuditIntelligencePage() {
             </div>
           </section>
 
-          <section className="rounded-xl border border-border bg-card p-4">
-            <h3 className="font-semibold">Variance by store (₹)</h3>
+          <section className="overflow-hidden rounded-xl border border-line bg-white p-4 shadow-card sm:p-5">
+            <h3 className="font-display text-[15px] font-semibold text-navy">Variance by store (₹)</h3>
             <div className="mt-4 h-56">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={storeChart}>
@@ -161,95 +190,66 @@ function AuditIntelligencePage() {
           </section>
         </div>
 
-        <section className="rounded-xl border border-border bg-card p-4">
-          <h3 className="font-semibold">Top SKU variances</h3>
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th className="p-2">Product</th>
-                  <th className="p-2">Store</th>
-                  <th className="p-2">Expected</th>
-                  <th className="p-2">Actual</th>
-                  <th className="p-2">₹ Value</th>
-                  <th className="p-2">Tier</th>
+        <MpTableShell title="Top SKU variances">
+          <table className={mpTableClassName()}>
+            <thead className={mpTableHeadClassName()}>
+              <tr>
+                <th className="px-3 py-2.5">Product</th>
+                <th className="px-3 py-2.5">Store</th>
+                <th className="px-3 py-2.5">Expected</th>
+                <th className="px-3 py-2.5">Actual</th>
+                <th className="px-3 py-2.5">₹ Value</th>
+                <th className="px-3 py-2.5">Tier</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.top_skus.map((row) => (
+                <tr key={`${row.sku}-${row.product_name}`} className={mpTableRowClassName()}>
+                  <td className={`${mpTableCellClassName()} font-medium`}>{row.product_name}</td>
+                  <td className={`${mpTableCellClassName()} text-mp-muted`}>{row.store_name}</td>
+                  <td className={`${mpTableCellClassName()} tabular-nums`}>{row.expected_qty}</td>
+                  <td className={`${mpTableCellClassName()} tabular-nums`}>{row.actual_qty}</td>
+                  <td className={`${mpTableCellClassName()} tabular-nums`}>₹{row.variance_value_inr.toFixed(2)}</td>
+                  <td className={mpTableCellClassName()}>
+                    <TierBadge tier={row.tier} />
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {data.top_skus.map((row) => (
-                  <tr key={`${row.sku}-${row.product_name}`} className="border-t border-border/60">
-                    <td className="p-2 font-medium">{row.product_name}</td>
-                    <td className="p-2 text-muted-foreground">{row.store_name}</td>
-                    <td className="p-2 tabular-nums">{row.expected_qty}</td>
-                    <td className="p-2 tabular-nums">{row.actual_qty}</td>
-                    <td className="p-2 tabular-nums">₹{row.variance_value_inr.toFixed(2)}</td>
-                    <td className="p-2">
-                      <TierBadge tier={row.tier} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+              ))}
+            </tbody>
+          </table>
+        </MpTableShell>
 
-        <section className="rounded-xl border border-border bg-card p-4">
-          <h3 className="font-semibold">Auditor performance</h3>
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full min-w-[560px] text-left text-sm">
-              <thead className="text-xs uppercase text-muted-foreground">
-                <tr>
-                  <th className="p-2">Auditor</th>
-                  <th className="p-2">Completion</th>
-                  <th className="p-2">On-time</th>
-                  <th className="p-2">Rejection</th>
-                  <th className="p-2">Assigned</th>
+        <MpTableShell title="Auditor performance">
+          <table className={mpTableClassName()}>
+            <thead className={mpTableHeadClassName()}>
+              <tr>
+                <th className="px-3 py-2.5">Auditor</th>
+                <th className="px-3 py-2.5">Completion</th>
+                <th className="px-3 py-2.5">On-time</th>
+                <th className="px-3 py-2.5">Rejection</th>
+                <th className="px-3 py-2.5">Assigned</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(perfQuery.data ?? []).map((row) => (
+                <tr key={row.user_id} className={mpTableRowClassName()}>
+                  <td className={`${mpTableCellClassName()} font-medium`}>{row.name}</td>
+                  <td className={`${mpTableCellClassName()} tabular-nums`}>{row.completion_rate}%</td>
+                  <td className={`${mpTableCellClassName()} tabular-nums`}>{row.on_time_rate}%</td>
+                  <td className={`${mpTableCellClassName()} tabular-nums`}>{row.rejection_rate}%</td>
+                  <td className={`${mpTableCellClassName()} tabular-nums`}>{row.assignments_total}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {(perfQuery.data ?? []).map((row) => (
-                  <tr key={row.user_id} className="border-t border-border/60">
-                    <td className="p-2 font-medium">{row.name}</td>
-                    <td className="p-2 tabular-nums">{row.completion_rate}%</td>
-                    <td className="p-2 tabular-nums">{row.on_time_rate}%</td>
-                    <td className="p-2 tabular-nums">{row.rejection_rate}%</td>
-                    <td className="p-2 tabular-nums">{row.assignments_total}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+              ))}
+            </tbody>
+          </table>
+        </MpTableShell>
       </div>
     </AppShell>
   );
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-  sub,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: string;
-  sub?: string;
-}) {
-  return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        {icon}
-        {label}
-      </div>
-      <p className="mt-2 text-2xl font-semibold">{value}</p>
-      {sub ? <p className="text-xs text-muted-foreground">{sub}</p> : null}
-    </div>
-  );
-}
-
 function TierBadge({ tier }: { tier: "critical" | "attention" | "normal" }) {
-  if (tier === "critical") return <Badge variant="destructive">Critical</Badge>;
-  if (tier === "attention") return <Badge className="bg-warning text-warning-foreground">Attention</Badge>;
-  return <Badge variant="secondary">Normal</Badge>;
+  if (tier === "critical") return <MpBadge tone="attention">Critical</MpBadge>;
+  if (tier === "attention") return <MpBadge tone="warehouse">Attention</MpBadge>;
+  return <MpBadge tone="neutral">Normal</MpBadge>;
 }

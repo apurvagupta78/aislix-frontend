@@ -17,8 +17,15 @@ import {
   XCircle,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { MpBadge } from "@/components/design-system/MpBadge";
+import { MpBadge, type MpBadgeTone } from "@/components/design-system/MpBadge";
 import { PageHeader } from "@/components/design-system/PageHeader";
+import {
+  MpTableShell,
+  mpTableCellClassName,
+  mpTableClassName,
+  mpTableHeadClassName,
+  mpTableRowClassName,
+} from "@/components/design-system/MpTableShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -105,12 +112,11 @@ const statusTone: Record<string, string> = {
   paused: "bg-muted text-muted-foreground hover:bg-muted",
 };
 
-const invoiceTone: Record<Invoice["status"], string> = {
-  paid: "bg-accent-green/12 text-accent-green hover:bg-accent-green/12",
-  due: "bg-warning/12 text-warning hover:bg-warning/12",
-  failed: "bg-destructive/10 text-destructive hover:bg-destructive/10",
-  refunded: "bg-muted text-muted-foreground hover:bg-muted",
-};
+function invoiceMpTone(status: Invoice["status"]): MpBadgeTone {
+  if (status === "paid") return "healthy";
+  if (status === "due" || status === "failed") return "attention";
+  return "neutral";
+}
 
 function Section({
   title,
@@ -409,7 +415,7 @@ function Billing() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3">
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-canvas px-4 py-3">
                   <div>
                     <Label htmlFor="auto-renew" className="text-sm font-medium">
                       Auto renewal
@@ -430,8 +436,8 @@ function Billing() {
           </div>
 
           <div className="space-y-4">
-            <div className="card-surface p-5 sm:p-6">
-              <h2 className="text-sm font-semibold tracking-tight">Payment method</h2>
+            <div className="overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card sm:p-6">
+              <h2 className="font-display text-sm font-semibold tracking-tight text-navy">Payment method</h2>
               {overview.payment_method ? (
                 <div className="mt-4 flex items-center gap-3 rounded-xl border border-border bg-surface p-4">
                   <span className="grid size-9 place-items-center rounded-lg bg-brand-soft text-brand">
@@ -461,7 +467,7 @@ function Billing() {
                 {overview.payment_method ? "Update payment method" : "Add payment method"}
               </Button>
 
-              <div className="mt-6 space-y-1 border-t border-border pt-5 text-sm">
+              <div className="mt-6 space-y-1 border-t border-line pt-5 text-sm">
                 <p className="text-xs text-muted-foreground">Billing contact</p>
                 <p className="font-medium">{overview.billing_contact?.email ?? "—"}</p>
                 <p className="text-xs text-muted-foreground">
@@ -472,8 +478,8 @@ function Billing() {
               </div>
             </div>
 
-            <div className="card-surface p-5 sm:p-6">
-              <h2 className="inline-flex items-center gap-2 text-sm font-semibold tracking-tight">
+            <div className="overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card sm:p-6">
+              <h2 className="inline-flex items-center gap-2 font-display text-sm font-semibold tracking-tight text-navy">
                 <Tag className="size-4 text-brand" /> Promo code
               </h2>
               {overview.promo ? (
@@ -587,7 +593,7 @@ function Billing() {
       >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {addOns.map((a) => (
-            <div key={a.id} className="card-surface card-hover p-5">
+            <div key={a.id} className="overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card transition-shadow hover:shadow-card">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="text-sm font-semibold">{a.name}</h3>
                 <Badge variant="secondary" className="rounded-full text-[0.65rem]">
@@ -662,7 +668,7 @@ function Billing() {
                       <TableCell className="text-muted-foreground">{i.plan ?? "—"}</TableCell>
                       <TableCell className="text-right">{formatMoney(i.amount)}</TableCell>
                       <TableCell className="text-right">
-                        <Badge className={`rounded-full capitalize ${invoiceTone[i.status]}`}>{i.status}</Badge>
+                        <MpBadge tone={invoiceMpTone(i.status)} className="capitalize">{i.status}</MpBadge>
                       </TableCell>
                       <TableCell className="text-right">
                         <Button
@@ -695,7 +701,7 @@ function Billing() {
                       <p className="truncate text-sm font-medium">{i.number ?? i.id}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">{formatDate(i.issued_at)}</p>
                     </div>
-                    <Badge className={`rounded-full capitalize ${invoiceTone[i.status]}`}>{i.status}</Badge>
+                    <MpBadge tone={invoiceMpTone(i.status)} className="capitalize">{i.status}</MpBadge>
                   </div>
                   <div className="mt-3 flex items-center justify-between">
                     <p className="text-sm font-medium">{formatMoney(i.amount)}</p>

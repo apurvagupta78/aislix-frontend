@@ -13,6 +13,7 @@ import {
   User,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/design-system/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ErrorState, Skeleton } from "@/components/States";
@@ -78,53 +79,58 @@ function StoreDashboard() {
   const metrics = metricsQuery.data ?? store?.metrics;
   const archived = store?.status === "archived";
 
+  const headerActions = (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button asChild variant="ghost" size="sm" className="rounded-xl">
+        <Link to="/stores">
+          <ArrowLeft className="size-4" /> All stores
+        </Link>
+      </Button>
+      <Button
+        variant="subtle"
+        size="sm"
+        className="rounded-xl"
+        disabled={!store}
+        onClick={() => setEditing(true)}
+      >
+        <Pencil className="size-4" /> Edit
+      </Button>
+      <Button
+        variant="subtle"
+        size="sm"
+        className="rounded-xl"
+        disabled={!store || archive.isPending}
+        onClick={() => store && archive.mutate(store)}
+      >
+        {archived ? (
+          <>
+            <ArchiveRestore className="size-4" /> Restore
+          </>
+        ) : (
+          <>
+            <Archive className="size-4" /> Archive
+          </>
+        )}
+      </Button>
+      <Button asChild variant="brand" size="sm" className="rounded-xl">
+        <Link to="/new-audit">
+          <ScanLine className="size-4" /> New audit
+        </Link>
+      </Button>
+    </div>
+  );
+
   return (
-    <AppShell
-      title={store?.name ?? "Store dashboard"}
-      description={
-        store ? [store.store_code, storeLocation(store)].filter(Boolean).join(" · ") : "Loading store…"
-      }
-      actions={
-        <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="sm" className="rounded-xl">
-            <Link to="/stores">
-              <ArrowLeft className="size-4" /> All stores
-            </Link>
-          </Button>
-          <Button
-            variant="subtle"
-            size="sm"
-            className="rounded-xl"
-            disabled={!store}
-            onClick={() => setEditing(true)}
-          >
-            <Pencil className="size-4" /> Edit
-          </Button>
-          <Button
-            variant="subtle"
-            size="sm"
-            className="rounded-xl"
-            disabled={!store || archive.isPending}
-            onClick={() => store && archive.mutate(store)}
-          >
-            {archived ? (
-              <>
-                <ArchiveRestore className="size-4" /> Restore
-              </>
-            ) : (
-              <>
-                <Archive className="size-4" /> Archive
-              </>
-            )}
-          </Button>
-          <Button asChild variant="brand" size="sm" className="rounded-xl">
-            <Link to="/new-audit">
-              <ScanLine className="size-4" /> New audit
-            </Link>
-          </Button>
-        </div>
-      }
-    >
+    <AppShell title="" hidePageHeader>
+      <div className="space-y-5">
+        <PageHeader
+          eyebrow="Organization"
+          title={store?.name ?? "Store dashboard"}
+          description={
+            store ? [store.store_code, storeLocation(store)].filter(Boolean).join(" · ") : "Loading store…"
+          }
+          actions={headerActions}
+        />
       {storeQuery.isError ? (
         <ErrorState
           title="Couldn't load this store"
@@ -223,6 +229,7 @@ function StoreDashboard() {
       )}
 
       <StoreFormDialog open={editing} store={store ?? null} onOpenChange={setEditing} />
+      </div>
     </AppShell>
   );
 }

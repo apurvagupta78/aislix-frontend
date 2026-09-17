@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Store as StoreIcon } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/design-system/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -151,25 +152,29 @@ function StoresPage() {
 
   const skeletons = useMemo(() => Array.from({ length: 6 }, (_, i) => i), []);
 
-  return (
-    <AppShell
-      title="Organization & stores"
-      description="Manage every retail location, its shelf performance and who can access it."
-      actions={
-        <Button
-          variant="brand"
-          size="sm"
-          className="rounded-xl"
-          onClick={() => {
-            setEditing(null);
-            setFormOpen(true);
-          }}
-        >
-          <Plus className="size-4" /> Add store
-        </Button>
-      }
+  const headerActions = (
+    <Button
+      variant="brand"
+      size="sm"
+      className="rounded-xl"
+      onClick={() => {
+        setEditing(null);
+        setFormOpen(true);
+      }}
     >
+      <Plus className="size-4" /> Add store
+    </Button>
+  );
+
+  return (
+    <AppShell title="" hidePageHeader>
       <div className="space-y-5">
+        <PageHeader
+          eyebrow="Organization"
+          title="Organization & stores"
+          description="Manage every retail location, its shelf performance and who can access it."
+          actions={headerActions}
+        />
         {orgQuery.isError ? (
           <ErrorState
             title="Couldn't load organization"
@@ -182,7 +187,7 @@ function StoresPage() {
           <OrganizationOverview org={orgQuery.data} loading={orgQuery.isPending} />
         )}
 
-        <div className="card-surface p-5">
+        <div className="overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card">
           <form
             className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]"
             onSubmit={(event) => {

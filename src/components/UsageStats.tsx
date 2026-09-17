@@ -19,25 +19,29 @@ export function ProgressRing({
 }) {
   const pct = value === null ? 100 : Math.max(0, Math.min(100, value));
   const color =
-    tone === "green" ? "var(--accent-green)" : tone === "warning" ? "var(--warning)" : "var(--brand-glow)";
+    tone === "green"
+      ? "var(--market-line)"
+      : tone === "warning"
+        ? "var(--dark-line)"
+        : "var(--local-line)";
   return (
     <div
       className="grid shrink-0 place-items-center rounded-full transition-transform duration-300 group-hover:scale-[1.03]"
       style={{
         width: size,
         height: size,
-        background: `conic-gradient(${color} ${pct}%, var(--border) 0)`,
+        background: `conic-gradient(${color} ${pct}%, var(--line) 0)`,
       }}
       role="img"
       aria-label={label ? `${label} ${value === null ? "unlimited" : `${pct}%`}` : undefined}
     >
       <div
-        className="grid place-items-center rounded-full bg-card text-center"
+        className="grid place-items-center rounded-full bg-white text-center"
         style={{ width: size - thickness * 2, height: size - thickness * 2 }}
       >
         <div>
-          <p className="text-sm font-semibold tracking-tight">{label ?? `${pct}%`}</p>
-          {sublabel && <p className="text-[0.65rem] text-muted-foreground">{sublabel}</p>}
+          <p className="font-display text-sm font-semibold tracking-tight text-navy">{label ?? `${pct}%`}</p>
+          {sublabel && <p className="text-[0.65rem] text-mp-muted">{sublabel}</p>}
         </div>
       </div>
     </div>
@@ -60,22 +64,22 @@ export function StatCard({
   className?: string;
 }) {
   return (
-    <div className={cn("card-surface card-hover group p-5", className)}>
+    <div className={cn("overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card transition-shadow hover:shadow-card group", className)}>
       <div className="flex items-center justify-between gap-3">
         {icon && (
           <span
             className={cn(
               "grid size-9 place-items-center rounded-xl",
-              accent === "green" ? "bg-accent-green/12 text-accent-green" : "bg-brand-soft text-brand",
+              accent === "green" ? "bg-market-bg text-navy" : "bg-local-bg text-navy",
             )}
           >
             {icon}
           </span>
         )}
-        {hint && <span className="text-xs text-muted-foreground">{hint}</span>}
+        {hint && <span className="text-[11px] text-mp-muted">{hint}</span>}
       </div>
-      <p className="mt-4 text-2xl font-semibold tracking-tight">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{label}</p>
+      <p className="mt-4 font-display text-2xl font-semibold tracking-tight text-navy">{value}</p>
+      <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.06em] text-mp-muted">{label}</p>
     </div>
   );
 }
@@ -96,11 +100,11 @@ export function RingCard({
   footer?: string | undefined;
 }) {
   return (
-    <div className="card-surface card-hover group flex items-center gap-4 p-5">
+    <div className="group flex items-center gap-4 overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card transition-shadow hover:shadow-card">
       <ProgressRing value={ringValue} label={ringLabel} sublabel={ringSublabel} tone={tone} />
       <div className="min-w-0">
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        {footer && <p className="mt-1 text-xs text-muted-foreground">{footer}</p>}
+        <p className="text-sm font-medium text-navy">{label}</p>
+        {footer && <p className="mt-1 text-xs text-mp-muted">{footer}</p>}
       </div>
     </div>
   );

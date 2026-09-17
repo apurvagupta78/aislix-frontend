@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, LayoutList, Loader2, Pencil, Plus, Trash2, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/design-system/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -63,7 +64,7 @@ export const Route = createFileRoute("/store-master")({
   component: StoreMasterPage,
 });
 
-const card = "rounded-2xl border border-border bg-card p-5 shadow-sm";
+const card = "overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card";
 
 function formatDate(value: string | null): string {
   if (!value) return "—";
@@ -168,16 +169,18 @@ function StoreMasterPage() {
   }
 
   return (
-    <AppShell
-      title="Planogram"
-      description="Keep a library of expected shelf data (planograms) per store, then assign an audit to your team."
-      actions={
-        <Button variant="brand" className="rounded-xl" disabled={!storeId} onClick={openCreate}>
-          <Plus className="mr-2 size-4" /> Add planogram
-        </Button>
-      }
-    >
+    <AppShell title="" hidePageHeader>
       <div className="space-y-6">
+        <PageHeader
+          eyebrow="Operations"
+          title="Planogram"
+          description="Keep a library of expected shelf data (planograms) per store, then assign an audit to your team."
+          actions={
+            <Button variant="brand" className="rounded-xl" disabled={!storeId} onClick={openCreate}>
+              <Plus className="mr-2 size-4" /> Add planogram
+            </Button>
+          }
+        />
         {/* Step 1 — store */}
         <section className={card}>
           <h2 className="text-sm font-semibold text-foreground">Step 1 · Select store</h2>
