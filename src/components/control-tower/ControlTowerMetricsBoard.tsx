@@ -1,10 +1,11 @@
-import { Cell, Pie, PieChart, PolarAngleAxis, RadialBar, RadialBarChart, ResponsiveContainer, Tooltip } from "recharts";
-import { AlertTriangle, IndianRupee } from "lucide-react";
+import { IndianRupee } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { AISLIX, AISLIX_STATUS_MIX } from "@/lib/aislix-theme";
+import { AISLIX_STATUS_MIX } from "@/lib/aislix-theme";
+import { MpCard, MpCardHeader } from "@/components/design-system/MpCard";
 import type { ControlTowerDemoPayload, ControlTowerKpi } from "@/lib/control-tower";
 import { KpiInfoPopover } from "./KpiInfoPopover";
+import { MpDonut, MpRadialGauge, MpRankBars } from "./MpCharts";
 
 function byId(kpis: ControlTowerKpi[], id: string) {
   return kpis.find((k) => k.id === id);
@@ -34,107 +35,95 @@ export function ControlTowerMetricsBoard({
 
   const status = data.auditStatus.map((b) => ({
     ...b,
-    color: AISLIX_STATUS_MIX[b.name] ?? AISLIX.customBg,
+    color: AISLIX_STATUS_MIX[b.name] ?? "#E7EDF0",
   }));
+  const statusTotal = status.reduce((sum, row) => sum + row.value, 0);
+  const slaBars = [
+    { label: "Overdue", value: data.correctiveActionHealth.overdue, color: "#F5C6CB" },
+    { label: "Due today", value: data.correctiveActionHealth.dueToday, color: "#FFE8A3" },
+    { label: "Open", value: data.correctiveActionHealth.open, color: "#AEDEF9" },
+    { label: "Closed", value: data.correctiveActionHealth.closed, color: "#C8E6C9" },
+  ];
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 xl:grid-cols-12">
+      <div className="grid gap-4 lg:grid-cols-3">
         {completion ? (
-          <button
-            type="button"
-            onClick={() => completion.available && onDrill(completion)}
-            className="xl:col-span-4 rounded-xl border border-[var(--aislix-border)] bg-[var(--aislix-primary)] p-5 text-left text-white shadow-[0_2px_10px_rgba(16,42,67,0.06)]"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-[0.7rem] font-semibold uppercase tracking-wider text-white/70">
-                {completion.label}
-              </p>
-              <span className="text-white/80">
-                <KpiInfoPopover kpi={completion} />
-              </span>
-            </div>
-            <div className="mt-2 grid grid-cols-[7.5rem_1fr] items-center gap-3">
-              <div className="h-28">
-                <ResponsiveContainer width="100%" height="100%">
-                  <RadialBarChart
-                    data={[{ name: "pct", value: pct, fill: "#FFFFFF" }]}
-                    innerRadius="68%"
-                    outerRadius="100%"
-                    startAngle={90}
-                    endAngle={-270}
-                  >
-                    <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-                    <RadialBar dataKey="value" background={{ fill: "rgba(255,255,255,0.18)" }} cornerRadius={8} />
-                  </RadialBarChart>
-                </ResponsiveContainer>
-              </div>
+          <MpCard className="lg:col-span-2">
+            <MpCardHeader
+              title={completion.label}
+              description={completion.detail}
+              action={<KpiInfoPopover kpi={completion} />}
+            />
+            <button
+              type="button"
+              onClick={() => completion.available && onDrill(completion)}
+              className="grid w-full gap-6 p-5 text-left sm:grid-cols-[auto,1fr] sm:items-center"
+            >
+              <MpRadialGauge value={pct} label="Complete" sublabel={completion.detail} />
               <div>
-                <p className="text-4xl font-semibold tracking-tight">{completion.value}</p>
-                <p className="mt-1 text-xs text-white/75">{completion.detail}</p>
+                <p className="font-display text-4xl font-semibold tracking-tight text-navy">{completion.value}</p>
+                <p className="mt-2 text-sm text-mp-muted">{completion.detail}</p>
               </div>
-            </div>
-          </button>
+            </button>
+          </MpCard>
         ) : null}
 
-        <div className="xl:col-span-4 rounded-xl border border-[var(--aislix-border)] bg-white p-5 shadow-[0_2px_10px_rgba(16,42,67,0.06)]">
-          <p className="text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--aislix-secondary)]">
-            Assignment mix
-          </p>
-          {status.every((b) => b.value === 0) ? (
-            <p className="mt-8 text-sm text-[var(--aislix-secondary)]">No assignments in this period</p>
-          ) : (
-            <div className="mt-2 grid grid-cols-[8rem_1fr] items-center gap-3">
-              <div className="h-32">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={status} dataKey="value" nameKey="name" innerRadius={34} outerRadius={52} paddingAngle={2}>
-                      {status.map((entry) => (
-                        <Cell key={entry.name} fill={entry.color} stroke={AISLIX.white} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+        <MpCard>
+          <MpCardHeader title="Response SLA" description="Corrective actions by workload bucket." />
+          <div className="p-5">
+            <MpRankBars data={slaBars} />
+            {(openFindings || critical) &&
+            (parseInt(String(openFindings?.value ?? "0"), 10) > 0 ||
+              parseInt(String(critical?.value ?? "0"), 10) > 0) ? (
+              <div className="mt-5 rounded-lg border border-dark-line bg-dark-bg px-3.5 py-3">
+                <p className="text-[13px] font-semibold text-navy">
+                  {critical?.value ?? 0} critical · {openFindings?.value ?? 0} open findings
+                </p>
+                <p className="mt-0.5 text-[12px] text-navy/70">
+                  Review exceptions to assign owners and close breaches.
+                </p>
               </div>
-              <ul className="space-y-1.5 text-xs">
-                {status.map((b) => (
-                  <li key={b.name} className="flex items-center justify-between gap-2 text-[var(--aislix-primary)]">
-                    <span className="flex items-center gap-2">
-                      <span className="size-2 rounded-full" style={{ background: b.color }} />
-                      {b.name}
-                    </span>
-                    <span className="font-semibold tabular-nums">{b.value}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
+            ) : null}
+          </div>
+        </MpCard>
+      </div>
 
-        <div className="xl:col-span-4 rounded-xl border border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)] p-5 shadow-[0_2px_10px_rgba(16,42,67,0.06)]">
-          <p className="flex items-center gap-2 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--aislix-primary)]">
-            <AlertTriangle className="size-3.5" /> Exceptions
-          </p>
-          <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <MpCard>
+          <MpCardHeader title="Assignment mix" description="Status breakdown for assignments in period." />
+          <div className="p-5">
+            {status.every((b) => b.value === 0) ? (
+              <p className="text-sm text-mp-muted">No assignments in this period</p>
+            ) : (
+              <MpDonut
+                slices={status.map((b) => ({ label: b.name, value: b.value, color: b.color }))}
+                total={statusTotal}
+                totalLabel="Assignments"
+              />
+            )}
+          </div>
+        </MpCard>
+
+        <MpCard className="border-dark-line bg-dark-bg">
+          <MpCardHeader title="Exceptions" description="Open findings requiring attention." />
+          <div className="grid grid-cols-2 gap-3 p-5">
             {[openFindings, critical].map((kpi) =>
               kpi ? (
                 <button
                   key={kpi.id}
                   type="button"
                   onClick={() => kpi.available && onDrill(kpi)}
-                  className="rounded-lg border border-[var(--aislix-darkstore-border)] bg-white/70 p-3 text-left"
+                  className="rounded-lg border border-dark-line bg-white/80 p-3 text-left"
                 >
-                  <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--aislix-secondary)]">
-                    {kpi.label}
-                  </p>
-                  <p className="mt-1 text-3xl font-semibold tabular-nums text-[var(--aislix-primary)]">{kpi.value}</p>
-                  <p className="mt-1 line-clamp-2 text-[0.7rem] text-[var(--aislix-secondary)]">{kpi.detail}</p>
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-mp-muted">{kpi.label}</p>
+                  <p className="mt-1 font-display text-3xl font-semibold tabular-nums text-navy">{kpi.value}</p>
+                  <p className="mt-1 line-clamp-2 text-[0.7rem] text-mp-muted">{kpi.detail}</p>
                 </button>
               ) : null,
             )}
           </div>
-        </div>
+        </MpCard>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-12">
@@ -142,21 +131,19 @@ export function ControlTowerMetricsBoard({
           <button
             type="button"
             onClick={() => variance.available && onDrill(variance)}
-            className="lg:col-span-5 rounded-xl border border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)] p-5 text-left shadow-[0_2px_10px_rgba(16,42,67,0.06)]"
+            className="lg:col-span-5 rounded-xl border border-warehouse-line bg-warehouse-bg p-5 text-left shadow-card"
           >
-            <p className="flex items-center gap-2 text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--aislix-secondary)]">
+            <p className="flex items-center gap-2 text-[0.7rem] font-semibold uppercase tracking-wider text-mp-muted">
               <IndianRupee className="size-3.5" /> {variance.label}
             </p>
-            <p className="mt-3 text-4xl font-semibold tracking-tight text-[var(--aislix-primary)]">{variance.value}</p>
-            <p className="mt-2 text-xs text-[var(--aislix-secondary)]">{variance.detail}</p>
+            <p className="mt-3 font-display text-4xl font-semibold tracking-tight text-navy">{variance.value}</p>
+            <p className="mt-2 text-xs text-mp-muted">{variance.detail}</p>
           </button>
         ) : null}
 
-        <div className="lg:col-span-7 rounded-xl border border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)] p-5 shadow-[0_2px_10px_rgba(16,42,67,0.06)]">
-          <p className="text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--aislix-secondary)]">
-            Corrective action load
-          </p>
-          <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-border)] sm:grid-cols-4">
+        <div className="lg:col-span-7 rounded-xl border border-market-line bg-market-bg p-5 shadow-card">
+          <p className="text-[0.7rem] font-semibold uppercase tracking-wider text-mp-muted">Corrective action load</p>
+          <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-market-line bg-market-line sm:grid-cols-4">
             {[
               { kpi: openActions, label: "Open" },
               { kpi: overdue, label: "Overdue" },
@@ -172,10 +159,8 @@ export function ControlTowerMetricsBoard({
                 }}
                 className="bg-white/80 p-3 text-left"
               >
-                <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--aislix-secondary)]">
-                  {cell.label}
-                </p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums text-[var(--aislix-primary)]">
+                <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-mp-muted">{cell.label}</p>
+                <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-navy">
                   {"kpi" in cell && cell.kpi ? cell.kpi.value : cell.value}
                 </p>
               </button>
@@ -185,21 +170,19 @@ export function ControlTowerMetricsBoard({
       </div>
 
       {pending.length > 0 ? (
-        <div className="rounded-xl border border-[var(--aislix-custom-border)] bg-[var(--aislix-custom-bg)] p-4">
-          <p className="text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--aislix-secondary)]">
-            Not computed yet
-          </p>
+        <div className="rounded-xl border border-neutral-line bg-neutral-bg p-4">
+          <p className="text-[0.7rem] font-semibold uppercase tracking-wider text-mp-muted">Not computed yet</p>
           <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             {pending.map((kpi) => (
               <div
                 key={kpi.id}
-                className="flex items-center justify-between gap-2 rounded-lg border border-[var(--aislix-custom-border)] bg-white px-3 py-2"
+                className="flex items-center justify-between gap-2 rounded-lg border border-neutral-line bg-white px-3 py-2"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-xs font-medium text-[var(--aislix-primary)]">{kpi.label}</p>
-                  <p className="truncate text-[0.7rem] text-[var(--aislix-secondary)]">{kpi.detail}</p>
+                  <p className="truncate text-xs font-medium text-navy">{kpi.label}</p>
+                  <p className="truncate text-[0.7rem] text-mp-muted">{kpi.detail}</p>
                 </div>
-                <span className="shrink-0 text-sm font-semibold text-[var(--aislix-secondary)]">{kpi.value}</span>
+                <span className="shrink-0 text-sm font-semibold text-mp-muted">{kpi.value}</span>
               </div>
             ))}
           </div>
@@ -207,23 +190,21 @@ export function ControlTowerMetricsBoard({
       ) : null}
 
       {data.contextualKpis.length > 0 ? (
-        <div className="rounded-xl border border-[var(--aislix-border)] bg-white p-4">
-          <p className="text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--aislix-secondary)]">
-            Operating-model metrics
-          </p>
+        <div className="rounded-xl border border-line bg-white p-4 shadow-card">
+          <p className="text-[0.7rem] font-semibold uppercase tracking-wider text-mp-muted">Operating-model metrics</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {data.contextualKpis.map((kpi, i) => (
               <span
                 key={kpi.id}
                 className={cn(
-                  "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs text-[var(--aislix-primary)]",
-                  i % 3 === 0 && "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]",
-                  i % 3 === 1 && "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)]",
-                  i % 3 === 2 && "border-[var(--aislix-custom-border)] bg-[var(--aislix-custom-bg)]",
+                  "inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs text-navy",
+                  i % 3 === 0 && "border-warehouse-line bg-warehouse-bg",
+                  i % 3 === 1 && "border-market-line bg-market-bg",
+                  i % 3 === 2 && "border-neutral-line bg-neutral-bg",
                 )}
               >
                 <span className="font-medium">{kpi.label}</span>
-                <span className="text-[var(--aislix-secondary)]">{kpi.value}</span>
+                <span className="text-mp-muted">{kpi.value}</span>
               </span>
             ))}
           </div>
@@ -231,14 +212,12 @@ export function ControlTowerMetricsBoard({
       ) : null}
 
       {data.auditSpecificKpis.length > 0 ? (
-        <div className="overflow-hidden rounded-xl border border-[var(--aislix-border)] bg-white">
-          <div className="border-b border-[var(--aislix-border)] bg-[var(--aislix-surface)] px-4 py-3">
-            <p className="text-[0.7rem] font-semibold uppercase tracking-wider text-[var(--aislix-secondary)]">
-              Audit-specific metrics
-            </p>
+        <div className="overflow-hidden rounded-xl border border-line bg-white shadow-card">
+          <div className="border-b border-line bg-canvas px-4 py-3">
+            <p className="text-[0.7rem] font-semibold uppercase tracking-wider text-mp-muted">Audit-specific metrics</p>
           </div>
           <table className="w-full text-sm">
-            <thead className="bg-[var(--aislix-surface)] text-left text-[0.7rem] uppercase tracking-wide text-[var(--aislix-primary)]">
+            <thead className="bg-canvas text-left text-[0.7rem] uppercase tracking-wide text-navy">
               <tr>
                 <th className="px-4 py-2 font-semibold">Metric</th>
                 <th className="px-4 py-2 font-semibold">Value</th>
@@ -247,17 +226,17 @@ export function ControlTowerMetricsBoard({
             </thead>
             <tbody>
               {data.auditSpecificKpis.map((kpi) => (
-                <tr key={kpi.id} className="border-t border-[var(--aislix-border)]">
-                  <td className="px-4 py-2.5 text-[var(--aislix-primary)]">{kpi.label}</td>
-                  <td className="px-4 py-2.5 font-semibold tabular-nums text-[var(--aislix-primary)]">{kpi.value}</td>
-                  <td className="px-4 py-2.5 text-[var(--aislix-secondary)]">{kpi.detail}</td>
+                <tr key={kpi.id} className="border-t border-line">
+                  <td className="px-4 py-2.5 text-navy">{kpi.label}</td>
+                  <td className="px-4 py-2.5 font-semibold tabular-nums text-navy">{kpi.value}</td>
+                  <td className="px-4 py-2.5 text-mp-muted">{kpi.detail}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ) : (
-        <p className="rounded-xl border border-dashed border-[var(--aislix-border)] bg-white px-4 py-6 text-sm text-[var(--aislix-secondary)]">
+        <p className="rounded-xl border border-dashed border-line bg-white px-4 py-6 text-sm text-mp-muted">
           No audit-specific metrics apply yet. Map Expected Qty, Actual Qty, Expiry Date or QC Status on templates to
           enable them.
         </p>

@@ -15,10 +15,13 @@ export function WorkspaceFilterBar({ className }: { className?: string }) {
   if (optionsLoading && !options) return null;
 
   return (
-    <div className={cn("rounded-xl border border-border bg-surface p-3 shadow-soft", className)}>
-      <p className="mb-2 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-        Workspace filters · persists across pages
-      </p>
+    <div className={cn("overflow-hidden rounded-xl border border-line bg-white shadow-card", className)}>
+      <div className="border-b border-line px-4 py-3 md:px-5">
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-mp-muted">
+          Workspace filters · persists across pages
+        </p>
+      </div>
+      <div className="p-3 md:p-4">
       <DashboardFilterBar
         filters={filters}
         onChange={setFilters}
@@ -36,6 +39,7 @@ export function WorkspaceFilterBar({ className }: { className?: string }) {
           }
         }
       />
+      </div>
     </div>
   );
 }

@@ -177,8 +177,8 @@ function SidebarNav({
           "flex min-h-11 items-center gap-2 rounded-xl py-2 pr-3 text-sm transition-colors lg:min-h-9",
           depth === 1 ? "pl-6" : "pl-10",
           active
-            ? "bg-[var(--aislix-warehouse-bg)] font-semibold text-[var(--aislix-primary)]"
-            : "text-muted-foreground hover:bg-surface hover:text-foreground",
+            ? "bg-local-bg font-semibold text-navy"
+            : "text-mp-muted hover:bg-canvas hover:text-navy",
         )}
       >
         <span className="flex-1 truncate">{leaf.label}</span>
@@ -240,8 +240,8 @@ function SidebarNav({
                   className={cn(
                     "relative flex size-10 items-center justify-center rounded-xl transition-colors",
                     active
-                      ? "bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]"
-                      : "text-muted-foreground hover:bg-surface hover:text-foreground",
+                      ? "bg-local-bg text-navy"
+                      : "text-mp-muted hover:bg-canvas hover:text-navy",
                   )}
                 >
                   <section.icon className="size-4" />
@@ -259,8 +259,8 @@ function SidebarNav({
                   className={cn(
                     "relative flex size-10 items-center justify-center rounded-xl transition-colors",
                     activeSectionId === section.id
-                      ? "bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]"
-                      : "text-muted-foreground hover:bg-surface hover:text-foreground",
+                      ? "bg-local-bg text-navy"
+                      : "text-mp-muted hover:bg-canvas hover:text-navy",
                   )}
                 >
                   <section.icon className="size-4" />
@@ -285,8 +285,8 @@ function SidebarNav({
                       className={cn(
                         "flex min-h-10 items-center gap-2 rounded-xl px-2.5 py-2 text-sm transition-colors",
                         leafActive(child)
-                          ? "bg-[var(--aislix-warehouse-bg)] font-semibold text-[var(--aislix-primary)]"
-                          : "text-muted-foreground hover:bg-surface hover:text-foreground",
+                          ? "bg-local-bg font-semibold text-navy"
+                          : "text-mp-muted hover:bg-canvas hover:text-navy",
                       )}
                     >
                       <span className="flex-1 truncate">{child.label}</span>
@@ -317,8 +317,8 @@ function SidebarNav({
               className={cn(
                 "flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors lg:min-h-10",
                 active
-                  ? "bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]"
-                  : "text-muted-foreground hover:bg-surface hover:text-foreground",
+                  ? "bg-local-bg text-navy"
+                  : "text-mp-muted hover:bg-canvas hover:text-navy",
               )}
             >
               <section.icon className="size-4 shrink-0" />
@@ -338,8 +338,8 @@ function SidebarNav({
               className={cn(
                 "flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors lg:min-h-10",
                 activeSectionId === section.id
-                  ? "bg-[var(--aislix-local-bg)] text-[var(--aislix-primary)]"
-                  : "text-muted-foreground hover:bg-surface hover:text-foreground",
+                  ? "bg-local-bg text-navy"
+                  : "text-mp-muted hover:bg-canvas hover:text-navy",
               )}
             >
               <section.icon className="size-4 shrink-0" />
@@ -379,6 +379,7 @@ export function AppShell({
   actions,
   eyebrow,
   nextStep,
+  hidePageHeader = false,
   children,
 }: {
   title: string;
@@ -388,6 +389,8 @@ export function AppShell({
   eyebrow?: string;
   /** "What should I do next?" — one short plain-English line. */
   nextStep?: ReactNode;
+  /** When true, page title/actions render inside children (e.g. Control Tower). */
+  hidePageHeader?: boolean;
   children: ReactNode;
 }) {
   const navigate = useNavigate();
@@ -518,8 +521,8 @@ export function AppShell({
         <div className="play-canvas">
           <aside
             className={cn(
-                "nav-dark nav-panel fixed inset-y-0 left-0 z-40 hidden h-screen flex-col border-y-0 border-l-0 py-5 lg:flex",
-              sidebarCollapsed ? "w-16 items-center px-2" : "w-64 px-4",
+                "fixed inset-y-0 left-0 z-40 hidden h-screen flex-col border-r border-line bg-white lg:flex",
+              sidebarCollapsed ? "w-[68px] items-center px-2 py-4" : "w-[248px] px-3 py-4",
             )}
           >
 
@@ -559,7 +562,7 @@ export function AppShell({
                     <Link
                       to="/billing"
                       aria-label="Manage plan"
-                      className="flex size-10 items-center justify-center rounded-xl bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]"
+                      className="flex size-10 items-center justify-center rounded-xl bg-local-bg text-navy"
                     >
                       <CreditCard className="size-4" />
                     </Link>
@@ -580,8 +583,8 @@ export function AppShell({
             </div>
           </aside>
 
-          <div className={sidebarCollapsed ? "lg:pl-24" : "lg:pl-72"}>
-            <header className="sticky top-0 z-30 border-b border-border bg-background/92 px-3 backdrop-blur-xl sm:px-5">
+          <div className={sidebarCollapsed ? "lg:pl-[68px]" : "lg:pl-[248px]"}>
+            <header className="sticky top-0 z-30 border-b border-line bg-white px-3 sm:px-5">
               <div className="flex h-16 items-center gap-3 px-1 sm:px-3">
 
                 <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
@@ -640,7 +643,7 @@ export function AppShell({
                     name="q"
                     aria-label="Search audits, stores and SKUs"
                     placeholder="Search audit ID, store, SKU, employee…"
-                    className="h-9 rounded-xl border-border bg-surface pl-9"
+                    className="h-10 rounded-lg border-line bg-canvas pl-9"
                   />
                 </form>
                 <div className="ml-auto flex items-center gap-2">
@@ -725,7 +728,7 @@ export function AppShell({
                           {profile?.avatar_url ? (
                             <AvatarImage src={profile.avatar_url} alt={displayName} />
                           ) : null}
-                          <AvatarFallback className="bg-[var(--aislix-warehouse-bg)] text-xs font-medium uppercase text-[var(--aislix-primary)]">
+                          <AvatarFallback className="bg-local-bg text-xs font-medium uppercase text-navy">
                             {initials.toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
@@ -792,13 +795,15 @@ export function AppShell({
 
             <main id="main-content" className="px-5 py-6 sm:px-8 sm:py-8">
               <div className="mx-auto max-w-7xl space-y-6">
-                <PageHeader
-                  title={title}
-                  {...(description ? { description } : {})}
-                  {...(actions ? { actions } : {})}
-                  {...(headerEyebrow ? { eyebrow: headerEyebrow } : {})}
-                  {...(nextStep ? { nextStep } : {})}
-                />
+                {!hidePageHeader ? (
+                  <PageHeader
+                    title={title}
+                    {...(description ? { description } : {})}
+                    {...(actions ? { actions } : {})}
+                    {...(headerEyebrow ? { eyebrow: headerEyebrow } : {})}
+                    {...(nextStep ? { nextStep } : {})}
+                  />
+                ) : null}
 
                 <GlobalFilterBarShell />
                 <div className="animate-fade-in">{children}</div>

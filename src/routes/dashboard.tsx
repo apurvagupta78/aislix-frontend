@@ -1,10 +1,7 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
 
 import { AppShell } from "@/components/AppShell";
 import { ControlTowerShell } from "@/components/control-tower/ControlTowerShell";
-import { Button } from "@/components/ui/button";
-import { NEW_AUDIT_BUTTON_CLASS } from "@/lib/aislix-theme";
 import type { ControlTowerSearch } from "@/lib/control-tower";
 
 function parseControlTowerSearch(search: Record<string, unknown>): ControlTowerSearch {
@@ -48,17 +45,7 @@ function DashboardPage() {
   const search = Route.useSearch();
 
   return (
-    <AppShell
-      title="Control Tower"
-      description="See what needs attention, drill in, and assign fixes — at a glance."
-      actions={
-        <Button asChild variant="outline" size="sm" className={NEW_AUDIT_BUTTON_CLASS}>
-          <Link to="/new-audit">
-            <Plus className="size-4" /> New Audit
-          </Link>
-        </Button>
-      }
-    >
+    <AppShell title="" hidePageHeader>
       <ControlTowerShell search={search} />
     </AppShell>
   );

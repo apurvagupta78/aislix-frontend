@@ -50,6 +50,7 @@ import {
   type ControlTowerSearch,
 } from "@/lib/control-tower";
 import { WorkspaceFilterBar } from "@/components/filters/GlobalFilterBarShell";
+import { ControlTowerDashboardHeader } from "./ControlTowerDashboardHeader";
 import { DashboardSectionHeader } from "./DashboardSectionHeader";
 import { ControlTowerMetricsBoard } from "./ControlTowerMetricsBoard";
 import { DashboardAuditsTable } from "./DashboardAuditsTable";
@@ -100,14 +101,14 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
   };
 
   const operatingModelSection = (
-    <section className="space-y-2">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          Operating Model
-        </p>
+    <section className="overflow-hidden rounded-xl border border-line bg-white shadow-card">
+      <div className="border-b border-line px-4 py-3 md:px-5">
+        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-mp-muted">Operating Model</p>
+      </div>
+      <div className="p-4 md:p-5">
         <OperatingModelSwitcher value={model} onChange={setModel} />
         {query.data ? (
-          <p className="mt-2 text-xs text-muted-foreground">
+          <p className="mt-2 text-xs text-mp-muted">
             {query.data.terminology.locationPlural}: contextual labels · {query.data.templateCount}{" "}
             org templates in scope
           </p>
@@ -147,6 +148,11 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
 
   return (
     <div className="space-y-8">
+      <ControlTowerDashboardHeader
+        data={data}
+        filters={filters}
+        onExport={() => exportAuditExecutionCsv(data, filters)}
+      />
       {operatingModelSection}
 
       <div className="space-y-3">
@@ -595,7 +601,7 @@ function OperatingModelSwitcher({
   onChange: (v: ControlTowerModelFilter) => void;
 }) {
   return (
-    <div className="mt-2 flex flex-wrap gap-1.5 rounded-xl border border-border bg-muted/20 p-1.5">
+    <div className="mt-1 flex flex-wrap gap-1.5 rounded-xl border border-line bg-white p-1.5">
       {MODEL_OPTIONS.map((opt) => {
         const tint = AISLIX_MODEL_SURFACE[opt.value] ?? AISLIX_MODEL_SURFACE.custom;
         const active = value === opt.value;
