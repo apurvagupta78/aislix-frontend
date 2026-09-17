@@ -932,7 +932,7 @@ function NewAuditPage() {
     phase === "setup" ? setupValid : phase === "configure" ? configureValid : assignValid;
 
   return (
-    <AppShell title="New Audit">
+    <AppShell title="" hidePageHeader>
       <div className="play-canvas mx-auto max-w-6xl space-y-6 pb-24">
         <PageHeader
           title="New Audit"

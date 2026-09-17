@@ -104,14 +104,14 @@ function AuditCalendarPage() {
   if (accessQuery.isLoading) return <Skeleton className="h-64 w-full" />;
   if (!accessQuery.data) {
     return (
-      <AppShell title="Audit Calendar">
+      <AppShell title="" hidePageHeader>
         <ErrorState description="You need manager permissions to view the audit calendar." />
       </AppShell>
     );
   }
 
   return (
-    <AppShell title="Audit Calendar">
+    <AppShell title="" hidePageHeader>
       <div className="play-canvas space-y-5">
         <PageHeader
           title="Audit Calendar"

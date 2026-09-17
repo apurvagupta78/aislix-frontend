@@ -313,7 +313,7 @@ function HistoryPage() {
   };
 
   return (
-    <AppShell title="Audit History">
+    <AppShell title="" hidePageHeader>
       <div className="play-canvas space-y-5">
         <PageHeader
           title="Audit History"

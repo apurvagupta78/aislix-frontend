@@ -24,25 +24,25 @@ export function SectionCard({
   padded = true,
 }: Props) {
   return (
-    <section className={cn("play-surface rounded-xl", className)}>
+    <section className={cn("overflow-hidden rounded-xl border border-line bg-white shadow-card", className)}>
       {title || description || action ? (
         <div
           className={cn(
-            "flex flex-wrap items-start justify-between gap-3 border-b border-border/60",
+            "flex flex-wrap items-start justify-between gap-3 border-b border-line",
             padded ? "px-5 py-4" : "px-5 py-3",
           )}
         >
           <div className="flex min-w-0 items-start gap-3">
             {Icon ? (
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-warehouse-line bg-warehouse-bg text-navy">
                 <Icon className="size-4" aria-hidden />
               </span>
             ) : null}
             <div className="min-w-0">
-              {title ? <h2 className="text-base font-semibold">{title}</h2> : null}
-              {description ? (
-                <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+              {title ? (
+                <h2 className="font-display text-[15px] font-semibold leading-tight text-navy">{title}</h2>
               ) : null}
+              {description ? <p className="mt-1 text-[13px] text-mp-muted">{description}</p> : null}
             </div>
           </div>
           {action}

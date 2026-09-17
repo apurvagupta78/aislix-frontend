@@ -437,7 +437,7 @@ function AssignedScansPage() {
   });
 
   return (
-    <AppShell title="Assignments">
+    <AppShell title="" hidePageHeader>
       <div className="play-canvas space-y-5">
         <PageHeader
           title="Assignments"

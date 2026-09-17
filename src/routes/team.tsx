@@ -5,6 +5,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, ShieldCheck, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { MpFilterCard } from "@/components/design-system/MpFilterCard";
+import { PageHeader } from "@/components/design-system/PageHeader";
+import { SectionCard } from "@/components/design-system/SectionCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -269,23 +272,26 @@ function TeamPage() {
     setFormOpen(true);
   };
 
+  const inviteAction =
+    seats.usage && !seats.canInvite ? (
+      <Button asChild variant="brand">
+        <Link to="/pricing">Upgrade to invite team members</Link>
+      </Button>
+    ) : (
+      <Button onClick={openInvite} disabled={!seats.canInvite}>
+        <UserPlus className="size-4" /> Invite user
+      </Button>
+    );
+
   return (
-    <AppShell
-      title="Team & user management"
-      description="Invite members, control role-based access and audit every change across your organization."
-      actions={
-        seats.usage && !seats.canInvite ? (
-          <Button asChild variant="brand">
-            <Link to="/pricing">Upgrade to invite team members</Link>
-          </Button>
-        ) : (
-          <Button onClick={openInvite} disabled={!seats.canInvite}>
-            <UserPlus className="size-4" /> Invite user
-          </Button>
-        )
-      }
-    >
+    <AppShell title="" hidePageHeader>
       <div className="space-y-8">
+        <PageHeader
+          eyebrow="Team"
+          title="Team & user management"
+          description="Invite members, control role-based access and audit every change across your organization."
+          actions={inviteAction}
+        />
         {seats.usage && !seats.canInvite ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-muted/30 p-4">
             <div className="space-y-1">

@@ -376,9 +376,9 @@
 }
 
 @utility card-surface {
-  background-color: var(--color-card);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-2xl);
+  background-color: #ffffff;
+  border: 1px solid var(--aislix-border);
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-card);
 }
 
@@ -406,9 +406,9 @@
 
 /** White grouped panel */
 @utility play-surface {
-  background-color: var(--color-card);
-  border: 1px solid color-mix(in oklab, var(--color-border) 85%, transparent);
-  box-shadow: var(--shadow-soft);
+  background-color: #ffffff;
+  border: 1px solid var(--aislix-border);
+  box-shadow: var(--shadow-card);
 }
 
 /** Interactive option / selection card */

@@ -12,7 +12,9 @@ type FilterBarProps = {
 /** Shared filter surface — search, selects, and toggles in one row. */
 export function FilterBar({ children, className }: FilterBarProps) {
   return (
-    <div className={cn("space-y-3 rounded-xl border border-border bg-surface p-4", className)}>{children}</div>
+    <div className={cn("space-y-3 rounded-xl border border-line bg-white p-4 shadow-card", className)}>
+      {children}
+    </div>
   );
 }
 
@@ -31,10 +33,10 @@ export function FilterSearch({
 }: FilterSearchProps) {
   return (
     <div className={cn("relative min-w-[200px] flex-1", className)}>
-      <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-mp-muted" />
       <Input
         aria-label={placeholder}
-        className="rounded-lg pl-9"
+        className="rounded-lg border-line bg-canvas pl-9"
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}

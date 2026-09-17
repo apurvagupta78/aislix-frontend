@@ -282,7 +282,7 @@ function AuditTemplatesPage() {
 
   if (managerQuery.isLoading) {
     return (
-      <AppShell title="Audit Templates">
+      <AppShell title="" hidePageHeader>
         <Skeleton className="h-48 w-full" />
       </AppShell>
     );
@@ -290,7 +290,7 @@ function AuditTemplatesPage() {
 
   if (!managerQuery.data) {
     return (
-      <AppShell title="Audit Templates">
+      <AppShell title="" hidePageHeader>
         <EmptyState
           title="Manager access required"
           description="Only organization admins and authorized managers can manage audit templates."
@@ -372,7 +372,7 @@ function AuditTemplatesPage() {
   );
 
   return (
-    <AppShell title="Audit Templates">
+    <AppShell title="" hidePageHeader>
       <div className="play-canvas space-y-5">
         <PageHeader
           title="Audit Templates"

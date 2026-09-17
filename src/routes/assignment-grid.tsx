@@ -129,7 +129,7 @@ function AssignmentGridPage() {
 
   if (accessQuery.isLoading) {
     return (
-      <AppShell title="Assignment Grid">
+      <AppShell title="" hidePageHeader>
         <Skeleton className="h-40 w-full" />
       </AppShell>
     );
@@ -137,14 +137,14 @@ function AssignmentGridPage() {
 
   if (!accessQuery.data) {
     return (
-      <AppShell title="Assignment Grid">
+      <AppShell title="" hidePageHeader>
         <ErrorState title="Manager access required" description="Only managers can edit the assignment grid." />
       </AppShell>
     );
   }
 
   return (
-    <AppShell title="Assignment Grid">
+    <AppShell title="" hidePageHeader>
       <div className="play-canvas space-y-5">
         <PageHeader
           title="Assignment Grid"

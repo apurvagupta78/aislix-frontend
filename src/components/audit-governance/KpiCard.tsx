@@ -6,29 +6,29 @@ export type KpiTone = "neutral" | "good" | "warn" | "danger" | "info";
 
 const TONE: Record<KpiTone, { surface: string; icon: string; value: string }> = {
   neutral: {
-    surface: "border-border bg-card",
-    icon: "bg-muted text-muted-foreground",
-    value: "text-foreground",
+    surface: "border-neutral-line bg-neutral-bg",
+    icon: "bg-white text-mp-muted",
+    value: "text-navy",
   },
   good: {
-    surface: "border-status-good/25 bg-status-good-soft",
-    icon: "bg-status-good/15 text-status-good-strong",
-    value: "text-status-good-strong",
+    surface: "border-market-line bg-market-bg",
+    icon: "bg-white text-navy",
+    value: "text-navy",
   },
   warn: {
-    surface: "border-status-warn/25 bg-status-warn-soft",
-    icon: "bg-status-warn/15 text-status-warn-strong",
-    value: "text-status-warn-strong",
+    surface: "border-warehouse-line bg-warehouse-bg",
+    icon: "bg-white text-navy",
+    value: "text-navy",
   },
   danger: {
-    surface: "border-status-danger/25 bg-status-danger-soft",
-    icon: "bg-status-danger/15 text-status-danger-strong",
-    value: "text-status-danger-strong",
+    surface: "border-dark-line bg-dark-bg",
+    icon: "bg-white text-navy",
+    value: "text-navy",
   },
   info: {
-    surface: "border-status-info/25 bg-status-info-soft",
-    icon: "bg-status-info/15 text-status-info-strong",
-    value: "text-status-info-strong",
+    surface: "border-local-line bg-local-bg",
+    icon: "bg-white text-navy",
+    value: "text-navy",
   },
 };
 
@@ -58,9 +58,9 @@ export function KpiCard({
       type={onClick ? "button" : undefined}
       onClick={onClick}
       className={cn(
-        "rounded-xl border p-4 text-left shadow-soft",
+        "rounded-lg border p-4 text-left shadow-card",
         t.surface,
-        onClick && "transition-colors hover:border-brand-glow hover:shadow-card",
+        onClick && "transition-colors hover:shadow-card",
         className,
       )}
     >
@@ -71,11 +71,11 @@ export function KpiCard({
           </span>
         ) : null}
         <div className="min-w-0">
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            {label}
+          <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-mp-muted">{label}</p>
+          <p className={cn("mt-1 font-display text-[15px] font-semibold tabular-nums leading-none", t.value)}>
+            {value}
           </p>
-          <p className={cn("mt-1 text-2xl font-semibold tabular-nums", t.value)}>{value}</p>
-          {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
+          {hint ? <p className="mt-1 text-[10px] text-mp-muted">{hint}</p> : null}
         </div>
       </div>
     </Tag>

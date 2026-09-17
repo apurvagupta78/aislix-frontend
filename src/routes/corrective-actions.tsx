@@ -4,6 +4,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
+import { MpBadge } from "@/components/design-system/MpBadge";
+import { MpFilterCard } from "@/components/design-system/MpFilterCard";
+import { PageHeader } from "@/components/design-system/PageHeader";
 import { KpiCard } from "@/components/audit-governance/KpiCard";
 import { SLAIndicator } from "@/components/audit-governance/SLAIndicator";
 import { Badge } from "@/components/ui/badge";
@@ -58,10 +61,7 @@ export const Route = createFileRoute("/corrective-actions")({
 
 function CorrectiveActionsPage() {
   return (
-    <AppShell
-      title="Corrective Actions"
-      description="Every fix raised by planogram comparisons, tracked to resolution."
-    >
+    <AppShell title="" hidePageHeader>
       <CorrectiveActionsMain />
     </AppShell>
   );
@@ -136,6 +136,25 @@ function CorrectiveActionsMain() {
 
   return (
     <div className="space-y-4">
+        <PageHeader
+          eyebrow="Exceptions"
+          title="Corrective Actions"
+          description="Every fix raised by planogram comparisons, tracked to resolution."
+          meta={
+            <>
+              {lifecycleKpis.overdue > 0 ? (
+                <MpBadge tone="attention" dot>
+                  {lifecycleKpis.overdue} overdue
+                </MpBadge>
+              ) : null}
+              {lifecycleKpis.open > 0 ? (
+                <MpBadge tone="active" dot>
+                  {lifecycleKpis.open} open
+                </MpBadge>
+              ) : null}
+            </>
+          }
+        />
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <KpiCard label="Open" value={String(lifecycleKpis.open)} />
           <KpiCard label="Critical" value={String(lifecycleKpis.critical)} />
@@ -146,9 +165,10 @@ function CorrectiveActionsMain() {
           <KpiCard label="Closed" value={String(lifecycleKpis.closed)} />
         </div>
 
+        <MpFilterCard title="Filter actions">
         <div className="flex flex-wrap gap-2">
           <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="w-40 rounded-xl">
+            <SelectTrigger className="w-40 rounded-lg border-line bg-canvas">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -161,7 +181,7 @@ function CorrectiveActionsMain() {
             </SelectContent>
           </Select>
           <Select value={store} onValueChange={setStore}>
-            <SelectTrigger className="w-44 rounded-xl">
+            <SelectTrigger className="w-44 rounded-lg border-line bg-canvas">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -174,7 +194,7 @@ function CorrectiveActionsMain() {
             </SelectContent>
           </Select>
           <Select value={assignee} onValueChange={setAssignee}>
-            <SelectTrigger className="w-44 rounded-xl">
+            <SelectTrigger className="w-44 rounded-lg border-line bg-canvas">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -210,6 +230,7 @@ function CorrectiveActionsMain() {
             </Button>
           )}
         </div>
+        </MpFilterCard>
 
         {query.isLoading ? (
           <Skeleton className="h-64 w-full rounded-2xl" />
