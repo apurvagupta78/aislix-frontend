@@ -21,17 +21,17 @@ export function SettingsCard({
   className?: string;
 }) {
   return (
-    <section className={cn("card-surface card-hover overflow-hidden", className)}>
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4 sm:px-6">
+    <section className={cn("overflow-hidden rounded-xl border border-line bg-white shadow-card", className)}>
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4 sm:px-6">
         <div className="flex items-start gap-3">
           {Icon && (
-            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-local-line bg-local-bg text-navy">
               <Icon className="size-4" />
             </span>
           )}
           <div>
-            <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
-            {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
+            <h2 className="font-display text-[15px] font-semibold leading-tight text-navy">{title}</h2>
+            {description && <p className="mt-1 text-[13px] text-mp-muted">{description}</p>}
           </div>
         </div>
         {action}

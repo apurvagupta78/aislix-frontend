@@ -17,6 +17,8 @@ import {
   XCircle,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { MpBadge } from "@/components/design-system/MpBadge";
+import { PageHeader } from "@/components/design-system/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -124,15 +126,15 @@ function Section({
   className?: string;
 }) {
   return (
-    <section className={`card-surface p-5 sm:p-6 ${className}`}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <section className={`overflow-hidden rounded-xl border border-line bg-white shadow-card ${className}`}>
+      <div className="flex flex-col gap-3 border-b border-line px-5 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold tracking-tight">{title}</h2>
-          {description && <p className="mt-1 text-xs text-muted-foreground sm:text-sm">{description}</p>}
+          <h2 className="font-display text-[15px] font-semibold leading-tight text-navy">{title}</h2>
+          {description && <p className="mt-1 text-[13px] text-mp-muted">{description}</p>}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
       </div>
-      <div className="mt-5">{children}</div>
+      <div className="p-5 sm:p-6">{children}</div>
     </section>
   );
 }
@@ -229,21 +231,47 @@ function Billing() {
 
   const cancelled = overview?.status === "cancelled" || overview?.cancel_at_period_end;
 
+  const headerActions = (
+    <>
+      <Button asChild variant="outline" size="sm" className="rounded-lg border-line">
+        <Link to="/pricing">View public pricing</Link>
+      </Button>
+      <Button asChild variant="brand" size="sm" className="rounded-lg">
+        <a href="mailto:sales@aislix.com">Talk to sales</a>
+      </Button>
+    </>
+  );
+
   return (
-    <AppShell
-      title="Subscription & billing"
-      description="Track audit usage, manage your plan and download GST invoices."
-      actions={
-        <>
-          <Button asChild variant="subtle" size="sm" className="rounded-xl">
-            <Link to="/pricing">View public pricing</Link>
-          </Button>
-          <Button asChild variant="brand" size="sm" className="rounded-xl">
-            <a href="mailto:sales@aislix.com">Talk to sales</a>
-          </Button>
-        </>
-      }
-    >
+    <AppShell title="" hidePageHeader>
+      <div className="space-y-6">
+        <PageHeader
+          eyebrow="Manage"
+          title="Subscription & billing"
+          description="Track audit usage, manage your plan and download GST invoices."
+          actions={headerActions}
+          meta={
+            overview ? (
+              <>
+                <MpBadge
+                  tone={
+                    overview.status === "active"
+                      ? "healthy"
+                      : overview.status === "past_due"
+                        ? "attention"
+                        : "neutral"
+                  }
+                  dot
+                >
+                  {statusLabels[overview.status]}
+                </MpBadge>
+                {overview.plan_name ? (
+                  <span className="text-[12px] text-mp-muted">{overview.plan_name}</span>
+                ) : null}
+              </>
+            ) : undefined
+          }
+        />
       {/* Current subscription + usage */}
       {overviewQuery.isPending ? (
         <div className="grid gap-4 lg:grid-cols-3">
@@ -267,7 +295,7 @@ function Billing() {
         />
       ) : (
         <div className="grid gap-4 lg:grid-cols-3">
-          <div className="card-surface p-5 sm:p-6 lg:col-span-2">
+          <div className="overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card sm:p-6 lg:col-span-2">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -747,6 +775,7 @@ function Billing() {
       <Section title="Full plan comparison" className="mt-4">
         <ComparisonTable />
       </Section>
+      </div>
     </AppShell>
   );
 }

@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { PageHeader } from "@/components/design-system/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SettingsCard } from "@/components/settings/SettingsParts";
@@ -61,17 +62,19 @@ const tabs = [
 
 function SettingsPage() {
   return (
-    <AppShell
-      title="Settings"
-      description="Company profile, stores, team access, notifications, security and API keys."
-    >
+    <AppShell title="" hidePageHeader>
+      <PageHeader
+        eyebrow="Manage"
+        title="Settings"
+        description="Company profile, stores, team access, notifications, security and API keys."
+      />
       <Tabs defaultValue="company" className="space-y-5">
-        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-2xl bg-muted/60 p-1.5">
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-xl border border-line bg-white p-1.5 shadow-card">
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.value}
               value={tab.value}
-              className="gap-2 rounded-xl px-3 py-2 text-sm data-[state=active]:shadow-card"
+              className="gap-2 rounded-lg px-3 py-2 text-sm text-mp-muted data-[state=active]:bg-local-bg data-[state=active]:text-navy data-[state=active]:shadow-none"
             >
               <tab.icon className="size-4" />
               <span>{tab.label}</span>
