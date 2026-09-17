@@ -18,15 +18,14 @@ import { cn } from "@/lib/utils";
 import type { ControlTowerKpi, KpiTone } from "@/lib/control-tower";
 import { KpiInfoPopover } from "./KpiInfoPopover";
 
-const TONE_TILE: Record<KpiTone, string> = {
-  brand: "kpi-tile-brand",
-  good: "kpi-tile-good",
-  warn: "kpi-tile-warn",
-  bad: "kpi-tile-bad",
-  neutral: "kpi-tile-neutral",
+const TONE_ACCENT: Record<KpiTone, string> = {
+  brand: "border-l-[var(--aislix-primary)]",
+  good: "border-l-[var(--aislix-supermarket-border)]",
+  warn: "border-l-[var(--aislix-darkstore-border)]",
+  bad: "border-l-[var(--aislix-darkstore-border)]",
+  neutral: "border-l-[var(--aislix-warehouse-border)]",
 };
 
-/** Icon chosen from the metric name so every tile reads at a glance. */
 function iconFor(label: string) {
   const l = label.toLowerCase();
   if (l.includes("evidence") || l.includes("photo") || l.includes("image")) return ImageIcon;
@@ -59,7 +58,6 @@ export function KpiCardVisual({
   const trendUp = firstTrend !== undefined && lastTrend !== undefined && lastTrend > firstTrend;
   const Icon = iconFor(kpi.label);
   const isSample = kpi.source?.includes("demo") || kpi.source?.includes("Illustrative");
-  const isDarkTile = kpi.tone === "brand";
 
   return (
     <button
@@ -67,61 +65,46 @@ export function KpiCardVisual({
       disabled={!kpi.available}
       onClick={() => kpi.available && onDrill?.(kpi)}
       className={cn(
-          "kpi-tile group flex min-h-[178px] flex-col p-5 text-left",
-        TONE_TILE[kpi.tone],
+        "kpi-tile group flex min-h-[178px] flex-col border-l-4 bg-white p-5 text-left",
+        TONE_ACCENT[kpi.tone],
         !kpi.available && "cursor-not-allowed opacity-60",
       )}
     >
-      <span
-        aria-hidden
-        className={cn(
-          "pointer-events-none absolute right-0 top-0 h-1 w-20 transition-colors",
-          isDarkTile ? "bg-brand-glow" : "bg-brand/15 group-hover:bg-brand/25",
-        )}
-      />
-
       <div className="relative flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-1">
-          <p className={cn("text-[0.7rem] font-bold uppercase tracking-wide", isDarkTile ? "text-white/80" : "text-foreground/70")}>
+          <p className="text-[0.7rem] font-bold uppercase tracking-wide text-[var(--aislix-secondary)]">
             {kpi.label}
           </p>
-          <span className={isDarkTile ? "text-white/70" : "text-foreground/60"}>
+          <span className="text-[var(--aislix-secondary)]">
             <KpiInfoPopover kpi={kpi} scopeLabel={scopeLabel} periodLabel={periodLabel} />
           </span>
         </div>
-        <span className={cn("glass-badge flex size-10 shrink-0 items-center justify-center", !isDarkTile && "bg-white/70")}>
-          <Icon className={cn("size-5", isDarkTile ? "text-white" : "text-foreground")} />
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-[var(--aislix-border)] bg-[var(--aislix-surface)]">
+          <Icon className="size-5 text-[var(--aislix-primary)]" />
         </span>
       </div>
 
-      <p className={cn("relative mt-4 text-4xl font-extrabold tracking-tight", isDarkTile ? "text-white" : "text-foreground")}>{kpi.value}</p>
-
-      <p className={cn("relative mt-1 line-clamp-2 text-xs font-medium", isDarkTile ? "text-white/75" : "text-foreground/65")}>{kpi.detail}</p>
+      <p className="relative mt-4 text-4xl font-extrabold tracking-tight text-[var(--aislix-primary)]">{kpi.value}</p>
+      <p className="relative mt-1 line-clamp-2 text-xs font-medium text-[var(--aislix-secondary)]">{kpi.detail}</p>
 
       {kpi.trendLabel ? (
-        <p className={cn("relative mt-3 inline-flex w-fit items-center gap-1 rounded-lg px-2 py-0.5 text-[0.7rem] font-bold", isDarkTile ? "bg-white/20 text-white" : "bg-white/70 text-foreground")}>
-          {kpi.trend ? (
-            trendUp ? (
-              <TrendingUp className="size-3" />
-            ) : (
-              <TrendingDown className="size-3" />
-            )
-          ) : null}
+        <p className="relative mt-3 inline-flex w-fit items-center gap-1 rounded-lg bg-[var(--aislix-surface)] px-2 py-0.5 text-[0.7rem] font-bold text-[var(--aislix-primary)]">
+          {kpi.trend ? trendUp ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" /> : null}
           {kpi.trendLabel}
         </p>
       ) : null}
 
       {kpi.progressPct != null ? (
-        <div className={cn("relative mt-3 h-2 w-full overflow-hidden rounded-full", isDarkTile ? "bg-white/25" : "bg-foreground/10")}>
+        <div className="relative mt-3 h-2 w-full overflow-hidden rounded-full bg-[var(--aislix-surface)]">
           <div
-            className={cn("h-full rounded-full", isDarkTile ? "bg-white" : "bg-foreground")}
+            className="h-full rounded-full bg-[var(--aislix-primary)]"
             style={{ width: `${Math.max(0, Math.min(100, kpi.progressPct))}%` }}
           />
         </div>
       ) : null}
 
       {sparkData.length > 1 ? (
-        <div className="relative mt-auto h-10 w-full pt-3">
+        <div className="relative mt-auto h-10 w-full pt-3 text-[var(--aislix-primary)]">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={sparkData}>
               <Area
@@ -129,7 +112,7 @@ export function KpiCardVisual({
                 dataKey="v"
                 stroke="currentColor"
                 fill="currentColor"
-                fillOpacity={0.25}
+                fillOpacity={0.18}
                 strokeWidth={2}
                 dot={false}
               />
@@ -140,14 +123,14 @@ export function KpiCardVisual({
 
       <div className="relative mt-3 flex items-center justify-between gap-2">
         {kpi.available ? (
-          <span className={cn("inline-flex items-center text-[0.7rem] font-bold", isDarkTile ? "text-white/85 group-hover:text-white" : "text-foreground/70 group-hover:text-foreground")}>
+          <span className="inline-flex items-center text-[0.7rem] font-bold text-[var(--aislix-secondary)] group-hover:text-[var(--aislix-primary)]">
             Drill down <ArrowRight className="ml-1 size-3" />
           </span>
         ) : (
           <span />
         )}
         {isSample ? (
-          <span className={cn("rounded-full px-2 py-0.5 text-[9px] font-bold uppercase", isDarkTile ? "bg-white/20 text-white" : "bg-white/70 text-foreground")}>
+          <span className="rounded-full bg-[var(--aislix-custom-bg)] px-2 py-0.5 text-[9px] font-bold uppercase text-[var(--aislix-secondary)]">
             Sample
           </span>
         ) : null}

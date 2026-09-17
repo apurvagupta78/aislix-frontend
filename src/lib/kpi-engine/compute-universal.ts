@@ -33,6 +33,7 @@ import type {
   RiskLocation,
   RiskSku,
 } from "@/lib/control-tower/types";
+import { AISLIX, AISLIX_STATUS_MIX } from "@/lib/aislix-theme";
 
 export const UNWIRED_UNIVERSAL_KPI_IDS = new Set([
   "evidence_coverage",
@@ -43,13 +44,7 @@ export const UNWIRED_UNIVERSAL_KPI_IDS = new Set([
 
 export const NOT_WIRED_YET = "Not wired yet — template KPIs come next";
 
-const STATUS_COLORS: Record<string, string> = {
-  Assigned: "hsl(var(--muted-foreground))",
-  "In Progress": "hsl(var(--brand))",
-  Submitted: "hsl(var(--warning))",
-  Approved: "hsl(var(--accent-green))",
-  Overdue: "hsl(var(--destructive))",
-};
+const STATUS_COLORS: Record<string, string> = AISLIX_STATUS_MIX;
 
 const CLOSED_FINDING = new Set(["closed"]);
 const CLOSED_ACTION = new Set(["closed"]);
@@ -499,8 +494,8 @@ export function computeUniversalDashboardFromRows(input: UniversalComputeInput):
     auditTrend,
     operationalTrend: auditTrend.map((p) => ({ date: p.date, completed: p.completed, findings: p.findings })),
     operationalTrendMetrics: [
-      { key: "completed", label: "Audits completed", color: "hsl(var(--brand))" },
-      { key: "findings", label: "Findings", color: "hsl(var(--destructive))" },
+      { key: "completed", label: "Audits completed", color: AISLIX.primary },
+      { key: "findings", label: "Findings", color: AISLIX.darkstoreBg },
     ],
     auditExecutionFull: executionFull,
     riskLocationsFull: riskLocations,

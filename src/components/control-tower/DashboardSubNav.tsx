@@ -21,7 +21,7 @@ export function DashboardSubNav() {
             className={cn(
               "rounded-lg px-3 py-1.5 text-sm transition-colors",
               active
-                ? "bg-brand-soft font-medium text-brand"
+                ? "bg-[var(--aislix-warehouse-bg)] font-medium text-[var(--aislix-primary)]"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >

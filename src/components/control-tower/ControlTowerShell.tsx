@@ -17,8 +17,6 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -48,13 +46,13 @@ import {
   nextDrilldownSearch,
   truncateDrilldownSearch,
   useControlTowerDashboard,
-  type ControlTowerKpi,
   type ControlTowerModelFilter,
   type ControlTowerSearch,
 } from "@/lib/control-tower";
 import { DashboardSectionHeader } from "./DashboardSectionHeader";
-import { KpiCardVisual } from "./KpiCardVisual";
+import { ControlTowerMetricsBoard } from "./ControlTowerMetricsBoard";
 import { DashboardVisualBoard } from "./DashboardVisualBoard";
+import { AISLIX, AISLIX_CHART, AISLIX_MODEL_SURFACE, AISLIX_STATUS_MIX } from "@/lib/aislix-theme";
 
 
 const MODEL_OPTIONS: { value: ControlTowerModelFilter; label: string }[] = [
@@ -65,13 +63,7 @@ const MODEL_OPTIONS: { value: ControlTowerModelFilter; label: string }[] = [
   })),
 ];
 
-const STATUS_COLORS: Record<string, string> = {
-  Assigned: "hsl(var(--muted-foreground))",
-  "In Progress": "hsl(var(--brand))",
-  Submitted: "hsl(var(--warning))",
-  Approved: "hsl(var(--accent-green))",
-  Overdue: "hsl(var(--destructive))",
-};
+const STATUS_COLORS: Record<string, string> = AISLIX_STATUS_MIX;
 
 function EmptyBlock({ title }: { title: string }) {
   return (
@@ -136,7 +128,6 @@ export function ControlTowerShell({
 
   const data = query.data;
   const locLabel = data.terminology.locationPlural;
-  const modelLabel = MODEL_OPTIONS.find((m) => m.value === model)?.label ?? "All";
 
   return (
     <div className="space-y-8">
@@ -167,56 +158,15 @@ export function ControlTowerShell({
           }}
           downloadLabel="Download KPI CSV"
         />
-        <KpiGrid kpis={data.universalKpis} onDrill={(kpi) => drillTo("kpi", kpi.label)} />
+        <ControlTowerMetricsBoard data={data} onDrill={(kpi) => drillTo("kpi", kpi.label)} />
       </section>
 
       <section className="space-y-3">
         <DashboardSectionHeader
           title="Visual overview"
-          description="Four different views: health dials, strengths radar, risk heatmap and audits vs problems."
+          description="Health dials, strengths radar, risk heatmap and audits vs problems."
         />
         <DashboardVisualBoard data={data} />
-      </section>
-
-      {data.contextualKpis.length > 0 ? (
-        <section>
-          <DashboardSectionHeader
-            title={`${modelLabel} KPIs`}
-            description="Template-specific metrics for this operating model — not wired yet."
-            viewAllTo="/dashboard/kpis"
-            viewAllSearch={viewAll({ scope: "contextual" })}
-            onDownloadCsv={() => {
-              import("@/lib/control-tower/exports").then(({ exportKpiCsv }) => exportKpiCsv(data, filters));
-            }}
-          />
-          <KpiGrid kpis={data.contextualKpis} onDrill={(kpi) => drillTo("kpi", kpi.label)} />
-        </section>
-      ) : null}
-
-      <section>
-        <DashboardSectionHeader
-          title="Audit-Specific Metrics"
-          description={
-            data.auditSpecificKpis.length
-              ? "Shown as N/A until qty, expiry, facing, and QC aggregations ship."
-              : "Your audit contains custom fields but no configured analytical metrics yet."
-          }
-          viewAllTo="/dashboard/kpis"
-          viewAllSearch={viewAll({ scope: "audit_specific" })}
-          onDownloadCsv={() => {
-            import("@/lib/control-tower/exports").then(({ exportKpiCsv }) => exportKpiCsv(data, filters));
-          }}
-          downloadLabel="Download CSV"
-        />
-        {data.auditSpecificKpis.length > 0 ? (
-          <KpiGrid kpis={data.auditSpecificKpis} onDrill={(kpi) => drillTo("kpi", kpi.label)} />
-        ) : (
-          <p className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-            No audit-specific metrics apply to the current template scope. Map standard fields such as
-            Expected Qty, Actual Qty, Expiry Date or QC Status in your audit templates to enable
-            automatic metrics.
-          </p>
-        )}
       </section>
 
       <div className="grid gap-4 xl:grid-cols-2">
@@ -235,28 +185,21 @@ export function ControlTowerShell({
             {data.auditStatus.every((b) => b.value === 0) ? (
               <EmptyBlock title="No assignments in this period" />
             ) : (
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="h-52">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={data.auditStatus}
-                        dataKey="value"
-                        nameKey="name"
-                        innerRadius={48}
-                        outerRadius={72}
-                        paddingAngle={2}
-                      >
-                        {data.auditStatus.map((entry) => (
-                          <Cell
-                            key={entry.name}
-                            fill={entry.color ?? STATUS_COLORS[entry.name] ?? "hsl(var(--brand))"}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+              <div className="space-y-4">
+                <div className="flex h-3 overflow-hidden rounded-full border border-[var(--aislix-border)]">
+                  {data.auditStatus.map((b) => {
+                    const total = data.auditStatus.reduce((sum, row) => sum + row.value, 0) || 1;
+                    return (
+                      <span
+                        key={b.name}
+                        className="h-full"
+                        style={{
+                          width: `${(b.value / total) * 100}%`,
+                          background: b.color ?? STATUS_COLORS[b.name] ?? AISLIX.primary,
+                        }}
+                      />
+                    );
+                  })}
                 </div>
                 <div className="space-y-2">
                   {data.auditStatus.map((b) => (
@@ -265,7 +208,7 @@ export function ControlTowerShell({
                         <span
                           className="size-2.5 rounded-full"
                           style={{
-                            background: b.color ?? STATUS_COLORS[b.name] ?? "hsl(var(--brand))",
+                            background: b.color ?? STATUS_COLORS[b.name] ?? AISLIX.primary,
                           }}
                         />
                         {b.name}
@@ -301,14 +244,14 @@ export function ControlTowerShell({
                     <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip />
-                    {data.operationalTrendMetrics.map((m) => (
+                    {data.operationalTrendMetrics.map((m, i) => (
                       <Area
                         key={m.key}
                         type="monotone"
                         dataKey={m.key}
                         name={m.label}
-                        stroke={m.color}
-                        fill={m.color}
+                        stroke={m.color || AISLIX_CHART[i % AISLIX_CHART.length]}
+                        fill={m.color || AISLIX_CHART[i % AISLIX_CHART.length]}
                         fillOpacity={0.12}
                         strokeWidth={2}
                       />
@@ -350,10 +293,10 @@ export function ControlTowerShell({
                             key={entry.id}
                             fill={
                               entry.score >= 80
-                                ? "hsl(var(--destructive))"
+                                ? AISLIX.darkstoreBg
                                 : entry.score >= 70
-                                  ? "hsl(var(--warning))"
-                                  : "hsl(var(--brand))"
+                                  ? AISLIX.warehouseBg
+                                  : AISLIX.supermarketBg
                             }
                           />
                         ))}
@@ -418,7 +361,7 @@ export function ControlTowerShell({
         </Card>
       </div>
 
-      <Card className="card-surface border-destructive/20">
+      <Card className="card-surface border-[var(--aislix-darkstore-border)]">
         <CardHeader className="pb-2">
           <DashboardSectionHeader
             title="Critical Findings"
@@ -438,9 +381,9 @@ export function ControlTowerShell({
                 key={f.id}
                 type="button"
                 onClick={() => drillTo("finding", f.id)}
-                className="flex w-full flex-wrap items-center gap-2 rounded-xl border border-border bg-destructive/5 p-3 text-left text-sm transition-colors hover:bg-destructive/10"
+                className="flex w-full flex-wrap items-center gap-2 rounded-xl border border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)] p-3 text-left text-sm transition-colors hover:bg-white/70"
               >
-                <AlertTriangle className="size-4 text-destructive" />
+                <AlertTriangle className="size-4 text-[var(--aislix-primary)]" />
                 <Badge variant="destructive">{f.severity}</Badge>
                 <span className="font-medium">{f.location}</span>
                 <span className="text-muted-foreground">· {f.sku}</span>
@@ -467,18 +410,18 @@ export function ControlTowerShell({
           <CardContent>
             <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {[
-                { label: "Open", value: data.correctiveActionHealth.open, tone: "text-brand" },
-                { label: "Due Today", value: data.correctiveActionHealth.dueToday, tone: "text-warning" },
-                { label: "Overdue", value: data.correctiveActionHealth.overdue, tone: "text-destructive" },
+                { label: "Open", value: data.correctiveActionHealth.open, surface: "bg-[var(--aislix-warehouse-bg)] border-[var(--aislix-warehouse-border)]" },
+                { label: "Due Today", value: data.correctiveActionHealth.dueToday, surface: "bg-[var(--aislix-local-bg)] border-[var(--aislix-local-border)]" },
+                { label: "Overdue", value: data.correctiveActionHealth.overdue, surface: "bg-[var(--aislix-darkstore-bg)] border-[var(--aislix-darkstore-border)]" },
                 {
                   label: "Pending Verification",
                   value: data.correctiveActionHealth.pendingVerification,
-                  tone: "text-muted-foreground",
+                  surface: "bg-[var(--aislix-custom-bg)] border-[var(--aislix-custom-border)]",
                 },
-                { label: "Closed", value: data.correctiveActionHealth.closed, tone: "text-success" },
+                { label: "Closed", value: data.correctiveActionHealth.closed, surface: "bg-[var(--aislix-supermarket-bg)] border-[var(--aislix-supermarket-border)]" },
               ].map((item) => (
-                <div key={item.label} className="rounded-lg border border-border bg-muted/30 p-3 text-center">
-                  <p className={cn("text-xl font-semibold tabular-nums", item.tone)}>{item.value}</p>
+                <div key={item.label} className={cn("rounded-lg border p-3 text-center", item.surface)}>
+                  <p className="text-xl font-semibold tabular-nums text-[var(--aislix-primary)]">{item.value}</p>
                   <p className="text-[10px] text-muted-foreground">{item.label}</p>
                 </div>
               ))}
@@ -516,7 +459,7 @@ export function ControlTowerShell({
           <CardContent className="space-y-4">
             <div className="flex items-end justify-between">
               <div>
-                <p className={cn("text-3xl font-semibold", data.sla.available ? "text-success" : "text-muted-foreground")}>
+                <p className={cn("text-3xl font-semibold", data.sla.available ? "text-[var(--aislix-primary)]" : "text-muted-foreground")}>
                   {data.sla.available ? `${data.sla.compliancePct}%` : "N/A"}
                 </p>
                 <p className="text-xs text-muted-foreground">SLA compliance</p>
@@ -525,16 +468,16 @@ export function ControlTowerShell({
             </div>
             {data.sla.available ? <Progress value={data.sla.compliancePct} className="h-2" /> : null}
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
-              <div className="rounded-lg bg-destructive/10 p-2">
-                <p className="font-semibold text-destructive">{data.sla.overdue}</p>
+              <div className="rounded-lg border border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)] p-2">
+                <p className="font-semibold text-[var(--aislix-primary)]">{data.sla.overdue}</p>
                 <p className="text-muted-foreground">Overdue</p>
               </div>
-              <div className="rounded-lg bg-warning/10 p-2">
-                <p className="font-semibold text-warning">{data.sla.dueToday}</p>
+              <div className="rounded-lg border border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)] p-2">
+                <p className="font-semibold text-[var(--aislix-primary)]">{data.sla.dueToday}</p>
                 <p className="text-muted-foreground">Due today</p>
               </div>
-              <div className="rounded-lg bg-muted/50 p-2">
-                <p className="font-semibold">{data.sla.breached}</p>
+              <div className="rounded-lg border border-[var(--aislix-custom-border)] bg-[var(--aislix-custom-bg)] p-2">
+                <p className="font-semibold text-[var(--aislix-primary)]">{data.sla.breached}</p>
                 <p className="text-muted-foreground">Breached</p>
               </div>
             </div>
@@ -602,7 +545,7 @@ export function ControlTowerShell({
                     <XAxis dataKey="issue" tick={{ fontSize: 9 }} interval={0} angle={-12} height={48} />
                     <YAxis tick={{ fontSize: 11 }} />
                     <Tooltip />
-                    <Bar dataKey="frequency" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="frequency" fill={AISLIX.darkstoreBg} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -612,7 +555,7 @@ export function ControlTowerShell({
                     key={r.id}
                     className="flex flex-wrap items-center gap-3 rounded-xl border border-border p-3 text-sm"
                   >
-                    <RefreshCw className="size-4 text-warning" />
+                    <RefreshCw className="size-4 text-[var(--aislix-primary)]" />
                     <span className="flex-1 font-medium">{r.issue}</span>
                     <Badge variant="outline">{r.frequency}×</Badge>
                     <span className="text-xs text-muted-foreground">{r.locations} locations</span>
@@ -642,7 +585,7 @@ function LiveBanner({
   model: ControlTowerModelFilter;
 }) {
   return (
-    <div className="rounded-2xl border border-brand/25 bg-brand-soft/30 p-4 text-foreground">
+    <div className="rounded-2xl border border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)] p-4 text-foreground">
       <p className="text-sm font-semibold">Live universal KPIs</p>
       <p className="mt-1 text-xs text-muted-foreground">
         Completion, findings, and corrective actions use production data for{" "}
@@ -663,30 +606,29 @@ function OperatingModelSwitcher({
 }) {
   return (
     <div className="mt-2 flex flex-wrap gap-1.5 rounded-xl border border-border bg-muted/20 p-1.5">
-      {MODEL_OPTIONS.map((opt) => (
-        <Button
-          key={opt.value}
-          size="sm"
-          variant={value === opt.value ? "secondary" : "ghost"}
-          className={cn(
-            "rounded-lg text-xs font-medium",
-            value === opt.value && "border border-brand/30 bg-brand-soft/50 shadow-sm ring-1 ring-brand/20",
-          )}
-          onClick={() => onChange(opt.value)}
-        >
-          {opt.label}
-        </Button>
-      ))}
-    </div>
-  );
-}
-
-function KpiGrid({ kpis, onDrill }: { kpis: ControlTowerKpi[]; onDrill: (kpi: ControlTowerKpi) => void }) {
-  return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-      {kpis.map((kpi) => (
-        <KpiCardVisual key={kpi.id} kpi={kpi} onDrill={onDrill} />
-      ))}
+      {MODEL_OPTIONS.map((opt) => {
+        const tint = AISLIX_MODEL_SURFACE[opt.value] ?? AISLIX_MODEL_SURFACE.custom;
+        const active = value === opt.value;
+        return (
+          <Button
+            key={opt.value}
+            size="sm"
+            variant="ghost"
+            className={cn(
+              "rounded-lg border text-xs font-medium",
+              active ? "shadow-sm" : "border-transparent",
+            )}
+            style={
+              active
+                ? { backgroundColor: tint.bg, borderColor: tint.border, color: AISLIX.primary }
+                : undefined
+            }
+            onClick={() => onChange(opt.value)}
+          >
+            {opt.label}
+          </Button>
+        );
+      })}
     </div>
   );
 }
@@ -731,7 +673,7 @@ function DrilldownPanel({
   const level = search.drill ?? "kpi";
 
   return (
-    <Card className="rounded-2xl border-brand/30 bg-brand-soft/10">
+    <Card className="rounded-2xl border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <BarChart3 className="size-4" /> Drilldown — {level}

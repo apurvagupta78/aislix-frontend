@@ -103,10 +103,10 @@ export const FINDING_TYPES: { value: FindingType; label: string }[] = [
 ];
 
 export const FINDING_SEVERITIES: { value: FindingSeverity; label: string; className: string }[] = [
-  { value: "low", label: "Low", className: "bg-emerald-500/12 text-emerald-700" },
-  { value: "medium", label: "Medium", className: "bg-amber-500/12 text-amber-700" },
-  { value: "high", label: "High", className: "bg-orange-500/12 text-orange-700" },
-  { value: "critical", label: "Critical", className: "bg-destructive/12 text-destructive" },
+  { value: "low", label: "Low", className: "bg-[var(--aislix-supermarket-bg)] text-[var(--aislix-primary)]" },
+  { value: "medium", label: "Medium", className: "bg-[var(--aislix-custom-bg)] text-[var(--aislix-primary)]" },
+  { value: "high", label: "High", className: "bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]" },
+  { value: "critical", label: "Critical", className: "bg-[var(--aislix-darkstore-bg)] text-[var(--aislix-primary)]" },
 ];
 
 export const FINDING_STATUSES: { value: FindingStatus; label: string }[] = [

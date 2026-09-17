@@ -58,10 +58,10 @@ export const LIFECYCLE_STATUSES: { value: LifecycleActionStatus; label: string }
 ];
 
 export function actionPriorityClass(priority: string): string {
-  if (priority === "critical") return "bg-destructive/12 text-destructive";
-  if (priority === "high") return "bg-orange-500/12 text-orange-700";
-  if (priority === "medium") return "bg-amber-500/12 text-amber-700";
-  return "bg-emerald-500/12 text-emerald-700";
+  if (priority === "critical") return "bg-[var(--aislix-darkstore-bg)] text-[var(--aislix-primary)]";
+  if (priority === "high") return "bg-[var(--aislix-darkstore-bg)] text-[var(--aislix-primary)]";
+  if (priority === "medium") return "bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]";
+  return "bg-[var(--aislix-supermarket-bg)] text-[var(--aislix-primary)]";
 }
 
 export function slaRemainingLabel(dueAt: string | null, status: string): string {

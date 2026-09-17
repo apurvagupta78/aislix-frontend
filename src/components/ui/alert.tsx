@@ -8,7 +8,7 @@ const alertVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-brand-glow bg-brand-soft text-foreground",
+        default: "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)] text-foreground",
         destructive:
           "border-status-danger bg-status-danger-soft text-status-danger-strong [&>svg]:text-status-danger-strong",
       },

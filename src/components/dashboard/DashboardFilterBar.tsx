@@ -57,7 +57,7 @@ import { cn } from "@/lib/utils";
 type Option = { value: string; label: string };
 
 const CONTROL =
-  "h-9 shrink-0 rounded-lg border border-border bg-card px-2.5 text-xs font-normal text-foreground shadow-soft hover:bg-brand-soft/55 focus:ring-2 focus:ring-ring/60";
+  "h-9 shrink-0 rounded-lg border border-border bg-surface px-2.5 text-xs font-normal text-foreground shadow-soft hover:bg-[var(--aislix-local-bg)] focus:ring-2 focus:ring-ring/60 data-[state=open]:bg-[var(--aislix-warehouse-bg)]";
 
 function CompactSelect({
   label,
@@ -315,7 +315,7 @@ function MoreFiltersPopover({
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className={cn(CONTROL, "gap-1 px-2.5", activeCount > 0 && "border-brand/30 bg-brand-soft/30")}
+          className={cn(CONTROL, "gap-1 px-2.5", activeCount > 0 && "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]")}
         >
           <SlidersHorizontal className="size-3.5 text-muted-foreground" />
           <span>More filters</span>
@@ -742,7 +742,7 @@ export function DashboardFilterBar({
               key={`${chip.key}-${chip.label}`}
               type="button"
               onClick={() => onChange(clearDashboardFilterChip(filters, chip.key))}
-              className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-white px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:border-brand/30 hover:bg-brand-soft/20"
+              className="inline-flex items-center gap-1 rounded-md border border-border/50 bg-white px-2 py-0.5 text-[11px] font-medium text-foreground transition-colors hover:border-[var(--aislix-warehouse-border)] hover:bg-[var(--aislix-warehouse-bg)]"
             >
               {chip.label}
               <X className="size-2.5 opacity-50" aria-hidden />

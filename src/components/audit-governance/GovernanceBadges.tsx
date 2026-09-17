@@ -50,14 +50,14 @@ export function FindingStatusBadge({
 }) {
   const tone =
     status === "closed" || status === "resolved"
-      ? "bg-accent-green/12 text-accent-green"
+      ? "bg-[var(--aislix-supermarket-bg)] text-[var(--aislix-primary)]"
       : status === "pending_verification"
-        ? "bg-brand-soft text-brand"
+        ? "bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]"
         : status === "rejected"
-          ? "bg-destructive/10 text-destructive"
+          ? "bg-[var(--aislix-darkstore-bg)] text-[var(--aislix-primary)]"
           : status === "in_progress" || status === "assigned"
-            ? "bg-warning/10 text-warning"
-            : "bg-muted text-muted-foreground";
+            ? "bg-[var(--aislix-local-bg)] text-[var(--aislix-primary)]"
+            : "bg-[var(--aislix-custom-bg)] text-[var(--aislix-secondary)]";
   return (
     <Badge variant="secondary" className={cn("rounded-full border-0 capitalize", tone, className)}>
       {status.replaceAll("_", " ")}
@@ -93,7 +93,7 @@ export function AiSuggestedBadge({ className }: { className?: string }) {
 
 export function HumanConfirmedBadge({ className }: { className?: string }) {
   return (
-    <Badge variant="outline" className={cn("rounded-full border-accent-green/30 bg-accent-green/10 text-accent-green", className)}>
+    <Badge variant="outline" className={cn("rounded-full border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)] text-[var(--aislix-primary)]", className)}>
       Human confirmed
     </Badge>
   );

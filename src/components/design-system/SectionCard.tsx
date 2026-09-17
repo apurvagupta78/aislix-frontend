@@ -34,7 +34,7 @@ export function SectionCard({
         >
           <div className="flex min-w-0 items-start gap-3">
             {Icon ? (
-              <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-brand-glow bg-brand-soft text-brand">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]">
                 <Icon className="size-4" aria-hidden />
               </span>
             ) : null}

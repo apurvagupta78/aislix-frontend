@@ -44,7 +44,7 @@ const tooltipStyle = {
   boxShadow: "0 4px 16px rgba(15, 23, 42, 0.06)",
 } as const;
 
-const TARGET_LINE_COLOR = "hsl(215 16% 62%)";
+const TARGET_LINE_COLOR = "var(--aislix-secondary)";
 
 function CommandSectionHeader({
   eyebrow,

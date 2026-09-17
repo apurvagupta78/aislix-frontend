@@ -96,7 +96,7 @@ export function AuditExecutiveSection() {
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                   <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="compliance" stroke="hsl(var(--brand))" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="compliance" stroke="var(--aislix-primary)" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -111,7 +111,7 @@ export function AuditExecutiveSection() {
                   <XAxis dataKey="name" tick={{ fontSize: 9 }} />
                   <YAxis tick={{ fontSize: 10 }} />
                   <Tooltip />
-                  <Bar dataKey="variance" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="variance" fill="var(--aislix-darkstore-bg)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

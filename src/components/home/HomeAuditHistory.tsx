@@ -29,7 +29,7 @@ export function HomeAuditHistory() {
                   Demo / Example
                 </p>
               </div>
-              <span className="grid size-9 place-items-center rounded-lg bg-brand-soft text-brand">
+              <span className="grid size-9 place-items-center rounded-lg border border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]">
                 <History className="size-4" strokeWidth={1.75} aria-hidden="true" />
               </span>
             </div>

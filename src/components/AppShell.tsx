@@ -167,8 +167,8 @@ function SidebarNav({
           "flex min-h-11 items-center gap-2 rounded-xl py-2 pr-3 text-sm transition-colors lg:min-h-9",
           depth === 1 ? "pl-6" : "pl-10",
           active
-            ? "bg-brand-soft font-semibold text-brand"
-            : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+            ? "bg-[var(--aislix-warehouse-bg)] font-semibold text-[var(--aislix-primary)]"
+            : "text-muted-foreground hover:bg-surface hover:text-foreground",
         )}
       >
         <span className="flex-1 truncate">{leaf.label}</span>
@@ -227,8 +227,8 @@ function SidebarNav({
                 className={cn(
                   "relative flex size-10 items-center justify-center rounded-xl transition-colors",
                   activeSectionId === section.id
-                    ? "bg-brand-soft text-brand"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                    ? "bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]"
+                    : "text-muted-foreground hover:bg-surface hover:text-foreground",
                 )}
               >
                 <section.icon className="size-4" />
@@ -253,8 +253,8 @@ function SidebarNav({
                     className={cn(
                       "flex min-h-10 items-center gap-2 rounded-xl px-2.5 py-2 text-sm transition-colors",
                       leafActive(child)
-                        ? "bg-brand-soft font-semibold text-brand"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                        ? "bg-[var(--aislix-warehouse-bg)] font-semibold text-[var(--aislix-primary)]"
+                        : "text-muted-foreground hover:bg-surface hover:text-foreground",
                     )}
                   >
                     <span className="flex-1 truncate">{child.label}</span>
@@ -282,8 +282,8 @@ function SidebarNav({
               className={cn(
                 "flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors lg:min-h-10",
                 activeSectionId === section.id
-                  ? "bg-brand-soft text-brand"
-                  : "text-muted-foreground hover:bg-muted/80 hover:text-foreground",
+                  ? "bg-[var(--aislix-local-bg)] text-[var(--aislix-primary)]"
+                  : "text-muted-foreground hover:bg-surface hover:text-foreground",
               )}
             >
               <section.icon className="size-4 shrink-0" />
@@ -503,7 +503,7 @@ export function AppShell({
                     <Link
                       to="/billing"
                       aria-label="Manage plan"
-                      className="flex size-10 items-center justify-center rounded-xl bg-brand-soft text-brand"
+                      className="flex size-10 items-center justify-center rounded-xl bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]"
                     >
                       <CreditCard className="size-4" />
                     </Link>
@@ -669,7 +669,7 @@ export function AppShell({
                           {profile?.avatar_url ? (
                             <AvatarImage src={profile.avatar_url} alt={displayName} />
                           ) : null}
-                          <AvatarFallback className="bg-brand-soft text-xs font-medium uppercase text-brand">
+                          <AvatarFallback className="bg-[var(--aislix-warehouse-bg)] text-xs font-medium uppercase text-[var(--aislix-primary)]">
                             {initials.toUpperCase()}
                           </AvatarFallback>
                         </Avatar>

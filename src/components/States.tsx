@@ -43,8 +43,8 @@ export function EmptyState({
   icon?: ReactNode | undefined;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-brand-glow bg-card px-6 py-14 text-center shadow-soft">
-      <span className="grid size-12 shrink-0 place-items-center rounded-xl border border-brand-glow bg-brand-soft text-brand">
+    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--aislix-border)] bg-card px-6 py-14 text-center shadow-soft">
+      <span className="grid size-12 shrink-0 place-items-center rounded-xl border border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]">
         {icon ?? <Inbox className="size-6" aria-hidden />}
       </span>
       <p className="mt-4 text-base font-semibold text-foreground">{title}</p>

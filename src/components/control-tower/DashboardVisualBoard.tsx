@@ -21,6 +21,7 @@ import { Activity, Flame, Gauge, Radar as RadarIcon } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ControlTowerDemoPayload } from "@/lib/control-tower";
+import { AISLIX, AISLIX_CHART } from "@/lib/aislix-theme";
 
 /**
  * Visual board — presentation only. Reads the same demo payload the rest of the
@@ -29,8 +30,8 @@ import type { ControlTowerDemoPayload } from "@/lib/control-tower";
 export function DashboardVisualBoard({ data }: { data: ControlTowerDemoPayload }) {
   const gauges = useMemo(
     () => [
-      { name: "SLA on time", value: data.sla.compliancePct, fill: "var(--chart-1)" },
-      { name: "Evidence verified", value: data.evidenceCoverage.pct, fill: "var(--chart-2)" },
+      { name: "SLA on time", value: data.sla.compliancePct, fill: AISLIX_CHART[0] },
+      { name: "Evidence verified", value: data.evidenceCoverage.pct, fill: AISLIX_CHART[1] },
       {
         name: "Actions closed",
         value: Math.round(
@@ -43,7 +44,7 @@ export function DashboardVisualBoard({ data }: { data: ControlTowerDemoPayload }
             )) *
             100,
         ),
-        fill: "var(--chart-3)",
+        fill: AISLIX_CHART[2],
       },
     ],
     [data],
@@ -108,8 +109,8 @@ export function DashboardVisualBoard({ data }: { data: ControlTowerDemoPayload }
             <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
             <Radar
               dataKey="score"
-              stroke="var(--chart-1)"
-              fill="var(--chart-1)"
+              stroke={AISLIX.primary}
+              fill={AISLIX.primary}
               fillOpacity={0.35}
             />
             <Tooltip formatter={(v: number) => `${v}`} />
@@ -128,13 +129,13 @@ export function DashboardVisualBoard({ data }: { data: ControlTowerDemoPayload }
             return (
               <div
                 key={row.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-status-danger px-3 py-2.5 text-sm text-foreground"
+                className="flex items-center justify-between gap-3 rounded-lg border border-[var(--aislix-darkstore-border)] px-3 py-2.5 text-sm text-foreground"
                 style={{
-                  backgroundColor: `color-mix(in oklab, var(--status-danger-soft) ${Math.round(intensity * 100)}%, var(--card))`,
+                  backgroundColor: `color-mix(in srgb, ${AISLIX.darkstoreBg} ${Math.round(intensity * 100)}%, #FFFFFF)`,
                 }}
               >
                 <span className="truncate font-medium">{row.name}</span>
-                <span className="shrink-0 rounded-full border border-status-danger bg-card/70 px-2 py-0.5 text-xs font-semibold">
+                <span className="shrink-0 rounded-full border border-[var(--aislix-darkstore-border)] bg-white/70 px-2 py-0.5 text-xs font-semibold">
                   {row.score}
                 </span>
               </div>
@@ -155,11 +156,11 @@ export function DashboardVisualBoard({ data }: { data: ControlTowerDemoPayload }
             <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
             <Tooltip />
             <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-            <Bar dataKey="completed" name="Audits done" fill="var(--chart-1)" radius={[8, 8, 0, 0]} barSize={18} />
+            <Bar dataKey="completed" name="Audits done" fill={AISLIX.primary} radius={[8, 8, 0, 0]} barSize={18} />
             <Line
               dataKey="findings"
               name="Problems found"
-              stroke="var(--chart-4)"
+              stroke={AISLIX.darkstoreBg}
               strokeWidth={3}
               dot={{ r: 3 }}
             />
@@ -185,7 +186,7 @@ function ChartFrame({
     <Card className="overflow-hidden rounded-xl">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <span className="flex size-8 items-center justify-center rounded-lg border border-brand-glow bg-brand-soft text-brand">
+          <span className="flex size-8 items-center justify-center rounded-lg border border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]">
             {icon}
           </span>
           {title}

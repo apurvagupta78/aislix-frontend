@@ -121,6 +121,22 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
+const FEATURE_SURFACES = [
+  "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]",
+  "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)]",
+  "border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)]",
+  "border-[var(--aislix-custom-border)] bg-[var(--aislix-custom-bg)]",
+  "border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)]",
+  "border-[var(--aislix-supermarket-border)] bg-white",
+];
+
+const STEP_SURFACES = [
+  "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]",
+  "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)]",
+  "border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)]",
+  "border-[var(--aislix-custom-border)] bg-[var(--aislix-custom-bg)]",
+];
+
 const features = [
   {
     icon: ScanLine,
@@ -260,12 +276,12 @@ function Landing() {
             turns shelf images into consistent, measurable and actionable retail audits.
           </p>
           <div className="mt-12 grid gap-5 text-left sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((f) => (
+            {features.map((f, i) => (
               <div
                 key={f.title}
-                className="rounded-xl border border-border bg-card p-7 shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-glow hover:shadow-card"
+                className={`rounded-xl border p-7 shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card ${FEATURE_SURFACES[i]}`}
               >
-                <span className="grid size-10 place-items-center rounded-xl bg-brand-soft text-brand">
+                <span className="grid size-10 place-items-center rounded-xl border border-[var(--aislix-border)] bg-white text-[var(--aislix-primary)]">
                   <f.icon className="size-5" />
                 </span>
                 <h3 className="mt-5 text-lg font-semibold tracking-tight">{f.title}</h3>
@@ -302,9 +318,9 @@ function Landing() {
           </h2>
           <div className="mt-12 grid gap-5 text-left sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((s, i) => (
-              <div key={s.title} className="card-surface card-hover p-7">
+              <div key={s.title} className={`card-hover rounded-xl border p-7 shadow-soft ${STEP_SURFACES[i]}`}>
                 <div className="flex items-center justify-between">
-                  <span className="grid size-10 place-items-center rounded-xl bg-brand-soft text-brand">
+                  <span className="grid size-10 place-items-center rounded-xl border border-[var(--aislix-border)] bg-white text-[var(--aislix-primary)]">
                     <s.icon className="size-5" />
                   </span>
                   <span className="text-sm text-muted-foreground">0{i + 1}</span>

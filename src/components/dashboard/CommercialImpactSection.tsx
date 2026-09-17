@@ -247,7 +247,7 @@ export function CommercialImpactSection({
                       contentStyle={tooltipStyle}
                       formatter={(v: number) => [formatLostSales(v), "Daily exposure"]}
                     />
-                    <Bar dataKey="value" fill="hsl(var(--brand))" radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="value" fill="var(--aislix-primary)" radius={[0, 4, 4, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -300,9 +300,9 @@ export function CommercialImpactSection({
                     <Line
                       type="monotone"
                       dataKey="daily_exposure_inr"
-                      stroke="hsl(var(--brand))"
+                      stroke="var(--aislix-primary)"
                       strokeWidth={2}
-                      dot={{ r: 3, fill: "hsl(var(--brand))" }}
+                      dot={{ r: 3, fill: "var(--aislix-primary)" }}
                     />
                   </LineChart>
                 </ResponsiveContainer>

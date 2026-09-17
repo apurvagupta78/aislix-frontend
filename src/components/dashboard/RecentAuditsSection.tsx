@@ -48,15 +48,15 @@ const PAGE_SIZE = 10;
 const STATUS_META: Record<RecentAuditStatus, { label: string; className: string }> = {
   completed: {
     label: "Completed",
-    className: "bg-accent-green/10 text-accent-green ring-accent-green/15",
+    className: "bg-[var(--aislix-supermarket-bg)] text-[var(--aislix-primary)] ring-[var(--aislix-supermarket-border)]",
   },
   in_progress: {
     label: "In Progress",
-    className: "bg-brand-soft text-brand ring-brand/15",
+    className: "bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)] ring-[var(--aislix-warehouse-border)]",
   },
   needs_action: {
     label: "Needs Action",
-    className: "bg-amber-500/10 text-amber-700 ring-amber-500/15",
+    className: "bg-[var(--aislix-darkstore-bg)] text-[var(--aislix-primary)] ring-[var(--aislix-darkstore-border)]",
   },
   draft: {
     label: "Draft",
@@ -64,7 +64,7 @@ const STATUS_META: Record<RecentAuditStatus, { label: string; className: string 
   },
   failed: {
     label: "Failed",
-    className: "bg-destructive/10 text-destructive ring-destructive/15",
+    className: "bg-[var(--aislix-darkstore-bg)] text-[var(--aislix-primary)] ring-[var(--aislix-darkstore-border)]",
   },
 };
 
@@ -113,7 +113,7 @@ function IssueChip({ count }: { count: number }) {
       className={cn(
         "inline-flex min-w-[1.5rem] items-center justify-center rounded-md px-1.5 py-0.5 text-[11px] font-medium tabular-nums ring-1 ring-inset",
         hasIssues
-          ? "bg-amber-500/10 text-amber-700 ring-amber-500/15"
+          ? "bg-[var(--aislix-darkstore-bg)] text-[var(--aislix-primary)] ring-[var(--aislix-darkstore-border)]"
           : "bg-muted/40 text-muted-foreground ring-border/50",
       )}
     >

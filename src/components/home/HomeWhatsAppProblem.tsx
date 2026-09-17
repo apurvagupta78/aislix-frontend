@@ -40,7 +40,7 @@ export function HomeWhatsAppProblem() {
         </p>
 
         <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_auto_1fr] lg:items-stretch">
-          <div className="rounded-xl border border-border bg-card p-5 shadow-soft sm:p-6">
+          <div className="rounded-xl border border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)] p-5 shadow-soft sm:p-6">
             <div className="flex items-center gap-2 text-muted-foreground">
               <MessageCircle className="size-4" strokeWidth={1.75} aria-hidden="true" />
               <span className="text-xs font-semibold uppercase tracking-wider">Scattered evidence</span>
@@ -61,8 +61,8 @@ export function HomeWhatsAppProblem() {
             <ArrowRight className="size-6 text-brand/60" strokeWidth={1.75} aria-hidden="true" />
           </div>
 
-          <div className="rounded-xl border border-brand/20 bg-brand-soft/30 p-5 shadow-soft sm:p-6">
-            <p className="text-xs font-semibold uppercase tracking-wider text-brand">
+          <div className="rounded-xl border border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)] p-5 shadow-soft sm:p-6">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--aislix-primary)]">
               Structured Aislix record
             </p>
             <p className="mt-3 text-base font-semibold tracking-tight text-foreground">

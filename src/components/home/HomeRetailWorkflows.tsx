@@ -1,7 +1,14 @@
-import { Building2, PackageSearch, ShoppingCart, Store, Truck } from "lucide-react";
+import { Building2, PackageSearch, ShoppingCart, Store, Warehouse } from "lucide-react";
 import { SectionHeading } from "@/components/landing/retail-shelf-intelligence/shared";
 
 const WORKFLOWS = [
+  {
+    modelClass: "border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)]",
+    Icon: Store,
+    title: "Local Stores",
+    headline: "Turn every store visit into measurable execution.",
+    body: "Track availability, assortment, facings, pricing and promotions without complicated retail systems.",
+  },
   {
     modelClass: "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)]",
     Icon: ShoppingCart,
@@ -17,25 +24,18 @@ const WORKFLOWS = [
     body: "Monitor availability, location accuracy, planogram compliance, assortment and facings.",
   },
   {
+    modelClass: "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]",
+    Icon: Warehouse,
+    title: "Warehouses",
+    headline: "Know whether inventory is accurate and in the right place.",
+    body: "Audit receiving, bin accuracy, putaway, picking and dispatch without a separate warehouse tool.",
+  },
+  {
     modelClass: "border-[var(--aislix-fmcg-border)] bg-[var(--aislix-fmcg-bg)]",
     Icon: PackageSearch,
-    title: "FMCG Brands",
-    headline: "Know how your brand is performing on the shelf.",
-    body: "Measure Share of Shelf, availability, facings, planogram execution and promotional compliance.",
-  },
-  {
-    modelClass: "border-[var(--aislix-fmcg-border)] bg-[var(--aislix-fmcg-bg)]",
-    Icon: Truck,
-    title: "Distributors",
-    headline: "Know whether every outlet is executing the range.",
-    body: "Track availability, must-stock compliance, planogram, pricing and promotions.",
-  },
-  {
-    modelClass: "border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)]",
-    Icon: Store,
-    title: "Local Stores",
-    headline: "Turn every store visit into measurable execution.",
-    body: "Track availability, assortment, facings, pricing and promotions without complicated retail systems.",
+    title: "FMCG / Distributors",
+    headline: "Know how the brand and outlet network are executing.",
+    body: "Measure Share of Shelf, availability, facings, must-stock, planogram, pricing and promotions.",
   },
 ];
 
@@ -51,7 +51,7 @@ export function HomeRetailWorkflows() {
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {WORKFLOWS.map(({ Icon, title, headline, body, modelClass }) => (
             <div key={title} className={`rounded-xl border p-5 shadow-soft ${modelClass}`}>
-              <Icon className="size-5 text-brand" strokeWidth={1.75} aria-hidden="true" />
+              <Icon className="size-5 text-[var(--aislix-primary)]" strokeWidth={1.75} aria-hidden="true" />
               <h3 className="mt-3 text-sm font-semibold text-foreground">{title}</h3>
               <p className="mt-2 text-xs font-medium leading-snug text-foreground/90">{headline}</p>
               <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{body}</p>

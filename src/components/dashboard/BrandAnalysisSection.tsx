@@ -116,12 +116,12 @@ function BrandMixDonut({ segments }: { segments: BrandAnalysisData["mix_segments
                   key={entry.name}
                   fill={
                     entry.is_primary
-                      ? "hsl(var(--brand))"
+                      ? "var(--aislix-primary)"
                       : i === 1
-                        ? "hsl(var(--brand) / 0.65)"
+                        ? "var(--aislix-warehouse-bg)"
                         : i === 2
-                          ? "hsl(var(--brand) / 0.4)"
-                          : "hsl(var(--muted-foreground) / 0.35)"
+                          ? "var(--aislix-local-bg)"
+                          : "var(--aislix-custom-bg)"
                   }
                 />
               ))}
@@ -201,7 +201,7 @@ function ShelfShareTrendCard({ trendData }: { trendData: BrandTrendPoint[] }) {
             {targetShare !== null ? (
               <ReferenceLine
                 y={targetShare}
-                stroke="hsl(215 16% 62%)"
+                stroke="var(--aislix-secondary)"
                 strokeDasharray="4 4"
                 label={{ value: "Target", fontSize: 10, fill: "var(--muted-foreground)" }}
               />
@@ -209,9 +209,9 @@ function ShelfShareTrendCard({ trendData }: { trendData: BrandTrendPoint[] }) {
             <Line
               type="monotone"
               dataKey="actual_share"
-              stroke="hsl(var(--brand))"
+              stroke="var(--aislix-primary)"
               strokeWidth={2}
-              dot={{ r: 3, fill: "hsl(var(--brand))" }}
+              dot={{ r: 3, fill: "var(--aislix-primary)" }}
               activeDot={{ r: 5 }}
             />
           </LineChart>

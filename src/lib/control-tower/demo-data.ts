@@ -1,3 +1,4 @@
+import { AISLIX, AISLIX_STATUS_MIX } from "@/lib/aislix-theme";
 import type { OperatingModel } from "@/lib/audit-builder/types";
 import { getTerminology } from "@/lib/audit-engine/operating-model-catalog";
 import { resolveKpiCatalog, templateCategoriesForModel, templateCountForModel } from "./kpi-catalog";
@@ -141,9 +142,9 @@ function buildOperationalTrend(model: ControlTowerModelFilter): {
     case "dark_store":
       return {
         metrics: [
-          { key: "inventoryAccuracy", label: "Inventory Accuracy", color: "hsl(var(--brand))" },
-          { key: "variance", label: "Variance", color: "hsl(var(--warning))" },
-          { key: "expiryRisk", label: "Expiry Risk", color: "hsl(var(--destructive))" },
+          { key: "inventoryAccuracy", label: "Inventory Accuracy", color: AISLIX.primary },
+          { key: "variance", label: "Variance", color: AISLIX.warehouseBg },
+          { key: "expiryRisk", label: "Expiry Risk", color: AISLIX.darkstoreBg },
         ],
         points: days.map((date, i) => ({
           date,
@@ -155,9 +156,9 @@ function buildOperationalTrend(model: ControlTowerModelFilter): {
     case "supermarket":
       return {
         metrics: [
-          { key: "planogram", label: "Planogram", color: "hsl(var(--brand))" },
-          { key: "oos", label: "OOS %", color: "hsl(var(--destructive))" },
-          { key: "shelfExecution", label: "Shelf Execution", color: "hsl(var(--accent-green))" },
+          { key: "planogram", label: "Planogram", color: AISLIX.primary },
+          { key: "oos", label: "OOS %", color: AISLIX.darkstoreBg },
+          { key: "shelfExecution", label: "Shelf Execution", color: AISLIX.supermarketBg },
         ],
         points: days.map((date, i) => ({
           date,
@@ -169,9 +170,9 @@ function buildOperationalTrend(model: ControlTowerModelFilter): {
     case "warehouse":
       return {
         metrics: [
-          { key: "inventory", label: "Inventory", color: "hsl(var(--brand))" },
-          { key: "receiving", label: "Receiving", color: "hsl(var(--accent-green))" },
-          { key: "putaway", label: "Putaway", color: "hsl(var(--warning))" },
+          { key: "inventory", label: "Inventory", color: AISLIX.primary },
+          { key: "receiving", label: "Receiving", color: AISLIX.supermarketBg },
+          { key: "putaway", label: "Putaway", color: AISLIX.warehouseBg },
         ],
         points: days.map((date, i) => ({
           date,
@@ -183,9 +184,9 @@ function buildOperationalTrend(model: ControlTowerModelFilter): {
     case "fmcg_distributor":
       return {
         metrics: [
-          { key: "outletCoverage", label: "Outlet Coverage", color: "hsl(var(--brand))" },
-          { key: "availability", label: "Availability", color: "hsl(var(--accent-green))" },
-          { key: "execution", label: "Execution", color: "hsl(var(--warning))" },
+          { key: "outletCoverage", label: "Outlet Coverage", color: AISLIX.primary },
+          { key: "availability", label: "Availability", color: AISLIX.supermarketBg },
+          { key: "execution", label: "Execution", color: AISLIX.warehouseBg },
         ],
         points: days.map((date, i) => ({
           date,
@@ -197,9 +198,9 @@ function buildOperationalTrend(model: ControlTowerModelFilter): {
     case "local_store":
       return {
         metrics: [
-          { key: "inventory", label: "Inventory", color: "hsl(var(--brand))" },
-          { key: "expiry", label: "Expiry Risk", color: "hsl(var(--destructive))" },
-          { key: "shelf", label: "Shelf", color: "hsl(var(--accent-green))" },
+          { key: "inventory", label: "Inventory", color: AISLIX.primary },
+          { key: "expiry", label: "Expiry Risk", color: AISLIX.darkstoreBg },
+          { key: "shelf", label: "Shelf", color: AISLIX.supermarketBg },
         ],
         points: days.map((date, i) => ({
           date,
@@ -211,8 +212,8 @@ function buildOperationalTrend(model: ControlTowerModelFilter): {
     default:
       return {
         metrics: [
-          { key: "completed", label: "Audits Completed", color: "hsl(var(--brand))" },
-          { key: "findings", label: "Findings", color: "hsl(var(--destructive))" },
+          { key: "completed", label: "Audits Completed", color: AISLIX.primary },
+          { key: "findings", label: "Findings", color: AISLIX.darkstoreBg },
         ],
         points: days.map((date, i) => ({
           date,
@@ -372,11 +373,11 @@ export function buildControlTowerDemo(model: ControlTowerModelFilter): ControlTo
     contextualKpis,
     auditSpecificKpis,
     auditStatus: [
-      { name: "Assigned", value: 12, color: "hsl(var(--muted-foreground))" },
-      { name: "In Progress", value: 8, color: "hsl(var(--brand))" },
-      { name: "Submitted", value: 6, color: "hsl(var(--warning))" },
-      { name: "Approved", value: 142, color: "hsl(var(--accent-green))" },
-      { name: "Overdue", value: 6, color: "hsl(var(--destructive))" },
+      { name: "Assigned", value: 12, color: AISLIX_STATUS_MIX.Assigned },
+      { name: "In Progress", value: 8, color: AISLIX_STATUS_MIX["In Progress"] },
+      { name: "Submitted", value: 6, color: AISLIX_STATUS_MIX.Submitted },
+      { name: "Approved", value: 142, color: AISLIX_STATUS_MIX.Approved },
+      { name: "Overdue", value: 6, color: AISLIX_STATUS_MIX.Overdue },
     ],
     riskLocations: riskLocationsFull.slice(0, 4),
     riskSkus: riskSkusFull.slice(0, 4),

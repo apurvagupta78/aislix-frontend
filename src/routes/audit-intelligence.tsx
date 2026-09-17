@@ -139,7 +139,7 @@ function AuditIntelligencePage() {
                   <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                   <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
                   <Tooltip />
-                  <Line type="monotone" dataKey="compliance" stroke="hsl(var(--brand))" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="compliance" stroke="var(--aislix-primary)" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
@@ -154,7 +154,7 @@ function AuditIntelligencePage() {
                   <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip />
-                  <Bar dataKey="variance" fill="hsl(var(--warning))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="variance" fill="var(--aislix-darkstore-bg)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

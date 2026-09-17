@@ -23,7 +23,7 @@ export function CollectionMethodBadge({
     digital: {
       label: "Digital Audit",
       icon: ClipboardList,
-      className: "bg-brand-soft text-brand border-brand/20",
+      className: "bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)] border-[var(--aislix-warehouse-border)]",
     },
     ai: {
       label: "AI Audit",
@@ -61,14 +61,14 @@ export function WorkflowBadge({
   const label = status.replace(/_/g, " ");
   const tone =
     status === "approved" || status === "completed"
-      ? "bg-accent-green/12 text-accent-green"
+      ? "bg-[var(--aislix-supermarket-bg)] text-[var(--aislix-primary)]"
       : status === "pending_review" || status === "submitted"
-        ? "bg-brand-soft text-brand"
+        ? "bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]"
         : status === "rejected" || status === "needs_correction"
-          ? "bg-destructive/10 text-destructive"
+          ? "bg-[var(--aislix-darkstore-bg)] text-[var(--aislix-primary)]"
           : status === "in_progress"
-            ? "bg-warning/10 text-warning"
-            : "bg-muted text-muted-foreground";
+            ? "bg-[var(--aislix-local-bg)] text-[var(--aislix-primary)]"
+            : "bg-[var(--aislix-custom-bg)] text-[var(--aislix-secondary)]";
   return (
     <Badge variant="secondary" className={cn("rounded-full border-0 capitalize", tone, className)}>
       {label}
