@@ -97,6 +97,10 @@ export type AuditExecutionRow = {
   assignedTo: string;
   dueDate: string;
   operatingModel: string;
+  date: string;
+  city: string;
+  scanId: string | null;
+  stage: "Not started" | "In progress" | "Completed";
 };
 
 export type EvidenceCoverageRow = {

@@ -15,6 +15,7 @@ import {
   Tag,
   Users,
   X,
+  Barcode,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,52 @@ type Option = { value: string; label: string };
 
 const CONTROL =
   "h-9 shrink-0 rounded-lg border border-border bg-surface px-2.5 text-xs font-normal text-foreground shadow-soft hover:bg-[var(--aislix-local-bg)] focus:ring-2 focus:ring-ring/60 data-[state=open]:bg-[var(--aislix-warehouse-bg)]";
+
+function CatalogFields({
+  filters,
+  onChange,
+}: {
+  filters: DashboardFilterState;
+  onChange: (next: DashboardFilterState) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <label className="block">
+        <span className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <Barcode className="size-3" /> SKU ID
+        </span>
+        <Input
+          className={cn(CONTROL, "w-full")}
+          value={filters.skuId ?? ""}
+          placeholder="All SKU IDs"
+          onChange={(e) => onChange({ ...filters, skuId: e.target.value })}
+        />
+      </label>
+      <label className="block">
+        <span className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Item code
+        </span>
+        <Input
+          className={cn(CONTROL, "w-full")}
+          value={filters.itemCode ?? ""}
+          placeholder="All item codes"
+          onChange={(e) => onChange({ ...filters, itemCode: e.target.value })}
+        />
+      </label>
+      <label className="block">
+        <span className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Item name
+        </span>
+        <Input
+          className={cn(CONTROL, "w-full")}
+          value={filters.itemName ?? ""}
+          placeholder="All item names"
+          onChange={(e) => onChange({ ...filters, itemName: e.target.value })}
+        />
+      </label>
+    </div>
+  );
+}
 
 function CompactSelect({
   label,
@@ -380,6 +427,7 @@ function MoreFiltersPopover({
           allLabel="All audits"
           className="w-full"
         />
+        <CatalogFields filters={filters} onChange={onChange} />
       </PopoverContent>
     </Popover>
   );
@@ -442,7 +490,10 @@ function DesktopToolbar({
   const moreActive =
     (filters.subCategory !== "all" ? 1 : 0) +
     (filters.teamMemberId !== "all" ? 1 : 0) +
-    (filters.auditAssignment !== "all" ? 1 : 0);
+    (filters.auditAssignment !== "all" ? 1 : 0) +
+    ((filters.skuId ?? "").trim() ? 1 : 0) +
+    ((filters.itemCode ?? "").trim() ? 1 : 0) +
+    ((filters.itemName ?? "").trim() ? 1 : 0);
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
@@ -666,6 +717,7 @@ function MobileFilters({
             allLabel="All audits"
             className="w-full"
           />
+          <CatalogFields filters={draft} onChange={setDraft} />
         </div>
         <div className="mt-5 flex gap-2">
           <Button

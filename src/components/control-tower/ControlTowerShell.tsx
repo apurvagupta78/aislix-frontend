@@ -51,6 +51,7 @@ import {
 } from "@/lib/control-tower";
 import { DashboardSectionHeader } from "./DashboardSectionHeader";
 import { ControlTowerMetricsBoard } from "./ControlTowerMetricsBoard";
+import { DashboardAuditsTable } from "./DashboardAuditsTable";
 import { DashboardVisualBoard } from "./DashboardVisualBoard";
 import { AISLIX, AISLIX_CHART, AISLIX_MODEL_SURFACE, AISLIX_STATUS_MIX } from "@/lib/aislix-theme";
 
@@ -132,6 +133,11 @@ export function ControlTowerShell({
   return (
     <div className="space-y-8">
       <LiveBanner templateCount={data.templateCount} categories={data.templateCategories} model={model} />
+
+      <DashboardAuditsTable
+        rows={data.auditExecutionFull}
+        onDownloadCsv={() => exportAuditExecutionCsv(data, filters)}
+      />
 
       <section className="space-y-4">
         <div>

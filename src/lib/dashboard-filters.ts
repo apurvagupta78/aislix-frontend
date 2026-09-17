@@ -32,6 +32,9 @@ export type DashboardFilterState = {
   auditAssignment: DashboardAssignmentFilter;
   /** Role primary KPI focus — "all" shows every KRI area. */
   kri: AuditKpiId | "all";
+  skuId: string;
+  itemCode: string;
+  itemName: string;
 };
 
 export const DEFAULT_DASHBOARD_FILTERS: DashboardFilterState = {
@@ -47,6 +50,9 @@ export const DEFAULT_DASHBOARD_FILTERS: DashboardFilterState = {
   teamMemberId: "all",
   auditAssignment: "all",
   kri: "all",
+  skuId: "",
+  itemCode: "",
+  itemName: "",
 };
 
 export type DashboardStoreOption = {
@@ -152,7 +158,10 @@ export function isDefaultDashboardFilters(filters: DashboardFilterState): boolea
     filters.subCategory === "all" &&
     filters.teamMemberId === "all" &&
     filters.auditAssignment === "all" &&
-    filters.kri === "all"
+    filters.kri === "all" &&
+    !(filters.skuId ?? "").trim() &&
+    !(filters.itemCode ?? "").trim() &&
+    !(filters.itemName ?? "").trim()
   );
 }
 
@@ -214,6 +223,16 @@ export function dashboardFilterChips(
     chips.push({ key: "kri", label: opt?.label ?? KPI_DASHBOARD_LABELS[filters.kri] });
   }
 
+  if (filters.skuId.trim()) {
+    chips.push({ key: "skuId", label: `SKU ${filters.skuId.trim()}` });
+  }
+  if (filters.itemCode.trim()) {
+    chips.push({ key: "itemCode", label: `Item ${filters.itemCode.trim()}` });
+  }
+  if (filters.itemName.trim()) {
+    chips.push({ key: "itemName", label: filters.itemName.trim() });
+  }
+
   return chips;
 }
 
@@ -233,6 +252,9 @@ export function clearDashboardFilterChip(
   }
   if (chipKey === "category") {
     return { ...filters, category: "all", subCategory: "all" };
+  }
+  if (chipKey === "skuId" || chipKey === "itemCode" || chipKey === "itemName") {
+    return { ...filters, [chipKey]: "" };
   }
   return { ...filters, [chipKey]: defaults[chipKey as keyof DashboardFilterState] };
 }

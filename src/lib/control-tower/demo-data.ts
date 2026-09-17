@@ -328,6 +328,10 @@ function buildFullAuditExecution(loc: string, model: string, count: number) {
     assignedTo: ["R. Sharma", "P. Singh", "A. Khan"][i % 3]!,
     dueDate: new Date(Date.now() + (i - 3) * 86400000).toISOString().slice(0, 10),
     operatingModel: model,
+    date: new Date(Date.now() - i * 86400000).toISOString().slice(0, 10),
+    city: ["Delhi", "Gurugram", "Noida"][i % 3]!,
+    scanId: i % 4 === 0 ? null : `scan-${i + 1}`,
+    stage: (["Not started", "In progress", "Completed"] as const)[i % 3]!,
   }));
 }
 

@@ -46,12 +46,12 @@ export function exportAuditExecutionCsv(
   data: ControlTowerDemoPayload,
   filters: DashboardFilterState,
 ) {
-  const header = row(["Audit ID", "Status", "Location", "Template", "Assigned To", "Due Date", "Operating Model"]);
+  const header = row(["Date", "Audit ID", "Store", "City", "Audit Name", "Assigned To", "Stage"]);
   const lines = [
     ...metaHeader("Audit Execution", data.operatingModel, filters),
     header,
     ...data.auditExecutionFull.map((r) =>
-      row([r.auditId, r.status, r.location, r.template, r.assignedTo, r.dueDate, r.operatingModel]),
+      row([r.date, r.auditId, r.location, r.city, r.template, r.assignedTo, r.stage]),
     ),
   ];
   downloadCsv(`audit-execution-${data.operatingModel}.csv`, lines);

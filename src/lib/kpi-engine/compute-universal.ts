@@ -16,7 +16,7 @@ import {
   type DashboardDateBounds,
   type DashboardFilterState,
 } from "@/lib/dashboard-filters";
-import { requireOrgId } from "@/lib/db/context";
+import { requireOrgId, requireUserId } from "@/lib/db/context";
 import { fetchFindings, findingTypeLabel, rcaLabel, type Finding } from "@/lib/findings";
 import { resolveKpiCatalog } from "@/lib/control-tower/kpi-catalog";
 import { resolveKpiEngine } from "@/lib/kpi-engine/resolver";
@@ -62,6 +62,11 @@ export type AssignmentComputeRow = {
   template_id: string | null;
   template_name: string;
   operating_model: string | null;
+  city?: string;
+  scan_id?: string | null;
+  category?: string;
+  sub_category?: string;
+  assigner_id?: string | null;
 };
 
 export type UniversalComputeInput = {
@@ -130,6 +135,117 @@ export function countDueTodayActions(
     if (CLOSED_ACTION.has(r.status) || !r.due_at) return false;
     return new Date(r.due_at).toDateString() === now.toDateString();
   }).length;
+}
+
+export function assignmentStage(
+  status: string,
+): "Not started" | "In progress" | "Completed" | null {
+  if (status === "cancelled") return null;
+  if (status === "completed") return "Completed";
+  if (status === "in_progress" || status === "needs_correction") return "In progress";
+  return "Not started";
+}
+
+function likePattern(raw: string): string | null {
+  const q = raw.trim().replace(/[%_,]/g, "").slice(0, 80);
+  return q ? `%${q}%` : null;
+}
+
+function scopeLabel(scope: unknown, key: string, plural: string): string {
+  if (!scope || typeof scope !== "object") return "";
+  const rec = scope as Record<string, unknown>;
+  const single = rec[key];
+  if (typeof single === "string" && single.trim()) return single.trim();
+  const many = rec[plural];
+  if (Array.isArray(many) && typeof many[0] === "string") return many[0];
+  return "";
+}
+
+async function assignmentIdsMatchingCatalog(
+  orgId: string,
+  assignments: AssignmentComputeRow[],
+  filters: DashboardFilterState,
+): Promise<Set<string> | null> {
+  const sku = likePattern(filters.skuId ?? "");
+  const itemCode = likePattern(filters.itemCode ?? "");
+  const itemName = likePattern(filters.itemName ?? "");
+  if (!sku && !itemCode && !itemName) return null;
+
+  const scanIds = assignments.map((a) => a.scan_id).filter(Boolean) as string[];
+  const ids = new Set<string>();
+
+  const queries: Array<Promise<void>> = [];
+
+  if (scanIds.length && (sku || itemName)) {
+    let q = supabase.from("detected_products").select("scan_id").in("scan_id", scanIds.slice(0, 500));
+    if (sku) q = q.ilike("sku", sku);
+    if (itemName) q = q.ilike("name", itemName);
+    queries.push(
+      q.then(({ data }) => {
+        const scanToAssignment = new Map(
+          assignments.filter((a) => a.scan_id).map((a) => [a.scan_id as string, a.id]),
+        );
+        for (const row of data ?? []) {
+          const aid = scanToAssignment.get(row.scan_id as string);
+          if (aid) ids.add(aid);
+        }
+      }),
+    );
+  }
+
+  {
+    let q = supabase
+      .from("digital_audit_lines")
+      .select("assignment_id, scan_id")
+      .eq("org_id", orgId)
+      .limit(2000);
+    if (sku) q = q.ilike("sku", sku);
+    if (itemCode) q = q.ilike("item_code", itemCode);
+    if (itemName) q = q.ilike("product_name", itemName);
+    queries.push(
+      q.then(({ data }) => {
+        const scanToAssignment = new Map(
+          assignments.filter((a) => a.scan_id).map((a) => [a.scan_id as string, a.id]),
+        );
+        for (const row of data ?? []) {
+          if (row.assignment_id) ids.add(row.assignment_id as string);
+          else if (row.scan_id) {
+            const aid = scanToAssignment.get(row.scan_id as string);
+            if (aid) ids.add(aid);
+          }
+        }
+      }),
+    );
+  }
+
+  await Promise.all(queries);
+  return ids;
+}
+
+function toAuditExecutionRows(
+  assignments: AssignmentComputeRow[],
+  model: ControlTowerModelFilter,
+  now: number,
+): AuditExecutionRow[] {
+  const rows: AuditExecutionRow[] = [];
+  for (const a of assignments) {
+    const stage = assignmentStage(a.status);
+    if (!stage) continue;
+    rows.push({
+      auditId: a.id,
+      status: assignmentStatusBucket(a, now) ?? a.status,
+      location: a.store_name,
+      template: a.template_name,
+      assignedTo: a.assignee_name,
+      dueDate: a.due_at ? a.due_at.slice(0, 10) : "—",
+      operatingModel: a.operating_model ?? (model === "all" ? "all" : model),
+      date: a.created_at.slice(0, 10),
+      city: a.city || "—",
+      scanId: a.scan_id ?? null,
+      stage,
+    });
+  }
+  return rows;
 }
 
 export function assignmentStatusBucket(
@@ -450,15 +566,7 @@ export function computeUniversalDashboardFromRows(input: UniversalComputeInput):
     now,
   );
 
-  const executionFull: AuditExecutionRow[] = input.assignments.map((a) => ({
-    auditId: a.id,
-    status: assignmentStatusBucket(a, now) ?? a.status,
-    location: a.store_name,
-    template: a.template_name,
-    assignedTo: a.assignee_name,
-    dueDate: a.due_at ? a.due_at.slice(0, 10) : "—",
-    operatingModel: a.operating_model ?? (model === "all" ? "all" : model),
-  }));
+  const executionFull: AuditExecutionRow[] = toAuditExecutionRows(input.assignments, model, now);
 
   return {
     labeledDemo: false,
@@ -533,13 +641,14 @@ export async function computeUniversalDashboard(input: {
   filters: DashboardFilterState;
 }): Promise<ControlTowerDemoPayload> {
   const orgId = await requireOrgId();
+  const userId = await requireUserId();
   const bounds = resolveDashboardDateBounds(input.filters);
   const storeIds = await fetchStoreScope(orgId, input.filters);
 
   let assignmentQuery = supabase
     .from("scan_assignments")
     .select(
-      "id, status, approval_status, store_id, due_at, created_at, assignee_id, template_id, stores:store_id (name)",
+      "id, status, approval_status, store_id, due_at, created_at, assignee_id, assigner_id, template_id, scan_id, scope_values, stores:store_id (name, city)",
     )
     .eq("org_id", orgId)
     .order("created_at", { ascending: false })
@@ -599,8 +708,11 @@ export async function computeUniversalDashboard(input: {
     due_at: string | null;
     created_at: string;
     assignee_id: string;
+    assigner_id?: string | null;
     template_id: string | null;
-    stores?: { name?: string | null } | null;
+    scan_id?: string | null;
+    scope_values?: unknown;
+    stores?: { name?: string | null; city?: string | null } | null;
   }>;
 
   const userIds = [...new Set(rawAssignments.map((r) => r.assignee_id).filter(Boolean))];
@@ -632,6 +744,11 @@ export async function computeUniversalDashboard(input: {
       template_id: row.template_id,
       template_name: tpl?.name ?? "Audit",
       operating_model: tpl?.operating_model ?? null,
+      city: row.stores?.city ?? "",
+      scan_id: row.scan_id ?? null,
+      category: scopeLabel(row.scope_values, "category", "categories"),
+      sub_category: scopeLabel(row.scope_values, "sub_category", "sub_categories"),
+      assigner_id: row.assigner_id ?? null,
     };
   });
 
@@ -676,6 +793,38 @@ export async function computeUniversalDashboard(input: {
     storeNames: Object.fromEntries(actionStoreNames),
     bounds,
   });
+
+  let tableAssignments = assignments;
+  if (input.filters.category && input.filters.category !== "all") {
+    const cat = input.filters.category.toLowerCase();
+    tableAssignments = tableAssignments.filter((a) => (a.category || "").toLowerCase() === cat);
+  }
+  if (input.filters.subCategory && input.filters.subCategory !== "all") {
+    const sub = input.filters.subCategory.toLowerCase();
+    tableAssignments = tableAssignments.filter((a) => (a.sub_category || "").toLowerCase() === sub);
+  }
+  if (input.filters.auditAssignment === "assigned_to_me") {
+    tableAssignments = tableAssignments.filter((a) => a.assignee_id === userId);
+  } else if (input.filters.auditAssignment === "assigned_by_me") {
+    tableAssignments = tableAssignments.filter((a) => a.assigner_id === userId);
+  } else if (input.filters.auditAssignment === "unassigned") {
+    tableAssignments = tableAssignments.filter((a) => !a.assignee_id);
+  }
+
+  const catalogIds = await assignmentIdsMatchingCatalog(orgId, tableAssignments, input.filters);
+  if (catalogIds) {
+    const sku = (input.filters.skuId ?? "").trim().toLowerCase();
+    const itemName = (input.filters.itemName ?? "").trim().toLowerCase();
+    for (const f of scopedFindings) {
+      if (sku && (f.sku || "").toLowerCase().includes(sku) && f.assignment_id) catalogIds.add(f.assignment_id);
+      if (itemName && (f.product_name || "").toLowerCase().includes(itemName) && f.assignment_id) {
+        catalogIds.add(f.assignment_id);
+      }
+    }
+    tableAssignments = tableAssignments.filter((a) => catalogIds.has(a.id));
+  }
+
+  payload.auditExecutionFull = toAuditExecutionRows(tableAssignments, input.model, Date.now());
 
   const orgTemplates = (templates ?? []).filter((t) =>
     matchesModel((t.operating_model as string | null) ?? null, input.model),

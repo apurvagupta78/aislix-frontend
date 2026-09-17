@@ -34,15 +34,16 @@ function AuditExecutionPage() {
       title="Audit Execution"
       description="Full assignment and audit status for the selected Control Tower scope."
       columns={[
+        { key: "date", label: "Date" },
         { key: "auditId", label: "Audit ID" },
-        { key: "status", label: "Status" },
-        { key: "location", label: "Location" },
-        { key: "template", label: "Template" },
-        { key: "assignedTo", label: "Assigned To" },
-        { key: "dueDate", label: "Due Date" },
+        { key: "location", label: "Store" },
+        { key: "city", label: "City" },
+        { key: "template", label: "Audit Name" },
+        { key: "assignedTo", label: "Audit Assigned" },
+        { key: "stage", label: "Stage" },
       ]}
-      rows={data.auditExecutionFull}
-      searchKeys={["auditId", "location", "template", "assignedTo", "status"]}
+      rows={data.auditExecutionFull as unknown as Record<string, unknown>[]}
+      searchKeys={["auditId", "location", "city", "template", "assignedTo", "stage"]}
       onExportCsv={() => exportAuditExecutionCsv(data, filters)}
       backSearch={backToDashboardSearch(search)}
       ctModel={model}

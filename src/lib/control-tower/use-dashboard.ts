@@ -15,7 +15,12 @@ export function controlTowerQueryKey(model: ControlTowerModelFilter, filters: Da
     filters.city,
     filters.storeId,
     filters.category,
+    filters.subCategory,
     filters.teamMemberId,
+    filters.auditAssignment,
+    filters.skuId,
+    filters.itemCode,
+    filters.itemName,
   ] as const;
 }
 

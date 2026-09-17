@@ -14,6 +14,7 @@ import {
   countOverdueActions,
   formatInrCompact,
   isCompletedAssignment,
+  assignmentStage,
   NOT_WIRED_YET,
 } from "./compute-universal";
 
@@ -120,6 +121,14 @@ describe("universal dashboard compute helpers", () => {
     ];
     expect(countOpenActions(rows)).toBe(2);
     expect(countOverdueActions(rows, now)).toBe(1);
+  });
+
+  it("maps assignment status to not started / in progress / completed", () => {
+    expect(assignmentStage("pending")).toBe("Not started");
+    expect(assignmentStage("in_progress")).toBe("In progress");
+    expect(assignmentStage("needs_correction")).toBe("In progress");
+    expect(assignmentStage("completed")).toBe("Completed");
+    expect(assignmentStage("cancelled")).toBeNull();
   });
 
   it("buckets assignment status including overdue vs approved", () => {
