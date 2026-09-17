@@ -105,3 +105,9 @@ export const GLOBAL_FILTER_PATHS = [
 export function pathUsesGlobalFilters(pathname: string): boolean {
   return GLOBAL_FILTER_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
+
+/** Main Control Tower renders filters above the audits table instead of in AppShell. */
+export function pathShowsGlobalFilterBarInShell(pathname: string): boolean {
+  if (pathname === "/dashboard") return false;
+  return pathUsesGlobalFilters(pathname);
+}

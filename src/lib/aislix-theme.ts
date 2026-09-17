@@ -41,6 +41,10 @@ export const AISLIX_STATUS_MIX: Record<string, string> = {
   Overdue: AISLIX.darkstoreBg,
 };
 
+/** Matches the corrective action load surface — primary CTA on Control Tower. */
+export const NEW_AUDIT_BUTTON_CLASS =
+  "rounded-xl border border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)] text-[var(--aislix-primary)] shadow-soft hover:bg-[var(--aislix-supermarket-border)]/35";
+
 export const AISLIX_MODEL_SURFACE: Record<string, { bg: string; border: string }> = {
   all: { bg: AISLIX.customBg, border: AISLIX.customBorder },
   local_store: { bg: AISLIX.localBg, border: AISLIX.localBorder },

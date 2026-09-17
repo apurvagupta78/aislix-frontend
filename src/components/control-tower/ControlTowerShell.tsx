@@ -49,6 +49,7 @@ import {
   type ControlTowerModelFilter,
   type ControlTowerSearch,
 } from "@/lib/control-tower";
+import { WorkspaceFilterBar } from "@/components/filters/GlobalFilterBarShell";
 import { DashboardSectionHeader } from "./DashboardSectionHeader";
 import { ControlTowerMetricsBoard } from "./ControlTowerMetricsBoard";
 import { DashboardAuditsTable } from "./DashboardAuditsTable";
@@ -134,10 +135,20 @@ export function ControlTowerShell({
     <div className="space-y-8">
       <LiveBanner templateCount={data.templateCount} categories={data.templateCategories} model={model} />
 
-      <DashboardAuditsTable
-        rows={data.auditExecutionFull}
-        onDownloadCsv={() => exportAuditExecutionCsv(data, filters)}
-      />
+      {routePath === "/dashboard" ? (
+        <div className="space-y-3">
+          <WorkspaceFilterBar />
+          <DashboardAuditsTable
+            rows={data.auditExecutionFull}
+            onDownloadCsv={() => exportAuditExecutionCsv(data, filters)}
+          />
+        </div>
+      ) : (
+        <DashboardAuditsTable
+          rows={data.auditExecutionFull}
+          onDownloadCsv={() => exportAuditExecutionCsv(data, filters)}
+        />
+      )}
 
       <section className="space-y-4">
         <div>

@@ -59,6 +59,7 @@ import {
 } from "@/lib/notifications";
 import { formatAssignmentId } from "@/components/AssignmentId";
 import { GlobalFilterBarShell } from "@/components/filters/GlobalFilterBarShell";
+import { NEW_AUDIT_BUTTON_CLASS } from "@/lib/aislix-theme";
 import { Badge } from "@/components/ui/badge";
 import { GlobalFilterProvider } from "@/lib/global-filters";
 import { PageHeader } from "@/components/design-system";
@@ -588,9 +589,9 @@ export function AppShell({
                   />
                 </form>
                 <div className="ml-auto flex items-center gap-2">
-                  <Button asChild variant="brand" size="sm" className="rounded-xl shadow-sm">
+                  <Button asChild variant="outline" size="sm" className={NEW_AUDIT_BUTTON_CLASS}>
                     <Link to="/new-audit">
-                      <Plus className="size-4" /> New audit
+                      <Plus className="size-4" /> New Audit
                     </Link>
                   </Button>
                   <DropdownMenu>

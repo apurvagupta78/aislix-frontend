@@ -1,10 +1,11 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { LayoutGrid, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 import { ControlTowerShell } from "@/components/control-tower/ControlTowerShell";
 import { DashboardSubNav } from "@/components/control-tower/DashboardSubNav";
 import { Button } from "@/components/ui/button";
+import { NEW_AUDIT_BUTTON_CLASS } from "@/lib/aislix-theme";
 import type { ControlTowerSearch } from "@/lib/control-tower";
 
 function parseControlTowerSearch(search: Record<string, unknown>): ControlTowerSearch {
@@ -52,18 +53,11 @@ function DashboardPage() {
       title="Control Tower"
       description="See what needs attention, drill in, and assign fixes — at a glance."
       actions={
-        <div className="flex gap-2">
-          <Button asChild variant="outline" size="sm" className="rounded-xl">
-            <Link to="/audit-templates">
-              <LayoutGrid className="size-4" /> Templates
-            </Link>
-          </Button>
-          <Button asChild variant="brand" size="sm" className="rounded-xl">
-            <Link to="/new-audit">
-              <Plus className="size-4" /> New audit
-            </Link>
-          </Button>
-        </div>
+        <Button asChild variant="outline" size="sm" className={NEW_AUDIT_BUTTON_CLASS}>
+          <Link to="/new-audit">
+            <Plus className="size-4" /> New Audit
+          </Link>
+        </Button>
       }
     >
       <DashboardSubNav />
