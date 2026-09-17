@@ -143,6 +143,7 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
   }
 
   const data = query.data;
+  const locLabel = data.terminology.locationPlural;
 
   return (
     <div className="space-y-8">
