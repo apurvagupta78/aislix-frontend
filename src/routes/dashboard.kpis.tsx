@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { ControlTowerDataTable } from "@/components/control-tower/ControlTowerDataTable";
+import { EmptyState, Skeleton } from "@/components/States";
 import {
   backToDashboardSearch,
-  buildControlTowerDemo,
   exportKpiCsv,
   parseControlTowerPageSearch,
+  useControlTowerDashboard,
 } from "@/lib/control-tower";
 import { useGlobalFilters } from "@/lib/global-filters";
 
@@ -19,7 +20,14 @@ function KpisPage() {
   const search = Route.useSearch();
   const { filters } = useGlobalFilters();
   const model = search.ctModel ?? "all";
-  const data = buildControlTowerDemo(model);
+  const query = useControlTowerDashboard(model, filters);
+
+  if (query.isLoading) return <Skeleton className="h-64 w-full rounded-2xl" />;
+  if (query.error || !query.data) {
+    return <EmptyState title="Could not load KPIs" description="Try refreshing the page." />;
+  }
+
+  const data = query.data;
   const rows =
     search.scope === "contextual"
       ? data.contextualKpis
@@ -41,6 +49,7 @@ function KpisPage() {
       onExportCsv={() => exportKpiCsv(data, filters)}
       backSearch={backToDashboardSearch(search)}
       ctModel={model}
+      demoBanner={false}
     />
   );
 }

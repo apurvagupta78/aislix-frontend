@@ -5,3 +5,4 @@ export * from "./drilldown";
 export * from "./filter-context";
 export * from "./exports";
 export * from "./route-search";
+export * from "./use-dashboard";

@@ -64,7 +64,7 @@ export function KpiInfoPopover({ kpi, scopeLabel, periodLabel }: Props) {
               />
             ) : null}
             <InfoSection label="Scope" value={scopeLabel ?? "Current dashboard filters"} />
-            <InfoSection label="Time period" value={periodLabel ?? "Last 7 days (demo)"} />
+            <InfoSection label="Time period" value={periodLabel ?? "Selected dashboard period"} />
             <InfoSection label="How to interpret" value={def.interpretation} />
             {def.whyItMatters ? (
               <InfoSection label="Why this matters" value={def.whyItMatters} />

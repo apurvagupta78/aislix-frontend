@@ -10,11 +10,11 @@ export function buildViewAllSearch(
   return {
     ctModel: search.model && search.model !== "all" ? search.model : undefined,
     ctFrom: "control-tower",
-    ctDateRange: globalFilters.dateRange !== "30d" ? globalFilters.dateRange : undefined,
-    ctCountry: globalFilters.countryId ?? undefined,
-    ctCity: globalFilters.cityId ?? undefined,
-    ctStore: globalFilters.storeId ?? undefined,
-    ctCategory: globalFilters.category ?? undefined,
+    ctDateRange: globalFilters.datePreset !== "7d" ? globalFilters.datePreset : undefined,
+    ctCountry: globalFilters.country !== "all" ? globalFilters.country : undefined,
+    ctCity: globalFilters.city !== "all" ? globalFilters.city : undefined,
+    ctStore: globalFilters.storeId !== "all" ? globalFilters.storeId : undefined,
+    ctCategory: globalFilters.category !== "all" ? globalFilters.category : undefined,
     ...extra,
   };
 }
@@ -30,9 +30,9 @@ export function filterContextSummary(
 ): string {
   const parts: string[] = [];
   if (search.model && search.model !== "all") parts.push(modelFilterLabel(search.model));
-  if (globalFilters.storeId) parts.push(`Store filter active`);
-  if (globalFilters.dateRange && globalFilters.dateRange !== "30d") {
-    parts.push(`Period: ${globalFilters.dateRange}`);
+  if (globalFilters.storeId && globalFilters.storeId !== "all") parts.push("Store filter active");
+  if (globalFilters.datePreset && globalFilters.datePreset !== "7d") {
+    parts.push(`Period: ${globalFilters.datePreset}`);
   }
   return parts.length ? parts.join(" · ") : "All scopes";
 }

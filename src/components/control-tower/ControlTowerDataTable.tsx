@@ -112,7 +112,7 @@ export function ControlTowerDataTable<T extends Record<string, unknown>>({
         {demoBanner ? (
           <div className="rounded-xl border border-amber-300/70 bg-amber-50/80 px-4 py-3 text-xs text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
             <strong>Illustrative demo data</strong> — Phase 1E. Filters:{" "}
-            {modelFilterLabel(ctModel as "all" | undefined)} · Period {filters.dateRange ?? "30d"}
+            {modelFilterLabel(ctModel as "all" | undefined)} · Period {filters.datePreset ?? "7d"}
             {filters.storeId ? " · Store filter active" : ""}
           </div>
         ) : null}

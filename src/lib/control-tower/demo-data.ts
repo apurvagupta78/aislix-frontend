@@ -389,8 +389,8 @@ export function buildControlTowerDemo(model: ControlTowerModelFilter): ControlTo
       pendingVerification: 5,
       closed: 156,
     },
-    sla: { compliancePct: 91, overdue: 7, dueToday: 4, breached: 3, avgResolutionHours: 18 },
-    evidenceCoverage: { required: 1240, verified: 1166, pct: 94 },
+    sla: { available: true, compliancePct: 91, overdue: 7, dueToday: 4, breached: 3, avgResolutionHours: 18 },
+    evidenceCoverage: { available: true, required: 1240, verified: 1166, pct: 94 },
     recurringIssues: recurringIssuesFull.slice(0, 2),
     auditTrend: [
       { date: "Mon", completed: 22, findings: 8 },

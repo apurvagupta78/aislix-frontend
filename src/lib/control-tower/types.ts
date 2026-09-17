@@ -39,6 +39,7 @@ export type ControlTowerKpi = {
   progressPct?: number;
   available: boolean;
   source?: string;
+  unavailableReason?: string;
 };
 
 export type AuditStatusBucket = { name: string; value: number; color?: string };
@@ -122,7 +123,7 @@ export type OperationalTrendPoint = {
 };
 
 export type ControlTowerDemoPayload = {
-  labeledDemo: true;
+  labeledDemo: boolean;
   operatingModel: ControlTowerModelFilter;
   terminology: {
     location: string;
@@ -142,6 +143,7 @@ export type ControlTowerDemoPayload = {
   correctiveActions: ActionRow[];
   correctiveActionHealth: CorrectiveActionHealth;
   sla: {
+    available: boolean;
     compliancePct: number;
     overdue: number;
     dueToday: number;
@@ -149,6 +151,7 @@ export type ControlTowerDemoPayload = {
     avgResolutionHours: number;
   };
   evidenceCoverage: {
+    available: boolean;
     required: number;
     verified: number;
     pct: number;
