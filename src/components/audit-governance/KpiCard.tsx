@@ -58,9 +58,9 @@ export function KpiCard({
       type={onClick ? "button" : undefined}
       onClick={onClick}
       className={cn(
-        "rounded-2xl border p-4 text-left shadow-[0_1px_2px_rgb(15_35_50/0.04)]",
+        "rounded-xl border p-4 text-left shadow-soft",
         t.surface,
-        onClick && "transition-colors hover:border-brand/40 hover:shadow-[0_4px_14px_rgb(15_35_50/0.08)]",
+        onClick && "transition-colors hover:border-brand-glow hover:shadow-card",
         className,
       )}
     >

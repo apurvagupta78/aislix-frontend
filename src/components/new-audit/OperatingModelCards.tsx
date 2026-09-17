@@ -2,6 +2,7 @@ import { Package, ShoppingCart, Sparkles, Store, Truck, Warehouse } from "lucide
 
 import { OptionCard } from "@/components/design-system";
 import type { SemanticTone } from "@/lib/design-system";
+import { operatingModelClasses } from "@/lib/design-system";
 import type { OperatingModel } from "@/lib/audit-builder/types";
 import { OPERATING_MODEL_CARDS } from "@/lib/audit-engine/operating-model-catalog";
 
@@ -45,6 +46,7 @@ export function OperatingModelCards({ value, onChange, error }: Props) {
               tone={meta.tone}
               selected={value === card.id}
               onClick={() => onChange(card.id)}
+              className={operatingModelClasses(card.id)}
             />
           );
         })}
