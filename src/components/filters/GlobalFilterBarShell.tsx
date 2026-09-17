@@ -12,7 +12,7 @@ export function GlobalFilterBarShell() {
   if (optionsLoading && !options) return null;
 
   return (
-    <div className="mb-6 rounded-xl border border-border/60 bg-card/50 p-3">
+    <div className="mb-6 rounded-xl border border-border bg-surface p-3 shadow-soft">
       <p className="mb-2 text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
         Workspace filters · persists across pages
       </p>

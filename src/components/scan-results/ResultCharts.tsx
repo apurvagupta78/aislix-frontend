@@ -128,7 +128,7 @@ export function ConfidenceDistributionChart({
         <XAxis dataKey="bucket" {...axisProps} />
         <YAxis allowDecimals={false} {...axisProps} />
         <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => [v, "Detections"]} />
-        <Bar dataKey="count" fill="var(--accent-green)" radius={[8, 8, 0, 0]} />
+        <Bar dataKey="count" fill="var(--chart-2)" radius={[6, 6, 0, 0]} />
       </BarChart>
     </ChartFrame>
   );
@@ -221,7 +221,7 @@ export function LowStockSummaryChart({
         <Tooltip contentStyle={tooltipStyle} />
         <Legend wrapperStyle={{ fontSize: 11 }} />
         <Bar dataKey="low_stock" name="Low stock" stackId="s" fill="var(--chart-4)" radius={[0, 0, 0, 0]} />
-        <Bar dataKey="out_of_stock" name="Out of stock" stackId="s" fill="var(--destructive)" radius={[8, 8, 0, 0]} />
+        <Bar dataKey="out_of_stock" name="Out of stock" stackId="s" fill="var(--chart-6)" radius={[6, 6, 0, 0]} />
       </BarChart>
     </ChartFrame>
   );
@@ -244,7 +244,7 @@ export function ShelfHealthChart({
       emptyText="The shelf health score appears here once the analysis service returns it."
     >
       <RadialBarChart
-        data={[{ name: "Shelf health", value: Math.round(value ?? 0), fill: "var(--accent-green)" }]}
+        data={[{ name: "Shelf health", value: Math.round(value ?? 0), fill: "var(--chart-1)" }]}
         innerRadius="72%"
         outerRadius="102%"
         startAngle={210}

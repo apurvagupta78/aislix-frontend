@@ -159,6 +159,17 @@
   --color-red-600: var(--status-danger);
   --color-red-800: var(--status-danger-strong);
   --color-red-950: var(--status-danger-strong);
+  --color-sky-50: var(--status-info-soft);
+  --color-sky-100: var(--status-info-soft);
+  --color-sky-200: var(--brand-glow);
+  --color-sky-300: var(--brand-glow);
+  --color-sky-500: var(--status-info);
+  --color-sky-800: var(--status-info-strong);
+  --color-sky-900: var(--status-info-strong);
+  --color-slate-100: var(--aislix-custom-bg);
+  --color-slate-200: var(--aislix-custom-border);
+  --color-slate-600: var(--aislix-secondary);
+  --color-slate-700: var(--aislix-primary);
 }
 
 :root {

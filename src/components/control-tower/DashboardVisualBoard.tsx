@@ -124,18 +124,17 @@ export function DashboardVisualBoard({ data }: { data: ControlTowerDemoPayload }
       >
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {heat.map((row) => {
-            const intensity = Math.min(1, Math.max(0.12, row.score / 100));
+            const intensity = Math.min(1, Math.max(0.18, row.score / 100));
             return (
               <div
                 key={row.id}
-                className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-sm"
+                className="flex items-center justify-between gap-3 rounded-lg border border-status-danger px-3 py-2.5 text-sm text-foreground"
                 style={{
-                  backgroundColor: `color-mix(in oklab, var(--chart-2) ${Math.round(intensity * 78)}%, white)`,
-                  color: intensity > 0.55 ? "white" : "var(--foreground)",
+                  backgroundColor: `color-mix(in oklab, var(--status-danger-soft) ${Math.round(intensity * 100)}%, var(--card))`,
                 }}
               >
                 <span className="truncate font-medium">{row.name}</span>
-                <span className="shrink-0 rounded-full bg-white/25 px-2 py-0.5 text-xs font-semibold">
+                <span className="shrink-0 rounded-full border border-status-danger bg-card/70 px-2 py-0.5 text-xs font-semibold">
                   {row.score}
                 </span>
               </div>
@@ -183,10 +182,10 @@ function ChartFrame({
   children: React.ReactNode;
 }) {
   return (
-    <Card className="card-surface overflow-hidden rounded-3xl">
+    <Card className="overflow-hidden rounded-xl">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <span className="flex size-8 items-center justify-center rounded-xl bg-brand-soft text-brand">
+          <span className="flex size-8 items-center justify-center rounded-lg border border-brand-glow bg-brand-soft text-brand">
             {icon}
           </span>
           {title}

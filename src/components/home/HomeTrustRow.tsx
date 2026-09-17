@@ -2,26 +2,31 @@ import { Building2, PackageSearch, ShoppingCart, Store, Truck } from "lucide-rea
 
 const audiences = [
   {
+    modelClass: "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)]",
     label: "Supermarkets",
     Icon: ShoppingCart,
     body: "Improve availability, assortment, pricing, promotions and shelf execution.",
   },
   {
+    modelClass: "border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)]",
     label: "Dark Stores",
     Icon: Building2,
     body: "Know what is available and whether products are in the right location.",
   },
   {
+    modelClass: "border-[var(--aislix-fmcg-border)] bg-[var(--aislix-fmcg-bg)]",
     label: "FMCG Brands",
     Icon: PackageSearch,
     body: "Measure shelf presence, facings, availability, planogram execution and Share of Shelf.",
   },
   {
+    modelClass: "border-[var(--aislix-fmcg-border)] bg-[var(--aislix-fmcg-bg)]",
     label: "Distributors",
     Icon: Truck,
     body: "Monitor outlet execution, must-stock compliance, pricing and promotions.",
   },
   {
+    modelClass: "border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)]",
     label: "Local Stores",
     Icon: Store,
     body: "Turn everyday store visits into measurable shelf execution.",
@@ -39,12 +44,12 @@ export function HomeTrustRow() {
           One platform for retailers, brands, distributors and store teams.
         </p>
         <div className="mx-auto mt-8 grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {audiences.map(({ label, Icon, body }) => (
+          {audiences.map(({ label, Icon, body, modelClass }) => (
             <div
               key={label}
-              className="card-surface flex flex-col items-center p-5 text-center transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lift"
+              className={`flex flex-col items-center rounded-xl border p-5 text-center shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card ${modelClass}`}
             >
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-landing-navy text-landing-navy">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-card/70 text-primary">
                 <Icon className="size-3.5" strokeWidth={1.75} aria-hidden="true" />
               </div>
               <h3 className="mt-3 text-sm font-semibold text-foreground">{label}</h3>

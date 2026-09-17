@@ -16,7 +16,7 @@ export const DASHBOARD_ROLE_OPTIONS: { value: AuditRoleTab; label: string }[] = 
   (role) => ({ value: role, label: roleTabLabel(role) }),
 );
 
-/** Tonal Aislix chart palette — navy/blue variations only. */
+/** Official Aislix chart sequence — no library defaults or unrelated hues. */
 export const DASHBOARD_CHART_COLORS = [
   "var(--chart-1)",
   "var(--chart-2)",
@@ -26,10 +26,10 @@ export const DASHBOARD_CHART_COLORS = [
 ] as const;
 
 export const DASHBOARD_STATUS_COLORS = {
-  critical: "bg-destructive/80",
-  high: "bg-destructive/55",
-  medium: "bg-warning/75",
-  low: "bg-brand/60",
+  critical: "bg-status-danger",
+  high: "bg-status-danger/75",
+  medium: "bg-status-info",
+  low: "bg-muted-foreground/55",
 } as const;
 
 /** Default trend series per role (spec § role-specific dashboard). */
