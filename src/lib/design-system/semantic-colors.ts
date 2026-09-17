@@ -61,6 +61,21 @@ export const SEMANTIC_PALETTE = {
   },
 } as const;
 
+export const OPERATING_MODEL_PALETTE = {
+  local_store: "border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)]",
+  supermarket: "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)]",
+  dark_store: "border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)]",
+  warehouse: "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]",
+  fmcg_distributor: "border-[var(--aislix-fmcg-border)] bg-[var(--aislix-fmcg-bg)]",
+  custom: "border-[var(--aislix-custom-border)] bg-[var(--aislix-custom-bg)]",
+} as const;
+
+export type OperatingModelTone = keyof typeof OPERATING_MODEL_PALETTE;
+
+export function operatingModelClasses(model: OperatingModelTone) {
+  return OPERATING_MODEL_PALETTE[model];
+}
+
 export type SemanticTone = keyof typeof SEMANTIC_PALETTE;
 
 export const FIELD_ROLE_TONE: Record<FieldRole, SemanticTone> = {

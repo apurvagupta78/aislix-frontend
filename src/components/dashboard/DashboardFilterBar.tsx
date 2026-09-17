@@ -57,7 +57,7 @@ import { cn } from "@/lib/utils";
 type Option = { value: string; label: string };
 
 const CONTROL =
-  "h-9 shrink-0 rounded-lg border border-border/60 bg-white px-2.5 text-xs font-normal text-foreground shadow-none hover:bg-muted/30 focus:ring-1 focus:ring-brand/20";
+  "h-9 shrink-0 rounded-lg border border-border bg-card px-2.5 text-xs font-normal text-foreground shadow-soft hover:bg-brand-soft/55 focus:ring-2 focus:ring-ring/60";
 
 function CompactSelect({
   label,

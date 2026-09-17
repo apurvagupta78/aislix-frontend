@@ -54,10 +54,12 @@ export function KpiCardVisual({
   periodLabel?: string;
 }) {
   const sparkData = kpi.trend?.map((v, i) => ({ i, v })) ?? [];
-  const trendUp = kpi.trend && kpi.trend.length >= 2 && kpi.trend.at(-1)! > kpi.trend[0]!;
+  const firstTrend = kpi.trend?.[0];
+  const lastTrend = kpi.trend?.at(-1);
+  const trendUp = firstTrend !== undefined && lastTrend !== undefined && lastTrend > firstTrend;
   const Icon = iconFor(kpi.label);
   const isSample = kpi.source?.includes("demo") || kpi.source?.includes("Illustrative");
-  const isDarkTile = kpi.tone === "brand" || kpi.tone === "good";
+  const isDarkTile = kpi.tone === "brand";
 
   return (
     <button
@@ -65,7 +67,7 @@ export function KpiCardVisual({
       disabled={!kpi.available}
       onClick={() => kpi.available && onDrill?.(kpi)}
       className={cn(
-        "kpi-tile group flex min-h-[178px] flex-col p-6 text-left",
+          "kpi-tile group flex min-h-[178px] flex-col p-5 text-left",
         TONE_TILE[kpi.tone],
         !kpi.available && "cursor-not-allowed opacity-60",
       )}
@@ -73,8 +75,8 @@ export function KpiCardVisual({
       <span
         aria-hidden
         className={cn(
-          "pointer-events-none absolute -right-8 -top-8 size-28 rounded-full blur-2xl transition-colors",
-          isDarkTile ? "bg-white/10 group-hover:bg-white/20" : "bg-white/40 group-hover:bg-white/60",
+          "pointer-events-none absolute right-0 top-0 h-1 w-20 transition-colors",
+          isDarkTile ? "bg-brand-glow" : "bg-brand/15 group-hover:bg-brand/25",
         )}
       />
 

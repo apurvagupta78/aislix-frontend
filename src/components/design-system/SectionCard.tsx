@@ -13,7 +13,7 @@ type Props = {
   padded?: boolean;
 };
 
-/** White rounded content surface with soft shadow — groups related UI. */
+/** Calm content surface that groups related work without looking like a floating panel. */
 export function SectionCard({
   title,
   description,
@@ -24,7 +24,7 @@ export function SectionCard({
   padded = true,
 }: Props) {
   return (
-    <section className={cn("play-surface rounded-2xl", className)}>
+    <section className={cn("play-surface rounded-xl", className)}>
       {title || description || action ? (
         <div
           className={cn(
@@ -34,7 +34,7 @@ export function SectionCard({
         >
           <div className="flex min-w-0 items-start gap-3">
             {Icon ? (
-              <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
+              <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-brand-glow bg-brand-soft text-brand">
                 <Icon className="size-4" aria-hidden />
               </span>
             ) : null}

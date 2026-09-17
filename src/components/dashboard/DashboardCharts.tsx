@@ -143,7 +143,7 @@ export function DashboardCharts({
               type="monotone"
               dataKey="value"
               name="Shelf health"
-              stroke="var(--chart-2)"
+              stroke="var(--chart-1)"
               strokeWidth={2.5}
               fill="url(#dashHealth)"
             />
@@ -177,7 +177,7 @@ export function DashboardCharts({
             <XAxis dataKey="label" {...axisProps} />
             <YAxis {...axisProps} />
             <Tooltip contentStyle={tooltipStyle} />
-            <Bar dataKey="value" name="Audits" fill="var(--chart-2)" radius={[8, 8, 0, 0]} />
+            <Bar dataKey="value" name="Audits" fill="var(--chart-1)" radius={[6, 6, 0, 0]} />
           </BarChart>
         )}
       </ChartFrame>
@@ -218,7 +218,7 @@ export function DashboardCharts({
               type="monotone"
               dataKey="value"
               name="Low stock SKUs"
-              stroke="var(--accent-green)"
+              stroke="var(--chart-2)"
               strokeWidth={2.5}
               dot={{ r: 3 }}
             />

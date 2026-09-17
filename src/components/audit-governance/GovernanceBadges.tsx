@@ -85,7 +85,7 @@ export function LockedRecordBadge({ className }: { className?: string }) {
 
 export function AiSuggestedBadge({ className }: { className?: string }) {
   return (
-    <Badge variant="outline" className={cn("rounded-full border-amber-500/30 bg-amber-500/10 text-amber-700", className)}>
+    <Badge variant="outline" className={cn("rounded-full border-status-info bg-status-info-soft text-status-info-strong", className)}>
       AI suggested
     </Badge>
   );

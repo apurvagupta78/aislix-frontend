@@ -22,7 +22,7 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-card/85 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-border bg-card/92 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-5 sm:px-8">
         <Logo />
         <nav className="ml-auto flex items-center gap-1 sm:gap-2">

@@ -43,8 +43,8 @@ export function EmptyState({
   icon?: ReactNode | undefined;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card px-6 py-14 text-center">
-      <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-brand-soft text-brand">
+    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-brand-glow bg-card px-6 py-14 text-center shadow-soft">
+      <span className="grid size-12 shrink-0 place-items-center rounded-xl border border-brand-glow bg-brand-soft text-brand">
         {icon ?? <Inbox className="size-6" aria-hidden />}
       </span>
       <p className="mt-4 text-base font-semibold text-foreground">{title}</p>
@@ -68,7 +68,7 @@ export function ErrorState({
   return (
     <div
       role="alert"
-      className="flex flex-col items-center justify-center rounded-2xl border border-status-danger/25 bg-status-danger-soft px-6 py-14 text-center"
+      className="flex flex-col items-center justify-center rounded-xl border border-status-danger bg-status-danger-soft px-6 py-14 text-center"
     >
       <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-card text-status-danger-strong shadow-soft">
         <AlertTriangle className="size-6" aria-hidden />

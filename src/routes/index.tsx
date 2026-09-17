@@ -187,14 +187,13 @@ function Landing() {
       <SiteHeader />
 
 
-      <section className="relative overflow-hidden bg-hero-glow">
-        <div className="absolute inset-0 grid-lines opacity-40 [mask-image:radial-gradient(70%_50%_at_50%_0%,black,transparent)]" />
-        <div className="relative mx-auto max-w-3xl px-6 pb-14 pt-16 text-center sm:pb-16 sm:pt-20">
+      <section className="relative overflow-hidden border-b border-border bg-background">
+        <div className="relative mx-auto max-w-4xl px-6 pb-20 pt-20 text-center sm:pb-24 sm:pt-28">
           <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs text-muted-foreground shadow-soft">
             <span className="size-1.5 rounded-full bg-brand" />
             Retail Audit & Shelf Intelligence Platform
           </span>
-          <h1 className="mt-7 text-4xl font-semibold leading-[1.08] tracking-tight text-foreground sm:text-6xl">
+          <h1 className="mt-7 text-4xl font-semibold leading-[1.08] text-foreground sm:text-6xl">
             Plan, Execute, Review and Learn From Every Retail Audit.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
@@ -264,7 +263,7 @@ function Landing() {
             {features.map((f) => (
               <div
                 key={f.title}
-                className="card-surface p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-lift"
+                className="rounded-xl border border-border bg-card p-7 shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-glow hover:shadow-card"
               >
                 <span className="grid size-10 place-items-center rounded-xl bg-brand-soft text-brand">
                   <f.icon className="size-5" />
