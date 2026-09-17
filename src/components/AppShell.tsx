@@ -102,6 +102,15 @@ function sectionItems(section: NavSection, showManagerNav: boolean): NavItem[] {
   return section.items.filter((item) => !item.managerOnly || showManagerNav);
 }
 
+function singleLeafSection(
+  section: NavSection,
+  showManagerNav: boolean,
+): NavLeaf | null {
+  const items = sectionItems(section, showManagerNav);
+  if (items.length === 1 && items[0]?.kind === "leaf") return items[0];
+  return null;
+}
+
 function SidebarNav({
   showManagerNav,
   openTasks,
@@ -218,54 +227,77 @@ function SidebarNav({
   if (rail) {
     return (
       <nav className="flex flex-col items-center gap-1">
-        {visibleSections.map((section) => (
-          <Popover key={section.id}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                aria-label={`${section.label} — expand for sub-items`}
-                title={`${section.label} — expand for sub-items`}
-                className={cn(
-                  "relative flex size-10 items-center justify-center rounded-xl transition-colors",
-                  activeSectionId === section.id
-                    ? "bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]"
-                    : "text-muted-foreground hover:bg-surface hover:text-foreground",
-                )}
-              >
-                <section.icon className="size-4" />
-                {section.id === "audits" && openTasks > 0 && (
-                  <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[0.6rem] font-semibold text-brand-foreground">
-                    {openTasks > 9 ? "9+" : openTasks}
-                  </span>
-                )}
-              </button>
-            </PopoverTrigger>
-            <PopoverContent side="right" align="start" className="w-52 p-1.5">
-              <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                {section.label}
-              </p>
-              <div className="flex flex-col gap-0.5">
-                {railFlyoutItems(section).map((child) => (
-                  <Link
-                    key={`${child.to}-${child.label}`}
-                    to={child.to}
-                    search={child.search ?? {}}
-                    onClick={onNavigate}
-                    className={cn(
-                      "flex min-h-10 items-center gap-2 rounded-xl px-2.5 py-2 text-sm transition-colors",
-                      leafActive(child)
-                        ? "bg-[var(--aislix-warehouse-bg)] font-semibold text-[var(--aislix-primary)]"
-                        : "text-muted-foreground hover:bg-surface hover:text-foreground",
-                    )}
-                  >
-                    <span className="flex-1 truncate">{child.label}</span>
-                    <CountBadge count={badgeFor(child.badge)} />
-                  </Link>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-        ))}
+        {visibleSections.map((section) => {
+          const direct = singleLeafSection(section, showManagerNav);
+          if (direct) {
+            const active = leafActive(direct);
+            return (
+              <RailTooltip key={section.id} label={direct.label}>
+                <Link
+                  to={direct.to}
+                  search={direct.search ?? {}}
+                  onClick={onNavigate}
+                  className={cn(
+                    "relative flex size-10 items-center justify-center rounded-xl transition-colors",
+                    active
+                      ? "bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]"
+                      : "text-muted-foreground hover:bg-surface hover:text-foreground",
+                  )}
+                >
+                  <section.icon className="size-4" />
+                </Link>
+              </RailTooltip>
+            );
+          }
+          return (
+            <Popover key={section.id}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`${section.label} — expand for sub-items`}
+                  title={`${section.label} — expand for sub-items`}
+                  className={cn(
+                    "relative flex size-10 items-center justify-center rounded-xl transition-colors",
+                    activeSectionId === section.id
+                      ? "bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]"
+                      : "text-muted-foreground hover:bg-surface hover:text-foreground",
+                  )}
+                >
+                  <section.icon className="size-4" />
+                  {section.id === "audits" && openTasks > 0 && (
+                    <span className="absolute -right-0.5 -top-0.5 flex min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[0.6rem] font-semibold text-brand-foreground">
+                      {openTasks > 9 ? "9+" : openTasks}
+                    </span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent side="right" align="start" className="w-52 p-1.5">
+                <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {section.label}
+                </p>
+                <div className="flex flex-col gap-0.5">
+                  {railFlyoutItems(section).map((child) => (
+                    <Link
+                      key={`${child.to}-${child.label}`}
+                      to={child.to}
+                      search={child.search ?? {}}
+                      onClick={onNavigate}
+                      className={cn(
+                        "flex min-h-10 items-center gap-2 rounded-xl px-2.5 py-2 text-sm transition-colors",
+                        leafActive(child)
+                          ? "bg-[var(--aislix-warehouse-bg)] font-semibold text-[var(--aislix-primary)]"
+                          : "text-muted-foreground hover:bg-surface hover:text-foreground",
+                      )}
+                    >
+                      <span className="flex-1 truncate">{child.label}</span>
+                      <CountBadge count={badgeFor(child.badge)} />
+                    </Link>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          );
+        })}
       </nav>
     );
   }
@@ -273,6 +305,29 @@ function SidebarNav({
   return (
     <nav className="flex flex-col gap-0.5">
       {visibleSections.map((section) => {
+        const direct = singleLeafSection(section, showManagerNav);
+        if (direct) {
+          const active = leafActive(direct);
+          return (
+            <Link
+              key={section.id}
+              to={direct.to}
+              search={direct.search ?? {}}
+              onClick={onNavigate}
+              className={cn(
+                "flex min-h-11 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-semibold transition-colors lg:min-h-10",
+                active
+                  ? "bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)]"
+                  : "text-muted-foreground hover:bg-surface hover:text-foreground",
+              )}
+            >
+              <section.icon className="size-4 shrink-0" />
+              <span className="flex-1 truncate text-left">{direct.label}</span>
+              <CountBadge count={badgeFor(direct.badge)} />
+            </Link>
+          );
+        }
+
         const open = openSection === section.id;
         return (
           <div key={section.id} className="flex flex-col gap-0.5">

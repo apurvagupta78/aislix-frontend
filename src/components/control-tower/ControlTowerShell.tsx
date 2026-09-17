@@ -99,16 +99,36 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
     void navigate({ to: "/dashboard", search: truncateDrilldownSearch(search, level) });
   };
 
+  const operatingModelSection = (
+    <section className="space-y-2">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          Operating Model
+        </p>
+        <OperatingModelSwitcher value={model} onChange={setModel} />
+        {query.data ? (
+          <p className="mt-2 text-xs text-muted-foreground">
+            {query.data.terminology.locationPlural}: contextual labels · {query.data.templateCount}{" "}
+            org templates in scope
+          </p>
+        ) : null}
+      </div>
+    </section>
+  );
+
   if (query.isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-16 w-full rounded-2xl" />
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-36 rounded-2xl" />
-          ))}
+      <div className="space-y-8">
+        {operatingModelSection}
+        <div className="space-y-4">
+          <Skeleton className="h-16 w-full rounded-2xl" />
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-36 rounded-2xl" />
+            ))}
+          </div>
+          <Skeleton className="h-64 w-full rounded-2xl" />
         </div>
-        <Skeleton className="h-64 w-full rounded-2xl" />
       </div>
     );
   }
@@ -123,10 +143,11 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
   }
 
   const data = query.data;
-  const locLabel = data.terminology.locationPlural;
 
   return (
     <div className="space-y-8">
+      {operatingModelSection}
+
       <div className="space-y-3">
         <WorkspaceFilterBar />
         <DashboardAuditsTable
@@ -134,18 +155,6 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
           onDownloadCsv={() => exportAuditExecutionCsv(data, filters)}
         />
       </div>
-
-      <section className="space-y-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-            Operating Model
-          </p>
-          <OperatingModelSwitcher value={model} onChange={setModel} />
-          <p className="mt-2 text-xs text-muted-foreground">
-            {locLabel}: contextual labels · {data.templateCount} org templates in scope
-          </p>
-        </div>
-      </section>
 
       {trail.length > 1 ? <DrilldownTrail trail={trail} onNavigate={drillBack} /> : null}
 
