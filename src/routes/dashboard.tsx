@@ -3,7 +3,6 @@ import { Plus } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
 import { ControlTowerShell } from "@/components/control-tower/ControlTowerShell";
-import { DashboardSubNav } from "@/components/control-tower/DashboardSubNav";
 import { Button } from "@/components/ui/button";
 import { NEW_AUDIT_BUTTON_CLASS } from "@/lib/aislix-theme";
 import type { ControlTowerSearch } from "@/lib/control-tower";
@@ -60,8 +59,7 @@ function DashboardPage() {
         </Button>
       }
     >
-      <DashboardSubNav />
-      <ControlTowerShell search={search} routePath="/dashboard" />
+      <ControlTowerShell search={search} />
     </AppShell>
   );
 }

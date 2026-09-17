@@ -88,9 +88,7 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as CorrectiveActionsActionIdRouteImport } from './routes/corrective-actions.$actionId'
 import { Route as DashboardAuditExecutionRouteImport } from './routes/dashboard.audit-execution'
 import { Route as DashboardEvidenceCoverageRouteImport } from './routes/dashboard.evidence-coverage'
-import { Route as DashboardExecutiveRouteImport } from './routes/dashboard.executive'
 import { Route as DashboardKpisRouteImport } from './routes/dashboard.kpis'
-import { Route as DashboardMyPerformanceRouteImport } from './routes/dashboard.my-performance'
 import { Route as DashboardOperationalTrendRouteImport } from './routes/dashboard.operational-trend'
 import { Route as DashboardRiskLocationsRouteImport } from './routes/dashboard.risk-locations'
 import { Route as DashboardRiskSkusRouteImport } from './routes/dashboard.risk-skus'
@@ -524,19 +522,9 @@ const DashboardEvidenceCoverageRoute =
     path: '/evidence-coverage',
     getParentRoute: () => DashboardRoute,
   } as any)
-const DashboardExecutiveRoute = DashboardExecutiveRouteImport.update({
-  id: '/executive',
-  path: '/executive',
-  getParentRoute: () => DashboardRoute,
-} as any)
 const DashboardKpisRoute = DashboardKpisRouteImport.update({
   id: '/kpis',
   path: '/kpis',
-  getParentRoute: () => DashboardRoute,
-} as any)
-const DashboardMyPerformanceRoute = DashboardMyPerformanceRouteImport.update({
-  id: '/my-performance',
-  path: '/my-performance',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardOperationalTrendRoute =
@@ -795,9 +783,7 @@ export interface FileRoutesByFullPath {
   '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
   '/dashboard/audit-execution': typeof DashboardAuditExecutionRoute
   '/dashboard/evidence-coverage': typeof DashboardEvidenceCoverageRoute
-  '/dashboard/executive': typeof DashboardExecutiveRoute
   '/dashboard/kpis': typeof DashboardKpisRoute
-  '/dashboard/my-performance': typeof DashboardMyPerformanceRoute
   '/dashboard/operational-trend': typeof DashboardOperationalTrendRoute
   '/dashboard/risk-locations': typeof DashboardRiskLocationsRoute
   '/dashboard/risk-skus': typeof DashboardRiskSkusRoute
@@ -912,9 +898,7 @@ export interface FileRoutesByTo {
   '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
   '/dashboard/audit-execution': typeof DashboardAuditExecutionRoute
   '/dashboard/evidence-coverage': typeof DashboardEvidenceCoverageRoute
-  '/dashboard/executive': typeof DashboardExecutiveRoute
   '/dashboard/kpis': typeof DashboardKpisRoute
-  '/dashboard/my-performance': typeof DashboardMyPerformanceRoute
   '/dashboard/operational-trend': typeof DashboardOperationalTrendRoute
   '/dashboard/risk-locations': typeof DashboardRiskLocationsRoute
   '/dashboard/risk-skus': typeof DashboardRiskSkusRoute
@@ -1030,9 +1014,7 @@ export interface FileRoutesById {
   '/corrective-actions/$actionId': typeof CorrectiveActionsActionIdRoute
   '/dashboard/audit-execution': typeof DashboardAuditExecutionRoute
   '/dashboard/evidence-coverage': typeof DashboardEvidenceCoverageRoute
-  '/dashboard/executive': typeof DashboardExecutiveRoute
   '/dashboard/kpis': typeof DashboardKpisRoute
-  '/dashboard/my-performance': typeof DashboardMyPerformanceRoute
   '/dashboard/operational-trend': typeof DashboardOperationalTrendRoute
   '/dashboard/risk-locations': typeof DashboardRiskLocationsRoute
   '/dashboard/risk-skus': typeof DashboardRiskSkusRoute
@@ -1149,9 +1131,7 @@ export interface FileRouteTypes {
     | '/corrective-actions/$actionId'
     | '/dashboard/audit-execution'
     | '/dashboard/evidence-coverage'
-    | '/dashboard/executive'
     | '/dashboard/kpis'
-    | '/dashboard/my-performance'
     | '/dashboard/operational-trend'
     | '/dashboard/risk-locations'
     | '/dashboard/risk-skus'
@@ -1266,9 +1246,7 @@ export interface FileRouteTypes {
     | '/corrective-actions/$actionId'
     | '/dashboard/audit-execution'
     | '/dashboard/evidence-coverage'
-    | '/dashboard/executive'
     | '/dashboard/kpis'
-    | '/dashboard/my-performance'
     | '/dashboard/operational-trend'
     | '/dashboard/risk-locations'
     | '/dashboard/risk-skus'
@@ -1383,9 +1361,7 @@ export interface FileRouteTypes {
     | '/corrective-actions/$actionId'
     | '/dashboard/audit-execution'
     | '/dashboard/evidence-coverage'
-    | '/dashboard/executive'
     | '/dashboard/kpis'
-    | '/dashboard/my-performance'
     | '/dashboard/operational-trend'
     | '/dashboard/risk-locations'
     | '/dashboard/risk-skus'
@@ -2064,25 +2040,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardEvidenceCoverageRouteImport
       parentRoute: typeof DashboardRoute
     }
-    '/dashboard/executive': {
-      id: '/dashboard/executive'
-      path: '/executive'
-      fullPath: '/dashboard/executive'
-      preLoaderRoute: typeof DashboardExecutiveRouteImport
-      parentRoute: typeof DashboardRoute
-    }
     '/dashboard/kpis': {
       id: '/dashboard/kpis'
       path: '/kpis'
       fullPath: '/dashboard/kpis'
       preLoaderRoute: typeof DashboardKpisRouteImport
-      parentRoute: typeof DashboardRoute
-    }
-    '/dashboard/my-performance': {
-      id: '/dashboard/my-performance'
-      path: '/my-performance'
-      fullPath: '/dashboard/my-performance'
-      preLoaderRoute: typeof DashboardMyPerformanceRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/operational-trend': {
@@ -2387,9 +2349,7 @@ const CorrectiveActionsRouteWithChildren =
 interface DashboardRouteChildren {
   DashboardAuditExecutionRoute: typeof DashboardAuditExecutionRoute
   DashboardEvidenceCoverageRoute: typeof DashboardEvidenceCoverageRoute
-  DashboardExecutiveRoute: typeof DashboardExecutiveRoute
   DashboardKpisRoute: typeof DashboardKpisRoute
-  DashboardMyPerformanceRoute: typeof DashboardMyPerformanceRoute
   DashboardOperationalTrendRoute: typeof DashboardOperationalTrendRoute
   DashboardRiskLocationsRoute: typeof DashboardRiskLocationsRoute
   DashboardRiskSkusRoute: typeof DashboardRiskSkusRoute
@@ -2398,9 +2358,7 @@ interface DashboardRouteChildren {
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAuditExecutionRoute: DashboardAuditExecutionRoute,
   DashboardEvidenceCoverageRoute: DashboardEvidenceCoverageRoute,
-  DashboardExecutiveRoute: DashboardExecutiveRoute,
   DashboardKpisRoute: DashboardKpisRoute,
-  DashboardMyPerformanceRoute: DashboardMyPerformanceRoute,
   DashboardOperationalTrendRoute: DashboardOperationalTrendRoute,
   DashboardRiskLocationsRoute: DashboardRiskLocationsRoute,
   DashboardRiskSkusRoute: DashboardRiskSkusRoute,

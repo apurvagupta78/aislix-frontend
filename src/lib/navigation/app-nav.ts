@@ -42,11 +42,7 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
     id: "dashboard",
     label: "Dashboard",
     icon: LayoutDashboard,
-    items: [
-      { kind: "leaf", label: "Control Tower", to: "/dashboard" },
-      { kind: "leaf", label: "My Performance", to: "/dashboard/my-performance" },
-      { kind: "leaf", label: "Executive View", to: "/dashboard/executive" },
-    ],
+    items: [{ kind: "leaf", label: "Dashboard", to: "/dashboard" }],
   },
   {
     id: "audits",

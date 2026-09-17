@@ -75,13 +75,7 @@ function EmptyBlock({ title }: { title: string }) {
   );
 }
 
-export function ControlTowerShell({
-  search,
-  routePath,
-}: {
-  search: ControlTowerSearch;
-  routePath: "/dashboard" | "/dashboard/my-performance" | "/dashboard/executive";
-}) {
+export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
   const navigate = useNavigate();
   const { filters } = useGlobalFilters();
   const model = search.model ?? "all";
@@ -91,18 +85,18 @@ export function ControlTowerShell({
     buildViewAllSearch(search, filters, extra);
 
   const setModel = (next: ControlTowerModelFilter) => {
-    void navigate({ to: routePath, search: { ...search, model: next === "all" ? undefined : next } });
+    void navigate({ to: "/dashboard", search: { ...search, model: next === "all" ? undefined : next } });
   };
 
   const drillTo = (level: Parameters<typeof nextDrilldownSearch>[1], value: string) => {
     void navigate({
-      to: routePath,
+      to: "/dashboard",
       search: nextDrilldownSearch(search, level, value),
     });
   };
 
   const drillBack = (level: Parameters<typeof truncateDrilldownSearch>[1]) => {
-    void navigate({ to: routePath, search: truncateDrilldownSearch(search, level) });
+    void navigate({ to: "/dashboard", search: truncateDrilldownSearch(search, level) });
   };
 
   if (query.isLoading) {
@@ -133,22 +127,13 @@ export function ControlTowerShell({
 
   return (
     <div className="space-y-8">
-      <LiveBanner templateCount={data.templateCount} categories={data.templateCategories} model={model} />
-
-      {routePath === "/dashboard" ? (
-        <div className="space-y-3">
-          <WorkspaceFilterBar />
-          <DashboardAuditsTable
-            rows={data.auditExecutionFull}
-            onDownloadCsv={() => exportAuditExecutionCsv(data, filters)}
-          />
-        </div>
-      ) : (
+      <div className="space-y-3">
+        <WorkspaceFilterBar />
         <DashboardAuditsTable
           rows={data.auditExecutionFull}
           onDownloadCsv={() => exportAuditExecutionCsv(data, filters)}
         />
-      )}
+      </div>
 
       <section className="space-y-4">
         <div>
@@ -588,28 +573,6 @@ export function ControlTowerShell({
       {search.drill && search.drill !== "overview" ? (
         <DrilldownPanel search={search} terminology={data.terminology} onDrill={drillTo} />
       ) : null}
-    </div>
-  );
-}
-
-function LiveBanner({
-  templateCount,
-  categories,
-  model,
-}: {
-  templateCount: number;
-  categories: string[];
-  model: ControlTowerModelFilter;
-}) {
-  return (
-    <div className="rounded-2xl border border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)] p-4 text-foreground">
-      <p className="text-sm font-semibold">Live universal KPIs</p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Completion, findings, and corrective actions use production data for{" "}
-        <strong>{model === "all" ? "all operating models" : model.replace(/_/g, " ")}</strong>
-        {templateCount ? ` (${templateCount} org templates${categories.length ? `: ${categories.slice(0, 4).join(", ")}` : ""}${categories.length > 4 ? "…" : ""})` : ""}.
-        Template qty/expiry/facing metrics come next.
-      </p>
     </div>
   );
 }
