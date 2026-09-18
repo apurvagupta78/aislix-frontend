@@ -3360,6 +3360,7 @@ export type Database = {
           gstin: string | null
           id: string
           industry: string | null
+          is_demo: boolean
           logo_url: string | null
           name: string
           owner_id: string
@@ -3377,6 +3378,7 @@ export type Database = {
           gstin?: string | null
           id?: string
           industry?: string | null
+          is_demo?: boolean
           logo_url?: string | null
           name: string
           owner_id: string
@@ -3394,6 +3396,7 @@ export type Database = {
           gstin?: string | null
           id?: string
           industry?: string | null
+          is_demo?: boolean
           logo_url?: string | null
           name?: string
           owner_id?: string
@@ -4926,6 +4929,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      aislix_demo_org_id: { Args: never; Returns: string }
       can_org_add_master_setup: { Args: { _org_id: string }; Returns: boolean }
       can_org_add_member: { Args: { p_org_id: string }; Returns: boolean }
       can_org_add_store: { Args: { p_org_id: string }; Returns: boolean }
@@ -4942,6 +4946,14 @@ export type Database = {
       }
       count_org_master_setups: { Args: { _org_id: string }; Returns: number }
       count_org_seats: { Args: { p_org_id: string }; Returns: number }
+      demo_compute_variance: {
+        Args: { p_actual: number; p_expected: number; p_mrp: number }
+        Returns: {
+          variance_pct: number
+          variance_qty: number
+          variance_value_inr: number
+        }[]
+      }
       ensure_org_free_subscription: {
         Args: { p_org_id: string }
         Returns: undefined
@@ -4994,6 +5006,7 @@ export type Database = {
         }[]
       }
       get_org_usage_summary: { Args: { p_org_id: string }; Returns: Json }
+      is_demo_org_readable: { Args: { p_org_id: string }; Returns: boolean }
       is_org_manager: { Args: { p_org_id: string }; Returns: boolean }
       is_org_member: { Args: { p_org_id: string }; Returns: boolean }
       is_org_owner_or_admin: { Args: { p_org_id: string }; Returns: boolean }
@@ -5028,6 +5041,10 @@ export type Database = {
       }
       org_has_platform_bypass: { Args: { p_org_id: string }; Returns: boolean }
       org_has_platform_store_bypass: {
+        Args: { p_org_id: string }
+        Returns: boolean
+      }
+      org_has_real_audit_activity: {
         Args: { p_org_id: string }
         Returns: boolean
       }
@@ -5106,6 +5123,25 @@ export type Database = {
           isOneToOne: false
           isSetofReturn: true
         }
+      }
+      seed_aislix_demo_environment: {
+        Args: { p_force?: boolean; p_owner_user_id: string }
+        Returns: Json
+      }
+      seed_demo_completed_audit: {
+        Args: {
+          p_assignee_id: string
+          p_assigner_id: string
+          p_completed_at: string
+          p_created_at: string
+          p_operating_model: string
+          p_org_id: string
+          p_scenario: number
+          p_store_id: string
+          p_template_id: string
+          p_template_name: string
+        }
+        Returns: string
       }
       seed_expiry_demo_scenario: {
         Args: { p_org_id: string; p_user_id: string }
