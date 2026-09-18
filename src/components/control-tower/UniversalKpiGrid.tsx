@@ -44,14 +44,17 @@ function valueClass(kpi: ControlTowerKpi, inverted?: boolean) {
 
 export function UniversalKpiGrid({
   data,
+  demoBadgePreviewMode,
   onDrill,
 }: {
   data: ControlTowerDemoPayload;
+  demoBadgePreviewMode?: boolean;
   onDrill?: (kpi: ControlTowerKpi) => void;
 }) {
+  const previewMode = demoBadgePreviewMode ?? data.previewDemo;
   return (
     <div className="space-y-3">
-      {data.labeledDemo ? <DemoDataBadge previewMode={data.previewDemo} /> : null}
+      {data.labeledDemo ? <DemoDataBadge previewMode={previewMode} /> : null}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {DASHBOARD_KPI_IDS.map((id) => {
         const kpi = findKpi(data.universalKpis, id);

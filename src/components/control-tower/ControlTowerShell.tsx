@@ -58,6 +58,7 @@ import { DashboardVisualBoard } from "./DashboardVisualBoard";
 import { UniversalKpiGrid } from "./UniversalKpiGrid";
 import { DemoPreviewToggle } from "./DemoPreviewToggle";
 import { AISLIX, AISLIX_CHART, AISLIX_STATUS_MIX } from "@/lib/aislix-theme";
+import { shouldShowDemoPreviewCta } from "@/lib/demo-environment";
 import { useDemoPreview } from "@/lib/use-demo-preview";
 
 const STATUS_COLORS: Record<string, string> = AISLIX_STATUS_MIX;
@@ -123,6 +124,7 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
   }
 
   const data = query.data;
+  const demoBadgePreviewMode = shouldShowDemoPreviewCta(data.previewDemo);
   const locLabel = data.terminology.locationPlural;
 
   return (
@@ -144,11 +146,16 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
           }}
           downloadLabel="Download KPI CSV"
         />
-        <UniversalKpiGrid data={data} onDrill={(kpi) => drillTo("kpi", kpi.label)} />
+        <UniversalKpiGrid
+          data={data}
+          demoBadgePreviewMode={demoBadgePreviewMode}
+          onDrill={(kpi) => drillTo("kpi", kpi.label)}
+        />
       </section>
 
       <ControlTowerDashboardHeader
         data={data}
+        demoBadgePreviewMode={demoBadgePreviewMode}
         filters={filters}
         onExport={() => exportAuditExecutionCsv(data, filters)}
       />
@@ -183,7 +190,7 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
           title="Visual overview"
           description="Health dials, strengths radar, risk heatmap and audits vs problems."
         />
-        <DashboardVisualBoard data={data} />
+        <DashboardVisualBoard data={data} demoBadgePreviewMode={demoBadgePreviewMode} />
       </section>
 
       <div className="grid gap-4 xl:grid-cols-2">

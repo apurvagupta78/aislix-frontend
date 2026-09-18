@@ -671,7 +671,9 @@ export async function computeUniversalDashboard(input: {
       assignments: [],
       findings: [],
       actions: [],
+      labeledDemo: demoExperience.labeledDemo,
     });
+    empty.previewDemo = demoExperience.previewDemo;
     return empty;
   }
 

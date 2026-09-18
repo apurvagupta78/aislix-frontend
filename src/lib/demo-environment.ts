@@ -103,6 +103,11 @@ export async function resolveDemoExperience(
   return { labeledDemo: false, dataOrgId: activeOrgId, activeOrgId, previewDemo: false };
 }
 
+/** Use preview overlay CTA when demo data comes from the owner preview toggle, not the demo workspace. */
+export function shouldShowDemoPreviewCta(previewDemo?: boolean): boolean {
+  return Boolean(previewDemo);
+}
+
 export function prefixDemoAnswer(answer: string, labeledDemo: boolean): string {
   if (!labeledDemo) return answer;
   const trimmed = answer.trim();

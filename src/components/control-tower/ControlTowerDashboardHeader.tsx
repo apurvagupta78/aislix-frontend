@@ -11,13 +11,16 @@ import { DemoDataBadge } from "@/components/control-tower/DemoDataBadge";
 
 export function ControlTowerDashboardHeader({
   data,
+  demoBadgePreviewMode,
   filters,
   onExport,
 }: {
   data?: ControlTowerDemoPayload;
+  demoBadgePreviewMode?: boolean;
   filters: DashboardFilterState;
   onExport: () => void;
 }) {
+  const previewMode = demoBadgePreviewMode ?? data?.previewDemo;
   const inProgress =
     data?.auditExecutionFull.filter((a) => a.stage === "In progress").length ?? 0;
   const breaches = data?.correctiveActionHealth.overdue ?? data?.sla.breached ?? 0;
@@ -33,7 +36,7 @@ export function ControlTowerDashboardHeader({
       description="See what needs attention, drill in, and assign fixes — at a glance."
       meta={
         <>
-          {data?.labeledDemo ? <DemoDataBadge showCta previewMode={data.previewDemo} /> : null}
+          {data?.labeledDemo ? <DemoDataBadge showCta previewMode={previewMode} /> : null}
           {inProgress > 0 ? (
             <MpBadge tone="active" dot>
               {inProgress} audits in progress

@@ -28,7 +28,14 @@ import { AISLIX, AISLIX_CHART } from "@/lib/aislix-theme";
  * Visual board — presentation only. Reads the same demo payload the rest of the
  * Control Tower uses; no data, API, or calculation changes.
  */
-export function DashboardVisualBoard({ data }: { data: ControlTowerDemoPayload }) {
+export function DashboardVisualBoard({
+  data,
+  demoBadgePreviewMode,
+}: {
+  data: ControlTowerDemoPayload;
+  demoBadgePreviewMode?: boolean;
+}) {
+  const previewMode = demoBadgePreviewMode ?? data.previewDemo;
   const gauges = useMemo(
     () => [
       { name: "SLA on time", value: data.sla.compliancePct, fill: AISLIX_CHART[0] },
@@ -83,7 +90,7 @@ export function DashboardVisualBoard({ data }: { data: ControlTowerDemoPayload }
 
   return (
     <div className="space-y-4">
-      {data.labeledDemo ? <DemoDataBadge showCta /> : null}
+      {data.labeledDemo ? <DemoDataBadge showCta previewMode={previewMode} /> : null}
       <div className="grid gap-4 lg:grid-cols-2">
       <ChartFrame
         icon={<Gauge className="size-4" />}
