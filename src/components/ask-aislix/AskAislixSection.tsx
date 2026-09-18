@@ -60,6 +60,12 @@ export function AskAislixSection() {
 
         if (!result.ok) {
           setResponse(null);
+          setError(result.response.answer || "Ask Aislix could not complete this request.");
+          return;
+        }
+
+        if (result.response.answer === NO_AUDIT_FOUND_MESSAGE) {
+          setResponse(null);
           setError(NO_AUDIT_FOUND_MESSAGE);
           return;
         }

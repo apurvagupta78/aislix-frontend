@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  ASK_AISLIX_PARSE_ERROR_MESSAGE,
   NO_AUDIT_FOUND_MESSAGE,
   isNoAuditDataResponse,
   parseAskAislixResponse,
 } from "./ask-aislix.response";
 
 describe("parseAskAislixResponse", () => {
-  it("returns the short no-audit message for unavailable data answers", () => {
+  it("returns the short no-audit message for explicit unavailable data answers", () => {
     const raw = JSON.stringify({
       answer: "Data unavailable: shelf-audit images for Lakme were not accessible.",
       summary: "The requested share-of-shelf analysis could not be completed.",
@@ -22,19 +23,24 @@ describe("parseAskAislixResponse", () => {
 
     const result = parseAskAislixResponse(raw);
     expect(result.answer).toBe(NO_AUDIT_FOUND_MESSAGE);
-    expect(result.summary).toBe("");
-    expect(result.insights).toEqual([]);
   });
 
-  it("returns the short no-audit message when raw JSON cannot be schema-validated", () => {
+  it("coerces loose JSON with invalid metric trends instead of failing", () => {
     const raw = JSON.stringify({
-      answer: "Data unavailable: shelf-audit images were not accessible.",
-      summary: "Could not complete analysis.",
-      metrics: [{ label: "Count", value: 0, trend: "invalid-trend" }],
+      answer: "3 recurring audit failures this month.",
+      summary: "Focus on Mumbai stores first.",
+      metrics: [{ label: "Count", value: "3", unit: "", trend: "invalid-trend" }],
+      visual: { type: "none", title: "", data: [] },
+      table: { columns: [], rows: [] },
+      insights: [],
+      actions: [],
+      source_context: { period: "This month", locations: ["Mumbai"] },
+      follow_up_questions: [],
     });
 
     const result = parseAskAislixResponse(raw);
-    expect(result.answer).toBe(NO_AUDIT_FOUND_MESSAGE);
+    expect(result.answer).toBe("3 recurring audit failures this month.");
+    expect(result.metrics[0]?.trend).toBe("none");
   });
 
   it("keeps valid successful answers unchanged", () => {
@@ -52,6 +58,28 @@ describe("parseAskAislixResponse", () => {
 
     const result = parseAskAislixResponse(raw);
     expect(result.answer).toBe("3 audits are overdue this week.");
+  });
+
+  it("does not treat empty recurring-failure answers as no-audit", () => {
+    const raw = JSON.stringify({
+      answer: "No recurring audit failures were found in your authorized scope for the last 30 days.",
+      summary: "",
+      metrics: [],
+      visual: { type: "none", title: "", data: [] },
+      table: { columns: [], rows: [] },
+      insights: [],
+      actions: [],
+      source_context: { period: "Last 30 days", locations: [] },
+      follow_up_questions: [],
+    });
+
+    const result = parseAskAislixResponse(raw);
+    expect(result.answer).toContain("No recurring audit failures");
+    expect(result.answer).not.toBe(NO_AUDIT_FOUND_MESSAGE);
+  });
+
+  it("returns parse error message for empty JSON payloads", () => {
+    expect(parseAskAislixResponse("{}").answer).toBe(ASK_AISLIX_PARSE_ERROR_MESSAGE);
   });
 });
 

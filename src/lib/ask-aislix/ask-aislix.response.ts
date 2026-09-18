@@ -6,6 +6,9 @@ import {
 export const NO_AUDIT_FOUND_MESSAGE =
   "No audit found. Please create an audit to generate the answer";
 
+export const ASK_AISLIX_PARSE_ERROR_MESSAGE =
+  "Ask Aislix could not format the response. Please try again.";
+
 const EMPTY_RESPONSE: AskAislixResponse = {
   answer: NO_AUDIT_FOUND_MESSAGE,
   summary: "",
@@ -18,11 +21,37 @@ const EMPTY_RESPONSE: AskAislixResponse = {
   follow_up_questions: [],
 };
 
-const NO_DATA_PATTERNS =
-  /data unavailable|cannot be calculated|not accessible|no audit|no audits|no matching audit|could not be completed|no shelf-audit|no evidence|not found under the current authorization/i;
+const VALID_TRENDS = new Set(["up", "down", "flat", "none"]);
+
+/** Only normalize when the model explicitly signals unavailable scoped data. */
+const UNAVAILABLE_ANSWER_PATTERNS = [
+  /^data unavailable/i,
+  /^no data is available/i,
+  /^no matching audit/i,
+  /^no shelf-audit/i,
+  /^no evidence/i,
+  /^not accessible under/i,
+];
 
 function emptyAskResponse(answer: string): AskAislixResponse {
   return { ...EMPTY_RESPONSE, answer };
+}
+
+function sanitizeMetrics(raw: unknown): AskAislixResponse["metrics"] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const metric = item as Record<string, unknown>;
+      const trend = String(metric.trend ?? "none");
+      return {
+        label: String(metric.label ?? ""),
+        value: String(metric.value ?? ""),
+        unit: String(metric.unit ?? ""),
+        trend: VALID_TRENDS.has(trend) ? (trend as "up" | "down" | "flat" | "none") : "none",
+      };
+    })
+    .filter((m): m is NonNullable<typeof m> => Boolean(m?.label));
 }
 
 function coerceLooseResponse(value: unknown): AskAislixResponse | null {
@@ -31,9 +60,9 @@ function coerceLooseResponse(value: unknown): AskAislixResponse | null {
   if (typeof obj.answer !== "string" || !obj.answer.trim()) return null;
 
   const candidate = {
-    answer: obj.answer,
+    answer: obj.answer.trim(),
     summary: typeof obj.summary === "string" ? obj.summary : "",
-    metrics: Array.isArray(obj.metrics) ? obj.metrics : [],
+    metrics: sanitizeMetrics(obj.metrics),
     visual:
       obj.visual && typeof obj.visual === "object"
         ? obj.visual
@@ -60,7 +89,7 @@ function coerceLooseResponse(value: unknown): AskAislixResponse | null {
 export function isNoAuditDataResponse(response: Pick<AskAislixResponse, "answer" | "summary">): boolean {
   const answer = response.answer.trim();
   if (answer.startsWith("{")) return true;
-  return NO_DATA_PATTERNS.test(`${response.answer} ${response.summary ?? ""}`);
+  return UNAVAILABLE_ANSWER_PATTERNS.some((pattern) => pattern.test(answer));
 }
 
 export function normalizeAskAislixResponse(response: AskAislixResponse): AskAislixResponse {
@@ -72,25 +101,26 @@ export function normalizeAskAislixResponse(response: AskAislixResponse): AskAisl
 
 export function parseAskAislixResponse(raw: string): AskAislixResponse {
   const trimmed = raw.trim();
-  if (!trimmed) {
-    return emptyAskResponse(NO_AUDIT_FOUND_MESSAGE);
+  if (!trimmed || trimmed === "{}") {
+    return emptyAskResponse(ASK_AISLIX_PARSE_ERROR_MESSAGE);
   }
 
   try {
-    const parsed = AskAislixResponseSchema.parse(JSON.parse(trimmed));
-    return normalizeAskAislixResponse(parsed);
+    const json = JSON.parse(trimmed) as unknown;
+    const strict = AskAislixResponseSchema.safeParse(json);
+    if (strict.success) {
+      return normalizeAskAislixResponse(strict.data);
+    }
+
+    const loose = coerceLooseResponse(json);
+    if (loose) return normalizeAskAislixResponse(loose);
   } catch {
-    try {
-      const loose = coerceLooseResponse(JSON.parse(trimmed));
-      if (loose) return normalizeAskAislixResponse(loose);
-    } catch {
-      // fall through
-    }
-
-    if (trimmed.startsWith("{")) {
-      return emptyAskResponse(NO_AUDIT_FOUND_MESSAGE);
-    }
-
-    return emptyAskResponse(NO_AUDIT_FOUND_MESSAGE);
+    // fall through — not JSON
   }
+
+  if (!trimmed.startsWith("{") && trimmed.length > 0) {
+    return emptyAskResponse(trimmed.slice(0, 4000));
+  }
+
+  return emptyAskResponse(ASK_AISLIX_PARSE_ERROR_MESSAGE);
 }

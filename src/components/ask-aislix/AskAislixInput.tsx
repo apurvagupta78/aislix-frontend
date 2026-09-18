@@ -1,10 +1,11 @@
 import { useRef } from "react";
-import { Paperclip, Send, X } from "lucide-react";
+import { Paperclip, Send, Upload, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { AskAislixAttachmentInput } from "@/lib/ask-aislix/ask-aislix.types";
 import { ASK_AISLIX_MAX_ATTACHMENTS } from "@/lib/ask-aislix/ask-aislix.attachments";
+import { readAskAislixAttachments } from "@/lib/ask-aislix/ask-aislix.attachments-io";
 import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,19 @@ export function AskAislixInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const canSubmit = !loading && value.trim().length > 0;
+  const attachDisabled =
+    loading || !onAttachmentsChange || attachments.length >= ASK_AISLIX_MAX_ATTACHMENTS;
+
+  const handleFiles = (files: FileList | null) => {
+    if (!files?.length || !onAttachmentsChange) return;
+    void readAskAislixAttachments(files, attachments.length)
+      .then((next) => onAttachmentsChange([...attachments, ...next]))
+      .catch((err) => {
+        onAttachmentError?.(
+          err instanceof Error ? err.message : "Could not attach that file.",
+        );
+      });
+  };
 
   return (
     <form
@@ -42,26 +56,63 @@ export function AskAislixInput({
         if (canSubmit) onSubmit();
       }}
     >
-      <Textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="What needs attention today?"
-        disabled={loading}
-        rows={3}
-        className={cn(
-          "min-h-[96px] w-full resize-y rounded-xl text-base leading-relaxed",
-          isDark
-            ? "border-[#536277]/50 text-navy placeholder:text-mp-muted focus-visible:ring-[#536277]/40"
-            : "border-line bg-white",
-        )}
-        style={isDark ? { backgroundColor: ASK_AISLIX_SECTION.inputBackground } : undefined}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            if (canSubmit) onSubmit();
+      <div className="relative">
+        <Textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="What needs attention today?"
+          disabled={loading}
+          rows={3}
+          className={cn(
+            "min-h-[96px] w-full resize-y rounded-xl pb-11 pl-11 pr-4 text-base leading-relaxed",
+            isDark
+              ? "border-[#536277]/50 text-navy placeholder:text-mp-muted focus-visible:ring-[#536277]/40"
+              : "border-line bg-white",
+          )}
+          style={isDark ? { backgroundColor: ASK_AISLIX_SECTION.inputBackground } : undefined}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              if (canSubmit) onSubmit();
+            }
+          }}
+        />
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          className="hidden"
+          accept="*/*"
+          disabled={attachDisabled}
+          onChange={(e) => {
+            handleFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+
+        <button
+          type="button"
+          disabled={attachDisabled}
+          aria-label="Upload file"
+          title={
+            attachments.length >= ASK_AISLIX_MAX_ATTACHMENTS
+              ? `Maximum ${ASK_AISLIX_MAX_ATTACHMENTS} files`
+              : "Upload file"
           }
-        }}
-      />
+          className={cn(
+            "absolute bottom-2.5 left-2.5 flex h-8 w-8 items-center justify-center rounded-lg transition",
+            attachDisabled
+              ? "cursor-not-allowed opacity-40"
+              : isDark
+                ? "text-[#536277] hover:bg-[#2B394D]/80 hover:text-navy"
+                : "text-mp-muted hover:bg-muted/60 hover:text-navy",
+          )}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Upload className="h-4 w-4" />
+        </button>
+      </div>
 
       {attachments.length > 0 ? (
         <div className="flex flex-wrap gap-2">
@@ -91,48 +142,7 @@ export function AskAislixInput({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          className="hidden"
-          accept="*/*"
-          disabled={loading || attachments.length >= ASK_AISLIX_MAX_ATTACHMENTS}
-          onChange={(e) => {
-            const files = e.target.files;
-            e.target.value = "";
-            if (!files?.length || !onAttachmentsChange) return;
-            void (async () => {
-              try {
-                const { readAskAislixAttachments } = await import(
-                  "@/lib/ask-aislix/ask-aislix.attachments-io"
-                );
-                const next = await readAskAislixAttachments(files, attachments.length);
-                onAttachmentsChange([...attachments, ...next]);
-              } catch (err) {
-                onAttachmentError?.(
-                  err instanceof Error ? err.message : "Could not attach that file.",
-                );
-              }
-            })();
-          }}
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          disabled={loading || attachments.length >= ASK_AISLIX_MAX_ATTACHMENTS}
-          className={cn(
-            "h-9 rounded-xl px-3",
-            isDark ? "text-[#D3DAE5] hover:bg-[#2B394D] hover:text-white" : "text-navy",
-          )}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <Paperclip className="mr-2 h-4 w-4" />
-          Attach
-        </Button>
-        <div className="flex-1" />
+      <div className="flex justify-end">
         <Button
           type="submit"
           size="lg"

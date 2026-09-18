@@ -371,11 +371,17 @@ export async function askAislixServer(
 
     if (message.includes("rate")) throw new Error(message);
 
+    const userMessage = message.includes("rate")
+      ? message
+      : message.includes("OPENAI_API_KEY")
+        ? "Ask Aislix is not configured. Contact your administrator."
+        : `Ask Aislix could not complete this request: ${message}`;
+
     return {
       ok: false,
       conversationId,
       response: {
-        answer: NO_AUDIT_FOUND_MESSAGE,
+        answer: userMessage,
         summary: "",
         metrics: [],
         visual: { type: "none", title: "", data: [] },
