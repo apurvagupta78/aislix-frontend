@@ -661,7 +661,7 @@ export function HelpMeAskAislixDialog({
                 disabled={!canContinue() && !SKIPPABLE_STEPS.has(currentStep)}
                 onClick={handlePrimaryAction}
               >
-                {isLastStep ? "Add to Ask box" : "Continue"}
+                {isLastStep ? "Add to Ask Aislix Box" : "Continue"}
               </Button>
             ) : null}
           </div>
