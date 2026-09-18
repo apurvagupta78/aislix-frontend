@@ -30,9 +30,12 @@ function formatDate(value: string) {
 export function DashboardAuditsTable({
   rows,
   onDownloadCsv,
+  embedded,
 }: {
   rows: AuditExecutionRow[];
   onDownloadCsv?: () => void;
+  /** When true, renders inside a parent card (no outer border/radius). */
+  embedded?: boolean;
 }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -72,8 +75,8 @@ export function DashboardAuditsTable({
     });
   };
 
-  return (
-    <section className="overflow-hidden rounded-xl border border-line bg-white shadow-card">
+  const content = (
+    <>
       <div className="border-b border-line bg-white px-4 py-3 sm:px-5">
         <DashboardSectionHeader
           title="Store audits"
@@ -160,6 +163,12 @@ export function DashboardAuditsTable({
           </div>
         </>
       )}
-    </section>
+    </>
+  );
+
+  if (embedded) return content;
+
+  return (
+    <section className="overflow-hidden rounded-xl border border-line bg-white shadow-card">{content}</section>
   );
 }

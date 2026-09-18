@@ -174,13 +174,14 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
         onExport={() => exportAuditExecutionCsv(data, filters)}
       />
 
-      <div className="space-y-3">
-        <WorkspaceFilterBar />
+      <section className="overflow-hidden rounded-xl border border-line bg-white shadow-card">
+        <WorkspaceFilterBar embedded />
         <DashboardAuditsTable
+          embedded
           rows={data.auditExecutionFull}
           onDownloadCsv={() => exportAuditExecutionCsv(data, filters)}
         />
-      </div>
+      </section>
 
       {trail.length > 1 ? <DrilldownTrail trail={trail} onNavigate={drillBack} /> : null}
 
