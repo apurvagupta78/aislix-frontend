@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Database, LayoutDashboard, LogOut, ScanLine, Shield, Users } from "lucide-react";
+import { Database, LayoutDashboard, LogOut, ScanLine, Shield, Upload, Users } from "lucide-react";
 import { SiteFooter } from "@/components/Footer";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ const NAV: {
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/orgs", label: "Organizations", icon: Database },
   { to: "/admin/demo-scans", label: "Demo audits", icon: Shield },
+  { to: "/admin/demo-seed", label: "Demo evidence", icon: Upload },
 ];
 
 export function AdminShell({

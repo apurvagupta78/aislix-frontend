@@ -74,6 +74,7 @@ import { Route as UploadRouteImport } from './routes/upload'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as AdminDemoScansRouteImport } from './routes/admin.demo-scans'
+import { Route as AdminDemoSeedRouteImport } from './routes/admin.demo-seed'
 import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminOrgsRouteImport } from './routes/admin.orgs'
 import { Route as AdminScansRouteImport } from './routes/admin.scans'
@@ -448,6 +449,11 @@ const AdminDemoScansRoute = AdminDemoScansRouteImport.update({
   path: '/demo-scans',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminDemoSeedRoute = AdminDemoSeedRouteImport.update({
+  id: '/demo-seed',
+  path: '/demo-seed',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminLoginRoute = AdminLoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -769,6 +775,7 @@ export interface FileRoutesByFullPath {
   '/users': typeof UsersRoute
   '/verify-email': typeof VerifyEmailRoute
   '/admin/demo-scans': typeof AdminDemoScansRoute
+  '/admin/demo-seed': typeof AdminDemoSeedRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/orgs': typeof AdminOrgsRoute
   '/admin/scans': typeof AdminScansRoute
@@ -884,6 +891,7 @@ export interface FileRoutesByTo {
   '/users': typeof UsersRoute
   '/verify-email': typeof VerifyEmailRoute
   '/admin/demo-scans': typeof AdminDemoScansRoute
+  '/admin/demo-seed': typeof AdminDemoSeedRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/orgs': typeof AdminOrgsRoute
   '/admin/scans': typeof AdminScansRoute
@@ -1000,6 +1008,7 @@ export interface FileRoutesById {
   '/users': typeof UsersRoute
   '/verify-email': typeof VerifyEmailRoute
   '/admin/demo-scans': typeof AdminDemoScansRoute
+  '/admin/demo-seed': typeof AdminDemoSeedRoute
   '/admin/login': typeof AdminLoginRoute
   '/admin/orgs': typeof AdminOrgsRoute
   '/admin/scans': typeof AdminScansRoute
@@ -1117,6 +1126,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/verify-email'
     | '/admin/demo-scans'
+    | '/admin/demo-seed'
     | '/admin/login'
     | '/admin/orgs'
     | '/admin/scans'
@@ -1232,6 +1242,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/verify-email'
     | '/admin/demo-scans'
+    | '/admin/demo-seed'
     | '/admin/login'
     | '/admin/orgs'
     | '/admin/scans'
@@ -1347,6 +1358,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/verify-email'
     | '/admin/demo-scans'
+    | '/admin/demo-seed'
     | '/admin/login'
     | '/admin/orgs'
     | '/admin/scans'
@@ -1942,6 +1954,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminDemoScansRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/demo-seed': {
+      id: '/admin/demo-seed'
+      path: '/demo-seed'
+      fullPath: '/admin/demo-seed'
+      preLoaderRoute: typeof AdminDemoSeedRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/login': {
       id: '/admin/login'
       path: '/login'
@@ -2283,6 +2302,7 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminDemoScansRoute: typeof AdminDemoScansRoute
+  AdminDemoSeedRoute: typeof AdminDemoSeedRoute
   AdminLoginRoute: typeof AdminLoginRoute
   AdminOrgsRoute: typeof AdminOrgsRoute
   AdminScansRoute: typeof AdminScansRoute
@@ -2291,6 +2311,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminDemoScansRoute: AdminDemoScansRoute,
+  AdminDemoSeedRoute: AdminDemoSeedRoute,
   AdminLoginRoute: AdminLoginRoute,
   AdminOrgsRoute: AdminOrgsRoute,
   AdminScansRoute: AdminScansRoute,
