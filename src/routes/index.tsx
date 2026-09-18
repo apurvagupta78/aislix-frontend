@@ -230,9 +230,6 @@ function Landing() {
             >
               Run a free shelf audit <ArrowRight className="size-4" />
             </Button>
-              <Button asChild variant="outline" size="xl" className="w-full rounded-lg px-7 sm:w-auto">
-                <Link to="/contact" search={{ subject: "Sales enquiry" }}>Talk to sales</Link>
-              </Button>
             </div>
             <div className="mt-7 grid max-w-xl gap-3 sm:grid-cols-3">
               {[
