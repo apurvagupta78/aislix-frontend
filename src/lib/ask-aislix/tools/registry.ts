@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { FunctionTool } from "openai/resources/responses/responses";
 
 import type { Database } from "@/integrations/supabase/types";
 import type { DashboardFilterState } from "@/lib/dashboard-filters";
@@ -28,157 +29,122 @@ export type ToolExecutor = (ctx: ToolContext, args: Record<string, unknown>) => 
 
 const NOT_WIRED = "Not wired yet — insufficient source data";
 
-export const TOOL_DEFINITIONS = [
+type ToolSpec = { name: string; description: string; parameters: Record<string, unknown> };
+
+const TOOL_SPECS: ToolSpec[] = [
   {
-    type: "function" as const,
-    function: {
-      name: "get_kpi",
-      description: "Get authoritative KPI values for the user's authorized scope.",
-      parameters: {
-        type: "object",
-        properties: {
-          kpi_id: {
-            type: "string",
-            enum: [
-              "audit_completion",
-              "evidence_coverage",
-              "audit_pass",
-              "value_variance",
-              "open_findings",
-              "critical_findings",
-              "overdue_actions",
-              "sla_compliance",
-              "open_actions",
-            ],
-          },
-        },
-        required: ["kpi_id"],
-      },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_audit_summary",
-      description: "Summary counts of audits/assignments in scope.",
-      parameters: { type: "object", properties: {} },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_overdue_audits",
-      description: "List overdue audit assignments.",
-      parameters: {
-        type: "object",
-        properties: { limit: { type: "number" } },
-      },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_inventory_variance",
-      description: "Store-level potential inventory value variance ranking.",
-      parameters: {
-        type: "object",
-        properties: { limit: { type: "number" }, store_query: { type: "string" } },
-      },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_findings",
-      description: "Findings counts and top open findings.",
-      parameters: {
-        type: "object",
-        properties: { severity: { type: "string" }, limit: { type: "number" } },
-      },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_corrective_actions",
-      description: "Open and overdue corrective actions.",
-      parameters: {
-        type: "object",
-        properties: { status: { type: "string" }, limit: { type: "number" } },
-      },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_audit_trends",
-      description: "Audit completion and findings trends over time.",
-      parameters: {
-        type: "object",
-        properties: { compare_previous_period: { type: "boolean" } },
-      },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_store_performance",
-      description: "Top stores by risk/completion in authorized scope.",
-      parameters: {
-        type: "object",
-        properties: { limit: { type: "number" } },
-      },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_expiry_risk",
-      description: "Expiry-risk findings in scope.",
-      parameters: { type: "object", properties: { limit: { type: "number" } } },
-    },
-  },
-  {
-    type: "function" as const,
-    function: {
-      name: "get_audit_evidence_images",
-      description: "Retrieve audit evidence image metadata for authorized stores/audits.",
-      parameters: {
-        type: "object",
-        properties: {
-          store_query: { type: "string" },
-          store_id: { type: "string" },
-          audit_type: { type: "string", enum: ["stacking", "shelf", "expiry", "all"] },
-          limit: { type: "number" },
+    name: "get_kpi",
+    description: "Get authoritative KPI values for the user's authorized scope.",
+    parameters: {
+      type: "object",
+      properties: {
+        kpi_id: {
+          type: "string",
+          enum: [
+            "audit_completion",
+            "evidence_coverage",
+            "audit_pass",
+            "value_variance",
+            "open_findings",
+            "critical_findings",
+            "overdue_actions",
+            "sla_compliance",
+            "open_actions",
+          ],
         },
       },
+      required: ["kpi_id"],
     },
   },
   {
-    type: "function" as const,
-    function: {
-      name: "get_evidence_coverage",
-      description: "Evidence coverage KPI.",
-      parameters: { type: "object", properties: {} },
+    name: "get_audit_summary",
+    description: "Summary counts of audits/assignments in scope.",
+    parameters: { type: "object", properties: {} },
+  },
+  {
+    name: "get_overdue_audits",
+    description: "List overdue audit assignments.",
+    parameters: { type: "object", properties: { limit: { type: "number" } } },
+  },
+  {
+    name: "get_inventory_variance",
+    description: "Store-level potential inventory value variance ranking.",
+    parameters: {
+      type: "object",
+      properties: { limit: { type: "number" }, store_query: { type: "string" } },
     },
   },
   {
-    type: "function" as const,
-    function: {
-      name: "get_sla_metrics",
-      description: "SLA buckets for corrective actions.",
-      parameters: { type: "object", properties: {} },
+    name: "get_findings",
+    description: "Findings counts and top open findings.",
+    parameters: {
+      type: "object",
+      properties: { severity: { type: "string" }, limit: { type: "number" } },
     },
   },
   {
-    type: "function" as const,
-    function: {
-      name: "get_inventory_accuracy",
-      description: "Inventory accuracy metric.",
-      parameters: { type: "object", properties: {} },
+    name: "get_corrective_actions",
+    description: "Open and overdue corrective actions.",
+    parameters: {
+      type: "object",
+      properties: { status: { type: "string" }, limit: { type: "number" } },
     },
+  },
+  {
+    name: "get_audit_trends",
+    description: "Audit completion and findings trends over time.",
+    parameters: {
+      type: "object",
+      properties: { compare_previous_period: { type: "boolean" } },
+    },
+  },
+  {
+    name: "get_store_performance",
+    description: "Top stores by risk/completion in authorized scope.",
+    parameters: { type: "object", properties: { limit: { type: "number" } } },
+  },
+  {
+    name: "get_expiry_risk",
+    description: "Expiry-risk findings in scope.",
+    parameters: { type: "object", properties: { limit: { type: "number" } } },
+  },
+  {
+    name: "get_audit_evidence_images",
+    description: "Retrieve audit evidence image metadata for authorized stores/audits.",
+    parameters: {
+      type: "object",
+      properties: {
+        store_query: { type: "string" },
+        store_id: { type: "string" },
+        audit_type: { type: "string", enum: ["stacking", "shelf", "expiry", "all"] },
+        limit: { type: "number" },
+      },
+    },
+  },
+  {
+    name: "get_evidence_coverage",
+    description: "Evidence coverage KPI.",
+    parameters: { type: "object", properties: {} },
+  },
+  {
+    name: "get_sla_metrics",
+    description: "SLA buckets for corrective actions.",
+    parameters: { type: "object", properties: {} },
+  },
+  {
+    name: "get_inventory_accuracy",
+    description: "Inventory accuracy metric.",
+    parameters: { type: "object", properties: {} },
   },
 ];
+
+export const RESPONSE_TOOLS: FunctionTool[] = TOOL_SPECS.map((tool) => ({
+  type: "function",
+  name: tool.name,
+  description: tool.description,
+  parameters: tool.parameters,
+  strict: false,
+}));
 
 async function getKpi(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
   const kpiId = String(args.kpi_id ?? "");

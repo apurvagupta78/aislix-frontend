@@ -1,1 +1,6 @@
-export { TOOL_DEFINITIONS, executeTool, compactToolResultForModel, type ToolContext } from "./registry";
+export {
+  RESPONSE_TOOLS,
+  executeTool,
+  compactToolResultForModel,
+  type ToolContext,
+} from "./registry";

@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export const ASK_AISLIX_SUGGESTIONS = [
   "What needs attention today?",
@@ -12,10 +13,14 @@ export const ASK_AISLIX_SUGGESTIONS = [
 export function AskAislixSuggestions({
   onSelect,
   disabled,
+  variant = "light",
 }: {
   onSelect: (question: string) => void;
   disabled?: boolean;
+  variant?: "light" | "dark";
 }) {
+  const isDark = variant === "dark";
+
   return (
     <div className="flex flex-wrap gap-2">
       {ASK_AISLIX_SUGGESTIONS.map((suggestion) => (
@@ -25,7 +30,12 @@ export function AskAislixSuggestions({
           variant="outline"
           size="sm"
           disabled={disabled}
-          className="rounded-full border-line bg-white text-xs md:text-sm"
+          className={cn(
+            "rounded-full text-xs md:text-sm",
+            isDark
+              ? "border-white/25 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+              : "border-line bg-white",
+          )}
           onClick={() => onSelect(suggestion)}
         >
           {suggestion}
