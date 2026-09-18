@@ -46,6 +46,7 @@ const SPECIAL_BADGE: Record<string, string> = {
 
 const PURPOSE_BADGE = `${SEMANTIC_PALETTE.info.border} ${SEMANTIC_PALETTE.info.bg}`;
 
+/** Five distinct operating-model tints from the design system — rotate so no two neighbors match. */
 const USE_TEMPLATE_BUTTON: Record<OperatingModel, string> = {
   local_store:
     "border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)] text-[var(--aislix-primary)] hover:bg-[var(--aislix-local-border)]/40",
@@ -61,12 +62,21 @@ const USE_TEMPLATE_BUTTON: Record<OperatingModel, string> = {
     "border-[var(--aislix-custom-border)] bg-[var(--aislix-custom-bg)] text-[var(--aislix-primary)] hover:bg-[var(--aislix-custom-border)]/40",
 };
 
+const USE_TEMPLATE_BUTTON_ROTATION: OperatingModel[] = [
+  "local_store",
+  "supermarket",
+  "dark_store",
+  "warehouse",
+  "custom",
+];
+
 function badgeTone(label: string) {
   return MODEL_BADGE[label] ?? SPECIAL_BADGE[label] ?? PURPOSE_BADGE;
 }
 
-function useTemplateButtonClass(model: OperatingModel) {
-  return USE_TEMPLATE_BUTTON[model] ?? USE_TEMPLATE_BUTTON.custom;
+function useTemplateButtonClass(colorIndex: number) {
+  const tone = USE_TEMPLATE_BUTTON_ROTATION[colorIndex % USE_TEMPLATE_BUTTON_ROTATION.length];
+  return USE_TEMPLATE_BUTTON[tone];
 }
 
 function systemKeyFromTemplate(t: AuditTemplate): string | undefined {
@@ -97,7 +107,7 @@ function SimpleTemplateCard({
   description,
   badges,
   selected,
-  model,
+  colorIndex,
   onUse,
   onPreview,
 }: {
@@ -105,7 +115,7 @@ function SimpleTemplateCard({
   description: string;
   badges: string[];
   selected?: boolean;
-  model: OperatingModel;
+  colorIndex: number;
   onUse: () => void;
   onPreview: () => void;
 }) {
@@ -149,7 +159,7 @@ function SimpleTemplateCard({
           size="sm"
           variant="outline"
           onClick={onUse}
-          className={cn("min-w-0 flex-1 font-semibold shadow-soft", useTemplateButtonClass(model))}
+          className={cn("min-w-0 flex-1 font-semibold shadow-soft", useTemplateButtonClass(colorIndex))}
         >
           <Play className="size-3 shrink-0" /> Use Template
         </Button>
@@ -315,14 +325,14 @@ export function SimpleTemplatePicker({
             </h3>
             <p className="mb-3 text-xs text-[var(--aislix-secondary)]">Based on {modelLabel}</p>
             <div className="grid gap-3 sm:grid-cols-2">
-              {recommended.slice(0, 4).map((spec) => (
+              {recommended.slice(0, 4).map((spec, index) => (
                 <SimpleTemplateCard
                   key={spec.key}
                   name={spec.name}
                   description={spec.shortDescription}
                   badges={badgesForSpec(spec)}
                   selected={templateChoice === `system:${spec.key}`}
-                  model={spec.operatingModel}
+                  colorIndex={index}
                   onPreview={() => openPreviewForSpec(spec)}
                   onUse={() => {
                     onSelect(`system:${spec.key}`, { name: spec.name, systemKey: spec.key });
@@ -358,38 +368,46 @@ export function SimpleTemplatePicker({
             ))}
           </div>
           <div className="grid auto-rows-fr gap-3 sm:grid-cols-2">
-            {source !== "mine" && source !== "organization"
-              ? systemSlice.map((spec) => (
-                  <SimpleTemplateCard
-                    key={spec.key}
-                    name={spec.name}
-                    description={spec.shortDescription}
-                    badges={badgesForSpec(spec)}
-                    selected={templateChoice === `system:${spec.key}`}
-                    model={spec.operatingModel}
-                    onPreview={() => openPreviewForSpec(spec)}
-                    onUse={() => {
-                      onSelect(`system:${spec.key}`, { name: spec.name, systemKey: spec.key });
-                      onOpenChange(false);
-                    }}
-                  />
-                ))
-              : null}
-            {dbVisible.map((t) => (
-              <SimpleTemplateCard
-                key={t.id}
-                name={t.name}
-                description={t.short_description ?? t.description ?? ""}
-                badges={badgesForTemplate(t)}
-                selected={templateChoice === t.id}
-                model={(t.operating_model ?? operatingModel) as OperatingModel}
-                onPreview={() => openPreviewForTemplate(t)}
-                onUse={() => {
-                  onSelect(t.id, { name: t.name });
-                  onOpenChange(false);
-                }}
-              />
-            ))}
+            {(() => {
+              let colorIndex = 0;
+              const nextColorIndex = () => colorIndex++;
+              return (
+                <>
+                  {source !== "mine" && source !== "organization"
+                    ? systemSlice.map((spec) => (
+                        <SimpleTemplateCard
+                          key={spec.key}
+                          name={spec.name}
+                          description={spec.shortDescription}
+                          badges={badgesForSpec(spec)}
+                          selected={templateChoice === `system:${spec.key}`}
+                          colorIndex={nextColorIndex()}
+                          onPreview={() => openPreviewForSpec(spec)}
+                          onUse={() => {
+                            onSelect(`system:${spec.key}`, { name: spec.name, systemKey: spec.key });
+                            onOpenChange(false);
+                          }}
+                        />
+                      ))
+                    : null}
+                  {dbVisible.map((t) => (
+                    <SimpleTemplateCard
+                      key={t.id}
+                      name={t.name}
+                      description={t.short_description ?? t.description ?? ""}
+                      badges={badgesForTemplate(t)}
+                      selected={templateChoice === t.id}
+                      colorIndex={nextColorIndex()}
+                      onPreview={() => openPreviewForTemplate(t)}
+                      onUse={() => {
+                        onSelect(t.id, { name: t.name });
+                        onOpenChange(false);
+                      }}
+                    />
+                  ))}
+                </>
+              );
+            })()}
           </div>
         </section>
       </PreviewDrawer>
