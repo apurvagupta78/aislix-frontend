@@ -548,7 +548,7 @@ async function getAuditEvidenceImages(ctx: ToolContext, args: Record<string, unk
       evidenceId: row.id as string,
       scanId: row.scan_id as string,
       assignmentId: assignment?.id as string | undefined,
-      storageBucket: "audit-evidence",
+      storageBucket: "scan-images",
       storagePath: row.storage_path as string,
       caption: `Evidence · ${row.bin_key ?? "audit"}`,
       capturedAt: row.captured_at as string,

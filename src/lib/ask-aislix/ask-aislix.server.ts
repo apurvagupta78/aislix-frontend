@@ -93,10 +93,18 @@ async function signImageGalleryItems(
 ): Promise<ImageGalleryItem[]> {
   const signed: ImageGalleryItem[] = [];
   for (const item of items) {
-    const { data } = await supabase.storage
-      .from(item.storageBucket)
-      .createSignedUrl(item.storagePath, 3600);
-    signed.push({ ...item, url: data?.signedUrl ?? undefined });
+    let signedUrl: string | undefined;
+    const buckets = item.storageBucket === "scan-images"
+      ? ["scan-images", "audit-evidence"]
+      : [item.storageBucket, "scan-images", "audit-evidence"];
+    for (const bucket of [...new Set(buckets)]) {
+      const { data } = await supabase.storage.from(bucket).createSignedUrl(item.storagePath, 3600);
+      if (data?.signedUrl) {
+        signedUrl = data.signedUrl;
+        break;
+      }
+    }
+    signed.push({ ...item, url: signedUrl });
   }
   return signed;
 }
