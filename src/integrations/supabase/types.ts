@@ -61,6 +61,48 @@ export type Database = {
           },
         ]
       }
+      ask_aislix_logs: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          error_code: string | null
+          id: string
+          latency_ms: number | null
+          org_id: string
+          question: string
+          status: string
+          token_usage: Json | null
+          tools_invoked: string[]
+          user_id: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          latency_ms?: number | null
+          org_id: string
+          question: string
+          status: string
+          token_usage?: Json | null
+          tools_invoked?: string[]
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          error_code?: string | null
+          id?: string
+          latency_ms?: number | null
+          org_id?: string
+          question?: string
+          status?: string
+          token_usage?: Json | null
+          tools_invoked?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
       assignment_campaigns: {
         Row: {
           assignment_mode: string
