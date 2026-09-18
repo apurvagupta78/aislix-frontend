@@ -17,9 +17,35 @@ import {
   getRecentTemplates,
   type RecentTemplateEntry,
 } from "@/lib/new-audit/recent-templates";
+import { operatingModelClasses, SEMANTIC_PALETTE } from "@/lib/design-system";
 import { cn } from "@/lib/utils";
 
 type SourceFilter = "all" | "mine" | "organization" | "aislix";
+
+const MODEL_BADGE: Record<string, string> = {
+  "Local Store": "border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)]",
+  Supermarket: "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)]",
+  "Dark Store": "border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)]",
+  Warehouse: "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]",
+  "FMCG / Distributor": "border-[var(--aislix-fmcg-border)] bg-[var(--aislix-fmcg-bg)]",
+  FMCG: "border-[var(--aislix-fmcg-border)] bg-[var(--aislix-fmcg-bg)]",
+  Distributor: "border-[var(--aislix-fmcg-border)] bg-[var(--aislix-fmcg-bg)]",
+  Custom: "border-[var(--aislix-custom-border)] bg-[var(--aislix-custom-bg)]",
+};
+
+const SPECIAL_BADGE: Record<string, string> = {
+  AI: `${SEMANTIC_PALETTE.ai.border} ${SEMANTIC_PALETTE.ai.bg}`,
+  Evidence: `${SEMANTIC_PALETTE.evidence.border} ${SEMANTIC_PALETTE.evidence.bg}`,
+  Aislix: `${SEMANTIC_PALETTE.brand.border} ${SEMANTIC_PALETTE.brand.bg}`,
+  Organization: `${SEMANTIC_PALETTE.success.border} ${SEMANTIC_PALETTE.success.bg}`,
+  "My Template": `${SEMANTIC_PALETTE.warning.border} ${SEMANTIC_PALETTE.warning.bg}`,
+};
+
+const PURPOSE_BADGE = `${SEMANTIC_PALETTE.info.border} ${SEMANTIC_PALETTE.info.bg}`;
+
+function badgeTone(label: string) {
+  return MODEL_BADGE[label] ?? SPECIAL_BADGE[label] ?? PURPOSE_BADGE;
+}
 
 type Props = {
   open: boolean;
@@ -38,6 +64,8 @@ function SimpleTemplateCard({
   description,
   badges,
   selected,
+  featured,
+  surfaceClass,
   onUse,
   onPreview,
 }: {
@@ -45,14 +73,18 @@ function SimpleTemplateCard({
   description: string;
   badges: string[];
   selected?: boolean;
+  featured?: boolean;
+  surfaceClass?: string;
   onUse: () => void;
   onPreview?: () => void;
 }) {
   return (
     <div
       className={cn(
-        "play-card flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[var(--aislix-border)] bg-white p-4 transition-shadow",
-        selected && "border-[var(--aislix-local-border)] ring-2 ring-[var(--aislix-local-bg)]",
+        "play-card flex min-w-0 flex-col overflow-hidden rounded-2xl border p-4 transition-shadow",
+        surfaceClass ?? "border-[var(--aislix-border)] bg-white",
+        featured && "shadow-card",
+        selected && "ring-2 ring-[var(--aislix-primary)]/15",
       )}
     >
       <h3 className="font-display text-[15px] font-semibold leading-snug text-[var(--aislix-primary)]">
@@ -66,7 +98,10 @@ function SimpleTemplateCard({
           <Badge
             key={b}
             variant="outline"
-            className="border-[var(--aislix-border)] bg-[var(--aislix-surface)] text-[10px] font-semibold text-[var(--aislix-primary)]"
+            className={cn(
+              "rounded-full border text-[10px] font-semibold text-[var(--aislix-primary)]",
+              badgeTone(b),
+            )}
           >
             {b}
           </Badge>
@@ -87,7 +122,10 @@ function SimpleTemplateCard({
           size="sm"
           variant="default"
           onClick={onUse}
-          className="min-w-0 flex-1 bg-[var(--aislix-primary)] text-white hover:bg-[#1B3B58]"
+          className={cn(
+            "min-w-0 bg-[var(--aislix-primary)] text-white hover:bg-[#1B3B58]",
+            onPreview ? "flex-1" : "w-full",
+          )}
         >
           <Play className="size-3 shrink-0" /> Use Template
         </Button>
@@ -188,7 +226,7 @@ export function SimpleTemplatePicker({
         onOpenChange={onOpenChange}
         title="Choose an audit template"
         description="Pick a ready-made workflow for your operating model."
-        className="sm:max-w-2xl"
+        className="bg-[var(--aislix-bg)] sm:max-w-2xl"
       >
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--aislix-secondary)]" />
@@ -210,7 +248,11 @@ export function SimpleTemplatePicker({
                 <button
                   key={`${entry.id}-${entry.systemKey}`}
                   type="button"
-                  className="flex w-full items-center justify-between rounded-xl border border-[var(--aislix-border)] bg-white px-3 py-2 text-left hover:bg-[var(--aislix-surface)]"
+                  className={cn(
+                    "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition-colors",
+                    operatingModelClasses(operatingModel),
+                    "hover:shadow-soft",
+                  )}
                   onClick={() => {
                     onSelect(resolveRecent(entry), { name: entry.name, systemKey: entry.systemKey });
                     onOpenChange(false);
@@ -231,15 +273,24 @@ export function SimpleTemplatePicker({
             <h3 className="mb-1 font-display text-sm font-semibold text-[var(--aislix-primary)]">
               Recommended for you
             </h3>
-            <p className="mb-3 text-xs text-[var(--aislix-secondary)]">Based on {modelLabel}</p>
+            <p
+              className={cn(
+                "mb-3 inline-flex rounded-full border px-3 py-1 text-xs font-semibold text-[var(--aislix-primary)]",
+                operatingModelClasses(operatingModel),
+              )}
+            >
+              Based on {modelLabel}
+            </p>
             <div className="grid gap-3 sm:grid-cols-2">
-              {recommended.slice(0, 4).map((spec) => (
+              {recommended.slice(0, 4).map((spec, index) => (
                 <SimpleTemplateCard
                   key={spec.key}
                   name={spec.name}
                   description={spec.shortDescription}
                   badges={badgesForSpec(spec)}
                   selected={templateChoice === `system:${spec.key}`}
+                  featured={index === 0}
+                  surfaceClass={operatingModelClasses(operatingModel)}
                   onPreview={() => setPreviewSpec(spec)}
                   onUse={() => {
                     onSelect(`system:${spec.key}`, { name: spec.name, systemKey: spec.key });
@@ -266,7 +317,17 @@ export function SimpleTemplatePicker({
                   "rounded-full",
                   source === chip.id
                     ? "border-[var(--aislix-primary)] bg-[var(--aislix-primary)] text-white hover:bg-[#1B3B58]"
-                    : "border-[var(--aislix-border)] bg-white text-[var(--aislix-primary)] hover:bg-[var(--aislix-surface)]",
+                    : cn(
+                        "border-[var(--aislix-border)] bg-white text-[var(--aislix-primary)]",
+                        chip.id === "aislix" &&
+                          "hover:border-[var(--aislix-warehouse-border)] hover:bg-[var(--aislix-warehouse-bg)]",
+                        chip.id === "organization" &&
+                          "hover:border-[var(--aislix-supermarket-border)] hover:bg-[var(--aislix-supermarket-bg)]",
+                        chip.id === "mine" &&
+                          "hover:border-[var(--aislix-darkstore-border)] hover:bg-[var(--aislix-darkstore-bg)]",
+                        chip.id === "all" &&
+                          "hover:border-[var(--aislix-local-border)] hover:bg-[var(--aislix-local-bg)]",
+                      ),
                 )}
                 onClick={() => setSource(chip.id)}
               >
@@ -283,6 +344,7 @@ export function SimpleTemplatePicker({
                     description={spec.shortDescription}
                     badges={badgesForSpec(spec)}
                     selected={templateChoice === `system:${spec.key}`}
+                    surfaceClass={operatingModelClasses(spec.operatingModel)}
                     onPreview={() => setPreviewSpec(spec)}
                     onUse={() => {
                       onSelect(`system:${spec.key}`, { name: spec.name, systemKey: spec.key });
@@ -298,6 +360,11 @@ export function SimpleTemplatePicker({
                 description={t.short_description ?? t.description ?? ""}
                 badges={badgesForTemplate(t)}
                 selected={templateChoice === t.id}
+                surfaceClass={
+                  t.operating_model
+                    ? operatingModelClasses(t.operating_model as OperatingModel)
+                    : undefined
+                }
                 onUse={() => {
                   onSelect(t.id, { name: t.name });
                   onOpenChange(false);
