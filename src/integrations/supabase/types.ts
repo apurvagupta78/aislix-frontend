@@ -5149,6 +5149,10 @@ export type Database = {
       }
       seed_fnv_qc_template: { Args: { p_org_id: string }; Returns: string }
       seed_hierarchy_profiles: { Args: { p_org_id: string }; Returns: Json }
+      seed_hierarchy_profiles_bootstrap: {
+        Args: { p_org_id: string }
+        Returns: undefined
+      }
       share_audit_template_with_org: {
         Args: { p_template_id: string }
         Returns: undefined
