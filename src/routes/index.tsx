@@ -212,7 +212,7 @@ function Landing() {
               <span className="size-1.5 rounded-full bg-brand" />
               AI-powered retail execution
             </span>
-            <h1 className="mt-7 max-w-xl text-5xl font-semibold leading-[1.02] text-foreground sm:text-6xl lg:text-7xl">
+            <h1 className="mt-7 max-w-xl text-4xl font-semibold leading-[1.05] text-foreground sm:text-5xl lg:text-[3.4rem]">
               Turn Every Shelf Visit Into Accountable Retail Intelligence.
             </h1>
             <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
