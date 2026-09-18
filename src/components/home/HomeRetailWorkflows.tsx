@@ -41,7 +41,7 @@ const WORKFLOWS = [
 
 export function HomeRetailWorkflows() {
   return (
-    <section id="workflows" className="scroll-mt-16 border-t border-border bg-surface py-16 sm:py-20">
+    <section id="workflows" className="home-section scroll-mt-16 bg-surface">
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <SectionHeading
           eyebrow="ONE PLATFORM"
@@ -50,7 +50,7 @@ export function HomeRetailWorkflows() {
         />
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {WORKFLOWS.map(({ Icon, title, headline, body, modelClass }) => (
-            <div key={title} className={`rounded-xl border p-5 shadow-soft ${modelClass}`}>
+            <div key={title} className={`card-hover rounded-lg border p-5 shadow-soft ${modelClass}`}>
               <Icon className="size-5 text-[var(--aislix-primary)]" strokeWidth={1.75} aria-hidden="true" />
               <h3 className="mt-3 text-sm font-semibold text-foreground">{title}</h3>
               <p className="mt-2 text-xs font-medium leading-snug text-foreground/90">{headline}</p>

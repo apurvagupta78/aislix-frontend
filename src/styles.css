@@ -21,6 +21,8 @@
 @theme inline {
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Sora", "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-home-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-home-display: "Space Grotesk", "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --color-status-good: var(--status-good);
   --color-status-good-soft: var(--status-good-soft);
   --color-status-good-strong: var(--status-good-strong);
@@ -396,6 +398,43 @@
     border-color: color-mix(in oklab, var(--color-brand) 22%, var(--color-border));
     transform: translateY(-2px);
   }
+}
+
+/** Selected homepage direction: precise enterprise retail with a darker AI frame. */
+@utility home-modern {
+  font-family: var(--font-home-sans);
+  background-color: var(--aislix-bg);
+  & h1,
+  & h2,
+  & h3,
+  & h4 {
+    font-family: var(--font-home-display);
+  }
+}
+
+@utility home-section {
+  border-top: 1px solid var(--aislix-border);
+  padding-block: 5.5rem;
+}
+
+@utility home-product-frame {
+  border: 1px solid color-mix(in oklab, var(--aislix-local-border) 70%, var(--aislix-border));
+  background-color: #FFFFFF;
+  box-shadow: 0 26px 72px rgb(16 42 67 / 0.16);
+}
+
+@utility home-dark-band {
+  background-color: var(--aislix-primary);
+  color: #FFFFFF;
+}
+
+@utility home-kicker {
+  color: var(--aislix-secondary);
+  font-family: var(--font-home-sans);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /** Soft app canvas — authenticated pages */
