@@ -57,6 +57,8 @@ export type HelpTopicConfig = {
   needsGrouping?: boolean;
   productDimensions?: string[];
   groupByOptions?: string[];
+  /** When false, topic is hidden — no wired Ask Aislix tool yet. */
+  available?: boolean;
 };
 
 export type HelpMetricOption = {
@@ -106,8 +108,43 @@ function topic(
   return { id, label, ...extra };
 }
 
+/** Topics without wired Ask Aislix tools — hidden from the wizard. */
+const UNAVAILABLE_TOPIC_IDS = new Set([
+  "shelf_space",
+  "shelf_stacking",
+  "facing",
+  "planogram",
+  "pricing",
+  "promotions",
+  "brand_performance",
+  "posm",
+  "brand_visibility",
+  "sales_rep_performance",
+  "picking_accuracy",
+  "putaway_accuracy",
+  "receiving",
+  "dispatch",
+  "bin_accuracy",
+  "location_compliance",
+  "inventory_accuracy",
+  "expiry_coverage",
+  "cycle_count",
+  "shelf_compliance",
+  "putaway",
+  "picking",
+  "damage",
+  "batch",
+]);
+
+export function getAvailableTopicsForRole(role: HelpOperatingRole): HelpTopicConfig[] {
+  return TOPICS_BY_ROLE[role].filter(
+    (t) => t.available !== false && !UNAVAILABLE_TOPIC_IDS.has(t.id),
+  );
+}
+
 export const TOPICS_BY_ROLE: Record<HelpOperatingRole, HelpTopicConfig[]> = {
   supermarket: [
+    topic("shelf_images", "Shelf Images", { groupByOptions: ["store"] }),
     topic("store_performance", "Store Performance", { needsMetric: true, needsGrouping: true, groupByOptions: STORE_GROUP }),
     topic("inventory", "Inventory", { needsProduct: true, needsMetric: true, needsGrouping: true, productDimensions: ["category", "brand", "sku"], groupByOptions: STORE_GROUP }),
     topic("shelf_space", "Shelf Space", { needsProduct: true, needsGrouping: true, productDimensions: ["category", "brand", "sku", "shelf", "aisle"], groupByOptions: ["store", "category", "brand"] }),
@@ -147,6 +184,7 @@ export const TOPICS_BY_ROLE: Record<HelpOperatingRole, HelpTopicConfig[]> = {
     topic("other", "Other", { needsGrouping: true, groupByOptions: FMCG_GROUP }),
   ],
   local_store: [
+    topic("shelf_images", "Shelf Images", { groupByOptions: ["store"] }),
     topic("store_performance", "Store Performance", { needsMetric: true, needsGrouping: true, groupByOptions: STORE_GROUP }),
     topic("inventory", "Inventory", { needsProduct: true, needsMetric: true, needsGrouping: true, productDimensions: ["category", "brand", "sku"], groupByOptions: STORE_GROUP }),
     topic("stock_variance", "Stock Variance", { needsProduct: true, needsMetric: true, needsGrouping: true, productDimensions: ["category", "brand", "sku"], groupByOptions: STORE_GROUP }),
@@ -205,7 +243,9 @@ export const TOPICS_BY_ROLE: Record<HelpOperatingRole, HelpTopicConfig[]> = {
 export function metricsForTopic(topicId: string): HelpMetricOption[] {
   if (topicId === "findings") return FINDINGS_METRICS;
   if (topicId === "corrective_actions") return CA_METRICS;
-  if (topicId === "audit_performance" || topicId === "evidence") return AUDIT_METRICS;
+  if (topicId === "audit_performance" || topicId === "evidence" || topicId === "shelf_images") {
+    return AUDIT_METRICS;
+  }
   if (
     topicId.includes("inventory") ||
     topicId === "stock_variance" ||

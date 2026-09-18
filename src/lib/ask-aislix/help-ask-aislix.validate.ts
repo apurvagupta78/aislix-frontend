@@ -1,5 +1,6 @@
 import type { AskAislixAccessScope } from "@/lib/ask-aislix/ask-aislix.types";
 import { assertStoreAccess } from "@/lib/ask-aislix/context";
+import { getAvailableTopicsForRole } from "@/lib/ask-aislix/help-ask-aislix.config";
 import {
   HelpAskIntentSchema,
   type HelpAskAuthorizedOptions,
@@ -24,6 +25,13 @@ export function validateHelpAskIntent(
   const allowedStoreIds = new Set(scope.allowedStoreIds);
   const allowedCities = new Set(options.cities.map(normalize));
   const allowedCountries = new Set(options.countries.map(normalize));
+
+  const allowedTopics = new Set(
+    getAvailableTopicsForRole(intent.operating_role).map((t) => t.id),
+  );
+  if (!allowedTopics.has(intent.topic)) {
+    return { ok: false, error: "The selected topic is not available in Aislix yet." };
+  }
 
   if (intent.locations.scope === "specific") {
     if (intent.locations.country) {

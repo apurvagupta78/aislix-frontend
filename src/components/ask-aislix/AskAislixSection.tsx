@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Sparkles } from "lucide-react";
 
 import { askAislix, type AskAislixMessage, type AskAislixResponse } from "@/lib/ask-aislix";
@@ -21,6 +21,11 @@ export function AskAislixSection() {
   const [messages, setMessages] = useState<AskAislixMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [helpOpen, setHelpOpen] = useState(false);
+
+  const suggestionRotationSeed = useMemo(
+    () => Math.floor(Date.now() / (1000 * 60 * 60 * 6)),
+    [],
+  );
 
   const submitQuestion = useCallback(
     async (raw: string) => {
@@ -99,20 +104,23 @@ export function AskAislixSection() {
       <HelpMeAskAislixDialog
         open={helpOpen}
         onOpenChange={setHelpOpen}
-        onQuestionReady={(q) => {
-          setQuestion(q);
+        onAskAislix={(q) => {
           setError(null);
           setResponse(null);
+          void submitQuestion(q);
         }}
       />
 
       <AskAislixSuggestions
         disabled={loading}
         variant="dark"
+        roleHint={filters.role}
+        city={filters.city}
+        rotationSeed={suggestionRotationSeed}
         onSelect={(s) => {
-          setQuestion(s);
           setError(null);
           setResponse(null);
+          void submitQuestion(s);
         }}
       />
 

@@ -12,7 +12,11 @@ export type HelpOperatingRole = (typeof HELP_OPERATING_ROLES)[number];
 
 export const HelpAskIntentSchema = z.object({
   operating_role: z.enum(HELP_OPERATING_ROLES),
+  operating_context: z.string().min(1),
+  user_role: z.string().min(1).max(120),
+  user_context: z.string().min(1),
   topic: z.string().min(1),
+  topic_label: z.string().min(1),
   locations: z.object({
     scope: z.enum(["all_my_locations", "specific"]),
     country: z.string().optional(),
@@ -45,11 +49,12 @@ export const HelpAskIntentSchema = z.object({
   metric_label: z.string().optional(),
   time_range: z.object({
     preset: z.string(),
+    label: z.string(),
     from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   }),
   group_by: z.string().optional(),
-  limit: z.number().int().min(1).max(100).optional(),
+  limit: z.number().int().min(0).max(100).optional(),
   optional_filters: z.record(z.string()).optional(),
 });
 
@@ -66,6 +71,9 @@ export type HelpAskAuthorizedOptions = {
 export type HelpAskQuestionResult = {
   ok: boolean;
   question: string;
+  contextSummary?: string;
+  selectedFilters?: string[];
   validatedIntent?: HelpAskIntent;
   error?: string;
+  usedFallback?: boolean;
 };

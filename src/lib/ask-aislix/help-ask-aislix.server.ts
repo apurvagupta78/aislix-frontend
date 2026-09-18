@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { buildAskAccessScope } from "@/lib/ask-aislix/context";
 import { formatHelpAskQuestion } from "@/lib/ask-aislix/help-ask-aislix.format";
+import { generateHelpAskQuestionWithOpenAI } from "@/lib/ask-aislix/help-ask-aislix.openai";
 import { validateHelpAskIntent } from "@/lib/ask-aislix/help-ask-aislix.validate";
 import type {
   HelpAskAuthorizedOptions,
@@ -77,8 +78,28 @@ export async function buildHelpAskQuestionServer(
       return { ok: false, question: "", error: validated.error };
     }
 
-    const question = formatHelpAskQuestion(validated.intent);
-    return { ok: true, question, validatedIntent: validated.intent };
+    const intent = validated.intent;
+
+    try {
+      const ai = await generateHelpAskQuestionWithOpenAI(intent);
+      return {
+        ok: true,
+        question: ai.generated_question.trim(),
+        contextSummary: ai.context_summary.trim(),
+        selectedFilters: ai.selected_filters,
+        validatedIntent: intent,
+      };
+    } catch {
+      const question = formatHelpAskQuestion(intent);
+      return {
+        ok: true,
+        question,
+        contextSummary: intent.topic_label,
+        selectedFilters: [intent.user_role, intent.time_range.label].filter(Boolean),
+        validatedIntent: intent,
+        usedFallback: true,
+      };
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not build question.";
     return { ok: false, question: "", error: message.slice(0, 500) };
