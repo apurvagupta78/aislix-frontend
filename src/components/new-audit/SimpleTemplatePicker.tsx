@@ -51,29 +51,45 @@ function SimpleTemplateCard({
   return (
     <div
       className={cn(
-        "play-card flex flex-col rounded-2xl p-4 transition-shadow",
-        selected && "ring-2 ring-brand/30",
+        "play-card flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[var(--aislix-border)] bg-white p-4 transition-shadow",
+        selected && "border-[var(--aislix-local-border)] ring-2 ring-[var(--aislix-local-bg)]",
       )}
     >
-      <h3 className="font-semibold leading-snug">{name}</h3>
+      <h3 className="font-display text-[15px] font-semibold leading-snug text-[var(--aislix-primary)]">
+        {name}
+      </h3>
       {description ? (
-        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{description}</p>
+        <p className="mt-1 line-clamp-2 text-xs text-[var(--aislix-secondary)]">{description}</p>
       ) : null}
-      <div className="mt-2 flex flex-wrap gap-1">
+      <div className="mt-2 flex min-w-0 flex-wrap gap-1">
         {badges.map((b) => (
-          <Badge key={b} variant="outline" className="text-[10px]">
+          <Badge
+            key={b}
+            variant="outline"
+            className="border-[var(--aislix-border)] bg-[var(--aislix-surface)] text-[10px] font-semibold text-[var(--aislix-primary)]"
+          >
             {b}
           </Badge>
         ))}
       </div>
-      <div className="mt-auto flex gap-2 pt-4">
+      <div className="mt-auto flex w-full min-w-0 flex-wrap gap-2 pt-4">
         {onPreview ? (
-          <Button size="sm" variant="outline" onClick={onPreview}>
-            <Eye className="mr-1 size-3" /> Preview
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={onPreview}
+            className="min-w-0 flex-1 border-[var(--aislix-border)] bg-white text-[var(--aislix-primary)] hover:bg-[var(--aislix-surface)]"
+          >
+            <Eye className="size-3 shrink-0" /> Preview
           </Button>
         ) : null}
-        <Button size="sm" variant="brand" onClick={onUse}>
-          <Play className="mr-1 size-3" /> Use Template
+        <Button
+          size="sm"
+          variant="default"
+          onClick={onUse}
+          className="min-w-0 flex-1 bg-[var(--aislix-primary)] text-white hover:bg-[#1B3B58]"
+        >
+          <Play className="size-3 shrink-0" /> Use Template
         </Button>
       </div>
     </div>
@@ -172,11 +188,12 @@ export function SimpleTemplatePicker({
         onOpenChange={onOpenChange}
         title="Choose an audit template"
         description="Pick a ready-made workflow for your operating model."
+        className="sm:max-w-2xl"
       >
         <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--aislix-secondary)]" />
           <Input
-            className="rounded-xl pl-9"
+            className="rounded-xl border-[var(--aislix-border)] bg-white pl-9 text-[var(--aislix-primary)] placeholder:text-[var(--aislix-secondary)]"
             placeholder="Search templates…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -185,20 +202,24 @@ export function SimpleTemplatePicker({
 
         {recent.length > 0 ? (
           <section className="mb-6">
-            <h3 className="mb-2 text-sm font-semibold">Recently Used</h3>
+            <h3 className="mb-2 font-display text-sm font-semibold text-[var(--aislix-primary)]">
+              Recently Used
+            </h3>
             <div className="space-y-2">
               {recent.map((entry) => (
                 <button
                   key={`${entry.id}-${entry.systemKey}`}
                   type="button"
-                  className="flex w-full items-center justify-between rounded-xl border border-border px-3 py-2 text-left hover:bg-muted/30"
+                  className="flex w-full items-center justify-between rounded-xl border border-[var(--aislix-border)] bg-white px-3 py-2 text-left hover:bg-[var(--aislix-surface)]"
                   onClick={() => {
                     onSelect(resolveRecent(entry), { name: entry.name, systemKey: entry.systemKey });
                     onOpenChange(false);
                   }}
                 >
-                  <span className="text-sm font-medium">{entry.name}</span>
-                  <span className="text-xs text-muted-foreground">{formatRecentLabel(entry.usedAt)}</span>
+                  <span className="text-sm font-medium text-[var(--aislix-primary)]">{entry.name}</span>
+                  <span className="text-xs text-[var(--aislix-secondary)]">
+                    {formatRecentLabel(entry.usedAt)}
+                  </span>
                 </button>
               ))}
             </div>
@@ -207,8 +228,10 @@ export function SimpleTemplatePicker({
 
         {recommended.length > 0 ? (
           <section className="mb-6">
-            <h3 className="mb-1 text-sm font-semibold">Recommended for you</h3>
-            <p className="mb-3 text-xs text-muted-foreground">Based on {modelLabel}</p>
+            <h3 className="mb-1 font-display text-sm font-semibold text-[var(--aislix-primary)]">
+              Recommended for you
+            </h3>
+            <p className="mb-3 text-xs text-[var(--aislix-secondary)]">Based on {modelLabel}</p>
             <div className="grid gap-3 sm:grid-cols-2">
               {recommended.slice(0, 4).map((spec) => (
                 <SimpleTemplateCard
@@ -229,7 +252,9 @@ export function SimpleTemplatePicker({
         ) : null}
 
         <section>
-          <h3 className="mb-3 text-sm font-semibold">All templates</h3>
+          <h3 className="mb-3 font-display text-sm font-semibold text-[var(--aislix-primary)]">
+            All templates
+          </h3>
           <div className="mb-3 flex flex-wrap gap-2">
             {chips.map((chip) => (
               <Button
@@ -237,7 +262,12 @@ export function SimpleTemplatePicker({
                 type="button"
                 size="sm"
                 variant={source === chip.id ? "default" : "outline"}
-                className="rounded-full"
+                className={cn(
+                  "rounded-full",
+                  source === chip.id
+                    ? "border-[var(--aislix-primary)] bg-[var(--aislix-primary)] text-white hover:bg-[#1B3B58]"
+                    : "border-[var(--aislix-border)] bg-white text-[var(--aislix-primary)] hover:bg-[var(--aislix-surface)]",
+                )}
                 onClick={() => setSource(chip.id)}
               >
                 {chip.label}

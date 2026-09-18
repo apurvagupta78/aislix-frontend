@@ -42,7 +42,7 @@ export function TemplateLibraryCard({
   const purpose = purposeLabel ?? t.audit_purpose ?? typeLabel;
 
   return (
-    <div className="play-card flex flex-col rounded-2xl p-4 transition-shadow hover:shadow-md">
+    <div className="play-card flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[var(--aislix-border)] bg-white p-4 transition-shadow hover:shadow-md">
       <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="mb-1.5 flex flex-wrap gap-1">
@@ -57,9 +57,9 @@ export function TemplateLibraryCard({
               </Badge>
             ) : null}
           </div>
-          <h3 className="font-semibold leading-snug">{t.name}</h3>
+          <h3 className="font-display font-semibold leading-snug text-[var(--aislix-primary)]">{t.name}</h3>
           {(t.short_description || t.description) && (
-            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+            <p className="mt-1 line-clamp-2 text-xs text-[var(--aislix-secondary)]">
               {t.short_description ?? t.description}
             </p>
           )}
@@ -94,17 +94,27 @@ export function TemplateLibraryCard({
         {t.updated_at ? ` · Updated ${new Date(t.updated_at).toLocaleDateString()}` : ""}
       </p>
 
-      <div className="mt-auto flex flex-wrap items-center gap-2">
-        <Button size="sm" variant="outline" onClick={onPreview}>
-          <Eye className="mr-1 size-3" /> Preview
+      <div className="mt-auto flex w-full min-w-0 flex-wrap items-center gap-2">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onPreview}
+          className="min-w-0 flex-1 border-[var(--aislix-border)] bg-white text-[var(--aislix-primary)] hover:bg-[var(--aislix-surface)] sm:flex-none"
+        >
+          <Eye className="size-3 shrink-0" /> Preview
         </Button>
-        <Button size="sm" variant="brand" onClick={onUse}>
-          <Play className="mr-1 size-3" /> Use Template
+        <Button
+          size="sm"
+          variant="default"
+          onClick={onUse}
+          className="min-w-0 flex-1 bg-[var(--aislix-primary)] text-white hover:bg-[#1B3B58] sm:flex-none"
+        >
+          <Play className="size-3 shrink-0" /> Use Template
         </Button>
         {advancedMenu ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="size-8">
+              <Button variant="ghost" size="icon" className="size-8 shrink-0 text-[var(--aislix-primary)]">
                 <MoreHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
