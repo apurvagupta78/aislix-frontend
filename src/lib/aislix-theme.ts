@@ -20,6 +20,9 @@ export const AISLIX = {
   fmcgBorder: "#C1E4F8",
   customBg: "#EEF1F4",
   customBorder: "#DBE0E5",
+  /** Magic Patterns accent — Ask Aislix + featured KPI tiles */
+  accentBg: "#F0E9FF",
+  accentBorder: "#D9C5F2",
 } as const;
 
 /** Chart series order from the design spec — never rainbow / library defaults. */

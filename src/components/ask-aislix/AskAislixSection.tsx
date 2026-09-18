@@ -68,16 +68,16 @@ export function AskAislixSection() {
 
   return (
     <section
-      className="space-y-4 overflow-hidden rounded-xl border border-white/10 p-4 shadow-card md:p-6"
-      style={{ backgroundColor: AISLIX.primary }}
+      className="space-y-4 overflow-hidden rounded-xl border p-4 shadow-card md:p-6"
+      style={{ backgroundColor: AISLIX.accentBg, borderColor: AISLIX.accentBorder }}
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/60 bg-white text-navy">
           <Sparkles className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="font-display text-xl font-semibold tracking-tight text-white">ASK AISLIX</h2>
-          <p className="mt-1 text-sm text-white/75">
+          <h2 className="font-display text-xl font-semibold tracking-tight text-navy">ASK AISLIX</h2>
+          <p className="mt-1 text-sm text-mp-muted">
             Your retail operations copilot. Ask anything about your audits, stores, inventory, findings or actions.
           </p>
         </div>
@@ -88,21 +88,19 @@ export function AskAislixSection() {
         onChange={setQuestion}
         onSubmit={() => void submitQuestion(question)}
         loading={loading}
-        variant="dark"
       />
 
       <AskAislixSuggestions
         disabled={loading}
-        variant="dark"
         onSelect={(s) => {
           setQuestion(s);
           void submitQuestion(s);
         }}
       />
 
-      {loading ? <AskAislixLoading variant="dark" /> : null}
+      {loading ? <AskAislixLoading /> : null}
       {error ? (
-        <p className="rounded-lg border border-red-300/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+        <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
           {error}
         </p>
       ) : null}

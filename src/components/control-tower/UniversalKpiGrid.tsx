@@ -19,7 +19,7 @@ const KPI_SURFACE: Record<
   (typeof DASHBOARD_KPI_IDS)[number],
   { bg: string; border: string; inverted?: boolean }
 > = {
-  audit_completion: { bg: AISLIX.primary, border: AISLIX.primary, inverted: true },
+  audit_completion: { bg: AISLIX.accentBg, border: AISLIX.accentBorder },
   evidence_coverage: { bg: AISLIX.localBg, border: AISLIX.localBorder },
   audit_pass: { bg: AISLIX.supermarketBg, border: AISLIX.supermarketBorder },
   open_findings: { bg: AISLIX.warehouseBg, border: AISLIX.warehouseBorder },
