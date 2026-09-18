@@ -1,0 +1,116 @@
+import { z } from "zod";
+
+import type { DashboardFilterState } from "@/lib/dashboard-filters";
+
+export const ASK_AISLIX_VISUAL_TYPES = [
+  "kpi",
+  "bar",
+  "line",
+  "donut",
+  "area",
+  "ranking",
+  "progress",
+  "timeline",
+  "table",
+  "image_gallery",
+  "none",
+] as const;
+
+export type AskAislixVisualType = (typeof ASK_AISLIX_VISUAL_TYPES)[number];
+
+export const AskAislixMetricSchema = z.object({
+  label: z.string(),
+  value: z.string(),
+  unit: z.string().optional().default(""),
+  trend: z.enum(["up", "down", "flat", "none"]).optional().default("none"),
+});
+
+export const AskAislixVisualSchema = z.object({
+  type: z.enum(ASK_AISLIX_VISUAL_TYPES),
+  title: z.string().optional().default(""),
+  data: z.array(z.record(z.unknown())).optional().default([]),
+});
+
+export const AskAislixTableSchema = z.object({
+  columns: z.array(z.string()).optional().default([]),
+  rows: z.array(z.array(z.union([z.string(), z.number(), z.null()]))).optional().default([]),
+});
+
+export const AskAislixActionSchema = z.object({
+  label: z.string(),
+  route: z.string(),
+  params: z.record(z.string()).optional().default({}),
+});
+
+export const AskAislixSourceContextSchema = z.object({
+  period: z.string().optional().default(""),
+  locations: z.array(z.string()).optional().default([]),
+  operating_model: z.string().optional(),
+});
+
+/** Model output — signed image URLs are injected server-side after validation. */
+export const AskAislixResponseSchema = z.object({
+  answer: z.string(),
+  summary: z.string().optional().default(""),
+  metrics: z.array(AskAislixMetricSchema).optional().default([]),
+  visual: AskAislixVisualSchema.optional().default({ type: "none", title: "", data: [] }),
+  table: AskAislixTableSchema.optional().default({ columns: [], rows: [] }),
+  insights: z.array(z.string()).optional().default([]),
+  actions: z.array(AskAislixActionSchema).optional().default([]),
+  source_context: AskAislixSourceContextSchema.optional().default({ period: "", locations: [] }),
+  follow_up_questions: z.array(z.string()).optional().default([]),
+});
+
+export type AskAislixResponse = z.infer<typeof AskAislixResponseSchema>;
+
+export type AskAislixMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type AskAislixRequest = {
+  question: string;
+  activeOrgId: string;
+  filters: DashboardFilterState;
+  messages?: AskAislixMessage[];
+  conversationId?: string;
+};
+
+export type AskAislixAccessScope = {
+  orgId: string;
+  userId: string;
+  role: string;
+  allowedStoreIds: string[];
+  allowedCities: string[];
+  allowedCountries: string[];
+  isOrgAdmin: boolean;
+  isManager: boolean;
+  accessibleAssignmentIds: string[];
+  accessibleScanIds: string[];
+};
+
+export type ImageGalleryItem = {
+  evidenceId: string;
+  scanId: string;
+  assignmentId?: string;
+  storageBucket: string;
+  storagePath: string;
+  caption: string;
+  capturedAt: string;
+  storeName?: string;
+  url?: string;
+};
+
+export type ToolResult = {
+  available: boolean;
+  reason?: string;
+  data?: unknown;
+  /** Pending images — signed after model response, not sent to OpenAI. */
+  pendingImages?: ImageGalleryItem[];
+};
+
+export const OUT_OF_SCOPE_MESSAGE =
+  "I can help you analyze Aislix retail audit and operations data. Try asking about audits, inventory, expiry, stores, findings, evidence, corrective actions, compliance or performance.";
+
+export const ACCESS_DENIED_MESSAGE =
+  "I don't have access to that store or audit under your account.";

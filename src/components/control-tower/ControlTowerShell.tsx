@@ -52,9 +52,12 @@ import {
 import { WorkspaceFilterBar } from "@/components/filters/GlobalFilterBarShell";
 import { ControlTowerDashboardHeader } from "./ControlTowerDashboardHeader";
 import { DashboardSectionHeader } from "./DashboardSectionHeader";
+import { AskAislixSection } from "@/components/ask-aislix/AskAislixSection";
 import { ControlTowerMetricsBoard } from "./ControlTowerMetricsBoard";
 import { DashboardAuditsTable } from "./DashboardAuditsTable";
+import { DashboardGreeting } from "./DashboardGreeting";
 import { DashboardVisualBoard } from "./DashboardVisualBoard";
+import { UniversalKpiGrid } from "./UniversalKpiGrid";
 import { AISLIX, AISLIX_CHART, AISLIX_MODEL_SURFACE, AISLIX_STATUS_MIX } from "@/lib/aislix-theme";
 
 
@@ -148,12 +151,28 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
 
   return (
     <div className="space-y-8">
+      <DashboardGreeting />
+      <AskAislixSection />
+
+      <section>
+        <DashboardSectionHeader
+          title="Universal KPIs"
+          description="Live counts from assignments, findings, and corrective actions."
+          viewAllTo="/dashboard/kpis"
+          viewAllSearch={viewAll()}
+          onDownloadCsv={() => {
+            import("@/lib/control-tower/exports").then(({ exportKpiCsv }) => exportKpiCsv(data, filters));
+          }}
+          downloadLabel="Download KPI CSV"
+        />
+        <UniversalKpiGrid data={data} onDrill={(kpi) => drillTo("kpi", kpi.label)} />
+      </section>
+
       <ControlTowerDashboardHeader
         data={data}
         filters={filters}
         onExport={() => exportAuditExecutionCsv(data, filters)}
       />
-      {operatingModelSection}
 
       <div className="space-y-3">
         <WorkspaceFilterBar />
@@ -167,8 +186,8 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
 
       <section>
         <DashboardSectionHeader
-          title="Universal KPIs"
-          description="Live counts from assignments, findings, and corrective actions."
+          title="Detailed KPI analytics"
+          description="Charts and drill-downs across your operating models."
           viewAllTo="/dashboard/kpis"
           viewAllSearch={viewAll()}
           onDownloadCsv={() => {
