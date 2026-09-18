@@ -33,6 +33,10 @@ export type DemoExperienceOptions = {
   userEmail?: string | null;
 };
 
+export function isDemoOrgId(orgId: string): boolean {
+  return orgId === AISLIX_DEMO_ORG_ID;
+}
+
 export function canUseDemoPreview(userEmail?: string | null): boolean {
   return hasPlatformBypass(userEmail);
 }
@@ -82,7 +86,7 @@ export async function resolveDemoExperience(
   activeOrgId: string,
   options: DemoExperienceOptions = {},
 ): Promise<DemoExperienceMode> {
-  const isDemoOrg = await fetchOrgIsDemo(activeOrgId);
+  const isDemoOrg = (await fetchOrgIsDemo(activeOrgId)) || isDemoOrgId(activeOrgId);
   if (isDemoOrg) {
     return { labeledDemo: true, dataOrgId: activeOrgId, activeOrgId, previewDemo: false };
   }
@@ -117,7 +121,7 @@ export async function resolveDemoExperienceWithClient(
     .select("is_demo")
     .eq("id", activeOrgId)
     .maybeSingle();
-  const isDemoOrg = Boolean(org?.is_demo);
+  const isDemoOrg = Boolean(org?.is_demo) || isDemoOrgId(activeOrgId);
   if (isDemoOrg) {
     return { labeledDemo: true, dataOrgId: activeOrgId, activeOrgId, previewDemo: false };
   }

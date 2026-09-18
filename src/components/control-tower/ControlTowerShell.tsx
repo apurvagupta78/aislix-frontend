@@ -131,7 +131,7 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
       {demoPreview.eligible ? (
         <DemoPreviewToggle enabled={demoPreview.previewDemo} onChange={demoPreview.setPreviewDemo} />
       ) : null}
-      <AskAislixSection previewDemo={demoPreview.previewDemo} />
+      <AskAislixSection previewDemo={demoPreview.previewDemo || data.labeledDemo} />
 
       <section>
         <DashboardSectionHeader

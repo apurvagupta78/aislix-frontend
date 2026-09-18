@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AISLIX_DEMO_ORG_ID, canUseDemoPreview } from "@/lib/demo-environment";
+import { AISLIX_DEMO_ORG_ID, canUseDemoPreview, isDemoOrgId } from "@/lib/demo-environment";
 
 describe("demo preview eligibility", () => {
   it("allows apurv@aislix.com", () => {
@@ -14,5 +14,7 @@ describe("demo preview eligibility", () => {
 
   it("uses fixed demo org id", () => {
     expect(AISLIX_DEMO_ORG_ID).toBe("d0000000-0000-4000-8000-000000000001");
+    expect(isDemoOrgId(AISLIX_DEMO_ORG_ID)).toBe(true);
+    expect(isDemoOrgId("00000000-0000-0000-0000-000000000001")).toBe(false);
   });
 });
