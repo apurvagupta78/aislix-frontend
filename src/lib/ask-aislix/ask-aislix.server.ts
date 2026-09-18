@@ -9,12 +9,15 @@ import type {
 
 import type { Database } from "@/integrations/supabase/types";
 import {
-  AskAislixResponseSchema,
   type AskAislixMessage,
   type AskAislixRequest,
   type AskAislixResponse,
   type ImageGalleryItem,
 } from "@/lib/ask-aislix/ask-aislix.types";
+import {
+  NO_AUDIT_FOUND_MESSAGE,
+  parseAskAislixResponse,
+} from "@/lib/ask-aislix/ask-aislix.response";
 import { ASK_AISLIX_SYSTEM_PROMPT } from "@/lib/ask-aislix/ask-aislix.prompt";
 import { buildAskAccessScope, clampFiltersToScope } from "@/lib/ask-aislix/context";
 import { checkAskRateLimit } from "@/lib/ask-aislix/rate-limit";
@@ -198,24 +201,6 @@ async function finalizeStructuredResponse(
   });
 }
 
-function parseResponse(raw: string): AskAislixResponse {
-  try {
-    return AskAislixResponseSchema.parse(JSON.parse(raw));
-  } catch {
-    return {
-      answer: raw.slice(0, 4000) || "I could not format the response.",
-      summary: "",
-      metrics: [],
-      visual: { type: "none", title: "", data: [] },
-      table: { columns: [], rows: [] },
-      insights: [],
-      actions: [],
-      source_context: { period: "", locations: [] },
-      follow_up_questions: [],
-    };
-  }
-}
-
 async function runPipeline(
   client: OpenAI,
   model: string,
@@ -279,7 +264,7 @@ export async function askAislixServer(
     }
 
     const raw = result.response.output_text || "{}";
-    const parsed = parseResponse(raw);
+    const parsed = parseAskAislixResponse(raw);
     parsed.actions = sanitizeActions(parsed.actions ?? []);
 
     if ((parsed.visual?.type === "image_gallery" || pendingImages.length) && pendingImages.length) {
@@ -326,15 +311,15 @@ export async function askAislixServer(
       ok: false,
       conversationId,
       response: {
-        answer: "Ask Aislix could not complete your request.",
-        summary: message,
+        answer: NO_AUDIT_FOUND_MESSAGE,
+        summary: "",
         metrics: [],
         visual: { type: "none", title: "", data: [] },
         table: { columns: [], rows: [] },
         insights: [],
         actions: [],
         source_context: { period: "", locations: [] },
-        follow_up_questions: ["What needs attention today?", "Show overdue actions"],
+        follow_up_questions: [],
       },
     };
   }

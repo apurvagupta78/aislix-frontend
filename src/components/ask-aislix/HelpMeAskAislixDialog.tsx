@@ -231,11 +231,11 @@ function buildIntent(state: WizardState, options: HelpAskAuthorizedOptions): Hel
 export function HelpMeAskAislixDialog({
   open,
   onOpenChange,
-  onAskAislix,
+  onUsePrompt,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAskAislix: (question: string) => void;
+  onUsePrompt: (question: string) => void;
 }) {
   const [state, setState] = useState<WizardState>(INITIAL);
   const [stepIndex, setStepIndex] = useState(0);
@@ -364,9 +364,9 @@ export function HelpMeAskAislixDialog({
     goNext();
   };
 
-  const handleAskAislix = () => {
+  const handleUsePrompt = () => {
     if (!generatedQuestion.trim()) return;
-    onAskAislix(generatedQuestion);
+    onUsePrompt(generatedQuestion.trim());
     onOpenChange(false);
   };
 
@@ -391,10 +391,13 @@ export function HelpMeAskAislixDialog({
           </div>
         ) : phase === "review" ? (
           <div className="space-y-4">
-            <p className="text-sm font-medium text-navy">Here&apos;s your generated prompt:</p>
-            <blockquote className="rounded-lg border border-line bg-canvas px-4 py-3 text-sm leading-relaxed text-navy">
-              &ldquo;{generatedQuestion}&rdquo;
-            </blockquote>
+            <p className="text-sm font-medium text-navy">Review and edit your generated prompt:</p>
+            <Textarea
+              value={generatedQuestion}
+              onChange={(e) => setGeneratedQuestion(e.target.value)}
+              rows={5}
+              className="min-h-[120px] resize-y text-sm leading-relaxed"
+            />
             {intentSummary ? (
               <p className="text-xs text-mp-muted">{intentSummary}</p>
             ) : null}
@@ -838,9 +841,9 @@ export function HelpMeAskAislixDialog({
                 <Button type="button" variant="outline" onClick={goBack}>
                   Edit
                 </Button>
-                <Button type="button" onClick={handleAskAislix}>
+                <Button type="button" onClick={handleUsePrompt} disabled={!generatedQuestion.trim()}>
                   <Sparkles className="mr-2 h-4 w-4" />
-                  Ask Aislix
+                  Use Prompt
                 </Button>
               </div>
             </>

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Sparkles } from "lucide-react";
 
 import { askAislix, type AskAislixMessage, type AskAislixResponse } from "@/lib/ask-aislix";
+import { NO_AUDIT_FOUND_MESSAGE } from "@/lib/ask-aislix/ask-aislix.response";
 import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
 import { useGlobalFilters } from "@/lib/global-filters";
 import { requireOrgId } from "@/lib/db/context";
@@ -52,7 +53,7 @@ export function AskAislixSection() {
 
         if (!result.ok) {
           setResponse(null);
-          setError(result.response.summary || "Something went wrong while analyzing your data.");
+          setError(NO_AUDIT_FOUND_MESSAGE);
           return;
         }
 
@@ -112,10 +113,10 @@ export function AskAislixSection() {
       <HelpMeAskAislixDialog
         open={helpOpen}
         onOpenChange={setHelpOpen}
-        onAskAislix={(q) => {
+        onUsePrompt={(q) => {
+          setQuestion(q);
           setError(null);
           setResponse(null);
-          void submitQuestion(q);
         }}
       />
 
@@ -126,9 +127,9 @@ export function AskAislixSection() {
         city={filters.city}
         rotationSeed={suggestionRotationSeed}
         onSelect={(s) => {
+          setQuestion(s);
           setError(null);
           setResponse(null);
-          void submitQuestion(s);
         }}
       />
 

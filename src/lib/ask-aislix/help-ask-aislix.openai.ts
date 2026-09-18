@@ -23,7 +23,7 @@ function getOpenAIClient(): OpenAI {
 }
 
 function getModel(): string {
-  return process.env.OPENAI_HELP_MODEL ?? process.env.OPENAI_MODEL ?? "gpt-4.1-mini";
+  return process.env.OPENAI_HELP_MODEL ?? process.env.OPENAI_MODEL ?? "gpt-5.6-luna";
 }
 
 function extractOutputText(response: Response): string {
