@@ -62,18 +62,35 @@ export async function buildAskAccessScope(
 
   const { data: assignmentRows } = await supabase
     .from("scan_assignments")
-    .select("id, store_id, scan_id")
+    .select("id, store_id, scan_id, assignee_id")
     .eq("org_id", orgId)
     .or(`assignee_id.eq.${userId},assigner_id.eq.${userId}`)
     .limit(5000);
 
   const accessibleAssignmentIds: string[] = [];
+  const assignedToUserAssignmentIds: string[] = [];
   const accessibleScanIds: string[] = [];
   const assignmentStoreIds: string[] = [];
 
   for (const row of assignmentRows ?? []) {
     accessibleAssignmentIds.push(row.id as string);
+    if (row.assignee_id === userId) assignedToUserAssignmentIds.push(row.id as string);
     if (row.scan_id) accessibleScanIds.push(row.scan_id as string);
+    if (row.store_id) assignmentStoreIds.push(row.store_id as string);
+  }
+
+  const { data: conductedScans } = await supabase
+    .from("shelf_scans")
+    .select("id, store_id, assignment_id")
+    .eq("org_id", orgId)
+    .or(`created_by.eq.${userId},finalized_by.eq.${userId}`)
+    .limit(5000);
+
+  let conductedScanIds: string[] = [];
+  const conductedAssignmentIds: string[] = [];
+  for (const row of conductedScans ?? []) {
+    conductedScanIds.push(row.id as string);
+    if (row.assignment_id) conductedAssignmentIds.push(row.assignment_id as string);
     if (row.store_id) assignmentStoreIds.push(row.store_id as string);
   }
 
@@ -81,6 +98,11 @@ export async function buildAskAccessScope(
     allowedStoreIds = uniqueStrings([...allowedStoreIds, ...assignmentStoreIds]).filter((id) =>
       orgStoreIds.includes(id),
     );
+    const allowedSet = new Set(allowedStoreIds);
+    conductedScanIds = conductedScanIds.filter((scanId) => {
+      const scan = (conductedScans ?? []).find((s) => s.id === scanId);
+      return scan?.store_id ? allowedSet.has(scan.store_id as string) : false;
+    });
   }
 
   const allowedStoreSet = new Set(allowedStoreIds);
@@ -96,7 +118,10 @@ export async function buildAskAccessScope(
     isOrgAdmin,
     isManager,
     accessibleAssignmentIds,
-    accessibleScanIds: uniqueStrings(accessibleScanIds),
+    accessibleScanIds: uniqueStrings([...accessibleScanIds, ...conductedScanIds]),
+    assignedToUserAssignmentIds,
+    conductedScanIds: uniqueStrings(conductedScanIds),
+    conductedAssignmentIds: uniqueStrings(conductedAssignmentIds),
   };
 }
 

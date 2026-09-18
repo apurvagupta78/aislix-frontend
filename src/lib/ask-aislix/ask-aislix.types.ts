@@ -93,8 +93,22 @@ export type AskAislixAccessScope = {
   allowedCountries: string[];
   isOrgAdmin: boolean;
   isManager: boolean;
+  /** Assignments where user is assignee or assigner. */
   accessibleAssignmentIds: string[];
   accessibleScanIds: string[];
+  /** Assignments explicitly assigned to this user (assignee_id). */
+  assignedToUserAssignmentIds: string[];
+  /** Scans conducted by this user (shelf_scans.created_by / finalized_by). */
+  conductedScanIds: string[];
+  /** Assignments linked to conducted scans. */
+  conductedAssignmentIds: string[];
+};
+
+export type VisionAsset = {
+  scanId: string;
+  caption: string;
+  mimeType: string;
+  base64: string;
 };
 
 export type ImageGalleryItem = {
@@ -115,6 +129,8 @@ export type ToolResult = {
   data?: unknown;
   /** Pending images — signed after model response, not sent to OpenAI. */
   pendingImages?: ImageGalleryItem[];
+  /** Vision assets for Luna analysis — injected before finalize, not in tool JSON. */
+  visionImages?: VisionAsset[];
 };
 
 export const OUT_OF_SCOPE_MESSAGE =

@@ -19,6 +19,19 @@ import {
   UNWIRED_UNIVERSAL_KPI_IDS,
 } from "@/lib/kpi-engine/compute-universal";
 
+import {
+  getAuditDetails,
+  getAuditEvidenceImagesExtended,
+  getAuditReports,
+  getAuditResponses,
+  getAuditsAggregate,
+  getDetectedProducts,
+  getDigitalAuditLines,
+  getMyAudits,
+  getPlanogramCompliance,
+  getScanAnalysis,
+} from "./audit-data-tools";
+
 export type ToolContext = {
   supabase: SupabaseClient<Database>;
   scope: AskAislixAccessScope;
@@ -109,14 +122,115 @@ const TOOL_SPECS: ToolSpec[] = [
     parameters: { type: "object", properties: { limit: { type: "number" } } },
   },
   {
+    name: "get_my_audits",
+    description: "List authorized audits with participation filter (assigned_to_me, conducted_by_me, all).",
+    parameters: {
+      type: "object",
+      properties: {
+        participation: { type: "string", enum: ["all", "assigned_to_me", "conducted_by_me"] },
+        store_query: { type: "string" },
+        store_id: { type: "string" },
+        include_completed_only: { type: "boolean" },
+        limit: { type: "number" },
+      },
+    },
+  },
+  {
+    name: "get_audit_details",
+    description: "Detailed assignment + scan metadata for one authorized audit.",
+    parameters: {
+      type: "object",
+      properties: { assignment_id: { type: "string" }, scan_id: { type: "string" } },
+    },
+  },
+  {
+    name: "get_scan_analysis",
+    description: "Structured scan_results analysis (summary, metrics, brand share, shelf rows).",
+    parameters: {
+      type: "object",
+      properties: { scan_id: { type: "string" } },
+      required: ["scan_id"],
+    },
+  },
+  {
+    name: "get_detected_products",
+    description: "Detected products/SKUs for an authorized scan.",
+    parameters: {
+      type: "object",
+      properties: { scan_id: { type: "string" }, limit: { type: "number" } },
+      required: ["scan_id"],
+    },
+  },
+  {
+    name: "get_audit_responses",
+    description: "Custom audit template responses for a scan or assignment.",
+    parameters: {
+      type: "object",
+      properties: {
+        scan_id: { type: "string" },
+        assignment_id: { type: "string" },
+        limit: { type: "number" },
+      },
+    },
+  },
+  {
+    name: "get_digital_audit_lines",
+    description: "Digital/custom audit variance lines with RCA for a scan.",
+    parameters: {
+      type: "object",
+      properties: { scan_id: { type: "string" }, limit: { type: "number" } },
+      required: ["scan_id"],
+    },
+  },
+  {
+    name: "get_planogram_compliance",
+    description: "Planogram compliance for a scan or assignment.",
+    parameters: {
+      type: "object",
+      properties: { scan_id: { type: "string" }, assignment_id: { type: "string" } },
+    },
+  },
+  {
+    name: "get_audit_reports",
+    description: "Multi-source audit reports (scan_images, executive summary, scan KPIs, CSV excerpts).",
+    parameters: {
+      type: "object",
+      properties: {
+        scan_id: { type: "string" },
+        assignment_id: { type: "string" },
+        participation: { type: "string", enum: ["all", "assigned_to_me", "conducted_by_me"] },
+        limit: { type: "number" },
+      },
+    },
+  },
+  {
+    name: "get_audits_aggregate",
+    description: "Broad-period audit aggregation for authorized scope (30-day style analysis).",
+    parameters: {
+      type: "object",
+      properties: {
+        participation: { type: "string", enum: ["all", "assigned_to_me", "conducted_by_me"] },
+        date_from: { type: "string" },
+        date_to: { type: "string" },
+      },
+    },
+  },
+  {
+    name: "get_recurring_issues",
+    description: "Recurring findings and compliance issues in authorized scope.",
+    parameters: { type: "object", properties: { limit: { type: "number" } } },
+  },
+  {
     name: "get_audit_evidence_images",
-    description: "Retrieve audit evidence image metadata for authorized stores/audits.",
+    description: "Audit evidence images. intent=analysis sends pixels to Luna; intent=gallery fills UI only.",
     parameters: {
       type: "object",
       properties: {
         store_query: { type: "string" },
         store_id: { type: "string" },
+        scan_id: { type: "string" },
         audit_type: { type: "string", enum: ["stacking", "shelf", "expiry", "all"] },
+        intent: { type: "string", enum: ["analysis", "gallery"] },
         limit: { type: "number" },
       },
     },
@@ -487,7 +601,16 @@ const EXECUTORS: Record<string, ToolExecutor> = {
   get_audit_trends: getAuditTrends,
   get_store_performance: getStorePerformance,
   get_expiry_risk: getExpiryRisk,
-  get_audit_evidence_images: getAuditEvidenceImages,
+  get_my_audits: getMyAudits,
+  get_audit_details: getAuditDetails,
+  get_scan_analysis: getScanAnalysis,
+  get_detected_products: getDetectedProducts,
+  get_audit_responses: getAuditResponses,
+  get_digital_audit_lines: getDigitalAuditLines,
+  get_planogram_compliance: getPlanogramCompliance,
+  get_audit_reports: getAuditReports,
+  get_audits_aggregate: getAuditsAggregate,
+  get_audit_evidence_images: (ctx, args) => getAuditEvidenceImagesExtended(ctx, args, getAuditEvidenceImages),
   get_evidence_coverage: async () => ({ available: false, reason: NOT_WIRED }),
   get_sla_metrics: async (ctx) => {
     const data = await fetchScopedControlTowerDataset({
@@ -503,17 +626,16 @@ const EXECUTORS: Record<string, ToolExecutor> = {
   },
   get_inventory_accuracy: async () => ({ available: false, reason: "No live inventory accuracy source" }),
   get_shelf_compliance: async () => ({ available: false, reason: NOT_WIRED }),
-  get_planogram_compliance: async () => ({ available: false, reason: NOT_WIRED }),
   get_sku_history: async () => ({ available: false, reason: NOT_WIRED }),
-  get_recurring_issues: async (ctx) => {
+  get_recurring_issues: async (ctx, args) => {
+    const limit = Math.min(Number(args.limit ?? 10), 20);
     const data = await fetchScopedControlTowerDataset({
       supabase: ctx.supabase,
       scope: ctx.scope,
       filters: ctx.filters,
     });
-    return { available: true, data: { items: data.recurringIssuesFull.slice(0, 10) } };
+    return { available: true, data: { items: data.recurringIssuesFull.slice(0, limit) } };
   },
-  get_audit_details: async () => ({ available: false, reason: NOT_WIRED }),
 };
 
 export async function executeTool(
@@ -526,9 +648,10 @@ export async function executeTool(
   return fn(ctx, args);
 }
 
-/** Strip pendingImages before sending tool output to OpenAI. */
+/** Strip server-side image payloads before sending tool output to OpenAI. */
 export function compactToolResultForModel(result: ToolResult): Record<string, unknown> {
-  const { pendingImages: _pending, ...rest } = result;
+  const { pendingImages: _pending, visionImages: _vision, ...rest } = result;
   void _pending;
+  void _vision;
   return rest as Record<string, unknown>;
 }

@@ -13,16 +13,26 @@ import {
   type AskAislixRequest,
   type AskAislixResponse,
   type ImageGalleryItem,
+  type VisionAsset,
 } from "@/lib/ask-aislix/ask-aislix.types";
 import {
   NO_AUDIT_FOUND_MESSAGE,
   parseAskAislixResponse,
 } from "@/lib/ask-aislix/ask-aislix.response";
 import { buildAttachmentContentParts } from "@/lib/ask-aislix/ask-aislix.attachments";
-import { ASK_AISLIX_SYSTEM_PROMPT } from "@/lib/ask-aislix/ask-aislix.prompt";
+import {
+  buildTrustedContextBlock,
+  summarizeAuditScope,
+} from "@/lib/ask-aislix/ask-aislix.context-builder";
+import {
+  ASK_AISLIX_JSON_FINALIZE_APPENDIX,
+  ASK_AISLIX_MASTER_SYSTEM_PROMPT,
+} from "@/lib/ask-aislix/ask-aislix.prompt";
 import { buildAskAccessScope, clampFiltersToScope } from "@/lib/ask-aislix/context";
 import { checkAskRateLimit } from "@/lib/ask-aislix/rate-limit";
 import { sanitizeActions } from "@/lib/ask-aislix/actions";
+import { loadAuthorizedStores } from "@/lib/ask-aislix/tools/audit-retrieval";
+import { buildVisionInputParts } from "@/lib/ask-aislix/tools/audit-vision";
 import {
   RESPONSE_TOOLS,
   compactToolResultForModel,
@@ -104,18 +114,20 @@ async function logRequest(
   }
 }
 
-function buildFilterContext(request: AskAislixRequest, scope: Awaited<ReturnType<typeof buildAskAccessScope>>) {
-  const filters = clampFiltersToScope(request.filters, scope);
-  return JSON.stringify({
-    period: filters.datePreset,
-    date_from: filters.dateFrom,
-    date_to: filters.dateTo,
-    store_id: filters.storeId,
-    city: filters.city,
-    country: filters.country,
-    authorized_store_count: scope.allowedStoreIds.length,
-    authorized_cities: scope.allowedCities.slice(0, 20),
-  });
+async function buildInstructions(
+  supabase: SupabaseClient<Database>,
+  request: AskAislixRequest,
+  scope: Awaited<ReturnType<typeof buildAskAccessScope>>,
+): Promise<string> {
+  const stores = await loadAuthorizedStores(supabase, scope);
+  const summaries = summarizeAuditScope(scope);
+  const trustedContext = buildTrustedContextBlock(
+    scope,
+    request,
+    summaries,
+    stores.map((s) => s.name),
+  );
+  return [ASK_AISLIX_MASTER_SYSTEM_PROMPT, trustedContext].join("\n\n");
 }
 
 function buildInitialInput(request: AskAislixRequest, history: AskAislixMessage[]): ResponseInput {
@@ -148,6 +160,7 @@ async function runToolLoop(
   toolCtx: ToolContext,
   toolsInvoked: string[],
   pendingImages: ImageGalleryItem[],
+  visionAssets: VisionAsset[],
 ): Promise<Response> {
   let input: ResponseInput = [...initialInput];
 
@@ -174,6 +187,7 @@ async function runToolLoop(
       }
       const result = await executeTool(call.name, toolCtx, args);
       if (result.pendingImages?.length) pendingImages.push(...result.pendingImages);
+      if (result.visionImages?.length) visionAssets.push(...result.visionImages);
       input.push({
         type: "function_call_output",
         call_id: call.call_id,
@@ -195,18 +209,23 @@ async function finalizeStructuredResponse(
   model: string,
   instructions: string,
   input: ResponseInput,
+  visionAssets: VisionAsset[],
 ): Promise<Response> {
+  const visionParts = buildVisionInputParts(visionAssets);
+  const finalizeContent: ResponseInputItem[] =
+    visionParts.length > 0
+      ? [
+          {
+            role: "user",
+            content: [...visionParts, { type: "input_text", text: ASK_AISLIX_JSON_FINALIZE_APPENDIX }],
+          },
+        ]
+      : [{ role: "user", content: ASK_AISLIX_JSON_FINALIZE_APPENDIX }];
+
   return client.responses.create({
     model,
-    instructions: `${instructions}\n\nReturn one JSON object matching AskAislixResponse with keys: answer, summary, metrics, visual, table, insights, actions, source_context, follow_up_questions.`,
-    input: [
-      ...input,
-      {
-        role: "user",
-        content:
-          "Using the tool results above, return the final AskAislixResponse JSON object only.",
-      },
-    ],
+    instructions: `${instructions}\n\n${ASK_AISLIX_JSON_FINALIZE_APPENDIX}`,
+    input: [...input, ...finalizeContent],
     text: { format: { type: "json_object" } },
   });
 }
@@ -219,10 +238,26 @@ async function runPipeline(
   toolCtx: ToolContext,
   toolsInvoked: string[],
   pendingImages: ImageGalleryItem[],
+  visionAssets: VisionAsset[],
 ): Promise<{ response: Response; usage?: Response["usage"] }> {
-  const loopResponse = await runToolLoop(client, model, instructions, initialInput, toolCtx, toolsInvoked, pendingImages);
+  const loopResponse = await runToolLoop(
+    client,
+    model,
+    instructions,
+    initialInput,
+    toolCtx,
+    toolsInvoked,
+    pendingImages,
+    visionAssets,
+  );
   const finalInput: ResponseInput = [...initialInput, ...loopResponse.output];
-  const finalResponse = await finalizeStructuredResponse(client, model, instructions, finalInput);
+  const finalResponse = await finalizeStructuredResponse(
+    client,
+    model,
+    instructions,
+    finalInput,
+    visionAssets,
+  );
   return { response: finalResponse, usage: finalResponse.usage };
 }
 
@@ -235,6 +270,7 @@ export async function askAislixServer(
   const conversationId = request.conversationId ?? crypto.randomUUID();
   const toolsInvoked: string[] = [];
   const pendingImages: ImageGalleryItem[] = [];
+  const visionAssets: VisionAsset[] = [];
 
   const rate = checkAskRateLimit(userId, request.activeOrgId);
   if (!rate.ok) {
@@ -258,7 +294,7 @@ export async function askAislixServer(
     filters: clampFiltersToScope(request.filters, scope),
   };
 
-  const instructions = `${ASK_AISLIX_SYSTEM_PROMPT}\n\nFilter context: ${buildFilterContext(request, scope)}`;
+  const instructions = await buildInstructions(supabase, request, scope);
   const initialInput = buildInitialInput(request, (request.messages ?? []).slice(-MAX_MESSAGES));
   const client = getOpenAIClient();
   const primaryModel = getModel();
@@ -266,11 +302,29 @@ export async function askAislixServer(
   try {
     let result;
     try {
-      result = await runPipeline(client, primaryModel, instructions, initialInput, toolCtx, toolsInvoked, pendingImages);
+      result = await runPipeline(
+        client,
+        primaryModel,
+        instructions,
+        initialInput,
+        toolCtx,
+        toolsInvoked,
+        pendingImages,
+        visionAssets,
+      );
     } catch (primaryError) {
       const fallback = getFallbackModel();
       if (fallback === primaryModel) throw primaryError;
-      result = await runPipeline(client, fallback, instructions, initialInput, toolCtx, toolsInvoked, pendingImages);
+      result = await runPipeline(
+        client,
+        fallback,
+        instructions,
+        initialInput,
+        toolCtx,
+        toolsInvoked,
+        pendingImages,
+        visionAssets,
+      );
     }
 
     const raw = result.response.output_text || "{}";

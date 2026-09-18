@@ -14,6 +14,9 @@ const baseScope: AskAislixAccessScope = {
   isManager: true,
   accessibleAssignmentIds: ["a1"],
   accessibleScanIds: [],
+  assignedToUserAssignmentIds: ["a1"],
+  conductedScanIds: [],
+  conductedAssignmentIds: [],
 };
 
 describe("AskAccessScope helpers", () => {
