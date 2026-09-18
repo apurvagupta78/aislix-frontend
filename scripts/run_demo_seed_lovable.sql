@@ -1,17 +1,11 @@
 -- ============================================================
--- LOVABLE / SUPABASE SQL EDITOR — one-shot demo environment setup
--- Project: vythviniybatyrdyrmhg (aislix.com)
+-- LOVABLE / SUPABASE SQL EDITOR — demo seed (run AFTER migration)
+-- Project: vythviniybatyrdyrmhg
 --
--- Run this ENTIRE file in: Lovable → Backend → SQL editor (or Supabase Dashboard → SQL)
--- Safe to re-run: seed skips if audits already exist (use force block at bottom to reseed)
+-- Migration 20260918130000_demo_environment.sql is already applied if
+-- SELECT public.aislix_demo_org_id(); returns d0000000-0000-4000-8000-000000000001
 -- ============================================================
 
--- Step 1: Apply migration (idempotent)
-\i is not supported in SQL editor — paste contents of:
---   supabase/migrations/20260918130000_demo_environment.sql
--- OR run that file first, then continue below.
-
--- Step 2: Seed demo org + audits (owner = apurv@aislix.com)
 DO $$
 DECLARE
   v_owner UUID;
@@ -26,15 +20,22 @@ BEGIN
   RAISE NOTICE 'Seed result: %', v_result;
 END $$;
 
--- Step 3: Quick validation
+-- Validation
 SELECT 'demo_org' AS check_name,
   EXISTS (SELECT 1 FROM organizations WHERE id = public.aislix_demo_org_id() AND is_demo) AS ok;
+
+SELECT 'stores' AS check_name, count(*) AS n
+FROM stores WHERE org_id = public.aislix_demo_org_id();
 
 SELECT 'templates' AS check_name, count(*) AS n
 FROM audit_templates WHERE org_id = public.aislix_demo_org_id() AND is_system_template;
 
 SELECT 'completed_audits' AS check_name, count(*) AS n
 FROM scan_assignments WHERE org_id = public.aislix_demo_org_id() AND status = 'completed';
+
+SELECT 'findings' AS check_name, severity, count(*) AS n
+FROM findings WHERE org_id = public.aislix_demo_org_id()
+GROUP BY severity ORDER BY severity;
 
 SELECT 'maggi_variance_sec54' AS check_name, count(*) AS n
 FROM digital_audit_lines l
