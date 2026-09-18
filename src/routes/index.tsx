@@ -213,11 +213,13 @@ function Landing() {
               AI-powered retail execution
             </span>
             <h1 className="mt-7 max-w-xl text-5xl font-semibold leading-[1.02] text-foreground sm:text-6xl lg:text-7xl">
-              Real-time shelf intelligence.
+              Turn Every Shelf Visit Into Accountable Retail Intelligence.
             </h1>
             <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Turn shelf photos into measurable audits. See availability, planogram compliance,
-              pricing, promotions and corrective actions in one accountable workflow.
+              Capture a shelf photo or run a digital audit. Aislix turns every visit into structured
+              findings — detecting products, availability, pricing, promotions and planogram
+              compliance, assigning corrective actions, and keeping the evidence until the issue is
+              verified closed.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button
@@ -228,7 +230,7 @@ function Landing() {
                 document.querySelector("#live-dashboard")?.scrollIntoView({ behavior: "smooth" })
               }
             >
-              Run a free shelf audit <ArrowRight className="size-4" />
+              Start Your First Audit Free <ArrowRight className="size-4" />
             </Button>
             </div>
             <div className="mt-7 grid max-w-xl gap-3 sm:grid-cols-3">
