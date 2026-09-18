@@ -7,7 +7,10 @@ import {
   type AskAislixMessage,
   type AskAislixResponse,
 } from "@/lib/ask-aislix";
-import { NO_AUDIT_FOUND_MESSAGE } from "@/lib/ask-aislix/ask-aislix.response";
+import {
+  ASK_AISLIX_PARSE_ERROR_MESSAGE,
+  NO_AUDIT_FOUND_MESSAGE,
+} from "@/lib/ask-aislix/ask-aislix.response";
 import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
 import { useGlobalFilters } from "@/lib/global-filters";
 import { requireOrgId } from "@/lib/db/context";
@@ -64,9 +67,12 @@ export function AskAislixSection() {
           return;
         }
 
-        if (result.response.answer === NO_AUDIT_FOUND_MESSAGE) {
+        if (
+          result.response.answer === NO_AUDIT_FOUND_MESSAGE ||
+          result.response.answer === ASK_AISLIX_PARSE_ERROR_MESSAGE
+        ) {
           setResponse(null);
-          setError(NO_AUDIT_FOUND_MESSAGE);
+          setError(result.response.answer);
           return;
         }
 

@@ -152,6 +152,17 @@ function extractFunctionCalls(response: Response): ResponseFunctionToolCall[] {
   return response.output.filter((item): item is ResponseFunctionToolCall => item.type === "function_call");
 }
 
+function extractOutputText(response: Response): string {
+  if (response.output_text?.trim()) return response.output_text.trim();
+  for (const item of response.output) {
+    if (item.type !== "message") continue;
+    for (const part of item.content) {
+      if (part.type === "output_text" && part.text.trim()) return part.text.trim();
+    }
+  }
+  return "";
+}
+
 async function runToolLoop(
   client: OpenAI,
   model: string,
@@ -327,7 +338,7 @@ export async function askAislixServer(
       );
     }
 
-    const raw = result.response.output_text || "{}";
+    const raw = extractOutputText(result.response) || "{}";
     const parsed = parseAskAislixResponse(raw);
     parsed.actions = sanitizeActions(parsed.actions ?? []);
 
