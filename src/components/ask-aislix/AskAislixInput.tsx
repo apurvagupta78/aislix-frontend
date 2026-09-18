@@ -64,7 +64,7 @@ export function AskAislixInput({
           disabled={loading}
           rows={3}
           className={cn(
-            "min-h-[96px] w-full resize-y rounded-xl pb-11 pl-11 pr-4 text-base leading-relaxed",
+            "min-h-[96px] w-full resize-y rounded-xl pb-11 pl-11 pr-[5.5rem] text-base leading-relaxed",
             isDark
               ? "border-[#536277]/50 text-navy placeholder:text-mp-muted focus-visible:ring-[#536277]/40"
               : "border-line bg-white",
@@ -112,6 +112,27 @@ export function AskAislixInput({
         >
           <Upload className="h-4 w-4" />
         </button>
+
+        <Button
+          type="submit"
+          size="sm"
+          disabled={!canSubmit}
+          className={cn(
+            "absolute bottom-2.5 right-2.5 h-8 rounded-lg px-3 text-sm font-semibold",
+            isDark && "hover:brightness-110",
+          )}
+          style={
+            isDark
+              ? {
+                  backgroundColor: ASK_AISLIX_SECTION.askButton,
+                  color: ASK_AISLIX_SECTION.heading,
+                }
+              : undefined
+          }
+        >
+          <Send className="mr-1.5 h-3.5 w-3.5" />
+          Ask
+        </Button>
       </div>
 
       {attachments.length > 0 ? (
@@ -141,26 +162,6 @@ export function AskAislixInput({
           ))}
         </div>
       ) : null}
-
-      <div className="flex justify-end">
-        <Button
-          type="submit"
-          size="lg"
-          disabled={!canSubmit}
-          className={cn("h-12 rounded-xl px-5", isDark && "hover:brightness-110")}
-          style={
-            isDark
-              ? {
-                  backgroundColor: ASK_AISLIX_SECTION.askButton,
-                  color: ASK_AISLIX_SECTION.heading,
-                }
-              : undefined
-          }
-        >
-          <Send className="mr-2 h-4 w-4" />
-          Ask
-        </Button>
-      </div>
     </form>
   );
 }

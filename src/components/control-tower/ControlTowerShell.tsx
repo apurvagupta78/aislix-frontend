@@ -135,38 +135,42 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
       ) : null}
       <AskAislixSection previewDemo={demoPreview.previewDemo || data.labeledDemo} />
 
-      <section>
-        <DashboardSectionHeader
-          title="Universal KPIs"
-          description="Live counts from assignments, findings, and corrective actions."
-          viewAllTo="/dashboard/kpis"
-          viewAllSearch={viewAll()}
-          onDownloadCsv={() => {
-            import("@/lib/control-tower/exports").then(({ exportKpiCsv }) => exportKpiCsv(data, filters));
-          }}
-          downloadLabel="Download KPI CSV"
-        />
-        <UniversalKpiGrid
-          data={data}
-          demoBadgePreviewMode={demoBadgePreviewMode}
-          onDrill={(kpi) => drillTo("kpi", kpi.label)}
-        />
-      </section>
-
-      <ControlTowerDashboardHeader
-        data={data}
-        demoBadgePreviewMode={demoBadgePreviewMode}
-        filters={filters}
-        onExport={() => exportAuditExecutionCsv(data, filters)}
-      />
-
       <section className="overflow-hidden rounded-xl border border-line bg-white shadow-card">
         <WorkspaceFilterBar embedded />
-        <DashboardAuditsTable
-          embedded
-          rows={data.auditExecutionFull}
-          onDownloadCsv={() => exportAuditExecutionCsv(data, filters)}
-        />
+
+        <div className="border-t border-line px-4 py-4 md:px-5">
+          <DashboardSectionHeader
+            title="Universal KPIs"
+            description="Live counts from assignments, findings, and corrective actions."
+            viewAllTo="/dashboard/kpis"
+            viewAllSearch={viewAll()}
+            onDownloadCsv={() => {
+              import("@/lib/control-tower/exports").then(({ exportKpiCsv }) => exportKpiCsv(data, filters));
+            }}
+            downloadLabel="Download KPI CSV"
+          />
+          <UniversalKpiGrid
+            data={data}
+            demoBadgePreviewMode={demoBadgePreviewMode}
+            onDrill={(kpi) => drillTo("kpi", kpi.label)}
+          />
+        </div>
+
+        <div className="border-t border-line">
+          <div className="px-4 pt-4 md:px-5">
+            <ControlTowerDashboardHeader
+              data={data}
+              demoBadgePreviewMode={demoBadgePreviewMode}
+              filters={filters}
+              onExport={() => exportAuditExecutionCsv(data, filters)}
+            />
+          </div>
+          <DashboardAuditsTable
+            embedded
+            rows={data.auditExecutionFull}
+            onDownloadCsv={() => exportAuditExecutionCsv(data, filters)}
+          />
+        </div>
       </section>
 
       {trail.length > 1 ? <DrilldownTrail trail={trail} onNavigate={drillBack} /> : null}

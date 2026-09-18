@@ -121,18 +121,20 @@ export function AskAislixSection({ previewDemo = false }: { previewDemo?: boolea
         </div>
       </div>
 
-      <AskAislixInput
-        value={question}
-        onChange={setQuestion}
-        onSubmit={() => void submitQuestion(question)}
-        loading={loading}
-        variant="dark"
-        attachments={attachments}
-        onAttachmentsChange={setAttachments}
-        onAttachmentError={setError}
-      />
+      <div className="space-y-1.5">
+        <AskAislixInput
+          value={question}
+          onChange={setQuestion}
+          onSubmit={() => void submitQuestion(question)}
+          loading={loading}
+          variant="dark"
+          attachments={attachments}
+          onAttachmentsChange={setAttachments}
+          onAttachmentError={setError}
+        />
 
-      <HelpMeAskAislixButton variant="dark" disabled={loading} onClick={() => setHelpOpen(true)} />
+        <HelpMeAskAislixButton variant="dark" disabled={loading} onClick={() => setHelpOpen(true)} />
+      </div>
 
       <HelpMeAskAislixDialog
         open={helpOpen}
