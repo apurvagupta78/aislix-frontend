@@ -81,9 +81,8 @@ export type HelpAskAuthorizedOptions = {
 export type HelpAskQuestionResult = {
   ok: boolean;
   question: string;
-  contextSummary?: string;
-  selectedFilters?: string[];
+  intentSummary?: string;
+  selectedContext?: string[];
   validatedIntent?: HelpAskIntent;
   error?: string;
-  usedFallback?: boolean;
 };

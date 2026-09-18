@@ -244,7 +244,8 @@ export function HelpMeAskAislixDialog({
   const [optionsLoading, setOptionsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [generatedQuestion, setGeneratedQuestion] = useState("");
-  const [contextSummary, setContextSummary] = useState("");
+  const [intentSummary, setIntentSummary] = useState("");
+  const [selectedContext, setSelectedContext] = useState<string[]>([]);
 
   const currentStep = WIZARD_STEPS[stepIndex] ?? "operatingModel";
   const cfg = topicConfig(state.role, state.topic);
@@ -273,7 +274,8 @@ export function HelpMeAskAislixDialog({
       setPhase("wizard");
       setError(null);
       setGeneratedQuestion("");
-      setContextSummary("");
+      setIntentSummary("");
+      setSelectedContext([]);
     }
   }, [open, loadOptions]);
 
@@ -345,7 +347,8 @@ export function HelpMeAskAislixDialog({
         return;
       }
       setGeneratedQuestion(result.question);
-      setContextSummary(result.contextSummary ?? "");
+      setIntentSummary(result.intentSummary ?? "");
+      setSelectedContext(result.selectedContext ?? []);
       setPhase("review");
     } catch (err) {
       setPhase("wizard");
@@ -392,10 +395,20 @@ export function HelpMeAskAislixDialog({
             <blockquote className="rounded-lg border border-line bg-canvas px-4 py-3 text-sm leading-relaxed text-navy">
               &ldquo;{generatedQuestion}&rdquo;
             </blockquote>
-            {contextSummary &&
-            !contextSummary.toLowerCase().includes("shelf images") &&
-            contextSummary.includes("•") ? (
-              <p className="text-xs text-mp-muted">{contextSummary}</p>
+            {intentSummary ? (
+              <p className="text-xs text-mp-muted">{intentSummary}</p>
+            ) : null}
+            {selectedContext.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {selectedContext.map((item) => (
+                  <span
+                    key={item}
+                    className="rounded-full border border-line bg-canvas px-2 py-0.5 text-[11px] text-mp-muted"
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
             ) : null}
             {error ? (
               <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">

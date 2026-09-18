@@ -88,8 +88,8 @@ export async function buildHelpAskQuestionServer(
     return {
       ok: true,
       question: ai.generated_question.trim(),
-      contextSummary: ai.context_summary.trim(),
-      selectedFilters: ai.selected_filters,
+      intentSummary: ai.intent_summary.trim(),
+      selectedContext: ai.selected_context,
       validatedIntent: intent,
     };
   } catch (error) {
