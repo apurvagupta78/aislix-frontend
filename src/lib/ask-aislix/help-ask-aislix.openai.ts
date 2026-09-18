@@ -49,7 +49,7 @@ export async function generateHelpAskQuestionWithOpenAI(
     input: [
       {
         role: "user",
-        content: JSON.stringify(payload),
+        content: `Convert this validated wizard payload into the required JSON object (generated_question, intent_summary, selected_context):\n\n${JSON.stringify(payload)}`,
       },
     ],
     text: { format: { type: "json_object" } },
