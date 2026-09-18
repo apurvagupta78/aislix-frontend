@@ -316,7 +316,7 @@ function DatePresetSelect({
       >
         <SelectTrigger className={cn(CONTROL, "min-w-[118px] gap-1.5")} aria-label="Date">
           <Calendar className="size-3.5 shrink-0 text-muted-foreground" />
-          <SelectValue placeholder="Last 7 days" />
+          <SelectValue placeholder="All time" />
         </SelectTrigger>
         <SelectContent>
           {DASHBOARD_DATE_PRESETS.map((o) => (

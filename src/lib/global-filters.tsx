@@ -18,7 +18,7 @@ import {
 } from "@/lib/dashboard-filters";
 import { fetchDashboardFilterOptions } from "@/lib/dashboard-intelligence";
 
-const STORAGE_KEY = "aislix_global_filters_v1";
+const STORAGE_KEY = "aislix_global_filters_v2";
 
 type GlobalFilterContextValue = {
   filters: DashboardFilterState;

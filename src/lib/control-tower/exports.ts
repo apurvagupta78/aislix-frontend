@@ -33,7 +33,7 @@ function metaHeader(
     "# Aislix Control Tower Export",
     row(["Section", section]),
     row(["Operating Model", modelFilterLabel(model)]),
-    row(["Date Range", filters.datePreset ?? "7d"]),
+    row(["Date Range", filters.datePreset ?? "all"]),
     row(["Store Filter", filters.storeId && filters.storeId !== "all" ? filters.storeId : "All"]),
     row(["Category Filter", filters.category && filters.category !== "all" ? filters.category : "All"]),
     row(["Data Source", "Live Control Tower"]),

@@ -7,6 +7,7 @@ import type { AuditKpiId } from "@/lib/role-kpi-config";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
 
 export type DashboardDatePreset =
+  | "all"
   | "today"
   | "yesterday"
   | "7d"
@@ -38,7 +39,7 @@ export type DashboardFilterState = {
 };
 
 export const DEFAULT_DASHBOARD_FILTERS: DashboardFilterState = {
-  datePreset: "7d",
+  datePreset: "all",
   dateFrom: "",
   dateTo: "",
   country: "all",
@@ -63,6 +64,7 @@ export type DashboardStoreOption = {
 };
 
 export const DASHBOARD_DATE_PRESETS: { value: DashboardDatePreset; label: string }[] = [
+  { value: "all", label: "All time" },
   { value: "today", label: "Today" },
   { value: "yesterday", label: "Yesterday" },
   { value: "7d", label: "Last 7 days" },
@@ -119,6 +121,8 @@ export function resolveDashboardDateBounds(filters: DashboardFilterState): Dashb
   };
 
   switch (filters.datePreset) {
+    case "all":
+      return { from: null, to: null, upcoming: false };
     case "today":
       return { from: startOfDay(now), to: endOfDay(now), upcoming: false };
     case "yesterday": {
@@ -176,7 +180,7 @@ export function dashboardFilterChips(
 ): DashboardFilterChip[] {
   const chips: DashboardFilterChip[] = [];
 
-  if (filters.datePreset !== "7d" || filters.dateFrom || filters.dateTo) {
+  if (filters.datePreset !== "all" || filters.dateFrom || filters.dateTo) {
     const preset = DASHBOARD_DATE_PRESETS.find((p) => p.value === filters.datePreset);
     let label = preset?.label ?? filters.datePreset;
     if (filters.datePreset === "custom" && filters.dateFrom) {
@@ -241,7 +245,7 @@ export function clearDashboardFilterChip(
   chipKey: DashboardFilterChip["key"],
 ): DashboardFilterState {
   if (chipKey === "date") {
-    return { ...filters, datePreset: "7d", dateFrom: "", dateTo: "" };
+    return { ...filters, datePreset: "all", dateFrom: "", dateTo: "" };
   }
   const defaults = DEFAULT_DASHBOARD_FILTERS;
   if (chipKey === "country") {

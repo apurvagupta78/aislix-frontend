@@ -25,7 +25,7 @@ export function ControlTowerDashboardHeader({
     data?.auditExecutionFull.filter((a) => a.stage === "In progress").length ?? 0;
   const breaches = data?.correctiveActionHealth.overdue ?? data?.sla.breached ?? 0;
   const dateLabel =
-    DASHBOARD_DATE_PRESETS.find((p) => p.value === filters.datePreset)?.label ?? "Last 7 days";
+    DASHBOARD_DATE_PRESETS.find((p) => p.value === filters.datePreset)?.label ?? "All time";
   const regionLabel =
     filters.country && filters.country !== "all" ? filters.country : "All regions";
 

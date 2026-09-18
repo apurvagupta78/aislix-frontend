@@ -10,7 +10,7 @@ export function buildViewAllSearch(
   return {
     ctModel: search.model && search.model !== "all" ? search.model : undefined,
     ctFrom: "control-tower",
-    ctDateRange: globalFilters.datePreset !== "7d" ? globalFilters.datePreset : undefined,
+    ctDateRange: globalFilters.datePreset !== "all" ? globalFilters.datePreset : undefined,
     ctCountry: globalFilters.country !== "all" ? globalFilters.country : undefined,
     ctCity: globalFilters.city !== "all" ? globalFilters.city : undefined,
     ctStore: globalFilters.storeId !== "all" ? globalFilters.storeId : undefined,
@@ -31,7 +31,7 @@ export function filterContextSummary(
   const parts: string[] = [];
   if (search.model && search.model !== "all") parts.push(modelFilterLabel(search.model));
   if (globalFilters.storeId && globalFilters.storeId !== "all") parts.push("Store filter active");
-  if (globalFilters.datePreset && globalFilters.datePreset !== "7d") {
+  if (globalFilters.datePreset && globalFilters.datePreset !== "all") {
     parts.push(`Period: ${globalFilters.datePreset}`);
   }
   return parts.length ? parts.join(" · ") : "All scopes";
