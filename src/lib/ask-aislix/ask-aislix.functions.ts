@@ -47,3 +47,33 @@ export const askAislix = createServerFn({ method: "POST" })
       conversationId: data.conversationId,
     });
   });
+
+const HelpAskOrgSchema = z.object({
+  activeOrgId: z.string().uuid(),
+});
+
+const HelpAskBuildSchema = z.object({
+  activeOrgId: z.string().uuid(),
+  intent: z.record(z.string(), z.unknown()),
+});
+
+export const getHelpAskAislixOptions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => HelpAskOrgSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const { getHelpAskAislixOptionsServer } = await import("@/lib/ask-aislix/help-ask-aislix.server");
+    return getHelpAskAislixOptionsServer(context.supabase, context.userId, data.activeOrgId);
+  });
+
+export const buildHelpAskQuestion = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: unknown) => HelpAskBuildSchema.parse(input))
+  .handler(async ({ data, context }) => {
+    const { buildHelpAskQuestionServer } = await import("@/lib/ask-aislix/help-ask-aislix.server");
+    return buildHelpAskQuestionServer(
+      context.supabase,
+      context.userId,
+      data.activeOrgId,
+      data.intent,
+    );
+  });

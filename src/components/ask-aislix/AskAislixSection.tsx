@@ -9,6 +9,8 @@ import { AskAislixAnswerPanel } from "./AskAislixAnswerPanel";
 import { AskAislixInput } from "./AskAislixInput";
 import { AskAislixLoading } from "./AskAislixLoading";
 import { AskAislixSuggestions } from "./AskAislixSuggestions";
+import { HelpMeAskAislixButton } from "./HelpMeAskAislixButton";
+import { HelpMeAskAislixDialog } from "./HelpMeAskAislixDialog";
 
 export function AskAislixSection() {
   const { filters } = useGlobalFilters();
@@ -18,6 +20,7 @@ export function AskAislixSection() {
   const [response, setResponse] = useState<AskAislixResponse | null>(null);
   const [messages, setMessages] = useState<AskAislixMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | undefined>();
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const submitQuestion = useCallback(
     async (raw: string) => {
@@ -68,16 +71,16 @@ export function AskAislixSection() {
 
   return (
     <section
-      className="space-y-4 overflow-hidden rounded-xl border p-4 shadow-card md:p-6"
-      style={{ backgroundColor: AISLIX.accentBg, borderColor: AISLIX.accentBorder }}
+      className="space-y-4 overflow-hidden rounded-xl border border-white/10 p-4 shadow-card md:p-6"
+      style={{ backgroundColor: AISLIX.primary }}
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/60 bg-white text-navy">
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white">
           <Sparkles className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="font-display text-xl font-semibold tracking-tight text-navy">ASK AISLIX</h2>
-          <p className="mt-1 text-sm text-mp-muted">
+          <h2 className="font-display text-xl font-semibold tracking-tight text-white">ASK AISLIX</h2>
+          <p className="mt-1 text-sm text-white/75">
             Your retail operations copilot. Ask anything about your audits, stores, inventory, findings or actions.
           </p>
         </div>
@@ -88,19 +91,29 @@ export function AskAislixSection() {
         onChange={setQuestion}
         onSubmit={() => void submitQuestion(question)}
         loading={loading}
+        variant="dark"
+      />
+
+      <HelpMeAskAislixButton variant="dark" disabled={loading} onClick={() => setHelpOpen(true)} />
+
+      <HelpMeAskAislixDialog
+        open={helpOpen}
+        onOpenChange={setHelpOpen}
+        onQuestionReady={(q) => setQuestion(q)}
       />
 
       <AskAislixSuggestions
         disabled={loading}
+        variant="dark"
         onSelect={(s) => {
           setQuestion(s);
           void submitQuestion(s);
         }}
       />
 
-      {loading ? <AskAislixLoading /> : null}
+      {loading ? <AskAislixLoading variant="dark" /> : null}
       {error ? (
-        <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+        <p className="rounded-lg border border-red-300/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
           {error}
         </p>
       ) : null}
