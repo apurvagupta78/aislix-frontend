@@ -3,9 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { buildAskAccessScope } from "@/lib/ask-aislix/context";
 import { mergeHelpAskCategories } from "@/lib/ask-aislix/help-ask-aislix.categories";
-import { formatHelpAskQuestion } from "@/lib/ask-aislix/help-ask-aislix.format";
 import { generateHelpAskQuestionWithOpenAI } from "@/lib/ask-aislix/help-ask-aislix.openai";
-import type { HelpAskIntent } from "@/lib/ask-aislix/help-ask-aislix.types";
 import { validateHelpAskIntent } from "@/lib/ask-aislix/help-ask-aislix.validate";
 import type {
   HelpAskAuthorizedOptions,
@@ -15,14 +13,6 @@ import { loadShelfCategories } from "@/lib/categories.server";
 
 function uniqueStrings(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))];
-}
-
-function buildContextSummary(intent: HelpAskIntent): string {
-  const parts: string[] = [intent.user_role, intent.time_range.label];
-  if (intent.locations.city) parts.push(intent.locations.city);
-  if (intent.optional_filters?.category) parts.push(intent.optional_filters.category);
-  if (intent.optional_filters?.sub_category) parts.push(intent.optional_filters.sub_category);
-  return parts.filter(Boolean).join(" • ");
 }
 
 export async function getHelpAskAislixOptionsServer(
@@ -94,26 +84,14 @@ export async function buildHelpAskQuestionServer(
 
     const intent = validated.intent;
 
-    try {
-      const ai = await generateHelpAskQuestionWithOpenAI(intent);
-      return {
-        ok: true,
-        question: ai.generated_question.trim(),
-        contextSummary: ai.context_summary.trim(),
-        selectedFilters: ai.selected_filters,
-        validatedIntent: intent,
-      };
-    } catch {
-      const question = formatHelpAskQuestion(intent);
-      return {
-        ok: true,
-        question,
-        contextSummary: buildContextSummary(intent),
-        selectedFilters: [intent.user_role, intent.time_range.label].filter(Boolean),
-        validatedIntent: intent,
-        usedFallback: true,
-      };
-    }
+    const ai = await generateHelpAskQuestionWithOpenAI(intent);
+    return {
+      ok: true,
+      question: ai.generated_question.trim(),
+      contextSummary: ai.context_summary.trim(),
+      selectedFilters: ai.selected_filters,
+      validatedIntent: intent,
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Could not build question.";
     return { ok: false, question: "", error: message.slice(0, 500) };

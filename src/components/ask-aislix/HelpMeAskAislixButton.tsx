@@ -29,7 +29,7 @@ export function HelpMeAskAislixButton({
       )}
     >
       <Wand2 className="mr-2 h-4 w-4" />
-      Help me ask Aislix
+      Generate Prompt
     </Button>
   );
 }

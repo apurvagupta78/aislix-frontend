@@ -62,6 +62,10 @@ export function validateHelpAskIntent(
     return { ok: false, error: "The selected topic is not available in Aislix yet." };
   }
 
+  if (intent.topic === "other" && !intent.topic_custom?.trim()) {
+    return { ok: false, error: "Please describe what you want to analyze." };
+  }
+
   const customLocationError = validateCustomUserRequestLocations(
     intent.custom_user_request,
     options,

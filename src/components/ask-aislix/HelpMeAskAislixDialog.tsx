@@ -37,7 +37,6 @@ import {
 import { HELP_CUSTOM_REQUEST_MAX_LENGTH } from "@/lib/ask-aislix/help-ask-aislix.types";
 import {
   getAvailableTopicsForRole,
-  GROUP_BY_LABELS,
   HELP_LIMIT_OPTIONS,
   HELP_ROLE_CARDS,
   HELP_TIME_PRESETS,
@@ -74,6 +73,7 @@ type WizardState = {
   role: HelpOperatingRole | null;
   userRole: string;
   topic: string | null;
+  topicOtherText: string;
   locationScope: "all_my_locations" | "specific";
   country: string;
   city: string;
@@ -98,6 +98,7 @@ const INITIAL: WizardState = {
   role: null,
   userRole: "",
   topic: null,
+  topicOtherText: "",
   locationScope: "all_my_locations",
   country: "",
   city: "",
@@ -184,7 +185,11 @@ function buildIntent(state: WizardState, options: HelpAskAuthorizedOptions): Hel
     user_role: state.userRole.trim(),
     user_context: buildUserContext(state.role!, state.userRole),
     topic: state.topic!,
-    topic_label: cfg.label,
+    topic_label:
+      state.topic === "other" ? state.topicOtherText.trim() || "Other" : cfg.label,
+    ...(state.topic === "other" && state.topicOtherText.trim()
+      ? { topic_custom: state.topicOtherText.trim() }
+      : {}),
     locations: {
       scope: state.locationScope,
       ...(state.locationScope === "specific" && state.country ? { country: state.country } : {}),
@@ -310,7 +315,11 @@ export function HelpMeAskAislixDialog({
   const canContinue = (): boolean => {
     if (currentStep === "operatingModel") return !!state.role;
     if (currentStep === "userRole") return !!state.userRole.trim();
-    if (currentStep === "topic") return !!state.topic;
+    if (currentStep === "topic") {
+      if (!state.topic) return false;
+      if (state.topic === "other") return !!state.topicOtherText.trim();
+      return true;
+    }
     if (currentStep === "location") {
       if (state.locationScope === "all_my_locations") return true;
       return !!(state.country || state.city || state.storeIds.length);
@@ -364,21 +373,22 @@ export function HelpMeAskAislixDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-display text-navy">
             <Wand2 className="h-5 w-5" />
-            Help me ask Aislix
+            Generate Prompt
           </DialogTitle>
           <DialogDescription>
-            Answer a few quick questions — we&apos;ll draft a precise question for you to review.
+            Answer a few quick questions — we&apos;ll use AI to generate a precise retail prompt for
+            you to review.
           </DialogDescription>
         </DialogHeader>
 
         {phase === "generating" ? (
           <div className="flex items-center gap-3 rounded-lg border border-line bg-canvas px-4 py-8">
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            <p className="text-sm text-navy">Building your question…</p>
+            <p className="text-sm text-navy">Generating your prompt with AI…</p>
           </div>
         ) : phase === "review" ? (
           <div className="space-y-4">
-            <p className="text-sm font-medium text-navy">Here&apos;s what I understood:</p>
+            <p className="text-sm font-medium text-navy">Here&apos;s your generated prompt:</p>
             <blockquote className="rounded-lg border border-line bg-canvas px-4 py-3 text-sm leading-relaxed text-navy">
               &ldquo;{generatedQuestion}&rdquo;
             </blockquote>
@@ -459,19 +469,34 @@ export function HelpMeAskAislixDialog({
             ) : null}
 
             {currentStep === "topic" && state.role ? (
-              <div className="flex flex-wrap gap-2">
-                {availableTopics.map((t) => (
-                  <Button
-                    key={t.id}
-                    type="button"
-                    size="sm"
-                    variant={state.topic === t.id ? "default" : "outline"}
-                    className="rounded-full"
-                    onClick={() => patch({ topic: t.id, metric: "" })}
-                  >
-                    {t.label}
-                  </Button>
-                ))}
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {availableTopics.map((t) => (
+                    <Button
+                      key={t.id}
+                      type="button"
+                      size="sm"
+                      variant={state.topic === t.id ? "default" : "outline"}
+                      className="rounded-full"
+                      onClick={() =>
+                        patch({
+                          topic: t.id,
+                          metric: "",
+                          topicOtherText: t.id === "other" ? state.topicOtherText : "",
+                        })
+                      }
+                    >
+                      {t.label}
+                    </Button>
+                  ))}
+                </div>
+                {state.topic === "other" ? (
+                  <Input
+                    value={state.topicOtherText}
+                    placeholder="Describe what you want to analyze"
+                    onChange={(e) => patch({ topicOtherText: e.target.value })}
+                  />
+                ) : null}
               </div>
             ) : null}
 
@@ -667,39 +692,29 @@ export function HelpMeAskAislixDialog({
                   </div>
                 ) : null}
 
-                {cfg.needsGrouping ? (
-                  <div className="space-y-2">
-                    <Label>Group by (optional)</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {(cfg.groupByOptions ?? []).map((g) => (
-                        <Button
-                          key={g}
-                          type="button"
-                          size="sm"
-                          variant={state.groupBy === g ? "default" : "outline"}
-                          className="rounded-full"
-                          onClick={() => patch({ groupBy: g })}
-                        >
-                          {GROUP_BY_LABELS[g] ?? g}
-                        </Button>
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {HELP_LIMIT_OPTIONS.map((l) => (
-                        <Button
-                          key={l.id}
-                          type="button"
-                          size="sm"
-                          variant={state.limit === l.id ? "default" : "outline"}
-                          className="rounded-full"
-                          onClick={() => patch({ limit: l.id, limitExplicit: l.id > 0 })}
-                        >
-                          {l.label}
-                        </Button>
-                      ))}
-                    </div>
+                <div className="space-y-2">
+                  <Label>Results limit (optional)</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {HELP_LIMIT_OPTIONS.map((l) => (
+                      <Button
+                        key={l.id}
+                        type="button"
+                        size="sm"
+                        variant={
+                          (l.id === 0 && !state.limitExplicit) || state.limit === l.id
+                            ? "default"
+                            : "outline"
+                        }
+                        className="rounded-full"
+                        onClick={() =>
+                          patch({ limit: l.id, limitExplicit: l.id > 0 })
+                        }
+                      >
+                        {l.label}
+                      </Button>
+                    ))}
                   </div>
-                ) : null}
+                </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
@@ -768,8 +783,8 @@ export function HelpMeAskAislixDialog({
                 </div>
 
                 <div className="space-y-2 border-t border-line pt-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-mp-muted">
-                    Or tell Aislix in your own words
+                  <p className="text-sm font-medium text-navy">
+                    Finally tell Aislix in your own words
                   </p>
                   <Textarea
                     value={state.customUserRequest}
@@ -839,7 +854,7 @@ export function HelpMeAskAislixDialog({
                   </Button>
                 )}
                 <Button type="button" disabled={!canContinue()} onClick={handlePrimaryAction}>
-                  {isLastStep ? "Build question" : "Continue"}
+                  {isLastStep ? "Generate Prompt" : "Continue"}
                 </Button>
               </div>
             </>

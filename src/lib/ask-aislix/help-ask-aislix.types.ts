@@ -19,6 +19,7 @@ export const HelpAskIntentSchema = z.object({
   user_context: z.string().min(1),
   topic: z.string().min(1),
   topic_label: z.string().min(1),
+  topic_custom: z.string().max(200).optional(),
   locations: z.object({
     scope: z.enum(["all_my_locations", "specific"]),
     country: z.string().optional(),
