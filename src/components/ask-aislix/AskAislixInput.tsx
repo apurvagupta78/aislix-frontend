@@ -106,7 +106,7 @@ export function AskAislixInput({
             void (async () => {
               try {
                 const { readAskAislixAttachments } = await import(
-                  "@/lib/ask-aislix/ask-aislix.attachments.client"
+                  "@/lib/ask-aislix/ask-aislix.attachments-io"
                 );
                 const next = await readAskAislixAttachments(files, attachments.length);
                 onAttachmentsChange([...attachments, ...next]);
