@@ -15,6 +15,7 @@ const NAV: {
   { to: "/admin/users", label: "Users", icon: Users },
   { to: "/admin/orgs", label: "Organizations", icon: Database },
   { to: "/admin/demo-scans", label: "Demo audits", icon: Shield },
+  { to: "/admin/demo-seed", label: "Demo evidence", icon: Upload },
 ];
 
 export function AdminShell({
