@@ -1,4 +1,5 @@
 import {
+  ASK_AISLIX_VISUAL_TYPES,
   AskAislixResponseSchema,
   type AskAislixResponse,
 } from "@/lib/ask-aislix/ask-aislix.types";
@@ -22,6 +23,66 @@ const EMPTY_RESPONSE: AskAislixResponse = {
 };
 
 const VALID_TRENDS = new Set(["up", "down", "flat", "none"]);
+const VALID_VISUAL_TYPES = new Set<string>(ASK_AISLIX_VISUAL_TYPES);
+
+function sanitizeActions(raw: unknown): AskAislixResponse["actions"] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const action = item as Record<string, unknown>;
+      const label = String(action.label ?? "").trim();
+      const route = String(action.route ?? "").trim();
+      if (!label || !route) return null;
+      const params =
+        action.params && typeof action.params === "object" && !Array.isArray(action.params)
+          ? (action.params as Record<string, string>)
+          : {};
+      return { label, route, params };
+    })
+    .filter((action): action is NonNullable<typeof action> => Boolean(action));
+}
+
+function sanitizeVisual(raw: unknown): AskAislixResponse["visual"] {
+  if (!raw || typeof raw !== "object") return { type: "none", title: "", data: [] };
+  const visual = raw as Record<string, unknown>;
+  const type = String(visual.type ?? "none");
+  return {
+    type: VALID_VISUAL_TYPES.has(type) ? (type as AskAislixResponse["visual"]["type"]) : "none",
+    title: typeof visual.title === "string" ? visual.title : "",
+    data: Array.isArray(visual.data) ? visual.data.filter((row) => row && typeof row === "object") : [],
+  };
+}
+
+function sanitizeTable(raw: unknown): AskAislixResponse["table"] {
+  if (!raw || typeof raw !== "object") return { columns: [], rows: [] };
+  const table = raw as Record<string, unknown>;
+  return {
+    columns: Array.isArray(table.columns) ? table.columns.map((c) => String(c)) : [],
+    rows: Array.isArray(table.rows)
+      ? table.rows
+          .filter((row) => Array.isArray(row))
+          .map((row) => row.map((cell) => (cell == null ? null : String(cell))))
+      : [],
+  };
+}
+
+/** Strip markdown fences and isolate the first JSON object when models wrap output. */
+export function normalizeRawJsonPayload(raw: string): string {
+  let trimmed = raw.trim();
+  if (!trimmed) return trimmed;
+
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)```$/i);
+  if (fenced?.[1]) trimmed = fenced[1].trim();
+
+  if (trimmed.startsWith("{")) return trimmed;
+
+  const start = trimmed.indexOf("{");
+  const end = trimmed.lastIndexOf("}");
+  if (start >= 0 && end > start) return trimmed.slice(start, end + 1);
+
+  return trimmed;
+}
 
 /** Only normalize when the model explicitly signals unavailable scoped data. */
 const UNAVAILABLE_ANSWER_PATTERNS = [
@@ -44,9 +105,11 @@ function sanitizeMetrics(raw: unknown): AskAislixResponse["metrics"] {
       if (!item || typeof item !== "object") return null;
       const metric = item as Record<string, unknown>;
       const trend = String(metric.trend ?? "none");
+      const value =
+        metric.value == null ? "" : typeof metric.value === "string" ? metric.value : String(metric.value);
       return {
         label: String(metric.label ?? ""),
-        value: String(metric.value ?? ""),
+        value,
         unit: String(metric.unit ?? ""),
         trend: VALID_TRENDS.has(trend) ? (trend as "up" | "down" | "flat" | "none") : "none",
       };
@@ -63,16 +126,10 @@ function coerceLooseResponse(value: unknown): AskAislixResponse | null {
     answer: obj.answer.trim(),
     summary: typeof obj.summary === "string" ? obj.summary : "",
     metrics: sanitizeMetrics(obj.metrics),
-    visual:
-      obj.visual && typeof obj.visual === "object"
-        ? obj.visual
-        : { type: "none", title: "", data: [] },
-    table:
-      obj.table && typeof obj.table === "object"
-        ? obj.table
-        : { columns: [], rows: [] },
+    visual: sanitizeVisual(obj.visual),
+    table: sanitizeTable(obj.table),
     insights: Array.isArray(obj.insights) ? obj.insights.filter((i) => typeof i === "string") : [],
-    actions: Array.isArray(obj.actions) ? obj.actions : [],
+    actions: sanitizeActions(obj.actions),
     source_context:
       obj.source_context && typeof obj.source_context === "object"
         ? obj.source_context
@@ -100,7 +157,7 @@ export function normalizeAskAislixResponse(response: AskAislixResponse): AskAisl
 }
 
 export function parseAskAislixResponse(raw: string): AskAislixResponse {
-  const trimmed = raw.trim();
+  const trimmed = normalizeRawJsonPayload(raw);
   if (!trimmed || trimmed === "{}") {
     return emptyAskResponse(ASK_AISLIX_PARSE_ERROR_MESSAGE);
   }

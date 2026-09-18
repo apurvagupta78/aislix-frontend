@@ -81,6 +81,28 @@ describe("parseAskAislixResponse", () => {
   it("returns parse error message for empty JSON payloads", () => {
     expect(parseAskAislixResponse("{}").answer).toBe(ASK_AISLIX_PARSE_ERROR_MESSAGE);
   });
+
+  it("parses markdown-wrapped JSON and numeric metric values", () => {
+    const raw = `\`\`\`json
+{
+  "answer": "Audit completion is 25% with 2 overdue assignments.",
+  "summary": "",
+  "metrics": [{ "label": "Completion", "value": 25, "unit": "%", "trend": "flat" }],
+  "visual": { "type": "invalid", "title": "", "data": [] },
+  "table": { "columns": [], "rows": [] },
+  "insights": [],
+  "actions": [{ "label": "View Dashboard", "route": "/dashboard" }],
+  "source_context": { "period": "", "locations": [] },
+  "follow_up_questions": []
+}
+\`\`\``;
+
+    const result = parseAskAislixResponse(raw);
+    expect(result.answer).toContain("25%");
+    expect(result.metrics[0]?.value).toBe("25");
+    expect(result.visual.type).toBe("none");
+    expect(result.actions[0]?.route).toBe("/dashboard");
+  });
 });
 
 describe("isNoAuditDataResponse", () => {
