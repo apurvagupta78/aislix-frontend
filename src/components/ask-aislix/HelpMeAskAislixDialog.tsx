@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -30,8 +31,10 @@ import {
 import {
   buildOperatingContext,
   buildUserContext,
+  CUSTOM_REQUEST_PLACEHOLDERS,
   USER_ROLE_PLACEHOLDERS,
 } from "@/lib/ask-aislix/help-ask-aislix.context";
+import { HELP_CUSTOM_REQUEST_MAX_LENGTH } from "@/lib/ask-aislix/help-ask-aislix.types";
 import {
   getAvailableTopicsForRole,
   GROUP_BY_LABELS,
@@ -63,7 +66,7 @@ const STEP_TITLES: Record<WizardStep, string> = {
   topic: "What do you want to know?",
   location: "Where do you want to analyze?",
   time: "What time period should Aislix analyze?",
-  additional: "Anything else you want to narrow down?",
+  additional: "Anything else you want Aislix to analyze?",
 };
 
 type WizardState = {
@@ -84,6 +87,7 @@ type WizardState = {
   limit: number;
   optionalBrand: string;
   optionalCategory: string;
+  customUserRequest: string;
 };
 
 const INITIAL: WizardState = {
@@ -104,6 +108,7 @@ const INITIAL: WizardState = {
   limit: 10,
   optionalBrand: "",
   optionalCategory: "",
+  customUserRequest: "",
 };
 
 function topicConfig(
@@ -193,6 +198,9 @@ function buildIntent(state: WizardState, options: HelpAskAuthorizedOptions): Hel
         ...(state.optionalCategory ? { category: state.optionalCategory } : {}),
       },
     }),
+    ...(state.customUserRequest.trim()
+      ? { custom_user_request: state.customUserRequest.trim() }
+      : {}),
   };
 }
 
@@ -366,7 +374,15 @@ export function HelpMeAskAislixDialog({
           </div>
         ) : (
           <div className="space-y-4">
-            <p className="text-sm font-medium text-navy">{STEP_TITLES[currentStep]}</p>
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-navy">{STEP_TITLES[currentStep]}</p>
+              {currentStep === "additional" ? (
+                <p className="text-xs text-mp-muted">
+                  Tell Aislix anything specific that you have in mind. You don&apos;t need to know
+                  how to write a prompt.
+                </p>
+              ) : null}
+            </div>
 
             {optionsLoading && currentStep !== "operatingModel" ? (
               <div className="flex items-center gap-2 text-sm text-mp-muted">
@@ -697,6 +713,31 @@ export function HelpMeAskAislixDialog({
                       />
                     )}
                   </div>
+                </div>
+
+                <div className="space-y-2 border-t border-line pt-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-mp-muted">
+                    Or tell Aislix in your own words
+                  </p>
+                  <Textarea
+                    value={state.customUserRequest}
+                    placeholder={
+                      state.role
+                        ? CUSTOM_REQUEST_PLACEHOLDERS[state.role]
+                        : "Example: I want to know whether Coca-Cola shelf space has improved in my Mumbai stores compared with last month..."
+                    }
+                    rows={3}
+                    maxLength={HELP_CUSTOM_REQUEST_MAX_LENGTH}
+                    className="min-h-[72px] resize-y text-sm"
+                    onChange={(e) =>
+                      patch({
+                        customUserRequest: e.target.value.slice(0, HELP_CUSTOM_REQUEST_MAX_LENGTH),
+                      })
+                    }
+                  />
+                  <p className="text-right text-[11px] text-mp-muted">
+                    {state.customUserRequest.length}/{HELP_CUSTOM_REQUEST_MAX_LENGTH}
+                  </p>
                 </div>
               </div>
             ) : null}

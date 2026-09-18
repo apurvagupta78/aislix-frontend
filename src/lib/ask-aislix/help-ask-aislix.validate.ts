@@ -11,6 +11,35 @@ function normalize(value: string): string {
   return value.trim().toLowerCase();
 }
 
+function validateCustomUserRequestLocations(
+  customText: string | undefined,
+  options: HelpAskAuthorizedOptions,
+): string | null {
+  if (!customText?.trim()) return null;
+
+  const lower = customText.toLowerCase();
+  const allowedCities = new Set(options.cities.map(normalize));
+  const allowedCountries = new Set(options.countries.map(normalize));
+
+  for (const city of options.allOrgCities) {
+    const cityNorm = normalize(city);
+    if (cityNorm.length < 3) continue;
+    if (lower.includes(cityNorm) && !allowedCities.has(cityNorm)) {
+      return `I can't access ${city} stores under your account.`;
+    }
+  }
+
+  for (const country of options.allOrgCountries) {
+    const countryNorm = normalize(country);
+    if (countryNorm.length < 3) continue;
+    if (lower.includes(countryNorm) && !allowedCountries.has(countryNorm)) {
+      return `I can't access locations in ${country} under your account.`;
+    }
+  }
+
+  return null;
+}
+
 export function validateHelpAskIntent(
   raw: unknown,
   scope: AskAislixAccessScope,
@@ -31,6 +60,14 @@ export function validateHelpAskIntent(
   );
   if (!allowedTopics.has(intent.topic)) {
     return { ok: false, error: "The selected topic is not available in Aislix yet." };
+  }
+
+  const customLocationError = validateCustomUserRequestLocations(
+    intent.custom_user_request,
+    options,
+  );
+  if (customLocationError) {
+    return { ok: false, error: customLocationError };
   }
 
   if (intent.locations.scope === "specific") {

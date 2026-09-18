@@ -59,6 +59,8 @@ export async function getHelpAskAislixOptionsServer(
     stores,
     countries: uniqueStrings(stores.map((s) => s.country ?? "")),
     cities: uniqueStrings(stores.map((s) => s.city ?? "")),
+    allOrgCities: uniqueStrings((storeRows ?? []).map((s) => s.city ?? "")),
+    allOrgCountries: uniqueStrings((storeRows ?? []).map((s) => s.country ?? "")),
     categories: uniqueStrings(categories).sort((a, b) => a.localeCompare(b)),
     canViewAllLocations: stores.length > 1 || scope.isOrgAdmin,
   };

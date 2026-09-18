@@ -56,7 +56,10 @@ export const HelpAskIntentSchema = z.object({
   group_by: z.string().optional(),
   limit: z.number().int().min(0).max(100).optional(),
   optional_filters: z.record(z.string()).optional(),
+  custom_user_request: z.string().max(800).optional(),
 });
+
+export const HELP_CUSTOM_REQUEST_MAX_LENGTH = 800;
 
 export type HelpAskIntent = z.infer<typeof HelpAskIntentSchema>;
 
@@ -64,6 +67,9 @@ export type HelpAskAuthorizedOptions = {
   stores: Array<{ id: string; name: string; city: string | null; country: string | null }>;
   countries: string[];
   cities: string[];
+  /** All cities/countries in the org — detect unauthorized mentions in free text. */
+  allOrgCities: string[];
+  allOrgCountries: string[];
   categories: string[];
   canViewAllLocations: boolean;
 };

@@ -40,3 +40,16 @@ export function buildUserContext(role: HelpOperatingRole, userRole: string): str
 export function operatingModelLabel(role: HelpOperatingRole): string {
   return HELP_ROLE_CARDS.find((r) => r.id === role)?.label ?? role;
 }
+
+export const CUSTOM_REQUEST_PLACEHOLDERS: Record<HelpOperatingRole, string> = {
+  supermarket:
+    "Example: Show me whether the brands with the most shelf space are also the ones with the best availability...",
+  fmcg_distributor:
+    "Example: I want to know which outlets are repeatedly failing execution for our top brands...",
+  local_store:
+    "Example: I want to know which products keep running short in my stores...",
+  dark_store:
+    "Example: I want to know why inventory variance is repeatedly high in some of my dark stores...",
+  warehouse:
+    "Example: I want to know which warehouse zones keep having picking and location accuracy problems...",
+};

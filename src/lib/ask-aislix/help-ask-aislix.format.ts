@@ -74,6 +74,18 @@ export function formatHelpAskQuestion(intent: HelpAskIntent): string {
     ? `${metricLabel.toLowerCase()} for ${topicLabel.toLowerCase()}`
     : topicLabel.toLowerCase();
 
+  const custom = intent.custom_user_request?.trim();
+
+  if (custom) {
+    let question = `${intent.user_context.replace(/\.$/, "")}, ${custom.replace(/\.$/, "")}`;
+    if (location !== "across my authorized locations") {
+      question += ` (${location})`;
+    }
+    question += ` over ${time}`;
+    if (grouping) question += `, ${grouping}`;
+    return `${question.replace(/\s+/g, " ").trim()}.`;
+  }
+
   let question = `${intent.user_context.replace(/\.$/, "")}, show me ${subject} ${location}`;
 
   if (product) {

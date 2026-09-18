@@ -36,4 +36,14 @@ describe("formatHelpAskQuestion fallback", () => {
     expect(q).toContain("Mumbai");
     expect(q).toContain("Coca-Cola");
   });
+
+  it("prioritizes custom user request when provided", () => {
+    const q = formatHelpAskQuestion({
+      ...baseIntent,
+      custom_user_request:
+        "I want to know whether Coca-Cola is getting more shelf space than Pepsi in my stores.",
+    });
+    expect(q).toContain("Coca-Cola");
+    expect(q).toContain("Pepsi");
+  });
 });

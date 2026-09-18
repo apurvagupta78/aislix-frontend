@@ -20,53 +20,57 @@ The resulting question must clearly express what the user wants Aislix to analyz
 
 The user's role provides context — include it naturally at the start when it helps clarity, but do not repeat it awkwardly.
 
-Examples:
+When the user provides a custom free-text request (custom_user_request), treat it as an important expression of what they actually want to know.
+
+Use the structured wizard selections as context and constraints.
+
+First understand the user's intended analysis.
+
+Then combine:
+- operating model
+- user role
+- topic
+- authorized location
+- filters
+- time period
+- custom user request
+
+into ONE clear, natural-language question.
+
+Preserve the user's intention.
+
+Do not unnecessarily rewrite the request into generic wording.
+
+Do not add analysis that the user did not ask for.
+
+If the user's free-text request conflicts with a selected structured filter, do not override the validated filter. The validated structured fields remain authoritative.
+
+If the free-text request is more specific than the structured selection, preserve that specificity when it is consistent with authorized data.
+
+If the free-text request is ambiguous, produce the clearest reasonable question using the available selections without inventing missing information.
+
+Examples with custom_user_request:
 
 Input:
-Operating model = supermarket
-Role = Store Manager
-Topic = Inventory
-City = Mumbai
-Category = Beverages
-Brand = Coca-Cola
-Time = This month
-Group by = store
+Supermarket Store Manager, Topic=Shelf Space, Mumbai, This month
+custom_user_request: "I want to know whether Coca-Cola is getting more shelf space than Pepsi in my stores."
 
 Output:
-"As a Supermarket Store Manager, show me inventory variance for Coca-Cola beverages across my authorized Mumbai supermarkets this month, broken down by store."
+"As a Supermarket Store Manager, compare Coca-Cola and Pepsi shelf space across my authorized Mumbai supermarkets this month and show which brand has the greater share of shelf."
 
 Input:
-Operating model = dark_store
-Role = Dark Store Manager
-Topic = Inventory Variance
-City = Mumbai
-SKU = Lays 50g
-Time = Last 30 days
+Dark Store Manager, Topic=Inventory Variance, Mumbai, Last 30 days
+custom_user_request: "I want to know why some stores keep showing high variance."
 
 Output:
-"As a Dark Store Manager, show me the inventory variance for Lays 50g across my authorized Mumbai dark stores over the last 30 days."
+"As a Dark Store Manager, analyze inventory variance across my authorized Mumbai dark stores over the last 30 days and identify which stores repeatedly show high variance."
 
 Input:
-Operating model = warehouse
-Role = Warehouse Manager
-Topic = Audit Performance
-City = Delhi
-Time = This month
-Group by = warehouse
+FMCG Territory Sales Manager, Topic=Outlet Performance, Maharashtra, Last 30 days
+custom_user_request: "Find outlets where availability is poor and the same issue has already happened multiple times."
 
 Output:
-"As a Warehouse Manager, show me audit completion across my authorized Delhi warehouses this month, broken down by warehouse."
-
-Input:
-Operating model = fmcg_distributor
-Role = Territory Sales Manager
-Topic = OOS
-Region = Maharashtra
-Brand = Coca-Cola
-Time = Last 30 days
-
-Output:
-"As an FMCG Territory Sales Manager, show me the out-of-stock rate for Coca-Cola products across my authorized Maharashtra outlets over the last 30 days."
+"As an FMCG Territory Sales Manager, identify authorized outlets across my Maharashtra territory with poor product availability and repeated availability issues over the last 30 days."
 
 Return JSON with exactly these keys:
 - generated_question (string)
