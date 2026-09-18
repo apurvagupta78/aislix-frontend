@@ -2,6 +2,7 @@ import { Send } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
 import { cn } from "@/lib/utils";
 
 export function AskAislixInput({
@@ -37,18 +38,24 @@ export function AskAislixInput({
         className={cn(
           "h-12 flex-1 rounded-xl text-base",
           isDark
-            ? "border-white/20 bg-white text-navy placeholder:text-mp-muted focus-visible:ring-white/30"
+            ? "border-[#536277]/50 text-navy placeholder:text-mp-muted focus-visible:ring-[#536277]/40"
             : "border-line bg-white",
         )}
+        style={isDark ? { backgroundColor: ASK_AISLIX_SECTION.inputBackground } : undefined}
       />
       <Button
         type="submit"
         size="lg"
         disabled={loading || !value.trim()}
-        className={cn(
-          "h-12 rounded-xl px-5",
-          isDark && "bg-white text-navy hover:bg-white/90",
-        )}
+        className={cn("h-12 rounded-xl px-5", isDark && "hover:brightness-110")}
+        style={
+          isDark
+            ? {
+                backgroundColor: ASK_AISLIX_SECTION.askButton,
+                color: ASK_AISLIX_SECTION.heading,
+              }
+            : undefined
+        }
       >
         <Send className="mr-2 h-4 w-4" />
         Ask

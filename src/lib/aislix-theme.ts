@@ -25,6 +25,18 @@ export const AISLIX = {
   accentBorder: "#D9C5F2",
 } as const;
 
+/** Ask Aislix command-center palette — scoped to the Ask section only; do not use on KPI cards. */
+export const ASK_AISLIX_SECTION = {
+  background: "#202B3C",
+  heading: "#FFFFFF",
+  subtitle: "#D3DAE5",
+  inputBackground: "#FFFFFF",
+  askButton: "#34445A",
+  chipBackground: "#2B394D",
+  chipBorder: "#536277",
+  chipText: "#FFFFFF",
+} as const;
+
 /** Chart series order from the design spec — never rainbow / library defaults. */
 export const AISLIX_CHART = [
   AISLIX.primary,

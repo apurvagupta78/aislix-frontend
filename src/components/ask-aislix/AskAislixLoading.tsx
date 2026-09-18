@@ -1,5 +1,6 @@
 import { Loader2 } from "lucide-react";
 
+import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
 import { cn } from "@/lib/utils";
 
 export function AskAislixLoading({
@@ -15,16 +16,35 @@ export function AskAislixLoading({
     <div
       className={cn(
         "flex items-center gap-3 rounded-xl border px-4 py-5 shadow-card",
-        isDark ? "border-white/15 bg-white/10" : "border-line bg-white",
+        isDark ? "" : "border-line bg-white",
       )}
+      style={
+        isDark
+          ? {
+              backgroundColor: ASK_AISLIX_SECTION.chipBackground,
+              borderColor: ASK_AISLIX_SECTION.chipBorder,
+            }
+          : undefined
+      }
     >
-      <Loader2 className={cn("h-5 w-5 animate-spin", isDark ? "text-white" : "text-primary")} />
+      <Loader2
+        className={cn("h-5 w-5 animate-spin", !isDark && "text-primary")}
+        style={isDark ? { color: ASK_AISLIX_SECTION.heading } : undefined}
+      />
       <div>
-        <p className={cn("text-sm font-medium", isDark ? "text-white" : "text-navy")}>
+        <p
+          className={cn("text-sm font-medium", !isDark && "text-navy")}
+          style={isDark ? { color: ASK_AISLIX_SECTION.heading } : undefined}
+        >
           Analyzing your audits...
         </p>
         {phase ? (
-          <p className={cn("text-xs", isDark ? "text-white/70" : "text-mp-muted")}>{phase}</p>
+          <p
+            className={cn("text-xs", !isDark && "text-mp-muted")}
+            style={isDark ? { color: ASK_AISLIX_SECTION.subtitle } : undefined}
+          >
+            {phase}
+          </p>
         ) : null}
       </div>
     </div>

@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Sparkles } from "lucide-react";
 
 import { askAislix, type AskAislixMessage, type AskAislixResponse } from "@/lib/ask-aislix";
-import { AISLIX } from "@/lib/aislix-theme";
+import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
 import { useGlobalFilters } from "@/lib/global-filters";
 import { requireOrgId } from "@/lib/db/context";
 import { AskAislixAnswerPanel } from "./AskAislixAnswerPanel";
@@ -76,16 +76,24 @@ export function AskAislixSection() {
 
   return (
     <section
-      className="space-y-4 overflow-hidden rounded-xl border border-white/10 p-4 shadow-card md:p-6"
-      style={{ backgroundColor: AISLIX.primary }}
+      className="space-y-4 overflow-hidden rounded-xl border border-[#536277]/40 p-4 shadow-card md:p-6"
+      style={{ backgroundColor: ASK_AISLIX_SECTION.background }}
     >
       <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white">
-          <Sparkles className="h-5 w-5" />
+        <div
+          className="flex h-10 w-10 items-center justify-center rounded-xl"
+          style={{ backgroundColor: ASK_AISLIX_SECTION.chipBackground }}
+        >
+          <Sparkles className="h-5 w-5" style={{ color: ASK_AISLIX_SECTION.heading }} />
         </div>
         <div className="min-w-0 flex-1">
-          <h2 className="font-display text-xl font-semibold tracking-tight text-white">ASK AISLIX</h2>
-          <p className="mt-1 text-sm text-white/75">
+          <h2
+            className="font-display text-xl font-semibold tracking-tight"
+            style={{ color: ASK_AISLIX_SECTION.heading }}
+          >
+            ASK AISLIX
+          </h2>
+          <p className="mt-1 text-sm" style={{ color: ASK_AISLIX_SECTION.subtitle }}>
             Your retail operations copilot. Ask anything about your audits, stores, inventory, findings or actions.
           </p>
         </div>
