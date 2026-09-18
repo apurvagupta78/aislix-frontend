@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -40,6 +40,7 @@ export const Route = createFileRoute("/admin/scans")({
   validateSearch: (search: Record<string, unknown>) => ({
     userId: typeof search.userId === "string" ? search.userId : undefined,
     orgId: typeof search.orgId === "string" ? search.orgId : undefined,
+    scanId: typeof search.scanId === "string" ? search.scanId : undefined,
   }),
   head: () => ({
     meta: [{ title: "All Audits — Platform Admin" }, { name: "robots", content: "noindex, nofollow" }],
@@ -54,7 +55,7 @@ function statusVariant(status: string) {
 }
 
 function AdminScansPage() {
-  const { userId, orgId } = Route.useSearch();
+  const { userId, orgId, scanId } = Route.useSearch();
   const [page, setPage] = useState(1);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
@@ -71,6 +72,23 @@ function AdminScansPage() {
       }),
     staleTime: 15_000,
   });
+
+  const deepLinkQuery = useQuery({
+    queryKey: ["platform-admin-scan-deeplink", scanId],
+    queryFn: () => fetchDetail({ data: { scanId: scanId! } }),
+    enabled: Boolean(scanId),
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (!scanId) return;
+    const fromList = query.data?.rows.find((row) => row.id === scanId);
+    if (fromList) {
+      setSelected(fromList);
+      return;
+    }
+    if (deepLinkQuery.data?.scan) setSelected(deepLinkQuery.data.scan);
+  }, [scanId, query.data, deepLinkQuery.data]);
 
   const detailQuery = useQuery<any>({
     queryKey: ["platform-admin-scan-detail", selected?.id],

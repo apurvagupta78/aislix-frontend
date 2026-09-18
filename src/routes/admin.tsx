@@ -180,7 +180,7 @@ function AdminOverviewPage() {
 
             <Button asChild variant="brand" className="rounded-xl">
 
-              <Link to="/admin/scans" search={{}} search={{}}>
+              <Link to="/admin/scans">
 
                 Browse all audits <ArrowRight className="size-4" />
 
@@ -218,7 +218,7 @@ function AdminOverviewPage() {
 
                 <p className="text-sm font-semibold">Recent audits</p>
 
-                <Link to="/admin/scans" search={{}} className="text-xs text-brand hover:underline">
+                <Link to="/admin/scans" className="text-xs text-brand hover:underline">
 
                   View all
 
@@ -250,7 +250,7 @@ function AdminOverviewPage() {
 
                       <TableCell className="text-xs">
 
-                        <Link to="/admin/scans" search={{}} className="block">
+                        <Link to="/admin/scans" search={{ scanId: row.id }} className="block hover:underline">
 
                           {new Date(row.created_at).toLocaleString()}
 
@@ -300,9 +300,11 @@ function AdminOverviewPage() {
 
                     <TableHead>Email</TableHead>
 
-                    <TableHead>Audits</TableHead>
+                    <TableHead>Signed up</TableHead>
 
-                    <TableHead>Orgs</TableHead>
+                    <TableHead>Last login</TableHead>
+
+                    <TableHead>Audits</TableHead>
 
                   </TableRow>
 
@@ -316,13 +318,31 @@ function AdminOverviewPage() {
 
                       <TableCell className="max-w-[160px] truncate text-xs">
 
-                        {row.email ?? row.id.slice(0, 8)}
+                        <Link to="/admin/users" className="hover:underline">
+
+                          {row.email ?? row.id.slice(0, 8)}
+
+                        </Link>
+
+                      </TableCell>
+
+                      <TableCell className="whitespace-nowrap text-xs">
+
+                        {new Date(row.created_at).toLocaleDateString()}
+
+                      </TableCell>
+
+                      <TableCell className="whitespace-nowrap text-xs">
+
+                        {row.last_sign_in_at
+
+                          ? new Date(row.last_sign_in_at).toLocaleString()
+
+                          : "—"}
 
                       </TableCell>
 
                       <TableCell>{row.scan_count}</TableCell>
-
-                      <TableCell>{row.org_count}</TableCell>
 
                     </TableRow>
 

@@ -52,6 +52,7 @@ export type PlatformUserRow = {
   email: string | null;
   full_name: string | null;
   created_at: string;
+  last_sign_in_at: string | null;
   onboarding_completed_at: string | null;
   org_count: number;
   scan_count: number;
@@ -283,8 +284,16 @@ export const listPlatformUsers = createServerFn({ method: "POST" })
     const userIds = (profiles ?? []).map((p) => p.id as string);
     const membershipsByUser = new Map<string, PlatformUserRow["orgs"]>();
     const scanCounts = new Map<string, number>();
+    const lastSignInByUser = new Map<string, string | null>();
 
     if (userIds.length > 0) {
+      await Promise.all(
+        userIds.map(async (userId) => {
+          const { data: authUser, error: authErr } = await db.auth.admin.getUserById(userId);
+          if (authErr) return;
+          lastSignInByUser.set(userId, authUser.user?.last_sign_in_at ?? null);
+        }),
+      );
       const { data: memberships } = await db
         .from("organization_members")
         .select("user_id, org_id, role, status, organizations(name)")
@@ -321,6 +330,7 @@ export const listPlatformUsers = createServerFn({ method: "POST" })
         email: (p.email as string | null) ?? null,
         full_name: (p.full_name as string | null) ?? null,
         created_at: p.created_at as string,
+        last_sign_in_at: lastSignInByUser.get(p.id as string) ?? null,
         onboarding_completed_at: (p.onboarding_completed_at as string | null) ?? null,
         org_count: membershipsByUser.get(p.id as string)?.length ?? 0,
         scan_count: scanCounts.get(p.id as string) ?? 0,

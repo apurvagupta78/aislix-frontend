@@ -79,7 +79,8 @@ function AdminUsersPage() {
                     <TableHead>User ID</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Name</TableHead>
-                    <TableHead>Joined</TableHead>
+                    <TableHead>Signed up</TableHead>
+                    <TableHead>Last login</TableHead>
                     <TableHead>Orgs</TableHead>
                     <TableHead>Audits</TableHead>
                     <TableHead>Onboarded</TableHead>
@@ -93,6 +94,11 @@ function AdminUsersPage() {
                       <TableCell>{row.full_name ?? "—"}</TableCell>
                       <TableCell className="whitespace-nowrap text-xs">
                         {new Date(row.created_at).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-xs">
+                        {row.last_sign_in_at
+                          ? new Date(row.last_sign_in_at).toLocaleString()
+                          : "—"}
                       </TableCell>
                       <TableCell>{row.org_count}</TableCell>
                       <TableCell>
