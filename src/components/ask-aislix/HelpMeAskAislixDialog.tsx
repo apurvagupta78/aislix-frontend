@@ -45,6 +45,7 @@ import {
   PRODUCT_MODE_LABELS,
   type HelpTopicConfig,
 } from "@/lib/ask-aislix/help-ask-aislix.config";
+import { resolveSubCategoryLabel } from "@/lib/ask-aislix/help-ask-aislix.categories";
 import { resolveHelpTimeRange } from "@/lib/ask-aislix/help-ask-aislix.dates";
 import { requireOrgId } from "@/lib/db/context";
 
@@ -87,6 +88,9 @@ type WizardState = {
   limit: number;
   optionalBrand: string;
   optionalCategory: string;
+  optionalSubCategoryId: string;
+  optionalSubCategoryCustom: string;
+  limitExplicit: boolean;
   customUserRequest: string;
 };
 
@@ -105,9 +109,12 @@ const INITIAL: WizardState = {
   customFrom: "",
   customTo: "",
   groupBy: "",
-  limit: 10,
+  limit: 0,
   optionalBrand: "",
   optionalCategory: "",
+  optionalSubCategoryId: "",
+  optionalSubCategoryCustom: "",
+  limitExplicit: false,
   customUserRequest: "",
 };
 
@@ -162,6 +169,14 @@ function buildIntent(state: WizardState, options: HelpAskAuthorizedOptions): Hel
 
   const metricOptions = metricsForTopic(state.topic!);
   const metricDef = metricOptions.find((m) => m.id === state.metric);
+  const subCategoryLabel = state.optionalCategory
+    ? resolveSubCategoryLabel(
+        options.categoryCatalog,
+        state.optionalCategory,
+        state.optionalSubCategoryId,
+        state.optionalSubCategoryCustom,
+      )
+    : null;
 
   return {
     operating_role: state.role!,
@@ -190,12 +205,16 @@ function buildIntent(state: WizardState, options: HelpAskAuthorizedOptions): Hel
       to: timeResolved.to,
     },
     ...(state.groupBy ? { group_by: state.groupBy } : {}),
-    ...(state.limit > 0 ? { limit: state.limit } : {}),
-    ...((state.optionalBrand || state.optionalCategory || Object.keys(extraFilters).length > 0) && {
+    ...(state.limitExplicit && state.limit > 0 ? { limit: state.limit } : {}),
+    ...((state.optionalBrand ||
+      state.optionalCategory ||
+      subCategoryLabel ||
+      Object.keys(extraFilters).length > 0) && {
       optional_filters: {
         ...extraFilters,
         ...(state.optionalBrand ? { brand: state.optionalBrand } : {}),
         ...(state.optionalCategory ? { category: state.optionalCategory } : {}),
+        ...(subCategoryLabel ? { sub_category: subCategoryLabel } : {}),
       },
     }),
     ...(state.customUserRequest.trim()
@@ -363,7 +382,9 @@ export function HelpMeAskAislixDialog({
             <blockquote className="rounded-lg border border-line bg-canvas px-4 py-3 text-sm leading-relaxed text-navy">
               &ldquo;{generatedQuestion}&rdquo;
             </blockquote>
-            {contextSummary ? (
+            {contextSummary &&
+            !contextSummary.toLowerCase().includes("shelf images") &&
+            contextSummary.includes("•") ? (
               <p className="text-xs text-mp-muted">{contextSummary}</p>
             ) : null}
             {error ? (
@@ -671,7 +692,7 @@ export function HelpMeAskAislixDialog({
                           size="sm"
                           variant={state.limit === l.id ? "default" : "outline"}
                           className="rounded-full"
-                          onClick={() => patch({ limit: l.id })}
+                          onClick={() => patch({ limit: l.id, limitExplicit: l.id > 0 })}
                         >
                           {l.label}
                         </Button>
@@ -690,29 +711,60 @@ export function HelpMeAskAislixDialog({
                   </div>
                   <div className="space-y-1.5">
                     <Label>Category (optional)</Label>
-                    {options?.categories.length ? (
+                    <Select
+                      value={state.optionalCategory}
+                      onValueChange={(v) =>
+                        patch({
+                          optionalCategory: v,
+                          optionalSubCategoryId: "",
+                          optionalSubCategoryCustom: "",
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(options?.categoryCatalog ?? []).map((c) => (
+                          <SelectItem key={c.name} value={c.name}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {state.optionalCategory ? (
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label>Sub-category (optional)</Label>
                       <Select
-                        value={state.optionalCategory}
-                        onValueChange={(v) => patch({ optionalCategory: v })}
+                        value={state.optionalSubCategoryId}
+                        onValueChange={(v) =>
+                          patch({ optionalSubCategoryId: v, optionalSubCategoryCustom: "" })
+                        }
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
+                          <SelectValue placeholder="Select sub-category" />
                         </SelectTrigger>
                         <SelectContent>
-                          {options.categories.map((c) => (
-                            <SelectItem key={c} value={c}>
-                              {c}
+                          {(
+                            options?.categoryCatalog.find((c) => c.name === state.optionalCategory)
+                              ?.subcategories ?? []
+                          ).map((sub) => (
+                            <SelectItem key={sub.id} value={sub.id}>
+                              {sub.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                    ) : (
-                      <Input
-                        value={state.optionalCategory}
-                        onChange={(e) => patch({ optionalCategory: e.target.value })}
-                      />
-                    )}
-                  </div>
+                      {state.optionalSubCategoryId === "others" ? (
+                        <Input
+                          value={state.optionalSubCategoryCustom}
+                          placeholder="Describe the sub-category"
+                          onChange={(e) => patch({ optionalSubCategoryCustom: e.target.value })}
+                        />
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="space-y-2 border-t border-line pt-4">

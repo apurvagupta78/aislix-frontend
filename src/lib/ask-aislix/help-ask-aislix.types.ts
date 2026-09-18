@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import type { ShelfCategory } from "@/lib/categories.data";
+
 export const HELP_OPERATING_ROLES = [
   "supermarket",
   "fmcg_distributor",
@@ -71,6 +73,7 @@ export type HelpAskAuthorizedOptions = {
   allOrgCities: string[];
   allOrgCountries: string[];
   categories: string[];
+  categoryCatalog: ShelfCategory[];
   canViewAllLocations: boolean;
 };
 

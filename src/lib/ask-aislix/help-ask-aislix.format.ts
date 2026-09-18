@@ -43,7 +43,7 @@ function productPhrase(intent: HelpAskIntent): string | null {
 
 function groupingPhrase(intent: HelpAskIntent): string | null {
   const parts: string[] = [];
-  if (intent.limit && intent.limit > 0) {
+  if (intent.limit && intent.limit > 0 && !intent.custom_user_request?.trim()) {
     parts.push(`show me the top ${intent.limit}`);
   }
   if (intent.group_by) {

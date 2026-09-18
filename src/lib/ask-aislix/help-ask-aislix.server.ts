@@ -2,16 +2,27 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import { buildAskAccessScope } from "@/lib/ask-aislix/context";
+import { mergeHelpAskCategories } from "@/lib/ask-aislix/help-ask-aislix.categories";
 import { formatHelpAskQuestion } from "@/lib/ask-aislix/help-ask-aislix.format";
 import { generateHelpAskQuestionWithOpenAI } from "@/lib/ask-aislix/help-ask-aislix.openai";
+import type { HelpAskIntent } from "@/lib/ask-aislix/help-ask-aislix.types";
 import { validateHelpAskIntent } from "@/lib/ask-aislix/help-ask-aislix.validate";
 import type {
   HelpAskAuthorizedOptions,
   HelpAskQuestionResult,
 } from "@/lib/ask-aislix/help-ask-aislix.types";
+import { loadShelfCategories } from "@/lib/categories.server";
 
 function uniqueStrings(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))];
+}
+
+function buildContextSummary(intent: HelpAskIntent): string {
+  const parts: string[] = [intent.user_role, intent.time_range.label];
+  if (intent.locations.city) parts.push(intent.locations.city);
+  if (intent.optional_filters?.category) parts.push(intent.optional_filters.category);
+  if (intent.optional_filters?.sub_category) parts.push(intent.optional_filters.sub_category);
+  return parts.filter(Boolean).join(" • ");
 }
 
 export async function getHelpAskAislixOptionsServer(
@@ -40,20 +51,20 @@ export async function getHelpAskAislixOptionsServer(
       country: s.country,
     }));
 
-  const categories: string[] = [];
+  let scanRows: Array<{ category: string | null; sub_category: string | null }> = [];
   if (allowed.size > 0) {
-    const { data: scanRows } = await supabase
+    const { data } = await supabase
       .from("shelf_scans")
-      .select("category")
+      .select("category, sub_category")
       .eq("org_id", orgId)
       .in("store_id", [...allowed])
       .not("category", "is", null)
-      .limit(500);
-    for (const row of scanRows ?? []) {
-      const cat = String(row.category ?? "").trim();
-      if (cat) categories.push(cat);
-    }
+      .limit(5000);
+    scanRows = data ?? [];
   }
+
+  const categoryMaster = await loadShelfCategories();
+  const { categoryCatalog, categories } = mergeHelpAskCategories(categoryMaster, scanRows);
 
   return {
     stores,
@@ -61,7 +72,8 @@ export async function getHelpAskAislixOptionsServer(
     cities: uniqueStrings(stores.map((s) => s.city ?? "")),
     allOrgCities: uniqueStrings((storeRows ?? []).map((s) => s.city ?? "")),
     allOrgCountries: uniqueStrings((storeRows ?? []).map((s) => s.country ?? "")),
-    categories: uniqueStrings(categories).sort((a, b) => a.localeCompare(b)),
+    categories,
+    categoryCatalog,
     canViewAllLocations: stores.length > 1 || scope.isOrgAdmin,
   };
 }
@@ -96,7 +108,7 @@ export async function buildHelpAskQuestionServer(
       return {
         ok: true,
         question,
-        contextSummary: intent.topic_label,
+        contextSummary: buildContextSummary(intent),
         selectedFilters: [intent.user_role, intent.time_range.label].filter(Boolean),
         validatedIntent: intent,
         usedFallback: true,
