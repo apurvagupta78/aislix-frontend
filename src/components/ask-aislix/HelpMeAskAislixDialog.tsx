@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Sparkles, Wand2 } from "lucide-react";
+import { Loader2, Wand2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -40,16 +40,7 @@ import {
 import { resolveHelpTimeRange } from "@/lib/ask-aislix/help-ask-aislix.dates";
 import { requireOrgId } from "@/lib/db/context";
 
-type WizardStep =
-  | "role"
-  | "topic"
-  | "location"
-  | "product"
-  | "metric"
-  | "time"
-  | "grouping"
-  | "optional"
-  | "preview";
+type WizardStep = "role" | "topic" | "location" | "product" | "metric" | "time" | "grouping" | "optional";
 
 type WizardState = {
   role: HelpOperatingRole | null;
@@ -89,6 +80,8 @@ const INITIAL: WizardState = {
   optionalCategory: "",
 };
 
+const SKIPPABLE_STEPS = new Set<WizardStep>(["location", "product", "metric", "time", "grouping", "optional"]);
+
 function topicConfig(role: HelpOperatingRole | null, topic: string | null): HelpTopicConfig | null {
   if (!role || !topic) return null;
   return TOPICS_BY_ROLE[role].find((t) => t.id === topic) ?? null;
@@ -101,7 +94,7 @@ function buildSteps(state: WizardState): WizardStep[] {
   if (cfg?.needsMetric) steps.push("metric");
   steps.push("time");
   if (cfg?.needsGrouping) steps.push("grouping");
-  steps.push("optional", "preview");
+  steps.push("optional");
   return steps;
 }
 
@@ -190,12 +183,11 @@ export function HelpMeAskAislixDialog({
   const [optionsLoading, setOptionsLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [generatedQuestion, setGeneratedQuestion] = useState("");
-  const [previewIntent, setPreviewIntent] = useState<HelpAskIntent | null>(null);
 
   const steps = useMemo(() => buildSteps(state), [state]);
   const currentStep = steps[stepIndex] ?? "role";
   const cfg = topicConfig(state.role, state.topic);
+  const isLastStep = stepIndex >= steps.length - 1;
 
   const loadOptions = useCallback(async () => {
     setOptionsLoading(true);
@@ -217,9 +209,8 @@ export function HelpMeAskAislixDialog({
     } else {
       setState(INITIAL);
       setStepIndex(0);
-      setGeneratedQuestion("");
-      setPreviewIntent(null);
       setError(null);
+      setGenerating(false);
     }
   }, [open, loadOptions]);
 
@@ -262,7 +253,6 @@ export function HelpMeAskAislixDialog({
       if (state.productMode === "all") return true;
       return !!state.productValue.trim();
     }
-    if (currentStep === "metric") return !!state.metric;
     if (currentStep === "time") {
       if (state.timePreset !== "custom") return true;
       return !!state.customFrom && !!state.customTo;
@@ -270,31 +260,33 @@ export function HelpMeAskAislixDialog({
     return true;
   };
 
-  const handleGenerate = async () => {
-    if (!options) return;
+  const finishWizard = async () => {
+    if (!options || generating) return;
     setGenerating(true);
     setError(null);
     try {
       const intent = buildIntent(state, options);
-      setPreviewIntent(intent);
       const orgId = await requireOrgId();
       const result = await buildHelpAskQuestion({ data: { activeOrgId: orgId, intent } });
       if (!result.ok) {
-        setError(result.error ?? "Could not generate question.");
+        setError(result.error ?? "Could not build your question.");
         return;
       }
-      setGeneratedQuestion(result.question);
+      onQuestionReady(result.question);
+      onOpenChange(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not generate question.");
+      setError(err instanceof Error ? err.message : "Could not build your question.");
     } finally {
       setGenerating(false);
     }
   };
 
-  const handleUseQuestion = () => {
-    if (!generatedQuestion.trim()) return;
-    onQuestionReady(generatedQuestion.trim());
-    onOpenChange(false);
+  const handlePrimaryAction = () => {
+    if (isLastStep) {
+      void finishWizard();
+      return;
+    }
+    goNext();
   };
 
   const stepTitle: Record<WizardStep, string> = {
@@ -306,7 +298,6 @@ export function HelpMeAskAislixDialog({
     time: "When do you want to look?",
     grouping: "How would you like to compare it?",
     optional: "Want to narrow it down?",
-    preview: "Review and generate your question",
   };
 
   return (
@@ -318,362 +309,361 @@ export function HelpMeAskAislixDialog({
             Help me ask Aislix
           </DialogTitle>
           <DialogDescription>
-            Tell Aislix what you want to see — we&apos;ll turn your selections into a clear question.
+            Answer a few quick questions — we&apos;ll draft a question you can edit before asking.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <p className="text-sm font-medium text-navy">{stepTitle[currentStep]}</p>
+        {generating ? (
+          <div className="flex items-center gap-3 rounded-lg border border-line bg-canvas px-4 py-8">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <p className="text-sm text-navy">Building your question…</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm font-medium text-navy">{stepTitle[currentStep]}</p>
 
-          {optionsLoading && currentStep !== "role" ? (
-            <div className="flex items-center gap-2 text-sm text-mp-muted">
-              <Loader2 className="h-4 w-4 animate-spin" /> Loading your authorized locations…
-            </div>
-          ) : null}
+            {optionsLoading && currentStep !== "role" ? (
+              <div className="flex items-center gap-2 text-sm text-mp-muted">
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading your authorized locations…
+              </div>
+            ) : null}
 
-          {currentStep === "role" ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {HELP_ROLE_CARDS.map((card) => {
-                const Icon = card.icon;
-                const selected = state.role === card.id;
-                return (
-                  <button
-                    key={card.id}
+            {currentStep === "role" ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                {HELP_ROLE_CARDS.map((card) => {
+                  const Icon = card.icon;
+                  const selected = state.role === card.id;
+                  return (
+                    <button
+                      key={card.id}
+                      type="button"
+                      onClick={() => patch({ role: card.id, topic: null, metric: "" })}
+                      className={cn(
+                        "rounded-xl border p-4 text-left transition",
+                        selected
+                          ? "border-primary bg-white shadow-card"
+                          : "border-line bg-canvas hover:border-primary/30",
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="grid size-9 place-items-center rounded-lg bg-white text-navy shadow-sm">
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        <div>
+                          <p className="font-semibold text-navy">{card.label}</p>
+                          <p className="mt-1 text-xs text-mp-muted">{card.description}</p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {currentStep === "topic" && state.role ? (
+              <div className="flex flex-wrap gap-2">
+                {TOPICS_BY_ROLE[state.role].map((t) => (
+                  <Button
+                    key={t.id}
                     type="button"
-                    onClick={() => patch({ role: card.id, topic: null, metric: "" })}
-                    className={cn(
-                      "rounded-xl border p-4 text-left transition",
-                      selected
-                        ? "border-primary bg-white shadow-card"
-                        : "border-line bg-canvas hover:border-primary/30",
-                    )}
+                    size="sm"
+                    variant={state.topic === t.id ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() => patch({ topic: t.id, metric: "" })}
                   >
-                    <div className="flex items-start gap-3">
-                      <span className="grid size-9 place-items-center rounded-lg bg-white text-navy shadow-sm">
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <div>
-                        <p className="font-semibold text-navy">{card.label}</p>
-                        <p className="mt-1 text-xs text-mp-muted">{card.description}</p>
+                    {t.label}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
+
+            {currentStep === "location" && options ? (
+              <div className="space-y-4">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={state.locationScope === "all_my_locations" ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() => patch({ locationScope: "all_my_locations", storeIds: [] })}
+                  >
+                    All my locations
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={state.locationScope === "specific" ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() => patch({ locationScope: "specific" })}
+                  >
+                    Choose specific locations
+                  </Button>
+                </div>
+
+                {state.locationScope === "specific" ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>Country</Label>
+                      <Select
+                        value={state.country}
+                        onValueChange={(v) => patch({ country: v, city: "", storeIds: [] })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select country" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {options.countries.map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {c}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>City</Label>
+                      <Select
+                        value={state.city}
+                        onValueChange={(v) => patch({ city: v, storeIds: [] })}
+                        disabled={!state.country}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select city" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {citiesForCountry.map((c) => (
+                            <SelectItem key={c} value={c}>
+                              {c}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5 sm:col-span-2">
+                      <Label>Store</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {storesForLocation.map((s) => {
+                          const active = state.storeIds.includes(s.id);
+                          return (
+                            <Button
+                              key={s.id}
+                              type="button"
+                              size="sm"
+                              variant={active ? "default" : "outline"}
+                              className="rounded-full"
+                              onClick={() =>
+                                patch({
+                                  storeIds: active
+                                    ? state.storeIds.filter((id) => id !== s.id)
+                                    : [...state.storeIds, s.id],
+                                })
+                              }
+                            >
+                              {s.name}
+                            </Button>
+                          );
+                        })}
                       </div>
                     </div>
-                  </button>
-                );
-              })}
-            </div>
-          ) : null}
-
-          {currentStep === "topic" && state.role ? (
-            <div className="flex flex-wrap gap-2">
-              {TOPICS_BY_ROLE[state.role].map((t) => (
-                <Button
-                  key={t.id}
-                  type="button"
-                  size="sm"
-                  variant={state.topic === t.id ? "default" : "outline"}
-                  className="rounded-full"
-                  onClick={() => patch({ topic: t.id, metric: "" })}
-                >
-                  {t.label}
-                </Button>
-              ))}
-            </div>
-          ) : null}
-
-          {currentStep === "location" && options ? (
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={state.locationScope === "all_my_locations" ? "default" : "outline"}
-                  className="rounded-full"
-                  onClick={() => patch({ locationScope: "all_my_locations", storeIds: [] })}
-                >
-                  All my locations
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={state.locationScope === "specific" ? "default" : "outline"}
-                  className="rounded-full"
-                  onClick={() => patch({ locationScope: "specific" })}
-                >
-                  Choose specific locations
-                </Button>
+                  </div>
+                ) : null}
               </div>
+            ) : null}
 
-              {state.locationScope === "specific" ? (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label>Country</Label>
-                    <Select value={state.country} onValueChange={(v) => patch({ country: v, city: "", storeIds: [] })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select country" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {options.countries.map((c) => (
-                          <SelectItem key={c} value={c}>
-                            {c}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>City</Label>
-                    <Select
-                      value={state.city}
-                      onValueChange={(v) => patch({ city: v, storeIds: [] })}
-                      disabled={!state.country}
+            {currentStep === "product" && cfg ? (
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {(cfg.productDimensions ?? ["category", "brand", "sku"]).map((dim) => (
+                    <Button
+                      key={dim}
+                      type="button"
+                      size="sm"
+                      variant={state.productMode === dim ? "default" : "outline"}
+                      className="rounded-full capitalize"
+                      onClick={() => patch({ productMode: dim, productValue: "" })}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select city" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {citiesForCountry.map((c) => (
-                          <SelectItem key={c} value={c}>
-                            {c}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5 sm:col-span-2">
-                    <Label>Store</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {storesForLocation.map((s) => {
-                        const active = state.storeIds.includes(s.id);
-                        return (
-                          <Button
-                            key={s.id}
-                            type="button"
-                            size="sm"
-                            variant={active ? "default" : "outline"}
-                            className="rounded-full"
-                            onClick={() =>
-                              patch({
-                                storeIds: active
-                                  ? state.storeIds.filter((id) => id !== s.id)
-                                  : [...state.storeIds, s.id],
-                              })
-                            }
-                          >
-                            {s.name}
-                          </Button>
-                        );
-                      })}
+                      {PRODUCT_MODE_LABELS[dim] ?? dim.replace(/_/g, " ")}
+                    </Button>
+                  ))}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={state.productMode === "all" ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() => patch({ productMode: "all", productValue: "" })}
+                  >
+                    All products
+                  </Button>
+                </div>
+                {state.productMode !== "all" ? (
+                  <Input
+                    placeholder={`Enter ${PRODUCT_MODE_LABELS[state.productMode] ?? state.productMode}`}
+                    value={state.productValue}
+                    onChange={(e) => patch({ productValue: e.target.value })}
+                  />
+                ) : null}
+              </div>
+            ) : null}
+
+            {currentStep === "metric" && state.topic ? (
+              <div className="flex flex-wrap gap-2">
+                {metricsForTopic(state.topic).map((m) => (
+                  <Button
+                    key={m.id}
+                    type="button"
+                    size="sm"
+                    disabled={!m.available}
+                    variant={state.metric === m.id ? "default" : "outline"}
+                    className="rounded-full"
+                    onClick={() => patch({ metric: m.id })}
+                  >
+                    {m.label}
+                    {m.comingSoon ? " (Coming soon)" : ""}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
+
+            {currentStep === "time" ? (
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {HELP_TIME_PRESETS.map((p) => (
+                    <Button
+                      key={p.id}
+                      type="button"
+                      size="sm"
+                      variant={state.timePreset === p.id ? "default" : "outline"}
+                      className="rounded-full"
+                      onClick={() => patch({ timePreset: p.id })}
+                    >
+                      {p.label}
+                    </Button>
+                  ))}
+                </div>
+                {state.timePreset === "custom" ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label>Date from</Label>
+                      <Input
+                        type="date"
+                        value={state.customFrom}
+                        onChange={(e) => patch({ customFrom: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Date to</Label>
+                      <Input
+                        type="date"
+                        value={state.customTo}
+                        onChange={(e) => patch({ customTo: e.target.value })}
+                      />
                     </div>
                   </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {currentStep === "grouping" && cfg ? (
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {(cfg.groupByOptions ?? []).map((g) => (
+                    <Button
+                      key={g}
+                      type="button"
+                      size="sm"
+                      variant={state.groupBy === g ? "default" : "outline"}
+                      className="rounded-full"
+                      onClick={() => patch({ groupBy: g })}
+                    >
+                      {GROUP_BY_LABELS[g] ?? g}
+                    </Button>
+                  ))}
                 </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {currentStep === "product" && cfg ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                {(cfg.productDimensions ?? ["category", "brand", "sku"]).map((dim) => (
-                  <Button
-                    key={dim}
-                    type="button"
-                    size="sm"
-                    variant={state.productMode === dim ? "default" : "outline"}
-                    className="rounded-full capitalize"
-                    onClick={() => patch({ productMode: dim, productValue: "" })}
-                  >
-                    {PRODUCT_MODE_LABELS[dim] ?? dim.replace(/_/g, " ")}
-                  </Button>
-                ))}
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={state.productMode === "all" ? "default" : "outline"}
-                  className="rounded-full"
-                  onClick={() => patch({ productMode: "all", productValue: "" })}
-                >
-                  All products
-                </Button>
-              </div>
-              {state.productMode !== "all" ? (
-                <Input
-                  placeholder={`Enter ${PRODUCT_MODE_LABELS[state.productMode] ?? state.productMode}`}
-                  value={state.productValue}
-                  onChange={(e) => patch({ productValue: e.target.value })}
-                />
-              ) : null}
-            </div>
-          ) : null}
-
-          {currentStep === "metric" && state.topic ? (
-            <div className="flex flex-wrap gap-2">
-              {metricsForTopic(state.topic).map((m) => (
-                <Button
-                  key={m.id}
-                  type="button"
-                  size="sm"
-                  disabled={!m.available}
-                  variant={state.metric === m.id ? "default" : "outline"}
-                  className="rounded-full"
-                  onClick={() => patch({ metric: m.id })}
-                >
-                  {m.label}
-                  {m.comingSoon ? " (Coming soon)" : ""}
-                </Button>
-              ))}
-            </div>
-          ) : null}
-
-          {currentStep === "time" ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                {HELP_TIME_PRESETS.map((p) => (
-                  <Button
-                    key={p.id}
-                    type="button"
-                    size="sm"
-                    variant={state.timePreset === p.id ? "default" : "outline"}
-                    className="rounded-full"
-                    onClick={() => patch({ timePreset: p.id })}
-                  >
-                    {p.label}
-                  </Button>
-                ))}
-              </div>
-              {state.timePreset === "custom" ? (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label>Date from</Label>
-                    <Input type="date" value={state.customFrom} onChange={(e) => patch({ customFrom: e.target.value })} />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Date to</Label>
-                    <Input type="date" value={state.customTo} onChange={(e) => patch({ customTo: e.target.value })} />
-                  </div>
+                <div className="flex flex-wrap gap-2">
+                  {HELP_LIMIT_OPTIONS.map((l) => (
+                    <Button
+                      key={l.id}
+                      type="button"
+                      size="sm"
+                      variant={state.limit === l.id ? "default" : "outline"}
+                      className="rounded-full"
+                      onClick={() => patch({ limit: l.id })}
+                    >
+                      {l.label}
+                    </Button>
+                  ))}
                 </div>
-              ) : null}
-            </div>
-          ) : null}
+              </div>
+            ) : null}
 
-          {currentStep === "grouping" && cfg ? (
-            <div className="space-y-3">
-              <div className="flex flex-wrap gap-2">
-                {(cfg.groupByOptions ?? []).map((g) => (
-                  <Button
-                    key={g}
-                    type="button"
-                    size="sm"
-                    variant={state.groupBy === g ? "default" : "outline"}
-                    className="rounded-full"
-                    onClick={() => patch({ groupBy: g })}
-                  >
-                    {GROUP_BY_LABELS[g] ?? g}
-                  </Button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {HELP_LIMIT_OPTIONS.map((l) => (
-                  <Button
-                    key={l.id}
-                    type="button"
-                    size="sm"
-                    variant={state.limit === l.id ? "default" : "outline"}
-                    className="rounded-full"
-                    onClick={() => patch({ limit: l.id })}
-                  >
-                    {l.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          {currentStep === "optional" ? (
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>Brand (optional)</Label>
-                <Input value={state.optionalBrand} onChange={(e) => patch({ optionalBrand: e.target.value })} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Category (optional)</Label>
-                {options?.categories.length ? (
-                  <Select value={state.optionalCategory} onValueChange={(v) => patch({ optionalCategory: v })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {options.categories.map((c) => (
-                        <SelectItem key={c} value={c}>
-                          {c}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input value={state.optionalCategory} onChange={(e) => patch({ optionalCategory: e.target.value })} />
-                )}
-              </div>
-            </div>
-          ) : null}
-
-          {currentStep === "preview" && options ? (
-            <div className="space-y-4">
-              <pre className="max-h-48 overflow-auto rounded-lg border border-line bg-canvas p-3 text-xs text-mp-muted">
-                {JSON.stringify(buildIntent(state, options), null, 2)}
-              </pre>
-              {generatedQuestion ? (
-                <div className="rounded-lg border border-line bg-white p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-mp-muted">Your question</p>
-                  <p className="mt-2 text-sm text-navy">{generatedQuestion}</p>
+            {currentStep === "optional" ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Brand (optional)</Label>
+                  <Input value={state.optionalBrand} onChange={(e) => patch({ optionalBrand: e.target.value })} />
                 </div>
-              ) : null}
-              {previewIntent && !generatedQuestion ? (
-                <p className="text-sm text-mp-muted">
-                  Generate a natural-language question from your selections, then use it in Ask Aislix.
-                </p>
-              ) : null}
-            </div>
-          ) : null}
+                <div className="space-y-1.5">
+                  <Label>Category (optional)</Label>
+                  {options?.categories.length ? (
+                    <Select value={state.optionalCategory} onValueChange={(v) => patch({ optionalCategory: v })}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {options.categories.map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {c}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={state.optionalCategory}
+                      onChange={(e) => patch({ optionalCategory: e.target.value })}
+                    />
+                  )}
+                </div>
+              </div>
+            ) : null}
 
-          {error ? (
-            <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-              {error}
-            </p>
-          ) : null}
-        </div>
+            {error ? (
+              <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
+          </div>
+        )}
 
         <DialogFooter className="gap-2 sm:justify-between">
           <div className="text-xs text-mp-muted">
             Step {stepIndex + 1} of {steps.length}
           </div>
           <div className="flex flex-wrap gap-2">
-            {stepIndex > 0 ? (
+            {stepIndex > 0 && !generating ? (
               <Button type="button" variant="outline" onClick={goBack}>
                 Back
               </Button>
             ) : null}
-            {currentStep !== "preview" ? (
-              <Button type="button" disabled={!canContinue()} onClick={goNext}>
-                Continue
+            {!generating && SKIPPABLE_STEPS.has(currentStep) && !isLastStep ? (
+              <Button type="button" variant="ghost" onClick={goNext}>
+                Skip
               </Button>
-            ) : (
-              <>
-                <Button type="button" variant="outline" disabled={generating} onClick={() => void handleGenerate()}>
-                  {generating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating…
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-4 w-4" /> Generate question
-                    </>
-                  )}
-                </Button>
-                <Button type="button" disabled={!generatedQuestion.trim()} onClick={handleUseQuestion}>
-                  Use this question
-                </Button>
-              </>
-            )}
+            ) : null}
+            {!generating && SKIPPABLE_STEPS.has(currentStep) && isLastStep ? (
+              <Button type="button" variant="ghost" onClick={() => void finishWizard()}>
+                Skip
+              </Button>
+            ) : null}
+            {!generating ? (
+              <Button
+                type="button"
+                disabled={!canContinue() && !SKIPPABLE_STEPS.has(currentStep)}
+                onClick={handlePrimaryAction}
+              >
+                {isLastStep ? "Add to Ask box" : "Continue"}
+              </Button>
+            ) : null}
           </div>
         </DialogFooter>
       </DialogContent>

@@ -99,7 +99,11 @@ export function AskAislixSection() {
       <HelpMeAskAislixDialog
         open={helpOpen}
         onOpenChange={setHelpOpen}
-        onQuestionReady={(q) => setQuestion(q)}
+        onQuestionReady={(q) => {
+          setQuestion(q);
+          setError(null);
+          setResponse(null);
+        }}
       />
 
       <AskAislixSuggestions
@@ -107,7 +111,8 @@ export function AskAislixSection() {
         variant="dark"
         onSelect={(s) => {
           setQuestion(s);
-          void submitQuestion(s);
+          setError(null);
+          setResponse(null);
         }}
       />
 
@@ -118,7 +123,14 @@ export function AskAislixSection() {
         </p>
       ) : null}
       {response && !loading && !error ? (
-        <AskAislixAnswerPanel response={response} onFollowUp={(q) => void submitQuestion(q)} />
+        <AskAislixAnswerPanel
+          response={response}
+          onFollowUp={(q) => {
+            setQuestion(q);
+            setError(null);
+            setResponse(null);
+          }}
+        />
       ) : null}
     </section>
   );

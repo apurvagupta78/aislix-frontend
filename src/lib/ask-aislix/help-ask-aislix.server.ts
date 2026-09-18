@@ -94,7 +94,7 @@ async function generateQuestionFromIntent(intent: HelpAskIntent): Promise<string
       input: [
         {
           role: "user",
-          content: `Convert this validated Aislix analysis intent into one natural-language question:\n\n${payload}`,
+          content: `Convert this validated Aislix analysis intent into one natural-language question. Return JSON with a single key "question".\n\n${payload}`,
         },
       ],
       text: { format: { type: "json_object" } },
