@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import type { DashboardFilterState } from "@/lib/dashboard-filters";
-
 export const ASK_AISLIX_VISUAL_TYPES = [
   "kpi",
   "bar",
@@ -78,7 +76,6 @@ export type AskAislixAttachmentInput = {
 export type AskAislixRequest = {
   question: string;
   activeOrgId: string;
-  filters: DashboardFilterState;
   messages?: AskAislixMessage[];
   conversationId?: string;
   attachments?: AskAislixAttachmentInput[];

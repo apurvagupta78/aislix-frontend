@@ -5,7 +5,6 @@ import {
   summarizeAuditScope,
 } from "@/lib/ask-aislix/ask-aislix.context-builder";
 import type { AskAislixAccessScope, AskAislixRequest } from "@/lib/ask-aislix/ask-aislix.types";
-import { DEFAULT_DASHBOARD_FILTERS } from "@/lib/dashboard-filters";
 
 const scope: AskAislixAccessScope = {
   orgId: "org-1",
@@ -26,7 +25,6 @@ const scope: AskAislixAccessScope = {
 const request: AskAislixRequest = {
   question: "Why did this audit fail?",
   activeOrgId: "org-1",
-  filters: DEFAULT_DASHBOARD_FILTERS,
   messages: [{ role: "user", content: "Show overdue audits" }],
 };
 
@@ -38,13 +36,15 @@ describe("ask-aislix context builder", () => {
     expect(summaries.conductedSample).toContain("scan-9");
   });
 
-  it("builds trusted context with scope and filters", () => {
+  it("builds trusted context with auth scope, not dashboard filters", () => {
     const block = buildTrustedContextBlock(scope, request, summarizeAuditScope(scope), ["Megamart"]);
     expect(block).toContain("CURRENT AISLIX CONTEXT");
     expect(block).toContain("AUDITS ASSIGNED TO USER: 1");
     expect(block).toContain("AUDITS CONDUCTED BY USER: 1");
     expect(block).toContain("Megamart");
     expect(block).toContain("Show overdue audits");
+    expect(block).toContain("DEFAULT QUERY SCOPE");
+    expect(block).not.toContain("CURRENT DASHBOARD FILTERS");
     expect(block).not.toContain("{{user_role}}");
   });
 });

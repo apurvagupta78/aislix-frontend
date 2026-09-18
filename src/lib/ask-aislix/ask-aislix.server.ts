@@ -33,6 +33,7 @@ import {
   buildDemoShowcaseScope,
   clampFiltersToScope,
 } from "@/lib/ask-aislix/context";
+import { resolveAskAislixQueryFilters } from "@/lib/ask-aislix/ask-aislix-filters";
 import {
   canUseDemoPreview,
   prefixDemoAnswer,
@@ -381,10 +382,11 @@ export async function askAislixServer(
   scope.labeledDemo = demoExperience.labeledDemo;
   scope.activeOrgId = request.activeOrgId;
 
+  const queryFilters = resolveAskAislixQueryFilters();
   const toolCtx: ToolContext = {
     supabase,
     scope,
-    filters: clampFiltersToScope(request.filters, scope),
+    filters: clampFiltersToScope(queryFilters, scope),
   };
 
   const instructions = await buildInstructions(supabase, request, scope);

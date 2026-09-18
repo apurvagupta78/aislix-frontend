@@ -12,7 +12,6 @@ import {
   NO_AUDIT_FOUND_MESSAGE,
 } from "@/lib/ask-aislix/ask-aislix.response";
 import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
-import { useGlobalFilters } from "@/lib/global-filters";
 import { requireOrgId } from "@/lib/db/context";
 import { AskAislixAnswerPanel } from "./AskAislixAnswerPanel";
 import { AskAislixInput } from "./AskAislixInput";
@@ -22,7 +21,6 @@ import { HelpMeAskAislixButton } from "./HelpMeAskAislixButton";
 import { HelpMeAskAislixDialog } from "./HelpMeAskAislixDialog";
 
 export function AskAislixSection({ previewDemo = false }: { previewDemo?: boolean }) {
-  const { filters } = useGlobalFilters();
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +50,6 @@ export function AskAislixSection({ previewDemo = false }: { previewDemo?: boolea
           data: {
             question: q,
             activeOrgId: orgId,
-            filters,
             messages,
             conversationId,
             attachments: attachments.length ? attachments : undefined,
@@ -93,7 +90,7 @@ export function AskAislixSection({ previewDemo = false }: { previewDemo?: boolea
         setLoading(false);
       }
     },
-    [attachments, conversationId, filters, loading, messages, previewDemo],
+    [attachments, conversationId, loading, messages, previewDemo],
   );
 
   return (
@@ -149,8 +146,6 @@ export function AskAislixSection({ previewDemo = false }: { previewDemo?: boolea
       <AskAislixSuggestions
         disabled={loading}
         variant="dark"
-        roleHint={filters.role}
-        city={filters.city}
         rotationSeed={suggestionRotationSeed}
         onSelect={(s) => {
           setQuestion(s);

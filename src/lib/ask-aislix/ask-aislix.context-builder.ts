@@ -1,4 +1,5 @@
 import type { AskAislixAccessScope, AskAislixMessage, AskAislixRequest } from "@/lib/ask-aislix/ask-aislix.types";
+import { resolveAskAislixQueryFilters } from "@/lib/ask-aislix/ask-aislix-filters";
 import { clampFiltersToScope } from "@/lib/ask-aislix/context";
 import { resolveDashboardDateBounds } from "@/lib/dashboard-filters";
 
@@ -9,11 +10,8 @@ export type AuditScopeSummaries = {
   conductedSample: string[];
 };
 
-export function buildFilterContextJson(
-  request: AskAislixRequest,
-  scope: AskAislixAccessScope,
-): string {
-  const filters = clampFiltersToScope(request.filters, scope);
+export function buildFilterContextJson(scope: AskAislixAccessScope): string {
+  const filters = clampFiltersToScope(resolveAskAislixQueryFilters(), scope);
   const bounds = resolveDashboardDateBounds(filters);
   return JSON.stringify({
     period: filters.datePreset,
@@ -22,7 +20,6 @@ export function buildFilterContextJson(
     store_id: filters.storeId,
     city: filters.city,
     country: filters.country,
-    role: filters.role,
     category: filters.category,
     sub_category: filters.subCategory,
     audit_assignment: filters.auditAssignment,
@@ -54,14 +51,14 @@ export function buildTrustedContextBlock(
   summaries: AuditScopeSummaries,
   storeNames: string[],
 ): string {
-  const filters = clampFiltersToScope(request.filters, scope);
+  const queryScope = buildFilterContextJson(scope);
 
   return [
     "CURRENT AISLIX CONTEXT",
     "",
     `USER: ${scope.role} (org membership role)`,
     "",
-    `OPERATING MODEL: ${filters.role}`,
+    "OPERATING MODEL: infer from question and audit data when relevant",
     "",
     `AUTHORIZED ORGANIZATION: org_id=${scope.orgId}; is_org_admin=${scope.isOrgAdmin}; is_manager=${scope.isManager}`,
     "",
@@ -75,7 +72,7 @@ export function buildTrustedContextBlock(
     "",
     `AUDITS CONDUCTED BY USER: ${summaries.conductedCount} scan(s)${summaries.conductedSample.length ? `; sample ids: ${summaries.conductedSample.join(", ")}` : ""}`,
     "",
-    `CURRENT DASHBOARD FILTERS: ${buildFilterContextJson(request, scope)}`,
+    `DEFAULT QUERY SCOPE (independent of Control Tower filters): ${queryScope}`,
     "",
     `CURRENT DATE: ${new Date().toISOString().slice(0, 10)}`,
     "",
