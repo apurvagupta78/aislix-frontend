@@ -20,6 +20,7 @@ import {
 import { Activity, Flame, Gauge, Radar as RadarIcon } from "lucide-react";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DemoDataBadge } from "@/components/control-tower/DemoDataBadge";
 import type { ControlTowerDemoPayload } from "@/lib/control-tower";
 import { AISLIX, AISLIX_CHART } from "@/lib/aislix-theme";
 
@@ -81,7 +82,9 @@ export function DashboardVisualBoard({ data }: { data: ControlTowerDemoPayload }
   );
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="space-y-4">
+      {data.labeledDemo ? <DemoDataBadge showCta /> : null}
+      <div className="grid gap-4 lg:grid-cols-2">
       <ChartFrame
         icon={<Gauge className="size-4" />}
         title="How healthy are we right now?"
