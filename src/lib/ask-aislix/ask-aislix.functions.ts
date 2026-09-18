@@ -40,6 +40,7 @@ const AskInputSchema = z.object({
   messages: z.array(MessageSchema).max(10).optional(),
   conversationId: z.string().uuid().optional(),
   attachments: z.array(AttachmentSchema).max(5).optional(),
+  previewDemo: z.boolean().optional(),
 });
 
 export const askAislix = createServerFn({ method: "POST" })
@@ -54,6 +55,7 @@ export const askAislix = createServerFn({ method: "POST" })
       messages: data.messages as AskAislixMessage[] | undefined,
       conversationId: data.conversationId,
       attachments: data.attachments,
+      previewDemo: data.previewDemo,
     });
   });
 

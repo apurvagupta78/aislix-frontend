@@ -34,6 +34,7 @@ import {
   clampFiltersToScope,
 } from "@/lib/ask-aislix/context";
 import {
+  canUseDemoPreview,
   prefixDemoAnswer,
   resolveDemoExperienceWithClient,
 } from "@/lib/demo-environment";
@@ -75,6 +76,14 @@ function getFallbackModel(): string {
 function sanitizeErrorMessage(error: unknown): string {
   if (!(error instanceof Error)) return "Unknown error";
   return error.message.replace(/sk-[A-Za-z0-9_-]+/g, "[redacted]").slice(0, 500);
+}
+
+async function fetchUserEmail(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<string | null> {
+  const { data } = await supabase.from("profiles").select("email").eq("id", userId).maybeSingle();
+  return data?.email ?? null;
 }
 
 async function signImageGalleryItems(
@@ -359,7 +368,12 @@ export async function askAislixServer(
     throw new Error("Too many Ask Aislix requests. Please try again later.");
   }
 
-  const demoExperience = await resolveDemoExperienceWithClient(supabase, request.activeOrgId);
+  const userEmail = await fetchUserEmail(supabase, userId);
+  const previewDemo = Boolean(request.previewDemo && canUseDemoPreview(userEmail));
+  const demoExperience = await resolveDemoExperienceWithClient(supabase, request.activeOrgId, {
+    previewDemo,
+    userEmail,
+  });
   const scope =
     demoExperience.labeledDemo && demoExperience.dataOrgId !== request.activeOrgId
       ? await buildDemoShowcaseScope(supabase, userId, request.activeOrgId)

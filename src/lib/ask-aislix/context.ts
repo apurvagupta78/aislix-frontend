@@ -141,7 +141,19 @@ export async function buildAskAccessScope(
     if (row.store_id) assignmentStoreIds.push(row.store_id as string);
   }
 
-  if (!isOrgAdmin) {
+  if (isOrgAdmin) {
+    const { data: orgAssignments } = await supabase
+      .from("scan_assignments")
+      .select("id, scan_id, store_id, assignee_id")
+      .eq("org_id", orgId)
+      .in("store_id", orgStoreIds.length ? orgStoreIds : ["00000000-0000-0000-0000-000000000000"])
+      .limit(5000);
+
+    for (const row of orgAssignments ?? []) {
+      accessibleAssignmentIds.push(row.id as string);
+      if (row.scan_id) accessibleScanIds.push(row.scan_id as string);
+    }
+  } else {
     allowedStoreIds = uniqueStrings([...allowedStoreIds, ...assignmentStoreIds]).filter((id) =>
       orgStoreIds.includes(id),
     );
@@ -164,7 +176,7 @@ export async function buildAskAccessScope(
     allowedCountries: uniqueStrings(scopedStores.map((s) => s.country ?? "")),
     isOrgAdmin,
     isManager,
-    accessibleAssignmentIds,
+    accessibleAssignmentIds: uniqueStrings(accessibleAssignmentIds),
     accessibleScanIds: uniqueStrings([...accessibleScanIds, ...conductedScanIds]),
     assignedToUserAssignmentIds,
     conductedScanIds: uniqueStrings(conductedScanIds),

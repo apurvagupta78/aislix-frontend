@@ -11,6 +11,7 @@ import { completionPct } from "@/lib/kpi-engine/compute-universal";
 
 import { fetchAuditReportsForScans } from "./audit-reports";
 import {
+  assertAssignmentAuthorized,
   assertScanAuthorized,
   resolveAuthorizedAssignments,
   resolveAuthorizedScanIds,
@@ -208,6 +209,7 @@ export async function getAuditResponses(ctx: AuditToolContext, args: Record<stri
     return { available: false, reason: "Provide scan_id or assignment_id." };
   }
   if (scanId && !assertScanAuthorized(ctx.scope, scanId)) return unauthorizedResult();
+  if (assignmentId && !assertAssignmentAuthorized(ctx.scope, assignmentId)) return unauthorizedResult();
 
   let query = ctx.supabase
     .from("audit_responses")

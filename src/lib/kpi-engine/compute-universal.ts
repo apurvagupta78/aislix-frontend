@@ -641,9 +641,14 @@ async function fetchStoreScope(
 export async function computeUniversalDashboard(input: {
   model: ControlTowerModelFilter;
   filters: DashboardFilterState;
+  previewDemo?: boolean;
+  userEmail?: string | null;
 }): Promise<ControlTowerDemoPayload> {
   const activeOrgId = await requireOrgId();
-  const demoExperience = await resolveDemoExperience(activeOrgId);
+  const demoExperience = await resolveDemoExperience(activeOrgId, {
+    previewDemo: input.previewDemo,
+    userEmail: input.userEmail,
+  });
   const orgId = demoExperience.dataOrgId;
   const userId = await requireUserId();
   const bounds = resolveDashboardDateBounds(input.filters);
@@ -838,6 +843,7 @@ export async function computeUniversalDashboard(input: {
   payload.templateCategories = [
     ...new Set(orgTemplates.map((t) => (t.name as string) || "Template")),
   ].slice(0, 8);
+  payload.previewDemo = demoExperience.previewDemo;
 
   return payload;
 }

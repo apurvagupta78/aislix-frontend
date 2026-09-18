@@ -128,6 +128,7 @@ export type OperationalTrendPoint = {
 
 export type ControlTowerDemoPayload = {
   labeledDemo: boolean;
+  previewDemo?: boolean;
   operatingModel: ControlTowerModelFilter;
   terminology: {
     location: string;

@@ -82,6 +82,8 @@ export type AskAislixRequest = {
   messages?: AskAislixMessage[];
   conversationId?: string;
   attachments?: AskAislixAttachmentInput[];
+  /** Owner preview toggle — server validates against allowlisted email. */
+  previewDemo?: boolean;
 };
 
 export type AskAislixAccessScope = {

@@ -44,7 +44,6 @@ function uniqueStrings(values: string[]): string[] {
 }
 
 export function assertScanAuthorized(scope: AskAislixAccessScope, scanId: string): boolean {
-  if (scope.isOrgAdmin) return scope.allowedStoreIds.length > 0;
   return scope.accessibleScanIds.includes(scanId) || scope.conductedScanIds.includes(scanId);
 }
 

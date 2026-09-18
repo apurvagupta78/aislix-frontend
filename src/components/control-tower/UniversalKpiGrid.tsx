@@ -51,7 +51,7 @@ export function UniversalKpiGrid({
 }) {
   return (
     <div className="space-y-3">
-      {data.labeledDemo ? <DemoDataBadge /> : null}
+      {data.labeledDemo ? <DemoDataBadge previewMode={data.previewDemo} /> : null}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {DASHBOARD_KPI_IDS.map((id) => {
         const kpi = findKpi(data.universalKpis, id);

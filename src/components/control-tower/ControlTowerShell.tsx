@@ -56,7 +56,9 @@ import { DashboardAuditsTable } from "./DashboardAuditsTable";
 import { DashboardGreeting } from "./DashboardGreeting";
 import { DashboardVisualBoard } from "./DashboardVisualBoard";
 import { UniversalKpiGrid } from "./UniversalKpiGrid";
+import { DemoPreviewToggle } from "./DemoPreviewToggle";
 import { AISLIX, AISLIX_CHART, AISLIX_STATUS_MIX } from "@/lib/aislix-theme";
+import { useDemoPreview } from "@/lib/use-demo-preview";
 
 const STATUS_COLORS: Record<string, string> = AISLIX_STATUS_MIX;
 
@@ -72,7 +74,11 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
   const navigate = useNavigate();
   const { filters } = useGlobalFilters();
   const model = search.model ?? "all";
-  const query = useControlTowerDashboard(model, filters);
+  const demoPreview = useDemoPreview(model, filters);
+  const query = useControlTowerDashboard(model, filters, {
+    previewDemo: demoPreview.previewDemo,
+    userEmail: demoPreview.userEmail,
+  });
   const trail = useMemo(() => buildDrilldownTrail(search), [search]);
   const viewAll = (extra?: Record<string, string | undefined>) =>
     buildViewAllSearch(search, filters, extra);
@@ -122,7 +128,10 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
   return (
     <div className="space-y-8">
       <DashboardGreeting />
-      <AskAislixSection />
+      {demoPreview.eligible ? (
+        <DemoPreviewToggle enabled={demoPreview.previewDemo} onChange={demoPreview.setPreviewDemo} />
+      ) : null}
+      <AskAislixSection previewDemo={demoPreview.previewDemo} />
 
       <section>
         <DashboardSectionHeader

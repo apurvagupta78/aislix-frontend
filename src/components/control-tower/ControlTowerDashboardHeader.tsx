@@ -33,7 +33,7 @@ export function ControlTowerDashboardHeader({
       description="See what needs attention, drill in, and assign fixes — at a glance."
       meta={
         <>
-          {data?.labeledDemo ? <DemoDataBadge showCta /> : null}
+          {data?.labeledDemo ? <DemoDataBadge showCta previewMode={data.previewDemo} /> : null}
           {inProgress > 0 ? (
             <MpBadge tone="active" dot>
               {inProgress} audits in progress

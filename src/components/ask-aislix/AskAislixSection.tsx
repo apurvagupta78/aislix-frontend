@@ -21,7 +21,7 @@ import { AskAislixSuggestions } from "./AskAislixSuggestions";
 import { HelpMeAskAislixButton } from "./HelpMeAskAislixButton";
 import { HelpMeAskAislixDialog } from "./HelpMeAskAislixDialog";
 
-export function AskAislixSection() {
+export function AskAislixSection({ previewDemo = false }: { previewDemo?: boolean }) {
   const { filters } = useGlobalFilters();
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
@@ -56,6 +56,7 @@ export function AskAislixSection() {
             messages,
             conversationId,
             attachments: attachments.length ? attachments : undefined,
+            previewDemo: previewDemo || undefined,
           },
         });
 
@@ -92,7 +93,7 @@ export function AskAislixSection() {
         setLoading(false);
       }
     },
-    [attachments, conversationId, filters, loading, messages],
+    [attachments, conversationId, filters, loading, messages, previewDemo],
   );
 
   return (
