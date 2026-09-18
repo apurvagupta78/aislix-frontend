@@ -29,8 +29,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Progress } from "@/components/ui/progress";
 import { EmptyState, Skeleton } from "@/components/States";
 import { cn } from "@/lib/utils";
-import type { OperatingModel } from "@/lib/audit-builder/types";
-import { OPERATING_MODEL_CARDS } from "@/lib/audit-engine/operating-model-catalog";
 import { useGlobalFilters } from "@/lib/global-filters";
 import {
   buildDrilldownTrail,
@@ -58,16 +56,7 @@ import { DashboardAuditsTable } from "./DashboardAuditsTable";
 import { DashboardGreeting } from "./DashboardGreeting";
 import { DashboardVisualBoard } from "./DashboardVisualBoard";
 import { UniversalKpiGrid } from "./UniversalKpiGrid";
-import { AISLIX, AISLIX_CHART, AISLIX_MODEL_SURFACE, AISLIX_STATUS_MIX } from "@/lib/aislix-theme";
-
-
-const MODEL_OPTIONS: { value: ControlTowerModelFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  ...OPERATING_MODEL_CARDS.filter((c) => c.id !== "custom").map((c) => ({
-    value: c.id as OperatingModel,
-    label: c.title,
-  })),
-];
+import { AISLIX, AISLIX_CHART, AISLIX_STATUS_MIX } from "@/lib/aislix-theme";
 
 const STATUS_COLORS: Record<string, string> = AISLIX_STATUS_MIX;
 
@@ -88,10 +77,6 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
   const viewAll = (extra?: Record<string, string | undefined>) =>
     buildViewAllSearch(search, filters, extra);
 
-  const setModel = (next: ControlTowerModelFilter) => {
-    void navigate({ to: "/dashboard", search: { ...search, model: next === "all" ? undefined : next } });
-  };
-
   const drillTo = (level: Parameters<typeof nextDrilldownSearch>[1], value: string) => {
     void navigate({
       to: "/dashboard",
@@ -103,36 +88,21 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
     void navigate({ to: "/dashboard", search: truncateDrilldownSearch(search, level) });
   };
 
-  const operatingModelSection = (
-    <section className="overflow-hidden rounded-xl border border-line bg-white shadow-card">
-      <div className="border-b border-line px-4 py-3 md:px-5">
-        <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-mp-muted">Operating Model</p>
-      </div>
-      <div className="p-4 md:p-5">
-        <OperatingModelSwitcher value={model} onChange={setModel} />
-        {query.data ? (
-          <p className="mt-2 text-xs text-mp-muted">
-            {query.data.terminology.locationPlural}: contextual labels · {query.data.templateCount}{" "}
-            org templates in scope
-          </p>
-        ) : null}
-      </div>
-    </section>
-  );
-
   if (query.isLoading) {
     return (
       <div className="space-y-8">
-        {operatingModelSection}
-        <div className="space-y-4">
-          <Skeleton className="h-16 w-full rounded-2xl" />
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-36 rounded-2xl" />
+        <Skeleton className="h-14 w-full max-w-md rounded-xl" />
+        <Skeleton className="h-52 w-full rounded-xl" />
+        <div className="space-y-3">
+          <Skeleton className="h-8 w-56 rounded-lg" />
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-28 rounded-xl" />
             ))}
           </div>
-          <Skeleton className="h-64 w-full rounded-2xl" />
         </div>
+        <Skeleton className="h-24 w-full rounded-xl" />
+        <Skeleton className="h-72 w-full rounded-xl" />
       </div>
     );
   }
@@ -609,42 +579,6 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
       {search.drill && search.drill !== "overview" ? (
         <DrilldownPanel search={search} terminology={data.terminology} onDrill={drillTo} />
       ) : null}
-    </div>
-  );
-}
-
-function OperatingModelSwitcher({
-  value,
-  onChange,
-}: {
-  value: ControlTowerModelFilter;
-  onChange: (v: ControlTowerModelFilter) => void;
-}) {
-  return (
-    <div className="mt-1 flex flex-wrap gap-1.5 rounded-xl border border-line bg-white p-1.5">
-      {MODEL_OPTIONS.map((opt) => {
-        const tint = AISLIX_MODEL_SURFACE[opt.value] ?? AISLIX_MODEL_SURFACE.custom;
-        const active = value === opt.value;
-        return (
-          <Button
-            key={opt.value}
-            size="sm"
-            variant="ghost"
-            className={cn(
-              "rounded-lg border text-xs font-medium",
-              active ? "shadow-sm" : "border-transparent",
-            )}
-            style={
-              active
-                ? { backgroundColor: tint.bg, borderColor: tint.border, color: AISLIX.primary }
-                : undefined
-            }
-            onClick={() => onChange(opt.value)}
-          >
-            {opt.label}
-          </Button>
-        );
-      })}
     </div>
   );
 }
