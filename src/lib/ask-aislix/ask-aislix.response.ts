@@ -117,23 +117,37 @@ function sanitizeMetrics(raw: unknown): AskAislixResponse["metrics"] {
     .filter((m): m is NonNullable<typeof m> => Boolean(m?.label));
 }
 
+function sanitizeSourceContext(raw: unknown): AskAislixResponse["source_context"] {
+  if (!raw || typeof raw !== "object") return { period: "", locations: [] };
+  const ctx = raw as Record<string, unknown>;
+  return {
+    period: typeof ctx.period === "string" ? ctx.period : "",
+    locations: Array.isArray(ctx.locations) ? ctx.locations.map((l) => String(l)) : [],
+    operating_model: typeof ctx.operating_model === "string" ? ctx.operating_model : undefined,
+  };
+}
+
 function coerceLooseResponse(value: unknown): AskAislixResponse | null {
   if (!value || typeof value !== "object") return null;
   const obj = value as Record<string, unknown>;
-  if (typeof obj.answer !== "string" || !obj.answer.trim()) return null;
+  const answerRaw = obj.answer;
+  const answer =
+    typeof answerRaw === "string"
+      ? answerRaw.trim()
+      : answerRaw == null
+        ? ""
+        : String(answerRaw).trim();
+  if (!answer) return null;
 
   const candidate = {
-    answer: obj.answer.trim(),
+    answer,
     summary: typeof obj.summary === "string" ? obj.summary : "",
     metrics: sanitizeMetrics(obj.metrics),
     visual: sanitizeVisual(obj.visual),
     table: sanitizeTable(obj.table),
     insights: Array.isArray(obj.insights) ? obj.insights.filter((i) => typeof i === "string") : [],
     actions: sanitizeActions(obj.actions),
-    source_context:
-      obj.source_context && typeof obj.source_context === "object"
-        ? obj.source_context
-        : { period: "", locations: [] },
+    source_context: sanitizeSourceContext(obj.source_context),
     follow_up_questions: Array.isArray(obj.follow_up_questions)
       ? obj.follow_up_questions.filter((q) => typeof q === "string")
       : [],

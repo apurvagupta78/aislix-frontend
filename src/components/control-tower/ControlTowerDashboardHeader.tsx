@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { NEW_AUDIT_BUTTON_CLASS } from "@/lib/aislix-theme";
 import type { ControlTowerDemoPayload } from "@/lib/control-tower";
 import { DASHBOARD_DATE_PRESETS, type DashboardFilterState } from "@/lib/dashboard-filters";
+import { DemoDataBadge } from "@/components/control-tower/DemoDataBadge";
 
 export function ControlTowerDashboardHeader({
   data,
@@ -32,6 +33,7 @@ export function ControlTowerDashboardHeader({
       description="See what needs attention, drill in, and assign fixes — at a glance."
       meta={
         <>
+          {data?.labeledDemo ? <DemoDataBadge showCta /> : null}
           {inProgress > 0 ? (
             <MpBadge tone="active" dot>
               {inProgress} audits in progress

@@ -34,6 +34,7 @@ import type {
   RiskSku,
 } from "@/lib/control-tower/types";
 import { AISLIX, AISLIX_STATUS_MIX } from "@/lib/aislix-theme";
+import { resolveDemoExperience } from "@/lib/demo-environment";
 
 export const UNWIRED_UNIVERSAL_KPI_IDS = new Set([
   "evidence_coverage",
@@ -77,6 +78,7 @@ export type UniversalComputeInput = {
   storeNames?: Record<string, string>;
   bounds?: DashboardDateBounds;
   now?: number;
+  labeledDemo?: boolean;
 };
 
 function inDateBounds(iso: string | null | undefined, bounds: DashboardDateBounds, upcomingField?: string | null): boolean {
@@ -569,7 +571,7 @@ export function computeUniversalDashboardFromRows(input: UniversalComputeInput):
   const executionFull: AuditExecutionRow[] = toAuditExecutionRows(input.assignments, model, now);
 
   return {
-    labeledDemo: false,
+    labeledDemo: input.labeledDemo ?? false,
     operatingModel: model,
     terminology,
     templateCount: 0,
@@ -640,7 +642,9 @@ export async function computeUniversalDashboard(input: {
   model: ControlTowerModelFilter;
   filters: DashboardFilterState;
 }): Promise<ControlTowerDemoPayload> {
-  const orgId = await requireOrgId();
+  const activeOrgId = await requireOrgId();
+  const demoExperience = await resolveDemoExperience(activeOrgId);
+  const orgId = demoExperience.dataOrgId;
   const userId = await requireUserId();
   const bounds = resolveDashboardDateBounds(input.filters);
   const storeIds = await fetchStoreScope(orgId, input.filters);
@@ -792,6 +796,7 @@ export async function computeUniversalDashboard(input: {
     actions: scopedActions,
     storeNames: Object.fromEntries(actionStoreNames),
     bounds,
+    labeledDemo: demoExperience.labeledDemo,
   });
 
   let tableAssignments = assignments;

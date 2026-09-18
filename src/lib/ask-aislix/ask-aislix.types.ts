@@ -102,6 +102,10 @@ export type AskAislixAccessScope = {
   conductedScanIds: string[];
   /** Assignments linked to conducted scans. */
   conductedAssignmentIds: string[];
+  /** When true, responses must be prefixed as demo data. */
+  labeledDemo?: boolean;
+  /** User's real org (may differ from orgId when viewing showcase data). */
+  activeOrgId?: string;
 };
 
 export type VisionAsset = {

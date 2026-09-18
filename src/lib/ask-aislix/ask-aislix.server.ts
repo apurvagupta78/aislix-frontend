@@ -16,9 +16,9 @@ import {
   type VisionAsset,
 } from "@/lib/ask-aislix/ask-aislix.types";
 import {
-  NO_AUDIT_FOUND_MESSAGE,
-  parseAskAislixResponse,
-} from "@/lib/ask-aislix/ask-aislix.response";
+  type CapturedToolCall,
+  resolveAskAislixResponse,
+} from "@/lib/ask-aislix/ask-aislix.fallback";
 import { buildAttachmentContentParts } from "@/lib/ask-aislix/ask-aislix.attachments";
 import {
   buildTrustedContextBlock,
@@ -28,7 +28,15 @@ import {
   ASK_AISLIX_JSON_FINALIZE_APPENDIX,
   ASK_AISLIX_MASTER_SYSTEM_PROMPT,
 } from "@/lib/ask-aislix/ask-aislix.prompt";
-import { buildAskAccessScope, clampFiltersToScope } from "@/lib/ask-aislix/context";
+import {
+  buildAskAccessScope,
+  buildDemoShowcaseScope,
+  clampFiltersToScope,
+} from "@/lib/ask-aislix/context";
+import {
+  prefixDemoAnswer,
+  resolveDemoExperienceWithClient,
+} from "@/lib/demo-environment";
 import { checkAskRateLimit } from "@/lib/ask-aislix/rate-limit";
 import { sanitizeActions } from "@/lib/ask-aislix/actions";
 import { loadAuthorizedStores } from "@/lib/ask-aislix/tools/audit-retrieval";
@@ -203,6 +211,7 @@ async function runToolLoop(
   toolsInvoked: string[],
   pendingImages: ImageGalleryItem[],
   visionAssets: VisionAsset[],
+  capturedTools: CapturedToolCall[],
 ): Promise<Response> {
   let input: ResponseInput = [...initialInput];
 
@@ -228,6 +237,11 @@ async function runToolLoop(
         args = {};
       }
       const result = await executeTool(call.name, toolCtx, args);
+      capturedTools.push({
+        name: call.name,
+        args,
+        result: compactToolResultForModel(result),
+      });
       if (result.pendingImages?.length) pendingImages.push(...result.pendingImages);
       if (result.visionImages?.length) visionAssets.push(...result.visionImages);
       input.push({
@@ -281,6 +295,7 @@ async function runPipeline(
   toolsInvoked: string[],
   pendingImages: ImageGalleryItem[],
   visionAssets: VisionAsset[],
+  capturedTools: CapturedToolCall[],
 ): Promise<{ response: Response; loopResponse: Response; usage?: Response["usage"] }> {
   const loopResponse = await runToolLoop(
     client,
@@ -291,6 +306,7 @@ async function runPipeline(
     toolsInvoked,
     pendingImages,
     visionAssets,
+    capturedTools,
   );
   const fullFinalInput: ResponseInput = [...initialInput, ...loopResponse.output];
   let finalResponse = await finalizeStructuredResponse(
@@ -324,6 +340,7 @@ export async function askAislixServer(
   const started = Date.now();
   const conversationId = request.conversationId ?? crypto.randomUUID();
   const toolsInvoked: string[] = [];
+  const capturedTools: CapturedToolCall[] = [];
   const pendingImages: ImageGalleryItem[] = [];
   const visionAssets: VisionAsset[] = [];
 
@@ -342,7 +359,14 @@ export async function askAislixServer(
     throw new Error("Too many Ask Aislix requests. Please try again later.");
   }
 
-  const scope = await buildAskAccessScope(supabase, userId, request.activeOrgId);
+  const demoExperience = await resolveDemoExperienceWithClient(supabase, request.activeOrgId);
+  const scope =
+    demoExperience.labeledDemo && demoExperience.dataOrgId !== request.activeOrgId
+      ? await buildDemoShowcaseScope(supabase, userId, request.activeOrgId)
+      : await buildAskAccessScope(supabase, userId, demoExperience.dataOrgId);
+  scope.labeledDemo = demoExperience.labeledDemo;
+  scope.activeOrgId = request.activeOrgId;
+
   const toolCtx: ToolContext = {
     supabase,
     scope,
@@ -366,6 +390,7 @@ export async function askAislixServer(
         toolsInvoked,
         pendingImages,
         visionAssets,
+        capturedTools,
       );
     } catch (primaryError) {
       const fallback = getFallbackModel();
@@ -379,12 +404,18 @@ export async function askAislixServer(
         toolsInvoked,
         pendingImages,
         visionAssets,
+        capturedTools,
       );
     }
 
     const raw = resolveStructuredRaw(result.response, result.loopResponse) || "{}";
-    const parsed = parseAskAislixResponse(raw);
+    const loopText = extractOutputText(result.loopResponse);
+    const parsed = resolveAskAislixResponse({ raw, loopText, toolCalls: capturedTools });
     parsed.actions = sanitizeActions(parsed.actions ?? []);
+    if (scope.labeledDemo) {
+      parsed.answer = prefixDemoAnswer(parsed.answer, true);
+      if (parsed.summary) parsed.summary = prefixDemoAnswer(parsed.summary, true);
+    }
 
     if ((parsed.visual?.type === "image_gallery" || pendingImages.length) && pendingImages.length) {
       parsed.visual = { type: "image_gallery", title: parsed.visual?.title ?? "Audit evidence", data: [] };

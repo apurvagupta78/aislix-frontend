@@ -302,9 +302,9 @@ Aislix database = truth. Aislix authorization = access control. Aislix tools = c
 
 Never reverse these responsibilities.`;
 
-export const ASK_AISLIX_JSON_FINALIZE_APPENDIX = `Return one JSON object matching AskAislixResponse with keys: answer, summary, metrics, visual, table, insights, actions, source_context, follow_up_questions.
+export const ASK_AISLIX_JSON_FINALIZE_APPENDIX = `Return one valid json object matching AskAislixResponse with keys: answer, summary, metrics, visual, table, insights, actions, source_context, follow_up_questions.
 
-Using the tool results, authorized vision inputs and attachments above, return the final AskAislixResponse JSON object only.`;
+Using the tool results, authorized vision inputs and attachments above, return the final AskAislixResponse json object only. Do not wrap in markdown fences.`;
 
 /** @deprecated Use ASK_AISLIX_MASTER_SYSTEM_PROMPT */
 export const ASK_AISLIX_SYSTEM_PROMPT = ASK_AISLIX_MASTER_SYSTEM_PROMPT;

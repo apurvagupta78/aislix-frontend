@@ -6,6 +6,7 @@ import {
   ACCESS_DENIED_MESSAGE,
   type AskAislixAccessScope,
 } from "@/lib/ask-aislix/ask-aislix.types";
+import { AISLIX_DEMO_ORG_ID } from "@/lib/demo-environment";
 
 const ORG_ADMIN_ROLES = new Set(["owner", "admin"]);
 const MANAGER_ROLES = new Set(["owner", "admin", "manager", "store_manager"]);
@@ -18,6 +19,52 @@ function uniqueStrings(values: string[]): string[] {
 
 function normalizeCity(value: string): string {
   return value.trim().toLowerCase();
+}
+
+/** Read-only showcase scope for the shared demo org (RLS: demo_showcase_read). */
+export async function buildDemoShowcaseScope(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  activeOrgId: string,
+): Promise<AskAislixAccessScope> {
+  const orgId = AISLIX_DEMO_ORG_ID;
+  const { data: storeRows } = await supabase
+    .from("stores")
+    .select("id, city, country, name")
+    .eq("org_id", orgId)
+    .eq("status", "active");
+
+  const orgStores = (storeRows ?? []) as StoreRow[];
+  const orgStoreIds = orgStores.map((s) => s.id);
+
+  const { data: assignmentRows } = await supabase
+    .from("scan_assignments")
+    .select("id, store_id, scan_id, assignee_id")
+    .eq("org_id", orgId)
+    .limit(5000);
+
+  const accessibleAssignmentIds = (assignmentRows ?? []).map((r) => r.id as string);
+  const accessibleScanIds = (assignmentRows ?? [])
+    .map((r) => r.scan_id as string | null)
+    .filter(Boolean) as string[];
+
+  return {
+    orgId,
+    userId,
+    role: "viewer",
+    allowedStoreIds: orgStoreIds,
+    allowedCities: uniqueStrings(orgStores.map((s) => s.city ?? "")),
+    allowedCountries: uniqueStrings(orgStores.map((s) => s.country ?? "")),
+    isOrgAdmin: true,
+    isManager: true,
+    accessibleAssignmentIds,
+    accessibleScanIds,
+    assignedToUserAssignmentIds: [],
+    conductedScanIds: accessibleScanIds,
+    conductedAssignmentIds: accessibleAssignmentIds,
+    labeledDemo: true,
+    activeOrgId,
+  };
 }
 
 export async function buildAskAccessScope(

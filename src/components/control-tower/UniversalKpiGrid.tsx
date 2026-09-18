@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { AISLIX } from "@/lib/aislix-theme";
 import type { ControlTowerDemoPayload, ControlTowerKpi } from "@/lib/control-tower";
 import { KpiInfoPopover } from "./KpiInfoPopover";
+import { DemoDataBadge } from "./DemoDataBadge";
 
 const DASHBOARD_KPI_IDS = [
   "audit_completion",
@@ -49,7 +50,9 @@ export function UniversalKpiGrid({
   onDrill?: (kpi: ControlTowerKpi) => void;
 }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="space-y-3">
+      {data.labeledDemo ? <DemoDataBadge /> : null}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {DASHBOARD_KPI_IDS.map((id) => {
         const kpi = findKpi(data.universalKpis, id);
         if (!kpi) return null;
@@ -93,6 +96,7 @@ export function UniversalKpiGrid({
           </button>
         );
       })}
+      </div>
     </div>
   );
 }
