@@ -170,8 +170,10 @@ export function DashboardVisualBoard({ data }: { data: ControlTowerDemoPayload }
           </ComposedChart>
         </ResponsiveContainer>
       </ChartFrame>
+      </div>
     </div>
   );
+
 }
 
 function ChartFrame({
