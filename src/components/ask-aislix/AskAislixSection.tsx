@@ -1,7 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
 import { Sparkles } from "lucide-react";
 
-import { askAislix, type AskAislixMessage, type AskAislixResponse } from "@/lib/ask-aislix";
+import {
+  askAislix,
+  type AskAislixAttachmentInput,
+  type AskAislixMessage,
+  type AskAislixResponse,
+} from "@/lib/ask-aislix";
 import { NO_AUDIT_FOUND_MESSAGE } from "@/lib/ask-aislix/ask-aislix.response";
 import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
 import { useGlobalFilters } from "@/lib/global-filters";
@@ -22,6 +27,7 @@ export function AskAislixSection() {
   const [messages, setMessages] = useState<AskAislixMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [helpOpen, setHelpOpen] = useState(false);
+  const [attachments, setAttachments] = useState<AskAislixAttachmentInput[]>([]);
 
   const suggestionRotationSeed = useMemo(
     () => Math.floor(Date.now() / (1000 * 60 * 60 * 6)),
@@ -46,6 +52,7 @@ export function AskAislixSection() {
             filters,
             messages,
             conversationId,
+            attachments: attachments.length ? attachments : undefined,
           },
         });
 
@@ -58,6 +65,7 @@ export function AskAislixSection() {
         }
 
         setResponse(result.response);
+        setAttachments([]);
         setMessages((prev) =>
           [
             ...prev,
@@ -72,7 +80,7 @@ export function AskAislixSection() {
         setLoading(false);
       }
     },
-    [conversationId, filters, loading, messages],
+    [attachments, conversationId, filters, loading, messages],
   );
 
   return (
@@ -92,10 +100,10 @@ export function AskAislixSection() {
             className="font-display text-xl font-semibold tracking-tight"
             style={{ color: ASK_AISLIX_SECTION.heading }}
           >
-            ASK AISLIX
+            Ask AISLIX
           </h2>
           <p className="mt-1 text-sm" style={{ color: ASK_AISLIX_SECTION.subtitle }}>
-            Your retail operations copilot. Ask anything about your audits, stores, inventory, findings or actions.
+            Your AI retail operations copilot. Ask anything about your audits, stores, inventory, findings, actions and analysis.
           </p>
         </div>
       </div>
@@ -106,6 +114,9 @@ export function AskAislixSection() {
         onSubmit={() => void submitQuestion(question)}
         loading={loading}
         variant="dark"
+        attachments={attachments}
+        onAttachmentsChange={setAttachments}
+        onAttachmentError={setError}
       />
 
       <HelpMeAskAislixButton variant="dark" disabled={loading} onClick={() => setHelpOpen(true)} />

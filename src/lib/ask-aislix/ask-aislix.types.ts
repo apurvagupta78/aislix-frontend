@@ -68,12 +68,20 @@ export type AskAislixMessage = {
   content: string;
 };
 
+export type AskAislixAttachmentInput = {
+  name: string;
+  mimeType: string;
+  dataBase64: string;
+  size: number;
+};
+
 export type AskAislixRequest = {
   question: string;
   activeOrgId: string;
   filters: DashboardFilterState;
   messages?: AskAislixMessage[];
   conversationId?: string;
+  attachments?: AskAislixAttachmentInput[];
 };
 
 export type AskAislixAccessScope = {

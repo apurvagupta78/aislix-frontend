@@ -26,12 +26,20 @@ const FiltersSchema = z.object({
   itemName: z.string().optional(),
 });
 
+const AttachmentSchema = z.object({
+  name: z.string().min(1).max(255),
+  mimeType: z.string().min(1).max(255),
+  dataBase64: z.string().min(1).max(15_000_000),
+  size: z.number().int().positive().max(10 * 1024 * 1024),
+});
+
 const AskInputSchema = z.object({
   question: z.string().min(1).max(2000),
   activeOrgId: z.string().uuid(),
   filters: FiltersSchema,
   messages: z.array(MessageSchema).max(10).optional(),
   conversationId: z.string().uuid().optional(),
+  attachments: z.array(AttachmentSchema).max(5).optional(),
 });
 
 export const askAislix = createServerFn({ method: "POST" })
@@ -45,6 +53,7 @@ export const askAislix = createServerFn({ method: "POST" })
       filters: data.filters as DashboardFilterState,
       messages: data.messages as AskAislixMessage[] | undefined,
       conversationId: data.conversationId,
+      attachments: data.attachments,
     });
   });
 

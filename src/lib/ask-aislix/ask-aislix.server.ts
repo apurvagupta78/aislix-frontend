@@ -18,6 +18,7 @@ import {
   NO_AUDIT_FOUND_MESSAGE,
   parseAskAislixResponse,
 } from "@/lib/ask-aislix/ask-aislix.response";
+import { buildAttachmentContentParts } from "@/lib/ask-aislix/ask-aislix.attachments";
 import { ASK_AISLIX_SYSTEM_PROMPT } from "@/lib/ask-aislix/ask-aislix.prompt";
 import { buildAskAccessScope, clampFiltersToScope } from "@/lib/ask-aislix/context";
 import { checkAskRateLimit } from "@/lib/ask-aislix/rate-limit";
@@ -122,7 +123,16 @@ function buildInitialInput(request: AskAislixRequest, history: AskAislixMessage[
     role: m.role,
     content: m.content,
   }));
-  items.push({ role: "user", content: request.question });
+  const attachmentParts = buildAttachmentContentParts(request.attachments ?? []);
+  if (attachmentParts.length) {
+    items.push({
+      role: "user",
+      content: [{ type: "input_text", text: request.question }, ...attachmentParts],
+    });
+  } else {
+    items.push({ role: "user", content: request.question });
+  }
+
   return items;
 }
 
