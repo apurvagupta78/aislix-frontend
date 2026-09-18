@@ -22,30 +22,30 @@ export function SiteHeader() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-card/92 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-5 sm:px-8">
+    <header className="sticky top-0 z-40 border-b border-border bg-card/90 backdrop-blur-xl">
+      <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center gap-6 px-5 sm:px-8">
         <Logo />
-        <nav className="ml-auto flex items-center gap-1 sm:gap-2">
-          <Button asChild variant="ghost" size="sm" className="hidden rounded-xl lg:inline-flex">
+        <nav className="ml-auto flex items-center gap-1 sm:gap-2">
+          <Button asChild variant="ghost" size="sm" className="hidden rounded-lg lg:inline-flex">
             <Link to="/platform">Platform</Link>
           </Button>
-          <Button asChild variant="ghost" size="sm" className="hidden rounded-xl lg:inline-flex">
+          <Button asChild variant="ghost" size="sm" className="hidden rounded-lg lg:inline-flex">
             <Link to="/how-it-works">How it works</Link>
           </Button>
-          <Button asChild variant="ghost" size="sm" className="hidden rounded-xl lg:inline-flex">
+          <Button asChild variant="ghost" size="sm" className="hidden rounded-lg lg:inline-flex">
             <Link to="/pricing">Pricing</Link>
           </Button>
-          <Button asChild variant="ghost" size="sm" className="hidden rounded-xl lg:inline-flex">
+          <Button asChild variant="ghost" size="sm" className="hidden rounded-lg lg:inline-flex">
             <Link to="/contact">Contact</Link>
           </Button>
-          <Button asChild variant="ghost" size="sm" className="hidden rounded-xl lg:inline-flex">
+          <Button asChild variant="ghost" size="sm" className="hidden rounded-lg lg:inline-flex">
             <Link to="/login">Sign in</Link>
           </Button>
-          <Button asChild variant="brand" size="sm" className="hidden rounded-xl lg:inline-flex">
+          <Button asChild variant="brand" size="sm" className="hidden rounded-lg px-5 lg:inline-flex">
             <Link to="/signup">Start free</Link>
           </Button>
 
-          <Button asChild variant="brand" size="sm" className="rounded-xl lg:hidden">
+          <Button asChild variant="brand" size="sm" className="rounded-lg lg:hidden">
             <Link to="/signup">Start free</Link>
           </Button>
           <Sheet open={open} onOpenChange={setOpen}>

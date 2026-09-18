@@ -74,9 +74,9 @@ export function HomeLeadCapture() {
   const ctaHref = successSignupUrl ?? signupUrl({ email: email.trim() || undefined });
 
   return (
-    <section id="lead" className="scroll-mt-20 border-b border-border bg-background py-16 sm:py-20">
+    <section id="lead" className="home-section scroll-mt-20 border-b border-border bg-card">
       <div className="mx-auto max-w-5xl px-5 sm:px-8">
-        <div className="rounded-2xl border border-border bg-card p-6 shadow-lift sm:p-10">
+        <div className="rounded-xl border border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)] p-6 shadow-lift sm:p-10">
           {done ? (
             <div className="text-center">
               <span className="mx-auto grid size-11 place-items-center rounded-full bg-secondary text-primary">

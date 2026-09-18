@@ -12,7 +12,7 @@ const PROCESS = ["Audit", "Fix", "Rescan", "Verify", "Track"] as const;
 
 export function HomeAuditHistory() {
   return (
-    <section id="audit-history" className="scroll-mt-16 border-t border-border bg-surface py-16 sm:py-20">
+    <section id="audit-history" className="home-section scroll-mt-16 bg-surface">
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <SectionHeading
           eyebrow="AUDIT HISTORY"
@@ -21,7 +21,7 @@ export function HomeAuditHistory() {
         />
 
         <div className="mx-auto mt-10 max-w-lg">
-          <div className="rounded-xl border border-border bg-card p-5 shadow-lift sm:p-6">
+          <div className="rounded-lg border border-border bg-card p-5 shadow-lift sm:p-6">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-foreground">Store 101 · Oral Care</p>

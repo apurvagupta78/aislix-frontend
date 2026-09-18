@@ -11,12 +11,15 @@ import {
   Wrench,
   Sparkles,
   History,
+  ShieldCheck,
+  Zap,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { SiteFooter, SiteHeader } from "@/components/MarketingLayout";
 import { HomeTrustRow } from "@/components/home/HomeTrustRow";
 import { LazyOnVisible } from "@/components/LazyOnVisible";
+import { HomepageDemoAuditPreview } from "@/components/landing/retail-shelf-intelligence/HomepageDemoAuditPreview";
 
 const LiveDemoSection = lazy(() =>
   import("@/components/landing/retail-shelf-intelligence/LiveDemoSection").then((m) => ({
@@ -199,39 +202,66 @@ const steps = [
 
 function Landing() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="home-modern min-h-screen bg-background">
       <SiteHeader />
 
-
       <section className="relative overflow-hidden border-b border-border bg-background">
-        <div className="relative mx-auto max-w-4xl px-6 pb-20 pt-20 text-center sm:pb-24 sm:pt-28">
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs text-muted-foreground shadow-soft">
-            <span className="size-1.5 rounded-full bg-brand" />
-            Retail Audit & Shelf Intelligence Platform
-          </span>
-          <h1 className="mt-7 text-4xl font-semibold leading-[1.08] text-foreground sm:text-6xl">
-            Plan, Execute, Review and Learn From Every Retail Audit.
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-            Aislix is an enterprise audit management platform — digital counts, AI-assisted shelf
-            capture, and guided manual audits in one accountable workflow. Managers get exception-first
-            visibility; auditors get fast execution; every finding links to evidence, ownership and
-            verified corrective action.
-          </p>
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+        <div className="mx-auto grid max-w-7xl gap-12 px-5 pb-20 pt-14 sm:px-8 sm:pb-24 sm:pt-20 lg:grid-cols-[0.86fr_1.14fr] lg:items-center lg:gap-16">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)] px-3.5 py-1.5 text-xs font-semibold text-foreground">
+              <span className="size-1.5 rounded-full bg-brand" />
+              AI-powered retail execution
+            </span>
+            <h1 className="mt-7 max-w-xl text-5xl font-semibold leading-[1.02] text-foreground sm:text-6xl lg:text-7xl">
+              Real-time shelf intelligence.
+            </h1>
+            <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+              Turn shelf photos into measurable audits. See availability, planogram compliance,
+              pricing, promotions and corrective actions in one accountable workflow.
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button
               variant="hero"
               size="xl"
+              className="w-full rounded-lg px-7 sm:w-auto"
               onClick={() =>
                 document.querySelector("#live-dashboard")?.scrollIntoView({ behavior: "smooth" })
               }
             >
-              Try Your First Audit Free <ArrowRight className="size-4" />
+              Run a free shelf audit <ArrowRight className="size-4" />
             </Button>
+              <Button asChild variant="outline" size="xl" className="w-full rounded-lg px-7 sm:w-auto">
+                <Link to="/contact" search={{ subject: "Sales enquiry" }}>Talk to sales</Link>
+              </Button>
+            </div>
+            <div className="mt-7 grid max-w-xl gap-3 sm:grid-cols-3">
+              {[
+                { icon: ShieldCheck, text: "No card required" },
+                { icon: Zap, text: "5 free audits/day" },
+                { icon: CircleCheck, text: "Results in 60–90 sec" },
+              ].map(({ icon: Icon, text }) => (
+                <div key={text} className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                  <Icon className="size-4 text-brand" strokeWidth={1.8} aria-hidden="true" />
+                  {text}
+                </div>
+              ))}
+            </div>
           </div>
-          <p className="mt-4 text-xs text-muted-foreground">
-            No card required · 30 free audits/month · Up to 5 audits/day
-          </p>
+
+          <div className="home-product-frame relative overflow-hidden rounded-2xl p-3 sm:p-4">
+            <div className="mb-3 flex items-center justify-between border-b border-border px-1 pb-3">
+              <div className="flex items-center gap-1.5" aria-hidden="true">
+                <span className="size-2 rounded-full bg-[var(--aislix-darkstore-border)]" />
+                <span className="size-2 rounded-full bg-[var(--aislix-supermarket-border)]" />
+                <span className="size-2 rounded-full bg-[var(--aislix-local-border)]" />
+              </div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Shelf intelligence preview
+              </p>
+              <span className="w-9" />
+            </div>
+            <HomepageDemoAuditPreview />
+          </div>
         </div>
       </section>
 
@@ -263,12 +293,12 @@ function Landing() {
         </LazyOnVisible>
       </section>
 
-      <section id="platform" className="border-t border-border py-24">
+      <section id="platform" className="home-section bg-card">
         <div className="mx-auto max-w-6xl px-6 text-center">
-          <p className="text-xs font-medium uppercase tracking-widest text-brand">
+          <p className="home-kicker">
             THE AISLIX PLATFORM
           </p>
-          <h2 className="mx-auto mt-3 max-w-2xl text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h2 className="mx-auto mt-4 max-w-2xl text-3xl font-semibold sm:text-5xl">
             Turn Shelf Visits Into Structured Retail Intelligence.
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
@@ -279,9 +309,9 @@ function Landing() {
             {features.map((f, i) => (
               <div
                 key={f.title}
-                className={`rounded-xl border p-7 shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card ${FEATURE_SURFACES[i]}`}
+                className={`card-hover rounded-lg border p-7 shadow-soft ${FEATURE_SURFACES[i]}`}
               >
-                <span className="grid size-10 place-items-center rounded-xl border border-[var(--aislix-border)] bg-white text-[var(--aislix-primary)]">
+                <span className="grid size-11 place-items-center rounded-lg border border-[var(--aislix-border)] bg-white text-[var(--aislix-primary)]">
                   <f.icon className="size-5" />
                 </span>
                 <h3 className="mt-5 text-lg font-semibold tracking-tight">{f.title}</h3>
@@ -310,15 +340,15 @@ function Landing() {
         </Suspense>
       </LazyOnVisible>
 
-      <section id="how" className="border-t border-border bg-background py-24">
+      <section id="how" className="home-section bg-card">
         <div className="mx-auto max-w-6xl px-6 text-center">
-          <p className="text-xs font-medium uppercase tracking-widest text-brand">HOW IT WORKS</p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+          <p className="home-kicker">HOW IT WORKS</p>
+          <h2 className="mt-4 text-3xl font-semibold sm:text-5xl">
             From Shelf Photo to Retail Action in Four Steps.
           </h2>
           <div className="mt-12 grid gap-5 text-left sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((s, i) => (
-              <div key={s.title} className={`card-hover rounded-xl border p-7 shadow-soft ${STEP_SURFACES[i]}`}>
+              <div key={s.title} className={`card-hover rounded-lg border p-7 shadow-soft ${STEP_SURFACES[i]}`}>
                 <div className="flex items-center justify-between">
                   <span className="grid size-10 place-items-center rounded-xl border border-[var(--aislix-border)] bg-white text-[var(--aislix-primary)]">
                     <s.icon className="size-5" />
@@ -365,21 +395,22 @@ function Landing() {
       </LazyOnVisible>
 
 
-      <section className="border-t border-border bg-surface py-20">
+      <section className="home-dark-band border-t border-border py-20 sm:py-24">
         <div className="mx-auto max-w-4xl px-6 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--aislix-local-border)]">Start with one shelf</p>
+          <h2 className="mt-4 text-3xl font-semibold text-primary-foreground sm:text-5xl">
             Turn Every Shelf Visit Into Measurable Action.
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
+          <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-[var(--aislix-local-border)] sm:text-base">
             From one shelf photo to actionable insights, corrective actions and a complete audit
             history — Aislix helps retail teams see more, act faster and track what changes.
           </p>
-          <Button asChild variant="hero" size="xl" className="mt-8">
+          <Button asChild variant="secondary" size="xl" className="mt-8 rounded-lg">
             <Link to="/signup">
               Create Your Free Workspace <ArrowRight className="size-4" />
             </Link>
           </Button>
-          <p className="mt-4 text-xs text-muted-foreground">
+          <p className="mt-4 text-xs text-[var(--aislix-local-border)]">
             No card required · Start with your first shelf audit
           </p>
         </div>

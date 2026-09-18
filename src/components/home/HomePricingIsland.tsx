@@ -18,7 +18,7 @@ export function HomePricingIsland() {
   };
 
   return (
-    <section id="pricing" className="border-t border-border py-24">
+    <section id="pricing" className="home-section bg-background">
       <div className="mx-auto max-w-[90rem] px-6 text-center sm:px-8">
         <p className="text-xs font-medium uppercase tracking-widest text-brand">Pricing</p>
         <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">

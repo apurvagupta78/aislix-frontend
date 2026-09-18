@@ -35,10 +35,11 @@ const audiences = [
 
 export function HomeTrustRow() {
   return (
-    <section className="border-b border-border bg-background py-12 sm:py-14">
+    <section className="border-b border-border bg-card py-14 sm:py-16">
       <div className="mx-auto max-w-6xl px-5 text-center sm:px-8">
-        <h2 className="text-2xl font-semibold leading-tight tracking-tight text-foreground sm:text-3xl">
-          Built for Every Retail Shelf.
+        <p className="home-kicker">Built for retail leaders</p>
+        <h2 className="mt-3 text-2xl font-semibold leading-tight text-foreground sm:text-4xl">
+          One view of execution across every retail format.
         </h2>
         <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
           One platform for retailers, brands, distributors and store teams.
@@ -47,7 +48,7 @@ export function HomeTrustRow() {
           {audiences.map(({ label, Icon, body, modelClass }) => (
             <div
               key={label}
-              className={`flex flex-col items-center rounded-xl border p-5 text-center shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card ${modelClass}`}
+              className={`card-hover flex flex-col items-center rounded-lg border p-5 text-center shadow-soft ${modelClass}`}
             >
               <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-[var(--aislix-border)] bg-white/80 text-[var(--aislix-primary)]">
                 <Icon className="size-3.5" strokeWidth={1.75} aria-hidden="true" />

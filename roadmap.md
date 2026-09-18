@@ -34,4 +34,5 @@
 - [ ] Intelligence, operations, master data
 - [ ] Reports, team, manage, settings, billing
 - [ ] Public site, product pages, login/signup
+  - [x] Homepage rebuilt in the approved modern enterprise retail direction
 - [ ] Responsive, accessibility, route metadata, release verification
