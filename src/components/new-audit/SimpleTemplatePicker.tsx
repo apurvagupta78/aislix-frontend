@@ -10,14 +10,17 @@ import type { AuditTemplate } from "@/lib/audit-templates";
 import { OPERATING_MODEL_CARDS } from "@/lib/audit-engine/operating-model-catalog";
 import { PURPOSE_SECTION_LABELS } from "@/lib/audit-engine/template-catalog-ui";
 import { getDiscoverySections } from "@/lib/audit-engine/template-catalog-ui";
-import type { SystemTemplateSpec } from "@/lib/audit-engine/template-factory";
+import {
+  getSystemTemplateSpec,
+  type SystemTemplateSpec,
+} from "@/lib/audit-engine/template-factory";
 import { TemplatePreviewSheet } from "@/components/audit-engine/TemplatePreviewSheet";
 import {
   formatRecentLabel,
   getRecentTemplates,
   type RecentTemplateEntry,
 } from "@/lib/new-audit/recent-templates";
-import { operatingModelClasses, SEMANTIC_PALETTE } from "@/lib/design-system";
+import { SEMANTIC_PALETTE } from "@/lib/design-system";
 import { cn } from "@/lib/utils";
 
 type SourceFilter = "all" | "mine" | "organization" | "aislix";
@@ -43,8 +46,38 @@ const SPECIAL_BADGE: Record<string, string> = {
 
 const PURPOSE_BADGE = `${SEMANTIC_PALETTE.info.border} ${SEMANTIC_PALETTE.info.bg}`;
 
+const USE_TEMPLATE_BUTTON: Record<OperatingModel, string> = {
+  local_store:
+    "border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)] text-[var(--aislix-primary)] hover:bg-[var(--aislix-local-border)]/40",
+  supermarket:
+    "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)] text-[var(--aislix-primary)] hover:bg-[var(--aislix-supermarket-border)]/40",
+  dark_store:
+    "border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)] text-[var(--aislix-primary)] hover:bg-[var(--aislix-darkstore-border)]/40",
+  warehouse:
+    "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)] hover:bg-[var(--aislix-warehouse-border)]/40",
+  fmcg_distributor:
+    "border-[var(--aislix-fmcg-border)] bg-[var(--aislix-fmcg-bg)] text-[var(--aislix-primary)] hover:bg-[var(--aislix-fmcg-border)]/40",
+  custom:
+    "border-[var(--aislix-custom-border)] bg-[var(--aislix-custom-bg)] text-[var(--aislix-primary)] hover:bg-[var(--aislix-custom-border)]/40",
+};
+
 function badgeTone(label: string) {
   return MODEL_BADGE[label] ?? SPECIAL_BADGE[label] ?? PURPOSE_BADGE;
+}
+
+function useTemplateButtonClass(model: OperatingModel) {
+  return USE_TEMPLATE_BUTTON[model] ?? USE_TEMPLATE_BUTTON.custom;
+}
+
+function systemKeyFromTemplate(t: AuditTemplate): string | undefined {
+  const raw = t.purpose_config?.systemTemplateKey;
+  return typeof raw === "string" ? raw : undefined;
+}
+
+function resolveSpecForTemplate(t: AuditTemplate): SystemTemplateSpec | undefined {
+  const key = systemKeyFromTemplate(t);
+  if (key) return getSystemTemplateSpec(key);
+  return undefined;
 }
 
 type Props = {
@@ -64,8 +97,7 @@ function SimpleTemplateCard({
   description,
   badges,
   selected,
-  featured,
-  surfaceClass,
+  model,
   onUse,
   onPreview,
 }: {
@@ -73,17 +105,14 @@ function SimpleTemplateCard({
   description: string;
   badges: string[];
   selected?: boolean;
-  featured?: boolean;
-  surfaceClass?: string;
+  model: OperatingModel;
   onUse: () => void;
-  onPreview?: () => void;
+  onPreview: () => void;
 }) {
   return (
     <div
       className={cn(
-        "play-card flex min-w-0 flex-col overflow-hidden rounded-2xl border p-4 transition-shadow",
-        surfaceClass ?? "border-[var(--aislix-border)] bg-white",
-        featured && "shadow-card",
+        "play-card flex h-full min-w-0 flex-col rounded-2xl border border-[var(--aislix-border)] bg-white p-4 transition-shadow",
         selected && "ring-2 ring-[var(--aislix-primary)]/15",
       )}
     >
@@ -107,25 +136,20 @@ function SimpleTemplateCard({
           </Badge>
         ))}
       </div>
-      <div className="mt-auto flex w-full min-w-0 flex-wrap gap-2 pt-4">
-        {onPreview ? (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onPreview}
-            className="min-w-0 flex-1 border-[var(--aislix-border)] bg-white text-[var(--aislix-primary)] hover:bg-[var(--aislix-surface)]"
-          >
-            <Eye className="size-3 shrink-0" /> Preview
-          </Button>
-        ) : null}
+      <div className="mt-auto flex w-full min-w-0 gap-2 pt-4">
         <Button
           size="sm"
-          variant="default"
+          variant="outline"
+          onClick={onPreview}
+          className="min-w-0 flex-1 border-[var(--aislix-border)] bg-white text-[var(--aislix-primary)] hover:bg-[var(--aislix-surface)]"
+        >
+          <Eye className="size-3 shrink-0" /> Preview
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
           onClick={onUse}
-          className={cn(
-            "min-w-0 bg-[var(--aislix-primary)] text-white hover:bg-[#1B3B58]",
-            onPreview ? "flex-1" : "w-full",
-          )}
+          className={cn("min-w-0 flex-1 font-semibold shadow-soft", useTemplateButtonClass(model))}
         >
           <Play className="size-3 shrink-0" /> Use Template
         </Button>
@@ -158,10 +182,6 @@ export function SimpleTemplatePicker({
   const modelLabel =
     OPERATING_MODEL_CARDS.find((c) => c.id === operatingModel)?.title ?? operatingModel;
 
-  const orgTemplates = publishedTemplates.filter(
-    (t) => !t.is_system_template && t.visibility === "organization",
-  );
-
   const filterSpec = (spec: SystemTemplateSpec) => {
     const term = search.trim().toLowerCase();
     if (term && !spec.name.toLowerCase().includes(term) && !spec.shortDescription.toLowerCase().includes(term)) {
@@ -182,9 +202,20 @@ export function SimpleTemplatePicker({
 
   const recommended = discovery.recommended.filter(filterSpec);
   const allSystem = discovery.browseAll.filter(filterSpec);
+  const systemSlice = allSystem.slice(0, source === "aislix" ? 24 : 12);
+  const systemKeys = new Set(systemSlice.map((spec) => spec.key));
+  const systemNames = new Set(systemSlice.map((spec) => `${spec.operatingModel}:${spec.name}`));
+
   const dbVisible = [...publishedTemplates, ...myTemplates]
     .filter((t, i, arr) => arr.findIndex((x) => x.id === t.id) === i)
-    .filter(filterDb);
+    .filter(filterDb)
+    .filter((t) => {
+      if (source === "mine" || source === "organization" || source === "aislix") return true;
+      const key = systemKeyFromTemplate(t);
+      if (key && systemKeys.has(key)) return false;
+      if (t.is_system_template && systemNames.has(`${t.operating_model}:${t.name}`)) return false;
+      return true;
+    });
 
   function resolveRecent(entry: RecentTemplateEntry) {
     if (entry.systemKey) return `system:${entry.systemKey}`;
@@ -212,6 +243,19 @@ export function SimpleTemplatePicker({
     return out;
   }
 
+  function openPreviewForSpec(spec: SystemTemplateSpec) {
+    setPreviewSpec(spec);
+  }
+
+  function openPreviewForTemplate(t: AuditTemplate) {
+    const spec = resolveSpecForTemplate(t);
+    if (spec) {
+      setPreviewSpec(spec);
+      return;
+    }
+    window.open(`/audit-templates/${t.id}/preview`, "_blank", "noopener,noreferrer");
+  }
+
   const chips: { id: SourceFilter; label: string }[] = [
     { id: "all", label: "All" },
     { id: "mine", label: "My Templates" },
@@ -226,7 +270,7 @@ export function SimpleTemplatePicker({
         onOpenChange={onOpenChange}
         title="Choose an audit template"
         description="Pick a ready-made workflow for your operating model."
-        className="bg-[var(--aislix-bg)] sm:max-w-2xl"
+        className="sm:max-w-2xl"
       >
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--aislix-secondary)]" />
@@ -248,11 +292,7 @@ export function SimpleTemplatePicker({
                 <button
                   key={`${entry.id}-${entry.systemKey}`}
                   type="button"
-                  className={cn(
-                    "flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left transition-colors",
-                    operatingModelClasses(operatingModel),
-                    "hover:shadow-soft",
-                  )}
+                  className="flex w-full items-center justify-between rounded-xl border border-[var(--aislix-border)] bg-white px-3 py-2 text-left hover:bg-[var(--aislix-surface)]"
                   onClick={() => {
                     onSelect(resolveRecent(entry), { name: entry.name, systemKey: entry.systemKey });
                     onOpenChange(false);
@@ -273,25 +313,17 @@ export function SimpleTemplatePicker({
             <h3 className="mb-1 font-display text-sm font-semibold text-[var(--aislix-primary)]">
               Recommended for you
             </h3>
-            <p
-              className={cn(
-                "mb-3 inline-flex rounded-full border px-3 py-1 text-xs font-semibold text-[var(--aislix-primary)]",
-                operatingModelClasses(operatingModel),
-              )}
-            >
-              Based on {modelLabel}
-            </p>
+            <p className="mb-3 text-xs text-[var(--aislix-secondary)]">Based on {modelLabel}</p>
             <div className="grid gap-3 sm:grid-cols-2">
-              {recommended.slice(0, 4).map((spec, index) => (
+              {recommended.slice(0, 4).map((spec) => (
                 <SimpleTemplateCard
                   key={spec.key}
                   name={spec.name}
                   description={spec.shortDescription}
                   badges={badgesForSpec(spec)}
                   selected={templateChoice === `system:${spec.key}`}
-                  featured={index === 0}
-                  surfaceClass={operatingModelClasses(operatingModel)}
-                  onPreview={() => setPreviewSpec(spec)}
+                  model={spec.operatingModel}
+                  onPreview={() => openPreviewForSpec(spec)}
                   onUse={() => {
                     onSelect(`system:${spec.key}`, { name: spec.name, systemKey: spec.key });
                     onOpenChange(false);
@@ -317,17 +349,7 @@ export function SimpleTemplatePicker({
                   "rounded-full",
                   source === chip.id
                     ? "border-[var(--aislix-primary)] bg-[var(--aislix-primary)] text-white hover:bg-[#1B3B58]"
-                    : cn(
-                        "border-[var(--aislix-border)] bg-white text-[var(--aislix-primary)]",
-                        chip.id === "aislix" &&
-                          "hover:border-[var(--aislix-warehouse-border)] hover:bg-[var(--aislix-warehouse-bg)]",
-                        chip.id === "organization" &&
-                          "hover:border-[var(--aislix-supermarket-border)] hover:bg-[var(--aislix-supermarket-bg)]",
-                        chip.id === "mine" &&
-                          "hover:border-[var(--aislix-darkstore-border)] hover:bg-[var(--aislix-darkstore-bg)]",
-                        chip.id === "all" &&
-                          "hover:border-[var(--aislix-local-border)] hover:bg-[var(--aislix-local-bg)]",
-                      ),
+                    : "border-[var(--aislix-border)] bg-white text-[var(--aislix-primary)] hover:bg-[var(--aislix-surface)]",
                 )}
                 onClick={() => setSource(chip.id)}
               >
@@ -335,17 +357,17 @@ export function SimpleTemplatePicker({
               </Button>
             ))}
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid auto-rows-fr gap-3 sm:grid-cols-2">
             {source !== "mine" && source !== "organization"
-              ? allSystem.slice(0, source === "aislix" ? 24 : 12).map((spec) => (
+              ? systemSlice.map((spec) => (
                   <SimpleTemplateCard
                     key={spec.key}
                     name={spec.name}
                     description={spec.shortDescription}
                     badges={badgesForSpec(spec)}
                     selected={templateChoice === `system:${spec.key}`}
-                    surfaceClass={operatingModelClasses(spec.operatingModel)}
-                    onPreview={() => setPreviewSpec(spec)}
+                    model={spec.operatingModel}
+                    onPreview={() => openPreviewForSpec(spec)}
                     onUse={() => {
                       onSelect(`system:${spec.key}`, { name: spec.name, systemKey: spec.key });
                       onOpenChange(false);
@@ -360,11 +382,8 @@ export function SimpleTemplatePicker({
                 description={t.short_description ?? t.description ?? ""}
                 badges={badgesForTemplate(t)}
                 selected={templateChoice === t.id}
-                surfaceClass={
-                  t.operating_model
-                    ? operatingModelClasses(t.operating_model as OperatingModel)
-                    : undefined
-                }
+                model={(t.operating_model ?? operatingModel) as OperatingModel}
+                onPreview={() => openPreviewForTemplate(t)}
                 onUse={() => {
                   onSelect(t.id, { name: t.name });
                   onOpenChange(false);
