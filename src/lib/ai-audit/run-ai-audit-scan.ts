@@ -95,10 +95,16 @@ export async function submitAuthenticatedAiAuditScan(
   return { scan_id: response.scan_id, assignment_id: input.assignmentId };
 }
 
-export function openScanProcessingTab(scanId: string): void {
+/** Navigate to the processing page in the same tab (no popup / new window). */
+export function openScanProcessingPage(scanId: string): void {
   if (typeof window === "undefined") return;
   const url = `${window.location.origin}/processing?scan=${encodeURIComponent(scanId)}`;
-  window.open(url, "_blank", "noopener,noreferrer");
+  window.location.assign(url);
+}
+
+/** @deprecated Prefer same-tab navigation via openScanProcessingPage / router navigate. */
+export function openScanProcessingTab(scanId: string): void {
+  openScanProcessingPage(scanId);
 }
 
 export async function runAuthenticatedAiAuditScan(

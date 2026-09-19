@@ -49,7 +49,6 @@ import {
   OPERATING_MODEL_CARDS,
 } from "@/lib/audit-engine/operating-model-catalog";
 import {
-  openScanProcessingTab,
   submitAuthenticatedAiAuditScan,
 } from "@/lib/ai-audit/run-ai-audit-scan";
 import { buildAiPlanogramPreviewSummary } from "@/lib/new-audit/ai-vision-context";
@@ -196,6 +195,7 @@ function NewAuditPage() {
   const [captureFile, setCaptureFile] = useState<File | null>(null);
   const [capturePreviewUrl, setCapturePreviewUrl] = useState<string | null>(null);
   const [aiAuditLaunched, setAiAuditLaunched] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   const userQuery = useQuery({
     queryKey: ["current-user-id", "new-audit"],
@@ -1006,6 +1006,7 @@ function NewAuditPage() {
   const aiSelfAuditMutation = useMutation({
     mutationFn: async () => {
       if (!captureFile) throw new Error("Add a shelf photo before running the AI audit.");
+      setUploadProgress(0);
       const created = await createMutation.mutateAsync({ skipNavigation: true });
       const uploaded = await submitAuthenticatedAiAuditScan({
         files: [captureFile],
@@ -1013,15 +1014,18 @@ function NewAuditPage() {
         storeId: storeId || undefined,
         scanContext: demoScanContext,
         notes: [auditDescription.trim(), instructions.trim()].filter(Boolean).join("\n\n"),
+        onUploadProgress: setUploadProgress,
       });
       return { assignmentId: created.assignmentId, scanId: uploaded.scan_id };
     },
     onSuccess: ({ scanId }) => {
       setAiAuditLaunched(true);
-      openScanProcessingTab(scanId);
-      toast.success("Analysis started in a new tab. Results will appear in audit history.");
+      setUploadProgress(100);
+      toast.success("Photo uploaded — starting analysis…");
+      void navigate({ to: "/processing", search: { scan: scanId } });
     },
     onError: (error) => {
+      setUploadProgress(null);
       console.error("[new-audit] AI audit failed:", error);
       toast.error(
         toUserMessage(error) || "Could not complete the AI audit. Please try again.",
@@ -1059,7 +1063,9 @@ function NewAuditPage() {
   }
 
   const primaryLabel = aiSelfAuditMutation.isPending
-    ? "Uploading…"
+    ? uploadProgress != null
+      ? `Uploading ${uploadProgress}%…`
+      : "Uploading…"
     : createMutation.isPending
       ? "Submitting…"
       : aiAuditLaunched
@@ -1197,10 +1203,12 @@ function NewAuditPage() {
                     onCaptureChange={handleCaptureChange}
                     disabled={footerBusy || aiAuditLaunched}
                     complete={stepStatus[7] || aiAuditLaunched}
+                    uploading={aiSelfAuditMutation.isPending}
+                    uploadProgress={uploadProgress}
                   />
                   {aiAuditLaunched ? (
                     <p className="rounded-xl border border-[var(--aislix-border)] bg-[var(--aislix-surface)]/50 px-4 py-3 text-sm text-[var(--aislix-secondary)]">
-                      Analysis is running in a new tab. When complete, results are saved automatically
+                      Analysis is running on this page. When complete, results open automatically
                       and appear in{" "}
                       <Link to="/history" className="font-semibold text-[var(--aislix-primary)] underline">
                         audit history
