@@ -115,13 +115,47 @@ Key: `astra_expected_products_analysis`
 }
 ```
 
-### Shelf-only fallback
+### Shelf-only (image-only, no planogram, no expected products)
 
-Return legacy `inventory[]` + metrics. No comparison table.
+Key: structured JSON with `"mode": "image_only_shelf_analysis"` (preferred) or legacy `inventory[]`.
+
+Prompt: `src/lib/ai-audit/prompts/shelf-only.prompt.ts`
+
+```json
+{
+  "mode": "image_only_shelf_analysis",
+  "operating_model": "supermarket",
+  "location": "string",
+  "location_status": "MATCHED | UNVERIFIABLE",
+  "image_quality": { "status": "GOOD", "reason": "..." },
+  "shelf_structure": { "visible_shelf_levels": 0, "notes": "..." },
+  "products": [],
+  "brand_analysis": [],
+  "category_analysis": [],
+  "focus_brand_analysis": {},
+  "visible_prices": [],
+  "visible_promotions": [],
+  "shelf_issues": [],
+  "summary": {
+    "products_identified": 0,
+    "brands_identified": 0,
+    "variants_identified": 0,
+    "visible_facings": 0,
+    "visible_units": 0,
+    "prices_read": 0,
+    "promotions_identified": 0,
+    "shelf_issues_identified": 0
+  }
+}
+```
+
+Request may include `focus_brand` (org primary brand) for share/competitor analysis.
 
 ## Frontend files
 
 - Prompt builders: `src/lib/ai-audit/astra-prompt.ts`
+- Shelf-only prompt: `src/lib/ai-audit/prompts/shelf-only.prompt.ts`
+- Expected-products prompt: `src/lib/ai-audit/prompts/without-planogram.prompt.ts`
 - Payload assembly: `src/lib/ai-audit/astra-analysis.ts`
 - Scan pipeline: `src/lib/scan-pipeline.server.ts` → `buildVisionRequest()`
 - Landing proxy: `src/routes/api/public/landing/scan.ts`

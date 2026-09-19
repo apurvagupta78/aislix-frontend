@@ -1246,11 +1246,14 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
     expectedProducts: adhocExpectedProducts,
     assignmentHasPlanogram: Boolean(assignment?.items.length),
     location:
+      scan.shelf_label ??
       (assignment
         ? (assignment.scope_values["location"] ?? assignment.items[0]?.["location"])
-        : adhocItems[0]?.["location"]) ?? null,
+        : adhocItems[0]?.["location"] ?? adhocExpectedProducts[0]?.location) ??
+      null,
     category: scan.category || primary?.category_name || null,
     subCategory: scan.sub_category || primary?.sub_category_label || primary?.sub_category_id || null,
+    focusBrand: primaryBrand ?? null,
     notes: scan.notes,
   });
 
@@ -1269,8 +1272,14 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
       new Set(selections.map((s) => s.sub_category_label).filter(Boolean)),
     ),
     category_selections: selections,
-    ...(primaryBrand ? { primary_brand: primaryBrand } : {}),
+    ...(primaryBrand ? { primary_brand: primaryBrand, focus_brand: primaryBrand } : {}),
     ...(competitorBrands.length ? { competitor_brands: competitorBrands } : {}),
+    location:
+      scan.shelf_label ??
+      (assignment
+        ? (assignment.scope_values["location"] ?? assignment.items[0]?.["location"])
+        : adhocItems[0]?.["location"] ?? adhocExpectedProducts[0]?.location) ??
+      null,
 
     notes: scan.notes,
     image_urls: signedImages.map((i) => i.url),

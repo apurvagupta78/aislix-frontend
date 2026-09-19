@@ -62,6 +62,7 @@ export type BuildAstraVisionExtrasInput = {
   subCategory?: string | null;
   auditName?: string;
   notes?: string | null;
+  focusBrand?: string | null;
 };
 
 export function buildAstraVisionExtras(input: BuildAstraVisionExtrasInput): {
@@ -118,6 +119,8 @@ export function buildAstraVisionExtras(input: BuildAstraVisionExtrasInput): {
     category: input.category,
     subCategory: input.subCategory,
     expectedProducts: analysis_mode === "expected_products" ? expectedProducts : [],
+    location: input.location,
+    focusBrand: input.focusBrand,
     notes: input.notes,
   });
 
