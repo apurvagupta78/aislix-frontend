@@ -50,23 +50,35 @@ Local dev: add `AISLIX_AI_API_KEY` to `.env` when testing scans locally.
 
 ### Planogram comparison
 
-Key: `astra_planogram_analysis`
+Key: `astra_planogram_analysis` (or top-level with `"mode": "planogram_comparison"`)
+
+Prompt: `src/lib/ai-audit/prompts/planogram-comparison.prompt.ts`
+
+Preferred response uses `products[]` (include duplicate `rows[]` for legacy consumers):
 
 ```json
 {
+  "mode": "planogram_comparison",
   "operating_model": "supermarket",
+  "location": "string",
   "image_quality": { "status": "GOOD", "reason": "..." },
+  "products": [],
   "rows": [],
+  "brand_analysis": [],
+  "category_analysis": [],
+  "subcategory_analysis": [],
+  "observed_unplanned_products": [],
   "summary": {
     "total_planogram_rows": 0,
-    "matched_rows": 0,
-    "not_found_rows": 0,
-    "non_compliant_rows": 0,
-    "not_verifiable_rows": 0,
-    "overall_compliance_percent": 0
+    "products_matched": 0,
+    "products_not_found": 0,
+    "overall_planogram_compliance_percent": null,
+    "total_potential_visible_unit_value_gap_inr": 0
   }
 }
 ```
+
+Each product row includes facing/unit compliance, min/max range, placement, price, shelf coverage days, and execution risk fields per the planogram prompt spec.
 
 ### Expected products (no planogram)
 
@@ -154,6 +166,7 @@ Request may include `focus_brand` (org primary brand) for share/competitor analy
 ## Frontend files
 
 - Prompt builders: `src/lib/ai-audit/astra-prompt.ts`
+- Planogram prompt: `src/lib/ai-audit/prompts/planogram-comparison.prompt.ts`
 - Shelf-only prompt: `src/lib/ai-audit/prompts/shelf-only.prompt.ts`
 - Expected-products prompt: `src/lib/ai-audit/prompts/without-planogram.prompt.ts`
 - Payload assembly: `src/lib/ai-audit/astra-analysis.ts`

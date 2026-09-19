@@ -38,11 +38,16 @@ export function buildAstraPlanogramPrompt(input: {
   auditName?: string;
   notes?: string | null;
 }): string {
-  return ASTRA_PLANOGRAM_COMPARISON_PROMPT_BODY.replace("{{OPERATING_MODEL}}", input.operatingModel)
-    .replace("{{PLANOGRAM_ITEMS_JSON}}", JSON.stringify(input.planogramItems, null, 2))
-    .replace("{{TRUSTED_LOCATION}}", input.location?.trim() || "Not supplied")
-    .replace("{{CATEGORY_CONTEXT}}", categoryContext(input.category, input.subCategory))
-    .replace("{{AUDITOR_NOTES}}", [input.auditName?.trim(), input.notes?.trim()].filter(Boolean).join(" · ") || "None");
+  const notes = [input.auditName?.trim(), input.notes?.trim()].filter(Boolean).join("\n");
+  const categoryNote = categoryContext(input.category, input.subCategory);
+  return ASTRA_PLANOGRAM_COMPARISON_PROMPT_BODY.replace(/\{\{operating_model\}\}/g, input.operatingModelSlug)
+    .replace(/\{\{location\}\}/g, input.location?.trim() || "Not supplied")
+    .replace(/\{\{planogram_items\}\}/g, JSON.stringify(input.planogramItems, null, 2))
+    .replace(/\{\{shelf_image\}\}/g, SHELF_IMAGE_PLACEHOLDER)
+    .concat(
+      categoryNote !== "General" ? `\n\nCategory context: ${categoryNote}` : "",
+      notes ? `\n\nAuditor notes:\n${notes}` : "",
+    );
 }
 
 /** Image-only shelf analysis — no planogram, no expected product rows. */

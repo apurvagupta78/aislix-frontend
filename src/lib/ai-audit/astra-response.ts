@@ -123,8 +123,8 @@ function normalizePlanogramRow(raw: unknown): AstraPlanogramRow {
     expected_shelf_units: num(r.expected_shelf_units),
     actual_visible_units: num(r.actual_visible_units),
     shelf_unit_variance: num(r.shelf_unit_variance),
-    facings_range_status: str(r.facings_range_status),
-    overall_row_status: str(r.overall_row_status),
+    facings_range_status: str(r.facings_range_status ?? r.facing_range_status),
+    overall_row_status: str(r.overall_row_status ?? r.overall_status),
     confidence: num(r.confidence),
     evidence_note: str(r.evidence_note),
   };
@@ -167,7 +167,37 @@ function analysisModeHint(root: Record<string, unknown>): string {
   const raw = str(root.analysis_mode).toLowerCase() || str(root.mode).toLowerCase();
   if (raw === "expected_product_comparison") return "expected_products";
   if (raw === "image_only_shelf_analysis") return "shelf_only";
+  if (raw === "planogram_comparison") return "planogram";
   return raw;
+}
+
+function looksLikePlanogramProductRow(row: Record<string, unknown>): boolean {
+  return (
+    "facing_range_status" in row ||
+    "placement_status" in row ||
+    "expected_shelf_position" in row ||
+    "sku_status" in row ||
+    "facing_compliance_percent" in row ||
+    "overall_row_status" in row ||
+    "risk_status" in row
+  );
+}
+
+function planogramRowList(block: Record<string, unknown>): unknown[] | null {
+  if (Array.isArray(block.rows) && block.rows.length) return block.rows;
+  if (
+    Array.isArray(block.products) &&
+    block.products.length &&
+    block.products.every(
+      (row) => row && typeof row === "object" && looksLikePlanogramProductRow(row as Record<string, unknown>),
+    )
+  ) {
+    return block.products;
+  }
+  if (str(block.mode).toLowerCase() === "planogram_comparison" && Array.isArray(block.products)) {
+    return block.products;
+  }
+  return null;
 }
 
 function looksLikeLegacyInventoryProducts(products: unknown[]): boolean {
@@ -198,15 +228,17 @@ export function normalizeAstraAnalysis(payload: unknown): NormalizedAstraAnalysi
   const planogramBlock =
     pickRecord(root.astra_planogram_analysis) ??
     pickRecord(nested?.astra_planogram_analysis) ??
-    (modeHint === "planogram_comparison" && Array.isArray(root.rows) ? root : null);
+    (modeHint === "planogram" || modeHint === "planogram_comparison" ? root : null);
 
-  if (planogramBlock && Array.isArray(planogramBlock.rows) && planogramBlock.rows.length) {
+  const planogramRows = planogramBlock ? planogramRowList(planogramBlock) : null;
+  if (planogramBlock && planogramRows?.length) {
+    const summary = (planogramBlock.summary ?? {}) as AstraPlanogramSummary;
     return {
       mode: "planogram",
       operating_model: str(planogramBlock.operating_model) || undefined,
       image_quality: imageQuality(planogramBlock.image_quality),
-      rows: planogramBlock.rows.map(normalizePlanogramRow),
-      summary: (planogramBlock.summary ?? {}) as AstraPlanogramSummary,
+      rows: planogramRows.map(normalizePlanogramRow),
+      summary: summary as AstraPlanogramSummary,
     };
   }
 
@@ -226,6 +258,11 @@ export function normalizeAstraAnalysis(payload: unknown): NormalizedAstraAnalysi
       : null) ??
     (rootProducts &&
     !looksLikeLegacyInventoryProducts(rootProducts) &&
+    modeHint !== "planogram" &&
+    modeHint !== "planogram_comparison" &&
+    !rootProducts.some(
+      (row) => row && typeof row === "object" && looksLikePlanogramProductRow(row as Record<string, unknown>),
+    ) &&
     rootProducts.some(
       (row) =>
         row &&
