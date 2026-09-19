@@ -1820,9 +1820,16 @@ async function persistScanPayload(
   // Headline compliance = SKU presence (3/3 found = 100%), never the quantity score.
   const skuMatchPercent = pct(metricsSource?.planogram_sku_match_percent);
   const qtyCompliancePercent = pct(metricsSource?.planogram_qty_compliance_percent);
-  const compliance = pct(
-    metricsSource?.planogram_compliance_percent ?? metricsSource?.planogram_compliance,
-  ) ?? skuMatchPercent;
+  const calcMetrics = (metricsSource?.calculated_metrics ?? null) as Record<string, unknown> | null;
+  const checkBasedPlano = calcMetrics?.planogram_compliance as Record<string, unknown> | undefined;
+  const checkBasedCompliance =
+    checkBasedPlano?.status === "CALCULATED" && checkBasedPlano.value != null
+      ? pct(checkBasedPlano.value)
+      : null;
+  const compliance =
+    checkBasedCompliance ??
+    pct(metricsSource?.planogram_compliance_percent ?? metricsSource?.planogram_compliance) ??
+    skuMatchPercent;
   const shareOfShelf = pct(metricsSource?.share_of_shelf_percent ?? metricsSource?.share_of_shelf);
   const health =
     pct(metricsSource?.shelf_health_score ?? metricsSource?.shelf_health) ??
@@ -1966,6 +1973,21 @@ async function persistScanPayload(
       ? { shelf_issues: payload.shelf_issues }
       : {}),
     ...(payload?.analysis_mode ? { analysis_mode: payload.analysis_mode } : {}),
+    ...(metricsSource?.astra_cv_analysis ? { astra_cv_analysis: metricsSource.astra_cv_analysis } : {}),
+    ...(metricsSource?.astra_cv_validation ? { astra_cv_validation: metricsSource.astra_cv_validation } : {}),
+    ...(metricsSource?.aislix_planogram_analysis
+      ? { aislix_planogram_analysis: metricsSource.aislix_planogram_analysis }
+      : {}),
+    ...(metricsSource?.aislix_shelf_analysis
+      ? { aislix_shelf_analysis: metricsSource.aislix_shelf_analysis }
+      : {}),
+    ...(calcMetrics ? { calculated_metrics: calcMetrics } : {}),
+    ...(metricsSource?.calc_engine_version ? { calc_engine_version: metricsSource.calc_engine_version } : {}),
+    ...(metricsSource?.execution_risk ? { execution_risk: metricsSource.execution_risk } : {}),
+    ...(metricsSource?.luna_secondary_analysis
+      ? { luna_secondary_analysis: metricsSource.luna_secondary_analysis }
+      : {}),
+    ...(typeof metricsSource?.scan_complete === "boolean" ? { scan_complete: metricsSource.scan_complete } : {}),
     ...(metricsSource?.audit_scope ? { audit_scope: metricsSource.audit_scope } : {}),
     ...(Array.isArray(metricsSource?.adjacent_category_findings)
       ? { adjacent_category_findings: metricsSource.adjacent_category_findings }

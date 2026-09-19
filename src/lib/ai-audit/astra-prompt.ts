@@ -1,5 +1,4 @@
-import { ASTRA_PLANOGRAM_COMPARISON_PROMPT_BODY } from "@/lib/ai-audit/prompts/planogram-comparison.prompt";
-import { ASTRA_SHELF_ONLY_PROMPT_BODY } from "@/lib/ai-audit/prompts/shelf-only.prompt";
+import { ASTRA_SHELF_CV_PROMPT_BODY } from "@/lib/ai-audit/prompts/shelf-cv.prompt";
 import { getRoleProfile } from "@/lib/role-kpi-config";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import type { NewAuditPlanogramChoice } from "@/lib/new-audit/planogram-setup";
@@ -26,6 +25,75 @@ function categoryContext(category?: string | null, subCategory?: string | null):
 const SHELF_IMAGE_PLACEHOLDER =
   "Attached shelf/store image supplied by Aislix via image_urls with this request.";
 
+function injectCvPlaceholders(
+  body: string,
+  input: {
+    operatingModelSlug: string;
+    analysisMode: "no_planogram" | "with_planogram";
+    category?: string | null;
+    subCategory?: string | null;
+    location?: string | null;
+    focusBrand?: string | null;
+    planogramReference?: string;
+    notes?: string | null;
+  },
+): string {
+  const prompt = body
+    .replace(/\{\{operating_model\}\}/g, input.operatingModelSlug)
+    .replace(/\{\{analysis_mode\}\}/g, input.analysisMode)
+    .replace(/\{\{category\}\}/g, input.category?.trim() || "Not supplied")
+    .replace(/\{\{sub_category\}\}/g, input.subCategory?.trim() || "Not supplied")
+    .replace(/\{\{location\}\}/g, input.location?.trim() || "Not supplied")
+    .replace(/\{\{focus_brand\}\}/g, input.focusBrand?.trim() || "Not supplied")
+    .replace(/\{\{planogram_reference\}\}/g, input.planogramReference ?? "Not supplied")
+    .replace(/\{\{shelf_image\}\}/g, SHELF_IMAGE_PLACEHOLDER);
+
+  const categoryNote = categoryContext(input.category, input.subCategory);
+  return prompt.concat(
+    categoryNote !== "General" ? `\n\nCategory context: ${categoryNote}` : "",
+    input.notes?.trim() ? `\n\nAuditor notes:\n${input.notes.trim()}` : "",
+  );
+}
+
+/** CV-only prompt — shelf image without planogram expected state. */
+export function buildNoPlanogramPrompt(input: {
+  operatingModelSlug: string;
+  category?: string | null;
+  subCategory?: string | null;
+  location?: string | null;
+  focusBrand?: string | null;
+  notes?: string | null;
+}): string {
+  return injectCvPlaceholders(ASTRA_SHELF_CV_PROMPT_BODY, {
+    ...input,
+    analysisMode: "no_planogram",
+    planogramReference: "Not supplied",
+  });
+}
+
+/** CV-only prompt — shelf image with planogram reference for identification context. */
+export function buildWithPlanogramPrompt(input: {
+  operatingModelSlug: string;
+  planogramItems: Record<string, unknown>[];
+  category?: string | null;
+  subCategory?: string | null;
+  location?: string | null;
+  focusBrand?: string | null;
+  notes?: string | null;
+}): string {
+  return injectCvPlaceholders(ASTRA_SHELF_CV_PROMPT_BODY, {
+    operatingModelSlug: input.operatingModelSlug,
+    analysisMode: "with_planogram",
+    category: input.category,
+    subCategory: input.subCategory,
+    location: input.location,
+    focusBrand: input.focusBrand,
+    notes: input.notes,
+    planogramReference: JSON.stringify(input.planogramItems, null, 2),
+  });
+}
+
+/** @deprecated Use buildWithPlanogramPrompt — legacy alias */
 export function buildAstraPlanogramPrompt(input: {
   operatingModel: string;
   operatingModelSlug: string;
@@ -37,18 +105,17 @@ export function buildAstraPlanogramPrompt(input: {
   notes?: string | null;
 }): string {
   const notes = [input.auditName?.trim(), input.notes?.trim()].filter(Boolean).join("\n");
-  const categoryNote = categoryContext(input.category, input.subCategory);
-  return ASTRA_PLANOGRAM_COMPARISON_PROMPT_BODY.replace(/\{\{operating_model\}\}/g, input.operatingModelSlug)
-    .replace(/\{\{location\}\}/g, input.location?.trim() || "Not supplied")
-    .replace(/\{\{planogram_items\}\}/g, JSON.stringify(input.planogramItems, null, 2))
-    .replace(/\{\{shelf_image\}\}/g, SHELF_IMAGE_PLACEHOLDER)
-    .concat(
-      categoryNote !== "General" ? `\n\nCategory context: ${categoryNote}` : "",
-      notes ? `\n\nAuditor notes:\n${notes}` : "",
-    );
+  return buildWithPlanogramPrompt({
+    operatingModelSlug: input.operatingModelSlug,
+    planogramItems: input.planogramItems,
+    location: input.location,
+    category: input.category,
+    subCategory: input.subCategory,
+    notes: notes || null,
+  });
 }
 
-/** Image-only shelf analysis — no planogram. */
+/** @deprecated Use buildNoPlanogramPrompt — legacy alias */
 export function buildAstraShelfOnlyPrompt(input: {
   operatingModelSlug: string;
   category?: string | null;
@@ -57,14 +124,7 @@ export function buildAstraShelfOnlyPrompt(input: {
   focusBrand?: string | null;
   notes?: string | null;
 }): string {
-  const notes = input.notes?.trim();
-  return ASTRA_SHELF_ONLY_PROMPT_BODY.replace(/\{\{operating_model\}\}/g, input.operatingModelSlug)
-    .replace(/\{\{category\}\}/g, input.category?.trim() || "Not supplied")
-    .replace(/\{\{sub_category\}\}/g, input.subCategory?.trim() || "Not supplied")
-    .replace(/\{\{location\}\}/g, input.location?.trim() || "Not supplied")
-    .replace(/\{\{focus_brand\}\}/g, input.focusBrand?.trim() || "Not supplied")
-    .replace(/\{\{shelf_image\}\}/g, SHELF_IMAGE_PLACEHOLDER)
-    .concat(notes ? `\n\nAuditor notes:\n${notes}` : "");
+  return buildNoPlanogramPrompt(input);
 }
 
 /** Preview prompt shown in the UI before scan submission. */
@@ -93,8 +153,7 @@ export function buildAstraVisionPrompt(input: AstraPromptInput): string {
 
   const visionPrompt =
     analysisMode === "planogram_comparison"
-      ? buildAstraPlanogramPrompt({
-          operatingModel,
+      ? buildWithPlanogramPrompt({
           operatingModelSlug: role,
           planogramItems: planogramRows.map((row) => ({
             location: row.location?.trim() ?? "",
@@ -116,10 +175,9 @@ export function buildAstraVisionPrompt(input: AstraPromptInput): string {
           location,
           category,
           subCategory,
-          auditName: input.auditName,
           notes,
         })
-      : buildAstraShelfOnlyPrompt({
+      : buildNoPlanogramPrompt({
           operatingModelSlug: role,
           category,
           subCategory,
