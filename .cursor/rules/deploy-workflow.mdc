@@ -8,7 +8,7 @@ alwaysApply: true
 After frontend or backend fixes that should go live:
 
 1. **Always commit, push, and publish yourself** — do not ask the user to push, publish, or redeploy.
-2. **Frontend (`aislix-frontend`)**: commit → `git push origin main` → Lovable auto-deploys to aislix.com. If auto-deploy is slow or blocked, open the Lovable project and publish from there (user session may be required in browser).
+2. **Frontend (`aislix-frontend`)**: commit → `git push origin main` → **Lovable `deploy_project`** for project `449a1800-6064-43d4-9afe-f713a920d0d4` via the Lovable MCP server (`.cursor/mcp.json`). Git push alone does NOT update aislix.com — publish is required every time.
 3. **Backend (`aislix-backend`)**: commit → push the branch Railway watches → confirm redeploy when relevant.
 4. Tell the user what was deployed and when to retest — not what they need to click.
 

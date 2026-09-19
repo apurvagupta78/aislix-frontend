@@ -1255,9 +1255,15 @@ export function enrichScanResultForDisplay(
 ): ScanResult {
   const allowClientPlanogram =
     options?.allowClientPlanogram ?? Boolean(result.planogram?.requested);
+  const shelfOnly =
+    result.analysis_mode === "shelf_only" ||
+    (!result.planogram?.requested && !(result.expected_products?.length ?? 0));
+  if (!allowClientPlanogram && shelfOnly) {
+    return result;
+  }
   const effectiveCtx: ScanContextState = allowClientPlanogram
     ? ctx
-    : { ...ctx, planogramRows: [] };
+    : { ...ctx, planogramRows: [], expectedProducts: [] };
   const enriched = enrichDemoScanResult(result, effectiveCtx);
   if (allowClientPlanogram || result.planogram?.requested) return enriched;
   return {

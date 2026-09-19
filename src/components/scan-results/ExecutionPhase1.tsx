@@ -707,7 +707,7 @@ export function CompetitorIntelPanel({
                 <p className="mt-1 text-2xl font-semibold tabular-nums">
                   {snapshot.product_label}{" "}
                   <span className="text-lg text-muted-foreground">
-                    {snapshot.product_share_percent.toFixed(1)}%
+                    {Number(snapshot.product_share_percent ?? 0).toFixed(1)}%
                   </span>
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">This SKU only — not all brand variants</p>
@@ -726,7 +726,9 @@ export function CompetitorIntelPanel({
                 >
                   <p className="font-medium">
                     {formatCompetitorBrandLabel(edge.brand, edge.different_category)}{" "}
-                    <span className="tabular-nums text-muted-foreground">{edge.share.toFixed(1)}% share</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {Number(edge.share ?? 0).toFixed(1)}% share
+                    </span>
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">{edge.note}</p>
                 </div>
@@ -784,17 +786,17 @@ export function ShareOfShelfPanel({ data, loading }: { data?: ScanResult; loadin
         <div className="flex flex-wrap gap-2">
           {brandShare !== undefined && (
             <Badge className="rounded-full bg-brand-soft text-brand hover:bg-brand-soft">
-              {brandShare.toFixed(1)}% of facings
+              {Number(brandShare ?? 0).toFixed(1)}% of facings
             </Badge>
           )}
           {productShare !== undefined && s?.product_share_label && (
             <Badge variant="secondary" className="rounded-full tabular-nums">
-              {s.product_share_label} {productShare.toFixed(1)}%
+              {s.product_share_label} {Number(productShare ?? 0).toFixed(1)}%
             </Badge>
           )}
           {brandShare === undefined && topShare !== undefined && (
             <Badge className="rounded-full bg-brand-soft text-brand hover:bg-brand-soft">
-              Top brand {topShare.toFixed(0)}%
+              Top brand {Number(topShare ?? 0).toFixed(0)}%
             </Badge>
           )}
         </div>
@@ -818,7 +820,9 @@ export function ShareOfShelfPanel({ data, loading }: { data?: ScanResult; loadin
           {brands.slice(0, 8).map((row) => (
             <li key={row.brand} className="flex items-center justify-between gap-3 text-sm">
               <span className="truncate font-medium">{row.brand}</span>
-              <span className="tabular-nums text-muted-foreground">{row.share.toFixed(1)}%</span>
+              <span className="tabular-nums text-muted-foreground">
+                {Number(row.share ?? 0).toFixed(1)}%
+              </span>
             </li>
           ))}
         </ul>

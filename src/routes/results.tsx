@@ -41,6 +41,7 @@ import { fetchScanResult } from "@/lib/scan-results";
 import { retryScanAnalysis } from "@/lib/scan-api";
 import { networkErrorMessage, sanitizeUserMessage } from "@/lib/api-errors";
 import { fetchPlanogramComparison } from "@/lib/planogram-compliance";
+import { ResultsErrorBoundary } from "@/components/scan-results/ResultsErrorBoundary";
 
 export const Route = createFileRoute("/results")({
   validateSearch: (search: Record<string, unknown>): { scan?: string } => {
@@ -113,6 +114,8 @@ function Results() {
   const data = query.data;
   const loading = !!scan && query.isPending;
   const processing = data?.status === "processing" || data?.status === "queued";
+  const failed = data?.status === "failed";
+  const ready = Boolean(data && !loading && !processing && !failed);
   const usageQuery = useQuery({
     queryKey: ["org-usage"],
     queryFn: () => fetchUsageSummary(),
@@ -264,21 +267,21 @@ function Results() {
             />
           )}
 
-          {data?.status === "failed" ? (
+          {failed && data ? (
             <FailedState scanId={data.scan_id} onRetried={() => void query.refetch()} />
           ) : processing ? (
             <ProcessingState scanId={data?.scan_id} />
-          ) : (
-            <>
+          ) : loading ? (
+            <ProcessingState scanId={scan} />
+          ) : ready ? (
+            <ResultsErrorBoundary scanId={data!.scan_id}>
               {assignmentQuery.data && (
                 <FixRescanVerifyPanel
                   assignmentId={assignmentQuery.data}
-                  scanId={data?.scan_id}
+                  scanId={data!.scan_id}
                 />
               )}
-              {data?.scan_id ? (
-                <AuditGovernanceTabs scanId={data.scan_id} scanData={data} />
-              ) : null}
+              <AuditGovernanceTabs scanId={data!.scan_id} scanData={data!} />
 
               {!scanHadPlanogram &&
               (showOptionalPricing || hasActiveScanContext(scanContext)) ? (
@@ -332,17 +335,17 @@ function Results() {
               {display && (
                 <div className="flex min-h-0 flex-col">
                   <ScanResultsHeaderBar
-                    timestamp={data?.created_at}
+                    timestamp={data!.created_at}
                     showDemoPlanogramBadge={isDemoOralCareContext(scanContext)}
                     assignmentId={assignmentId}
                   />
                   <AstraComparisonResults result={display} className="mb-4" />
                   <ScanResultsBody
                     data={display}
-                    rawData={data}
+                    rawData={data!}
                     activeRole={activeRole}
                     onRoleChange={setRoleOverride}
-                    loading={loading}
+                    loading={false}
                     planogramComparison={comparison}
                     financialLocked={financialLocked}
                     planCode={planCode}
@@ -350,7 +353,7 @@ function Results() {
                   />
                   <ScanResultsActionsFooter
                     data={display}
-                    loading={loading}
+                    loading={false}
                     activeRole={activeRole}
                     hasWorkspace
                   />
@@ -359,8 +362,8 @@ function Results() {
                   </p>
                 </div>
               )}
-            </>
-          )}
+            </ResultsErrorBoundary>
+          ) : null}
         </div>
       )}
     </AppShell>
