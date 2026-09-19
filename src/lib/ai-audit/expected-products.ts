@@ -42,6 +42,13 @@ export function normalizeExpectedProduct(raw: Partial<ExpectedProduct> | null | 
   };
 }
 
+/** Trim and coerce expected product rows before persisting or sending to Astra. */
+export function prepareExpectedProductsForSubmit(
+  rows: ExpectedProduct[] | undefined,
+): ExpectedProduct[] {
+  return (rows ?? []).map((row) => normalizeExpectedProduct(row));
+}
+
 export function validateExpectedProduct(row: ExpectedProduct): string | null {
   if (!row.brand.trim()) return "Brand is required.";
   if (!row.product_name.trim()) return "Product name is required.";

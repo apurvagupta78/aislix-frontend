@@ -152,7 +152,7 @@ export function AstraComparisonResults({ result, className }: Props) {
           </thead>
           <tbody>
             {analysis.mode === "planogram"
-              ? analysis.rows.map((row, index) => (
+              ? (analysis.rows ?? []).map((row, index) => (
                   <tr key={`planogram-row-${index}`} className="border-t border-border/60 align-top">
                     <td className="px-2 py-2">
                       <p className="font-medium">{row.brand} · {row.product_name}</p>
@@ -167,7 +167,7 @@ export function AstraComparisonResults({ result, className }: Props) {
                     <td className="px-2 py-2 text-muted-foreground">{row.evidence_note || "—"}</td>
                   </tr>
                 ))
-              : analysis.products.map((row, index) => (
+              : (analysis.products ?? []).map((row, index) => (
                   <tr key={`expected-row-${index}`} className="border-t border-border/60 align-top">
                     <td className="px-2 py-2">
                       <p className="font-medium">{row.brand} · {row.product_name}</p>

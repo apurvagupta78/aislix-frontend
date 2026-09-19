@@ -164,10 +164,12 @@ function comparisonLineForRow(
   comparison: PlanogramComparison | null | undefined,
   row: PlanogramRow,
 ): PlanogramComparison["lines"][number] | undefined {
+  const expectedProduct = String(row.product_name ?? "").trim();
+  const expectedBrand = String(row.brand ?? "").trim();
   return comparison?.lines.find(
     (l) =>
-      l.expected_product?.trim().toLowerCase() === row.product_name.trim().toLowerCase() &&
-      (l.expected_brand ?? "").trim().toLowerCase() === row.brand.trim().toLowerCase(),
+      l.expected_product?.trim().toLowerCase() === expectedProduct.toLowerCase() &&
+      (l.expected_brand ?? "").trim().toLowerCase() === expectedBrand.toLowerCase(),
   );
 }
 
@@ -194,21 +196,22 @@ export function buildPositionComparisons(
       compLine?.actual_qty ??
       (DEMO_ORAL_CARE_OBSERVATIONS[row.shelf_position]?.facings ?? 0);
 
-    const obs = DEMO_ORAL_CARE_OBSERVATIONS[row.shelf_position];
+    const shelfPosition = String(row.shelf_position ?? "").trim();
+    const obs = shelfPosition ? DEMO_ORAL_CARE_OBSERVATIONS[shelfPosition] : undefined;
     const observedLoc = obs?.observed_shelf
-      ? `${obs.observed_shelf}-${row.shelf_position.split("-")[1]}`
+      ? `${obs.observed_shelf}-${shelfPosition.split("-")[1] ?? shelfPosition}`
       : matchLine && isMovedProduct(matchLine)
         ? observedShelfFromDetail(matchLine.detail)
-        : row.shelf_position;
+        : shelfPosition || undefined;
 
     const action = comparison?.actions.find(
       (a) =>
-        a.suggestion.includes(row.product_name) ||
+        (row.product_name && a.suggestion.includes(row.product_name)) ||
         a.issue_type === matchLine?.issue_type,
     );
 
     return {
-      position_id: row.shelf_position,
+      position_id: shelfPosition || `${row.brand}-${row.product_name}`,
       shelf_key: key,
       shelf_label: label,
       row,

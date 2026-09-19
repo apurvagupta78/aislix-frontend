@@ -836,11 +836,15 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
   const configuredSummaryRows = Array.isArray(planogramSummary.configured_rows)
     ? planogramSummary.configured_rows
     : [];
+  const isExpectedProductsAudit =
+    adhocParsed.analysis_mode === "expected_products" ||
+    (adhocParsed.expected_products?.length ?? 0) > 0 ||
+    metricsAny.analysis_mode === "expected_products";
   const planogramRequested =
     Boolean((scan as any).assignment_id) ||
     adhocRows.length > 0 ||
-    planogramPercent !== null ||
-    configuredSummaryRows.length > 0;
+    (!isExpectedProductsAudit && planogramPercent !== null) ||
+    (!isExpectedProductsAudit && configuredSummaryRows.length > 0);
 
   const quality = mapQuality(metricsAny);
   const facingsDebug = Array.isArray(metricsAny["facings_debug"])

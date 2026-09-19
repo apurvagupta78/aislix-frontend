@@ -8,6 +8,7 @@ import {
 } from "@/lib/landing-scan-api";
 import type { CategorySelection } from "@/lib/category-selections";
 import { buildAstraVisionExtras } from "@/lib/ai-audit/astra-analysis";
+import { prepareExpectedProductsForSubmit } from "@/lib/ai-audit/expected-products";
 import { adhocPlanogramPayload } from "@/lib/role-planogram-requirements";
 import type { ScanContextState } from "@/lib/scan-context";
 
@@ -54,19 +55,20 @@ function buildScanSubmitOptions(input: AuthenticatedAiScanInput) {
     ctx.planogramRows,
     ctx.auditPackage ?? {},
   );
+  const expectedProducts = prepareExpectedProductsForSubmit(ctx.expectedProducts);
   const astraExtras = buildAstraVisionExtras({
     auditRole,
     planogramRows: ctx.planogramRows,
-    expectedProducts: ctx.expectedProducts,
+    expectedProducts,
     location: ctx.planogramMeta?.fixture_id ?? ctx.planogramMeta?.store_outlet,
     category,
     subCategory,
     notes: input.notes,
   });
   const planogramPayload =
-    ctx.planogramRows.length > 0 || (ctx.expectedProducts?.length ?? 0) > 0
+    ctx.planogramRows.length > 0 || expectedProducts.length > 0
       ? adhocPlanogramPayload(ctx.planogramRows, auditRole, auditPackage, {
-          expectedProducts: ctx.expectedProducts,
+          expectedProducts,
           analysisMode: astraExtras.analysis_mode,
         })
       : astraExtras.analysis_mode === "shelf_only"

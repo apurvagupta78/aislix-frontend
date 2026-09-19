@@ -747,7 +747,9 @@ export function CompetitorIntelPanel({
                     {formatCompetitorBrandLabel(row.brand, row.different_category)}
                   </span>
                   <span className="tabular-nums text-muted-foreground">
-                    {row.share > 0 ? `${row.share.toFixed(1)}%` : "Not detected"}
+                    {Number(row.share ?? 0) > 0
+                      ? `${Number(row.share ?? 0).toFixed(1)}%`
+                      : "Not detected"}
                   </span>
                 </li>
               ))}
@@ -1148,7 +1150,9 @@ export function ScanDetailsAccordion({
         <div>
           <dt className="text-muted-foreground">Shelf utilization</dt>
           <dd className="font-medium tabular-nums">
-            {s?.share_of_shelf_percent !== undefined ? `${s.share_of_shelf_percent.toFixed(1)}%` : "—"}
+            {s?.share_of_shelf_percent !== undefined
+              ? `${Number(s.share_of_shelf_percent).toFixed(1)}%`
+              : "—"}
           </dd>
         </div>
         <div>

@@ -34,7 +34,7 @@ function ShareOfShelfStackedBar({ segments }: { segments: ReturnType<typeof buil
             key={seg.brand}
             className={cn("transition-all", seg.bar_class)}
             style={{ width: `${(seg.share / total) * 100}%` }}
-            title={`${seg.brand} ${seg.share.toFixed(1)}%`}
+            title={`${seg.brand} ${Number(seg.share ?? 0).toFixed(1)}%`}
           />
         ))}
       </div>

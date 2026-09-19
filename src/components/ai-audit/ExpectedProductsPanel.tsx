@@ -15,7 +15,9 @@ type Props = {
 };
 
 function updateRow(rows: ExpectedProduct[], index: number, patch: Partial<ExpectedProduct>) {
-  return rows.map((row, i) => (i === index ? normalizeExpectedProduct({ ...row, ...patch }) : row));
+  // Do not trim text fields on every keystroke — that removes trailing spaces while typing
+  // multi-word names like "potato chips".
+  return rows.map((row, i) => (i === index ? { ...row, ...patch } : row));
 }
 
 export function ExpectedProductsPanel({ scanContext, onScanContextChange }: Props) {

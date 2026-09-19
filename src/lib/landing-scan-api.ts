@@ -3,6 +3,7 @@
  * endpoints — never to the authenticated scan pipeline.
  */
 import { buildAstraVisionExtras } from "@/lib/ai-audit/astra-analysis";
+import { prepareExpectedProductsForSubmit } from "@/lib/ai-audit/expected-products";
 import type { ScanContextState } from "@/lib/scan-context";
 import { captureUtmParams, readStoredUtm } from "@/lib/utm";
 import {
@@ -198,10 +199,11 @@ function appendContext(form: FormData, context?: LandingScanContext) {
   }
   const ctx = context.scanContext;
   if (!ctx) return;
+  const expectedProducts = prepareExpectedProductsForSubmit(ctx.expectedProducts);
   const extras = buildAstraVisionExtras({
     auditRole: ctx.auditRole ?? "supermarket",
     planogramRows: ctx.planogramRows,
-    expectedProducts: ctx.expectedProducts,
+    expectedProducts,
     location: ctx.planogramMeta?.fixture_id ?? ctx.planogramMeta?.store_outlet,
     category: context.category ?? ctx.planogramMeta?.category,
     subCategory: context.sub_category_label ?? ctx.planogramMeta?.sub_category,

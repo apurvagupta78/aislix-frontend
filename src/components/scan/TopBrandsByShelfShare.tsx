@@ -47,7 +47,7 @@ export function TopBrandsByShelfShare({
               />
             </span>
             <span className="text-right text-xs tabular-nums text-muted-foreground">
-              {row.share.toFixed(1)}%
+              {Number(row.share ?? 0).toFixed(1)}%
             </span>
           </li>
         ))}

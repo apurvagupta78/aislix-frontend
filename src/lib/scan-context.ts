@@ -1258,7 +1258,11 @@ export function enrichScanResultForDisplay(
   const shelfOnly =
     result.analysis_mode === "shelf_only" ||
     (!result.planogram?.requested && !(result.expected_products?.length ?? 0));
-  if (!allowClientPlanogram && shelfOnly) {
+  const expectedProductsOnly =
+    result.analysis_mode === "expected_products" &&
+    (result.expected_products?.length ?? 0) > 0 &&
+    !result.planogram?.requested;
+  if (!allowClientPlanogram && (shelfOnly || expectedProductsOnly)) {
     return result;
   }
   const effectiveCtx: ScanContextState = allowClientPlanogram

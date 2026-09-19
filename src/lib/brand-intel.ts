@@ -181,19 +181,74 @@ export function annotateCompetitorCategories(
   };
 }
 
+function shareNumber(value: unknown, fallback = 0): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+/** Coerce backend competitor_intel metrics to numeric shares (Railway may return strings). */
+export function sanitizeCompetitorSnapshot(
+  snapshot: Partial<CompetitorSnapshot> | null | undefined,
+): Partial<CompetitorSnapshot> | null {
+  if (!snapshot || typeof snapshot !== "object") return null;
+  return {
+    ...snapshot,
+    own_brand_share_percent: shareNumber(snapshot.own_brand_share_percent),
+    product_share_percent:
+      snapshot.product_share_percent != null
+        ? shareNumber(snapshot.product_share_percent)
+        : undefined,
+    unclassified_share_percent:
+      snapshot.unclassified_share_percent != null
+        ? shareNumber(snapshot.unclassified_share_percent)
+        : undefined,
+    competitor_shares: Array.isArray(snapshot.competitor_shares)
+      ? snapshot.competitor_shares.map((row) => ({
+          ...row,
+          share: shareNumber(row.share),
+          facings:
+            row.facings != null && Number.isFinite(Number(row.facings))
+              ? Number(row.facings)
+              : row.facings,
+        }))
+      : [],
+    upper_hand: Array.isArray(snapshot.upper_hand)
+      ? snapshot.upper_hand.map((edge) => ({
+          ...edge,
+          share: shareNumber(edge.share),
+        }))
+      : snapshot.upper_hand,
+  };
+}
+
 /** Build competitor intel from brand share rows + org config (works on old scans). */
 export function buildCompetitorSnapshot(
   brandRows: { brand: string; share: number }[] | undefined,
   config: BrandConfig,
   metricsSnapshot?: Partial<CompetitorSnapshot>,
 ): CompetitorSnapshot | null {
-  if (metricsSnapshot?.primary_brand) {
+  const metrics = sanitizeCompetitorSnapshot(metricsSnapshot);
+  if (metrics?.primary_brand) {
     return {
-      primary_brand: metricsSnapshot.primary_brand,
-      own_brand_share_percent: metricsSnapshot.own_brand_share_percent ?? 0,
-      competitor_shares: metricsSnapshot.competitor_shares ?? [],
-      competitors_detected: metricsSnapshot.competitors_detected ?? 0,
-      competitors_configured: metricsSnapshot.competitors_configured ?? config.competitor_brands.length,
+      primary_brand: metrics.primary_brand,
+      own_brand_share_percent: metrics.own_brand_share_percent ?? 0,
+      competitor_shares: metrics.competitor_shares ?? [],
+      competitors_detected: metrics.competitors_detected ?? 0,
+      competitors_configured: metrics.competitors_configured ?? config.competitor_brands.length,
+      ...(metrics.product_share_percent !== undefined
+        ? { product_share_percent: metrics.product_share_percent }
+        : {}),
+      ...(metrics.product_label ? { product_label: metrics.product_label } : {}),
+      ...(metrics.upper_hand ? { upper_hand: metrics.upper_hand } : {}),
+      ...(metrics.unclassified_facings !== undefined
+        ? { unclassified_facings: metrics.unclassified_facings }
+        : {}),
+      ...(metrics.unclassified_share_percent !== undefined
+        ? { unclassified_share_percent: metrics.unclassified_share_percent }
+        : {}),
+      ...(metrics.competitors_tracked_configured !== undefined
+        ? { competitors_tracked_configured: metrics.competitors_tracked_configured }
+        : {}),
     };
   }
 
