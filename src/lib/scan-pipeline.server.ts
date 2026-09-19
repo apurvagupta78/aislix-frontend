@@ -2149,7 +2149,9 @@ async function persistScanPayload(
       ...(photoCount && photoCount > 0 ? { photo_count: Math.round(photoCount) } : {}),
       processing_completed_at: completedAt,
       error_message: null,
-    })
+      error_code: null,
+      error_detail: null,
+    } as never)
     .eq("id", scan.id);
   if (completeError) throw new PipelineError(completeError.message, 500);
 
