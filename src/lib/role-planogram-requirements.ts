@@ -8,6 +8,8 @@ import {
   type KpiReadiness,
   type PlanogramAuditPackage,
 } from "@/lib/planogram-audit-package";
+import type { ExpectedProduct } from "@/lib/ai-audit/expected-products";
+import type { AstraAnalysisMode } from "@/lib/ai-audit/astra-analysis";
 import type { PlanogramRow } from "@/lib/planogram";
 import { primaryKpiIds, type AuditRoleTab } from "@/lib/role-audit-ui";
 import type { AuditKpiId } from "@/lib/role-kpi-config";
@@ -123,11 +125,17 @@ export function adhocPlanogramPayload(
   rows: PlanogramRow[],
   auditRole: AuditRoleTab,
   auditPackage: PlanogramAuditPackage,
+  extras?: {
+    expectedProducts?: ExpectedProduct[];
+    analysisMode?: AstraAnalysisMode;
+  },
 ): Record<string, unknown> {
   return {
     rows,
     audit_role: auditRole,
     audit_package: auditPackage,
+    ...(extras?.expectedProducts?.length ? { expected_products: extras.expectedProducts } : {}),
+    ...(extras?.analysisMode ? { analysis_mode: extras.analysisMode } : {}),
   };
 }
 

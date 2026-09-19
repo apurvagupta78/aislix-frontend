@@ -7,6 +7,7 @@ import {
   DEFAULT_SAMPLE_ID,
   DEFAULT_SAMPLE_IMAGE,
   loadLandingSessionId,
+  mergeLandingScanContext,
   persistLandingSession,
   runLandingSample,
   runLandingUpload,
@@ -107,7 +108,7 @@ export function LiveDemoSection({
     });
   }
 
-  async function run(mode: "sample" | "upload", file?: File) {
+  async function run(mode: "sample" | "upload", file?: File, activeScanContext?: ScanContextState) {
     setError(null);
     setResult(null);
     setElapsedSec(null);
@@ -117,12 +118,16 @@ export function LiveDemoSection({
     const minVisible = new Promise<void>((resolve) => setTimeout(resolve, MIN_SCAN_MS));
 
     try {
+      const landingContext = mergeLandingScanContext(
+        demoCategory.context,
+        activeScanContext ?? scanContext,
+      );
       const [scan] = await Promise.all([
         mode === "sample"
-          ? runLandingSample(DEFAULT_SAMPLE_ID, loadLandingSessionId() ?? undefined)
+          ? runLandingSample(DEFAULT_SAMPLE_ID, loadLandingSessionId() ?? undefined, landingContext)
           : file
             ? runLandingUpload(file, {
-                ...demoCategory.context,
+                ...landingContext,
                 landingSessionId: loadLandingSessionId() ?? undefined,
               })
             : Promise.resolve(null),
@@ -243,7 +248,11 @@ export function LiveDemoSection({
           onStart={(ctx) => {
             setResultScanContext(ctx);
             setScanContext(ctx);
-            void run(setupMode, setupMode === "upload" ? (pendingFile ?? undefined) : undefined);
+            void run(
+              setupMode,
+              setupMode === "upload" ? (pendingFile ?? undefined) : undefined,
+              ctx,
+            );
           }}
         />
       </Suspense>

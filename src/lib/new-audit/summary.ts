@@ -16,19 +16,19 @@ export const CAPTURE_METHOD_OPTIONS: {
   {
     value: "digital",
     title: "Digital Audit",
-    description: "Employee enters the results in Aislix.",
+    description: "Your team records audit results manually using the configured audit.",
   },
   {
     value: "ai",
     title: "AI Audit",
-    description: "AI analyzes photos and identifies products, quantities and issues.",
-  },
-  {
-    value: "ai_assisted",
-    title: "AI-Assisted Audit",
-    description: "AI suggests results and the employee confirms them.",
+    description: "Use AI to analyze photos and identify relevant audit results.",
   },
 ];
+
+/** Options shown on the New Audit perform step (AI Assisted removed from this flow). */
+export const NEW_AUDIT_CAPTURE_OPTIONS = CAPTURE_METHOD_OPTIONS.filter(
+  (o) => o.value !== "ai_assisted",
+);
 
 export const ROLE_PILL_CLASS: Record<FieldRole, string> = {
   reference: "bg-sky-100 text-sky-800 border-sky-200",

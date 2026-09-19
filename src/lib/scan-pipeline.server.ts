@@ -21,6 +21,11 @@ import {
   sanitizeUserMessage,
 } from "@/lib/api-errors";
 import {
+  buildAstraVisionExtras,
+  shapePlanogramItemForApi,
+} from "@/lib/ai-audit/astra-analysis";
+import { normalizeAstraAnalysis } from "@/lib/ai-audit/astra-response";
+import {
   dedupeSelections,
   parseCategorySelections,
   slugifyCategory,
@@ -1010,6 +1015,8 @@ async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
 
 function parseAdhocPlanogram(raw: unknown): {
   rows: Record<string, unknown>[];
+  expected_products?: Record<string, unknown>[];
+  analysis_mode?: string;
   audit_role?: string;
   audit_package?: Record<string, unknown>;
 } {
@@ -1020,6 +1027,10 @@ function parseAdhocPlanogram(raw: unknown): {
     if (Array.isArray(obj.rows)) {
       return {
         rows: obj.rows as Record<string, unknown>[],
+        expected_products: Array.isArray(obj.expected_products)
+          ? (obj.expected_products as Record<string, unknown>[])
+          : undefined,
+        analysis_mode: typeof obj.analysis_mode === "string" ? obj.analysis_mode : undefined,
         audit_role: typeof obj.audit_role === "string" ? obj.audit_role : undefined,
         audit_package:
           obj.audit_package && typeof obj.audit_package === "object"
@@ -1035,17 +1046,11 @@ const PLANOGRAM_FIELDS =
   "id, location, aisle, category, sub_category, brand, product_name, variant, sku, expected_qty, match_key";
 
 function planogramShape(row: Record<string, unknown>) {
+  const shaped = shapePlanogramItemForApi(row);
   const s = (value: unknown) => (typeof value === "string" ? value : "");
   return {
-    location: s(row["location"]),
-    aisle: s(row["aisle"]) || s(row["location"]),
-    category: s(row["category"]),
-    sub_category: s(row["sub_category"]),
-    brand: s(row["brand"]),
-    product_name: s(row["product_name"]),
-    variant: s(row["variant"]),
-    sku: s(row["sku"]),
-    expected_qty: Number(row["expected_qty"]) || 0,
+    ...shaped,
+    aisle: s(row["aisle"]) || shaped.location,
     match_key: s(row["match_key"]),
     planogram_item_id: s(row["id"]),
   };
@@ -1180,8 +1185,20 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
   const assignment = await loadAssignmentContext(supabase, scan);
   // No assignment: the scanner may still have supplied expected products
   // inline on the New Scan page.
-  const adhocParsed = assignment ? { rows: [] as Record<string, unknown>[] } : parseAdhocPlanogram(scan.adhoc_planogram);
+  const adhocParsed = assignment
+    ? { rows: [] as Record<string, unknown>[] }
+    : parseAdhocPlanogram(scan.adhoc_planogram);
   const adhocItems = adhocParsed.rows.map((row) => planogramShape(row));
+  const adhocExpectedProducts = (adhocParsed.expected_products ?? []).map((row) => ({
+    location: str(row["location"]) ?? "",
+    category: str(row["category"]) ?? scan.category ?? "",
+    sub_category: str(row["sub_category"]) ?? scan.sub_category_label ?? scan.sub_category ?? "",
+    brand: str(row["brand"]) ?? "",
+    product_name: str(row["product_name"]) ?? "",
+    variant: str(row["variant"]) ?? "",
+    expected_facings: Number(row["expected_facings"]) || 0,
+    expected_shelf_units: Number(row["expected_shelf_units"]) || 0,
+  }));
 
   // Every shelf type on this rack must reach the vision backend, otherwise it
   // scopes to one sub-category and reports false mismatches on mixed shelves.
@@ -1220,6 +1237,22 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
     ? brandConfig.competitor_brands.map((b) => str(b)).filter(Boolean)
     : [];
 
+  const planogramItems = assignment ? assignment.items : adhocItems;
+  const auditRole = (assignment ? undefined : adhocParsed.audit_role) ?? "supermarket";
+  const astraExtras = buildAstraVisionExtras({
+    auditRole: String(auditRole),
+    planogramRows: planogramItems as Record<string, unknown>[],
+    expectedProducts: adhocExpectedProducts,
+    assignmentHasPlanogram: Boolean(assignment?.items.length),
+    location:
+      (assignment
+        ? (assignment.scope_values["location"] ?? assignment.items[0]?.["location"])
+        : adhocItems[0]?.["location"]) ?? null,
+    category: scan.category || primary?.category_name || null,
+    subCategory: scan.sub_category || primary?.sub_category_label || primary?.sub_category_id || null,
+    notes: scan.notes,
+  });
+
   return {
     scan_id: scan.id,
     org_id: scan.org_id,
@@ -1243,6 +1276,16 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
     images: signedImages,
     learned_catalog: learnedCatalog,
     requested_at: startedAt,
+    customer_type: auditRole,
+    operating_model: astraExtras.operating_model,
+    analysis_mode: astraExtras.analysis_mode,
+    vision_prompt: astraExtras.vision_prompt,
+    ...(astraExtras.planogram_items?.length
+      ? { planogram_items: astraExtras.planogram_items }
+      : {}),
+    ...(astraExtras.expected_products?.length
+      ? { expected_products: astraExtras.expected_products }
+      : {}),
     ...(assignment
       ? {
           location:
@@ -1251,17 +1294,17 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
           assignment_scope_type: assignment.scope_type,
           assignment_scope_values: assignment.scope_values,
           planogram_version_id: assignment.planogram_version_id,
-          planogram_items: assignment.items,
+          planogram_items: astraExtras.planogram_items ?? assignment.items,
           planogram_items_full: assignment.items_full,
           audit_package: assignment.audit_package ?? {},
         }
-      : adhocItems.length
+      : adhocItems.length || adhocExpectedProducts.length
         ? {
-            location: adhocItems[0]?.["location"] || null,
+            location: adhocItems[0]?.["location"] || adhocExpectedProducts[0]?.location || null,
             planogram_source: "adhoc",
-            planogram_items: adhocItems,
+            planogram_items: astraExtras.planogram_items ?? adhocItems,
             planogram_items_full: adhocItems,
-            customer_type: adhocParsed.audit_role ?? undefined,
+            customer_type: adhocParsed.audit_role ?? astraExtras.operating_model,
             audit_package: adhocParsed.audit_package ?? {},
           }
         : {}),
@@ -1900,8 +1943,17 @@ async function persistScanPayload(
     ...(shareOfShelf !== null ? { share_of_shelf_percent: shareOfShelf } : {}),
     ...(metricsSource?.competitor_intel ? { competitor_intel: metricsSource.competitor_intel } : {}),
     ...(metricsSource?.financial_impact ? { financial_impact: metricsSource.financial_impact } : {}),
-    ...(metricsSource?.retail_intelligence
-      ? { retail_intelligence: metricsSource.retail_intelligence }
+    ...(metricsSource?.retail_intelligence || normalizeAstraAnalysis(payload).mode !== "shelf_only"
+      ? {
+          retail_intelligence: {
+            ...(typeof metricsSource?.retail_intelligence === "object"
+              ? (metricsSource.retail_intelligence as Record<string, unknown>)
+              : {}),
+            ...(normalizeAstraAnalysis(payload).mode !== "shelf_only"
+              ? { astra_analysis: normalizeAstraAnalysis(payload) }
+              : {}),
+          },
+        }
       : {}),
     ...(metricsSource?.audit_scope ? { audit_scope: metricsSource.audit_scope } : {}),
     ...(Array.isArray(metricsSource?.adjacent_category_findings)

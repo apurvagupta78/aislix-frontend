@@ -162,6 +162,8 @@ type NewPlanogramWizardProps = {
   };
   /** Step-by-step manual path — hide CSV/JSON import; use forms only */
   manualEntryOnly?: boolean;
+  /** Role chosen upstream (e.g. new-audit Step 3) — show compact label only */
+  roleLocked?: boolean;
 };
 
 function toDraftRows(rows: PlanogramRow[]): DraftRow[] {
@@ -175,8 +177,16 @@ function fromDraftRows(rows: DraftRow[]): PlanogramRow[] {
   return rows.map(({ key: _key, ...row }) => row);
 }
 
-function mergeMeta(value: ScanContextState, patch: Partial<PlanogramMeta>): ScanContextState {
+function mergeMeta(
+  value: ScanContextState,
+  patch: Partial<PlanogramMeta>,
+  opts?: { roleLocked?: boolean },
+): ScanContextState {
+  const roleLocked = opts?.roleLocked ?? false;
   const meta = { ...(value.planogramMeta ?? EMPTY_PLANOGRAM_META), ...patch };
+  if (roleLocked) {
+    return { ...value, planogramMeta: meta };
+  }
   const auditPackage = {
     ...(value.auditPackage ?? EMPTY_AUDIT_PACKAGE),
     fixture_id: meta.store_outlet ? `${meta.store_outlet}-fixture` : value.auditPackage?.fixture_id,
@@ -201,6 +211,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
       onStepChange,
       homepageStartAudit,
       manualEntryOnly = false,
+      roleLocked = false,
     },
     ref,
   ) {
@@ -222,8 +233,23 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
       onStepChange?.(currentStep);
     }, [currentStep, onStepChange]);
 
+    const metaOpts = roleLocked ? { roleLocked: true as const } : undefined;
+    const mergeMetaPatch = (patch: Partial<PlanogramMeta>) => mergeMetaPatch( patch, metaOpts);
+
     const meta = useMemo(() => {
       const stored = value.planogramMeta ?? EMPTY_PLANOGRAM_META;
+      if (roleLocked) {
+        return {
+          name: stored.name ?? "",
+          store_outlet: stored.store_outlet ?? "",
+          category: stored.category ?? "",
+          sub_category: stored.sub_category ?? "",
+          valid_from: stored.valid_from ?? "",
+          measurement_unit: stored.measurement_unit,
+          fixture_type: stored.fixture_type,
+          shelf_count: stored.shelf_count,
+        } satisfies Partial<PlanogramMeta> & Pick<PlanogramMeta, "name" | "store_outlet" | "category" | "valid_from">;
+      }
       return {
         ...EMPTY_PLANOGRAM_META,
         ...stored,
@@ -231,9 +257,10 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
         sub_category: stored.sub_category?.trim() || defaultSubCategory || "",
         store_outlet: stored.store_outlet?.trim() || defaultLocation || stored.store_outlet,
       };
-    }, [value.planogramMeta, defaultCategory, defaultSubCategory, defaultLocation]);
+    }, [value.planogramMeta, defaultCategory, defaultSubCategory, defaultLocation, roleLocked]);
 
     useEffect(() => {
+      if (roleLocked) return;
       const stored = value.planogramMeta ?? EMPTY_PLANOGRAM_META;
       const patch: Partial<PlanogramMeta> = {};
       if (defaultCategory && stored.category !== defaultCategory) {
@@ -246,13 +273,13 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
         patch.store_outlet = defaultLocation;
       }
       if (Object.keys(patch).length === 0) return;
-      onChange(mergeMeta(value, patch));
-    }, [defaultCategory, defaultSubCategory, defaultLocation]);
+      onChange(mergeMetaPatch( patch));
+    }, [defaultCategory, defaultSubCategory, defaultLocation, roleLocked]);
     const draftRows = useMemo(() => toDraftRows(value.planogramRows), [value.planogramRows]);
     const auditPackage = value.auditPackage ?? EMPTY_AUDIT_PACKAGE;
     const storeTimezone =
       auditPackage.store_timezone?.trim() ||
-      (homepageIntro ? getBrowserTimezone() : "Asia/Kolkata");
+      (roleLocked ? "" : homepageIntro ? getBrowserTimezone() : "Asia/Kolkata");
     const allAssortment = mergeAssortmentLists(auditPackage.assortment_skus, auditPackage.msl_skus);
     const jsonInputRef = useRef<HTMLInputElement>(null);
     const [jsonBusy, setJsonBusy] = useState(false);
@@ -328,15 +355,22 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
           return (
             <div className="space-y-5">
               {!homepageIntro ? (
-                <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Audit role *
-                  </Label>
-                  <RoleTabSwitcher value={role} onChange={setRole} />
-                  <p className="text-xs text-muted-foreground">
-                    Role selection determines which planogram sections and KPIs apply to this audit.
+                roleLocked ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    Audit role:{" "}
+                    <span className="font-medium text-foreground">{roleTabLabel(role)}</span>
                   </p>
-                </div>
+                ) : (
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Audit role *
+                    </Label>
+                    <RoleTabSwitcher value={role} onChange={setRole} />
+                    <p className="text-xs text-muted-foreground">
+                      Role selection determines which planogram sections and KPIs apply to this audit.
+                    </p>
+                  </div>
+                )
               ) : null}
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5 sm:col-span-2">
@@ -345,9 +379,10 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                   </Label>
                   <Input
                     className="h-9 rounded-lg"
-                    placeholder="Oral Care A-1 — Sep 2026"
+                    placeholder={roleLocked ? "e.g. Snacks Aisle — Sep 2026" : "Oral Care A-1 — Sep 2026"}
+                    autoComplete={roleLocked ? "off" : undefined}
                     value={meta.name}
-                    onChange={(e) => patch(mergeMeta(value, { name: e.target.value }))}
+                    onChange={(e) => patch(mergeMetaPatch({ name: e.target.value }))}
                   />
                   {meta.name.trim() && !homepageIntro ? (
                     <p className="text-[11px] text-muted-foreground">
@@ -366,9 +401,10 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                       <Label className="text-xs">Store / outlet *</Label>
                       <Input
                         className="h-9 rounded-lg"
-                        placeholder={defaultLocation || "Store 102"}
+                        placeholder="Store 102"
+                        autoComplete={roleLocked ? "off" : undefined}
                         value={meta.store_outlet}
-                        onChange={(e) => patch(mergeMeta(value, { store_outlet: e.target.value }))}
+                        onChange={(e) => patch(mergeMetaPatch({ store_outlet: e.target.value }))}
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -376,6 +412,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                       <Input
                         className="h-9 rounded-lg"
                         placeholder="A-1-L"
+                        autoComplete={roleLocked ? "off" : undefined}
                         value={auditPackage.fixture_id ?? ""}
                         onChange={(e) =>
                           patch({
@@ -387,14 +424,14 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                     </div>
                   </>
                 ) : null}
-                {!(homepageIntro && role === "fmcg") ? (
+                {!(homepageIntro && role === "fmcg") && !roleLocked ? (
                   <>
                     <div className="space-y-1.5">
                       <Label className="text-xs">Category *</Label>
                       <Input
                         className="h-9 rounded-lg"
                         value={meta.category}
-                        onChange={(e) => patch(mergeMeta(value, { category: e.target.value }))}
+                        onChange={(e) => patch(mergeMetaPatch( { category: e.target.value }))}
                       />
                       {homepageIntro ? (
                         <p className="text-[11px] text-muted-foreground">
@@ -407,7 +444,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                       <Input
                         className="h-9 rounded-lg"
                         value={meta.sub_category ?? ""}
-                        onChange={(e) => patch(mergeMeta(value, { sub_category: e.target.value }))}
+                        onChange={(e) => patch(mergeMetaPatch( { sub_category: e.target.value }))}
                       />
                       {homepageIntro ? (
                         <p className="text-[11px] text-muted-foreground">
@@ -422,8 +459,9 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                   <Input
                     type="date"
                     className="h-9 rounded-lg"
+                    autoComplete={roleLocked ? "off" : undefined}
                     value={meta.valid_from}
-                    onChange={(e) => patch(mergeMeta(value, { valid_from: e.target.value }))}
+                    onChange={(e) => patch(mergeMetaPatch({ valid_from: e.target.value }))}
                   />
                   {homepageIntro ? (
                     <p className="text-[11px] text-muted-foreground">
@@ -434,7 +472,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                 <div className="space-y-1.5">
                   <Label className="text-xs">Store Timezone *</Label>
                   <Select
-                    value={storeTimezone}
+                    value={storeTimezone || undefined}
                     onValueChange={(v) =>
                       patch({
                         ...value,
@@ -464,13 +502,15 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                     {homepageIntro ? "Shelf Measurement Unit *" : "Measurement unit *"}
                   </Label>
                   <Select
-                    value={meta.measurement_unit}
+                    value={meta.measurement_unit || undefined}
                     onValueChange={(v) =>
-                      patch(mergeMeta(value, { measurement_unit: v as PlanogramMeta["measurement_unit"] }))
+                      patch(
+                        mergeMetaPatch({ measurement_unit: v as PlanogramMeta["measurement_unit"] }),
+                      )
                     }
                   >
                     <SelectTrigger className="h-9 rounded-lg">
-                      <SelectValue />
+                      <SelectValue placeholder="Select unit" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="cm">cm</SelectItem>
@@ -610,7 +650,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                       className="h-9 rounded-lg"
                       placeholder={defaultLocation || "Outlet 102"}
                       value={meta.store_outlet}
-                      onChange={(e) => patch(mergeMeta(value, { store_outlet: e.target.value }))}
+                      onChange={(e) => patch(mergeMetaPatch( { store_outlet: e.target.value }))}
                     />
                     <p className="text-[11px] text-muted-foreground">
                       {HOMEPAGE_DISTRIBUTOR_OUTLET.outletHelper}
@@ -622,7 +662,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                       className="h-9 rounded-lg"
                       placeholder="North Zone"
                       value={meta.territory ?? ""}
-                      onChange={(e) => patch(mergeMeta(value, { territory: e.target.value }))}
+                      onChange={(e) => patch(mergeMetaPatch( { territory: e.target.value }))}
                     />
                     <p className="text-[11px] text-muted-foreground">
                       {HOMEPAGE_DISTRIBUTOR_OUTLET.territoryHelper}
@@ -635,7 +675,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                       placeholder="Jane Smith"
                       value={meta.sales_representative ?? ""}
                       onChange={(e) =>
-                        patch(mergeMeta(value, { sales_representative: e.target.value }))
+                        patch(mergeMetaPatch( { sales_representative: e.target.value }))
                       }
                     />
                     <p className="text-[11px] text-muted-foreground">
@@ -672,7 +712,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                   <Input
                     className="h-9 rounded-lg"
                     value={meta.category}
-                    onChange={(e) => patch(mergeMeta(value, { category: e.target.value }))}
+                    onChange={(e) => patch(mergeMetaPatch( { category: e.target.value }))}
                   />
                   <p className="text-[11px] text-muted-foreground">
                     Which product category should Share of Shelf be measured in?
@@ -683,7 +723,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                   <Input
                     className="h-9 rounded-lg"
                     value={meta.sub_category ?? ""}
-                    onChange={(e) => patch(mergeMeta(value, { sub_category: e.target.value }))}
+                    onChange={(e) => patch(mergeMetaPatch( { sub_category: e.target.value }))}
                   />
                   <p className="text-[11px] text-muted-foreground">
                     Optional — narrows the product group for this audit.
@@ -702,7 +742,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                       className="h-9 rounded-lg"
                       placeholder={defaultLocation || "Store 102"}
                       value={meta.store_outlet}
-                      onChange={(e) => patch(mergeMeta(value, { store_outlet: e.target.value }))}
+                      onChange={(e) => patch(mergeMetaPatch( { store_outlet: e.target.value }))}
                     />
                     <p className="text-[11px] text-muted-foreground">
                       {role === "darkstore"
@@ -737,7 +777,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                 </Label>
                 <Select
                   value={meta.fixture_type ?? "gondola"}
-                  onValueChange={(v) => patch(mergeMeta(value, { fixture_type: v }))}
+                  onValueChange={(v) => patch(mergeMetaPatch( { fixture_type: v }))}
                 >
                   <SelectTrigger className="h-9 rounded-lg">
                     <SelectValue />
@@ -768,7 +808,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                   className="h-9 rounded-lg"
                   value={meta.shelf_count ?? ""}
                   onChange={(e) =>
-                    patch(mergeMeta(value, { shelf_count: Number(e.target.value) || undefined }))
+                    patch(mergeMetaPatch( { shelf_count: Number(e.target.value) || undefined }))
                   }
                 />
                 {homepageIntro ? (
@@ -787,7 +827,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                   className="h-9 rounded-lg"
                   value={meta.fixture_width ?? ""}
                   onChange={(e) =>
-                    patch(mergeMeta(value, { fixture_width: Number(e.target.value) || undefined }))
+                    patch(mergeMetaPatch( { fixture_width: Number(e.target.value) || undefined }))
                   }
                 />
                 {homepageIntro ? (
@@ -808,7 +848,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
                   className="h-9 rounded-lg"
                   value={meta.fixture_height ?? ""}
                   onChange={(e) =>
-                    patch(mergeMeta(value, { fixture_height: Number(e.target.value) || undefined }))
+                    patch(mergeMetaPatch( { fixture_height: Number(e.target.value) || undefined }))
                   }
                 />
                 {homepageIntro ? (

@@ -12,6 +12,7 @@ type Props = {
   error?: string | null;
   children?: ReactNode;
   onOpenTemplatePicker?: () => void;
+  hideHeader?: boolean;
 };
 
 const OPTIONS: {
@@ -26,7 +27,7 @@ const OPTIONS: {
   {
     value: "template",
     title: "Select Template",
-    description: "Start with a ready-made audit.",
+    description: "Start with an existing Aislix audit template.",
     action: "Choose Template",
     icon: LayoutTemplate,
     card: "border-sky-200 bg-sky-50/70 hover:border-sky-300",
@@ -35,7 +36,7 @@ const OPTIONS: {
   {
     value: "csv",
     title: "Upload CSV",
-    description: "Bring your own product or audit data.",
+    description: "Use your own audit data or master list.",
     action: "Upload CSV",
     icon: FileSpreadsheet,
     card: "border-status-good/30 bg-status-good-soft hover:border-status-good/50",
@@ -43,8 +44,8 @@ const OPTIONS: {
   },
   {
     value: "custom",
-    title: "Create from Scratch",
-    description: "Build a completely custom audit.",
+    title: "Start from Scratch",
+    description: "Create a completely new audit.",
     action: "Create Custom",
     icon: Plus,
     card: "border-status-evidence/30 bg-status-evidence-soft hover:border-status-evidence/50",
@@ -59,15 +60,18 @@ export function StartChoiceCards({
   error,
   children,
   onOpenTemplatePicker,
+  hideHeader,
 }: Props) {
   return (
     <section className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold">How do you want to start?</h2>
-        <p className="text-sm text-muted-foreground">
-          Pick a template, upload a spreadsheet, or build your own.
-        </p>
-      </div>
+      {!hideHeader ? (
+        <div>
+          <h2 className="text-lg font-semibold">How do you want to start?</h2>
+          <p className="text-sm text-muted-foreground">
+            Pick a template, upload a spreadsheet, or build your own.
+          </p>
+        </div>
+      ) : null}
       <div className="grid gap-3 md:grid-cols-3">
         {OPTIONS.map((option) => {
           const Icon = option.icon;
@@ -76,10 +80,7 @@ export function StartChoiceCards({
             <button
               key={option.value}
               type="button"
-              onClick={() => {
-                onChange(option.value);
-                if (option.value === "template") onOpenTemplatePicker?.();
-              }}
+              onClick={() => onChange(option.value)}
               className={cn(
                 "relative flex flex-col rounded-2xl border p-4 text-left transition-all",
                 selected ? option.selected : option.card,

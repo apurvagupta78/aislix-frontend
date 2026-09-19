@@ -41,6 +41,7 @@ import { EMPTY_PLANOGRAM_META, type PlanogramMeta } from "@/lib/planogram-meta";
 import { defaultAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { roleRequiresPricing } from "@/lib/role-planogram-requirements";
 import type { FinancialImpact, ScanRecommendation, ScanResult } from "@/lib/scan-results";
+import type { ExpectedProduct } from "@/lib/ai-audit/expected-products";
 import { emptyRow, type PlanogramRow } from "@/lib/planogram";
 
 export type ScanFocusFilter = {
@@ -52,6 +53,8 @@ export type ScanFocusFilter = {
 export type ScanContextState = {
   focus: ScanFocusFilter;
   planogramRows: PlanogramRow[];
+  /** Optional expected products for without-planogram Astra comparison. */
+  expectedProducts?: ExpectedProduct[];
   /** Customer role selected before planogram entry — drives KPI field requirements. */
   auditRole?: AuditRoleTab;
   auditPackage?: PlanogramAuditPackage;
@@ -62,10 +65,34 @@ export type ScanContextState = {
 export const EMPTY_SCAN_CONTEXT: ScanContextState = {
   focus: {},
   planogramRows: [],
+  expectedProducts: [],
   auditRole: "supermarket",
   auditPackage: { ...EMPTY_AUDIT_PACKAGE },
   planogramMeta: { ...EMPTY_PLANOGRAM_META },
 };
+
+/** Build scan context from canonical planogram CSV rows (category comes from the file). */
+export function buildScanContextFromPlanogramRows(
+  role: AuditRoleTab,
+  rows: PlanogramRow[],
+): ScanContextState {
+  const first = rows[0];
+  const auditPackage = autoPopulateAuditPackage(rows, { ...EMPTY_AUDIT_PACKAGE });
+  const location = first?.location?.trim() ?? "";
+  return {
+    focus: {},
+    planogramRows: rows,
+    auditRole: role,
+    auditPackage,
+    planogramMeta: {
+      ...EMPTY_PLANOGRAM_META,
+      category: first?.category?.trim() ?? "",
+      sub_category: first?.sub_category?.trim() ?? "",
+      fixture_id: location,
+      store_outlet: location,
+    },
+  };
+}
 
 const STORAGE_KEY = "aislix_scan_context";
 
@@ -83,6 +110,7 @@ export function loadStoredScanContext(): ScanContextState {
     return {
       focus: parsed.focus ?? {},
       planogramRows: Array.isArray(parsed.planogramRows) ? parsed.planogramRows : [],
+      expectedProducts: Array.isArray(parsed.expectedProducts) ? parsed.expectedProducts : [],
       auditRole: defaultAuditRoleTab(parsed.auditRole),
       auditPackage: parsed.auditPackage ?? { ...EMPTY_AUDIT_PACKAGE },
       planogramMeta: parsed.planogramMeta ?? { ...EMPTY_PLANOGRAM_META },

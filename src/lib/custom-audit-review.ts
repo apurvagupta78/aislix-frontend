@@ -6,7 +6,13 @@
 import { supabase } from "@/integrations/supabase/client";
 import { dbError, requireUserId } from "@/lib/db/context";
 import { isImageField } from "@/lib/audit-builder/field-library";
-import type { AuditResponseValue, TemplateDefinition, TemplateField } from "@/lib/audit-builder/types";
+import type {
+  AuditResponseValue,
+  FieldConfig,
+  FieldType,
+  TemplateDefinition,
+  TemplateField,
+} from "@/lib/audit-builder/types";
 import {
   AUDIT_EVIDENCE_REF_PREFIX,
   buildRecordContexts,
@@ -82,6 +88,19 @@ export function normalizeRcaCode(value: AuditResponseValue): RcaCode | null {
 
 export function stripAuditEvidenceRef(stored: string): string {
   return isAuditEvidenceRef(stored) ? stored.slice(AUDIT_EVIDENCE_REF_PREFIX.length) : stored;
+}
+
+/** Normalize persisted evidence to a bucket-relative storage path. */
+export function storagePathFromEvidenceValue(stored: string): string {
+  const refPath = stripAuditEvidenceRef(stored);
+  const publicMarker = "/storage/v1/object/public/audit-evidence/";
+  const idx = refPath.indexOf(publicMarker);
+  if (idx >= 0) return refPath.slice(idx + publicMarker.length);
+  return refPath;
+}
+
+function isEvidenceImageField(field: TemplateField): boolean {
+  return isImageField(field.type) || field.key === "image" || field.type === ("image" as FieldType);
 }
 
 export function normalizeImagePaths(value: AuditResponseValue): string[] {

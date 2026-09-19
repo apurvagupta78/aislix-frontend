@@ -48,7 +48,7 @@ import {
 
   emptyRow,
 
-  fetchPlanogramCsvTemplate,
+  downloadPlanogramCsvTemplateFile,
 
   parsePlanogramCsv,
 
@@ -481,24 +481,8 @@ export const ScanContextPanel = forwardRef<ScanContextPanelHandle, ScanContextPa
 
 
 
-    async function downloadTemplate() {
-
-      const text = await fetchPlanogramCsvTemplate();
-
-      const blob = new Blob([text], { type: "text/csv" });
-
-      const url = URL.createObjectURL(blob);
-
-      const a = document.createElement("a");
-
-      a.href = url;
-
-      a.download = "aislix-planogram-template.csv";
-
-      a.click();
-
-      URL.revokeObjectURL(url);
-
+    function downloadTemplate() {
+      downloadPlanogramCsvTemplateFile();
     }
 
 

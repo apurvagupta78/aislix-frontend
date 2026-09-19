@@ -92,9 +92,7 @@ export function SimpleAssignmentPanel({
         <TeamAssignmentPanel
           members={members}
           teamScope={teamScope}
-          distributionStrategy={distributionStrategy}
           onTeamChange={onTeamChange}
-          onStrategyChange={onStrategyChange}
           singleAssignee={assignToSelf}
         />
         <Label className="flex items-center gap-2 rounded-xl border p-4">

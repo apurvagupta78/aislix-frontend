@@ -4,11 +4,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  DemoCategoryPicker,
+  type DemoCategoryState,
+} from "@/components/scan/DemoCategoryPicker";
 import { HomepageRolePicker } from "@/components/planogram/HomepageRolePicker";
 import {
   MasterShelfSetupPanel,
   type MasterSetupPhase,
 } from "@/components/planogram/MasterShelfSetupPanel";
+import {
+  CsvPlanogramManualPanel,
+  type CsvPlanogramManualPanelHandle,
+} from "@/components/planogram/CsvPlanogramManualPanel";
 import {
   NewPlanogramWizard,
   type NewPlanogramWizardHandle,
@@ -41,6 +49,7 @@ import {
 } from "@/lib/planogram-wizard-homepage-copy";
 import { HOMEPAGE_DISTRIBUTOR_OUTLET } from "@/lib/planogram-wizard-homepage-role-flow";
 import { defaultAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
+import { ExpectedProductsPanel } from "@/components/ai-audit/ExpectedProductsPanel";
 import type { ScanContextState } from "@/lib/scan-context";
 import { cn } from "@/lib/utils";
 
@@ -67,7 +76,7 @@ export type PlanogramSetupSectionProps = {
   subCategoryLabel?: string;
   onSyncCategoryFromContext?: (ctx: ScanContextState) => void;
   disabled?: boolean;
-  wizardRef?: RefObject<NewPlanogramWizardHandle | null>;
+  wizardRef?: RefObject<NewPlanogramWizardHandle | CsvPlanogramManualPanelHandle | null>;
   /** Homepage inline start — dashboard omits */
   showInlineStart?: boolean;
   canStart?: boolean;
@@ -77,6 +86,15 @@ export type PlanogramSetupSectionProps = {
   defaultCategory?: string;
   defaultSubCategory?: string;
   defaultLocation?: string;
+  /** When set, hides planogram mode picker and locks to this mode. */
+  lockedPlanogramMode?: PlanogramModeChoice;
+  /** Optional category + sub-category picker (shown after role). */
+  shelfCategory?: {
+    state: DemoCategoryState;
+    onChange: (next: DemoCategoryState) => void;
+    categories: ShelfCategory[];
+    helperText?: string;
+  };
 };
 
 export function PlanogramSetupSection({
@@ -100,6 +118,8 @@ export function PlanogramSetupSection({
   defaultCategory,
   defaultSubCategory,
   defaultLocation = "A-1",
+  lockedPlanogramMode,
+  shelfCategory,
 }: PlanogramSetupSectionProps) {
   const internalWizardRef = useRef<NewPlanogramWizardHandle>(null);
   const wizardRef = wizardRefProp ?? internalWizardRef;
@@ -109,10 +129,11 @@ export function PlanogramSetupSection({
   const [masterPhase, setMasterPhase] = useState<MasterSetupPhase>("upload");
   const [masterImport, setMasterImport] = useState<MasterImportResult | null>(null);
 
+  const effectivePlanogramMode = lockedPlanogramMode ?? planogramMode;
   const auditRole = defaultAuditRoleTab(scanContext.auditRole);
 
   function setAuditRole(nextRole: AuditRoleTab) {
-    if (planogramMode === "demo" && flowMode === "sample") {
+    if (effectivePlanogramMode === "demo" && flowMode === "sample") {
       onScanContextChange(buildDemoOralCareScanContext(nextRole));
       return;
     }
@@ -167,28 +188,28 @@ export function PlanogramSetupSection({
   }
 
   const useMasterFlow = homepageIntro || variant === "dashboard";
-  const showDemoPlanogram = flowMode === "sample" && planogramMode === "demo";
+  const showDemoPlanogram = flowMode === "sample" && effectivePlanogramMode === "demo";
   const showMasterSetup =
     useMasterFlow &&
-    planogramMode === "custom" &&
+    effectivePlanogramMode === "custom" &&
     customSetupPath !== "manual" &&
     masterPhase !== "ready";
   const showMasterReady =
     useMasterFlow &&
-    planogramMode === "custom" &&
+    effectivePlanogramMode === "custom" &&
     masterPhase === "ready" &&
     customSetupPath !== "manual";
   const showWizard =
-    planogramMode === "custom" && (!useMasterFlow || customSetupPath === "manual");
+    effectivePlanogramMode === "custom" && (!useMasterFlow || customSetupPath === "manual");
   const showManualSetupOption =
     useMasterFlow &&
-    planogramMode === "custom" &&
+    effectivePlanogramMode === "custom" &&
     customSetupPath === "choose" &&
     masterPhase === "upload";
 
   const auditBlockReason = homepageIntro
     ? homepageCustomAuditBlockReason(
-        planogramMode,
+        effectivePlanogramMode,
         scanContext.planogramRows,
         flowMode === "upload",
         hasPhoto,
@@ -197,32 +218,60 @@ export function PlanogramSetupSection({
 
   const handleStart = () => onStart?.();
 
+  function openManualWizard(resetRows: boolean) {
+    setCustomSetupPath("manual");
+    if (!resetRows || variant !== "dashboard" || !lockedPlanogramMode) return;
+    onScanContextChange({
+      ...scanContext,
+      planogramRows: [],
+    });
+  }
+
+  const useCsvManualPanel =
+    variant === "dashboard" && Boolean(lockedPlanogramMode) && customSetupPath === "manual";
+
   const modeOptions = flowMode === "sample" ? PLANOGRAM_SAMPLE_OPTIONS : PLANOGRAM_UPLOAD_OPTIONS;
 
   return (
     <>
       <div className="overflow-hidden rounded-2xl border border-border bg-card p-4 sm:p-5">
         <HomepageRolePicker value={auditRole} onChange={setAuditRole} />
+        {shelfCategory ? (
+          <div className="mt-5 border-t border-border pt-5">
+            <DemoCategoryPicker
+              state={shelfCategory.state}
+              onChange={shelfCategory.onChange}
+              categories={shelfCategory.categories}
+              disabled={disabled}
+              helperText={
+                shelfCategory.helperText ??
+                "Category and sub-category are sent with your shelf photo for analysis."
+              }
+            />
+          </div>
+        ) : null}
       </div>
 
-      <div
-        className={cn(
-          "mt-5 grid gap-2",
-          flowMode === "sample" ? "sm:grid-cols-3" : "sm:grid-cols-2",
-        )}
-      >
-        {modeOptions.map((option) => (
-          <PlanogramModeOption
-            key={option.mode}
-            label={option.label}
-            detail={option.detail}
-            recommended={"recommended" in option ? option.recommended : false}
-            selected={planogramMode === option.mode}
-            disabled={disabled}
-            onClick={() => setPlanogramMode(option.mode)}
-          />
-        ))}
-      </div>
+      {!lockedPlanogramMode ? (
+        <div
+          className={cn(
+            "mt-5 grid gap-2",
+            flowMode === "sample" ? "sm:grid-cols-3" : "sm:grid-cols-2",
+          )}
+        >
+          {modeOptions.map((option) => (
+            <PlanogramModeOption
+              key={option.mode}
+              label={option.label}
+              detail={option.detail}
+              recommended={"recommended" in option ? option.recommended : false}
+              selected={planogramMode === option.mode}
+              disabled={disabled}
+              onClick={() => setPlanogramMode(option.mode)}
+            />
+          ))}
+        </div>
+      ) : null}
 
       {showDemoPlanogram ? (
         <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/30 bg-gradient-to-br from-brand-soft/60 to-background shadow-sm">
@@ -294,7 +343,7 @@ export function PlanogramSetupSection({
         </div>
       ) : null}
 
-      {planogramMode === "none" ? (
+      {effectivePlanogramMode === "none" ? (
         <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/20 bg-gradient-to-br from-brand-soft/40 to-background p-5 shadow-soft sm:p-6">
           <p className="text-base font-semibold text-foreground">
             {HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM.title}
@@ -366,6 +415,10 @@ export function PlanogramSetupSection({
               </div>
             </div>
           ) : null}
+          <ExpectedProductsPanel
+            scanContext={scanContext}
+            onScanContextChange={onScanContextChange}
+          />
           {showInlineStart ? (
             <Button
               type="button"
@@ -392,6 +445,7 @@ export function PlanogramSetupSection({
             onPhaseChange={setMasterPhase}
             importResult={masterImport}
             onImportResult={setMasterImport}
+            inlineSuccess={variant === "dashboard" && Boolean(lockedPlanogramMode)}
             canStartAudit={canStart}
             onContextReady={(ctx) => {
               const merged: ScanContextState = {
@@ -408,7 +462,7 @@ export function PlanogramSetupSection({
               setCustomSetupPath("master");
             }}
             onStartAudit={handleStart}
-            onReviewSetup={() => setCustomSetupPath("manual")}
+            onReviewSetup={() => openManualWizard(false)}
             onReplace={() => {
               setMasterPhase("upload");
               setMasterImport(null);
@@ -424,7 +478,7 @@ export function PlanogramSetupSection({
                 variant="outline"
                 className="rounded-xl"
                 disabled={disabled}
-                onClick={() => setCustomSetupPath("manual")}
+                onClick={() => openManualWizard(true)}
               >
                 Configure Step by Step
               </Button>
@@ -445,7 +499,7 @@ export function PlanogramSetupSection({
             canStartAudit={canStart}
             onContextReady={onScanContextChange}
             onStartAudit={handleStart}
-            onReviewSetup={() => setCustomSetupPath("manual")}
+            onReviewSetup={() => openManualWizard(false)}
             onReplace={() => {
               setMasterPhase("upload");
               setMasterImport(null);
@@ -471,6 +525,13 @@ export function PlanogramSetupSection({
                     {HOMEPAGE_SHELF_SETUP_FLOW}
                   </p>
                 </>
+              ) : useCsvManualPanel ? (
+                <>
+                  <p className="text-sm font-semibold text-foreground">Add planogram products</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                    Enter products on one page using the same fields as the planogram CSV.
+                  </p>
+                </>
               ) : (
                 <>
                   <p className="text-sm font-semibold text-foreground">Set Up Your Shelf</p>
@@ -483,27 +544,37 @@ export function PlanogramSetupSection({
             </div>
           </div>
           <div className="p-4">
-            <NewPlanogramWizard
-              ref={wizardRef}
-              homepageIntro={homepageIntro}
-              planogramMode={planogramMode}
-              manualEntryOnly={useMasterFlow && customSetupPath === "manual"}
-              value={scanContext}
-              onChange={onScanContextChange}
-              categories={categories}
-              defaultCategory={defaultCategory}
-              defaultSubCategory={defaultSubCategory}
-              defaultLocation={defaultLocation}
-              homepageStartAudit={
-                showInlineStart && homepageIntro
-                  ? {
-                      disabled: !canStart,
-                      disabledReason: auditBlockReason ?? startError ?? null,
-                      onStart: handleStart,
-                    }
-                  : undefined
-              }
-            />
+            {useCsvManualPanel ? (
+              <CsvPlanogramManualPanel
+                ref={wizardRef as RefObject<CsvPlanogramManualPanelHandle | null>}
+                value={scanContext}
+                onChange={onScanContextChange}
+                categories={categories}
+              />
+            ) : (
+              <NewPlanogramWizard
+                ref={wizardRef as RefObject<NewPlanogramWizardHandle | null>}
+                homepageIntro={homepageIntro}
+                planogramMode={planogramMode}
+                manualEntryOnly={useMasterFlow && customSetupPath === "manual"}
+                roleLocked={variant === "dashboard" && Boolean(lockedPlanogramMode)}
+                value={scanContext}
+                onChange={onScanContextChange}
+                categories={categories}
+                defaultCategory={lockedPlanogramMode ? undefined : defaultCategory}
+                defaultSubCategory={lockedPlanogramMode ? undefined : defaultSubCategory}
+                defaultLocation={lockedPlanogramMode ? undefined : defaultLocation}
+                homepageStartAudit={
+                  showInlineStart && homepageIntro
+                    ? {
+                        disabled: !canStart,
+                        disabledReason: auditBlockReason ?? startError ?? null,
+                        onStart: handleStart,
+                      }
+                    : undefined
+                }
+              />
+            )}
           </div>
         </div>
       ) : null}

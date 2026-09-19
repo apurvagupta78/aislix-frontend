@@ -2,6 +2,8 @@
  * Anonymous landing-demo scan client. Talks only to the public /landing/*
  * endpoints — never to the authenticated scan pipeline.
  */
+import { buildAstraVisionExtras } from "@/lib/ai-audit/astra-analysis";
+import type { ScanContextState } from "@/lib/scan-context";
 import { captureUtmParams, readStoredUtm } from "@/lib/utm";
 import {
   GENERIC_TIMEOUT,
@@ -107,6 +109,10 @@ export type LandingScanResult = {
   demo_audits_limit?: number;
   demo_audits_remaining?: number;
   demo_next_available_at?: string | null;
+  analysis_mode?: string;
+  operating_model?: string;
+  astra_planogram_analysis?: Record<string, unknown>;
+  astra_expected_products_analysis?: Record<string, unknown>;
 };
 
 
@@ -181,6 +187,7 @@ export type LandingScanContext = {
   sub_category?: string;
   sub_category_label?: string;
   shelf_label?: string;
+  scanContext?: ScanContextState;
 };
 
 function appendContext(form: FormData, context?: LandingScanContext) {
@@ -188,6 +195,26 @@ function appendContext(form: FormData, context?: LandingScanContext) {
   for (const key of ["category", "sub_category", "sub_category_label", "shelf_label"] as const) {
     const value = context[key];
     if (value) form.append(key, value);
+  }
+  const ctx = context.scanContext;
+  if (!ctx) return;
+  const extras = buildAstraVisionExtras({
+    auditRole: ctx.auditRole ?? "supermarket",
+    planogramRows: ctx.planogramRows,
+    expectedProducts: ctx.expectedProducts,
+    location: ctx.planogramMeta?.fixture_id ?? ctx.planogramMeta?.store_outlet,
+    category: context.category ?? ctx.planogramMeta?.category,
+    subCategory: context.sub_category_label ?? ctx.planogramMeta?.sub_category,
+  });
+  form.append("customer_type", ctx.auditRole ?? "supermarket");
+  form.append("analysis_mode", extras.analysis_mode);
+  form.append("operating_model", extras.operating_model);
+  form.append("vision_prompt", extras.vision_prompt);
+  if (extras.planogram_items?.length) {
+    form.append("planogram_items", JSON.stringify(extras.planogram_items));
+  }
+  if (extras.expected_products?.length) {
+    form.append("expected_products", JSON.stringify(extras.expected_products));
   }
 }
 
@@ -201,6 +228,14 @@ export async function runLandingUpload(
   appendContext(form, ctx);
   appendUtm(form);
   return postScan(form, "Audit failed");
+}
+
+/** Merge category labels with the active scan context for landing uploads. */
+export function mergeLandingScanContext(
+  categoryContext: LandingScanContext,
+  scanContext: ScanContextState,
+): LandingScanContext {
+  return { ...categoryContext, scanContext };
 }
 
 

@@ -8,8 +8,8 @@
 
 
 
+import { normalizeAstraAnalysis } from "@/lib/ai-audit/astra-response";
 import type { FinancialImpact, ScanResult } from "@/lib/scan-results";
-
 import type { LandingScanResult } from "@/lib/landing-scan-api";
 
 
@@ -169,7 +169,13 @@ export function landingToScanResult(landing: LandingScanResult): ScanResult {
 
     executive_summary: landing.executive_summary,
     role_summaries: landing.role_summaries,
-    retail_intelligence: landing.retail_intelligence,
+    retail_intelligence: (() => {
+      const astraAnalysis = normalizeAstraAnalysis(landing);
+      return {
+        ...(landing.retail_intelligence ?? {}),
+        ...(astraAnalysis.mode !== "shelf_only" ? { astra_analysis: astraAnalysis } : {}),
+      };
+    })(),
 
     summary: {
 

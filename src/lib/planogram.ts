@@ -229,15 +229,36 @@ async function callPlanogramApi<T>(path: string, body: unknown): Promise<T> {
   return payload as T;
 }
 
+export const PLANOGRAM_CSV_TEMPLATE_FILENAME = "aislix-planogram-template.csv";
+
+/** Immediate browser download — must run synchronously inside a click handler. */
+export function downloadPlanogramCsvTemplateFile(): void {
+  const blob = new Blob(["\uFEFF", SAMPLE_CSV_TEMPLATE], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = PLANOGRAM_CSV_TEMPLATE_FILENAME;
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 /** Fetches the canonical CSV template text from the backend, with a local fallback. */
 export async function fetchPlanogramCsvTemplate(): Promise<string> {
   try {
     const response = await fetch("/api/planogram/csv-template", {
-      headers: { Accept: "application/json" },
+      headers: { Accept: "application/json, text/csv" },
     });
     if (!response.ok) return SAMPLE_CSV_TEMPLATE;
-    const payload = (await response.json()) as { csv_text?: unknown };
-    const text = typeof payload?.csv_text === "string" ? payload.csv_text.trim() : "";
+    const contentType = response.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      const payload = (await response.json()) as { csv_text?: unknown };
+      const text = typeof payload?.csv_text === "string" ? payload.csv_text.trim() : "";
+      return text || SAMPLE_CSV_TEMPLATE;
+    }
+    const text = (await response.text()).trim();
     return text || SAMPLE_CSV_TEMPLATE;
   } catch {
     return SAMPLE_CSV_TEMPLATE;

@@ -126,6 +126,10 @@ type DemoScanSetupPanelProps = {
   defaultSubCategory?: string;
   planogramMode?: DemoPlanogramMode;
   onPlanogramModeChange?: (mode: DemoPlanogramMode) => void;
+  /** When set, hides planogram mode picker and locks to this mode (e.g. new-audit AI flow). */
+  lockedPlanogramMode?: DemoPlanogramMode;
+  /** Override primary action label (default: Start Audit). */
+  primaryCtaLabel?: string;
   /** Upload mode — shelf photo selected */
   hasPhoto?: boolean;
   previewImageUrl?: string | null;
@@ -188,6 +192,8 @@ export function DemoScanSetupPanel({
   defaultSubCategory,
   planogramMode: planogramModeProp,
   onPlanogramModeChange,
+  lockedPlanogramMode,
+  primaryCtaLabel,
   hasPhoto = false,
   previewImageUrl,
   onPickUploadPhoto,
@@ -199,9 +205,10 @@ export function DemoScanSetupPanel({
   const [masterPhase, setMasterPhase] = useState<MasterSetupPhase>("upload");
   const [masterImport, setMasterImport] = useState<MasterImportResult | null>(null);
   const [internalMode, setInternalMode] = useState<DemoPlanogramMode>(
-    mode === "sample" ? "demo" : "none",
+    lockedPlanogramMode ?? (mode === "sample" ? "demo" : "none"),
   );
-  const planogramMode = planogramModeProp ?? internalMode;
+  const planogramMode = lockedPlanogramMode ?? planogramModeProp ?? internalMode;
+  const startCtaLabel = primaryCtaLabel ?? HOMEPAGE_START_AUDIT_CTA;
   const auditRole = defaultAuditRoleTab(scanContext.auditRole);
 
   function setAuditRole(nextRole: AuditRoleTab) {
@@ -389,7 +396,7 @@ export function DemoScanSetupPanel({
         </div>
       ) : null}
 
-      {homepageIntro ? (
+      {homepageIntro && !lockedPlanogramMode ? (
         <div
           className={cn(
             "mt-5 grid gap-2",
@@ -408,7 +415,7 @@ export function DemoScanSetupPanel({
             />
           ))}
         </div>
-      ) : mode === "sample" ? (
+      ) : !lockedPlanogramMode && mode === "sample" ? (
         <div className="mt-5 flex flex-wrap justify-center gap-2">
           <Button
             type="button"
@@ -440,7 +447,7 @@ export function DemoScanSetupPanel({
             No planogram
           </Button>
         </div>
-      ) : (
+      ) : !lockedPlanogramMode ? (
         <div className="mt-5 flex flex-wrap justify-center gap-2">
           <Button
             type="button"
@@ -462,7 +469,7 @@ export function DemoScanSetupPanel({
             No planogram
           </Button>
         </div>
-      )}
+      ) : null}
 
       {mode === "upload" ? (
         <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-surface/80">
@@ -604,7 +611,7 @@ export function DemoScanSetupPanel({
                   onClick={handleStart}
                 >
                   <span className="inline-flex items-center gap-1.5">
-                    {HOMEPAGE_START_AUDIT_CTA}
+                    {startCtaLabel}
                     <ArrowRight className="size-4" aria-hidden />
                   </span>
                 </Button>
@@ -710,7 +717,7 @@ export function DemoScanSetupPanel({
             onClick={handleStart}
           >
             <span className="inline-flex items-center gap-1.5">
-              {HOMEPAGE_START_AUDIT_CTA}
+              {startCtaLabel}
               <ArrowRight className="size-4" aria-hidden />
             </span>
           </Button>
@@ -881,7 +888,7 @@ export function DemoScanSetupPanel({
           >
             {homepageIntro ? (
               <span className="inline-flex items-center gap-1.5">
-                {HOMEPAGE_START_AUDIT_CTA}
+                {startCtaLabel}
                 <ArrowRight className="size-4" aria-hidden />
               </span>
             ) : (

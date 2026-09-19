@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/design-system";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { fetchStores } from "@/lib/account";
 import { createScanAssignment, fetchAssignableMembers } from "@/lib/assignments";
 import { fetchAuditTemplate, fetchAuditTemplates } from "@/lib/audit-templates";
@@ -18,7 +17,7 @@ import {
   type EvidenceLevel,
   type EvidenceProof,
 } from "@/lib/audit-evidence-policy";
-import { createAssignmentPlanogramVersion } from "@/lib/planogram";
+import { createAssignmentPlanogramVersion, toDraftRow } from "@/lib/planogram";
 import { toUserMessage } from "@/lib/api/errors";
 import { requireUserId } from "@/lib/db/context";
 import { startAssignment } from "@/lib/assignments";
@@ -26,12 +25,10 @@ import { createAssignment as createExpiryAssignment } from "@/lib/expiry-control
 import {
   createManualAuditDataset,
   datasetToDraftRows,
-  parseAuditSpreadsheet,
   validateAuditDataset,
   type AuditInputDataset,
 } from "@/lib/audit-input-dataset";
 import type { AuditPurpose, OperatingModel } from "@/lib/audit-builder/types";
-import { AuditDataDefinitionStep } from "@/components/audit-builder/AuditDataDefinitionStep";
 import type { InputSchema } from "@/lib/audit-builder/field-roles";
 import {
   defaultDataInputMode,
@@ -39,32 +36,51 @@ import {
   type AuditDataInputMode,
 } from "@/lib/audit-builder/audit-data-modes";
 import {
-  buildDefaultColumnMappings,
   buildInputSchema,
   buildTemplateFromInputSchema,
   mergeInputSchemaIntoSnapshot,
 } from "@/lib/audit-builder/input-schema";
 import { buildMergedTemplateSnapshot } from "@/lib/audit-builder/template-csv-merge";
-import { definitionToPatch, templateToDefinition } from "@/lib/audit-templates";
+import { definitionToPatch } from "@/lib/audit-templates";
 import { fetchHierarchyProfiles } from "@/lib/hierarchy";
 import { buildHierarchyDistribution, resolveHierarchyOutlets } from "@/lib/hierarchy/routing";
-import { getPurposesForModel } from "@/lib/audit-engine/operating-model-catalog";
-import { AdvancedSettingsPanel } from "@/components/new-audit/AdvancedSettingsPanel";
-import { SimpleCsvUploadStep } from "@/components/new-audit/SimpleCsvUploadStep";
-import { SimpleScratchBuilder } from "@/components/new-audit/SimpleScratchBuilder";
+import {
+  getPurposesForModel,
+  OPERATING_MODEL_CARDS,
+} from "@/lib/audit-engine/operating-model-catalog";
+import {
+  openScanProcessingTab,
+  submitAuthenticatedAiAuditScan,
+} from "@/lib/ai-audit/run-ai-audit-scan";
+import { buildAiPlanogramPreviewSummary } from "@/lib/new-audit/ai-vision-context";
+import {
+  demoPlanogramDraftRows,
+  isPlanogramRelatedTemplate,
+  type NewAuditPlanogramChoice,
+} from "@/lib/new-audit/planogram-setup";
+import { DEMO_ORAL_CARE_META } from "@/lib/demo-oral-care-planogram";
+import { EMPTY_SCAN_CONTEXT, type ScanContextState } from "@/lib/scan-context";
 import { SimpleTemplatePicker } from "@/components/new-audit/SimpleTemplatePicker";
 import { recordRecentTemplate } from "@/lib/new-audit/recent-templates";
-import { AuditMethodCards } from "@/components/new-audit/AuditMethodCards";
-import { AuditorFillPills } from "@/components/new-audit/AuditorFillPills";
-import { NewAuditProgress } from "@/components/new-audit/NewAuditProgress";
-import { OperatingModelCards } from "@/components/new-audit/OperatingModelCards";
-import { SetupSummaryPanel, MobileSetupSummary } from "@/components/new-audit/SetupSummaryPanel";
-import { SimpleAssignmentPanel } from "@/components/new-audit/SimpleAssignmentPanel";
-import { SimpleLocationStep } from "@/components/new-audit/SimpleLocationStep";
-import { StartChoiceCards } from "@/components/new-audit/StartChoiceCards";
+import { NewAuditStepNav } from "@/components/new-audit/NewAuditStepNav";
+import { NewAuditStep1Details } from "@/components/new-audit/steps/NewAuditStep1Details";
+import { NewAuditStep2StartMethod } from "@/components/new-audit/steps/NewAuditStep2StartMethod";
+import { NewAuditStep3AuditMode } from "@/components/new-audit/steps/NewAuditStep3AuditMode";
+import { NewAuditStep4Assignment } from "@/components/new-audit/steps/NewAuditStep4Assignment";
+import { NewAuditStep5Scheduling } from "@/components/new-audit/steps/NewAuditStep5Scheduling";
+import { NewAuditStep6Evidence } from "@/components/new-audit/steps/NewAuditStep6Evidence";
+import {
+  NewAuditStep7Preview,
+  formatScheduleSummary,
+} from "@/components/new-audit/steps/NewAuditStep7Preview";
+import { NewAuditStep7Capture } from "@/components/new-audit/steps/NewAuditStep7Capture";
+import {
+  isAiStep3Ready,
+  scrollToNewAuditStep,
+  validateNewAuditSteps,
+} from "@/lib/new-audit/step-validation";
 import {
   mapCaptureMethodToAuditMode,
-  resolveAuditorFillItems,
   type CaptureMethod,
   type StartChoice,
 } from "@/lib/new-audit/summary";
@@ -105,7 +121,6 @@ export const Route = createFileRoute("/new-audit")({
 });
 
 type TemplateChoice = "general" | "fnv" | "expiry" | "planogram" | string;
-type Phase = "setup" | "configure" | "assign";
 
 function NewAuditPage() {
   const navigate = useNavigate();
@@ -114,7 +129,8 @@ function NewAuditPage() {
     systemKey: initialSystemKey,
     assign: initialAssign,
   } = Route.useSearch();
-  const [phase, setPhase] = useState<Phase>("setup");
+  const [auditName, setAuditName] = useState("");
+  const [auditDescription, setAuditDescription] = useState("");
   const [startChoice, setStartChoice] = useState<StartChoice>(() =>
     initialTemplateId || initialSystemKey ? "template" : null,
   );
@@ -144,7 +160,6 @@ function NewAuditPage() {
   const [inputSchema, setInputSchema] = useState<InputSchema>(() =>
     buildInputSchema(createManualAuditDataset()),
   );
-  const [inputError, setInputError] = useState<string | null>(null);
   const [dataInputMode, setDataInputMode] = useState<AuditDataInputMode>("upload_csv");
   const [evidenceLevel, setEvidenceLevel] = useState<EvidenceLevel>("standard");
   const [evidencePolicy, setEvidencePolicy] = useState<AuditEvidencePolicy>(
@@ -174,6 +189,13 @@ function NewAuditPage() {
   });
   const [templateHydrated, setTemplateHydrated] = useState(false);
   const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [aiPlanogramChoice, setAiPlanogramChoice] = useState<NewAuditPlanogramChoice | null>(
+    null,
+  );
+  const [demoScanContext, setDemoScanContext] = useState<ScanContextState>(EMPTY_SCAN_CONTEXT);
+  const [captureFile, setCaptureFile] = useState<File | null>(null);
+  const [capturePreviewUrl, setCapturePreviewUrl] = useState<string | null>(null);
+  const [aiAuditLaunched, setAiAuditLaunched] = useState(false);
 
   const userQuery = useQuery({
     queryKey: ["current-user-id", "new-audit"],
@@ -257,12 +279,21 @@ function NewAuditPage() {
     () => (systemTemplateSpec ? systemTemplateSpec.build() : null),
     [systemTemplateSpec],
   );
-  const activeTemplateDefinition = useMemo(() => {
-    if (selectedTemplate) return templateToDefinition(selectedTemplate);
-    return systemTemplateDefinition;
-  }, [selectedTemplate, systemTemplateDefinition]);
   const activeTemplateName =
     selectedTemplate?.name ?? systemTemplateSpec?.name ?? undefined;
+  const templateIsPlanogram = isPlanogramRelatedTemplate({
+    templateChoice,
+    systemTemplateSpec,
+    selectedTemplate,
+  });
+  const usesAiCustomPlanogram =
+    method === "ai" &&
+    aiPlanogramChoice === "with_demo" &&
+    demoScanContext.planogramRows.length > 0;
+  const usesTemplateDemoPlanogram =
+    startChoice === "template" && templateIsPlanogram;
+  const operatingModelLabel =
+    OPERATING_MODEL_CARDS.find((c) => c.id === operatingModel)?.title ?? operatingModel;
   const hasTemplate =
     templateChoice !== "general" &&
     (templateChoice.startsWith("system:") ||
@@ -345,62 +376,25 @@ function NewAuditPage() {
     locationScope.storeIds.length > 0 ||
     (locationScope.hierarchyNodeIds?.length ?? 0) > 0;
 
+  /** IA phase: card selection only — CSV/scratch deep config comes in later iterations. */
   const startReady = useMemo(() => {
     if (!startChoice) return false;
     if (startChoice === "template") {
       return hasTemplate && templateChoice !== "general";
     }
-    if (startChoice === "csv") {
-      if (auditMode === "ai") return true;
-      return dataset.columns.length > 0 && !dataDefinitionError;
-    }
-    if (startChoice === "custom") {
-      return inputSchema.columnMappings.length > 0 && !dataDefinitionError;
-    }
-    return false;
-  }, [
-    startChoice,
-    hasTemplate,
-    templateChoice,
-    auditMode,
-    dataset.columns.length,
-    dataDefinitionError,
-    inputSchema.columnMappings.length,
-  ]);
+    return true;
+  }, [startChoice, hasTemplate, templateChoice]);
 
-  const setupCompletedThrough = useMemo(() => {
-    let completed = 0;
-    if (operatingModel) completed = 1;
-    if (hasLocations) completed = 2;
-    if (method) completed = 3;
-    if (startReady) completed = 4;
-    return completed;
-  }, [operatingModel, hasLocations, method, startReady]);
-
-  const setupErrors = {
-    model: !operatingModel ? "Choose where you are auditing." : null,
-    location: !hasLocations ? "Select at least one location." : null,
-    method: !method ? "Choose how the audit will be performed." : null,
-    start: !startReady ? "Choose a template, upload data, or build a custom audit." : null,
-  };
-
-  const auditorFillItems = useMemo(
-    () =>
-      resolveAuditorFillItems({
-        inputSchema,
-        templateDefinition: activeTemplateDefinition,
-      }),
-    [inputSchema, activeTemplateDefinition],
-  );
-
-  const locationPreview = (locationScope.stores ?? [])
-    .slice(0, 2)
-    .map((s) => s.name)
-    .join(", ");
-  const locationOverflow =
-    (locationScope.stores?.length ?? locationScope.storeIds.length) > 2
-      ? ` +${(locationScope.stores?.length ?? locationScope.storeIds.length) - 2}`
-      : "";
+  useEffect(() => {
+    const stores = storesQuery.data;
+    if (!stores?.length || locationScope.storeIds.length > 0) return;
+    const store = stores[0];
+    setLocationScope({
+      storeIds: [store.id],
+      stores: [{ id: store.id, name: store.name, city: store.city, country: store.country }],
+    });
+    setStoreId(store.id);
+  }, [storesQuery.data, locationScope.storeIds.length]);
 
   useEffect(() => {
     if (storeId && !locationScope.storeIds.includes(storeId)) {
@@ -434,7 +428,7 @@ function NewAuditPage() {
   const hierarchyProfileQuery = useQuery({
     queryKey: ["hierarchy-profiles", operatingModel],
     queryFn: () => fetchHierarchyProfiles(operatingModel),
-    enabled: operatingModel === "fmcg_distributor" && phase === "assign",
+    enabled: operatingModel === "fmcg_distributor",
   });
 
   useEffect(() => {
@@ -479,13 +473,12 @@ function NewAuditPage() {
     hierarchyProfileQuery.data,
     operatingModel,
     membersQuery.data,
-    phase,
   ]);
 
   const existingAssignmentsQuery = useQuery({
     queryKey: ["org-assignments", "conflicts"],
     queryFn: fetchOrgAssignments,
-    enabled: phase === "assign",
+    enabled: true,
   });
 
   const assignmentPlan = useMemo((): AssignmentPlan | null => {
@@ -536,7 +529,7 @@ function NewAuditPage() {
       requireRca,
       reviewerId: reviewerId || null,
       instructions,
-      campaignName: campaignName || null,
+      campaignName: auditName.trim() || campaignName || null,
       inputSource: dataset.rows.length ? "csv_upload" : "template",
       creationSource: "unified_new_audit",
     };
@@ -566,6 +559,7 @@ function NewAuditPage() {
     reviewerId,
     instructions,
     campaignName,
+    auditName,
   ]);
 
   const assignmentPreview = useMemo(() => {
@@ -576,6 +570,73 @@ function NewAuditPage() {
     });
     return buildAssignmentPreview(assignmentPlan, conflicts);
   }, [assignmentPlan, existingAssignmentsQuery.data]);
+
+  const stepStatus = validateNewAuditSteps({
+    auditName,
+    startChoice,
+    startReady,
+    method,
+    aiPlanogramChoice,
+    demoScanContext,
+    assignToSelf,
+    teamScope,
+    assigneeId,
+    assignmentMode,
+    publishAt,
+    evidenceLevel,
+    evidencePolicy: effectivePolicy,
+    reviewerId,
+    hasBlockingConflicts: hasBlockingConflicts(assignmentPreview?.conflicts ?? []),
+    captureReady: Boolean(captureFile),
+  });
+
+  const stepErrors = {
+    name: !auditName.trim() ? "Audit name is required." : null,
+    start:
+      method === "digital" && !startReady
+        ? startChoice === "template"
+          ? "Choose a template to continue."
+          : "Choose how you want to start this audit."
+        : null,
+    method: !method ? "Choose how the audit will be performed." : null,
+    planogram:
+      method === "ai" && !aiPlanogramChoice
+        ? "Select with or without a planogram to continue."
+        : method === "ai" &&
+            aiPlanogramChoice &&
+            !isAiStep3Ready(aiPlanogramChoice, demoScanContext)
+          ? aiPlanogramChoice === "with_demo"
+            ? "Complete role, category, sub-category, and planogram upload."
+            : "Complete role, category, and sub-category."
+          : null,
+    assign: !(assignToSelf || teamScope.assigneeIds.length > 0 || assigneeId)
+      ? "Choose at least one team member or assign to yourself."
+      : null,
+    schedule:
+      assignmentMode === "schedule_once" && !publishAt
+        ? "Choose a publish date and time for the scheduled audit."
+        : hasBlockingConflicts(assignmentPreview?.conflicts ?? [])
+          ? "Resolve scheduling conflicts before submitting."
+          : null,
+    evidence:
+      effectivePolicy.reviewMode === "independent" && !reviewerId
+        ? "An independent reviewer is required for this evidence level."
+        : null,
+  };
+
+  const assigneeSummary = assignToSelf
+    ? "Assign to myself and start now"
+    : teamScope.assigneeIds
+        .map(
+          (id) =>
+            membersQuery.data?.find((m) => m.user_id === id)?.name ?? "Team member",
+        )
+        .join(", ") || "—";
+
+  const evidenceSummary =
+    evidenceLevel === "high"
+      ? "High assurance"
+      : evidenceLevel.charAt(0).toUpperCase() + evidenceLevel.slice(1);
 
   function selectEvidenceLevel(level: EvidenceLevel) {
     setEvidenceLevel(level);
@@ -593,25 +654,49 @@ function NewAuditPage() {
     }));
   }
 
-  async function parseSpreadsheet(file: File) {
-    try {
-      const parsed = await parseAuditSpreadsheet(file);
-      const schema = buildInputSchema(parsed);
-      setDataset({ ...parsed, inputSchema: schema });
-      setInputSchema(schema);
-      setInputError(null);
-      if (hasTemplate) setDataInputMode("template_plus_csv");
-      else setDataInputMode("upload_csv");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not read this file.";
-      if (message.toLowerCase().includes("xlsx") || message.toLowerCase().includes("csv")) {
-        setInputError(message);
-      } else if (message.toLowerCase().includes("empty")) {
-        setInputError("Could not read the spreadsheet — the file appears empty.");
-      } else {
-        setInputError(message);
-      }
+  function handleOperatingModelChange(model: OperatingModel) {
+    setOperatingModel(model);
+    const purposes = getPurposesForModel(model);
+    setAuditPurpose(purposes[0]?.value ?? "custom");
+    setTemplateChoice("general");
+    setStartChoice((current) => (current === "template" ? "template" : current));
+  }
+
+  function handleMethodChange(next: CaptureMethod) {
+    setMethod(next);
+    if (next !== "ai") {
+      setAiPlanogramChoice(null);
+      setDemoScanContext(EMPTY_SCAN_CONTEXT);
+      setCaptureFile(null);
+      setCapturePreviewUrl(null);
+      setAiAuditLaunched(false);
+    } else {
+      scrollToNewAuditStep("step-3-start");
     }
+  }
+
+  function handleCaptureChange(file: File | null, previewUrl: string | null) {
+    setCaptureFile(file);
+    setCapturePreviewUrl(previewUrl);
+    setAiAuditLaunched(false);
+  }
+
+  useEffect(() => {
+    if (!assignToSelf) {
+      setCaptureFile(null);
+      setCapturePreviewUrl(null);
+      setAiAuditLaunched(false);
+    }
+  }, [assignToSelf]);
+
+  function handleAiPlanogramChange(choice: NewAuditPlanogramChoice) {
+    setAiPlanogramChoice(choice);
+    setDemoScanContext(EMPTY_SCAN_CONTEXT);
+  }
+
+  function handleAiPlanogramReset() {
+    setAiPlanogramChoice(null);
+    setDemoScanContext(EMPTY_SCAN_CONTEXT);
   }
 
   function handleTemplateSelect(
@@ -630,22 +715,8 @@ function NewAuditPage() {
     }
   }
 
-  function updateDataset(next: AuditInputDataset) {
-    setDataset(next);
-    setInputSchema((current) => {
-      const mappings = current.columnMappings.filter((m) =>
-        next.columns.some((c) => c.id === m.columnId),
-      );
-      const existingIds = new Set(mappings.map((m) => m.columnId));
-      const added = next.columns
-        .filter((c) => !existingIds.has(c.id))
-        .map((col) => buildDefaultColumnMappings({ ...next, columns: [col] })[0]!);
-      return buildInputSchema(next, current.subjectType, [...mappings, ...added]);
-    });
-  }
-
   const createMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (options?: { skipNavigation?: boolean }) => {
       const userId = await requireUserId();
       const resolvedAssigneeId = assignToSelf
         ? userId
@@ -683,7 +754,12 @@ function NewAuditPage() {
           assuranceLevel: effectivePolicy.level === "high" ? "high" : "standard",
           instructions: instructions || undefined,
         });
-        return { assignmentId: attemptId, self: assignToSelf, expiry: true };
+        return {
+          assignmentId: attemptId,
+          self: assignToSelf,
+          expiry: true,
+          skipNavigation: options?.skipNavigation,
+        };
       }
 
       let templateForAssignment = selectedTemplate;
@@ -707,13 +783,31 @@ function NewAuditPage() {
           ? datasetToDraftRows(dataset, { location, category })
           : [];
 
+      const storeIds =
+        locationScope.storeIds.length > 0 ? locationScope.storeIds : storeId ? [storeId] : [];
+      const primaryStoreId = storeIds[0] ?? storeId;
+
       let planogramVersionId: string | null = null;
-      if (assignmentRows.length) {
+      if (assignmentRows.length && primaryStoreId) {
         planogramVersionId = await createAssignmentPlanogramVersion({
-          storeId,
+          storeId: primaryStoreId,
           rows: assignmentRows,
           sourceType: dataset.source === "csv" ? "csv" : "manual",
           sourceFilename: dataset.filename,
+        });
+      } else if (usesAiCustomPlanogram && primaryStoreId) {
+        planogramVersionId = await createAssignmentPlanogramVersion({
+          storeId: primaryStoreId,
+          rows: demoScanContext.planogramRows.map((row) => toDraftRow(row)),
+          sourceType: "manual",
+          sourceFilename: "New Audit Planogram",
+        });
+      } else if (usesTemplateDemoPlanogram && primaryStoreId) {
+        planogramVersionId = await createAssignmentPlanogramVersion({
+          storeId: primaryStoreId,
+          rows: demoPlanogramDraftRows(),
+          sourceType: "manual",
+          sourceFilename: "Aislix Demo Planogram",
         });
       }
 
@@ -730,7 +824,7 @@ function NewAuditPage() {
         templateSnapshot = templateForAssignment as unknown as Record<string, unknown>;
       } else if (hasInputData || inputSchema.columnMappings.length) {
         const csvDef = buildTemplateFromInputSchema(inputSchema, dataset, {
-          name: campaignName || `Custom Audit ${new Date().toLocaleDateString()}`,
+          name: auditName.trim() || campaignName || `Custom Audit ${new Date().toLocaleDateString()}`,
           operatingModel,
         });
         templateSnapshot = mergeInputSchemaIntoSnapshot(
@@ -750,16 +844,32 @@ function NewAuditPage() {
         };
       }
 
-      if (method === "ai_assisted") {
+      if (usesAiCustomPlanogram) {
         templateSnapshot = {
           ...templateSnapshot,
-          ai_assisted: true,
-          capture_method: "ai_assisted",
+          planogram_mode: "custom",
+          audit_role: demoScanContext.auditRole,
+          scan_category:
+            demoScanContext.planogramMeta?.category ?? DEMO_ORAL_CARE_META.category,
+          scan_sub_category:
+            demoScanContext.planogramMeta?.sub_category ?? DEMO_ORAL_CARE_META.sub_category,
+        };
+      } else if (usesTemplateDemoPlanogram) {
+        templateSnapshot = {
+          ...templateSnapshot,
+          demo_oral_care: true,
+          planogram_mode: "demo",
+          scan_category: DEMO_ORAL_CARE_META.category,
+          scan_sub_category: DEMO_ORAL_CARE_META.sub_category,
+        };
+      } else if (method === "ai" && aiPlanogramChoice === "without") {
+        templateSnapshot = {
+          ...templateSnapshot,
+          planogram_mode: "none",
+          audit_role: demoScanContext.auditRole,
         };
       }
 
-      const storeIds =
-        locationScope.storeIds.length > 0 ? locationScope.storeIds : storeId ? [storeId] : [];
       const useUniversalEngine =
         storeIds.length > 1 ||
         teamScope.assigneeIds.length > 1 ||
@@ -804,6 +914,7 @@ function NewAuditPage() {
           expiry: false,
           bulk: result.assignmentIds.length,
           scheduled: Boolean(result.scheduleId),
+          skipNavigation: options?.skipNavigation,
         };
       }
 
@@ -823,7 +934,7 @@ function NewAuditPage() {
         assigneeId: assignee.id,
         assigneeName: assignee.name,
         dueAt: resolvedDueAt,
-        instructions,
+        instructions: [auditDescription.trim(), instructions.trim()].filter(Boolean).join("\n\n"),
         planogramVersionId,
         auditMode,
         templateId: templateForAssignment?.id ?? null,
@@ -845,9 +956,17 @@ function NewAuditPage() {
       });
 
       if (assignToSelf) await startAssignment(assignmentId);
-      return { assignmentId, self: assignToSelf, expiry: false, bulk: 1, scheduled: false };
+      return {
+        assignmentId,
+        self: assignToSelf,
+        expiry: false,
+        bulk: 1,
+        scheduled: false,
+        skipNavigation: options?.skipNavigation,
+      };
     },
-    onSuccess: ({ assignmentId, self, expiry, bulk, scheduled }) => {
+    onSuccess: ({ assignmentId, self, expiry, bulk, scheduled, skipNavigation }) => {
+      if (skipNavigation) return;
       if (scheduled) toast.success("Audit schedule created.");
       else if (bulk && bulk > 1) toast.success(`${bulk} assignments created.`);
       else toast.success(self ? "Audit created and started." : "Audit assigned successfully.");
@@ -868,7 +987,7 @@ function NewAuditPage() {
       } else if (auditMode === "digital") {
         void navigate({ to: "/digital-audit", search: { assignmentId } });
       } else {
-        void navigate({ to: "/scan", search: { assignmentId } });
+        void navigate({ to: "/audits", search: { tab: "reviews" } });
       }
     },
     onError: (error) => {
@@ -884,218 +1003,154 @@ function NewAuditPage() {
     },
   });
 
-  const setupValid = setupCompletedThrough === 4;
-  const configuredOnSetup =
-    (startChoice === "csv" && dataset.columns.length > 0 && !dataDefinitionError) ||
-    (startChoice === "custom" && inputSchema.columnMappings.length > 0 && !dataDefinitionError);
-  const skipsConfigure =
-    auditMode === "ai" ||
-    configuredOnSetup ||
-    (startChoice === "template" && dataInputMode === "template_only" && !dataDefinitionError);
-  const configureValid = Boolean(
-    hasLocations && (auditMode === "ai" || templateChoice === "expiry" || !dataDefinitionError),
-  );
-  const assignValid = Boolean(
-    (assignToSelf || teamScope.assigneeIds.length > 0 || assigneeId) &&
-      hasLocations &&
-      (effectivePolicy.reviewMode !== "independent" || reviewerId) &&
-      (assignmentMode !== "schedule_once" || publishAt) &&
-      !hasBlockingConflicts(assignmentPreview?.conflicts ?? []),
-  );
+  const aiSelfAuditMutation = useMutation({
+    mutationFn: async () => {
+      if (!captureFile) throw new Error("Add a shelf photo before running the AI audit.");
+      const created = await createMutation.mutateAsync({ skipNavigation: true });
+      const uploaded = await submitAuthenticatedAiAuditScan({
+        files: [captureFile],
+        assignmentId: created.assignmentId,
+        storeId: storeId || undefined,
+        scanContext: demoScanContext,
+        notes: [auditDescription.trim(), instructions.trim()].filter(Boolean).join("\n\n"),
+      });
+      return { assignmentId: created.assignmentId, scanId: uploaded.scan_id };
+    },
+    onSuccess: ({ scanId }) => {
+      setAiAuditLaunched(true);
+      openScanProcessingTab(scanId);
+      toast.success("Analysis started in a new tab. Results will appear in audit history.");
+    },
+    onError: (error) => {
+      console.error("[new-audit] AI audit failed:", error);
+      toast.error(
+        toUserMessage(error) || "Could not complete the AI audit. Please try again.",
+      );
+    },
+  });
 
-  function handleContinue() {
-    if (phase === "setup") {
-      if (!setupValid) {
-        toast.error(
-          setupErrors.start ??
-            setupErrors.location ??
-            setupErrors.method ??
-            "Complete all four choices before continuing.",
-        );
-        return;
-      }
-      setPhase(skipsConfigure ? "assign" : "configure");
+  const showAssignmentSteps = method !== "ai" || aiPlanogramChoice !== null;
+  const isAiSelf = method === "ai" && assignToSelf;
+  const previewReady = method === "ai" ? stepStatus[6] : stepStatus[7];
+  const canSubmit = previewReady && Boolean(assignmentPlan) && !isAiSelf;
+  const canRunAiAudit =
+    isAiSelf && Boolean(captureFile) && stepStatus[6] && !aiAuditLaunched;
+  const footerBusy = createMutation.isPending || aiSelfAuditMutation.isPending;
+
+  function handleSubmit() {
+    if (!canSubmit && !canRunAiAudit) {
+      toast.error(
+        stepErrors.name ??
+          stepErrors.method ??
+          stepErrors.start ??
+          stepErrors.planogram ??
+          stepErrors.assign ??
+          stepErrors.schedule ??
+          stepErrors.evidence ??
+          "Complete all required steps before submitting.",
+      );
       return;
     }
-    if (phase === "configure") {
-      if (!configureValid) return;
-      setPhase("assign");
+    if (canRunAiAudit) {
+      aiSelfAuditMutation.mutate();
+      return;
     }
+    createMutation.mutate(undefined);
   }
 
-  function handleBack() {
-    if (phase === "assign") setPhase(skipsConfigure ? "setup" : "configure");
-    else if (phase === "configure") setPhase("setup");
-  }
-
-  const canContinue =
-    phase === "setup" ? setupValid : phase === "configure" ? configureValid : assignValid;
+  const primaryLabel = aiSelfAuditMutation.isPending
+    ? "Uploading…"
+    : createMutation.isPending
+      ? "Submitting…"
+      : aiAuditLaunched
+        ? "Audit started"
+        : canRunAiAudit
+          ? "Run AI Audit"
+          : "Submit";
 
   return (
     <AppShell title="" hidePageHeader>
-      <div className="play-canvas mx-auto max-w-6xl space-y-6 pb-24">
+      <div className="play-canvas mx-auto max-w-4xl space-y-6 pb-36">
         <PageHeader
           title="New Audit"
-          description="Create and assign an audit in minutes."
-        />
-        <NewAuditProgress completedThrough={setupCompletedThrough} phase={phase} />
-        <MobileSetupSummary
-          operatingModel={operatingModel}
-          locationCount={locationScope.storeIds.length}
-          method={method}
-          templateName={activeTemplateName}
+          description="Set up your audit, choose how it will be performed, assign your team and schedule it."
         />
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-          <div className="space-y-10">
-            {phase === "setup" ? (
-              <>
-                <OperatingModelCards
-                  value={operatingModel}
-                  onChange={(model) => {
-                    setOperatingModel(model);
-                    const purposes = getPurposesForModel(model);
-                    setAuditPurpose(purposes[0]?.value ?? "custom");
-                    setTemplateChoice("general");
-                    setStartChoice(null);
-                  }}
-                  error={setupErrors.model}
-                />
-                <SimpleLocationStep
-                  operatingModel={operatingModel}
-                  value={locationScope}
-                  onChange={setLocationScope}
-                  error={setupErrors.location}
-                />
-                <AuditMethodCards
-                  value={method}
-                  onChange={setMethod}
-                  error={setupErrors.method}
-                />
-                <StartChoiceCards
-                  value={startChoice}
-                  onChange={(choice) => {
-                    setStartChoice(choice);
-                    if (choice === "csv") {
-                      setDataInputMode(hasTemplate ? "template_plus_csv" : "upload_csv");
-                    } else if (choice === "custom") {
-                      setTemplateChoice("general");
-                      setDataInputMode("manual");
-                    }
-                  }}
-                  selectedTemplateName={activeTemplateName}
-                  error={setupErrors.start}
-                  onOpenTemplatePicker={() => setTemplatePickerOpen(true)}
-                >
-                  {startChoice === "csv" ? (
-                    <SimpleCsvUploadStep
-                      dataset={dataset}
-                      inputSchema={inputSchema}
-                      templateName={activeTemplateName}
-                      templateDefinition={activeTemplateDefinition}
-                      error={inputError ?? dataDefinitionError}
-                      onUpload={parseSpreadsheet}
-                    />
-                  ) : null}
-                  {startChoice === "custom" ? (
-                    <SimpleScratchBuilder
-                      dataset={dataset}
-                      inputSchema={inputSchema}
-                      onDatasetChange={updateDataset}
-                      onInputSchemaChange={setInputSchema}
-                    />
-                  ) : null}
-                </StartChoiceCards>
-                <SimpleTemplatePicker
-                  open={templatePickerOpen}
-                  onOpenChange={setTemplatePickerOpen}
-                  operatingModel={operatingModel}
-                  auditPurpose={auditPurpose}
-                  templateChoice={templateChoice}
-                  userId={userId}
-                  publishedTemplates={filteredPublishedTemplates}
-                  myTemplates={myTemplates}
-                  onSelect={handleTemplateSelect}
-                />
-              </>
-            ) : null}
+        <NewAuditStepNav stepStatus={stepStatus} method={method} assignToSelf={assignToSelf} />
 
-            {phase === "configure" ? (
-              <section className="space-y-6">
-                <div>
-                  <h2 className="text-lg font-semibold">Configure your audit data</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Upload or review the data your team will work from.
-                  </p>
-                </div>
-                {auditMode === "digital" && templateChoice !== "expiry" ? (
-                  <AuditDataDefinitionStep
-                    dataInputMode={dataInputMode}
-                    onDataInputModeChange={setDataInputMode}
-                    hasTemplate={hasTemplate}
-                    templateName={activeTemplateName}
-                    templateDefinition={activeTemplateDefinition}
-                    dataset={dataset}
-                    inputSchema={inputSchema}
-                    operatingModel={operatingModel}
-                    error={inputError ?? dataDefinitionError}
-                    onDatasetChange={(next) => {
-                      updateDataset(next);
-                      setInputError(null);
-                    }}
-                    onInputSchemaChange={setInputSchema}
-                    onUpload={parseSpreadsheet}
-                  />
-                ) : (
-                  <Alert>
-                    <Sparkles className="size-4" />
-                    <AlertDescription>
-                      AI audits use photos and on-site capture. You can fine-tune evidence in
-                      advanced settings on the next step.
-                    </AlertDescription>
-                  </Alert>
-                )}
-                <div className="rounded-2xl border border-border bg-card p-5">
-                  <p className="mb-3 text-sm font-semibold">What your auditor will fill</p>
-                  <AuditorFillPills items={auditorFillItems} />
-                </div>
-                {dataDefinitionError ? (
-                  <Alert variant="destructive">
-                    <AlertTriangle className="size-4" />
-                    <AlertDescription>{dataDefinitionError}</AlertDescription>
-                  </Alert>
-                ) : null}
-              </section>
-            ) : null}
+        <div className="space-y-6">
+          <NewAuditStep1Details
+            auditName={auditName}
+            auditDescription={auditDescription}
+            onAuditNameChange={setAuditName}
+            onAuditDescriptionChange={setAuditDescription}
+            complete={stepStatus[1]}
+            error={stepErrors.name}
+          />
 
-            {phase === "assign" ? (
-              <section className="space-y-6">
-                <SimpleAssignmentPanel
-                  locationCount={locationScope.storeIds.length}
-                  members={membersQuery.data ?? []}
-                  teamScope={teamScope}
-                  distributionStrategy={distributionStrategy}
-                  assignToSelf={assignToSelf}
-                  assignmentMode={assignmentMode}
-                  publishAt={publishAt}
-                  dueConfig={dueConfig}
-                  recurrence={recurrence}
-                  reviewerId={reviewerId}
-                  instructions={instructions}
-                  campaignName={campaignName}
-                  preview={assignmentPreview}
-                  onTeamChange={setTeamScope}
-                  onStrategyChange={setDistributionStrategy}
-                  onAssignToSelfChange={setAssignToSelf}
-                  onAssignmentModeChange={setAssignmentMode}
-                  onPublishAtChange={setPublishAt}
-                  onDueConfigChange={setDueConfig}
-                  onRecurrenceChange={setRecurrence}
-                  onReviewerChange={setReviewerId}
-                  onInstructionsChange={setInstructions}
-                  onCampaignNameChange={setCampaignName}
-                />
-                <AdvancedSettingsPanel
+          <NewAuditStep3AuditMode
+            method={method}
+            onMethodChange={handleMethodChange}
+            complete={stepStatus[2]}
+            error={stepErrors.method}
+          />
+
+          <NewAuditStep2StartMethod
+            method={method}
+            startChoice={startChoice}
+            operatingModel={operatingModel}
+            selectedTemplateName={activeTemplateName}
+            templateIsPlanogram={templateIsPlanogram}
+            aiPlanogramChoice={aiPlanogramChoice}
+            complete={stepStatus[3]}
+            error={method === "digital" ? stepErrors.start : null}
+            planogramError={method === "ai" ? stepErrors.planogram : null}
+            onOperatingModelChange={handleOperatingModelChange}
+            onAiPlanogramChange={handleAiPlanogramChange}
+            onAiPlanogramReset={handleAiPlanogramReset}
+            demoScanContext={demoScanContext}
+            onScanContextChange={setDemoScanContext}
+            onOpenTemplatePicker={() => setTemplatePickerOpen(true)}
+            onStartChoiceChange={(choice) => {
+              setStartChoice(choice);
+              if (choice === "csv") {
+                setDataInputMode(hasTemplate ? "template_plus_csv" : "upload_csv");
+              } else if (choice === "custom") {
+                setTemplateChoice("general");
+                setDataInputMode("manual");
+              }
+            }}
+          />
+
+          {showAssignmentSteps ? (
+            <>
+              <NewAuditStep4Assignment
+                members={membersQuery.data ?? []}
+                teamScope={teamScope}
+                assignToSelf={assignToSelf}
+                onTeamChange={setTeamScope}
+                onAssignToSelfChange={setAssignToSelf}
+                complete={stepStatus[4]}
+                error={stepErrors.assign}
+              />
+
+              <NewAuditStep5Scheduling
+                assignmentMode={assignmentMode}
+                publishAt={publishAt}
+                dueConfig={dueConfig}
+                recurrence={recurrence}
+                instructions={instructions}
+                onAssignmentModeChange={setAssignmentMode}
+                onPublishAtChange={setPublishAt}
+                onDueConfigChange={setDueConfig}
+                onRecurrenceChange={setRecurrence}
+                onInstructionsChange={setInstructions}
+                complete={stepStatus[5]}
+                error={stepErrors.schedule}
+              />
+
+              {method !== "ai" ? (
+                <NewAuditStep6Evidence
                   evidenceLevel={evidenceLevel}
                   evidencePolicy={effectivePolicy}
                   requireRca={requireRca}
@@ -1105,78 +1160,103 @@ function NewAuditPage() {
                     setEvidencePolicy((current) => ({ ...current, ...patch }))
                   }
                   onRequireRcaChange={setRequireRca}
+                  complete={stepStatus[6]}
+                  error={stepErrors.evidence}
                 />
-              </section>
-            ) : null}
-          </div>
+              ) : null}
 
-          <SetupSummaryPanel
-            className="hidden lg:block"
-            operatingModel={operatingModel}
-            locationCount={locationScope.storeIds.length}
-            locationPreview={
-              locationPreview ? `${locationPreview}${locationOverflow}` : undefined
-            }
-            method={method}
-            startChoice={startChoice}
-            templateName={activeTemplateName}
-            auditorItems={auditorFillItems}
-            evidenceCount={effectivePolicy.requiredProof.length}
-            onEdit={() => setPhase("setup")}
-          />
+              <NewAuditStep7Preview
+                auditName={auditName}
+                auditDescription={auditDescription}
+                startChoice={startChoice}
+                templateName={activeTemplateName}
+                operatingModelLabel={operatingModelLabel}
+                method={method}
+                stepNumber={method === "ai" ? 6 : 7}
+                sectionId={method === "ai" ? "step-6-preview" : "step-7-preview"}
+                planogramSummary={
+                  method === "ai"
+                    ? buildAiPlanogramPreviewSummary(aiPlanogramChoice, demoScanContext)
+                    : templateIsPlanogram
+                      ? buildAiPlanogramPreviewSummary("with_demo", demoScanContext)
+                      : undefined
+                }
+                assigneeSummary={assigneeSummary}
+                scheduleSummary={formatScheduleSummary(assignmentMode, publishAt)}
+                evidenceSummary={evidenceSummary}
+                showEvidence={method !== "ai"}
+                assignToSelf={assignToSelf}
+                complete={method === "ai" ? stepStatus[6] : stepStatus[7]}
+              />
+
+              {isAiSelf ? (
+                <>
+                  <NewAuditStep7Capture
+                    captureFile={captureFile}
+                    capturePreviewUrl={capturePreviewUrl}
+                    onCaptureChange={handleCaptureChange}
+                    disabled={footerBusy || aiAuditLaunched}
+                    complete={stepStatus[7] || aiAuditLaunched}
+                  />
+                  {aiAuditLaunched ? (
+                    <p className="rounded-xl border border-[var(--aislix-border)] bg-[var(--aislix-surface)]/50 px-4 py-3 text-sm text-[var(--aislix-secondary)]">
+                      Analysis is running in a new tab. When complete, results are saved automatically
+                      and appear in{" "}
+                      <Link to="/history" className="font-semibold text-[var(--aislix-primary)] underline">
+                        audit history
+                      </Link>
+                      .
+                    </p>
+                  ) : null}
+                </>
+              ) : null}
+            </>
+          ) : null}
         </div>
 
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:px-6">
-          <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
-            <Button
-              variant="ghost"
-              onClick={() => void navigate({ to: "/audits" })}
-            >
+        <SimpleTemplatePicker
+          open={templatePickerOpen}
+          onOpenChange={setTemplatePickerOpen}
+          operatingModel={operatingModel}
+          auditPurpose={auditPurpose}
+          templateChoice={templateChoice}
+          userId={userId}
+          publishedTemplates={filteredPublishedTemplates}
+          myTemplates={myTemplates}
+          onSelect={handleTemplateSelect}
+        />
+
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--aislix-border)] bg-white/95 px-4 py-3 backdrop-blur md:px-6">
+          <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
+            <Button variant="ghost" onClick={() => void navigate({ to: "/audits" })}>
               Cancel
             </Button>
             <div className="flex items-center gap-2">
-              {phase !== "setup" ? (
-                <Button variant="outline" onClick={handleBack}>
-                  Back
-                </Button>
-              ) : null}
-              {phase === "assign" ? (
-                <>
-                  <Button
-                    variant="outline"
-                    disabled={!assignmentPlan || createMutation.isPending}
-                    onClick={async () => {
-                      if (!assignmentPlan) return;
-                      try {
-                        await saveAssignmentDraft(assignmentPlan);
-                        toast.success("Draft saved.");
-                      } catch (e) {
-                        toast.error(e instanceof Error ? e.message : "Could not save draft.");
-                      }
-                    }}
-                  >
-                    Save Draft
-                  </Button>
-                  <Button
-                    variant="brand"
-                    disabled={!canContinue || createMutation.isPending}
-                    onClick={() => createMutation.mutate()}
-                  >
-                    <CheckCircle2 className="size-4" />
-                    {assignmentMode === "assign_now"
-                      ? assignToSelf
-                        ? "Create & start"
-                        : "Assign Now"
-                      : assignmentMode === "schedule_once"
-                        ? "Schedule"
-                        : "Create Schedule"}
-                  </Button>
-                </>
-              ) : (
-                <Button disabled={!canContinue} onClick={handleContinue}>
-                  Continue <ArrowRight className="size-4" />
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                disabled={!assignmentPlan || createMutation.isPending}
+                onClick={async () => {
+                  if (!assignmentPlan) return;
+                  try {
+                    await saveAssignmentDraft(assignmentPlan);
+                    toast.success("Draft saved.");
+                  } catch (e) {
+                    toast.error(e instanceof Error ? e.message : "Could not save draft.");
+                  }
+                }}
+              >
+                Save Draft
+              </Button>
+              <Button
+                variant="brand"
+                disabled={
+                  footerBusy || aiAuditLaunched || (!canSubmit && !canRunAiAudit)
+                }
+                onClick={handleSubmit}
+              >
+                <CheckCircle2 className="size-4" />
+                {primaryLabel}
+              </Button>
             </div>
           </div>
         </div>

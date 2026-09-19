@@ -1,7 +1,7 @@
-import { Bot, Check, Smartphone, Sparkles } from "lucide-react";
+import { Bot, Check, Smartphone } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { CAPTURE_METHOD_OPTIONS, type CaptureMethod } from "@/lib/new-audit/summary";
+import { NEW_AUDIT_CAPTURE_OPTIONS, type CaptureMethod } from "@/lib/new-audit/summary";
 
 const METHOD_VISUAL: Record<
   CaptureMethod,
@@ -17,29 +17,28 @@ const METHOD_VISUAL: Record<
     card: "border-status-evidence/30 bg-status-evidence-soft hover:border-status-evidence/50",
     selected: "border-status-evidence bg-status-evidence-soft ring-2 ring-status-evidence/25",
   },
-  ai_assisted: {
-    icon: Sparkles,
-    card: "border-status-good/30 bg-status-good-soft hover:border-status-good/50",
-    selected: "border-status-good bg-status-good-soft ring-2 ring-status-good/25",
-  },
 };
 
 type Props = {
   value: CaptureMethod;
   onChange: (method: CaptureMethod) => void;
   error?: string | null;
+  hideHeader?: boolean;
 };
 
-export function AuditMethodCards({ value, onChange, error }: Props) {
+export function AuditMethodCards({ value, onChange, error, hideHeader }: Props) {
   return (
     <section className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold">How will your team perform the audit?</h2>
-        <p className="text-sm text-muted-foreground">Pick the capture style that fits your team.</p>
-      </div>
-      <div className="grid gap-3 md:grid-cols-3">
-        {CAPTURE_METHOD_OPTIONS.map((option) => {
+      {!hideHeader ? (
+        <div>
+          <h2 className="text-lg font-semibold">How will your team perform the audit?</h2>
+          <p className="text-sm text-muted-foreground">Pick the capture style that fits your team.</p>
+        </div>
+      ) : null}
+      <div className="grid gap-3 md:grid-cols-2">
+        {NEW_AUDIT_CAPTURE_OPTIONS.map((option) => {
           const visual = METHOD_VISUAL[option.value];
+          if (!visual) return null;
           const Icon = visual.icon;
           const selected = value === option.value;
           return (

@@ -6,7 +6,7 @@
  * Variant (optional), Expected qty, SKU (optional), Shelf Position (optional).
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import {
   AlertCircle,
@@ -47,7 +47,7 @@ import {
   PLANOGRAM_CSV_REQUIRED_LABEL,
   SAMPLE_CSV_HEADERS,
   emptyRow,
-  fetchPlanogramCsvTemplate,
+  downloadPlanogramCsvTemplateFile,
   normalizePlanogramRow,
   parsePlanogramCsv,
   toDraftRow,
@@ -83,6 +83,10 @@ export type PlanogramBuilderProps = {
   simplifiedCopy?: boolean;
   /** Step-by-step manual setup — forms only, no CSV upload tab */
   manualEntryOnly?: boolean;
+  /** Canonical CSV columns only — separate min/max facings, MRP (INR) label. */
+  csvExact?: boolean;
+  /** Pre-fill fields on new product rows (e.g. category from audit Step 3). */
+  prefillRow?: Partial<PlanogramRow>;
   /**
    * When set, Location / Category / Sub category are owned by the caller: the
    * manual form only asks product fields and CSV rows are validated against it.
@@ -152,16 +156,27 @@ export function PlanogramBuilder({
   tableDescription,
   simplifiedCopy = false,
   manualEntryOnly = false,
+  csvExact = false,
+  prefillRow,
   context,
 }: PlanogramBuilderProps) {
   const { currency } = useDisplayCurrency();
-  const priceLabel = priceFieldLabel(currency);
+  const priceLabel = csvExact ? "MRP (INR)" : priceFieldLabel(currency);
   const [preview, setPreview] = useState<CsvParseRow[] | null>(null);
-  const [form, setForm] = useState<PlanogramRow>(emptyRow());
+  const [form, setForm] = useState<PlanogramRow>(() => ({ ...emptyRow(), ...prefillRow }));
   const [priceDisplay, setPriceDisplay] = useState<number | undefined>();
   const [csvError, setCsvError] = useState<string | null>(null);
   const [manualError, setManualError] = useState<string | null>(null);
   const [editingKey, setEditingKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!prefillRow) return;
+    setForm((prev) => ({
+      ...prev,
+      category: prefillRow.category ?? prev.category,
+      sub_category: prefillRow.sub_category ?? prev.sub_category,
+    }));
+  }, [prefillRow?.category, prefillRow?.sub_category]);
 
   const subCategories = categories.find((c) => c.name === form.category)?.subcategories ?? [];
   const hasLegacyAisle = (preview ?? []).some((row) =>
@@ -225,14 +240,8 @@ export function PlanogramBuilder({
     onError: (error) => setManualError(toUserMessage(error)),
   });
 
-  async function downloadTemplate() {
-    const csv = await fetchPlanogramCsvTemplate();
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "aislix-planogram-template.csv";
-    link.click();
-    URL.revokeObjectURL(url);
+  function downloadTemplate() {
+    downloadPlanogramCsvTemplateFile();
   }
 
   function importValidRows() {
@@ -261,8 +270,9 @@ export function PlanogramBuilder({
   function submitManual(keepContext: boolean) {
     const candidate = withContext({
       ...form,
-      mrp_inr:
-        priceDisplay != null && Number.isFinite(priceDisplay)
+      mrp_inr: csvExact
+        ? form.mrp_inr
+        : priceDisplay != null && Number.isFinite(priceDisplay)
           ? convertToInr(priceDisplay, currency)
           : undefined,
     });
@@ -281,11 +291,12 @@ export function PlanogramBuilder({
           keepContext
             ? {
                 ...emptyRow(),
+                ...prefillRow,
                 location: prev.location,
                 category: prev.category,
                 sub_category: prev.sub_category,
               }
-            : emptyRow(),
+            : { ...emptyRow(), ...prefillRow },
         );
         setPriceDisplay(undefined);
       },
@@ -559,33 +570,74 @@ export function PlanogramBuilder({
                 }
               />
             </Field>
-            <Field
-              label={simplifiedCopy ? "Min / Max Facings" : "Min / max facings (optional)"}
-              helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.minMaxFacings : undefined}
-            >
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  min={0}
-                  className="rounded-xl"
-                  placeholder="Min"
-                  value={form.min_facings ?? ""}
-                  onChange={(e) =>
-                    setForm({ ...form, min_facings: e.target.value ? Number(e.target.value) : undefined })
-                  }
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  className="rounded-xl"
-                  placeholder="Max"
-                  value={form.max_facings ?? ""}
-                  onChange={(e) =>
-                    setForm({ ...form, max_facings: e.target.value ? Number(e.target.value) : undefined })
-                  }
-                />
-              </div>
-            </Field>
+            {csvExact ? (
+              <>
+                <Field label="Min facings">
+                  <Input
+                    type="number"
+                    min={0}
+                    className="rounded-xl"
+                    placeholder="e.g. 2"
+                    value={form.min_facings ?? ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        min_facings: e.target.value ? Number(e.target.value) : undefined,
+                      })
+                    }
+                  />
+                </Field>
+                <Field label="Max facings">
+                  <Input
+                    type="number"
+                    min={0}
+                    className="rounded-xl"
+                    placeholder="e.g. 6"
+                    value={form.max_facings ?? ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        max_facings: e.target.value ? Number(e.target.value) : undefined,
+                      })
+                    }
+                  />
+                </Field>
+              </>
+            ) : (
+              <Field
+                label={simplifiedCopy ? "Min / Max Facings" : "Min / max facings (optional)"}
+                helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.minMaxFacings : undefined}
+              >
+                <div className="flex gap-2">
+                  <Input
+                    type="number"
+                    min={0}
+                    className="rounded-xl"
+                    placeholder="Min"
+                    value={form.min_facings ?? ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        min_facings: e.target.value ? Number(e.target.value) : undefined,
+                      })
+                    }
+                  />
+                  <Input
+                    type="number"
+                    min={0}
+                    className="rounded-xl"
+                    placeholder="Max"
+                    value={form.max_facings ?? ""}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        max_facings: e.target.value ? Number(e.target.value) : undefined,
+                      })
+                    }
+                  />
+                </div>
+              </Field>
+            )}
             <Field
               label={simplifiedCopy ? "Expected Shelf Units" : "Expected shelf units (optional)"}
               helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.expectedShelfUnits : undefined}
@@ -603,19 +655,24 @@ export function PlanogramBuilder({
               />
             </Field>
             <Field
-              label={simplifiedCopy ? "Price" : `${priceLabel} (optional)`}
-              helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.price : undefined}
+              label={csvExact ? "MRP (INR)" : simplifiedCopy ? "Price" : `${priceLabel} (optional)`}
+              helper={simplifiedCopy && !csvExact ? HOMEPAGE_PRODUCT_FIELD_HELP.price : undefined}
             >
               <Input
                 type="number"
                 min={0}
                 step="0.01"
                 className="rounded-xl"
-                placeholder={currency === "INR" ? "e.g. 299" : "e.g. 3.99"}
-                value={priceDisplay ?? ""}
-                onChange={(e) =>
-                  setPriceDisplay(e.target.value ? Number(e.target.value) : undefined)
-                }
+                placeholder={csvExact || currency === "INR" ? "e.g. 299" : "e.g. 3.99"}
+                value={csvExact ? (form.mrp_inr ?? "") : (priceDisplay ?? "")}
+                onChange={(e) => {
+                  const n = e.target.value ? Number(e.target.value) : undefined;
+                  if (csvExact) {
+                    setForm({ ...form, mrp_inr: n });
+                    return;
+                  }
+                  setPriceDisplay(n);
+                }}
               />
             </Field>
             <Field
@@ -727,6 +784,12 @@ export function PlanogramBuilder({
                   <th className="px-3 py-2">Product</th>
                   <th className="px-3 py-2">Variant</th>
                   <th className="px-3 py-2 text-right">Facings</th>
+                  {csvExact ? (
+                    <>
+                      <th className="px-3 py-2 text-right">Min</th>
+                      <th className="px-3 py-2 text-right">Max</th>
+                    </>
+                  ) : null}
                   <th className="px-3 py-2 text-right">Shelf units</th>
                   <th className="px-3 py-2 text-right">{priceLabel}</th>
                   <th className="px-3 py-2 text-right">Sales/d</th>
@@ -785,6 +848,48 @@ export function PlanogramBuilder({
                           row.expected_facings ?? "—"
                         )}
                       </td>
+                      {csvExact ? (
+                        <>
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            {editing ? (
+                              <Input
+                                type="number"
+                                min={0}
+                                className="h-8 w-16 rounded-lg text-right"
+                                value={row.min_facings ?? ""}
+                                onChange={(e) =>
+                                  update(row.key, {
+                                    min_facings: e.target.value
+                                      ? Number(e.target.value)
+                                      : undefined,
+                                  })
+                                }
+                              />
+                            ) : (
+                              row.min_facings ?? "—"
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums">
+                            {editing ? (
+                              <Input
+                                type="number"
+                                min={0}
+                                className="h-8 w-16 rounded-lg text-right"
+                                value={row.max_facings ?? ""}
+                                onChange={(e) =>
+                                  update(row.key, {
+                                    max_facings: e.target.value
+                                      ? Number(e.target.value)
+                                      : undefined,
+                                  })
+                                }
+                              />
+                            ) : (
+                              row.max_facings ?? "—"
+                            )}
+                          </td>
+                        </>
+                      ) : null}
                       <td className="px-3 py-2 text-right tabular-nums">
                         {editing ? (
                           <Input
@@ -811,16 +916,24 @@ export function PlanogramBuilder({
                             step="0.01"
                             className="h-8 w-24 rounded-lg text-right"
                             value={
-                              row.mrp_inr != null ? inrToDisplayAmount(row.mrp_inr, currency) : ""
+                              row.mrp_inr != null
+                                ? csvExact
+                                  ? row.mrp_inr
+                                  : inrToDisplayAmount(row.mrp_inr, currency)
+                                : ""
                             }
                             onChange={(e) =>
                               update(row.key, {
                                 mrp_inr: e.target.value
-                                  ? convertToInr(Number(e.target.value), currency)
+                                  ? csvExact
+                                    ? Number(e.target.value)
+                                    : convertToInr(Number(e.target.value), currency)
                                   : undefined,
                               })
                             }
                           />
+                        ) : csvExact ? (
+                          row.mrp_inr ?? "—"
                         ) : (
                           formatStoredPrice(row.mrp_inr, currency)
                         )}

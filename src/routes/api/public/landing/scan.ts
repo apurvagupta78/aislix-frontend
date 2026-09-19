@@ -6,7 +6,41 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const MAX_TEXT_LENGTH = 500;
 const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png"]);
 const CONTEXT_FIELDS = ["category", "sub_category", "sub_category_label", "shelf_label"] as const;
+const ASTRA_FIELDS = [
+  "customer_type",
+  "analysis_mode",
+  "operating_model",
+  "vision_prompt",
+  "planogram_items",
+  "expected_products",
+] as const;
 const UTM_FIELDS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"] as const;
+
+function visionAuthHeaders(): Record<string, string> {
+  const apiKey = (process.env["AISLIX_AI_API_KEY"] ?? "").trim();
+  if (!apiKey) return {};
+  return {
+    authorization: `Bearer ${apiKey}`,
+    "x-api-key": apiKey,
+  };
+}
+
+function longTextField(form: FormData, field: string): string | null {
+  const value = form.get(field);
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+function appendForwardedFields(form: FormData, incoming: FormData, fields: readonly string[]) {
+  for (const field of fields) {
+    const value =
+      field === "vision_prompt" || field === "planogram_items" || field === "expected_products"
+        ? longTextField(incoming, field)
+        : textField(incoming, field);
+    if (value) form.append(field, value);
+  }
+}
 
 function textField(form: FormData, field: string): string | null {
   const value = form.get(field);
@@ -107,21 +141,23 @@ export const Route = createFileRoute("/api/public/landing/scan")({
         if (file) forward.append("file", file, file.name);
         if (sampleId) forward.append("sample_id", sampleId);
         forward.append("landing_session_id", attemptToken);
-        for (const field of CONTEXT_FIELDS) {
-          const value = textField(incoming, field);
-          if (value) forward.append(field, value);
-        }
+        appendForwardedFields(forward, incoming, CONTEXT_FIELDS);
+        appendForwardedFields(forward, incoming, ASTRA_FIELDS);
         for (const field of UTM_FIELDS) {
           const value = utm[field];
           if (value) forward.append(field, value);
         }
 
+        const authHeaders = visionAuthHeaders();
 
         try {
           let upstream = await fetch(`${backendUrl.replace(/\/+$/, "")}/landing/scan`, {
             method: "POST",
             body: forward,
-            headers: forwardedFor ? { "x-forwarded-for": forwardedFor } : undefined,
+            headers: {
+              ...authHeaders,
+              ...(forwardedFor ? { "x-forwarded-for": forwardedFor } : {}),
+            },
           });
           // The public campaign endpoint applies a shared-IP allowance. Incognito
           // visitors on the same office/VPN/mobile network can therefore receive
@@ -144,13 +180,12 @@ export const Route = createFileRoute("/api/public/landing/scan")({
               const sampleBlob = await sampleResponse.blob();
               fallback.append("file", sampleBlob, `${sampleId}.jpg`);
             }
-            for (const field of CONTEXT_FIELDS) {
-              const value = textField(incoming, field);
-              if (value) fallback.append(field, value);
-            }
+            appendForwardedFields(fallback, incoming, CONTEXT_FIELDS);
+            appendForwardedFields(fallback, incoming, ASTRA_FIELDS);
             upstream = await fetch(`${backendUrl.replace(/\/+$/, "")}/scan`, {
               method: "POST",
               body: fallback,
+              headers: authHeaders,
             });
           }
           const bodyText = await upstream.text();

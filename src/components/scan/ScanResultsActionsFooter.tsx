@@ -19,6 +19,8 @@ import { WorkspaceShareDialog } from "@/components/scan/WorkspaceShareDialog";
 import { DemoAllowanceIndicator } from "@/components/scan/DemoAllowanceIndicator";
 import { createScanShareLink } from "@/lib/scan-share.functions";
 import { downloadRoleAuditExcel } from "@/lib/audit-excel-export";
+import { downloadLandingCsv } from "@/lib/landing-scan-api";
+import { downloadObservedProductsCsv } from "@/lib/observed-products-export";
 import type { DemoAllowance } from "@/lib/demo-allowance";
 import { slimLandingSnapshot } from "@/lib/demo-share-snapshot";
 import { signupUrl, type LandingScanResult } from "@/lib/landing-scan-api";
@@ -115,6 +117,25 @@ export function ScanResultsActionsFooter({
     }
   };
 
+  const downloadCsv = () => {
+    try {
+      if (demoMode && landingSnapshot?.csv_base64) {
+        downloadLandingCsv(landingSnapshot);
+      } else if (data.downloads?.csv_url) {
+        const a = document.createElement("a");
+        a.href = data.downloads.csv_url;
+        a.download = `aislix-${scanId}-report.csv`;
+        a.click();
+      } else {
+        downloadObservedProductsCsv(data);
+      }
+      toast.success("CSV downloaded");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not download CSV.";
+      toast.error(message);
+    }
+  };
+
   const showWorkspaceCta = demoMode || !hasWorkspace;
 
   return (
@@ -194,6 +215,24 @@ export function ScanResultsActionsFooter({
                 variant="outline"
                 size="sm"
                 className="order-4 w-full sm:order-none sm:w-auto"
+                disabled={!ready}
+                onClick={downloadCsv}
+              >
+                <Download className="size-4" /> Download CSV ↓
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs text-xs">
+              Download audit inventory and KPI data as CSV.
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="order-5 w-full sm:order-none sm:w-auto"
                 disabled={!ready}
                 onClick={downloadExcel}
               >

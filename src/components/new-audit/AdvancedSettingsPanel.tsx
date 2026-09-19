@@ -29,9 +29,11 @@ type Props = {
   onToggleProof: (proof: AuditEvidencePolicy["requiredProof"][number], checked: boolean) => void;
   onEvidencePolicyChange: (patch: Partial<AuditEvidencePolicy>) => void;
   onRequireRcaChange: (value: boolean) => void;
+  /** When true, content is shown inline without a collapsible shell. */
+  defaultOpen?: boolean;
 };
 
-export function AdvancedSettingsPanel({
+function EvidenceSettingsBody({
   evidenceLevel,
   evidencePolicy,
   requireRca,
@@ -39,19 +41,9 @@ export function AdvancedSettingsPanel({
   onToggleProof,
   onEvidencePolicyChange,
   onRequireRcaChange,
-}: Props) {
+}: Omit<Props, "defaultOpen">) {
   return (
-    <Collapsible defaultOpen={false}>
-      <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border bg-muted/20 px-4 py-3 text-left">
-        <span>
-          <span className="block text-sm font-semibold">Advanced settings</span>
-          <span className="block text-xs text-muted-foreground">
-            Evidence, AI, RCA, rules, approval, and scheduling options
-          </span>
-        </span>
-        <ChevronDown className="size-4 text-muted-foreground" />
-      </CollapsibleTrigger>
-      <CollapsibleContent className="mt-3 space-y-5 rounded-2xl border border-border p-5">
+    <div className="space-y-5">
         <div className="space-y-2">
           <Label>Evidence level</Label>
           <RadioGroup
@@ -145,6 +137,55 @@ export function AdvancedSettingsPanel({
             </span>
           </span>
         </Label>
+    </div>
+  );
+}
+
+export function AdvancedSettingsPanel({
+  evidenceLevel,
+  evidencePolicy,
+  requireRca,
+  onEvidenceLevelChange,
+  onToggleProof,
+  onEvidencePolicyChange,
+  onRequireRcaChange,
+  defaultOpen,
+}: Props) {
+  if (defaultOpen) {
+    return (
+      <EvidenceSettingsBody
+        evidenceLevel={evidenceLevel}
+        evidencePolicy={evidencePolicy}
+        requireRca={requireRca}
+        onEvidenceLevelChange={onEvidenceLevelChange}
+        onToggleProof={onToggleProof}
+        onEvidencePolicyChange={onEvidencePolicyChange}
+        onRequireRcaChange={onRequireRcaChange}
+      />
+    );
+  }
+
+  return (
+    <Collapsible defaultOpen={false}>
+      <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border bg-muted/20 px-4 py-3 text-left">
+        <span>
+          <span className="block text-sm font-semibold">Advanced settings</span>
+          <span className="block text-xs text-muted-foreground">
+            Evidence, AI, RCA, rules, approval, and scheduling options
+          </span>
+        </span>
+        <ChevronDown className="size-4 text-muted-foreground" />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="mt-3 rounded-2xl border border-border p-5">
+        <EvidenceSettingsBody
+          evidenceLevel={evidenceLevel}
+          evidencePolicy={evidencePolicy}
+          requireRca={requireRca}
+          onEvidenceLevelChange={onEvidenceLevelChange}
+          onToggleProof={onToggleProof}
+          onEvidencePolicyChange={onEvidencePolicyChange}
+          onRequireRcaChange={onRequireRcaChange}
+        />
       </CollapsibleContent>
     </Collapsible>
   );
