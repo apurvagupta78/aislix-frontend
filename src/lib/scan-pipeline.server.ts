@@ -1898,8 +1898,18 @@ async function persistScanPayload(
   const adhocParsed = parseAdhocPlanogram(scan.adhoc_planogram);
   let astraAnalysis = normalizeAstraAnalysis({
     ...(payload && typeof payload === "object" ? payload : {}),
-    analysis_mode: payload?.analysis_mode ?? adhocParsed.analysis_mode,
+    ...(metricsSource && typeof metricsSource === "object" ? metricsSource : {}),
+    analysis_mode: payload?.analysis_mode ?? metricsSource?.analysis_mode ?? adhocParsed.analysis_mode,
   });
+  if (astraAnalysis.mode === "incomplete" && metricsSource) {
+    astraAnalysis = normalizeAstraAnalysis({
+      aislix_shelf_analysis: metricsSource.aislix_shelf_analysis,
+      aislix_planogram_analysis: metricsSource.aislix_planogram_analysis,
+      astra_cv_analysis: metricsSource.astra_cv_analysis,
+      metrics: metricsSource,
+      analysis_mode: payload?.analysis_mode ?? metricsSource?.analysis_mode ?? adhocParsed.analysis_mode,
+    });
+  }
   const planogramSource = (payload?.planogram_compliance ??
     payload?.result?.planogram_compliance ??
     null) as any;
