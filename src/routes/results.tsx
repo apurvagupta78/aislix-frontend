@@ -43,6 +43,15 @@ import { retryScanAnalysis } from "@/lib/scan-api";
 import { networkErrorMessage, sanitizeUserMessage } from "@/lib/api-errors";
 import { fetchPlanogramComparison } from "@/lib/planogram-compliance";
 import { ResultsErrorBoundary } from "@/components/scan-results/ResultsErrorBoundary";
+import { loadDigitalAuditSession } from "@/lib/digital-audit";
+
+async function fetchDigitalSessionSafe(scanId: string) {
+  try {
+    return await loadDigitalAuditSession(scanId);
+  } catch {
+    return null;
+  }
+}
 
 export const Route = createFileRoute("/results")({
   validateSearch: (search: Record<string, unknown>): { scan?: string } => {
@@ -101,6 +110,12 @@ function Results() {
     enabled: Boolean(scan),
     retry: false,
   });
+  const digitalQuery = useQuery({
+    queryKey: ["digital-audit-session", scan],
+    queryFn: () => fetchDigitalSessionSafe(scan!),
+    enabled: Boolean(scan) && scanStatus === "completed",
+    retry: false,
+  });
   const queryClient = useQueryClient();
 
   // Viewing a scan's results acknowledges its bell notifications.
@@ -133,12 +148,11 @@ function Results() {
   const assignmentId = assignmentQuery.data ?? null;
   const scanHadPlanogram = Boolean(data?.planogram?.requested || assignmentId);
   const hasExpectedProducts = (data?.expected_products?.length ?? 0) > 0;
-  const isAiAstraAudit = Boolean(
-    data?.analysis_mode ||
-      hasExpectedProducts ||
-      data?.astra_expected_products_analysis ||
-      data?.astra_planogram_analysis,
-  );
+  const digitalLines = digitalQuery.data?.lines?.length ?? 0;
+  const isDigitalAudit = digitalLines > 0;
+  /** Until /results is rebuilt, every non-digital scan uses the safe Astra view. */
+  const useSimpleAiView = !isDigitalAudit;
+  const auditTypeReady = !scan || !ready || digitalQuery.isFetched;
   const allowClientPlanogram = scanHadPlanogram || showOptionalPricing;
 
   useEffect(() => {
@@ -180,14 +194,14 @@ function Results() {
     );
   const display = useMemo(() => {
     if (!data) return undefined;
-    if (isAiAstraAudit) return data;
+    if (useSimpleAiView) return data;
     try {
       return enrichScanResultForDisplay(data, scanContext, { allowClientPlanogram });
     } catch (error) {
       console.error("Failed to enrich scan result for display", error);
       return data;
     }
-  }, [data, scanContext, allowClientPlanogram, isAiAstraAudit]);
+  }, [data, scanContext, allowClientPlanogram, useSimpleAiView]);
   const imageUrl = data?.annotated_image_url ?? data?.original_image_url ?? undefined;
 
   const goToScan = (id?: string | null) => {
@@ -281,9 +295,11 @@ function Results() {
             <ProcessingState scanId={data?.scan_id} />
           ) : loading ? (
             <ProcessingState scanId={scan} />
+          ) : ready && !auditTypeReady ? (
+            <ProcessingState scanId={data?.scan_id ?? scan} />
           ) : ready ? (
             <>
-              <div className="flex justify-end">
+              <div className="flex flex-wrap justify-end gap-2">
                 <Button asChild variant="outline" size="sm" className="rounded-xl text-xs">
                   <Link to="/results/debug" search={{ scan: data!.scan_id }}>
                     Debug raw payload
@@ -291,17 +307,18 @@ function Results() {
                 </Button>
               </div>
               <ResultsErrorBoundary scanId={data!.scan_id}>
-              {assignmentQuery.data && (
+              {isDigitalAudit && assignmentQuery.data ? (
                 <FixRescanVerifyPanel
                   assignmentId={assignmentQuery.data}
                   scanId={data!.scan_id}
                 />
-              )}
-              {!isAiAstraAudit ? (
+              ) : null}
+              {isDigitalAudit ? (
                 <AuditGovernanceTabs scanId={data!.scan_id} scanData={data!} />
               ) : null}
 
-              {!scanHadPlanogram &&
+              {isDigitalAudit &&
+              !scanHadPlanogram &&
               (showOptionalPricing || hasActiveScanContext(scanContext)) ? (
                 <div className="mb-4 overflow-hidden rounded-2xl border border-border bg-surface">
                   <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
@@ -336,7 +353,7 @@ function Results() {
                     embedded
                   />
                 </div>
-              ) : !scanHadPlanogram ? (
+              ) : isDigitalAudit && !scanHadPlanogram ? (
                 <div className="mb-4 flex justify-end">
                   <Button
                     type="button"
@@ -352,12 +369,7 @@ function Results() {
 
               {display && (
                 <div className="flex min-h-0 flex-col">
-                  <ScanResultsHeaderBar
-                    timestamp={data!.created_at}
-                    showDemoPlanogramBadge={isDemoOralCareContext(scanContext)}
-                    assignmentId={assignmentId}
-                  />
-                  {isAiAstraAudit ? (
+                  {useSimpleAiView ? (
                     <>
                       <AiAuditSimpleResults data={display} imageUrl={imageUrl} />
                       <p className="mt-3 shrink-0 text-[11px] leading-relaxed text-muted-foreground">
@@ -366,6 +378,11 @@ function Results() {
                     </>
                   ) : (
                     <>
+                      <ScanResultsHeaderBar
+                        timestamp={data!.created_at}
+                        showDemoPlanogramBadge={isDemoOralCareContext(scanContext)}
+                        assignmentId={assignmentId}
+                      />
                       <AstraComparisonResults result={display} className="mb-4" />
                       <ScanResultsBody
                         data={display}
