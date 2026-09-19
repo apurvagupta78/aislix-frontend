@@ -4477,6 +4477,8 @@ export type Database = {
           created_by: string | null
           device_info: Json
           error_message: string | null
+          error_code: string | null
+          error_detail: string | null
           finalized_at: string | null
           finalized_by: string | null
           geofence_status: string | null
@@ -4522,6 +4524,8 @@ export type Database = {
           created_by?: string | null
           device_info?: Json
           error_message?: string | null
+          error_code?: string | null
+          error_detail?: string | null
           finalized_at?: string | null
           finalized_by?: string | null
           geofence_status?: string | null
@@ -4567,6 +4571,8 @@ export type Database = {
           created_by?: string | null
           device_info?: Json
           error_message?: string | null
+          error_code?: string | null
+          error_detail?: string | null
           finalized_at?: string | null
           finalized_by?: string | null
           geofence_status?: string | null

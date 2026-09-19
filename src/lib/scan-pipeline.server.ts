@@ -52,11 +52,35 @@ export type PipelineResult = {
 
 export class PipelineError extends Error {
   status: number;
-  constructor(message: string, status = 502) {
+  code: string;
+  detail: string | null;
+  constructor(
+    message: string,
+    status = 502,
+    opts?: { code?: string; detail?: string | null },
+  ) {
     super(message);
     this.name = "PipelineError";
     this.status = status;
+    this.code = opts?.code ?? classifyPipelineErrorCode(message, status);
+    this.detail = opts?.detail ?? null;
   }
+}
+
+/** Stable machine codes for ALL failed scans — never customer-facing. */
+export function classifyPipelineErrorCode(raw: string, status?: number): string {
+  const text = (raw ?? "").toLowerCase();
+  if (status === 504 || /timed?\s*out|timeout|abort/.test(text)) return "vision_timeout";
+  if (status === 503 || /unavailable|failed to fetch|network/.test(text)) return "vision_unavailable";
+  if (status === 502 || /\b502\b|\b503\b|\b504\b|bad gateway|connection refused/.test(text)) {
+    return "vision_http_502";
+  }
+  if (/not valid json|json\.decode|expected json/.test(text)) return "vision_invalid_json";
+  if (/no products detected|did not detect any products/.test(text)) return "no_products";
+  if (/openai|rate.?limit|\b429\b|quota|credits?|billing/.test(text)) return "openai_upstream";
+  if (/reference_cache|skip_reference/.test(text)) return "reference_cache";
+  if (status && status >= 400 && status < 500) return `vision_http_${status}`;
+  return "pipeline_failed";
 }
 
 /* -------------------------------------------------------------------------- */
@@ -354,33 +378,69 @@ async function callVisionApi(body: unknown): Promise<any> {
     headers["x-api-key"] = apiKey;
   }
 
-  let response: Response;
-  try {
-    response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(timeoutMs),
+  let response: Response | null = null;
+  let text = "";
+  let lastNetworkError: unknown = null;
+
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      text = await response.text();
+      // Retry once on transient gateway/deploy failures (global for all scans).
+      if ([502, 503, 504].includes(response.status) && attempt === 0) {
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
+      break;
+    } catch (error) {
+      lastNetworkError = error;
+      const timedOut = error instanceof Error && /timeout|abort/i.test(error.name + error.message);
+      if (!timedOut && attempt === 0) {
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
+      throw new PipelineError(
+        timedOut ? GENERIC_TIMEOUT : GENERIC_UNAVAILABLE,
+        timedOut ? 504 : 502,
+        {
+          code: timedOut ? "vision_timeout" : "vision_unavailable",
+          detail: error instanceof Error ? error.message.slice(0, 800) : String(error).slice(0, 800),
+        },
+      );
+    }
+  }
+
+  if (!response) {
+    throw new PipelineError(GENERIC_UNAVAILABLE, 502, {
+      code: "vision_unavailable",
+      detail:
+        lastNetworkError instanceof Error
+          ? lastNetworkError.message.slice(0, 800)
+          : String(lastNetworkError ?? "no response").slice(0, 800),
     });
-  } catch (error) {
-    const timedOut = error instanceof Error && /timeout|abort/i.test(error.name + error.message);
-    throw new PipelineError(
-      timedOut
-        ? GENERIC_TIMEOUT
-        : GENERIC_UNAVAILABLE,
-      timedOut ? 504 : 502,
-    );
   }
 
-  const text = await response.text();
   if (!response.ok) {
-    throw new PipelineError(
-      safeVisionMessage(text),
-      response.status >= 500 ? 502 : response.status,
-    );
+    throw new PipelineError(safeVisionMessage(text), response.status >= 500 ? 502 : response.status, {
+      code: classifyPipelineErrorCode(text, response.status),
+      detail: text.slice(0, 800),
+    });
   }
 
-  const payload = parseJson(text);
+  let payload: any;
+  try {
+    payload = parseJson(text);
+  } catch (error) {
+    throw new PipelineError(GENERIC_SCAN, 502, {
+      code: "vision_invalid_json",
+      detail: (error instanceof Error ? error.message : String(error)).slice(0, 800),
+    });
+  }
 
   // Async backend: 202 Accepted means the scan is queued; poll until it finishes.
   const remoteId = str(payload?.scan_id) ?? str(payload?.id) ?? str(payload?.job_id);
@@ -391,9 +451,10 @@ async function callVisionApi(body: unknown): Promise<any> {
   if (!isAsync) return payload;
 
   if (!remoteId) {
-    throw new PipelineError(
-      GENERIC_SCAN,
-    );
+    throw new PipelineError(GENERIC_SCAN, 502, {
+      code: "vision_missing_job_id",
+      detail: text.slice(0, 800),
+    });
   }
 
   return pollVisionScan(baseUrl, remoteId, headers);
@@ -550,11 +611,12 @@ export async function pollVisionJobOnce(jobId: string): Promise<PollVisionResult
   const status = (str(payload?.status) ?? "").toLowerCase();
 
   if (status === "failed" || status === "error") {
-    throw new PipelineError(
-      sanitizeUserMessage(
-        str(payload?.error) ?? str(payload?.error_message) ?? str(payload?.detail) ?? "",
-      ),
-    );
+    const rawDetail =
+      str(payload?.error) ?? str(payload?.error_message) ?? str(payload?.detail) ?? "";
+    throw new PipelineError(sanitizeUserMessage(rawDetail), 502, {
+      code: classifyPipelineErrorCode(rawDetail, 502),
+      detail: rawDetail.slice(0, 800),
+    });
   }
   if (["completed", "complete", "done", "success"].includes(status)) {
     return { kind: "completed", payload: payload?.result ?? payload?.results ?? payload };
@@ -566,14 +628,33 @@ export async function pollVisionJobOnce(jobId: string): Promise<PollVisionResult
 /* Persistence                                                                */
 /* -------------------------------------------------------------------------- */
 
-async function markFailed(supabase: DB, scanId: string, message: string) {
+function failureOptsFromError(error: unknown): { code: string; detail: string | null } {
+  if (error instanceof PipelineError) {
+    return { code: error.code, detail: error.detail ?? error.message };
+  }
+  const message = error instanceof Error ? error.message : String(error);
+  return { code: classifyPipelineErrorCode(message), detail: message.slice(0, 2000) };
+}
+
+async function markFailed(
+  supabase: DB,
+  scanId: string,
+  message: string,
+  opts?: { code?: string; detail?: string | null },
+) {
+  const code = opts?.code ?? classifyPipelineErrorCode(message);
+  const detail = (opts?.detail ?? message).slice(0, 2000);
+  // Customer UI reads error_message only (sanitized). Ops fields are for debug.
+  console.error("[scan-pipeline] markFailed", { scanId, code, detail: detail.slice(0, 400) });
   await supabase
     .from("shelf_scans")
     .update({
       status: "failed",
       error_message: message.slice(0, 800),
+      error_code: code,
+      error_detail: detail,
       processing_completed_at: new Date().toISOString(),
-    })
+    } as never)
     .eq("id", scanId);
 }
 
@@ -2104,7 +2185,7 @@ export async function startScanPipelineServer(
   const startedAt = new Date().toISOString();
   await supabase
     .from("shelf_scans")
-    .update({ status: "processing", processing_started_at: startedAt, error_message: null })
+    .update({ status: "processing", processing_started_at: startedAt, error_message: null, error_code: null, error_detail: null } as never)
     .eq("id", scan.id);
 
   try {
@@ -2124,7 +2205,7 @@ export async function startScanPipelineServer(
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "The AI audit pipeline failed unexpectedly.";
-    await markFailed(supabase, scan.id, message);
+    await markFailed(supabase, scan.id, message, failureOptsFromError(error));
     if (error instanceof PipelineError) throw error;
     throw new PipelineError(message, 500);
   }
@@ -2175,7 +2256,7 @@ export async function pollScanPipelineServer(
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "The AI audit pipeline failed unexpectedly.";
-    await markFailed(supabase, scan.id, message);
+    await markFailed(supabase, scan.id, message, failureOptsFromError(error));
     if (error instanceof PipelineError) throw error;
     throw new PipelineError(message, 500);
   }
@@ -2187,7 +2268,7 @@ export async function runScanPipelineServer(supabase: DB, scanId: string): Promi
   const startedAt = new Date().toISOString();
   await supabase
     .from("shelf_scans")
-    .update({ status: "processing", processing_started_at: startedAt, error_message: null })
+    .update({ status: "processing", processing_started_at: startedAt, error_message: null, error_code: null, error_detail: null } as never)
     .eq("id", scan.id);
 
   try {
@@ -2197,7 +2278,7 @@ export async function runScanPipelineServer(supabase: DB, scanId: string): Promi
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "The AI audit pipeline failed unexpectedly.";
-    await markFailed(supabase, scan.id, message);
+    await markFailed(supabase, scan.id, message, failureOptsFromError(error));
     if (error instanceof PipelineError) throw error;
     throw new PipelineError(message, 500);
   }

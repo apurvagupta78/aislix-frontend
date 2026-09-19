@@ -75,7 +75,7 @@ export async function fetchScanDebugPayload(scanId: string): Promise<ScanDebugPa
   const { data: scanRow, error: scanError } = await supabase
     .from("shelf_scans")
     .select(
-      "id, status, category, sub_category, sub_category_label, shelf_label, created_at, assignment_id, adhoc_planogram, error_message, planogram_compliance_percent, stores(name)",
+      "id, status, category, sub_category, sub_category_label, shelf_label, created_at, assignment_id, adhoc_planogram, error_message, error_code, error_detail, planogram_compliance_percent, stores(name)",
     )
     .eq("org_id", orgId)
     .eq("id", scanId)
@@ -154,6 +154,17 @@ export async function fetchScanDebugPayload(scanId: string): Promise<ScanDebugPa
       id: "scan_row",
       label: "shelf_scans row",
       data: scanRow,
+    },
+    {
+      id: "pipeline_failure",
+      label: "Pipeline failure diagnostics (ops)",
+      data: {
+        status: (scanRow as { status?: string }).status,
+        error_message: (scanRow as { error_message?: string | null }).error_message,
+        error_code: (scanRow as { error_code?: string | null }).error_code,
+        error_detail: (scanRow as { error_detail?: string | null }).error_detail,
+      },
+      note: "error_code / error_detail are for ops debugging. Customers only see error_message.",
     },
     {
       id: "adhoc_planogram",
