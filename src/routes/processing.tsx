@@ -47,9 +47,7 @@ function Processing() {
         if (cancelled) return;
         setDone(true);
         trackEvent("scan_completed", { scan_id: scan });
-        setTimeout(() => {
-          navigate({ to: "/results", search: { scan } });
-        }, 700);
+        navigate({ to: "/results", search: { scan }, replace: true });
       })
       .catch((err) => {
         if (cancelled) return;

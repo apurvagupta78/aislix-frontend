@@ -633,25 +633,37 @@ export function astraAnalysisFromScanResult(result: {
   astra_cv_analysis?: Record<string, unknown> | null;
 }): NormalizedAstraAnalysis {
   const metrics = pickRecord(result.metrics);
+  // Prefer explicit calc / CV blocks (stored under metrics or top-level).
+  const aislixShelf =
+    pickRecord(result.aislix_shelf_analysis) ?? pickRecord(metrics?.aislix_shelf_analysis);
+  const aislixPlanogram =
+    pickRecord(result.aislix_planogram_analysis) ?? pickRecord(metrics?.aislix_planogram_analysis);
+  const astraCv = pickRecord(result.astra_cv_analysis) ?? pickRecord(metrics?.astra_cv_analysis);
+
+  if (aislixPlanogram) {
+    const parsed = normalizeAstraAnalysis({
+      aislix_planogram_analysis: aislixPlanogram,
+      metrics: metrics ?? undefined,
+      analysis_mode: result.analysis_mode ?? metrics?.analysis_mode,
+    });
+    if (parsed.mode !== "incomplete") return parsed;
+  }
+  if (aislixShelf || astraCv) {
+    const parsed = normalizeAstraAnalysis({
+      ...(aislixShelf ? { aislix_shelf_analysis: aislixShelf } : {}),
+      ...(astraCv ? { astra_cv_analysis: astraCv } : {}),
+      metrics: metrics ?? undefined,
+      analysis_mode: result.analysis_mode ?? metrics?.analysis_mode,
+    });
+    if (parsed.mode !== "incomplete") return parsed;
+  }
+
   if (metrics) {
     const fromMetrics = normalizeAstraAnalysis({
       ...metrics,
       analysis_mode: result.analysis_mode ?? metrics.analysis_mode,
     });
     if (fromMetrics.mode !== "incomplete") return fromMetrics;
-  }
-  if (result.aislix_planogram_analysis) {
-    return normalizeAstraAnalysis({
-      aislix_planogram_analysis: result.aislix_planogram_analysis,
-      metrics: result.metrics ?? undefined,
-    });
-  }
-  if (result.aislix_shelf_analysis || result.astra_cv_analysis) {
-    return normalizeAstraAnalysis({
-      aislix_shelf_analysis: result.aislix_shelf_analysis,
-      astra_cv_analysis: result.astra_cv_analysis,
-      metrics: result.metrics ?? undefined,
-    });
   }
   if (result.astra_planogram_analysis) {
     return normalizeAstraAnalysis({ astra_planogram_analysis: result.astra_planogram_analysis });

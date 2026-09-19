@@ -188,6 +188,13 @@ export type ScanResult = {
   analysis_mode?: string;
   astra_planogram_analysis?: Record<string, unknown>;
   astra_shelf_analysis?: Record<string, unknown>;
+  /** Canonical shelf_cv block from the vision pipeline (Astra). */
+  astra_cv_analysis?: Record<string, unknown>;
+  /** Aislix calc layer over Astra CV (preferred for shelf-only UI). */
+  aislix_shelf_analysis?: Record<string, unknown>;
+  aislix_planogram_analysis?: Record<string, unknown>;
+  /** Full metrics blob from scan_results — used to recover Astra blocks. */
+  metrics?: Record<string, unknown>;
   /** Prices, promotions, and shelf issues returned at the top level of Astra JSON. */
   astra_visible_prices?: Array<Record<string, unknown>>;
   astra_visible_promotions?: Array<Record<string, unknown>>;
@@ -839,12 +846,23 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
   const configuredSummaryRows = Array.isArray(planogramSummary.configured_rows)
     ? planogramSummary.configured_rows
     : [];
+  const metricsAnalysisMode = String(metricsAny["analysis_mode"] ?? "").toLowerCase();
+  const adhocAnalysisMode = String(adhocParsed.analysis_mode ?? "").toLowerCase();
+  const resolvedAnalysisMode = adhocAnalysisMode || metricsAnalysisMode;
+  // Explicit shelf-only audits must never be treated as planogram just because
+  // an assignment_id exists (self-serve AI audits create an assignment row).
+  const shelfOnlyMode = ["shelf_only", "no_planogram", "image_only_shelf_analysis"].includes(
+    resolvedAnalysisMode,
+  );
   const planogramRequested =
-    Boolean((scan as any).assignment_id) ||
-    adhocRows.length > 0 ||
-    adhocParsed.analysis_mode === "planogram_comparison" ||
-    planogramPercent !== null ||
-    configuredSummaryRows.length > 0;
+    !shelfOnlyMode &&
+    (Boolean((scan as any).assignment_id) ||
+      adhocRows.length > 0 ||
+      adhocAnalysisMode === "planogram_comparison" ||
+      metricsAnalysisMode === "planogram_comparison" ||
+      metricsAnalysisMode === "with_planogram" ||
+      planogramPercent !== null ||
+      configuredSummaryRows.length > 0);
 
   const quality = mapQuality(metricsAny);
   const facingsDebug = Array.isArray(metricsAny["facings_debug"])
@@ -955,19 +973,36 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
     scanResult.retail_intelligence = intel as ScanResult["retail_intelligence"];
   }
   if (adhocParsed.analysis_mode) scanResult.analysis_mode = adhocParsed.analysis_mode;
+  else if (metricsAnalysisMode) scanResult.analysis_mode = metricsAnalysisMode;
   if (adhocParsed.audit_role) {
     scanResult.retail_intelligence = {
       ...(scanResult.retail_intelligence ?? {}),
       audit_role: adhocParsed.audit_role,
     } as ScanResult["retail_intelligence"];
   }
+  // Attach full metrics so Astra normalizers can find shelf_cv / aislix blocks.
+  if (metricsObj && typeof metricsObj === "object") {
+    scanResult.metrics = metricsObj;
+  }
   const metricsAstraPlanogram = metricsObj?.astra_planogram_analysis;
   const metricsAstraShelf = metricsObj?.astra_shelf_analysis;
+  const metricsAstraCv = metricsObj?.astra_cv_analysis;
+  const metricsAislixShelf = metricsObj?.aislix_shelf_analysis;
+  const metricsAislixPlanogram = metricsObj?.aislix_planogram_analysis;
   if (metricsAstraPlanogram && typeof metricsAstraPlanogram === "object") {
     scanResult.astra_planogram_analysis = metricsAstraPlanogram as Record<string, unknown>;
   }
   if (metricsAstraShelf && typeof metricsAstraShelf === "object") {
     scanResult.astra_shelf_analysis = metricsAstraShelf as Record<string, unknown>;
+  }
+  if (metricsAstraCv && typeof metricsAstraCv === "object") {
+    scanResult.astra_cv_analysis = metricsAstraCv as Record<string, unknown>;
+  }
+  if (metricsAislixShelf && typeof metricsAislixShelf === "object") {
+    scanResult.aislix_shelf_analysis = metricsAislixShelf as Record<string, unknown>;
+  }
+  if (metricsAislixPlanogram && typeof metricsAislixPlanogram === "object") {
+    scanResult.aislix_planogram_analysis = metricsAislixPlanogram as Record<string, unknown>;
   }
   if (Array.isArray(metricsObj?.visible_prices)) {
     scanResult.astra_visible_prices = metricsObj.visible_prices as Array<Record<string, unknown>>;

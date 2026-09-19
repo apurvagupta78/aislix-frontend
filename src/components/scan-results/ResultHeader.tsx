@@ -401,3 +401,18 @@ export function ProcessingState({ scanId }: { scanId?: string | undefined }) {
     </div>
   );
 }
+
+/** Shown only while hydrating a completed scan — not during vision analysis. */
+export function LoadingResultsState({ scanId }: { scanId?: string | undefined }) {
+  return (
+    <div className="card-surface flex flex-col items-center gap-3 rounded-2xl p-10 text-center">
+      <span className="flex size-12 items-center justify-center rounded-2xl bg-brand-soft text-brand">
+        <Loader2 className="size-6 animate-spin" />
+      </span>
+      <h3 className="text-base font-semibold">Loading results</h3>
+      <p className="max-w-md text-sm text-muted-foreground">
+        Preparing the audit dashboard{scanId ? ` for ${scanId.slice(0, 8)}…` : "…"}.
+      </p>
+    </div>
+  );
+}

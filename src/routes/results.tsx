@@ -37,7 +37,7 @@ import {
   saveStoredScanContext,
   type ScanContextState,
 } from "@/lib/scan-context";
-import { ProcessingState, ScanResultHeader } from "@/components/scan-results/ResultHeader";
+import { ProcessingState, LoadingResultsState, ScanResultHeader } from "@/components/scan-results/ResultHeader";
 import { fetchScanResult } from "@/lib/scan-results";
 import { retryScanAnalysis } from "@/lib/scan-api";
 import { networkErrorMessage, sanitizeUserMessage } from "@/lib/api-errors";
@@ -146,12 +146,19 @@ function Results() {
   const [scanContext, setScanContext] = useState<ScanContextState>(EMPTY_SCAN_CONTEXT);
   const [showOptionalPricing, setShowOptionalPricing] = useState(false);
   const assignmentId = assignmentQuery.data ?? null;
-  const scanHadPlanogram = Boolean(data?.planogram?.requested || assignmentId);
+  // Assignment alone does not mean planogram — shelf_only AI audits also create assignments.
+  const scanHadPlanogram = Boolean(
+    data?.planogram?.requested &&
+      data?.analysis_mode !== "shelf_only" &&
+      data?.analysis_mode !== "no_planogram" &&
+      data?.analysis_mode !== "image_only_shelf_analysis",
+  );
   const digitalLines = digitalQuery.data?.lines?.length ?? 0;
   const isDigitalAudit = digitalLines > 0;
   /** Until /results is rebuilt, every non-digital scan uses the safe Astra view. */
   const useSimpleAiView = !isDigitalAudit;
-  const auditTypeReady = !scan || !ready || digitalQuery.isFetched;
+  // Never block the Astra results view waiting on digital-session hydration.
+  const auditTypeReady = !scan || !ready || digitalQuery.isFetched || useSimpleAiView;
   const allowClientPlanogram = scanHadPlanogram || showOptionalPricing;
 
   useEffect(() => {
@@ -286,9 +293,9 @@ function Results() {
           ) : processing ? (
             <ProcessingState scanId={data?.scan_id} />
           ) : loading ? (
-            <ProcessingState scanId={scan} />
+            <LoadingResultsState scanId={scan} />
           ) : ready && !auditTypeReady ? (
-            <ProcessingState scanId={data?.scan_id ?? scan} />
+            <LoadingResultsState scanId={data?.scan_id ?? scan} />
           ) : ready ? (
             <>
               <div className="flex flex-wrap justify-end gap-2">
