@@ -13,8 +13,8 @@ type Props = {
   className?: string;
 };
 
-function statusBadge(status: string) {
-  const normalized = status.toUpperCase();
+function statusBadge(status: unknown) {
+  const normalized = String(status ?? "").toUpperCase();
   if (normalized.includes("COMPLIANT") && !normalized.includes("NON") && !normalized.includes("PARTIAL")) {
     return (
       <Badge variant="outline" className="border-emerald-500/40 text-emerald-700">

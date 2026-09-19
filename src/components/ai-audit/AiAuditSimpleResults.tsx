@@ -66,7 +66,7 @@ export function AiAuditSimpleResults({ data, imageUrl }: Props) {
       {astra.mode === "shelf_only" && (data.inventory?.length ?? 0) > 0 ? (
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="mb-3 text-sm font-semibold">Detected on shelf</p>
-          <InventoryTable items={data.inventory ?? []} scanId={data.scan_id} scanResult={data} />
+          <InventoryTable items={data.inventory ?? []} scanId={data.scan_id} />
         </div>
       ) : null}
 
