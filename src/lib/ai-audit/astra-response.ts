@@ -1,161 +1,241 @@
-/** Normalized Astra comparison payloads returned by Railway. */
+/** Normalized Astra payloads returned by Railway. */
 
 export type AstraImageQuality = {
   status: "GOOD" | "LIMITED" | "POOR" | string;
   reason?: string;
 };
 
-export type AstraPlanogramRow = {
-  location: string;
-  brand: string;
-  brand_status: string;
-  product_name: string;
-  product_status: string;
-  variant: string;
-  variant_status: string;
-  expected_facings: number;
-  actual_facings: number;
-  facing_variance: number;
-  facing_compliance_percent: number | "N/A";
-  expected_shelf_units: number;
-  actual_visible_units: number;
-  shelf_unit_variance: number;
-  facings_range_status: string;
-  overall_row_status: string;
-  confidence: number;
-  evidence_note: string;
-};
-
-export type AstraPlanogramSummary = {
-  total_planogram_rows?: number;
-  matched_rows?: number;
-  not_found_rows?: number;
-  non_compliant_rows?: number;
-  not_verifiable_rows?: number;
-  overall_compliance_percent?: number;
-};
-
-export type AstraExpectedProductRow = {
+export type AstraPlanogramProduct = {
   location: string;
   category: string;
-  category_status: string;
-  sub_category: string;
-  subcategory_status: string;
+  subcategory: string;
   brand: string;
   brand_status: string;
   product_name: string;
   product_status: string;
   variant: string;
   variant_status: string;
+  sku: string;
+  sku_status: string;
   expected_facings: number;
   actual_facings: number;
   facing_variance: number;
-  facing_status: string;
+  facing_compliance_percent: number | null;
+  min_facings: number;
+  max_facings: number;
+  facing_range_status: string;
   expected_shelf_units: number;
   actual_visible_units: number;
   shelf_unit_variance: number;
-  shelf_unit_status: string;
+  shelf_unit_compliance_percent: number | null;
+  expected_shelf_position: string;
+  actual_shelf_position: string;
+  placement_status: string;
+  expected_mrp_inr: number;
+  visible_price: string | null;
+  price_status: string;
+  avg_daily_sales: number;
+  estimated_visible_shelf_coverage_days: number | null;
+  visible_unit_shortfall: number;
+  potential_visible_unit_value_gap_inr: number;
+  risk_status: string;
   overall_status: string;
   confidence: number;
   evidence_note: string;
 };
 
-export type AstraExpectedProductsSummary = {
-  total_products?: number;
-  matched_products?: number;
-  not_found_products?: number;
-  not_verifiable_products?: number;
-  products_below_expected_facings?: number;
-  products_below_expected_units?: number;
-  products_above_expected_facings?: number;
-  products_above_expected_units?: number;
+export type AstraPlanogramBrandAnalysis = {
+  brand: string;
+  expected_facings: number;
+  actual_facings: number;
+  expected_share_percent: number;
+  actual_share_percent: number;
+  share_variance_pp: number;
+  status: string;
+};
+
+export type AstraPlanogramCategoryAnalysis = {
+  category: string;
+  expected_facings: number;
+  actual_facings: number;
+  expected_share_percent: number;
+  actual_share_percent: number;
+  compliance_percent: number | null;
+  status: string;
+};
+
+export type AstraPlanogramSubcategoryAnalysis = {
+  subcategory: string;
+  expected_facings: number;
+  actual_facings: number;
+  compliance_percent: number | null;
+  status: string;
+};
+
+export type AstraUnplannedProduct = {
+  brand: string;
+  product_name: string;
+  variant: string;
+  actual_facings: number;
+  actual_visible_units: number;
+  confidence: number;
+};
+
+export type AstraPlanogramSummary = {
+  total_planogram_rows: number;
+  products_matched: number;
+  products_not_found: number;
+  products_not_verifiable: number;
+  non_compliant_products: number;
+  products_below_expected_facings: number;
+  products_below_minimum_facings: number;
+  products_above_maximum_facings: number;
+  products_below_expected_units: number;
+  wrong_placements: number;
+  price_mismatches: number;
+  high_priority_execution_risks: number;
+  total_expected_facings: number;
+  total_actual_facings: number;
+  total_expected_shelf_units: number;
+  total_actual_visible_units: number;
+  overall_facing_compliance_percent: number | null;
+  overall_shelf_unit_compliance_percent: number | null;
+  overall_planogram_compliance_percent: number | null;
+  total_potential_visible_unit_value_gap_inr: number;
+};
+
+export type AstraShelfProduct = {
+  brand: string;
+  brand_status: string;
+  product_name: string;
+  product_status: string;
+  variant: string;
+  variant_status: string;
+  category: string;
+  category_status: string;
+  subcategory: string;
+  subcategory_status: string;
+  shelf_position: string;
+  actual_facings: number;
+  actual_visible_units: number;
+  confidence: number;
+  evidence_note: string;
+};
+
+export type AstraShelfBrandAnalysis = {
+  brand: string;
+  facings: number;
+  visible_units: number;
+  share_of_facings_percent: number;
+  share_of_visible_units_percent: number;
+  rank_by_facings: number;
+  rank_by_visible_units: number;
+  confidence: number;
+};
+
+export type AstraShelfCategoryAnalysis = {
+  category: string;
+  facings: number;
+  visible_units: number;
+  share_of_facings_percent: number;
+  share_of_visible_units_percent: number;
+  confidence: number;
+};
+
+export type AstraFocusBrandAnalysis = {
+  brand: string;
+  facings: number;
+  visible_units: number;
+  share_of_facings_percent: number;
+  share_of_visible_units_percent: number;
+  status: string;
+};
+
+export type AstraShelfStructure = {
+  visible_shelf_levels: number;
+  notes: string;
+};
+
+export type AstraVisiblePrice = {
+  product_name?: string;
+  brand?: string;
+  price?: string;
+  price_type?: string;
+  confidence?: number;
+};
+
+export type AstraVisiblePromotion = {
+  brand?: string;
+  product_name?: string;
+  product_or_brand?: string;
+  promotion_text?: string;
+  promotion_type?: string;
+  confidence?: number;
+};
+
+export type AstraShelfIssue = {
+  issue_type?: string;
+  description?: string;
+  shelf_position?: string;
+  severity?: string;
+  confidence?: number;
+};
+
+export type AstraShelfSummary = {
+  products_identified: number;
+  brands_identified: number;
+  variants_identified: number;
+  visible_facings: number;
+  visible_units: number;
+  prices_read: number;
+  promotions_identified: number;
+  shelf_issues_identified: number;
 };
 
 export type NormalizedAstraAnalysis =
   | {
       mode: "planogram";
       operating_model?: string;
+      location?: string;
       image_quality?: AstraImageQuality;
-      rows: AstraPlanogramRow[];
+      products: AstraPlanogramProduct[];
+      brand_analysis: AstraPlanogramBrandAnalysis[];
+      category_analysis: AstraPlanogramCategoryAnalysis[];
+      subcategory_analysis: AstraPlanogramSubcategoryAnalysis[];
+      observed_unplanned_products: AstraUnplannedProduct[];
       summary: AstraPlanogramSummary;
     }
   | {
-      mode: "expected_products";
+      mode: "shelf_only";
       operating_model?: string;
+      location?: string;
+      location_status?: string;
       image_quality?: AstraImageQuality;
-      products: AstraExpectedProductRow[];
-      summary: AstraExpectedProductsSummary;
+      shelf_structure?: AstraShelfStructure;
+      products: AstraShelfProduct[];
+      brand_analysis: AstraShelfBrandAnalysis[];
+      category_analysis: AstraShelfCategoryAnalysis[];
+      focus_brand_analysis?: AstraFocusBrandAnalysis;
+      visible_prices: AstraVisiblePrice[];
+      visible_promotions: AstraVisiblePromotion[];
+      shelf_issues: AstraShelfIssue[];
+      summary: AstraShelfSummary;
     }
-  | { mode: "shelf_only" };
+  | { mode: "incomplete"; reason: string };
 
 function num(value: unknown, fallback = 0): number {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
 }
 
+function numOrNull(value: unknown): number | null {
+  if (value === null || value === undefined || value === "N/A") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
 function str(value: unknown): string {
   return typeof value === "string" ? value : "";
-}
-
-function imageQuality(raw: unknown): AstraImageQuality | undefined {
-  if (!raw || typeof raw !== "object") return undefined;
-  const obj = raw as Record<string, unknown>;
-  const status = str(obj.status);
-  if (!status) return undefined;
-  return { status, reason: str(obj.reason) || undefined };
-}
-
-function normalizePlanogramRow(raw: unknown): AstraPlanogramRow {
-  const r = (raw ?? {}) as Record<string, unknown>;
-  return {
-    location: str(r.location),
-    brand: str(r.brand),
-    brand_status: str(r.brand_status),
-    product_name: str(r.product_name),
-    product_status: str(r.product_status),
-    variant: str(r.variant),
-    variant_status: str(r.variant_status),
-    expected_facings: num(r.expected_facings),
-    actual_facings: num(r.actual_facings),
-    facing_variance: num(r.facing_variance),
-    facing_compliance_percent:
-      r.facing_compliance_percent === "N/A" ? "N/A" : num(r.facing_compliance_percent),
-    expected_shelf_units: num(r.expected_shelf_units),
-    actual_visible_units: num(r.actual_visible_units),
-    shelf_unit_variance: num(r.shelf_unit_variance),
-    facings_range_status: str(r.facings_range_status ?? r.facing_range_status),
-    overall_row_status: str(r.overall_row_status ?? r.overall_status),
-    confidence: num(r.confidence),
-    evidence_note: str(r.evidence_note),
-  };
-}
-
-function normalizeExpectedProductRow(raw: unknown): AstraExpectedProductRow {
-  const r = (raw ?? {}) as Record<string, unknown>;
-  return {
-    location: str(r.location),
-    category: str(r.category),
-    category_status: str(r.category_status),
-    sub_category: str(r.sub_category),
-    subcategory_status: str(r.subcategory_status),
-    brand: str(r.brand),
-    brand_status: str(r.brand_status),
-    product_name: str(r.product_name),
-    product_status: str(r.product_status),
-    variant: str(r.variant),
-    variant_status: str(r.variant_status),
-    expected_facings: num(r.expected_facings),
-    actual_facings: num(r.actual_facings),
-    facing_variance: num(r.facing_variance),
-    facing_status: str(r.facing_status),
-    expected_shelf_units: num(r.expected_shelf_units),
-    actual_visible_units: num(r.actual_visible_units),
-    shelf_unit_variance: num(r.shelf_unit_variance),
-    shelf_unit_status: str(r.shelf_unit_status),
-    overall_status: str(r.overall_status),
-    confidence: num(r.confidence),
-    evidence_note: str(r.evidence_note),
-  };
 }
 
 function pickRecord(payload: unknown): Record<string, unknown> | null {
@@ -163,172 +243,330 @@ function pickRecord(payload: unknown): Record<string, unknown> | null {
   return payload as Record<string, unknown>;
 }
 
+function pickArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
+
+function imageQuality(raw: unknown): AstraImageQuality | undefined {
+  const obj = pickRecord(raw);
+  if (!obj) return undefined;
+  const status = str(obj.status);
+  if (!status) return undefined;
+  return { status, reason: str(obj.reason) || undefined };
+}
+
+function normalizePlanogramProduct(raw: unknown): AstraPlanogramProduct {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  return {
+    location: str(r.location),
+    category: str(r.category),
+    subcategory: str(r.subcategory ?? r.sub_category),
+    brand: str(r.brand),
+    brand_status: str(r.brand_status),
+    product_name: str(r.product_name),
+    product_status: str(r.product_status),
+    variant: str(r.variant),
+    variant_status: str(r.variant_status),
+    sku: str(r.sku),
+    sku_status: str(r.sku_status),
+    expected_facings: num(r.expected_facings),
+    actual_facings: num(r.actual_facings),
+    facing_variance: num(r.facing_variance),
+    facing_compliance_percent: numOrNull(r.facing_compliance_percent),
+    min_facings: num(r.min_facings),
+    max_facings: num(r.max_facings),
+    facing_range_status: str(r.facing_range_status ?? r.facings_range_status),
+    expected_shelf_units: num(r.expected_shelf_units),
+    actual_visible_units: num(r.actual_visible_units),
+    shelf_unit_variance: num(r.shelf_unit_variance),
+    shelf_unit_compliance_percent: numOrNull(r.shelf_unit_compliance_percent),
+    expected_shelf_position: str(r.expected_shelf_position),
+    actual_shelf_position: str(r.actual_shelf_position),
+    placement_status: str(r.placement_status),
+    expected_mrp_inr: num(r.expected_mrp_inr),
+    visible_price: r.visible_price != null ? String(r.visible_price) : null,
+    price_status: str(r.price_status),
+    avg_daily_sales: num(r.avg_daily_sales),
+    estimated_visible_shelf_coverage_days: numOrNull(r.estimated_visible_shelf_coverage_days),
+    visible_unit_shortfall: num(r.visible_unit_shortfall),
+    potential_visible_unit_value_gap_inr: num(r.potential_visible_unit_value_gap_inr),
+    risk_status: str(r.risk_status),
+    overall_status: str(r.overall_status ?? r.overall_row_status),
+    confidence: num(r.confidence),
+    evidence_note: str(r.evidence_note),
+  };
+}
+
+function normalizePlanogramSummary(raw: unknown): AstraPlanogramSummary {
+  const s = (raw ?? {}) as Record<string, unknown>;
+  return {
+    total_planogram_rows: num(s.total_planogram_rows),
+    products_matched: num(s.products_matched ?? s.matched_rows),
+    products_not_found: num(s.products_not_found ?? s.not_found_rows),
+    products_not_verifiable: num(s.products_not_verifiable ?? s.not_verifiable_rows),
+    non_compliant_products: num(s.non_compliant_products ?? s.non_compliant_rows),
+    products_below_expected_facings: num(s.products_below_expected_facings),
+    products_below_minimum_facings: num(s.products_below_minimum_facings),
+    products_above_maximum_facings: num(s.products_above_maximum_facings),
+    products_below_expected_units: num(s.products_below_expected_units),
+    wrong_placements: num(s.wrong_placements),
+    price_mismatches: num(s.price_mismatches),
+    high_priority_execution_risks: num(s.high_priority_execution_risks),
+    total_expected_facings: num(s.total_expected_facings),
+    total_actual_facings: num(s.total_actual_facings),
+    total_expected_shelf_units: num(s.total_expected_shelf_units),
+    total_actual_visible_units: num(s.total_actual_visible_units),
+    overall_facing_compliance_percent: numOrNull(s.overall_facing_compliance_percent),
+    overall_shelf_unit_compliance_percent: numOrNull(s.overall_shelf_unit_compliance_percent),
+    overall_planogram_compliance_percent: numOrNull(
+      s.overall_planogram_compliance_percent ?? s.overall_compliance_percent,
+    ),
+    total_potential_visible_unit_value_gap_inr: num(s.total_potential_visible_unit_value_gap_inr),
+  };
+}
+
+function normalizePlanogramBlock(block: Record<string, unknown>): NormalizedAstraAnalysis | null {
+  const rows = pickArray(block.rows).length
+    ? pickArray(block.rows)
+    : pickArray(block.products);
+  if (!rows.length) return null;
+  return {
+    mode: "planogram",
+    operating_model: str(block.operating_model) || undefined,
+    location: str(block.location) || undefined,
+    image_quality: imageQuality(block.image_quality),
+    products: rows.map(normalizePlanogramProduct),
+    brand_analysis: pickArray(block.brand_analysis).map((raw) => {
+      const b = (raw ?? {}) as Record<string, unknown>;
+      return {
+        brand: str(b.brand),
+        expected_facings: num(b.expected_facings),
+        actual_facings: num(b.actual_facings),
+        expected_share_percent: num(b.expected_share_percent),
+        actual_share_percent: num(b.actual_share_percent),
+        share_variance_pp: num(b.share_variance_pp),
+        status: str(b.status),
+      };
+    }),
+    category_analysis: pickArray(block.category_analysis).map((raw) => {
+      const c = (raw ?? {}) as Record<string, unknown>;
+      return {
+        category: str(c.category),
+        expected_facings: num(c.expected_facings),
+        actual_facings: num(c.actual_facings),
+        expected_share_percent: num(c.expected_share_percent),
+        actual_share_percent: num(c.actual_share_percent),
+        compliance_percent: numOrNull(c.compliance_percent),
+        status: str(c.status),
+      };
+    }),
+    subcategory_analysis: pickArray(block.subcategory_analysis).map((raw) => {
+      const sc = (raw ?? {}) as Record<string, unknown>;
+      return {
+        subcategory: str(sc.subcategory),
+        expected_facings: num(sc.expected_facings),
+        actual_facings: num(sc.actual_facings),
+        compliance_percent: numOrNull(sc.compliance_percent),
+        status: str(sc.status),
+      };
+    }),
+    observed_unplanned_products: pickArray(block.observed_unplanned_products).map((raw) => {
+      const u = (raw ?? {}) as Record<string, unknown>;
+      return {
+        brand: str(u.brand),
+        product_name: str(u.product_name),
+        variant: str(u.variant),
+        actual_facings: num(u.actual_facings),
+        actual_visible_units: num(u.actual_visible_units),
+        confidence: num(u.confidence),
+      };
+    }),
+    summary: normalizePlanogramSummary(block.summary),
+  };
+}
+
+function normalizeShelfProduct(raw: unknown): AstraShelfProduct {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  return {
+    brand: str(r.brand),
+    brand_status: str(r.brand_status),
+    product_name: str(r.product_name),
+    product_status: str(r.product_status),
+    variant: str(r.variant),
+    variant_status: str(r.variant_status),
+    category: str(r.category),
+    category_status: str(r.category_status),
+    subcategory: str(r.subcategory ?? r.sub_category),
+    subcategory_status: str(r.subcategory_status ?? r.sub_category_status),
+    shelf_position: str(r.shelf_position),
+    actual_facings: num(r.actual_facings ?? r.facings),
+    actual_visible_units: num(r.actual_visible_units ?? r.quantity),
+    confidence: num(r.confidence),
+    evidence_note: str(r.evidence_note),
+  };
+}
+
+function normalizeShelfSummary(raw: unknown): AstraShelfSummary {
+  const s = (raw ?? {}) as Record<string, unknown>;
+  return {
+    products_identified: num(s.products_identified),
+    brands_identified: num(s.brands_identified),
+    variants_identified: num(s.variants_identified),
+    visible_facings: num(s.visible_facings),
+    visible_units: num(s.visible_units),
+    prices_read: num(s.prices_read),
+    promotions_identified: num(s.promotions_identified),
+    shelf_issues_identified: num(s.shelf_issues_identified),
+  };
+}
+
+function normalizeShelfBlock(block: Record<string, unknown>): NormalizedAstraAnalysis | null {
+  const products = pickArray(block.products);
+  if (!products.length && str(block.mode).toLowerCase() !== "image_only_shelf_analysis") {
+    return null;
+  }
+  const focus = pickRecord(block.focus_brand_analysis);
+  const shelfStructure = pickRecord(block.shelf_structure);
+  return {
+    mode: "shelf_only",
+    operating_model: str(block.operating_model) || undefined,
+    location: str(block.location) || undefined,
+    location_status: str(block.location_status) || undefined,
+    image_quality: imageQuality(block.image_quality),
+    shelf_structure: shelfStructure
+      ? {
+          visible_shelf_levels: num(shelfStructure.visible_shelf_levels),
+          notes: str(shelfStructure.notes),
+        }
+      : undefined,
+    products: products.map(normalizeShelfProduct),
+    brand_analysis: pickArray(block.brand_analysis).map((raw) => {
+      const b = (raw ?? {}) as Record<string, unknown>;
+      return {
+        brand: str(b.brand),
+        facings: num(b.facings),
+        visible_units: num(b.visible_units),
+        share_of_facings_percent: num(b.share_of_facings_percent),
+        share_of_visible_units_percent: num(b.share_of_visible_units_percent),
+        rank_by_facings: num(b.rank_by_facings),
+        rank_by_visible_units: num(b.rank_by_visible_units),
+        confidence: num(b.confidence),
+      };
+    }),
+    category_analysis: pickArray(block.category_analysis).map((raw) => {
+      const c = (raw ?? {}) as Record<string, unknown>;
+      return {
+        category: str(c.category),
+        facings: num(c.facings),
+        visible_units: num(c.visible_units),
+        share_of_facings_percent: num(c.share_of_facings_percent),
+        share_of_visible_units_percent: num(c.share_of_visible_units_percent),
+        confidence: num(c.confidence),
+      };
+    }),
+    focus_brand_analysis: focus
+      ? {
+          brand: str(focus.brand),
+          facings: num(focus.facings),
+          visible_units: num(focus.visible_units),
+          share_of_facings_percent: num(focus.share_of_facings_percent),
+          share_of_visible_units_percent: num(focus.share_of_visible_units_percent),
+          status: str(focus.status),
+        }
+      : undefined,
+    visible_prices: pickArray(block.visible_prices),
+    visible_promotions: pickArray(block.visible_promotions),
+    shelf_issues: pickArray(block.shelf_issues),
+    summary: normalizeShelfSummary(block.summary),
+  };
+}
+
 function analysisModeHint(root: Record<string, unknown>): string {
-  const raw = str(root.analysis_mode).toLowerCase() || str(root.mode).toLowerCase();
-  if (raw === "expected_product_comparison") return "expected_products";
-  if (raw === "image_only_shelf_analysis") return "shelf_only";
-  if (raw === "planogram_comparison") return "planogram";
-  return raw;
-}
-
-function looksLikePlanogramProductRow(row: Record<string, unknown>): boolean {
   return (
-    "facing_range_status" in row ||
-    "placement_status" in row ||
-    "expected_shelf_position" in row ||
-    "sku_status" in row ||
-    "facing_compliance_percent" in row ||
-    "overall_row_status" in row ||
-    "risk_status" in row
+    str(root.analysis_mode).toLowerCase() ||
+    str(root.mode).toLowerCase()
   );
 }
 
-function planogramRowList(block: Record<string, unknown>): unknown[] | null {
-  if (Array.isArray(block.rows) && block.rows.length) return block.rows;
-  if (
-    Array.isArray(block.products) &&
-    block.products.length &&
-    block.products.every(
-      (row) => row && typeof row === "object" && looksLikePlanogramProductRow(row as Record<string, unknown>),
-    )
-  ) {
-    return block.products;
-  }
-  if (str(block.mode).toLowerCase() === "planogram_comparison" && Array.isArray(block.products)) {
-    return block.products;
-  }
-  return null;
-}
-
-function looksLikeLegacyInventoryProducts(products: unknown[]): boolean {
-  if (!products.length || !products[0] || typeof products[0] !== "object") return false;
-  const sample = products[0] as Record<string, unknown>;
+function findPlanogramBlock(root: Record<string, unknown>): Record<string, unknown> | null {
+  const nested = pickRecord(root.metrics) ?? pickRecord(root.result);
   return (
-    !("product_status" in sample) &&
-    !("overall_status" in sample) &&
-    !("facing_status" in sample) &&
-    ("qty" in sample || "quantity" in sample || "facings" in sample || "product" in sample)
-  );
-}
-
-/** Extract Astra comparison analysis from a vision API payload or stored metrics. */
-export function normalizeAstraAnalysis(payload: unknown): NormalizedAstraAnalysis {
-  const root = pickRecord(payload);
-  if (!root) return { mode: "shelf_only" };
-
-  const modeHint = analysisModeHint(root);
-  if (modeHint === "shelf_only") return { mode: "shelf_only" };
-
-  const nested =
-    pickRecord(root.astra_planogram_analysis) ??
-    pickRecord(root.astra_expected_products_analysis) ??
-    pickRecord(root.result) ??
-    pickRecord(root.metrics);
-
-  const planogramBlock =
     pickRecord(root.astra_planogram_analysis) ??
     pickRecord(nested?.astra_planogram_analysis) ??
-    (modeHint === "planogram" || modeHint === "planogram_comparison" ? root : null);
+    (analysisModeHint(root) === "planogram_comparison" ? root : null)
+  );
+}
 
-  const planogramRows = planogramBlock ? planogramRowList(planogramBlock) : null;
-  if (planogramBlock && planogramRows?.length) {
-    const summary = (planogramBlock.summary ?? {}) as AstraPlanogramSummary;
-    return {
-      mode: "planogram",
-      operating_model: str(planogramBlock.operating_model) || undefined,
-      image_quality: imageQuality(planogramBlock.image_quality),
-      rows: planogramRows.map(normalizePlanogramRow),
-      summary: summary as AstraPlanogramSummary,
-    };
+function findShelfBlock(root: Record<string, unknown>): Record<string, unknown> | null {
+  const nested = pickRecord(root.metrics) ?? pickRecord(root.result);
+  const intel = pickRecord(root.retail_intelligence) ?? pickRecord(nested?.retail_intelligence);
+  return (
+    pickRecord(root.astra_shelf_analysis) ??
+    pickRecord(nested?.astra_shelf_analysis) ??
+    pickRecord(intel?.astra_shelf_analysis) ??
+    (analysisModeHint(root) === "image_only_shelf_analysis" ? root : null) ??
+    (analysisModeHint(root) === "shelf_only" && pickArray(root.products).length ? root : null)
+  );
+}
+
+/** Extract Astra analysis from a vision API payload or stored metrics. */
+export function normalizeAstraAnalysis(payload: unknown): NormalizedAstraAnalysis {
+  const root = pickRecord(payload);
+  if (!root) return { mode: "incomplete", reason: "No Astra payload found." };
+
+  const planogramBlock = findPlanogramBlock(root);
+  if (planogramBlock) {
+    const parsed = normalizePlanogramBlock(planogramBlock);
+    if (parsed) return parsed;
   }
 
-  const rootProducts = Array.isArray(root.products) ? root.products : null;
-  const expectedBlock =
-    pickRecord(root.astra_expected_products_analysis) ??
-    pickRecord(nested?.astra_expected_products_analysis) ??
-    (modeHint === "expected_products" &&
-    rootProducts &&
-    !looksLikeLegacyInventoryProducts(rootProducts)
-      ? root
-      : null) ??
-    (str(root.mode).toLowerCase() === "expected_product_comparison" &&
-    rootProducts &&
-    !looksLikeLegacyInventoryProducts(rootProducts)
-      ? root
-      : null) ??
-    (rootProducts &&
-    !looksLikeLegacyInventoryProducts(rootProducts) &&
-    modeHint !== "planogram" &&
-    modeHint !== "planogram_comparison" &&
-    !rootProducts.some(
-      (row) => row && typeof row === "object" && looksLikePlanogramProductRow(row as Record<string, unknown>),
-    ) &&
-    rootProducts.some(
-      (row) =>
-        row &&
-        typeof row === "object" &&
-        ("product_status" in row || "overall_status" in row || "facing_status" in row),
-    )
-      ? root
-      : null);
-
-  if (expectedBlock && Array.isArray(expectedBlock.products) && expectedBlock.products.length) {
-    return {
-      mode: "expected_products",
-      operating_model: str(expectedBlock.operating_model) || undefined,
-      image_quality: imageQuality(expectedBlock.image_quality),
-      products: expectedBlock.products.map(normalizeExpectedProductRow),
-      summary: (expectedBlock.summary ?? {}) as AstraExpectedProductsSummary,
-    };
+  const shelfBlock = findShelfBlock(root);
+  if (shelfBlock) {
+    const parsed = normalizeShelfBlock(shelfBlock);
+    if (parsed?.products.length) return parsed;
   }
 
   const stored = pickRecord(root.astra_analysis);
-  if (stored?.mode === "planogram" && Array.isArray(stored.rows)) {
-    return {
-      mode: "planogram",
-      operating_model: str(stored.operating_model) || undefined,
-      image_quality: imageQuality(stored.image_quality),
-      rows: stored.rows.map(normalizePlanogramRow),
-      summary: (stored.summary ?? {}) as AstraPlanogramSummary,
-    };
-  }
-  if (
-    stored?.mode === "expected_products" &&
-    Array.isArray(stored.products) &&
-    !looksLikeLegacyInventoryProducts(stored.products)
-  ) {
-    return {
-      mode: "expected_products",
-      operating_model: str(stored.operating_model) || undefined,
-      image_quality: imageQuality(stored.image_quality),
-      products: stored.products.map(normalizeExpectedProductRow),
-      summary: (stored.summary ?? {}) as AstraExpectedProductsSummary,
-    };
+  if (stored?.mode === "planogram") {
+    const parsed = normalizePlanogramBlock(stored);
+    if (parsed) return parsed;
   }
 
-  return { mode: "shelf_only" };
+  return { mode: "incomplete", reason: "Structured Astra JSON was not returned for this scan." };
 }
 
 export function astraAnalysisFromScanResult(result: {
+  analysis_mode?: string | null;
   retail_intelligence?: Record<string, unknown> | null;
-  astra_expected_products_analysis?: Record<string, unknown> | null;
   astra_planogram_analysis?: Record<string, unknown> | null;
+  astra_shelf_analysis?: Record<string, unknown> | null;
 }): NormalizedAstraAnalysis {
   if (result.astra_planogram_analysis) {
     return normalizeAstraAnalysis({ astra_planogram_analysis: result.astra_planogram_analysis });
   }
-  if (result.astra_expected_products_analysis) {
-    return normalizeAstraAnalysis({
-      astra_expected_products_analysis: result.astra_expected_products_analysis,
-    });
+  if (result.astra_shelf_analysis) {
+    return normalizeAstraAnalysis({ astra_shelf_analysis: result.astra_shelf_analysis });
+  }
+  if (result.analysis_mode === "shelf_only") {
+    const fromIntel = (result.retail_intelligence as Record<string, unknown> | undefined)
+      ?.astra_shelf_analysis;
+    if (fromIntel && typeof fromIntel === "object") {
+      return normalizeAstraAnalysis({ astra_shelf_analysis: fromIntel });
+    }
   }
   const intel = result.retail_intelligence as Record<string, unknown> | undefined;
+  if (intel?.astra_planogram_analysis || intel?.astra_shelf_analysis) {
+    return normalizeAstraAnalysis(intel);
+  }
   if (intel?.astra_analysis) {
     const stored = pickRecord(intel.astra_analysis);
     if (stored) return normalizeAstraAnalysis({ astra_analysis: stored, ...stored });
   }
-  if (intel?.astra_expected_products_analysis || intel?.astra_planogram_analysis) {
-    return normalizeAstraAnalysis(intel);
-  }
-  return normalizeAstraAnalysis(intel ?? {});
+  return normalizeAstraAnalysis({
+    ...(intel ?? {}),
+    analysis_mode: result.analysis_mode ?? undefined,
+  });
 }
+
+/** @deprecated Use AstraPlanogramProduct */
+export type AstraPlanogramRow = AstraPlanogramProduct;

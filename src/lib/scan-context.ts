@@ -41,7 +41,6 @@ import { EMPTY_PLANOGRAM_META, type PlanogramMeta } from "@/lib/planogram-meta";
 import { defaultAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { roleRequiresPricing } from "@/lib/role-planogram-requirements";
 import type { FinancialImpact, ScanRecommendation, ScanResult } from "@/lib/scan-results";
-import type { ExpectedProduct } from "@/lib/ai-audit/expected-products";
 import { emptyRow, type PlanogramRow } from "@/lib/planogram";
 
 export type ScanFocusFilter = {
@@ -53,8 +52,6 @@ export type ScanFocusFilter = {
 export type ScanContextState = {
   focus: ScanFocusFilter;
   planogramRows: PlanogramRow[];
-  /** Optional expected products for without-planogram Astra comparison. */
-  expectedProducts?: ExpectedProduct[];
   /** Customer role selected before planogram entry — drives KPI field requirements. */
   auditRole?: AuditRoleTab;
   auditPackage?: PlanogramAuditPackage;
@@ -65,7 +62,6 @@ export type ScanContextState = {
 export const EMPTY_SCAN_CONTEXT: ScanContextState = {
   focus: {},
   planogramRows: [],
-  expectedProducts: [],
   auditRole: "supermarket",
   auditPackage: { ...EMPTY_AUDIT_PACKAGE },
   planogramMeta: { ...EMPTY_PLANOGRAM_META },
@@ -110,7 +106,6 @@ export function loadStoredScanContext(): ScanContextState {
     return {
       focus: parsed.focus ?? {},
       planogramRows: Array.isArray(parsed.planogramRows) ? parsed.planogramRows : [],
-      expectedProducts: Array.isArray(parsed.expectedProducts) ? parsed.expectedProducts : [],
       auditRole: defaultAuditRoleTab(parsed.auditRole),
       auditPackage: parsed.auditPackage ?? { ...EMPTY_AUDIT_PACKAGE },
       planogramMeta: parsed.planogramMeta ?? { ...EMPTY_PLANOGRAM_META },
@@ -1256,18 +1251,13 @@ export function enrichScanResultForDisplay(
   const allowClientPlanogram =
     options?.allowClientPlanogram ?? Boolean(result.planogram?.requested);
   const shelfOnly =
-    result.analysis_mode === "shelf_only" ||
-    (!result.planogram?.requested && !(result.expected_products?.length ?? 0));
-  const expectedProductsOnly =
-    result.analysis_mode === "expected_products" &&
-    (result.expected_products?.length ?? 0) > 0 &&
-    !result.planogram?.requested;
-  if (!allowClientPlanogram && (shelfOnly || expectedProductsOnly)) {
+    result.analysis_mode === "shelf_only" || !result.planogram?.requested;
+  if (!allowClientPlanogram && shelfOnly) {
     return result;
   }
   const effectiveCtx: ScanContextState = allowClientPlanogram
     ? ctx
-    : { ...ctx, planogramRows: [], expectedProducts: [] };
+    : { ...ctx, planogramRows: [] };
   const enriched = enrichDemoScanResult(result, effectiveCtx);
   if (allowClientPlanogram || result.planogram?.requested) return enriched;
   return {

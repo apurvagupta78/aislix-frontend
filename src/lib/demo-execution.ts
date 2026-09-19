@@ -173,7 +173,7 @@ export function landingToScanResult(landing: LandingScanResult): ScanResult {
       const astraAnalysis = normalizeAstraAnalysis(landing);
       return {
         ...(landing.retail_intelligence ?? {}),
-        ...(astraAnalysis.mode !== "shelf_only" ? { astra_analysis: astraAnalysis } : {}),
+        ...(astraAnalysis.mode !== "incomplete" ? { astra_analysis: astraAnalysis } : {}),
       };
     })(),
 

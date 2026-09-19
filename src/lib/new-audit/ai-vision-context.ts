@@ -48,9 +48,7 @@ export function buildAiVisionContextPreview(input: {
       label: "Analysis mode",
       value:
         input.aiPlanogramChoice === "without"
-          ? (input.scanContext.expectedProducts?.length ?? 0) > 0
-            ? "Expected products vs shelf photo"
-            : "Shelf photo only — no expected layout"
+          ? "Shelf photo only — image analysis (no planogram)"
           : "Compare shelf photo against uploaded planogram",
     },
   ];

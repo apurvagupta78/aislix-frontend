@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -64,13 +64,11 @@ export function AiResultsHero({
   modeLabel,
   operatingModel,
   timestamp,
-  comparisonSynthesized,
 }: {
   scanId: string;
   modeLabel: string;
   operatingModel?: string;
   timestamp?: string;
-  comparisonSynthesized?: boolean;
 }) {
   return (
     <div className="rounded-2xl border border-brand/20 bg-gradient-to-br from-brand-soft/30 to-card px-4 py-4 sm:px-5">
@@ -86,15 +84,6 @@ export function AiResultsHero({
           </span>
         ) : null}
       </div>
-      {comparisonSynthesized ? (
-        <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600" />
-          <p className="text-amber-950 dark:text-amber-100">
-            Astra returned shelf detections only. Comparison rows below were synthesized from
-            expected products + detected inventory.
-          </p>
-        </div>
-      ) : null}
       <div className="mt-3 flex flex-wrap gap-2">
         <Button asChild variant="outline" size="sm" className="rounded-xl text-xs">
           <Link to="/results/debug" search={{ scan: scanId }}>

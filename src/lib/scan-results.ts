@@ -186,9 +186,8 @@ export type ScanResult = {
   status?: ScanStatus;
   error_message?: string;
   analysis_mode?: string;
-  expected_products?: ExpectedProduct[];
   astra_planogram_analysis?: Record<string, unknown>;
-  astra_expected_products_analysis?: Record<string, unknown>;
+  astra_shelf_analysis?: Record<string, unknown>;
   /** Prices, promotions, and shelf issues returned at the top level of Astra JSON. */
   astra_visible_prices?: Array<Record<string, unknown>>;
   astra_visible_promotions?: Array<Record<string, unknown>>;
@@ -266,7 +265,6 @@ import type { CompetitorSnapshot } from "@/lib/brand-intel";
 import { annotateCompetitorCategories, buildCompetitorSnapshot } from "@/lib/brand-intel";
 import { enrichScanResultWithAstra } from "@/lib/ai-audit/astra-display";
 import { normalizeAstraAnalysis } from "@/lib/ai-audit/astra-response";
-import type { ExpectedProduct } from "@/lib/ai-audit/expected-products";
 import {
   formatCategorySelections,
   parseCategorySelections,
@@ -841,15 +839,12 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
   const configuredSummaryRows = Array.isArray(planogramSummary.configured_rows)
     ? planogramSummary.configured_rows
     : [];
-  const isExpectedProductsAudit =
-    adhocParsed.analysis_mode === "expected_products" ||
-    (adhocParsed.expected_products?.length ?? 0) > 0 ||
-    metricsAny.analysis_mode === "expected_products";
   const planogramRequested =
     Boolean((scan as any).assignment_id) ||
     adhocRows.length > 0 ||
-    (!isExpectedProductsAudit && planogramPercent !== null) ||
-    (!isExpectedProductsAudit && configuredSummaryRows.length > 0);
+    adhocParsed.analysis_mode === "planogram_comparison" ||
+    planogramPercent !== null ||
+    configuredSummaryRows.length > 0;
 
   const quality = mapQuality(metricsAny);
   const facingsDebug = Array.isArray(metricsAny["facings_debug"])
@@ -955,19 +950,11 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
   if (metricsRetailIntel && typeof metricsRetailIntel === "object") {
     const intel = { ...(metricsRetailIntel as Record<string, unknown>) };
     if (intel.astra_analysis) {
-      const cleaned = normalizeAstraAnalysis({ astra_analysis: intel.astra_analysis });
-      if (cleaned.mode === "shelf_only") {
-        delete intel.astra_analysis;
-      } else {
-        intel.astra_analysis = cleaned;
-      }
+      intel.astra_analysis = normalizeAstraAnalysis({ astra_analysis: intel.astra_analysis });
     }
     scanResult.retail_intelligence = intel as ScanResult["retail_intelligence"];
   }
   if (adhocParsed.analysis_mode) scanResult.analysis_mode = adhocParsed.analysis_mode;
-  if (adhocParsed.expected_products?.length) {
-    scanResult.expected_products = adhocParsed.expected_products;
-  }
   if (adhocParsed.audit_role) {
     scanResult.retail_intelligence = {
       ...(scanResult.retail_intelligence ?? {}),
@@ -975,12 +962,12 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
     } as ScanResult["retail_intelligence"];
   }
   const metricsAstraPlanogram = metricsObj?.astra_planogram_analysis;
-  const metricsAstraExpected = metricsObj?.astra_expected_products_analysis;
+  const metricsAstraShelf = metricsObj?.astra_shelf_analysis;
   if (metricsAstraPlanogram && typeof metricsAstraPlanogram === "object") {
     scanResult.astra_planogram_analysis = metricsAstraPlanogram as Record<string, unknown>;
   }
-  if (metricsAstraExpected && typeof metricsAstraExpected === "object") {
-    scanResult.astra_expected_products_analysis = metricsAstraExpected as Record<string, unknown>;
+  if (metricsAstraShelf && typeof metricsAstraShelf === "object") {
+    scanResult.astra_shelf_analysis = metricsAstraShelf as Record<string, unknown>;
   }
   if (Array.isArray(metricsObj?.visible_prices)) {
     scanResult.astra_visible_prices = metricsObj.visible_prices as Array<Record<string, unknown>>;

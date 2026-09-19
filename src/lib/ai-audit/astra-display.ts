@@ -2,36 +2,16 @@
 
 import {
   astraAnalysisFromScanResult,
-  normalizeAstraAnalysis,
   type AstraImageQuality,
+  type AstraShelfIssue,
+  type AstraVisiblePrice,
+  type AstraVisiblePromotion,
   type NormalizedAstraAnalysis,
 } from "@/lib/ai-audit/astra-response";
-import {
-  resolveAiAuditViewKind,
-  synthesizeExpectedProductsAnalysis,
-  type AiAuditViewKind,
-} from "@/lib/ai-audit/astra-expected-synthesis";
 import { operatingModelLabel } from "@/lib/ai-audit/astra-analysis";
 import type { ScanResult } from "@/lib/scan-results";
 
-export type AstraVisiblePrice = {
-  product_name?: string;
-  price?: string;
-  confidence?: number;
-};
-
-export type AstraVisiblePromotion = {
-  product_or_brand?: string;
-  promotion_text?: string;
-  confidence?: number;
-};
-
-export type AstraShelfIssue = {
-  issue_type?: string;
-  description?: string;
-  severity?: string;
-  confidence?: number;
-};
+export type AiAuditViewKind = "planogram" | "shelf_only" | "incomplete";
 
 export type AstraOutputExtras = {
   operating_model?: string;
@@ -41,14 +21,17 @@ export type AstraOutputExtras = {
   visible_promotions: AstraVisiblePromotion[];
   shelf_issues: AstraShelfIssue[];
   raw_mode?: string;
+  location?: string;
 };
 
 export type AiAuditDisplayContext = {
   analysis: NormalizedAstraAnalysis;
   viewKind: AiAuditViewKind;
+  intendedViewKind: "planogram" | "shelf_only";
   extras: AstraOutputExtras;
-  comparisonSynthesized: boolean;
-  matchRatePercent: number | null;
+  isComplete: boolean;
+  incompleteReason?: string;
+  compliancePercent: number | null;
 };
 
 function pickRecord(value: unknown): Record<string, unknown> | null {
@@ -60,159 +43,129 @@ function pickArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
 }
 
-function extractExtrasFromBlock(block: Record<string, unknown> | null): Partial<AstraOutputExtras> {
-  if (!block) return {};
-  const iq = block.image_quality;
-  return {
-    operating_model: typeof block.operating_model === "string" ? block.operating_model : undefined,
-    image_quality:
-      iq && typeof iq === "object" && !Array.isArray(iq)
-        ? {
-            status: String((iq as Record<string, unknown>).status ?? ""),
-            reason:
-              typeof (iq as Record<string, unknown>).reason === "string"
-                ? ((iq as Record<string, unknown>).reason as string)
-                : undefined,
-          }
-        : undefined,
-    visible_prices: pickArray(block.visible_prices),
-    visible_promotions: pickArray(block.visible_promotions),
-    shelf_issues: pickArray(block.shelf_issues),
-    raw_mode: typeof block.mode === "string" ? block.mode : undefined,
-  };
+function resolveViewKind(result: ScanResult): AiAuditViewKind {
+  const mode = (result.analysis_mode ?? "").toLowerCase();
+  if (mode === "planogram_comparison" || result.planogram?.requested) return "planogram";
+  return "shelf_only";
 }
 
-function mergeExtras(...parts: Partial<AstraOutputExtras>[]): AstraOutputExtras {
+function extractExtras(
+  analysis: NormalizedAstraAnalysis,
+  result: ScanResult,
+): AstraOutputExtras {
+  const rawBlocks = [
+    pickRecord(result.astra_planogram_analysis),
+    pickRecord(result.astra_shelf_analysis),
+    pickRecord((result.retail_intelligence as Record<string, unknown> | undefined)?.astra_analysis),
+  ].filter(Boolean) as Record<string, unknown>[];
+
   const merged: AstraOutputExtras = {
-    visible_prices: [],
-    visible_promotions: [],
-    shelf_issues: [],
+    visible_prices: pickArray(result.astra_visible_prices),
+    visible_promotions: pickArray(result.astra_visible_promotions),
+    shelf_issues: pickArray(result.astra_shelf_issues),
   };
-  for (const part of parts) {
-    if (part.operating_model) merged.operating_model = part.operating_model;
-    if (part.image_quality) merged.image_quality = part.image_quality;
-    if (part.raw_mode) merged.raw_mode = part.raw_mode;
-    if (part.visible_prices?.length) merged.visible_prices = part.visible_prices;
-    if (part.visible_promotions?.length) merged.visible_promotions = part.visible_promotions;
-    if (part.shelf_issues?.length) merged.shelf_issues = part.shelf_issues;
+
+  for (const block of rawBlocks) {
+    if (typeof block.operating_model === "string") merged.operating_model = block.operating_model;
+    if (typeof block.location === "string") merged.location = block.location;
+    if (typeof block.mode === "string") merged.raw_mode = block.mode;
+    const iq = block.image_quality;
+    if (iq && typeof iq === "object" && !Array.isArray(iq)) {
+      merged.image_quality = {
+        status: String((iq as Record<string, unknown>).status ?? ""),
+        reason:
+          typeof (iq as Record<string, unknown>).reason === "string"
+            ? ((iq as Record<string, unknown>).reason as string)
+            : undefined,
+      };
+    }
+    if (pickArray(block.visible_prices).length) merged.visible_prices = pickArray(block.visible_prices);
+    if (pickArray(block.visible_promotions).length) {
+      merged.visible_promotions = pickArray(block.visible_promotions);
+    }
+    if (pickArray(block.shelf_issues).length) merged.shelf_issues = pickArray(block.shelf_issues);
   }
+
+  if (analysis.mode === "planogram" || analysis.mode === "shelf_only") {
+    if (!merged.operating_model && analysis.operating_model) {
+      merged.operating_model = analysis.operating_model;
+    }
+    if (!merged.location && analysis.location) merged.location = analysis.location;
+    if (!merged.image_quality && analysis.image_quality) merged.image_quality = analysis.image_quality;
+    if (analysis.mode === "shelf_only") {
+      if (!merged.visible_prices.length) merged.visible_prices = analysis.visible_prices;
+      if (!merged.visible_promotions.length) merged.visible_promotions = analysis.visible_promotions;
+      if (!merged.shelf_issues.length) merged.shelf_issues = analysis.shelf_issues;
+    }
+  }
+
   if (merged.operating_model) {
     merged.operating_model_label = operatingModelLabel(merged.operating_model);
   }
   return merged;
 }
 
-function matchRateFromAnalysis(analysis: NormalizedAstraAnalysis): number | null {
-  if (analysis.mode === "expected_products") {
-    const total = analysis.summary.total_products ?? analysis.products.length;
-    if (!total) return null;
-    const matched = analysis.summary.matched_products ?? 0;
-    return Math.round((matched / total) * 100);
-  }
+function compliancePercent(analysis: NormalizedAstraAnalysis): number | null {
   if (analysis.mode === "planogram") {
-    const total = analysis.summary.total_planogram_rows ?? analysis.rows.length;
-    if (!total) return null;
-    const matched = analysis.summary.matched_rows ?? 0;
-    return Math.round((matched / total) * 100);
+    return analysis.summary.overall_planogram_compliance_percent ?? null;
   }
   return null;
 }
 
-/** Full Astra context for rendering — synthesizes comparison when Railway omitted it. */
 export function buildAiAuditDisplayContext(result: ScanResult): AiAuditDisplayContext {
-  let comparisonSynthesized = false;
-  let analysis = astraAnalysisFromScanResult(result);
+  const intendedViewKind = resolveViewKind(result);
+  const analysis = astraAnalysisFromScanResult(result);
+  const extras = extractExtras(analysis, result);
 
-  const rawBlocks = [
-    pickRecord(result.astra_planogram_analysis),
-    pickRecord(result.astra_expected_products_analysis),
-    pickRecord(
-      (result.retail_intelligence as Record<string, unknown> | undefined)?.astra_analysis,
-    ),
-  ].filter(Boolean) as Record<string, unknown>[];
-
-  const extras = mergeExtras(
-    ...rawBlocks.map((b) => extractExtrasFromBlock(b)),
-    {
-      visible_prices: pickArray(result.astra_visible_prices),
-      visible_promotions: pickArray(result.astra_visible_promotions),
-      shelf_issues: pickArray(result.astra_shelf_issues),
-    },
-  );
-
-  if (
-    analysis.mode === "shelf_only" &&
-    (result.expected_products?.length ?? 0) > 0 &&
-    (result.inventory?.length ?? 0) > 0
-  ) {
-    const synthesized = synthesizeExpectedProductsAnalysis({
-      expectedProducts: result.expected_products ?? [],
-      inventory: result.inventory ?? [],
-      operatingModel:
-        extras.operating_model ??
-        (result.retail_intelligence as { audit_role?: string } | undefined)?.audit_role,
-    });
-    if (synthesized) {
-      analysis = synthesized;
-      comparisonSynthesized = true;
-    }
+  if (analysis.mode === "incomplete") {
+    return {
+      analysis,
+      viewKind: "incomplete",
+      intendedViewKind,
+      extras,
+      isComplete: false,
+      incompleteReason: analysis.reason,
+      compliancePercent: null,
+    };
   }
 
-  if (analysis.mode !== "shelf_only" && !extras.image_quality && analysis.image_quality) {
-    extras.image_quality = analysis.image_quality;
-  }
-  if (analysis.mode !== "shelf_only" && !extras.operating_model && analysis.operating_model) {
-    extras.operating_model = analysis.operating_model;
-    extras.operating_model_label = operatingModelLabel(analysis.operating_model);
-  }
+  const modeMatches =
+    (intendedViewKind === "planogram" && analysis.mode === "planogram") ||
+    (intendedViewKind === "shelf_only" && analysis.mode === "shelf_only");
 
-  const viewKind = resolveAiAuditViewKind({
-    astra: analysis,
-    submittedAnalysisMode: result.analysis_mode,
-    expectedProductCount: result.expected_products?.length ?? 0,
-    planogramRequested: result.planogram?.requested,
-  });
+  if (!modeMatches) {
+    return {
+      analysis,
+      viewKind: "incomplete",
+      intendedViewKind,
+      extras,
+      isComplete: false,
+      incompleteReason:
+        intendedViewKind === "planogram"
+          ? "This planogram scan did not return structured Astra planogram comparison data. Please re-run the scan."
+          : "This shelf-only scan did not return structured Astra shelf analysis data. Please re-run the scan.",
+      compliancePercent: null,
+    };
+  }
 
   return {
     analysis,
-    viewKind,
+    viewKind: intendedViewKind,
+    intendedViewKind,
     extras,
-    comparisonSynthesized,
-    matchRatePercent: matchRateFromAnalysis(analysis),
+    isComplete: true,
+    compliancePercent: compliancePercent(analysis),
   };
 }
 
-/** Re-attach synthesized analysis onto a scan result for downstream consumers. */
 export function enrichScanResultWithAstra(result: ScanResult): ScanResult {
   const ctx = buildAiAuditDisplayContext(result);
-  if (ctx.comparisonSynthesized && ctx.analysis.mode === "expected_products") {
-    return {
-      ...result,
-      astra_expected_products_analysis: {
-        operating_model: ctx.analysis.operating_model,
-        image_quality: ctx.analysis.image_quality,
-        products: ctx.analysis.products,
-        summary: ctx.analysis.summary,
-        _synthesized: true,
-      },
-      retail_intelligence: {
-        ...(result.retail_intelligence ?? {}),
-        astra_analysis: ctx.analysis,
-      },
-    };
-  }
-  if (ctx.analysis.mode !== "shelf_only") {
-    return {
-      ...result,
-      retail_intelligence: {
-        ...(result.retail_intelligence ?? {}),
-        astra_analysis: ctx.analysis,
-      },
-    };
-  }
-  return result;
-}
-
-export function normalizeAstraFromPayload(payload: unknown): NormalizedAstraAnalysis {
-  return normalizeAstraAnalysis(payload);
+  if (!ctx.isComplete) return result;
+  return {
+    ...result,
+    retail_intelligence: {
+      ...(result.retail_intelligence ?? {}),
+      astra_analysis: ctx.analysis,
+    },
+  };
 }

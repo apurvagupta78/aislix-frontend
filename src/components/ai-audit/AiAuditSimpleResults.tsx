@@ -15,13 +15,9 @@ type Props = {
 export function AiAuditSimpleResults({ data, imageUrl }: Props) {
   const astra = astraAnalysisFromScanResult(data);
   const modeLabel =
-    data.analysis_mode === "expected_products"
-      ? "Expected products comparison"
-      : data.analysis_mode === "planogram_comparison"
-        ? "Planogram comparison"
-        : astra.mode === "expected_products"
-          ? "Expected products comparison"
-          : "Shelf intelligence (image-only)";
+    data.analysis_mode === "planogram_comparison" || astra.mode === "planogram"
+      ? "Planogram comparison"
+      : "Shelf intelligence (image-only)";
 
   return (
     <div className="space-y-4">

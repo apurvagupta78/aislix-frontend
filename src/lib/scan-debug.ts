@@ -37,7 +37,6 @@ function detectResultKind(input: {
   if (input.digitalLineCount > 0) return "digital";
   if (
     input.hasAstra ||
-    input.analysisMode === "expected_products" ||
     input.analysisMode === "planogram_comparison" ||
     input.analysisMode === "shelf_only"
   ) {
@@ -52,7 +51,7 @@ function pickMetricsKeys(metrics: Record<string, unknown>): Record<string, unkno
     "analysis_mode",
     "operating_model",
     "astra_planogram_analysis",
-    "astra_expected_products_analysis",
+    "astra_shelf_analysis",
     "astra_analysis",
     "competitor_intel",
     "retail_intelligence",
@@ -128,9 +127,9 @@ export async function fetchScanDebugPayload(scanId: string): Promise<ScanDebugPa
 
   const hasAstra =
     Boolean(metrics.astra_planogram_analysis) ||
-    Boolean(metrics.astra_expected_products_analysis) ||
+    Boolean(metrics.astra_shelf_analysis) ||
     Boolean((metrics.retail_intelligence as Record<string, unknown> | undefined)?.astra_analysis) ||
-    astraFromResult.mode !== "shelf_only";
+    (astraFromResult.mode !== "incomplete" && astraFromResult.mode !== "shelf_only");
 
   const resultKind = detectResultKind({
     digitalLineCount: digitalSession?.lines?.length ?? 0,
@@ -160,7 +159,7 @@ export async function fetchScanDebugPayload(scanId: string): Promise<ScanDebugPa
       id: "adhoc_planogram",
       label: "adhoc_planogram (parsed)",
       data: adhoc,
-      note: "Includes expected_products, analysis_mode, and any planogram rows submitted with the audit.",
+      note: "Includes analysis_mode and any planogram rows submitted with the audit.",
     },
     {
       id: "metrics_keys",

@@ -8,7 +8,6 @@ import {
   type KpiReadiness,
   type PlanogramAuditPackage,
 } from "@/lib/planogram-audit-package";
-import type { ExpectedProduct } from "@/lib/ai-audit/expected-products";
 import type { AstraAnalysisMode } from "@/lib/ai-audit/astra-analysis";
 import type { PlanogramRow } from "@/lib/planogram";
 import { primaryKpiIds, type AuditRoleTab } from "@/lib/role-audit-ui";
@@ -103,7 +102,6 @@ export function autoSku(brand: string, product: string): string {
 
 export function parseAdhocPlanogram(raw: unknown): {
   rows: PlanogramRow[];
-  expected_products?: ExpectedProduct[];
   analysis_mode?: string;
   audit_role?: string;
   audit_package?: PlanogramAuditPackage;
@@ -112,23 +110,19 @@ export function parseAdhocPlanogram(raw: unknown): {
   if (Array.isArray(raw)) return { rows: raw as PlanogramRow[] };
   if (typeof raw === "object") {
     const obj = raw as Record<string, unknown>;
-    const expected_products = Array.isArray(obj.expected_products)
-      ? (obj.expected_products as ExpectedProduct[])
-      : undefined;
     const analysis_mode = typeof obj.analysis_mode === "string" ? obj.analysis_mode : undefined;
     const audit_role = typeof obj.audit_role === "string" ? obj.audit_role : undefined;
     const audit_package = obj.audit_package ? packageFromDb(obj.audit_package) : undefined;
     if (Array.isArray(obj.rows)) {
       return {
         rows: obj.rows as PlanogramRow[],
-        expected_products,
         analysis_mode,
         audit_role,
         audit_package,
       };
     }
-    if (expected_products?.length || analysis_mode) {
-      return { rows: [], expected_products, analysis_mode, audit_role, audit_package };
+    if (analysis_mode) {
+      return { rows: [], analysis_mode, audit_role, audit_package };
     }
   }
   return { rows: [] };
@@ -139,7 +133,6 @@ export function adhocPlanogramPayload(
   auditRole: AuditRoleTab,
   auditPackage: PlanogramAuditPackage,
   extras?: {
-    expectedProducts?: ExpectedProduct[];
     analysisMode?: AstraAnalysisMode;
   },
 ): Record<string, unknown> {
@@ -147,7 +140,6 @@ export function adhocPlanogramPayload(
     rows,
     audit_role: auditRole,
     audit_package: auditPackage,
-    ...(extras?.expectedProducts?.length ? { expected_products: extras.expectedProducts } : {}),
     ...(extras?.analysisMode ? { analysis_mode: extras.analysisMode } : {}),
   };
 }

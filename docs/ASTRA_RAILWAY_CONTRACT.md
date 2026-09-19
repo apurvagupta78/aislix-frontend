@@ -20,41 +20,35 @@ Local dev: add `AISLIX_AI_API_KEY` to `.env` when testing scans locally.
   "image_urls": ["signed-url"],
   "customer_type": "supermarket",
   "operating_model": "supermarket",
-  "analysis_mode": "planogram_comparison | expected_products | shelf_only",
+  "analysis_mode": "planogram_comparison | shelf_only",
   "vision_prompt": "full Astra prompt text",
   "planogram_items": [],
-  "expected_products": [],
   "category": "Personal Care",
   "sub_category": "toothpaste",
   "audit_package": {}
 }
 ```
 
-### Mode selection
+### Mode selection (two modes only)
 
 | Condition | `analysis_mode` | List sent |
 |---|---|---|
 | Planogram rows present | `planogram_comparison` | `planogram_items` (14 CSV fields) |
-| No planogram, expected products added | `expected_products` | `expected_products` (6 fields) |
-| No planogram, no products | `shelf_only` | neither list |
+| No planogram | `shelf_only` | none — image-only shelf analysis |
 
 ### Planogram item fields
 
 `location`, `category`, `sub_category`, `brand`, `product_name`, `variant`, `expected_facings`, `min_facings`, `max_facings`, `expected_shelf_units`, `mrp_inr`, `avg_daily_sales`, `sku`, `shelf_position`, `expected_qty`
 
-### Expected product fields
-
-`location`, `category`, `sub_category`, `brand`, `product_name`, `variant`, `expected_facings`, `expected_shelf_units`
-
 ## Response
+
+**Results pages require native structured Astra JSON.** Legacy `inventory[]`-only payloads show an incomplete state and prompt re-run.
 
 ### Planogram comparison
 
 Key: `astra_planogram_analysis` (or top-level with `"mode": "planogram_comparison"`)
 
 Prompt: `src/lib/ai-audit/prompts/planogram-comparison.prompt.ts`
-
-Preferred response uses `products[]` (include duplicate `rows[]` for legacy consumers):
 
 ```json
 {
@@ -68,68 +62,15 @@ Preferred response uses `products[]` (include duplicate `rows[]` for legacy cons
   "category_analysis": [],
   "subcategory_analysis": [],
   "observed_unplanned_products": [],
-  "summary": {
-    "total_planogram_rows": 0,
-    "products_matched": 0,
-    "products_not_found": 0,
-    "overall_planogram_compliance_percent": null,
-    "total_potential_visible_unit_value_gap_inr": 0
-  }
+  "summary": { }
 }
 ```
 
-Each product row includes facing/unit compliance, min/max range, placement, price, shelf coverage days, and execution risk fields per the planogram prompt spec.
+Each product row includes all fields from the planogram prompt (identity match statuses, facings, units, placement, price, coverage days, risk, evidence).
 
-### Expected products (no planogram)
+### Shelf-only (image-only, no planogram)
 
-Key: `astra_expected_products_analysis`
-
-```json
-{
-  "operating_model": "supermarket",
-  "image_quality": { "status": "GOOD", "reason": "..." },
-  "products": [
-    {
-      "location": "string",
-      "category": "string",
-      "category_status": "MATCHED | MISMATCHED | UNVERIFIABLE",
-      "sub_category": "string",
-      "subcategory_status": "MATCHED | MISMATCHED | UNVERIFIABLE",
-      "brand": "string",
-      "brand_status": "MATCHED | MISMATCHED | UNVERIFIABLE",
-      "product_name": "string",
-      "product_status": "MATCHED | MISMATCHED | NOT_FOUND | NOT_VERIFIABLE",
-      "variant": "string",
-      "variant_status": "MATCHED | MISMATCHED | UNVERIFIABLE",
-      "expected_facings": 0,
-      "actual_facings": 0,
-      "facing_variance": 0,
-      "facing_status": "MATCHED | BELOW_EXPECTED | ABOVE_EXPECTED | UNVERIFIABLE",
-      "expected_shelf_units": 0,
-      "actual_visible_units": 0,
-      "shelf_unit_variance": 0,
-      "shelf_unit_status": "MATCHED | BELOW_EXPECTED | ABOVE_EXPECTED | UNVERIFIABLE",
-      "overall_status": "COMPLIANT | PARTIALLY_COMPLIANT | NON_COMPLIANT | NOT_FOUND | NOT_VERIFIABLE",
-      "confidence": 0.0,
-      "evidence_note": "string"
-    }
-  ],
-  "summary": {
-    "total_products": 0,
-    "matched_products": 0,
-    "not_found_products": 0,
-    "not_verifiable_products": 0,
-    "products_below_expected_facings": 0,
-    "products_below_expected_units": 0,
-    "products_above_expected_facings": 0,
-    "products_above_expected_units": 0
-  }
-}
-```
-
-### Shelf-only (image-only, no planogram, no expected products)
-
-Key: structured JSON with `"mode": "image_only_shelf_analysis"` (preferred) or legacy `inventory[]`.
+Key: `astra_shelf_analysis` or top-level `"mode": "image_only_shelf_analysis"`
 
 Prompt: `src/lib/ai-audit/prompts/shelf-only.prompt.ts`
 
@@ -148,29 +89,21 @@ Prompt: `src/lib/ai-audit/prompts/shelf-only.prompt.ts`
   "visible_prices": [],
   "visible_promotions": [],
   "shelf_issues": [],
-  "summary": {
-    "products_identified": 0,
-    "brands_identified": 0,
-    "variants_identified": 0,
-    "visible_facings": 0,
-    "visible_units": 0,
-    "prices_read": 0,
-    "promotions_identified": 0,
-    "shelf_issues_identified": 0
-  }
+  "summary": { }
 }
 ```
 
-Request may include `focus_brand` (org primary brand) for share/competitor analysis.
+Request may include `focus_brand` (org primary brand) for share analysis.
 
 ## Frontend files
 
 - Prompt builders: `src/lib/ai-audit/astra-prompt.ts`
 - Planogram prompt: `src/lib/ai-audit/prompts/planogram-comparison.prompt.ts`
 - Shelf-only prompt: `src/lib/ai-audit/prompts/shelf-only.prompt.ts`
-- Expected-products prompt: `src/lib/ai-audit/prompts/without-planogram.prompt.ts`
 - Payload assembly: `src/lib/ai-audit/astra-analysis.ts`
+- Normalization: `src/lib/ai-audit/astra-response.ts`
+- Display context: `src/lib/ai-audit/astra-display.ts`
 - Scan pipeline: `src/lib/scan-pipeline.server.ts` → `buildVisionRequest()`
 - Landing proxy: `src/routes/api/public/landing/scan.ts`
-- Results UI: `src/components/ai-audit/AstraComparisonResults.tsx`
+- Results UI: `src/components/ai-audit/AiAuditResultsPage.tsx`
 - CSV export: `src/lib/ai-audit/astra-comparison-export.ts`

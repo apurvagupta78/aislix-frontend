@@ -70,7 +70,7 @@ export function AiAuditResultsView({
         : landingResult
           ? normalizeAstraAnalysis(landingResult)
           : { mode: "shelf_only" as const };
-      if (astraAnalysis.mode !== "shelf_only") {
+      if (astraAnalysis.mode === "planogram" || astraAnalysis.mode === "shelf_only") {
         downloadAstraComparisonCsv(astraAnalysis, data?.scan_id ?? landingResult?.scan_id ?? "audit");
       } else if (landingResult?.csv_base64) {
         downloadLandingCsv(landingResult);

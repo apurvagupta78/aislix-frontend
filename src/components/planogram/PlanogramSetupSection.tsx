@@ -49,7 +49,6 @@ import {
 } from "@/lib/planogram-wizard-homepage-copy";
 import { HOMEPAGE_DISTRIBUTOR_OUTLET } from "@/lib/planogram-wizard-homepage-role-flow";
 import { defaultAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
-import { ExpectedProductsPanel } from "@/components/ai-audit/ExpectedProductsPanel";
 import type { ScanContextState } from "@/lib/scan-context";
 import { cn } from "@/lib/utils";
 
@@ -415,10 +414,6 @@ export function PlanogramSetupSection({
               </div>
             </div>
           ) : null}
-          <ExpectedProductsPanel
-            scanContext={scanContext}
-            onScanContextChange={onScanContextChange}
-          />
           {showInlineStart ? (
             <Button
               type="button"

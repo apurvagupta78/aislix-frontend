@@ -147,7 +147,6 @@ function Results() {
   const [showOptionalPricing, setShowOptionalPricing] = useState(false);
   const assignmentId = assignmentQuery.data ?? null;
   const scanHadPlanogram = Boolean(data?.planogram?.requested || assignmentId);
-  const hasExpectedProducts = (data?.expected_products?.length ?? 0) > 0;
   const digitalLines = digitalQuery.data?.lines?.length ?? 0;
   const isDigitalAudit = digitalLines > 0;
   /** Until /results is rebuilt, every non-digital scan uses the safe Astra view. */
@@ -161,27 +160,20 @@ function Results() {
       (data.retail_intelligence as { audit_role?: string } | undefined)?.audit_role ??
         workspace.data?.customerType,
     );
-    const next: ScanContextState =
-      scanHadPlanogram || hasExpectedProducts
-        ? {
-            ...EMPTY_SCAN_CONTEXT,
-            auditRole: role,
-            expectedProducts: data.expected_products ?? [],
-          }
-        : EMPTY_SCAN_CONTEXT;
+    const next: ScanContextState = scanHadPlanogram
+      ? { ...EMPTY_SCAN_CONTEXT, auditRole: role }
+      : EMPTY_SCAN_CONTEXT;
     setScanContext(next);
     saveStoredScanContext(next);
-    if (!scanHadPlanogram && !hasExpectedProducts) {
+    if (!scanHadPlanogram) {
       setShowOptionalPricing(false);
     }
   }, [
     scan,
     data?.scan_id,
     data?.status,
-    data?.expected_products,
     data?.retail_intelligence,
     scanHadPlanogram,
-    hasExpectedProducts,
     workspace.data?.customerType,
   ]);
 

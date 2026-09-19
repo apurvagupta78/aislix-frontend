@@ -12,7 +12,6 @@ const ASTRA_FIELDS = [
   "operating_model",
   "vision_prompt",
   "planogram_items",
-  "expected_products",
 ] as const;
 const UTM_FIELDS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"] as const;
 
@@ -35,7 +34,7 @@ function longTextField(form: FormData, field: string): string | null {
 function appendForwardedFields(form: FormData, incoming: FormData, fields: readonly string[]) {
   for (const field of fields) {
     const value =
-      field === "vision_prompt" || field === "planogram_items" || field === "expected_products"
+      field === "vision_prompt" || field === "planogram_items"
         ? longTextField(incoming, field)
         : textField(incoming, field);
     if (value) form.append(field, value);
