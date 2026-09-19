@@ -184,6 +184,11 @@ export type ScanResult = {
   scan_category?: string;
   scan_sub_category?: string;
   status?: ScanStatus;
+  error_message?: string;
+  analysis_mode?: string;
+  expected_products?: ExpectedProduct[];
+  astra_planogram_analysis?: Record<string, unknown>;
+  astra_expected_products_analysis?: Record<string, unknown>;
   summary: ScanSummary;
   annotated_image_url?: string;
   /** The untouched shelf photo — used to colour-correct the annotated render. */
@@ -255,11 +260,14 @@ import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import type { CompetitorSnapshot } from "@/lib/brand-intel";
 import { annotateCompetitorCategories, buildCompetitorSnapshot } from "@/lib/brand-intel";
+import { normalizeAstraAnalysis } from "@/lib/ai-audit/astra-response";
+import type { ExpectedProduct } from "@/lib/ai-audit/expected-products";
 import {
   formatCategorySelections,
   parseCategorySelections,
 } from "@/lib/category-selections";
 import { dbError, notFound, requireOrgId } from "@/lib/db/context";
+import { parseAdhocPlanogram } from "@/lib/role-planogram-requirements";
 
 
 function severityFromAlert(value: unknown): Severity {
@@ -462,7 +470,7 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
   const { data: scan, error: scanError } = await supabase
     .from("shelf_scans")
     .select(
-      "id, org_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, category_selections, created_at, processing_started_at, processing_completed_at, shelf_health_score, osa_percent, share_of_shelf_percent, planogram_compliance_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count, store_id, assignment_id, adhoc_planogram, photo_count, parent_scan_id, stores(name)",
+      "id, org_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, category_selections, created_at, processing_started_at, processing_completed_at, shelf_health_score, osa_percent, share_of_shelf_percent, planogram_compliance_percent, total_products, out_of_stock_count, low_stock_count, misplaced_count, store_id, assignment_id, adhoc_planogram, photo_count, parent_scan_id, error_message, stores(name)",
     )
     .eq("org_id", orgId)
     .eq("id", scanId)
@@ -477,6 +485,18 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
       created_at: scan.created_at as string,
       status: scanStatus,
       summary: emptyScanSummary(),
+    };
+  }
+  if (scanStatus === "failed") {
+    return {
+      scan_id: scan.id as string,
+      created_at: scan.created_at as string,
+      status: scanStatus,
+      summary: emptyScanSummary(),
+      error_message:
+        typeof (scan as { error_message?: string | null }).error_message === "string"
+          ? (scan as { error_message: string }).error_message
+          : undefined,
     };
   }
 
@@ -801,13 +821,8 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
         ? Number(metricsAny["planogram_compliance_percent"])
         : null;
   let planogramSummary = (metricsAny["planogram_summary"] ?? {}) as Record<string, unknown>;
-  const adhocRaw = (scan as any).adhoc_planogram;
-  let adhocRows: unknown[] = [];
-  if (Array.isArray(adhocRaw)) {
-    adhocRows = adhocRaw;
-  } else if (adhocRaw && typeof adhocRaw === "object" && Array.isArray((adhocRaw as any).rows)) {
-    adhocRows = (adhocRaw as { rows: unknown[] }).rows;
-  }
+  const adhocParsed = parseAdhocPlanogram((scan as any).adhoc_planogram);
+  const adhocRows = adhocParsed.rows;
   if (
     !Array.isArray(planogramSummary.configured_rows) &&
     adhocRows.length
@@ -818,11 +833,14 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
     typeof metricsAny[key] === "number" ? Number(metricsAny[key]) : null;
   const planogramSkuMatchPercent = metricNum("planogram_sku_match_percent") ?? planogramPercent;
   const planogramQtyCompliancePercent = metricNum("planogram_qty_compliance_percent");
+  const configuredSummaryRows = Array.isArray(planogramSummary.configured_rows)
+    ? planogramSummary.configured_rows
+    : [];
   const planogramRequested =
     Boolean((scan as any).assignment_id) ||
     adhocRows.length > 0 ||
     planogramPercent !== null ||
-    Object.keys(planogramSummary).length > 0;
+    configuredSummaryRows.length > 0;
 
   const quality = mapQuality(metricsAny);
   const facingsDebug = Array.isArray(metricsAny["facings_debug"])
@@ -926,7 +944,34 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
   const metricsRetailIntel = metricsObj?.retail_intelligence;
   const metricsExecutionScore = metricsObj?.retail_execution_score;
   if (metricsRetailIntel && typeof metricsRetailIntel === "object") {
-    scanResult.retail_intelligence = metricsRetailIntel as ScanResult["retail_intelligence"];
+    const intel = { ...(metricsRetailIntel as Record<string, unknown>) };
+    if (intel.astra_analysis) {
+      const cleaned = normalizeAstraAnalysis({ astra_analysis: intel.astra_analysis });
+      if (cleaned.mode === "shelf_only") {
+        delete intel.astra_analysis;
+      } else {
+        intel.astra_analysis = cleaned;
+      }
+    }
+    scanResult.retail_intelligence = intel as ScanResult["retail_intelligence"];
+  }
+  if (adhocParsed.analysis_mode) scanResult.analysis_mode = adhocParsed.analysis_mode;
+  if (adhocParsed.expected_products?.length) {
+    scanResult.expected_products = adhocParsed.expected_products;
+  }
+  if (adhocParsed.audit_role) {
+    scanResult.retail_intelligence = {
+      ...(scanResult.retail_intelligence ?? {}),
+      audit_role: adhocParsed.audit_role,
+    } as ScanResult["retail_intelligence"];
+  }
+  const metricsAstraPlanogram = metricsObj?.astra_planogram_analysis;
+  const metricsAstraExpected = metricsObj?.astra_expected_products_analysis;
+  if (metricsAstraPlanogram && typeof metricsAstraPlanogram === "object") {
+    scanResult.astra_planogram_analysis = metricsAstraPlanogram as Record<string, unknown>;
+  }
+  if (metricsAstraExpected && typeof metricsAstraExpected === "object") {
+    scanResult.astra_expected_products_analysis = metricsAstraExpected as Record<string, unknown>;
   }
   const auditScope = metricsObj?.audit_scope;
   const adjacentFindings = metricsObj?.adjacent_category_findings;

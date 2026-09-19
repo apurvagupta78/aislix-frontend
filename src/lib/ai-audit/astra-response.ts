@@ -163,10 +163,28 @@ function pickRecord(payload: unknown): Record<string, unknown> | null {
   return payload as Record<string, unknown>;
 }
 
+function analysisModeHint(root: Record<string, unknown>): string {
+  return str(root.analysis_mode).toLowerCase();
+}
+
+function looksLikeLegacyInventoryProducts(products: unknown[]): boolean {
+  if (!products.length || !products[0] || typeof products[0] !== "object") return false;
+  const sample = products[0] as Record<string, unknown>;
+  return (
+    !("product_status" in sample) &&
+    !("overall_status" in sample) &&
+    !("facing_status" in sample) &&
+    ("qty" in sample || "quantity" in sample || "facings" in sample || "product" in sample)
+  );
+}
+
 /** Extract Astra comparison analysis from a vision API payload or stored metrics. */
 export function normalizeAstraAnalysis(payload: unknown): NormalizedAstraAnalysis {
   const root = pickRecord(payload);
   if (!root) return { mode: "shelf_only" };
+
+  const modeHint = analysisModeHint(root);
+  if (modeHint === "shelf_only") return { mode: "shelf_only" };
 
   const nested =
     pickRecord(root.astra_planogram_analysis) ??
@@ -177,7 +195,7 @@ export function normalizeAstraAnalysis(payload: unknown): NormalizedAstraAnalysi
   const planogramBlock =
     pickRecord(root.astra_planogram_analysis) ??
     pickRecord(nested?.astra_planogram_analysis) ??
-    (Array.isArray(root.rows) ? root : null);
+    (modeHint === "planogram_comparison" && Array.isArray(root.rows) ? root : null);
 
   if (planogramBlock && Array.isArray(planogramBlock.rows) && planogramBlock.rows.length) {
     return {
@@ -189,10 +207,25 @@ export function normalizeAstraAnalysis(payload: unknown): NormalizedAstraAnalysi
     };
   }
 
+  const rootProducts = Array.isArray(root.products) ? root.products : null;
   const expectedBlock =
     pickRecord(root.astra_expected_products_analysis) ??
     pickRecord(nested?.astra_expected_products_analysis) ??
-    (Array.isArray(root.products) ? root : null);
+    (modeHint === "expected_products" &&
+    rootProducts &&
+    !looksLikeLegacyInventoryProducts(rootProducts)
+      ? root
+      : null) ??
+    (rootProducts &&
+    !looksLikeLegacyInventoryProducts(rootProducts) &&
+    rootProducts.some(
+      (row) =>
+        row &&
+        typeof row === "object" &&
+        ("product_status" in row || "overall_status" in row || "facing_status" in row),
+    )
+      ? root
+      : null);
 
   if (expectedBlock && Array.isArray(expectedBlock.products) && expectedBlock.products.length) {
     return {
@@ -214,7 +247,11 @@ export function normalizeAstraAnalysis(payload: unknown): NormalizedAstraAnalysi
       summary: (stored.summary ?? {}) as AstraPlanogramSummary,
     };
   }
-  if (stored?.mode === "expected_products" && Array.isArray(stored.products)) {
+  if (
+    stored?.mode === "expected_products" &&
+    Array.isArray(stored.products) &&
+    !looksLikeLegacyInventoryProducts(stored.products)
+  ) {
     return {
       mode: "expected_products",
       operating_model: str(stored.operating_model) || undefined,
@@ -229,8 +266,24 @@ export function normalizeAstraAnalysis(payload: unknown): NormalizedAstraAnalysi
 
 export function astraAnalysisFromScanResult(result: {
   retail_intelligence?: Record<string, unknown> | null;
+  astra_expected_products_analysis?: Record<string, unknown> | null;
+  astra_planogram_analysis?: Record<string, unknown> | null;
 }): NormalizedAstraAnalysis {
+  if (result.astra_planogram_analysis) {
+    return normalizeAstraAnalysis({ astra_planogram_analysis: result.astra_planogram_analysis });
+  }
+  if (result.astra_expected_products_analysis) {
+    return normalizeAstraAnalysis({
+      astra_expected_products_analysis: result.astra_expected_products_analysis,
+    });
+  }
   const intel = result.retail_intelligence as Record<string, unknown> | undefined;
-  if (intel?.astra_analysis) return normalizeAstraAnalysis({ astra_analysis: intel.astra_analysis });
+  if (intel?.astra_analysis) {
+    const stored = pickRecord(intel.astra_analysis);
+    if (stored) return normalizeAstraAnalysis({ astra_analysis: stored, ...stored });
+  }
+  if (intel?.astra_expected_products_analysis || intel?.astra_planogram_analysis) {
+    return normalizeAstraAnalysis(intel);
+  }
   return normalizeAstraAnalysis(intel ?? {});
 }

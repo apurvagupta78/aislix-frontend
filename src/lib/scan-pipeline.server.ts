@@ -1800,6 +1800,11 @@ async function persistScanPayload(
 
   // --- Metrics -------------------------------------------------------------
   const metricsSource = (payload?.metrics ?? payload?.summary ?? payload) as any;
+  const adhocParsed = parseAdhocPlanogram(scan.adhoc_planogram);
+  const astraAnalysis = normalizeAstraAnalysis({
+    ...(payload && typeof payload === "object" ? payload : {}),
+    analysis_mode: payload?.analysis_mode ?? adhocParsed.analysis_mode,
+  });
   const planogramSource = (payload?.planogram_compliance ??
     payload?.result?.planogram_compliance ??
     null) as any;
@@ -1943,17 +1948,21 @@ async function persistScanPayload(
     ...(shareOfShelf !== null ? { share_of_shelf_percent: shareOfShelf } : {}),
     ...(metricsSource?.competitor_intel ? { competitor_intel: metricsSource.competitor_intel } : {}),
     ...(metricsSource?.financial_impact ? { financial_impact: metricsSource.financial_impact } : {}),
-    ...(metricsSource?.retail_intelligence || normalizeAstraAnalysis(payload).mode !== "shelf_only"
+    ...(metricsSource?.retail_intelligence || astraAnalysis.mode !== "shelf_only"
       ? {
           retail_intelligence: {
             ...(typeof metricsSource?.retail_intelligence === "object"
               ? (metricsSource.retail_intelligence as Record<string, unknown>)
               : {}),
-            ...(normalizeAstraAnalysis(payload).mode !== "shelf_only"
-              ? { astra_analysis: normalizeAstraAnalysis(payload) }
-              : {}),
+            ...(astraAnalysis.mode !== "shelf_only" ? { astra_analysis: astraAnalysis } : {}),
           },
         }
+      : {}),
+    ...(payload?.astra_planogram_analysis
+      ? { astra_planogram_analysis: payload.astra_planogram_analysis }
+      : {}),
+    ...(payload?.astra_expected_products_analysis
+      ? { astra_expected_products_analysis: payload.astra_expected_products_analysis }
       : {}),
     ...(metricsSource?.audit_scope ? { audit_scope: metricsSource.audit_scope } : {}),
     ...(Array.isArray(metricsSource?.adjacent_category_findings)

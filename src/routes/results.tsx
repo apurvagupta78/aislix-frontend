@@ -25,14 +25,14 @@ import { AI_DISCLAIMER } from "@/components/scan/ScanProgressPanel";
 import { planHasFeature } from "@/lib/plan-features";
 import { fetchUsageSummary } from "@/lib/subscription-limits";
 import { useWorkspaceContext } from "@/hooks/use-customer-context";
-import { defaultAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
+import { AstraComparisonResults } from "@/components/ai-audit/AstraComparisonResults";
+import { normalizeAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { ScanContextPanel } from "@/components/scan/ScanContextPanel";
 import { ScanResultsBody } from "@/components/scan/DemoScanResultsBody";
 import {
   EMPTY_SCAN_CONTEXT,
   enrichScanResultForDisplay,
   hasActiveScanContext,
-  loadStoredScanContext,
   saveStoredScanContext,
   type ScanContextState,
 } from "@/lib/scan-context";
@@ -124,29 +124,59 @@ function Results() {
     !usageQuery.data?.platform_bypass && !planHasFeature(planCode, "financial_impact");
 
   const [roleOverride, setRoleOverride] = useState<AuditRoleTab | undefined>();
-  const [scanContext, setScanContext] = useState<ScanContextState>(() => loadStoredScanContext());
+  const [scanContext, setScanContext] = useState<ScanContextState>(EMPTY_SCAN_CONTEXT);
   const [showOptionalPricing, setShowOptionalPricing] = useState(false);
   const assignmentId = assignmentQuery.data ?? null;
   const scanHadPlanogram = Boolean(data?.planogram?.requested || assignmentId);
+  const hasExpectedProducts = (data?.expected_products?.length ?? 0) > 0;
   const allowClientPlanogram = scanHadPlanogram || showOptionalPricing;
 
   useEffect(() => {
-    if (!scan || scanHadPlanogram) return;
-    setShowOptionalPricing(false);
-    setScanContext(EMPTY_SCAN_CONTEXT);
-    saveStoredScanContext(EMPTY_SCAN_CONTEXT);
-  }, [scan, scanHadPlanogram]);
+    if (!scan || !data || data.status !== "completed") return;
+    const role = normalizeAuditRoleTab(
+      (data.retail_intelligence as { audit_role?: string } | undefined)?.audit_role ??
+        workspace.data?.customerType,
+    );
+    const next: ScanContextState =
+      scanHadPlanogram || hasExpectedProducts
+        ? {
+            ...EMPTY_SCAN_CONTEXT,
+            auditRole: role,
+            expectedProducts: data.expected_products ?? [],
+          }
+        : EMPTY_SCAN_CONTEXT;
+    setScanContext(next);
+    saveStoredScanContext(next);
+    if (!scanHadPlanogram && !hasExpectedProducts) {
+      setShowOptionalPricing(false);
+    }
+  }, [
+    scan,
+    data?.scan_id,
+    data?.status,
+    data?.expected_products,
+    data?.retail_intelligence,
+    scanHadPlanogram,
+    hasExpectedProducts,
+    workspace.data?.customerType,
+  ]);
 
   const activeRole =
     roleOverride ??
-    defaultAuditRoleTab(scanContext.auditRole ?? workspace.data?.customerType);
-  const display = useMemo(
-    () =>
-      data
-        ? enrichScanResultForDisplay(data, scanContext, { allowClientPlanogram })
-        : undefined,
-    [data, scanContext, allowClientPlanogram],
-  );
+    normalizeAuditRoleTab(
+      scanContext.auditRole ??
+        (data?.retail_intelligence as { audit_role?: string } | undefined)?.audit_role ??
+        workspace.data?.customerType,
+    );
+  const display = useMemo(() => {
+    if (!data) return undefined;
+    try {
+      return enrichScanResultForDisplay(data, scanContext, { allowClientPlanogram });
+    } catch (error) {
+      console.error("Failed to enrich scan result for display", error);
+      return data;
+    }
+  }, [data, scanContext, allowClientPlanogram]);
   const imageUrl = data?.annotated_image_url ?? data?.original_image_url ?? undefined;
 
   const goToScan = (id?: string | null) => {
@@ -306,6 +336,7 @@ function Results() {
                     showDemoPlanogramBadge={isDemoOralCareContext(scanContext)}
                     assignmentId={assignmentId}
                   />
+                  <AstraComparisonResults result={display} className="mb-4" />
                   <ScanResultsBody
                     data={display}
                     rawData={data}

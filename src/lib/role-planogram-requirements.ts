@@ -103,6 +103,8 @@ export function autoSku(brand: string, product: string): string {
 
 export function parseAdhocPlanogram(raw: unknown): {
   rows: PlanogramRow[];
+  expected_products?: ExpectedProduct[];
+  analysis_mode?: string;
   audit_role?: string;
   audit_package?: PlanogramAuditPackage;
 } {
@@ -110,12 +112,23 @@ export function parseAdhocPlanogram(raw: unknown): {
   if (Array.isArray(raw)) return { rows: raw as PlanogramRow[] };
   if (typeof raw === "object") {
     const obj = raw as Record<string, unknown>;
+    const expected_products = Array.isArray(obj.expected_products)
+      ? (obj.expected_products as ExpectedProduct[])
+      : undefined;
+    const analysis_mode = typeof obj.analysis_mode === "string" ? obj.analysis_mode : undefined;
+    const audit_role = typeof obj.audit_role === "string" ? obj.audit_role : undefined;
+    const audit_package = obj.audit_package ? packageFromDb(obj.audit_package) : undefined;
     if (Array.isArray(obj.rows)) {
       return {
         rows: obj.rows as PlanogramRow[],
-        audit_role: typeof obj.audit_role === "string" ? obj.audit_role : undefined,
-        audit_package: obj.audit_package ? packageFromDb(obj.audit_package) : undefined,
+        expected_products,
+        analysis_mode,
+        audit_role,
+        audit_package,
       };
+    }
+    if (expected_products?.length || analysis_mode) {
+      return { rows: [], expected_products, analysis_mode, audit_role, audit_package };
     }
   }
   return { rows: [] };

@@ -696,7 +696,7 @@ export function CompetitorIntelPanel({
               <p className="mt-1 text-2xl font-semibold tabular-nums">
                 {snapshot.primary_brand}{" "}
                 <span className="text-lg text-muted-foreground">
-                  {snapshot.own_brand_share_percent.toFixed(1)}%
+                  {Number(snapshot.own_brand_share_percent ?? 0).toFixed(1)}%
                 </span>
               </p>
               <p className="mt-1 text-xs text-muted-foreground">All {snapshot.primary_brand} SKUs on shelf</p>
@@ -734,7 +734,7 @@ export function CompetitorIntelPanel({
             </div>
           ) : null}
           <ul className="space-y-2">
-            {snapshot.competitor_shares
+            {(snapshot.competitor_shares ?? [])
               .filter((row) => !row.is_primary)
               .map((row) => (
                 <li
