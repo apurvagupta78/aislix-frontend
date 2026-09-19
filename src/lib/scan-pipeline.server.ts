@@ -24,6 +24,7 @@ import {
   buildAstraVisionExtras,
   shapePlanogramItemForApi,
 } from "@/lib/ai-audit/astra-analysis";
+import { synthesizeExpectedProductsAnalysis } from "@/lib/ai-audit/astra-expected-synthesis";
 import { normalizeAstraAnalysis } from "@/lib/ai-audit/astra-response";
 import {
   dedupeSelections,
@@ -1801,10 +1802,43 @@ async function persistScanPayload(
   // --- Metrics -------------------------------------------------------------
   const metricsSource = (payload?.metrics ?? payload?.summary ?? payload) as any;
   const adhocParsed = parseAdhocPlanogram(scan.adhoc_planogram);
-  const astraAnalysis = normalizeAstraAnalysis({
+  let astraAnalysis = normalizeAstraAnalysis({
     ...(payload && typeof payload === "object" ? payload : {}),
     analysis_mode: payload?.analysis_mode ?? adhocParsed.analysis_mode,
   });
+  let synthesizedExpectedBlock: Record<string, unknown> | null = null;
+  if (
+    astraAnalysis.mode === "shelf_only" &&
+    (adhocParsed.expected_products?.length ?? 0) > 0
+  ) {
+    const synthesized = synthesizeExpectedProductsAnalysis({
+      expectedProducts: adhocParsed.expected_products ?? [],
+      inventory: products.map((p, index) => ({
+        id: `pipeline-${index}`,
+        brand: p.brand ?? "",
+        product: p.name,
+        name: p.name,
+        variant: p.variant ?? undefined,
+        quantity: p.facings,
+        facings: p.facings,
+        confidence: p.confidence ?? 0,
+        shelf_position: undefined,
+      })),
+      operatingModel:
+        str(payload?.operating_model) ??
+        (adhocParsed.audit_role ? String(adhocParsed.audit_role) : undefined),
+    });
+    if (synthesized) {
+      astraAnalysis = synthesized;
+      synthesizedExpectedBlock = {
+        operating_model: synthesized.operating_model,
+        image_quality: synthesized.image_quality,
+        products: synthesized.products,
+        summary: synthesized.summary,
+        _synthesized: true,
+      };
+    }
+  }
   const planogramSource = (payload?.planogram_compliance ??
     payload?.result?.planogram_compliance ??
     null) as any;
@@ -1963,7 +1997,19 @@ async function persistScanPayload(
       : {}),
     ...(payload?.astra_expected_products_analysis
       ? { astra_expected_products_analysis: payload.astra_expected_products_analysis }
+      : synthesizedExpectedBlock
+        ? { astra_expected_products_analysis: synthesizedExpectedBlock }
+        : {}),
+    ...(Array.isArray(payload?.visible_prices) && payload.visible_prices.length
+      ? { visible_prices: payload.visible_prices }
       : {}),
+    ...(Array.isArray(payload?.visible_promotions) && payload.visible_promotions.length
+      ? { visible_promotions: payload.visible_promotions }
+      : {}),
+    ...(Array.isArray(payload?.shelf_issues) && payload.shelf_issues.length
+      ? { shelf_issues: payload.shelf_issues }
+      : {}),
+    ...(payload?.analysis_mode ? { analysis_mode: payload.analysis_mode } : {}),
     ...(metricsSource?.audit_scope ? { audit_scope: metricsSource.audit_scope } : {}),
     ...(Array.isArray(metricsSource?.adjacent_category_findings)
       ? { adjacent_category_findings: metricsSource.adjacent_category_findings }

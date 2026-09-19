@@ -147,6 +147,8 @@ export function AstraComparisonResults({ result, className }: Props) {
                 <th className="px-2 py-2">Actual units</th>
                 <th className="px-2 py-2">Unit status</th>
                 <th className="px-2 py-2">Overall</th>
+                <th className="px-2 py-2">Confidence</th>
+                <th className="px-2 py-2">Evidence</th>
               </tr>
             )}
           </thead>
@@ -186,6 +188,12 @@ export function AstraComparisonResults({ result, className }: Props) {
                     <td className="px-2 py-2">{row.actual_visible_units}</td>
                     <td className="px-2 py-2">{statusBadge(row.shelf_unit_status)}</td>
                     <td className="px-2 py-2">{statusBadge(row.overall_status)}</td>
+                    <td className="px-2 py-2 tabular-nums">
+                      {row.confidence
+                        ? `${Math.round(row.confidence <= 1 ? row.confidence * 100 : row.confidence)}%`
+                        : "—"}
+                    </td>
+                    <td className="px-2 py-2 text-muted-foreground">{row.evidence_note || "—"}</td>
                   </tr>
                 ))}
           </tbody>

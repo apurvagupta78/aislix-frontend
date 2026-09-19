@@ -25,7 +25,7 @@ import { AI_DISCLAIMER } from "@/components/scan/ScanProgressPanel";
 import { planHasFeature } from "@/lib/plan-features";
 import { fetchUsageSummary } from "@/lib/subscription-limits";
 import { useWorkspaceContext } from "@/hooks/use-customer-context";
-import { AiAuditSimpleResults } from "@/components/ai-audit/AiAuditSimpleResults";
+import { AiAuditResultsPage } from "@/components/ai-audit/AiAuditResultsPage";
 import { AstraComparisonResults } from "@/components/ai-audit/AstraComparisonResults";
 import { normalizeAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { ScanContextPanel } from "@/components/scan/ScanContextPanel";
@@ -371,7 +371,7 @@ function Results() {
                 <div className="flex min-h-0 flex-col">
                   {useSimpleAiView ? (
                     <>
-                      <AiAuditSimpleResults data={display} imageUrl={imageUrl} />
+                      <AiAuditResultsPage data={display} imageUrl={imageUrl} />
                       <p className="mt-3 shrink-0 text-[11px] leading-relaxed text-muted-foreground">
                         {AI_DISCLAIMER}
                       </p>

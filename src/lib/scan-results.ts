@@ -189,6 +189,10 @@ export type ScanResult = {
   expected_products?: ExpectedProduct[];
   astra_planogram_analysis?: Record<string, unknown>;
   astra_expected_products_analysis?: Record<string, unknown>;
+  /** Prices, promotions, and shelf issues returned at the top level of Astra JSON. */
+  astra_visible_prices?: Array<Record<string, unknown>>;
+  astra_visible_promotions?: Array<Record<string, unknown>>;
+  astra_shelf_issues?: Array<Record<string, unknown>>;
   summary: ScanSummary;
   annotated_image_url?: string;
   /** The untouched shelf photo — used to colour-correct the annotated render. */
@@ -260,6 +264,7 @@ import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import type { CompetitorSnapshot } from "@/lib/brand-intel";
 import { annotateCompetitorCategories, buildCompetitorSnapshot } from "@/lib/brand-intel";
+import { enrichScanResultWithAstra } from "@/lib/ai-audit/astra-display";
 import { normalizeAstraAnalysis } from "@/lib/ai-audit/astra-response";
 import type { ExpectedProduct } from "@/lib/ai-audit/expected-products";
 import {
@@ -977,6 +982,17 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
   if (metricsAstraExpected && typeof metricsAstraExpected === "object") {
     scanResult.astra_expected_products_analysis = metricsAstraExpected as Record<string, unknown>;
   }
+  if (Array.isArray(metricsObj?.visible_prices)) {
+    scanResult.astra_visible_prices = metricsObj.visible_prices as Array<Record<string, unknown>>;
+  }
+  if (Array.isArray(metricsObj?.visible_promotions)) {
+    scanResult.astra_visible_promotions = metricsObj.visible_promotions as Array<
+      Record<string, unknown>
+    >;
+  }
+  if (Array.isArray(metricsObj?.shelf_issues)) {
+    scanResult.astra_shelf_issues = metricsObj.shelf_issues as Array<Record<string, unknown>>;
+  }
   const auditScope = metricsObj?.audit_scope;
   const adjacentFindings = metricsObj?.adjacent_category_findings;
   const multiPhoto = metricsObj?.multi_photo;
@@ -1060,7 +1076,7 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
     };
   }
 
-  return scanResult;
+  return enrichScanResultWithAstra(scanResult);
 }
 
 /** Stable dedupe key for a SKU: prefers a real SKU, else brand|product|variant. */
