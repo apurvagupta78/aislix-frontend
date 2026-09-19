@@ -497,11 +497,14 @@ async function pollVisionScan(
     const status = (str(payload?.status) ?? "").toLowerCase();
 
     if (status === "failed" || status === "error") {
-      throw new PipelineError(
-        sanitizeUserMessage(
-          str(payload?.error) ?? str(payload?.error_message) ?? str(payload?.detail) ?? "",
-        ),
-      );
+      const publicMsg =
+        str(payload?.error) ?? str(payload?.error_message) ?? str(payload?.detail) ?? "";
+      const internalDetail = str(payload?.error_detail) ?? publicMsg;
+      const backendCode = str(payload?.error_code);
+      throw new PipelineError(sanitizeUserMessage(publicMsg), 502, {
+        code: backendCode || classifyPipelineErrorCode(internalDetail, 502),
+        detail: internalDetail.slice(0, 2000),
+      });
     }
     if (
       status === "completed" ||
@@ -611,11 +614,16 @@ export async function pollVisionJobOnce(jobId: string): Promise<PollVisionResult
   const status = (str(payload?.status) ?? "").toLowerCase();
 
   if (status === "failed" || status === "error") {
-    const rawDetail =
+    const publicMsg =
       str(payload?.error) ?? str(payload?.error_message) ?? str(payload?.detail) ?? "";
-    throw new PipelineError(sanitizeUserMessage(rawDetail), 502, {
-      code: classifyPipelineErrorCode(rawDetail, 502),
-      detail: rawDetail.slice(0, 800),
+    // Prefer Railway's machine code + internal detail (server-to-server) over
+    // re-classifying the sanitized public message as vision_http_502.
+    const internalDetail =
+      str(payload?.error_detail) ?? str(payload?.detail_internal) ?? publicMsg;
+    const backendCode = str(payload?.error_code);
+    throw new PipelineError(sanitizeUserMessage(publicMsg), 502, {
+      code: backendCode || classifyPipelineErrorCode(internalDetail, 502),
+      detail: internalDetail.slice(0, 2000),
     });
   }
   if (["completed", "complete", "done", "success"].includes(status)) {
@@ -1260,11 +1268,15 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
 
   const learnedCatalog = await loadLearnedCatalog(supabase, scan.org_id);
   const assignment = await loadAssignmentContext(supabase, scan);
+  // Honor explicit shelf_only from the audit setup — do not force planogram mode
+  // just because the assignment happens to have a planogram version attached.
+  const adhocMeta = parseAdhocPlanogram(scan.adhoc_planogram);
+  const forceShelfOnly = adhocMeta.analysis_mode === "shelf_only";
   // No assignment: the scanner may still have supplied expected products
   // inline on the New Scan page.
   const adhocParsed = assignment
-    ? { rows: [] as Record<string, unknown>[] }
-    : parseAdhocPlanogram(scan.adhoc_planogram);
+    ? { rows: [] as Record<string, unknown>[], analysis_mode: adhocMeta.analysis_mode, audit_role: adhocMeta.audit_role, audit_package: adhocMeta.audit_package }
+    : adhocMeta;
   const adhocItems = adhocParsed.rows.map((row) => planogramShape(row));
   // Every shelf type on this rack must reach the vision backend, otherwise it
   // scopes to one sub-category and reports false mismatches on mixed shelves.
@@ -1303,12 +1315,16 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
     ? brandConfig.competitor_brands.map((b) => str(b)).filter(Boolean)
     : [];
 
-  const planogramItems = assignment ? assignment.items : adhocItems;
-  const auditRole = (assignment ? undefined : adhocParsed.audit_role) ?? "supermarket";
+  const planogramItems = forceShelfOnly
+    ? []
+    : assignment
+      ? assignment.items
+      : adhocItems;
+  const auditRole = (assignment ? adhocMeta.audit_role : adhocParsed.audit_role) ?? "supermarket";
   const astraExtras = buildAstraVisionExtras({
     auditRole: String(auditRole),
     planogramRows: planogramItems as Record<string, unknown>[],
-    assignmentHasPlanogram: Boolean(assignment?.items.length),
+    assignmentHasPlanogram: !forceShelfOnly && Boolean(assignment?.items.length),
     location:
       scan.shelf_label ??
       (assignment
@@ -1366,12 +1382,18 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
           assignment_id: assignment.id,
           assignment_scope_type: assignment.scope_type,
           assignment_scope_values: assignment.scope_values,
-          planogram_version_id: assignment.planogram_version_id,
-          planogram_items: astraExtras.planogram_items ?? assignment.items,
-          planogram_items_full: assignment.items_full,
-          audit_package: assignment.audit_package ?? {},
+          // shelf_only audits must not re-inject assignment planogram rows —
+          // that flips the CV prompt/mode and often yields unparseable Astra JSON.
+          ...(forceShelfOnly
+            ? {}
+            : {
+                planogram_version_id: assignment.planogram_version_id,
+                planogram_items: astraExtras.planogram_items ?? assignment.items,
+                planogram_items_full: assignment.items_full,
+                audit_package: assignment.audit_package ?? {},
+              }),
         }
-      : adhocItems.length
+      : !forceShelfOnly && adhocItems.length
         ? {
             location: adhocItems[0]?.["location"] || null,
             planogram_source: "adhoc",
