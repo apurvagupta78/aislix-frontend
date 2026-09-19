@@ -9,7 +9,11 @@ After frontend or backend fixes that should go live:
 
 1. **Always commit, push, and publish yourself** — do not ask the user to push, publish, or redeploy.
 2. **Frontend (`aislix-frontend`)**: commit → `git push origin main` → **Lovable `deploy_project`** for project `449a1800-6064-43d4-9afe-f713a920d0d4` via the Lovable MCP server (`.cursor/mcp.json`). Git push alone does NOT update aislix.com — publish is required every time.
-3. **Backend (`aislix-backend`)**: commit → push the branch Railway watches → confirm redeploy when relevant.
+3. **Backend (`aislix-backend`)** — **always verify deploy target before pushing**:
+   - Production service: `aislix-backend` in Railway project **poetic-happiness** → URL `https://aislix-backend-production.up.railway.app`
+   - Railway watches **`main`** (not feature branches). Pushing only to `universal-audit-engine` or other branches does **not** update production.
+   - Workflow: commit → merge into `main` if work was on a feature branch → `git push origin main` → confirm Railway shows the new commit on the active deployment.
+   - Never assume a feature-branch push reached Railway; check branch + latest deploy commit in Railway (or `git log origin/main -1`) before telling the user backend is live.
 4. Tell the user what was deployed and when to retest — not what they need to click.
 
 Never end with "you should push/publish" or "please publish in Lovable" as the required action for the user.
