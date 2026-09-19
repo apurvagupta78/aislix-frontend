@@ -58,6 +58,7 @@ import { Route as ReportRouteImport } from './routes/report'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ResultsRouteImport } from './routes/results'
+import { Route as ResultsDebugRouteImport } from './routes/results.debug'
 import { Route as RetailIntelligenceRouteImport } from './routes/retail-intelligence'
 import { Route as RetailShelfIntelligenceRouteImport } from './routes/retail-shelf-intelligence'
 import { Route as ScanRouteImport } from './routes/scan'
@@ -368,6 +369,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
 const ResultsRoute = ResultsRouteImport.update({
   id: '/results',
   path: '/results',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResultsDebugRoute = ResultsDebugRouteImport.update({
+  id: '/results/debug',
+  path: '/results/debug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RetailIntelligenceRoute = RetailIntelligenceRouteImport.update({
@@ -765,6 +771,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/results': typeof ResultsRoute
+  '/results/debug': typeof ResultsDebugRoute
   '/retail-intelligence': typeof RetailIntelligenceRoute
   '/retail-shelf-intelligence': typeof RetailShelfIntelligenceRoute
   '/scan': typeof ScanRoute
@@ -882,6 +889,7 @@ export interface FileRoutesByTo {
   '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/results': typeof ResultsRoute
+  '/results/debug': typeof ResultsDebugRoute
   '/retail-intelligence': typeof RetailIntelligenceRoute
   '/retail-shelf-intelligence': typeof RetailShelfIntelligenceRoute
   '/scan': typeof ScanRoute
@@ -1000,6 +1008,7 @@ export interface FileRoutesById {
   '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
   '/results': typeof ResultsRoute
+  '/results/debug': typeof ResultsDebugRoute
   '/retail-intelligence': typeof RetailIntelligenceRoute
   '/retail-shelf-intelligence': typeof RetailShelfIntelligenceRoute
   '/scan': typeof ScanRoute
@@ -1471,6 +1480,7 @@ export interface RootRouteChildren {
   ReportsRoute: typeof ReportsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ResultsRoute: typeof ResultsRoute
+  ResultsDebugRoute: typeof ResultsDebugRoute
   RetailIntelligenceRoute: typeof RetailIntelligenceRoute
   RetailShelfIntelligenceRoute: typeof RetailShelfIntelligenceRoute
   ScanRoute: typeof ScanRoute
@@ -1852,6 +1862,13 @@ declare module '@tanstack/react-router' {
       path: '/results'
       fullPath: '/results'
       preLoaderRoute: typeof ResultsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/results/debug': {
+      id: '/results/debug'
+      path: '/results/debug'
+      fullPath: '/results/debug'
+      preLoaderRoute: typeof ResultsDebugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/retail-intelligence': {
@@ -2519,6 +2536,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReportsRoute: ReportsRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ResultsRoute: ResultsRoute,
+  ResultsDebugRoute: ResultsDebugRoute,
   RetailIntelligenceRoute: RetailIntelligenceRoute,
   RetailShelfIntelligenceRoute: RetailShelfIntelligenceRoute,
   ScanRoute: ScanRoute,

@@ -1,8 +1,7 @@
 import type { ExpectedProduct } from "@/lib/ai-audit/expected-products";
 import {
-  buildAstraExpectedProductsPrompt,
   buildAstraPlanogramPrompt,
-  buildAstraShelfOnlyPrompt,
+  buildAstraWithoutPlanogramPrompt,
 } from "@/lib/ai-audit/astra-prompt";
 import type { PlanogramRow } from "@/lib/planogram";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
@@ -114,30 +113,27 @@ export function buildAstraVisionExtras(input: BuildAstraVisionExtrasInput): {
     };
   }
 
+  const withoutPlanogramPrompt = buildAstraWithoutPlanogramPrompt({
+    operatingModelSlug: operating_model,
+    category: input.category,
+    subCategory: input.subCategory,
+    expectedProducts: analysis_mode === "expected_products" ? expectedProducts : [],
+    notes: input.notes,
+  });
+
   if (analysis_mode === "expected_products") {
     return {
       analysis_mode,
       operating_model,
       expected_products: expectedProducts,
-      vision_prompt: buildAstraExpectedProductsPrompt({
-        operatingModel: operatingLabel,
-        operatingModelSlug: operating_model,
-        expectedProducts,
-        location: input.location,
-        notes: input.notes,
-      }),
+      vision_prompt: withoutPlanogramPrompt,
     };
   }
 
   return {
     analysis_mode,
     operating_model,
-    vision_prompt: buildAstraShelfOnlyPrompt({
-      operatingModel: operatingLabel,
-      category: input.category,
-      subCategory: input.subCategory,
-      notes: input.notes,
-    }),
+    vision_prompt: withoutPlanogramPrompt,
   };
 }
 

@@ -1,7 +1,6 @@
 import type { ExpectedProduct } from "@/lib/ai-audit/expected-products";
-import { ASTRA_EXPECTED_PRODUCTS_PROMPT_BODY } from "@/lib/ai-audit/prompts/expected-products.prompt";
 import { ASTRA_PLANOGRAM_COMPARISON_PROMPT_BODY } from "@/lib/ai-audit/prompts/planogram-comparison.prompt";
-import { ASTRA_SHELF_ONLY_PROMPT_BODY } from "@/lib/ai-audit/prompts/shelf-only.prompt";
+import { ASTRA_WITHOUT_PLANOGRAM_PROMPT_BODY } from "@/lib/ai-audit/prompts/without-planogram.prompt";
 import { getRoleProfile } from "@/lib/role-kpi-config";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import type { NewAuditPlanogramChoice } from "@/lib/new-audit/planogram-setup";
@@ -40,6 +39,28 @@ export function buildAstraPlanogramPrompt(input: {
     .replace("{{AUDITOR_NOTES}}", [input.auditName?.trim(), input.notes?.trim()].filter(Boolean).join(" · ") || "None");
 }
 
+/** Unified without-planogram prompt — Mode A (expected products) or Mode B (image-only). */
+export function buildAstraWithoutPlanogramPrompt(input: {
+  operatingModelSlug: string;
+  category?: string | null;
+  subCategory?: string | null;
+  expectedProducts?: ExpectedProduct[];
+  notes?: string | null;
+}): string {
+  const expected = input.expectedProducts ?? [];
+  const notes = input.notes?.trim();
+  return ASTRA_WITHOUT_PLANOGRAM_PROMPT_BODY.replace(/\{\{operating_model\}\}/g, input.operatingModelSlug)
+    .replace(/\{\{category\}\}/g, input.category?.trim() || "Not supplied")
+    .replace(/\{\{sub_category\}\}/g, input.subCategory?.trim() || "Not supplied")
+    .replace(/\{\{expected_products\}\}/g, JSON.stringify(expected, null, 2))
+    .replace(
+      /\{\{shelf_image\}\}/g,
+      "Attached shelf/store image supplied by Aislix via image_urls with this request.",
+    )
+    .concat(notes ? `\n\nAuditor notes:\n${notes}` : "");
+}
+
+/** @deprecated Use buildAstraWithoutPlanogramPrompt — kept for imports that pass expected rows. */
 export function buildAstraExpectedProductsPrompt(input: {
   operatingModel: string;
   operatingModelSlug: string;
@@ -47,23 +68,27 @@ export function buildAstraExpectedProductsPrompt(input: {
   location?: string | null;
   notes?: string | null;
 }): string {
-  return ASTRA_EXPECTED_PRODUCTS_PROMPT_BODY.replace(/\{\{operating_model\}\}/g, input.operatingModelSlug)
-    .replace("{{EXPECTED_PRODUCTS_JSON}}", JSON.stringify(input.expectedProducts, null, 2))
-    .replace(
-      /\{\{shelf_image\}\}/g,
-      "Attached shelf/store image supplied by Aislix via image_urls with this request.",
-    );
+  return buildAstraWithoutPlanogramPrompt({
+    operatingModelSlug: input.operatingModelSlug,
+    expectedProducts: input.expectedProducts,
+    notes: input.notes,
+  });
 }
 
+/** @deprecated Use buildAstraWithoutPlanogramPrompt with an empty expectedProducts array. */
 export function buildAstraShelfOnlyPrompt(input: {
   operatingModel: string;
   category?: string | null;
   subCategory?: string | null;
   notes?: string | null;
 }): string {
-  return ASTRA_SHELF_ONLY_PROMPT_BODY.replace("{{OPERATING_MODEL}}", input.operatingModel)
-    .replace("{{CATEGORY_CONTEXT}}", categoryContext(input.category, input.subCategory))
-    .replace("{{AUDITOR_NOTES}}", input.notes?.trim() || "None");
+  return buildAstraWithoutPlanogramPrompt({
+    operatingModelSlug: input.operatingModel,
+    category: input.category,
+    subCategory: input.subCategory,
+    expectedProducts: [],
+    notes: input.notes,
+  });
 }
 
 /** Preview prompt shown in the UI before scan submission. */
@@ -122,19 +147,12 @@ export function buildAstraVisionPrompt(input: AstraPromptInput): string {
       auditName: input.auditName,
       notes,
     });
-  } else if (analysisMode === "expected_products") {
-    visionPrompt = buildAstraExpectedProductsPrompt({
-      operatingModel,
-      operatingModelSlug: role,
-      expectedProducts,
-      location,
-      notes,
-    });
   } else {
-    visionPrompt = buildAstraShelfOnlyPrompt({
-      operatingModel,
+    visionPrompt = buildAstraWithoutPlanogramPrompt({
+      operatingModelSlug: role,
       category,
       subCategory,
+      expectedProducts: analysisMode === "expected_products" ? expectedProducts : [],
       notes,
     });
   }

@@ -164,7 +164,10 @@ function pickRecord(payload: unknown): Record<string, unknown> | null {
 }
 
 function analysisModeHint(root: Record<string, unknown>): string {
-  return str(root.analysis_mode).toLowerCase();
+  const raw = str(root.analysis_mode).toLowerCase() || str(root.mode).toLowerCase();
+  if (raw === "expected_product_comparison") return "expected_products";
+  if (raw === "image_only_shelf_analysis") return "shelf_only";
+  return raw;
 }
 
 function looksLikeLegacyInventoryProducts(products: unknown[]): boolean {
@@ -212,6 +215,11 @@ export function normalizeAstraAnalysis(payload: unknown): NormalizedAstraAnalysi
     pickRecord(root.astra_expected_products_analysis) ??
     pickRecord(nested?.astra_expected_products_analysis) ??
     (modeHint === "expected_products" &&
+    rootProducts &&
+    !looksLikeLegacyInventoryProducts(rootProducts)
+      ? root
+      : null) ??
+    (str(root.mode).toLowerCase() === "expected_product_comparison" &&
     rootProducts &&
     !looksLikeLegacyInventoryProducts(rootProducts)
       ? root

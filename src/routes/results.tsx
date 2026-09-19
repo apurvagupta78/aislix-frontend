@@ -25,6 +25,7 @@ import { AI_DISCLAIMER } from "@/components/scan/ScanProgressPanel";
 import { planHasFeature } from "@/lib/plan-features";
 import { fetchUsageSummary } from "@/lib/subscription-limits";
 import { useWorkspaceContext } from "@/hooks/use-customer-context";
+import { AiAuditSimpleResults } from "@/components/ai-audit/AiAuditSimpleResults";
 import { AstraComparisonResults } from "@/components/ai-audit/AstraComparisonResults";
 import { normalizeAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { ScanContextPanel } from "@/components/scan/ScanContextPanel";
@@ -132,6 +133,12 @@ function Results() {
   const assignmentId = assignmentQuery.data ?? null;
   const scanHadPlanogram = Boolean(data?.planogram?.requested || assignmentId);
   const hasExpectedProducts = (data?.expected_products?.length ?? 0) > 0;
+  const isAiAstraAudit = Boolean(
+    data?.analysis_mode ||
+      hasExpectedProducts ||
+      data?.astra_expected_products_analysis ||
+      data?.astra_planogram_analysis,
+  );
   const allowClientPlanogram = scanHadPlanogram || showOptionalPricing;
 
   useEffect(() => {
@@ -173,13 +180,14 @@ function Results() {
     );
   const display = useMemo(() => {
     if (!data) return undefined;
+    if (isAiAstraAudit) return data;
     try {
       return enrichScanResultForDisplay(data, scanContext, { allowClientPlanogram });
     } catch (error) {
       console.error("Failed to enrich scan result for display", error);
       return data;
     }
-  }, [data, scanContext, allowClientPlanogram]);
+  }, [data, scanContext, allowClientPlanogram, isAiAstraAudit]);
   const imageUrl = data?.annotated_image_url ?? data?.original_image_url ?? undefined;
 
   const goToScan = (id?: string | null) => {
@@ -274,14 +282,24 @@ function Results() {
           ) : loading ? (
             <ProcessingState scanId={scan} />
           ) : ready ? (
-            <ResultsErrorBoundary scanId={data!.scan_id}>
+            <>
+              <div className="flex justify-end">
+                <Button asChild variant="outline" size="sm" className="rounded-xl text-xs">
+                  <Link to="/results/debug" search={{ scan: data!.scan_id }}>
+                    Debug raw payload
+                  </Link>
+                </Button>
+              </div>
+              <ResultsErrorBoundary scanId={data!.scan_id}>
               {assignmentQuery.data && (
                 <FixRescanVerifyPanel
                   assignmentId={assignmentQuery.data}
                   scanId={data!.scan_id}
                 />
               )}
-              <AuditGovernanceTabs scanId={data!.scan_id} scanData={data!} />
+              {!isAiAstraAudit ? (
+                <AuditGovernanceTabs scanId={data!.scan_id} scanData={data!} />
+              ) : null}
 
               {!scanHadPlanogram &&
               (showOptionalPricing || hasActiveScanContext(scanContext)) ? (
@@ -339,30 +357,42 @@ function Results() {
                     showDemoPlanogramBadge={isDemoOralCareContext(scanContext)}
                     assignmentId={assignmentId}
                   />
-                  <AstraComparisonResults result={display} className="mb-4" />
-                  <ScanResultsBody
-                    data={display}
-                    rawData={data!}
-                    activeRole={activeRole}
-                    onRoleChange={setRoleOverride}
-                    loading={false}
-                    planogramComparison={comparison}
-                    financialLocked={financialLocked}
-                    planCode={planCode}
-                    imageUrl={imageUrl}
-                  />
-                  <ScanResultsActionsFooter
-                    data={display}
-                    loading={false}
-                    activeRole={activeRole}
-                    hasWorkspace
-                  />
-                  <p className="mt-3 shrink-0 text-[11px] leading-relaxed text-muted-foreground">
-                    {AI_DISCLAIMER}
-                  </p>
+                  {isAiAstraAudit ? (
+                    <>
+                      <AiAuditSimpleResults data={display} imageUrl={imageUrl} />
+                      <p className="mt-3 shrink-0 text-[11px] leading-relaxed text-muted-foreground">
+                        {AI_DISCLAIMER}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <AstraComparisonResults result={display} className="mb-4" />
+                      <ScanResultsBody
+                        data={display}
+                        rawData={data!}
+                        activeRole={activeRole}
+                        onRoleChange={setRoleOverride}
+                        loading={false}
+                        planogramComparison={comparison}
+                        financialLocked={financialLocked}
+                        planCode={planCode}
+                        imageUrl={imageUrl}
+                      />
+                      <ScanResultsActionsFooter
+                        data={display}
+                        loading={false}
+                        activeRole={activeRole}
+                        hasWorkspace
+                      />
+                      <p className="mt-3 shrink-0 text-[11px] leading-relaxed text-muted-foreground">
+                        {AI_DISCLAIMER}
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
-            </ResultsErrorBoundary>
+              </ResultsErrorBoundary>
+            </>
           ) : null}
         </div>
       )}
