@@ -45,7 +45,13 @@ function pickArray<T>(value: unknown): T[] {
 
 function resolveViewKind(result: ScanResult): AiAuditViewKind {
   const mode = (result.analysis_mode ?? "").toLowerCase();
-  if (mode === "planogram_comparison" || result.planogram?.requested) return "planogram";
+  // Explicit shelf-only wins — do not treat facing_compliance / null planogram % as planogram mode.
+  if (mode === "shelf_only" || mode === "no_planogram" || mode === "image_only_shelf_analysis") {
+    return "shelf_only";
+  }
+  if (mode === "planogram_comparison" || mode === "with_planogram" || result.planogram?.requested) {
+    return "planogram";
+  }
   return "shelf_only";
 }
 

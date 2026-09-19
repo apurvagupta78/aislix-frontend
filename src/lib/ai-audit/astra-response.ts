@@ -580,6 +580,14 @@ function shelfCvIncompleteReason(root: Record<string, unknown>): string | null {
   if (nested?.scan_complete === false || root.scan_complete === false) {
     return "Scan requires review before verified KPIs can be displayed.";
   }
+  const refCache =
+    str(root.reference_cache) ||
+    str(nested?.reference_cache) ||
+    str(pickRecord(root.astra_shelf_analysis)?.reference_cache) ||
+    str(pickRecord(nested?.astra_shelf_analysis)?.reference_cache);
+  if (refCache) {
+    return `This scan used the landing demo reference cache (${refCache}) instead of a live Astra CV analysis. Re-run the scan — AI Audit now skips that cache.`;
+  }
   return null;
 }
 

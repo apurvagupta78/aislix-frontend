@@ -1273,6 +1273,8 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
     operating_model: astraExtras.operating_model,
     analysis_mode: astraExtras.analysis_mode,
     vision_prompt: astraExtras.vision_prompt,
+    // Landing demo cache returns inventory-only JSON — never use it for AI Audit.
+    skip_reference_cache: true,
     ...(astraExtras.planogram_items?.length
       ? { planogram_items: astraExtras.planogram_items }
       : {}),
