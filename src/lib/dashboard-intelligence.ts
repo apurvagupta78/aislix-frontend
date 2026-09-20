@@ -1016,10 +1016,10 @@ export async function fetchDashboardFilterOptions(
     loadTeamMembers(orgId),
   ]);
   if (storesRes.error) dbError(storesRes.error, "Could not load stores.");
-  if (scansRes.error) dbError(scansRes.error, "Could not load audits.");
+  if (auditsRes.error) dbError(auditsRes.error, "Could not load audits.");
 
   const allStores = mapStoreRows(storesRes.data ?? []);
-  const poolScans = (scansRes.data ?? []) as ScanRow[];
+  const poolScans = (auditsRes.data ?? []) as ScanRow[];
   const metricsMap = await fetchMetricsMap(poolScans.map((s) => s.id));
   return buildFilterOptions(
     allStores,
