@@ -234,7 +234,7 @@ export const NewPlanogramWizard = forwardRef<NewPlanogramWizardHandle, NewPlanog
     }, [currentStep, onStepChange]);
 
     const metaOpts = roleLocked ? { roleLocked: true as const } : undefined;
-    const mergeMetaPatch = (patch: Partial<PlanogramMeta>) => mergeMetaPatch( patch, metaOpts);
+    const mergeMetaPatch = (patch: Partial<PlanogramMeta>) => mergeMeta(value, patch, metaOpts);
 
     const meta = useMemo(() => {
       const stored = value.planogramMeta ?? EMPTY_PLANOGRAM_META;
