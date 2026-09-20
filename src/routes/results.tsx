@@ -155,10 +155,10 @@ function Results() {
   );
   const digitalLines = digitalQuery.data?.lines?.length ?? 0;
   const isDigitalAudit = digitalLines > 0;
-  /** Until /results is rebuilt, every non-digital scan uses the safe Astra view. */
-  const useSimpleAiView = !isDigitalAudit;
+  /** Prefer Astra graphical AI audit view for all completed AI scans (incl. assigned). */
+  const useSimpleAiView = true;
   // Never block the Astra results view waiting on digital-session hydration.
-  const auditTypeReady = !scan || !ready || digitalQuery.isFetched || useSimpleAiView;
+  const auditTypeReady = true;
   const allowClientPlanogram = scanHadPlanogram || showOptionalPricing;
 
   useEffect(() => {

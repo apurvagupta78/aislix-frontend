@@ -190,7 +190,13 @@ export function ScanResultHeader({
         <ResultNavigation />
       </div>
 
-      <div className="mt-5 grid gap-4 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="mt-5 grid gap-4 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <MetaItem
+          icon={<ScanLine className="size-4" />}
+          label="Scan ID"
+          value={data?.scan_id}
+          loading={loading}
+        />
         <MetaItem
           icon={<Building2 className="size-4" />}
           label="Store"
@@ -206,9 +212,13 @@ export function ScanResultHeader({
         <MetaItem
           icon={<Tags className="size-4" />}
           label="Category"
-          value={
-            [data?.scan_category, data?.scan_sub_category].filter(Boolean).join(" · ") || undefined
-          }
+          value={data?.scan_category || undefined}
+          loading={loading}
+        />
+        <MetaItem
+          icon={<Tags className="size-4" />}
+          label="Sub-category"
+          value={data?.scan_sub_category || undefined}
           loading={loading}
         />
         <MetaItem
@@ -224,9 +234,6 @@ export function ScanResultHeader({
           loading={loading}
           accent
         />
-      </div>
-
-      <div className="mt-4 grid gap-4 border-t border-border pt-4 sm:grid-cols-2">
         <MetaItem
           icon={<Timer className="size-4" />}
           label="Processing time"
