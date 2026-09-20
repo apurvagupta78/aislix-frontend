@@ -26,6 +26,7 @@ import { planHasFeature } from "@/lib/plan-features";
 import { fetchUsageSummary } from "@/lib/subscription-limits";
 import { useWorkspaceContext } from "@/hooks/use-customer-context";
 import { AiAuditResultsPage } from "@/components/ai-audit/AiAuditResultsPage";
+import { ReportActionsFooter } from "@/components/scan-results/ReportActionsFooter";
 import { AstraComparisonResults } from "@/components/ai-audit/AstraComparisonResults";
 import { normalizeAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { ScanContextPanel } from "@/components/scan/ScanContextPanel";
