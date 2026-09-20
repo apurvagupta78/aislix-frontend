@@ -19,6 +19,35 @@ const norm = (value: string | null | undefined) =>
     .toLowerCase()
     .replace(/[\s-]+/g, "_");
 
+/** Free-text planogram aisle names → canonical GET /categories names. */
+const CATEGORY_ALIASES: Record<string, string> = {
+  oral_care: "personal_care",
+  oral_hygiene: "personal_care",
+  toothpaste: "personal_care",
+  beauty: "personal_care",
+  hair_care: "personal_care",
+  skin_care: "personal_care",
+  skincare: "personal_care",
+  snacks: "packaged_food_snacks",
+  packaged_food_and_snacks: "packaged_food_snacks",
+  frozen: "frozen_ice_cream",
+  frozen_foods: "frozen_ice_cream",
+  ice_cream: "frozen_ice_cream",
+  grocery: "grocery_staples",
+  staples: "grocery_staples",
+  dairy: "dairy_chilled",
+  household: "home_care",
+  cleaning: "home_care",
+  baby_care: "baby_pet_care",
+  pet_care: "baby_pet_care",
+  health: "health_wellness",
+  wellness: "health_wellness",
+};
+
+function aliasCategoryKey(wanted: string): string {
+  return CATEGORY_ALIASES[wanted] ?? wanted;
+}
+
 /** Most frequent (category, sub_category) pair across planogram rows. */
 export function dominantPlanogramPair(
   rows: Array<Pick<DraftRow, "category" | "sub_category">>,
@@ -46,7 +75,7 @@ export function resolveScanCategory(
   rawCategory: string,
   rawSubCategory: string,
 ): ResolvedScanCategory | null {
-  const wanted = norm(rawCategory);
+  const wanted = aliasCategoryKey(norm(rawCategory));
   if (!wanted) return null;
 
   const category =
@@ -58,7 +87,17 @@ export function resolveScanCategory(
       (item.subcategories ?? []).some(
         (sub) => norm(sub.id) === wanted || norm(sub.label) === wanted,
       ),
-    );
+    ) ??
+    // Infer aisle from subcategory alone (e.g. category "Oral Care", sub "Toothpaste").
+    (norm(rawSubCategory)
+      ? categories.find((item) =>
+          (item.subcategories ?? []).some(
+            (sub) =>
+              norm(sub.id) === norm(rawSubCategory) ||
+              norm(sub.label) === norm(rawSubCategory),
+          ),
+        )
+      : undefined);
   if (!category) return null;
 
   const subs = category.subcategories ?? [];

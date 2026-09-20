@@ -1272,11 +1272,10 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
   // just because the assignment happens to have a planogram version attached.
   const adhocMeta = parseAdhocPlanogram(scan.adhoc_planogram);
   const forceShelfOnly = adhocMeta.analysis_mode === "shelf_only";
-  // No assignment: the scanner may still have supplied expected products
-  // inline on the New Scan page.
-  const adhocParsed = assignment
-    ? { rows: [] as Record<string, unknown>[], analysis_mode: adhocMeta.analysis_mode, audit_role: adhocMeta.audit_role, audit_package: adhocMeta.audit_package }
-    : adhocMeta;
+  // Adhoc rows come from New Audit / New Scan CSV uploads. Prefer a linked
+  // assignment planogram when it has items; otherwise keep the adhoc rows even
+  // when an assignment exists (self-assign often has no planogram_version_id).
+  const adhocParsed = adhocMeta;
   const adhocItems = adhocParsed.rows.map((row) => planogramShape(row));
   // Every shelf type on this rack must reach the vision backend, otherwise it
   // scopes to one sub-category and reports false mismatches on mixed shelves.
@@ -1317,19 +1316,22 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
 
   const planogramItems = forceShelfOnly
     ? []
-    : assignment
+    : assignment?.items?.length
       ? assignment.items
       : adhocItems;
-  const auditRole = (assignment ? adhocMeta.audit_role : adhocParsed.audit_role) ?? "supermarket";
+  const auditRole = adhocParsed.audit_role ?? "supermarket";
   const astraExtras = buildAstraVisionExtras({
     auditRole: String(auditRole),
     planogramRows: planogramItems as Record<string, unknown>[],
-    assignmentHasPlanogram: !forceShelfOnly && Boolean(assignment?.items.length),
+    assignmentHasPlanogram:
+      !forceShelfOnly &&
+      (planogramItems.length > 0 || adhocParsed.analysis_mode === "planogram_comparison"),
     location:
       scan.shelf_label ??
       (assignment
         ? (assignment.scope_values["location"] ?? assignment.items[0]?.["location"])
-        : adhocItems[0]?.["location"]) ??
+        : undefined) ??
+      adhocItems[0]?.["location"] ??
       null,
     category: scan.category || primary?.category_name || null,
     subCategory: scan.sub_category || primary?.sub_category_label || primary?.sub_category_id || null,
@@ -1378,7 +1380,10 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
     ...(assignment
       ? {
           location:
-            assignment.scope_values["location"] ?? assignment.items[0]?.["location"] ?? null,
+            assignment.scope_values["location"] ??
+            assignment.items[0]?.["location"] ??
+            adhocItems[0]?.["location"] ??
+            null,
           assignment_id: assignment.id,
           assignment_scope_type: assignment.scope_type,
           assignment_scope_values: assignment.scope_values,
@@ -1387,10 +1392,14 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
           ...(forceShelfOnly
             ? {}
             : {
-                planogram_version_id: assignment.planogram_version_id,
-                planogram_items: astraExtras.planogram_items ?? assignment.items,
-                planogram_items_full: assignment.items_full,
-                audit_package: assignment.audit_package ?? {},
+                ...(assignment.planogram_version_id
+                  ? { planogram_version_id: assignment.planogram_version_id }
+                  : { planogram_source: "adhoc" }),
+                planogram_items: astraExtras.planogram_items ?? planogramItems,
+                planogram_items_full: assignment.items_full?.length
+                  ? assignment.items_full
+                  : adhocItems,
+                audit_package: assignment.audit_package ?? adhocParsed.audit_package ?? {},
               }),
         }
       : !forceShelfOnly && adhocItems.length
