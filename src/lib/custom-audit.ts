@@ -66,7 +66,27 @@ export async function loadCustomAuditSession(
     .eq("id", assignmentId)
     .maybeSingle();
   if (error) dbError(error, "Could not load assignment.");
-  if (!assignment) return null;
+  if (!assignment) {
+    // Self-schedule / recurring creates an audit_schedules row first. Opening that
+    // UUID under /audit/:id used to show a blank failure — explain the wait state.
+    const { data: schedule } = await supabase
+      .from("audit_schedules")
+      .select("id, name, status, publish_at, next_run_at, assignment_mode")
+      .eq("org_id", orgId)
+      .eq("id", assignmentId)
+      .maybeSingle();
+    if (schedule) {
+      const when =
+        (schedule.publish_at as string | null) ||
+        (schedule.next_run_at as string | null);
+      const whenLabel = when ? new Date(when).toLocaleString() : "the scheduled time";
+      throw new Error(
+        `“${(schedule.name as string | null) || "This audit"}” is scheduled for ${whenLabel}. ` +
+          "It will appear in My Work after it publishes — this link is not an open assignment yet.",
+      );
+    }
+    return null;
+  }
 
   const templateSnapshot = assignment.template_snapshot as Record<string, unknown> | null;
   let template: AuditTemplate | null = null;

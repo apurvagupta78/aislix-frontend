@@ -112,7 +112,15 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
 
   if (sessionQuery.isLoading) return <Skeleton className="h-64 w-full" />;
   if (sessionQuery.isError || !session) {
-    return <ErrorState description="Could not load this audit assignment." />;
+    return (
+      <ErrorState
+        description={
+          sessionQuery.error
+            ? toUserMessage(sessionQuery.error)
+            : "Could not load this audit assignment."
+        }
+      />
+    );
   }
 
   const handleSaveField = async (

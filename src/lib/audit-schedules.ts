@@ -179,12 +179,14 @@ export async function processDueAuditSchedules(): Promise<number> {
   const orgId = await requireOrgId();
   const now = new Date().toISOString();
 
+  // Include schedule_once rows (active=false, status=scheduled) that are due.
   const { data: due, error } = await supabase
     .from("audit_schedules")
     .select("*")
     .eq("org_id", orgId)
-    .eq("active", true)
-    .lte("next_run_at", now);
+    .or("active.eq.true,status.in.(active,scheduled)")
+    .lte("next_run_at", now)
+    .not("status", "eq", "completed");
   if (error) dbError(error, "Could not check due schedules.");
   if (!due?.length) return 0;
 

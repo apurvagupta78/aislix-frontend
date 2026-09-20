@@ -186,7 +186,10 @@ function MyScansPage() {
     onSuccess: (_data, assignment) => {
       void queryClient.invalidateQueries({ queryKey: ["my-assignments"] });
       void queryClient.invalidateQueries({ queryKey: ["my-assignments-pending"] });
-      if (assignment.template_id) {
+      // Prefer capture method over template presence — AI + template must open the scan flow.
+      if (assignment.audit_mode === "ai" || assignment.audit_mode === "ai_assisted") {
+        void navigate({ to: "/scan", search: { assignmentId: assignment.id } });
+      } else if (assignment.template_id) {
         void navigate({
           to: "/custom-audit",
           search: { assignmentId: assignment.id, test: false },

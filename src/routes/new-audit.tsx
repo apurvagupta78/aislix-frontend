@@ -986,8 +986,13 @@ function NewAuditPage() {
     },
     onSuccess: ({ assignmentId, self, expiry, bulk, scheduled, skipNavigation }) => {
       if (skipNavigation) return;
-      if (scheduled) toast.success("Audit schedule created.");
-      else if (bulk && bulk > 1) toast.success(`${bulk} assignments created.`);
+      if (scheduled) {
+        toast.success("Audit schedule created.");
+        // Schedule IDs are not executable assignments — never open /audit/{scheduleId}.
+        void navigate({ to: "/audits", search: { tab: "schedules" } });
+        return;
+      }
+      if (bulk && bulk > 1) toast.success(`${bulk} assignments created.`);
       else toast.success(self ? "Audit created and started." : "Audit assigned successfully.");
       if (expiry && self) {
         void navigate({
