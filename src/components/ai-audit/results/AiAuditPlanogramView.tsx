@@ -72,12 +72,17 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
   const calc = ctx.calculatedMetrics;
   const planoMetric = calc.planogram_compliance;
   const facingMetric = calc.overall_facing_compliance;
-  const compliance = Math.round(
+  const countPending =
+    Boolean(analysis.count_verification_pending) ||
+    planoMetric?.status === "COUNT_MISMATCH" ||
+    facingMetric?.status === "COUNT_MISMATCH" ||
+    calc.total_actual_facings?.status === "COUNT_MISMATCH";
+  const rawCompliance =
     (typeof planoMetric?.value === "number" ? planoMetric.value : null) ??
-      ctx.compliancePercent ??
-      s.overall_planogram_compliance_percent ??
-      0,
-  );
+    ctx.compliancePercent ??
+    s.overall_planogram_compliance_percent;
+  const compliance =
+    countPending || rawCompliance == null ? null : Math.round(rawCompliance);
   const risk = ctx.executionRisk;
   const riskCount =
     risk?.rules_triggered.length ??
@@ -241,6 +246,19 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
       <AiExecutiveSummary text={data.executive_summary} scanId={data.scan_id} />
       <AiImageQualityBanner extras={ctx.extras} />
 
+      {countPending ? (
+        <div
+          className="rounded-2xl border border-[#D9E2E8] bg-[#FFEAF1] px-4 py-3 text-sm text-[#102A43]"
+          role="status"
+        >
+          <p className="font-semibold tracking-wide">COUNT VERIFICATION PENDING</p>
+          <p className="mt-1 text-[#667085]">
+            Visual counts need review. Aggregate compliance is not shown as valid — product rows
+            remain available below.
+          </p>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-[auto,1fr]">
         <AiAuditCard
           title="Planogram compliance"
@@ -248,18 +266,30 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
           csvDownload={{
             onDownload: () =>
               downloadKeyValueCsv(data.scan_id, "planogram-compliance", [
-                { label: "Planogram compliance %", value: compliance },
+                {
+                  label: "Planogram compliance %",
+                  value: countPending ? "COUNT VERIFICATION PENDING" : compliance,
+                },
                 { label: "Status", value: metricStatusLabel(planoMetric?.status) },
                 { label: "Rows", value: analysis.products.length },
               ]),
           }}
         >
-          <MpRadialGauge
-            value={compliance}
-            label="Compliant"
-            sublabel={`${analysis.products.length} products`}
-            color={CHART_ACCENT.brandFacingShare}
-          />
+          {countPending || compliance == null ? (
+            <div className="flex min-h-[140px] flex-col items-center justify-center gap-2 px-4 text-center">
+              <p className="text-sm font-semibold text-[#102A43]">COUNT VERIFICATION PENDING</p>
+              <p className="text-xs text-[#667085]">
+                {analysis.products.length} products · aggregate compliance unavailable
+              </p>
+            </div>
+          ) : (
+            <MpRadialGauge
+              value={compliance}
+              label="Compliant"
+              sublabel={`${analysis.products.length} products`}
+              color={CHART_ACCENT.brandFacingShare}
+            />
+          )}
         </AiAuditCard>
         <AiAuditCard
           title="Summary KPIs"
@@ -461,7 +491,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
               columns={[
                 { key: "b", header: "Brand", cell: (r: AstraPlanogramBrandAnalysis) => r.brand },
                 { key: "ef", header: "Exp facings", cell: (r) => r.expected_facings },
-                { key: "af", header: "Total Facings", cell: (r) => r.actual_facings },
+                { key: "af", header: "Total Facings", cell: (r) => countCell(r.actual_facings) },
                 { key: "es", header: "Exp share %", cell: (r) => pctCell(r.expected_share_percent) },
                 { key: "as", header: "Act share %", cell: (r) => pctCell(r.actual_share_percent) },
                 { key: "vp", header: "Variance pp", cell: (r) => r.share_variance_pp.toFixed(1) },
@@ -508,7 +538,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
             columns={[
               { key: "c", header: "Category", cell: (r: AstraPlanogramCategoryAnalysis) => r.category },
               { key: "ef", header: "Exp facings", cell: (r) => r.expected_facings },
-              { key: "af", header: "Total Facings", cell: (r) => r.actual_facings },
+              { key: "af", header: "Total Facings", cell: (r) => countCell(r.actual_facings) },
               { key: "es", header: "Exp share %", cell: (r) => pctCell(r.expected_share_percent) },
               { key: "as", header: "Act share %", cell: (r) => pctCell(r.actual_share_percent) },
               { key: "cp", header: "Compliance %", cell: (r) => pctCell(r.compliance_percent) },
@@ -548,7 +578,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
                 cell: (r: AstraPlanogramSubcategoryAnalysis) => r.subcategory,
               },
               { key: "ef", header: "Exp facings", cell: (r) => r.expected_facings },
-              { key: "af", header: "Total Facings", cell: (r) => r.actual_facings },
+              { key: "af", header: "Total Facings", cell: (r) => countCell(r.actual_facings) },
               { key: "cp", header: "Compliance %", cell: (r) => pctCell(r.compliance_percent) },
               { key: "st", header: "Status", cell: (r) => statusBadge(r.status) },
             ]}

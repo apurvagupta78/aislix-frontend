@@ -59,7 +59,7 @@ export function metricDisplayValue(
   fallback?: number | string | null,
 ): string {
   if (metric) {
-    if (metric.status === "COUNT_MISMATCH") return "Needs review";
+    if (metric.status === "COUNT_MISMATCH") return "COUNT VERIFICATION PENDING";
     if (metric.status === "NOT_APPLICABLE") return "N/A";
     if (
       metric.status === "UNAVAILABLE" ||
@@ -97,7 +97,7 @@ export function metricCountDisplay(
   observedCount: number,
   summaryCount?: number | null,
 ): string {
-  if (metric?.status === "COUNT_MISMATCH") return "Needs review";
+  if (metric?.status === "COUNT_MISMATCH") return "COUNT VERIFICATION PENDING";
   if (metric?.status === "NOT_APPLICABLE") return "N/A";
   const candidates = [
     typeof metric?.value === "number" ? metric.value : null,
@@ -118,7 +118,7 @@ export function metricStatusLabel(status: MetricStatus | undefined): string | nu
     case "CALCULATED":
       return "Calculated";
     case "COUNT_MISMATCH":
-      return "Count mismatch";
+      return "COUNT VERIFICATION PENDING";
     case "NOT_APPLICABLE":
       return "N/A";
     case "UNAVAILABLE":

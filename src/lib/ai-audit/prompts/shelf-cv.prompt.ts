@@ -44,18 +44,11 @@ Use category/subcategory as context only — never as proof of identity.
 When uncertain: mark field UNVERIFIABLE (UNVERIFIABLE ≠ zero).
 Optional sku only when visibly readable with sku_status IDENTIFIED | UNVERIFIABLE.
 Keep actual_facings and actual_visible_units independent — do not assume facings equals units.
-Lay's chip bags (Magic Masala / Tomato Tango / Cream & Onion) must be brand "Lay's", never "Louis" OCR guesses.
 
 ============================================================
 FACINGS
 ============================================================
 Count distinct visible product fronts toward the shopper. Do not double-count reflections, labels, or the same facing twice.
-
-CRITICAL — only count independently established facings:
-- actual_facings MUST equal the sum of fronts you can individually establish from the image (e.g. row tallies in visual_notes).
-- NEVER add speculative, inferred, obscured, or "cannot be independently established" facings into actual_facings.
-- If some fronts are uncertain, omit them from the count and note that in visual_notes. Do not invent a higher total and then say the facing count "requires correction".
-- Example: notes say "6 + 7 + 6 = 19 established; 6 more uncertain" → actual_facings = 19 (not 25).
 
 ============================================================
 CONFIDENCE & IMAGE QUALITY

@@ -67,6 +67,8 @@ export type SharedScanPayload = {
     annotated_image_url?: string;
   };
   expires_at: string;
+  /** Full audit payload for AiAuditResultsPage parity with /results. */
+  audit_result?: import("@/lib/scan-results").ScanResult | null;
 };
 
 /** Public URL for a share token, built from the canonical app origin. */

@@ -355,6 +355,109 @@ export async function resolvePublicShare(token: string): Promise<PublicShareLoad
   }
 }
 
+/** Build a ScanResult-shaped payload so /share can render AiAuditResultsPage. */
+function buildSharedAuditResult(input: {
+  scanId: string;
+  summary: Awaited<ReturnType<typeof scanShareSummary>>;
+  metrics: Record<string, unknown>;
+  executiveSummary: string | null;
+  inventory: SharedScanPayload["inventory"];
+  downloads: SignedScanAssets;
+  planogramPercent: number | null;
+}): import("@/lib/scan-results").ScanResult {
+  const metrics = input.metrics;
+  const analysisMode = String(metrics.analysis_mode ?? "").toLowerCase();
+  const shelfOnly = ["shelf_only", "no_planogram", "image_only_shelf_analysis"].includes(
+    analysisMode,
+  );
+  const hasPlanogramBlock = Boolean(
+    metrics.aislix_planogram_analysis || metrics.astra_planogram_analysis,
+  );
+  const planogramRequested =
+    !shelfOnly &&
+    (hasPlanogramBlock ||
+      analysisMode === "planogram_comparison" ||
+      analysisMode === "with_planogram" ||
+      input.planogramPercent != null);
+
+  const result: import("@/lib/scan-results").ScanResult = {
+    scan_id: input.scanId,
+    created_at: input.summary.scanned_at ?? undefined,
+    status: input.summary.status as import("@/lib/scan-results").ScanStatus,
+    store: input.summary.store_name ?? undefined,
+    location: input.summary.location ?? undefined,
+    scan_category: input.summary.category ?? undefined,
+    scan_sub_category: input.summary.sub_category ?? undefined,
+    analysis_mode: analysisMode || undefined,
+    executive_summary: input.executiveSummary ?? undefined,
+    metrics,
+    summary: {
+      total_products: input.summary.products_detected,
+      unique_skus: input.inventory.length,
+      unique_brands: new Set(input.inventory.map((r) => r.brand)).size,
+      low_stock_products: input.inventory.filter((r) => r.quantity > 0 && r.quantity <= 2).length,
+      average_confidence: 0,
+      processing_time_ms: 0,
+      total_facings: input.inventory.reduce((n, row) => n + (row.quantity || 0), 0),
+      ...(input.summary.shelf_health_score != null
+        ? { shelf_health_score: input.summary.shelf_health_score }
+        : {}),
+      ...(input.planogramPercent != null ? { shelf_compliance: input.planogramPercent } : {}),
+    },
+    inventory: input.inventory.map((row, index) => ({
+      id: `share-${index}`,
+      brand: row.brand,
+      product: row.product,
+      quantity: row.quantity,
+      confidence: row.confidence ?? 0,
+      category: row.category ?? undefined,
+    })),
+    planogram: {
+      requested: planogramRequested,
+      percent: input.planogramPercent,
+      sku_match_percent: input.planogramPercent,
+      qty_compliance_percent: null,
+      summary: {},
+    },
+    downloads: {
+      ...(input.downloads.pdf_url ? { pdf_url: input.downloads.pdf_url } : {}),
+      ...(input.downloads.annotated_image_url
+        ? { annotated_image_url: input.downloads.annotated_image_url }
+        : {}),
+      ...(input.downloads.csv_url ? { csv_url: input.downloads.csv_url } : {}),
+    },
+    ...(input.downloads.annotated_image_url
+      ? { annotated_image_url: input.downloads.annotated_image_url }
+      : {}),
+  };
+
+  const attach = (key: keyof typeof result, metricKey: string) => {
+    const block = metrics[metricKey];
+    if (block && typeof block === "object" && !Array.isArray(block)) {
+      (result as Record<string, unknown>)[key as string] = block;
+    }
+  };
+  attach("astra_planogram_analysis", "astra_planogram_analysis");
+  attach("astra_shelf_analysis", "astra_shelf_analysis");
+  attach("astra_cv_analysis", "astra_cv_analysis");
+  attach("aislix_shelf_analysis", "aislix_shelf_analysis");
+  attach("aislix_planogram_analysis", "aislix_planogram_analysis");
+  if (Array.isArray(metrics.visible_prices)) {
+    result.astra_visible_prices = metrics.visible_prices as Array<Record<string, unknown>>;
+  }
+  if (Array.isArray(metrics.visible_promotions)) {
+    result.astra_visible_promotions = metrics.visible_promotions as Array<Record<string, unknown>>;
+  }
+  if (Array.isArray(metrics.shelf_issues)) {
+    result.astra_shelf_issues = metrics.shelf_issues as Array<Record<string, unknown>>;
+  }
+  if (metrics.retail_intelligence && typeof metrics.retail_intelligence === "object") {
+    result.retail_intelligence =
+      metrics.retail_intelligence as import("@/lib/scan-results").ScanResult["retail_intelligence"];
+  }
+  return result;
+}
+
 /** Full public payload for a share token. Throws on expired / invalid tokens. */
 export async function loadSharedScan(token: string): Promise<SharedScanPayload> {
   const db = await admin();
@@ -446,6 +549,26 @@ export async function loadSharedScan(token: string): Promise<SharedScanPayload> 
   const facingsDetected =
     metricNum("total_facings") ?? metricNum("total_products") ?? summary.products_detected;
 
+  const inventory = (products ?? []).map((row) => ({
+    brand: (row.brand as string | null) ?? "Unknown",
+    product: (row.name as string | null) ?? "Unknown product",
+    quantity: Number(row.facings ?? 0),
+    category: (row.category as string | null) ?? null,
+    stock_status: (row.stock_status as string | null) ?? null,
+    confidence: row.confidence === null ? null : Number(row.confidence),
+  }));
+
+  const executiveSummary = (result?.executive_summary as string | null) ?? null;
+  const audit_result = buildSharedAuditResult({
+    scanId,
+    summary,
+    metrics,
+    executiveSummary,
+    inventory,
+    downloads,
+    planogramPercent: compliancePercent,
+  });
+
   return {
     scan_id: scanId,
     store_name: summary.store_name,
@@ -465,21 +588,15 @@ export async function loadSharedScan(token: string): Promise<SharedScanPayload> 
     out_of_stock_count: Number(scanRow?.out_of_stock_count ?? 0),
     low_stock_count: Number(scanRow?.low_stock_count ?? 0),
     planogram_compliance_percent: summary.planogram_compliance_percent,
-    executive_summary: (result?.executive_summary as string | null) ?? null,
-    inventory: (products ?? []).map((row) => ({
-      brand: (row.brand as string | null) ?? "Unknown",
-      product: (row.name as string | null) ?? "Unknown product",
-      quantity: Number(row.facings ?? 0),
-      category: (row.category as string | null) ?? null,
-      stock_status: (row.stock_status as string | null) ?? null,
-      confidence: row.confidence === null ? null : Number(row.confidence),
-    })),
+    executive_summary: executiveSummary,
+    inventory,
     planogram_compliance:
       compliancePercent !== null || complianceLines.length
         ? { compliance_percent: compliancePercent, lines: complianceLines }
         : null,
     downloads,
     expires_at: link.expires_at as string,
+    audit_result,
   };
 }
 

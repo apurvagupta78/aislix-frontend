@@ -59,9 +59,9 @@ export type AstraPlanogramBrandAnalysis = {
 export type AstraPlanogramCategoryAnalysis = {
   category: string;
   expected_facings: number;
-  actual_facings: number;
+  actual_facings: number | null;
   expected_share_percent: number;
-  actual_share_percent: number;
+  actual_share_percent: number | null;
   compliance_percent: number | null;
   status: string;
 };
@@ -69,7 +69,7 @@ export type AstraPlanogramCategoryAnalysis = {
 export type AstraPlanogramSubcategoryAnalysis = {
   subcategory: string;
   expected_facings: number;
-  actual_facings: number;
+  actual_facings: number | null;
   compliance_percent: number | null;
   status: string;
 };
@@ -206,6 +206,8 @@ export type NormalizedAstraAnalysis =
       subcategory_analysis: AstraPlanogramSubcategoryAnalysis[];
       observed_unplanned_products: AstraUnplannedProduct[];
       summary: AstraPlanogramSummary;
+      /** Aggregate KPIs must not be treated as valid when true. */
+      count_verification_pending?: boolean;
     }
   | {
       mode: "shelf_only";
@@ -466,134 +468,7 @@ function derivePlanogramSummaryFromProducts(
   };
 }
 
-/**
- * When planogram matching left a row UNVERIFIABLE with null actuals, but shelf CV
- * counted the same brand/product as an UNVERIFIABLE variant with matching facings,
- * attribute those counts so the UI does not show a fake zero.
- */
-function attributeUnverifiableShelfFacings(
-  products: AstraPlanogramProduct[],
-  root: Record<string, unknown>,
-): AstraPlanogramProduct[] {
-  const nested = pickRecord(root.metrics) ?? pickRecord(root.result);
-  const shelfRows = [
-    ...pickArray(root.products),
-    ...pickArray(nested?.products),
-  ] as Record<string, unknown>[];
-  if (!shelfRows.length) return products;
-
-  const pool = shelfRows
-    .map((row) => ({
-      brand: displayBrandName(str(row.brand)).toLowerCase(),
-      product: str(row.product_name ?? row.name).toLowerCase(),
-      variant: str(row.variant).toUpperCase(),
-      facings: numOrNull(row.facings ?? row.actual_facings),
-      units: numOrNull(row.quantity ?? row.actual_visible_units ?? row.facings),
-      used: false,
-    }))
-    .filter((row) => isUnverifiableToken(row.variant) && row.facings != null && row.facings > 0);
-
-  if (!pool.length) return products;
-
-  return products.map((product) => {
-    if (product.actual_facings != null) return product;
-    const status = statusToken(product.match_status, product.overall_status, product.variant_status);
-    if (!isUnverifiableToken(status) && !isNotFoundToken(status)) return product;
-
-    const brand = product.brand.toLowerCase().replace(/['']/g, "");
-    const name = product.product_name.toLowerCase();
-    const hit =
-      pool.find(
-        (row) =>
-          !row.used &&
-          row.brand.replace(/['']/g, "") === brand &&
-          (row.product === name ||
-            (!!row.product && !!name && (row.product.includes(name) || name.includes(row.product))) ||
-            row.product.includes("chip") === name.includes("chip")) &&
-          row.facings === product.expected_facings,
-      ) ??
-      pool.find(
-        (row) =>
-          !row.used &&
-          row.brand.replace(/['']/g, "") === brand &&
-          row.facings === product.expected_facings,
-      );
-    if (!hit || hit.facings == null) return product;
-    hit.used = true;
-    return {
-      ...product,
-      actual_facings: hit.facings,
-      actual_visible_units: hit.units ?? hit.facings,
-      facing_variance:
-        product.expected_facings > 0 ? hit.facings - product.expected_facings : null,
-      facing_compliance_percent:
-        product.expected_facings > 0
-          ? Math.round((hit.facings / product.expected_facings) * 1000) / 10
-          : null,
-      overall_status: product.overall_status || "UNVERIFIABLE",
-      match_status: product.match_status || "UNVERIFIABLE",
-      variant_status: product.variant_status || "UNVERIFIABLE",
-      evidence_note:
-        product.evidence_note ||
-        "Variant text was unreadable; facings attributed from an unverifiable shelf detection with the same expected count.",
-    };
-  });
-}
-
-/**
- * When aggregate facing totals exceed the sum of row actuals, attribute the residual
- * gap to the unique UNVERIFIABLE/null planogram row (prefer expected_facings === gap).
- * Universal — not scan-specific.
- */
-function attributeResidualUnverifiableFacings(
-  products: AstraPlanogramProduct[],
-  totalActualFacings: number | null,
-  totalActualUnits: number | null,
-): AstraPlanogramProduct[] {
-  if (totalActualFacings == null || totalActualFacings <= 0) return products;
-  const knownFacings = products.reduce((sum, row) => sum + (row.actual_facings ?? 0), 0);
-  const facingGap = totalActualFacings - knownFacings;
-  if (facingGap <= 0) return products;
-
-  const openIdx = products
-    .map((row, idx) => ({ row, idx }))
-    .filter(({ row }) => {
-      if (row.actual_facings != null) return false;
-      const status = statusToken(row.match_status, row.overall_status, row.variant_status);
-      return isUnverifiableToken(status) || isNotFoundToken(status) || !status;
-    });
-  if (!openIdx.length) return products;
-
-  const exact = openIdx.filter(({ row }) => row.expected_facings === facingGap);
-  const pick = exact.length === 1 ? exact[0] : openIdx.length === 1 ? openIdx[0] : null;
-  if (!pick) return products;
-
-  const knownUnits = products.reduce((sum, row) => sum + (row.actual_visible_units ?? 0), 0);
-  const unitGap =
-    totalActualUnits != null && totalActualUnits > knownUnits
-      ? totalActualUnits - knownUnits
-      : facingGap;
-
-  return products.map((row, idx) => {
-    if (idx !== pick.idx) return row;
-    return {
-      ...row,
-      actual_facings: facingGap,
-      actual_visible_units: row.actual_visible_units ?? unitGap,
-      facing_variance:
-        row.expected_facings > 0 ? facingGap - row.expected_facings : null,
-      facing_compliance_percent:
-        row.expected_facings > 0
-          ? Math.round((facingGap / row.expected_facings) * 1000) / 10
-          : null,
-      overall_status: row.overall_status || "UNVERIFIABLE",
-      match_status: row.match_status || "UNVERIFIABLE",
-      evidence_note:
-        row.evidence_note ||
-        "Facings attributed from verified shelf total residual; variant text was not readable.",
-    };
-  });
-}
+/** Residual inventing removed — UNVERIFIABLE actuals stay null (decision 3A). */
 
 function normalizePlanogramSummary(raw: unknown): AstraPlanogramSummary {
   const s = (raw ?? {}) as Record<string, unknown>;
@@ -637,22 +512,7 @@ function normalizePlanogramBlock(
   const facingCompliance = metricField(calc?.overall_facing_compliance);
   const summaryRaw = pickRecord(block.summary);
   let products = rows.map(normalizePlanogramProduct);
-  if (root) {
-    products = attributeUnverifiableShelfFacings(products, root);
-  }
-  const verifiedFacings = numOrNull(
-    pickRecord(countValidation?.total_actual_facings)?.verified_value ??
-      pickRecord(countValidation?.total_actual_facings)?.product_sum,
-  );
-  const verifiedUnits = numOrNull(
-    pickRecord(countValidation?.total_actual_visible_units)?.verified_value ??
-      pickRecord(countValidation?.total_actual_visible_units)?.product_sum,
-  );
-  products = attributeResidualUnverifiableFacings(
-    products,
-    verifiedFacings ?? metricField(calc?.total_actual_facings),
-    verifiedUnits ?? metricField(calc?.total_actual_visible_units),
-  );
+  // Do not invent actuals for UNVERIFIABLE/open rows — null stays unavailable (—).
   const baseSummary = normalizePlanogramSummary(block.summary ?? summaryRaw);
   const derivedSummary = derivePlanogramSummaryFromProducts(
     products,
@@ -696,9 +556,9 @@ function normalizePlanogramBlock(
       return {
         category: str(c.category),
         expected_facings: num(c.expected_facings),
-        actual_facings: num(c.actual_facings),
+        actual_facings: numOrNull(c.actual_facings),
         expected_share_percent: num(c.expected_share_percent),
-        actual_share_percent: num(c.actual_share_percent),
+        actual_share_percent: numOrNull(c.actual_share_percent),
         compliance_percent: numOrNull(c.compliance_percent),
         status: str(c.status),
       };
@@ -708,12 +568,15 @@ function normalizePlanogramBlock(
       return {
         subcategory: str(sc.subcategory),
         expected_facings: num(sc.expected_facings),
-        actual_facings: num(sc.actual_facings),
+        actual_facings: numOrNull(sc.actual_facings),
         compliance_percent: numOrNull(sc.compliance_percent),
         status: str(sc.status),
       };
     }),
-    observed_unplanned_products: pickArray(block.observed_unplanned_products).map((raw) => {
+    observed_unplanned_products: [
+      ...pickArray(block.observed_unplanned_products),
+      ...pickArray(block.unplanned_products),
+    ].map((raw) => {
       const u = (raw ?? {}) as Record<string, unknown>;
       return {
         brand: displayBrandName(str(u.brand)),
@@ -731,6 +594,7 @@ function normalizePlanogramBlock(
       overall_facing_compliance_percent:
         facingCompliance ?? summary.overall_facing_compliance_percent,
     },
+    count_verification_pending: root ? isCountVerificationPending(root) : false,
   };
 }
 
@@ -933,14 +797,7 @@ function findShelfBlock(root: Record<string, unknown>): Record<string, unknown> 
 
 function shelfCvIncompleteReason(root: Record<string, unknown>): string | null {
   const nested = pickRecord(root.metrics) ?? pickRecord(root.result);
-  const validation =
-    pickRecord(root.astra_cv_validation) ?? pickRecord(nested?.astra_cv_validation);
-  if (validation?.count_verification_status === "COUNT_MISMATCH") {
-    return "Visual count verification pending review.";
-  }
-  if (nested?.scan_complete === false || root.scan_complete === false) {
-    return "Scan requires review before verified KPIs can be displayed.";
-  }
+  // COUNT_MISMATCH must keep product rows visible — handled as a pending banner in the view.
   const refCache =
     str(root.reference_cache) ||
     str(nested?.reference_cache) ||
@@ -950,6 +807,25 @@ function shelfCvIncompleteReason(root: Record<string, unknown>): string | null {
     return `This scan used the landing demo reference cache (${refCache}) instead of a live Astra CV analysis. Re-run the scan — AI Audit now skips that cache.`;
   }
   return null;
+}
+
+function isCountVerificationPending(root: Record<string, unknown>): boolean {
+  const nested = pickRecord(root.metrics) ?? pickRecord(root.result);
+  const validation =
+    pickRecord(root.astra_cv_validation) ?? pickRecord(nested?.astra_cv_validation);
+  if (validation?.count_verification_status === "COUNT_MISMATCH") return true;
+  if (nested?.scan_complete === false || root.scan_complete === false) return true;
+  const calc =
+    pickRecord(root.calculated_metrics) ??
+    pickRecord(nested?.calculated_metrics) ??
+    pickRecord(pickRecord(root.aislix_planogram_analysis)?.calculated_metrics) ??
+    pickRecord(pickRecord(nested?.aislix_planogram_analysis)?.calculated_metrics);
+  if (calc) {
+    for (const key of ["planogram_compliance", "overall_facing_compliance", "total_actual_facings"]) {
+      if (pickRecord(calc[key])?.status === "COUNT_MISMATCH") return true;
+    }
+  }
+  return false;
 }
 
 /** Extract Astra analysis from a vision API payload or stored metrics. */
