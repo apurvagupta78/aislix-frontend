@@ -17,12 +17,15 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { EmailShareDialog, TeamShareDialog } from "@/components/scan-results/ShareDialogs";
 import { ResultSection } from "@/components/scan-results/ResultParts";
 import { createScanShareLink } from "@/lib/scan-share.functions";
 import { downloadScanPdf, type ScanResult } from "@/lib/scan-results";
 import { GENERIC_EXPORT, networkErrorMessage } from "@/lib/api-errors";
+
+function shareTextFromResult(result: { url: string; share_text?: string }) {
+  return result.share_text?.trim() || result.url;
+}
 
 export function ReportActionsFooter({
   data,
@@ -34,6 +37,7 @@ export function ReportActionsFooter({
   const [teamOpen, setTeamOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState<string | null>(null);
+  const [shareText, setShareText] = useState<string | null>(null);
   const createLink = useServerFn(createScanShareLink);
   const scanId = data?.scan_id;
   const ready = Boolean(scanId) && !loading;
@@ -50,27 +54,33 @@ export function ReportActionsFooter({
   const linkMutation = useMutation({
     mutationFn: async () => {
       if (!scanId) throw new Error("Audit is still loading.");
-      if (linkUrl) return { url: linkUrl };
+      if (linkUrl && shareText) return { url: linkUrl, share_text: shareText };
       return createLink({ data: { scanId } });
     },
     onError: (error: Error) => toast.error(error.message || "Could not create a share link."),
   });
 
-  const copyLink = async (url: string) => {
+  const copyText = async (text: string) => {
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(text);
       return true;
     } catch {
       return false;
     }
   };
 
+  const rememberLink = (result: { url: string; share_text?: string }) => {
+    setLinkUrl(result.url);
+    setShareText(shareTextFromResult(result));
+  };
+
   const handleCopyLink = () => {
     linkMutation.mutate(undefined, {
       onSuccess: async (result) => {
-        setLinkUrl(result.url);
-        if (await copyLink(result.url)) toast.success("Link copied ✓");
-        else toast.info(result.url, { description: "Copy this link manually" });
+        rememberLink(result);
+        const text = shareTextFromResult(result);
+        if (await copyText(text)) toast.success("Share message copied ✓");
+        else toast.info(text, { description: "Copy this message manually" });
       },
     });
   };
@@ -78,8 +88,8 @@ export function ReportActionsFooter({
   const handleWhatsApp = () => {
     linkMutation.mutate(undefined, {
       onSuccess: (result) => {
-        setLinkUrl(result.url);
-        const text = encodeURIComponent(`Aislix shelf audit report: ${result.url}`);
+        rememberLink(result);
+        const text = encodeURIComponent(shareTextFromResult(result));
         window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
       },
     });
@@ -88,9 +98,10 @@ export function ReportActionsFooter({
   const handleSlack = () => {
     linkMutation.mutate(undefined, {
       onSuccess: async (result) => {
-        setLinkUrl(result.url);
-        if (await copyLink(result.url)) toast.success("Link copied — paste it in Slack");
-        else toast.info(result.url, { description: "Copy this link and paste it in Slack" });
+        rememberLink(result);
+        const text = shareTextFromResult(result);
+        if (await copyText(text)) toast.success("Share message copied — paste it in Slack");
+        else toast.info(text, { description: "Copy this message and paste it in Slack" });
         window.open("https://app.slack.com/", "_blank", "noopener,noreferrer");
       },
     });
@@ -149,7 +160,7 @@ export function ReportActionsFooter({
           ) : (
             <Copy className="size-4" />
           )}
-          Copy public link
+          Copy share message
         </Button>
 
         <Button
@@ -174,15 +185,30 @@ export function ReportActionsFooter({
       </div>
 
       {linkUrl ? (
-        <div className="mt-4 flex items-center gap-2">
-          <Input readOnly value={linkUrl} className="rounded-xl text-xs" />
+        <div className="mt-4 space-y-2">
+          {shareText ? (
+            <textarea
+              readOnly
+              value={shareText}
+              rows={6}
+              className="w-full rounded-xl border border-border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-foreground"
+            />
+          ) : (
+            <p className="rounded-xl border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              {linkUrl}
+            </p>
+          )}
           <Button
             variant="outline"
             size="sm"
-            className="shrink-0 rounded-xl"
-            onClick={() => void copyLink(linkUrl).then((ok) => ok && toast.success("Link copied ✓"))}
+            className="rounded-xl"
+            onClick={() =>
+              void copyText(shareText || linkUrl).then(
+                (ok) => ok && toast.success("Share message copied ✓"),
+              )
+            }
           >
-            <Copy className="size-4" /> Copy
+            <Copy className="size-4" /> Copy message
           </Button>
         </div>
       ) : null}

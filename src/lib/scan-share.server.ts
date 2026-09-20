@@ -148,6 +148,8 @@ export async function scanShareSummary(scanId: string): Promise<{
   location: string | null;
   category: string | null;
   sub_category: string | null;
+  audit_name: string | null;
+  audit_description: string | null;
   scanned_at: string | null;
   status: string;
   shelf_health_score: number | null;
@@ -158,7 +160,7 @@ export async function scanShareSummary(scanId: string): Promise<{
   const { data, error } = await db
     .from("shelf_scans")
     .select(
-      "id, org_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, created_at, shelf_health_score, total_products, planogram_compliance_percent, stores(name)",
+      "id, org_id, status, shelf_label, category, sub_category, sub_category_label, sub_category_custom, notes, created_at, shelf_health_score, total_products, planogram_compliance_percent, assignment_id, stores(name)",
     )
     .eq("id", scanId)
     .maybeSingle();
@@ -166,16 +168,76 @@ export async function scanShareSummary(scanId: string): Promise<{
   if (!data) throw new Error("Audit not found.");
 
   const row = data as Record<string, any>;
+  const category = (row["category"] as string | null) ?? null;
+  const subCategory =
+    (row["sub_category_custom"] as string | null) ||
+    (row["sub_category_label"] as string | null) ||
+    (row["sub_category"] as string | null) ||
+    null;
+  const location = (row["shelf_label"] as string | null) ?? null;
+
+  let auditName: string | null = null;
+  let auditDescription: string | null = null;
+  const assignmentId = (row["assignment_id"] as string | null) ?? null;
+  if (assignmentId) {
+    const { data: assignment } = await db
+      .from("scan_assignments")
+      .select("instructions, campaign_id, scope_values")
+      .eq("id", assignmentId)
+      .maybeSingle();
+    const scopeValues =
+      assignment?.scope_values &&
+      typeof assignment.scope_values === "object" &&
+      !Array.isArray(assignment.scope_values)
+        ? (assignment.scope_values as Record<string, unknown>)
+        : {};
+    auditName =
+      typeof scopeValues.audit_name === "string" ? scopeValues.audit_name.trim() || null : null;
+    auditDescription =
+      typeof scopeValues.audit_description === "string"
+        ? scopeValues.audit_description.trim() || null
+        : null;
+
+    const campaignId = assignment?.campaign_id as string | null;
+    if (campaignId) {
+      const { data: campaign } = await db
+        .from("assignment_campaigns")
+        .select("name, audit_purpose, instructions")
+        .eq("id", campaignId)
+        .maybeSingle();
+      if (!auditName && campaign?.name) auditName = String(campaign.name).trim() || null;
+      if (!auditDescription) {
+        auditDescription =
+          (campaign?.audit_purpose as string | null)?.trim() ||
+          (campaign?.instructions as string | null)?.trim() ||
+          null;
+      }
+    }
+
+    const instructions = (assignment?.instructions as string | null)?.trim() || "";
+    if (instructions) {
+      const singleShortLine = instructions.length <= 120 && !instructions.includes("\n");
+      if (!auditName && singleShortLine) auditName = instructions;
+      else if (!auditDescription) auditDescription = instructions;
+    }
+  }
+
+  if (!auditName) {
+    auditName = [category, subCategory].filter(Boolean).join(" · ") || "Shelf audit";
+  }
+  if (!auditDescription) {
+    const notes = (row["notes"] as string | null)?.trim();
+    auditDescription = notes || (location ? `Shelf photo audit · ${location}` : null);
+  }
+
   return {
     org_id: row["org_id"] as string,
     store_name: (row["stores"]?.name as string | null) ?? null,
-    location: (row["shelf_label"] as string | null) ?? null,
-    category: (row["category"] as string | null) ?? null,
-    sub_category:
-      (row["sub_category_custom"] as string | null) ||
-      (row["sub_category_label"] as string | null) ||
-      (row["sub_category"] as string | null) ||
-      null,
+    location,
+    category,
+    sub_category: subCategory,
+    audit_name: auditName,
+    audit_description: auditDescription,
     scanned_at: (row["created_at"] as string | null) ?? null,
     status: String(row["status"] ?? "queued"),
     shelf_health_score:

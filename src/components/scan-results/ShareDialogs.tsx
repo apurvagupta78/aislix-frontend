@@ -149,8 +149,8 @@ export function EmailAuditDialog({
           </div>
 
           <p className="text-[11px] leading-relaxed text-muted-foreground">
-            Your Aislix shelf audit is ready. Review the attached report for KPI results, shelf
-            findings, issues, recommendations and supporting analysis.
+            Recipients get an email with the store, audit name, description, category,
+            subcategory, location, and a link to the full public report.
           </p>
         </div>
 
@@ -227,8 +227,9 @@ export function EmailShareDialog({
         <DialogHeader>
           <DialogTitle>Email this report</DialogTitle>
           <DialogDescription>
-            Recipients get a secure link that expires in 7 days, plus download links for the PDF,
-            annotated shelf image and CSV report.
+            Recipients get store, audit name, description, category, subcategory, location, a
+            secure report link (expires in 7 days), and optional PDF / annotated image / CSV
+            downloads.
           </DialogDescription>
         </DialogHeader>
 

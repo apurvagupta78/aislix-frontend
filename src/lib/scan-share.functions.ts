@@ -29,8 +29,14 @@ export const createScanShareLink = createServerFn({ method: "POST" })
     const { requireScanAccess } = await import("@/lib/scan-share.server");
     const { orgId } = await requireScanAccess(supabase as never, data.scanId);
 
-    const { ensureShareLink, logShareEvent } = await import("@/lib/scan-share.server");
-    const link = await ensureShareLink(data.scanId, orgId, userId);
+    const { ensureShareLink, logShareEvent, scanShareSummary } = await import(
+      "@/lib/scan-share.server"
+    );
+    const { buildShareMessage } = await import("@/lib/scan-share");
+    const [link, summary] = await Promise.all([
+      ensureShareLink(data.scanId, orgId, userId),
+      scanShareSummary(data.scanId),
+    ]);
     await logShareEvent({
       scanId: data.scanId,
       orgId,
@@ -39,7 +45,17 @@ export const createScanShareLink = createServerFn({ method: "POST" })
       payload: { action: "copy" },
     });
 
-    return { ...link, view_count: 0 };
+    const share_text = buildShareMessage({
+      storeName: summary.store_name,
+      auditName: summary.audit_name,
+      auditDescription: summary.audit_description,
+      category: summary.category,
+      subCategory: summary.sub_category,
+      location: summary.location,
+      url: link.url,
+    });
+
+    return { ...link, view_count: 0, share_text };
   });
 
 /* ----------------------------- share targets ------------------------------ */
@@ -170,7 +186,10 @@ export const emailScanReport = createServerFn({ method: "POST" })
           sharerName,
           storeName: summary.store_name,
           location: summary.location,
-          category: [summary.category, summary.sub_category].filter(Boolean).join(" · "),
+          category: summary.category,
+          subCategory: summary.sub_category,
+          auditName: summary.audit_name,
+          auditDescription: summary.audit_description,
           scanDate: summary.scanned_at,
           healthScore: summary.shelf_health_score,
           productsDetected: summary.products_detected,
@@ -253,7 +272,19 @@ export const shareScanWithTeam = createServerFn({ method: "POST" })
     );
     const link = await ensureShareLink(data.scanId, orgId, userId);
     const summary = await scanShareSummary(data.scanId);
-    const context_label = [summary.store_name, summary.location].filter(Boolean).join(" · ");
+    const { buildShareMessage } = await import("@/lib/scan-share");
+    const shareBlurb = buildShareMessage({
+      storeName: summary.store_name,
+      auditName: summary.audit_name,
+      auditDescription: summary.audit_description,
+      category: summary.category,
+      subCategory: summary.sub_category,
+      location: summary.location,
+      url: link.url,
+    });
+    const context_label = [summary.store_name, summary.audit_name, summary.location]
+      .filter(Boolean)
+      .join(" · ");
 
     if (data.notifyInApp) {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -263,8 +294,10 @@ export const shareScanWithTeam = createServerFn({ method: "POST" })
           org_id: orgId,
           type: "scan_shared",
           title: "Shelf audit shared with you",
-          body: data.note || `${sharerName} shared a scan report${context_label ? ` · ${context_label}` : ""}`,
-          payload: { scan_id: data.scanId, share_url: link.url } as never,
+          body:
+            data.note ||
+            `${sharerName} shared an Aislix shelf audit report${context_label ? ` · ${context_label}` : ""}`,
+          payload: { scan_id: data.scanId, share_url: link.url, share_text: shareBlurb } as never,
         })),
       );
       if (insertError) throw new Error(insertError.message);
@@ -289,7 +322,10 @@ export const shareScanWithTeam = createServerFn({ method: "POST" })
             sharerName,
             storeName: summary.store_name,
             location: summary.location,
-            category: [summary.category, summary.sub_category].filter(Boolean).join(" · "),
+            category: summary.category,
+            subCategory: summary.sub_category,
+            auditName: summary.audit_name,
+            auditDescription: summary.audit_description,
             scanDate: summary.scanned_at,
             healthScore: summary.shelf_health_score,
             productsDetected: summary.products_detected,

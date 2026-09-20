@@ -312,24 +312,27 @@ export function SharePanel({
   const [emailOpen, setEmailOpen] = useState(false);
   const [teamOpen, setTeamOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState<string | null>(null);
+  const [shareText, setShareText] = useState<string | null>(null);
   const scanId = data?.scan_id;
   const createLink = useServerFn(createScanShareLink);
 
   const linkMutation = useMutation({
     mutationFn: async () => {
       if (!scanId) throw new Error("Audit is still loading.");
-      if (linkUrl) return { url: linkUrl };
+      if (linkUrl && shareText) return { url: linkUrl, share_text: shareText };
       return createLink({ data: { scanId } });
     },
     onSuccess: async (result) => {
       setLinkUrl(result.url);
+      const text = result.share_text?.trim() || result.url;
+      setShareText(text);
       try {
-        await navigator.clipboard.writeText(result.url);
+        await navigator.clipboard.writeText(text);
         setCopied(true);
-        toast.success("Share link copied — valid for 7 days");
+        toast.success("Share message copied — valid for 7 days");
         setTimeout(() => setCopied(false), 2000);
       } catch {
-        toast.info(result.url, { description: "Copy this link manually" });
+        toast.info(text, { description: "Copy this message manually" });
       }
     },
     onError: (error: Error) => toast.error(error.message || "Could not create a share link."),

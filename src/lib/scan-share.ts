@@ -17,7 +17,47 @@ export type ScanShareLink = {
   url: string;
   expires_at: string;
   view_count: number;
+  /** Preformatted blurb for WhatsApp / Slack / paste. */
+  share_text?: string;
 };
+
+export type ShareMessageFields = {
+  storeName?: string | null;
+  auditName?: string | null;
+  auditDescription?: string | null;
+  category?: string | null;
+  subCategory?: string | null;
+  location?: string | null;
+  url: string;
+};
+
+/**
+ * Canonical share blurb for WhatsApp, Slack, email, and clipboard paste.
+ * Omits empty optional fields; always ends with the public URL.
+ */
+export function buildShareMessage(fields: ShareMessageFields): string {
+  const store = (fields.storeName ?? "").trim() || "this store";
+  const lines = [`Aislix shelf audit report of ${store}`];
+
+  const auditName = (fields.auditName ?? "").trim();
+  if (auditName) lines.push(`Audit name: ${auditName}`);
+
+  const auditDescription = (fields.auditDescription ?? "").trim();
+  if (auditDescription) lines.push(`Audit description: ${auditDescription}`);
+
+  const category = (fields.category ?? "").trim();
+  if (category) lines.push(`Category: ${category}`);
+
+  const subCategory = (fields.subCategory ?? "").trim();
+  if (subCategory) lines.push(`Subcategory: ${subCategory}`);
+
+  const location = (fields.location ?? "").trim();
+  if (location) lines.push(`Location: ${location}`);
+
+  lines.push("");
+  lines.push(fields.url.trim());
+  return lines.join("\n");
+}
 
 export type SharedInventoryRow = {
   brand: string;
