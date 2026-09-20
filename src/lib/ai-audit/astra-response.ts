@@ -192,6 +192,7 @@ export type AstraShelfSummary = {
   prices_read: number;
   promotions_identified: number;
   shelf_issues_identified: number;
+  categories_detected?: number;
 };
 
 export type NormalizedAstraAnalysis =
@@ -252,6 +253,11 @@ function pickArray<T>(value: unknown): T[] {
 }
 
 function imageQuality(raw: unknown): AstraImageQuality | undefined {
+  if (typeof raw === "string") {
+    const status = raw.trim();
+    if (!status) return undefined;
+    return { status };
+  }
   const obj = pickRecord(raw);
   if (!obj) return undefined;
   const status = str(obj.status);
@@ -603,7 +609,7 @@ function normalizeShelfProduct(raw: unknown): AstraShelfProduct {
   return {
     brand: str(r.brand),
     brand_status: str(r.brand_status),
-    product_name: str(r.product_name),
+    product_name: str(r.product_name ?? r.product),
     product_status: str(r.product_status),
     variant: str(r.variant),
     variant_status: str(r.variant_status),
@@ -622,14 +628,15 @@ function normalizeShelfProduct(raw: unknown): AstraShelfProduct {
 function normalizeShelfSummary(raw: unknown): AstraShelfSummary {
   const s = (raw ?? {}) as Record<string, unknown>;
   return {
-    products_identified: num(s.products_identified),
-    brands_identified: num(s.brands_identified),
-    variants_identified: num(s.variants_identified),
-    visible_facings: num(s.visible_facings),
-    visible_units: num(s.visible_units),
+    products_identified: num(s.products_identified ?? s.products_detected),
+    brands_identified: num(s.brands_identified ?? s.brands_detected),
+    variants_identified: num(s.variants_identified ?? s.variants_detected),
+    visible_facings: num(s.visible_facings ?? s.total_actual_facings),
+    visible_units: num(s.visible_units ?? s.total_actual_visible_units),
     prices_read: num(s.prices_read),
     promotions_identified: num(s.promotions_identified),
     shelf_issues_identified: num(s.shelf_issues_identified),
+    categories_detected: num(s.categories_detected),
   };
 }
 
