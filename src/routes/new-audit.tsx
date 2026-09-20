@@ -916,7 +916,11 @@ function NewAuditPage() {
           }),
         };
         const result = await publishAssignmentPlan(plan);
-        if (assignToSelf && result.assignmentIds[0]) {
+        if (
+          assignToSelf &&
+          assignmentMode === "assign_now" &&
+          result.assignmentIds[0]
+        ) {
           await startAssignment(result.assignmentIds[0]);
         }
         return {
@@ -1049,11 +1053,13 @@ function NewAuditPage() {
   });
 
   const showAssignmentSteps = method !== "ai" || aiPlanogramChoice !== null;
-  const isAiSelf = method === "ai" && assignToSelf;
+  /** Immediate self-run needs photo capture; schedule/recurring still creates an assignment. */
+  const isAiSelfImmediate =
+    method === "ai" && assignToSelf && assignmentMode === "assign_now";
   const previewReady = method === "ai" ? stepStatus[6] : stepStatus[7];
-  const canSubmit = previewReady && Boolean(assignmentPlan) && !isAiSelf;
+  const canSubmit = previewReady && Boolean(assignmentPlan) && !isAiSelfImmediate;
   const canRunAiAudit =
-    isAiSelf && Boolean(captureFile) && stepStatus[6] && !aiAuditLaunched;
+    isAiSelfImmediate && Boolean(captureFile) && stepStatus[6] && !aiAuditLaunched;
   const footerBusy = createMutation.isPending || aiSelfAuditMutation.isPending;
 
   function handleSubmit() {
@@ -1097,7 +1103,12 @@ function NewAuditPage() {
           description="Set up your audit, choose how it will be performed, assign your team and schedule it."
         />
 
-        <NewAuditStepNav stepStatus={stepStatus} method={method} assignToSelf={assignToSelf} />
+        <NewAuditStepNav
+          stepStatus={stepStatus}
+          method={method}
+          assignToSelf={assignToSelf}
+          assignmentMode={assignmentMode}
+        />
 
         <div className="space-y-6">
           <NewAuditStep1Details
@@ -1210,7 +1221,7 @@ function NewAuditPage() {
                 complete={method === "ai" ? stepStatus[6] : stepStatus[7]}
               />
 
-              {isAiSelf ? (
+              {isAiSelfImmediate ? (
                 <>
                   <NewAuditStep7Capture
                     captureFile={captureFile}

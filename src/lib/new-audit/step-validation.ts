@@ -51,9 +51,11 @@ export const NEW_AUDIT_STEPS = DIGITAL_AUDIT_STEPS;
 export function getNewAuditNavSteps(
   method: CaptureMethod,
   assignToSelf: boolean,
+  assignmentMode: AssignmentMode = "assign_now",
 ): NewAuditNavStep[] {
   if (method !== "ai") return DIGITAL_AUDIT_STEPS;
-  if (assignToSelf) return AI_AUDIT_STEPS;
+  const needsImmediateCapture = assignToSelf && assignmentMode === "assign_now";
+  if (needsImmediateCapture) return AI_AUDIT_STEPS;
   return AI_AUDIT_STEPS.filter((step) => step.id <= 6);
 }
 
@@ -98,7 +100,9 @@ export function validateNewAuditSteps(input: StepValidationInput): StepValidatio
 
   if (input.method === "ai") {
     const step6 = step1 && step2 && step3 && step4 && step5;
-    const step7 = step6 && input.assignToSelf && Boolean(input.captureReady);
+    const needsImmediateCapture =
+      input.assignToSelf && input.assignmentMode === "assign_now";
+    const step7 = step6 && needsImmediateCapture && Boolean(input.captureReady);
     return {
       1: step1,
       2: step2,

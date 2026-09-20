@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import type { AssignmentMode } from "@/lib/assignment-engine";
 import type { CaptureMethod } from "@/lib/new-audit/summary";
 import {
   getNewAuditNavSteps,
@@ -11,11 +12,22 @@ type Props = {
   stepStatus: StepValidationResult;
   method?: CaptureMethod;
   assignToSelf?: boolean;
+  assignmentMode?: AssignmentMode;
   className?: string;
 };
 
-export function NewAuditStepNav({ stepStatus, method, assignToSelf, className }: Props) {
-  const steps = getNewAuditNavSteps(method ?? "digital", assignToSelf ?? false);
+export function NewAuditStepNav({
+  stepStatus,
+  method,
+  assignToSelf,
+  assignmentMode = "assign_now",
+  className,
+}: Props) {
+  const steps = getNewAuditNavSteps(
+    method ?? "digital",
+    assignToSelf ?? false,
+    assignmentMode,
+  );
   return (
     <nav
       className={cn(
