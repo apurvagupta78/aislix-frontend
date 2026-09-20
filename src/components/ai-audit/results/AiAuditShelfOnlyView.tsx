@@ -23,11 +23,13 @@ import type {
   AstraVisiblePrice,
   AstraVisiblePromotion,
 } from "@/lib/ai-audit/astra-response";
+import { CHART_ACCENT, KPI_CARD, summaryFillAt } from "@/lib/ai-audit/kpi-palette";
 import {
   metricDisplayValue,
   metricStatusLabel,
   sanitizeShelfOnlyExecutiveSummary,
 } from "@/lib/ai-audit/metric-results";
+import { downloadKeyValueCsv, downloadSectionCsv } from "@/lib/ai-audit/section-csv";
 import type { ScanResult } from "@/lib/scan-results";
 
 type Props = {
@@ -65,45 +67,70 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
   const facingsTotal = Number.isFinite(facingsNum) ? facingsNum : s.visible_facings;
 
   const summaryTiles = [
-    {
-      label: "Products",
-      value: productsValue,
-      tone: tileTone(productsMetric?.status),
-    },
-    {
-      label: "Brands",
-      value: brandsValue,
-      tone: tileTone(brandsMetric?.status),
-    },
+    { label: "Products", value: productsValue, tone: tileTone(productsMetric?.status), bg: KPI_CARD.detectedProducts },
+    { label: "Brands", value: brandsValue, tone: tileTone(brandsMetric?.status), bg: KPI_CARD.auditPass },
     {
       label: "Variants",
       value: String(s.variants_identified || analysis.products.filter((p) => p.variant).length),
       tone: "neutral" as const,
+      bg: KPI_CARD.auditCompletion,
     },
-    {
-      label: "Facings",
-      value: facingsValue,
-      tone: tileTone(facingsMetric?.status),
-    },
-    {
-      label: "Units",
-      value: unitsValue,
-      tone: tileTone(unitsMetric?.status),
-    },
+    { label: "Facings", value: facingsValue, tone: tileTone(facingsMetric?.status), bg: KPI_CARD.openFindings },
+    { label: "Units", value: unitsValue, tone: tileTone(unitsMetric?.status), bg: KPI_CARD.inventoryValueVariance },
     {
       label: "Prices read",
       value: analysis.visible_prices.length ? String(analysis.visible_prices.length) : "N/A",
       tone: "neutral" as const,
+      bg: KPI_CARD.pricesRead,
     },
     {
       label: "Promotions",
       value: analysis.visible_promotions.length ? String(analysis.visible_promotions.length) : "N/A",
       tone: "neutral" as const,
+      bg: KPI_CARD.evidenceCoverage,
     },
     {
       label: "Shelf issues",
       value: analysis.shelf_issues.length ? String(analysis.shelf_issues.length) : "N/A",
       tone: analysis.shelf_issues.length ? ("attention" as const) : ("neutral" as const),
+      bg: KPI_CARD.criticalFindings,
+    },
+  ];
+
+  const summaryStats = [
+    {
+      label: "Products identified",
+      value: productsValue,
+      status: metricStatusLabel(productsMetric?.status),
+    },
+    {
+      label: "Brands identified",
+      value: brandsValue,
+      status: metricStatusLabel(brandsMetric?.status),
+    },
+    {
+      label: "Total facings",
+      value: facingsValue,
+      status: metricStatusLabel(facingsMetric?.status),
+      sub: facingsMetric?.source ? `Source: ${facingsMetric.source}` : undefined,
+    },
+    {
+      label: "Visible units",
+      value: unitsValue,
+      status: metricStatusLabel(unitsMetric?.status),
+      sub: unitsMetric?.source ? `Source: ${unitsMetric.source}` : undefined,
+    },
+    {
+      label: "Planogram compliance",
+      value: "N/A",
+      status: "Not applicable",
+      sub: "Shelf-only audit",
+    },
+    {
+      label: "Facing compliance",
+      value: "N/A",
+      status: "Not applicable",
+      sub: "No expected facings",
     },
   ];
 
@@ -125,19 +152,19 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
   const facingsBars = [...analysis.products]
     .sort((a, b) => b.actual_facings - a.actual_facings)
     .slice(0, 10)
-    .map((row, i) => ({
+    .map((row) => ({
       label: productLabel(row),
       value: row.actual_facings,
-      color: ["#AEDEF9", "#86EFAC", "#FCD34D", "#FCA5A5", "#C4B5FD"][i % 5],
+      color: CHART_ACCENT.rankByFacings,
     }));
 
   const unitsBars = [...analysis.products]
     .sort((a, b) => b.actual_visible_units - a.actual_visible_units)
     .slice(0, 10)
-    .map((row, i) => ({
+    .map((row) => ({
       label: productLabel(row),
       value: row.actual_visible_units,
-      color: ["#CFEEFF", "#BBF7D0", "#FDE68A", "#FECACA", "#E9D5FF"][i % 5],
+      color: CHART_ACCENT.rankByUnits,
     }));
 
   const risk = ctx.executionRisk;
@@ -198,21 +225,44 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
         modeLabel="Shelf intelligence (image-only)"
         operatingModel={ctx.extras.operating_model_label ?? ctx.extras.operating_model}
         timestamp={data.created_at}
+        category={data.scan_category}
+        subCategory={data.scan_sub_category}
+        location={data.location ?? data.aisle}
+        store={data.store}
+        processingTimeMs={data.summary?.processing_time_ms}
+        averageConfidence={data.summary?.average_confidence}
       />
-      <AiExecutiveSummary text={summaryText} />
+      <AiExecutiveSummary text={summaryText} scanId={data.scan_id} />
       <AiImageQualityBanner extras={ctx.extras} />
 
-      <AiAuditCard title="Location & shelf structure" description="Context from Astra shelf analysis">
+      <AiAuditCard
+        title="Location & shelf structure"
+        description="Context from Astra shelf analysis"
+        csvDownload={{
+          onDownload: () =>
+            downloadKeyValueCsv(data.scan_id, "location-shelf-structure", [
+              { label: "Location", value: analysis.location || ctx.extras.location || "—" },
+              { label: "Location status", value: analysis.location_status || "—" },
+              { label: "Shelf levels", value: analysis.shelf_structure?.visible_shelf_levels ?? "—" },
+              {
+                label: "Image quality",
+                value: analysis.image_quality?.status ?? ctx.extras.image_quality?.status ?? "—",
+              },
+            ]),
+        }}
+      >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <AiMetricStat label="Location" value={analysis.location || ctx.extras.location || "—"} />
-          <AiMetricStat label="Location status" value={analysis.location_status || "—"} />
+          <AiMetricStat label="Location" value={analysis.location || ctx.extras.location || "—"} bg={summaryFillAt(0)} />
+          <AiMetricStat label="Location status" value={analysis.location_status || "—"} bg={summaryFillAt(1)} />
           <AiMetricStat
             label="Shelf levels"
             value={analysis.shelf_structure?.visible_shelf_levels ?? "—"}
+            bg={summaryFillAt(2)}
           />
           <AiMetricStat
             label="Image quality"
             value={analysis.image_quality?.status ?? ctx.extras.image_quality?.status ?? "—"}
+            bg={summaryFillAt(3)}
           />
         </div>
         {analysis.shelf_structure?.notes ? (
@@ -223,42 +273,54 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       <AiAuditCard
         title="Summary KPIs"
         description="Aislix calculated metrics (MetricResults) — planogram compliance is N/A for shelf-only"
+        csvDownload={{
+          onDownload: () =>
+            downloadKeyValueCsv(data.scan_id, "summary-kpis", [
+              ...summaryTiles.map((t) => ({ label: t.label, value: t.value })),
+              ...summaryStats.map((t) => ({ label: t.label, value: t.value })),
+            ]),
+        }}
       >
         <MpTileGrid tiles={summaryTiles} />
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <AiMetricStat
-            label="Products identified"
-            value={productsValue}
-            status={metricStatusLabel(productsMetric?.status)}
-          />
-          <AiMetricStat
-            label="Brands identified"
-            value={brandsValue}
-            status={metricStatusLabel(brandsMetric?.status)}
-          />
-          <AiMetricStat
-            label="Total facings"
-            value={facingsValue}
-            status={metricStatusLabel(facingsMetric?.status)}
-            sub={facingsMetric?.source ? `Source: ${facingsMetric.source}` : undefined}
-          />
-          <AiMetricStat
-            label="Visible units"
-            value={unitsValue}
-            status={metricStatusLabel(unitsMetric?.status)}
-            sub={unitsMetric?.source ? `Source: ${unitsMetric.source}` : undefined}
-          />
-          <AiMetricStat label="Planogram compliance" value="N/A" status="Not applicable" sub="Shelf-only audit" />
-          <AiMetricStat label="Facing compliance" value="N/A" status="Not applicable" sub="No expected facings" />
+          {summaryStats.map((stat, i) => (
+            <AiMetricStat
+              key={stat.label}
+              label={stat.label}
+              value={stat.value}
+              status={stat.status}
+              sub={stat.sub}
+              bg={summaryFillAt(i)}
+            />
+          ))}
         </div>
       </AiAuditCard>
 
       {risk ? (
-        <AiAuditCard title="Execution risk" description="Rule-based severity from Aislix calc">
+        <AiAuditCard
+          title="Execution risk"
+          description="Rule-based severity from Aislix calc"
+          csvDownload={{
+            onDownload: () =>
+              downloadSectionCsv(
+                data.scan_id,
+                "execution-risk",
+                ["Severity", "Rules triggered", "Reasons", "Rule"],
+                risk.rules_triggered.length
+                  ? risk.rules_triggered.map((rule) => [
+                      risk.severity,
+                      risk.rules_triggered.length,
+                      risk.reasons.length,
+                      String(rule.description ?? rule.rule_id ?? ""),
+                    ])
+                  : [[risk.severity, 0, risk.reasons.length, "None"]],
+              ),
+          }}
+        >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <AiMetricStat label="Severity" value={risk.severity || "NONE"} />
-            <AiMetricStat label="Rules triggered" value={risk.rules_triggered.length} />
-            <AiMetricStat label="Reasons" value={risk.reasons.length || "—"} />
+            <AiMetricStat label="Severity" value={risk.severity || "NONE"} bg={KPI_CARD.criticalFindings} />
+            <AiMetricStat label="Rules triggered" value={risk.rules_triggered.length} bg={KPI_CARD.openFindings} />
+            <AiMetricStat label="Reasons" value={risk.reasons.length || "—"} bg={KPI_CARD.overdueActions} />
           </div>
           {risk.rules_triggered.length ? (
             <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
@@ -273,18 +335,44 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       ) : null}
 
       {analysis.focus_brand_analysis ? (
-        <AiAuditCard title="Focus brand analysis" description="Primary brand performance on this fixture">
+        <AiAuditCard
+          title="Focus brand analysis"
+          description="Primary brand performance on this fixture"
+          csvDownload={{
+            onDownload: () =>
+              downloadKeyValueCsv(data.scan_id, "focus-brand", [
+                { label: "Brand", value: analysis.focus_brand_analysis!.brand },
+                { label: "Facings", value: analysis.focus_brand_analysis!.facings },
+                { label: "Visible units", value: analysis.focus_brand_analysis!.visible_units },
+                {
+                  label: "Facing share %",
+                  value: analysis.focus_brand_analysis!.share_of_facings_percent,
+                },
+                {
+                  label: "Unit share %",
+                  value: analysis.focus_brand_analysis!.share_of_visible_units_percent,
+                },
+                { label: "Status", value: analysis.focus_brand_analysis!.status },
+              ]),
+          }}
+        >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-            <AiMetricStat label="Brand" value={analysis.focus_brand_analysis.brand} />
-            <AiMetricStat label="Facings" value={analysis.focus_brand_analysis.facings} />
-            <AiMetricStat label="Visible units" value={analysis.focus_brand_analysis.visible_units} />
+            <AiMetricStat label="Brand" value={analysis.focus_brand_analysis.brand} bg={summaryFillAt(0)} />
+            <AiMetricStat label="Facings" value={analysis.focus_brand_analysis.facings} bg={summaryFillAt(1)} />
+            <AiMetricStat
+              label="Visible units"
+              value={analysis.focus_brand_analysis.visible_units}
+              bg={summaryFillAt(2)}
+            />
             <AiMetricStat
               label="Facing share"
               value={pctCell(analysis.focus_brand_analysis.share_of_facings_percent)}
+              bg={summaryFillAt(3)}
             />
             <AiMetricStat
               label="Unit share"
               value={pctCell(analysis.focus_brand_analysis.share_of_visible_units_percent)}
+              bg={summaryFillAt(4)}
             />
           </div>
           <div className="mt-3">{statusBadge(analysis.focus_brand_analysis.status)}</div>
@@ -293,16 +381,54 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
 
       <div className="grid gap-4 xl:grid-cols-2">
         {brandDonut.length ? (
-          <AiAuditCard title="Brand share (facings)" description="From Aislix brand_analysis">
-            <MpDonut slices={brandDonut} total={facingsTotal || brandDonut.reduce((a, s) => a + s.value, 0)} totalLabel="Facings" />
+          <AiAuditCard
+            title="Brand share of facings"
+            description="Horizontal share view from brand_analysis"
+            csvDownload={{
+              onDownload: () =>
+                downloadSectionCsv(
+                  data.scan_id,
+                  "brand-facing-share",
+                  ["Brand", "Facings"],
+                  brandDonut.map((s) => [s.label, s.value]),
+                ),
+            }}
+          >
+            <MpDonut
+              slices={brandDonut.map((s, i) => ({
+                ...s,
+                color: i % 2 === 0 ? CHART_ACCENT.brandFacingShare : CHART_ACCENT.brandUnitShare,
+              }))}
+              total={facingsTotal || brandDonut.reduce((a, slice) => a + slice.value, 0)}
+              totalLabel="Facings"
+            />
           </AiAuditCard>
         ) : null}
         {categoryDonut.length ? (
-          <AiAuditCard title="Category share (facings)" description="From category_analysis when available">
-            <MpDonut slices={categoryDonut} total={facingsTotal || categoryDonut.reduce((a, s) => a + s.value, 0)} totalLabel="Facings" />
+          <AiAuditCard
+            title="Category share of facings"
+            description="From category_analysis when available"
+            csvDownload={{
+              onDownload: () =>
+                downloadSectionCsv(
+                  data.scan_id,
+                  "category-facing-share",
+                  ["Category", "Facings"],
+                  categoryDonut.map((s) => [s.label, s.value]),
+                ),
+            }}
+          >
+            <MpDonut
+              slices={categoryDonut.map((s, i) => ({
+                ...s,
+                color: i % 2 === 0 ? CHART_ACCENT.categoryFacingShare : CHART_ACCENT.rankByUnits,
+              }))}
+              total={facingsTotal || categoryDonut.reduce((a, slice) => a + slice.value, 0)}
+              totalLabel="Facings"
+            />
           </AiAuditCard>
         ) : (
-          <AiAuditCard title="Category share (facings)" description="Trusted category mapping">
+          <AiAuditCard title="Category share of facings" description="Trusted category mapping">
             <p className="text-sm text-muted-foreground">
               Not available — category share requires trusted category mapping (not LLM-only labels).
             </p>
@@ -312,19 +438,73 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
 
       <div className="grid gap-4 xl:grid-cols-2">
         {facingsBars.length ? (
-          <AiAuditCard title="Top products by facings" description="Ranked bar chart">
+          <AiAuditCard
+            title="Top products by facings"
+            description="Ranked horizontal bar chart"
+            csvDownload={{
+              onDownload: () =>
+                downloadSectionCsv(
+                  data.scan_id,
+                  "top-products-facings",
+                  ["Product", "Facings"],
+                  facingsBars.map((r) => [r.label, r.value]),
+                ),
+            }}
+          >
             <MpRankBars data={facingsBars} unit=" facings" />
           </AiAuditCard>
         ) : null}
         {unitsBars.length ? (
-          <AiAuditCard title="Top products by visible units" description="Ranked bar chart">
+          <AiAuditCard
+            title="Top products by visible units"
+            description="Ranked horizontal bar chart"
+            csvDownload={{
+              onDownload: () =>
+                downloadSectionCsv(
+                  data.scan_id,
+                  "top-products-units",
+                  ["Product", "Visible units"],
+                  unitsBars.map((r) => [r.label, r.value]),
+                ),
+            }}
+          >
             <MpRankBars data={unitsBars} unit=" units" />
           </AiAuditCard>
         ) : null}
       </div>
 
       {analysis.brand_analysis.length ? (
-        <AiAuditCard title="Brand analysis table" description="Aislix calculated brand shares">
+        <AiAuditCard
+          title="Brand analysis table"
+          description="Aislix calculated brand shares"
+          csvDownload={{
+            onDownload: () =>
+              downloadSectionCsv(
+                data.scan_id,
+                "brand-analysis",
+                [
+                  "Brand",
+                  "Facings",
+                  "Units",
+                  "Facing share %",
+                  "Unit share %",
+                  "Rank facings",
+                  "Rank units",
+                  "Confidence",
+                ],
+                analysis.brand_analysis.map((b) => [
+                  b.brand,
+                  b.facings,
+                  b.visible_units,
+                  b.share_of_facings_percent,
+                  b.share_of_visible_units_percent,
+                  b.rank_by_facings,
+                  b.rank_by_visible_units,
+                  b.confidence,
+                ]),
+              ),
+          }}
+        >
           <AiAuditMetricTable
             rows={analysis.brand_analysis}
             rowKey={(r) => r.brand}
@@ -343,7 +523,26 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       ) : null}
 
       {analysis.category_analysis.length ? (
-        <AiAuditCard title="Category analysis table" description="All category_analysis fields">
+        <AiAuditCard
+          title="Category analysis table"
+          description="All category_analysis fields"
+          csvDownload={{
+            onDownload: () =>
+              downloadSectionCsv(
+                data.scan_id,
+                "category-analysis",
+                ["Category", "Facings", "Units", "Facing share %", "Unit share %", "Confidence"],
+                analysis.category_analysis.map((c) => [
+                  c.category,
+                  c.facings,
+                  c.visible_units,
+                  c.share_of_facings_percent,
+                  c.share_of_visible_units_percent,
+                  c.confidence,
+                ]),
+              ),
+          }}
+        >
           <AiAuditMetricTable
             rows={analysis.category_analysis}
             rowKey={(r) => r.category}
@@ -359,7 +558,39 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
         </AiAuditCard>
       ) : null}
 
-      <AiAuditCard title="Detected products" description="Every product field from Astra CV">
+      <AiAuditCard
+        title="Detected products"
+        description="Every product field from Astra CV"
+        csvDownload={{
+          onDownload: () =>
+            downloadSectionCsv(
+              data.scan_id,
+              "detected-products",
+              [
+                "Brand",
+                "Product",
+                "Variant",
+                "Category",
+                "Subcategory",
+                "Facings",
+                "Visible units",
+                "Confidence",
+                "Evidence",
+              ],
+              analysis.products.map((r) => [
+                r.brand,
+                r.product_name,
+                r.variant,
+                r.category,
+                r.subcategory,
+                r.actual_facings,
+                r.actual_visible_units,
+                r.confidence,
+                r.evidence_note,
+              ]),
+            ),
+        }}
+      >
         <AiAuditMetricTable
           columns={productColumns}
           rows={analysis.products}
@@ -368,7 +599,25 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       </AiAuditCard>
 
       {analysis.visible_prices.length ? (
-        <AiAuditCard title="Visible prices" description="All visible_prices from secondary vision">
+        <AiAuditCard
+          title="Visible prices"
+          description="All visible_prices from secondary vision"
+          csvDownload={{
+            onDownload: () =>
+              downloadSectionCsv(
+                data.scan_id,
+                "visible-prices",
+                ["Product", "Brand", "Price", "Type", "Confidence"],
+                analysis.visible_prices.map((r) => [
+                  r.product_name,
+                  r.brand,
+                  r.price,
+                  r.price_type,
+                  r.confidence,
+                ]),
+              ),
+          }}
+        >
           <AiAuditMetricTable
             rows={analysis.visible_prices}
             rowKey={(r, i) => `price-${i}`}
@@ -390,7 +639,25 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       )}
 
       {analysis.visible_promotions.length ? (
-        <AiAuditCard title="Visible promotions" description="All visible_promotions from Astra">
+        <AiAuditCard
+          title="Visible promotions"
+          description="All visible_promotions from Astra"
+          csvDownload={{
+            onDownload: () =>
+              downloadSectionCsv(
+                data.scan_id,
+                "visible-promotions",
+                ["Brand", "Product", "Text", "Type", "Confidence"],
+                analysis.visible_promotions.map((r) => [
+                  r.brand ?? r.product_or_brand,
+                  r.product_name,
+                  r.promotion_text,
+                  r.promotion_type,
+                  r.confidence,
+                ]),
+              ),
+          }}
+        >
           <AiAuditMetricTable
             rows={analysis.visible_promotions}
             rowKey={(r, i) => `promo-${i}`}
@@ -410,7 +677,25 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       ) : null}
 
       {analysis.shelf_issues.length ? (
-        <AiAuditCard title="Shelf issues" description="All shelf_issues from Astra">
+        <AiAuditCard
+          title="Shelf issues"
+          description="All shelf_issues from Astra"
+          csvDownload={{
+            onDownload: () =>
+              downloadSectionCsv(
+                data.scan_id,
+                "shelf-issues",
+                ["Type", "Description", "Position", "Severity", "Confidence"],
+                analysis.shelf_issues.map((r) => [
+                  r.issue_type,
+                  r.description,
+                  r.shelf_position,
+                  r.severity,
+                  r.confidence,
+                ]),
+              ),
+          }}
+        >
           <AiAuditMetricTable
             rows={analysis.shelf_issues}
             rowKey={(r, i) => `issue-${i}`}

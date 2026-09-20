@@ -28,7 +28,9 @@ import type {
   AstraPlanogramSubcategoryAnalysis,
   AstraUnplannedProduct,
 } from "@/lib/ai-audit/astra-response";
+import { CHART_ACCENT, KPI_CARD, summaryFillAt } from "@/lib/ai-audit/kpi-palette";
 import { metricDisplayValue, metricStatusLabel } from "@/lib/ai-audit/metric-results";
+import { downloadKeyValueCsv, downloadSectionCsv } from "@/lib/ai-audit/section-csv";
 import { planogramComparisonFromResult } from "@/lib/planogram-display";
 import type { ScanResult } from "@/lib/scan-results";
 
@@ -40,6 +42,21 @@ type Props = {
 
 function productLabel(row: AstraPlanogramProduct) {
   return `${row.brand} · ${row.product_name}${row.variant ? ` · ${row.variant}` : ""}`;
+}
+
+function heroProps(data: ScanResult, ctx: AiAuditDisplayContext, modeLabel: string) {
+  return {
+    scanId: data.scan_id,
+    modeLabel,
+    operatingModel: ctx.extras.operating_model_label ?? ctx.extras.operating_model,
+    timestamp: data.created_at,
+    category: data.scan_category,
+    subCategory: data.scan_sub_category,
+    location: data.location ?? data.aisle,
+    store: data.store,
+    processingTimeMs: data.summary?.processing_time_ms,
+    averageConfidence: data.summary?.average_confidence,
+  };
 }
 
 export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
@@ -69,14 +86,55 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
   const donutSlices = statusDonutSlices(statusCounts);
 
   const funnelTiles = [
-    { label: "Matched", value: String(s.products_matched), tone: "healthy" as const },
-    { label: "Not found", value: String(s.products_not_found), tone: "attention" as const },
-    { label: "Non-compliant", value: String(s.non_compliant_products), tone: "attention" as const },
-    { label: "Unverifiable", value: String(s.products_not_verifiable), tone: "neutral" as const },
-    { label: "Wrong placement", value: String(s.wrong_placements), tone: "attention" as const },
-    { label: "Price mismatches", value: String(s.price_mismatches), tone: "attention" as const },
-    { label: "Exec. risks", value: String(riskCount), tone: "attention" as const },
-    { label: "Value gap ₹", value: String(s.total_potential_visible_unit_value_gap_inr), tone: "active" as const },
+    { label: "Matched", value: String(s.products_matched), tone: "healthy" as const, bg: KPI_CARD.auditPass },
+    { label: "Not found", value: String(s.products_not_found), tone: "attention" as const, bg: KPI_CARD.criticalFindings },
+    { label: "Non-compliant", value: String(s.non_compliant_products), tone: "attention" as const, bg: KPI_CARD.openFindings },
+    { label: "Unverifiable", value: String(s.products_not_verifiable), tone: "neutral" as const, bg: KPI_CARD.overdueActions },
+    { label: "Wrong placement", value: String(s.wrong_placements), tone: "attention" as const, bg: KPI_CARD.auditCompletion },
+    { label: "Price mismatches", value: String(s.price_mismatches), tone: "attention" as const, bg: KPI_CARD.evidenceCoverage },
+    { label: "Exec. risks", value: String(riskCount), tone: "attention" as const, bg: KPI_CARD.slaCompliance },
+    { label: "Value gap ₹", value: String(s.total_potential_visible_unit_value_gap_inr), tone: "active" as const, bg: KPI_CARD.inventoryValueVariance },
+  ];
+
+  const summaryStats = [
+    { label: "Total rows", value: s.total_planogram_rows || analysis.products.length },
+    {
+      label: "Planogram compliance",
+      value: metricDisplayValue(planoMetric, pctCell(s.overall_planogram_compliance_percent)),
+      status: metricStatusLabel(planoMetric?.status),
+    },
+    {
+      label: "Facing compliance",
+      value: metricDisplayValue(facingMetric, pctCell(s.overall_facing_compliance_percent)),
+      status: metricStatusLabel(facingMetric?.status),
+    },
+    { label: "Unit compliance", value: pctCell(s.overall_shelf_unit_compliance_percent) },
+    {
+      label: "Products identified",
+      value: metricDisplayValue(calc.products_identified, analysis.products.length),
+      status: metricStatusLabel(calc.products_identified?.status),
+    },
+    {
+      label: "Brands identified",
+      value: metricDisplayValue(calc.brands_identified, analysis.brand_analysis.length),
+      status: metricStatusLabel(calc.brands_identified?.status),
+    },
+    {
+      label: "Actual facings",
+      value: metricDisplayValue(calc.total_actual_facings, s.total_actual_facings),
+      status: metricStatusLabel(calc.total_actual_facings?.status),
+      sub: `Expected ${s.total_expected_facings}`,
+    },
+    {
+      label: "Actual units",
+      value: metricDisplayValue(calc.total_actual_visible_units, s.total_actual_visible_units),
+      status: metricStatusLabel(calc.total_actual_visible_units?.status),
+      sub: `Expected ${s.total_expected_shelf_units}`,
+    },
+    { label: "Below exp facings", value: s.products_below_expected_facings },
+    { label: "Below min facings", value: s.products_below_minimum_facings },
+    { label: "Above max facings", value: s.products_above_maximum_facings },
+    { label: "Below exp units", value: s.products_below_expected_units },
   ];
 
   const topVariance = [...analysis.products]
@@ -101,13 +159,21 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
   const comparison = planogramComparisonFromResult(data, null);
 
   const productColumns = [
-    { key: "product", header: "Product", cell: (r: AstraPlanogramProduct) => (
-      <div>
-        <p className="font-medium">{productLabel(r)}</p>
-        <p className="text-muted-foreground">{r.location}{r.category ? ` · ${r.category}` : ""}{r.subcategory ? ` · ${r.subcategory}` : ""}</p>
-        <p className="text-muted-foreground">SKU: {r.sku || "—"}</p>
-      </div>
-    )},
+    {
+      key: "product",
+      header: "Product",
+      cell: (r: AstraPlanogramProduct) => (
+        <div>
+          <p className="font-medium">{productLabel(r)}</p>
+          <p className="text-muted-foreground">
+            {r.location}
+            {r.category ? ` · ${r.category}` : ""}
+            {r.subcategory ? ` · ${r.subcategory}` : ""}
+          </p>
+          <p className="text-muted-foreground">SKU: {r.sku || "—"}</p>
+        </div>
+      ),
+    },
     { key: "brand", header: "Brand", cell: (r: AstraPlanogramProduct) => statusBadge(r.brand_status) },
     { key: "product_st", header: "Product", cell: (r: AstraPlanogramProduct) => statusBadge(r.product_status) },
     { key: "variant", header: "Variant", cell: (r: AstraPlanogramProduct) => statusBadge(r.variant_status) },
@@ -124,90 +190,115 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
     { key: "exp_pos", header: "Exp position", cell: (r: AstraPlanogramProduct) => r.expected_shelf_position || "—" },
     { key: "act_pos", header: "Act position", cell: (r: AstraPlanogramProduct) => r.actual_shelf_position || "—" },
     { key: "place", header: "Placement", cell: (r: AstraPlanogramProduct) => statusBadge(r.placement_status) },
-    { key: "mrp", header: "Exp MRP", cell: (r: AstraPlanogramProduct) => r.expected_mrp_inr ? `₹${r.expected_mrp_inr}` : "—" },
+    {
+      key: "mrp",
+      header: "Exp MRP",
+      cell: (r: AstraPlanogramProduct) => (r.expected_mrp_inr ? `₹${r.expected_mrp_inr}` : "—"),
+    },
     { key: "vis_p", header: "Visible price", cell: (r: AstraPlanogramProduct) => r.visible_price ?? "—" },
     { key: "price", header: "Price", cell: (r: AstraPlanogramProduct) => statusBadge(r.price_status) },
     { key: "ads", header: "Avg daily sales", cell: (r: AstraPlanogramProduct) => r.avg_daily_sales || "—" },
-    { key: "cov", header: "Coverage days", cell: (r: AstraPlanogramProduct) => r.estimated_visible_shelf_coverage_days ?? "—" },
+    {
+      key: "cov",
+      header: "Coverage days",
+      cell: (r: AstraPlanogramProduct) => r.estimated_visible_shelf_coverage_days ?? "—",
+    },
     { key: "short", header: "Unit shortfall", cell: (r: AstraPlanogramProduct) => r.visible_unit_shortfall },
     { key: "gap", header: "Value gap ₹", cell: (r: AstraPlanogramProduct) => r.potential_visible_unit_value_gap_inr },
     { key: "risk", header: "Risk", cell: (r: AstraPlanogramProduct) => statusBadge(r.risk_status) },
     { key: "overall", header: "Overall", cell: (r: AstraPlanogramProduct) => statusBadge(r.overall_status) },
     { key: "conf", header: "Conf.", cell: (r: AstraPlanogramProduct) => confCell(r.confidence) },
-    { key: "ev", header: "Evidence", cell: (r: AstraPlanogramProduct) => <span className="text-muted-foreground">{r.evidence_note || "—"}</span> },
+    {
+      key: "ev",
+      header: "Evidence",
+      cell: (r: AstraPlanogramProduct) => (
+        <span className="text-muted-foreground">{r.evidence_note || "—"}</span>
+      ),
+    },
   ];
 
   return (
     <div className="space-y-4">
-      <AiResultsHero
-        scanId={data.scan_id}
-        modeLabel="Planogram comparison"
-        operatingModel={ctx.extras.operating_model_label ?? ctx.extras.operating_model}
-        timestamp={data.created_at}
-      />
-      <AiExecutiveSummary text={data.executive_summary} />
+      <AiResultsHero {...heroProps(data, ctx, "Planogram comparison")} />
+      <AiExecutiveSummary text={data.executive_summary} scanId={data.scan_id} />
       <AiImageQualityBanner extras={ctx.extras} />
 
       <div className="grid gap-4 lg:grid-cols-[auto,1fr]">
-        <AiAuditCard title="Planogram compliance" description="Check-based Aislix MetricResult">
+        <AiAuditCard
+          title="Planogram compliance"
+          description="Check-based Aislix MetricResult"
+          csvDownload={{
+            onDownload: () =>
+              downloadKeyValueCsv(data.scan_id, "planogram-compliance", [
+                { label: "Planogram compliance %", value: compliance },
+                { label: "Status", value: metricStatusLabel(planoMetric?.status) },
+                { label: "Rows", value: analysis.products.length },
+              ]),
+          }}
+        >
           <MpRadialGauge
             value={compliance}
             label="Compliant"
             sublabel={`${analysis.products.length} rows · ${metricStatusLabel(planoMetric?.status) ?? "Calculated"}`}
-            color="#86EFAC"
+            color={CHART_ACCENT.brandFacingShare}
           />
         </AiAuditCard>
-        <AiAuditCard title="Summary KPIs" description="Astra row funnel + Aislix calculated metrics">
+        <AiAuditCard
+          title="Summary KPIs"
+          description="Astra row funnel + Aislix calculated metrics"
+          csvDownload={{
+            onDownload: () =>
+              downloadKeyValueCsv(data.scan_id, "summary-kpis", [
+                ...funnelTiles.map((t) => ({ label: t.label, value: t.value })),
+                ...summaryStats.map((t) => ({ label: t.label, value: t.value })),
+              ]),
+          }}
+        >
           <MpTileGrid tiles={funnelTiles} />
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <AiMetricStat label="Total rows" value={s.total_planogram_rows || analysis.products.length} />
-            <AiMetricStat
-              label="Planogram compliance"
-              value={metricDisplayValue(planoMetric, pctCell(s.overall_planogram_compliance_percent))}
-              status={metricStatusLabel(planoMetric?.status)}
-            />
-            <AiMetricStat
-              label="Facing compliance"
-              value={metricDisplayValue(facingMetric, pctCell(s.overall_facing_compliance_percent))}
-              status={metricStatusLabel(facingMetric?.status)}
-            />
-            <AiMetricStat label="Unit compliance" value={pctCell(s.overall_shelf_unit_compliance_percent)} />
-            <AiMetricStat
-              label="Products identified"
-              value={metricDisplayValue(calc.products_identified, analysis.products.length)}
-              status={metricStatusLabel(calc.products_identified?.status)}
-            />
-            <AiMetricStat
-              label="Brands identified"
-              value={metricDisplayValue(calc.brands_identified, analysis.brand_analysis.length)}
-              status={metricStatusLabel(calc.brands_identified?.status)}
-            />
-            <AiMetricStat
-              label="Actual facings"
-              value={metricDisplayValue(calc.total_actual_facings, s.total_actual_facings)}
-              status={metricStatusLabel(calc.total_actual_facings?.status)}
-              sub={`Expected ${s.total_expected_facings}`}
-            />
-            <AiMetricStat
-              label="Actual units"
-              value={metricDisplayValue(calc.total_actual_visible_units, s.total_actual_visible_units)}
-              status={metricStatusLabel(calc.total_actual_visible_units?.status)}
-              sub={`Expected ${s.total_expected_shelf_units}`}
-            />
-            <AiMetricStat label="Below exp facings" value={s.products_below_expected_facings} />
-            <AiMetricStat label="Below min facings" value={s.products_below_minimum_facings} />
-            <AiMetricStat label="Above max facings" value={s.products_above_maximum_facings} />
-            <AiMetricStat label="Below exp units" value={s.products_below_expected_units} />
+            {summaryStats.map((stat, i) => (
+              <AiMetricStat
+                key={stat.label}
+                label={stat.label}
+                value={stat.value}
+                status={"status" in stat ? stat.status : undefined}
+                sub={"sub" in stat ? (stat as { sub?: string }).sub : undefined}
+                bg={summaryFillAt(i)}
+              />
+            ))}
           </div>
         </AiAuditCard>
       </div>
 
       {risk ? (
-        <AiAuditCard title="Execution risk" description="Rule-based severity from Aislix calc">
+        <AiAuditCard
+          title="Execution risk"
+          description="Rule-based severity from Aislix calc"
+          csvDownload={{
+            onDownload: () =>
+              downloadSectionCsv(
+                data.scan_id,
+                "execution-risk",
+                ["Severity", "Rules triggered", "High-priority risks", "Rule"],
+                risk.rules_triggered.length
+                  ? risk.rules_triggered.map((rule) => [
+                      risk.severity,
+                      risk.rules_triggered.length,
+                      s.high_priority_execution_risks,
+                      String(rule.description ?? rule.rule_id ?? ""),
+                    ])
+                  : [[risk.severity, 0, s.high_priority_execution_risks, "None"]],
+              ),
+          }}
+        >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <AiMetricStat label="Severity" value={risk.severity || "NONE"} />
-            <AiMetricStat label="Rules triggered" value={risk.rules_triggered.length} />
-            <AiMetricStat label="High-priority risks" value={s.high_priority_execution_risks} />
+            <AiMetricStat label="Severity" value={risk.severity || "NONE"} bg={KPI_CARD.criticalFindings} />
+            <AiMetricStat label="Rules triggered" value={risk.rules_triggered.length} bg={KPI_CARD.openFindings} />
+            <AiMetricStat
+              label="High-priority risks"
+              value={s.high_priority_execution_risks}
+              bg={KPI_CARD.overdueActions}
+            />
           </div>
           {risk.rules_triggered.length ? (
             <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
@@ -223,26 +314,93 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
 
       <div className="grid gap-4 xl:grid-cols-3">
         {donutSlices.length ? (
-          <AiAuditCard title="Status mix" description="Overall row status distribution">
+          <AiAuditCard
+            title="Status mix"
+            description="Overall row status distribution"
+            csvDownload={{
+              onDownload: () =>
+                downloadSectionCsv(
+                  data.scan_id,
+                  "status-mix",
+                  ["Status", "Count"],
+                  donutSlices.map((slice) => [slice.label, slice.value]),
+                ),
+            }}
+          >
             <MpDonut slices={donutSlices} total={analysis.products.length} totalLabel="Rows" />
           </AiAuditCard>
         ) : null}
-        <AiAuditCard title="Largest facing variance" description="Top rows by absolute facing delta" className="xl:col-span-1">
-          <AiVarianceBars items={topVariance} unit=" facings" />
+        <AiAuditCard
+          title="Largest facing variance"
+          description="Top rows by absolute facing delta"
+          className="xl:col-span-1"
+          csvDownload={{
+            onDownload: () =>
+              downloadSectionCsv(
+                data.scan_id,
+                "facing-variance",
+                ["Product", "Facing variance"],
+                topVariance.map((r) => [r.label, r.variance]),
+              ),
+          }}
+        >
+          <AiVarianceBars items={topVariance} unit=" facings" accent={CHART_ACCENT.actualFacings} />
         </AiAuditCard>
-        <AiAuditCard title="Largest unit variance" description="Top rows by absolute unit delta">
-          <AiVarianceBars items={topUnitVariance} unit=" units" />
+        <AiAuditCard
+          title="Largest unit variance"
+          description="Top rows by absolute unit delta"
+          csvDownload={{
+            onDownload: () =>
+              downloadSectionCsv(
+                data.scan_id,
+                "unit-variance",
+                ["Product", "Unit variance"],
+                topUnitVariance.map((r) => [r.label, r.variance]),
+              ),
+          }}
+        >
+          <AiVarianceBars items={topUnitVariance} unit=" units" accent={CHART_ACCENT.actualUnits} />
         </AiAuditCard>
       </div>
 
-      <AiAuditCard title="Expected vs actual facings" description="Side-by-side comparison for top variance SKUs">
-        <AiGroupedComparisonBars items={facingCompare} unit="" />
+      <AiAuditCard
+        title="Expected vs actual facings"
+        description="Side-by-side comparison for top variance SKUs"
+        csvDownload={{
+          onDownload: () =>
+            downloadSectionCsv(
+              data.scan_id,
+              "expected-vs-actual-facings",
+              ["Product", "Expected", "Actual"],
+              facingCompare.map((r) => [r.label, r.expected, r.actual]),
+            ),
+        }}
+      >
+        <AiGroupedComparisonBars items={facingCompare} unit="" accent={CHART_ACCENT.rankByFacings} />
       </AiAuditCard>
 
       {analysis.brand_analysis.length ? (
         <div className="grid gap-4 xl:grid-cols-2">
-          <AiAuditCard title="Brand share vs plan" description="Expected vs actual brand facing share">
+          <AiAuditCard
+            title="Brand share vs plan"
+            description="Expected vs actual brand facing share"
+            csvDownload={{
+              onDownload: () =>
+                downloadSectionCsv(
+                  data.scan_id,
+                  "brand-share",
+                  ["Brand", "Expected share %", "Actual share %", "Variance pp"],
+                  analysis.brand_analysis.map((b) => [
+                    b.brand,
+                    b.expected_share_percent,
+                    b.actual_share_percent,
+                    b.share_variance_pp,
+                  ]),
+                ),
+            }}
+          >
             <AiShareComparisonBars
+              accent={CHART_ACCENT.brandFacingShare}
               items={analysis.brand_analysis.map((b) => ({
                 label: b.brand,
                 expected: b.expected_share_percent,
@@ -251,7 +409,35 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
               }))}
             />
           </AiAuditCard>
-          <AiAuditCard title="Brand analysis table" description="All brand_analysis fields">
+          <AiAuditCard
+            title="Brand analysis table"
+            description="All brand_analysis fields"
+            csvDownload={{
+              onDownload: () =>
+                downloadSectionCsv(
+                  data.scan_id,
+                  "brand-analysis",
+                  [
+                    "Brand",
+                    "Exp facings",
+                    "Act facings",
+                    "Exp share %",
+                    "Act share %",
+                    "Variance pp",
+                    "Status",
+                  ],
+                  analysis.brand_analysis.map((b) => [
+                    b.brand,
+                    b.expected_facings,
+                    b.actual_facings,
+                    b.expected_share_percent,
+                    b.actual_share_percent,
+                    b.share_variance_pp,
+                    b.status,
+                  ]),
+                ),
+            }}
+          >
             <AiAuditMetricTable
               rows={analysis.brand_analysis}
               rowKey={(r) => r.brand}
@@ -270,7 +456,35 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
       ) : null}
 
       {analysis.category_analysis.length ? (
-        <AiAuditCard title="Category analysis" description="Category facings, share, and compliance">
+        <AiAuditCard
+          title="Category analysis"
+          description="Category facings, share, and compliance"
+          csvDownload={{
+            onDownload: () =>
+              downloadSectionCsv(
+                data.scan_id,
+                "category-analysis",
+                [
+                  "Category",
+                  "Exp facings",
+                  "Act facings",
+                  "Exp share %",
+                  "Act share %",
+                  "Compliance %",
+                  "Status",
+                ],
+                analysis.category_analysis.map((c) => [
+                  c.category,
+                  c.expected_facings,
+                  c.actual_facings,
+                  c.expected_share_percent,
+                  c.actual_share_percent,
+                  c.compliance_percent,
+                  c.status,
+                ]),
+              ),
+          }}
+        >
           <AiAuditMetricTable
             rows={analysis.category_analysis}
             rowKey={(r) => r.category}
@@ -288,12 +502,34 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
       ) : null}
 
       {analysis.subcategory_analysis.length ? (
-        <AiAuditCard title="Subcategory analysis" description="Subcategory facings and compliance">
+        <AiAuditCard
+          title="Subcategory analysis"
+          description="Subcategory facings and compliance"
+          csvDownload={{
+            onDownload: () =>
+              downloadSectionCsv(
+                data.scan_id,
+                "subcategory-analysis",
+                ["Subcategory", "Exp facings", "Act facings", "Compliance %", "Status"],
+                analysis.subcategory_analysis.map((c) => [
+                  c.subcategory,
+                  c.expected_facings,
+                  c.actual_facings,
+                  c.compliance_percent,
+                  c.status,
+                ]),
+              ),
+          }}
+        >
           <AiAuditMetricTable
             rows={analysis.subcategory_analysis}
             rowKey={(r) => r.subcategory}
             columns={[
-              { key: "sc", header: "Subcategory", cell: (r: AstraPlanogramSubcategoryAnalysis) => r.subcategory },
+              {
+                key: "sc",
+                header: "Subcategory",
+                cell: (r: AstraPlanogramSubcategoryAnalysis) => r.subcategory,
+              },
               { key: "ef", header: "Exp facings", cell: (r) => r.expected_facings },
               { key: "af", header: "Act facings", cell: (r) => r.actual_facings },
               { key: "cp", header: "Compliance %", cell: (r) => pctCell(r.compliance_percent) },
@@ -303,7 +539,43 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
         </AiAuditCard>
       ) : null}
 
-      <AiAuditCard title="Product comparison" description="Every planogram row metric from Astra">
+      <AiAuditCard
+        title="Product comparison"
+        description="Every planogram row metric from Astra"
+        csvDownload={{
+          onDownload: () =>
+            downloadSectionCsv(
+              data.scan_id,
+              "product-comparison",
+              [
+                "Brand",
+                "Product",
+                "Variant",
+                "SKU",
+                "Expected facings",
+                "Actual facings",
+                "Facing variance",
+                "Expected units",
+                "Actual units",
+                "Overall status",
+                "Confidence",
+              ],
+              analysis.products.map((r) => [
+                r.brand,
+                r.product_name,
+                r.variant,
+                r.sku,
+                r.expected_facings,
+                r.actual_facings,
+                r.facing_variance,
+                r.expected_shelf_units,
+                r.actual_visible_units,
+                r.overall_status,
+                r.confidence,
+              ]),
+            ),
+        }}
+      >
         <AiAuditMetricTable
           columns={productColumns}
           rows={analysis.products}
@@ -312,7 +584,26 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
       </AiAuditCard>
 
       {analysis.observed_unplanned_products.length ? (
-        <AiAuditCard title="Unplanned products on shelf" description="Products not in the planogram">
+        <AiAuditCard
+          title="Unplanned products on shelf"
+          description="Products not in the planogram"
+          csvDownload={{
+            onDownload: () =>
+              downloadSectionCsv(
+                data.scan_id,
+                "unplanned-products",
+                ["Brand", "Product", "Variant", "Facings", "Units", "Confidence"],
+                analysis.observed_unplanned_products.map((r) => [
+                  r.brand,
+                  r.product_name,
+                  r.variant,
+                  r.actual_facings,
+                  r.actual_visible_units,
+                  r.confidence,
+                ]),
+              ),
+          }}
+        >
           <AiAuditMetricTable
             rows={analysis.observed_unplanned_products}
             rowKey={(r, i) => `${r.brand}-${i}`}

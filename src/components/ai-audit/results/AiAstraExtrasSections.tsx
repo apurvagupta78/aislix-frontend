@@ -1,6 +1,7 @@
 import { AiAuditCard } from "@/components/ai-audit/results/AiAuditUi";
 import { Badge } from "@/components/ui/badge";
 import type { AstraOutputExtras } from "@/lib/ai-audit/astra-display";
+import { downloadKeyValueCsv } from "@/lib/ai-audit/section-csv";
 import type { ScanAlert, ScanRecommendation, ScanResult } from "@/lib/scan-results";
 import { cn } from "@/lib/utils";
 
@@ -171,28 +172,68 @@ export function AiRoleSummariesSection({
 
 export function AiFinancialImpactSection({
   impact,
+  scanId = "audit",
 }: {
   impact?: ScanResult["financial_impact"];
+  scanId?: string;
 }) {
   if (!impact) return null;
+  const cards = [
+    {
+      label: "Potential Daily Value at Risk",
+      value: `₹${impact.estimated_daily_lost_sales_inr}`,
+      bg: "#EAF6FD",
+      accent: "#8EC9E8",
+    },
+    {
+      label: "Potential Weekly Value at Risk",
+      value: `₹${impact.estimated_weekly_lost_sales_inr}`,
+      bg: "#F0E9FF",
+      accent: "#9B86D9",
+    },
+    {
+      label: "Potential OOS SKUs",
+      value: impact.oos_sku_count,
+      bg: "#FFEAF1",
+      accent: "#F9A8C9",
+    },
+    {
+      label: "Financial Impact Status",
+      value: impact.estimate_status ?? impact.confidence ?? "—",
+      bg: "#EEF1F4",
+      accent: "#94A3B8",
+    },
+  ];
   return (
-    <AiAuditCard title="Financial impact" description={impact.methodology}>
+    <AiAuditCard
+      title="Financial impact"
+      description={impact.methodology}
+      csvDownload={{
+        onDownload: () => {
+          downloadKeyValueCsv(
+            scanId,
+            "financial-impact",
+            cards.map((c) => ({ label: c.label, value: c.value })),
+          );
+        },
+      }}
+    >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <AiMetricInline label="Daily at risk" value={`₹${impact.estimated_daily_lost_sales_inr}`} />
-        <AiMetricInline label="Weekly at risk" value={`₹${impact.estimated_weekly_lost_sales_inr}`} />
-        <AiMetricInline label="OOS SKUs" value={impact.oos_sku_count} />
-        <AiMetricInline label="Status" value={impact.estimate_status ?? impact.confidence} />
+        {cards.map((card) => (
+          <div
+            key={card.label}
+            className="rounded-xl border border-black/5 px-3 py-3 shadow-sm"
+            style={{ background: card.bg }}
+          >
+            <p className="text-[10px] font-bold uppercase tracking-wide text-navy/60">{card.label}</p>
+            <p className="mt-1 text-lg font-semibold tabular-nums text-navy">{card.value}</p>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/70">
+              <div className="h-full w-2/3 rounded-full" style={{ background: card.accent }} />
+            </div>
+          </div>
+        ))}
       </div>
     </AiAuditCard>
-  );
-}
-
-function AiMetricInline({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div>
-      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-0.5 text-lg font-semibold tabular-nums">{value}</p>
-    </div>
   );
 }
 
@@ -272,7 +313,7 @@ export function AiAstraOutputSections({ result, extras }: { result: ScanResult; 
       <AiAlertsSection alerts={result.alerts} />
       <AiRecommendationsSection items={result.recommendations} />
       <AiRoleSummariesSection summaries={result.role_summaries} />
-      <AiFinancialImpactSection impact={result.financial_impact} />
+      <AiFinancialImpactSection impact={result.financial_impact} scanId={result.scan_id} />
     </>
   );
 }

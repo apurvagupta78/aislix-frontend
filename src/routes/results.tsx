@@ -280,10 +280,10 @@ function Results() {
         />
       ) : (
         <div className="space-y-4">
-          {(loading || processing) && (
+          {(loading || processing || ready) && (
             <ScanResultHeader
               data={data}
-              loading={loading}
+              loading={loading && !ready}
               assignmentId={assignmentQuery.data ?? null}
             />
           )}

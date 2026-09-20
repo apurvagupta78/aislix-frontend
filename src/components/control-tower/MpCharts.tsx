@@ -218,14 +218,23 @@ const tileTone: Record<string, string> = {
 export function MpTileGrid({
   tiles,
 }: {
-  tiles: Array<{ label: string; value: string; tone: "active" | "healthy" | "attention" | "neutral" }>;
+  tiles: Array<{
+    label: string;
+    value: string;
+    tone: "active" | "healthy" | "attention" | "neutral";
+    bg?: string;
+  }>;
 }) {
   return (
     <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 xl:grid-cols-6">
       {tiles.map((tile) => (
         <div
           key={tile.label}
-          className={cn("rounded-lg border px-2.5 py-2", tileTone[tile.tone])}
+          className={cn(
+            "rounded-lg border px-2.5 py-2 shadow-sm",
+            tile.bg ? "border-black/5" : tileTone[tile.tone],
+          )}
+          style={tile.bg ? { background: tile.bg } : undefined}
           title={`${tile.label}: ${tile.value}`}
         >
           <p className="font-display text-[15px] font-semibold leading-none text-navy">{tile.value}</p>
