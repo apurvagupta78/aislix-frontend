@@ -336,7 +336,7 @@ function SharedReport() {
                     <TableHead>Brand</TableHead>
                     <TableHead>Product</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead className="text-right">Facings</TableHead>
+                    <TableHead className="text-right">Total Facings</TableHead>
                     <TableHead>Stock</TableHead>
                   </TableRow>
                 </TableHeader>
