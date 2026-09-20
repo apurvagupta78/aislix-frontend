@@ -26,6 +26,7 @@ import { planHasFeature } from "@/lib/plan-features";
 import { fetchUsageSummary } from "@/lib/subscription-limits";
 import { useWorkspaceContext } from "@/hooks/use-customer-context";
 import { AiAuditResultsPage } from "@/components/ai-audit/AiAuditResultsPage";
+import { ReportActionsFooter } from "@/components/scan-results/ReportActionsFooter";
 import { AstraComparisonResults } from "@/components/ai-audit/AstraComparisonResults";
 import { normalizeAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { ScanContextPanel } from "@/components/scan/ScanContextPanel";
@@ -367,6 +368,7 @@ function Results() {
                   {useSimpleAiView ? (
                     <>
                       <AiAuditResultsPage data={display} imageUrl={imageUrl} />
+                      <ReportActionsFooter data={display} loading={false} />
                       <p className="mt-3 shrink-0 text-[11px] leading-relaxed text-muted-foreground">
                         {AI_DISCLAIMER}
                       </p>
@@ -396,6 +398,7 @@ function Results() {
                         activeRole={activeRole}
                         hasWorkspace
                       />
+                      <ReportActionsFooter data={display} loading={false} />
                       <p className="mt-3 shrink-0 text-[11px] leading-relaxed text-muted-foreground">
                         {AI_DISCLAIMER}
                       </p>
