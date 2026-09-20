@@ -66,6 +66,124 @@ function PositionDetail({ position }: { position: PositionComparisonRow }) {
   );
 }
 
+function ObservedProductCard({
+  brand,
+  product,
+  variant,
+  facings,
+  units,
+  status,
+}: {
+  brand: string;
+  product: string;
+  variant?: string;
+  facings: number | null;
+  units: number | null;
+  status: string;
+}) {
+  const title = [brand, product, variant].filter(Boolean).join(" · ");
+  const statusKey: "match" | "missing" | "review" = /match/i.test(status)
+    ? "match"
+    : /missing|not_found/i.test(status)
+      ? "missing"
+      : "review";
+  return (
+    <div
+      className={cn(
+        "w-full rounded-lg border border-l-[3px] bg-card px-3 py-2.5 text-left text-xs shadow-sm",
+        STATUS_ACCENT[statusKey],
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="font-semibold text-foreground">{title || "Product"}</p>
+        <Badge
+          variant="secondary"
+          className={cn("shrink-0 text-[9px] font-medium", STATUS_PILL[statusKey])}
+        >
+          {status}
+        </Badge>
+      </div>
+      <p className="mt-1 text-[10px] text-muted-foreground">
+        Observed: {facings == null ? "—" : `${facings} facing${facings === 1 ? "" : "s}`}
+        {units != null ? ` · ${units} visible unit${units === 1 ? "" : "s"}` : ""}
+      </p>
+    </div>
+  );
+}
+
+function pickAislixObservedCards(data?: ScanResult | null): Array<{
+  brand: string;
+  product: string;
+  variant?: string;
+  facings: number | null;
+  units: number | null;
+  status: string;
+  key: string;
+}> {
+  if (!data) return [];
+  const metrics = (data.metrics ?? {}) as Record<string, unknown>;
+  const aislix =
+    (data.aislix_planogram_analysis as Record<string, unknown> | undefined) ??
+    (metrics.aislix_planogram_analysis as Record<string, unknown> | undefined);
+  const products = Array.isArray(aislix?.products) ? aislix.products : [];
+  const unplanned = Array.isArray(aislix?.unplanned_products) ? aislix.unplanned_products : [];
+  const cards: Array<{
+    brand: string;
+    product: string;
+    variant?: string;
+    facings: number | null;
+    units: number | null;
+    status: string;
+    key: string;
+  }> = [];
+
+  products.forEach((raw, i) => {
+    if (!raw || typeof raw !== "object") return;
+    const p = raw as Record<string, unknown>;
+    const brand = String(p.actual_brand ?? p.brand ?? "").trim();
+    const product = String(p.actual_product_name ?? p.product_name ?? "").trim();
+    const variant = String(p.actual_variant ?? "").trim() || undefined;
+    const facings =
+      p.actual_facings == null || p.actual_facings === "" ? null : Number(p.actual_facings);
+    const units =
+      p.actual_visible_units == null || p.actual_visible_units === ""
+        ? null
+        : Number(p.actual_visible_units);
+    if (facings == null && units == null && !brand && !product) return;
+    cards.push({
+      brand: brand || "Unknown brand",
+      product: product || "Product",
+      variant,
+      facings: Number.isFinite(facings as number) ? (facings as number) : null,
+      units: Number.isFinite(units as number) ? (units as number) : null,
+      status: String(p.match_status ?? "OBSERVED"),
+      key: `matched-${String(p.sku ?? i)}`,
+    });
+  });
+
+  unplanned.forEach((raw, i) => {
+    if (!raw || typeof raw !== "object") return;
+    const p = raw as Record<string, unknown>;
+    cards.push({
+      brand: String(p.actual_brand ?? p.brand ?? "Unknown brand").trim(),
+      product: String(p.actual_product_name ?? p.product_name ?? "Product").trim(),
+      variant: String(p.actual_variant ?? p.variant ?? "").trim() || undefined,
+      facings:
+        p.actual_facings == null || p.actual_facings === ""
+          ? null
+          : Number(p.actual_facings),
+      units:
+        p.actual_visible_units == null || p.actual_visible_units === ""
+          ? null
+          : Number(p.actual_visible_units),
+      status: "UNPLANNED",
+      key: `unplanned-${i}`,
+    });
+  });
+
+  return cards;
+}
+
 function ExpectedPositionCard({
   position,
   selected,
@@ -178,6 +296,7 @@ export function PlanogramSideBySidePanel({
     [data, comparison],
   );
   const summary = useMemo(() => buildShelfExecutionSummary(positions), [positions]);
+  const observedCards = useMemo(() => pickAislixObservedCards(data), [data]);
   const selected = positions.find((p) => p.position_id === selectedPositionId) ?? null;
   const hasPlanogram = Boolean(data?.planogram?.requested) || rows.length > 0;
 
@@ -272,11 +391,34 @@ export function PlanogramSideBySidePanel({
             The expected products, positions and facings from your shelf setup.
           </p>
           <div className="mt-3 max-h-[32rem] overflow-y-auto pr-1">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-foreground/70">
+              What Should Be
+            </p>
             <ExpectedShelfGrid
               positions={positions}
               selectedId={selectedPositionId}
               onSelect={(id) => setSelectedPositionId((prev) => (prev === id ? null : id))}
             />
+            {observedCards.length ? (
+              <div className="mt-4 border-t border-border/60 pt-3">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-foreground/70">
+                  What Aislix Saw
+                </p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {observedCards.map((card) => (
+                    <ObservedProductCard
+                      key={card.key}
+                      brand={card.brand}
+                      product={card.product}
+                      variant={card.variant}
+                      facings={card.facings}
+                      units={card.units}
+                      status={card.status}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

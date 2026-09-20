@@ -139,6 +139,12 @@ export type FinancialImpact = {
   estimated_monthly_lost_sales_inr: number;
   oos_sku_count: number;
   at_risk_sku_count: number;
+  /** Visible units × MRP from planogram pricing (Aislix). */
+  visible_inventory_value_inr?: number | null;
+  /** Expected shelf units × MRP. */
+  expected_inventory_value_inr?: number | null;
+  /** Shortfall units × MRP (potential value gap). */
+  potential_inventory_value_gap_inr?: number | null;
   methodology: string;
   confidence: "indicative" | "priced" | "medium" | "high" | "low";
   source?: string;
@@ -346,11 +352,16 @@ function mapFinancialImpact(raw: unknown): FinancialImpact | null {
     estimated_monthly_lost_sales_inr: num("estimated_monthly_lost_sales_inr") ?? daily * 30,
     oos_sku_count: num("oos_sku_count") ?? 0,
     at_risk_sku_count: num("at_risk_sku_count") ?? 0,
+    visible_inventory_value_inr: num("visible_inventory_value_inr"),
+    expected_inventory_value_inr: num("expected_inventory_value_inr"),
+    potential_inventory_value_gap_inr: num("potential_inventory_value_gap_inr"),
     methodology:
       typeof row.methodology === "string"
         ? row.methodology
         : "Indicative estimate using category ASP defaults and typical daily velocity.",
     confidence: row.confidence === "priced" ? "priced" : "indicative",
+    estimate_status: row.estimate_status === "estimated" ? "estimated" : row.estimate_status === "not_estimated" ? "not_estimated" : undefined,
+    source: typeof row.source === "string" ? row.source : undefined,
   };
 }
 

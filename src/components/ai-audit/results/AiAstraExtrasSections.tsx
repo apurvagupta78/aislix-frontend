@@ -33,7 +33,7 @@ export function AiImageQualityBanner({ extras }: { extras: AstraOutputExtras }) 
 export function AiAstraPricesSection({ extras }: { extras: AstraOutputExtras }) {
   if (!extras.visible_prices.length) return null;
   return (
-    <AiAuditCard title="Visible prices" description="Prices read from shelf labels (Astra)">
+    <AiAuditCard title="Visible prices" description="Prices read from shelf labels">
       <div className="overflow-x-auto">
         <table className="min-w-full text-left text-xs">
           <thead className="text-[11px] uppercase tracking-wide text-muted-foreground">
@@ -87,7 +87,7 @@ export function AiAstraPromotionsSection({ extras }: { extras: AstraOutputExtras
 export function AiAstraShelfIssuesSection({ extras }: { extras: AstraOutputExtras }) {
   if (!extras.shelf_issues.length) return null;
   return (
-    <AiAuditCard title="Shelf issues" description="Issues flagged by Astra on this fixture">
+    <AiAuditCard title="Shelf issues" description="Issues flagged on this fixture">
       <ul className="space-y-2">
         {extras.shelf_issues.map((row, i) => (
           <li key={`issue-${i}`} className="rounded-lg border border-border/70 px-3 py-2">
@@ -131,7 +131,7 @@ export function AiAlertsSection({ alerts }: { alerts?: ScanAlert[] }) {
 export function AiRecommendationsSection({ items }: { items?: ScanRecommendation[] }) {
   if (!items?.length) return null;
   return (
-    <AiAuditCard title="Recommendations" description="Suggested next steps from Astra">
+    <AiAuditCard title="Recommendations" description="Suggested next steps">
       <ul className="space-y-2">
         {items.map((rec) => (
           <li key={rec.id} className="rounded-lg border border-border/70 px-3 py-2">
@@ -155,7 +155,7 @@ export function AiRoleSummariesSection({
   if (!summaries || !Object.values(summaries).some(Boolean)) return null;
   const entries = Object.entries(summaries).filter(([, v]) => v);
   return (
-    <AiAuditCard title="Role summaries" description="Astra summaries by stakeholder role">
+    <AiAuditCard title="Role summaries" description="Summaries by stakeholder role">
       <div className="grid gap-3 sm:grid-cols-2">
         {entries.map(([role, text]) => (
           <div key={role} className="rounded-lg border border-border/70 px-3 py-2">
@@ -178,7 +178,41 @@ export function AiFinancialImpactSection({
   scanId?: string;
 }) {
   if (!impact) return null;
+  const hasInventory =
+    typeof impact.visible_inventory_value_inr === "number" ||
+    typeof impact.expected_inventory_value_inr === "number";
   const cards = [
+    ...(hasInventory
+      ? [
+          {
+            label: "Visible inventory value",
+            value:
+              impact.visible_inventory_value_inr == null
+                ? "—"
+                : `₹${impact.visible_inventory_value_inr}`,
+            bg: "#F0E9FF",
+            accent: "#9B86D9",
+          },
+          {
+            label: "Expected inventory value",
+            value:
+              impact.expected_inventory_value_inr == null
+                ? "—"
+                : `₹${impact.expected_inventory_value_inr}`,
+            bg: "#EAF6FD",
+            accent: "#7DB7D6",
+          },
+          {
+            label: "Potential value gap",
+            value:
+              impact.potential_inventory_value_gap_inr == null
+                ? "—"
+                : `₹${impact.potential_inventory_value_gap_inr}`,
+            bg: "#FFEAF1",
+            accent: "#F9A8C9",
+          },
+        ]
+      : []),
     {
       label: "Potential Daily Value at Risk",
       value: `₹${impact.estimated_daily_lost_sales_inr}`,

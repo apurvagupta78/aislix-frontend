@@ -648,8 +648,8 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
 
       {astraCvProducts.length ? (
         <AiAuditCard
-          title="AI detections (Astra)"
-          description="Every product Astra identified on the shelf, shown exactly as returned"
+          title="AI detections"
+          description="Every product identified on the shelf, shown exactly as returned"
           csvDownload={{
             onDownload: () =>
               downloadSectionCsv(
@@ -690,7 +690,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
 
       <AiAuditCard
         title="Product comparison"
-        description="Planogram expected vs shelf actuals — Astra names shown as Actual by AI"
+        description="Planogram expected vs shelf actuals — AI names shown as Actual by AI"
         csvDownload={{
           onDownload: () =>
             downloadSectionCsv(
