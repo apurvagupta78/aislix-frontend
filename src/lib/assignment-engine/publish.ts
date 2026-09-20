@@ -255,7 +255,15 @@ async function createUniversalSchedule(plan: AssignmentPlan): Promise<string> {
     .select("id")
     .single();
 
-  if (error) dbError(error, "Could not create audit schedule.");
+  if (error) {
+    const rlsBlocked = /row-level security/i.test(error.message ?? "");
+    dbError(
+      error,
+      rlsBlocked
+        ? "Only managers can create Schedule Once or Recurring audits. Use Assign Now, or ask an org owner/admin to schedule."
+        : "Could not create audit schedule.",
+    );
+  }
   return data!.id as string;
 }
 
