@@ -188,13 +188,10 @@ export function ScanResultHeader({
           </div>
 
           {auditDescription ? (
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{auditDescription}</p>
-          ) : (
-            <p className="mt-1 text-sm text-muted-foreground">
-              {[data?.scan_category, data?.scan_sub_category, data?.location].filter(Boolean).join(" · ") ||
-                "Shelf photo audit"}
+            <p className="mt-1 line-clamp-4 text-[11px] leading-snug text-muted-foreground">
+              {auditDescription}
             </p>
-          )}
+          ) : null}
         </div>
         <ResultNavigation />
       </div>
