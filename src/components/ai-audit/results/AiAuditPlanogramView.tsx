@@ -50,9 +50,19 @@ function productLabel(row: AstraPlanogramProduct) {
     variant && !/^(unverifiable|unknown|unidentified)$/i.test(variant)
       ? variant
       : variant
-        ? "Variant not readable"
+        ? "Variant: Unverifiable"
         : "";
   return cleanVariant ? `${brand} · ${cleanName} · ${cleanVariant}` : `${brand} · ${cleanName}`;
+}
+
+function countCell(value: number | null | undefined) {
+  if (value == null) return "—";
+  return String(value);
+}
+
+function varianceCell(value: number | null | undefined) {
+  if (value == null) return "—";
+  return value > 0 ? `+${value}` : String(value);
 }
 
 export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
@@ -76,7 +86,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
 
   const statusCounts: Record<string, number> = {};
   for (const row of analysis.products) {
-    const key = row.overall_status || "UNKNOWN";
+    const key = row.overall_status || row.match_status || "UNKNOWN";
     statusCounts[key] = (statusCounts[key] ?? 0) + 1;
   }
   const donutSlices = statusDonutSlices(statusCounts);
@@ -134,22 +144,24 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
   ];
 
   const topVariance = [...analysis.products]
-    .sort((a, b) => Math.abs(b.facing_variance) - Math.abs(a.facing_variance))
+    .filter((row) => row.facing_variance != null)
+    .sort((a, b) => Math.abs(b.facing_variance ?? 0) - Math.abs(a.facing_variance ?? 0))
     .slice(0, 8)
-    .map((row) => ({ label: productLabel(row), variance: row.facing_variance }));
+    .map((row) => ({ label: productLabel(row), variance: row.facing_variance ?? 0 }));
 
   const topUnitVariance = [...analysis.products]
-    .sort((a, b) => Math.abs(b.shelf_unit_variance) - Math.abs(a.shelf_unit_variance))
+    .filter((row) => row.shelf_unit_variance != null)
+    .sort((a, b) => Math.abs(b.shelf_unit_variance ?? 0) - Math.abs(a.shelf_unit_variance ?? 0))
     .slice(0, 8)
-    .map((row) => ({ label: productLabel(row), variance: row.shelf_unit_variance }));
+    .map((row) => ({ label: productLabel(row), variance: row.shelf_unit_variance ?? 0 }));
 
   const facingCompare = [...analysis.products]
-    .sort((a, b) => Math.abs(b.facing_variance) - Math.abs(a.facing_variance))
+    .sort((a, b) => Math.abs(b.facing_variance ?? 0) - Math.abs(a.facing_variance ?? 0))
     .slice(0, 6)
     .map((row) => ({
       label: productLabel(row),
       expected: row.expected_facings,
-      actual: row.actual_facings,
+      actual: row.actual_facings ?? 0,
     }));
 
   const comparison = planogramComparisonFromResult(data, null);
@@ -158,55 +170,62 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
     {
       key: "product",
       header: "Product",
+      className: "min-w-[220px] sticky left-0 z-10 bg-card",
       cell: (r: AstraPlanogramProduct) => (
-        <div>
-          <p className="font-medium">{productLabel(r)}</p>
-          <p className="text-muted-foreground">
-            {r.location}
-            {r.category ? ` · ${r.category}` : ""}
-            {r.subcategory ? ` · ${r.subcategory}` : ""}
+        <div className="max-w-[260px]">
+          <p className="font-medium leading-snug text-foreground">{productLabel(r)}</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            {[r.location, r.category, r.subcategory].filter(Boolean).join(" · ") || "—"}
           </p>
-          <p className="text-muted-foreground">SKU: {r.sku || "—"}</p>
+          {r.sku ? <p className="text-[11px] text-muted-foreground">SKU: {r.sku}</p> : null}
         </div>
       ),
     },
-    { key: "brand", header: "Brand", cell: (r: AstraPlanogramProduct) => statusBadge(r.brand_status) },
-    { key: "product_st", header: "Product", cell: (r: AstraPlanogramProduct) => statusBadge(r.product_status) },
-    { key: "variant", header: "Variant", cell: (r: AstraPlanogramProduct) => statusBadge(r.variant_status) },
-    { key: "sku_st", header: "SKU", cell: (r: AstraPlanogramProduct) => statusBadge(r.sku_status) },
-    { key: "exp_f", header: "Exp facings", cell: (r: AstraPlanogramProduct) => r.expected_facings },
-    { key: "act_f", header: "Total Facings", cell: (r: AstraPlanogramProduct) => r.actual_facings },
-    { key: "f_var", header: "Facing Δ", cell: (r: AstraPlanogramProduct) => r.facing_variance },
-    { key: "f_pct", header: "Facing %", cell: (r: AstraPlanogramProduct) => pctCell(r.facing_compliance_percent) },
-    { key: "f_rng", header: "Facing range", cell: (r: AstraPlanogramProduct) => statusBadge(r.facing_range_status) },
-    { key: "exp_u", header: "Exp units", cell: (r: AstraPlanogramProduct) => r.expected_shelf_units },
-    { key: "act_u", header: "Fully visible facings", cell: (r: AstraPlanogramProduct) => r.actual_visible_units },
-    { key: "u_var", header: "Unit Δ", cell: (r: AstraPlanogramProduct) => r.shelf_unit_variance },
-    { key: "u_pct", header: "Unit %", cell: (r: AstraPlanogramProduct) => pctCell(r.shelf_unit_compliance_percent) },
-    { key: "exp_pos", header: "Exp position", cell: (r: AstraPlanogramProduct) => r.expected_shelf_position || "—" },
-    { key: "act_pos", header: "Act position", cell: (r: AstraPlanogramProduct) => r.actual_shelf_position || "—" },
-    { key: "place", header: "Placement", cell: (r: AstraPlanogramProduct) => statusBadge(r.placement_status) },
     {
-      key: "mrp",
-      header: "Exp MRP",
-      cell: (r: AstraPlanogramProduct) => (r.expected_mrp_inr ? `₹${r.expected_mrp_inr}` : "—"),
+      key: "status",
+      header: "Status",
+      cell: (r: AstraPlanogramProduct) => statusBadge(r.overall_status || r.match_status),
     },
-    { key: "vis_p", header: "Visible price", cell: (r: AstraPlanogramProduct) => r.visible_price ?? "—" },
-    { key: "price", header: "Price", cell: (r: AstraPlanogramProduct) => statusBadge(r.price_status) },
-    { key: "ads", header: "Avg daily sales", cell: (r: AstraPlanogramProduct) => r.avg_daily_sales || "—" },
+    { key: "exp_f", header: "Expected", cell: (r: AstraPlanogramProduct) => r.expected_facings },
     {
-      key: "cov",
-      header: "Coverage days",
-      cell: (r: AstraPlanogramProduct) => r.estimated_visible_shelf_coverage_days ?? "—",
+      key: "act_f",
+      header: "Total Facings",
+      cell: (r: AstraPlanogramProduct) => countCell(r.actual_facings),
     },
-    { key: "short", header: "Unit shortfall", cell: (r: AstraPlanogramProduct) => r.visible_unit_shortfall },
-    { key: "gap", header: "Value gap ₹", cell: (r: AstraPlanogramProduct) => r.potential_visible_unit_value_gap_inr },
-    { key: "risk", header: "Risk", cell: (r: AstraPlanogramProduct) => statusBadge(r.risk_status) },
-    { key: "overall", header: "Overall", cell: (r: AstraPlanogramProduct) => statusBadge(r.overall_status) },
-    { key: "conf", header: "Conf.", cell: (r: AstraPlanogramProduct) => confCell(r.confidence) },
+    {
+      key: "f_var",
+      header: "Facing Δ",
+      cell: (r: AstraPlanogramProduct) => varianceCell(r.facing_variance),
+    },
+    {
+      key: "f_pct",
+      header: "Facing %",
+      cell: (r: AstraPlanogramProduct) => pctCell(r.facing_compliance_percent),
+    },
+    {
+      key: "exp_u",
+      header: "Exp units",
+      cell: (r: AstraPlanogramProduct) => r.expected_shelf_units || "—",
+    },
+    {
+      key: "act_u",
+      header: "Fully visible",
+      cell: (r: AstraPlanogramProduct) => countCell(r.actual_visible_units),
+    },
+    {
+      key: "variant_st",
+      header: "Variant",
+      cell: (r: AstraPlanogramProduct) => statusBadge(r.variant_status || r.match_status),
+    },
+    {
+      key: "conf",
+      header: "Conf.",
+      cell: (r: AstraPlanogramProduct) => confCell(r.confidence),
+    },
     {
       key: "ev",
       header: "Evidence",
+      className: "min-w-[180px]",
       cell: (r: AstraPlanogramProduct) => (
         <span className="text-muted-foreground">{r.evidence_note || "—"}</span>
       ),
@@ -539,7 +558,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
 
       <AiAuditCard
         title="Product comparison"
-        description="Every planogram row metric from Astra"
+        description="Planogram expected vs shelf actuals"
         csvDownload={{
           onDownload: () =>
             downloadSectionCsv(
@@ -555,8 +574,9 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
                 "Facing variance",
                 "Expected units",
                 "Fully visible facings",
-                "Overall status",
+                "Status",
                 "Confidence",
+                "Evidence",
               ],
               analysis.products.map((r) => [
                 r.brand,
@@ -564,12 +584,13 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
                 r.variant,
                 r.sku,
                 r.expected_facings,
-                r.actual_facings,
-                r.facing_variance,
+                r.actual_facings ?? "",
+                r.facing_variance ?? "",
                 r.expected_shelf_units,
-                r.actual_visible_units,
-                r.overall_status,
+                r.actual_visible_units ?? "",
+                r.overall_status || r.match_status,
                 r.confidence,
+                r.evidence_note,
               ]),
             ),
         }}
