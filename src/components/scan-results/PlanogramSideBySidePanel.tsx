@@ -104,7 +104,7 @@ function ObservedProductCard({
         </Badge>
       </div>
       <p className="mt-1 text-[10px] text-muted-foreground">
-        Observed: {facings == null ? "—" : `${facings} facing${facings === 1 ? "" : "s}`}
+        Observed: {facings == null ? "—" : `${facings} facing${facings === 1 ? "" : "s"}`}
         {units != null ? ` · ${units} visible unit${units === 1 ? "" : "s"}` : ""}
       </p>
     </div>
