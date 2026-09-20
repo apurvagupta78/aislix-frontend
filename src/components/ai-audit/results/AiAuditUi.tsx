@@ -324,3 +324,20 @@ export function AiExecutiveSummary({
     </AiAuditCard>
   );
 }
+
+/** Shows the original shelf photo the AI analysed, as audit evidence. */
+export function AiEvidencePanel({ imageUrl }: { imageUrl: string | null | undefined }) {
+  if (!imageUrl) return null;
+  return (
+    <AiAuditCard title="Shelf photo" description="Original image used for this analysis.">
+      <div className="overflow-hidden rounded-xl border border-border bg-muted">
+        <img
+          src={imageUrl}
+          alt="Shelf photo evidence"
+          className="mx-auto max-h-[480px] w-full object-contain"
+          loading="lazy"
+        />
+      </div>
+    </AiAuditCard>
+  );
+}
