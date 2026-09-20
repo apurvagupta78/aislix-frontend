@@ -548,6 +548,13 @@ function normalizeShelfBlock(block: Record<string, unknown>): NormalizedAstraAna
         );
         return brands.size;
       })(),
+      variants_identified: (() => {
+        const fromMetric = metricField(calc?.variants_identified);
+        if (fromMetric != null && fromMetric > 0) return fromMetric;
+        const fromSummary = normalizeShelfSummary(block.summary ?? summaryRaw).variants_identified;
+        if (fromSummary > 0) return fromSummary;
+        return products.length;
+      })(),
       visible_facings:
         metricField(calc?.total_actual_facings) ??
         num(summaryRaw?.total_actual_facings) ??

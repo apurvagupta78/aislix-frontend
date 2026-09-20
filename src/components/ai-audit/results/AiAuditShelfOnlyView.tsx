@@ -97,10 +97,9 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
     {
       label: "Variants",
       value: String(
-        s.variants_identified ||
-          analysis.products.filter(
-            (p) => p.variant && !/^(unverifiable|unknown)$/i.test(p.variant),
-          ).length,
+        analysis.products.filter(
+          (p) => !/^unverifiable$/i.test((p.product_status || "").trim()),
+        ).length,
       ),
       tone: "neutral" as const,
       bg: KPI_CARD.auditCompletion,
