@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, Loader2, Plus, Trash2 } from "lucide-react";
@@ -61,6 +61,26 @@ function AuditSchedulesPage() {
     queryFn: fetchAssignableMembers,
     enabled: accessQuery.data === true,
   });
+
+  // No pg_cron in this project — mint due Schedule Once / Recurring assignments
+  // whenever a manager opens this page. Occurrence keys keep it idempotent.
+  useEffect(() => {
+    if (accessQuery.data !== true) return;
+    let cancelled = false;
+    void processDueAuditSchedules()
+      .then((count) => {
+        if (cancelled || !count) return;
+        toast.success(`Published ${count} scheduled assignment(s).`);
+        void queryClient.invalidateQueries({ queryKey: ["audit-schedules"] });
+        void queryClient.invalidateQueries({ queryKey: ["my-assignments"] });
+      })
+      .catch(() => {
+        /* Manual "Run due schedules now" remains available. */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessQuery.data, queryClient]);
 
   const createMutation = useMutation({
     mutationFn: () => {

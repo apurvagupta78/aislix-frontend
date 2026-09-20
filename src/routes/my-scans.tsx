@@ -25,6 +25,7 @@ import {
   startAssignment,
   type Assignment,
 } from "@/lib/assignments";
+import { processDueAuditSchedules } from "@/lib/audit-schedules";
 import { markAssignmentNotificationsRead } from "@/lib/notifications";
 import { complianceTone } from "@/lib/planogram-compliance";
 import { AssignmentIdChip } from "@/components/AssignmentId";
@@ -165,6 +166,23 @@ function MyScansPage() {
       }
     });
   }, []);
+
+  // Publish any due Schedule Once / Recurring rows into My Work (idempotent RPC).
+  // Needed because this project has no pg_cron schedule runner.
+  useEffect(() => {
+    let cancelled = false;
+    void processDueAuditSchedules()
+      .then((count) => {
+        if (cancelled || !count) return;
+        void queryClient.invalidateQueries({ queryKey: ["my-assignments"] });
+      })
+      .catch(() => {
+        /* Non-blocking — assignments already listed still load. */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [queryClient]);
 
   const query = useQuery({
     queryKey: ["my-assignments"],

@@ -988,8 +988,9 @@ function NewAuditPage() {
       if (skipNavigation) return;
       if (scheduled) {
         toast.success("Audit schedule created.");
-        // Schedule IDs are not executable assignments — never open /audit/{scheduleId}.
-        void navigate({ to: "/audits", search: { tab: "schedules" } });
+        // Schedule IDs are not executable assignments — open the schedules workspace
+        // (which also runs due processing) instead of /audit/{scheduleId}.
+        void navigate({ to: "/audit-schedules" });
         return;
       }
       if (bulk && bulk > 1) toast.success(`${bulk} assignments created.`);
