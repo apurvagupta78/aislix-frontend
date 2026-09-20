@@ -538,6 +538,8 @@ function NewAuditPage() {
       campaignName: auditName.trim() || campaignName || null,
       inputSource: dataset.rows.length ? "csv_upload" : "template",
       creationSource: "unified_new_audit",
+      planogramVersionId:
+        method === "ai" && aiPlanogramChoice === "without" ? null : undefined,
     };
   }, [
     locationScope,
@@ -566,6 +568,9 @@ function NewAuditPage() {
     instructions,
     campaignName,
     auditName,
+    auditDescription,
+    method,
+    aiPlanogramChoice,
   ]);
 
   const assignmentPreview = useMemo(() => {
@@ -943,8 +948,10 @@ function NewAuditPage() {
         assigneeName: assignee.name,
         dueAt: resolvedDueAt,
         instructions: instructions.trim(),
-        planogramVersionId,
-        auditMode,
+        // Explicit null for AI shelf-only so createScanAssignment does not
+        // fall back to the store's active planogram CSV.
+        planogramVersionId:
+          method === "ai" && aiPlanogramChoice === "without" ? null : planogramVersionId,        auditMode,
         templateId: templateForAssignment?.id ?? null,
         templateVersion: templateForAssignment?.version ?? null,
         templateSnapshot,

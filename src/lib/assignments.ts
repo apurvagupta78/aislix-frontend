@@ -26,6 +26,9 @@ export type ScopeValues = {
   /** Planogram scope only: counts derived from the assignment's own row list. */
   product_count?: number;
   facing_count?: number;
+  /** Display name / description from New Audit for assignee lists. */
+  audit_name?: string;
+  audit_description?: string;
   /** Multi shelf types for sub-category scope (mixed racks). */
   category_selections?: CategorySelection[];
   categories?: string[];
@@ -265,8 +268,10 @@ export async function createScanAssignment(input: {
   const orgId = await requireOrgId();
   const assignerId = await requireUserId();
 
-  let versionId = input.planogramVersionId ?? null;
-  if (!versionId) {
+  // Only auto-attach the store's active planogram when the caller omitted
+  // planogramVersionId. Explicit null means shelf-only / no-planogram AI audit.
+  let versionId: string | null;
+  if (input.planogramVersionId === undefined) {
     const { data: version } = await supabase
       .from("planogram_versions")
       .select("id")
@@ -277,6 +282,8 @@ export async function createScanAssignment(input: {
       .limit(1)
       .maybeSingle();
     versionId = (version?.id as string | null) ?? null;
+  } else {
+    versionId = input.planogramVersionId;
   }
 
   const auditMode = input.auditMode ?? "ai";
