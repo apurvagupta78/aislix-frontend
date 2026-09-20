@@ -40,23 +40,68 @@ type Props = {
   imageUrl?: string | null;
 };
 
-function productLabel(row: AstraPlanogramProduct) {
-  const brand = row.brand?.trim() || "Unknown brand";
-  const name = row.product_name?.trim();
+function identityLabel(brand?: string, product?: string, variant?: string) {
+  const b = brand?.trim() || "Unknown brand";
+  const name = product?.trim();
   const cleanName =
     !name || /^(unverifiable|unknown|unidentified)$/i.test(name) ? "Product" : name;
-  const variant = row.variant?.trim();
+  const v = variant?.trim();
   const cleanVariant =
-    variant && !/^(unverifiable|unknown|unidentified)$/i.test(variant)
-      ? variant
-      : variant
+    v && !/^(unverifiable|unknown|unidentified)$/i.test(v)
+      ? v
+      : v
         ? "Variant: Unverifiable"
         : "";
-  return cleanVariant ? `${brand} · ${cleanName} · ${cleanVariant}` : `${brand} · ${cleanName}`;
+  return cleanVariant ? `${b} · ${cleanName} · ${cleanVariant}` : `${b} · ${cleanName}`;
+}
+
+function productLabel(row: AstraPlanogramProduct) {
+  return identityLabel(row.brand, row.product_name, row.variant);
+}
+
+function actualByAiLabel(row: AstraPlanogramProduct) {
+  const brand = row.actual_brand?.trim();
+  const product = row.actual_product_name?.trim();
+  const variant = row.actual_variant?.trim();
+  if (!brand && !product && !variant) return null;
+  return identityLabel(brand || row.brand, product, variant);
+}
+
+function pickAstraCvProducts(data: ScanResult): Array<{
+  brand: string;
+  product: string;
+  variant: string;
+  category: string;
+  actual_facings: number | null;
+  actual_visible_units: number | null;
+  confidence: number | null;
+}> {
+  const metrics = (data.metrics ?? {}) as Record<string, unknown>;
+  const block =
+    (data.astra_cv_analysis as Record<string, unknown> | undefined) ??
+    (metrics.astra_cv_analysis as Record<string, unknown> | undefined);
+  const products = Array.isArray(block?.products) ? block.products : [];
+  return products
+    .filter((p): p is Record<string, unknown> => !!p && typeof p === "object" && !Array.isArray(p))
+    .map((p) => ({
+      brand: String(p.brand ?? "").trim() || "—",
+      product: String(p.product_name ?? p.product ?? "").trim() || "—",
+      variant: String(p.variant ?? "").trim() || "—",
+      category: String(p.category ?? "").trim() || "—",
+      actual_facings:
+        p.actual_facings == null || p.actual_facings === ""
+          ? null
+          : Number(p.actual_facings),
+      actual_visible_units:
+        p.actual_visible_units == null || p.actual_visible_units === ""
+          ? null
+          : Number(p.actual_visible_units),
+      confidence: p.confidence == null || p.confidence === "" ? null : Number(p.confidence),
+    }));
 }
 
 function countCell(value: number | null | undefined) {
-  if (value == null) return "—";
+  if (value == null || Number.isNaN(value)) return "—";
   return String(value);
 }
 
@@ -170,21 +215,36 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
     }));
 
   const comparison = planogramComparisonFromResult(data, null);
+  const astraCvProducts = pickAstraCvProducts(data);
 
   const productColumns = [
     {
       key: "product",
       header: "Product",
-      className: "min-w-[220px] sticky left-0 z-10 bg-card",
-      cell: (r: AstraPlanogramProduct) => (
-        <div className="max-w-[260px]">
-          <p className="font-medium leading-snug text-foreground">{productLabel(r)}</p>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">
-            {[r.location, r.category, r.subcategory].filter(Boolean).join(" · ") || "—"}
-          </p>
-          {r.sku ? <p className="text-[11px] text-muted-foreground">SKU: {r.sku}</p> : null}
-        </div>
-      ),
+      className: "min-w-[260px] sticky left-0 z-10 bg-card",
+      cell: (r: AstraPlanogramProduct) => {
+        const aiLabel = actualByAiLabel(r);
+        return (
+          <div className="max-w-[300px]">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-[#667085]">Expected</p>
+            <p className="font-medium leading-snug text-[#102A43]">{productLabel(r)}</p>
+            {aiLabel ? (
+              <>
+                <p className="mt-1.5 text-[11px] font-medium uppercase tracking-wide text-[#667085]">
+                  Actual by AI
+                </p>
+                <p className="leading-snug text-[#102A43]">{aiLabel}</p>
+              </>
+            ) : (
+              <p className="mt-1 text-[11px] text-[#667085]">Actual by AI: —</p>
+            )}
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              {[r.location, r.category, r.subcategory].filter(Boolean).join(" · ") || "—"}
+            </p>
+            {r.sku ? <p className="text-[11px] text-muted-foreground">SKU: {r.sku}</p> : null}
+          </div>
+        );
+      },
     },
     {
       key: "status",
@@ -586,18 +646,63 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
         </AiAuditCard>
       ) : null}
 
+      {astraCvProducts.length ? (
+        <AiAuditCard
+          title="AI detections (Astra)"
+          description="Every product Astra identified on the shelf, shown exactly as returned"
+          csvDownload={{
+            onDownload: () =>
+              downloadSectionCsv(
+                data.scan_id,
+                "astra-detections",
+                ["Brand", "Product", "Variant", "Category", "Facings", "Visible units", "Confidence"],
+                astraCvProducts.map((r) => [
+                  r.brand,
+                  r.product,
+                  r.variant,
+                  r.category,
+                  r.actual_facings ?? "",
+                  r.actual_visible_units ?? "",
+                  r.confidence ?? "",
+                ]),
+              ),
+          }}
+        >
+          <AiAuditMetricTable
+            rows={astraCvProducts}
+            rowKey={(r, i) => `${r.brand}-${r.variant}-${i}`}
+            columns={[
+              { key: "b", header: "Brand", cell: (r) => r.brand },
+              { key: "p", header: "Product", cell: (r) => r.product },
+              { key: "v", header: "Variant", cell: (r) => r.variant },
+              { key: "c", header: "Category", cell: (r) => r.category },
+              { key: "f", header: "Facings", cell: (r) => countCell(r.actual_facings) },
+              { key: "u", header: "Visible units", cell: (r) => countCell(r.actual_visible_units) },
+              {
+                key: "conf",
+                header: "Conf.",
+                cell: (r) => (r.confidence == null ? "—" : confCell(r.confidence)),
+              },
+            ]}
+          />
+        </AiAuditCard>
+      ) : null}
+
       <AiAuditCard
         title="Product comparison"
-        description="Planogram expected vs shelf actuals"
+        description="Planogram expected vs shelf actuals — Astra names shown as Actual by AI"
         csvDownload={{
           onDownload: () =>
             downloadSectionCsv(
               data.scan_id,
               "product-comparison",
               [
-                "Brand",
-                "Product",
-                "Variant",
+                "Expected brand",
+                "Expected product",
+                "Expected variant",
+                "Actual brand (AI)",
+                "Actual product (AI)",
+                "Actual variant (AI)",
                 "SKU",
                 "Expected facings",
                 "Total Facings",
@@ -612,6 +717,9 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
                 r.brand,
                 r.product_name,
                 r.variant,
+                r.actual_brand ?? "",
+                r.actual_product_name ?? "",
+                r.actual_variant ?? "",
                 r.sku,
                 r.expected_facings,
                 r.actual_facings ?? "",

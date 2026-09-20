@@ -15,6 +15,11 @@ export type AstraPlanogramProduct = {
   product_status: string;
   variant: string;
   variant_status: string;
+  /** Astra identity as returned — never overwritten by planogram expected names. */
+  actual_brand?: string;
+  actual_product_name?: string;
+  actual_variant?: string;
+  actual_category?: string;
   sku: string;
   sku_status: string;
   expected_facings: number;
@@ -42,6 +47,7 @@ export type AstraPlanogramProduct = {
   risk_status: string;
   overall_status: string;
   match_status: string;
+  match_score?: number;
   confidence: number;
   evidence_note: string;
 };
@@ -326,6 +332,10 @@ function normalizePlanogramProduct(raw: unknown): AstraPlanogramProduct {
     product_status: str(r.product_status),
     variant: str(r.variant),
     variant_status: str(r.variant_status),
+    actual_brand: displayBrandName(str(r.actual_brand)) || undefined,
+    actual_product_name: str(r.actual_product_name) || undefined,
+    actual_variant: str(r.actual_variant) || undefined,
+    actual_category: str(r.actual_category) || undefined,
     sku: str(r.sku),
     sku_status: str(r.sku_status),
     expected_facings: num(r.expected_facings),
@@ -358,6 +368,7 @@ function normalizePlanogramProduct(raw: unknown): AstraPlanogramProduct {
     risk_status: str(r.risk_status),
     overall_status: overallStatus,
     match_status: matchStatus || overallStatus,
+    match_score: numOrNull(r.match_score) ?? undefined,
     confidence: num(r.confidence),
     evidence_note: str(r.evidence_note),
   };
