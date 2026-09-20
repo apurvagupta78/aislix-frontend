@@ -189,6 +189,7 @@ function parseExecutiveSummary(raw: string): SummaryBlock[] {
   const normalized = raw
     .replace(/\r\n/g, "\n")
     .replace(/\u2022/g, "•")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
     .trim();
   if (!normalized) return [];
 
@@ -208,8 +209,15 @@ function parseExecutiveSummary(raw: string): SummaryBlock[] {
 
   const isBullet = (line: string) => /^([•\-\*]|\d+[.)])\s+/.test(line);
   const stripBullet = (line: string) => line.replace(/^([•\-\*]|\d+[.)])\s+/, "").trim();
+  const isMdHeading = (line: string) => /^#{1,3}\s+/.test(line);
+  const stripMdHeading = (line: string) => line.replace(/^#{1,3}\s+/, "").replace(/:$/, "").trim();
 
   for (const line of lines) {
+    if (isMdHeading(line)) {
+      flushBullets();
+      blocks.push({ kind: "heading", text: stripMdHeading(line) });
+      continue;
+    }
     if (isBullet(line)) {
       bullets.push(stripBullet(line));
       continue;
