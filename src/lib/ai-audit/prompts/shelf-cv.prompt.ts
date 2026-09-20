@@ -44,6 +44,7 @@ Use category/subcategory as context only — never as proof of identity.
 When uncertain: mark field UNVERIFIABLE (UNVERIFIABLE ≠ zero).
 Optional sku only when visibly readable with sku_status IDENTIFIED | UNVERIFIABLE.
 Keep actual_facings and actual_visible_units independent — do not assume facings equals units.
+Lay's chip bags (Magic Masala / Tomato Tango / Cream & Onion) must be brand "Lay's", never "Louis" OCR guesses.
 
 ============================================================
 FACINGS

@@ -30,6 +30,9 @@ export type ScopeValues = {
   category_selections?: CategorySelection[];
   categories?: string[];
   sub_categories?: string[];
+  /** Audit identity captured at creation time. */
+  audit_name?: string;
+  audit_description?: string;
 };
 
 export type AssignmentStatus =
@@ -793,7 +796,7 @@ export async function fetchScanAssignmentMeta(scanId: string): Promise<ScanAssig
   if (assignmentId) {
     const { data: assignment } = await supabase
       .from("scan_assignments")
-      .select("assignee_id, instructions, campaign_id")
+      .select("assignee_id, instructions, campaign_id, scope_values")
       .eq("id", assignmentId)
       .maybeSingle();
     if (assignment?.assignee_id) {
@@ -802,7 +805,10 @@ export async function fetchScanAssignmentMeta(scanId: string): Promise<ScanAssig
       assigneeLabel =
         userId && assignment.assignee_id === userId ? "Self" : name;
     }
-    auditDescription = (assignment?.instructions as string | null)?.trim() || null;
+    const scopeValues = (assignment?.scope_values ?? {}) as ScopeValues;
+    auditName = scopeValues.audit_name?.trim() || null;
+    auditDescription = scopeValues.audit_description?.trim() || null;
+
     const campaignId = assignment?.campaign_id as string | null;
     if (campaignId) {
       const { data: campaign } = await supabase
@@ -810,11 +816,23 @@ export async function fetchScanAssignmentMeta(scanId: string): Promise<ScanAssig
         .select("name, audit_purpose, instructions")
         .eq("id", campaignId)
         .maybeSingle();
-      if (campaign?.name) auditName = String(campaign.name);
-      auditDescription =
-        (campaign?.audit_purpose as string | null)?.trim() ||
-        (campaign?.instructions as string | null)?.trim() ||
-        auditDescription;
+      if (!auditName && campaign?.name) auditName = String(campaign.name).trim() || null;
+      if (!auditDescription) {
+        auditDescription =
+          (campaign?.audit_purpose as string | null)?.trim() ||
+          (campaign?.instructions as string | null)?.trim() ||
+          null;
+      }
+    }
+
+    const instructions = (assignment?.instructions as string | null)?.trim() || "";
+    if (instructions) {
+      const singleShortLine = instructions.length <= 120 && !instructions.includes("\n");
+      if (!auditName && singleShortLine) {
+        auditName = instructions;
+      } else if (!auditDescription) {
+        auditDescription = instructions;
+      }
     }
   }
 
@@ -829,9 +847,7 @@ export async function fetchScanAssignmentMeta(scanId: string): Promise<ScanAssig
   if (!auditDescription) {
     const shelf = (scan.shelf_label as string | null)?.trim();
     const notes = (scan.notes as string | null)?.trim();
-    auditDescription =
-      notes ||
-      (shelf ? `Shelf photo audit · ${shelf}` : "Shelf photo audit");
+    auditDescription = notes || (shelf ? `Shelf photo audit · ${shelf}` : null);
   }
 
   return {
