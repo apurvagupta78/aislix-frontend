@@ -58,7 +58,6 @@ import { Route as ReportRouteImport } from './routes/report'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ResultsRouteImport } from './routes/results'
-import { Route as ResultsDebugRouteImport } from './routes/results.debug'
 import { Route as RetailIntelligenceRouteImport } from './routes/retail-intelligence'
 import { Route as RetailShelfIntelligenceRouteImport } from './routes/retail-shelf-intelligence'
 import { Route as ScanRouteImport } from './routes/scan'
@@ -107,6 +106,7 @@ import { Route as IntelligenceInventoryVarianceRouteImport } from './routes/inte
 import { Route as ManageRulesRouteImport } from './routes/manage.rules'
 import { Route as OperationsDistributorsRouteImport } from './routes/operations.distributors'
 import { Route as OperationsWarehousesRouteImport } from './routes/operations.warehouses'
+import { Route as ResultsDebugRouteImport } from './routes/results.debug'
 import { Route as ShareTokenRouteImport } from './routes/share.$token'
 import { Route as StoresIndexRouteImport } from './routes/stores.index'
 import { Route as StoresStoreIdRouteImport } from './routes/stores.$storeId'
@@ -371,11 +371,6 @@ const ResultsRoute = ResultsRouteImport.update({
   path: '/results',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ResultsDebugRoute = ResultsDebugRouteImport.update({
-  id: '/results/debug',
-  path: '/results/debug',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const RetailIntelligenceRoute = RetailIntelligenceRouteImport.update({
   id: '/retail-intelligence',
   path: '/retail-intelligence',
@@ -623,6 +618,11 @@ const OperationsWarehousesRoute = OperationsWarehousesRouteImport.update({
   path: '/operations/warehouses',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ResultsDebugRoute = ResultsDebugRouteImport.update({
+  id: '/debug',
+  path: '/debug',
+  getParentRoute: () => ResultsRoute,
+} as any)
 const ShareTokenRoute = ShareTokenRouteImport.update({
   id: '/share/$token',
   path: '/share/$token',
@@ -770,8 +770,7 @@ export interface FileRoutesByFullPath {
   '/report': typeof ReportRoute
   '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/results': typeof ResultsRoute
-  '/results/debug': typeof ResultsDebugRoute
+  '/results': typeof ResultsRouteWithChildren
   '/retail-intelligence': typeof RetailIntelligenceRoute
   '/retail-shelf-intelligence': typeof RetailShelfIntelligenceRoute
   '/scan': typeof ScanRoute
@@ -820,6 +819,7 @@ export interface FileRoutesByFullPath {
   '/manage/rules': typeof ManageRulesRoute
   '/operations/distributors': typeof OperationsDistributorsRoute
   '/operations/warehouses': typeof OperationsWarehousesRoute
+  '/results/debug': typeof ResultsDebugRoute
   '/share/$token': typeof ShareTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
@@ -888,8 +888,7 @@ export interface FileRoutesByTo {
   '/report': typeof ReportRoute
   '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/results': typeof ResultsRoute
-  '/results/debug': typeof ResultsDebugRoute
+  '/results': typeof ResultsRouteWithChildren
   '/retail-intelligence': typeof RetailIntelligenceRoute
   '/retail-shelf-intelligence': typeof RetailShelfIntelligenceRoute
   '/scan': typeof ScanRoute
@@ -938,6 +937,7 @@ export interface FileRoutesByTo {
   '/manage/rules': typeof ManageRulesRoute
   '/operations/distributors': typeof OperationsDistributorsRoute
   '/operations/warehouses': typeof OperationsWarehousesRoute
+  '/results/debug': typeof ResultsDebugRoute
   '/share/$token': typeof ShareTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores': typeof StoresIndexRoute
@@ -1007,8 +1007,7 @@ export interface FileRoutesById {
   '/report': typeof ReportRoute
   '/reports': typeof ReportsRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/results': typeof ResultsRoute
-  '/results/debug': typeof ResultsDebugRoute
+  '/results': typeof ResultsRouteWithChildren
   '/retail-intelligence': typeof RetailIntelligenceRoute
   '/retail-shelf-intelligence': typeof RetailShelfIntelligenceRoute
   '/scan': typeof ScanRoute
@@ -1057,6 +1056,7 @@ export interface FileRoutesById {
   '/manage/rules': typeof ManageRulesRoute
   '/operations/distributors': typeof OperationsDistributorsRoute
   '/operations/warehouses': typeof OperationsWarehousesRoute
+  '/results/debug': typeof ResultsDebugRoute
   '/share/$token': typeof ShareTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
@@ -1176,6 +1176,7 @@ export interface FileRouteTypes {
     | '/manage/rules'
     | '/operations/distributors'
     | '/operations/warehouses'
+    | '/results/debug'
     | '/share/$token'
     | '/stores/$storeId'
     | '/stores/'
@@ -1293,6 +1294,7 @@ export interface FileRouteTypes {
     | '/manage/rules'
     | '/operations/distributors'
     | '/operations/warehouses'
+    | '/results/debug'
     | '/share/$token'
     | '/stores/$storeId'
     | '/stores'
@@ -1410,6 +1412,7 @@ export interface FileRouteTypes {
     | '/manage/rules'
     | '/operations/distributors'
     | '/operations/warehouses'
+    | '/results/debug'
     | '/share/$token'
     | '/stores/$storeId'
     | '/stores/'
@@ -1479,8 +1482,7 @@ export interface RootRouteChildren {
   ReportRoute: typeof ReportRoute
   ReportsRoute: typeof ReportsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
-  ResultsRoute: typeof ResultsRoute
-  ResultsDebugRoute: typeof ResultsDebugRoute
+  ResultsRoute: typeof ResultsRouteWithChildren
   RetailIntelligenceRoute: typeof RetailIntelligenceRoute
   RetailShelfIntelligenceRoute: typeof RetailShelfIntelligenceRoute
   ScanRoute: typeof ScanRoute
@@ -1864,13 +1866,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResultsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/results/debug': {
-      id: '/results/debug'
-      path: '/results/debug'
-      fullPath: '/results/debug'
-      preLoaderRoute: typeof ResultsDebugRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/retail-intelligence': {
       id: '/retail-intelligence'
       path: '/retail-intelligence'
@@ -2207,6 +2202,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OperationsWarehousesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/results/debug': {
+      id: '/results/debug'
+      path: '/debug'
+      fullPath: '/results/debug'
+      preLoaderRoute: typeof ResultsDebugRouteImport
+      parentRoute: typeof ResultsRoute
+    }
     '/share/$token': {
       id: '/share/$token'
       path: '/share/$token'
@@ -2486,6 +2488,17 @@ const ManageRouteChildren: ManageRouteChildren = {
 const ManageRouteWithChildren =
   ManageRoute._addFileChildren(ManageRouteChildren)
 
+interface ResultsRouteChildren {
+  ResultsDebugRoute: typeof ResultsDebugRoute
+}
+
+const ResultsRouteChildren: ResultsRouteChildren = {
+  ResultsDebugRoute: ResultsDebugRoute,
+}
+
+const ResultsRouteWithChildren =
+  ResultsRoute._addFileChildren(ResultsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
@@ -2535,8 +2548,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReportRoute: ReportRoute,
   ReportsRoute: ReportsRoute,
   ResetPasswordRoute: ResetPasswordRoute,
-  ResultsRoute: ResultsRoute,
-  ResultsDebugRoute: ResultsDebugRoute,
+  ResultsRoute: ResultsRouteWithChildren,
   RetailIntelligenceRoute: RetailIntelligenceRoute,
   RetailShelfIntelligenceRoute: RetailShelfIntelligenceRoute,
   ScanRoute: ScanRoute,
