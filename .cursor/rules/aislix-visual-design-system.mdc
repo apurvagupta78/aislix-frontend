@@ -1,0 +1,97 @@
+---
+description: Locked Aislix Magic Pattern visual system — palette, adjacency, charts, empty states for ALL pages
+alwaysApply: true
+---
+
+# Aislix Visual Design System (LOCKED — whole site)
+
+You are Senior Product Designer / Data Viz / UI Architect for Aislix.
+**UI/UX for every page** must follow this system. Do not wait to be reminded.
+Visual reference: Magic Pattern zip `6e9360fc-9d3e-4856-b1c4-2e1eff6f50c0` (calm enterprise retail SaaS).
+
+## Scope
+
+ONLY UI/UX: charts, KPI cards, hierarchy, colors, spacing, labels, legends, empty/loading states, responsive layout, presentation.
+**Never** change backend logic, DB, formulas, API contracts, auth, RLS, or invent KPI math.
+
+## Feel
+
+Modern, premium, enterprise, intelligent, calm, data-rich not crowded. Pass the **8-year-old test**: what is happening / good / needs attention / changed / where the problem is. No decorative charts — every chart answers one business question.
+
+## Locked palette (ONLY these)
+
+| Token | Hex | Meaning |
+|-------|-----|---------|
+| Soft Green | `#79E2A8` | success, compliance, positive, brand presence |
+| Soft Blue | `#7DB7D6` | category, evidence, coverage, process |
+| Soft Purple | `#9B86D9` | product, facings, execution, progress |
+| Light Cyan | `#8EC9E8` | units, inventory, value/volume |
+| Soft Pink | `#FFEAF1` | critical, exception, risk |
+| Soft Grey | `#EEF1F4` | N/A, unavailable, pending, inactive |
+| Navy | `#102A43` | primary text |
+| Secondary | `#667085` | secondary text |
+| Border | `#D9E2E8` | borders |
+| Card | `#FFFFFF` | card bg |
+| Page | `#F4F7F9` | page bg |
+
+No arbitrary chart colors. No neon. No traffic-light red/orange overload.
+
+## Hard rule: no adjacent same accent
+
+Never put the same accent on two adjacent analytical/KPI cards (2-col grid or KPI row).
+Cycle: **PURPLE → BLUE → PINK → GREEN → CYAN** (repeat). Same color may appear elsewhere, never adjacent.
+Use `src/lib/ai-audit/kpi-palette.ts` / design tokens — do not invent fills.
+
+## Semantic color consistency
+
+GREEN = positive/compliant · PINK = critical/risk · PURPLE = product/facings · BLUE = category/evidence · CYAN = units/value · GREY = unavailable/N/A.
+
+## Data presentation (never fake zeros)
+
+- `0` only when true calculated zero
+- Unavailable → `Data unavailable` or `N/A` (grey empty state, not empty chart with zeros)
+- Insufficient evidence → `Verification required`
+- Integrity issue → `Needs review`
+- Backend `COUNT_MISMATCH` → show **COUNT VERIFICATION PENDING** (pink/neutral), keep product rows visible; do not treat aggregate as valid
+
+## Chart type selection
+
+| Need | Chart |
+|------|--------|
+| Trend over time | Line (`#9B86D9` or `#7DB7D6`) |
+| Rankings / long labels | Horizontal bar (default) |
+| Period volumes | Vertical columns |
+| Status/severity mix | Stacked horizontal bar |
+| ≤~5 segment composition | Donut only |
+| Single % progress | Progress bar |
+| Exact evidence | Table (never replace tables with charts) |
+
+Do not: donuts for rankings, pie everywhere, line for rankings, duplicate chart+same chart, merge variants as `Product · UNVERIFIABLE` (show Variant: Unverifiable).
+
+## KPI cards
+
+White card + thin border `#D9E2E8` + subtle left/top accent tint (not full-color fill) + generous whitespace.
+Include: name, value, small info icon, short context, optional delta. No large decorative icons.
+
+Core KPI accents: Completion PURPLE · Evidence BLUE · Pass GREEN · Open Findings CYAN · Critical PINK · Overdue GREY · SLA BLUE/CYAN by adjacency · Inventory variance CYAN.
+
+Financial labels: **Potential Daily/Weekly Value at Risk**, **Potential OOS SKUs**, **Financial Impact Status** — never "Daily Loss" / theft language.
+
+## Modes
+
+- **No planogram**: hide or mark N/A planogram/facing compliance/expected-vs-actual; show products, brands, facings, units, brand share, rankings, confidence, image quality.
+- **With planogram**: compliance, variances, shortfalls, expected vs actual, value gap, risks, findings.
+
+## Provenance in UI
+
+Visually distinguish: AI detected · Calculated by Aislix · Expected from planogram · Read from image · Human confirmed.
+
+## Layout / style
+
+Desktop 2-col analytical grid · mobile 1-col. Hierarchy: Ask Aislix → 8 KPIs → trends → findings/actions → planogram → product/brand → financial → tables.
+Rounded white cards, thin borders, subtle shadow, navy text, light grids. Animation 150–300ms once (bar/line/KPI), not looping.
+Tooltips: exact value, unit, context, expected vs actual when relevant. Legends only for multi-series.
+
+## Implementation checklist (every UI change)
+
+1. Correct chart type 2. Clear business question 3. Semantic color 4. No adjacent same accent 5. No fake zeros 6. Minimal legends 7. Persisted backend values only 8. No new production KPI math in UI

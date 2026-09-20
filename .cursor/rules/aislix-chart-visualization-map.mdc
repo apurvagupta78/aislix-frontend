@@ -1,0 +1,53 @@
+---
+description: Aislix chart map — which chart/color for each analytical section (dashboard + results)
+globs: "**/dashboard/**/*.{ts,tsx},**/control-tower/**/*.{ts,tsx},**/ai-audit/**/*.{ts,tsx},**/scan-results/**/*.{ts,tsx},**/MpCharts.tsx,**/kpi-palette.ts"
+alwaysApply: false
+---
+
+# Aislix Chart Map
+
+Follow `aislix-visual-design-system.mdc`. Adjacency cycle: PURPLE → BLUE → PINK → GREEN → CYAN.
+
+## Audit performance
+- Completion trend → **line** PURPLE `#9B86D9` (prior period = grey)
+- Outcome → **donut** Pass GREEN / Fail PINK / Incomplete GREY; center = pass %
+
+## Findings & actions
+- By severity → **stacked h-bar** Critical PINK · High darker pink · Medium BLUE · Low GREY
+- Findings trend → **line** CYAN; optional critical series PINK
+- Corrective status → **stacked h-bar** Open BLUE · In Progress PURPLE · Completed GREEN · Overdue PINK
+
+## Planogram / execution
+- Compliance by store → **ranked h-bar** PURPLE, worst→best, target ref line if configured
+- Top SKU facing gaps → **ranked h-bar** CYAN, largest shortfall first
+- Brand share of facings → **h-bar** GREEN focus brand; others light grey; expected = grey marker
+- Category share → **h-bar** BLUE; unavailable = grey empty (never invent mapping)
+
+## Product intelligence
+- Top by facings → **ranked h-bar** PURPLE, Brand → Product → Variant
+- Top by units → **ranked h-bar** CYAN (same naming; never `Product · UNVERIFIABLE`)
+
+## Brand / category comparison
+- Brand facing vs unit share → **grouped h-bar** GREEN + CYAN
+- Category facing vs unit share → **grouped h-bar** BLUE + PURPLE
+
+## Inventory
+- Unit shortfall → expected GREY + actual CYAN
+- Potential visible-unit value gap → **h-bar** CYAN (not "loss/theft")
+- Visible shelf coverage days → **h-bar** BLUE (+ grey threshold)
+
+## Price / promo (only if Luna returned data)
+- MRP vs selling → **grouped h-bar** BLUE + PURPLE
+- Promotion presence → GREEN; none = grey empty
+
+## Financial
+- Potential Daily Value at Risk → KPI + optional columns CYAN
+- Potential Weekly Value at Risk → KPI + optional columns PURPLE
+- Value impact by SKU → **h-bar** CYAN
+
+## Confidence / quality
+- AI confidence → **progress bars** BLUE (threshold tints only if backend defines them)
+- Image quality → status card GOOD GREEN · LIMITED BLUE · POOR PINK (not a chart)
+
+## Empty / mismatch
+Unavailable → title + "Data unavailable" + one-line why (GREY). COUNT_MISMATCH → "COUNT VERIFICATION PENDING", aggregates not as normal numbers.
