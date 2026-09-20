@@ -15,15 +15,20 @@ export function AiGroupedComparisonBars({
   unit = "",
   accent,
 }: {
-  items: Array<{ label: string; expected: number; actual: number }>;
+  items: Array<{ label: string; expected: number; actual: number | null }>;
   unit?: string;
   accent?: string;
 }) {
-  const max = Math.max(...items.flatMap((i) => [i.expected, i.actual]), 1);
+  const max = Math.max(
+    ...items.flatMap((i) => [i.expected, i.actual ?? 0]),
+    1,
+  );
   return (
     <ul className="space-y-3">
       {items.map((item, i) => {
         const color = accent ?? COLORS[i % COLORS.length]!;
+        const actualLabel = item.actual == null ? "—" : `${item.actual}${unit}`;
+        const actualWidth = item.actual == null ? 0 : (item.actual / max) * 100;
         return (
           <li key={item.label}>
             <p className="mb-1 truncate text-[12px] font-medium text-foreground">{item.label}</p>
@@ -51,15 +56,12 @@ export function AiGroupedComparisonBars({
                   <div
                     className="h-full rounded-full"
                     style={{
-                      width: `${(item.actual / max) * 100}%`,
+                      width: `${actualWidth}%`,
                       background: color,
                     }}
                   />
                 </div>
-                <span className="w-10 tabular-nums text-right">
-                  {item.actual}
-                  {unit}
-                </span>
+                <span className="w-10 tabular-nums text-right">{actualLabel}</span>
               </div>
             </div>
           </li>

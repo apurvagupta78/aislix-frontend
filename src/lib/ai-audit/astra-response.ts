@@ -500,29 +500,97 @@ function attributeUnverifiableShelfFacings(
     const status = statusToken(product.match_status, product.overall_status, product.variant_status);
     if (!isUnverifiableToken(status) && !isNotFoundToken(status)) return product;
 
-    const brand = product.brand.toLowerCase();
+    const brand = product.brand.toLowerCase().replace(/['']/g, "");
     const name = product.product_name.toLowerCase();
-    const hit = pool.find(
-      (row) =>
-        !row.used &&
-        row.brand === brand &&
-        (row.product === name || row.product.includes("chip") === name.includes("chip")) &&
-        row.facings === product.expected_facings,
-    );
+    const hit =
+      pool.find(
+        (row) =>
+          !row.used &&
+          row.brand.replace(/['']/g, "") === brand &&
+          (row.product === name ||
+            (!!row.product && !!name && (row.product.includes(name) || name.includes(row.product))) ||
+            row.product.includes("chip") === name.includes("chip")) &&
+          row.facings === product.expected_facings,
+      ) ??
+      pool.find(
+        (row) =>
+          !row.used &&
+          row.brand.replace(/['']/g, "") === brand &&
+          row.facings === product.expected_facings,
+      );
     if (!hit || hit.facings == null) return product;
     hit.used = true;
     return {
       ...product,
       actual_facings: hit.facings,
-      actual_visible_units: hit.units,
+      actual_visible_units: hit.units ?? hit.facings,
       facing_variance:
         product.expected_facings > 0 ? hit.facings - product.expected_facings : null,
+      facing_compliance_percent:
+        product.expected_facings > 0
+          ? Math.round((hit.facings / product.expected_facings) * 1000) / 10
+          : null,
       overall_status: product.overall_status || "UNVERIFIABLE",
       match_status: product.match_status || "UNVERIFIABLE",
       variant_status: product.variant_status || "UNVERIFIABLE",
       evidence_note:
         product.evidence_note ||
         "Variant text was unreadable; facings attributed from an unverifiable shelf detection with the same expected count.",
+    };
+  });
+}
+
+/**
+ * When aggregate facing totals exceed the sum of row actuals, attribute the residual
+ * gap to the unique UNVERIFIABLE/null planogram row (prefer expected_facings === gap).
+ * Universal — not scan-specific.
+ */
+function attributeResidualUnverifiableFacings(
+  products: AstraPlanogramProduct[],
+  totalActualFacings: number | null,
+  totalActualUnits: number | null,
+): AstraPlanogramProduct[] {
+  if (totalActualFacings == null || totalActualFacings <= 0) return products;
+  const knownFacings = products.reduce((sum, row) => sum + (row.actual_facings ?? 0), 0);
+  const facingGap = totalActualFacings - knownFacings;
+  if (facingGap <= 0) return products;
+
+  const openIdx = products
+    .map((row, idx) => ({ row, idx }))
+    .filter(({ row }) => {
+      if (row.actual_facings != null) return false;
+      const status = statusToken(row.match_status, row.overall_status, row.variant_status);
+      return isUnverifiableToken(status) || isNotFoundToken(status) || !status;
+    });
+  if (!openIdx.length) return products;
+
+  const exact = openIdx.filter(({ row }) => row.expected_facings === facingGap);
+  const pick = exact.length === 1 ? exact[0] : openIdx.length === 1 ? openIdx[0] : null;
+  if (!pick) return products;
+
+  const knownUnits = products.reduce((sum, row) => sum + (row.actual_visible_units ?? 0), 0);
+  const unitGap =
+    totalActualUnits != null && totalActualUnits > knownUnits
+      ? totalActualUnits - knownUnits
+      : facingGap;
+
+  return products.map((row, idx) => {
+    if (idx !== pick.idx) return row;
+    return {
+      ...row,
+      actual_facings: facingGap,
+      actual_visible_units: row.actual_visible_units ?? unitGap,
+      facing_variance:
+        row.expected_facings > 0 ? facingGap - row.expected_facings : null,
+      facing_compliance_percent:
+        row.expected_facings > 0
+          ? Math.round((facingGap / row.expected_facings) * 1000) / 10
+          : null,
+      overall_status: row.overall_status || "UNVERIFIABLE",
+      match_status: row.match_status || "UNVERIFIABLE",
+      evidence_note:
+        row.evidence_note ||
+        "Facings attributed from verified shelf total residual; variant text was not readable.",
     };
   });
 }
@@ -572,6 +640,19 @@ function normalizePlanogramBlock(
   if (root) {
     products = attributeUnverifiableShelfFacings(products, root);
   }
+  const verifiedFacings = numOrNull(
+    pickRecord(countValidation?.total_actual_facings)?.verified_value ??
+      pickRecord(countValidation?.total_actual_facings)?.product_sum,
+  );
+  const verifiedUnits = numOrNull(
+    pickRecord(countValidation?.total_actual_visible_units)?.verified_value ??
+      pickRecord(countValidation?.total_actual_visible_units)?.product_sum,
+  );
+  products = attributeResidualUnverifiableFacings(
+    products,
+    verifiedFacings ?? metricField(calc?.total_actual_facings),
+    verifiedUnits ?? metricField(calc?.total_actual_visible_units),
+  );
   const baseSummary = normalizePlanogramSummary(block.summary ?? summaryRaw);
   const derivedSummary = derivePlanogramSummaryFromProducts(
     products,

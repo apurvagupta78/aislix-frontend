@@ -161,7 +161,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
     .map((row) => ({
       label: productLabel(row),
       expected: row.expected_facings,
-      actual: row.actual_facings ?? 0,
+      actual: row.actual_facings,
     }));
 
   const comparison = planogramComparisonFromResult(data, null);
