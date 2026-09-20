@@ -142,16 +142,26 @@ export function ScanResultHeader({
   data,
   loading,
   assignmentId,
+  assignmentLabel,
+  auditName,
+  auditDescription,
 }: {
   data?: ScanResult | undefined;
   loading?: boolean | undefined;
   assignmentId?: string | null | undefined;
+  assignmentLabel?: string | null | undefined;
+  auditName?: string | null | undefined;
+  auditDescription?: string | null | undefined;
 }) {
   const summary = data?.summary;
   const health =
     typeof summary?.shelf_health_score === "number"
       ? `${Math.round(normalizeConfidence(summary.shelf_health_score))} / 100`
       : undefined;
+  const title =
+    auditName?.trim() ||
+    [data?.scan_category, data?.scan_sub_category].filter(Boolean).join(" · ") ||
+    "Shelf audit";
 
   return (
     <div className="card-surface rounded-2xl p-4 sm:p-5">
@@ -159,38 +169,57 @@ export function ScanResultHeader({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="truncate text-lg font-semibold tracking-tight">
-              {loading ? "Loading audit…" : (data?.scan_id ?? "Audit")}
+              {loading ? "Loading audit…" : title}
             </h2>
             <ScanStatusBadge status={data?.status} />
             {assignmentId ? (
               <Link to="/assigned-scans" search={{ tab: "assignments" as const }}>
                 <Badge
                   variant="outline"
-                  className="rounded-full border-brand/25 bg-brand-soft font-mono text-brand"
+                  className="rounded-full border-brand/25 bg-brand-soft text-brand"
                 >
-                  Assignment {formatAssignmentId(assignmentId)}
+                  {assignmentLabel
+                    ? `Assigned to ${assignmentLabel}`
+                    : `Assignment ${formatAssignmentId(assignmentId)}`}
                 </Badge>
               </Link>
             ) : null}
-            <LearnedCatalogBadge
-              size={summary?.learned_catalog_size}
-              added={summary?.learned_new_this_scan}
-            />
             <NeedsReviewBadge count={reviewCount(data)} />
           </div>
 
-          <p className="mt-1 text-sm text-muted-foreground">
-            {[data?.scan_category, data?.scan_sub_category, data?.location].some(Boolean)
-              ? [data?.scan_category, data?.scan_sub_category, data?.location]
-                  .filter(Boolean)
-                  .join(" · ")
-              : "AI shelf audit result"}
-          </p>
+          {auditDescription ? (
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{auditDescription}</p>
+          ) : (
+            <p className="mt-1 text-sm text-muted-foreground">
+              {[data?.scan_category, data?.scan_sub_category, data?.location].filter(Boolean).join(" · ") ||
+                "Shelf photo audit"}
+            </p>
+          )}
         </div>
         <ResultNavigation />
       </div>
 
       <div className="mt-5 grid gap-4 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <MetaItem
+          icon={<Sparkles className="size-4" />}
+          label="Audit name"
+          value={title}
+          loading={loading}
+        />
+        <MetaItem
+          icon={<Users className="size-4" />}
+          label="Assignment"
+          value={
+            assignmentLabel
+              ? assignmentLabel === "Self"
+                ? "Self"
+                : assignmentLabel
+              : assignmentId
+                ? formatAssignmentId(assignmentId)
+                : "Unassigned"
+          }
+          loading={loading}
+        />
         <MetaItem
           icon={<ScanLine className="size-4" />}
           label="Scan ID"
@@ -247,8 +276,6 @@ export function ScanResultHeader({
           loading={loading}
         />
       </div>
-
-
     </div>
   );
 }

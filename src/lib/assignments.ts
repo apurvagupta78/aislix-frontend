@@ -758,10 +758,86 @@ export async function verifyAssignmentPass(assignmentId: string): Promise<void> 
 
 /** Assignment a scan was launched from, if any (used for the results badge). */
 export async function fetchScanAssignmentId(scanId: string): Promise<string | null> {
-  const { data } = await supabase
+  const meta = await fetchScanAssignmentMeta(scanId);
+  return meta?.id ?? null;
+}
+
+export type ScanAssignmentMeta = {
+  id: string | null;
+  assigneeLabel: string | null;
+  auditName: string;
+  auditDescription: string | null;
+};
+
+/** Audit name, description, and assignee label for the results header. */
+export async function fetchScanAssignmentMeta(scanId: string): Promise<ScanAssignmentMeta | null> {
+  const { data: scan } = await supabase
     .from("shelf_scans")
-    .select("assignment_id")
+    .select("assignment_id, category, sub_category_label, sub_category, notes, shelf_label")
     .eq("id", scanId)
     .maybeSingle();
-  return ((data?.assignment_id as string | null) ?? null) || null;
+  if (!scan) return null;
+
+  let userId: string | null = null;
+  try {
+    userId = await requireUserId();
+  } catch {
+    userId = null;
+  }
+
+  const assignmentId = (scan.assignment_id as string | null) ?? null;
+  let assigneeLabel: string | null = null;
+  let auditName: string | null = null;
+  let auditDescription: string | null = null;
+
+  if (assignmentId) {
+    const { data: assignment } = await supabase
+      .from("scan_assignments")
+      .select("assignee_id, instructions, campaign_id")
+      .eq("id", assignmentId)
+      .maybeSingle();
+    if (assignment?.assignee_id) {
+      const names = await fetchNames([assignment.assignee_id as string]);
+      const name = names.get(assignment.assignee_id as string) ?? "Team member";
+      assigneeLabel =
+        userId && assignment.assignee_id === userId ? "Self" : name;
+    }
+    auditDescription = (assignment?.instructions as string | null)?.trim() || null;
+    const campaignId = assignment?.campaign_id as string | null;
+    if (campaignId) {
+      const { data: campaign } = await supabase
+        .from("assignment_campaigns")
+        .select("name, audit_purpose, instructions")
+        .eq("id", campaignId)
+        .maybeSingle();
+      if (campaign?.name) auditName = String(campaign.name);
+      auditDescription =
+        (campaign?.audit_purpose as string | null)?.trim() ||
+        (campaign?.instructions as string | null)?.trim() ||
+        auditDescription;
+    }
+  }
+
+  const category = (scan.category as string | null)?.trim() || "";
+  const sub =
+    ((scan.sub_category_label as string | null) ||
+      (scan.sub_category as string | null) ||
+      "").trim();
+  if (!auditName) {
+    auditName = [category, sub].filter(Boolean).join(" · ") || "Shelf audit";
+  }
+  if (!auditDescription) {
+    const shelf = (scan.shelf_label as string | null)?.trim();
+    const notes = (scan.notes as string | null)?.trim();
+    auditDescription =
+      notes ||
+      (shelf ? `Shelf photo audit · ${shelf}` : "Shelf photo audit");
+  }
+
+  return {
+    id: assignmentId,
+    assigneeLabel,
+    auditName,
+    auditDescription,
+  };
 }

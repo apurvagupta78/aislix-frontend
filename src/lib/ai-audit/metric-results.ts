@@ -59,7 +59,7 @@ export function metricDisplayValue(
   fallback?: number | string | null,
 ): string {
   if (metric) {
-    if (metric.status === "COUNT_MISMATCH") return "Review";
+    if (metric.status === "COUNT_MISMATCH") return "Needs review";
     if (metric.status === "NOT_APPLICABLE") return "N/A";
     if (
       metric.status === "UNAVAILABLE" ||
@@ -76,9 +76,37 @@ export function metricDisplayValue(
     ) {
       return `${Math.round(metric.value)}%`;
     }
+    // Prefer a positive observed/fallback count when the stored metric is a stale 0.
+    if (
+      typeof metric.value === "number" &&
+      metric.value === 0 &&
+      typeof fallback === "number" &&
+      fallback > 0
+    ) {
+      return String(fallback);
+    }
     return String(metric.value);
   }
   if (fallback != null && fallback !== "") return String(fallback);
+  return "—";
+}
+
+/** Count KPIs: never show 0 when product rows clearly exist. */
+export function metricCountDisplay(
+  metric: MetricResultView | null,
+  observedCount: number,
+  summaryCount?: number | null,
+): string {
+  if (metric?.status === "COUNT_MISMATCH") return "Needs review";
+  if (metric?.status === "NOT_APPLICABLE") return "N/A";
+  const candidates = [
+    typeof metric?.value === "number" ? metric.value : null,
+    typeof summaryCount === "number" ? summaryCount : null,
+    observedCount,
+  ].filter((n): n is number => typeof n === "number" && Number.isFinite(n));
+  const positive = candidates.find((n) => n > 0);
+  if (positive != null) return String(positive);
+  if (candidates.includes(0)) return "0";
   return "—";
 }
 
@@ -131,24 +159,30 @@ export function pickExecutionRisk(
   };
 }
 
-/** Soften legacy shelf-only executive summaries that still say planogram/Luna "Data unavailable". */
+/** Soften shelf-only executive summaries for plain-English display. */
 export function sanitizeShelfOnlyExecutiveSummary(text: string | null | undefined): string | undefined {
   if (!text) return undefined;
   return text
     .replace(
       /Overall facing compliance:\s*Data unavailable/gi,
-      "Overall facing compliance: Not applicable (shelf-only)",
+      "Facing compliance: Not applicable for this photo-only audit",
     )
     .replace(
       /Planogram compliance:\s*Data unavailable/gi,
-      "Planogram compliance: Not applicable (shelf-only)",
+      "Planogram compliance: Not applicable for this photo-only audit",
     )
     .replace(
       /Price and promotion intelligence:\s*Data unavailable\.?/gi,
-      "Price and promotion intelligence: Not assessed (secondary vision not enabled).",
+      "Prices and promotions: Not readable in this photo.",
     )
     .replace(
       /Brand share metrics available in calculated analysis\./gi,
-      "Brand share: see calculated brand analysis below.",
-    );
+      "Brand share: see the brand charts below.",
+    )
+    .replace(/\bAstra\b/gi, "AI")
+    .replace(/\bLuna\b/gi, "price reading")
+    .replace(/\bMetricResults?\b/gi, "metrics")
+    .replace(/\bAislix calculated\b/gi, "calculated")
+    .replace(/\bshelf_cv\b/gi, "shelf analysis")
+    .replace(/\bUNVERIFIABLE\b/g, "not readable");
 }

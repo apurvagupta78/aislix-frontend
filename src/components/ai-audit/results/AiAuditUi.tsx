@@ -1,11 +1,9 @@
 import type { ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
 import { Download, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { downloadSectionCsv } from "@/lib/ai-audit/section-csv";
-import { formatDuration, formatScanDate } from "@/lib/scan-results";
 import { cn } from "@/lib/utils";
 
 export function AiAuditCard({
@@ -15,6 +13,7 @@ export function AiAuditCard({
   children,
   className,
   csvDownload,
+  headerClassName,
 }: {
   title: string;
   description?: string;
@@ -22,6 +21,7 @@ export function AiAuditCard({
   children: ReactNode;
   className?: string;
   csvDownload?: { onDownload: () => void } | null;
+  headerClassName?: string;
 }) {
   function handleCsv() {
     try {
@@ -39,7 +39,12 @@ export function AiAuditCard({
         className,
       )}
     >
-      <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border px-4 py-3">
+      <div
+        className={cn(
+          "flex flex-wrap items-start justify-between gap-2 border-b border-border px-4 py-3",
+          headerClassName,
+        )}
+      >
         <div className="min-w-0">
           <h3 className="text-sm font-semibold tracking-tight text-foreground">{title}</h3>
           {description ? (
@@ -52,7 +57,7 @@ export function AiAuditCard({
               type="button"
               variant="outline"
               size="sm"
-              className="h-8 rounded-lg text-[11px]"
+              className="h-8 rounded-lg bg-white/80 text-[11px]"
               onClick={handleCsv}
             >
               <Download className="size-3.5" /> Download CSV
@@ -101,19 +106,12 @@ export function AiMetricStat({
   );
 }
 
+/** Compact mode strip — no duplicate scan meta (that lives in ScanResultHeader). */
 export function AiResultsHero({
-  scanId,
   modeLabel,
   operatingModel,
-  timestamp,
-  category,
-  subCategory,
-  location,
-  store,
-  processingTimeMs,
-  averageConfidence,
 }: {
-  scanId: string;
+  scanId?: string;
   modeLabel: string;
   operatingModel?: string;
   timestamp?: string;
@@ -124,58 +122,13 @@ export function AiResultsHero({
   processingTimeMs?: number | null;
   averageConfidence?: number | null;
 }) {
-  const conf =
-    averageConfidence == null
-      ? null
-      : `${Math.round(averageConfidence <= 1 ? averageConfidence * 100 : averageConfidence)}%`;
-
-  const meta = [
-    { label: "Scan ID", value: scanId },
-    { label: "Store", value: store || "—" },
-    { label: "Location", value: location || "—" },
-    { label: "Category", value: category || "—" },
-    { label: "Sub-category", value: subCategory || "—" },
-    { label: "Audit date & time", value: timestamp ? formatScanDate(timestamp) || "—" : "—" },
-    {
-      label: "Processing time",
-      value: processingTimeMs != null ? formatDuration(processingTimeMs) : "—",
-    },
-    { label: "Avg AI confidence", value: conf || "—" },
-  ];
-
   return (
-    <div className="rounded-2xl border border-brand/20 bg-gradient-to-br from-brand-soft/30 to-card px-4 py-4 sm:px-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge className="gap-1 rounded-full bg-status-ai-soft text-status-ai-strong">
-          <Sparkles className="size-3" /> AI Audit
-        </Badge>
-        <Badge variant="outline">{modeLabel}</Badge>
-        {operatingModel ? <Badge variant="secondary">{operatingModel}</Badge> : null}
-      </div>
-
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {meta.map((item) => (
-          <div
-            key={item.label}
-            className="rounded-xl border border-black/5 bg-white/80 px-3 py-2.5 shadow-sm"
-          >
-            <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-              {item.label}
-            </p>
-            <p className="mt-0.5 truncate text-sm font-semibold text-foreground" title={item.value}>
-              {item.value}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Button asChild variant="outline" size="sm" className="rounded-xl text-xs">
-          <Link to="/results/debug" search={{ scan: scanId }}>
-            Raw Astra payload
-          </Link>
-        </Button>
-      </div>
+    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#D9E2E8] bg-white px-3 py-2.5">
+      <Badge className="gap-1 rounded-full bg-[#F3EFFB] text-[#102A43]">
+        <Sparkles className="size-3" /> AI Audit
+      </Badge>
+      <Badge variant="outline">{modeLabel}</Badge>
+      {operatingModel ? <Badge variant="secondary">{operatingModel}</Badge> : null}
     </div>
   );
 }
@@ -276,7 +229,8 @@ export function AiExecutiveSummary({
   return (
     <AiAuditCard
       title="Executive summary"
-      description="Clear, readable narrative — key findings as bullet points"
+      description="Key findings from this shelf audit"
+      headerClassName="bg-[#F3EFFB]"
       csvDownload={{
         onDownload: () => {
           const rows: Array<[string, string]> = [];
@@ -297,7 +251,7 @@ export function AiExecutiveSummary({
             return (
               <h4
                 key={i}
-                className="text-xs font-bold uppercase tracking-wide text-muted-foreground"
+                className="rounded-md bg-[#EEF6FA] px-2.5 py-1.5 text-xs font-bold uppercase tracking-wide text-[#102A43]"
               >
                 {block.text}
               </h4>
@@ -305,7 +259,7 @@ export function AiExecutiveSummary({
           }
           if (block.kind === "bullets") {
             return (
-              <ul key={i} className="list-disc space-y-2 pl-5 marker:text-brand">
+              <ul key={i} className="list-disc space-y-2 pl-5 marker:text-[#9B86D9]">
                 {block.items.map((item, j) => (
                   <li key={j} className="pl-1">
                     {item}

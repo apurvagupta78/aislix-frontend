@@ -12,7 +12,7 @@ import {
   RefreshCw,
   ScanLine,
 } from "lucide-react";
-import { fetchScanAssignmentId } from "@/lib/assignments";
+import { fetchScanAssignmentMeta } from "@/lib/assignments";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { ScanResultsHeaderBar } from "@/components/scan/ScanResultsHeaderBar";
@@ -105,11 +105,12 @@ function Results() {
   const comparison = comparisonQuery.data ?? null;
 
   const assignmentQuery = useQuery({
-    queryKey: ["scan-assignment-id", scan],
-    queryFn: () => fetchScanAssignmentId(scan!),
+    queryKey: ["scan-assignment-meta", scan],
+    queryFn: () => fetchScanAssignmentMeta(scan!),
     enabled: Boolean(scan),
     retry: false,
   });
+  const assignmentId = assignmentQuery.data?.id ?? null;
   const digitalQuery = useQuery({
     queryKey: ["digital-audit-session", scan],
     queryFn: () => fetchDigitalSessionSafe(scan!),
@@ -145,7 +146,6 @@ function Results() {
   const [roleOverride, setRoleOverride] = useState<AuditRoleTab | undefined>();
   const [scanContext, setScanContext] = useState<ScanContextState>(EMPTY_SCAN_CONTEXT);
   const [showOptionalPricing, setShowOptionalPricing] = useState(false);
-  const assignmentId = assignmentQuery.data ?? null;
   // Assignment alone does not mean planogram — shelf_only AI audits also create assignments.
   const scanHadPlanogram = Boolean(
     data?.planogram?.requested &&
@@ -284,7 +284,10 @@ function Results() {
             <ScanResultHeader
               data={data}
               loading={loading && !ready}
-              assignmentId={assignmentQuery.data ?? null}
+              assignmentId={assignmentId}
+              assignmentLabel={assignmentQuery.data?.assigneeLabel}
+              auditName={assignmentQuery.data?.auditName}
+              auditDescription={assignmentQuery.data?.auditDescription}
             />
           )}
 
@@ -298,17 +301,10 @@ function Results() {
             <LoadingResultsState scanId={data?.scan_id ?? scan} />
           ) : ready ? (
             <>
-              <div className="flex flex-wrap justify-end gap-2">
-                <Button asChild variant="outline" size="sm" className="rounded-xl text-xs">
-                  <Link to="/results/debug" search={{ scan: data!.scan_id }}>
-                    Debug raw payload
-                  </Link>
-                </Button>
-              </div>
               <ResultsErrorBoundary scanId={data!.scan_id}>
-              {isDigitalAudit && assignmentQuery.data ? (
+              {isDigitalAudit && assignmentId ? (
                 <FixRescanVerifyPanel
-                  assignmentId={assignmentQuery.data}
+                  assignmentId={assignmentId}
                   scanId={data!.scan_id}
                 />
               ) : null}

@@ -529,12 +529,25 @@ function normalizeShelfBlock(block: Record<string, unknown>): NormalizedAstraAna
     shelf_issues: pickArray(block.shelf_issues),
     summary: {
       ...normalizeShelfSummary(block.summary ?? summaryRaw),
-      products_identified:
-        metricField(calc?.products_identified) ??
-        normalizeShelfSummary(block.summary ?? summaryRaw).products_identified,
-      brands_identified:
-        metricField(calc?.brands_identified) ??
-        normalizeShelfSummary(block.summary ?? summaryRaw).brands_identified,
+      products_identified: (() => {
+        const fromMetric = metricField(calc?.products_identified);
+        const fromSummary = normalizeShelfSummary(block.summary ?? summaryRaw).products_identified;
+        if (fromMetric != null && fromMetric > 0) return fromMetric;
+        if (fromSummary > 0) return fromSummary;
+        return products.length;
+      })(),
+      brands_identified: (() => {
+        const fromMetric = metricField(calc?.brands_identified);
+        const fromSummary = normalizeShelfSummary(block.summary ?? summaryRaw).brands_identified;
+        if (fromMetric != null && fromMetric > 0) return fromMetric;
+        if (fromSummary > 0) return fromSummary;
+        const brands = new Set(
+          products
+            .map((p) => str((p as Record<string, unknown>).brand).trim().toLowerCase())
+            .filter(Boolean),
+        );
+        return brands.size;
+      })(),
       visible_facings:
         metricField(calc?.total_actual_facings) ??
         num(summaryRaw?.total_actual_facings) ??

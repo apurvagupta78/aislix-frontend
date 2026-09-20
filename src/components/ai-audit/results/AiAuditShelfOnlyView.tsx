@@ -25,8 +25,8 @@ import type {
 } from "@/lib/ai-audit/astra-response";
 import { CHART_ACCENT, KPI_CARD, summaryFillAt } from "@/lib/ai-audit/kpi-palette";
 import {
+  metricCountDisplay,
   metricDisplayValue,
-  metricStatusLabel,
   sanitizeShelfOnlyExecutiveSummary,
 } from "@/lib/ai-audit/metric-results";
 import { downloadKeyValueCsv, downloadSectionCsv } from "@/lib/ai-audit/section-csv";
@@ -39,7 +39,18 @@ type Props = {
 };
 
 function productLabel(row: AstraShelfProduct) {
-  return `${row.brand} · ${row.product_name}${row.variant ? ` · ${row.variant}` : ""}`;
+  const brand = row.brand?.trim() || "Unknown brand";
+  const name = row.product_name?.trim();
+  const cleanName =
+    !name || /^(unverifiable|unknown|unidentified)$/i.test(name) ? "Product" : name;
+  const variant = row.variant?.trim();
+  const cleanVariant =
+    variant && !/^(unverifiable|unknown|unidentified)$/i.test(variant)
+      ? variant
+      : variant
+        ? "Variant not readable"
+        : "";
+  return cleanVariant ? `${brand} · ${cleanName} · ${cleanVariant}` : `${brand} · ${cleanName}`;
 }
 
 function tileTone(status: string | undefined): "active" | "healthy" | "neutral" | "attention" {
@@ -59,10 +70,24 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
   const facingsMetric = calc.total_actual_facings;
   const unitsMetric = calc.total_actual_visible_units;
 
-  const productsValue = metricDisplayValue(productsMetric, s.products_identified);
-  const brandsValue = metricDisplayValue(brandsMetric, s.brands_identified);
-  const facingsValue = metricDisplayValue(facingsMetric, s.visible_facings);
-  const unitsValue = metricDisplayValue(unitsMetric, s.visible_units);
+  const productsValue = metricCountDisplay(
+    productsMetric,
+    analysis.products.length,
+    s.products_identified,
+  );
+  const brandsValue = metricCountDisplay(
+    brandsMetric,
+    new Set(analysis.products.map((p) => p.brand.trim().toLowerCase()).filter(Boolean)).size,
+    s.brands_identified,
+  );
+  const facingsValue = metricDisplayValue(
+    facingsMetric,
+    s.visible_facings || analysis.products.reduce((n, p) => n + (p.actual_facings || 0), 0),
+  );
+  const unitsValue = metricDisplayValue(
+    unitsMetric,
+    s.visible_units || analysis.products.reduce((n, p) => n + (p.actual_visible_units || 0), 0),
+  );
   const facingsNum = Number(facingsValue);
   const facingsTotal = Number.isFinite(facingsNum) ? facingsNum : s.visible_facings;
 
@@ -71,7 +96,12 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
     { label: "Brands", value: brandsValue, tone: tileTone(brandsMetric?.status), bg: KPI_CARD.auditPass },
     {
       label: "Variants",
-      value: String(s.variants_identified || analysis.products.filter((p) => p.variant).length),
+      value: String(
+        s.variants_identified ||
+          analysis.products.filter(
+            (p) => p.variant && !/^(unverifiable|unknown)$/i.test(p.variant),
+          ).length,
+      ),
       tone: "neutral" as const,
       bg: KPI_CARD.auditCompletion,
     },
@@ -81,58 +111,44 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       label: "Prices read",
       value: analysis.visible_prices.length ? String(analysis.visible_prices.length) : "N/A",
       tone: "neutral" as const,
-      bg: KPI_CARD.pricesRead,
+      bg: KPI_CARD.criticalFindings,
     },
     {
       label: "Promotions",
       value: analysis.visible_promotions.length ? String(analysis.visible_promotions.length) : "N/A",
       tone: "neutral" as const,
-      bg: KPI_CARD.evidenceCoverage,
+      bg: KPI_CARD.overdueActions,
     },
     {
       label: "Shelf issues",
       value: analysis.shelf_issues.length ? String(analysis.shelf_issues.length) : "N/A",
       tone: analysis.shelf_issues.length ? ("attention" as const) : ("neutral" as const),
-      bg: KPI_CARD.criticalFindings,
+      bg: KPI_CARD.slaCompliance,
     },
   ];
 
-  const summaryStats = [
-    {
-      label: "Products identified",
-      value: productsValue,
-      status: metricStatusLabel(productsMetric?.status),
-    },
-    {
-      label: "Brands identified",
-      value: brandsValue,
-      status: metricStatusLabel(brandsMetric?.status),
-    },
-    {
-      label: "Total facings",
-      value: facingsValue,
-      status: metricStatusLabel(facingsMetric?.status),
-      sub: facingsMetric?.source ? `Source: ${facingsMetric.source}` : undefined,
-    },
-    {
-      label: "Visible units",
-      value: unitsValue,
-      status: metricStatusLabel(unitsMetric?.status),
-      sub: unitsMetric?.source ? `Source: ${unitsMetric.source}` : undefined,
-    },
-    {
-      label: "Planogram compliance",
-      value: "N/A",
-      status: "Not applicable",
-      sub: "Shelf-only audit",
-    },
-    {
-      label: "Facing compliance",
-      value: "N/A",
-      status: "Not applicable",
-      sub: "No expected facings",
-    },
-  ];
+  const categoryFromProducts = (() => {
+    if (analysis.category_analysis.length) return analysis.category_analysis;
+    const totals = new Map<string, { facings: number; units: number }>();
+    for (const row of analysis.products) {
+      const cat = row.category?.trim();
+      if (!cat || /^(unverifiable|unknown|other)$/i.test(cat)) continue;
+      const cur = totals.get(cat) ?? { facings: 0, units: 0 };
+      cur.facings += row.actual_facings || 0;
+      cur.units += row.actual_visible_units || 0;
+      totals.set(cat, cur);
+    }
+    const facingSum = [...totals.values()].reduce((n, v) => n + v.facings, 0) || 1;
+    const unitSum = [...totals.values()].reduce((n, v) => n + v.units, 0) || 1;
+    return [...totals.entries()].map(([category, v]) => ({
+      category,
+      facings: v.facings,
+      visible_units: v.units,
+      share_of_facings_percent: Math.round((v.facings / facingSum) * 1000) / 10,
+      share_of_visible_units_percent: Math.round((v.units / unitSum) * 1000) / 10,
+      confidence: 0,
+    }));
+  })();
 
   const brandDonut = statusDonutSlices(
     Object.fromEntries(
@@ -143,7 +159,7 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
   );
   const categoryDonut = statusDonutSlices(
     Object.fromEntries(
-      analysis.category_analysis
+      categoryFromProducts
         .filter((c) => c.category && c.facings > 0)
         .map((c) => [c.category, c.facings]),
     ),
@@ -221,26 +237,18 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
   return (
     <div className="space-y-4">
       <AiResultsHero
-        scanId={data.scan_id}
-        modeLabel="Shelf intelligence (image-only)"
+        modeLabel="Shelf photo audit"
         operatingModel={ctx.extras.operating_model_label ?? ctx.extras.operating_model}
-        timestamp={data.created_at}
-        category={data.scan_category}
-        subCategory={data.scan_sub_category}
-        location={data.location ?? data.aisle}
-        store={data.store}
-        processingTimeMs={data.summary?.processing_time_ms}
-        averageConfidence={data.summary?.average_confidence}
       />
       <AiExecutiveSummary text={summaryText} scanId={data.scan_id} />
       <AiImageQualityBanner extras={ctx.extras} />
 
       <AiAuditCard
-        title="Location & shelf structure"
-        description="Context from Astra shelf analysis"
+        title="Shelf context"
+        description="Where this photo was taken and how clear it is"
         csvDownload={{
           onDownload: () =>
-            downloadKeyValueCsv(data.scan_id, "location-shelf-structure", [
+            downloadKeyValueCsv(data.scan_id, "shelf-context", [
               { label: "Location", value: analysis.location || ctx.extras.location || "—" },
               { label: "Location status", value: analysis.location_status || "—" },
               { label: "Shelf levels", value: analysis.shelf_structure?.visible_shelf_levels ?? "—" },
@@ -272,34 +280,23 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
 
       <AiAuditCard
         title="Summary KPIs"
-        description="Aislix calculated metrics (MetricResults) — planogram compliance is N/A for shelf-only"
+        description="What the AI found on this shelf"
         csvDownload={{
           onDownload: () =>
-            downloadKeyValueCsv(data.scan_id, "summary-kpis", [
-              ...summaryTiles.map((t) => ({ label: t.label, value: t.value })),
-              ...summaryStats.map((t) => ({ label: t.label, value: t.value })),
-            ]),
+            downloadKeyValueCsv(
+              data.scan_id,
+              "summary-kpis",
+              summaryTiles.map((t) => ({ label: t.label, value: t.value })),
+            ),
         }}
       >
         <MpTileGrid tiles={summaryTiles} />
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {summaryStats.map((stat, i) => (
-            <AiMetricStat
-              key={stat.label}
-              label={stat.label}
-              value={stat.value}
-              status={stat.status}
-              sub={stat.sub}
-              bg={summaryFillAt(i)}
-            />
-          ))}
-        </div>
       </AiAuditCard>
 
       {risk ? (
         <AiAuditCard
           title="Execution risk"
-          description="Rule-based severity from Aislix calc"
+          description="Issues that need attention"
           csvDownload={{
             onDownload: () =>
               downloadSectionCsv(
@@ -383,7 +380,7 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
         {brandDonut.length ? (
           <AiAuditCard
             title="Brand share of facings"
-            description="Horizontal share view from brand_analysis"
+            description="How much shelf space each brand occupies"
             csvDownload={{
               onDownload: () =>
                 downloadSectionCsv(
@@ -407,14 +404,18 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
         {categoryDonut.length ? (
           <AiAuditCard
             title="Category share of facings"
-            description="From category_analysis when available"
+            description="How shelf space is split across categories"
             csvDownload={{
               onDownload: () =>
                 downloadSectionCsv(
                   data.scan_id,
                   "category-facing-share",
-                  ["Category", "Facings"],
-                  categoryDonut.map((s) => [s.label, s.value]),
+                  ["Category", "Facings", "Share %"],
+                  categoryFromProducts.map((c) => [
+                    c.category,
+                    c.facings,
+                    c.share_of_facings_percent,
+                  ]),
                 ),
             }}
           >
@@ -428,9 +429,9 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
             />
           </AiAuditCard>
         ) : (
-          <AiAuditCard title="Category share of facings" description="Trusted category mapping">
+          <AiAuditCard title="Category share of facings" description="How shelf space is split across categories">
             <p className="text-sm text-muted-foreground">
-              Not available — category share requires trusted category mapping (not LLM-only labels).
+              Data unavailable — categories were not clearly readable in this photo.
             </p>
           </AiAuditCard>
         )}
@@ -475,8 +476,8 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
 
       {analysis.brand_analysis.length ? (
         <AiAuditCard
-          title="Brand analysis table"
-          description="Aislix calculated brand shares"
+          title="Brand analysis"
+          description="Brand facing and unit share"
           csvDownload={{
             onDownload: () =>
               downloadSectionCsv(
@@ -522,29 +523,28 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
         </AiAuditCard>
       ) : null}
 
-      {analysis.category_analysis.length ? (
+      {analysis.category_analysis.length || categoryFromProducts.length ? (
         <AiAuditCard
-          title="Category analysis table"
-          description="All category_analysis fields"
+          title="Category analysis"
+          description="Facing and unit share by category"
           csvDownload={{
             onDownload: () =>
               downloadSectionCsv(
                 data.scan_id,
                 "category-analysis",
-                ["Category", "Facings", "Units", "Facing share %", "Unit share %", "Confidence"],
-                analysis.category_analysis.map((c) => [
+                ["Category", "Facings", "Units", "Facing share %", "Unit share %"],
+                categoryFromProducts.map((c) => [
                   c.category,
                   c.facings,
                   c.visible_units,
                   c.share_of_facings_percent,
                   c.share_of_visible_units_percent,
-                  c.confidence,
                 ]),
               ),
           }}
         >
           <AiAuditMetricTable
-            rows={analysis.category_analysis}
+            rows={categoryFromProducts}
             rowKey={(r) => r.category}
             columns={[
               { key: "c", header: "Category", cell: (r: AstraShelfCategoryAnalysis) => r.category },
@@ -560,7 +560,7 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
 
       <AiAuditCard
         title="Detected products"
-        description="Every product field from Astra CV"
+        description="Products found in the shelf photo"
         csvDownload={{
           onDownload: () =>
             downloadSectionCsv(
@@ -631,9 +631,9 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
           />
         </AiAuditCard>
       ) : (
-        <AiAuditCard title="Visible prices" description="Secondary vision (Luna)">
+        <AiAuditCard title="Visible prices" description="Prices readable on shelf labels">
           <p className="text-sm text-muted-foreground">
-            Not assessed — price reading requires Luna secondary vision (not enabled for this scan).
+            Data unavailable — prices were not readable in this photo.
           </p>
         </AiAuditCard>
       )}
@@ -641,7 +641,7 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       {analysis.visible_promotions.length ? (
         <AiAuditCard
           title="Visible promotions"
-          description="All visible_promotions from Astra"
+          description="Promotional offers found on the shelf"
           csvDownload={{
             onDownload: () =>
               downloadSectionCsv(
@@ -679,7 +679,7 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       {analysis.shelf_issues.length ? (
         <AiAuditCard
           title="Shelf issues"
-          description="All shelf_issues from Astra"
+          description="Problems spotted on the shelf"
           csvDownload={{
             onDownload: () =>
               downloadSectionCsv(

@@ -41,22 +41,18 @@ type Props = {
 };
 
 function productLabel(row: AstraPlanogramProduct) {
-  return `${row.brand} · ${row.product_name}${row.variant ? ` · ${row.variant}` : ""}`;
-}
-
-function heroProps(data: ScanResult, ctx: AiAuditDisplayContext, modeLabel: string) {
-  return {
-    scanId: data.scan_id,
-    modeLabel,
-    operatingModel: ctx.extras.operating_model_label ?? ctx.extras.operating_model,
-    timestamp: data.created_at,
-    category: data.scan_category,
-    subCategory: data.scan_sub_category,
-    location: data.location ?? data.aisle,
-    store: data.store,
-    processingTimeMs: data.summary?.processing_time_ms,
-    averageConfidence: data.summary?.average_confidence,
-  };
+  const brand = row.brand?.trim() || "Unknown brand";
+  const name = row.product_name?.trim();
+  const cleanName =
+    !name || /^(unverifiable|unknown|unidentified)$/i.test(name) ? "Product" : name;
+  const variant = row.variant?.trim();
+  const cleanVariant =
+    variant && !/^(unverifiable|unknown|unidentified)$/i.test(variant)
+      ? variant
+      : variant
+        ? "Variant not readable"
+        : "";
+  return cleanVariant ? `${brand} · ${cleanName} · ${cleanVariant}` : `${brand} · ${cleanName}`;
 }
 
 export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
@@ -219,14 +215,17 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
 
   return (
     <div className="space-y-4">
-      <AiResultsHero {...heroProps(data, ctx, "Planogram comparison")} />
+      <AiResultsHero
+        modeLabel="Planogram comparison"
+        operatingModel={ctx.extras.operating_model_label ?? ctx.extras.operating_model}
+      />
       <AiExecutiveSummary text={data.executive_summary} scanId={data.scan_id} />
       <AiImageQualityBanner extras={ctx.extras} />
 
       <div className="grid gap-4 lg:grid-cols-[auto,1fr]">
         <AiAuditCard
           title="Planogram compliance"
-          description="Check-based Aislix MetricResult"
+          description="How closely the shelf matches the plan"
           csvDownload={{
             onDownload: () =>
               downloadKeyValueCsv(data.scan_id, "planogram-compliance", [
@@ -239,13 +238,13 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
           <MpRadialGauge
             value={compliance}
             label="Compliant"
-            sublabel={`${analysis.products.length} rows · ${metricStatusLabel(planoMetric?.status) ?? "Calculated"}`}
+            sublabel={`${analysis.products.length} products`}
             color={CHART_ACCENT.brandFacingShare}
           />
         </AiAuditCard>
         <AiAuditCard
           title="Summary KPIs"
-          description="Astra row funnel + Aislix calculated metrics"
+          description="What was found versus the plan"
           csvDownload={{
             onDownload: () =>
               downloadKeyValueCsv(data.scan_id, "summary-kpis", [
@@ -261,7 +260,6 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
                 key={stat.label}
                 label={stat.label}
                 value={stat.value}
-                status={"status" in stat ? stat.status : undefined}
                 sub={"sub" in stat ? (stat as { sub?: string }).sub : undefined}
                 bg={summaryFillAt(i)}
               />
