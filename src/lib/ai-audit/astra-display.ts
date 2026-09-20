@@ -9,6 +9,12 @@ import {
   type NormalizedAstraAnalysis,
 } from "@/lib/ai-audit/astra-response";
 import { operatingModelLabel } from "@/lib/ai-audit/astra-analysis";
+import {
+  pickCalculatedMetrics,
+  pickExecutionRisk,
+  readMetricResult,
+  type MetricResultView,
+} from "@/lib/ai-audit/metric-results";
 import type { ScanResult } from "@/lib/scan-results";
 
 export type AiAuditViewKind = "planogram" | "shelf_only" | "incomplete";
@@ -32,6 +38,13 @@ export type AiAuditDisplayContext = {
   isComplete: boolean;
   incompleteReason?: string;
   compliancePercent: number | null;
+  /** Railway MetricResults keyed by metric_id. */
+  calculatedMetrics: Record<string, MetricResultView | null>;
+  executionRisk: {
+    severity: string;
+    reasons: string[];
+    rules_triggered: Array<Record<string, unknown>>;
+  } | null;
 };
 
 function pickRecord(value: unknown): Record<string, unknown> | null {
@@ -59,9 +72,14 @@ function extractExtras(
   analysis: NormalizedAstraAnalysis,
   result: ScanResult,
 ): AstraOutputExtras {
+  const metrics = pickRecord(result.metrics);
   const rawBlocks = [
     pickRecord(result.astra_planogram_analysis),
     pickRecord(result.astra_shelf_analysis),
+    pickRecord(result.astra_cv_analysis),
+    pickRecord(result.aislix_shelf_analysis),
+    pickRecord(result.aislix_planogram_analysis),
+    pickRecord(metrics?.astra_cv_analysis),
     pickRecord((result.retail_intelligence as Record<string, unknown> | undefined)?.astra_analysis),
   ].filter(Boolean) as Record<string, unknown>[];
 
@@ -111,28 +129,76 @@ function extractExtras(
   return merged;
 }
 
-function compliancePercent(analysis: NormalizedAstraAnalysis): number | null {
+function compliancePercent(
+  analysis: NormalizedAstraAnalysis,
+  calc: Record<string, unknown>,
+): number | null {
+  const plano = readMetricResult(calc, "planogram_compliance");
+  if (plano?.value != null && typeof plano.value === "number") return plano.value;
   if (analysis.mode === "planogram") {
     return analysis.summary.overall_planogram_compliance_percent ?? null;
   }
   return null;
 }
 
+const SHELF_METRIC_KEYS = [
+  "products_identified",
+  "brands_identified",
+  "total_actual_facings",
+  "total_actual_visible_units",
+] as const;
+
+const PLANO_METRIC_KEYS = [
+  "planogram_compliance",
+  "overall_facing_compliance",
+  "planogram_sku_match_percent",
+  "total_actual_facings",
+  "total_actual_visible_units",
+  "products_identified",
+  "brands_identified",
+] as const;
+
+function buildCalculatedMetricViews(
+  calc: Record<string, unknown>,
+  keys: readonly string[],
+): Record<string, MetricResultView | null> {
+  const out: Record<string, MetricResultView | null> = {};
+  for (const key of keys) {
+    out[key] = readMetricResult(calc, key);
+  }
+  return out;
+}
+
+function emptyCtx(
+  analysis: NormalizedAstraAnalysis,
+  intendedViewKind: "planogram" | "shelf_only",
+  extras: AstraOutputExtras,
+  incompleteReason?: string,
+): AiAuditDisplayContext {
+  return {
+    analysis,
+    viewKind: "incomplete",
+    intendedViewKind,
+    extras,
+    isComplete: false,
+    incompleteReason,
+    compliancePercent: null,
+    calculatedMetrics: {},
+    executionRisk: null,
+  };
+}
+
 export function buildAiAuditDisplayContext(result: ScanResult): AiAuditDisplayContext {
   const intendedViewKind = resolveViewKind(result);
   const analysis = astraAnalysisFromScanResult(result);
   const extras = extractExtras(analysis, result);
+  const calcRaw = pickCalculatedMetrics(result);
+  const executionRisk = pickExecutionRisk(result);
+  const metricKeys = intendedViewKind === "planogram" ? PLANO_METRIC_KEYS : SHELF_METRIC_KEYS;
+  const calculatedMetrics = buildCalculatedMetricViews(calcRaw, metricKeys);
 
   if (analysis.mode === "incomplete") {
-    return {
-      analysis,
-      viewKind: "incomplete",
-      intendedViewKind,
-      extras,
-      isComplete: false,
-      incompleteReason: analysis.reason,
-      compliancePercent: null,
-    };
+    return emptyCtx(analysis, intendedViewKind, extras, analysis.reason);
   }
 
   const modeMatches =
@@ -140,18 +206,14 @@ export function buildAiAuditDisplayContext(result: ScanResult): AiAuditDisplayCo
     (intendedViewKind === "shelf_only" && analysis.mode === "shelf_only");
 
   if (!modeMatches) {
-    return {
+    return emptyCtx(
       analysis,
-      viewKind: "incomplete",
       intendedViewKind,
       extras,
-      isComplete: false,
-      incompleteReason:
-        intendedViewKind === "planogram"
-          ? "This planogram scan did not return structured Astra planogram comparison data. Please re-run the scan."
-          : "This shelf-only scan did not return structured Astra shelf analysis data. Please re-run the scan.",
-      compliancePercent: null,
-    };
+      intendedViewKind === "planogram"
+        ? "This planogram scan did not return structured Astra planogram comparison data. Please re-run the scan."
+        : "This shelf-only scan did not return structured Astra shelf analysis data. Please re-run the scan.",
+    );
   }
 
   return {
@@ -160,7 +222,9 @@ export function buildAiAuditDisplayContext(result: ScanResult): AiAuditDisplayCo
     intendedViewKind,
     extras,
     isComplete: true,
-    compliancePercent: compliancePercent(analysis),
+    compliancePercent: compliancePercent(analysis, calcRaw),
+    calculatedMetrics,
+    executionRisk,
   };
 }
 

@@ -459,6 +459,36 @@ function normalizeShelfBlock(block: Record<string, unknown>): NormalizedAstraAna
   const summaryRaw = pickRecord(block.summary);
   const focus = pickRecord(block.focus_brand_analysis);
   const shelfStructure = pickRecord(block.shelf_structure);
+
+  const brandRows = pickArray(block.brand_analysis).map((raw) => {
+    const b = (raw ?? {}) as Record<string, unknown>;
+    const shareBlock = pickRecord(b.share);
+    const shareValue =
+      typeof b.share_of_facings_percent === "number"
+        ? num(b.share_of_facings_percent)
+        : shareBlock
+          ? num(shareBlock.value)
+          : 0;
+    return {
+      brand: str(b.brand),
+      facings: num(b.facings ?? b.actual_facings),
+      visible_units: num(b.visible_units ?? b.actual_visible_units),
+      share_of_facings_percent: shareValue,
+      share_of_visible_units_percent: num(b.share_of_visible_units_percent),
+      rank_by_facings: num(b.rank_by_facings),
+      rank_by_visible_units: num(b.rank_by_visible_units),
+      confidence: num(b.confidence),
+    };
+  });
+
+  // If Aislix returned brand_analysis without ranks, rank by facings for the UI.
+  if (brandRows.some((row) => !row.rank_by_facings) && brandRows.length) {
+    const ranked = [...brandRows].sort((a, b) => b.facings - a.facings);
+    ranked.forEach((row, index) => {
+      if (!row.rank_by_facings) row.rank_by_facings = index + 1;
+    });
+  }
+
   return {
     mode: "shelf_only",
     operating_model: str(block.operating_model) || undefined,
@@ -472,25 +502,13 @@ function normalizeShelfBlock(block: Record<string, unknown>): NormalizedAstraAna
         }
       : undefined,
     products: products.map(normalizeShelfProduct),
-    brand_analysis: pickArray(block.brand_analysis).map((raw) => {
-      const b = (raw ?? {}) as Record<string, unknown>;
-      return {
-        brand: str(b.brand),
-        facings: num(b.facings),
-        visible_units: num(b.visible_units),
-        share_of_facings_percent: num(b.share_of_facings_percent),
-        share_of_visible_units_percent: num(b.share_of_visible_units_percent),
-        rank_by_facings: num(b.rank_by_facings),
-        rank_by_visible_units: num(b.rank_by_visible_units),
-        confidence: num(b.confidence),
-      };
-    }),
+    brand_analysis: brandRows,
     category_analysis: pickArray(block.category_analysis).map((raw) => {
       const c = (raw ?? {}) as Record<string, unknown>;
       return {
         category: str(c.category),
-        facings: num(c.facings),
-        visible_units: num(c.visible_units),
+        facings: num(c.facings ?? c.actual_facings),
+        visible_units: num(c.visible_units ?? c.actual_visible_units),
         share_of_facings_percent: num(c.share_of_facings_percent),
         share_of_visible_units_percent: num(c.share_of_visible_units_percent),
         confidence: num(c.confidence),
@@ -499,8 +517,8 @@ function normalizeShelfBlock(block: Record<string, unknown>): NormalizedAstraAna
     focus_brand_analysis: focus
       ? {
           brand: str(focus.brand),
-          facings: num(focus.facings),
-          visible_units: num(focus.visible_units),
+          facings: num(focus.facings ?? focus.actual_facings),
+          visible_units: num(focus.visible_units ?? focus.actual_visible_units),
           share_of_facings_percent: num(focus.share_of_facings_percent),
           share_of_visible_units_percent: num(focus.share_of_visible_units_percent),
           status: str(focus.status),

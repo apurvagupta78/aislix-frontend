@@ -1,0 +1,31 @@
+---
+description: All scan/pipeline fixes must be universal — never scan-ID-specific patches
+alwaysApply: true
+---
+
+# Universal scan fixes (going live)
+
+Aislix will soon be public. Customers will scan **any** shelf image, store, category, and planogram setup.
+
+## Hard rule
+
+When debugging a failing scan (or any production issue):
+
+1. **Use that scan only as evidence** — inspect payload, metrics, logs, and mode to understand the failure class.
+2. **Fix the underlying system behavior** so the same class of failure cannot recur for any future scan.
+3. **Never** ship one-off patches for a specific `scan_id`, org, store, brand, sample image, or fixture path as the production fix.
+4. **Never** tell the user that reprocessing one named scan is the solution unless they explicitly asked to repair that historical row; prefer a global pipeline/UI/API change and a fresh scan to validate.
+
+## Examples of correct vs wrong
+
+| Wrong | Right |
+|-------|--------|
+| Special-case `if scan_id == "ec140…"` | Fix parser / cache gate / prompt path for all AI Audit modes |
+| Hardcode Lay's / one reference sample as the product path | Keep demo samples on landing only; product scans always use live CV |
+| "Re-run this scan and it will work" as the only deliverable | Change backend + frontend so every new scan follows the correct path |
+
+## When a specific scan appears in chat
+
+- Diagnose root cause from that scan.
+- Implement a **global** fix (all modes, all customers).
+- Mention the example scan only to explain what was learned — not as the scope of the fix.

@@ -43,14 +43,23 @@ export function AiMetricStat({
   label,
   value,
   sub,
+  status,
 }: {
   label: string;
   value: string | number;
   sub?: string;
+  status?: string | null;
 }) {
   return (
     <div className="rounded-xl border border-border bg-muted/20 px-3 py-3">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>
+        {status ? (
+          <span className="rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {status}
+          </span>
+        ) : null}
+      </div>
       <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-foreground">
         {value}
       </p>

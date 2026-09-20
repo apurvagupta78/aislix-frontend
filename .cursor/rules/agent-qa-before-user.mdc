@@ -1,0 +1,14 @@
+---
+description: Agent must QA on aislix.com in browser before asking the user to test
+alwaysApply: true
+---
+
+# Agent QA before user testing
+
+For every fix that should go live (frontend, backend, scan pipeline, UX):
+
+1. **Deploy first** (commit → push `main` → Lovable publish and/or Railway as required).
+2. **QA yourself in the Cursor browser on aislix.com** (or the live URL the user has open) before asking the user to scan, retest, or verify.
+3. The user keeps aislix.com available in the browser for agent QA — use it. Do not end with “please test” / “please re-scan” as the primary next step until you have already verified the happy path (or documented a concrete blocker you hit in-browser).
+4. Prefer verifying with an existing completed scan URL when the bug is display/mapping; run a new audit only when the failure class requires a fresh pipeline run.
+5. Report what you checked and what you saw (pass/fail) before handing off.

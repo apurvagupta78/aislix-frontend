@@ -28,6 +28,7 @@ import type {
   AstraPlanogramSubcategoryAnalysis,
   AstraUnplannedProduct,
 } from "@/lib/ai-audit/astra-response";
+import { metricDisplayValue, metricStatusLabel } from "@/lib/ai-audit/metric-results";
 import { planogramComparisonFromResult } from "@/lib/planogram-display";
 import type { ScanResult } from "@/lib/scan-results";
 
@@ -45,7 +46,20 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
   if (ctx.analysis.mode !== "planogram") return null;
   const analysis = ctx.analysis;
   const s = analysis.summary;
-  const compliance = Math.round(ctx.compliancePercent ?? s.overall_planogram_compliance_percent ?? 0);
+  const calc = ctx.calculatedMetrics;
+  const planoMetric = calc.planogram_compliance;
+  const facingMetric = calc.overall_facing_compliance;
+  const compliance = Math.round(
+    (typeof planoMetric?.value === "number" ? planoMetric.value : null) ??
+      ctx.compliancePercent ??
+      s.overall_planogram_compliance_percent ??
+      0,
+  );
+  const risk = ctx.executionRisk;
+  const riskCount =
+    risk?.rules_triggered.length ??
+    s.high_priority_execution_risks ??
+    0;
 
   const statusCounts: Record<string, number> = {};
   for (const row of analysis.products) {
@@ -61,7 +75,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
     { label: "Unverifiable", value: String(s.products_not_verifiable), tone: "neutral" as const },
     { label: "Wrong placement", value: String(s.wrong_placements), tone: "attention" as const },
     { label: "Price mismatches", value: String(s.price_mismatches), tone: "attention" as const },
-    { label: "Exec. risks", value: String(s.high_priority_execution_risks), tone: "attention" as const },
+    { label: "Exec. risks", value: String(riskCount), tone: "attention" as const },
     { label: "Value gap ₹", value: String(s.total_potential_visible_unit_value_gap_inr), tone: "active" as const },
   ];
 
@@ -135,17 +149,51 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
       <AiImageQualityBanner extras={ctx.extras} />
 
       <div className="grid gap-4 lg:grid-cols-[auto,1fr]">
-        <AiAuditCard title="Planogram compliance" description="Overall planogram execution">
-          <MpRadialGauge value={compliance} label="Compliant" sublabel={`${analysis.products.length} rows`} color="#86EFAC" />
+        <AiAuditCard title="Planogram compliance" description="Check-based Aislix MetricResult">
+          <MpRadialGauge
+            value={compliance}
+            label="Compliant"
+            sublabel={`${analysis.products.length} rows · ${metricStatusLabel(planoMetric?.status) ?? "Calculated"}`}
+            color="#86EFAC"
+          />
         </AiAuditCard>
-        <AiAuditCard title="Summary KPIs" description="All planogram summary metrics from Astra">
+        <AiAuditCard title="Summary KPIs" description="Astra row funnel + Aislix calculated metrics">
           <MpTileGrid tiles={funnelTiles} />
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <AiMetricStat label="Total rows" value={s.total_planogram_rows || analysis.products.length} />
-            <AiMetricStat label="Facing compliance" value={pctCell(s.overall_facing_compliance_percent)} />
+            <AiMetricStat
+              label="Planogram compliance"
+              value={metricDisplayValue(planoMetric, pctCell(s.overall_planogram_compliance_percent))}
+              status={metricStatusLabel(planoMetric?.status)}
+            />
+            <AiMetricStat
+              label="Facing compliance"
+              value={metricDisplayValue(facingMetric, pctCell(s.overall_facing_compliance_percent))}
+              status={metricStatusLabel(facingMetric?.status)}
+            />
             <AiMetricStat label="Unit compliance" value={pctCell(s.overall_shelf_unit_compliance_percent)} />
-            <AiMetricStat label="Exp facings" value={s.total_expected_facings} sub={`Actual ${s.total_actual_facings}`} />
-            <AiMetricStat label="Exp units" value={s.total_expected_shelf_units} sub={`Actual ${s.total_actual_visible_units}`} />
+            <AiMetricStat
+              label="Products identified"
+              value={metricDisplayValue(calc.products_identified, analysis.products.length)}
+              status={metricStatusLabel(calc.products_identified?.status)}
+            />
+            <AiMetricStat
+              label="Brands identified"
+              value={metricDisplayValue(calc.brands_identified, analysis.brand_analysis.length)}
+              status={metricStatusLabel(calc.brands_identified?.status)}
+            />
+            <AiMetricStat
+              label="Actual facings"
+              value={metricDisplayValue(calc.total_actual_facings, s.total_actual_facings)}
+              status={metricStatusLabel(calc.total_actual_facings?.status)}
+              sub={`Expected ${s.total_expected_facings}`}
+            />
+            <AiMetricStat
+              label="Actual units"
+              value={metricDisplayValue(calc.total_actual_visible_units, s.total_actual_visible_units)}
+              status={metricStatusLabel(calc.total_actual_visible_units?.status)}
+              sub={`Expected ${s.total_expected_shelf_units}`}
+            />
             <AiMetricStat label="Below exp facings" value={s.products_below_expected_facings} />
             <AiMetricStat label="Below min facings" value={s.products_below_minimum_facings} />
             <AiMetricStat label="Above max facings" value={s.products_above_maximum_facings} />
@@ -153,6 +201,25 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
           </div>
         </AiAuditCard>
       </div>
+
+      {risk ? (
+        <AiAuditCard title="Execution risk" description="Rule-based severity from Aislix calc">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <AiMetricStat label="Severity" value={risk.severity || "NONE"} />
+            <AiMetricStat label="Rules triggered" value={risk.rules_triggered.length} />
+            <AiMetricStat label="High-priority risks" value={s.high_priority_execution_risks} />
+          </div>
+          {risk.rules_triggered.length ? (
+            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+              {risk.rules_triggered.slice(0, 5).map((rule, i) => (
+                <li key={i}>{String(rule.description ?? rule.rule_id ?? "Rule triggered")}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-3 text-sm text-muted-foreground">No execution-risk rules triggered.</p>
+          )}
+        </AiAuditCard>
+      ) : null}
 
       <div className="grid gap-4 xl:grid-cols-3">
         {donutSlices.length ? (
