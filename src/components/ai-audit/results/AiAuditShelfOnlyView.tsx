@@ -104,8 +104,8 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       tone: "neutral" as const,
       bg: KPI_CARD.auditCompletion,
     },
-    { label: "Facings", value: facingsValue, tone: tileTone(facingsMetric?.status), bg: KPI_CARD.openFindings },
-    { label: "Units", value: unitsValue, tone: tileTone(unitsMetric?.status), bg: KPI_CARD.inventoryValueVariance },
+    { label: "Total Facings", value: facingsValue, tone: tileTone(facingsMetric?.status), bg: KPI_CARD.openFindings },
+    { label: "Fully visible facings", value: unitsValue, tone: tileTone(unitsMetric?.status), bg: KPI_CARD.inventoryValueVariance },
     {
       label: "Prices read",
       value: analysis.visible_prices.length ? String(analysis.visible_prices.length) : "N/A",
@@ -221,8 +221,8 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
         </div>
       ),
     },
-    { key: "facings", header: "Facings", cell: (r: AstraShelfProduct) => r.actual_facings },
-    { key: "units", header: "Visible units", cell: (r: AstraShelfProduct) => r.actual_visible_units },
+    { key: "facings", header: "Total Facings", cell: (r: AstraShelfProduct) => r.actual_facings },
+    { key: "units", header: "Fully visible facings", cell: (r: AstraShelfProduct) => r.actual_visible_units },
     { key: "conf", header: "Confidence", cell: (r: AstraShelfProduct) => confCell(r.confidence) },
     {
       key: "ev",
@@ -338,8 +338,8 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
             onDownload: () =>
               downloadKeyValueCsv(data.scan_id, "focus-brand", [
                 { label: "Brand", value: analysis.focus_brand_analysis!.brand },
-                { label: "Facings", value: analysis.focus_brand_analysis!.facings },
-                { label: "Visible units", value: analysis.focus_brand_analysis!.visible_units },
+                { label: "Total Facings", value: analysis.focus_brand_analysis!.facings },
+                { label: "Fully visible facings", value: analysis.focus_brand_analysis!.visible_units },
                 {
                   label: "Facing share %",
                   value: analysis.focus_brand_analysis!.share_of_facings_percent,
@@ -354,9 +354,9 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
         >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <AiMetricStat label="Brand" value={analysis.focus_brand_analysis.brand} bg={summaryFillAt(0)} />
-            <AiMetricStat label="Facings" value={analysis.focus_brand_analysis.facings} bg={summaryFillAt(1)} />
+            <AiMetricStat label="Total Facings" value={analysis.focus_brand_analysis.facings} bg={summaryFillAt(1)} />
             <AiMetricStat
-              label="Visible units"
+              label="Fully visible facings"
               value={analysis.focus_brand_analysis.visible_units}
               bg={summaryFillAt(2)}
             />
@@ -378,14 +378,14 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       <div className="grid gap-4 xl:grid-cols-2">
         {brandDonut.length ? (
           <AiAuditCard
-            title="Brand share of facings"
+            title="Brand share of total facings"
             description="How much shelf space each brand occupies"
             csvDownload={{
               onDownload: () =>
                 downloadSectionCsv(
                   data.scan_id,
                   "brand-facing-share",
-                  ["Brand", "Facings"],
+                  ["Brand", "Total Facings"],
                   brandDonut.map((s) => [s.label, s.value]),
                 ),
             }}
@@ -396,20 +396,20 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
                 color: i % 2 === 0 ? CHART_ACCENT.brandFacingShare : CHART_ACCENT.brandUnitShare,
               }))}
               total={facingsTotal || brandDonut.reduce((a, slice) => a + slice.value, 0)}
-              totalLabel="Facings"
+              totalLabel="Total Facings"
             />
           </AiAuditCard>
         ) : null}
         {categoryDonut.length ? (
           <AiAuditCard
-            title="Category share of facings"
+            title="Category share of total facings"
             description="How shelf space is split across categories"
             csvDownload={{
               onDownload: () =>
                 downloadSectionCsv(
                   data.scan_id,
                   "category-facing-share",
-                  ["Category", "Facings", "Share %"],
+                  ["Category", "Total Facings", "Share %"],
                   categoryFromProducts.map((c) => [
                     c.category,
                     c.facings,
@@ -424,11 +424,11 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
                 color: i % 2 === 0 ? CHART_ACCENT.categoryFacingShare : CHART_ACCENT.rankByUnits,
               }))}
               total={facingsTotal || categoryDonut.reduce((a, slice) => a + slice.value, 0)}
-              totalLabel="Facings"
+              totalLabel="Total Facings"
             />
           </AiAuditCard>
         ) : (
-          <AiAuditCard title="Category share of facings" description="How shelf space is split across categories">
+          <AiAuditCard title="Category share of total facings" description="How shelf space is split across categories">
             <p className="text-sm text-muted-foreground">
               Data unavailable — categories were not clearly readable in this photo.
             </p>
@@ -439,36 +439,36 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       <div className="grid gap-4 xl:grid-cols-2">
         {facingsBars.length ? (
           <AiAuditCard
-            title="Top products by facings"
+            title="Top products by total facings"
             description="Ranked horizontal bar chart"
             csvDownload={{
               onDownload: () =>
                 downloadSectionCsv(
                   data.scan_id,
                   "top-products-facings",
-                  ["Product", "Facings"],
+                  ["Product", "Total Facings"],
                   facingsBars.map((r) => [r.label, r.value]),
                 ),
             }}
           >
-            <MpRankBars data={facingsBars} unit=" facings" />
+            <MpRankBars data={facingsBars} unit=" total facings" />
           </AiAuditCard>
         ) : null}
         {unitsBars.length ? (
           <AiAuditCard
-            title="Top products by visible units"
+            title="Top products by fully visible facings"
             description="Ranked horizontal bar chart"
             csvDownload={{
               onDownload: () =>
                 downloadSectionCsv(
                   data.scan_id,
                   "top-products-units",
-                  ["Product", "Visible units"],
+                  ["Product", "Fully visible facings"],
                   unitsBars.map((r) => [r.label, r.value]),
                 ),
             }}
           >
-            <MpRankBars data={unitsBars} unit=" units" />
+            <MpRankBars data={unitsBars} unit=" fully visible facings" />
           </AiAuditCard>
         ) : null}
       </div>
@@ -484,8 +484,8 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
                 "brand-analysis",
                 [
                   "Brand",
-                  "Facings",
-                  "Units",
+                  "Total Facings",
+                  "Fully visible facings",
                   "Facing share %",
                   "Unit share %",
                   "Rank facings",
@@ -510,8 +510,8 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
             rowKey={(r) => r.brand}
             columns={[
               { key: "b", header: "Brand", cell: (r: AstraShelfBrandAnalysis) => r.brand },
-              { key: "f", header: "Facings", cell: (r) => r.facings },
-              { key: "u", header: "Units", cell: (r) => r.visible_units || "—" },
+              { key: "f", header: "Total Facings", cell: (r) => r.facings },
+              { key: "u", header: "Fully visible facings", cell: (r) => r.visible_units || "—" },
               { key: "fs", header: "Facing share %", cell: (r) => pctCell(r.share_of_facings_percent) },
               { key: "us", header: "Unit share %", cell: (r) => pctCell(r.share_of_visible_units_percent) },
               { key: "rf", header: "Rank facings", cell: (r) => r.rank_by_facings || "—" },
@@ -531,7 +531,7 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
               downloadSectionCsv(
                 data.scan_id,
                 "category-analysis",
-                ["Category", "Facings", "Units", "Facing share %", "Unit share %"],
+                ["Category", "Total Facings", "Fully visible facings", "Facing share %", "Unit share %"],
                 categoryFromProducts.map((c) => [
                   c.category,
                   c.facings,
@@ -547,8 +547,8 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
             rowKey={(r) => r.category}
             columns={[
               { key: "c", header: "Category", cell: (r: AstraShelfCategoryAnalysis) => r.category },
-              { key: "f", header: "Facings", cell: (r) => r.facings },
-              { key: "u", header: "Units", cell: (r) => r.visible_units },
+              { key: "f", header: "Total Facings", cell: (r) => r.facings },
+              { key: "u", header: "Fully visible facings", cell: (r) => r.visible_units },
               { key: "fs", header: "Facing share %", cell: (r) => pctCell(r.share_of_facings_percent) },
               { key: "us", header: "Unit share %", cell: (r) => pctCell(r.share_of_visible_units_percent) },
               { key: "conf", header: "Confidence", cell: (r) => confCell(r.confidence) },
@@ -571,8 +571,8 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
                 "Variant",
                 "Category",
                 "Subcategory",
-                "Facings",
-                "Visible units",
+                "Total Facings",
+                "Fully visible facings",
                 "Confidence",
                 "Evidence",
               ],

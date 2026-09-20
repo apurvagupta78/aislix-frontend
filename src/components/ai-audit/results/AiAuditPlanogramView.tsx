@@ -116,13 +116,13 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
       status: metricStatusLabel(calc.brands_identified?.status),
     },
     {
-      label: "Actual facings",
+      label: "Total Facings",
       value: metricDisplayValue(calc.total_actual_facings, s.total_actual_facings),
       status: metricStatusLabel(calc.total_actual_facings?.status),
       sub: `Expected ${s.total_expected_facings}`,
     },
     {
-      label: "Actual units",
+      label: "Fully visible facings",
       value: metricDisplayValue(calc.total_actual_visible_units, s.total_actual_visible_units),
       status: metricStatusLabel(calc.total_actual_visible_units?.status),
       sub: `Expected ${s.total_expected_shelf_units}`,
@@ -175,12 +175,12 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
     { key: "variant", header: "Variant", cell: (r: AstraPlanogramProduct) => statusBadge(r.variant_status) },
     { key: "sku_st", header: "SKU", cell: (r: AstraPlanogramProduct) => statusBadge(r.sku_status) },
     { key: "exp_f", header: "Exp facings", cell: (r: AstraPlanogramProduct) => r.expected_facings },
-    { key: "act_f", header: "Act facings", cell: (r: AstraPlanogramProduct) => r.actual_facings },
+    { key: "act_f", header: "Total Facings", cell: (r: AstraPlanogramProduct) => r.actual_facings },
     { key: "f_var", header: "Facing Δ", cell: (r: AstraPlanogramProduct) => r.facing_variance },
     { key: "f_pct", header: "Facing %", cell: (r: AstraPlanogramProduct) => pctCell(r.facing_compliance_percent) },
     { key: "f_rng", header: "Facing range", cell: (r: AstraPlanogramProduct) => statusBadge(r.facing_range_status) },
     { key: "exp_u", header: "Exp units", cell: (r: AstraPlanogramProduct) => r.expected_shelf_units },
-    { key: "act_u", header: "Act units", cell: (r: AstraPlanogramProduct) => r.actual_visible_units },
+    { key: "act_u", header: "Fully visible facings", cell: (r: AstraPlanogramProduct) => r.actual_visible_units },
     { key: "u_var", header: "Unit Δ", cell: (r: AstraPlanogramProduct) => r.shelf_unit_variance },
     { key: "u_pct", header: "Unit %", cell: (r: AstraPlanogramProduct) => pctCell(r.shelf_unit_compliance_percent) },
     { key: "exp_pos", header: "Exp position", cell: (r: AstraPlanogramProduct) => r.expected_shelf_position || "—" },
@@ -342,7 +342,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
               ),
           }}
         >
-          <AiVarianceBars items={topVariance} unit=" facings" accent={CHART_ACCENT.actualFacings} />
+          <AiVarianceBars items={topVariance} unit=" total facings" accent={CHART_ACCENT.actualFacings} />
         </AiAuditCard>
         <AiAuditCard
           title="Largest unit variance"
@@ -357,7 +357,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
               ),
           }}
         >
-          <AiVarianceBars items={topUnitVariance} unit=" units" accent={CHART_ACCENT.actualUnits} />
+          <AiVarianceBars items={topUnitVariance} unit=" fully visible facings" accent={CHART_ACCENT.actualUnits} />
         </AiAuditCard>
       </div>
 
@@ -418,7 +418,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
                   [
                     "Brand",
                     "Exp facings",
-                    "Act facings",
+                    "Total Facings",
                     "Exp share %",
                     "Act share %",
                     "Variance pp",
@@ -442,7 +442,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
               columns={[
                 { key: "b", header: "Brand", cell: (r: AstraPlanogramBrandAnalysis) => r.brand },
                 { key: "ef", header: "Exp facings", cell: (r) => r.expected_facings },
-                { key: "af", header: "Act facings", cell: (r) => r.actual_facings },
+                { key: "af", header: "Total Facings", cell: (r) => r.actual_facings },
                 { key: "es", header: "Exp share %", cell: (r) => pctCell(r.expected_share_percent) },
                 { key: "as", header: "Act share %", cell: (r) => pctCell(r.actual_share_percent) },
                 { key: "vp", header: "Variance pp", cell: (r) => r.share_variance_pp.toFixed(1) },
@@ -465,7 +465,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
                 [
                   "Category",
                   "Exp facings",
-                  "Act facings",
+                  "Total Facings",
                   "Exp share %",
                   "Act share %",
                   "Compliance %",
@@ -489,7 +489,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
             columns={[
               { key: "c", header: "Category", cell: (r: AstraPlanogramCategoryAnalysis) => r.category },
               { key: "ef", header: "Exp facings", cell: (r) => r.expected_facings },
-              { key: "af", header: "Act facings", cell: (r) => r.actual_facings },
+              { key: "af", header: "Total Facings", cell: (r) => r.actual_facings },
               { key: "es", header: "Exp share %", cell: (r) => pctCell(r.expected_share_percent) },
               { key: "as", header: "Act share %", cell: (r) => pctCell(r.actual_share_percent) },
               { key: "cp", header: "Compliance %", cell: (r) => pctCell(r.compliance_percent) },
@@ -508,7 +508,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
               downloadSectionCsv(
                 data.scan_id,
                 "subcategory-analysis",
-                ["Subcategory", "Exp facings", "Act facings", "Compliance %", "Status"],
+                ["Subcategory", "Exp facings", "Total Facings", "Compliance %", "Status"],
                 analysis.subcategory_analysis.map((c) => [
                   c.subcategory,
                   c.expected_facings,
@@ -529,7 +529,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
                 cell: (r: AstraPlanogramSubcategoryAnalysis) => r.subcategory,
               },
               { key: "ef", header: "Exp facings", cell: (r) => r.expected_facings },
-              { key: "af", header: "Act facings", cell: (r) => r.actual_facings },
+              { key: "af", header: "Total Facings", cell: (r) => r.actual_facings },
               { key: "cp", header: "Compliance %", cell: (r) => pctCell(r.compliance_percent) },
               { key: "st", header: "Status", cell: (r) => statusBadge(r.status) },
             ]}
@@ -551,10 +551,10 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
                 "Variant",
                 "SKU",
                 "Expected facings",
-                "Actual facings",
+                "Total Facings",
                 "Facing variance",
                 "Expected units",
-                "Actual units",
+                "Fully visible facings",
                 "Overall status",
                 "Confidence",
               ],
@@ -590,7 +590,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
               downloadSectionCsv(
                 data.scan_id,
                 "unplanned-products",
-                ["Brand", "Product", "Variant", "Facings", "Units", "Confidence"],
+                ["Brand", "Product", "Variant", "Total Facings", "Fully visible facings", "Confidence"],
                 analysis.observed_unplanned_products.map((r) => [
                   r.brand,
                   r.product_name,
@@ -609,8 +609,8 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
               { key: "b", header: "Brand", cell: (r: AstraUnplannedProduct) => r.brand },
               { key: "p", header: "Product", cell: (r) => r.product_name },
               { key: "v", header: "Variant", cell: (r) => r.variant || "—" },
-              { key: "f", header: "Facings", cell: (r) => r.actual_facings },
-              { key: "u", header: "Units", cell: (r) => r.actual_visible_units },
+              { key: "f", header: "Total Facings", cell: (r) => r.actual_facings },
+              { key: "u", header: "Fully visible facings", cell: (r) => r.actual_visible_units },
               { key: "c", header: "Confidence", cell: (r) => confCell(r.confidence) },
             ]}
           />

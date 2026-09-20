@@ -89,12 +89,12 @@ export const Route = createFileRoute("/share/$token")({
       {
         name: "description",
         content:
-          "Read-only AI shelf audit shared from Aislix: shelf execution score, planogram compliance, facings detected and stock alerts.",
+          "Read-only AI shelf audit shared from Aislix: shelf execution score, planogram compliance, total facings detected and stock alerts.",
       },
       { property: "og:title", content: "Shared shelf audit report — Aislix" },
       {
         property: "og:description",
-        content: "View shelf execution, compliance and facings detected for this shelf audit.",
+        content: "View shelf execution, compliance and total facings detected for this shelf audit.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -267,7 +267,7 @@ function SharedReport() {
           />
           <Metric
             icon={<Boxes className="size-4" />}
-            label="Facings detected"
+            label="Total Facings Detected"
             value={String(report.facings_detected ?? report.products_detected)}
             hint={`${report.low_stock_count} low stock`}
           />
@@ -336,7 +336,7 @@ function SharedReport() {
                     <TableHead>Brand</TableHead>
                     <TableHead>Product</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead className="text-right">Facings</TableHead>
+                    <TableHead className="text-right">Total Facings</TableHead>
                     <TableHead>Stock</TableHead>
                   </TableRow>
                 </TableHeader>
