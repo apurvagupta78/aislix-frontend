@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowUpRight, Download, Loader2, Mail, Users } from "lucide-react";
+import { ArrowUpRight, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { EmailAuditDialog } from "@/components/scan-results/ShareDialogs";
+import {
+  EmailBrandIcon,
+  TeamBrandIcon,
+} from "@/components/scan-results/BrandShareIcons";
 import { WorkspaceShareDialog } from "@/components/scan/WorkspaceShareDialog";
 import { DemoAllowanceIndicator } from "@/components/scan/DemoAllowanceIndicator";
 import { createScanShareLink } from "@/lib/scan-share.functions";
@@ -157,7 +161,7 @@ export function ScanResultsActionsFooter({
                   className="order-1 w-full sm:order-none sm:w-auto"
                   onClick={() => setWorkspaceOpen(true)}
                 >
-                  <Users className="size-4" />
+                  <TeamBrandIcon className="size-4 shrink-0" />
                   Create Free Workspace to Share
                 </Button>
               </TooltipTrigger>
@@ -200,7 +204,7 @@ export function ScanResultsActionsFooter({
                 disabled={!ready}
                 onClick={() => setEmailOpen(true)}
               >
-                <Mail className="size-4" /> Email Audit Report
+                <EmailBrandIcon className="size-4 shrink-0" /> Email Audit Report
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-xs text-xs">

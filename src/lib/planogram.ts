@@ -26,7 +26,7 @@ export type PlanogramRow = {
   expected_shelf_units?: number;
   expected_shelf_level?: string;
   expected_position?: string;
-  /** Price in INR (CSV column mrp_inr) — used for financial impact calculations. */
+  /** Price in INR (CSV column `price`; legacy `mrp_inr`) — used for financial impact. */
   mrp_inr?: number;
   /** Average daily unit sales — used for velocity-based lost sales. */
   avg_daily_sales?: number;
@@ -157,6 +157,9 @@ export function toDraftRow(row: Partial<PlanogramRow> | null | undefined): Draft
   const minFacings = Number(row?.min_facings);
   const maxFacings = Number(row?.max_facings);
   const shelfUnits = Number(row?.expected_shelf_units);
+  const raw = row as Record<string, unknown> | null | undefined;
+  const productId = raw?.product_id ?? raw?.["product id"];
+  const priceRaw = row?.mrp_inr ?? raw?.price ?? raw?.mrp;
   return {
     key: nextRowKey(),
     location: String(row?.location ?? "").trim(),
@@ -165,7 +168,7 @@ export function toDraftRow(row: Partial<PlanogramRow> | null | undefined): Draft
     brand: String(row?.brand ?? "").trim(),
     product_name: String(row?.product_name ?? "").trim(),
     variant: String(row?.variant ?? "").trim(),
-    sku: String(row?.sku ?? "").trim(),
+    sku: String(row?.sku ?? productId ?? "").trim(),
     expected_qty: Number.isFinite(qty) && qty >= 0 ? Math.floor(qty) : base.expected_qty,
     expected_facings:
       Number.isFinite(facings) && facings >= 0 ? Math.floor(facings) : undefined,
@@ -173,7 +176,7 @@ export function toDraftRow(row: Partial<PlanogramRow> | null | undefined): Draft
     max_facings: Number.isFinite(maxFacings) && maxFacings >= 0 ? Math.floor(maxFacings) : undefined,
     expected_shelf_units:
       Number.isFinite(shelfUnits) && shelfUnits >= 0 ? Math.floor(shelfUnits) : undefined,
-    mrp_inr: Number.isFinite(Number(row?.mrp_inr)) ? Number(row?.mrp_inr) : undefined,
+    mrp_inr: Number.isFinite(Number(priceRaw)) ? Number(priceRaw) : undefined,
     avg_daily_sales: Number.isFinite(Number(row?.avg_daily_sales))
       ? Number(row?.avg_daily_sales)
       : undefined,

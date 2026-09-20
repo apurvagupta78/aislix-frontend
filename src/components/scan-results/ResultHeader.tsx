@@ -9,18 +9,20 @@ import {
 import { createScanShareLink } from "@/lib/scan-share.functions";
 import { Link } from "@tanstack/react-router";
 import {
+  EmailBrandIcon,
+  TeamBrandIcon,
+  CopyBrandIcon,
+} from "@/components/scan-results/BrandShareIcons";
+import {
   BadgeCheck,
   Brain,
-
   Building2,
   CalendarClock,
   CheckCircle2,
-  Copy,
   Gauge,
   LayoutDashboard,
   MapPin,
   Loader2,
-  Mail,
   Printer,
   ScanLine,
   Sparkles,
@@ -363,7 +365,7 @@ export function SharePanel({
             {linkMutation.isPending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
-              <Copy className="size-4" />
+              <CopyBrandIcon className="size-5 shrink-0" />
             )}
             {copied ? "Copied" : "Copy share link"}
           </Button>
@@ -374,7 +376,7 @@ export function SharePanel({
             disabled={!ready}
             onClick={() => setEmailOpen(true)}
           >
-            <Mail className="size-4" /> Email report
+            <EmailBrandIcon className="size-5 shrink-0" /> Email report
           </Button>
           <Button
             variant="subtle"
@@ -383,7 +385,7 @@ export function SharePanel({
             disabled={!ready}
             onClick={() => setTeamOpen(true)}
           >
-            <Users className="size-4" /> Share with team
+            <TeamBrandIcon className="size-5 shrink-0" /> Share with team
           </Button>
         </div>
       )}

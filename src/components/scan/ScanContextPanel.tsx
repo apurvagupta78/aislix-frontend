@@ -487,9 +487,13 @@ export const ScanContextPanel = forwardRef<ScanContextPanelHandle, ScanContextPa
 
 
 
-    const requiredCols = roleFields.filter((f) => f.required).map((f) => f.key);
-
-    const optionalCols = roleFields.filter((f) => !f.required).map((f) => f.key);
+    const csvFieldName = (key: string) => {
+      if (key === "sku") return "product_id";
+      if (key === "mrp_inr") return "price";
+      return key;
+    };
+    const requiredCols = roleFields.filter((f) => f.required).map((f) => csvFieldName(f.key));
+    const optionalCols = roleFields.filter((f) => !f.required).map((f) => csvFieldName(f.key));
 
     const fieldRequired = (key: PlanogramFieldKey) => isFieldRequired(auditRole, key);
 
@@ -640,7 +644,7 @@ export const ScanContextPanel = forwardRef<ScanContextPanelHandle, ScanContextPa
 
                 <span className="font-medium text-foreground">Price column: </span>
 
-                <code className="rounded bg-background px-1">mrp_inr</code> in CSV files (INR values). Manual
+                <code className="rounded bg-background px-1">price</code> in CSV files (INR values). Manual
 
                 entry below uses {currency}.
 
@@ -940,7 +944,7 @@ export const ScanContextPanel = forwardRef<ScanContextPanelHandle, ScanContextPa
               <div className="space-y-1.5">
 
                 <Label className="text-xs">
-                  SKU{fieldRequired("sku") ? " *" : ""}
+                  Product ID{fieldRequired("sku") ? " *" : ""}
                 </Label>
 
                 <Input

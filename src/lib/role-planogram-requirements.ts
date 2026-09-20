@@ -46,11 +46,11 @@ const BASE_FIELDS: PlanogramFieldDef[] = [
     required: true,
     note: "Front-facing units visible on shelf (not total inventory)",
   },
-  { key: "sku", label: "SKU", required: true, note: "Auto-generated from brand + product if blank" },
+  { key: "sku", label: "Product ID", required: true, note: "Auto-generated from brand + product if blank" },
   { key: "shelf_position", label: "Shelf position / slot ID", required: false },
   {
     key: "mrp_inr",
-    label: "Price (MRP)",
+    label: "Price",
     required: false,
     note: "Required when this role calculates Price Compliance",
   },

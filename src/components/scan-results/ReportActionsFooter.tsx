@@ -6,19 +6,19 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  Copy,
-  FileText,
-  Link2,
-  Loader2,
-  Mail,
-  MessageCircle,
-  Users,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { EmailShareDialog, TeamShareDialog } from "@/components/scan-results/ShareDialogs";
 import { ResultSection } from "@/components/scan-results/ResultParts";
+import {
+  CopyBrandIcon,
+  EmailBrandIcon,
+  PdfBrandIcon,
+  SlackBrandIcon,
+  TeamBrandIcon,
+  WhatsAppBrandIcon,
+} from "@/components/scan-results/BrandShareIcons";
 import { createScanShareLink } from "@/lib/scan-share.functions";
 import { downloadScanPdf, type ScanResult } from "@/lib/scan-results";
 import { GENERIC_EXPORT, networkErrorMessage } from "@/lib/api-errors";
@@ -123,7 +123,7 @@ export function ReportActionsFooter({
           {pdfMutation.isPending ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (
-            <FileText className="size-4" />
+            <PdfBrandIcon className="size-5 shrink-0" />
           )}
           Download PDF
         </Button>
@@ -135,7 +135,7 @@ export function ReportActionsFooter({
           disabled={!ready}
           onClick={() => setTeamOpen(true)}
         >
-          <Users className="size-4" /> Share with team
+          <TeamBrandIcon className="size-5 shrink-0" /> Share with team
         </Button>
 
         <Button
@@ -145,7 +145,7 @@ export function ReportActionsFooter({
           disabled={!ready}
           onClick={() => setEmailOpen(true)}
         >
-          <Mail className="size-4" /> Email report
+          <EmailBrandIcon className="size-5 shrink-0" /> Email report
         </Button>
 
         <Button
@@ -158,7 +158,7 @@ export function ReportActionsFooter({
           {linkMutation.isPending ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (
-            <Copy className="size-4" />
+            <CopyBrandIcon className="size-5 shrink-0" />
           )}
           Copy share message
         </Button>
@@ -170,7 +170,7 @@ export function ReportActionsFooter({
           disabled={!ready || linkMutation.isPending}
           onClick={handleWhatsApp}
         >
-          <MessageCircle className="size-4" /> Share on WhatsApp
+          <WhatsAppBrandIcon className="size-5 shrink-0" /> Share on WhatsApp
         </Button>
 
         <Button
@@ -180,7 +180,7 @@ export function ReportActionsFooter({
           disabled={!ready || linkMutation.isPending}
           onClick={handleSlack}
         >
-          <Link2 className="size-4" /> Share on Slack
+          <SlackBrandIcon className="size-5 shrink-0" /> Share on Slack
         </Button>
       </div>
 
@@ -208,7 +208,7 @@ export function ReportActionsFooter({
               )
             }
           >
-            <Copy className="size-4" /> Copy message
+            <CopyBrandIcon className="size-4 shrink-0" /> Copy message
           </Button>
         </div>
       ) : null}

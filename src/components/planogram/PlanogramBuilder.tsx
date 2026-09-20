@@ -3,7 +3,7 @@
  * and by the optional planogram section on the New Audit page.
  *
  * Field order is fixed: Location, Category, Sub category, Brand, Product Name,
- * Variant (optional), Expected qty, SKU (optional), Shelf Position (optional).
+ * Variant (optional), Expected qty, Product ID (optional), Shelf Position (optional).
  */
 
 import { useEffect, useState } from "react";
@@ -83,7 +83,7 @@ export type PlanogramBuilderProps = {
   simplifiedCopy?: boolean;
   /** Step-by-step manual setup — forms only, no CSV upload tab */
   manualEntryOnly?: boolean;
-  /** Canonical CSV columns only — separate min/max facings, MRP (INR) label. */
+  /** Canonical CSV columns only — separate min/max facings, Price / Product ID labels. */
   csvExact?: boolean;
   /** Pre-fill fields on new product rows (e.g. category from audit Step 3). */
   prefillRow?: Partial<PlanogramRow>;
@@ -161,7 +161,8 @@ export function PlanogramBuilder({
   context,
 }: PlanogramBuilderProps) {
   const { currency } = useDisplayCurrency();
-  const priceLabel = csvExact ? "MRP (INR)" : priceFieldLabel(currency);
+  const priceLabel = csvExact ? "Price" : priceFieldLabel(currency);
+  const productIdLabel = csvExact || simplifiedCopy ? "Product ID" : "Product ID (optional)";
   const [preview, setPreview] = useState<CsvParseRow[] | null>(null);
   const [form, setForm] = useState<PlanogramRow>(() => ({ ...emptyRow(), ...prefillRow }));
   const [priceDisplay, setPriceDisplay] = useState<number | undefined>();
@@ -382,7 +383,7 @@ export function PlanogramBuilder({
                       <th className="px-3 py-2">Product</th>
                       <th className="px-3 py-2">Variant</th>
                       <th className="px-3 py-2 text-right">Qty</th>
-                      <th className="px-3 py-2">SKU</th>
+                      <th className="px-3 py-2">Product ID</th>
                       <th className="px-3 py-2">Shelf position</th>
                       {hasLegacyAisle && <th className="px-3 py-2">Aisle (legacy)</th>}
                       <th className="px-3 py-2">Status</th>
@@ -655,7 +656,7 @@ export function PlanogramBuilder({
               />
             </Field>
             <Field
-              label={csvExact ? "MRP (INR)" : simplifiedCopy ? "Price" : `${priceLabel} (optional)`}
+              label={csvExact || simplifiedCopy ? "Price" : `${priceLabel} (optional)`}
               helper={simplifiedCopy && !csvExact ? HOMEPAGE_PRODUCT_FIELD_HELP.price : undefined}
             >
               <Input
@@ -694,7 +695,7 @@ export function PlanogramBuilder({
               />
             </Field>
             <Field
-              label={simplifiedCopy ? "SKU" : "SKU (optional)"}
+              label={productIdLabel}
               helper={simplifiedCopy ? HOMEPAGE_PRODUCT_FIELD_HELP.sku : undefined}
             >
               <Input
@@ -793,7 +794,7 @@ export function PlanogramBuilder({
                   <th className="px-3 py-2 text-right">Shelf units</th>
                   <th className="px-3 py-2 text-right">{priceLabel}</th>
                   <th className="px-3 py-2 text-right">Sales/d</th>
-                  <th className="px-3 py-2">SKU</th>
+                  <th className="px-3 py-2">Product ID</th>
                   <th className="px-3 py-2">Shelf position</th>
                   <th className="px-3 py-2 text-right">Actions</th>
                 </tr>

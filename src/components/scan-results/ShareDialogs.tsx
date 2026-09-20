@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2, Mail, Users } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  EmailBrandIcon,
+  TeamBrandIcon,
+} from "@/components/scan-results/BrandShareIcons";
 import { Skeleton } from "@/components/States";
 import { parseRecipients } from "@/lib/scan-share";
 import {
@@ -293,7 +297,7 @@ export function EmailShareDialog({
             {mutation.isPending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
-              <Mail className="size-4" />
+              <EmailBrandIcon className="size-4 shrink-0" />
             )}
             Send report
           </Button>
@@ -439,7 +443,7 @@ export function TeamShareDialog({
             {mutation.isPending ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
-              <Users className="size-4" />
+              <TeamBrandIcon className="size-4 shrink-0" />
             )}
             Share
           </Button>
