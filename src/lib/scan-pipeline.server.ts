@@ -585,6 +585,70 @@ export async function submitVisionJob(body: unknown): Promise<SubmitVisionResult
   return { kind: "accepted", jobId };
 }
 
+/** Multipart vision submit — used when evidence bytes are already on the server (FNV). */
+export async function submitVisionJobMultipart(input: {
+  scanId: string;
+  file: Blob | ArrayBuffer | Buffer;
+  fileName?: string;
+  contentType?: string;
+  vision_prompt?: string;
+  analysis_mode?: string;
+  operating_model?: string;
+  purpose?: string;
+}): Promise<SubmitVisionResult> {
+  const { url, apiKey } = visionConfig();
+  const headers = visionHeaders(apiKey);
+  delete headers["content-type"];
+
+  const form = new FormData();
+  const blob =
+    input.file instanceof Blob
+      ? input.file
+      : new Blob([input.file as BlobPart], {
+          type: input.contentType ?? "image/jpeg",
+        });
+  form.append("file", blob, input.fileName ?? "evidence.jpg");
+  form.append("scan_id", input.scanId);
+  if (input.vision_prompt) form.append("vision_prompt", input.vision_prompt);
+  if (input.analysis_mode) form.append("analysis_mode", input.analysis_mode);
+  if (input.operating_model) form.append("operating_model", input.operating_model);
+  if (input.purpose) form.append("purpose", input.purpose);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: form,
+      signal: AbortSignal.timeout(120_000),
+    });
+  } catch (error) {
+    const timedOut = error instanceof Error && /timeout|abort/i.test(error.name + error.message);
+    throw new PipelineError(
+      timedOut ? GENERIC_TIMEOUT : GENERIC_UNAVAILABLE,
+      timedOut ? 504 : 502,
+    );
+  }
+
+  const text = await response.text();
+  if (!response.ok) {
+    throw new PipelineError(
+      safeVisionMessage(text),
+      response.status >= 500 ? 502 : response.status,
+    );
+  }
+
+  const payload = parseJson(text);
+  const status = (str(payload?.status) ?? "").toLowerCase();
+  const jobId = str(payload?.scan_id) ?? str(payload?.id) ?? str(payload?.job_id);
+  const isAsync =
+    response.status === 202 || ["queued", "pending", "processing", "running"].includes(status);
+
+  if (!isAsync) return { kind: "completed", payload };
+  if (!jobId) throw new PipelineError(GENERIC_SCAN);
+  return { kind: "accepted", jobId };
+}
+
 export type PollVisionResult = { kind: "processing" } | { kind: "completed"; payload: any };
 
 /** A single GET /scan/{id} — never loops, so the request stays short. */

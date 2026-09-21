@@ -30,32 +30,12 @@ function resolveFnvEvidenceBucket(
   return "scan-images";
 }
 
-async function signFnvEvidenceUrl(
+/** Download evidence bytes (prefer service-role client). */
+async function loadFnvEvidenceBytes(
   supabase: SupabaseClient,
   storagePath: string,
   storageBucket?: RunFnvQcInput["storageBucket"],
-): Promise<string> {
-  const primary = resolveFnvEvidenceBucket(storagePath, storageBucket);
-  const order =
-    primary === "audit-evidence"
-      ? (["audit-evidence", "scan-images"] as const)
-      : (["scan-images", "audit-evidence"] as const);
-
-  for (const bucket of order) {
-    const { data: signed, error } = await supabase.storage
-      .from(bucket)
-      .createSignedUrl(storagePath, 3600);
-    if (!error && signed?.signedUrl) return signed.signedUrl;
-  }
-  throw new Error("Could not sign FNV evidence URL.");
-}
-
-/** Prefer an inline data URL so Railway does not depend on fetching Supabase signed URLs. */
-async function loadFnvEvidenceDataUrl(
-  supabase: SupabaseClient,
-  storagePath: string,
-  storageBucket?: RunFnvQcInput["storageBucket"],
-): Promise<string> {
+): Promise<{ bytes: Buffer; contentType: string; fileName: string }> {
   const primary = resolveFnvEvidenceBucket(storagePath, storageBucket);
   const order =
     primary === "audit-evidence"
@@ -69,14 +49,15 @@ async function loadFnvEvidenceDataUrl(
       lastError = error?.message ?? lastError;
       continue;
     }
-    const buf = Buffer.from(await data.arrayBuffer());
-    const mime =
-      storagePath.toLowerCase().endsWith(".png")
-        ? "image/png"
-        : storagePath.toLowerCase().endsWith(".webp")
-          ? "image/webp"
-          : "image/jpeg";
-    return `data:${mime};base64,${buf.toString("base64")}`;
+    const bytes = Buffer.from(await data.arrayBuffer());
+    const lower = storagePath.toLowerCase();
+    const contentType = lower.endsWith(".png")
+      ? "image/png"
+      : lower.endsWith(".webp")
+        ? "image/webp"
+        : "image/jpeg";
+    const fileName = storagePath.split("/").pop() || "evidence.jpg";
+    return { bytes, contentType, fileName };
   }
   throw new Error(`Could not download FNV evidence: ${lastError}`);
 }
@@ -160,21 +141,13 @@ async function runFnvQcCore(
   }
   if (!isFnv) return { result: null, skipped: "not_fnv" };
 
-  // Prefer service-role download → data URL so Railway never has to fetch a
-  // private Supabase signed URL (common cause of GENERIC_SCAN on FNV ensure).
-  let imageUrl: string;
+  // Download evidence on the server and POST multipart to Railway — avoids private
+  // signed-URL fetch failures and oversized JSON data-URL bodies.
+  let evidence: { bytes: Buffer; contentType: string; fileName: string };
   try {
-    imageUrl = await loadFnvEvidenceDataUrl(db, data.storagePath, data.storageBucket);
+    evidence = await loadFnvEvidenceBytes(db, data.storagePath, data.storageBucket);
   } catch {
-    try {
-      imageUrl = await loadFnvEvidenceDataUrl(supabase, data.storagePath, data.storageBucket);
-    } catch {
-      try {
-        imageUrl = await signFnvEvidenceUrl(db, data.storagePath, data.storageBucket);
-      } catch {
-        imageUrl = await signFnvEvidenceUrl(supabase, data.storagePath, data.storageBucket);
-      }
-    }
+    evidence = await loadFnvEvidenceBytes(supabase, data.storagePath, data.storageBucket);
   }
 
   const extras = buildAstraVisionExtras({
@@ -183,14 +156,16 @@ async function runFnvQcCore(
     notes: data.notes ?? null,
   });
 
-  const { submitVisionJob, pollVisionJobOnce } = await import("@/lib/scan-pipeline.server");
+  const { submitVisionJobMultipart, pollVisionJobOnce } = await import("@/lib/scan-pipeline.server");
   let payload: unknown;
-  const submitted = await submitVisionJob({
-    image_urls: [imageUrl],
+  const submitted = await submitVisionJobMultipart({
+    scanId: data.scanId,
+    file: evidence.bytes,
+    fileName: evidence.fileName,
+    contentType: evidence.contentType,
     vision_prompt: extras.vision_prompt,
     analysis_mode: extras.analysis_mode,
     operating_model: extras.operating_model,
-    scan_id: data.scanId,
     purpose: "fnv_qc",
   });
   if (submitted.kind === "completed") {
