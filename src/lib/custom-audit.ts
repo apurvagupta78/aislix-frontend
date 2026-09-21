@@ -343,7 +343,7 @@ export async function submitCustomAudit(input: {
       },
     });
 
-    // FNV QC: universal/custom path stores evidence in audit-evidence; run Astra after lines exist.
+    // FNV QC: after lines+evidence persist, run Astra from DB-authoritative evidence rows.
     const isFnv =
       session.template.template_type === "fnv_qc_audit" ||
       session.template.audit_purpose === "fnv_qc" ||
@@ -351,7 +351,9 @@ export async function submitCustomAudit(input: {
       session.definition.purpose === "fnv_qc";
     if (isFnv) {
       try {
-        const { runFnvQcOnBinEvidence } = await import("@/lib/fnv-qc.functions");
+        const { ensureFnvQcForScan, runFnvQcOnBinEvidence } = await import(
+          "@/lib/fnv-qc.functions"
+        );
         const evidenceDrafts = collectCustomAuditEvidenceDrafts(session.definition, responses);
         const lineHint =
           buildRecordContexts(session.definition, responses)[0]?.values ?? {};
@@ -369,6 +371,8 @@ export async function submitCustomAudit(input: {
             },
           });
         }
+        // DB fallback covers drafts that missed image fields or prior null QC rows.
+        await ensureFnvQcForScan({ data: { scanId, productHint } });
       } catch (fnvError) {
         console.error("[custom-audit] FNV QC analysis failed", fnvError);
       }

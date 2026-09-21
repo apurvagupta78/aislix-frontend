@@ -50,7 +50,21 @@ import { loadDigitalAuditSession } from "@/lib/digital-audit";
 
 async function fetchDigitalSessionSafe(scanId: string) {
   try {
-    return await loadDigitalAuditSession(scanId);
+    let session = await loadDigitalAuditSession(scanId);
+    const missingQc = (session?.lines ?? []).some((l) => !l.qc_disposition);
+    const hasEvidence = (session?.evidence ?? []).length > 0;
+    if (missingQc && hasEvidence) {
+      try {
+        const { ensureFnvQcForScan } = await import("@/lib/fnv-qc.functions");
+        const hint =
+          session?.lines?.[0]?.product_name ?? session?.lines?.[0]?.sku ?? null;
+        await ensureFnvQcForScan({ data: { scanId, productHint: hint } });
+        session = await loadDigitalAuditSession(scanId);
+      } catch (err) {
+        console.error("[results] FNV QC ensure failed", err);
+      }
+    }
+    return session;
   } catch {
     return null;
   }
