@@ -1,4 +1,4 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, RefreshCw } from "lucide-react";
 
@@ -25,10 +25,22 @@ function useIsManager() {
 
 export const Route = createFileRoute("/expiry-control")({
   head: () => ({ meta: [{ title: "Expiry Control — Aislix" }] }),
-  component: ExpiryControlPage,
+  component: ExpiryControlLayout,
 });
 
-function ExpiryControlPage() {
+/**
+ * Layout for /expiry-control and nested routes (/planner, /review, /inspect/:id, …).
+ * Without <Outlet />, child pages never mount and the overview stays stuck on screen.
+ */
+function ExpiryControlLayout() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isIndex =
+    pathname === "/expiry-control" || pathname === "/expiry-control/";
+
+  if (!isIndex) {
+    return <Outlet />;
+  }
+
   return (
     <AppShell title="" hidePageHeader>
       <ExpiryControlMain />
