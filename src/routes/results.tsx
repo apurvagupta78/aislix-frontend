@@ -381,9 +381,11 @@ function Results() {
                 <div className="flex min-h-0 flex-col">
                   {useSimpleAiView ? (
                     <>
-                      <AiAuditResultsPage data={display} imageUrl={imageUrl} />
-                      {!isDigitalAudit ? (
+                      {/* Digital/FNV audits use AuditGovernanceTabs above — do not show
+                          shelf Astra "Analysis incomplete" for missing planogram JSON. */}
+                      {!digitalQuery.isPending && !isDigitalAudit ? (
                         <>
+                          <AiAuditResultsPage data={display} imageUrl={imageUrl} />
                           <AiFieldVerificationPanel
                             scanId={scan!}
                             products={(display.inventory ?? []).map((row) => ({

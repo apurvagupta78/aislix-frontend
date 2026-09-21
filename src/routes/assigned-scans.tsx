@@ -477,7 +477,12 @@ function AssignedScansPage() {
           }
         />
       {managerQuery.isPending ? (
-        <Skeleton className="h-64 w-full rounded-2xl" />
+        <Skeleton className="h-64 w-full rounded-2xl" aria-label="Loading assignments" />
+      ) : managerQuery.isError ? (
+        <ErrorState
+          description={toUserMessage(managerQuery.error)}
+          onRetry={() => void managerQuery.refetch()}
+        />
       ) : managerQuery.data === false ? (
         <EmptyState
           icon={<ClipboardList className="size-6" />}
