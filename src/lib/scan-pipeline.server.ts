@@ -601,18 +601,24 @@ export async function submitVisionJobMultipart(input: {
   delete headers["content-type"];
 
   const form = new FormData();
+  const bytes =
+    input.file instanceof Blob
+      ? null
+      : input.file instanceof ArrayBuffer
+        ? new Uint8Array(input.file)
+        : new Uint8Array(input.file as Buffer);
   const blob =
     input.file instanceof Blob
       ? input.file
-      : new Blob([input.file as BlobPart], {
+      : new Blob([bytes as BlobPart], {
           type: input.contentType ?? "image/jpeg",
         });
   form.append("file", blob, input.fileName ?? "evidence.jpg");
   form.append("scan_id", input.scanId);
-  if (input.vision_prompt) form.append("vision_prompt", input.vision_prompt);
-  if (input.analysis_mode) form.append("analysis_mode", input.analysis_mode);
-  if (input.operating_model) form.append("operating_model", input.operating_model);
-  if (input.purpose) form.append("purpose", input.purpose);
+  if (input.vision_prompt) form.append("vision_prompt", String(input.vision_prompt));
+  if (input.analysis_mode) form.append("analysis_mode", String(input.analysis_mode));
+  if (input.operating_model) form.append("operating_model", String(input.operating_model));
+  if (input.purpose) form.append("purpose", String(input.purpose));
 
   let response: Response;
   try {
