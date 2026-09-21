@@ -3,6 +3,7 @@
  */
 
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { buildAstraVisionExtras } from "@/lib/ai-audit/astra-analysis";
 import { parseFnvQcPayload, type FnvQcResult } from "@/lib/ai-audit/fnv-qc-parse";
@@ -11,9 +12,42 @@ export type RunFnvQcInput = {
   scanId: string;
   binKey: string;
   storagePath: string;
+  /** Storage bucket for the evidence object. Defaults by path heuristic. */
+  storageBucket?: "scan-images" | "audit-evidence" | null;
   productHint?: string | null;
   notes?: string | null;
 };
+
+function resolveFnvEvidenceBucket(
+  storagePath: string,
+  explicit?: RunFnvQcInput["storageBucket"],
+): "scan-images" | "audit-evidence" {
+  if (explicit === "scan-images" || explicit === "audit-evidence") return explicit;
+  if (storagePath.includes("/custom-audit/") || storagePath.startsWith("custom-audit/")) {
+    return "audit-evidence";
+  }
+  return "scan-images";
+}
+
+async function signFnvEvidenceUrl(
+  supabase: SupabaseClient,
+  storagePath: string,
+  storageBucket?: RunFnvQcInput["storageBucket"],
+): Promise<string> {
+  const primary = resolveFnvEvidenceBucket(storagePath, storageBucket);
+  const order =
+    primary === "audit-evidence"
+      ? (["audit-evidence", "scan-images"] as const)
+      : (["scan-images", "audit-evidence"] as const);
+
+  for (const bucket of order) {
+    const { data: signed, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(storagePath, 3600);
+    if (!error && signed?.signedUrl) return signed.signedUrl;
+  }
+  throw new Error("Could not sign FNV evidence URL.");
+}
 
 export const runFnvQcOnBinEvidence = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -69,12 +103,7 @@ export const runFnvQcOnBinEvidence = createServerFn({ method: "POST" })
     }
     if (!isFnv) return { result: null, skipped: "not_fnv" };
 
-    const { data: signed, error: signErr } = await supabase.storage
-      .from("scan-images")
-      .createSignedUrl(data.storagePath, 3600);
-    if (signErr || !signed?.signedUrl) {
-      throw new Error("Could not sign FNV evidence URL.");
-    }
+    const signedUrl = await signFnvEvidenceUrl(supabase, data.storagePath, data.storageBucket);
 
     const extras = buildAstraVisionExtras({
       purpose: "fnv_qc",
@@ -85,7 +114,7 @@ export const runFnvQcOnBinEvidence = createServerFn({ method: "POST" })
     const { submitVisionJob, pollVisionJobOnce } = await import("@/lib/scan-pipeline.server");
     let payload: unknown;
     const submitted = await submitVisionJob({
-      image_urls: [signed.signedUrl],
+      image_urls: [signedUrl],
       vision_prompt: extras.vision_prompt,
       analysis_mode: extras.analysis_mode,
       operating_model: extras.operating_model,
@@ -110,11 +139,21 @@ export const runFnvQcOnBinEvidence = createServerFn({ method: "POST" })
     const result = parseFnvQcPayload(payload);
     const now = new Date().toISOString();
 
-    const { data: lines } = await supabase
+    let { data: lines } = await supabase
       .from("digital_audit_lines")
-      .select("id, product_name, category")
+      .select("id, product_name, category, bin_key")
       .eq("scan_id", data.scanId)
       .eq("bin_key", data.binKey);
+
+    // Universal audits may persist a single line under a location-derived bin_key while
+    // evidence was keyed as record-N before alignment — fall back to all lines on the scan.
+    if (!lines?.length) {
+      const fallback = await supabase
+        .from("digital_audit_lines")
+        .select("id, product_name, category, bin_key")
+        .eq("scan_id", data.scanId);
+      lines = fallback.data;
+    }
 
     const lineIds = ((lines ?? []) as { id: string }[]).map((l) => l.id);
     if (lineIds.length) {

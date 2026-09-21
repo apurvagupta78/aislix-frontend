@@ -173,6 +173,11 @@ function applyFieldToDraft(
       }
       break;
     default:
+      if (field.key === "physical_qty" || field.key === "actual_qty") {
+        draft.actual_qty = asNumber(value) ?? draft.actual_qty;
+      } else if (field.key === "sku" || field.key === "sku_id") {
+        draft.sku = asString(value) ?? draft.sku;
+      }
       break;
   }
 }
@@ -256,15 +261,20 @@ export function collectCustomAuditEvidenceDrafts(
   definition: TemplateDefinition,
   responses: ResponseMap,
 ): CustomAuditEvidenceDraft[] {
+  const lineDrafts = buildDigitalAuditLineDraftsFromResponses(definition, responses);
   const entries: CustomAuditEvidenceDraft[] = [];
   for (const field of definition.fields) {
     if (!isImageField(field.type)) continue;
     const sectionData = responses[field.section] ?? {};
     for (const [idxStr, recordValues] of Object.entries(sectionData)) {
+      const idx = Number(idxStr);
+      const line = lineDrafts.find(
+        (d) => d.sectionKey === field.section && d.recordIndex === idx,
+      );
+      const baseBin = line?.bin_key ?? `record-${idxStr}`;
       const paths = normalizeImagePaths(recordValues[field.key]);
       paths.forEach((stored, imageIndex) => {
-        const binKey =
-          paths.length > 1 ? `record-${idxStr}-${imageIndex}` : `record-${idxStr}`;
+        const binKey = paths.length > 1 ? `${baseBin}-${imageIndex}` : baseBin;
         entries.push({
           bin_key: binKey,
           storage_path: stripAuditEvidenceRef(stored),

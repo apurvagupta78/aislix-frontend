@@ -88,10 +88,23 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
         }
         throw new Error(parts.join("; ") || "Audit completion requirements not met.");
       }
+      // Prefer latest persisted responses so submit matches what the auditor saved,
+      // then overlay in-memory edits (deep-merge by section/record).
+      const persisted = await fetchCustomAuditResponses(assignmentId);
+      const submitResponses: typeof responses = { ...persisted };
+      for (const [sec, records] of Object.entries(responses)) {
+        submitResponses[sec] = { ...(submitResponses[sec] ?? {}) };
+        for (const [idx, vals] of Object.entries(records)) {
+          submitResponses[sec][Number(idx)] = {
+            ...(submitResponses[sec][Number(idx)] ?? {}),
+            ...vals,
+          };
+        }
+      }
       return submitCustomAudit({
         assignmentId,
         session: session!,
-        responses,
+        responses: submitResponses,
         testMode,
       });
     },

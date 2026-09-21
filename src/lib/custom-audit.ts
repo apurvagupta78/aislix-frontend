@@ -328,7 +328,9 @@ export async function submitCustomAudit(input: {
       .eq("assignment_id", assignmentId);
     if (linkErr) dbError(linkErr, "Could not link audit responses to scan.");
 
-    const { persistCustomAuditReviewData } = await import("@/lib/custom-audit-review");
+    const { persistCustomAuditReviewData, collectCustomAuditEvidenceDrafts } = await import(
+      "@/lib/custom-audit-review"
+    );
     await persistCustomAuditReviewData({
       definition: session.definition,
       responses,
@@ -340,6 +342,37 @@ export async function submitCustomAudit(input: {
         userId,
       },
     });
+
+    // FNV QC: universal/custom path stores evidence in audit-evidence; run Astra after lines exist.
+    const isFnv =
+      session.template.template_type === "fnv_qc_audit" ||
+      session.template.audit_purpose === "fnv_qc" ||
+      Boolean(session.template.name?.toLowerCase().includes("fnv")) ||
+      session.definition.purpose === "fnv_qc";
+    if (isFnv) {
+      try {
+        const { runFnvQcOnBinEvidence } = await import("@/lib/fnv-qc.functions");
+        const evidenceDrafts = collectCustomAuditEvidenceDrafts(session.definition, responses);
+        const lineHint =
+          buildRecordContexts(session.definition, responses)[0]?.values ?? {};
+        const productHint =
+          String(lineHint.item_name ?? lineHint.product ?? lineHint.sku ?? lineHint.sku_id ?? "") ||
+          null;
+        for (const evidence of evidenceDrafts) {
+          await runFnvQcOnBinEvidence({
+            data: {
+              scanId,
+              binKey: evidence.bin_key,
+              storagePath: evidence.storage_path,
+              storageBucket: "audit-evidence",
+              productHint,
+            },
+          });
+        }
+      } catch (fnvError) {
+        console.error("[custom-audit] FNV QC analysis failed", fnvError);
+      }
+    }
 
     await supabase
       .from("scan_assignments")
