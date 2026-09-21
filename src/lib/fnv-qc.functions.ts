@@ -1,5 +1,6 @@
 /**
  * FNV QC vision: evidence image → Astra disposition → persist on digital line + finding.
+ * Build bump: force Lovable serverFn registry refresh for service-role persist.
  */
 
 import { createServerFn } from "@tanstack/react-start";
