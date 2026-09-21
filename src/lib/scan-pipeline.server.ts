@@ -1800,6 +1800,7 @@ async function notifyAssignmentPassed(
         compliance_percent: compliance,
       },
     } as never);
+    await emailAssignerAuditCompleted(supabase, scan, context, compliance);
   } catch (error) {
     console.error("[pipeline] pass notification failed", error);
   }
@@ -1859,8 +1860,57 @@ async function notifyAssignerOfCompletion(
         open_issue_count: openIssues,
       },
     } as never);
+    await emailAssignerAuditCompleted(supabase, scan, context, compliance);
   } catch (error) {
     console.error("[pipeline] assigner notification failed", error);
+  }
+}
+
+/**
+ * Email the assignor/manager when an assignee finishes an assigned audit.
+ * Uses the durable in-app report URL (audits stay in the database permanently).
+ */
+async function emailAssignerAuditCompleted(
+  supabase: DB,
+  scan: ScanRow,
+  context: AssignmentNotifyContext,
+  compliance: number | null,
+): Promise<void> {
+  try {
+    const { data: assigner } = await supabase
+      .from("profiles")
+      .select("email")
+      .eq("id", context.assigner_id!)
+      .maybeSingle();
+    const email = ((assigner as { email?: string | null } | null)?.email ?? "").trim().toLowerCase();
+    if (!email) return;
+
+    const { scanShareSummary } = await import("@/lib/scan-share.server");
+    const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
+    const { serverAppOrigin } = await import("@/lib/app-origin");
+
+    const summary = await scanShareSummary(scan.id);
+    const reportUrl = `${serverAppOrigin()}/results?scan=${encodeURIComponent(scan.id)}`;
+
+    await sendTemplateEmail("audit-completed", email, {
+      idempotencyKey: `audit-completed-${scan.id}-${context.assigner_id}`,
+      templateData: {
+        assigneeName: context.assignee_name,
+        storeName: summary.store_name ?? context.store_name,
+        location: summary.location ?? context.location,
+        category: summary.category,
+        subCategory: summary.sub_category,
+        auditName: summary.audit_name,
+        auditDescription: summary.audit_description,
+        scanDate: summary.scanned_at,
+        healthScore: summary.shelf_health_score,
+        productsDetected: summary.products_detected,
+        compliancePercent: compliance ?? summary.planogram_compliance_percent,
+        reportUrl,
+      },
+    });
+  } catch (error) {
+    console.error("[pipeline] assigner completion email failed", error);
   }
 }
 
