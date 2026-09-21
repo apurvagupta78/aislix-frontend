@@ -125,13 +125,29 @@ export function OrgStat({
 export function OrganizationOverview({
   org,
   loading,
+  /** When viewing a store-type filter (warehouse/supermarket/…), show that count instead of org-wide total. */
+  scopedStoreCount,
+  scopedStoreLabel,
 }: {
   org?: Organization | undefined;
   loading?: boolean | undefined;
+  scopedStoreCount?: number | null | undefined;
+  scopedStoreLabel?: string | undefined;
 }) {
   const remaining = scansRemaining(org);
   const percent = usagePercent(org);
   const status = org?.account_status;
+  const storeCount =
+    scopedStoreCount != null && Number.isFinite(scopedStoreCount)
+      ? scopedStoreCount
+      : org?.total_stores;
+  const storeLabel = scopedStoreLabel ?? "Total stores";
+  const storeHint =
+    scopedStoreCount != null
+      ? "Matching the current store-type filter"
+      : org
+        ? `${formatNumber(org.active_stores)} active · ${formatNumber(org.archived_stores)} archived`
+        : undefined;
 
   return (
     <div className="space-y-4">
@@ -217,9 +233,12 @@ export function OrganizationOverview({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <OrgStat label="Total stores" value={formatNumber(org?.total_stores)} loading={loading} hint={
-          org ? `${formatNumber(org.active_stores)} active · ${formatNumber(org.archived_stores)} archived` : undefined
-        } />
+        <OrgStat
+          label={storeLabel}
+          value={formatNumber(storeCount)}
+          loading={loading}
+          hint={storeHint}
+        />
         <OrgStat label="Active users" value={formatNumber(org?.active_users)} loading={loading} />
         <OrgStat
           label="Audits used"

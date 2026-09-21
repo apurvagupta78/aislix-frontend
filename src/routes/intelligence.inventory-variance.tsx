@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/design-system/PageHeader";
 import { fetchDigitalDashboardMetrics } from "@/lib/dashboard-ai-digital";
+import { useOptionalGlobalFilters } from "@/lib/global-filters";
 
 function fmt(value: number | null | undefined, suffix = ""): string {
   if (value == null || Number.isNaN(value)) return "N/A";
@@ -16,15 +17,36 @@ export const Route = createFileRoute("/intelligence/inventory-variance")({
 });
 
 function InventoryVariancePage() {
+  const global = useOptionalGlobalFilters();
+  const filterKey = global?.filters
+    ? {
+        storeId: global.filters.storeId,
+        category: global.filters.category,
+        subCategory: global.filters.subCategory,
+        teamMemberId: global.filters.teamMemberId,
+        datePreset: global.filters.datePreset,
+        dateFrom: global.filters.dateFrom,
+        dateTo: global.filters.dateTo,
+        country: global.filters.country,
+        city: global.filters.city,
+        skuId: global.filters.skuId,
+      }
+    : undefined;
   const query = useQuery({
-    queryKey: ["inventory-variance-metrics"],
-    queryFn: fetchDigitalDashboardMetrics,
+    queryKey: ["inventory-variance-metrics", filterKey],
+    queryFn: () => fetchDigitalDashboardMetrics(filterKey),
   });
   const m = query.data;
   const accuracy =
     m?.totalExpected != null && m.totalExpected > 0 && m.absoluteVariance != null
       ? Math.max(0, 100 - (m.absoluteVariance / m.totalExpected) * 100)
       : null;
+
+  // When inventory variance source data is absent, do not present incidental
+  // findings-derived rates as if they were inventory accuracy outcomes.
+  const inventoryReady = m?.totalExpected != null && m?.totalActual != null;
+  const reauditPct = inventoryReady ? m?.reauditImprovementPct : null;
+  const recurringPct = inventoryReady ? m?.recurringIssueRate : null;
 
   const kpis: [string, string][] = [
     ["Total Expected", fmt(m?.totalExpected)],
@@ -39,8 +61,8 @@ function InventoryVariancePage() {
         ? `₹${Math.round(m.potentialInventoryValueVariance).toLocaleString("en-IN")}`
         : "N/A",
     ],
-    ["Re-audit Improvement %", fmt(m?.reauditImprovementPct, "%")],
-    ["Recurring Issue Rate %", fmt(m?.recurringIssueRate, "%")],
+    ["Re-audit Improvement %", fmt(reauditPct, "%")],
+    ["Recurring Issue Rate %", fmt(recurringPct, "%")],
   ];
 
   return (

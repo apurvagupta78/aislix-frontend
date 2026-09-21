@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -283,15 +283,23 @@ function AssignmentsTab({ storeId, assignerMe }: { storeId?: string; assignerMe?
         </div>
       ) : null}
 
-      {query.isLoading ? (
-        <Skeleton className="h-64 w-full rounded-2xl" />
+      {query.isLoading || session.isLoading ? (
+        <Skeleton className="h-64 w-full rounded-2xl" aria-label="Loading assignments" />
       ) : query.isError ? (
         <ErrorState description={toUserMessage(query.error)} onRetry={() => void query.refetch()} />
       ) : !rows.length ? (
         <EmptyState
           icon={<ClipboardList className="size-6" />}
-          title="No assignments yet"
-          description="Assign a scoped shelf audit to a team member to see it tracked here."
+          title={
+            storeId || assignerMe || status !== "all" || term
+              ? "No assignments match these filters"
+              : "No assignments yet"
+          }
+          description={
+            storeId || assignerMe || status !== "all" || term
+              ? "Clear store, assigner, status, or search filters to see every assignment in this workspace."
+              : "Assign a scoped shelf audit to a team member to see it tracked here."
+          }
           action={
             <Button variant="brand" className="rounded-xl" asChild>
               <Link to="/assign-scan" search={(prev) => ({ ...prev, store: undefined, scope: undefined, planogramVersion: undefined })}>Assign audit</Link>
@@ -423,11 +431,16 @@ function TeamScansTab() {
 }
 
 function AssignedScansPage() {
+  const navigate = Route.useNavigate();
   const { tab: tabParam, store: storeSearch, assigner: assignerSearch } = Route.useSearch();
-  const [tab, setTab] = useState(tabParam ?? "assignments");
-  useEffect(() => {
-    if (tabParam) setTab(tabParam);
-  }, [tabParam]);
+  const tab = tabParam === "team-scans" ? "team-scans" : "assignments";
+
+  const setTab = (next: "assignments" | "team-scans") => {
+    void navigate({
+      search: (prev) => ({ ...prev, tab: next }),
+      replace: true,
+    });
+  };
 
   const managerQuery = useQuery({
     queryKey: ["is-org-manager"],
@@ -463,7 +476,9 @@ function AssignedScansPage() {
             </>
           }
         />
-      {managerQuery.data === false ? (
+      {managerQuery.isPending ? (
+        <Skeleton className="h-64 w-full rounded-2xl" />
+      ) : managerQuery.data === false ? (
         <EmptyState
           icon={<ClipboardList className="size-6" />}
           title="Manager access required"

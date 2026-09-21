@@ -220,7 +220,20 @@ function StoresPage() {
             onRetry={() => void orgQuery.refetch()}
           />
         ) : (
-          <OrganizationOverview org={orgQuery.data} loading={orgQuery.isPending} />
+          <OrganizationOverview
+            org={orgQuery.data}
+            loading={orgQuery.isPending || (Boolean(model) && storesQuery.isPending)}
+            scopedStoreCount={model ? total : null}
+            scopedStoreLabel={
+              model === "supermarket"
+                ? "Supermarkets"
+                : model === "warehouse"
+                  ? "Warehouses"
+                  : model === "fmcg_distributor"
+                    ? "Distributors"
+                    : undefined
+            }
+          />
         )}
 
         <div className="overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card">
@@ -308,11 +321,23 @@ function StoresPage() {
         ) : stores.length === 0 ? (
           <EmptyState
             icon={<StoreIcon className="size-5" />}
-            title={q || filter !== "all" ? "No stores match these filters" : "No stores yet"}
+            title={
+              q || filter !== "all"
+                ? "No stores match these filters"
+                : model === "warehouse"
+                  ? "No warehouses yet"
+                  : model === "supermarket"
+                    ? "No supermarkets yet"
+                    : model === "fmcg_distributor"
+                      ? "No distributors yet"
+                      : "No stores yet"
+            }
             description={
               q || filter !== "all"
                 ? "Try a different search term, or clear the filters to see every location."
-                : "Add your first store to start auditing shelves. Enterprises can bulk-upload a store list."
+                : model
+                  ? "Add a location with this store type, or open Organization & stores to manage all locations."
+                  : "Add your first store to start auditing shelves. Enterprises can bulk-upload a store list."
             }
             action={
               <Button
