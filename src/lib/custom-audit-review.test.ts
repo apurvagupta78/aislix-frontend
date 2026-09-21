@@ -62,4 +62,45 @@ describe("custom audit review materialization", () => {
     expect(row.variance_qty).toBe(-2);
     expect(computeLineVariance(10, 8, null).variance_qty).toBe(-2);
   });
+
+  it("maps Expected/Actual when CSV template uses type number + standardConcept", () => {
+    const csvStyleDefinition = {
+      ...INVENTORY_DEFINITION,
+      fields: [
+        {
+          key: "sku_id",
+          section: "records",
+          type: "short_text",
+          label: "SKU",
+          required: true,
+          config: {},
+          standardConcept: "sku_id",
+        },
+        {
+          key: "expected_qty",
+          section: "records",
+          type: "number",
+          label: "Expected Qty",
+          required: true,
+          config: {},
+          standardConcept: "expected_quantity",
+        },
+        {
+          key: "actual_qty",
+          section: "records",
+          type: "number",
+          label: "Actual Qty",
+          required: true,
+          config: {},
+          standardConcept: "actual_quantity",
+        },
+      ],
+    } as TemplateDefinition;
+
+    const drafts = buildDigitalAuditLineDraftsFromResponses(csvStyleDefinition, {
+      records: { 0: { sku_id: "SKU-1", expected_qty: 12, actual_qty: 9 } },
+    });
+    expect(drafts).toHaveLength(1);
+    expect(drafts[0]).toMatchObject({ sku: "SKU-1", expected_qty: 12, actual_qty: 9 });
+  });
 });

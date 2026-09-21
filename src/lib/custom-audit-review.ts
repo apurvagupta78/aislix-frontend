@@ -119,6 +119,53 @@ function applyFieldToDraft(
   field: TemplateField,
   value: AuditResponseValue,
 ): void {
+  // CSV-built templates often use type "number"/"short_text" with standardConcept/key —
+  // still materialize Expected/Actual into digital_audit_lines.
+  const concept = field.standardConcept ?? "";
+  const key = field.key ?? "";
+  if (
+    field.type === "expected_qty" ||
+    concept === "expected_quantity" ||
+    key === "expected_qty" ||
+    key === "expected_quantity"
+  ) {
+    draft.expected_qty = asNumber(value) ?? draft.expected_qty;
+    return;
+  }
+  if (
+    field.type === "actual_qty" ||
+    concept === "actual_quantity" ||
+    concept === "physical_quantity" ||
+    key === "actual_qty" ||
+    key === "actual_quantity" ||
+    key === "physical_qty"
+  ) {
+    draft.actual_qty = asNumber(value) ?? draft.actual_qty;
+    return;
+  }
+  if (
+    field.type === "sku_id" ||
+    field.type === "sku_selector" ||
+    concept === "sku_id" ||
+    key === "sku" ||
+    key === "sku_id"
+  ) {
+    draft.sku = asString(value) ?? draft.sku;
+    return;
+  }
+  if (concept === "product_name" || key === "product_name" || key === "item_name") {
+    draft.product_name = asString(value) ?? draft.product_name;
+    return;
+  }
+  if (concept === "mrp" || key === "mrp") {
+    draft.mrp_inr = asNumber(value) ?? draft.mrp_inr;
+    return;
+  }
+  if (field.type === "rca" || concept === "rca" || key === "rca") {
+    draft.rca_code = normalizeRcaCode(value) ?? draft.rca_code;
+    return;
+  }
+
   switch (field.type) {
     case "sku_id":
     case "sku_selector":
@@ -152,12 +199,6 @@ function applyFieldToDraft(
       draft.location = asString(value) ?? draft.location;
       draft.bin_key = binKeyFromLocation(draft.location);
       break;
-    case "expected_qty":
-      draft.expected_qty = asNumber(value) ?? draft.expected_qty;
-      break;
-    case "actual_qty":
-      draft.actual_qty = asNumber(value) ?? draft.actual_qty;
-      break;
     case "currency":
       if (field.label.toLowerCase().includes("mrp") || field.key.includes("mrp")) {
         draft.mrp_inr = asNumber(value) ?? draft.mrp_inr;
@@ -173,10 +214,14 @@ function applyFieldToDraft(
       }
       break;
     default:
-      if (field.key === "physical_qty" || field.key === "actual_qty") {
-        draft.actual_qty = asNumber(value) ?? draft.actual_qty;
-      } else if (field.key === "sku" || field.key === "sku_id") {
+      if (concept === "sku_id" || key === "sku" || key === "sku_id") {
         draft.sku = asString(value) ?? draft.sku;
+      } else if (concept === "product_name" || key === "product_name" || key === "item_name") {
+        draft.product_name = asString(value) ?? draft.product_name;
+      } else if (concept === "mrp" || key === "mrp") {
+        draft.mrp_inr = asNumber(value) ?? draft.mrp_inr;
+      } else if (concept === "rca" || key === "rca") {
+        draft.rca_code = normalizeRcaCode(value) ?? draft.rca_code;
       }
       break;
   }

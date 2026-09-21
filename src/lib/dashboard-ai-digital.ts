@@ -463,10 +463,30 @@ export async function fetchDigitalDashboardMetrics(
   let variancePct: number | null = null;
 
   if (scanIds.length) {
-    const { data: lines } = await supabase
+    const scopedScanIds = scanIds.slice(0, 100);
+    let { data: lines } = await supabase
       .from("digital_audit_lines")
       .select("expected_qty, actual_qty, scan_id")
-      .in("scan_id", scanIds.slice(0, 100));
+      .in("scan_id", scopedScanIds);
+
+    // Backfill lines for universal/custom digital submits that predate materialization
+    // (or never opened Review/Results, which is the other ensure trigger).
+    const scansWithLines = new Set(
+      (lines ?? []).map((l) => l.scan_id as string).filter(Boolean),
+    );
+    const missingLineScans = scopedScanIds.filter((id) => !scansWithLines.has(id)).slice(0, 25);
+    if (missingLineScans.length) {
+      const { ensureCustomAuditReviewData } = await import("@/lib/custom-audit-review");
+      await Promise.all(
+        missingLineScans.map((id) => ensureCustomAuditReviewData(id).catch(() => false)),
+      );
+      const refreshed = await supabase
+        .from("digital_audit_lines")
+        .select("expected_qty, actual_qty, scan_id")
+        .in("scan_id", scopedScanIds);
+      lines = refreshed.data;
+    }
+
     const usable = (lines ?? []).filter(
       (l) => l.actual_qty != null && l.expected_qty != null,
     ) as { expected_qty: number; actual_qty: number }[];
