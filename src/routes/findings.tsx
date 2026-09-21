@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
@@ -60,10 +60,14 @@ export const Route = createFileRoute("/findings")({
       },
     ],
   }),
-  component: FindingsPage,
+  component: FindingsLayout,
 });
 
-function FindingsPage() {
+/** Nested /findings/$findingId needs an Outlet or the list page stays stuck. */
+function FindingsLayout() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isIndex = pathname === "/findings" || pathname === "/findings/";
+  if (!isIndex) return <Outlet />;
   return (
     <AppShell title="" hidePageHeader>
       <FindingsMain />

@@ -125,16 +125,16 @@ export const submitAiAudit = createServerFn({ method: "POST" })
 
       assigneeId = (assignment.assignee_id as string | null) ?? null;
       assignerId = (assignment.assigner_id as string | null) ?? null;
-      if (assigneeId && assigneeId !== userId) {
-        // Managers may submit on review; assignees submit their own work.
+      if (assigneeId && assigneeId !== userId && assignerId !== userId) {
+        // Assignees submit their own work; assigners/managers may submit on their behalf.
         const { data: membership } = await supabase
-          .from("org_memberships")
+          .from("organization_members")
           .select("role")
           .eq("org_id", assignment.org_id as string)
           .eq("user_id", userId)
           .eq("status", "active")
           .maybeSingle();
-        const role = (membership as { role?: string } | null)?.role ?? "";
+        const role = String((membership as { role?: string } | null)?.role ?? "").toLowerCase();
         if (!["owner", "admin", "manager", "store_manager"].includes(role)) {
           throw new Error("Only the assignee or a manager can submit this audit.");
         }
