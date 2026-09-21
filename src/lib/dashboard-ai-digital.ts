@@ -291,26 +291,37 @@ export async function fetchAiDashboardMetrics(
   let verifiedUnitsSum = 0;
   let absFacingErr = 0;
   let verifiedFacingsSum = 0;
+  let facingDelta = 0;
+  let unitsDelta = 0;
   for (const scanId of scanIds.slice(0, 20)) {
     const verifications = await listScanFieldVerifications(scanId);
     for (const v of verifications) {
+      // Eligible = AI field present (or already verified). Ignore empty stubs.
+      if (v.ai_value == null && v.verified_value == null) continue;
       eligible += 1;
       if (v.verified_value != null) {
         verified += 1;
         const ai = v.ai_value ?? 0;
         const ver = Number(v.verified_value);
+        const delta = ver - ai;
         if (v.field_key === "visible_units") {
-          unitVar += ver - ai;
-          absUnitErr += Math.abs(ver - ai);
+          unitVar += delta;
+          absUnitErr += Math.abs(delta);
           verifiedUnitsSum += ver;
+          unitsDelta += delta;
         }
         if (v.field_key === "facings") {
-          absFacingErr += Math.abs(ver - ai);
+          absFacingErr += Math.abs(delta);
           verifiedFacingsSum += ver;
+          facingDelta += delta;
         }
       }
     }
   }
+
+  // Operational totals prefer verified where humans overrode AI (verified ?? ai).
+  if (metricsFacingsCount && facingDelta) metricsFacingsSum += facingDelta;
+  if (metricsUnitsCount && unitsDelta) metricsUnitsSum += unitsDelta;
 
   const toShare = (map: Map<string, number>) => {
     const total = [...map.values()].reduce((s, n) => s + n, 0);

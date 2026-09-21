@@ -378,9 +378,15 @@ function Results() {
                               id: row.id,
                               brand: row.brand,
                               product: row.product,
-                              facings: row.quantity,
+                              facings: row.facings ?? row.quantity,
                               quantity: row.quantity,
-                              visible_units: row.quantity,
+                              // Prefer distinct visible units when present; do not clone facings.
+                              visible_units:
+                                row.quantity != null &&
+                                row.facings != null &&
+                                row.quantity !== row.facings
+                                  ? row.quantity
+                                  : row.quantity ?? null,
                             }))}
                             canEdit={!assignmentQuery.data?.submitted}
                           />

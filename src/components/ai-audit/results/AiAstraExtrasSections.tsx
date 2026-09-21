@@ -181,6 +181,9 @@ export function AiFinancialImpactSection({
   const hasInventory =
     typeof impact.visible_inventory_value_inr === "number" ||
     typeof impact.expected_inventory_value_inr === "number";
+  const estimated = impact.estimate_status !== "not_estimated";
+  const moneyOrNa = (n: number | null | undefined) =>
+    !estimated || n == null ? "N/A" : `₹${n}`;
   const cards = [
     ...(hasInventory
       ? [
@@ -215,19 +218,19 @@ export function AiFinancialImpactSection({
       : []),
     {
       label: "Potential Daily Value at Risk",
-      value: `₹${impact.estimated_daily_lost_sales_inr}`,
+      value: moneyOrNa(impact.estimated_daily_lost_sales_inr),
       bg: "#EAF6FD",
       accent: "#8EC9E8",
     },
     {
       label: "Potential Weekly Value at Risk",
-      value: `₹${impact.estimated_weekly_lost_sales_inr}`,
+      value: moneyOrNa(impact.estimated_weekly_lost_sales_inr),
       bg: "#F0E9FF",
       accent: "#9B86D9",
     },
     {
       label: "Potential OOS SKUs",
-      value: impact.oos_sku_count,
+      value: estimated ? impact.oos_sku_count : "N/A",
       bg: "#FFEAF1",
       accent: "#F9A8C9",
     },

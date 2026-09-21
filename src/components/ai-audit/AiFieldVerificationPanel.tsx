@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -147,6 +147,9 @@ function VerifyCell({
   onSave: (v: number | null) => void;
 }) {
   const [draft, setDraft] = useState(value != null ? String(value) : "");
+  useEffect(() => {
+    setDraft(value != null ? String(value) : "");
+  }, [value]);
   if (!canEdit) {
     return <span className="text-[#102A43]">{value ?? "—"}</span>;
   }
