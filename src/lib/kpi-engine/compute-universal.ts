@@ -36,14 +36,11 @@ import type {
 import { AISLIX, AISLIX_STATUS_MIX } from "@/lib/aislix-theme";
 import { resolveDemoExperience } from "@/lib/demo-environment";
 
-export const UNWIRED_UNIVERSAL_KPI_IDS = new Set([
-  "evidence_coverage",
-  "audit_pass",
-  "sla_compliance",
-  "recurring_rate",
+export const UNWIRED_UNIVERSAL_KPI_IDS = new Set<string>([
+  // Kept empty — previously unwired KPIs now compute from live rows or show Data unavailable via liveKpi null paths.
 ]);
 
-export const NOT_WIRED_YET = "Not wired yet — template KPIs come next";
+export const NOT_WIRED_YET = "Data unavailable";
 
 const STATUS_COLORS: Record<string, string> = AISLIX_STATUS_MIX;
 
@@ -477,6 +474,35 @@ export function computeUniversalDashboardFromRows(input: UniversalComputeInput):
     .filter((f) => !CLOSED_FINDING.has(f.status))
     .reduce((sum, f) => sum + Math.abs(Number(f.variance_value_inr) || 0), 0);
 
+  const recurring = buildRecurringIssues(input.findings, now);
+  const recurringGroups = recurring.length;
+  const findingTypeGroups = new Set(
+    input.findings.map((f) => `${f.store_id ?? ""}|${f.sku ?? ""}|${f.finding_type}`),
+  ).size;
+  const recurringRate =
+    findingTypeGroups > 0 ? Math.round((recurringGroups / Math.max(1, findingTypeGroups)) * 1000) / 10 : null;
+
+  const closedFindings = input.findings.filter((f) => CLOSED_FINDING.has(f.status) || f.status === "resolved").length;
+  const auditPassPct =
+    input.findings.length > 0
+      ? Math.round((closedFindings / input.findings.length) * 1000) / 10
+      : completed > 0
+        ? 100
+        : null;
+
+  const actionsWithDue = input.actions.filter((a) => a.due_at);
+  const onTimeClosed = input.actions.filter(
+    (a) =>
+      a.status === "closed" &&
+      a.due_at &&
+      (a.closed_at || a.resolved_at) &&
+      new Date((a.closed_at || a.resolved_at) as string).getTime() <= new Date(a.due_at).getTime(),
+  ).length;
+  const slaPct =
+    actionsWithDue.length > 0
+      ? Math.round(((actionsWithDue.length - overdueActions) / actionsWithDue.length) * 1000) / 10
+      : null;
+
   const liveById: Record<string, ControlTowerKpi> = {
     audit_completion: liveKpi(
       "audit_completion",
@@ -521,6 +547,37 @@ export function computeUniversalDashboardFromRows(input: UniversalComputeInput):
       "Past due · not closed",
       overdueActions === 0 ? "good" : "bad",
     ),
+    evidence_coverage: liveKpi(
+      "evidence_coverage",
+      "Evidence Coverage %",
+      "N/A",
+      "Use Expiry Control for unit-level evidence coverage",
+      "neutral",
+      { available: false, unavailableReason: "Data unavailable" },
+    ),
+    audit_pass: liveKpi(
+      "audit_pass",
+      "Audit Pass %",
+      auditPassPct == null ? "N/A" : `${auditPassPct}%`,
+      auditPassPct == null ? "Data unavailable" : `${closedFindings} closed / ${input.findings.length} findings`,
+      completionTone(auditPassPct),
+    ),
+    sla_compliance: liveKpi(
+      "sla_compliance",
+      "SLA Compliance %",
+      slaPct == null ? "N/A" : `${slaPct}%`,
+      slaPct == null ? "Data unavailable" : `${overdueActions} overdue of ${actionsWithDue.length} with due dates`,
+      completionTone(slaPct),
+    ),
+    recurring_rate: liveKpi(
+      "recurring_rate",
+      "Recurring Issue Rate",
+      recurringRate == null ? "N/A" : `${recurringRate}%`,
+      recurringRate == null
+        ? "Data unavailable"
+        : `${recurringGroups} recurring issue groups`,
+      recurringRate != null && recurringRate > 20 ? "warn" : "good",
+    ),
   };
 
   const universalKpis = catalog.universal.map((d) => {
@@ -557,7 +614,6 @@ export function computeUniversalDashboardFromRows(input: UniversalComputeInput):
       status: a.status.replaceAll("_", " "),
     }));
 
-  const recurring = buildRecurringIssues(input.findings, now);
   const riskLocations = buildRiskLocations(input.findings);
   const riskSkus = buildRiskSkus(input.findings);
   const auditStatus = buildAuditStatusBuckets(input.assignments, now);
@@ -592,8 +648,8 @@ export function computeUniversalDashboardFromRows(input: UniversalComputeInput):
       closed: closedActions,
     },
     sla: {
-      available: false,
-      compliancePct: 0,
+      available: slaPct != null,
+      compliancePct: slaPct ?? 0,
       overdue: overdueActions,
       dueToday,
       breached: overdueActions,

@@ -19,6 +19,7 @@ import {
 import type { TemplateEntry } from './registry'
 
 interface Props {
+  assignerName?: string
   assigneeName?: string
   storeName?: string | null
   location?: string | null
@@ -26,12 +27,9 @@ interface Props {
   subCategory?: string | null
   auditName?: string | null
   auditDescription?: string | null
-  scanDate?: string | null
-  healthScore?: number | null
-  productsDetected?: number | null
-  compliancePercent?: number | null
-  reportUrl?: string
-  message?: string | null
+  auditMode?: string | null
+  dueAt?: string | null
+  myWorkUrl?: string
 }
 
 const formatDate = (iso?: string | null) => {
@@ -41,39 +39,34 @@ const formatDate = (iso?: string | null) => {
   return date.toUTCString().replace(' GMT', 'UTC')
 }
 
-const percent = (value?: number | null) =>
-  typeof value === 'number' && Number.isFinite(value) ? `${Math.round(value)}%` : '—'
-
 const Email = ({
-  assigneeName = 'A team member',
+  assignerName = 'Your manager',
+  assigneeName = 'you',
   storeName,
   location,
   category,
   subCategory,
   auditName,
   auditDescription,
-  scanDate,
-  healthScore,
-  productsDetected,
-  compliancePercent,
-  reportUrl = 'https://aislix.com',
-  message,
+  auditMode,
+  dueAt,
+  myWorkUrl = 'https://aislix.com/my-scans',
 }: Props) => {
-  const storeLabel = storeName?.trim() || 'this store'
+  const storeLabel = storeName?.trim() || 'a store'
+  const modeLabel = auditMode === 'digital' ? 'Digital' : 'AI'
 
   return (
     <Html lang="en" dir="ltr">
       <Head />
-      <Preview>{`${assigneeName} completed the shelf audit at ${storeLabel}`}</Preview>
+      <Preview>{`New ${modeLabel} audit assigned at ${storeLabel}`}</Preview>
       <Body style={main}>
         <Container style={container}>
           <EmailLogo />
-          <Heading style={heading}>Audit completed — {storeLabel}</Heading>
+          <Heading style={heading}>Audit assigned — {storeLabel}</Heading>
           <Text style={text}>
-            Audit has been completed by <strong>{assigneeName}</strong> and you can view the report
-            using the link below.
+            <strong>{assignerName}</strong> has assigned a {modeLabel.toLowerCase()} audit to{' '}
+            <strong>{assigneeName}</strong>. Open My Work to start.
           </Text>
-          {message ? <Text style={quote}>{message}</Text> : null}
 
           <Section style={card}>
             <Row>
@@ -92,8 +85,8 @@ const Email = ({
                 <Text style={cellValue}>{auditName || '—'}</Text>
               </Column>
               <Column style={cell}>
-                <Text style={cellLabel}>Audit description</Text>
-                <Text style={cellValue}>{auditDescription || '—'}</Text>
+                <Text style={cellLabel}>Audit type</Text>
+                <Text style={cellValue}>{modeLabel}</Text>
               </Column>
             </Row>
             <Row>
@@ -108,38 +101,19 @@ const Email = ({
             </Row>
             <Row>
               <Column style={cell}>
-                <Text style={cellLabel}>Completed by</Text>
-                <Text style={cellValue}>{assigneeName}</Text>
+                <Text style={cellLabel}>Due</Text>
+                <Text style={cellValue}>{formatDate(dueAt) || 'No due date'}</Text>
               </Column>
               <Column style={cell}>
-                <Text style={cellLabel}>Audited</Text>
-                <Text style={cellValue}>{formatDate(scanDate) || '—'}</Text>
+                <Text style={cellLabel}>Description</Text>
+                <Text style={cellValue}>{auditDescription || '—'}</Text>
               </Column>
-            </Row>
-            <Row>
-              <Column style={cell}>
-                <Text style={cellLabel}>Shelf health</Text>
-                <Text style={cellValue}>{percent(healthScore)}</Text>
-              </Column>
-              <Column style={cell}>
-                <Text style={cellLabel}>Products detected</Text>
-                <Text style={cellValue}>
-                  {typeof productsDetected === 'number' ? String(productsDetected) : '—'}
-                </Text>
-              </Column>
-            </Row>
-            <Row>
-              <Column style={cell}>
-                <Text style={cellLabel}>Planogram compliance</Text>
-                <Text style={cellValue}>{percent(compliancePercent)}</Text>
-              </Column>
-              <Column style={cell} />
             </Row>
           </Section>
 
           <Section style={{ margin: '28px 0 8px' }}>
-            <Button href={reportUrl} style={button}>
-              View full report
+            <Button href={myWorkUrl} style={button}>
+              Open My Work
             </Button>
           </Section>
 
@@ -147,8 +121,8 @@ const Email = ({
           <Text style={muted}>
             If the button does not work, copy this link into your browser:
             <br />
-            <Link href={reportUrl} style={link}>
-              {reportUrl}
+            <Link href={myWorkUrl} style={link}>
+              {myWorkUrl}
             </Link>
           </Text>
           <Text style={muted}>Aislix — AI-powered retail shelf intelligence.</Text>
@@ -163,12 +137,13 @@ export const template = {
   subject: (data: Record<string, any>) => {
     const store = data?.storeName ? String(data.storeName) : null
     const name = data?.auditName ? String(data.auditName) : null
-    if (store && name) return `Audit completed — ${store} · ${name}`
-    if (store) return `Audit completed — ${store}`
-    return 'Audit completed'
+    if (store && name) return `Audit assigned — ${store} · ${name}`
+    if (store) return `Audit assigned — ${store}`
+    return 'Audit assigned'
   },
-  displayName: 'Audit completed (assignor)',
+  displayName: 'Audit assigned (assignee)',
   previewData: {
+    assignerName: 'Apaar Gupta',
     assigneeName: 'Apurv Gupta',
     storeName: 'Sharma Supermarkets — Andheri',
     location: 'Aisle 4 · Beverages bay',
@@ -176,11 +151,9 @@ export const template = {
     subCategory: 'Soft drinks',
     auditName: 'Weekend beverage bay check',
     auditDescription: 'Verify planogram compliance before weekend restock.',
-    scanDate: new Date().toISOString(),
-    healthScore: 87,
-    productsDetected: 42,
-    compliancePercent: 91,
-    reportUrl: 'https://aislix.com/results?scan=demo-scan-id',
+    auditMode: 'ai',
+    dueAt: new Date().toISOString(),
+    myWorkUrl: 'https://aislix.com/my-scans',
   },
 } satisfies TemplateEntry
 
@@ -188,16 +161,6 @@ const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif
 const container = { padding: '32px 28px', maxWidth: '600px' }
 const heading = { fontSize: '24px', lineHeight: '32px', color: '#09283e', margin: '0 0 16px' }
 const text = { fontSize: '15px', lineHeight: '24px', color: '#1f2937', margin: '0 0 8px' }
-const quote = {
-  fontSize: '14px',
-  lineHeight: '22px',
-  color: '#1f2937',
-  backgroundColor: '#f1f5f9',
-  borderLeft: '3px solid #09283e',
-  borderRadius: '8px',
-  padding: '12px 14px',
-  margin: '16px 0 0',
-}
 const card = {
   marginTop: '20px',
   border: '1px solid #e2e8f0',

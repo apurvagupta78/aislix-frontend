@@ -11,6 +11,7 @@ import { ClassificationBadge } from "@/components/expiry-control/SeverityBadge";
 import {
   checkReconciliation,
   classifyByPolicy,
+  computeExpiryEvidenceCoverage,
   createQuarantineTransfer,
   expiryTransition,
   fetchAttempt,
@@ -18,6 +19,7 @@ import {
   linkEvidenceToObservation,
   makeIdempotencyKey,
   parseRetailDate,
+  resolveExpiryRequiredUnits,
   uploadEvidence,
   uploadSessionVideo,
   type ExpiryInspectionAttempt,
@@ -194,12 +196,51 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      await expiryTransition({ entityType: "attempt", entityId: attemptId, action: "report_quarantine_transfer" });
-      await expiryTransition({ entityType: "attempt", entityId: attemptId, action: "submit" });
+      const obs = await fetchObservations(attemptId);
+      const required = resolveExpiryRequiredUnits({
+        physicalCount: attempt?.physical_count,
+        actualQuantity: attempt?.actual_quantity,
+      });
+      const verifiedUnits = obs.filter(
+        (o) =>
+          !o.unreadable &&
+          (o.human_confirmed_date || o.parsed_date || o.ai_suggested_date) &&
+          !o.wrong_product,
+      ).length;
+      const coverage = computeExpiryEvidenceCoverage({
+        requiredUnits: required,
+        verifiedUnits,
+      });
+      await expiryTransition({
+        entityType: "attempt",
+        entityId: attemptId,
+        action: "report_quarantine_transfer",
+      });
+      // Submit always allowed; <100% coverage → EVIDENCE INCOMPLETE path.
+      await expiryTransition({
+        entityType: "attempt",
+        entityId: attemptId,
+        action: coverage.complete ? "submit" : "submit_incomplete",
+        payload: coverage.complete
+          ? undefined
+          : {
+              reason: `${coverage.statusLabel} — coverage ${coverage.coveragePct?.toFixed(0) ?? 0}%`,
+              coverage_pct: coverage.coveragePct,
+              required_units: coverage.requiredUnits,
+              verified_units: coverage.verifiedUnits,
+            },
+      });
+      return coverage;
     },
-    onSuccess: () => {
+    onSuccess: (coverage) => {
       const pending = (attempt?.remove_count ?? 0) + (attempt?.unresolved_count ?? 0);
-      setSubmitMessage(`Inspection submitted — ${pending} units awaiting quarantine receipt.`);
+      if (!coverage.complete) {
+        setSubmitMessage(
+          `${coverage.statusLabel} — submitted at ${coverage.coveragePct?.toFixed(0) ?? 0}% coverage. ${pending} units awaiting quarantine receipt.`,
+        );
+      } else {
+        setSubmitMessage(`Inspection submitted — ${pending} units awaiting quarantine receipt.`);
+      }
       onDone?.();
     },
   });

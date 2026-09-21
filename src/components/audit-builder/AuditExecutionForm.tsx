@@ -208,7 +208,9 @@ export function AuditExecutionForm({
     ...computeCalculatedValues(definition, responses[sectionKey]?.[activeRecord] ?? {}),
   };
 
-  const physicalQty = Number(currentValues.actual_qty ?? currentValues.expected_qty ?? 0);
+  const physicalQty = Number(
+    currentValues.physical_qty ?? currentValues.actual_qty ?? currentValues.actual_quantity ?? 0,
+  );
   const imageFields = definition.fields.filter((f) => isImageField(f.type));
   const verifiedUnits = imageFields.reduce((max, f) => {
     const imgs = responses[sectionKey]?.[activeRecord]?.[f.key];

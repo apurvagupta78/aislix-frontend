@@ -1674,9 +1674,9 @@ async function persistPlanogramCompliance(
       last_compliance_percent: compliance,
       scan_attempts: (context?.scan_attempts ?? 0) + 1,
       updated_at: now,
-      ...(passed
-        ? { status: "completed", completed_at: now }
-        : { status: "needs_correction", completed_at: null }),
+      // Stay in progress until the assignee explicitly Submits (email + final status).
+      status: "in_progress",
+      completed_at: null,
     } as never)
     .eq("id", assignmentId);
 
@@ -1689,10 +1689,10 @@ async function persistPlanogramCompliance(
 
   if (passed) {
     await resolveAllActions(supabase, assignmentId, now);
-    await notifyAssignmentPassed(supabase, scan, context, compliance);
+    // Soft in-app tip for assignee that the shelf passed — assignor notified on Submit.
+    await notifyAssigneeReadyToSubmit(supabase, scan, context, compliance);
   } else {
     await notifyAssigneeNeedsCorrection(supabase, scan, context, compliance, openIssues);
-    await notifyAssignerOfCompletion(supabase, scan, context, compliance, openIssues);
   }
 
   return compliance;
@@ -1778,31 +1778,30 @@ async function resolveAllActions(supabase: DB, assignmentId: string, now: string
     .in("status", ["open", "in_progress"]);
 }
 
-/** 100% pass — tell the manager who raised the assignment. */
-async function notifyAssignmentPassed(
+/** Soft tip after a passing scan — assignor is notified only on explicit Submit. */
+async function notifyAssigneeReadyToSubmit(
   supabase: DB,
   scan: ScanRow,
   context: AssignmentNotifyContext | null,
   compliance: number | null,
 ): Promise<void> {
   try {
-    if (!context?.assigner_id) return;
-    if (context.assignee_id && context.assigner_id === context.assignee_id) return;
+    if (!context?.assignee_id) return;
+    const percentLabel = compliance === null ? "—" : `${Math.round(compliance)}`;
     await supabase.from("notifications").insert({
-      user_id: context.assigner_id,
+      user_id: context.assignee_id,
       org_id: scan.org_id,
-      type: "scan_completed",
-      title: "Assigned audit passed — 100% compliance",
-      body: `${context.assignee_name} completed ${context.store_name} · ${context.location} at 100%`,
+      type: "scan_ready_to_submit",
+      title: "Audit ready to submit",
+      body: `${percentLabel}% compliance at ${context.store_name} · ${context.location}. Review results and submit when ready.`,
       payload: {
         assignment_id: context.id,
         scan_id: scan.id,
         compliance_percent: compliance,
       },
     } as never);
-    await emailAssignerAuditCompleted(supabase, scan, context, compliance);
   } catch (error) {
-    console.error("[pipeline] pass notification failed", error);
+    console.error("[pipeline] ready-to-submit notification failed", error);
   }
 }
 
@@ -1832,85 +1831,6 @@ async function notifyAssigneeNeedsCorrection(
     } as never);
   } catch (error) {
     console.error("[pipeline] needs-correction notification failed", error);
-  }
-}
-
-/** Keeps the manager informed about a below-target attempt. */
-async function notifyAssignerOfCompletion(
-  supabase: DB,
-  scan: ScanRow,
-  context: AssignmentNotifyContext | null,
-  compliance: number | null,
-  openIssues: number,
-): Promise<void> {
-  try {
-    if (!context?.assigner_id) return;
-    if (context.assignee_id && context.assigner_id === context.assignee_id) return;
-    const percentLabel = compliance === null ? "—" : `${Math.round(compliance)}`;
-    await supabase.from("notifications").insert({
-      user_id: context.assigner_id,
-      org_id: scan.org_id,
-      type: "scan_needs_correction_manager",
-      title: "Assigned audit needs correction",
-      body: `${context.assignee_name} audited ${context.store_name} · ${context.location} — ${percentLabel}% compliance, ${openIssues} open issue(s)`,
-      payload: {
-        assignment_id: context.id,
-        scan_id: scan.id,
-        compliance_percent: compliance,
-        open_issue_count: openIssues,
-      },
-    } as never);
-    await emailAssignerAuditCompleted(supabase, scan, context, compliance);
-  } catch (error) {
-    console.error("[pipeline] assigner notification failed", error);
-  }
-}
-
-/**
- * Email the assignor/manager when an assignee finishes an assigned audit.
- * Uses the durable in-app report URL (audits stay in the database permanently).
- */
-async function emailAssignerAuditCompleted(
-  supabase: DB,
-  scan: ScanRow,
-  context: AssignmentNotifyContext,
-  compliance: number | null,
-): Promise<void> {
-  try {
-    const { data: assigner } = await supabase
-      .from("profiles")
-      .select("email")
-      .eq("id", context.assigner_id!)
-      .maybeSingle();
-    const email = ((assigner as { email?: string | null } | null)?.email ?? "").trim().toLowerCase();
-    if (!email) return;
-
-    const { scanShareSummary } = await import("@/lib/scan-share.server");
-    const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
-    const { serverAppOrigin } = await import("@/lib/app-origin");
-
-    const summary = await scanShareSummary(scan.id);
-    const reportUrl = `${serverAppOrigin()}/results?scan=${encodeURIComponent(scan.id)}`;
-
-    await sendTemplateEmail("audit-completed", email, {
-      idempotencyKey: `audit-completed-${scan.id}-${context.assigner_id}`,
-      templateData: {
-        assigneeName: context.assignee_name,
-        storeName: summary.store_name ?? context.store_name,
-        location: summary.location ?? context.location,
-        category: summary.category,
-        subCategory: summary.sub_category,
-        auditName: summary.audit_name,
-        auditDescription: summary.audit_description,
-        scanDate: summary.scanned_at,
-        healthScore: summary.shelf_health_score,
-        productsDetected: summary.products_detected,
-        compliancePercent: compliance ?? summary.planogram_compliance_percent,
-        reportUrl,
-      },
-    });
-  } catch (error) {
-    console.error("[pipeline] assigner completion email failed", error);
   }
 }
 

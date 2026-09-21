@@ -100,6 +100,9 @@ export const GLOBAL_FILTER_PATHS = [
   "/corrective-actions",
   "/assigned-scans",
   "/history",
+  "/intelligence/inventory-variance",
+  "/expiry-control",
+  "/reports",
 ] as const;
 
 export function pathUsesGlobalFilters(pathname: string): boolean {
@@ -108,6 +111,5 @@ export function pathUsesGlobalFilters(pathname: string): boolean {
 
 /** Main Control Tower renders filters above the audits table instead of in AppShell. */
 export function pathShowsGlobalFilterBarInShell(pathname: string): boolean {
-  if (pathname === "/dashboard") return false;
   return pathUsesGlobalFilters(pathname);
 }

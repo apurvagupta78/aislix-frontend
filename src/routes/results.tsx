@@ -26,6 +26,8 @@ import { planHasFeature } from "@/lib/plan-features";
 import { fetchUsageSummary } from "@/lib/subscription-limits";
 import { useWorkspaceContext } from "@/hooks/use-customer-context";
 import { AiAuditResultsPage } from "@/components/ai-audit/AiAuditResultsPage";
+import { AiAuditSubmitPanel } from "@/components/ai-audit/AiAuditSubmitPanel";
+import { AiFieldVerificationPanel } from "@/components/ai-audit/AiFieldVerificationPanel";
 import { ReportActionsFooter } from "@/components/scan-results/ReportActionsFooter";
 import { AstraComparisonResults } from "@/components/ai-audit/AstraComparisonResults";
 import { normalizeAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
@@ -368,6 +370,27 @@ function Results() {
                   {useSimpleAiView ? (
                     <>
                       <AiAuditResultsPage data={display} imageUrl={imageUrl} />
+                      {!isDigitalAudit ? (
+                        <>
+                          <AiFieldVerificationPanel
+                            scanId={scan!}
+                            products={(display.inventory ?? []).map((row) => ({
+                              id: row.id,
+                              brand: row.brand,
+                              product: row.product,
+                              facings: row.quantity,
+                              quantity: row.quantity,
+                              visible_units: row.quantity,
+                            }))}
+                            canEdit={!assignmentQuery.data?.submitted}
+                          />
+                          <AiAuditSubmitPanel
+                            scanId={scan!}
+                            assignmentId={assignmentId}
+                            alreadySubmitted={Boolean(assignmentQuery.data?.submitted)}
+                          />
+                        </>
+                      ) : null}
                       <ReportActionsFooter data={display} loading={false} />
                       <p className="mt-3 shrink-0 text-[11px] leading-relaxed text-muted-foreground">
                         {AI_DISCLAIMER}

@@ -40,7 +40,7 @@ export type ToolContext = {
 
 export type ToolExecutor = (ctx: ToolContext, args: Record<string, unknown>) => Promise<ToolResult>;
 
-const NOT_WIRED = "Not wired yet — insufficient source data";
+const NOT_WIRED = "Data unavailable — insufficient source data";
 
 type ToolSpec = { name: string; description: string; parameters: Record<string, unknown> };
 

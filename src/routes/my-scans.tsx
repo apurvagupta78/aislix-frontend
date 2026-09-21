@@ -29,6 +29,7 @@ import { processDueAuditSchedules } from "@/lib/audit-schedules";
 import { markAssignmentNotificationsRead } from "@/lib/notifications";
 import { complianceTone } from "@/lib/planogram-compliance";
 import { AssignmentIdChip } from "@/components/AssignmentId";
+import { assignmentStatusClassName, assignmentStatusLabel } from "@/lib/assignment-status-ui";
 
 export const Route = createFileRoute("/my-scans")({
   validateSearch: (search: Record<string, unknown>): { tab?: "assigned" | "completed" } => {
@@ -57,17 +58,12 @@ export const Route = createFileRoute("/my-scans")({
 });
 
 export function statusBadge(status: Assignment["status"]) {
-  const map: Record<Assignment["status"], { label: string; className: string }> = {
-    pending: { label: "Pending", className: "bg-warning/10 text-warning" },
-    in_progress: { label: "In progress", className: "bg-brand-soft text-brand" },
-    needs_correction: { label: "Needs correction", className: "bg-warning/15 text-warning" },
-    completed: { label: "Completed", className: "bg-success/10 text-success" },
-    cancelled: { label: "Cancelled", className: "bg-muted text-muted-foreground" },
-  };
-  const item = map[status] ?? map.pending;
   return (
-    <Badge variant="secondary" className={`rounded-full border-0 ${item.className}`}>
-      {item.label}
+    <Badge
+      variant="secondary"
+      className={`rounded-full border-0 ${assignmentStatusClassName(status)}`}
+    >
+      {assignmentStatusLabel(status)}
     </Badge>
   );
 }

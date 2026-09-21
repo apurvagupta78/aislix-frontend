@@ -98,12 +98,24 @@ export function binKeyFromLocation(location: string): string {
   return trimmed || "default";
 }
 
-export function computeLineVariance(expected: number, actual: number | null, mrp: number | null) {
+export function computeLineVariance(
+  expected: number,
+  actual: number | null,
+  mrp: number | null,
+  opts?: { expectedMapped?: boolean; actualMapped?: boolean },
+) {
+  const expectedMapped = opts?.expectedMapped !== false;
+  const actualMapped = opts?.actualMapped !== false;
+  if (!expectedMapped || !actualMapped) {
+    return { variance_qty: null, variance_pct: null, variance_value_inr: null };
+  }
   if (actual === null || Number.isNaN(actual)) {
     return { variance_qty: null, variance_pct: null, variance_value_inr: null };
   }
   const variance_qty = actual - expected;
-  const variance_pct = expected > 0 ? (variance_qty / expected) * 100 : actual === 0 ? 0 : 100;
+  // E=0, A=0 → 0%; E=0, A>0 → N/A (do not divide by zero)
+  const variance_pct =
+    expected > 0 ? (variance_qty / expected) * 100 : actual === 0 ? 0 : null;
   const variance_value_inr =
     mrp != null && !Number.isNaN(mrp) ? Math.round(variance_qty * mrp * 100) / 100 : null;
   return { variance_qty, variance_pct, variance_value_inr };
@@ -479,6 +491,65 @@ export async function uploadBinEvidence(input: {
     { onConflict: "scan_id,bin_key" },
   );
   if (upsertErr) dbError(upsertErr, "Could not save evidence metadata.");
+
+  // FNV QC: when this assignment is an FNV template, run Astra visual disposition.
+  try {
+    const { data: scanRow } = await supabase
+      .from("shelf_scans")
+      .select("assignment_id")
+      .eq("id", input.scanId)
+      .maybeSingle();
+    const assignmentId = (scanRow as { assignment_id?: string | null } | null)?.assignment_id;
+    if (assignmentId) {
+      const { data: assignment } = await supabase
+        .from("scan_assignments")
+        .select("template_id")
+        .eq("id", assignmentId)
+        .maybeSingle();
+      const templateId = (assignment as { template_id?: string | null } | null)?.template_id;
+      let isFnv = false;
+      if (templateId) {
+        const { data: template } = await supabase
+          .from("audit_templates")
+          .select("template_type, audit_purpose, name")
+          .eq("id", templateId)
+          .maybeSingle();
+        const t = template as {
+          template_type?: string | null;
+          audit_purpose?: string | null;
+          name?: string | null;
+        } | null;
+        isFnv =
+          t?.template_type === "fnv_qc_audit" ||
+          t?.audit_purpose === "fnv_qc" ||
+          Boolean(t?.name?.toLowerCase().includes("fnv"));
+      }
+      if (isFnv) {
+        const { runFnvQcOnBinEvidence } = await import("@/lib/fnv-qc.functions");
+        const lineHint = await supabase
+          .from("digital_audit_lines")
+          .select("product_name, category")
+          .eq("scan_id", input.scanId)
+          .eq("bin_key", input.binKey)
+          .limit(1)
+          .maybeSingle();
+        await runFnvQcOnBinEvidence({
+          data: {
+            scanId: input.scanId,
+            binKey: input.binKey,
+            storagePath,
+            productHint:
+              (lineHint.data as { product_name?: string; category?: string } | null)?.product_name ??
+              (lineHint.data as { category?: string } | null)?.category ??
+              null,
+          },
+        });
+      }
+    }
+  } catch (fnvError) {
+    // Evidence is already stored; QC failure must not discard the photo.
+    console.error("[digital-audit] FNV QC analysis failed", fnvError);
+  }
 }
 
 function normalizeKey(value: string | null | undefined): string {
@@ -626,7 +697,13 @@ export async function submitDigitalAudit(input: {
 
   await supabase
     .from("scan_assignments")
-    .update({ approval_status: "pending_review" } as Record<string, unknown>)
+    .update({
+      approval_status: "pending_review",
+      assignment_state: "submitted",
+      status: "completed",
+      completed_at: now,
+      updated_at: now,
+    } as Record<string, unknown>)
     .eq("id", input.assignmentId);
 
   try {

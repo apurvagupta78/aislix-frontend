@@ -49,9 +49,9 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
     label: "Audits",
     icon: ClipboardCheck,
     items: [
+      { kind: "leaf", label: "My Work", to: "/my-scans" },
       { kind: "leaf", label: "All Audits", to: "/history" },
       { kind: "leaf", label: "Assignments", to: "/assigned-scans" },
-      { kind: "leaf", label: "Assignment Grid", to: "/assignment-grid", managerOnly: true },
       { kind: "leaf", label: "Audit Calendar", to: "/audit-calendar" },
       { kind: "leaf", label: "Recurring Schedules", to: "/audit-schedules" },
       { kind: "leaf", label: "Audit Templates", to: "/audit-templates", managerOnly: true },
@@ -75,8 +75,6 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
     items: [
       { kind: "leaf", label: "Inventory & Variance", to: "/intelligence/inventory-variance" },
       { kind: "leaf", label: "Expiry Control", to: "/expiry-control" },
-      { kind: "leaf", label: "Shelf Intelligence", to: "/retail-shelf-intelligence" },
-      { kind: "leaf", label: "Planogram", to: "/planogram-management" },
       { kind: "leaf", label: "Analytics", to: "/audit-intelligence", managerOnly: true },
     ],
   },
@@ -86,6 +84,7 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
     icon: Store,
     items: [
       { kind: "leaf", label: "Stores / Outlets", to: "/stores" },
+      { kind: "leaf", label: "Supermarkets", to: "/stores", search: { model: "supermarket" } },
       { kind: "leaf", label: "Warehouses", to: "/operations/warehouses" },
       { kind: "leaf", label: "Distributors", to: "/operations/distributors" },
       { kind: "leaf", label: "SKUs", to: "/sku-intelligence" },
@@ -111,7 +110,6 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
     icon: Settings,
     managerOnly: true,
     items: [
-      { kind: "leaf", label: "Rules", to: "/manage/rules" },
       { kind: "leaf", label: "SLA", to: "/escalation-settings" },
       { kind: "leaf", label: "Users & Roles", to: "/team" },
       { kind: "leaf", label: "Notifications", to: "/settings" },

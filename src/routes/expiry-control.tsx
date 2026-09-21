@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState, Skeleton } from "@/components/States";
 import { isOrgManager } from "@/lib/assignments";
 import { fetchExceptions, fetchOverviewMetrics, seedDemoScenario } from "@/lib/expiry-control";
-import { useGlobalFilters } from "@/lib/global-filters";
+import { useOptionalGlobalFilters } from "@/lib/global-filters";
 
 function useIsManager() {
   return useQuery({ queryKey: ["is-org-manager"], queryFn: () => isOrgManager() });
@@ -29,11 +29,23 @@ export const Route = createFileRoute("/expiry-control")({
 });
 
 function ExpiryControlPage() {
-  const { filters } = useGlobalFilters();
+  return (
+    <AppShell title="" hidePageHeader>
+      <ExpiryControlMain />
+    </AppShell>
+  );
+}
+
+function ExpiryControlMain() {
+  const globalFilters = useOptionalGlobalFilters();
+  const storeId =
+    globalFilters?.filters.storeId && globalFilters.filters.storeId !== "all"
+      ? globalFilters.filters.storeId
+      : undefined;
   const qc = useQueryClient();
   const metricsQuery = useQuery({
-    queryKey: ["expiry-metrics", filters.storeId],
-    queryFn: () => fetchOverviewMetrics(filters.storeId || undefined),
+    queryKey: ["expiry-metrics", storeId],
+    queryFn: () => fetchOverviewMetrics(storeId),
     retry: false,
   });
   const exceptionsQuery = useQuery({
@@ -63,7 +75,13 @@ function ExpiryControlPage() {
           <Button variant="outline" size="sm" className="rounded-lg" asChild>
             <Link to="/expiry-control/planner">Create inspection</Link>
           </Button>
-          <Button variant="outline" size="sm" className="rounded-lg" onClick={() => seedMutation.mutate()} disabled={seedMutation.isPending}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="rounded-lg"
+            onClick={() => seedMutation.mutate()}
+            disabled={seedMutation.isPending}
+          >
             Seed demo
           </Button>
         </>
@@ -78,26 +96,42 @@ function ExpiryControlPage() {
   );
 
   return (
-    <AppShell title="" hidePageHeader>
-      <div className="space-y-6">
-        <PageHeader
-          eyebrow="Operations"
-          title="Expiry Control"
-          description="Point-in-time expiry inspections — not a guarantee of store-wide clearance."
-          actions={headerActions}
-        />
+    <div className="space-y-6">
+      <PageHeader
+        eyebrow="Operations"
+        title="Expiry Control"
+        description="Point-in-time expiry inspections — not a guarantee of store-wide clearance."
+        actions={headerActions}
+      />
       {metricsQuery.isLoading && <Skeleton className="h-48" />}
       {metricsQuery.isError && (
-        <ErrorState description="Run the expiry_control migration, then refresh." />
+        <ErrorState description="Could not load expiry metrics. Refresh or check your workspace access." />
       )}
       {m && (
         <div className="space-y-6">
           <p className="text-xs text-muted-foreground">
-            Last refresh: {new Date(m.refreshed_at).toLocaleString()} · Counts exclude superseded recheck attempts where marked.
+            Last refresh: {new Date(m.refreshed_at).toLocaleString()} · Counts exclude superseded
+            recheck attempts where marked.
           </p>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
             <KpiCard label="Units in scope" value={String(m.units_in_scope)} hint="Assigned, not yet verified" />
             <KpiCard label="Units inspected" value={String(m.units_inspected)} />
+            <KpiCard
+              label="Evidence coverage %"
+              value={
+                m.evidence_coverage_pct != null ? `${m.evidence_coverage_pct.toFixed(0)}%` : "N/A"
+              }
+              hint={
+                m.evidence_coverage_pct != null && m.evidence_coverage_pct < 100
+                  ? "EVIDENCE INCOMPLETE until 100%"
+                  : "Required physical units with verified expiry"
+              }
+            />
+            <KpiCard
+              label="EVIDENCE INCOMPLETE"
+              value={String(m.evidence_incomplete_count ?? 0)}
+              tone="warn"
+            />
             <KpiCard label="Expired detected" value={String(m.expired_detected)} tone="danger" />
             <KpiCard label="Near expiry" value={String(m.near_expiry)} tone="warn" />
             <KpiCard label="Unresolved dates" value={String(m.unresolved_dates)} />
@@ -109,10 +143,17 @@ function ExpiryControlPage() {
           </div>
 
           <MpTableShell title="Action required">
-            {exceptionsQuery.isLoading && <div className="p-5"><Skeleton className="h-32" /></div>}
+            {exceptionsQuery.isLoading && (
+              <div className="p-5">
+                <Skeleton className="h-32" />
+              </div>
+            )}
             {exceptionsQuery.data?.length === 0 && (
               <div className="p-5">
-                <EmptyState title="No open expiry exceptions" description="Partial coverage may still exist elsewhere." />
+                <EmptyState
+                  title="No open expiry exceptions"
+                  description="Partial coverage may still exist elsewhere."
+                />
               </div>
             )}
             {(exceptionsQuery.data?.length ?? 0) > 0 && (
@@ -153,7 +194,6 @@ function ExpiryControlPage() {
           </MpTableShell>
         </div>
       )}
-      </div>
-    </AppShell>
+    </div>
   );
 }

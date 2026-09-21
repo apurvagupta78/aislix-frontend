@@ -1,8 +1,11 @@
 import { ASTRA_SHELF_CV_PROMPT_BODY } from "@/lib/ai-audit/prompts/shelf-cv.prompt";
+import { buildFnvQcVisionPrompt, FNV_QC_PROMPT_VERSION } from "@/lib/ai-audit/prompts/fnv-qc.prompt";
 import { getRoleProfile } from "@/lib/role-kpi-config";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import type { NewAuditPlanogramChoice } from "@/lib/new-audit/planogram-setup";
 import type { ScanContextState } from "@/lib/scan-context";
+
+export { buildFnvQcVisionPrompt, FNV_QC_PROMPT_VERSION };
 
 export type AstraPromptInput = {
   auditName?: string;

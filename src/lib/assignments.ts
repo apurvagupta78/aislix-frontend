@@ -340,6 +340,23 @@ export async function createScanAssignment(input: {
     console.error("[assignments] notification delivery failed", notifyError);
   }
 
+  try {
+    const { sendAuditAssignedEmail } = await import("@/lib/assignment-emails.functions");
+    await sendAuditAssignedEmail({
+      data: {
+        assignmentId,
+        assigneeId: input.assigneeId,
+        assignerId,
+        storeId: input.storeId,
+        auditMode,
+        dueAt: input.dueAt ?? null,
+        scopeValues: input.scopeValues as Record<string, unknown>,
+      },
+    });
+  } catch (emailError) {
+    console.error("[assignments] assignment email failed", emailError);
+  }
+
   return assignmentId;
 }
 
@@ -777,13 +794,19 @@ export type ScanAssignmentMeta = {
   assigneeLabel: string | null;
   auditName: string;
   auditDescription: string | null;
+  /** Assignment workflow status (pending / in_progress / completed / …). */
+  status: string | null;
+  assignmentState: string | null;
+  submitted: boolean;
 };
 
 /** Audit name, description, and assignee label for the results header. */
 export async function fetchScanAssignmentMeta(scanId: string): Promise<ScanAssignmentMeta | null> {
   const { data: scan } = await supabase
     .from("shelf_scans")
-    .select("assignment_id, category, sub_category_label, sub_category, notes, shelf_label")
+    .select(
+      "assignment_id, category, sub_category_label, sub_category, notes, shelf_label, submission_status, submitted_at",
+    )
     .eq("id", scanId)
     .maybeSingle();
   if (!scan) return null;
@@ -799,13 +822,17 @@ export async function fetchScanAssignmentMeta(scanId: string): Promise<ScanAssig
   let assigneeLabel: string | null = null;
   let auditName: string | null = null;
   let auditDescription: string | null = null;
+  let status: string | null = null;
+  let assignmentState: string | null = null;
 
   if (assignmentId) {
     const { data: assignment } = await supabase
       .from("scan_assignments")
-      .select("assignee_id, instructions, campaign_id, scope_values")
+      .select("assignee_id, instructions, campaign_id, scope_values, status, assignment_state")
       .eq("id", assignmentId)
       .maybeSingle();
+    status = (assignment?.status as string | null) ?? null;
+    assignmentState = (assignment?.assignment_state as string | null) ?? null;
     if (assignment?.assignee_id) {
       const names = await fetchNames([assignment.assignee_id as string]);
       const name = names.get(assignment.assignee_id as string) ?? "Team member";
@@ -857,10 +884,21 @@ export async function fetchScanAssignmentMeta(scanId: string): Promise<ScanAssig
     auditDescription = notes || (shelf ? `Shelf photo audit · ${shelf}` : null);
   }
 
+  const submissionStatus = (scan as { submission_status?: string | null }).submission_status;
+  const submittedAt = (scan as { submitted_at?: string | null }).submitted_at;
+  const submitted =
+    Boolean(submittedAt) ||
+    submissionStatus === "pending_review" ||
+    submissionStatus === "approved" ||
+    assignmentState === "submitted";
+
   return {
     id: assignmentId,
     assigneeLabel,
     auditName,
     auditDescription,
+    status,
+    assignmentState,
+    submitted,
   };
 }

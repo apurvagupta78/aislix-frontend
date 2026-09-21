@@ -91,6 +91,8 @@ export type StoreListQuery = {
   filter?: StoreFilter;
   page?: number;
   page_size?: number;
+  /** Operating model / store_type filter (supermarket, warehouse, fmcg_distributor, …). */
+  model?: string;
 };
 
 export type StoreListResponse = {
@@ -370,6 +372,9 @@ export async function fetchStoreList(
   }
   if (query.filter === "active") builder = builder.eq("status", "active");
   if (query.filter === "archived") builder = builder.eq("status", "inactive");
+  if (query.model && query.model !== "all") {
+    builder = builder.eq("store_type", query.model);
+  }
 
   builder = builder.order("created_at", { ascending: false }).range(from, to);
 

@@ -1,40 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import { AppShell } from "@/components/AppShell";
-import { ControlTowerShell } from "@/components/control-tower/ControlTowerShell";
-import type { ControlTowerSearch } from "@/lib/control-tower";
-
-function parseControlTowerSearch(search: Record<string, unknown>): ControlTowerSearch {
-  const model =
-    typeof search.model === "string" &&
-    ["all", "local_store", "supermarket", "dark_store", "warehouse", "fmcg_distributor"].includes(
-      search.model,
-    )
-      ? (search.model as ControlTowerSearch["model"])
-      : undefined;
-
-  return {
-    model: model ?? "all",
-    drill: typeof search.drill === "string" ? (search.drill as ControlTowerSearch["drill"]) : undefined,
-    kpi: typeof search.kpi === "string" ? search.kpi : undefined,
-    location: typeof search.location === "string" ? search.location : undefined,
-    category: typeof search.category === "string" ? search.category : undefined,
-    sku: typeof search.sku === "string" ? search.sku : undefined,
-    audit: typeof search.audit === "string" ? search.audit : undefined,
-    finding: typeof search.finding === "string" ? search.finding : undefined,
-    action: typeof search.action === "string" ? search.action : undefined,
-  };
-}
+import { AiDigitalDashboardShell } from "@/components/dashboard/AiDigitalDashboardShell";
 
 export const Route = createFileRoute("/dashboard")({
-  validateSearch: parseControlTowerSearch,
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: search.tab === "digital" ? ("digital" as const) : ("ai" as const),
+  }),
   head: () => ({
     meta: [
-      { title: "Control Tower — Aislix" },
+      { title: "Dashboard — Aislix" },
       {
         name: "description",
-        content:
-          "Operational command center — audit execution, KPIs, findings, corrective actions and risk across your retail operation.",
+        content: "AI Audits and Digital Audits operational dashboard with deterministic KPIs.",
       },
     ],
   }),
@@ -42,11 +20,9 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function DashboardPage() {
-  const search = Route.useSearch();
-
   return (
     <AppShell title="" hidePageHeader>
-      <ControlTowerShell search={search} />
+      <AiDigitalDashboardShell />
     </AppShell>
   );
 }

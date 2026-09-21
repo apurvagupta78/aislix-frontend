@@ -64,10 +64,67 @@ export async function publishAssignmentPlan(plan: AssignmentPlan): Promise<Publi
 
   if (plan.mode === "recurring" || plan.mode === "schedule_once") {
     const scheduleId = await createUniversalSchedule(plan);
-    if (plan.mode === "schedule_once") {
+    if (plan.mode === "recurring") {
       return { scheduleId, assignmentIds: [], mode: plan.mode };
     }
-    return { scheduleId, assignmentIds: [], mode: plan.mode };
+
+    // Schedule once: mint the first assignment(s) immediately so Assignments is not empty.
+    const timezone = plan.recurrence?.timezone ?? "Asia/Kolkata";
+    const publishAt = plan.publishAt ? new Date(plan.publishAt) : new Date();
+    const dueAt = computeDueAt(publishAt, plan.dueConfig, timezone);
+
+    for (const entry of plan.distribution) {
+      for (const storeId of entry.storeIds) {
+        const storeMeta = plan.locationScope.stores?.find((s) => s.id === storeId);
+        const scopeValues: ScopeValues = {
+          ...plan.scopeValues,
+          location: plan.scopeValues.location ?? storeMeta?.name ?? "Main",
+        };
+
+        const id = await createScanAssignment({
+          storeId,
+          scopeType: plan.scopeType,
+          scopeValues,
+          assigneeId: entry.assigneeId,
+          assigneeName: entry.assigneeName,
+          dueAt,
+          instructions: plan.instructions,
+          planogramVersionId: plan.planogramVersionId,
+          auditMode: plan.auditMode,
+          templateId: plan.templateId,
+          templateVersion: plan.templateVersion,
+          templateSnapshot: snapshotForStore(
+            plan.templateSnapshot ?? undefined,
+            storeId,
+            storeMeta?.name,
+          ),
+          reviewerId: plan.reviewerId,
+          evidencePolicy: plan.evidencePolicy,
+          requireRca: plan.requireRca,
+          creationSource: "schedule",
+          inputSource: plan.inputSource as never,
+        });
+
+        await supabase
+          .from("scan_assignments")
+          .update({
+            schedule_id: scheduleId,
+            scheduled_at: publishAt.toISOString(),
+            assignment_state: "assigned",
+            scope_values: {
+              ...scopeValues,
+              city: storeMeta?.city,
+              country: storeMeta?.country,
+            },
+          } as Record<string, unknown>)
+          .eq("id", id)
+          .eq("org_id", orgId);
+
+        assignmentIds.push(id);
+      }
+    }
+
+    return { scheduleId, assignmentIds, mode: plan.mode };
   }
 
   // Assign Now — create campaign record optionally, then assignments

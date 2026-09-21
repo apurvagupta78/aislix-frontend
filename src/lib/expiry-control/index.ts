@@ -19,32 +19,109 @@ export * from "./types";
 export * from "./reconciliation";
 export * from "./date-policy";
 export * from "./transitions";
+export * from "./coverage";
 
 export async function fetchOverviewMetrics(storeId?: string): Promise<ExpiryOverviewMetrics> {
   const orgId = await requireOrgId();
-  const { data, error } = await supabase.rpc("expiry_overview_metrics", {
-    p_org_id: orgId,
-    p_store_id: storeId ?? null,
-  });
-  if (error) {
-    if (error.code === "42883") {
+  let base: ExpiryOverviewMetrics = {
+    units_in_scope: 0,
+    units_inspected: 0,
+    expired_detected: 0,
+    near_expiry: 0,
+    unresolved_dates: 0,
+    awaiting_removal_verification: 0,
+    in_quarantine: 0,
+    disposition_pending: 0,
+    overdue_inspections: 0,
+    open_exceptions: 0,
+    refreshed_at: new Date().toISOString(),
+  };
+
+  try {
+    const { data, error } = await supabase.rpc("expiry_overview_metrics", {
+      p_org_id: orgId,
+      p_store_id: storeId ?? null,
+    });
+    if (!error && data) {
+      base = data as ExpiryOverviewMetrics;
+    } else if (error && error.code !== "42883") {
+      console.error("[expiry] overview metrics RPC failed", error.message);
+    }
+  } catch (err) {
+    console.error("[expiry] overview metrics RPC threw", err);
+  }
+
+  // Coverage layer — physical required units vs verified observations (never planogram expected).
+  let requiredSum = 0;
+  let verifiedSum = 0;
+  let incompleteCount = 0;
+  let hasRequired = false;
+
+  try {
+    const { computeExpiryEvidenceCoverage, resolveExpiryRequiredUnits } = await import("./coverage");
+    let attemptsQuery = supabase
+      .from("expiry_inspection_attempts")
+      .select("id, physical_count, actual_quantity, inspection_status")
+      .eq("org_id", orgId)
+      .order("updated_at", { ascending: false })
+      .limit(200);
+    if (storeId) attemptsQuery = attemptsQuery.eq("store_id", storeId);
+    const { data: attempts, error: attemptsErr } = await attemptsQuery;
+    if (attemptsErr) {
+      console.error("[expiry] attempts coverage query failed", attemptsErr.message);
       return {
-        units_in_scope: 0,
-        units_inspected: 0,
-        expired_detected: 0,
-        near_expiry: 0,
-        unresolved_dates: 0,
-        awaiting_removal_verification: 0,
-        in_quarantine: 0,
-        disposition_pending: 0,
-        overdue_inspections: 0,
-        open_exceptions: 0,
-        refreshed_at: new Date().toISOString(),
+        ...base,
+        required_units: null,
+        verified_units: null,
+        evidence_coverage_pct: null,
+        evidence_incomplete_count: 0,
       };
     }
-    dbError(error, "Could not load expiry overview metrics.");
+
+    for (const attempt of attempts ?? []) {
+      if (attempt.inspection_status === "incomplete") incompleteCount += 1;
+      const required = resolveExpiryRequiredUnits({
+        physicalCount: attempt.physical_count as number | null,
+        actualQuantity: attempt.actual_quantity as number | null,
+      });
+      if (required == null || required <= 0) continue;
+      hasRequired = true;
+      requiredSum += required;
+      const { data: obs } = await supabase
+        .from("expiry_packet_observations")
+        .select("unreadable, wrong_product, human_confirmed_date, parsed_date, ai_suggested_date")
+        .eq("attempt_id", attempt.id as string);
+      const verifiedUnits = (obs ?? []).filter(
+        (o) =>
+          !o.unreadable &&
+          !o.wrong_product &&
+          (o.human_confirmed_date || o.parsed_date || o.ai_suggested_date),
+      ).length;
+      verifiedSum += verifiedUnits;
+    }
+
+    const coverage = computeExpiryEvidenceCoverage({
+      requiredUnits: hasRequired ? requiredSum : null,
+      verifiedUnits: hasRequired ? verifiedSum : null,
+    });
+
+    return {
+      ...base,
+      required_units: coverage.requiredUnits,
+      verified_units: coverage.verifiedUnits,
+      evidence_coverage_pct: coverage.coveragePct,
+      evidence_incomplete_count: incompleteCount,
+    };
+  } catch (err) {
+    console.error("[expiry] coverage layer failed", err);
+    return {
+      ...base,
+      required_units: null,
+      verified_units: null,
+      evidence_coverage_pct: null,
+      evidence_incomplete_count: incompleteCount,
+    };
   }
-  return data as ExpiryOverviewMetrics;
 }
 
 export async function fetchExceptions(limit = 100): Promise<ExpiryException[]> {

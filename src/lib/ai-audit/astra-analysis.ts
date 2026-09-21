@@ -1,8 +1,8 @@
-import { buildAstraPlanogramPrompt, buildAstraShelfOnlyPrompt } from "@/lib/ai-audit/astra-prompt";
+import { buildAstraPlanogramPrompt, buildAstraShelfOnlyPrompt, buildFnvQcVisionPrompt } from "@/lib/ai-audit/astra-prompt";
 import type { PlanogramRow } from "@/lib/planogram";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
 
-export type AstraAnalysisMode = "planogram_comparison" | "shelf_only";
+export type AstraAnalysisMode = "planogram_comparison" | "shelf_only" | "fnv_qc";
 
 export function auditRoleToOperatingModel(role: AuditRoleTab | string | undefined): string {
   switch (role) {
@@ -56,6 +56,8 @@ export type BuildAstraVisionExtrasInput = {
   auditName?: string;
   notes?: string | null;
   focusBrand?: string | null;
+  /** Digital FNV QC visual disposition path. */
+  purpose?: "fnv_qc" | string | null;
 };
 
 export function buildAstraVisionExtras(input: BuildAstraVisionExtrasInput): {
@@ -64,13 +66,25 @@ export function buildAstraVisionExtras(input: BuildAstraVisionExtrasInput): {
   vision_prompt: string;
   planogram_items?: ReturnType<typeof shapePlanogramItemForApi>[];
 } {
+  const operating_model = auditRoleToOperatingModel(input.auditRole);
+  const operatingLabel = operatingModelLabel(operating_model);
+
+  if (input.purpose === "fnv_qc") {
+    return {
+      analysis_mode: "fnv_qc",
+      operating_model,
+      vision_prompt: buildFnvQcVisionPrompt({
+        productHint: input.category ?? input.auditName,
+        notes: input.notes,
+      }),
+    };
+  }
+
   const planogramRows = input.planogramRows ?? [];
   const analysis_mode = pickAstraAnalysisMode({
     planogramRowCount: planogramRows.length,
     assignmentHasPlanogram: input.assignmentHasPlanogram,
   });
-  const operating_model = auditRoleToOperatingModel(input.auditRole);
-  const operatingLabel = operatingModelLabel(operating_model);
 
   if (analysis_mode === "planogram_comparison") {
     const planogram_items = planogramRows.map(shapePlanogramItemForApi);

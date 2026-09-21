@@ -148,6 +148,18 @@ function FindingsMain() {
           tone="info"
           hint="Estimate only — not a confirmed loss"
         />
+        <KpiCard
+          label="Re-audit improvement %"
+          value={kpis.reaudit_improvement_pct == null ? "N/A" : `${kpis.reaudit_improvement_pct}%`}
+          icon={CheckCircle2}
+          tone="good"
+        />
+        <KpiCard
+          label="Repeat failure rate %"
+          value={kpis.repeat_failure_rate == null ? "N/A" : `${kpis.repeat_failure_rate}%`}
+          icon={AlertTriangle}
+          tone="warn"
+        />
       </div>
 
       <MpFilterCard title="Filter findings">

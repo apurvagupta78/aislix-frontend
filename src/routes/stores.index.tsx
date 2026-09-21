@@ -37,7 +37,12 @@ const filters: StoreFilter[] = ["all", "active", "archived", "healthy", "alerts"
 export const Route = createFileRoute("/stores/")({
   validateSearch: (
     search: Record<string, unknown>,
-  ): { q?: string | undefined; filter?: StoreFilter | undefined; page?: number | undefined } => {
+  ): {
+    q?: string | undefined;
+    filter?: StoreFilter | undefined;
+    page?: number | undefined;
+    model?: string | undefined;
+  } => {
     const q = typeof search['q'] === "string" && search['q'] ? { q: search['q'] as string } : {};
     const rawFilter = search['filter'];
     const filter =
@@ -46,7 +51,11 @@ export const Route = createFileRoute("/stores/")({
         : {};
     const rawPage = Number(search['page']);
     const page = Number.isFinite(rawPage) && rawPage > 1 ? { page: Math.floor(rawPage) } : {};
-    return { ...q, ...filter, ...page };
+    const model =
+      typeof search['model'] === "string" && search['model']
+        ? { model: search['model'] as string }
+        : {};
+    return { ...q, ...filter, ...page, ...model };
   },
   head: () => ({
     meta: [
@@ -69,7 +78,7 @@ export const Route = createFileRoute("/stores/")({
 });
 
 function StoresPage() {
-  const { q, filter = "all", page = 1 } = Route.useSearch();
+  const { q, filter = "all", page = 1, model } = Route.useSearch();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -86,9 +95,18 @@ function StoresPage() {
   });
 
   const storesQuery = useQuery({
-    queryKey: ["stores", { q, filter, page }],
+    queryKey: ["stores", { q, filter, page, model }],
     queryFn: ({ signal }) =>
-      fetchStoreList({ ...(q ? { search: q } : {}), filter, page, page_size: PAGE_SIZE }, signal),
+      fetchStoreList(
+        {
+          ...(q ? { search: q } : {}),
+          filter,
+          page,
+          page_size: PAGE_SIZE,
+          ...(model ? { model } : {}),
+        },
+        signal,
+      ),
     retry: false,
   });
 
@@ -111,7 +129,25 @@ function StoresPage() {
     q?: string | undefined;
     filter?: StoreFilter | undefined;
     page?: number | undefined;
-  }) => navigate({ to: "/stores", search: { q, filter, page, ...next } });
+    model?: string | undefined;
+  }) => navigate({ to: "/stores", search: { q, filter, page, model, ...next } });
+
+  const modelTitle =
+    model === "supermarket"
+      ? "Supermarkets"
+      : model === "warehouse"
+        ? "Warehouses"
+        : model === "fmcg_distributor"
+          ? "Distributors"
+          : "Organization & stores";
+  const modelDescription =
+    model === "supermarket"
+      ? "Supermarket locations — same store master, filtered by store type."
+      : model === "warehouse"
+        ? "Warehouse locations — same store master, filtered by store type."
+        : model === "fmcg_distributor"
+          ? "Distributor locations — same store master, filtered by store type."
+          : "Manage every retail location, its shelf performance and who can access it.";
 
   const bulkArchive = useMutation({
     mutationFn: () => bulkArchiveStores(selected),
@@ -171,8 +207,8 @@ function StoresPage() {
       <div className="space-y-5">
         <PageHeader
           eyebrow="Organization"
-          title="Organization & stores"
-          description="Manage every retail location, its shelf performance and who can access it."
+          title={modelTitle}
+          description={modelDescription}
           actions={headerActions}
         />
         {orgQuery.isError ? (

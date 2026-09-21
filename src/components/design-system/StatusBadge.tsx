@@ -26,10 +26,10 @@ const INFO = "bg-status-info-soft text-status-info-strong";
 const NEUTRAL = "bg-muted text-muted-foreground";
 
 const assignmentMeta: Record<AssignmentStatus | "overdue", Meta> = {
-  pending: { label: "Not started", className: WARN, Icon: Clock },
-  in_progress: { label: "In progress", className: INFO, Icon: Loader2 },
-  needs_correction: { label: "Needs a fix", className: WARN, Icon: Wrench },
-  completed: { label: "Done", className: GOOD, Icon: CheckCircle2 },
+  pending: { label: "Not Started", className: WARN, Icon: Clock },
+  in_progress: { label: "In Progress", className: INFO, Icon: Loader2 },
+  needs_correction: { label: "Re-audit Requested", className: WARN, Icon: Wrench },
+  completed: { label: "Approved", className: GOOD, Icon: CheckCircle2 },
   cancelled: { label: "Cancelled", className: NEUTRAL, Icon: CircleSlash },
   overdue: { label: "Overdue", className: DANGER, Icon: AlertTriangle },
 };

@@ -76,6 +76,7 @@ import {
   downloadScanCsv,
   downloadScanPdf,
 } from "@/lib/scan-results";
+import { assignmentStatusLabel } from "@/lib/assignment-status-ui";
 
 import { toast } from "sonner";
 
@@ -132,7 +133,7 @@ function AssignmentStatusBadge({ status }: { status: string | null }) {
   if (known.includes(status as (typeof known)[number])) {
     return <StatusBadge kind="assignment" status={status as (typeof known)[number]} />;
   }
-  return <Badge variant="outline">{status}</Badge>;
+  return <Badge variant="outline">{assignmentStatusLabel(status)}</Badge>;
 }
 
 function complianceTone(value: number | null): string {
@@ -495,6 +496,8 @@ function HistoryPage() {
                       <TableHead className="w-10" />
                       <TableHead>Audit</TableHead>
                       <TableHead>Store</TableHead>
+                      <TableHead>Assigned to</TableHead>
+                      <TableHead>Conducted by</TableHead>
                       <TableHead>Date &amp; time</TableHead>
                       <TableHead className="text-right">Products</TableHead>
                       <TableHead>Location</TableHead>
@@ -527,6 +530,12 @@ function HistoryPage() {
                           </Link>
                         </TableCell>
                         <TableCell className="max-w-[200px] truncate font-medium">{scan.store}</TableCell>
+                        <TableCell className="max-w-[160px] truncate text-sm">
+                          {scan.assignee_name ?? "—"}
+                        </TableCell>
+                        <TableCell className="max-w-[160px] truncate text-sm">
+                          {scan.conducted_by_name ?? "—"}
+                        </TableCell>
                         <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
                           {formatScanDate(scan.created_at)}
                           <span className="ml-2 tabular-nums">{formatScanTime(scan.created_at)}</span>

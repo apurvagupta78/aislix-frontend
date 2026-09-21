@@ -5,13 +5,16 @@ import { ClassificationBadge, SeverityBadge } from "@/components/expiry-control/
 import { SessionVideoReview } from "@/components/expiry-control/SessionVideoReview";
 import {
   checkReconciliation,
+  computeExpiryEvidenceCoverage,
   expiryTransition,
   fetchAttempt,
   fetchAttemptEvidence,
   fetchObservations,
+  resolveExpiryRequiredUnits,
   type ExpiryInspectionAttempt,
   type ExpiryPacketObservation,
 } from "@/lib/expiry-control";
+import { toast } from "sonner";
 
 export function ReviewPanel({ attemptId }: { attemptId: string }) {
   const qc = useQueryClient();
@@ -25,14 +28,45 @@ export function ReviewPanel({ attemptId }: { attemptId: string }) {
     retry: false,
   });
 
-  const verifyMutation = useMutation({
-    mutationFn: () => expiryTransition({ entityType: "attempt", entityId: attemptId, action: "verify_inspection" }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["expiry-review"] }),
-  });
-
   const attempt = attemptQuery.data;
   const observations = obsQuery.data ?? [];
   const evidence = evidenceQuery.data;
+
+  const verifyMutation = useMutation({
+    mutationFn: async () => {
+      const current = attemptQuery.data;
+      if (!current) throw new Error("Inspection not loaded.");
+      const obs = obsQuery.data ?? [];
+      const required = resolveExpiryRequiredUnits({
+        physicalCount: current.physical_count,
+        actualQuantity: current.actual_quantity,
+      });
+      const verifiedUnits = obs.filter(
+        (o) =>
+          !o.unreadable &&
+          (o.human_confirmed_date || o.parsed_date || o.ai_suggested_date) &&
+          !o.wrong_product,
+      ).length;
+      const coverage = computeExpiryEvidenceCoverage({
+        requiredUnits: required,
+        verifiedUnits,
+      });
+      if (!coverage.complete) {
+        throw new Error(
+          `${coverage.statusLabel}: coverage ${coverage.coveragePct?.toFixed(0) ?? 0}% — verify only at 100%.`,
+        );
+      }
+      await expiryTransition({
+        entityType: "attempt",
+        entityId: attemptId,
+        action: "verify_inspection",
+      });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["expiry-review"] }),
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Could not verify inspection.");
+    },
+  });
 
   const selectedObs = observations.find((o) => o.id === selectedObsId) ?? observations[0] ?? null;
   const selectedPhoto = useMemo(() => {
@@ -54,6 +88,21 @@ export function ReviewPanel({ attemptId }: { attemptId: string }) {
       })
     : null;
 
+  const coverage = attempt
+    ? computeExpiryEvidenceCoverage({
+        requiredUnits: resolveExpiryRequiredUnits({
+          physicalCount: attempt.physical_count,
+          actualQuantity: attempt.actual_quantity,
+        }),
+        verifiedUnits: observations.filter(
+          (o) =>
+            !o.unreadable &&
+            (o.human_confirmed_date || o.parsed_date || o.ai_suggested_date) &&
+            !o.wrong_product,
+        ).length,
+      })
+    : null;
+
   if (!attempt) return null;
 
   return (
@@ -61,7 +110,19 @@ export function ReviewPanel({ attemptId }: { attemptId: string }) {
       <div className="space-y-3 rounded-2xl border p-4">
         <h3 className="font-semibold">Inspection scope</h3>
         <p className="text-sm text-muted-foreground">SKU: {attempt.sku}</p>
-        <p className="text-sm">Expected {attempt.expected_quantity} · Actual {attempt.actual_quantity ?? "—"}</p>
+        <p className="text-sm">
+          Physical units {attempt.physical_count ?? attempt.actual_quantity ?? "—"} · Expected{" "}
+          {attempt.expected_quantity} (inventory ref only)
+        </p>
+        {coverage ? (
+          <p
+            className={`text-sm font-medium ${coverage.complete ? "text-emerald-700" : "text-destructive"}`}
+          >
+            {coverage.statusLabel} — coverage{" "}
+            {coverage.coveragePct != null ? `${coverage.coveragePct.toFixed(0)}%` : "N/A"} (
+            {coverage.verifiedUnits ?? 0}/{coverage.requiredUnits ?? "—"})
+          </p>
+        ) : null}
         <p className="text-xs text-muted-foreground">{attempt.coverage_statement ?? "Partial coverage — not store-wide."}</p>
         {reconcile ? (
           <p className={`text-sm ${reconcile.ok ? "text-emerald-700" : "text-destructive"}`}>{reconcile.equation}</p>
@@ -77,7 +138,11 @@ export function ReviewPanel({ attemptId }: { attemptId: string }) {
           ))}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" onClick={() => verifyMutation.mutate()} disabled={verifyMutation.isPending}>
+          <Button
+            size="sm"
+            onClick={() => verifyMutation.mutate()}
+            disabled={verifyMutation.isPending || (coverage != null && !coverage.complete)}
+          >
             Verify inspection
           </Button>
           <Button

@@ -928,7 +928,8 @@ function NewAuditPage() {
           self: assignToSelf,
           expiry: false,
           bulk: result.assignmentIds.length,
-          scheduled: Boolean(result.scheduleId),
+          // Only recurring stays on /audit-schedules; schedule_once mints rows → assigned-scans.
+          scheduled: result.mode === "recurring",
           skipNavigation: options?.skipNavigation,
         };
       }
@@ -987,9 +988,8 @@ function NewAuditPage() {
     onSuccess: ({ assignmentId, self, expiry, bulk, scheduled, skipNavigation }) => {
       if (skipNavigation) return;
       if (scheduled) {
-        toast.success("Audit schedule created.");
-        // Schedule IDs are not executable assignments — open the schedules workspace
-        // (which also runs due processing) instead of /audit/{scheduleId}.
+        // Recurring only — schedule_once mints assignments and is not flagged scheduled.
+        toast.success("Recurring audit schedule created.");
         void navigate({ to: "/audit-schedules" });
         return;
       }
@@ -1003,7 +1003,7 @@ function NewAuditPage() {
         return;
       }
       if (!self) {
-        void navigate({ to: "/audits", search: { tab: "reviews" } });
+        void navigate({ to: "/assigned-scans" });
       } else if (selectedTemplate || systemTemplateKey) {
         void navigate({
           to: "/audit/$assignmentId",
@@ -1012,7 +1012,7 @@ function NewAuditPage() {
       } else if (auditMode === "digital") {
         void navigate({ to: "/digital-audit", search: { assignmentId } });
       } else {
-        void navigate({ to: "/audits", search: { tab: "reviews" } });
+        void navigate({ to: "/assigned-scans" });
       }
     },
     onError: (error) => {

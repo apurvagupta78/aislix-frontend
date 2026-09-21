@@ -1231,6 +1231,11 @@ export type Database = {
           org_id: string
           planogram_item_id: string | null
           product_name: string
+          qc_analyzed_at: string | null
+          qc_confidence: number | null
+          qc_defect_types: Json
+          qc_disposition: string | null
+          qc_notes: string | null
           rca_code: string | null
           rca_notes: string | null
           scan_id: string
@@ -1264,6 +1269,11 @@ export type Database = {
           org_id: string
           planogram_item_id?: string | null
           product_name: string
+          qc_analyzed_at?: string | null
+          qc_confidence?: number | null
+          qc_defect_types?: Json
+          qc_disposition?: string | null
+          qc_notes?: string | null
           rca_code?: string | null
           rca_notes?: string | null
           scan_id: string
@@ -1297,6 +1307,11 @@ export type Database = {
           org_id?: string
           planogram_item_id?: string | null
           product_name?: string
+          qc_analyzed_at?: string | null
+          qc_confidence?: number | null
+          qc_defect_types?: Json
+          qc_disposition?: string | null
+          qc_notes?: string | null
           rca_code?: string | null
           rca_notes?: string | null
           scan_id?: string

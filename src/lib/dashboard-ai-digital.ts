@@ -1,0 +1,621 @@
+/**
+ * Shared AI + Digital dashboard aggregates (display layer over persisted scan data).
+ * Core shelf/planogram math remains Railway shelf_calc; this only aggregates persisted rows.
+ */
+
+import { supabase } from "@/integrations/supabase/client";
+import { requireOrgId } from "@/lib/db/context";
+import {
+  listScanFieldVerifications,
+  operationalActual,
+} from "@/lib/ai-audit/field-verifications";
+import {
+  resolveDashboardDateBounds,
+  type DashboardFilterState,
+} from "@/lib/dashboard-filters";
+
+export type DashboardTab = "ai" | "digital";
+
+export type DashboardMetricFilters = Partial<
+  Pick<DashboardFilterState, "storeId" | "category" | "teamMemberId" | "datePreset" | "dateFrom" | "dateTo">
+>;
+
+export type AiDashboardMetrics = {
+  auditCount: number;
+  productsIdentified: number | null;
+  brandsIdentified: number | null;
+  variantsIdentified: number | null;
+  categoriesIdentified: number | null;
+  totalFacings: number | null;
+  totalVisibleUnits: number | null;
+  avgConfidence: number | null;
+  verificationCoveragePct: number | null;
+  aiVsVerifiedUnitVariance: number | null;
+  aiUnitAccuracyPct: number | null;
+  aiFacingAccuracyPct: number | null;
+  brandShare: { label: string; value: number }[];
+  categoryShare: { label: string; value: number }[];
+  topProductsByFacings: { label: string; value: number }[];
+  topProductsByUnits: { label: string; value: number }[];
+  planogram: {
+    applicable: boolean;
+    expectedFacings: number | null;
+    actualFacings: number | null;
+    facingVariance: number | null;
+    facingPct: number | null;
+    compliancePct: number | null;
+  };
+};
+
+export type DigitalDashboardMetrics = {
+  totalAudits: number;
+  completed: number;
+  inProgress: number;
+  pendingReview: number;
+  reauditRequested: number;
+  overdue: number;
+  completionPct: number | null;
+  onTimePct: number | null;
+  totalExpected: number | null;
+  totalActual: number | null;
+  netVariance: number | null;
+  absoluteVariance: number | null;
+  variancePct: number | null;
+  lastFive: {
+    id: string;
+    store: string;
+    assignee: string;
+    date: string;
+    status: string;
+    expected: number | null;
+    actual: number | null;
+    variance: number | null;
+  }[];
+  fnv: {
+    applicable: boolean;
+    audits: number;
+    unitsInspected: number;
+    sellable: number;
+    damaged: number;
+    humanReview: number;
+    sellableRate: number | null;
+    damageRate: number | null;
+    humanReviewRate: number | null;
+  };
+  varianceByStore: { label: string; value: number }[];
+  varianceByCategory: { label: string; value: number }[];
+  caOpen: number | null;
+  caOverdue: number | null;
+  caClosed: number | null;
+  potentialInventoryValueVariance: number | null;
+  reauditImprovementPct: number | null;
+  recurringIssueRate: number | null;
+};
+
+function pct(num: number, den: number): number | null {
+  if (!Number.isFinite(den) || den <= 0) return null;
+  return (num / den) * 100;
+}
+
+export async function fetchAiDashboardMetrics(
+  filters?: DashboardMetricFilters,
+): Promise<AiDashboardMetrics> {
+  const orgId = await requireOrgId();
+  let scanQuery = supabase
+    .from("shelf_scans")
+    .select("id, status, planogram_compliance_percent, total_products, audit_mode, store_id, category, created_at, created_by")
+    .eq("org_id", orgId)
+    .eq("status", "completed")
+    .or("audit_mode.eq.ai,audit_mode.is.null")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (filters?.storeId && filters.storeId !== "all") {
+    scanQuery = scanQuery.eq("store_id", filters.storeId);
+  }
+  if (filters?.category && filters.category !== "all") {
+    scanQuery = scanQuery.eq("category", filters.category);
+  }
+  const bounds = filters
+    ? resolveDashboardDateBounds({
+        datePreset: filters.datePreset ?? "all",
+        dateFrom: filters.dateFrom ?? "",
+        dateTo: filters.dateTo ?? "",
+      } as DashboardFilterState)
+    : null;
+  if (bounds?.from) scanQuery = scanQuery.gte("created_at", bounds.from.toISOString());
+  if (bounds?.to) scanQuery = scanQuery.lt("created_at", bounds.to.toISOString());
+
+  const { data: scans } = await scanQuery;
+
+  const scanIds = (scans ?? []).map((s) => s.id as string);
+  const empty: AiDashboardMetrics = {
+    auditCount: scanIds.length,
+    productsIdentified: null,
+    brandsIdentified: null,
+    variantsIdentified: null,
+    categoriesIdentified: null,
+    totalFacings: null,
+    totalVisibleUnits: null,
+    avgConfidence: null,
+    verificationCoveragePct: null,
+    aiVsVerifiedUnitVariance: null,
+    aiUnitAccuracyPct: null,
+    aiFacingAccuracyPct: null,
+    brandShare: [],
+    categoryShare: [],
+    topProductsByFacings: [],
+    topProductsByUnits: [],
+    planogram: {
+      applicable: false,
+      expectedFacings: null,
+      actualFacings: null,
+      facingVariance: null,
+      facingPct: null,
+      compliancePct: null,
+    },
+  };
+  if (!scanIds.length) return empty;
+
+  const { data: products } = await supabase
+    .from("detected_products")
+    .select("id, scan_id, name, brand, variant, category, facings, confidence")
+    .in("scan_id", scanIds.slice(0, 80));
+
+  const rows = (products ?? []) as {
+    id: string;
+    scan_id: string;
+    name: string | null;
+    brand: string | null;
+    variant: string | null;
+    category: string | null;
+    facings: number | null;
+    confidence: number | null;
+  }[];
+
+  const productKeys = new Set<string>();
+  const brands = new Set<string>();
+  const variants = new Set<string>();
+  const categories = new Set<string>();
+  let facingsSum = 0;
+  let facingCount = 0;
+  let confSum = 0;
+  let confCount = 0;
+  const brandFacings = new Map<string, number>();
+  const categoryFacings = new Map<string, number>();
+  const productFacings = new Map<string, number>();
+
+  for (const row of rows) {
+    const name = (row.name ?? "").trim() || "Unknown";
+    const brand = (row.brand ?? "").trim() || "Unknown";
+    const variant = (row.variant ?? "").trim();
+    const category = (row.category ?? "").trim() || "Unknown";
+    productKeys.add(`${brand}|${name}`);
+    brands.add(brand);
+    variants.add(`${brand}|${name}|${variant}`);
+    categories.add(category);
+    const f = Number(row.facings) || 0;
+    if (row.facings != null) {
+      facingsSum += f;
+      facingCount += 1;
+      brandFacings.set(brand, (brandFacings.get(brand) ?? 0) + f);
+      categoryFacings.set(category, (categoryFacings.get(category) ?? 0) + f);
+      productFacings.set(`${brand} · ${name}`, (productFacings.get(`${brand} · ${name}`) ?? 0) + f);
+    }
+    if (row.confidence != null && Number.isFinite(Number(row.confidence))) {
+      confSum += Number(row.confidence);
+      confCount += 1;
+    }
+  }
+
+  // Verification aggregates across recent scans (bounded)
+  let eligible = 0;
+  let verified = 0;
+  let unitVar = 0;
+  let absUnitErr = 0;
+  let verifiedUnitsSum = 0;
+  let absFacingErr = 0;
+  let verifiedFacingsSum = 0;
+  for (const scanId of scanIds.slice(0, 20)) {
+    const verifications = await listScanFieldVerifications(scanId);
+    for (const v of verifications) {
+      eligible += 1;
+      if (v.verified_value != null) {
+        verified += 1;
+        const ai = v.ai_value ?? 0;
+        const ver = Number(v.verified_value);
+        if (v.field_key === "visible_units") {
+          unitVar += ver - ai;
+          absUnitErr += Math.abs(ver - ai);
+          verifiedUnitsSum += ver;
+        }
+        if (v.field_key === "facings") {
+          absFacingErr += Math.abs(ver - ai);
+          verifiedFacingsSum += ver;
+        }
+      }
+    }
+  }
+
+  const toShare = (map: Map<string, number>) => {
+    const total = [...map.values()].reduce((s, n) => s + n, 0);
+    if (total <= 0) return [];
+    return [...map.entries()]
+      .map(([label, value]) => ({ label, value: (value / total) * 100 }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+  };
+
+  const top = (map: Map<string, number>) =>
+    [...map.entries()]
+      .map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+
+  const complianceValues = (scans ?? [])
+    .map((s) => s.planogram_compliance_percent)
+    .filter((v): v is number => v != null && Number.isFinite(Number(v)))
+    .map(Number);
+  const planogramApplicable = complianceValues.length > 0;
+
+  return {
+    auditCount: scanIds.length,
+    productsIdentified: productKeys.size || null,
+    brandsIdentified: brands.size || null,
+    variantsIdentified: variants.size || null,
+    categoriesIdentified: categories.size || null,
+    totalFacings: facingCount ? facingsSum : null,
+    totalVisibleUnits: facingCount ? facingsSum : null, // facings proxy until visible_units column is universal
+    avgConfidence: confCount ? confSum / confCount : null,
+    verificationCoveragePct: eligible ? pct(verified, eligible) : null,
+    aiVsVerifiedUnitVariance: verified > 0 ? unitVar : null,
+    aiUnitAccuracyPct:
+      verifiedUnitsSum > 0
+        ? Math.max(0, 100 - (absUnitErr / verifiedUnitsSum) * 100)
+        : null,
+    aiFacingAccuracyPct:
+      verifiedFacingsSum > 0
+        ? Math.max(0, 100 - (absFacingErr / verifiedFacingsSum) * 100)
+        : null,
+    brandShare: toShare(brandFacings),
+    categoryShare: toShare(categoryFacings),
+    topProductsByFacings: top(productFacings),
+    topProductsByUnits: top(productFacings),
+    planogram: {
+      applicable: planogramApplicable,
+      expectedFacings: null,
+      actualFacings: facingCount ? facingsSum : null,
+      facingVariance: null,
+      facingPct: null,
+      compliancePct: planogramApplicable
+        ? complianceValues.reduce((s, n) => s + n, 0) / complianceValues.length
+        : null,
+    },
+  };
+}
+
+export async function fetchDigitalDashboardMetrics(
+  filters?: DashboardMetricFilters,
+): Promise<DigitalDashboardMetrics> {
+  const orgId = await requireOrgId();
+  const now = Date.now();
+
+  let assignmentQuery = supabase
+    .from("scan_assignments")
+    .select(
+      "id, status, approval_status, assignment_state, due_at, completed_at, scan_id, assignee_id, store_id, template_id, created_at, stores:store_id(name)",
+    )
+    .eq("org_id", orgId)
+    .eq("audit_mode", "digital")
+    .order("created_at", { ascending: false })
+    .limit(300);
+  if (filters?.storeId && filters.storeId !== "all") {
+    assignmentQuery = assignmentQuery.eq("store_id", filters.storeId);
+  }
+  if (filters?.teamMemberId && filters.teamMemberId !== "all") {
+    assignmentQuery = assignmentQuery.eq("assignee_id", filters.teamMemberId);
+  }
+  const bounds = filters
+    ? resolveDashboardDateBounds({
+        datePreset: filters.datePreset ?? "all",
+        dateFrom: filters.dateFrom ?? "",
+        dateTo: filters.dateTo ?? "",
+      } as DashboardFilterState)
+    : null;
+  if (bounds?.from) assignmentQuery = assignmentQuery.gte("created_at", bounds.from.toISOString());
+  if (bounds?.to) assignmentQuery = assignmentQuery.lt("created_at", bounds.to.toISOString());
+
+  const { data: assignments } = await assignmentQuery;
+
+  const rows = assignments ?? [];
+  const totalAudits = rows.length;
+  const completed = rows.filter(
+    (r) =>
+      r.status === "completed" ||
+      r.assignment_state === "submitted" ||
+      r.approval_status === "approved",
+  ).length;
+  const inProgress = rows.filter((r) => r.status === "in_progress").length;
+  const pendingReview = rows.filter(
+    (r) => r.approval_status === "pending_review" || r.assignment_state === "submitted",
+  ).length;
+  const reauditRequested = rows.filter(
+    (r) => r.assignment_state === "reaudit_required" || r.status === "needs_correction",
+  ).length;
+  const overdue = rows.filter((r) => {
+    if (!r.due_at) return false;
+    if (r.status === "completed" || r.approval_status === "approved") return false;
+    return new Date(r.due_at as string).getTime() < now;
+  }).length;
+
+  const withDueCompleted = rows.filter(
+    (r) => r.completed_at && r.due_at && (r.status === "completed" || r.assignment_state === "submitted"),
+  );
+  const onTime = withDueCompleted.filter(
+    (r) => new Date(r.completed_at as string).getTime() <= new Date(r.due_at as string).getTime(),
+  ).length;
+
+  const scanIds = rows.map((r) => r.scan_id as string | null).filter(Boolean) as string[];
+  let totalExpected: number | null = null;
+  let totalActual: number | null = null;
+  let netVariance: number | null = null;
+  let absoluteVariance: number | null = null;
+  let variancePct: number | null = null;
+
+  if (scanIds.length) {
+    const { data: lines } = await supabase
+      .from("digital_audit_lines")
+      .select("expected_qty, actual_qty, scan_id")
+      .in("scan_id", scanIds.slice(0, 100));
+    const usable = (lines ?? []).filter(
+      (l) => l.actual_qty != null && l.expected_qty != null,
+    ) as { expected_qty: number; actual_qty: number }[];
+    if (usable.length) {
+      totalExpected = usable.reduce((s, l) => s + Number(l.expected_qty), 0);
+      totalActual = usable.reduce((s, l) => s + Number(l.actual_qty), 0);
+      netVariance = totalActual - totalExpected;
+      absoluteVariance = usable.reduce(
+        (s, l) => s + Math.abs(Number(l.actual_qty) - Number(l.expected_qty)),
+        0,
+      );
+      variancePct = pct(totalActual - totalExpected, totalExpected);
+    }
+  }
+
+  const assigneeIds = [...new Set(rows.map((r) => r.assignee_id as string).filter(Boolean))];
+  const names = new Map<string, string>();
+  if (assigneeIds.length) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", assigneeIds);
+    for (const p of profiles ?? []) {
+      names.set(
+        p.id as string,
+        ((p.full_name as string | null)?.trim() || (p.email as string | null) || "Assignee") as string,
+      );
+    }
+  }
+
+  const lastFive = rows.slice(0, 5).map((r) => {
+    const storeRel = r.stores as { name?: string } | { name?: string }[] | null;
+    const storeName = Array.isArray(storeRel) ? storeRel[0]?.name : storeRel?.name;
+    const scanId = r.scan_id as string | null;
+    let expected: number | null = null;
+    let actual: number | null = null;
+    let variance: number | null = null;
+    if (scanId && scanIds.length) {
+      // Filled below after line aggregates when available.
+    }
+    return {
+      id: r.id as string,
+      store: storeName ?? "—",
+      assignee: names.get(r.assignee_id as string) ?? "—",
+      date: (r.created_at as string) ?? "",
+      status: (r.assignment_state as string) || (r.status as string) || "—",
+      expected,
+      actual,
+      variance,
+      scanId,
+    };
+  });
+
+  // Fill lastFive expected/actual from mapped digital lines (Expected+Actual only).
+  const lastFiveScanIds = lastFive.map((r) => r.scanId).filter(Boolean) as string[];
+  if (lastFiveScanIds.length) {
+    const { data: lastLines } = await supabase
+      .from("digital_audit_lines")
+      .select("scan_id, expected_qty, actual_qty")
+      .in("scan_id", lastFiveScanIds);
+    const byScan = new Map<string, { e: number; a: number }>();
+    for (const line of lastLines ?? []) {
+      if (line.actual_qty == null || line.expected_qty == null) continue;
+      const sid = line.scan_id as string;
+      const cur = byScan.get(sid) ?? { e: 0, a: 0 };
+      cur.e += Number(line.expected_qty);
+      cur.a += Number(line.actual_qty);
+      byScan.set(sid, cur);
+    }
+    for (const row of lastFive) {
+      if (!row.scanId) continue;
+      const agg = byScan.get(row.scanId);
+      if (!agg) continue;
+      row.expected = agg.e;
+      row.actual = agg.a;
+      row.variance = agg.a - agg.e;
+    }
+  }
+
+  const lastFiveOut = lastFive.map(({ scanId: _sid, ...rest }) => rest);
+
+  // FNV QC subsection — dispositions from digital_audit_lines.qc_disposition
+  const { data: fnvTemplates } = await supabase
+    .from("audit_templates")
+    .select("id")
+    .eq("org_id", orgId)
+    .or("template_type.eq.fnv_qc_audit,name.ilike.%fnv%");
+  const fnvTemplateIds = new Set((fnvTemplates ?? []).map((t) => t.id as string));
+  const fnvRows = rows.filter((r) => r.template_id && fnvTemplateIds.has(r.template_id as string));
+  const fnvScanIds = fnvRows
+    .map((r) => r.scan_id as string | null)
+    .filter(Boolean) as string[];
+
+  let sellable = 0;
+  let damaged = 0;
+  let humanReview = 0;
+  let unitsInspected = 0;
+  if (fnvScanIds.length) {
+    const { data: qcLines } = await supabase
+      .from("digital_audit_lines")
+      .select("qc_disposition")
+      .in("scan_id", fnvScanIds.slice(0, 100))
+      .not("qc_disposition", "is", null);
+    for (const line of qcLines ?? []) {
+      const d = (line as { qc_disposition?: string }).qc_disposition;
+      if (!d) continue;
+      unitsInspected += 1;
+      if (d === "SELLABLE") sellable += 1;
+      else if (d === "DAMAGED") damaged += 1;
+      else if (d === "HUMAN_REVIEW") humanReview += 1;
+    }
+  }
+
+  const rate = (n: number) => (unitsInspected > 0 ? (n / unitsInspected) * 100 : null);
+
+  // Variance Explorer — absolute variance by store / category (Expected+Actual mapped only)
+  const varianceByStoreMap = new Map<string, number>();
+  const varianceByCategoryMap = new Map<string, number>();
+  if (scanIds.length) {
+    const { data: varLines } = await supabase
+      .from("digital_audit_lines")
+      .select("expected_qty, actual_qty, category, scan_id")
+      .in("scan_id", scanIds.slice(0, 100));
+    const scanStore = new Map<string, string>();
+    for (const r of rows) {
+      if (!r.scan_id) continue;
+      const storeRel = r.stores as { name?: string } | { name?: string }[] | null;
+      const storeName = Array.isArray(storeRel) ? storeRel[0]?.name : storeRel?.name;
+      scanStore.set(r.scan_id as string, storeName ?? "—");
+    }
+    for (const line of varLines ?? []) {
+      if (line.actual_qty == null || line.expected_qty == null) continue;
+      const abs = Math.abs(Number(line.actual_qty) - Number(line.expected_qty));
+      const store = scanStore.get(line.scan_id as string) ?? "—";
+      varianceByStoreMap.set(store, (varianceByStoreMap.get(store) ?? 0) + abs);
+      const cat = ((line.category as string) || "Uncategorized").trim() || "Uncategorized";
+      varianceByCategoryMap.set(cat, (varianceByCategoryMap.get(cat) ?? 0) + abs);
+    }
+  }
+  const topAbs = (m: Map<string, number>) =>
+    [...m.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([label, value]) => ({ label, value }));
+
+  // Corrective actions summary (digital-origin)
+  let caOpen: number | null = null;
+  let caOverdue: number | null = null;
+  let caClosed: number | null = null;
+  {
+    const { data: cas } = await supabase
+      .from("corrective_actions")
+      .select("id, status, due_at")
+      .eq("org_id", orgId)
+      .limit(500);
+    if (cas) {
+      caOpen = cas.filter((c) => !["closed", "resolved", "cancelled"].includes(String(c.status))).length;
+      caClosed = cas.filter((c) => ["closed", "resolved"].includes(String(c.status))).length;
+      caOverdue = cas.filter((c) => {
+        if (["closed", "resolved", "cancelled"].includes(String(c.status))) return false;
+        return c.due_at && new Date(c.due_at as string).getTime() < now;
+      }).length;
+    }
+  }
+
+  // Potential inventory value variance — sum abs(variance_value_inr) when MRP mapped
+  let potentialInventoryValueVariance: number | null = null;
+  if (scanIds.length) {
+    const { data: valueLines } = await supabase
+      .from("digital_audit_lines")
+      .select("variance_value_inr, expected_qty, actual_qty, mrp_inr")
+      .in("scan_id", scanIds.slice(0, 100));
+    const withValue = (valueLines ?? []).filter(
+      (l) =>
+        l.variance_value_inr != null &&
+        Number.isFinite(Number(l.variance_value_inr)) &&
+        l.expected_qty != null &&
+        l.actual_qty != null,
+    );
+    if (withValue.length) {
+      potentialInventoryValueVariance = withValue.reduce(
+        (s, l) => s + Math.abs(Number(l.variance_value_inr)),
+        0,
+      );
+    }
+  }
+
+  // Re-audit improvement + recurring issue rate from findings
+  let reauditImprovementPct: number | null = null;
+  let recurringIssueRate: number | null = null;
+  {
+    const { data: findings } = await supabase
+      .from("findings")
+      .select("id, status, store_id, sku, finding_type, created_at")
+      .eq("org_id", orgId)
+      .limit(800);
+    if (findings?.length) {
+      const groups = new Map<string, { open: number; closed: number; total: number }>();
+      for (const f of findings) {
+        const key = `${f.store_id ?? ""}|${f.sku ?? ""}|${f.finding_type ?? ""}`;
+        const g = groups.get(key) ?? { open: 0, closed: 0, total: 0 };
+        g.total += 1;
+        if (["closed", "resolved"].includes(String(f.status))) g.closed += 1;
+        else g.open += 1;
+        groups.set(key, g);
+      }
+      const recurringGroups = [...groups.values()].filter((g) => g.total > 1);
+      recurringIssueRate =
+        groups.size > 0 ? (recurringGroups.length / groups.size) * 100 : null;
+      const improved = recurringGroups.filter((g) => g.closed > 0 && g.open === 0).length;
+      reauditImprovementPct =
+        recurringGroups.length > 0 ? (improved / recurringGroups.length) * 100 : null;
+    }
+  }
+
+  return {
+    totalAudits,
+    completed,
+    inProgress,
+    pendingReview,
+    reauditRequested,
+    overdue,
+    completionPct: pct(completed, totalAudits),
+    onTimePct: withDueCompleted.length ? pct(onTime, withDueCompleted.length) : null,
+    totalExpected,
+    totalActual,
+    netVariance,
+    absoluteVariance,
+    variancePct,
+    lastFive: lastFiveOut,
+    fnv: {
+      applicable: fnvRows.length > 0,
+      audits: fnvRows.length,
+      unitsInspected,
+      sellable,
+      damaged,
+      humanReview,
+      sellableRate: rate(sellable),
+      damageRate: rate(damaged),
+      humanReviewRate: rate(humanReview),
+    },
+    varianceByStore: topAbs(varianceByStoreMap),
+    varianceByCategory: topAbs(varianceByCategoryMap),
+    caOpen,
+    caOverdue,
+    caClosed,
+    potentialInventoryValueVariance,
+    reauditImprovementPct,
+    recurringIssueRate,
+  };
+}
+
+void operationalActual;

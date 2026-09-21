@@ -32,6 +32,9 @@ export type ScanHistoryItem = {
   planogram_compliance?: number | null;
   assignee_name?: string | null;
   assignee_id?: string | null;
+  /** User who ran/submitted the scan (shelf_scans.created_by). */
+  conducted_by_name?: string | null;
+  conducted_by_id?: string | null;
   downloads?: {
     pdf_url?: string;
     csv_url?: string;
@@ -118,7 +121,7 @@ export async function fetchScanHistory(
   let query = supabase
     .from("shelf_scans")
     .select(
-      "id, status, audit_mode, shelf_label, category, total_products, low_stock_count, out_of_stock_count, processing_started_at, processing_completed_at, created_at, store_id, created_by, assignment_id, stores(name)",
+      "id, status, audit_mode, shelf_label, category, total_products, low_stock_count, out_of_stock_count, processing_started_at, processing_completed_at, created_at, store_id, created_by, finalized_by, assignment_id, stores(name)",
       { count: "exact" },
     )
     .eq("org_id", orgId);
@@ -204,6 +207,8 @@ export async function fetchScanHistory(
       item.processing_time_ms = processingTimeMs;
     }
     item.assignment_id = (row.assignment_id as string | null) ?? null;
+    // Conducted by = who finalized the audit — never fall back to created_by.
+    item.conducted_by_id = (row.finalized_by as string | null) ?? null;
     return item;
   });
 
@@ -211,20 +216,30 @@ export async function fetchScanHistory(
   const assignmentIds = Array.from(
     new Set(items.map((item) => item.assignment_id).filter((id): id is string => Boolean(id))),
   );
-  if (assignmentIds.length) {
-    const { data: assignmentRows } = await supabase
-      .from("scan_assignments")
-      .select("id, status, last_compliance_percent, assignee_id")
-      .in("id", assignmentIds);
+  const conductorIds = Array.from(
+    new Set(items.map((item) => item.conducted_by_id).filter((id): id is string => Boolean(id))),
+  );
+  if (assignmentIds.length || conductorIds.length) {
+    const { data: assignmentRows } = assignmentIds.length
+      ? await supabase
+          .from("scan_assignments")
+          .select("id, status, last_compliance_percent, assignee_id")
+          .in("id", assignmentIds)
+      : { data: [] as { id: string; status: string; last_compliance_percent: number | null; assignee_id: string | null }[] };
     const assigneeIds = Array.from(
       new Set((assignmentRows ?? []).map((row) => row.assignee_id as string).filter(Boolean)),
     );
-    const { data: profileRows } = assigneeIds.length
-      ? await supabase.from("profiles").select("id, full_name, email").in("id", assigneeIds)
+    const profileIds = Array.from(new Set([...assigneeIds, ...conductorIds]));
+    const { data: profileRows } = profileIds.length
+      ? await supabase.from("profiles").select("id, full_name, email").in("id", profileIds)
       : { data: [] as { id: string; full_name: string | null; email: string | null }[] };
     const profileById = new Map((profileRows ?? []).map((row) => [row.id as string, row]));
     const assignmentById = new Map((assignmentRows ?? []).map((row) => [row.id as string, row]));
     for (const item of items) {
+      if (item.conducted_by_id) {
+        const profile = profileById.get(item.conducted_by_id);
+        item.conducted_by_name = profile?.full_name ?? profile?.email ?? null;
+      }
       if (!item.assignment_id) continue;
       const assignment = assignmentById.get(item.assignment_id);
       if (!assignment) continue;

@@ -143,6 +143,14 @@ export type ExpiryOverviewMetrics = {
   overdue_inspections: number;
   open_exceptions: number;
   refreshed_at: string;
+  /** Physical units requiring verification across open/recent attempts. */
+  required_units?: number | null;
+  /** Units with verified readable expiry + evidence. */
+  verified_units?: number | null;
+  /** verified/required × 100; null when required unknown. */
+  evidence_coverage_pct?: number | null;
+  /** Count of attempts marked EVIDENCE INCOMPLETE. */
+  evidence_incomplete_count?: number;
 };
 
 export type ExpiryQuarantineTransfer = {
@@ -209,7 +217,7 @@ export const INSPECTION_STATUS_LABEL: Record<InspectionStatus, string> = {
   under_review: "Under review",
   verified: "Verified",
   rework_required: "Rework required",
-  incomplete: "Incomplete",
+  incomplete: "EVIDENCE INCOMPLETE",
   cancelled: "Cancelled",
 };
 

@@ -163,6 +163,14 @@ function CorrectiveActionsMain() {
           <KpiCard label="Pending verification" value={String(lifecycleKpis.pending_verification)} />
           <KpiCard label="Resolved" value={String(lifecycleKpis.resolved)} />
           <KpiCard label="Closed" value={String(lifecycleKpis.closed)} />
+          <KpiCard
+            label="Re-audit improvement %"
+            value={
+              lifecycleKpis.reaudit_improvement_pct == null
+                ? "N/A"
+                : `${lifecycleKpis.reaudit_improvement_pct}%`
+            }
+          />
         </div>
 
         <MpFilterCard title="Filter actions">

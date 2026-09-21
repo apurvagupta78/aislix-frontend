@@ -86,12 +86,21 @@ export type LifecycleActionsKpis = {
   pending_verification: number;
   resolved: number;
   closed: number;
+  reaudit_improvement_pct: number | null;
 };
 
 export function lifecycleActionsKpis(actions: LifecycleAction[]): LifecycleActionsKpis {
   const openStatuses = new Set(["open", "assigned", "in_progress", "overdue", "rejected"]);
   const now = new Date();
   const open = actions.filter((a) => openStatuses.has(a.status));
+  const closed = actions.filter((a) => a.status === "closed" || a.status === "resolved");
+  const withDue = actions.filter((a) => a.due_at);
+  const closedOnTime = closed.filter(
+    (a) =>
+      a.due_at &&
+      (a.closed_at || a.resolved_at) &&
+      new Date((a.closed_at || a.resolved_at) as string).getTime() <= new Date(a.due_at).getTime(),
+  );
   return {
     open: open.length,
     critical: open.filter((a) => a.priority === "critical").length,
@@ -103,6 +112,10 @@ export function lifecycleActionsKpis(actions: LifecycleAction[]): LifecycleActio
     pending_verification: actions.filter((a) => a.status === "pending_verification").length,
     resolved: actions.filter((a) => a.status === "resolved").length,
     closed: actions.filter((a) => a.status === "closed").length,
+    reaudit_improvement_pct:
+      withDue.length > 0
+        ? Math.round((closedOnTime.length / Math.max(1, closed.length || withDue.length)) * 1000) / 10
+        : null,
   };
 }
 

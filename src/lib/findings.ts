@@ -83,6 +83,8 @@ export type FindingsKpis = {
   closed: number;
   pending_verification: number;
   value_at_risk: number;
+  reaudit_improvement_pct: number | null;
+  repeat_failure_rate: number | null;
 };
 
 export const FINDING_TYPES: { value: FindingType; label: string }[] = [
@@ -258,6 +260,17 @@ export async function fetchFinding(id: string): Promise<Finding | null> {
 
 export function findingsKpis(rows: Finding[]): FindingsKpis {
   const now = Date.now();
+  const groups = new Map<string, { open: number; closed: number; total: number }>();
+  for (const r of rows) {
+    const key = `${r.store_id ?? ""}|${r.sku ?? ""}|${r.finding_type}`;
+    const g = groups.get(key) ?? { open: 0, closed: 0, total: 0 };
+    g.total += 1;
+    if (["closed", "resolved"].includes(r.status)) g.closed += 1;
+    else g.open += 1;
+    groups.set(key, g);
+  }
+  const recurring = [...groups.values()].filter((g) => g.total > 1);
+  const improved = recurring.filter((g) => g.closed > 0 && g.open === 0).length;
   return {
     total: rows.length,
     open: rows.filter((r) => !["resolved", "closed"].includes(r.status)).length,
@@ -269,6 +282,10 @@ export function findingsKpis(rows: Finding[]): FindingsKpis {
     value_at_risk: rows
       .filter((r) => !["resolved", "closed"].includes(r.status))
       .reduce((sum, r) => sum + Math.abs(Number(r.variance_value_inr) || 0), 0),
+    reaudit_improvement_pct:
+      recurring.length > 0 ? Math.round((improved / recurring.length) * 1000) / 10 : null,
+    repeat_failure_rate:
+      groups.size > 0 ? Math.round((recurring.length / groups.size) * 1000) / 10 : null,
   };
 }
 

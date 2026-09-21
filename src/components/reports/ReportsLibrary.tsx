@@ -38,24 +38,16 @@ import {
   formatScanDate,
 } from "@/lib/scan-results";
 import { toUserMessage } from "@/lib/api/errors";
-
-const assignmentStatusMeta: Record<string, { label: string; className: string }> = {
-  pending: { label: "Pending", className: "bg-muted text-muted-foreground" },
-  in_progress: { label: "In progress", className: "bg-brand-soft text-brand" },
-  needs_correction: { label: "Needs correction", className: "bg-amber-500/12 text-amber-600" },
-  completed: { label: "Completed", className: "bg-accent-green/12 text-accent-green" },
-  cancelled: { label: "Cancelled", className: "bg-muted text-muted-foreground" },
-};
+import { assignmentStatusClassName, assignmentStatusLabel } from "@/lib/assignment-status-ui";
 
 function AssignmentStatusBadge({ status }: { status: string | null | undefined }) {
   if (!status) return <span className="text-muted-foreground">—</span>;
-  const meta = assignmentStatusMeta[status] ?? {
-    label: status,
-    className: "bg-muted text-muted-foreground",
-  };
   return (
-    <Badge variant="secondary" className={`rounded-full border-0 font-medium ${meta.className}`}>
-      {meta.label}
+    <Badge
+      variant="secondary"
+      className={`rounded-full border-0 font-medium ${assignmentStatusClassName(status)}`}
+    >
+      {assignmentStatusLabel(status)}
     </Badge>
   );
 }

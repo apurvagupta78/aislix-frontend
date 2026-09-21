@@ -32,7 +32,7 @@ function EvidenceCoveragePage() {
   return (
     <ControlTowerDataTable
       title="Evidence Coverage"
-      description="Required vs verified evidence units across audits. Not wired yet."
+      description="Required vs verified evidence units across audits. Data unavailable until coverage is computed for the selected filters."
       columns={[
         { key: "unitId", label: "Unit ID" },
         { key: "auditId", label: "Audit ID" },

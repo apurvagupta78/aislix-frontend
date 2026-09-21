@@ -284,6 +284,10 @@ import {
 } from "@/lib/category-selections";
 import { dbError, notFound, requireOrgId } from "@/lib/db/context";
 import { parseAdhocPlanogram } from "@/lib/role-planogram-requirements";
+import {
+  listScanFieldVerifications,
+  type FieldVerification,
+} from "@/lib/ai-audit/field-verifications";
 
 
 function severityFromAlert(value: unknown): Severity {
@@ -1483,12 +1487,35 @@ export function downloadBlobBytes(content: ArrayBuffer | Uint8Array, filename: s
 
 type ExcelRows = (string | number | undefined | null)[][];
 
+export type DigitalExportLine = {
+  product_name?: string | null;
+  category?: string | null;
+  brand?: string | null;
+  sku?: string | null;
+  expected_qty?: number | null;
+  actual_qty?: number | null;
+  bin_key?: string | null;
+  qc_disposition?: string | null;
+  qc_defect_types?: unknown;
+  qc_confidence?: number | null;
+  qc_notes?: string | null;
+  qc_analyzed_at?: string | null;
+};
+
+export type ScanReportExcelExtras = {
+  verifications?: FieldVerification[];
+  digitalLines?: DigitalExportLine[];
+};
+
 function excelSheetName(label: string): string {
   return label.replace(/[\\/?*[\]:]/g, "").slice(0, 31);
 }
 
 /** Multi-tab Excel workbook — eight-section retail report (table-first). */
-export function buildFullScanReportExcel(result: ScanResult): ArrayBuffer {
+export function buildFullScanReportExcel(
+  result: ScanResult,
+  extras?: ScanReportExcelExtras,
+): ArrayBuffer {
   const wb = XLSX.utils.book_new();
   const s = result.summary;
 
@@ -1704,6 +1731,75 @@ export function buildFullScanReportExcel(result: ScanResult): ArrayBuffer {
     ["Score gate", "Execution score needs target SKUs, expected qty, and shelf position rules."],
   ]);
 
+  const verifications = extras?.verifications ?? [];
+  if (verifications.length) {
+    append("Human verification", [
+      ["Product ID", "Field", "AI value", "Verified value", "Verified at"],
+      ...verifications.map((v) => [
+        v.detected_product_id ?? "",
+        v.field_key,
+        v.ai_value ?? "",
+        v.verified_value ?? "",
+        v.verified_at ?? "",
+      ]),
+    ]);
+  }
+
+  const digitalLines = extras?.digitalLines ?? [];
+  if (digitalLines.length) {
+    append("Digital audit lines", [
+      [
+        "Product",
+        "Brand",
+        "Category",
+        "SKU",
+        "Bin",
+        "Expected",
+        "Actual",
+        "QC disposition",
+        "Defects",
+        "QC confidence",
+        "QC notes",
+      ],
+      ...digitalLines.map((line) => [
+        line.product_name ?? "",
+        line.brand ?? "",
+        line.category ?? "",
+        line.sku ?? "",
+        line.bin_key ?? "",
+        line.expected_qty ?? "",
+        line.actual_qty ?? "",
+        line.qc_disposition ?? "",
+        Array.isArray(line.qc_defect_types)
+          ? (line.qc_defect_types as string[]).join("; ")
+          : typeof line.qc_defect_types === "string"
+            ? line.qc_defect_types
+            : "",
+        line.qc_confidence ?? "",
+        line.qc_notes ?? "",
+      ]),
+    ]);
+    const withQc = digitalLines.filter((l) => l.qc_disposition);
+    if (withQc.length) {
+      const sellable = withQc.filter((l) => l.qc_disposition === "SELLABLE").length;
+      const damaged = withQc.filter((l) => l.qc_disposition === "DAMAGED").length;
+      const humanReview = withQc.filter((l) => l.qc_disposition === "HUMAN_REVIEW").length;
+      append("FNV QC summary", [
+        ["Metric", "Value"],
+        ["Units with disposition", withQc.length],
+        ["Sellable", sellable],
+        ["Damaged", damaged],
+        ["Human review", humanReview],
+        ["Sellable rate %", withQc.length ? ((sellable / withQc.length) * 100).toFixed(1) : ""],
+        ["Damage rate %", withQc.length ? ((damaged / withQc.length) * 100).toFixed(1) : ""],
+        [
+          "Human review rate %",
+          withQc.length ? ((humanReview / withQc.length) * 100).toFixed(1) : "",
+        ],
+      ]);
+    }
+  }
+
   return XLSX.write(wb, { bookType: "xlsx", type: "array" }) as ArrayBuffer;
 }
 
@@ -1718,12 +1814,43 @@ export function downloadDemoFullReportExcel(result: ScanResult): void {
 
 /** Builds a full multi-tab Excel report from live scan data. */
 export async function downloadScanExcel(scanId: string, _url?: string): Promise<void> {
-  const result = await fetchScanResult(scanId);
-  if (!result.summary && !result.inventory?.length) {
+  let result: ScanResult | null = null;
+  try {
+    result = await fetchScanResult(scanId);
+  } catch {
+    result = null;
+  }
+
+  const [verifications, digitalRes] = await Promise.all([
+    listScanFieldVerifications(scanId).catch(() => [] as FieldVerification[]),
+    supabase
+      .from("digital_audit_lines")
+      .select(
+        "product_name, category, brand, sku, expected_qty, actual_qty, bin_key, qc_disposition, qc_defect_types, qc_confidence, qc_notes, qc_analyzed_at",
+      )
+      .eq("scan_id", scanId),
+  ]);
+  const digitalLines = (digitalRes.data ?? []) as DigitalExportLine[];
+
+  if (!result?.summary && !result?.inventory?.length && !digitalLines.length) {
     throw new Error("This audit has no report data to export.");
   }
+
+  const reportResult: ScanResult =
+    result ??
+    ({
+      scan_id: scanId,
+      created_at: new Date().toISOString(),
+      status: "completed",
+      inventory: [],
+    } as ScanResult);
+
+  const bytes = buildFullScanReportExcel(reportResult, {
+    verifications,
+    digitalLines,
+  });
   downloadBlobBytes(
-    buildFullScanReportExcel(result),
+    bytes,
     `aislix-${scanId}-report.xlsx`,
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   );
