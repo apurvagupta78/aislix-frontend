@@ -49,10 +49,26 @@ async function signFnvEvidenceUrl(
   throw new Error("Could not sign FNV evidence URL.");
 }
 
+function isFnvTemplate(t: {
+  template_type?: string | null;
+  audit_purpose?: string | null;
+  name?: string | null;
+} | null): boolean {
+  if (!t) return false;
+  return (
+    t.template_type === "fnv_qc_audit" ||
+    t.audit_purpose === "fnv_qc" ||
+    Boolean(t.name?.toLowerCase().includes("fnv"))
+  );
+}
+
 async function runFnvQcCore(
   supabase: SupabaseClient,
   data: RunFnvQcInput,
+  /** Trusted writer — bypasses RLS for disposition persist after authz read. */
+  writer?: SupabaseClient,
 ): Promise<{ result: FnvQcResult | null; skipped?: string }> {
+  const db = writer ?? supabase;
   const { data: scan } = await supabase
     .from("shelf_scans")
     .select("id, org_id, assignment_id, store_id, template_id")
@@ -71,15 +87,13 @@ async function runFnvQcCore(
       .select("template_type, audit_purpose, name")
       .eq("id", scanTemplateId)
       .maybeSingle();
-    const t = template as {
-      template_type?: string | null;
-      audit_purpose?: string | null;
-      name?: string | null;
-    } | null;
-    isFnv =
-      t?.template_type === "fnv_qc_audit" ||
-      t?.audit_purpose === "fnv_qc" ||
-      Boolean(t?.name?.toLowerCase().includes("fnv"));
+    isFnv = isFnvTemplate(
+      template as {
+        template_type?: string | null;
+        audit_purpose?: string | null;
+        name?: string | null;
+      } | null,
+    );
   }
 
   if (!isFnv && assignmentId) {
@@ -95,15 +109,13 @@ async function runFnvQcCore(
         .select("template_type, audit_purpose, name")
         .eq("id", templateId)
         .maybeSingle();
-      const t = template as {
-        template_type?: string | null;
-        audit_purpose?: string | null;
-        name?: string | null;
-      } | null;
-      isFnv =
-        t?.template_type === "fnv_qc_audit" ||
-        t?.audit_purpose === "fnv_qc" ||
-        Boolean(t?.name?.toLowerCase().includes("fnv"));
+      isFnv = isFnvTemplate(
+        template as {
+          template_type?: string | null;
+          audit_purpose?: string | null;
+          name?: string | null;
+        } | null,
+      );
     }
     if (!isFnv && (assignment as { campaign_id?: string | null } | null)?.campaign_id) {
       const { data: campaign } = await supabase
@@ -116,7 +128,13 @@ async function runFnvQcCore(
   }
   if (!isFnv) return { result: null, skipped: "not_fnv" };
 
-  const signedUrl = await signFnvEvidenceUrl(supabase, data.storagePath, data.storageBucket);
+  // Prefer service-role signing when available — user JWT often cannot sign storage objects.
+  let signedUrl: string;
+  try {
+    signedUrl = await signFnvEvidenceUrl(db, data.storagePath, data.storageBucket);
+  } catch {
+    signedUrl = await signFnvEvidenceUrl(supabase, data.storagePath, data.storageBucket);
+  }
 
   const extras = buildAstraVisionExtras({
     purpose: "fnv_qc",
@@ -173,26 +191,38 @@ async function runFnvQcCore(
     throw new Error("FNV QC produced a disposition but no digital audit lines were found to update.");
   }
 
-  const { error: updateErr } = await supabase
+  const patch = {
+    qc_disposition: result.disposition,
+    qc_defect_types: result.defect_types,
+    qc_confidence: result.confidence,
+    qc_notes: result.notes,
+    qc_analyzed_at: now,
+    ...(result.disposition === "DAMAGED" ? { rca_code: "damaged" } : {}),
+  } as never;
+
+  // Persist with writer (service role) so RLS cannot silently no-op the update.
+  const { data: updatedRows, error: updateErr } = await db
     .from("digital_audit_lines")
-    .update({
-      qc_disposition: result.disposition,
-      qc_defect_types: result.defect_types,
-      qc_confidence: result.confidence,
-      qc_notes: result.notes,
-      qc_analyzed_at: now,
-      ...(result.disposition === "DAMAGED" ? { rca_code: "damaged" } : {}),
-    } as never)
-    .in("id", lineIds);
+    .update(patch)
+    .in("id", lineIds)
+    .select("id, qc_disposition");
   if (updateErr) {
     throw new Error(`FNV QC could not persist disposition: ${updateErr.message}`);
+  }
+  const persisted = (updatedRows ?? []).filter(
+    (row) => (row as { qc_disposition?: string | null }).qc_disposition === result.disposition,
+  );
+  if (persisted.length === 0) {
+    throw new Error(
+      "FNV QC disposition was computed but not saved (0 rows updated). Check org access to digital_audit_lines.",
+    );
   }
 
   if (result.disposition === "DAMAGED" && lineIds[0]) {
     const line = (lines ?? [])[0] as { id: string; product_name?: string; category?: string };
     const orgId = (scan as { org_id: string }).org_id;
     const storeId = (scan as { store_id: string | null }).store_id;
-    const { data: existingFinding } = await supabase
+    const { data: existingFinding } = await db
       .from("findings")
       .select("id")
       .eq("scan_id", data.scanId)
@@ -201,7 +231,7 @@ async function runFnvQcCore(
       .limit(1)
       .maybeSingle();
     if (!existingFinding) {
-      await supabase.from("findings").insert({
+      await db.from("findings").insert({
         org_id: orgId,
         scan_id: data.scanId,
         assignment_id: assignmentId,
@@ -226,6 +256,22 @@ async function runFnvQcCore(
   return { result };
 }
 
+async function getFnvWriter(userClient: SupabaseClient, scanId: string): Promise<SupabaseClient> {
+  // Authz: caller must be able to read the scan under RLS.
+  const { data: scan, error } = await userClient
+    .from("shelf_scans")
+    .select("id")
+    .eq("id", scanId)
+    .maybeSingle();
+  if (error || !scan) throw new Error("Audit not found or not authorized.");
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    return supabaseAdmin as unknown as SupabaseClient;
+  } catch {
+    return userClient;
+  }
+}
+
 export const runFnvQcOnBinEvidence = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: RunFnvQcInput) => {
@@ -235,7 +281,8 @@ export const runFnvQcOnBinEvidence = createServerFn({ method: "POST" })
     return input;
   })
   .handler(async ({ data, context }): Promise<{ result: FnvQcResult | null; skipped?: string }> => {
-    return runFnvQcCore(context.supabase, data);
+    const writer = await getFnvWriter(context.supabase, data.scanId);
+    return runFnvQcCore(context.supabase, data, writer);
   });
 
 /**
@@ -250,6 +297,7 @@ export const ensureFnvQcForScan = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }): Promise<{ ran: number; skipped?: string }> => {
     const { supabase } = context;
+    const writer = await getFnvWriter(supabase, data.scanId);
     const { data: pending } = await supabase
       .from("digital_audit_lines")
       .select("id")
@@ -266,18 +314,31 @@ export const ensureFnvQcForScan = createServerFn({ method: "POST" })
     if (!evidenceRows?.length) return { ran: 0, skipped: "no_evidence" };
 
     let ran = 0;
+    let lastSkip: string | undefined;
     for (const row of evidenceRows as { bin_key: string; storage_path: string }[]) {
       const path = String(row.storage_path ?? "").trim();
       const binKey = String(row.bin_key ?? "default").trim() || "default";
       if (!path) continue;
-      const out = await runFnvQcCore(supabase, {
-        scanId: data.scanId,
-        binKey,
-        storagePath: path,
-        storageBucket: "audit-evidence",
-        productHint: data.productHint ?? null,
-      });
+      const out = await runFnvQcCore(
+        supabase,
+        {
+          scanId: data.scanId,
+          binKey,
+          storagePath: path,
+          storageBucket: "audit-evidence",
+          productHint: data.productHint ?? null,
+        },
+        writer,
+      );
+      if (out.skipped) lastSkip = out.skipped;
       if (out.result) ran += 1;
+    }
+    if (ran === 0) {
+      throw new Error(
+        lastSkip === "not_fnv"
+          ? "FNV QC ensure skipped: scan was not classified as FNV on the server."
+          : "FNV QC ensure ran but did not persist a disposition. Re-upload evidence and retry.",
+      );
     }
     return { ran };
   });

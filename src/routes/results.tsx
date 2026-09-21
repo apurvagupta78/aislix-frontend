@@ -49,25 +49,23 @@ import { ResultsErrorBoundary } from "@/components/scan-results/ResultsErrorBoun
 import { loadDigitalAuditSession } from "@/lib/digital-audit";
 
 async function fetchDigitalSessionSafe(scanId: string) {
+  let session;
   try {
-    let session = await loadDigitalAuditSession(scanId);
-    const missingQc = (session?.lines ?? []).some((l) => !l.qc_disposition);
-    const hasEvidence = (session?.evidence ?? []).length > 0;
-    if (missingQc && hasEvidence) {
-      try {
-        const { ensureFnvQcForScan } = await import("@/lib/fnv-qc.functions");
-        const hint =
-          session?.lines?.[0]?.product_name ?? session?.lines?.[0]?.sku ?? null;
-        await ensureFnvQcForScan({ data: { scanId, productHint: hint } });
-        session = await loadDigitalAuditSession(scanId);
-      } catch (err) {
-        console.error("[results] FNV QC ensure failed", err);
-      }
-    }
-    return session;
+    session = await loadDigitalAuditSession(scanId);
   } catch {
     return null;
   }
+  const missingQc = (session?.lines ?? []).some((l) => !l.qc_disposition);
+  const hasEvidence = (session?.evidence ?? []).length > 0;
+  if (missingQc && hasEvidence) {
+    const { ensureFnvQcForScan } = await import("@/lib/fnv-qc.functions");
+    const hint =
+      session?.lines?.[0]?.product_name ?? session?.lines?.[0]?.sku ?? null;
+    // Do not swallow — silent catch left qc_disposition null on LIVE FNV scans.
+    await ensureFnvQcForScan({ data: { scanId, productHint: hint } });
+    session = await loadDigitalAuditSession(scanId);
+  }
+  return session;
 }
 
 export const Route = createFileRoute("/results")({
