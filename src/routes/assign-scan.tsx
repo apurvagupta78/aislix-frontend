@@ -750,7 +750,7 @@ function AssignScanPage() {
 
 
         <section className={card}>
-          <h2 className="text-sm font-semibold text-foreground">Step 3 · Assign to team member</h2>
+          <h2 className="text-sm font-semibold text-foreground">Step 4 · Assign to team member</h2>
           <div className="mt-3 grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Assign to team member</Label>
