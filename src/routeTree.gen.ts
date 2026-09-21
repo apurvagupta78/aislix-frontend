@@ -32,6 +32,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DemoScansRouteImport } from './routes/demo-scans'
 import { Route as DigitalAuditRouteImport } from './routes/digital-audit'
+import { Route as DistributorsRouteImport } from './routes/distributors'
 import { Route as EscalationSettingsRouteImport } from './routes/escalation-settings'
 import { Route as ExceptionsRouteImport } from './routes/exceptions'
 import { Route as ExpiryControlRouteImport } from './routes/expiry-control'
@@ -40,6 +41,8 @@ import { Route as FindingsRouteImport } from './routes/findings'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
+import { Route as InventoryRouteImport } from './routes/inventory'
+import { Route as InventoryVarianceRouteImport } from './routes/inventory-variance'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as ManageRouteImport } from './routes/manage'
@@ -53,6 +56,7 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProcessingRouteImport } from './routes/processing'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as RecurringIssuesRouteImport } from './routes/recurring-issues'
 import { Route as RefundsRouteImport } from './routes/refunds'
 import { Route as ReportRouteImport } from './routes/report'
 import { Route as ReportsRouteImport } from './routes/reports'
@@ -68,11 +72,13 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SkuIntelligenceRouteImport } from './routes/sku-intelligence'
 import { Route as StoreMasterRouteImport } from './routes/store-master'
+import { Route as SupermarketsRouteImport } from './routes/supermarkets'
 import { Route as TeamRouteImport } from './routes/team'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as UploadRouteImport } from './routes/upload'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
+import { Route as WarehousesRouteImport } from './routes/warehouses'
 import { Route as AdminDemoEvidenceRouteImport } from './routes/admin.demo-evidence'
 import { Route as AdminDemoScansRouteImport } from './routes/admin.demo-scans'
 import { Route as AdminDemoSeedRouteImport } from './routes/admin.demo-seed'
@@ -241,6 +247,11 @@ const DigitalAuditRoute = DigitalAuditRouteImport.update({
   path: '/digital-audit',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DistributorsRoute = DistributorsRouteImport.update({
+  id: '/distributors',
+  path: '/distributors',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EscalationSettingsRoute = EscalationSettingsRouteImport.update({
   id: '/escalation-settings',
   path: '/escalation-settings',
@@ -279,6 +290,16 @@ const HistoryRoute = HistoryRouteImport.update({
 const HowItWorksRoute = HowItWorksRouteImport.update({
   id: '/how-it-works',
   path: '/how-it-works',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InventoryRoute = InventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InventoryVarianceRoute = InventoryVarianceRouteImport.update({
+  id: '/inventory-variance',
+  path: '/inventory-variance',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -344,6 +365,11 @@ const ProcessingRoute = ProcessingRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecurringIssuesRoute = RecurringIssuesRouteImport.update({
+  id: '/recurring-issues',
+  path: '/recurring-issues',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RefundsRoute = RefundsRouteImport.update({
@@ -421,6 +447,11 @@ const StoreMasterRoute = StoreMasterRouteImport.update({
   path: '/store-master',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SupermarketsRoute = SupermarketsRouteImport.update({
+  id: '/supermarkets',
+  path: '/supermarkets',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TeamRoute = TeamRouteImport.update({
   id: '/team',
   path: '/team',
@@ -444,6 +475,11 @@ const UsersRoute = UsersRouteImport.update({
 const VerifyEmailRoute = VerifyEmailRouteImport.update({
   id: '/verify-email',
   path: '/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WarehousesRoute = WarehousesRouteImport.update({
+  id: '/warehouses',
+  path: '/warehouses',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminDemoEvidenceRoute = AdminDemoEvidenceRouteImport.update({
@@ -745,6 +781,7 @@ export interface FileRoutesByFullPath {
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
   '/digital-audit': typeof DigitalAuditRoute
+  '/distributors': typeof DistributorsRoute
   '/escalation-settings': typeof EscalationSettingsRoute
   '/exceptions': typeof ExceptionsRouteWithChildren
   '/expiry-control': typeof ExpiryControlRouteWithChildren
@@ -753,6 +790,8 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/history': typeof HistoryRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/inventory': typeof InventoryRoute
+  '/inventory-variance': typeof InventoryVarianceRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/manage': typeof ManageRouteWithChildren
@@ -766,6 +805,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/processing': typeof ProcessingRoute
   '/profile': typeof ProfileRoute
+  '/recurring-issues': typeof RecurringIssuesRoute
   '/refunds': typeof RefundsRoute
   '/report': typeof ReportRoute
   '/reports': typeof ReportsRoute
@@ -781,11 +821,13 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sku-intelligence': typeof SkuIntelligenceRoute
   '/store-master': typeof StoreMasterRoute
+  '/supermarkets': typeof SupermarketsRoute
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/upload': typeof UploadRoute
   '/users': typeof UsersRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/warehouses': typeof WarehousesRoute
   '/admin/demo-evidence': typeof AdminDemoEvidenceRoute
   '/admin/demo-scans': typeof AdminDemoScansRoute
   '/admin/demo-seed': typeof AdminDemoSeedRoute
@@ -863,6 +905,7 @@ export interface FileRoutesByTo {
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
   '/digital-audit': typeof DigitalAuditRoute
+  '/distributors': typeof DistributorsRoute
   '/escalation-settings': typeof EscalationSettingsRoute
   '/exceptions': typeof ExceptionsRouteWithChildren
   '/expiry-control': typeof ExpiryControlRouteWithChildren
@@ -871,6 +914,8 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/history': typeof HistoryRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/inventory': typeof InventoryRoute
+  '/inventory-variance': typeof InventoryVarianceRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/manage': typeof ManageRouteWithChildren
@@ -884,6 +929,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/processing': typeof ProcessingRoute
   '/profile': typeof ProfileRoute
+  '/recurring-issues': typeof RecurringIssuesRoute
   '/refunds': typeof RefundsRoute
   '/report': typeof ReportRoute
   '/reports': typeof ReportsRoute
@@ -899,11 +945,13 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sku-intelligence': typeof SkuIntelligenceRoute
   '/store-master': typeof StoreMasterRoute
+  '/supermarkets': typeof SupermarketsRoute
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/upload': typeof UploadRoute
   '/users': typeof UsersRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/warehouses': typeof WarehousesRoute
   '/admin/demo-evidence': typeof AdminDemoEvidenceRoute
   '/admin/demo-scans': typeof AdminDemoScansRoute
   '/admin/demo-seed': typeof AdminDemoSeedRoute
@@ -982,6 +1030,7 @@ export interface FileRoutesById {
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
   '/digital-audit': typeof DigitalAuditRoute
+  '/distributors': typeof DistributorsRoute
   '/escalation-settings': typeof EscalationSettingsRoute
   '/exceptions': typeof ExceptionsRouteWithChildren
   '/expiry-control': typeof ExpiryControlRouteWithChildren
@@ -990,6 +1039,8 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/history': typeof HistoryRoute
   '/how-it-works': typeof HowItWorksRoute
+  '/inventory': typeof InventoryRoute
+  '/inventory-variance': typeof InventoryVarianceRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/manage': typeof ManageRouteWithChildren
@@ -1003,6 +1054,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/processing': typeof ProcessingRoute
   '/profile': typeof ProfileRoute
+  '/recurring-issues': typeof RecurringIssuesRoute
   '/refunds': typeof RefundsRoute
   '/report': typeof ReportRoute
   '/reports': typeof ReportsRoute
@@ -1018,11 +1070,13 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/sku-intelligence': typeof SkuIntelligenceRoute
   '/store-master': typeof StoreMasterRoute
+  '/supermarkets': typeof SupermarketsRoute
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/upload': typeof UploadRoute
   '/users': typeof UsersRoute
   '/verify-email': typeof VerifyEmailRoute
+  '/warehouses': typeof WarehousesRoute
   '/admin/demo-evidence': typeof AdminDemoEvidenceRoute
   '/admin/demo-scans': typeof AdminDemoScansRoute
   '/admin/demo-seed': typeof AdminDemoSeedRoute
@@ -1102,6 +1156,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/demo-scans'
     | '/digital-audit'
+    | '/distributors'
     | '/escalation-settings'
     | '/exceptions'
     | '/expiry-control'
@@ -1110,6 +1165,8 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/history'
     | '/how-it-works'
+    | '/inventory'
+    | '/inventory-variance'
     | '/login'
     | '/logout'
     | '/manage'
@@ -1123,6 +1180,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/processing'
     | '/profile'
+    | '/recurring-issues'
     | '/refunds'
     | '/report'
     | '/reports'
@@ -1138,11 +1196,13 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/sku-intelligence'
     | '/store-master'
+    | '/supermarkets'
     | '/team'
     | '/terms'
     | '/upload'
     | '/users'
     | '/verify-email'
+    | '/warehouses'
     | '/admin/demo-evidence'
     | '/admin/demo-scans'
     | '/admin/demo-seed'
@@ -1220,6 +1280,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/demo-scans'
     | '/digital-audit'
+    | '/distributors'
     | '/escalation-settings'
     | '/exceptions'
     | '/expiry-control'
@@ -1228,6 +1289,8 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/history'
     | '/how-it-works'
+    | '/inventory'
+    | '/inventory-variance'
     | '/login'
     | '/logout'
     | '/manage'
@@ -1241,6 +1304,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/processing'
     | '/profile'
+    | '/recurring-issues'
     | '/refunds'
     | '/report'
     | '/reports'
@@ -1256,11 +1320,13 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/sku-intelligence'
     | '/store-master'
+    | '/supermarkets'
     | '/team'
     | '/terms'
     | '/upload'
     | '/users'
     | '/verify-email'
+    | '/warehouses'
     | '/admin/demo-evidence'
     | '/admin/demo-scans'
     | '/admin/demo-seed'
@@ -1338,6 +1404,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/demo-scans'
     | '/digital-audit'
+    | '/distributors'
     | '/escalation-settings'
     | '/exceptions'
     | '/expiry-control'
@@ -1346,6 +1413,8 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/history'
     | '/how-it-works'
+    | '/inventory'
+    | '/inventory-variance'
     | '/login'
     | '/logout'
     | '/manage'
@@ -1359,6 +1428,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/processing'
     | '/profile'
+    | '/recurring-issues'
     | '/refunds'
     | '/report'
     | '/reports'
@@ -1374,11 +1444,13 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/sku-intelligence'
     | '/store-master'
+    | '/supermarkets'
     | '/team'
     | '/terms'
     | '/upload'
     | '/users'
     | '/verify-email'
+    | '/warehouses'
     | '/admin/demo-evidence'
     | '/admin/demo-scans'
     | '/admin/demo-seed'
@@ -1457,6 +1529,7 @@ export interface RootRouteChildren {
   DemoRoute: typeof DemoRoute
   DemoScansRoute: typeof DemoScansRoute
   DigitalAuditRoute: typeof DigitalAuditRoute
+  DistributorsRoute: typeof DistributorsRoute
   EscalationSettingsRoute: typeof EscalationSettingsRoute
   ExceptionsRoute: typeof ExceptionsRouteWithChildren
   ExpiryControlRoute: typeof ExpiryControlRouteWithChildren
@@ -1465,6 +1538,8 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   HistoryRoute: typeof HistoryRoute
   HowItWorksRoute: typeof HowItWorksRoute
+  InventoryRoute: typeof InventoryRoute
+  InventoryVarianceRoute: typeof InventoryVarianceRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
   ManageRoute: typeof ManageRouteWithChildren
@@ -1478,6 +1553,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   ProcessingRoute: typeof ProcessingRoute
   ProfileRoute: typeof ProfileRoute
+  RecurringIssuesRoute: typeof RecurringIssuesRoute
   RefundsRoute: typeof RefundsRoute
   ReportRoute: typeof ReportRoute
   ReportsRoute: typeof ReportsRoute
@@ -1493,11 +1569,13 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   SkuIntelligenceRoute: typeof SkuIntelligenceRoute
   StoreMasterRoute: typeof StoreMasterRoute
+  SupermarketsRoute: typeof SupermarketsRoute
   TeamRoute: typeof TeamRoute
   TermsRoute: typeof TermsRoute
   UploadRoute: typeof UploadRoute
   UsersRoute: typeof UsersRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
+  WarehousesRoute: typeof WarehousesRoute
   ApiScanRoute: typeof ApiScanRoute
   ApiSendLandingOnboardingRoute: typeof ApiSendLandingOnboardingRoute
   AuditReviewScanIdRoute: typeof AuditReviewScanIdRoute
@@ -1684,6 +1762,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DigitalAuditRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/distributors': {
+      id: '/distributors'
+      path: '/distributors'
+      fullPath: '/distributors'
+      preLoaderRoute: typeof DistributorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/escalation-settings': {
       id: '/escalation-settings'
       path: '/escalation-settings'
@@ -1738,6 +1823,20 @@ declare module '@tanstack/react-router' {
       path: '/how-it-works'
       fullPath: '/how-it-works'
       preLoaderRoute: typeof HowItWorksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inventory': {
+      id: '/inventory'
+      path: '/inventory'
+      fullPath: '/inventory'
+      preLoaderRoute: typeof InventoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inventory-variance': {
+      id: '/inventory-variance'
+      path: '/inventory-variance'
+      fullPath: '/inventory-variance'
+      preLoaderRoute: typeof InventoryVarianceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -1829,6 +1928,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recurring-issues': {
+      id: '/recurring-issues'
+      path: '/recurring-issues'
+      fullPath: '/recurring-issues'
+      preLoaderRoute: typeof RecurringIssuesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/refunds': {
@@ -1936,6 +2042,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StoreMasterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/supermarkets': {
+      id: '/supermarkets'
+      path: '/supermarkets'
+      fullPath: '/supermarkets'
+      preLoaderRoute: typeof SupermarketsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/team': {
       id: '/team'
       path: '/team'
@@ -1969,6 +2082,13 @@ declare module '@tanstack/react-router' {
       path: '/verify-email'
       fullPath: '/verify-email'
       preLoaderRoute: typeof VerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/warehouses': {
+      id: '/warehouses'
+      path: '/warehouses'
+      fullPath: '/warehouses'
+      preLoaderRoute: typeof WarehousesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/demo-evidence': {
@@ -2523,6 +2643,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoRoute: DemoRoute,
   DemoScansRoute: DemoScansRoute,
   DigitalAuditRoute: DigitalAuditRoute,
+  DistributorsRoute: DistributorsRoute,
   EscalationSettingsRoute: EscalationSettingsRoute,
   ExceptionsRoute: ExceptionsRouteWithChildren,
   ExpiryControlRoute: ExpiryControlRouteWithChildren,
@@ -2531,6 +2652,8 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   HistoryRoute: HistoryRoute,
   HowItWorksRoute: HowItWorksRoute,
+  InventoryRoute: InventoryRoute,
+  InventoryVarianceRoute: InventoryVarianceRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
   ManageRoute: ManageRouteWithChildren,
@@ -2544,6 +2667,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   ProcessingRoute: ProcessingRoute,
   ProfileRoute: ProfileRoute,
+  RecurringIssuesRoute: RecurringIssuesRoute,
   RefundsRoute: RefundsRoute,
   ReportRoute: ReportRoute,
   ReportsRoute: ReportsRoute,
@@ -2559,11 +2683,13 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   SkuIntelligenceRoute: SkuIntelligenceRoute,
   StoreMasterRoute: StoreMasterRoute,
+  SupermarketsRoute: SupermarketsRoute,
   TeamRoute: TeamRoute,
   TermsRoute: TermsRoute,
   UploadRoute: UploadRoute,
   UsersRoute: UsersRoute,
   VerifyEmailRoute: VerifyEmailRoute,
+  WarehousesRoute: WarehousesRoute,
   ApiScanRoute: ApiScanRoute,
   ApiSendLandingOnboardingRoute: ApiSendLandingOnboardingRoute,
   AuditReviewScanIdRoute: AuditReviewScanIdRoute,
