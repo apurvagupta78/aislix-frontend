@@ -4170,6 +4170,70 @@ export type Database = {
           },
         ]
       }
+      scan_field_verifications: {
+        Row: {
+          ai_value: number | null
+          created_at: string
+          detected_product_id: string | null
+          field_key: string
+          id: string
+          org_id: string
+          scan_id: string
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+          verified_value: number | null
+        }
+        Insert: {
+          ai_value?: number | null
+          created_at?: string
+          detected_product_id?: string | null
+          field_key: string
+          id?: string
+          org_id: string
+          scan_id: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          verified_value?: number | null
+        }
+        Update: {
+          ai_value?: number | null
+          created_at?: string
+          detected_product_id?: string | null
+          field_key?: string
+          id?: string
+          org_id?: string
+          scan_id?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+          verified_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scan_field_verifications_detected_product_id_fkey"
+            columns: ["detected_product_id"]
+            isOneToOne: false
+            referencedRelation: "detected_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scan_field_verifications_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scan_field_verifications_scan_id_fkey"
+            columns: ["scan_id"]
+            isOneToOne: false
+            referencedRelation: "shelf_scans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scan_images: {
         Row: {
           captured_at: string | null
@@ -5248,6 +5312,10 @@ export type Database = {
         Returns: boolean
       }
       validate_assignment_rca: {
+        Args: { p_assignment_id: string }
+        Returns: Json
+      }
+      validate_audit_completion: {
         Args: { p_assignment_id: string }
         Returns: Json
       }
