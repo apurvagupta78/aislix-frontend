@@ -89,9 +89,9 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "today", label: "Today" },
   { key: "upcoming", label: "Upcoming" },
   { key: "overdue", label: "Overdue" },
-  { key: "needs_correction", label: "Returned" },
+  { key: "needs_correction", label: "Re-audit Requested" },
   { key: "unsynced", label: "Unsynced" },
-  { key: "completed", label: "Completed" },
+  { key: "completed", label: "Approved" },
 ];
 
 function isDueToday(dueAt: string | null): boolean {

@@ -233,10 +233,10 @@ function AssignmentsTab({ storeId, assignerMe }: { storeId?: string; assignerMe?
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="in_progress">In progress</SelectItem>
-              <SelectItem value="needs_correction">Needs correction</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="pending">Not Started</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="needs_correction">Re-audit Requested</SelectItem>
+              <SelectItem value="completed">Approved</SelectItem>
               <SelectItem value="overdue">Overdue</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>

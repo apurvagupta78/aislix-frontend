@@ -8,6 +8,7 @@ import { isOverdue } from "@/lib/assignments";
 import { formatAssignmentDueDate } from "@/lib/assignment-display";
 import { SLAIndicator, slaToneFromDueDate } from "./SLAIndicator";
 import { StatusBadge } from "./StatusBadge";
+import { resolveAssignmentDisplayStatus } from "@/lib/assignment-status-ui";
 
 type Props = {
   assignment: Assignment;
@@ -30,6 +31,20 @@ export function AssignmentWorkCard({
   className,
 }: Props) {
   const overdue = isOverdue(assignment);
+  const displayStatus = resolveAssignmentDisplayStatus({
+    status: assignment.status,
+    approval_status: assignment.approval_status,
+    overdue,
+  });
+  const badgeStatus =
+    displayStatus === "overdue" ||
+    displayStatus === "pending_review" ||
+    displayStatus === "submitted" ||
+    displayStatus === "approved"
+      ? displayStatus
+      : displayStatus === "needs_correction"
+        ? "needs_correction"
+        : (assignment.status as typeof assignment.status);
   const slaTone = slaToneFromDueDate(assignment.due_at, assignment.status);
   const progress =
     assignment.status === "completed"
@@ -59,11 +74,7 @@ export function AssignmentWorkCard({
         ) : null}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            {overdue ? (
-              <StatusBadge kind="assignment" status="overdue" />
-            ) : (
-              <StatusBadge kind="assignment" status={assignment.status} />
-            )}
+            <StatusBadge kind="assignment" status={badgeStatus} />
             {slaTone && slaTone !== "completed" ? (
               <SLAIndicator tone={slaTone} compact />
             ) : null}

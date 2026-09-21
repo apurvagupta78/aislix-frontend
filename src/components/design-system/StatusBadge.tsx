@@ -25,18 +25,21 @@ const DANGER = "bg-status-danger-soft text-status-danger-strong";
 const INFO = "bg-status-info-soft text-status-info-strong";
 const NEUTRAL = "bg-muted text-muted-foreground";
 
-const assignmentMeta: Record<AssignmentStatus | "overdue", Meta> = {
+const assignmentMeta: Record<AssignmentStatus | "overdue" | "submitted" | "pending_review" | "approved", Meta> = {
   pending: { label: "Not Started", className: WARN, Icon: Clock },
   in_progress: { label: "In Progress", className: INFO, Icon: Loader2 },
   needs_correction: { label: "Re-audit Requested", className: WARN, Icon: Wrench },
   completed: { label: "Approved", className: GOOD, Icon: CheckCircle2 },
   cancelled: { label: "Cancelled", className: NEUTRAL, Icon: CircleSlash },
   overdue: { label: "Overdue", className: DANGER, Icon: AlertTriangle },
+  submitted: { label: "Submitted", className: INFO, Icon: CheckCircle2 },
+  pending_review: { label: "Pending Review", className: WARN, Icon: Clock },
+  approved: { label: "Approved", className: GOOD, Icon: CheckCircle2 },
 };
 
 const scanMeta: Record<ScanStatus, Meta> = {
-  completed: { label: "Done", className: GOOD, Icon: CheckCircle2 },
-  processing: { label: "Working on it", className: INFO, Icon: Loader2 },
+  completed: { label: "Approved", className: GOOD, Icon: CheckCircle2 },
+  processing: { label: "In Progress", className: INFO, Icon: Loader2 },
   failed: { label: "Failed", className: DANGER, Icon: AlertTriangle },
 };
 
@@ -49,7 +52,15 @@ const templateMeta: Record<TemplateStatus, Meta> = {
 type Props = {
   className?: string;
 } & (
-  | { kind: "assignment"; status: AssignmentStatus | "overdue" }
+  | {
+      kind: "assignment";
+      status:
+        | AssignmentStatus
+        | "overdue"
+        | "submitted"
+        | "pending_review"
+        | "approved";
+    }
   | { kind: "scan"; status: ScanStatus }
   | { kind: "template"; status: TemplateStatus; published?: boolean }
 );

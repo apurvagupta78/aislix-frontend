@@ -76,7 +76,7 @@ import {
   downloadScanCsv,
   downloadScanPdf,
 } from "@/lib/scan-results";
-import { assignmentStatusLabel } from "@/lib/assignment-status-ui";
+import { assignmentStatusLabel, resolveAssignmentDisplayStatus } from "@/lib/assignment-status-ui";
 
 import { toast } from "sonner";
 
@@ -129,11 +129,22 @@ export const Route = createFileRoute("/history")({
 
 function AssignmentStatusBadge({ status }: { status: string | null }) {
   if (!status) return <span className="text-muted-foreground">—</span>;
-  const known = ["pending", "in_progress", "needs_correction", "completed", "cancelled"] as const;
-  if (known.includes(status as (typeof known)[number])) {
-    return <StatusBadge kind="assignment" status={status as (typeof known)[number]} />;
+  const display = resolveAssignmentDisplayStatus({ status });
+  const known = [
+    "pending",
+    "in_progress",
+    "needs_correction",
+    "completed",
+    "cancelled",
+    "overdue",
+    "submitted",
+    "pending_review",
+    "approved",
+  ] as const;
+  if (known.includes(display as (typeof known)[number])) {
+    return <StatusBadge kind="assignment" status={display as (typeof known)[number]} />;
   }
-  return <Badge variant="outline">{assignmentStatusLabel(status)}</Badge>;
+  return <Badge variant="outline">{assignmentStatusLabel(display)}</Badge>;
 }
 
 function complianceTone(value: number | null): string {

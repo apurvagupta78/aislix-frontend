@@ -27,12 +27,15 @@ import {
 } from "@/lib/assignments";
 
 const statusLabels: Record<string, string> = {
-  pending: "Pending",
-  in_progress: "In progress",
-  needs_correction: "Needs correction",
-  completed: "Completed",
+  pending: "Not Started",
+  in_progress: "In Progress",
+  needs_correction: "Re-audit Requested",
+  completed: "Approved",
   cancelled: "Cancelled",
   overdue: "Overdue",
+  submitted: "Submitted",
+  pending_review: "Pending Review",
+  approved: "Approved",
 };
 
 const statusClasses: Record<string, string> = {
