@@ -169,9 +169,16 @@ function Results() {
       data?.analysis_mode !== "image_only_shelf_analysis",
   );
   const digitalLines = digitalQuery.data?.lines?.length ?? 0;
-  const isDigitalAudit = digitalLines > 0;
+  const digitalEvidence = digitalQuery.data?.evidence?.length ?? 0;
+  const isDigitalAudit = digitalLines > 0 || digitalEvidence > 0;
   /** Prefer Astra graphical AI audit view for all completed AI scans (incl. assigned). */
   const useSimpleAiView = true;
+  // Wait for digital session probe so FNV/digital never flash shelf "Analysis incomplete".
+  const showAstraShelfResults =
+    Boolean(display) &&
+    !digitalQuery.isPending &&
+    !digitalQuery.isFetching &&
+    !isDigitalAudit;
   // Never block the Astra results view waiting on digital-session hydration.
   const auditTypeReady = true;
   const allowClientPlanogram = scanHadPlanogram || showOptionalPricing;
@@ -383,7 +390,7 @@ function Results() {
                     <>
                       {/* Digital/FNV audits use AuditGovernanceTabs above — do not show
                           shelf Astra "Analysis incomplete" for missing planogram JSON. */}
-                      {!digitalQuery.isPending && !isDigitalAudit ? (
+                      {showAstraShelfResults ? (
                         <>
                           <AiAuditResultsPage data={display} imageUrl={imageUrl} />
                           <AiFieldVerificationPanel
