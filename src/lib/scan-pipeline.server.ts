@@ -2482,3 +2482,174 @@ export async function backfillScanAssetsServer(
   kinds = await existingAssetKinds(supabase, scan.id);
   return done();
 }
+
+/**
+ * Rebuild PDF with human verification overlay (no re-scan).
+ * Used on download so Reports PDF matches Audit Detail verified values.
+ */
+export async function rebuildScanPdfWithVerificationsServer(
+  supabase: DB,
+  scanId: string,
+): Promise<{ pdf_base64: string } | null> {
+  const scan = await loadScan(supabase, scanId);
+
+  const { data: resultRow } = await supabase
+    .from("scan_results")
+    .select("raw_payload, metrics, brand_share, recommendations, executive_summary, shelf_rows, alerts")
+    .eq("scan_id", scan.id)
+    .maybeSingle();
+
+  const payload = (resultRow?.raw_payload ?? {}) as Record<string, unknown>;
+  const metrics = {
+    ...((typeof resultRow?.metrics === "object" && resultRow?.metrics) || {}),
+    ...((typeof payload.metrics === "object" && payload.metrics) || {}),
+    ...((typeof payload.summary === "object" && payload.summary) || {}),
+  } as Record<string, unknown>;
+
+  const inventory = Array.isArray(payload.inventory)
+    ? payload.inventory
+    : Array.isArray(payload.products)
+      ? payload.products
+      : Array.isArray(resultRow?.shelf_rows)
+        ? resultRow!.shelf_rows
+        : [];
+  const shares = Array.isArray(resultRow?.brand_share)
+    ? resultRow!.brand_share
+    : Array.isArray(payload.brand_share)
+      ? payload.brand_share
+      : Array.isArray(payload.top_brands)
+        ? payload.top_brands
+        : [];
+  const recommendations = Array.isArray(resultRow?.recommendations)
+    ? resultRow!.recommendations
+    : Array.isArray(payload.recommendations)
+      ? payload.recommendations
+      : [];
+  const alerts = Array.isArray(resultRow?.alerts)
+    ? resultRow!.alerts
+    : Array.isArray(payload.alerts)
+      ? payload.alerts
+      : [];
+
+  const { data: verRows } = await supabase
+    .from("scan_field_verifications" as never)
+    .select(
+      "detected_product_id, field_key, ai_value, verified_value, verified_at",
+    )
+    .eq("scan_id", scan.id);
+
+  const vers = (verRows ?? []) as Array<{
+    detected_product_id?: string | null;
+    field_key?: string;
+    ai_value?: number | null;
+    verified_value?: number | null;
+    verified_at?: string | null;
+  }>;
+
+  const facingVers = vers.filter((v) => v.field_key === "facings");
+  const unitVers = vers.filter((v) => v.field_key === "visible_units");
+  const sumVerified = (rows: typeof vers) =>
+    rows.reduce((n, r) => n + (typeof r.verified_value === "number" ? r.verified_value : Number(r.verified_value) || 0), 0);
+
+  const inventoryFacingSum = (inventory as Array<{ quantity?: number }>).reduce(
+    (n, row) => n + (Number(row.quantity) || 0),
+    0,
+  );
+  const aiFacings =
+    (typeof metrics.total_facings === "number" ? metrics.total_facings : null) ??
+    (inventoryFacingSum > 0 ? inventoryFacingSum : null);
+  const aiUnits =
+    (typeof metrics.total_visible_units === "number" ? metrics.total_visible_units : null) ??
+    aiFacings;
+
+  const human_verification = {
+    ai_facings: aiFacings,
+    verified_facings: facingVers.length ? sumVerified(facingVers) : null,
+    ai_visible_units: aiUnits,
+    verified_visible_units: unitVers.length ? sumVerified(unitVers) : null,
+    verified_at: vers.find((v) => v.verified_at)?.verified_at ?? null,
+    lines: vers.map((v) => ({
+      detected_product_id: v.detected_product_id,
+      field_key: v.field_key,
+      ai_value: v.ai_value,
+      verified_value: v.verified_value,
+      verified_at: v.verified_at,
+    })),
+  };
+
+  let annotated_image_base64: string | undefined;
+  const { data: pdfImgs } = await supabase
+    .from("scan_images")
+    .select("storage_bucket, storage_path")
+    .eq("scan_id", scan.id)
+    .eq("kind", "annotated")
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const annotated = pdfImgs?.[0];
+  if (annotated) {
+    const { data: signed } = await supabase.storage
+      .from(annotated.storage_bucket as string)
+      .createSignedUrl(annotated.storage_path as string, 600);
+    if (signed?.signedUrl) {
+      try {
+        const imgRes = await fetch(signed.signedUrl);
+        if (imgRes.ok) {
+          const buf = Buffer.from(await imgRes.arrayBuffer());
+          annotated_image_base64 = buf.toString("base64");
+        }
+      } catch {
+        // optional evidence image
+      }
+    }
+  }
+
+  const { baseUrl, apiKey, timeoutMs } = visionConfig();
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    accept: "application/json",
+  };
+  if (apiKey) {
+    headers["authorization"] = `Bearer ${apiKey}`;
+    headers["x-api-key"] = apiKey;
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}/scan/rebuild-pdf`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        scan_id: scan.id,
+        store_id: scan.store_id,
+        shelf_label: scan.shelf_label,
+        category: scan.category,
+        metrics,
+        inventory,
+        shares,
+        recommendations,
+        alerts,
+        compliance_alerts: Array.isArray(payload.compliance_alerts)
+          ? payload.compliance_alerts
+          : [],
+        executive_summary:
+          resultRow?.executive_summary ??
+          payload.executive_summary ??
+          payload.summary_text ??
+          null,
+        human_verification,
+        annotated_image_base64,
+      }),
+      signal: AbortSignal.timeout(Math.min(timeoutMs, 120_000)),
+    });
+  } catch {
+    return null;
+  }
+
+  const text = await response.text();
+  if (!response.ok) return null;
+  const exported = parseJson(text) as { pdf_base64?: string };
+  if (!exported?.pdf_base64) return null;
+
+  await storePdfReport(supabase, { id: scan.id, org_id: scan.org_id }, exported);
+  return { pdf_base64: exported.pdf_base64 };
+}

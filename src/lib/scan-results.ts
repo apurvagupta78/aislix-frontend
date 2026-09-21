@@ -1610,16 +1610,22 @@ export function buildFullScanReportExcel(
 
   const facingVers = (extras?.verifications ?? []).filter((v) => v.field_key === "facings");
   const unitVers = (extras?.verifications ?? []).filter((v) => v.field_key === "visible_units");
-  const sumAi = (rows: FieldVerification[]) =>
-    rows.reduce((n, r) => n + (typeof r.ai_value === "number" ? r.ai_value : Number(r.ai_value) || 0), 0);
   const sumVerified = (rows: FieldVerification[]) =>
     rows.reduce(
       (n, r) => n + (typeof r.verified_value === "number" ? r.verified_value : Number(r.verified_value) || 0),
       0,
     );
-  const aiFacingsTotal = facingVers.length ? sumAi(facingVers) : (s?.total_facings ?? "");
+  // AI totals are always shelf-wide (summary / inventory) — never only the verified subset.
+  const inventoryFacingSum = inventoryRows.reduce((n, i) => n + (Number(i.quantity) || 0), 0);
+  const aiFacingsTotal =
+    s?.total_facings ??
+    (inventoryFacingSum > 0 ? inventoryFacingSum : "");
+  const aiUnitsTotal =
+    (typeof (s as { total_visible_units?: number } | undefined)?.total_visible_units === "number"
+      ? (s as { total_visible_units?: number }).total_visible_units
+      : undefined) ??
+    (inventoryFacingSum > 0 ? inventoryFacingSum : "N/A");
   const verifiedFacingsTotal = facingVers.length ? sumVerified(facingVers) : "N/A";
-  const aiUnitsTotal = unitVers.length ? sumAi(unitVers) : "N/A";
   const verifiedUnitsTotal = unitVers.length ? sumVerified(unitVers) : "N/A";
 
   append("S5 Core KPIs", [
@@ -2007,7 +2013,19 @@ async function downloadAsset(
   }
 }
 
-export function downloadScanPdf(scanId: string, url?: string): Promise<void> {
+export async function downloadScanPdf(scanId: string, url?: string): Promise<void> {
+  try {
+    const { rebuildScanPdfWithVerifications } = await import("@/lib/scan-pipeline.functions");
+    const rebuilt = await rebuildScanPdfWithVerifications({ data: { scanId } });
+    if (rebuilt?.pdf_base64) {
+      const cleaned = rebuilt.pdf_base64.replace(/^data:[^;]+;base64,/, "");
+      const bytes = Uint8Array.from(atob(cleaned), (c) => c.charCodeAt(0));
+      downloadBlobBytes(bytes, `aislix-${scanId}-report.pdf`, "application/pdf");
+      return;
+    }
+  } catch {
+    // Fall through to stored asset.
+  }
   return downloadAsset(
     scanId,
     "pdf_url",

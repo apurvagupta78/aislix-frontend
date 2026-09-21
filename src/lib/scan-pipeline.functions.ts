@@ -56,3 +56,12 @@ export const backfillScanAssets = createServerFn({ method: "POST" })
     const { backfillScanAssetsServer } = await import("@/lib/scan-pipeline.server");
     return backfillScanAssetsServer(context.supabase, data.scanId);
   });
+
+/** Rebuild PDF including human verification (AI + verified facings/units). */
+export const rebuildScanPdfWithVerifications = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { scanId: string }) => validateScanId(input))
+  .handler(async ({ data, context }) => {
+    const { rebuildScanPdfWithVerificationsServer } = await import("@/lib/scan-pipeline.server");
+    return rebuildScanPdfWithVerificationsServer(context.supabase, data.scanId);
+  });
