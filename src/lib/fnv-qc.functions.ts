@@ -50,6 +50,37 @@ async function signFnvEvidenceUrl(
   throw new Error("Could not sign FNV evidence URL.");
 }
 
+/** Prefer an inline data URL so Railway does not depend on fetching Supabase signed URLs. */
+async function loadFnvEvidenceDataUrl(
+  supabase: SupabaseClient,
+  storagePath: string,
+  storageBucket?: RunFnvQcInput["storageBucket"],
+): Promise<string> {
+  const primary = resolveFnvEvidenceBucket(storagePath, storageBucket);
+  const order =
+    primary === "audit-evidence"
+      ? (["audit-evidence", "scan-images"] as const)
+      : (["scan-images", "audit-evidence"] as const);
+
+  let lastError = "Evidence object not found.";
+  for (const bucket of order) {
+    const { data, error } = await supabase.storage.from(bucket).download(storagePath);
+    if (error || !data) {
+      lastError = error?.message ?? lastError;
+      continue;
+    }
+    const buf = Buffer.from(await data.arrayBuffer());
+    const mime =
+      storagePath.toLowerCase().endsWith(".png")
+        ? "image/png"
+        : storagePath.toLowerCase().endsWith(".webp")
+          ? "image/webp"
+          : "image/jpeg";
+    return `data:${mime};base64,${buf.toString("base64")}`;
+  }
+  throw new Error(`Could not download FNV evidence: ${lastError}`);
+}
+
 function isFnvTemplate(t: {
   template_type?: string | null;
   audit_purpose?: string | null;
@@ -129,12 +160,21 @@ async function runFnvQcCore(
   }
   if (!isFnv) return { result: null, skipped: "not_fnv" };
 
-  // Prefer service-role signing when available — user JWT often cannot sign storage objects.
-  let signedUrl: string;
+  // Prefer service-role download → data URL so Railway never has to fetch a
+  // private Supabase signed URL (common cause of GENERIC_SCAN on FNV ensure).
+  let imageUrl: string;
   try {
-    signedUrl = await signFnvEvidenceUrl(db, data.storagePath, data.storageBucket);
+    imageUrl = await loadFnvEvidenceDataUrl(db, data.storagePath, data.storageBucket);
   } catch {
-    signedUrl = await signFnvEvidenceUrl(supabase, data.storagePath, data.storageBucket);
+    try {
+      imageUrl = await loadFnvEvidenceDataUrl(supabase, data.storagePath, data.storageBucket);
+    } catch {
+      try {
+        imageUrl = await signFnvEvidenceUrl(db, data.storagePath, data.storageBucket);
+      } catch {
+        imageUrl = await signFnvEvidenceUrl(supabase, data.storagePath, data.storageBucket);
+      }
+    }
   }
 
   const extras = buildAstraVisionExtras({
@@ -146,7 +186,7 @@ async function runFnvQcCore(
   const { submitVisionJob, pollVisionJobOnce } = await import("@/lib/scan-pipeline.server");
   let payload: unknown;
   const submitted = await submitVisionJob({
-    image_urls: [signedUrl],
+    image_urls: [imageUrl],
     vision_prompt: extras.vision_prompt,
     analysis_mode: extras.analysis_mode,
     operating_model: extras.operating_model,
