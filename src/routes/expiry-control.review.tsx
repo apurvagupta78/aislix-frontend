@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 
 import { AppShell } from "@/components/AppShell";
@@ -30,8 +30,18 @@ function ReviewPage() {
         <div className="mt-6 space-y-1">
           <p className="text-sm font-medium">Queue</p>
           {(queueQuery.data ?? []).map((a) => (
-            <p key={a.id} className="text-sm text-muted-foreground">
-              {a.sku} — {a.inspection_status} · removal {a.removal_status}
+            <p key={a.id} className="text-sm">
+              <Link
+                to="/expiry-control/review"
+                search={{ attemptId: a.id }}
+                className={
+                  a.id === selected
+                    ? "font-medium text-foreground underline-offset-2"
+                    : "text-muted-foreground hover:text-foreground hover:underline underline-offset-2"
+                }
+              >
+                {a.sku} — {a.inspection_status} · removal {a.removal_status}
+              </Link>
             </p>
           ))}
         </div>
