@@ -149,17 +149,19 @@ export type ControlTowerDemoPayload = {
   correctiveActionHealth: CorrectiveActionHealth;
   sla: {
     available: boolean;
-    compliancePct: number;
+    /** Null when SLA % is unavailable — never paint as fake 0. */
+    compliancePct: number | null;
     overdue: number;
     dueToday: number;
     breached: number;
-    avgResolutionHours: number;
+    avgResolutionHours: number | null;
   };
   evidenceCoverage: {
     available: boolean;
-    required: number;
-    verified: number;
-    pct: number;
+    required: number | null;
+    verified: number | null;
+    /** Null when coverage is unavailable — never paint as fake 0. */
+    pct: number | null;
   };
   recurringIssues: RecurringIssueRow[];
   auditTrend: { date: string; completed: number; findings: number }[];

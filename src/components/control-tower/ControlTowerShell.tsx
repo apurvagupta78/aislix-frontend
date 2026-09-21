@@ -487,14 +487,18 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
           <CardContent className="space-y-4">
             <div className="flex items-end justify-between">
               <div>
-                <p className={cn("text-3xl font-semibold", data.sla.available ? "text-[var(--aislix-primary)]" : "text-muted-foreground")}>
-                  {data.sla.available ? `${data.sla.compliancePct}%` : "N/A"}
+                <p className={cn("text-3xl font-semibold", data.sla.available && data.sla.compliancePct != null ? "text-[var(--aislix-primary)]" : "text-muted-foreground")}>
+                  {data.sla.available && data.sla.compliancePct != null
+                    ? `${data.sla.compliancePct}%`
+                    : "N/A"}
                 </p>
                 <p className="text-xs text-muted-foreground">SLA compliance</p>
               </div>
               <ShieldCheck className="size-8 text-brand opacity-80" />
             </div>
-            {data.sla.available ? <Progress value={data.sla.compliancePct} className="h-2" /> : null}
+            {data.sla.available && data.sla.compliancePct != null ? (
+              <Progress value={data.sla.compliancePct} className="h-2" />
+            ) : null}
             <div className="grid grid-cols-3 gap-2 text-center text-xs">
               <div className="rounded-lg border border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)] p-2">
                 <p className="font-semibold text-[var(--aislix-primary)]">{data.sla.overdue}</p>
@@ -527,7 +531,7 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
             />
           </CardHeader>
           <CardContent className="space-y-3">
-            {data.evidenceCoverage.available ? (
+            {data.evidenceCoverage.available && data.evidenceCoverage.pct != null ? (
               <>
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-2">
@@ -537,7 +541,8 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
                 </div>
                 <Progress value={data.evidenceCoverage.pct} className="h-2" />
                 <p className="text-xs text-muted-foreground">
-                  {data.evidenceCoverage.verified} of {data.evidenceCoverage.required} required evidence units
+                  {data.evidenceCoverage.verified ?? "N/A"} of{" "}
+                  {data.evidenceCoverage.required ?? "N/A"} required evidence units
                 </p>
               </>
             ) : (

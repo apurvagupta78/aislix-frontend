@@ -36,45 +36,61 @@ export function DashboardVisualBoard({
   demoBadgePreviewMode?: boolean;
 }) {
   const previewMode = demoBadgePreviewMode ?? data.previewDemo;
-  const gauges = useMemo(
-    () => [
-      { name: "SLA on time", value: data.sla.compliancePct, fill: AISLIX_CHART[0] },
-      { name: "Evidence verified", value: data.evidenceCoverage.pct, fill: AISLIX_CHART[1] },
-      {
+  const gauges = useMemo(() => {
+    const rows: { name: string; value: number; fill: string }[] = [];
+    if (data.sla.available && data.sla.compliancePct != null) {
+      rows.push({ name: "SLA on time", value: data.sla.compliancePct, fill: AISLIX_CHART[0] });
+    }
+    if (data.evidenceCoverage.available && data.evidenceCoverage.pct != null) {
+      rows.push({
+        name: "Evidence verified",
+        value: data.evidenceCoverage.pct,
+        fill: AISLIX_CHART[1],
+      });
+    }
+    const actionDenom =
+      data.correctiveActionHealth.closed +
+      data.correctiveActionHealth.open +
+      data.correctiveActionHealth.overdue;
+    if (actionDenom > 0) {
+      rows.push({
         name: "Actions closed",
-        value: Math.round(
-          (data.correctiveActionHealth.closed /
-            Math.max(
-              1,
-              data.correctiveActionHealth.closed +
-                data.correctiveActionHealth.open +
-                data.correctiveActionHealth.overdue,
-            )) *
-            100,
-        ),
+        value: Math.round((data.correctiveActionHealth.closed / actionDenom) * 100),
         fill: AISLIX_CHART[2],
-      },
-    ],
-    [data],
-  );
+      });
+    }
+    return rows;
+  }, [data]);
 
   const radar = useMemo(() => {
-    const total = Math.max(
-      1,
+    const total =
       data.correctiveActionHealth.open +
-        data.correctiveActionHealth.overdue +
-        data.correctiveActionHealth.closed,
-    );
-    return [
-      { axis: "Compliance", score: data.sla.compliancePct },
-      { axis: "Evidence", score: data.evidenceCoverage.pct },
-      { axis: "Speed", score: Math.max(10, 100 - data.sla.avgResolutionHours * 2) },
-      { axis: "Follow-up", score: Math.round((data.correctiveActionHealth.closed / total) * 100) },
-      {
-        axis: "Stability",
-        score: Math.max(10, 100 - data.recurringIssues.length * 6),
-      },
-    ];
+      data.correctiveActionHealth.overdue +
+      data.correctiveActionHealth.closed;
+    const rows: { axis: string; score: number }[] = [];
+    if (data.sla.available && data.sla.compliancePct != null) {
+      rows.push({ axis: "Compliance", score: data.sla.compliancePct });
+    }
+    if (data.evidenceCoverage.available && data.evidenceCoverage.pct != null) {
+      rows.push({ axis: "Evidence", score: data.evidenceCoverage.pct });
+    }
+    if (data.sla.avgResolutionHours != null) {
+      rows.push({
+        axis: "Speed",
+        score: Math.max(10, 100 - data.sla.avgResolutionHours * 2),
+      });
+    }
+    if (total > 0) {
+      rows.push({
+        axis: "Follow-up",
+        score: Math.round((data.correctiveActionHealth.closed / total) * 100),
+      });
+    }
+    rows.push({
+      axis: "Stability",
+      score: Math.max(10, 100 - data.recurringIssues.length * 6),
+    });
+    return rows;
   }, [data]);
 
   const heat = useMemo(() => data.riskLocationsFull.slice(0, 8), [data.riskLocationsFull]);
@@ -97,14 +113,20 @@ export function DashboardVisualBoard({
         title="How healthy are we right now?"
         description="Three headline rates in one dial."
       >
-        <ResponsiveContainer width="100%" height={260}>
-          <RadialBarChart data={gauges} innerRadius="32%" outerRadius="100%" startAngle={200} endAngle={-20}>
-            <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
-            <RadialBar dataKey="value" cornerRadius={12} background />
-            <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-            <Tooltip formatter={(v: number) => `${v}%`} />
-          </RadialBarChart>
-        </ResponsiveContainer>
+        {gauges.length === 0 ? (
+          <p className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">
+            Data unavailable
+          </p>
+        ) : (
+          <ResponsiveContainer width="100%" height={260}>
+            <RadialBarChart data={gauges} innerRadius="32%" outerRadius="100%" startAngle={200} endAngle={-20}>
+              <PolarAngleAxis type="number" domain={[0, 100]} tick={false} />
+              <RadialBar dataKey="value" cornerRadius={12} background />
+              <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+              <Tooltip formatter={(v: number) => `${v}%`} />
+            </RadialBarChart>
+          </ResponsiveContainer>
+        )}
       </ChartFrame>
 
       <ChartFrame
@@ -112,20 +134,26 @@ export function DashboardVisualBoard({
         title="Where are we strong or weak?"
         description="Five operating dimensions, 0-100."
       >
-        <ResponsiveContainer width="100%" height={260}>
-          <RadarChart data={radar} outerRadius="72%">
-            <PolarGrid stroke="var(--border)" />
-            <PolarAngleAxis dataKey="axis" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
-            <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
-            <Radar
-              dataKey="score"
-              stroke={AISLIX.primary}
-              fill={AISLIX.primary}
-              fillOpacity={0.35}
-            />
-            <Tooltip formatter={(v: number) => `${v}`} />
-          </RadarChart>
-        </ResponsiveContainer>
+        {radar.length < 3 ? (
+          <p className="flex h-[260px] items-center justify-center text-sm text-muted-foreground">
+            Data unavailable
+          </p>
+        ) : (
+          <ResponsiveContainer width="100%" height={260}>
+            <RadarChart data={radar} outerRadius="72%">
+              <PolarGrid stroke="var(--border)" />
+              <PolarAngleAxis dataKey="axis" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
+              <PolarRadiusAxis domain={[0, 100]} tick={false} axisLine={false} />
+              <Radar
+                dataKey="score"
+                stroke={AISLIX.primary}
+                fill={AISLIX.primary}
+                fillOpacity={0.35}
+              />
+              <Tooltip formatter={(v: number) => `${v}`} />
+            </RadarChart>
+          </ResponsiveContainer>
+        )}
       </ChartFrame>
 
       <ChartFrame

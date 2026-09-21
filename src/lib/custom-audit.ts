@@ -350,31 +350,38 @@ export async function submitCustomAudit(input: {
       Boolean(session.template.name?.toLowerCase().includes("fnv")) ||
       session.definition.purpose === "fnv_qc";
     if (isFnv) {
-      try {
-        const { ensureFnvQcForScan, runFnvQcOnBinEvidence } = await import(
-          "@/lib/fnv-qc.functions"
-        );
-        const evidenceDrafts = collectCustomAuditEvidenceDrafts(session.definition, responses);
-        const lineHint =
-          buildRecordContexts(session.definition, responses)[0]?.values ?? {};
-        const productHint =
-          String(lineHint.item_name ?? lineHint.product ?? lineHint.sku ?? lineHint.sku_id ?? "") ||
-          null;
-        for (const evidence of evidenceDrafts) {
-          await runFnvQcOnBinEvidence({
-            data: {
-              scanId,
-              binKey: evidence.bin_key,
-              storagePath: evidence.storage_path,
-              storageBucket: "audit-evidence",
-              productHint,
-            },
-          });
+      const { ensureFnvQcForScan, runFnvQcOnBinEvidence } = await import(
+        "@/lib/fnv-qc.functions"
+      );
+      const evidenceDrafts = collectCustomAuditEvidenceDrafts(session.definition, responses);
+      const lineHint =
+        buildRecordContexts(session.definition, responses)[0]?.values ?? {};
+      const productHint =
+        String(lineHint.item_name ?? lineHint.product ?? lineHint.sku ?? lineHint.sku_id ?? "") ||
+        null;
+      let ran = 0;
+      for (const evidence of evidenceDrafts) {
+        const out = await runFnvQcOnBinEvidence({
+          data: {
+            scanId,
+            binKey: evidence.bin_key,
+            storagePath: evidence.storage_path,
+            storageBucket: "audit-evidence",
+            productHint,
+          },
+        });
+        if (out?.skipped === "not_fnv") {
+          throw new Error("FNV QC skipped: template was not classified as FNV on the server.");
         }
-        // DB fallback covers drafts that missed image fields or prior null QC rows.
-        await ensureFnvQcForScan({ data: { scanId, productHint } });
-      } catch (fnvError) {
-        console.error("[custom-audit] FNV QC analysis failed", fnvError);
+        if (out?.result) ran += 1;
+      }
+      const ensured = await ensureFnvQcForScan({ data: { scanId, productHint } });
+      ran += ensured?.ran ?? 0;
+      if (ensured?.skipped === "no_evidence" && evidenceDrafts.length === 0) {
+        throw new Error("FNV QC requires at least one evidence image before submit.");
+      }
+      if (ran === 0 && ensured?.skipped !== "already_complete") {
+        throw new Error("FNV QC did not persist a disposition. Re-upload evidence and submit again.");
       }
     }
 

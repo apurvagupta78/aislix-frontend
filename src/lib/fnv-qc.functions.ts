@@ -169,18 +169,23 @@ async function runFnvQcCore(
   }
 
   const lineIds = ((lines ?? []) as { id: string }[]).map((l) => l.id);
-  if (lineIds.length) {
-    await supabase
-      .from("digital_audit_lines")
-      .update({
-        qc_disposition: result.disposition,
-        qc_defect_types: result.defect_types,
-        qc_confidence: result.confidence,
-        qc_notes: result.notes,
-        qc_analyzed_at: now,
-        ...(result.disposition === "DAMAGED" ? { rca_code: "damaged" } : {}),
-      } as never)
-      .in("id", lineIds);
+  if (!lineIds.length) {
+    throw new Error("FNV QC produced a disposition but no digital audit lines were found to update.");
+  }
+
+  const { error: updateErr } = await supabase
+    .from("digital_audit_lines")
+    .update({
+      qc_disposition: result.disposition,
+      qc_defect_types: result.defect_types,
+      qc_confidence: result.confidence,
+      qc_notes: result.notes,
+      qc_analyzed_at: now,
+      ...(result.disposition === "DAMAGED" ? { rca_code: "damaged" } : {}),
+    } as never)
+    .in("id", lineIds);
+  if (updateErr) {
+    throw new Error(`FNV QC could not persist disposition: ${updateErr.message}`);
   }
 
   if (result.disposition === "DAMAGED" && lineIds[0]) {
