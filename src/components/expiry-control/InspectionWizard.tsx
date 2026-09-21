@@ -224,7 +224,9 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
         payload: coverage.complete
           ? undefined
           : {
-              reason: `${coverage.statusLabel} — coverage ${coverage.coveragePct?.toFixed(0) ?? 0}%`,
+              reason: `${coverage.statusLabel} — coverage ${
+                coverage.coveragePct != null ? `${coverage.coveragePct.toFixed(0)}%` : "N/A"
+              }`,
               coverage_pct: coverage.coveragePct,
               required_units: coverage.requiredUnits,
               verified_units: coverage.verifiedUnits,
@@ -235,8 +237,10 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
     onSuccess: (coverage) => {
       const pending = (attempt?.remove_count ?? 0) + (attempt?.unresolved_count ?? 0);
       if (!coverage.complete) {
+        const pctLabel =
+          coverage.coveragePct != null ? `${coverage.coveragePct.toFixed(0)}%` : "N/A";
         setSubmitMessage(
-          `${coverage.statusLabel} — submitted at ${coverage.coveragePct?.toFixed(0) ?? 0}% coverage. ${pending} units awaiting quarantine receipt.`,
+          `${coverage.statusLabel} — submitted at ${pctLabel} coverage. ${pending} units awaiting quarantine receipt.`,
         );
       } else {
         setSubmitMessage(`Inspection submitted — ${pending} units awaiting quarantine receipt.`);
