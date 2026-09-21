@@ -156,31 +156,46 @@ async function runFnvQcCore(
     notes: data.notes ?? null,
   });
 
-  const { submitVisionJobMultipart, pollVisionJobOnce } = await import("@/lib/scan-pipeline.server");
+  const { submitVisionJobMultipart, pollVisionJobOnce, PipelineError } = await import(
+    "@/lib/scan-pipeline.server"
+  );
+  // Distinct job id so FNV never returns a cached shelf-scan result for the same audit.
+  const visionJobId = `${data.scanId}__fnv__${data.binKey || "default"}`.slice(0, 120);
   let payload: unknown;
-  const submitted = await submitVisionJobMultipart({
-    scanId: data.scanId,
-    file: evidence.bytes,
-    fileName: evidence.fileName,
-    contentType: evidence.contentType,
-    vision_prompt: extras.vision_prompt,
-    analysis_mode: extras.analysis_mode,
-    operating_model: extras.operating_model,
-    purpose: "fnv_qc",
-  });
-  if (submitted.kind === "completed") {
-    payload = submitted.payload;
-  } else {
-    const deadline = Date.now() + 90_000;
-    while (Date.now() < deadline) {
-      await new Promise((r) => setTimeout(r, 2500));
-      const once = await pollVisionJobOnce(submitted.jobId);
-      if (once.kind === "completed") {
-        payload = once.payload;
-        break;
+  try {
+    const submitted = await submitVisionJobMultipart({
+      scanId: visionJobId,
+      file: evidence.bytes,
+      fileName: evidence.fileName,
+      contentType: evidence.contentType,
+      vision_prompt: extras.vision_prompt,
+      analysis_mode: extras.analysis_mode,
+      operating_model: extras.operating_model,
+      purpose: "fnv_qc",
+    });
+    if (submitted.kind === "completed") {
+      payload = submitted.payload;
+    } else {
+      const deadline = Date.now() + 90_000;
+      while (Date.now() < deadline) {
+        await new Promise((r) => setTimeout(r, 2500));
+        const once = await pollVisionJobOnce(submitted.jobId);
+        if (once.kind === "completed") {
+          payload = once.payload;
+          break;
+        }
       }
+      if (!payload) throw new Error("FNV QC analysis timed out.");
     }
-    if (!payload) throw new Error("FNV QC analysis timed out.");
+  } catch (err) {
+    if (err instanceof PipelineError && err.detail) {
+      console.error("[fnv-qc] vision failed", {
+        scanId: data.scanId,
+        code: err.code,
+        detail: err.detail.slice(0, 500),
+      });
+    }
+    throw err;
   }
 
   const result = parseFnvQcPayload(payload);
