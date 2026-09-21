@@ -67,6 +67,13 @@ export function getEffectiveRequiredFields(
     for (const action of rule.then) {
       if (action.action === "require_field") {
         required.add(action.field);
+        // Published templates may use shortened keys (e.g. severity) while rules
+        // reference the canonical type name (defect_severity).
+        for (const field of fields) {
+          if (field.key === action.field || field.type === action.field) {
+            required.add(field.key);
+          }
+        }
       }
     }
   }

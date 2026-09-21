@@ -26,7 +26,16 @@ export async function validateAuditCompletion(
     p_assignment_id: assignmentId,
   });
   if (error) {
-    if (error.code === "42883") {
+    // Postgres undefined_function = 42883; PostgREST schema-cache miss = PGRST202.
+    // Either means the completion RPC is not deployed — do not block submit.
+    const code = String((error as { code?: string }).code ?? "");
+    const message = String((error as { message?: string }).message ?? "").toLowerCase();
+    if (
+      code === "42883" ||
+      code === "PGRST202" ||
+      message.includes("could not find the function") ||
+      message.includes("validate_audit_completion")
+    ) {
       return {
         ok: true,
         missingRcaCount: 0,
