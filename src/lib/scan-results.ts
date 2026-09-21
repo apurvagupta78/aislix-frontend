@@ -694,14 +694,20 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
   const metricsNum = (key: string): number | undefined =>
     typeof metricsAny[key] === "number" ? Number(metricsAny[key]) : undefined;
 
+  const inventoryFacingSum = inventory.reduce((n, i) => n + i.quantity, 0);
   const totalFacings =
     metricsNum("total_facings") ??
-    (scan.total_products !== null && scan.total_products !== undefined
-      ? Number(scan.total_products)
-      : inventory.reduce((n, i) => n + i.quantity, 0));
+    (inventoryFacingSum > 0
+      ? inventoryFacingSum
+      : scan.total_products !== null && scan.total_products !== undefined
+        ? Number(scan.total_products)
+        : 0);
+
+  // Products = unique SKUs — never copy facing totals into total_products.
+  const productCount = uniqueSkus > 0 ? uniqueSkus : inventory.length;
 
   const summary: ScanSummary = {
-    total_products: totalFacings,
+    total_products: productCount,
     total_facings: totalFacings,
     unique_skus: uniqueSkus,
     unique_brands: uniqueBrands,
@@ -1602,10 +1608,29 @@ export function buildFullScanReportExcel(
       : [["—", "No products returned by analysis API", "", "", "", "", "", ""]]),
   ]);
 
+  const facingVers = (extras?.verifications ?? []).filter((v) => v.field_key === "facings");
+  const unitVers = (extras?.verifications ?? []).filter((v) => v.field_key === "visible_units");
+  const sumAi = (rows: FieldVerification[]) =>
+    rows.reduce((n, r) => n + (typeof r.ai_value === "number" ? r.ai_value : Number(r.ai_value) || 0), 0);
+  const sumVerified = (rows: FieldVerification[]) =>
+    rows.reduce(
+      (n, r) => n + (typeof r.verified_value === "number" ? r.verified_value : Number(r.verified_value) || 0),
+      0,
+    );
+  const aiFacingsTotal = facingVers.length ? sumAi(facingVers) : (s?.total_facings ?? "");
+  const verifiedFacingsTotal = facingVers.length ? sumVerified(facingVers) : "N/A";
+  const aiUnitsTotal = unitVers.length ? sumAi(unitVers) : "N/A";
+  const verifiedUnitsTotal = unitVers.length ? sumVerified(unitVers) : "N/A";
+
   append("S5 Core KPIs", [
     ["KPI", "Value"],
     ["Retail execution score", s?.shelf_execution_score ?? "Not scoreable"],
-    ["Total visible facings", s?.total_facings ?? s?.total_products ?? ""],
+    ["Products identified", s?.total_products ?? s?.unique_skus ?? ""],
+    ["Total visible facings", s?.total_facings ?? ""],
+    ["AI Facings", aiFacingsTotal],
+    ["Verified Facings", verifiedFacingsTotal],
+    ["AI Visible Units", aiUnitsTotal],
+    ["Verified Visible Units", verifiedUnitsTotal],
     ["Unique SKUs", s?.unique_skus ?? ""],
     ["Brand share %", s?.brand_share_percent ?? ""],
     ["Planogram SKU match %", result.planogram?.sku_match_percent ?? result.planogram?.percent ?? ""],
@@ -1732,18 +1757,44 @@ export function buildFullScanReportExcel(
   ]);
 
   const verifications = extras?.verifications ?? [];
-  if (verifications.length) {
-    append("Human verification", [
-      ["Product ID", "Field", "AI value", "Verified value", "Verified at"],
-      ...verifications.map((v) => [
-        v.detected_product_id ?? "",
-        v.field_key,
-        v.ai_value ?? "",
-        v.verified_value ?? "",
-        v.verified_at ?? "",
-      ]),
-    ]);
-  }
+  append("Human verification", [
+    [
+      "Product ID",
+      "Field",
+      "AI value",
+      "Verified value",
+      "Verified at",
+      "AI Facings total",
+      "Verified Facings total",
+      "AI Visible Units total",
+      "Verified Visible Units total",
+    ],
+    ...(verifications.length
+      ? verifications.map((v, idx) => [
+          v.detected_product_id ?? "",
+          v.field_key,
+          v.ai_value ?? "",
+          v.verified_value ?? "",
+          v.verified_at ?? "",
+          idx === 0 ? aiFacingsTotal : "",
+          idx === 0 ? verifiedFacingsTotal : "",
+          idx === 0 ? aiUnitsTotal : "",
+          idx === 0 ? verifiedUnitsTotal : "",
+        ])
+      : [
+          [
+            "",
+            "",
+            "",
+            "",
+            "",
+            aiFacingsTotal,
+            verifiedFacingsTotal,
+            aiUnitsTotal,
+            verifiedUnitsTotal,
+          ],
+        ]),
+  ]);
 
   const digitalLines = extras?.digitalLines ?? [];
   if (digitalLines.length) {

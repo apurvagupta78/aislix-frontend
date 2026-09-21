@@ -233,13 +233,21 @@ function ReportViewer() {
 
             <div className="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-4">
               {[
-                { l: "Products", v: summary ? String(summary.total_products) : "—" },
-                { l: "Brands", v: summary ? String(summary.unique_brands) : "—" },
+                {
+                  l: "Products",
+                  v: summary
+                    ? String(summary.unique_skus ?? summary.total_products ?? "—")
+                    : "—",
+                },
+                {
+                  l: "Facings",
+                  v: summary ? String(summary.total_facings ?? "—") : "—",
+                },
                 {
                   l: "Confidence",
                   v: summary ? formatConfidence(summary.average_confidence) : "—",
                 },
-                { l: "Low stock", v: summary ? String(summary.low_stock_products) : "—" },
+                { l: "Brands", v: summary ? String(summary.unique_brands) : "—" },
               ].map((k) => (
                 <div key={k.l} className="rounded-xl border border-border bg-surface p-3">
                   <p className="text-lg font-semibold tracking-tight">{k.v}</p>
