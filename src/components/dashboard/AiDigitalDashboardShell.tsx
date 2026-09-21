@@ -308,6 +308,27 @@ export function AiDigitalDashboardShell() {
               </div>
 
               <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
+                <h3 className="text-sm font-semibold text-[#102A43]">Audit A vs Audit B</h3>
+                <p className="mt-1 text-sm text-[#667085]">
+                  Side-by-side comparison of two completed audits (products, gaps, confidence).
+                </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Link
+                    to="/history"
+                    className="rounded-lg bg-[#102A43] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
+                  >
+                    Pick audits in All Audits
+                  </Link>
+                  <Link
+                    to="/compare"
+                    className="rounded-lg border border-[#D9E2E8] px-4 py-2 text-sm font-medium text-[#102A43] hover:bg-[#F4F7F9]"
+                  >
+                    Open Compare
+                  </Link>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
                 <h3 className="text-sm font-semibold text-[#102A43]">Corrective actions</h3>
                 <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
                   <KpiCard label="Open CA" value={fmt(dig?.caOpen)} accent="#9B86D9" />
