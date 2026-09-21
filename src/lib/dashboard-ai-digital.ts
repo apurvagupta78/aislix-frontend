@@ -6,7 +6,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgId } from "@/lib/db/context";
 import {
-  listScanFieldVerifications,
+  listScanFieldVerificationsForScans,
   operationalActual,
 } from "@/lib/ai-audit/field-verifications";
 import {
@@ -283,7 +283,7 @@ export async function fetchAiDashboardMetrics(
     }
   }
 
-  // Verification aggregates across recent scans (bounded)
+  // Verification aggregates across recent scans (single batch query)
   let eligible = 0;
   let verified = 0;
   let unitVar = 0;
@@ -293,28 +293,26 @@ export async function fetchAiDashboardMetrics(
   let verifiedFacingsSum = 0;
   let facingDelta = 0;
   let unitsDelta = 0;
-  for (const scanId of scanIds.slice(0, 20)) {
-    const verifications = await listScanFieldVerifications(scanId);
-    for (const v of verifications) {
-      // Eligible = AI field present (or already verified). Ignore empty stubs.
-      if (v.ai_value == null && v.verified_value == null) continue;
-      eligible += 1;
-      if (v.verified_value != null) {
-        verified += 1;
-        const ai = v.ai_value ?? 0;
-        const ver = Number(v.verified_value);
-        const delta = ver - ai;
-        if (v.field_key === "visible_units") {
-          unitVar += delta;
-          absUnitErr += Math.abs(delta);
-          verifiedUnitsSum += ver;
-          unitsDelta += delta;
-        }
-        if (v.field_key === "facings") {
-          absFacingErr += Math.abs(delta);
-          verifiedFacingsSum += ver;
-          facingDelta += delta;
-        }
+  const verificationRows = await listScanFieldVerificationsForScans(scanIds.slice(0, 20));
+  for (const v of verificationRows) {
+    // Eligible = AI field present (or already verified). Ignore empty stubs.
+    if (v.ai_value == null && v.verified_value == null) continue;
+    eligible += 1;
+    if (v.verified_value != null) {
+      verified += 1;
+      const ai = v.ai_value ?? 0;
+      const ver = Number(v.verified_value);
+      const delta = ver - ai;
+      if (v.field_key === "visible_units") {
+        unitVar += delta;
+        absUnitErr += Math.abs(delta);
+        verifiedUnitsSum += ver;
+        unitsDelta += delta;
+      }
+      if (v.field_key === "facings") {
+        absFacingErr += Math.abs(delta);
+        verifiedFacingsSum += ver;
+        facingDelta += delta;
       }
     }
   }

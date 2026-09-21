@@ -46,6 +46,25 @@ export async function listScanFieldVerifications(
   return (data ?? []) as FieldVerification[];
 }
 
+/** Batch load verifications for many scans (dashboard / reports). */
+export async function listScanFieldVerificationsForScans(
+  scanIds: string[],
+): Promise<FieldVerification[]> {
+  const ids = [...new Set(scanIds.filter(Boolean))];
+  if (!ids.length) return [];
+  const { data, error } = await supabase
+    .from("scan_field_verifications" as never)
+    .select(
+      "id, scan_id, detected_product_id, field_key, ai_value, verified_value, verified_by, verified_at",
+    )
+    .in("scan_id", ids.slice(0, 100));
+  if (error) {
+    console.error("[verifications] batch list failed", error.message);
+    return [];
+  }
+  return (data ?? []) as FieldVerification[];
+}
+
 export async function upsertFieldVerification(input: {
   scanId: string;
   detectedProductId: string | null;
