@@ -769,6 +769,7 @@ function NewAuditPage() {
           assignmentId: attemptId,
           self: assignToSelf,
           expiry: true,
+          mode: assignmentMode,
           skipNavigation: options?.skipNavigation,
         };
       }
@@ -930,6 +931,7 @@ function NewAuditPage() {
           bulk: result.assignmentIds.length,
           // Only recurring stays on /audit-schedules; schedule_once mints rows → assigned-scans.
           scheduled: result.mode === "recurring",
+          mode: assignmentMode,
           skipNavigation: options?.skipNavigation,
         };
       }
@@ -982,15 +984,22 @@ function NewAuditPage() {
         expiry: false,
         bulk: 1,
         scheduled: false,
+        mode: assignmentMode,
         skipNavigation: options?.skipNavigation,
       };
     },
-    onSuccess: ({ assignmentId, self, expiry, bulk, scheduled, skipNavigation }) => {
+    onSuccess: ({ assignmentId, self, expiry, bulk, scheduled, mode, skipNavigation }) => {
       if (skipNavigation) return;
-      if (scheduled) {
+      if (scheduled || mode === "recurring") {
         // Recurring only — schedule_once mints assignments and is not flagged scheduled.
         toast.success("Recurring audit schedule created.");
         void navigate({ to: "/audit-schedules" });
+        return;
+      }
+      // Schedule Once always lands on Assignments — never jump into audit execution.
+      if (mode === "schedule_once") {
+        toast.success(self ? "Scheduled audit created." : "Audit scheduled successfully.");
+        void navigate({ to: "/assigned-scans" });
         return;
       }
       if (bulk && bulk > 1) toast.success(`${bulk} assignments created.`);
