@@ -1,6 +1,6 @@
 /**
  * FNV QC vision: evidence image → Astra disposition → persist on digital line + finding.
- * Build bump: force Lovable serverFn registry refresh for service-role persist.
+ * Build bump: direct OpenAI path (bypass Railway shelf finalize for disposition JSON).
  */
 
 import { createServerFn } from "@tanstack/react-start";
@@ -75,6 +75,53 @@ function isFnvTemplate(t: {
   );
 }
 
+async function runFnvQcViaOpenAI(
+  evidence: { bytes: Buffer; contentType: string },
+  visionPrompt: string,
+): Promise<unknown> {
+  const OpenAI = (await import("openai")).default;
+  const apiKey = (process.env.OPENAI_API_KEY ?? "").trim();
+  if (!apiKey) {
+    throw new Error("OPENAI_API_KEY is not configured for FNV QC.");
+  }
+  const model =
+    (process.env.OPENAI_VISION_MODEL ?? "").trim() ||
+    (process.env.OPENAI_FNV_MODEL ?? "").trim() ||
+    (process.env.OPENAI_MODEL ?? "").trim() ||
+    "gpt-5.6-luna";
+
+  const client = new OpenAI({ apiKey, timeout: 120_000 });
+  const mime = evidence.contentType || "image/jpeg";
+  const dataUrl = `data:${mime};base64,${evidence.bytes.toString("base64")}`;
+
+  const response = await client.responses.create({
+    model,
+    input: [
+      {
+        role: "user",
+        content: [
+          { type: "input_text", text: visionPrompt },
+          { type: "input_image", image_url: dataUrl },
+        ],
+      },
+    ],
+    text: { format: { type: "json_object" } },
+    max_output_tokens: 1024,
+  });
+
+  const text = String(response.output_text ?? "").trim();
+  if (!text) {
+    throw new Error("FNV QC vision returned an empty response.");
+  }
+  try {
+    return JSON.parse(text) as unknown;
+  } catch (err) {
+    throw new Error(
+      `FNV QC vision response was not valid JSON: ${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+}
+
 async function runFnvQcCore(
   supabase: SupabaseClient,
   data: RunFnvQcInput,
@@ -141,8 +188,6 @@ async function runFnvQcCore(
   }
   if (!isFnv) return { result: null, skipped: "not_fnv" };
 
-  // Download evidence on the server and POST multipart to Railway — avoids private
-  // signed-URL fetch failures and oversized JSON data-URL bodies.
   let evidence: { bytes: Buffer; contentType: string; fileName: string };
   try {
     evidence = await loadFnvEvidenceBytes(db, data.storagePath, data.storageBucket);
@@ -156,46 +201,55 @@ async function runFnvQcCore(
     notes: data.notes ?? null,
   });
 
-  const { submitVisionJobMultipart, pollVisionJobOnce, PipelineError } = await import(
-    "@/lib/scan-pipeline.server"
-  );
-  // Distinct job id so FNV never returns a cached shelf-scan result for the same audit.
-  const visionJobId = `${data.scanId}__fnv__${data.binKey || "default"}`.slice(0, 120);
+  // Prefer direct OpenAI on the app server. Railway shelf finalize still rejects
+  // disposition-only JSON until that deploy is live (error_code=no_products).
   let payload: unknown;
   try {
-    const submitted = await submitVisionJobMultipart({
-      scanId: visionJobId,
-      file: evidence.bytes,
-      fileName: evidence.fileName,
-      contentType: evidence.contentType,
-      vision_prompt: extras.vision_prompt,
-      analysis_mode: extras.analysis_mode,
-      operating_model: extras.operating_model,
-      purpose: "fnv_qc",
+    payload = await runFnvQcViaOpenAI(evidence, extras.vision_prompt);
+  } catch (primaryErr) {
+    console.error("[fnv-qc] direct OpenAI failed; trying Railway multipart", {
+      scanId: data.scanId,
+      message: primaryErr instanceof Error ? primaryErr.message : String(primaryErr),
     });
-    if (submitted.kind === "completed") {
-      payload = submitted.payload;
-    } else {
-      const deadline = Date.now() + 90_000;
-      while (Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 2500));
-        const once = await pollVisionJobOnce(submitted.jobId);
-        if (once.kind === "completed") {
-          payload = once.payload;
-          break;
-        }
-      }
-      if (!payload) throw new Error("FNV QC analysis timed out.");
-    }
-  } catch (err) {
-    if (err instanceof PipelineError && err.detail) {
-      console.error("[fnv-qc] vision failed", {
-        scanId: data.scanId,
-        code: err.code,
-        detail: err.detail.slice(0, 500),
+    const { submitVisionJobMultipart, pollVisionJobOnce, PipelineError } = await import(
+      "@/lib/scan-pipeline.server"
+    );
+    const visionJobId = `${data.scanId}__fnv__${data.binKey || "default"}`.slice(0, 120);
+    try {
+      const submitted = await submitVisionJobMultipart({
+        scanId: visionJobId,
+        file: evidence.bytes,
+        fileName: evidence.fileName,
+        contentType: evidence.contentType,
+        vision_prompt: extras.vision_prompt,
+        analysis_mode: extras.analysis_mode,
+        operating_model: extras.operating_model,
+        purpose: "fnv_qc",
       });
+      if (submitted.kind === "completed") {
+        payload = submitted.payload;
+      } else {
+        const deadline = Date.now() + 90_000;
+        while (Date.now() < deadline) {
+          await new Promise((r) => setTimeout(r, 2500));
+          const once = await pollVisionJobOnce(submitted.jobId);
+          if (once.kind === "completed") {
+            payload = once.payload;
+            break;
+          }
+        }
+        if (!payload) throw new Error("FNV QC analysis timed out.");
+      }
+    } catch (err) {
+      if (err instanceof PipelineError && err.detail) {
+        console.error("[fnv-qc] railway vision failed", {
+          scanId: data.scanId,
+          code: err.code,
+          detail: err.detail.slice(0, 500),
+        });
+      }
+      throw primaryErr instanceof Error ? primaryErr : err;
     }
-    throw err;
   }
 
   const result = parseFnvQcPayload(payload);
