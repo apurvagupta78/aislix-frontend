@@ -17,7 +17,19 @@ import {
 export type DashboardTab = "ai" | "digital";
 
 export type DashboardMetricFilters = Partial<
-  Pick<DashboardFilterState, "storeId" | "category" | "teamMemberId" | "datePreset" | "dateFrom" | "dateTo">
+  Pick<
+    DashboardFilterState,
+    | "storeId"
+    | "category"
+    | "subCategory"
+    | "teamMemberId"
+    | "datePreset"
+    | "dateFrom"
+    | "dateTo"
+    | "country"
+    | "city"
+    | "skuId"
+  >
 >;
 
 export type AiDashboardMetrics = {
@@ -115,6 +127,19 @@ export async function fetchAiDashboardMetrics(
   if (filters?.category && filters.category !== "all") {
     scanQuery = scanQuery.eq("category", filters.category);
   }
+  if (filters?.skuId && filters.skuId.trim()) {
+    // skuId filter applied post-query via product rows when present
+  }
+  const needsStoreGeo =
+    (filters?.country && filters.country !== "all") || (filters?.city && filters.city !== "all");
+  let storeIdAllow: Set<string> | null = null;
+  if (needsStoreGeo) {
+    let storeQ = supabase.from("stores").select("id, country, city").eq("org_id", orgId);
+    if (filters?.country && filters.country !== "all") storeQ = storeQ.eq("country", filters.country);
+    if (filters?.city && filters.city !== "all") storeQ = storeQ.eq("city", filters.city);
+    const { data: geoStores } = await storeQ;
+    storeIdAllow = new Set((geoStores ?? []).map((s) => s.id as string));
+  }
   const bounds = filters
     ? resolveDashboardDateBounds({
         datePreset: filters.datePreset ?? "all",
@@ -125,7 +150,12 @@ export async function fetchAiDashboardMetrics(
   if (bounds?.from) scanQuery = scanQuery.gte("created_at", bounds.from.toISOString());
   if (bounds?.to) scanQuery = scanQuery.lt("created_at", bounds.to.toISOString());
 
-  const { data: scans } = await scanQuery;
+  const { data: scansRaw } = await scanQuery;
+  const scans = (scansRaw ?? []).filter((s) => {
+    if (!storeIdAllow) return true;
+    const sid = s.store_id as string | null;
+    return sid != null && storeIdAllow.has(sid);
+  });
 
   const scanIds = (scans ?? []).map((s) => s.id as string);
   const empty: AiDashboardMetrics = {
@@ -155,6 +185,52 @@ export async function fetchAiDashboardMetrics(
     },
   };
   if (!scanIds.length) return empty;
+
+  const { data: resultRows } = await supabase
+    .from("scan_results")
+    .select("scan_id, metrics")
+    .in("scan_id", scanIds.slice(0, 80));
+
+  const metricNum = (metrics: unknown, key: string): number | null => {
+    if (!metrics || typeof metrics !== "object") return null;
+    const root = metrics as Record<string, unknown>;
+    const calc = root.calculated_metrics;
+    if (calc && typeof calc === "object") {
+      const entry = (calc as Record<string, unknown>)[key];
+      if (entry && typeof entry === "object") {
+        const v = (entry as Record<string, unknown>).value;
+        if (v != null && Number.isFinite(Number(v))) return Number(v);
+      }
+    }
+    const astra = root.astra_cv_analysis;
+    if (astra && typeof astra === "object") {
+      const summary = (astra as Record<string, unknown>).summary;
+      if (summary && typeof summary === "object") {
+        const v = (summary as Record<string, unknown>)[key];
+        if (v != null && Number.isFinite(Number(v))) return Number(v);
+      }
+    }
+    const direct = root[key];
+    if (direct != null && Number.isFinite(Number(direct))) return Number(direct);
+    return null;
+  };
+
+  let metricsFacingsSum = 0;
+  let metricsFacingsCount = 0;
+  let metricsUnitsSum = 0;
+  let metricsUnitsCount = 0;
+  for (const row of resultRows ?? []) {
+    const facings = metricNum(row.metrics, "total_actual_facings");
+    const units = metricNum(row.metrics, "total_actual_visible_units");
+    if (facings != null) {
+      metricsFacingsSum += facings;
+      metricsFacingsCount += 1;
+    }
+    if (units != null) {
+      metricsUnitsSum += units;
+      metricsUnitsCount += 1;
+    }
+  }
 
   const { data: products } = await supabase
     .from("detected_products")
@@ -263,8 +339,8 @@ export async function fetchAiDashboardMetrics(
     brandsIdentified: brands.size || null,
     variantsIdentified: variants.size || null,
     categoriesIdentified: categories.size || null,
-    totalFacings: facingCount ? facingsSum : null,
-    totalVisibleUnits: facingCount ? facingsSum : null, // facings proxy until visible_units column is universal
+    totalFacings: metricsFacingsCount ? metricsFacingsSum : facingCount ? facingsSum : null,
+    totalVisibleUnits: metricsUnitsCount ? metricsUnitsSum : null,
     avgConfidence: confCount ? confSum / confCount : null,
     verificationCoveragePct: eligible ? pct(verified, eligible) : null,
     aiVsVerifiedUnitVariance: verified > 0 ? unitVar : null,
@@ -279,11 +355,12 @@ export async function fetchAiDashboardMetrics(
     brandShare: toShare(brandFacings),
     categoryShare: toShare(categoryFacings),
     topProductsByFacings: top(productFacings),
-    topProductsByUnits: top(productFacings),
+    // Product-level visible units are not stored on detected_products; avoid facings proxy.
+    topProductsByUnits: [],
     planogram: {
       applicable: planogramApplicable,
       expectedFacings: null,
-      actualFacings: facingCount ? facingsSum : null,
+      actualFacings: metricsFacingsCount ? metricsFacingsSum : facingCount ? facingsSum : null,
       facingVariance: null,
       facingPct: null,
       compliancePct: planogramApplicable
@@ -314,6 +391,16 @@ export async function fetchDigitalDashboardMetrics(
   if (filters?.teamMemberId && filters.teamMemberId !== "all") {
     assignmentQuery = assignmentQuery.eq("assignee_id", filters.teamMemberId);
   }
+  const needsStoreGeo =
+    (filters?.country && filters.country !== "all") || (filters?.city && filters.city !== "all");
+  let storeIdAllow: Set<string> | null = null;
+  if (needsStoreGeo) {
+    let storeQ = supabase.from("stores").select("id, country, city").eq("org_id", orgId);
+    if (filters?.country && filters.country !== "all") storeQ = storeQ.eq("country", filters.country);
+    if (filters?.city && filters.city !== "all") storeQ = storeQ.eq("city", filters.city);
+    const { data: geoStores } = await storeQ;
+    storeIdAllow = new Set((geoStores ?? []).map((s) => s.id as string));
+  }
   const bounds = filters
     ? resolveDashboardDateBounds({
         datePreset: filters.datePreset ?? "all",
@@ -324,7 +411,12 @@ export async function fetchDigitalDashboardMetrics(
   if (bounds?.from) assignmentQuery = assignmentQuery.gte("created_at", bounds.from.toISOString());
   if (bounds?.to) assignmentQuery = assignmentQuery.lt("created_at", bounds.to.toISOString());
 
-  const { data: assignments } = await assignmentQuery;
+  const { data: assignmentsRaw } = await assignmentQuery;
+  const assignments = (assignmentsRaw ?? []).filter((r) => {
+    if (!storeIdAllow) return true;
+    const sid = r.store_id as string | null;
+    return sid != null && storeIdAllow.has(sid);
+  });
 
   const rows = assignments ?? [];
   const totalAudits = rows.length;

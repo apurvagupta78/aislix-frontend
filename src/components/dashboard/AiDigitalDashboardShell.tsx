@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   fetchAiDashboardMetrics,
   fetchDigitalDashboardMetrics,
@@ -10,6 +9,7 @@ import { PageHeader } from "@/components/design-system/PageHeader";
 import { cn } from "@/lib/utils";
 import { useOptionalGlobalFilters } from "@/lib/global-filters";
 import { assignmentStatusLabel } from "@/lib/assignment-status-ui";
+import { Route as DashboardRoute } from "@/routes/dashboard";
 
 function fmt(value: number | null | undefined, suffix = ""): string {
   if (value == null || Number.isNaN(value)) return "N/A";
@@ -75,18 +75,30 @@ function HorizontalBars({
 }
 
 export function AiDigitalDashboardShell() {
-  const [tab, setTab] = useState<DashboardTab>("ai");
+  const navigate = useNavigate({ from: DashboardRoute.fullPath });
+  const { tab } = DashboardRoute.useSearch();
   const global = useOptionalGlobalFilters();
   const filterKey = global?.filters
     ? {
         storeId: global.filters.storeId,
         category: global.filters.category,
+        subCategory: global.filters.subCategory,
         teamMemberId: global.filters.teamMemberId,
         datePreset: global.filters.datePreset,
         dateFrom: global.filters.dateFrom,
         dateTo: global.filters.dateTo,
+        country: global.filters.country,
+        city: global.filters.city,
+        skuId: global.filters.skuId,
       }
     : undefined;
+
+  const setTab = (next: DashboardTab) => {
+    void navigate({
+      search: (prev) => ({ ...prev, tab: next }),
+      replace: true,
+    });
+  };
 
   const aiQuery = useQuery({
     queryKey: ["dashboard-ai-metrics", filterKey],

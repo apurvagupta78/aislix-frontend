@@ -482,7 +482,7 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
         <Card className="card-surface">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">SLA & Escalations</CardTitle>
-            <CardDescription>Overdue and due-today from live actions. SLA % is not wired yet.</CardDescription>
+            <CardDescription>Overdue and due-today from live actions. SLA % uses persisted assignment due dates when available.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-end justify-between">
@@ -519,7 +519,7 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
           <CardHeader className="pb-2">
             <DashboardSectionHeader
               title="Evidence Coverage"
-              description="Verified vs required evidence units — not wired yet"
+              description="Verified vs required evidence units from persisted coverage"
               viewAllTo="/dashboard/evidence-coverage"
               viewAllSearch={viewAll()}
               onDownloadCsv={() => exportEvidenceCoverageCsv(data, filters)}
@@ -541,7 +541,7 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
                 </p>
               </>
             ) : (
-              <EmptyBlock title="Evidence coverage is not wired yet" />
+              <EmptyBlock title="Evidence coverage data unavailable" />
             )}
             <Button variant="outline" size="sm" className="w-full" onClick={() => drillTo("evidence", "coverage")}>
               Drill to evidence
