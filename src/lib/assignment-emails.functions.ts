@@ -177,7 +177,7 @@ export const submitAiAudit = createServerFn({ method: "POST" })
         ...(data.notes ? { submission_notes: data.notes } : {}),
       };
 
-      await supabase
+      const { data: updatedAsn, error: asnUpdateErr } = await supabase
         .from("scan_assignments")
         .update({
           scan_id: data.scanId,
@@ -189,7 +189,15 @@ export const submitAiAudit = createServerFn({ method: "POST" })
           scope_values: nextScope,
           last_compliance_percent: compliance,
         } as never)
-        .eq("id", assignmentId);
+        .eq("id", assignmentId)
+        .select("id")
+        .maybeSingle();
+      if (asnUpdateErr) {
+        throw new Error(asnUpdateErr.message || "Could not update assignment after submit.");
+      }
+      if (!updatedAsn) {
+        throw new Error("Could not update assignment after submit (permission denied).");
+      }
     }
 
     await supabase
