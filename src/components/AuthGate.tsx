@@ -15,12 +15,26 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   fetchAuthUser,
   fetchPendingInvite,
+  goToAuthRoute,
   isEmailVerifiedServer,
   isAdminLoginPath,
   isAdminPath,
   isPublicPath,
   isVerifyPath,
+  resolvePostAuthRoute,
 } from "@/lib/auth-routing";
+
+/** Auth entry pages where a verified session must leave for the landing route. */
+function isAuthEntryPath(path: string): boolean {
+  return (
+    isVerifyPath(path) ||
+    path === "/login" ||
+    path === "/signup" ||
+    path === "/register" ||
+    path === "/forgot-password" ||
+    path === "/admin/login"
+  );
+}
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -46,7 +60,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
         // Public marketing pages do not need a network round-trip for anonymous
         // visitors. getSession() reads local storage; getUser() always hits Auth.
-        if (isPublicPath(path) && !isVerifyPath(path)) {
+        // Auth entry pages always continue — OAuth may land with a hash session
+        // that getSession() has not parsed yet on the first tick.
+        if (isPublicPath(path) && !isVerifyPath(path) && !isAuthEntryPath(path)) {
           const { data: sessionData } = await supabase.auth.getSession();
           if (!sessionData.session) return;
         }
@@ -82,7 +98,11 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           return;
         }
 
-
+        // Verified session on an auth entry page (incl. OAuth return to /login
+        // or a stale /verify-email) must continue to the workspace landing.
+        if (isAuthEntryPath(path) || path === "/auth/callback") {
+          goToAuthRoute(navigate as never, await resolvePostAuthRoute());
+        }
 
       } finally {
         busy.current = false;
@@ -92,7 +112,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     void enforce();
 
     const { data } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") return;
+      // TOKEN_REFRESHED is noisy; INITIAL_SESSION must run so OAuth hash
+      // recovery on /login can leave the auth entry page.
+      if (event === "TOKEN_REFRESHED") return;
       void enforce();
     });
 

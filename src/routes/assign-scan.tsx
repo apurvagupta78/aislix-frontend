@@ -414,6 +414,14 @@ function AssignScanPage() {
   }
 
 
+  if (accessQuery.isLoading || accessQuery.data === undefined) {
+    return (
+      <AppShell title="Assignments & Schedules" description="Delegate audits to your team.">
+        <Skeleton className="h-40 w-full" />
+      </AppShell>
+    );
+  }
+
   if (accessQuery.data === false) {
     return (
       <AppShell title="Assignments & Schedules" description="Delegate audits to your team.">
