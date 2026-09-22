@@ -122,6 +122,7 @@ export async function listMemberships(): Promise<Membership[]> {
 
   if (rows.length > 1) {
     const orgIds = rows.map((row) => row.org_id);
+    // Do not block membership resolution on assignment counts — soft enrich only.
     const [{ data: stores }, counts] = await Promise.all([
       supabase.from("stores").select("org_id, name").in("org_id", orgIds),
       pendingAssignmentCountsByOrg().catch(() => new Map<string, number>()),
@@ -230,24 +231,24 @@ export function clearContextCache(): void {
 const NO_WORKSPACE_MESSAGE =
   "Your team membership is not active yet. Ask your manager to re-send the invite, or sign out and use the link in your invitation email.";
 
-/** Active organization id, throwing when the user has no workspace yet. */
+/** Active organization id, throwing when the user has no workspace yet.
+ * Prefer cached / stored org so Expiry Review and similar shells are not
+ * blocked on slow membership RLS; RLS still enforces row access. */
 export async function requireOrgId(): Promise<string> {
-  const membership = await Promise.race([
-    getMembership(),
-    new Promise<never>((_, reject) =>
-      setTimeout(
-        () =>
-          reject(
-            new ApiError({
-              message: "Workspace lookup timed out. Refresh and try again.",
-              kind: "server",
-              status: 504,
-            }),
-          ),
-        20_000,
-      ),
-    ),
-  ]);
+  const user = await getUser();
+  if (!user) unauthorized();
+
+  if (membershipCache?.userId === user.id) {
+    return membershipCache.membership.org_id;
+  }
+
+  const stored = readStoredOrgId();
+  if (stored) {
+    void getMembership().catch(() => undefined);
+    return stored;
+  }
+
+  const membership = await getMembership();
   if (!membership) {
     throw new ApiError({
       message: NO_WORKSPACE_MESSAGE,
