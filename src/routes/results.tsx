@@ -173,12 +173,6 @@ function Results() {
   const isDigitalAudit = digitalLines > 0 || digitalEvidence > 0;
   /** Prefer Astra graphical AI audit view for all completed AI scans (incl. assigned). */
   const useSimpleAiView = true;
-  // Wait for digital session probe so FNV/digital never flash shelf "Analysis incomplete".
-  const showAstraShelfResults =
-    Boolean(display) &&
-    !digitalQuery.isPending &&
-    !digitalQuery.isFetching &&
-    !isDigitalAudit;
   // Never block the Astra results view waiting on digital-session hydration.
   const auditTypeReady = true;
   const allowClientPlanogram = scanHadPlanogram || showOptionalPricing;
@@ -223,6 +217,13 @@ function Results() {
       return data;
     }
   }, [data, scanContext, allowClientPlanogram, useSimpleAiView]);
+  // Wait for digital session probe so FNV/digital never flash shelf "Analysis incomplete".
+  // Must stay after `display` — referencing it earlier is a TDZ crash on every /results load.
+  const showAstraShelfResults =
+    Boolean(display) &&
+    !digitalQuery.isPending &&
+    !digitalQuery.isFetching &&
+    !isDigitalAudit;
   const imageUrl = data?.annotated_image_url ?? data?.original_image_url ?? undefined;
 
   const goToScan = (id?: string | null) => {
