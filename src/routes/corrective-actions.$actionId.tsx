@@ -50,7 +50,15 @@ function ActionDetailPage() {
 
   const actionQuery = useQuery({
     queryKey: ["lifecycle-action", actionId],
-    queryFn: () => fetchLifecycleAction(actionId),
+    queryFn: async () => {
+      return await Promise.race([
+        fetchLifecycleAction(actionId),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Timed out loading this action.")), 20_000),
+        ),
+      ]);
+    },
+    retry: 1,
   });
   const action = actionQuery.data;
   const findingQuery = useQuery({

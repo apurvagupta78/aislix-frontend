@@ -367,10 +367,17 @@ export async function loadDigitalAuditSession(scanId: string): Promise<DigitalAu
       const path = row.storage_path as string;
       let signedUrl: string | undefined;
       for (const bucket of ["audit-evidence", "scan-images"] as const) {
-        const { data: signed } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
-        if (signed?.signedUrl) {
-          signedUrl = signed.signedUrl;
-          break;
+        try {
+          const signed = await Promise.race([
+            supabase.storage.from(bucket).createSignedUrl(path, 3600),
+            new Promise<null>((resolve) => setTimeout(() => resolve(null), 5_000)),
+          ]);
+          if (signed && "data" in signed && signed.data?.signedUrl) {
+            signedUrl = signed.data.signedUrl;
+            break;
+          }
+        } catch {
+          /* try next bucket */
         }
       }
       return {

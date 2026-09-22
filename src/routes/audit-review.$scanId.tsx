@@ -50,11 +50,20 @@ function AuditReviewPage() {
   const accessQuery = useQuery({
     queryKey: ["assignment-manager"],
     queryFn: () => isOrgManager(),
+    retry: 1,
+    staleTime: 60_000,
   });
 
   const sessionQuery = useQuery({
     queryKey: ["audit-review", scanId],
-    queryFn: () => loadDigitalAuditSession(scanId),
+    queryFn: async () => {
+      return await Promise.race([
+        loadDigitalAuditSession(scanId),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Timed out loading audit review.")), 20_000),
+        ),
+      ]);
+    },
     retry: false,
   });
 
@@ -108,11 +117,22 @@ function AuditReviewPage() {
     onError: (e) => toast.error(toUserMessage(e)),
   });
 
-  if (accessQuery.isLoading || sessionQuery.isLoading) {
+  if (accessQuery.isPending || sessionQuery.isPending) {
     return (
       <AppShell title="Review audit">
         <p className="mb-3 text-sm text-muted-foreground">Loading audit review…</p>
         <Skeleton className="h-48 w-full" />
+      </AppShell>
+    );
+  }
+
+  if (accessQuery.isError) {
+    return (
+      <AppShell title="Review audit">
+        <ErrorState
+          title="Could not verify access"
+          description={toUserMessage(accessQuery.error)}
+        />
       </AppShell>
     );
   }

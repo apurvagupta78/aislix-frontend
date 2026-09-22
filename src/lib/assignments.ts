@@ -142,7 +142,10 @@ export function scopeSummary(type: ScopeType, values: ScopeValues): string {
 }
 
 export async function isOrgManager(): Promise<boolean> {
-  const membership = await getMembership();
+  const membership = await Promise.race([
+    getMembership(),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 12_000)),
+  ]);
   const role = String(membership?.role ?? "").toLowerCase();
   return (MANAGER_ROLES as readonly string[]).includes(role);
 }
