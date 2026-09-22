@@ -9,7 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatCategorySelections, type CategorySelection } from "@/lib/category-selections";
 import {
   dbError,
-  getMembership,
   requireOrgId,
   requireUserId,
   unauthorized,
