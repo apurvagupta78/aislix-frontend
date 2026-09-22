@@ -27,10 +27,20 @@ export function notFound(message = "Not found."): never {
   throw new ApiError({ message, kind: "not_found", status: 404 });
 }
 
-/** Current auth user, or null when signed out. */
+/** Current auth user, or null when signed out.
+ * Prefer local session (no network) so org-scoped pages do not stall on slow auth/v1/user. */
 export async function getUser() {
-  const { data } = await supabase.auth.getUser();
-  return data.user ?? null;
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (sessionData.session?.user) return sessionData.session.user;
+
+  try {
+    return await Promise.race([
+      supabase.auth.getUser().then(({ data }) => data.user ?? null),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 8_000)),
+    ]);
+  } catch {
+    return null;
+  }
 }
 
 /** Current auth user id, throwing a 401-shaped error when signed out. */
@@ -234,7 +244,7 @@ export async function requireOrgId(): Promise<string> {
               status: 504,
             }),
           ),
-        12_000,
+        20_000,
       ),
     ),
   ]);
