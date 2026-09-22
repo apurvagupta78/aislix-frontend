@@ -42,6 +42,8 @@ function AuditSchedulesPage() {
   const accessQuery = useQuery({
     queryKey: ["assignment-manager"],
     queryFn: () => isOrgManager(),
+    retry: false,
+    staleTime: 0,
   });
 
   const schedulesQuery = useQuery({
@@ -125,7 +127,7 @@ function AuditSchedulesPage() {
     onError: (e) => toast.error(toUserMessage(e)),
   });
 
-  if (accessQuery.isLoading) {
+  if (accessQuery.isPending) {
     return (
       <AppShell title="Recurring Audits">
         <Skeleton className="h-40 w-full" />
@@ -133,7 +135,7 @@ function AuditSchedulesPage() {
     );
   }
 
-  if (!accessQuery.data) {
+  if (accessQuery.data !== true) {
     return (
       <AppShell title="Recurring Audits">
         <ErrorState title="Manager access required" description="Only managers can manage recurring audits." />

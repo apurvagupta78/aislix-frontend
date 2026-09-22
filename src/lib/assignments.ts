@@ -141,13 +141,29 @@ export function scopeSummary(type: ScopeType, values: ScopeValues): string {
   return `Category · ${values.category ?? "—"}`;
 }
 
+/**
+ * Manager gate for assignment / schedule / review surfaces.
+ * Prefer a direct role row against the active org (fast via requireOrgId stored
+ * path) — never race getMembership to null, which falsely denied owners when
+ * membership enrichment was slow.
+ */
 export async function isOrgManager(): Promise<boolean> {
-  const membership = await Promise.race([
-    getMembership(),
-    new Promise<null>((resolve) => setTimeout(() => resolve(null), 12_000)),
-  ]);
-  const role = String(membership?.role ?? "").toLowerCase();
-  return (MANAGER_ROLES as readonly string[]).includes(role);
+  try {
+    const userId = await requireUserId();
+    const orgId = await requireOrgId();
+    const { data, error } = await supabase
+      .from("organization_members")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("org_id", orgId)
+      .eq("status", "active")
+      .maybeSingle();
+    if (error) return false;
+    const role = String(data?.role ?? "").toLowerCase();
+    return (MANAGER_ROLES as readonly string[]).includes(role);
+  } catch {
+    return false;
+  }
 }
 
 /** Every active member of the org except the signed-in user. */
