@@ -3359,6 +3359,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "organization_members_reports_to_user_id_fkey"
+            columns: ["reports_to_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "organization_members_user_profile_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -5042,25 +5049,17 @@ export type Database = {
           variance_value_inr: number
         }[]
       }
-      ensure_org_free_subscription: {
-        Args: { p_org_id: string }
-        Returns: undefined
+      direct_store_ids: {
+        Args: { p_org_id: string; p_user_id?: string }
+        Returns: string[]
       }
       effective_store_ids: {
         Args: { p_org_id: string; p_user_id?: string }
         Returns: string[]
       }
-      direct_store_ids: {
-        Args: { p_org_id: string; p_user_id?: string }
-        Returns: string[]
-      }
-      inherited_store_ids: {
-        Args: { p_org_id: string; p_user_id?: string }
-        Returns: string[]
-      }
-      user_can_access_store: {
-        Args: { p_org_id: string; p_store_id: string; p_user_id?: string }
-        Returns: boolean
+      ensure_org_free_subscription: {
+        Args: { p_org_id: string }
+        Returns: undefined
       }
       expiry_demo_clock: { Args: never; Returns: string }
       expiry_is_reviewer: {
@@ -5110,6 +5109,10 @@ export type Database = {
         }[]
       }
       get_org_usage_summary: { Args: { p_org_id: string }; Returns: Json }
+      inherited_store_ids: {
+        Args: { p_org_id: string; p_user_id?: string }
+        Returns: string[]
+      }
       is_demo_org_readable: { Args: { p_org_id: string }; Returns: boolean }
       is_org_manager: { Args: { p_org_id: string }; Returns: boolean }
       is_org_member: { Args: { p_org_id: string }; Returns: boolean }
@@ -5247,6 +5250,7 @@ export type Database = {
         }
         Returns: string
       }
+      seed_demo_people_hierarchy: { Args: never; Returns: Json }
       seed_expiry_demo_scenario: {
         Args: { p_org_id: string; p_user_id: string }
         Returns: Json
@@ -5325,6 +5329,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      user_can_access_store: {
+        Args: { p_org_id: string; p_store_id: string; p_user_id?: string }
+        Returns: boolean
       }
       user_email_has_platform_bypass: {
         Args: { _email: string }
