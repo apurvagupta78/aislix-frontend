@@ -74,9 +74,8 @@ export type ScanHistoryQuery = {
 };
 
 import { supabase } from "@/integrations/supabase/client";
-import { dbError, getMembership, requireOrgId, requireUserId } from "@/lib/db/context";
-
-const MANAGER_ROLES = ["owner", "admin", "manager"];
+import { isOrgManager } from "@/lib/assignments";
+import { dbError, requireOrgId, requireUserId } from "@/lib/db/context";
 
 function toApiStatus(status: string): ScanStatus {
   if (status === "completed") return "completed";
@@ -91,8 +90,8 @@ export async function fetchScanHistory(
   _signal?: AbortSignal,
 ): Promise<ScanHistoryResponse> {
   const orgId = await requireOrgId();
-  const membership = await getMembership();
-  const isManager = MANAGER_ROLES.includes(String(membership?.role ?? "").toLowerCase());
+  // Direct role lookup — never race getMembership to null (false member scope).
+  const isManager = await isOrgManager();
   const page = params.page ?? 1;
   const pageSize = params.page_size ?? 10;
   const from = (page - 1) * pageSize;
@@ -255,20 +254,9 @@ export async function fetchScanHistory(
     }
   }
 
-  // Attach signed download URLs (PDF report, annotated image, CSV) for these scans.
-  const { resolveScanAssetUrls } = await import("@/lib/scan-results");
-  await Promise.all(
-    items.map(async (item) => {
-      if (item.status !== "completed") return;
-      const urls = await resolveScanAssetUrls(item.scan_id);
-      const downloads: NonNullable<ScanHistoryItem["downloads"]> = {};
-      if (urls.pdf_url) downloads.pdf_url = urls.pdf_url;
-      if (urls.csv_url) downloads.csv_url = urls.csv_url;
-      if (urls.annotated_image_url) downloads.annotated_image_url = urls.annotated_image_url;
-      if (Object.keys(downloads).length > 0) item.downloads = downloads;
-    }),
-  );
-
+  // Do not pre-sign PDF/CSV URLs for every list row — that is N+1 storage I/O and
+  // can leave /history and /report chrome-only for tens of seconds on large orgs.
+  // Downloads resolve on click via downloadScanPdf / downloadScanCsv.
 
   if (params.sort === "processing_time") {
     items = [...items].sort((a, b) => (b.processing_time_ms ?? 0) - (a.processing_time_ms ?? 0));
