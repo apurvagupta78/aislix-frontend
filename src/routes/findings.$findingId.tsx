@@ -191,7 +191,11 @@ function FindingDetailPage() {
             </section>
           </div>
 
-          {managerQuery.data ? (
+          {managerQuery.isPending ? (
+            <section className="h-fit rounded-2xl border border-border bg-card p-5">
+              <p className="text-sm text-muted-foreground">Checking manager access…</p>
+            </section>
+          ) : managerQuery.data ? (
             <section className="h-fit rounded-2xl border border-border bg-card p-5">
               <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Corrective action</p>
               <p className="mt-2 text-sm text-muted-foreground">
