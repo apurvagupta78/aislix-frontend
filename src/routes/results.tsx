@@ -61,9 +61,18 @@ async function fetchDigitalSessionSafe(scanId: string) {
     const { ensureFnvQcForScan } = await import("@/lib/fnv-qc.functions");
     const hint =
       session?.lines?.[0]?.product_name ?? session?.lines?.[0]?.sku ?? null;
-    // Do not swallow — silent catch left qc_disposition null on LIVE FNV scans.
-    await ensureFnvQcForScan({ data: { scanId, productHint: hint } });
-    session = await loadDigitalAuditSession(scanId);
+    try {
+      await Promise.race([
+        ensureFnvQcForScan({ data: { scanId, productHint: hint } }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("FNV QC ensure timed out")), 12_000),
+        ),
+      ]);
+      session = await loadDigitalAuditSession(scanId);
+    } catch {
+      // Keep the session without QC rather than hanging /results forever.
+      return session;
+    }
   }
   return session;
 }
@@ -170,7 +179,9 @@ function Results() {
   );
   const digitalLines = digitalQuery.data?.lines?.length ?? 0;
   const digitalEvidence = digitalQuery.data?.evidence?.length ?? 0;
-  const isDigitalAudit = digitalLines > 0 || digitalEvidence > 0;
+  // Only treat as digital once the probe settles — never leave AI results blank while it hangs.
+  const isDigitalAudit =
+    digitalQuery.isSuccess && (digitalLines > 0 || digitalEvidence > 0);
   /** Prefer Astra graphical AI audit view for all completed AI scans (incl. assigned). */
   const useSimpleAiView = true;
   // Never block the Astra results view waiting on digital-session hydration.
@@ -217,13 +228,9 @@ function Results() {
       return data;
     }
   }, [data, scanContext, allowClientPlanogram, useSimpleAiView]);
-  // Wait for digital session probe so FNV/digital never flash shelf "Analysis incomplete".
-  // Must stay after `display` — referencing it earlier is a TDZ crash on every /results load.
-  const showAstraShelfResults =
-    Boolean(display) &&
-    !digitalQuery.isPending &&
-    !digitalQuery.isFetching &&
-    !isDigitalAudit;
+  // Do not wait on digital-session isPending/isFetching — that left LIVE AI /results
+  // stuck on "Loading results" when the digital probe hung (ensureFnvQc, etc.).
+  const showAstraShelfResults = Boolean(display) && !isDigitalAudit;
   const imageUrl = data?.annotated_image_url ?? data?.original_image_url ?? undefined;
 
   const goToScan = (id?: string | null) => {

@@ -483,8 +483,16 @@ async function signImageUrl(
   bucket: string,
   path: string,
 ): Promise<string | undefined> {
-  const { data: signed } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
-  return signed?.signedUrl;
+  try {
+    const signed = await Promise.race([
+      supabase.storage.from(bucket).createSignedUrl(path, 3600),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 8_000)),
+    ]);
+    if (!signed || !("data" in signed)) return undefined;
+    return signed.data?.signedUrl;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Loads the full result payload for one scan from Supabase. */
