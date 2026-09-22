@@ -434,7 +434,12 @@ function StoresPage() {
         </p>
       </div>
 
-      <StoreFormDialog open={formOpen} store={editing} onOpenChange={setFormOpen} />
+      <StoreFormDialog
+        open={formOpen}
+        store={editing}
+        onOpenChange={setFormOpen}
+        defaultStoreType={model ?? null}
+      />
       <DeleteStoreDialog
         store={deleting}
         pending={remove.isPending}

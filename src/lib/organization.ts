@@ -58,6 +58,8 @@ export type OrgStore = {
   manager_name?: string;
   contact_number?: string;
   timezone?: string;
+  /** Matches `stores.store_type` / URL `?model=` (warehouse, supermarket, fmcg_distributor, …). */
+  store_type?: string | null;
   territory_id?: string | null;
   territory_name?: string | null;
   latitude?: number | null;
@@ -78,6 +80,8 @@ export type StoreInput = {
   manager_name?: string;
   contact_number?: string;
   timezone?: string;
+  /** Written on create/update so model-scoped `/stores?model=` lists stay consistent. */
+  store_type?: string | null;
   territory_id?: string | null;
   latitude?: number | null;
   longitude?: number | null;
@@ -188,6 +192,7 @@ function mapStoreRow(row: {
   contact_phone: string | null;
   status: string;
   created_at: string;
+  store_type?: string | null;
   territory_id?: string | null;
   territories?: { name?: string | null } | null;
   latitude?: number | null;
@@ -206,6 +211,7 @@ function mapStoreRow(row: {
     country: row.country ?? undefined,
     manager_name: row.contact_name ?? undefined,
     contact_number: row.contact_phone ?? undefined,
+    store_type: row.store_type ?? null,
     territory_id: row.territory_id ?? null,
     territory_name: territory?.name ?? null,
     latitude: row.latitude ?? null,
@@ -226,6 +232,7 @@ function storeInputToRow(input: StoreInput) {
     country: input.country ?? null,
     contact_name: input.manager_name ?? null,
     contact_phone: input.contact_number ?? null,
+    store_type: input.store_type ?? null,
     territory_id: input.territory_id ?? null,
     latitude: input.latitude ?? null,
     longitude: input.longitude ?? null,

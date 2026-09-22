@@ -522,10 +522,13 @@ export function StoreFormDialog({
   open,
   store,
   onOpenChange,
+  /** From `/stores?model=` so create writes the matching `store_type`. */
+  defaultStoreType,
 }: {
   open: boolean;
   store?: OrgStore | null;
   onOpenChange: (open: boolean) => void;
+  defaultStoreType?: string | null;
 }) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<StoreInput>(blankStore);
@@ -565,14 +568,18 @@ export function StoreFormDialog({
             manager_name: store.manager_name ?? "",
             contact_number: store.contact_number ?? "",
             timezone: store.timezone ?? "Asia/Kolkata",
+            store_type: store.store_type ?? defaultStoreType ?? null,
             territory_id: store.territory_id ?? null,
             latitude: store.latitude ?? null,
             longitude: store.longitude ?? null,
             geofence_radius_m: store.geofence_radius_m ?? 200,
           }
-        : blankStore,
+        : {
+            ...blankStore,
+            store_type: defaultStoreType?.trim() || "local_store",
+          },
     );
-  }, [open, store]);
+  }, [open, store, defaultStoreType]);
 
   const mutation = useMutation({
     mutationFn: async (input: StoreInput) => {
