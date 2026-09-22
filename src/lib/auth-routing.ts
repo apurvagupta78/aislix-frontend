@@ -25,20 +25,46 @@ export function isEmailVerifiedFromUser(user: MinimalUser): boolean {
 /** Back-compat alias. */
 export const isEmailVerified = isEmailVerifiedFromUser;
 
-/** Reads the live user from Supabase (revalidates with the auth server). */
+/** Reads the auth user — prefer local session so AuthGate is not blocked on slow auth/v1/user. */
 export async function fetchAuthUser() {
-  const { data } = await supabase.auth.getUser();
-  return data.user ?? null;
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (sessionData.session?.user) return sessionData.session.user;
+
+  try {
+    return await Promise.race([
+      supabase.auth.getUser().then(({ data }) => data.user ?? null),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 8_000)),
+    ]);
+  } catch {
+    return null;
+  }
 }
 
-/** Server-side truth: reads auth.users through a security-definer RPC. */
+/**
+ * Verification truth for routing.
+ * Trust a confirmed session claim first; RPC is a backup with a hard timeout so
+ * verified users never sit on /verify-email while auth/network stalls.
+ */
 export async function isEmailVerifiedServer(): Promise<boolean> {
-  const { data, error } = await supabase.rpc("is_user_email_verified" as never, {} as never);
-  if (error) {
-    const user = await fetchAuthUser();
-    return isEmailVerifiedFromUser(user);
+  const { data: sessionData } = await supabase.auth.getSession();
+  if (isEmailVerifiedFromUser(sessionData.session?.user ?? null)) return true;
+
+  try {
+    const rpcResult = await Promise.race([
+      supabase.rpc("is_user_email_verified" as never, {} as never),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 5_000)),
+    ]);
+    if (rpcResult && "data" in rpcResult && rpcResult.data === true) return true;
+    if (rpcResult && "error" in rpcResult && rpcResult.error) {
+      const user = await fetchAuthUser();
+      return isEmailVerifiedFromUser(user);
+    }
+  } catch {
+    /* fall through */
   }
-  return data === true;
+
+  const user = await fetchAuthUser();
+  return isEmailVerifiedFromUser(user);
 }
 
 export type PendingInvite = { org_id: string; role: string; org_name: string };

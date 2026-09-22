@@ -82,7 +82,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        const verified = await isEmailVerifiedServer();
+        // Fast path: JWT already has email_confirmed_at — do not wait on RPC.
+        const verified =
+          Boolean(user.email_confirmed_at) || (await isEmailVerifiedServer());
         if (cancelled) return;
 
         if (!verified) {
