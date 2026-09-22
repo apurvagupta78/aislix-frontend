@@ -10,6 +10,8 @@ import type {
 export type SuggestionSelectContext = {
   /** Dashboard role tab hint (supermarket, darkstore, fmcg, etc.). */
   roleHint?: string | null;
+  /** Org RBAC role — owner/admin/manager/member. */
+  accessRole?: string | null;
   /** Active city filter label, e.g. "Mumbai". */
   city?: string | null;
   /** Number of chips to display (default 7). */
@@ -185,19 +187,39 @@ export function selectAskAislixSuggestions(
   const rng = mulberry32(seed);
 
   const preferredRole = normalizeRoleHint(context.roleHint);
+  const accessRole = String(context.accessRole ?? "").toLowerCase();
+  const accessBucket =
+    accessRole === "owner" || accessRole === "admin"
+      ? (["owner", "admin", "boss"] as const)
+      : accessRole === "manager" || accessRole === "store_manager"
+        ? (["manager", "boss"] as const)
+        : accessRole
+          ? (["member"] as const)
+          : null;
+
   const rolePickCount = Math.min(3, Math.max(2, Math.floor(count / 2)));
-  const universalPickCount = count - rolePickCount;
+  const accessPicks =
+    accessBucket == null
+      ? []
+      : shuffleWithRng(
+          pool.filter(
+            (item) =>
+              item.accessRoles?.some((r) => (accessBucket as readonly string[]).includes(r)) ??
+              false,
+          ),
+          rng,
+        ).slice(0, 2);
 
   const rolePicks = pickRoleExamples(pool, rng, preferredRole, rolePickCount);
-  const excludeIds = new Set(rolePicks.map((item) => item.id));
+  const excludeIds = new Set([...accessPicks, ...rolePicks].map((item) => item.id));
   const universalPicks = pickUniversalExamples(
     pool,
     rng,
     excludeIds,
-    universalPickCount,
+    Math.max(1, count - accessPicks.length - rolePicks.length),
   );
 
-  const combined = shuffleWithRng([...universalPicks, ...rolePicks], rng);
+  const combined = shuffleWithRng([...accessPicks, ...universalPicks, ...rolePicks], rng);
 
   return combined.slice(0, count).map((item) => ({
     id: item.id,

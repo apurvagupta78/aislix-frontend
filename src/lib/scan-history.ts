@@ -74,7 +74,6 @@ export type ScanHistoryQuery = {
 };
 
 import { supabase } from "@/integrations/supabase/client";
-import { isOrgManager } from "@/lib/assignments";
 import { dbError, requireOrgId, requireUserId } from "@/lib/db/context";
 
 function toApiStatus(status: string): ScanStatus {
@@ -90,8 +89,11 @@ export async function fetchScanHistory(
   _signal?: AbortSignal,
 ): Promise<ScanHistoryResponse> {
   const orgId = await requireOrgId();
-  // Direct role lookup — never race getMembership to null (false member scope).
-  const isManager = await isOrgManager();
+  const { resolveEffectiveAccessScope } = await import("@/lib/access-scope");
+  const scope = await resolveEffectiveAccessScope({ orgId });
+  // Managers see scans in their effective store scope — NOT organization-wide.
+  // Members keep assignment-based history.
+  const isManager = scope.isManager;
   const page = params.page ?? 1;
   const pageSize = params.page_size ?? 10;
   const from = (page - 1) * pageSize;
@@ -110,6 +112,9 @@ export async function fetchScanHistory(
     let assignmentQuery = supabase.from("scan_assignments").select("id").eq("org_id", orgId);
     if (wantsAssignmentStatus) assignmentQuery = assignmentQuery.eq("status", params.assignment_status!);
     if (wantsAssignee) assignmentQuery = assignmentQuery.eq("assignee_id", params.assignee!);
+    if (!scope.isOrgAdmin && scope.hasStoreScope) {
+      assignmentQuery = assignmentQuery.in("store_id", scope.effectiveStoreIds);
+    }
     const { data: assignmentRows } = await assignmentQuery;
     assignmentIdFilter = (assignmentRows ?? []).map((row) => row.id as string);
     if (assignmentIdFilter.length === 0) {
@@ -129,8 +134,6 @@ export async function fetchScanHistory(
     query = query.eq("audit_mode", params.audit_mode);
   }
 
-  // Managers see every scan in the active organization. Members' history is
-  // their completed assigned work, irrespective of who created the scan row.
   if (!isManager) {
     const userId = await requireUserId();
     const { data: myAssignments, error: assignmentError } = await supabase
@@ -144,6 +147,11 @@ export async function fetchScanHistory(
       return { items: [], total: 0, page, page_size: pageSize, stores: [], assignees: [] };
     }
     query = query.eq("status", "completed").in("assignment_id", myAssignmentIds);
+  } else if (!scope.isOrgAdmin) {
+    if (!scope.hasStoreScope) {
+      return { items: [], total: 0, page, page_size: pageSize, stores: [], assignees: [] };
+    }
+    query = query.in("store_id", scope.effectiveStoreIds);
   }
 
   if (cutoff) query = query.gte("created_at", cutoff);

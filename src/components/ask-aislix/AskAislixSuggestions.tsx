@@ -46,6 +46,7 @@ export function AskAislixSuggestions({
   disabled,
   variant = "light",
   roleHint,
+  accessRole,
   city,
   rotationSeed,
 }: {
@@ -53,6 +54,7 @@ export function AskAislixSuggestions({
   disabled?: boolean;
   variant?: "light" | "dark";
   roleHint?: string | null;
+  accessRole?: string | null;
   city?: string | null;
   rotationSeed?: number;
 }) {
@@ -62,11 +64,12 @@ export function AskAislixSuggestions({
     () =>
       selectAskAislixSuggestions({
         roleHint,
+        accessRole,
         city,
         count: 7,
         rotationSeed,
       }),
-    [roleHint, city, rotationSeed],
+    [roleHint, accessRole, city, rotationSeed],
   );
 
   if (suggestions.length === 0) return null;

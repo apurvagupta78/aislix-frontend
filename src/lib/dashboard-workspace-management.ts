@@ -107,33 +107,86 @@ function memberDisplayName(row: {
 export async function fetchWorkspaceManagementData(): Promise<WorkspaceManagementData> {
   const orgId = await requireOrgId();
   const userId = await requireUserId();
+  const { resolveEffectiveAccessScope, applyStoreScopeFilter } = await import("@/lib/access-scope");
+  const scope = await resolveEffectiveAccessScope({ orgId });
+
+  const empty: WorkspaceManagementData = {
+    planograms: { count: 0, recent: [] },
+    stores: { count: 0, recent: [] },
+    team: { count: 0, recent: [] },
+    assigned_audits: { completed: 0, in_progress: 0, needs_action: 0, recent: [] },
+  };
+  if (!scope.isOrgAdmin && !scope.hasStoreScope) {
+    // Team list is still useful; keep a scoped-empty store/planogram/assignment view.
+    const { data: membersOnly } = await supabase
+      .from("organization_members")
+      .select("user_id, role, status, invited_email, created_at, profiles:user_id(full_name, email)")
+      .eq("org_id", orgId)
+      .in("status", ["active", "invited"])
+      .order("created_at", { ascending: false });
+    const memberRows = (membersOnly ?? []) as Array<{
+      user_id: string;
+      role: string;
+      status: string;
+      invited_email?: string | null;
+      profiles?: { full_name?: string | null; email?: string | null } | null;
+    }>;
+    return {
+      ...empty,
+      team: {
+        count: memberRows.length,
+        recent: memberRows.slice(0, 4).map((row) => ({
+          user_id: row.user_id,
+          name: memberDisplayName(row),
+          role: userRoleLabels[row.role as UserRole] ?? row.role,
+          status: row.status === "active" ? "Active" : row.status === "invited" ? "Invited" : row.status,
+        })),
+      },
+    };
+  }
+
+  let planogramsQuery = supabase
+    .from("planogram_versions")
+    .select("id, name, status, created_at, store_id, stores:store_id(name)")
+    .eq("org_id", orgId)
+    .order("created_at", { ascending: false });
+  planogramsQuery = applyStoreScopeFilter(planogramsQuery, scope) ?? planogramsQuery;
+
+  let storesQuery = supabase
+    .from("stores")
+    .select("id, name, city, country, status, created_at")
+    .eq("org_id", orgId)
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+  storesQuery = applyStoreScopeFilter(storesQuery, scope, "id") ?? storesQuery;
+
+  let assignmentsQuery = supabase
+    .from("scan_assignments")
+    .select("id, status, created_at, scope_type, scope_values, assignee_id, assigner_id, stores:store_id(name)")
+    .eq("org_id", orgId)
+    .eq("assigner_id", userId)
+    .neq("status", "cancelled")
+    .order("created_at", { ascending: false });
+  assignmentsQuery = applyStoreScopeFilter(assignmentsQuery, scope) ?? assignmentsQuery;
+
+  let scanCountsQuery = supabase
+    .from("shelf_scans")
+    .select("store_id")
+    .eq("org_id", orgId)
+    .eq("status", "completed");
+  scanCountsQuery = applyStoreScopeFilter(scanCountsQuery, scope) ?? scanCountsQuery;
 
   const [planogramsRes, storesRes, membersRes, assignmentsRes, scanCountsRes] = await Promise.all([
-    supabase
-      .from("planogram_versions")
-      .select("id, name, status, created_at, store_id, stores:store_id(name)")
-      .eq("org_id", orgId)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("stores")
-      .select("id, name, city, country, status, created_at")
-      .eq("org_id", orgId)
-      .eq("status", "active")
-      .order("created_at", { ascending: false }),
+    planogramsQuery,
+    storesQuery,
     supabase
       .from("organization_members")
       .select("user_id, role, status, invited_email, created_at, profiles:user_id(full_name, email)")
       .eq("org_id", orgId)
       .in("status", ["active", "invited"])
       .order("created_at", { ascending: false }),
-    supabase
-      .from("scan_assignments")
-      .select("id, status, created_at, scope_type, scope_values, assignee_id, assigner_id, stores:store_id(name)")
-      .eq("org_id", orgId)
-      .eq("assigner_id", userId)
-      .neq("status", "cancelled")
-      .order("created_at", { ascending: false }),
-    supabase.from("shelf_scans").select("store_id").eq("org_id", orgId).eq("status", "completed"),
+    assignmentsQuery,
+    scanCountsQuery,
   ]);
 
   if (planogramsRes.error) dbError(planogramsRes.error, "Could not load planograms.");

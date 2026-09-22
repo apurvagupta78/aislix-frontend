@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Sparkles } from "lucide-react";
 
 import {
@@ -12,7 +12,8 @@ import {
   NO_AUDIT_FOUND_MESSAGE,
 } from "@/lib/ask-aislix/ask-aislix.response";
 import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
-import { requireOrgId } from "@/lib/db/context";
+import { requireOrgId, requireUserId } from "@/lib/db/context";
+import { fetchMembershipRole } from "@/lib/access-scope";
 import { AskAislixAnswerPanel } from "./AskAislixAnswerPanel";
 import { AskAislixInput } from "./AskAislixInput";
 import { AskAislixLoading } from "./AskAislixLoading";
@@ -29,11 +30,29 @@ export function AskAislixSection({ previewDemo = false }: { previewDemo?: boolea
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [helpOpen, setHelpOpen] = useState(false);
   const [attachments, setAttachments] = useState<AskAislixAttachmentInput[]>([]);
+  const [accessRole, setAccessRole] = useState<string | null>(null);
 
   const suggestionRotationSeed = useMemo(
     () => Math.floor(Date.now() / (1000 * 60 * 60 * 6)),
     [],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const orgId = await requireOrgId();
+        const userId = await requireUserId();
+        const membership = await fetchMembershipRole(orgId, userId);
+        if (!cancelled) setAccessRole(membership?.role ?? null);
+      } catch {
+        if (!cancelled) setAccessRole(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const submitQuestion = useCallback(
     async (raw: string) => {
@@ -146,6 +165,7 @@ export function AskAislixSection({ previewDemo = false }: { previewDemo?: boolea
       <AskAislixSuggestions
         disabled={loading}
         variant="dark"
+        accessRole={accessRole}
         rotationSeed={suggestionRotationSeed}
         onSelect={(s) => {
           setQuestion(s);

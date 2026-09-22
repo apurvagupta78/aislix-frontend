@@ -40,6 +40,8 @@ export type AskAislixSuggestionItem = {
   icon: SuggestionIcon;
   /** Ask Aislix tools that must exist and be wired for this example. */
   requiredTools: string[];
+  /** Optional RBAC audience — owner/admin/manager/member. */
+  accessRoles?: Array<"owner" | "admin" | "manager" | "member" | "boss">;
 };
 
 export type ResolvedAskSuggestion = {

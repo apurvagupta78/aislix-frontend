@@ -1004,15 +1004,41 @@ export async function fetchDashboardFilterOptions(
   const user = await getUser();
   const since = new Date();
   since.setDate(since.getDate() - 90);
+  const { resolveEffectiveAccessScope, applyStoreScopeFilter } = await import("@/lib/access-scope");
+  const scope = await resolveEffectiveAccessScope({ orgId });
+  if (!scope.isOrgAdmin && !scope.hasStoreScope) {
+    return {
+      stores: [],
+      countries: [],
+      cities: [],
+      categories: [],
+      subcategories: [],
+      team_members: [],
+      kri_options: [],
+      only_self: true,
+      current_user_id: user?.id ?? null,
+    };
+  }
+
+  let storesQuery = supabase
+    .from("stores")
+    .select("id, name, country, city")
+    .eq("org_id", orgId)
+    .eq("status", "active")
+    .order("name");
+  storesQuery = applyStoreScopeFilter(storesQuery, scope, "id") ?? storesQuery;
+
+  let auditsQuery = supabase
+    .from("shelf_scans")
+    .select(SCAN_SELECT)
+    .eq("org_id", orgId)
+    .eq("status", "completed")
+    .gte("created_at", since.toISOString());
+  auditsQuery = applyStoreScopeFilter(auditsQuery, scope) ?? auditsQuery;
 
   const [storesRes, auditsRes, teamMembers] = await Promise.all([
-    supabase.from("stores").select("id, name, country, city").eq("org_id", orgId).eq("status", "active").order("name"),
-    supabase
-      .from("shelf_scans")
-      .select(SCAN_SELECT)
-      .eq("org_id", orgId)
-      .eq("status", "completed")
-      .gte("created_at", since.toISOString()),
+    storesQuery,
+    auditsQuery,
     loadTeamMembers(orgId),
   ]);
   if (storesRes.error) dbError(storesRes.error, "Could not load stores.");
@@ -1041,25 +1067,137 @@ export async function fetchWorkspaceDashboard(
   const user = await getUser();
   const currentUserId = user?.id ?? null;
   const bounds = resolveDashboardDateBounds(filters);
+  const { resolveEffectiveAccessScope, applyStoreScopeFilter, clampStoreIdToScope } = await import(
+    "@/lib/access-scope"
+  );
+  const scope = await resolveEffectiveAccessScope({ orgId });
 
   const optionSince = new Date();
   optionSince.setDate(optionSince.getDate() - 90);
 
+  // Clamp requested store filter to effective scope (managers are not org-wide).
+  const scopedFilterStoreId = clampStoreIdToScope(filters.storeId, scope);
+  const effectiveFilters: DashboardFilters =
+    scopedFilterStoreId && scopedFilterStoreId !== filters.storeId
+      ? { ...filters, storeId: scopedFilterStoreId }
+      : filters;
+
+  if (!scope.isOrgAdmin && !scope.hasStoreScope) {
+    const emptyOptions: DashboardFilterOptions = {
+      stores: [],
+      countries: [],
+      cities: [],
+      categories: [],
+      subcategories: [],
+      team_members: [],
+      kri_options: [],
+      only_self: true,
+      current_user_id: currentUserId,
+    };
+    const emptyWeighted: DashboardWeightedKpi = {
+      percent: null,
+      numerator: null,
+      denominator: null,
+      detail: null,
+      eligible_audits: 0,
+      trace_scan_id: null,
+      available: false,
+      unavailable_reason: "No stores in your access scope.",
+    };
+    const emptyRankings = buildPerformanceRankingsData(
+      [],
+      new Map(),
+      effectiveFilters.role,
+      new Map(),
+      new Map(),
+      new Map(),
+    );
+    const trendKpis = trendKpisForRole(effectiveFilters.role);
+    const performance_over_time = buildPerformanceOverTime(
+      [],
+      new Map(),
+      effectiveFilters.role,
+      trendKpis,
+    );
+    return {
+      kpis: {
+        primary_kpi_cards: [],
+        audits_completed: null,
+        stores_covered: null,
+        osa: emptyWeighted,
+        planogram: emptyWeighted,
+        avg_osa: null,
+        avg_planogram: null,
+        open_issues: null,
+        issue_resolution: {
+          rate: null,
+          display: "—",
+          resolved_count: 0,
+          outcome_count: 0,
+        },
+        issues_resolved_rate: null,
+        shelf_health: { score: null, display: "—", available: false, audit_count: 0 },
+        shelf_health_available: false,
+        audits_remaining: null,
+        audits_unlimited: true,
+        products_detected: null,
+        average_confidence: null,
+        images_processed: null,
+      },
+      issues: { total: 0, high: 0, medium: 0, low: 0 },
+      issue_rows: [],
+      attention_cards: [],
+      performance_trend: [],
+      performance_over_time,
+      performance_period: performance_over_time.period_metrics,
+      improvement: null,
+      stores: [],
+      performance_rankings: emptyRankings,
+      recent_audits: [],
+      priority_opportunities: [],
+      role_visual: null,
+      brand_competition: null,
+      brand_analysis: null,
+      commercial_impact: null,
+      filter_options: emptyOptions,
+      filter_summary: buildDashboardFilterSummary(0, 0, 0),
+      effective_role: effectiveFilters.role,
+      has_completed_audits: false,
+    };
+  }
+
+  let storesQuery = supabase
+    .from("stores")
+    .select("id, name, country, city")
+    .eq("org_id", orgId)
+    .eq("status", "active")
+    .order("name");
+  storesQuery = applyStoreScopeFilter(storesQuery, scope, "id") ?? storesQuery;
+
+  let actionsQuery = supabase
+    .from("corrective_actions")
+    .select("id, status, issue_type, suggestion, created_at, comparison_id")
+    .eq("org_id", orgId);
+  if (!scope.isOrgAdmin) {
+    const ids = scope.effectiveStoreIds.map((id) => `"${id}"`).join(",");
+    actionsQuery = actionsQuery.or(`store_id.in.(${ids}),store_id.is.null`);
+  }
+
+  let assignmentsQuery = supabase
+    .from("scan_assignments")
+    .select("id, assignee_id, assigner_id, scan_id, status, due_at, created_at, stores(name)")
+    .eq("org_id", orgId);
+  assignmentsQuery = applyStoreScopeFilter(assignmentsQuery, scope) ?? assignmentsQuery;
+
   const [storesRes, subscriptionRes, actionsRes, assignmentsRes, teamMembers] = await Promise.all([
-    supabase.from("stores").select("id, name, country, city").eq("org_id", orgId).eq("status", "active").order("name"),
+    storesQuery,
     supabase
       .from("subscriptions")
       .select("scans_used, subscription_plans(scan_quota)")
       .eq("org_id", orgId)
       .maybeSingle(),
-    supabase
-      .from("corrective_actions")
-      .select("id, status, issue_type, suggestion, created_at, comparison_id")
-      .eq("org_id", orgId),
-    supabase
-      .from("scan_assignments")
-      .select("id, assignee_id, assigner_id, scan_id, status, due_at, created_at, stores(name)")
-      .eq("org_id", orgId),
+    actionsQuery,
+    assignmentsQuery,
     loadTeamMembers(orgId),
   ]);
 
@@ -1076,11 +1214,13 @@ export async function fetchWorkspaceDashboard(
     });
     const linkedScanIds = upcomingAssignments.map((a) => a.scan_id).filter(Boolean) as string[];
     if (linkedScanIds.length) {
-      const { data, error } = await supabase
+      let upcomingScansQ = supabase
         .from("shelf_scans")
         .select(SCAN_SELECT)
         .eq("org_id", orgId)
         .in("id", linkedScanIds);
+      upcomingScansQ = applyStoreScopeFilter(upcomingScansQ, scope) ?? upcomingScansQ;
+      const { data, error } = await upcomingScansQ;
       if (error) dbError(error, "Could not load upcoming audits.");
       audits = (data ?? []) as ScanRow[];
     }
@@ -1091,6 +1231,7 @@ export async function fetchWorkspaceDashboard(
       .eq("org_id", orgId)
       .eq("status", "completed")
       .order("created_at", { ascending: true });
+    q = applyStoreScopeFilter(q, scope) ?? q;
     if (bounds.from) q = q.gte("created_at", bounds.from.toISOString());
     if (bounds.to) q = q.lt("created_at", bounds.to.toISOString());
     const { data, error } = await q;
@@ -1098,12 +1239,14 @@ export async function fetchWorkspaceDashboard(
     audits = (data ?? []) as ScanRow[];
   }
 
-  const { data: poolScansRes } = await supabase
+  let poolScansQuery = supabase
     .from("shelf_scans")
     .select(SCAN_SELECT)
     .eq("org_id", orgId)
     .eq("status", "completed")
     .gte("created_at", optionSince.toISOString());
+  poolScansQuery = applyStoreScopeFilter(poolScansQuery, scope) ?? poolScansQuery;
+  const { data: poolScansRes } = await poolScansQuery;
 
   if (storesRes.error) dbError(storesRes.error, "Could not load stores.");
 
@@ -1122,7 +1265,7 @@ export async function fetchWorkspaceDashboard(
     poolScans,
     teamMembers,
     currentUserId,
-    { role: filters.role, country: filters.country, city: filters.city },
+    { role: effectiveFilters.role, country: effectiveFilters.country, city: effectiveFilters.city },
     poolMetricsMap,
   );
 
@@ -1130,18 +1273,18 @@ export async function fetchWorkspaceDashboard(
   const metricsMap = await fetchMetricsMap(scanIds);
   const confidenceMap = await fetchConfidenceMap(scanIds);
 
-  audits = applyScanFilters(audits, filters, metricsMap, assignmentByScanId, currentUserId, storeById);
+  audits = applyScanFilters(audits, effectiveFilters, metricsMap, assignmentByScanId, currentUserId, storeById);
 
-  const effectiveRole = filters.role;
+  const effectiveRole = effectiveFilters.role;
 
-  if (filters.kri !== "all") {
+  if (effectiveFilters.kri !== "all") {
     audits = audits.filter((scan) =>
-      scanMatchesKri(scan, metricsMap.get(scan.id) ?? null, effectiveRole, filters.kri as AuditKpiId),
+      scanMatchesKri(scan, metricsMap.get(scan.id) ?? null, effectiveRole, effectiveFilters.kri as AuditKpiId),
     );
   }
 
   const kriCategories =
-    filters.kri !== "all" ? kpiIssueCategories(filters.kri as AuditKpiId) : null;
+    effectiveFilters.kri !== "all" ? kpiIssueCategories(effectiveFilters.kri as AuditKpiId) : null;
 
   // --- KPIs (weighted aggregation from filtered audits) ---
   const storeIds = new Set(audits.map((s) => s.store_id).filter(Boolean));
@@ -1290,8 +1433,8 @@ export async function fetchWorkspaceDashboard(
   kpis.open_issues = issuesTotal || null;
 
   const trendKpis: AuditKpiId[] =
-    filters.kri !== "all"
-      ? [filters.kri as AuditKpiId]
+    effectiveFilters.kri !== "all"
+      ? [effectiveFilters.kri as AuditKpiId]
       : trendKpisForRole(effectiveRole);
   const performance_over_time = buildPerformanceOverTime(audits, metricsMap, effectiveRole, trendKpis);
   const performance_trend: PerformanceTrendPoint[] = performance_over_time.chart_points.map((p) => {
@@ -1548,12 +1691,12 @@ export async function fetchWorkspaceDashboard(
     metricsMap,
     effectiveRole,
     categoryCounts,
-    filters.kri,
+    effectiveFilters.kri,
   );
 
   const performance_period = performance_over_time.period_metrics;
   const brand_competition =
-    filters.kri === "all" || filters.kri === "share_of_shelf"
+    effectiveFilters.kri === "all" || effectiveFilters.kri === "share_of_shelf"
       ? buildBrandCompetition(audits, metricsMap, effectiveRole)
       : null;
 

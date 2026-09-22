@@ -87,7 +87,10 @@ export async function buildAskAccessScope(
   const role = String(membership.role ?? "member").toLowerCase();
   const isOrgAdmin = ORG_ADMIN_ROLES.has(role);
   const isManager = MANAGER_ROLES.has(role);
-  const memberStoreIds = ((membership.store_ids ?? []) as string[]).filter(Boolean);
+
+  const { resolveEffectiveAccessScope } = await import("@/lib/access-scope");
+  const access = await resolveEffectiveAccessScope({ orgId, userId });
+  let allowedStoreIds = access.effectiveStoreIds;
 
   const { data: storeRows, error: storeError } = await supabase
     .from("stores")
@@ -100,11 +103,10 @@ export async function buildAskAccessScope(
   const orgStores = (storeRows ?? []) as StoreRow[];
   const orgStoreIds = orgStores.map((s) => s.id);
 
-  let allowedStoreIds: string[] = [];
+  // Clamp to stores still visible under RLS / active status.
+  allowedStoreIds = allowedStoreIds.filter((id) => orgStoreIds.includes(id));
   if (isOrgAdmin) {
     allowedStoreIds = orgStoreIds;
-  } else if (memberStoreIds.length > 0) {
-    allowedStoreIds = memberStoreIds.filter((id) => orgStoreIds.includes(id));
   }
 
   const { data: assignmentRows } = await supabase
@@ -141,15 +143,18 @@ export async function buildAskAccessScope(
     if (row.store_id) assignmentStoreIds.push(row.store_id as string);
   }
 
-  if (isOrgAdmin) {
-    const { data: orgAssignments } = await supabase
+  if (isOrgAdmin || (isManager && allowedStoreIds.length > 0)) {
+    const { data: scopedAssignments } = await supabase
       .from("scan_assignments")
       .select("id, scan_id, store_id, assignee_id")
       .eq("org_id", orgId)
-      .in("store_id", orgStoreIds.length ? orgStoreIds : ["00000000-0000-0000-0000-000000000000"])
+      .in(
+        "store_id",
+        allowedStoreIds.length ? allowedStoreIds : ["00000000-0000-0000-0000-000000000000"],
+      )
       .limit(5000);
 
-    for (const row of orgAssignments ?? []) {
+    for (const row of scopedAssignments ?? []) {
       accessibleAssignmentIds.push(row.id as string);
       if (row.scan_id) accessibleScanIds.push(row.scan_id as string);
     }

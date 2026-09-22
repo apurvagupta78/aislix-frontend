@@ -113,53 +113,12 @@ export async function fetchAiDashboardMetrics(
   filters?: DashboardMetricFilters,
 ): Promise<AiDashboardMetrics> {
   const orgId = await requireOrgId();
-  let scanQuery = supabase
-    .from("shelf_scans")
-    .select("id, status, planogram_compliance_percent, total_products, audit_mode, store_id, category, created_at, created_by")
-    .eq("org_id", orgId)
-    .eq("status", "completed")
-    .or("audit_mode.eq.ai,audit_mode.is.null")
-    .order("created_at", { ascending: false })
-    .limit(200);
-  if (filters?.storeId && filters.storeId !== "all") {
-    scanQuery = scanQuery.eq("store_id", filters.storeId);
-  }
-  if (filters?.category && filters.category !== "all") {
-    scanQuery = scanQuery.eq("category", filters.category);
-  }
-  if (filters?.skuId && filters.skuId.trim()) {
-    // skuId filter applied post-query via product rows when present
-  }
-  const needsStoreGeo =
-    (filters?.country && filters.country !== "all") || (filters?.city && filters.city !== "all");
-  let storeIdAllow: Set<string> | null = null;
-  if (needsStoreGeo) {
-    let storeQ = supabase.from("stores").select("id, country, city").eq("org_id", orgId);
-    if (filters?.country && filters.country !== "all") storeQ = storeQ.eq("country", filters.country);
-    if (filters?.city && filters.city !== "all") storeQ = storeQ.eq("city", filters.city);
-    const { data: geoStores } = await storeQ;
-    storeIdAllow = new Set((geoStores ?? []).map((s) => s.id as string));
-  }
-  const bounds = filters
-    ? resolveDashboardDateBounds({
-        datePreset: filters.datePreset ?? "all",
-        dateFrom: filters.dateFrom ?? "",
-        dateTo: filters.dateTo ?? "",
-      } as DashboardFilterState)
-    : null;
-  if (bounds?.from) scanQuery = scanQuery.gte("created_at", bounds.from.toISOString());
-  if (bounds?.to) scanQuery = scanQuery.lt("created_at", bounds.to.toISOString());
-
-  const { data: scansRaw } = await scanQuery;
-  const scans = (scansRaw ?? []).filter((s) => {
-    if (!storeIdAllow) return true;
-    const sid = s.store_id as string | null;
-    return sid != null && storeIdAllow.has(sid);
-  });
-
-  const scanIds = (scans ?? []).map((s) => s.id as string);
+  const { resolveEffectiveAccessScope, applyStoreScopeFilter, clampStoreIdToScope } = await import(
+    "@/lib/access-scope"
+  );
+  const scope = await resolveEffectiveAccessScope({ orgId });
   const empty: AiDashboardMetrics = {
-    auditCount: scanIds.length,
+    auditCount: 0,
     productsIdentified: null,
     brandsIdentified: null,
     variantsIdentified: null,
@@ -184,7 +143,57 @@ export async function fetchAiDashboardMetrics(
       compliancePct: null,
     },
   };
-  if (!scanIds.length) return empty;
+  if (!scope.isOrgAdmin && !scope.hasStoreScope) return empty;
+
+  let scanQuery = supabase
+    .from("shelf_scans")
+    .select("id, status, planogram_compliance_percent, total_products, audit_mode, store_id, category, created_at, created_by")
+    .eq("org_id", orgId)
+    .eq("status", "completed")
+    .or("audit_mode.eq.ai,audit_mode.is.null")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  scanQuery = applyStoreScopeFilter(scanQuery, scope) ?? scanQuery;
+  const scopedStoreId = clampStoreIdToScope(filters?.storeId, scope);
+  if (scopedStoreId && scopedStoreId !== "all") {
+    scanQuery = scanQuery.eq("store_id", scopedStoreId);
+  }
+  if (filters?.category && filters.category !== "all") {
+    scanQuery = scanQuery.eq("category", filters.category);
+  }
+  if (filters?.skuId && filters.skuId.trim()) {
+    // skuId filter applied post-query via product rows when present
+  }
+  const needsStoreGeo =
+    (filters?.country && filters.country !== "all") || (filters?.city && filters.city !== "all");
+  let storeIdAllow: Set<string> | null = null;
+  if (needsStoreGeo) {
+    let storeQ = supabase.from("stores").select("id, country, city").eq("org_id", orgId);
+    storeQ = applyStoreScopeFilter(storeQ, scope, "id") ?? storeQ;
+    if (filters?.country && filters.country !== "all") storeQ = storeQ.eq("country", filters.country);
+    if (filters?.city && filters.city !== "all") storeQ = storeQ.eq("city", filters.city);
+    const { data: geoStores } = await storeQ;
+    storeIdAllow = new Set((geoStores ?? []).map((s) => s.id as string));
+  }
+  const bounds = filters
+    ? resolveDashboardDateBounds({
+        datePreset: filters.datePreset ?? "all",
+        dateFrom: filters.dateFrom ?? "",
+        dateTo: filters.dateTo ?? "",
+      } as DashboardFilterState)
+    : null;
+  if (bounds?.from) scanQuery = scanQuery.gte("created_at", bounds.from.toISOString());
+  if (bounds?.to) scanQuery = scanQuery.lt("created_at", bounds.to.toISOString());
+
+  const { data: scansRaw } = await scanQuery;
+  const scans = (scansRaw ?? []).filter((s) => {
+    if (!storeIdAllow) return true;
+    const sid = s.store_id as string | null;
+    return sid != null && storeIdAllow.has(sid);
+  });
+
+  const scanIds = (scans ?? []).map((s) => s.id as string);
+  if (!scanIds.length) return { ...empty, auditCount: 0 };
 
   const { data: resultRows } = await supabase
     .from("scan_results")
@@ -384,6 +393,46 @@ export async function fetchDigitalDashboardMetrics(
 ): Promise<DigitalDashboardMetrics> {
   const orgId = await requireOrgId();
   const now = Date.now();
+  const { resolveEffectiveAccessScope, applyStoreScopeFilter, clampStoreIdToScope } = await import(
+    "@/lib/access-scope"
+  );
+  const scope = await resolveEffectiveAccessScope({ orgId });
+  const emptyDigital: DigitalDashboardMetrics = {
+    totalAudits: 0,
+    completed: 0,
+    inProgress: 0,
+    pendingReview: 0,
+    reauditRequested: 0,
+    overdue: 0,
+    completionPct: null,
+    onTimePct: null,
+    totalExpected: null,
+    totalActual: null,
+    netVariance: null,
+    absoluteVariance: null,
+    variancePct: null,
+    lastFive: [],
+    fnv: {
+      applicable: false,
+      audits: 0,
+      unitsInspected: 0,
+      sellable: 0,
+      damaged: 0,
+      humanReview: 0,
+      sellableRate: null,
+      damageRate: null,
+      humanReviewRate: null,
+    },
+    varianceByStore: [],
+    varianceByCategory: [],
+    caOpen: null,
+    caOverdue: null,
+    caClosed: null,
+    potentialInventoryValueVariance: null,
+    reauditImprovementPct: null,
+    recurringIssueRate: null,
+  };
+  if (!scope.isOrgAdmin && !scope.hasStoreScope) return emptyDigital;
 
   let assignmentQuery = supabase
     .from("scan_assignments")
@@ -394,8 +443,10 @@ export async function fetchDigitalDashboardMetrics(
     .eq("audit_mode", "digital")
     .order("created_at", { ascending: false })
     .limit(300);
-  if (filters?.storeId && filters.storeId !== "all") {
-    assignmentQuery = assignmentQuery.eq("store_id", filters.storeId);
+  assignmentQuery = applyStoreScopeFilter(assignmentQuery, scope) ?? assignmentQuery;
+  const scopedStoreId = clampStoreIdToScope(filters?.storeId, scope);
+  if (scopedStoreId && scopedStoreId !== "all") {
+    assignmentQuery = assignmentQuery.eq("store_id", scopedStoreId);
   }
   if (filters?.teamMemberId && filters.teamMemberId !== "all") {
     assignmentQuery = assignmentQuery.eq("assignee_id", filters.teamMemberId);
@@ -405,6 +456,7 @@ export async function fetchDigitalDashboardMetrics(
   let storeIdAllow: Set<string> | null = null;
   if (needsStoreGeo) {
     let storeQ = supabase.from("stores").select("id, country, city").eq("org_id", orgId);
+    storeQ = applyStoreScopeFilter(storeQ, scope, "id") ?? storeQ;
     if (filters?.country && filters.country !== "all") storeQ = storeQ.eq("country", filters.country);
     if (filters?.city && filters.city !== "all") storeQ = storeQ.eq("city", filters.city);
     const { data: geoStores } = await storeQ;
@@ -637,11 +689,16 @@ export async function fetchDigitalDashboardMetrics(
   let caOverdue: number | null = null;
   let caClosed: number | null = null;
   {
-    const { data: cas } = await supabase
+    let caQuery = supabase
       .from("corrective_actions")
       .select("id, status, due_at")
       .eq("org_id", orgId)
       .limit(500);
+    if (!scope.isOrgAdmin) {
+      const ids = scope.effectiveStoreIds.map((id) => `"${id}"`).join(",");
+      caQuery = caQuery.or(`store_id.in.(${ids}),store_id.is.null`);
+    }
+    const { data: cas } = await caQuery;
     if (cas) {
       caOpen = cas.filter((c) => !["closed", "resolved", "cancelled"].includes(String(c.status))).length;
       caClosed = cas.filter((c) => ["closed", "resolved"].includes(String(c.status))).length;
@@ -678,11 +735,13 @@ export async function fetchDigitalDashboardMetrics(
   let reauditImprovementPct: number | null = null;
   let recurringIssueRate: number | null = null;
   {
-    const { data: findings } = await supabase
+    let findingsQuery = supabase
       .from("findings")
       .select("id, status, store_id, sku, finding_type, created_at")
       .eq("org_id", orgId)
       .limit(800);
+    findingsQuery = applyStoreScopeFilter(findingsQuery, scope) ?? findingsQuery;
+    const { data: findings } = await findingsQuery;
     if (findings?.length) {
       const groups = new Map<string, { open: number; closed: number; total: number }>();
       for (const f of findings) {

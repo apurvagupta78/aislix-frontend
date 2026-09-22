@@ -22,9 +22,12 @@ import {
   ActivityList,
   ActivitySkeleton,
   BulkActionsBar,
+  BulkImportTriggerButton,
+  BulkUserImportDialog,
   ConfirmDialog,
   MembersTable,
   MembersTableSkeleton,
+  MyTeamSection,
   RolePermissionsGrid,
   UserFormDialog,
   UserDetailDrawer,
@@ -38,6 +41,7 @@ import {
   bulkDeleteUsers,
   bulkDisableUsers,
   deleteUser,
+  fetchMyTeam,
   fetchOrgActivity,
   fetchUserActivity,
   fetchUsers,
@@ -116,6 +120,7 @@ function TeamPage() {
   const [formMode, setFormMode] = useState<"invite" | "edit">("invite");
   const [formUser, setFormUser] = useState<OrgUser | null>(null);
   const [drawerUser, setDrawerUser] = useState<OrgUser | null>(null);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [confirm, setConfirm] = useState<
     | { kind: "toggle"; user: OrgUser }
     | { kind: "delete"; user: OrgUser }
@@ -137,6 +142,19 @@ function TeamPage() {
   const storesQuery = useQuery({
     queryKey: ["team-store-options"],
     queryFn: () => fetchStoreList({ filter: "active", page_size: 200 }),
+    retry: false,
+  });
+
+  /** Full member list for Reports To + bulk import (not page-filtered). */
+  const allMembersQuery = useQuery({
+    queryKey: ["users-all-for-hierarchy"],
+    queryFn: () => fetchUsers({ page: 1, page_size: 500 }),
+    retry: false,
+  });
+
+  const myTeamQuery = useQuery({
+    queryKey: ["my-team"],
+    queryFn: () => fetchMyTeam(),
     retry: false,
   });
 
@@ -164,6 +182,8 @@ function TeamPage() {
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["users"] });
+    void queryClient.invalidateQueries({ queryKey: ["users-all-for-hierarchy"] });
+    void queryClient.invalidateQueries({ queryKey: ["my-team"] });
     void queryClient.invalidateQueries({ queryKey: ["users-activity"] });
   };
 
@@ -185,6 +205,7 @@ function TeamPage() {
         name: values.name,
         role: values.role,
         store_ids: values.store_ids,
+        reports_to_user_id: values.reports_to_user_id ?? null,
       }),
     onSuccess: () => {
       toast.success("Member updated");
@@ -278,9 +299,12 @@ function TeamPage() {
         <Link to="/pricing">Upgrade to invite team members</Link>
       </Button>
     ) : (
-      <Button onClick={openInvite} disabled={!seats.canInvite}>
-        <UserPlus className="size-4" /> Invite user
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <BulkImportTriggerButton onClick={() => setBulkImportOpen(true)} />
+        <Button onClick={openInvite} disabled={!seats.canInvite}>
+          <UserPlus className="size-4" /> Invite user
+        </Button>
+      </div>
     );
 
   return (
@@ -315,6 +339,14 @@ function TeamPage() {
               : ""}
           </p>
         ) : null}
+
+        <MyTeamSection
+          members={myTeamQuery.data ?? []}
+          loading={myTeamQuery.isPending}
+          error={myTeamQuery.isError}
+          onRetry={() => void myTeamQuery.refetch()}
+          onOpenUser={(user) => setDrawerUser(user)}
+        />
 
         {/* Filters + table */}
         <section className="space-y-4">
@@ -494,6 +526,7 @@ function TeamPage() {
         user={formUser}
         stores={storeOptions}
         storesLoading={storesQuery.isPending}
+        members={allMembersQuery.data?.items ?? []}
         submitting={inviteMutation.isPending || updateMutation.isPending}
         error={
           (formMode === "invite" ? inviteMutation.error?.message : updateMutation.error?.message) ??
@@ -502,6 +535,14 @@ function TeamPage() {
         onSubmit={(values) =>
           formMode === "invite" ? inviteMutation.mutate(values) : updateMutation.mutate(values)
         }
+      />
+
+      <BulkUserImportDialog
+        open={bulkImportOpen}
+        onOpenChange={setBulkImportOpen}
+        stores={storeOptions}
+        members={allMembersQuery.data?.items ?? []}
+        onImported={refresh}
       />
 
       <UserDetailDrawer

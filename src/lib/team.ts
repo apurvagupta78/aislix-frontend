@@ -75,7 +75,8 @@ export const rolePermissions: Record<UserRole, PermissionKey[]> = {
 export const roleSummaries: Record<UserRole, string> = {
   owner: "Complete control of the organization, including billing and account deletion.",
   admin: "Manages stores, users and settings. Cannot change billing or delete the account.",
-  manager: "Uploads planograms, assigns audits and reviews reports across stores.",
+  manager:
+    "Assigns audits and reviews reports for their direct stores plus stores covered by their team.",
   member: "Teammate who completes assigned audits and views their results.",
   store_manager: "Runs audits and works with reports for the stores assigned to them.",
   viewer: "Read-only access to audits and reports for assigned stores.",
@@ -84,7 +85,8 @@ export const roleSummaries: Record<UserRole, string> = {
 export const roleScope: Record<UserRole, "organization" | "assigned_stores"> = {
   owner: "organization",
   admin: "organization",
-  manager: "organization",
+  // Managers are NOT org-wide — effective scope = direct + descendant stores.
+  manager: "assigned_stores",
   member: "assigned_stores",
   store_manager: "assigned_stores",
   viewer: "assigned_stores",
@@ -119,12 +121,25 @@ export type AssignedStore = {
 
 export type OrgUser = {
   id: string;
+  /** auth/profile user id */
+  user_id?: string;
   name?: string;
   email: string;
   role?: UserRole;
   status?: UserStatus;
   avatar_url?: string | null;
   assigned_stores?: AssignedStore[];
+  /** Direct store count (membership.store_ids). */
+  direct_store_count?: number;
+  /** Inherited via reporting tree / assignment-touch. */
+  inherited_store_count?: number;
+  /** Effective = direct ∪ inherited. */
+  effective_store_count?: number;
+  inherited_stores?: AssignedStore[];
+  effective_stores?: AssignedStore[];
+  reports_to_user_id?: string | null;
+  reports_to_name?: string | null;
+  team_member_count?: number;
   all_stores_access?: boolean;
   created_at?: string | null;
   last_login_at?: string | null;
@@ -154,6 +169,7 @@ export type UserInput = {
   email: string;
   role: UserRole;
   store_ids: string[];
+  reports_to_user_id?: string | null;
 };
 
 export type UserUpdateInput = {
@@ -161,6 +177,7 @@ export type UserUpdateInput = {
   role?: UserRole;
   store_ids?: string[];
   status?: UserStatus;
+  reports_to_user_id?: string | null;
 };
 
 // ---------- status mapping (member_status <-> UserStatus) ----------
@@ -190,6 +207,7 @@ type MemberRow = {
   invited_email: string | null;
   created_at: string;
   last_active_at: string | null;
+  reports_to_user_id?: string | null;
 };
 
 type ProfileRow = {
@@ -200,23 +218,28 @@ type ProfileRow = {
 };
 
 async function mapMembersToUsers(rows: MemberRow[]): Promise<OrgUser[]> {
+  const orgId = await requireOrgId();
   const userIds = rows.map((r) => r.user_id).filter(Boolean);
-  const storeIds = Array.from(new Set(rows.flatMap((r) => r.store_ids ?? [])));
+  const reportsToIds = rows
+    .map((r) => r.reports_to_user_id)
+    .filter((id): id is string => Boolean(id));
+  const profileIds = Array.from(new Set([...userIds, ...reportsToIds]));
 
-  const [{ data: profiles }, { data: stores }, { data: scanCounts }] = await Promise.all([
-    userIds.length
-      ? supabase.from("profiles").select("id, full_name, email, avatar_url").in("id", userIds)
+  const [{ data: profiles }, { data: allMembers }, { data: scanCounts }] = await Promise.all([
+    profileIds.length
+      ? supabase.from("profiles").select("id, full_name, email, avatar_url").in("id", profileIds)
       : Promise.resolve({ data: [] as ProfileRow[] }),
-    storeIds.length
-      ? supabase.from("stores").select("id, name").in("id", storeIds)
-      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+    supabase
+      .from("organization_members")
+      .select("user_id, store_ids, reports_to_user_id, status")
+      .eq("org_id", orgId)
+      .eq("status", "active"),
     userIds.length
       ? supabase.from("shelf_scans").select("created_by, created_at").in("created_by", userIds)
       : Promise.resolve({ data: [] as { created_by: string | null; created_at: string }[] }),
   ]);
 
   const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
-  const storeById = new Map((stores ?? []).map((s) => [s.id, s]));
   const since30 = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
   const scansByUser = new Map<string, { total: number; last30: number; lastAt: string | null }>();
@@ -229,15 +252,92 @@ async function mapMembersToUsers(rows: MemberRow[]): Promise<OrgUser[]> {
     scansByUser.set(scan.created_by, entry);
   }
 
+  const childrenByManager = new Map<string, string[]>();
+  for (const m of allMembers ?? []) {
+    const mgr = (m as { reports_to_user_id?: string | null }).reports_to_user_id;
+    if (!mgr) continue;
+    const list = childrenByManager.get(mgr) ?? [];
+    list.push(m.user_id as string);
+    childrenByManager.set(mgr, list);
+  }
+
+  const storeByUser = new Map(
+    (allMembers ?? []).map((m) => [m.user_id as string, (m.store_ids ?? []) as string[]]),
+  );
+
+  // Resolve scopes via RPC when possible (batch per user — keep small).
+  const scopeByUser = new Map<
+    string,
+    { direct: string[]; inherited: string[]; effective: string[] }
+  >();
+  await Promise.all(
+    userIds.map(async (uid) => {
+      try {
+        const { resolveEffectiveAccessScope } = await import("@/lib/access-scope");
+        const scope = await resolveEffectiveAccessScope({ orgId, userId: uid });
+        scopeByUser.set(uid, {
+          direct: scope.directStoreIds,
+          inherited: scope.inheritedStoreIds,
+          effective: scope.effectiveStoreIds,
+        });
+      } catch {
+        const direct = storeByUser.get(uid) ?? [];
+        const queue = [...(childrenByManager.get(uid) ?? [])];
+        const seen = new Set<string>();
+        const inherited: string[] = [];
+        while (queue.length) {
+          const next = queue.shift()!;
+          if (seen.has(next)) continue;
+          seen.add(next);
+          for (const sid of storeByUser.get(next) ?? []) inherited.push(sid);
+          for (const child of childrenByManager.get(next) ?? []) queue.push(child);
+        }
+        const directSet = new Set(direct);
+        const effective = Array.from(new Set([...direct, ...inherited]));
+        scopeByUser.set(uid, {
+          direct,
+          inherited: effective.filter((id) => !directSet.has(id)),
+          effective,
+        });
+      }
+    }),
+  );
+
+  const allStoreIds = Array.from(
+    new Set(
+      [...scopeByUser.values()].flatMap((s) => [...s.direct, ...s.inherited, ...s.effective]),
+    ),
+  );
+  const { data: stores } = allStoreIds.length
+    ? await supabase.from("stores").select("id, name").in("id", allStoreIds)
+    : { data: [] as { id: string; name: string }[] };
+  const storeById = new Map((stores ?? []).map((s) => [s.id, s]));
+
   return rows.map((row) => {
     const profile = profileById.get(row.user_id);
     const scans = scansByUser.get(row.user_id);
-    const assigned_stores = (row.store_ids ?? [])
+    const scope = scopeByUser.get(row.user_id) ?? {
+      direct: row.store_ids ?? [],
+      inherited: [],
+      effective: row.store_ids ?? [],
+    };
+    const assigned_stores = scope.direct
       .map((id) => storeById.get(id))
       .filter((s): s is { id: string; name: string } => Boolean(s));
+    const inherited_stores = scope.inherited
+      .map((id) => storeById.get(id))
+      .filter((s): s is { id: string; name: string } => Boolean(s));
+    const effective_stores = scope.effective
+      .map((id) => storeById.get(id))
+      .filter((s): s is { id: string; name: string } => Boolean(s));
+    const reportsTo = row.reports_to_user_id
+      ? profileById.get(row.reports_to_user_id)
+      : null;
+    const team_member_count = (childrenByManager.get(row.user_id) ?? []).length;
 
     return {
       id: row.id,
+      user_id: row.user_id,
       name:
         profile?.full_name ??
         (row.invited_email ? row.invited_email.split("@")[0] : undefined) ??
@@ -247,6 +347,14 @@ async function mapMembersToUsers(rows: MemberRow[]): Promise<OrgUser[]> {
       status: toUserStatus(row.status),
       avatar_url: profile?.avatar_url ?? null,
       assigned_stores,
+      inherited_stores,
+      effective_stores,
+      direct_store_count: scope.direct.length,
+      inherited_store_count: scope.inherited.length,
+      effective_store_count: scope.effective.length,
+      reports_to_user_id: row.reports_to_user_id ?? null,
+      reports_to_name: reportsTo?.full_name ?? reportsTo?.email ?? null,
+      team_member_count,
       all_stores_access: roleScope[row.role] === "organization",
       created_at: row.created_at,
       last_login_at: row.last_active_at,
@@ -269,7 +377,7 @@ export async function fetchUsers(query: UserListQuery = {}): Promise<UserListRes
   let builder = supabase
     .from("organization_members")
     .select(
-      "id, user_id, role, status, store_ids, invited_email, created_at, last_active_at",
+      "id, user_id, role, status, store_ids, invited_email, created_at, last_active_at, reports_to_user_id",
       { count: "exact" },
     )
     .eq("org_id", orgId);
@@ -298,7 +406,9 @@ export async function fetchUser(id: string): Promise<OrgUser> {
   const orgId = await requireOrgId();
   const { data, error } = await supabase
     .from("organization_members")
-    .select("id, user_id, role, status, store_ids, invited_email, created_at, last_active_at")
+    .select(
+      "id, user_id, role, status, store_ids, invited_email, created_at, last_active_at, reports_to_user_id",
+    )
     .eq("org_id", orgId)
     .eq("id", id)
     .maybeSingle();
@@ -319,13 +429,18 @@ export async function updateUser(id: string, input: UserUpdateInput): Promise<Or
   if (input.role) patch.role = appRoleForUiRole[input.role] ?? input.role;
   if (input.store_ids) patch.store_ids = input.store_ids;
   if (input.status) patch.status = toMemberStatus(input.status);
+  if (input.reports_to_user_id !== undefined) {
+    patch.reports_to_user_id = input.reports_to_user_id || null;
+  }
 
   const { data, error } = await supabase
     .from("organization_members")
     .update(patch as never)
     .eq("org_id", orgId)
     .eq("id", id)
-    .select("id, user_id, role, status, store_ids, invited_email, created_at, last_active_at")
+    .select(
+      "id, user_id, role, status, store_ids, invited_email, created_at, last_active_at, reports_to_user_id",
+    )
     .single();
   if (error) dbError(error, "Could not update the team member.");
 
@@ -362,6 +477,7 @@ export async function inviteUser(input: UserInput): Promise<OrgUser> {
       name: input.name,
       role: appRoleForUiRole[input.role] ?? "member",
       store_ids: input.store_ids,
+      reports_to_user_id: input.reports_to_user_id ?? null,
     },
   }).catch(async (error: unknown) => {
     throw await mapLimitError(error, orgId);
@@ -383,11 +499,31 @@ export async function setUserEnabled(id: string, enabled: boolean): Promise<OrgU
     .update({ status: enabled ? "active" : "suspended" })
     .eq("org_id", orgId)
     .eq("id", id)
-    .select("id, user_id, role, status, store_ids, invited_email, created_at, last_active_at")
+    .select(
+      "id, user_id, role, status, store_ids, invited_email, created_at, last_active_at, reports_to_user_id",
+    )
     .single();
   if (error) dbError(error, "Could not update the team member status.");
   const [user] = await mapMembersToUsers([data as MemberRow]);
   return user!;
+}
+
+/** Direct reports for the signed-in manager (My Team). */
+export async function fetchMyTeam(): Promise<OrgUser[]> {
+  const orgId = await requireOrgId();
+  const { requireUserId } = await import("@/lib/db/context");
+  const userId = await requireUserId();
+  const { data, error } = await supabase
+    .from("organization_members")
+    .select(
+      "id, user_id, role, status, store_ids, invited_email, created_at, last_active_at, reports_to_user_id",
+    )
+    .eq("org_id", orgId)
+    .eq("reports_to_user_id", userId)
+    .in("status", ["active", "invited"])
+    .order("created_at", { ascending: false });
+  if (error) dbError(error, "Could not load your team.");
+  return mapMembersToUsers((data ?? []) as MemberRow[]);
 }
 
 /** Password resets are handled by Supabase Auth directly, not this table. */

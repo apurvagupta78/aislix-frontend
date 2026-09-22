@@ -824,7 +824,36 @@ function parseCsv(text: string): Record<string, string>[] {
   });
 }
 
-export async function importStoresCsv(file: File): Promise<{ created: number; failed: number }> {
+const STORE_TYPE_ALIASES: Record<string, string> = {
+  warehouse: "warehouse",
+  supermarket: "supermarket",
+  distributor: "fmcg_distributor",
+  fmcg_distributor: "fmcg_distributor",
+  fmcg: "fmcg_distributor",
+  local_store: "local_store",
+  local: "local_store",
+  "local store": "local_store",
+  dark_store: "dark_store",
+  darkstore: "dark_store",
+  "dark store": "dark_store",
+};
+
+function normalizeStoreType(raw: string | undefined): string | null {
+  if (!raw?.trim()) return null;
+  const key = raw.trim().toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
+  const compact = key.replace(/\s+/g, "_");
+  return STORE_TYPE_ALIASES[key] ?? STORE_TYPE_ALIASES[compact] ?? compact;
+}
+
+function storeDupKey(name: string, city: string | null | undefined): string {
+  return `${name.trim().toLowerCase()}::${(city ?? "").trim().toLowerCase()}`;
+}
+
+export async function importStoresCsv(file: File): Promise<{
+  created: number;
+  failed: number;
+  skippedDuplicates: number;
+}> {
   const orgId = await requireOrgId();
   const text = await file.text();
   const rows = parseCsv(text);
@@ -833,8 +862,18 @@ export async function importStoresCsv(file: File): Promise<{ created: number; fa
   let allowance = await assertCanAddStore();
   let remaining = allowance.stores_remaining;
 
+  const { data: existingStores } = await supabase
+    .from("stores")
+    .select("name, city")
+    .eq("org_id", orgId);
+  const existingKeys = new Set(
+    (existingStores ?? []).map((s) => storeDupKey(String(s.name ?? ""), s.city)),
+  );
+  const fileKeys = new Set<string>();
+
   let created = 0;
   let failed = 0;
+  let skippedDuplicates = 0;
 
   for (const row of rows) {
     const name = row["name"] || row["Name"];
@@ -842,32 +881,45 @@ export async function importStoresCsv(file: File): Promise<{ created: number; fa
       failed += 1;
       continue;
     }
+    const city = row["city"] || row["City"] || null;
+    const dup = storeDupKey(name, city);
+    if (existingKeys.has(dup) || fileKeys.has(dup)) {
+      skippedDuplicates += 1;
+      continue;
+    }
+    fileKeys.add(dup);
+
     if (remaining !== null && remaining <= 0) {
       // Plan store limit reached — surface the same limit modal as single adds.
       allowance = await assertCanAddStore();
       remaining = allowance.stores_remaining;
     }
 
+    const storeType = normalizeStoreType(
+      row["store_type"] || row["Store Type"] || row["type"] || row["Type"],
+    );
+
     const { error } = await supabase.from("stores").insert({
       org_id: orgId,
       name,
       code: row["store_code"] || row["code"] || null,
       address_line1: row["address"] || null,
-      city: row["city"] || null,
+      city,
       state: row["state"] || null,
       country: row["country"] || null,
       contact_name: row["manager_name"] || null,
       contact_phone: row["contact_number"] || null,
+      store_type: storeType ?? "local_store",
     });
     if (error) failed += 1;
     else {
       created += 1;
+      existingKeys.add(dup);
       if (remaining !== null) remaining -= 1;
     }
-
   }
 
-  return { created, failed };
+  return { created, failed, skippedDuplicates };
 }
 
 export async function exportStoreList(

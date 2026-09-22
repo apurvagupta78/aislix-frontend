@@ -182,6 +182,10 @@ export async function fetchFindings(input: {
   filters?: DashboardFilterState;
 } = {}): Promise<Finding[]> {
   const orgId = await requireOrgId();
+  const { resolveEffectiveAccessScope } = await import("@/lib/access-scope");
+  const scope = await resolveEffectiveAccessScope({ orgId });
+  if (!scope.isOrgAdmin && !scope.hasStoreScope) return [];
+
   let query = supabase
     .from("findings")
     .select("*")
@@ -189,8 +193,15 @@ export async function fetchFindings(input: {
     .order("created_at", { ascending: false })
     .limit(400);
 
+  if (!scope.isOrgAdmin) {
+    query = query.in("store_id", scope.effectiveStoreIds);
+  }
+
   query = applyDashboardFilters(query, input.filters);
-  if (input.storeId && input.storeId !== "all") query = query.eq("store_id", input.storeId);
+  if (input.storeId && input.storeId !== "all") {
+    if (!scope.isOrgAdmin && !scope.effectiveStoreIds.includes(input.storeId)) return [];
+    query = query.eq("store_id", input.storeId);
+  }
   if (input.sku) query = query.ilike("sku", `%${input.sku}%`);
   if (input.findingType && input.findingType !== "all") query = query.eq("finding_type", input.findingType);
   if (input.severity && input.severity !== "all") query = query.eq("severity", input.severity);

@@ -494,4 +494,42 @@ export const ASK_AISLIX_SUGGESTION_LIBRARY: AskAislixSuggestionItem[] = [
     icon: "comparison",
     requiredTools: [T.trends],
   },
+
+  // ── RBAC / hierarchy-aware ──────────────────────────────────────────────
+  {
+    id: "rbac_owner_city_variance",
+    text: "Which cities have the highest inventory variance?",
+    roles: ["universal"],
+    accessRoles: ["owner", "admin"],
+    category: "inventory",
+    icon: "inventory",
+    requiredTools: [T.variance, T.stores],
+  },
+  {
+    id: "rbac_manager_store_variance",
+    text: "Which of my stores had the highest inventory variance this month?",
+    roles: ["universal"],
+    accessRoles: ["manager"],
+    category: "inventory",
+    icon: "inventory",
+    requiredTools: [T.variance, T.stores],
+  },
+  {
+    id: "rbac_boss_repeat_findings",
+    text: "Which of my managers has the highest repeat finding rate?",
+    roles: ["universal"],
+    accessRoles: ["owner", "admin", "boss", "manager"],
+    category: "findings",
+    icon: "findings",
+    requiredTools: [T.findings, T.recurring],
+  },
+  {
+    id: "rbac_member_overdue",
+    text: "Which of my assigned audits are overdue?",
+    roles: ["universal"],
+    accessRoles: ["member"],
+    category: "audit",
+    icon: "audit",
+    requiredTools: [T.overdue],
+  },
 ];

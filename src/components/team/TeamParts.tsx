@@ -3,6 +3,7 @@ import {
   Activity,
   CheckCircle2,
   Circle,
+  FileUp,
   KeyRound,
   Mail,
   MoreHorizontal,
@@ -11,6 +12,7 @@ import {
   ShieldCheck,
   Store,
   Trash2,
+  Upload,
   UserMinus,
   UserPlus,
   Users,
@@ -259,6 +261,7 @@ export function UserFormDialog({
   user,
   stores,
   storesLoading,
+  members,
   submitting,
   error,
   onSubmit,
@@ -269,6 +272,8 @@ export function UserFormDialog({
   user?: OrgUser | null;
   stores: AssignedStore[];
   storesLoading?: boolean | undefined;
+  /** Org members for Reports To (keyed by auth user_id). */
+  members?: OrgUser[] | undefined;
   submitting?: boolean | undefined;
   error?: string | null | undefined;
   onSubmit: (values: UserFormValues) => void;
@@ -277,6 +282,7 @@ export function UserFormDialog({
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<UserRole>("member");
   const [storeIds, setStoreIds] = useState<string[]>([]);
+  const [reportsToUserId, setReportsToUserId] = useState<string>("none");
   const [touched, setTouched] = useState(false);
 
   useEffect(() => {
@@ -285,16 +291,28 @@ export function UserFormDialog({
     setEmail(user?.email ?? "");
     setRole(user?.role ?? "member");
     setStoreIds((user?.assigned_stores ?? []).map((store) => store.id));
+    setReportsToUserId(user?.reports_to_user_id ?? "none");
     setTouched(false);
   }, [open, user]);
 
   const orgWide = roleScope[role] === "organization";
+  const reportsToOptions = useMemo(
+    () =>
+      (members ?? []).filter(
+        (m) =>
+          Boolean(m.user_id) &&
+          m.user_id !== user?.user_id &&
+          m.status !== "disabled",
+      ),
+    [members, user?.user_id],
+  );
   const nameError = name.trim().length === 0 ? "Name is required." : name.trim().length > 120 ? "Name is too long." : null;
   const emailError = !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())
     ? "Enter a valid email address."
     : email.trim().length > 255
       ? "Email is too long."
       : null;
+  // Managers are NOT org-wide — always require store assignment for manager/member/etc.
   const storeError = !orgWide && storeIds.length === 0 ? "Assign at least one store." : null;
   const invalid = Boolean(nameError || emailError || storeError);
 
@@ -306,6 +324,7 @@ export function UserFormDialog({
       email: email.trim().toLowerCase(),
       role,
       store_ids: orgWide ? [] : storeIds,
+      reports_to_user_id: reportsToUserId === "none" ? null : reportsToUserId,
     });
   }
 
@@ -366,6 +385,27 @@ export function UserFormDialog({
           </div>
 
           <div className="space-y-1.5">
+            <Label>Reports to</Label>
+            <Select value={reportsToUserId} onValueChange={setReportsToUserId}>
+              <SelectTrigger>
+                <SelectValue placeholder="No manager" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No manager</SelectItem>
+                {reportsToOptions.map((member) => (
+                  <SelectItem key={member.user_id!} value={member.user_id!}>
+                    {member.name ?? member.email}
+                    {member.role ? ` · ${userRoleLabels[member.role]}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Reporting hierarchy drives inherited store access for managers.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
             <Label>Assigned stores</Label>
             {orgWide ? (
               <p className="rounded-xl border border-dashed border-border px-3 py-3 text-xs text-muted-foreground">
@@ -381,6 +421,11 @@ export function UserFormDialog({
                   loading={storesLoading}
                 />
                 {touched && storeError && <p className="text-xs text-destructive">{storeError}</p>}
+                {role === "manager" && (
+                  <p className="text-xs text-muted-foreground">
+                    Managers need direct store assignments. Inherited stores come from their team.
+                  </p>
+                )}
               </>
             )}
           </div>
@@ -495,7 +540,11 @@ export function MembersTable({
               <th className="px-4 py-3 font-medium">Name</th>
               <th className="px-4 py-3 font-medium">Email</th>
               <th className="px-4 py-3 font-medium">Role</th>
-              <th className="px-4 py-3 font-medium">Assigned stores</th>
+              <th className="px-4 py-3 font-medium">Reports to</th>
+              <th className="px-4 py-3 font-medium">Direct</th>
+              <th className="px-4 py-3 font-medium">Inherited</th>
+              <th className="px-4 py-3 font-medium">Effective</th>
+              <th className="px-4 py-3 font-medium">Team</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium">Last login</th>
               <th className="px-4 py-3 text-right font-medium">Actions</th>
@@ -530,7 +579,21 @@ export function MembersTable({
                 <td className="px-4 py-3">
                   <RoleBadge role={user.role} />
                 </td>
-                <td className="px-4 py-3 text-muted-foreground">{storeAccessLabel(user)}</td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {user.reports_to_name ?? "—"}
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {user.all_stores_access ? "All" : formatCount(user.direct_store_count ?? user.assigned_stores?.length)}
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {user.all_stores_access ? "—" : formatCount(user.inherited_store_count)}
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {user.all_stores_access ? "All" : formatCount(user.effective_store_count)}
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {formatCount(user.team_member_count)}
+                </td>
                 <td className="px-4 py-3">
                   <StatusBadge status={user.status} />
                 </td>
@@ -579,8 +642,20 @@ export function MembersTable({
             </div>
             <dl className="mt-3 grid grid-cols-2 gap-3 text-xs">
               <div>
-                <dt className="text-muted-foreground">Assigned stores</dt>
-                <dd className="mt-0.5 text-foreground">{storeAccessLabel(user)}</dd>
+                <dt className="text-muted-foreground">Reports to</dt>
+                <dd className="mt-0.5 text-foreground">{user.reports_to_name ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Team members</dt>
+                <dd className="mt-0.5 text-foreground">{formatCount(user.team_member_count)}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Direct / Inherited / Effective</dt>
+                <dd className="mt-0.5 text-foreground">
+                  {user.all_stores_access
+                    ? "All stores"
+                    : `${formatCount(user.direct_store_count)} / ${formatCount(user.inherited_store_count)} / ${formatCount(user.effective_store_count)}`}
+                </dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Last login</dt>
@@ -646,8 +721,8 @@ export function MembersTableSkeleton() {
     <div className="space-y-3 rounded-2xl border border-border p-4" aria-busy="true">
       <Skeleton className="h-8 w-full" />
       {Array.from({ length: 6 }).map((_, index) => (
-        <div key={index} className="grid grid-cols-2 gap-3 lg:grid-cols-7">
-          {Array.from({ length: 7 }).map((__, cell) => (
+        <div key={index} className="grid grid-cols-2 gap-3 lg:grid-cols-8">
+          {Array.from({ length: 8 }).map((__, cell) => (
             <Skeleton key={cell} className="h-5" />
           ))}
         </div>
@@ -844,6 +919,28 @@ export function UserDetailDrawer({
 
               <dl className="divide-y divide-border rounded-2xl border border-border px-4">
                 <DetailRow label="Role" value={user.role ? userRoleLabels[user.role] : "—"} />
+                <DetailRow label="Reports to" value={user.reports_to_name ?? "—"} />
+                <DetailRow
+                  label="Direct stores"
+                  value={
+                    user.all_stores_access
+                      ? "All stores"
+                      : formatCount(user.direct_store_count ?? user.assigned_stores?.length)
+                  }
+                />
+                <DetailRow
+                  label="Inherited stores"
+                  value={user.all_stores_access ? "—" : formatCount(user.inherited_store_count)}
+                />
+                <DetailRow
+                  label="Effective stores"
+                  value={
+                    user.all_stores_access
+                      ? "All stores"
+                      : formatCount(user.effective_store_count)
+                  }
+                />
+                <DetailRow label="Team members" value={formatCount(user.team_member_count)} />
                 <DetailRow label="Assigned stores" value={storeAccessLabel(user)} />
                 <DetailRow label="Created" value={formatDate(user.created_at)} />
                 <DetailRow label="Last login" value={formatDateTime(user.last_login_at)} />
@@ -893,3 +990,309 @@ export function UserDetailDrawer({
 }
 
 export { UserPlus };
+
+// ---------- bulk user import ----------
+
+type BulkImportStep = "upload" | "preview" | "done";
+
+export function BulkUserImportDialog({
+  open,
+  onOpenChange,
+  stores,
+  members,
+  onImported,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  stores: AssignedStore[];
+  members: OrgUser[];
+  onImported?: (() => void) | undefined;
+}) {
+  const [step, setStep] = useState<BulkImportStep>("upload");
+  const [busy, setBusy] = useState(false);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [validation, setValidation] = useState<import("@/lib/bulk-user-import").BulkUserValidationResult | null>(null);
+  const [importResult, setImportResult] = useState<import("@/lib/bulk-user-import").BulkUserImportResult | null>(null);
+  const [parseError, setParseError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) {
+      setStep("upload");
+      setBusy(false);
+      setFileName(null);
+      setValidation(null);
+      setImportResult(null);
+      setParseError(null);
+    }
+  }, [open]);
+
+  async function handleFile(file: File) {
+    setBusy(true);
+    setParseError(null);
+    setFileName(file.name);
+    try {
+      const { parseBulkUsersFile, validateBulkUsers } = await import("@/lib/bulk-user-import");
+      const rows = await parseBulkUsersFile(file);
+      const result = validateBulkUsers(rows, {
+        existingEmails: members.map((m) => m.email),
+        stores,
+        members,
+      });
+      setValidation(result);
+      setStep("preview");
+    } catch (err) {
+      setParseError(err instanceof Error ? err.message : "Could not read the file.");
+      setValidation(null);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleImport() {
+    if (!validation) return;
+    const validRows = validation.previewRows.filter((r) => r.valid);
+    if (validRows.length === 0) return;
+    setBusy(true);
+    try {
+      const { importBulkUsers } = await import("@/lib/bulk-user-import");
+      const result = await importBulkUsers(validRows);
+      setImportResult(result);
+      setStep("done");
+      onImported?.();
+    } catch (err) {
+      setParseError(err instanceof Error ? err.message : "Import failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Bulk invite users</DialogTitle>
+          <DialogDescription>
+            Upload CSV or XLSX with columns: Name, Email, Role, Reports To, Stores. Then validate,
+            preview, and invite.
+          </DialogDescription>
+        </DialogHeader>
+
+        {step === "upload" && (
+          <div className="space-y-4">
+            <label className="flex cursor-pointer flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-[#F4F7F9] px-6 py-10 text-center transition-colors hover:border-[#7DB7D6]/
+              <Upload className="size-8 text-[#7DB7D6]" />
+              <div>
+                <p className="text-sm font-medium text-[#102A43]">
+                  {busy ? "Reading file…" : "Drop a file or click to upload"}
+                </p>
+                <p className="mt-1 text-xs text-[#667085]">.csv or .xlsx</p>
+              </div>
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                className="hidden"
+                disabled={busy}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void handleFile(file);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {parseError && (
+              <p className="rounded-xl border border-destructive/25 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                {parseError}
+              </p>
+            )}
+          </div>
+        )}
+
+        {step === "preview" && validation && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <Badge variant="outline" className="rounded-md">
+                {fileName ?? "File"}
+              </Badge>
+              <span className="text-[#667085]">
+                {validation.total} rows · {validation.valid} valid · {validation.duplicates}{" "}
+                duplicates · {validation.errors.length} issues
+              </span>
+            </div>
+
+            <div className="max-h-64 overflow-auto rounded-xl border border-[#D9E2E8]">
+              <table className="w-full text-left text-xs">
+                <thead className="sticky top-0 bg-[#EEF1F4] text-[#667085]">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Row</th>
+                    <th className="px-3 py-2 font-medium">Name</th>
+                    <th className="px-3 py-2 font-medium">Email</th>
+                    <th className="px-3 py-2 font-medium">Role</th>
+                    <th className="px-3 py-2 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {validation.previewRows.slice(0, 50).map((row) => (
+                    <tr key={row.rowNumber} className="border-t border-[#D9E2E8]">
+                      <td className="px-3 py-2 text-[#667085]">{row.rowNumber}</td>
+                      <td className="px-3 py-2 text-[#102A43]">{row.name || "—"}</td>
+                      <td className="px-3 py-2 text-[#667085]">{row.email || "—"}</td>
+                      <td className="px-3 py-2 text-[#667085]">{row.roleNormalized ?? row.role}</td>
+                      <td className="px-3 py-2">
+                        {row.valid ? (
+                          <span className="text-[#102A43]">
+                            {row.existingMemberId ? "Update" : "Invite"}
+                          </span>
+                        ) : (
+                          <span className="text-destructive">{row.error ?? "Invalid"}</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {validation.errors.length > 0 && (
+              <div className="max-h-24 overflow-y-auto rounded-xl border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                {validation.errors.slice(0, 12).map((err) => (
+                  <p key={err}>{err}</p>
+                ))}
+                {validation.errors.length > 12 && (
+                  <p>+{validation.errors.length - 12} more…</p>
+                )}
+              </div>
+            )}
+
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button
+                variant="subtle"
+                disabled={busy}
+                onClick={() => {
+                  setStep("upload");
+                  setValidation(null);
+                }}
+              >
+                Back
+              </Button>
+              <Button
+                disabled={busy || validation.valid === 0}
+                onClick={() => void handleImport()}
+              >
+                <Mail className="size-4" />
+                {busy ? "Importing…" : `Import ${validation.valid} user${validation.valid === 1 ? "" : "s"}`}
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+
+        {step === "done" && importResult && (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-[#D9E2E8] bg-white p-5">
+              <p className="text-sm font-medium text-[#102A43]">Import complete</p>
+              <p className="mt-2 text-sm text-[#667085]">
+                {importResult.invited} invited · {importResult.updated} updated ·{" "}
+                {importResult.failed} failed
+              </p>
+              {importResult.errors.length > 0 && (
+                <div className="mt-3 max-h-32 overflow-y-auto text-xs text-destructive">
+                  {importResult.errors.map((err) => (
+                    <p key={err}>{err}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button onClick={() => onOpenChange(false)}>Done</Button>
+            </DialogFooter>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------- my team ----------
+
+export function MyTeamSection({
+  members,
+  loading,
+  error,
+  onRetry,
+  onOpenUser,
+}: {
+  members: OrgUser[];
+  loading?: boolean | undefined;
+  error?: boolean | undefined;
+  onRetry?: (() => void) | undefined;
+  onOpenUser?: ((user: OrgUser) => void) | undefined;
+}) {
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Users className="size-4 text-[#9B86D9]" />
+        <h2 className="text-base font-semibold text-[#102A43]">My team</h2>
+      </div>
+      <p className="max-w-2xl text-sm text-[#667085]">
+        People who report directly to you. Their store access contributes to your inherited scope.
+      </p>
+      <div className="rounded-2xl border border-[#D9E2E8] bg-white p-5 shadow-sm">
+        {loading ? (
+          <div className="space-y-3" aria-busy="true">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-5 w-64" />
+          </div>
+        ) : error ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">Could not load your direct reports.</p>
+            {onRetry && (
+              <Button variant="subtle" size="sm" onClick={onRetry}>
+                Retry
+              </Button>
+            )}
+          </div>
+        ) : members.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No direct reports yet. Assign “Reports to” when inviting or editing members.
+          </p>
+        ) : (
+          <ul className="divide-y divide-[#D9E2E8]">
+            {members.map((member) => (
+              <li key={member.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                <button
+                  type="button"
+                  className="flex min-w-0 items-center gap-3 text-left"
+                  onClick={() => onOpenUser?.(member)}
+                >
+                  <Avatar className="size-8">
+                    {member.avatar_url && <AvatarImage src={member.avatar_url} alt="" />}
+                    <AvatarFallback className="text-xs">{userInitials(member)}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-[#102A43]">
+                      {member.name ?? "Invited user"}
+                    </p>
+                    <p className="truncate text-xs text-[#667085]">{member.email}</p>
+                  </div>
+                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <RoleBadge role={member.role} />
+                  <span className="text-xs text-[#667085]">
+                    {formatCount(member.direct_store_count)} stores
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export function BulkImportTriggerButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button variant="subtle" onClick={onClick}>
+      <FileUp className="size-4" /> Bulk invite
+    </Button>
+  );
+}

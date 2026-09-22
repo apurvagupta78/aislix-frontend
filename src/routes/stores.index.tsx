@@ -178,7 +178,10 @@ function StoresPage() {
     mutationFn: (file: File) => importStoresCsv(file),
     onSuccess: (data) => {
       void queryClient.invalidateQueries({ queryKey: ["stores"] });
-      toast.success(`${data.created} stores imported, ${data.failed} skipped`);
+      const parts = [`${data.created} created`];
+      if (data.skippedDuplicates > 0) parts.push(`${data.skippedDuplicates} duplicates skipped`);
+      if (data.failed > 0) parts.push(`${data.failed} failed`);
+      toast.success(parts.join(" · "));
     },
     onError: (error: unknown) =>
       toast.error(error instanceof Error ? error.message : "Bulk import is not available yet."),

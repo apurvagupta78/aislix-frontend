@@ -3315,6 +3315,7 @@ export type Database = {
           invited_email: string | null
           last_active_at: string | null
           org_id: string
+          reports_to_user_id: string | null
           role: Database["public"]["Enums"]["app_role"]
           status: Database["public"]["Enums"]["member_status"]
           store_ids: string[]
@@ -3328,6 +3329,7 @@ export type Database = {
           invited_email?: string | null
           last_active_at?: string | null
           org_id: string
+          reports_to_user_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           status?: Database["public"]["Enums"]["member_status"]
           store_ids?: string[]
@@ -3341,6 +3343,7 @@ export type Database = {
           invited_email?: string | null
           last_active_at?: string | null
           org_id?: string
+          reports_to_user_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           status?: Database["public"]["Enums"]["member_status"]
           store_ids?: string[]
@@ -5042,6 +5045,22 @@ export type Database = {
       ensure_org_free_subscription: {
         Args: { p_org_id: string }
         Returns: undefined
+      }
+      effective_store_ids: {
+        Args: { p_org_id: string; p_user_id?: string }
+        Returns: string[]
+      }
+      direct_store_ids: {
+        Args: { p_org_id: string; p_user_id?: string }
+        Returns: string[]
+      }
+      inherited_store_ids: {
+        Args: { p_org_id: string; p_user_id?: string }
+        Returns: string[]
+      }
+      user_can_access_store: {
+        Args: { p_org_id: string; p_store_id: string; p_user_id?: string }
+        Returns: boolean
       }
       expiry_demo_clock: { Args: never; Returns: string }
       expiry_is_reviewer: {

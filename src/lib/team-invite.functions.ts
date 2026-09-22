@@ -16,6 +16,7 @@ export type InviteMemberInput = {
   name?: string;
   role: string;
   store_ids?: string[];
+  reports_to_user_id?: string | null;
 };
 
 export type InviteMemberResult = {
@@ -47,6 +48,9 @@ export const inviteMember = createServerFn({ method: "POST" })
       name: String(input?.name ?? "").trim(),
       role: APP_ROLE[String(input?.role ?? "member")] ?? "member",
       store_ids: Array.isArray(input?.store_ids) ? input.store_ids.map(String) : [],
+      reports_to_user_id: input?.reports_to_user_id
+        ? String(input.reports_to_user_id)
+        : null,
     };
   })
   .handler(async ({ data, context }): Promise<InviteMemberResult> => {
@@ -125,6 +129,7 @@ export const inviteMember = createServerFn({ method: "POST" })
           role: data.role as never,
           status: (isExistingActive ? "active" : "invited") as never,
           store_ids: data.store_ids,
+          reports_to_user_id: data.reports_to_user_id || null,
           invited_email: data.email,
           invited_by: userId,
           updated_at: new Date().toISOString(),

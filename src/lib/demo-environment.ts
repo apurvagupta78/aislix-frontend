@@ -11,6 +11,15 @@ import { hasPlatformBypass } from "@/lib/subscription-limits";
 /** Fixed demo org id (matches supabase migration aislix_demo_org_id). */
 export const AISLIX_DEMO_ORG_ID = "d0000000-0000-4000-8000-000000000001";
 
+/**
+ * People hierarchy for the showcase org is seeded by
+ * `seed_demo_people_hierarchy()` (migration 20260922170000): Owner →
+ * North/South managers → auditors, with distinct store_ids and reports_to.
+ * Demo-only emails use `@aislix.demo` (e.g. demo.north.manager@aislix.demo).
+ */
+export const DEMO_PEOPLE_HIERARCHY_NOTE =
+  "Demo org members include North/South managers and auditors under the demo owner.";
+
 export const DEMO_DATA_LABEL = "DEMO DATA";
 export const DEMO_CTA = "Start your first audit to see your real performance.";
 export const DEMO_PREVIEW_CTA = "Turn off preview to return to your real workspace data.";

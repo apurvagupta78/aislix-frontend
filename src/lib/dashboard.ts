@@ -66,6 +66,49 @@ export async function fetchDashboard(signal?: AbortSignal): Promise<DashboardRes
   void signal;
   const orgId = await requireOrgId();
   const user = await getUser();
+  const { resolveEffectiveAccessScope, applyStoreScopeFilter } = await import("@/lib/access-scope");
+  const scope = await resolveEffectiveAccessScope({ orgId });
+
+  if (!scope.isOrgAdmin && !scope.hasStoreScope) {
+    const profileRes = user
+      ? await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle()
+      : { data: null };
+    return {
+      greeting_name: (profileRes.data as { full_name?: string } | null)?.full_name ?? undefined,
+      kpis: {
+        total_scans: 0,
+        products_detected: 0,
+        stores: 0,
+        low_stock_alerts: 0,
+        out_of_stock_alerts: 0,
+      },
+      activity: [],
+    };
+  }
+
+  let scansQuery = supabase
+    .from("shelf_scans")
+    .select(
+      "id, status, shelf_health_score, out_of_stock_count, low_stock_count, total_products, created_at, shelf_label",
+      { count: "exact" },
+    )
+    .eq("org_id", orgId)
+    .order("created_at", { ascending: false });
+  scansQuery = applyStoreScopeFilter(scansQuery, scope) ?? scansQuery;
+
+  let storesCountQuery = supabase
+    .from("stores")
+    .select("id", { count: "exact", head: true })
+    .eq("org_id", orgId);
+  storesCountQuery = applyStoreScopeFilter(storesCountQuery, scope, "id") ?? storesCountQuery;
+
+  let recentStoresQuery = supabase
+    .from("stores")
+    .select("id, name, created_at")
+    .eq("org_id", orgId)
+    .order("created_at", { ascending: false })
+    .limit(3);
+  recentStoresQuery = applyStoreScopeFilter(recentStoresQuery, scope, "id") ?? recentStoresQuery;
 
   const [
     profileRes,
@@ -79,15 +122,8 @@ export async function fetchDashboard(signal?: AbortSignal): Promise<DashboardRes
     user
       ? supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle()
       : Promise.resolve({ data: null, error: null } as const),
-    supabase
-      .from("shelf_scans")
-      .select(
-        "id, status, shelf_health_score, out_of_stock_count, low_stock_count, total_products, created_at, shelf_label",
-        { count: "exact" },
-      )
-      .eq("org_id", orgId)
-      .order("created_at", { ascending: false }),
-    supabase.from("stores").select("id", { count: "exact", head: true }).eq("org_id", orgId),
+    scansQuery,
+    storesCountQuery,
     supabase
       .from("organization_members")
       .select("id", { count: "exact", head: true })
@@ -98,12 +134,7 @@ export async function fetchDashboard(signal?: AbortSignal): Promise<DashboardRes
       .select("scans_used, current_period_end, status, subscription_plans(name, code, scan_quota)")
       .eq("org_id", orgId)
       .maybeSingle(),
-    supabase
-      .from("stores")
-      .select("id, name, created_at")
-      .eq("org_id", orgId)
-      .order("created_at", { ascending: false })
-      .limit(3),
+    recentStoresQuery,
     supabase
       .from("organization_members")
       .select("id, created_at, invited_email, status, profiles(full_name, email)")
@@ -256,6 +287,11 @@ export async function fetchRecentScans(
   const orgId = await requireOrgId();
   const page = params.page ?? 1;
   const pageSize = params.page_size ?? 8;
+  const { resolveEffectiveAccessScope, applyStoreScopeFilter } = await import("@/lib/access-scope");
+  const scope = await resolveEffectiveAccessScope({ orgId });
+  if (!scope.isOrgAdmin && !scope.hasStoreScope) {
+    return { items: [], total: 0, page, page_size: pageSize, stores: [] };
+  }
 
   // Free plan only shows the last 7 days. Data is never deleted, just filtered.
   const { fetchHistoryCutoffIso } = await import("@/lib/subscription-limits");
@@ -267,6 +303,7 @@ export async function fetchRecentScans(
       count: "exact",
     })
     .eq("org_id", orgId);
+  query = applyStoreScopeFilter(query, scope) ?? query;
 
   if (cutoff) query = query.gte("created_at", cutoff);
 
@@ -307,7 +344,9 @@ export async function fetchRecentScans(
     }
   }
 
-  const { data: storesData } = await supabase.from("stores").select("name").eq("org_id", orgId);
+  let storesListQuery = supabase.from("stores").select("name").eq("org_id", orgId);
+  storesListQuery = applyStoreScopeFilter(storesListQuery, scope, "id") ?? storesListQuery;
+  const { data: storesData } = await storesListQuery;
 
   const items: RecentScan[] = (data ?? []).map((row) => ({
     scan_id: row.id,
@@ -358,27 +397,41 @@ export type NotificationsResponse = {
 export async function fetchNotifications(signal?: AbortSignal): Promise<NotificationsResponse> {
   void signal;
   const orgId = await requireOrgId();
+  const { resolveEffectiveAccessScope, applyStoreScopeFilter } = await import("@/lib/access-scope");
+  const scope = await resolveEffectiveAccessScope({ orgId });
+  if (!scope.isOrgAdmin && !scope.hasStoreScope) {
+    return { items: [], unread: 0 };
+  }
+
+  let failedScansQuery = supabase
+    .from("shelf_scans")
+    .select("id, shelf_label, error_message, created_at")
+    .eq("org_id", orgId)
+    .eq("status", "failed")
+    .order("created_at", { ascending: false })
+    .limit(5);
+  failedScansQuery = applyStoreScopeFilter(failedScansQuery, scope) ?? failedScansQuery;
+
+  let recentScansQuery = supabase
+    .from("shelf_scans")
+    .select("id, created_at")
+    .eq("org_id", orgId)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  recentScansQuery = applyStoreScopeFilter(recentScansQuery, scope) ?? recentScansQuery;
+
+  let storesQuery = supabase.from("stores").select("id, name").eq("org_id", orgId);
+  storesQuery = applyStoreScopeFilter(storesQuery, scope, "id") ?? storesQuery;
 
   const [failedScansRes, recentScansRes, subscriptionRes, storesRes] = await Promise.all([
-    supabase
-      .from("shelf_scans")
-      .select("id, shelf_label, error_message, created_at")
-      .eq("org_id", orgId)
-      .eq("status", "failed")
-      .order("created_at", { ascending: false })
-      .limit(5),
-    supabase
-      .from("shelf_scans")
-      .select("id, created_at")
-      .eq("org_id", orgId)
-      .order("created_at", { ascending: false })
-      .limit(20),
+    failedScansQuery,
+    recentScansQuery,
     supabase
       .from("subscriptions")
       .select("scans_used, subscription_plans(scan_quota)")
       .eq("org_id", orgId)
       .maybeSingle(),
-    supabase.from("stores").select("id, name").eq("org_id", orgId),
+    storesQuery,
   ]);
 
   const items: DashboardNotification[] = [];
@@ -447,11 +500,13 @@ export async function fetchNotifications(signal?: AbortSignal): Promise<Notifica
   }
 
   const storesWithScans = new Set<string>();
-  const { data: storeScans } = await supabase
+  let storeScansQuery = supabase
     .from("shelf_scans")
     .select("store_id")
     .eq("org_id", orgId)
     .not("store_id", "is", null);
+  storeScansQuery = applyStoreScopeFilter(storeScansQuery, scope) ?? storeScansQuery;
+  const { data: storeScans } = await storeScansQuery;
   for (const row of storeScans ?? []) {
     if (row.store_id) storesWithScans.add(row.store_id);
   }
@@ -511,6 +566,18 @@ export async function fetchAnalytics(
 ): Promise<AnalyticsResponse> {
   void signal;
   const orgId = await requireOrgId();
+  const { resolveEffectiveAccessScope } = await import("@/lib/access-scope");
+  const scope = await resolveEffectiveAccessScope({ orgId });
+  const emptyAnalytics: AnalyticsResponse = {
+    shelf_health_trend: [],
+    daily_scans: [],
+    weekly_scans: undefined,
+    monthly_scans: undefined,
+    brand_distribution: [],
+    low_stock_trend: [],
+  };
+  if (!scope.isOrgAdmin && !scope.hasStoreScope) return emptyAnalytics;
+
   const days = rangeToDays(range);
   const since = new Date();
   since.setDate(since.getDate() - days);
@@ -520,16 +587,14 @@ export async function fetchAnalytics(
   if (territoryId) {
     const { fetchTerritoryStoreIds } = await import("@/lib/territories");
     storeFilter = await fetchTerritoryStoreIds(territoryId);
-    if (!storeFilter.length) {
-      return {
-        shelf_health_trend: [],
-        daily_scans: [],
-        weekly_scans: undefined,
-        monthly_scans: undefined,
-        brand_distribution: [],
-        low_stock_trend: [],
-      };
-    }
+    if (!storeFilter.length) return emptyAnalytics;
+  }
+  if (!scope.isOrgAdmin) {
+    const allowed = new Set(scope.effectiveStoreIds);
+    storeFilter = storeFilter
+      ? storeFilter.filter((id) => allowed.has(id))
+      : scope.effectiveStoreIds;
+    if (!storeFilter.length) return emptyAnalytics;
   }
 
   let scanQuery = supabase
@@ -608,6 +673,10 @@ export async function fetchStoreComplianceRanking(
   territoryId?: string | null,
 ): Promise<StoreComplianceRow[]> {
   const orgId = await requireOrgId();
+  const { resolveEffectiveAccessScope, applyStoreScopeFilter } = await import("@/lib/access-scope");
+  const scope = await resolveEffectiveAccessScope({ orgId });
+  if (!scope.isOrgAdmin && !scope.hasStoreScope) return [];
+
   const since = new Date();
   since.setDate(since.getDate() - rangeToDays(range));
 
@@ -616,6 +685,7 @@ export async function fetchStoreComplianceRanking(
     .select("id, name, territory_id, territories:territory_id (name)")
     .eq("org_id", orgId)
     .eq("status", "active");
+  storeQuery = applyStoreScopeFilter(storeQuery, scope, "id") ?? storeQuery;
   if (territoryId) storeQuery = storeQuery.eq("territory_id", territoryId);
 
   const { data: stores, error: storeError } = await storeQuery;

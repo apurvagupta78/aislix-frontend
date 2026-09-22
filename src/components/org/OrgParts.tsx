@@ -1064,8 +1064,9 @@ export function BulkOperationsPanel({
       </div>
       <p className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
         <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-        Bulk endpoints are wired to the Aislix API and activate as soon as the service exposes them
-        for your organization.
+        CSV columns: name, store_code, address, city, state, country, manager_name, contact_number,
+        store_type (warehouse, supermarket, distributor, local_store, …). Duplicates by name + city
+        are skipped.
       </p>
     </div>
   );

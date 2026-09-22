@@ -1,8 +1,8 @@
 /**
  * Corrective actions raised by planogram comparisons.
  *
- * Managers (owner / admin / manager) see every action in the workspace; other
- * members only see actions raised by scans they ran themselves.
+ * Owner/admin: org-wide. Managers: effective store scope only.
+ * Members: actions assigned to them (still store-clamped).
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -56,12 +56,22 @@ export async function fetchCorrectiveActions(): Promise<CorrectiveActionRow[]> {
   const orgId = await requireOrgId();
   const userId = await requireUserId();
   const manager = await isOrgManager();
+  const { resolveEffectiveAccessScope, applyStoreScopeFilter } = await import("@/lib/access-scope");
+  const scope = await resolveEffectiveAccessScope({ orgId });
+  if (!scope.isOrgAdmin && !scope.hasStoreScope) return [];
 
-  const { data, error } = await supabase
+  let actionsQuery = supabase
     .from("corrective_actions")
     .select(SELECT)
     .eq("org_id", orgId)
     .order("created_at", { ascending: false });
+  // Prefer direct store_id clamp when populated; null store_id rows are filtered via comparisons below.
+  if (!scope.isOrgAdmin) {
+    const ids = scope.effectiveStoreIds.map((id) => `"${id}"`).join(",");
+    actionsQuery = actionsQuery.or(`store_id.in.(${ids}),store_id.is.null`);
+  }
+
+  const { data, error } = await actionsQuery;
   if (error) dbError(error, "Could not load corrective actions.");
 
   const rows = (data ?? []) as unknown as {
@@ -76,13 +86,16 @@ export async function fetchCorrectiveActions(): Promise<CorrectiveActionRow[]> {
   }[];
   if (!rows.length) return [];
 
+  let comparisonsQuery = supabase
+    .from("planogram_comparisons")
+    .select(
+      "id, scan_id, store_id, assignment_id, compliance_percent, stores:store_id (name)",
+    )
+    .in("id", [...new Set(rows.map((row) => row.comparison_id))]);
+  comparisonsQuery = applyStoreScopeFilter(comparisonsQuery, scope) ?? comparisonsQuery;
+
   const [{ data: comparisons }, { data: lines }] = await Promise.all([
-    supabase
-      .from("planogram_comparisons")
-      .select(
-        "id, scan_id, store_id, assignment_id, compliance_percent, stores:store_id (name)",
-      )
-      .in("id", [...new Set(rows.map((row) => row.comparison_id))]),
+    comparisonsQuery,
     supabase
       .from("planogram_comparison_lines")
       .select("id, expected_product, expected_brand, actual_product")
@@ -92,8 +105,17 @@ export async function fetchCorrectiveActions(): Promise<CorrectiveActionRow[]> {
       ),
   ]);
 
+  // Drop actions whose comparison store fell outside scope (null store_id on CA row).
+  const comparisonIdsInScope = new Set((comparisons ?? []).map((c) => c.id as string));
+  const scopedRows = scope.isOrgAdmin
+    ? rows
+    : rows.filter((row) => comparisonIdsInScope.has(row.comparison_id));
+  if (!scopedRows.length) return [];
+
   const scanIds = [
-    ...new Set(((comparisons ?? []) as { scan_id: string | null }[]).map((c) => c.scan_id ?? "")),
+    ...new Set(
+      ((comparisons ?? []) as { scan_id: string | null }[]).map((c) => c.scan_id ?? ""),
+    ),
   ].filter(Boolean);
 
   const { data: scans } = scanIds.length
@@ -184,7 +206,7 @@ export async function fetchCorrectiveActions(): Promise<CorrectiveActionRow[]> {
     ).map((row) => [row.id, row]),
   );
 
-  const mapped = rows.map((row) => {
+  const mapped = scopedRows.map((row) => {
     const comparison = comparisonById.get(row.comparison_id);
     const scan = comparison?.scan_id ? scanById.get(comparison.scan_id) : undefined;
     const line = row.comparison_line_id ? lineById.get(row.comparison_line_id) : undefined;
@@ -217,6 +239,12 @@ export async function fetchCorrectiveActions(): Promise<CorrectiveActionRow[]> {
     } satisfies CorrectiveActionRow;
   });
 
+  // Managers: store-scoped (already clamped). Members: assignee filter.
+  if (manager && !scope.isOrgAdmin) {
+    return mapped.filter(
+      (row) => !row.store_id || scope.effectiveStoreIds.includes(row.store_id),
+    );
+  }
   return manager ? mapped : mapped.filter((row) => row.assignee_id === userId);
 }
 
