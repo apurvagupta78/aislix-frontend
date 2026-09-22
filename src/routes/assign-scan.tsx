@@ -414,7 +414,7 @@ function AssignScanPage() {
   }
 
 
-  if (accessQuery.isLoading || accessQuery.data === undefined) {
+  if (accessQuery.isPending) {
     return (
       <AppShell title="Assignments & Schedules" description="Delegate audits to your team.">
         <Skeleton className="h-40 w-full" />
@@ -422,7 +422,7 @@ function AssignScanPage() {
     );
   }
 
-  if (accessQuery.data === false) {
+  if (accessQuery.data !== true) {
     return (
       <AppShell title="Assignments & Schedules" description="Delegate audits to your team.">
         <EmptyState
