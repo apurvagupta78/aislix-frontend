@@ -62,13 +62,16 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
   const attemptQuery = useQuery({
     queryKey: ["expiry-attempt", attemptId],
     queryFn: () => fetchAttempt(attemptId),
+    retry: 1,
   });
   const obsQuery = useQuery({
     queryKey: ["expiry-observations", attemptId],
     queryFn: () => fetchObservations(attemptId),
+    retry: 1,
   });
 
   const attempt = attemptQuery.data;
+  const resolvedAttemptId = attempt?.id ?? attemptId;
   const observations = obsQuery.data ?? [];
   const physicalCount = Number(actualQty || attempt?.physical_count || 0);
 
@@ -85,7 +88,7 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
   );
 
   const startMutation = useMutation({
-    mutationFn: () => expiryTransition({ entityType: "attempt", entityId: attemptId, action: "start" }),
+    mutationFn: () => expiryTransition({ entityType: "attempt", entityId: resolvedAttemptId, action: "start" }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["expiry-attempt", attemptId] }),
   });
 
@@ -93,7 +96,7 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
     mutationFn: () =>
       expiryTransition({
         entityType: "attempt",
-        entityId: attemptId,
+        entityId: resolvedAttemptId,
         action: "confirm_scope",
         payload: {
           actual_quantity: Number(actualQty),
@@ -111,7 +114,7 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
     mutationFn: (payload: Record<string, unknown>) =>
       expiryTransition({
         entityType: "attempt",
-        entityId: attemptId,
+        entityId: resolvedAttemptId,
         action: "record_observation",
         payload,
         idempotencyKey: makeIdempotencyKey(`obs-${payload.packet_ordinal}`),
@@ -131,7 +134,7 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
       setRecording(false);
       videoSessionRef.current = null;
       if (report.videoBlob) {
-        await uploadSessionVideo(report.videoBlob, attemptId, {
+        await uploadSessionVideo(report.videoBlob, resolvedAttemptId, {
           markers: report.markers,
           durationMs: report.durationMs,
           missingSegments: report.missingSegments,
@@ -149,7 +152,7 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
   const reconcileMutation = useMutation({
     mutationFn: async () => {
       await finalizeSessionVideo();
-      await expiryTransition({ entityType: "attempt", entityId: attemptId, action: "reconcile" });
+      await expiryTransition({ entityType: "attempt", entityId: resolvedAttemptId, action: "reconcile" });
     },
     onSuccess: () => setStep(5),
   });
@@ -170,7 +173,7 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
       setMarkerCount(0);
       await expiryTransition({
         entityType: "attempt",
-        entityId: attemptId,
+        entityId: resolvedAttemptId,
         action: "set_assurance_fallback",
         payload: { assurance_fallback: null },
       });
@@ -188,7 +191,7 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
     setAssuranceFallback(true);
     await expiryTransition({
       entityType: "attempt",
-      entityId: attemptId,
+      entityId: resolvedAttemptId,
       action: "set_assurance_fallback",
       payload: { assurance_fallback: "lower_assurance_photos_only" },
     });
@@ -213,13 +216,13 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
       });
       await expiryTransition({
         entityType: "attempt",
-        entityId: attemptId,
+        entityId: resolvedAttemptId,
         action: "report_quarantine_transfer",
       });
       // Submit always allowed; <100% coverage → EVIDENCE INCOMPLETE path.
       await expiryTransition({
         entityType: "attempt",
-        entityId: attemptId,
+        entityId: resolvedAttemptId,
         action: coverage.complete ? "submit" : "submit_incomplete",
         payload: coverage.complete
           ? undefined
@@ -265,7 +268,7 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
       sessionTimestampRef.current = Date.now();
     }
     try {
-      const { evidenceId } = await uploadEvidence(file, attemptId, {
+      const { evidenceId } = await uploadEvidence(file, resolvedAttemptId, {
         linkType: "packet_date",
         sessionTimestampMs: sessionTimestampRef.current ?? undefined,
       });
@@ -273,7 +276,7 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
     } catch {
       await saveOfflineDraft({
         key: `obs-${currentPacket}`,
-        attemptId,
+        attemptId: resolvedAttemptId,
         payload: { packet: currentPacket },
         savedAt: new Date().toISOString(),
       });
@@ -312,10 +315,10 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
       wrong_product: kind === "wrong",
       file_hash: null,
     });
-    const obs = await fetchObservations(attemptId);
+    const obs = await fetchObservations(resolvedAttemptId);
     const saved = obs.find((o) => o.packet_ordinal === currentPacket);
     if (saved && pendingEvidenceIdRef.current) {
-      await linkEvidenceToObservation(pendingEvidenceIdRef.current, saved.id, attemptId);
+      await linkEvidenceToObservation(pendingEvidenceIdRef.current, saved.id, resolvedAttemptId);
       pendingEvidenceIdRef.current = null;
     }
     setOcrState(null);
@@ -327,7 +330,7 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
   async function handleTransfer() {
     if (!attempt) return;
     await createQuarantineTransfer({
-      attemptId,
+      attemptId: resolvedAttemptId,
       storeId: attempt.store_id,
       containerCode: transferForm.containerCode,
       quarantineLocation: transferForm.quarantineLocation,
@@ -518,7 +521,7 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
               onClick={() =>
                 expiryTransition({
                   entityType: "attempt",
-                  entityId: attemptId,
+                  entityId: resolvedAttemptId,
                   action: "submit_incomplete",
                   payload: { reason: "Quantity mismatch — escalated" },
                 }).then(onDone)

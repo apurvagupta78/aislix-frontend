@@ -3,7 +3,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { dbError, requireOrgId, requireUserId } from "@/lib/db/context";
+import { dbError, notFound, requireOrgId, requireUserId } from "@/lib/db/context";
 import type {
   ExpiryAssignment,
   ExpiryAttemptEvidence,
@@ -180,18 +180,32 @@ export async function fetchAttempt(attemptId: string): Promise<ExpiryInspectionA
     .select("*")
     .eq("org_id", orgId)
     .eq("id", attemptId)
-    .single();
+    .maybeSingle();
   if (error) dbError(error, "Could not load inspection attempt.");
-  return data as ExpiryInspectionAttempt;
+  if (data) return data as ExpiryInspectionAttempt;
+
+  // Universal executor / deep-links sometimes pass assignment id instead of attempt id.
+  const { data: byAssignment, error: assignmentError } = await supabase
+    .from("expiry_inspection_attempts")
+    .select("*")
+    .eq("org_id", orgId)
+    .eq("assignment_id", attemptId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (assignmentError) dbError(assignmentError, "Could not load inspection attempt.");
+  if (!byAssignment) notFound("Inspection not found.");
+  return byAssignment as ExpiryInspectionAttempt;
 }
 
 export async function fetchObservations(attemptId: string): Promise<ExpiryPacketObservation[]> {
+  const attempt = await fetchAttempt(attemptId);
   const orgId = await requireOrgId();
   const { data, error } = await supabase
     .from("expiry_packet_observations")
     .select("*")
     .eq("org_id", orgId)
-    .eq("attempt_id", attemptId)
+    .eq("attempt_id", attempt.id)
     .order("packet_ordinal", { ascending: true });
   if (error) {
     if (error.code === "42P01") return [];
@@ -426,7 +440,7 @@ export async function fetchAttemptEvidence(attemptId: string): Promise<ExpiryAtt
     .from("expiry_evidence_links")
     .select("*, asset:expiry_evidence_assets(*)")
     .eq("org_id", orgId)
-    .eq("attempt_id", attemptId);
+    .eq("attempt_id", attempt.id);
 
   if (error) {
     if (error.code === "42P01") {

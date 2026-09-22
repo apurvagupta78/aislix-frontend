@@ -20,8 +20,16 @@ export function ReviewPanel({ attemptId }: { attemptId: string }) {
   const qc = useQueryClient();
   const [selectedObsId, setSelectedObsId] = useState<string | null>(null);
 
-  const attemptQuery = useQuery({ queryKey: ["expiry-attempt", attemptId], queryFn: () => fetchAttempt(attemptId) });
-  const obsQuery = useQuery({ queryKey: ["expiry-observations", attemptId], queryFn: () => fetchObservations(attemptId) });
+  const attemptQuery = useQuery({
+    queryKey: ["expiry-attempt", attemptId],
+    queryFn: () => fetchAttempt(attemptId),
+    retry: 1,
+  });
+  const obsQuery = useQuery({
+    queryKey: ["expiry-observations", attemptId],
+    queryFn: () => fetchObservations(attemptId),
+    retry: 1,
+  });
   const evidenceQuery = useQuery({
     queryKey: ["expiry-evidence", attemptId],
     queryFn: () => fetchAttemptEvidence(attemptId),
@@ -29,6 +37,7 @@ export function ReviewPanel({ attemptId }: { attemptId: string }) {
   });
 
   const attempt = attemptQuery.data;
+  const resolvedAttemptId = attempt?.id ?? attemptId;
   const observations = obsQuery.data ?? [];
   const evidence = evidenceQuery.data;
 
@@ -58,7 +67,7 @@ export function ReviewPanel({ attemptId }: { attemptId: string }) {
       }
       await expiryTransition({
         entityType: "attempt",
-        entityId: attemptId,
+        entityId: resolvedAttemptId,
         action: "verify_inspection",
       });
     },

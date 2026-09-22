@@ -29,10 +29,21 @@ export function AuditLifecyclePanel({ scanId }: { scanId: string }) {
     <div className="grid gap-4 lg:grid-cols-3">
       <section className="rounded-2xl border border-border bg-card p-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Findings</h3>
+          <h3 className="text-sm font-semibold">
+            Findings
+            {findingsQuery.isPending
+              ? " (…)"
+              : findingsQuery.isError
+                ? " (!)"
+                : ` (${findings.length})`}
+          </h3>
           <Link to="/findings" className="text-xs text-brand hover:underline">All</Link>
         </div>
-        {findings.length === 0 ? (
+        {findingsQuery.isPending ? (
+          <p className="mt-2 text-sm text-muted-foreground">Loading findings…</p>
+        ) : findingsQuery.isError ? (
+          <p className="mt-2 text-sm text-destructive">Could not load findings.</p>
+        ) : findings.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">No findings on this audit yet.</p>
         ) : (
           <ul className="mt-2 space-y-2 text-sm">
@@ -50,10 +61,15 @@ export function AuditLifecyclePanel({ scanId }: { scanId: string }) {
 
       <section className="rounded-2xl border border-border bg-card p-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Corrective actions</h3>
+          <h3 className="text-sm font-semibold">
+            Corrective actions
+            {actionsQuery.isPending ? " (…)" : ` (${actions.length})`}
+          </h3>
           <Link to="/corrective-actions" className="text-xs text-brand hover:underline">All</Link>
         </div>
-        {actions.length === 0 ? (
+        {actionsQuery.isPending ? (
+          <p className="mt-2 text-sm text-muted-foreground">Loading actions…</p>
+        ) : actions.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">No actions assigned yet.</p>
         ) : (
           <ul className="mt-2 space-y-2 text-sm">

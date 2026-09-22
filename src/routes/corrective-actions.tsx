@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Wrench } from "lucide-react";
 import { toast } from "sonner";
@@ -56,10 +56,15 @@ export const Route = createFileRoute("/corrective-actions")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: CorrectiveActionsPage,
+  component: CorrectiveActionsLayout,
 });
 
-function CorrectiveActionsPage() {
+/** Nested /corrective-actions/$actionId needs an Outlet or the list page stays stuck. */
+function CorrectiveActionsLayout() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isIndex =
+    pathname === "/corrective-actions" || pathname === "/corrective-actions/";
+  if (!isIndex) return <Outlet />;
   return (
     <AppShell title="" hidePageHeader>
       <CorrectiveActionsMain />
