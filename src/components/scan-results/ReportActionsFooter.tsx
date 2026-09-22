@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Loader2 } from "lucide-react";
+import { FileSpreadsheet, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { EmailShareDialog, TeamShareDialog } from "@/components/scan-results/ShareDialogs";
@@ -20,7 +20,7 @@ import {
   WhatsAppBrandIcon,
 } from "@/components/scan-results/BrandShareIcons";
 import { createScanShareLink } from "@/lib/scan-share.functions";
-import { downloadScanPdf, type ScanResult } from "@/lib/scan-results";
+import { downloadScanCsv, downloadScanPdf, type ScanResult } from "@/lib/scan-results";
 import { GENERIC_EXPORT, networkErrorMessage } from "@/lib/api-errors";
 
 function shareTextFromResult(result: { url: string; share_text?: string }) {
@@ -48,6 +48,15 @@ export function ReportActionsFooter({
       await downloadScanPdf(scanId, data?.downloads?.pdf_url);
     },
     onSuccess: () => toast.success("PDF report downloaded"),
+    onError: (error: Error) => toast.error(networkErrorMessage(error, GENERIC_EXPORT)),
+  });
+
+  const csvMutation = useMutation({
+    mutationFn: async () => {
+      if (!scanId) throw new Error("Audit is still loading.");
+      await downloadScanCsv(scanId, data?.downloads?.csv_url);
+    },
+    onSuccess: () => toast.success("CSV downloaded"),
     onError: (error: Error) => toast.error(networkErrorMessage(error, GENERIC_EXPORT)),
   });
 
@@ -126,6 +135,21 @@ export function ReportActionsFooter({
             <PdfBrandIcon className="size-5 shrink-0" />
           )}
           Download PDF
+        </Button>
+
+        <Button
+          variant="subtle"
+          size="lg"
+          className="w-full rounded-xl"
+          disabled={!ready || csvMutation.isPending}
+          onClick={() => csvMutation.mutate()}
+        >
+          {csvMutation.isPending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <FileSpreadsheet className="size-5 shrink-0" />
+          )}
+          Download CSV
         </Button>
 
         <Button

@@ -2162,7 +2162,98 @@ export function downloadDemoFullReportCsv(result: ScanResult): void {
   downloadDemoFullReportExcel(result);
 }
 
-/** @deprecated Use downloadScanExcel */
+/** Build CSV for digital / FNV QC line rows (expected/actual + disposition). */
+export function buildDigitalAuditLinesCsv(lines: DigitalExportLine[]): string {
+  const header = [
+    "product_name",
+    "brand",
+    "category",
+    "sku",
+    "bin",
+    "expected_qty",
+    "actual_qty",
+    "qc_disposition",
+    "defects",
+    "qc_confidence",
+    "qc_notes",
+  ];
+  const escape = (value: unknown) => {
+    const s = value == null ? "" : String(value);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const defectCell = (raw: unknown) => {
+    if (Array.isArray(raw)) return (raw as string[]).join("; ");
+    if (typeof raw === "string") return raw;
+    return "";
+  };
+  return [
+    header.join(","),
+    ...lines.map((line) =>
+      [
+        line.product_name ?? "",
+        line.brand ?? "",
+        line.category ?? "",
+        line.sku ?? "",
+        line.bin_key ?? "",
+        line.expected_qty ?? "",
+        line.actual_qty ?? "",
+        line.qc_disposition ?? "",
+        defectCell(line.qc_defect_types),
+        line.qc_confidence ?? "",
+        line.qc_notes ?? "",
+      ]
+        .map(escape)
+        .join(","),
+    ),
+  ].join("\n");
+}
+
+/**
+ * Download a real CSV for any audit mode.
+ * Prefers a stored csv asset; otherwise builds from digital/FNV lines or AI inventory.
+ */
 export async function downloadScanCsv(scanId: string, url?: string): Promise<void> {
-  return downloadScanExcel(scanId, url);
+  try {
+    await downloadAsset(
+      scanId,
+      "csv_url",
+      `aislix-${scanId}-report.csv`,
+      url,
+      "No CSV report is available for this audit yet.",
+    );
+    return;
+  } catch {
+    // Fall through — digital/FNV and older AI scans may lack a stored csv asset.
+  }
+
+  const [result, digitalRes] = await Promise.all([
+    fetchScanResult(scanId).catch(() => null),
+    supabase
+      .from("digital_audit_lines")
+      .select(
+        "product_name, category, brand, sku, expected_qty, actual_qty, bin_key, qc_disposition, qc_defect_types, qc_confidence, qc_notes",
+      )
+      .eq("scan_id", scanId),
+  ]);
+  const digitalLines = (digitalRes.data ?? []) as DigitalExportLine[];
+
+  if (digitalLines.length) {
+    downloadBlob(
+      buildDigitalAuditLinesCsv(digitalLines),
+      `aislix-${scanId}-report.csv`,
+      "text/csv;charset=utf-8",
+    );
+    return;
+  }
+
+  if (result && (result.summary || result.inventory?.length)) {
+    downloadBlob(
+      buildFullScanReportCsv(result),
+      `aislix-${scanId}-report.csv`,
+      "text/csv;charset=utf-8",
+    );
+    return;
+  }
+
+  throw new Error("No CSV report is available for this audit yet.");
 }

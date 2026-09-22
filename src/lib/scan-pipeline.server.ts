@@ -2542,6 +2542,12 @@ export async function backfillScanAssetsServer(
   if (!done().pdf) await storePdfReport(supabase, target, exported);
   if (!done().csv) await storeCsvReport(supabase, target, exported);
   kinds = await existingAssetKinds(supabase, scan.id);
+  // FNV / digital scans may store evidence as "original" but vision export
+  // still leaves CSV empty — fall back to digital_audit_lines.
+  if (!done().csv) {
+    await persistDigitalCsvExport(supabase, target);
+    kinds = await existingAssetKinds(supabase, scan.id);
+  }
   return done();
 }
 
