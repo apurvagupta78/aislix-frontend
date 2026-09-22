@@ -1079,7 +1079,7 @@ export function BulkUserImportDialog({
 
         {step === "upload" && (
           <div className="space-y-4">
-            <label className="flex cursor-pointer flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-[#F4F7F9] px-6 py-10 text-center transition-colors hover:border-[#7DB7D6]/
+            <label className="flex cursor-pointer flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-muted/40 px-6 py-10 text-center transition-colors hover:border-primary/60">
               <Upload className="size-8 text-[#7DB7D6]" />
               <div>
                 <p className="text-sm font-medium text-[#102A43]">
