@@ -549,7 +549,8 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
         .select(
           "id, name, brand, variant, category, facings, shelf_row, stock_status, confidence, expected_facings, sku, bounding_box",
         )
-        .eq("scan_id", scanId),
+        .eq("scan_id", scanId)
+        .limit(500),
       supabase.from("scan_images").select("kind, storage_bucket, storage_path").eq("scan_id", scanId),
       supabase
         .from("scan_corrections")

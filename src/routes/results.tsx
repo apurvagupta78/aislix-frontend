@@ -109,7 +109,18 @@ function Results() {
 
   const query = useQuery({
     queryKey: ["scan-result", scan],
-    queryFn: ({ signal }) => fetchScanResult(scan!, signal),
+    queryFn: async ({ signal }) => {
+      const result = await Promise.race([
+        fetchScanResult(scan!, signal),
+        new Promise<never>((_, reject) => {
+          const t = setTimeout(() => {
+            reject(new Error("Timed out loading this audit. Refresh and try again."));
+          }, 25_000);
+          signal?.addEventListener("abort", () => clearTimeout(t), { once: true });
+        }),
+      ]);
+      return result;
+    },
     enabled: !!scan,
     retry: 1,
     staleTime: 30_000,

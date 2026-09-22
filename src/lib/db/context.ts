@@ -167,7 +167,10 @@ export function setActiveOrgId(orgId: string, explicit = true): void {
 async function activatePendingInvites(): Promise<boolean> {
   try {
     const { activateMyMemberships } = await import("@/lib/membership.functions");
-    const result = await activateMyMemberships({ data: {} } as never);
+    const result = await Promise.race([
+      activateMyMemberships({ data: {} } as never),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 8_000)),
+    ]);
     if (!result?.activated) return false;
     clearContextCache();
     return true;
@@ -219,7 +222,22 @@ const NO_WORKSPACE_MESSAGE =
 
 /** Active organization id, throwing when the user has no workspace yet. */
 export async function requireOrgId(): Promise<string> {
-  const membership = await getMembership();
+  const membership = await Promise.race([
+    getMembership(),
+    new Promise<never>((_, reject) =>
+      setTimeout(
+        () =>
+          reject(
+            new ApiError({
+              message: "Workspace lookup timed out. Refresh and try again.",
+              kind: "server",
+              status: 504,
+            }),
+          ),
+        12_000,
+      ),
+    ),
+  ]);
   if (!membership) {
     throw new ApiError({
       message: NO_WORKSPACE_MESSAGE,

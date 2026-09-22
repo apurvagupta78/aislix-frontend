@@ -22,7 +22,14 @@ export function ReviewPanel({ attemptId }: { attemptId: string }) {
 
   const attemptQuery = useQuery({
     queryKey: ["expiry-attempt", attemptId],
-    queryFn: () => fetchAttempt(attemptId),
+    queryFn: async () => {
+      return await Promise.race([
+        fetchAttempt(attemptId),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Timed out loading inspection.")), 15_000),
+        ),
+      ]);
+    },
     retry: 1,
   });
   const obsQuery = useQuery({
