@@ -130,6 +130,13 @@ function FindingsMain() {
         nextStep="Start with critical and overdue problems first."
       />
 
+      {query.isPending ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full rounded-2xl" />
+          ))}
+        </div>
+      ) : (
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard label="All problems" value={String(kpis.total)} icon={ListChecks} />
         <KpiCard label="Still open" value={String(kpis.open)} icon={CircleDot} tone="warn" />
@@ -165,6 +172,7 @@ function FindingsMain() {
           tone="warn"
         />
       </div>
+      )}
 
       <MpFilterCard title="Filter findings">
         <div className="flex flex-wrap items-center gap-2">

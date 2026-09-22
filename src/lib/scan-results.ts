@@ -2035,13 +2035,91 @@ export async function downloadScanPdf(scanId: string, url?: string): Promise<voi
   } catch {
     // Fall through to stored asset.
   }
-  return downloadAsset(
-    scanId,
-    "pdf_url",
-    `aislix-${scanId}-report.pdf`,
-    url,
-    "No PDF report is available for this audit yet.",
-  );
+  try {
+    await downloadAsset(
+      scanId,
+      "pdf_url",
+      `aislix-${scanId}-report.pdf`,
+      url,
+      "No PDF report is available for this audit yet.",
+    );
+    return;
+  } catch {
+    // Digital / FNV audits often lack a shelf-photo PDF — build a tabular PDF instead.
+  }
+  const built = await buildDigitalFallbackPdf(scanId);
+  if (!built) {
+    throw new Error("No PDF report is available for this audit yet.");
+  }
+  downloadBlobBytes(built, `aislix-${scanId}-report.pdf`, "application/pdf");
+}
+
+/** Minimal single-page PDF for digital/FNV audits when vision PDF assets are absent. */
+async function buildDigitalFallbackPdf(scanId: string): Promise<Uint8Array | null> {
+  const [result, digitalRes] = await Promise.all([
+    fetchScanResult(scanId).catch(() => null),
+    supabase
+      .from("digital_audit_lines")
+      .select(
+        "product_name, sku, expected_qty, actual_qty, qc_disposition, brand, category",
+      )
+      .eq("scan_id", scanId)
+      .limit(80),
+  ]);
+  const lines = (digitalRes.data ?? []) as Array<Record<string, unknown>>;
+  if (!result && !lines.length) return null;
+
+  const header = [
+    "Aislix audit report",
+    `Scan: ${scanId}`,
+    result?.store ? `Store: ${result.store}` : null,
+    result?.created_at ? `Date: ${result.created_at}` : null,
+    `Lines: ${lines.length}`,
+    "",
+  ].filter(Boolean) as string[];
+
+  const body = lines.slice(0, 40).map((line, i) => {
+    const name = String(line.product_name ?? line.sku ?? `Line ${i + 1}`);
+    const exp = line.expected_qty ?? "—";
+    const act = line.actual_qty ?? "—";
+    const qc = line.qc_disposition ?? "—";
+    return `${i + 1}. ${name}  exp=${exp}  act=${act}  qc=${qc}`;
+  });
+
+  return encodeSimplePdf([...header, ...body]);
+}
+
+/** Tiny PDF writer (text only) — no external dependency. */
+function encodeSimplePdf(lines: string[]): Uint8Array {
+  const escape = (s: string) =>
+    s.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+  const contentLines = ["BT", "/F1 10 Tf", "50 780 Td", "14 TL"];
+  for (const line of lines) {
+    contentLines.push(`(${escape(line.slice(0, 110))}) Tj`, "T*");
+  }
+  contentLines.push("ET");
+  const stream = contentLines.join("\n");
+  const objects = [
+    "1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj\n",
+    "2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj\n",
+    "3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources<< /Font<< /F1 5 0 R >> >> >>endobj\n",
+    `4 0 obj<< /Length ${stream.length} >>stream\n${stream}\nendstream\nendobj\n`,
+    "5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj\n",
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  for (const obj of objects) {
+    offsets.push(pdf.length);
+    pdf += obj;
+  }
+  const xrefStart = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n`;
+  pdf += "0000000000 65535 f \n";
+  for (let i = 1; i < offsets.length; i++) {
+    pdf += `${String(offsets[i]).padStart(10, "0")} 00000 n \n`;
+  }
+  pdf += `trailer<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+  return new TextEncoder().encode(pdf);
 }
 
 export async function downloadScanAnnotatedImage(

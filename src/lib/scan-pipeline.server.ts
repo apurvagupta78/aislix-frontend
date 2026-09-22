@@ -2384,6 +2384,63 @@ async function existingAssetKinds(supabase: DB, scanId: string): Promise<Set<str
 }
 
 /**
+ * Persist a CSV for digital/FNV audits that have line rows but no shelf photo.
+ * Vision export-assets requires an original image; this path covers that gap.
+ */
+async function persistDigitalCsvExport(
+  supabase: DB,
+  scan: { id: string; org_id: string },
+): Promise<void> {
+  const kinds = await existingAssetKinds(supabase, scan.id);
+  if (kinds.has("csv")) return;
+
+  const { data: lines } = await supabase
+    .from("digital_audit_lines")
+    .select(
+      "product_name, brand, category, sku, expected_qty, actual_qty, qc_disposition, qc_notes",
+    )
+    .eq("scan_id", scan.id)
+    .limit(500);
+  if (!lines?.length) return;
+
+  const header = [
+    "product_name",
+    "brand",
+    "category",
+    "sku",
+    "expected_qty",
+    "actual_qty",
+    "qc_disposition",
+    "qc_notes",
+  ];
+  const escape = (v: unknown) => {
+    const s = v == null ? "" : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const rows = [
+    header.join(","),
+    ...lines.map((line) =>
+      header.map((key) => escape((line as Record<string, unknown>)[key])).join(","),
+    ),
+  ];
+  const bytes = new TextEncoder().encode(rows.join("\n"));
+  const path = `${scan.org_id}/${scan.id}/report-digital-${Date.now()}.csv`;
+  const { error: uploadError } = await supabase.storage
+    .from("scan-images")
+    .upload(path, bytes, { contentType: "text/csv", upsert: true });
+  if (uploadError) return;
+
+  await supabase.from("scan_images").insert({
+    scan_id: scan.id,
+    kind: "csv",
+    storage_bucket: "scan-images",
+    storage_path: path,
+    mime_type: "text/csv",
+    file_size_bytes: bytes.byteLength,
+  } as never);
+}
+
+/**
  * Ensures a completed scan has its PDF / annotated / CSV assets in storage.
  *
  * 1. Re-uses base64 files already saved on `scan_results.raw_payload`.
@@ -2430,7 +2487,12 @@ export async function backfillScanAssetsServer(
     .order("created_at", { ascending: true })
     .limit(1);
   const original = originals?.[0];
-  if (!original) return done();
+  if (!original) {
+    // Digital / FNV audits often have no shelf photo — still persist a CSV from lines.
+    await persistDigitalCsvExport(supabase, target);
+    kinds = await existingAssetKinds(supabase, scan.id);
+    return done();
+  }
 
   const { data: signed } = await supabase.storage
     .from(original.storage_bucket as string)
