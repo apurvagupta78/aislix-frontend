@@ -103,7 +103,18 @@ export function ReviewPanel({ attemptId }: { attemptId: string }) {
       })
     : null;
 
-  if (!attempt) return null;
+  if (attemptQuery.isPending) {
+    return <p className="text-sm text-muted-foreground">Loading inspection for review…</p>;
+  }
+  if (attemptQuery.isError || !attempt) {
+    return (
+      <p className="text-sm text-destructive">
+        {attemptQuery.error instanceof Error
+          ? attemptQuery.error.message
+          : "Inspection not found. It may belong to another workspace or was removed."}
+      </p>
+    );
+  }
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">

@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/States";
 import { ActivityTimeline } from "@/components/audit-governance/ActivityTimeline";
@@ -14,7 +15,7 @@ import { SLAIndicator } from "@/components/audit-governance/SLAIndicator";
 import { KpiCard } from "@/components/audit-governance/KpiCard";
 import { fetchAuditActivity } from "@/lib/audit-activity";
 import { loadDigitalAuditSession } from "@/lib/digital-audit";
-import { fetchFindings, findingTypeLabel, rcaLabel } from "@/lib/findings";
+import { fetchFindings, findingTypeLabel, rcaLabel, syncFindingsForScan } from "@/lib/findings";
 import { fetchLifecycleActions } from "@/lib/corrective-action-lifecycle";
 import type { ScanResult } from "@/lib/scan-results";
 
@@ -26,6 +27,25 @@ type Props = {
 };
 
 export function AuditGovernanceTabs({ scanId, scanData, locked: lockedProp, auditOrigin: originProp }: Props) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        await syncFindingsForScan(scanId);
+      } catch {
+        /* RPC may be absent in some envs — list query still runs */
+      }
+      if (!cancelled) {
+        void queryClient.invalidateQueries({ queryKey: ["scan-findings", scanId] });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [scanId, queryClient]);
+
   const findingsQuery = useQuery({
     queryKey: ["scan-findings", scanId],
     queryFn: () => fetchFindings({ scanId }),
@@ -50,6 +70,14 @@ export function AuditGovernanceTabs({ scanId, scanData, locked: lockedProp, audi
   const digital = digitalQuery.data;
   const lines = digital?.lines ?? [];
   const evidence = digital?.evidence ?? [];
+  const findingsTabLabel = findingsQuery.isPending
+    ? "Findings (…)"
+    : findingsQuery.isError
+      ? "Findings (!)"
+      : `Findings (${findings.length})`;
+  const actionsTabLabel = actionsQuery.isPending
+    ? "Corrective actions (…)"
+    : `Corrective actions (${actions.length})`;
 
   const expectedQty = lines.reduce((s, l) => s + (l.expected_qty ?? 0), 0);
   const actualQty = lines.reduce((s, l) => s + (l.actual_qty ?? 0), 0);
@@ -85,8 +113,8 @@ export function AuditGovernanceTabs({ scanId, scanData, locked: lockedProp, audi
             ["overview", "Overview"],
             ["items", "Audit items"],
             ["evidence", "Evidence"],
-            ["findings", `Findings (${findings.length})`],
-            ["actions", `Corrective actions (${actions.length})`],
+            ["findings", findingsTabLabel],
+            ["actions", actionsTabLabel],
             ["activity", "Activity"],
           ] satisfies Array<[string, string]>).map(([value, label]) => (
             <TabsTrigger key={value} value={value} className="rounded-lg text-xs sm:text-sm">
@@ -194,7 +222,13 @@ export function AuditGovernanceTabs({ scanId, scanData, locked: lockedProp, audi
         </TabsContent>
 
         <TabsContent value="findings" className="mt-4">
-          {!findings.length ? (
+          {findingsQuery.isPending ? (
+            <Skeleton className="h-24 rounded-2xl" />
+          ) : findingsQuery.isError ? (
+            <p className="text-sm text-destructive">
+              Could not load findings for this audit. Refresh and try again.
+            </p>
+          ) : !findings.length ? (
             <p className="text-sm text-muted-foreground">
               Findings are created automatically from variance and planogram gaps after submission.
             </p>

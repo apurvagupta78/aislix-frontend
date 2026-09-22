@@ -91,7 +91,10 @@ function FindingDetailPage() {
       </Link>
 
       {findingQuery.isPending ? (
-        <Skeleton className="h-80" />
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground">Loading finding…</p>
+          <Skeleton className="h-80" />
+        </div>
       ) : findingQuery.error || !finding ? (
         <ErrorState title="Finding not found" description={toUserMessage(findingQuery.error)} />
       ) : (

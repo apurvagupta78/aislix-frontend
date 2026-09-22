@@ -338,7 +338,18 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
     await submitMutation.mutateAsync();
   }
 
-  if (attemptQuery.isLoading) return <p className="text-sm text-muted-foreground">Loading inspection…</p>;
+  if (attemptQuery.isPending) {
+    return <p className="text-sm text-muted-foreground">Loading inspection…</p>;
+  }
+  if (attemptQuery.isError) {
+    return (
+      <p className="text-sm text-destructive">
+        {attemptQuery.error instanceof Error
+          ? attemptQuery.error.message
+          : "Could not load this inspection. Check you are in the correct workspace."}
+      </p>
+    );
+  }
   if (!attempt) return <p className="text-sm text-destructive">Inspection not found.</p>;
 
   return (

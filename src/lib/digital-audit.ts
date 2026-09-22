@@ -336,7 +336,11 @@ export async function startOrResumeDigitalAudit(assignmentId: string): Promise<D
 export async function loadDigitalAuditSession(scanId: string): Promise<DigitalAuditSession> {
   try {
     const { ensureCustomAuditReviewData } = await import("@/lib/custom-audit-review");
-    await ensureCustomAuditReviewData(scanId).catch(() => false);
+    // Cap backfill so AI/FNV scans without custom responses cannot hang Review forever.
+    await Promise.race([
+      ensureCustomAuditReviewData(scanId).catch(() => false),
+      new Promise<false>((resolve) => setTimeout(() => resolve(false), 8_000)),
+    ]);
   } catch {
     /* backfill module unavailable — still load the scan session */
   }

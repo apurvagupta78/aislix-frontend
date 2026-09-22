@@ -111,6 +111,7 @@ function AuditReviewPage() {
   if (accessQuery.isLoading || sessionQuery.isLoading) {
     return (
       <AppShell title="Review audit">
+        <p className="mb-3 text-sm text-muted-foreground">Loading audit review…</p>
         <Skeleton className="h-48 w-full" />
       </AppShell>
     );
@@ -127,12 +128,36 @@ function AuditReviewPage() {
   if (sessionQuery.isError || !sessionQuery.data) {
     return (
       <AppShell title="Review audit">
-        <ErrorState title="Audit not found" description={toUserMessage(sessionQuery.error)} />
+        <ErrorState
+          title="Audit not found"
+          description={toUserMessage(sessionQuery.error)}
+        />
+        <Button asChild variant="outline" className="mt-4">
+          <Link to="/results" search={{ scan: scanId }}>
+            Open audit results instead
+          </Link>
+        </Button>
       </AppShell>
     );
   }
 
   const session = sessionQuery.data;
+  // AI / FNV / photo audits have no digital lines — Review is the results page.
+  if (session.lines.length === 0) {
+    return (
+      <AppShell title="Review audit">
+        <ErrorState
+          title="Open results to review this audit"
+          description="This scan is not a Digital Audit form. Use Audit results for AI shelf, FNV and photo audits."
+        />
+        <Button asChild className="mt-4">
+          <Link to="/results" search={{ scan: scanId }}>
+            Open audit results
+          </Link>
+        </Button>
+      </AppShell>
+    );
+  }
   const categories = [
     "all",
     ...new Set(session.lines.map((l) => l.category).filter(Boolean) as string[]),
