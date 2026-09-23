@@ -1,49 +1,17 @@
 import { lazy, Suspense } from "react";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import {
-  ScanLine,
-  BarChart3,
-  ArrowRight,
-  Camera,
-  CircleCheck,
-  LayoutGrid,
-  BadgePercent,
-  Wrench,
-  Sparkles,
-  History,
-  ShieldCheck,
-  Zap,
-} from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
 
-import { Button } from "@/components/ui/button";
 import { SiteFooter, SiteHeader } from "@/components/MarketingLayout";
-import { HomeTrustRow } from "@/components/home/HomeTrustRow";
 import { LazyOnVisible } from "@/components/LazyOnVisible";
-import { HomepageDemoAuditPreview } from "@/components/landing/retail-shelf-intelligence/HomepageDemoAuditPreview";
+import { HomeHero } from "@/components/home/HomeHero";
+import { HomeRetailFormats } from "@/components/home/HomeRetailFormats";
+import { HomePlatformSection } from "@/components/home/HomePlatformSection";
+import { HomeHowItWorks } from "@/components/home/HomeHowItWorks";
+import { HomeFinalCta } from "@/components/home/HomeFinalCta";
 
 const LiveDemoSection = lazy(() =>
   import("@/components/landing/retail-shelf-intelligence/LiveDemoSection").then((m) => ({
     default: m.LiveDemoSection,
-  })),
-);
-const HomeRetailWorkflows = lazy(() =>
-  import("@/components/home/HomeRetailWorkflows").then((m) => ({
-    default: m.HomeRetailWorkflows,
-  })),
-);
-const HomeWhatsAppProblem = lazy(() =>
-  import("@/components/home/HomeWhatsAppProblem").then((m) => ({
-    default: m.HomeWhatsAppProblem,
-  })),
-);
-const HomeAuditHistory = lazy(() =>
-  import("@/components/home/HomeAuditHistory").then((m) => ({
-    default: m.HomeAuditHistory,
-  })),
-);
-const HomeLeadCapture = lazy(() =>
-  import("@/components/home/HomeLeadCapture").then((m) => ({
-    default: m.HomeLeadCapture,
   })),
 );
 const HomePricingIsland = lazy(() =>
@@ -51,7 +19,6 @@ const HomePricingIsland = lazy(() =>
     default: m.HomePricingIsland,
   })),
 );
-
 
 export const Route = createFileRoute("/")({
   headers: () => ({
@@ -124,257 +91,43 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-const FEATURE_SURFACES = [
-  "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]",
-  "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)]",
-  "border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)]",
-  "border-[var(--aislix-custom-border)] bg-[var(--aislix-custom-bg)]",
-  "border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)]",
-  "border-[var(--aislix-supermarket-border)] bg-white",
-];
-
-const STEP_SURFACES = [
-  "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]",
-  "border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)]",
-  "border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)]",
-  "border-[var(--aislix-custom-border)] bg-[var(--aislix-custom-bg)]",
-];
-
-const features = [
-  {
-    icon: ScanLine,
-    title: "One Photo. Full Shelf Audit.",
-    body: "Upload a shelf photo and let Aislix identify products, brands, facings and visible shelf conditions.",
-  },
-  {
-    icon: CircleCheck,
-    title: "Know What's Actually Available.",
-    body: "Measure on-shelf availability and identify products that are missing or need attention.",
-  },
-  {
-    icon: LayoutGrid,
-    title: "Measure Shelf Execution.",
-    body: "Compare actual shelf placement and facings against the expected planogram when one is configured.",
-  },
-  {
-    icon: BadgePercent,
-    title: "Check Prices & Promotions.",
-    body: "Detect visible price and promotional issues and highlight where shelf execution does not match the configured requirements.",
-  },
-  {
-    icon: BarChart3,
-    title: "Measure Your Shelf Presence.",
-    body: "For FMCG brands, measure facings and Share of Shelf against relevant competitors and planned allocation.",
-  },
-  {
-    icon: Wrench,
-    title: "Turn Issues Into Actions.",
-    body: "See what needs to be fixed, review the evidence, re-audit the shelf and track whether the issue was resolved.",
-  },
-];
-
-const steps = [
-  {
-    icon: Camera,
-    title: "Capture",
-    subtitle: "Take a photo.",
-    body: "Capture the shelf using your phone or upload an existing shelf image.",
-  },
-  {
-    icon: Sparkles,
-    title: "Understand",
-    subtitle: "Let Aislix read the shelf.",
-    body: "Aislix identifies products, brands, facings and visible shelf conditions, then calculates the configured retail KPIs.",
-  },
-  {
-    icon: Wrench,
-    title: "Act",
-    subtitle: "Know what needs attention.",
-    body: "Review issues, inspect the image evidence and see what needs to be fixed.",
-  },
-  {
-    icon: History,
-    title: "Track",
-    subtitle: "Re-audit and measure improvement.",
-    body: "Keep every audit, compare previous visits and verify whether the shelf improved after corrective action.",
-  },
-];
-
 function Landing() {
   return (
     <div className="home-modern min-h-screen bg-background">
       <SiteHeader />
 
-      <section className="relative overflow-hidden border-b border-border bg-background">
-        <div className="mx-auto grid max-w-7xl gap-12 px-5 pb-20 pt-14 sm:px-8 sm:pb-24 sm:pt-20 lg:grid-cols-[0.86fr_1.14fr] lg:items-center lg:gap-16">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)] px-3.5 py-1.5 text-xs font-semibold text-foreground">
-              <span className="size-1.5 rounded-full bg-brand" />
-              AI-powered retail execution
-            </span>
-            <h1 className="mt-7 max-w-xl text-4xl font-semibold leading-[1.05] text-foreground sm:text-5xl lg:text-[3.4rem]">
-              Turn Every Shelf Visit Into Accountable Retail Intelligence.
-            </h1>
-            <p className="mt-6 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Capture a shelf photo or run a digital audit. Aislix turns every visit into structured
-              findings — detecting products, availability, pricing, promotions and planogram
-              compliance, assigning corrective actions, and keeping the evidence until the issue is
-              verified closed.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button
-              variant="hero"
-              size="xl"
-              className="w-full rounded-lg px-7 sm:w-auto"
-              onClick={() =>
-                document.querySelector("#live-dashboard")?.scrollIntoView({ behavior: "smooth" })
-              }
-            >
-              Start Your First Audit Free <ArrowRight className="size-4" />
-            </Button>
-            </div>
-            <div className="mt-7 grid max-w-xl gap-3 sm:grid-cols-3">
-              {[
-                { icon: ShieldCheck, text: "No card required" },
-                { icon: Zap, text: "5 free audits/day" },
-                { icon: CircleCheck, text: "Results in 60–90 sec" },
-              ].map(({ icon: Icon, text }) => (
-                <div key={text} className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                  <Icon className="size-4 text-brand" strokeWidth={1.8} aria-hidden="true" />
-                  {text}
-                </div>
-              ))}
-            </div>
-          </div>
+      <HomeHero />
+      <HomeRetailFormats />
 
-          <div className="home-product-frame relative overflow-hidden rounded-2xl p-3 sm:p-4">
-            <div className="mb-3 flex items-center justify-between border-b border-border px-1 pb-3">
-              <div className="flex items-center gap-1.5" aria-hidden="true">
-                <span className="size-2 rounded-full bg-[var(--aislix-darkstore-border)]" />
-                <span className="size-2 rounded-full bg-[var(--aislix-supermarket-border)]" />
-                <span className="size-2 rounded-full bg-[var(--aislix-local-border)]" />
-              </div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Shelf intelligence preview
-              </p>
-              <span className="w-9" />
-            </div>
-            <HomepageDemoAuditPreview />
-          </div>
-        </div>
-      </section>
-
-      <HomeTrustRow />
-
-      <section id="live-dashboard">
+      <section id="live-dashboard" className="scroll-mt-20">
         <LazyOnVisible
           fallback={
-            <div className="bg-surface py-16 sm:py-20">
-              <div className="mx-auto max-w-6xl px-5 sm:px-8">
-                <p className="text-xs font-medium uppercase tracking-widest text-brand">
-                  TRY AISLIX FREE
-                </p>
-                <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
-                  See What Aislix Can Find on Your Shelf.
+            <div className="bg-card py-16 sm:py-20">
+              <div className="mx-auto max-w-7xl px-5 sm:px-8">
+                <p className="text-sm font-semibold text-[#2A6FA8]">Try Aislix free</p>
+                <h2 className="mt-3 text-3xl font-bold tracking-[-0.02em] text-foreground sm:text-4xl">
+                  See what Aislix can find on your shelf.
                 </h2>
-                <div className="mt-8 min-h-[22rem] rounded-xl border border-border bg-card" />
+                <div className="mt-8 min-h-[22rem] rounded-3xl border border-border bg-surface" />
               </div>
             </div>
           }
         >
-          <Suspense
-            fallback={
-              <div className="min-h-[28rem] bg-surface" aria-hidden="true" />
-            }
-          >
+          <Suspense fallback={<div className="min-h-[28rem] bg-card" aria-hidden="true" />}>
             <LiveDemoSection showWorkspaceCta homepageIntro />
           </Suspense>
         </LazyOnVisible>
       </section>
 
-      <section id="platform" className="home-section bg-card">
-        <div className="mx-auto max-w-6xl px-6 text-center">
-          <p className="home-kicker">
-            THE AISLIX PLATFORM
-          </p>
-          <h2 className="mx-auto mt-4 max-w-2xl text-3xl font-semibold sm:text-5xl">
-            Turn Shelf Visits Into Structured Retail Intelligence.
-          </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Stop relying on manual counting, scattered photos and subjective store reports. Aislix
-            turns shelf images into consistent, measurable and actionable retail audits.
-          </p>
-          <div className="mt-12 grid gap-5 text-left sm:grid-cols-2 lg:grid-cols-3">
-            {features.map((f, i) => (
-              <div
-                key={f.title}
-                className={`card-hover rounded-lg border p-7 shadow-soft ${FEATURE_SURFACES[i]}`}
-              >
-                <span className="grid size-11 place-items-center rounded-lg border border-[var(--aislix-border)] bg-white text-[var(--aislix-primary)]">
-                  <f.icon className="size-5" />
-                </span>
-                <h3 className="mt-5 text-lg font-semibold tracking-tight">{f.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{f.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <LazyOnVisible fallback={<div className="min-h-[24rem]" aria-hidden="true" />}>
-        <Suspense fallback={null}>
-          <HomeRetailWorkflows />
-        </Suspense>
-      </LazyOnVisible>
-
-      <LazyOnVisible fallback={<div className="min-h-[20rem]" aria-hidden="true" />}>
-        <Suspense fallback={null}>
-          <HomeWhatsAppProblem />
-        </Suspense>
-      </LazyOnVisible>
-
-      <LazyOnVisible fallback={<div className="min-h-[20rem]" aria-hidden="true" />}>
-        <Suspense fallback={null}>
-          <HomeAuditHistory />
-        </Suspense>
-      </LazyOnVisible>
-
-      <section id="how" className="home-section bg-card">
-        <div className="mx-auto max-w-6xl px-6 text-center">
-          <p className="home-kicker">HOW IT WORKS</p>
-          <h2 className="mt-4 text-3xl font-semibold sm:text-5xl">
-            From Shelf Photo to Retail Action in Four Steps.
-          </h2>
-          <div className="mt-12 grid gap-5 text-left sm:grid-cols-2 lg:grid-cols-4">
-            {steps.map((s, i) => (
-              <div key={s.title} className={`card-hover rounded-lg border p-7 shadow-soft ${STEP_SURFACES[i]}`}>
-                <div className="flex items-center justify-between">
-                  <span className="grid size-10 place-items-center rounded-xl border border-[var(--aislix-border)] bg-white text-[var(--aislix-primary)]">
-                    <s.icon className="size-5" />
-                  </span>
-                  <span className="text-sm text-muted-foreground">0{i + 1}</span>
-                </div>
-                <h3 className="mt-5 text-lg font-semibold tracking-tight">{s.title}</h3>
-                <p className="mt-1 text-sm font-medium text-foreground/90">{s.subtitle}</p>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{s.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <LazyOnVisible fallback={<div className="min-h-[22rem]" aria-hidden="true" />}>
-        <Suspense fallback={null}>
-          <HomeLeadCapture />
-        </Suspense>
-      </LazyOnVisible>
+      <HomePlatformSection />
+      <HomeHowItWorks />
 
       <LazyOnVisible
         fallback={
-          <section id="pricing" className="border-t border-border py-24">
-            <div className="mx-auto max-w-[90rem] px-6 text-center sm:px-8">
-              <p className="text-xs font-medium uppercase tracking-widest text-brand">Pricing</p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+          <section id="pricing" className="border-t border-border bg-surface py-20 lg:py-28">
+            <div className="mx-auto max-w-7xl px-5 lg:px-8">
+              <p className="text-sm font-semibold text-[#2A6FA8]">Pricing</p>
+              <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
                 Plans that scale from one local store to a national chain.
               </h2>
               <div className="mt-10 min-h-[28rem]" />
@@ -384,8 +137,8 @@ function Landing() {
       >
         <Suspense
           fallback={
-            <section id="pricing" className="border-t border-border py-24">
-              <div className="mx-auto min-h-[28rem] max-w-[90rem]" />
+            <section id="pricing" className="border-t border-border bg-surface py-20">
+              <div className="mx-auto min-h-[28rem] max-w-7xl" />
             </section>
           }
         >
@@ -393,30 +146,8 @@ function Landing() {
         </Suspense>
       </LazyOnVisible>
 
-
-      <section className="home-dark-band border-t border-border py-20 sm:py-24">
-        <div className="mx-auto max-w-4xl px-6 text-center">
-          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--aislix-local-border)]">Start with one shelf</p>
-          <h2 className="mt-4 text-3xl font-semibold text-primary-foreground sm:text-5xl">
-            Turn Every Shelf Visit Into Measurable Action.
-          </h2>
-          <p className="mx-auto mt-5 max-w-2xl text-sm leading-relaxed text-[var(--aislix-local-border)] sm:text-base">
-            From one shelf photo to actionable insights, corrective actions and a complete audit
-            history — Aislix helps retail teams see more, act faster and track what changes.
-          </p>
-          <Button asChild variant="secondary" size="xl" className="mt-8 rounded-lg">
-            <Link to="/signup">
-              Create Your Free Workspace <ArrowRight className="size-4" />
-            </Link>
-          </Button>
-          <p className="mt-4 text-xs text-[var(--aislix-local-border)]">
-            No card required · Start with your first shelf audit
-          </p>
-        </div>
-      </section>
-
+      <HomeFinalCta />
       <SiteFooter />
-
     </div>
   );
 }

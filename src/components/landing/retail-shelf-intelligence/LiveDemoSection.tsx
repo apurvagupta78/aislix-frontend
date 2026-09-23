@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowRight, Loader2, Sparkles, Upload } from "lucide-react";
+import { AlertCircle, Loader2, Sparkles, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { trackLandingEvent } from "@/lib/landing-analytics";
@@ -261,35 +261,49 @@ export function LiveDemoSection({
   return (
     <section
       id={homepageIntro ? "start-scanning" : "demo"}
-      className="scroll-mt-16 bg-surface py-16 sm:py-20"
+      className={
+        homepageIntro
+          ? "scroll-mt-20 bg-card py-20 lg:py-28"
+          : "scroll-mt-16 bg-surface py-16 sm:py-20"
+      }
     >
-      <div className="mx-auto max-w-6xl px-5 sm:px-8">
-        <SectionHeading
-          title={
-            homepageIntro
-              ? "See What Aislix Can Find on Your Shelf."
-              : "See What Aislix Sees"
-          }
-          subtitle={
-            homepageIntro
-              ? "Upload a shelf photo or try our sample shelf. Aislix turns it into a structured retail audit in seconds."
-              : "Try a real shelf audit — no login required."
-          }
-          {...(homepageIntro ? { eyebrow: "TRY AISLIX FREE" } : { eyebrow: "Live demo" })}
-          className={homepageIntro ? "max-w-3xl" : undefined}
-        />
+      <div className={homepageIntro ? "mx-auto max-w-7xl px-5 lg:px-8" : "mx-auto max-w-6xl px-5 sm:px-8"}>
+        {homepageIntro ? (
+          <div className="max-w-2xl">
+            <p className="text-sm font-semibold text-[#2A6FA8]">Try Aislix free</p>
+            <h2 className="mt-3 text-3xl font-bold tracking-[-0.02em] text-foreground sm:text-4xl">
+              See what Aislix can find on your shelf.
+            </h2>
+            <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
+              Run the sample audit, or drop in a photo of your own shelf. You&apos;ll get products,
+              gaps, price issues and planogram fit in about a minute.
+            </p>
+          </div>
+        ) : (
+          <SectionHeading
+            title="See What Aislix Sees"
+            subtitle="Try a real shelf audit — no login required."
+            eyebrow="Live demo"
+          />
+        )}
 
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+        <div
+          className={
+            homepageIntro
+              ? "mt-8 flex flex-col gap-3 sm:flex-row"
+              : "mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center"
+          }
+        >
           <Button
             size="xl"
             variant="default"
-            className="min-h-11 w-full sm:w-auto"
+            className="min-h-11 w-full rounded-xl sm:w-auto"
             disabled={scanning}
             onClick={beginSampleSetup}
           >
             {homepageIntro ? (
               <>
-                Try Sample Shelf <ArrowRight className="size-4" />
+                <Sparkles className="size-4" /> Run audit
               </>
             ) : (
               <>
@@ -300,11 +314,12 @@ export function LiveDemoSection({
           <Button
             variant="outline"
             size="xl"
-            className="min-h-11 w-full sm:w-auto"
+            className="min-h-11 w-full rounded-xl sm:w-auto"
             disabled={scanning}
             onClick={beginUploadSetup}
           >
-            <Upload className="size-4" /> Upload Your Shelf Photo
+            <Upload className="size-4" />
+            {homepageIntro ? "Upload shelf photo" : "Upload Your Shelf Photo"}
           </Button>
           <input
             ref={fileRef}
@@ -333,7 +348,11 @@ export function LiveDemoSection({
 
         <div
           ref={demoCardRef}
-          className="mt-8 overflow-hidden rounded-xl border border-border bg-card shadow-lift"
+          className={
+            homepageIntro
+              ? "mt-10 overflow-hidden rounded-3xl border border-border bg-surface p-3 shadow-soft sm:p-4"
+              : "mt-8 overflow-hidden rounded-xl border border-border bg-card shadow-lift"
+          }
         >
           <div className="p-4 sm:p-6 lg:p-8">
             {scanning && (
@@ -373,7 +392,7 @@ export function LiveDemoSection({
                   defaultSubCategory={subCategoryLabel}
                   previewImageUrl={previewImageUrl}
                   onWorkspaceCta={() =>
-                    document.querySelector("#lead")?.scrollIntoView({ behavior: "smooth" })
+                    document.querySelector("#pricing")?.scrollIntoView({ behavior: "smooth" })
                   }
                 />
               </Suspense>
