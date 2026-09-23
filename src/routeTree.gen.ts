@@ -30,7 +30,6 @@ import { Route as CorrectiveActionsRouteImport } from './routes/corrective-actio
 import { Route as CustomAuditRouteImport } from './routes/custom-audit'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DemoRouteImport } from './routes/demo'
-import { Route as GuestRouteImport } from './routes/guest'
 import { Route as DemoScansRouteImport } from './routes/demo-scans'
 import { Route as DigitalAuditRouteImport } from './routes/digital-audit'
 import { Route as DistributorsRouteImport } from './routes/distributors'
@@ -40,6 +39,7 @@ import { Route as ExpiryControlRouteImport } from './routes/expiry-control'
 import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as FindingsRouteImport } from './routes/findings'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as GuestRouteImport } from './routes/guest'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as InventoryRouteImport } from './routes/inventory'
@@ -238,11 +238,6 @@ const DemoRoute = DemoRouteImport.update({
   path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
-const GuestRoute = GuestRouteImport.update({
-  id: '/guest',
-  path: '/guest',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DemoScansRoute = DemoScansRouteImport.update({
   id: '/demo-scans',
   path: '/demo-scans',
@@ -286,6 +281,11 @@ const FindingsRoute = FindingsRouteImport.update({
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuestRoute = GuestRouteImport.update({
+  id: '/guest',
+  path: '/guest',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoryRoute = HistoryRouteImport.update({
@@ -785,7 +785,6 @@ export interface FileRoutesByFullPath {
   '/custom-audit': typeof CustomAuditRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/demo': typeof DemoRoute
-  '/guest': typeof GuestRoute
   '/demo-scans': typeof DemoScansRoute
   '/digital-audit': typeof DigitalAuditRoute
   '/distributors': typeof DistributorsRoute
@@ -795,6 +794,7 @@ export interface FileRoutesByFullPath {
   '/features': typeof FeaturesRoute
   '/findings': typeof FindingsRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
+  '/guest': typeof GuestRoute
   '/history': typeof HistoryRoute
   '/how-it-works': typeof HowItWorksRoute
   '/inventory': typeof InventoryRoute
@@ -910,7 +910,6 @@ export interface FileRoutesByTo {
   '/custom-audit': typeof CustomAuditRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/demo': typeof DemoRoute
-  '/guest': typeof GuestRoute
   '/demo-scans': typeof DemoScansRoute
   '/digital-audit': typeof DigitalAuditRoute
   '/distributors': typeof DistributorsRoute
@@ -920,6 +919,7 @@ export interface FileRoutesByTo {
   '/features': typeof FeaturesRoute
   '/findings': typeof FindingsRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
+  '/guest': typeof GuestRoute
   '/history': typeof HistoryRoute
   '/how-it-works': typeof HowItWorksRoute
   '/inventory': typeof InventoryRoute
@@ -1036,7 +1036,6 @@ export interface FileRoutesById {
   '/custom-audit': typeof CustomAuditRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/demo': typeof DemoRoute
-  '/guest': typeof GuestRoute
   '/demo-scans': typeof DemoScansRoute
   '/digital-audit': typeof DigitalAuditRoute
   '/distributors': typeof DistributorsRoute
@@ -1046,6 +1045,7 @@ export interface FileRoutesById {
   '/features': typeof FeaturesRoute
   '/findings': typeof FindingsRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
+  '/guest': typeof GuestRoute
   '/history': typeof HistoryRoute
   '/how-it-works': typeof HowItWorksRoute
   '/inventory': typeof InventoryRoute
@@ -1163,7 +1163,6 @@ export interface FileRouteTypes {
     | '/custom-audit'
     | '/dashboard'
     | '/demo'
-    | '/guest'
     | '/demo-scans'
     | '/digital-audit'
     | '/distributors'
@@ -1173,6 +1172,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/findings'
     | '/forgot-password'
+    | '/guest'
     | '/history'
     | '/how-it-works'
     | '/inventory'
@@ -1288,7 +1288,6 @@ export interface FileRouteTypes {
     | '/custom-audit'
     | '/dashboard'
     | '/demo'
-    | '/guest'
     | '/demo-scans'
     | '/digital-audit'
     | '/distributors'
@@ -1298,6 +1297,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/findings'
     | '/forgot-password'
+    | '/guest'
     | '/history'
     | '/how-it-works'
     | '/inventory'
@@ -1413,7 +1413,6 @@ export interface FileRouteTypes {
     | '/custom-audit'
     | '/dashboard'
     | '/demo'
-    | '/guest'
     | '/demo-scans'
     | '/digital-audit'
     | '/distributors'
@@ -1423,6 +1422,7 @@ export interface FileRouteTypes {
     | '/features'
     | '/findings'
     | '/forgot-password'
+    | '/guest'
     | '/history'
     | '/how-it-works'
     | '/inventory'
@@ -1539,7 +1539,6 @@ export interface RootRouteChildren {
   CustomAuditRoute: typeof CustomAuditRoute
   DashboardRoute: typeof DashboardRouteWithChildren
   DemoRoute: typeof DemoRoute
-  GuestRoute: typeof GuestRoute
   DemoScansRoute: typeof DemoScansRoute
   DigitalAuditRoute: typeof DigitalAuditRoute
   DistributorsRoute: typeof DistributorsRoute
@@ -1549,6 +1548,7 @@ export interface RootRouteChildren {
   FeaturesRoute: typeof FeaturesRoute
   FindingsRoute: typeof FindingsRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  GuestRoute: typeof GuestRoute
   HistoryRoute: typeof HistoryRoute
   HowItWorksRoute: typeof HowItWorksRoute
   InventoryRoute: typeof InventoryRoute
@@ -1761,13 +1761,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/guest': {
-      id: '/guest'
-      path: '/guest'
-      fullPath: '/guest'
-      preLoaderRoute: typeof GuestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/demo-scans': {
       id: '/demo-scans'
       path: '/demo-scans'
@@ -1829,6 +1822,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guest': {
+      id: '/guest'
+      path: '/guest'
+      fullPath: '/guest'
+      preLoaderRoute: typeof GuestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/history': {
@@ -2661,7 +2661,6 @@ const rootRouteChildren: RootRouteChildren = {
   CustomAuditRoute: CustomAuditRoute,
   DashboardRoute: DashboardRouteWithChildren,
   DemoRoute: DemoRoute,
-  GuestRoute: GuestRoute,
   DemoScansRoute: DemoScansRoute,
   DigitalAuditRoute: DigitalAuditRoute,
   DistributorsRoute: DistributorsRoute,
@@ -2671,6 +2670,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeaturesRoute: FeaturesRoute,
   FindingsRoute: FindingsRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  GuestRoute: GuestRoute,
   HistoryRoute: HistoryRoute,
   HowItWorksRoute: HowItWorksRoute,
   InventoryRoute: InventoryRoute,
