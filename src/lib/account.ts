@@ -73,6 +73,8 @@ export type NotificationPreferences = {
   product_updates: boolean;
   /** Ops AI / Digital dashboard section layout (optional). */
   dashboard_layout?: import("@/lib/dashboard-layout").DashboardLayoutPrefs;
+  /** Up to 3 custom metric cards per tab. */
+  dashboard_custom_metrics?: import("@/lib/dashboard-custom-metrics").DashboardCustomMetricsPrefs;
 };
 
 export type LoginSession = {

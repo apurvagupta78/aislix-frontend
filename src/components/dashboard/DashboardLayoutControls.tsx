@@ -1,9 +1,10 @@
-import { GripVertical, Plus, RotateCcw, Save, X } from "lucide-react";
+import { GripVertical, Plus, RotateCcw, Save, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
   catalogForTab,
+  isCustomCardId,
   reorderIds,
   resolveVisibleOrder,
   type DashboardTabKey,
@@ -16,30 +17,42 @@ export function DashboardLayoutToolbar({
   layout,
   dirty,
   saving,
+  customSlotsUsed,
   onChange,
   onSave,
   onReset,
+  onCreateCustom,
 }: {
   tab: DashboardTabKey;
   layout: TabLayoutState;
   dirty: boolean;
   saving?: boolean;
+  customSlotsUsed: number;
   onChange: (next: TabLayoutState) => void;
   onSave: () => void;
   onReset: () => void;
+  onCreateCustom: () => void;
 }) {
   const catalog = catalogForTab(tab);
-  const hiddenCatalog = catalog.filter(
-    (s) => !s.pinned && layout.hidden.includes(s.id),
-  );
+  const hiddenCatalog = catalog.filter((s) => layout.hidden.includes(s.id));
   const [addOpen, setAddOpen] = useState(false);
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#D9E2E8] bg-white px-3 py-2">
       <p className="mr-auto text-xs text-[#667085]">
-        Drag sections to reorder. Layout saves to your profile.
+        Drag metric cards to reorder. Layout saves to your profile.
         {dirty ? <span className="ml-1 font-medium text-[#102A43]">Unsaved changes</span> : null}
       </p>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="rounded-lg border-[#D9E2E8]"
+        disabled={customSlotsUsed >= 3}
+        onClick={onCreateCustom}
+      >
+        <Sparkles className="size-3.5" /> Create custom metric
+      </Button>
       <div className="relative">
         <Button
           type="button"
@@ -49,10 +62,10 @@ export function DashboardLayoutToolbar({
           disabled={!hiddenCatalog.length}
           onClick={() => setAddOpen((v) => !v)}
         >
-          <Plus className="size-3.5" /> Add section
+          <Plus className="size-3.5" /> Add card
         </Button>
         {addOpen && hiddenCatalog.length ? (
-          <div className="absolute right-0 z-20 mt-1 min-w-[220px] rounded-xl border border-[#D9E2E8] bg-white p-1 shadow-lg">
+          <div className="absolute right-0 z-20 mt-1 max-h-64 min-w-[240px] overflow-y-auto rounded-xl border border-[#D9E2E8] bg-white p-1 shadow-lg">
             {hiddenCatalog.map((s) => (
               <button
                 key={s.id}
@@ -67,6 +80,7 @@ export function DashboardLayoutToolbar({
                 }}
               >
                 {s.title}
+                {isCustomCardId(s.id) ? " (custom slot)" : ""}
               </button>
             ))}
           </div>
@@ -96,61 +110,44 @@ export function DashboardLayoutToolbar({
   );
 }
 
-export function SortableSection({
+export function SortableMetricCard({
   id,
   title,
-  pinned,
   editMode,
+  span2,
   children,
   onHide,
   onDragStart,
   onDragOver,
   onDrop,
-  order,
 }: {
   id: string;
   title: string;
-  pinned?: boolean;
   editMode: boolean;
+  span2?: boolean;
   children: React.ReactNode;
   onHide?: () => void;
   onDragStart: (id: string) => void;
   onDragOver: (e: React.DragEvent, id: string) => void;
   onDrop: (id: string) => void;
-  /** CSS flex order so drag reorder reflects without remounting all content. */
-  order?: number;
 }) {
   return (
     <div
-      className={cn(
-        "relative",
-        editMode && !pinned && "rounded-xl ring-1 ring-[#C1E4F8] ring-offset-2",
-      )}
-      style={order != null ? { order } : undefined}
-      draggable={editMode && !pinned}
-      onDragStart={() => {
-        if (!pinned) onDragStart(id);
-      }}
-      onDragOver={(e) => {
-        if (!pinned) onDragOver(e, id);
-      }}
-      onDrop={() => {
-        if (!pinned) onDrop(id);
-      }}
+      className={cn("relative min-w-0", span2 && "sm:col-span-2")}
+      draggable={editMode}
+      onDragStart={() => onDragStart(id)}
+      onDragOver={(e) => onDragOver(e, id)}
+      onDrop={() => onDrop(id)}
     >
       {editMode ? (
-        <div className="mb-2 flex items-center gap-2">
-          {!pinned ? (
-            <span className="inline-flex cursor-grab items-center gap-1 rounded-md border border-[#D9E2E8] bg-white px-2 py-1 text-[11px] text-[#667085] active:cursor-grabbing">
-              <GripVertical className="size-3.5" /> {title}
-            </span>
-          ) : (
-            <span className="text-[11px] font-medium text-[#667085]">{title} · pinned</span>
-          )}
-          {!pinned && onHide ? (
+        <div className="mb-1.5 flex items-center gap-2">
+          <span className="inline-flex cursor-grab items-center gap-1 rounded-md border border-[#D9E2E8] bg-white px-2 py-0.5 text-[10px] text-[#667085] active:cursor-grabbing">
+            <GripVertical className="size-3" /> {title}
+          </span>
+          {onHide ? (
             <button
               type="button"
-              className="ml-auto inline-flex items-center gap-1 rounded-md border border-[#ECBDCC] bg-[#FFEAF1] px-2 py-1 text-[11px] text-[#102A43]"
+              className="ml-auto inline-flex items-center gap-1 rounded-md border border-[#ECBDCC] bg-[#FFEAF1] px-2 py-0.5 text-[10px] text-[#102A43]"
               onClick={onHide}
             >
               <X className="size-3" /> Hide
@@ -189,3 +186,6 @@ export function useSectionDrag(layout: TabLayoutState, onChange: (next: TabLayou
 export function visibleSectionIds(tab: DashboardTabKey, layout: TabLayoutState): string[] {
   return resolveVisibleOrder(catalogForTab(tab), layout);
 }
+
+/** @deprecated alias */
+export const SortableSection = SortableMetricCard;

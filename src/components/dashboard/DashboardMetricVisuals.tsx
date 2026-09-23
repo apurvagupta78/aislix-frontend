@@ -14,7 +14,7 @@ export function BrandShareMultiRing({
 }: {
   rows: { label: string; value: number }[];
 }) {
-  const top = rows.slice(0, 4);
+  const top = rows.slice(0, 5);
   if (!top.length) {
     return <p className="text-sm text-[#667085]">Data unavailable</p>;
   }

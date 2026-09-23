@@ -93,6 +93,11 @@ export type LastTenAuditRow = {
   templateName: string;
   storeName: string;
   assigneeName: string;
+  assignerName?: string;
+  assigneeId?: string | null;
+  assignerId?: string | null;
+  /** Relative to current user when known. */
+  relation?: "assigned_to_me" | "assigned_by_me" | "other";
   type: string;
   completionStage: "completed" | "in_progress" | "not_started";
   date: string;
@@ -564,22 +569,31 @@ export async function fetchOpsAiDashboard(
       .slice(0, 5);
   }
 
-  // Last 10
-  const lastTen: LastTenAuditRow[] = assignments.slice(0, 10).map((a) => {
+  // Recent audits for Last 10 table (extra rows so Assignment filter still fills 10)
+  const lastTen: LastTenAuditRow[] = assignments.slice(0, 40).map((a) => {
     const scan = a.scan_id ? scanById.get(a.scan_id as string) : null;
     const stage = stageOf(a);
     const tmpl = a.template_id
       ? templateName.get(a.template_id as string) ?? "—"
       : "—";
+    const assigneeId = (a.assignee_id as string | null) ?? null;
+    const assignerId = (a.assigner_id as string | null) ?? null;
+    let relation: LastTenAuditRow["relation"] = "other";
+    if (userId && assigneeId === userId) relation = "assigned_to_me";
+    else if (userId && assignerId === userId) relation = "assigned_by_me";
     return {
       id: a.id as string,
       scanId: (a.scan_id as string | null) ?? null,
       auditName: tmpl !== "—" ? tmpl : "Audit",
       templateName: tmpl,
       storeName: a.store_id ? storeName.get(a.store_id as string) ?? "—" : "—",
-      assigneeName: a.assignee_id
-        ? personName.get(a.assignee_id as string) ?? "Unassigned"
+      assigneeName: assigneeId
+        ? personName.get(assigneeId) ?? "Unassigned"
         : "Unassigned",
+      assignerName: assignerId ? personName.get(assignerId) ?? "—" : "—",
+      assigneeId,
+      assignerId,
+      relation,
       type: String(a.audit_mode ?? "digital").toLowerCase() === "ai" ? "AI" : "Digital",
       completionStage: stage,
       date: (a.created_at as string) ?? "",
@@ -592,52 +606,8 @@ export async function fetchOpsAiDashboard(
     };
   });
 
-  // My assigned audits — assigned to me or by me (demo: show recent org assignments)
-  const assignedSource = userId
-    ? assignments.filter((a) => a.assignee_id === userId || a.assigner_id === userId)
-    : [];
-  const assignedPool =
-    assignedSource.length > 0
-      ? assignedSource
-      : experience.labeledDemo
-        ? assignments
-        : [];
-  const myAssignedAudits: AssignedAuditRow[] = assignedPool.slice(0, 10).map((a) => {
-          const scan = a.scan_id ? scanById.get(a.scan_id as string) : null;
-          const stage = stageOf(a);
-          const tmpl = a.template_id
-            ? templateName.get(a.template_id as string) ?? "—"
-            : "—";
-          const toMe = userId != null && a.assignee_id === userId;
-          return {
-            id: a.id as string,
-            scanId: (a.scan_id as string | null) ?? null,
-            auditName: tmpl !== "—" ? tmpl : "Audit",
-            templateName: tmpl,
-            storeName: a.store_id ? storeName.get(a.store_id as string) ?? "—" : "—",
-            assigneeName: a.assignee_id
-              ? personName.get(a.assignee_id as string) ?? "Unassigned"
-              : "Unassigned",
-            assignerName: a.assigner_id
-              ? personName.get(a.assigner_id as string) ?? "—"
-              : "—",
-            relation: toMe || (experience.labeledDemo && !userId)
-              ? ("assigned_to_me" as const)
-              : userId != null && a.assigner_id === userId
-                ? ("assigned_by_me" as const)
-                : ("assigned_to_me" as const),
-            type: String(a.audit_mode ?? "digital").toLowerCase() === "ai" ? "AI" : "Digital",
-            completionStage: stage,
-            date: (a.created_at as string) ?? "",
-            dueAt: (a.due_at as string | null) ?? null,
-            scorePct:
-              scan?.planogram_compliance_percent != null
-                ? Number(scan.planogram_compliance_percent)
-                : a.last_compliance_percent != null
-                  ? Number(a.last_compliance_percent)
-                  : null,
-          };
-        });
+  // Deprecated separate list — folded into lastTen + Assignment filter
+  const myAssignedAudits: AssignedAuditRow[] = [];
 
   // Last completed report
   const lastCompleted = assignments.find((a) => stageOf(a) === "completed" && a.scan_id);
