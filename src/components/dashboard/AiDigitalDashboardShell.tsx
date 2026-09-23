@@ -88,6 +88,7 @@ import { digitalKpiTooltip } from "@/lib/dashboard-digital-kpi-catalog";
 import { useOptionalGlobalFilters } from "@/lib/global-filters";
 import { assignmentStatusLabel } from "@/lib/assignment-status-ui";
 import { useDemoPreview } from "@/lib/use-demo-preview";
+import { useIsGuest } from "@/lib/use-is-guest";
 import { cn } from "@/lib/utils";
 import { Route as DashboardRoute } from "@/routes/dashboard";
 
@@ -427,6 +428,7 @@ export function AiDigitalDashboardShell() {
   const tabKey: DashboardTabKey = tab === "digital" ? "digital" : "ai";
   const global = useOptionalGlobalFilters();
   const demoPreview = useDemoPreview();
+  const isGuest = useIsGuest();
   const queryClient = useQueryClient();
   const [completion, setCompletion] = useState<CompletionFilter>("all");
   const [tableStage, setTableStage] = useState<string>("all");
@@ -481,6 +483,7 @@ export function AiDigitalDashboardShell() {
       };
     },
     staleTime: 60_000,
+    enabled: Boolean(demoPreview.userEmail),
   });
 
   useEffect(() => {
@@ -513,6 +516,10 @@ export function AiDigitalDashboardShell() {
     });
 
   const saveLayout = async () => {
+    if (isGuest) {
+      toast.message("Create a free account to save dashboard layout.");
+      return;
+    }
     setLayoutSaving(true);
     try {
       await updateNotificationPreferences({ dashboard_layout: layoutPrefs });
@@ -527,6 +534,13 @@ export function AiDigitalDashboardShell() {
   };
 
   const resetLayout = async () => {
+    if (isGuest) {
+      const next = withTab(layoutPrefs, tabKey, () => defaultTabLayout(catalogForTab(tabKey)));
+      setLayoutPrefs(next);
+      setSavedLayout(next);
+      toast.message("Layout reset locally. Create an account to save it.");
+      return;
+    }
     const previous = layoutPrefs;
     const next = withTab(layoutPrefs, tabKey, () => defaultTabLayout(catalogForTab(tabKey)));
     setLayoutPrefs(next);
@@ -544,6 +558,10 @@ export function AiDigitalDashboardShell() {
   };
 
   const saveCustomMetric = async (metric: CustomMetricDef) => {
+    if (isGuest) {
+      toast.message("Create a free account to add custom metrics.");
+      return;
+    }
     const items = [
       ...customMetrics.items.filter((m) => !(m.tab === metric.tab && m.id === metric.id)),
       metric,
@@ -569,6 +587,10 @@ export function AiDigitalDashboardShell() {
   };
 
   const deleteCustomMetric = async (metric: CustomMetricDef) => {
+    if (isGuest) {
+      toast.message("Create a free account to manage custom metrics.");
+      return;
+    }
     const items = customMetrics.items.filter((m) => !(m.tab === metric.tab && m.id === metric.id));
     const hide = (l: TabLayoutState): TabLayoutState => ({
       ...l,
@@ -1523,11 +1545,18 @@ export function AiDigitalDashboardShell() {
           <>
             <DemoPreviewToggle
               compact
+              locked={isGuest}
               enabled={demoPreview.previewDemo}
               onChange={demoPreview.setPreviewDemo}
             />
             <Button variant="outline" size="sm" className={NEW_AUDIT_BUTTON_CLASS} asChild>
-              <Link to="/new-audit">New Audit</Link>
+              {isGuest ? (
+                <Link to="/dashboard" search={{ intent: "sample" } as never}>
+                  New Audit
+                </Link>
+              ) : (
+                <Link to="/new-audit">New Audit</Link>
+              )}
             </Button>
           </>
         }

@@ -19,10 +19,12 @@ import {
   isEmailVerifiedServer,
   isAdminLoginPath,
   isAdminPath,
+  isAppShellGuestPath,
   isPublicPath,
   isVerifyPath,
   resolvePostAuthRoute,
 } from "@/lib/auth-routing";
+import { markGuestMode } from "@/lib/guest-mode";
 
 /** Auth entry pages where a verified session must leave for the landing route. */
 function isAuthEntryPath(path: string): boolean {
@@ -67,13 +69,22 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
           if (!sessionData.session) return;
         }
 
+        // Guest mode: AppShell destinations stay mounted without a session.
+        if (isAppShellGuestPath(path)) {
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (!sessionData.session) {
+            markGuestMode();
+            return;
+          }
+        }
+
         const user = await fetchAuthUser();
         if (cancelled) return;
 
         if (!user) {
           // Signup leaves no session while confirmation is pending — the
           // verify page must stay open, so it is never bounced to /login.
-          if (!isPublicPath(path) && !isVerifyPath(path)) {
+          if (!isPublicPath(path) && !isVerifyPath(path) && !isAppShellGuestPath(path)) {
             void navigate({
               to: isAdminPath(path) && !isAdminLoginPath(path) ? "/admin/login" : "/login",
               replace: true,

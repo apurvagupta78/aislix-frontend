@@ -7,23 +7,26 @@ import {
   readDemoPreviewPreference,
   writeDemoPreviewPreference,
 } from "@/lib/demo-environment";
+import { useIsGuest } from "@/lib/use-is-guest";
 
 export function useDemoPreview(_model?: string, _filters?: Record<string, unknown>) {
   const queryClient = useQueryClient();
+  const isGuest = useIsGuest();
   const profileQuery = useQuery({
     queryKey: ["demo-preview-profile"],
     queryFn: fetchProfile,
     staleTime: 60_000,
+    enabled: !isGuest,
   });
 
-  const eligible = canUseDemoPreview(profileQuery.data?.email);
+  const eligible = isGuest || canUseDemoPreview(profileQuery.data?.email);
   const [enabled, setEnabledState] = useState(() => readDemoPreviewPreference());
 
-  const previewDemo = eligible && enabled;
+  const previewDemo = isGuest ? true : eligible && enabled;
 
   const setPreviewDemo = useCallback(
     (next: boolean) => {
-      if (!eligible) return;
+      if (isGuest || !eligible) return;
       writeDemoPreviewPreference(next);
       setEnabledState(next);
       void queryClient.invalidateQueries({ queryKey: ["control-tower-dashboard"] });
@@ -31,7 +34,7 @@ export function useDemoPreview(_model?: string, _filters?: Record<string, unknow
       void queryClient.invalidateQueries({ queryKey: ["dashboard-digital-metrics-v2"] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard-digital-metrics"] });
     },
-    [eligible, queryClient],
+    [eligible, isGuest, queryClient],
   );
 
   return useMemo(

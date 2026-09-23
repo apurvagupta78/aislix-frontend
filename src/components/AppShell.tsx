@@ -64,6 +64,8 @@ import { Badge } from "@/components/ui/badge";
 import { GlobalFilterProvider } from "@/lib/global-filters";
 import { PageHeader } from "@/components/design-system";
 import { APP_NAV_SECTIONS, type NavItemConfig, type NavLeafConfig, type NavSectionConfig } from "@/lib/navigation/app-nav";
+import { useIsGuest } from "@/lib/use-is-guest";
+import { GuestNavPage } from "@/components/guest/GuestNavPage";
 
 type LucideIcon = typeof Bell;
 type NavLeaf = NavLeafConfig & { icon?: LucideIcon };
@@ -397,6 +399,8 @@ export function AppShell({
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useSidebarCollapsed();
+  const isGuest = useIsGuest();
+  const isDashboardRoute = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
 
   const sectionLabel =
     SECTIONS.find((section) =>
@@ -413,6 +417,7 @@ export function AppShell({
     queryFn: () => fetchProfile(),
     retry: false,
     staleTime: 60_000,
+    enabled: !isGuest,
   });
 
   const managerQuery = useQuery({
@@ -420,20 +425,23 @@ export function AppShell({
     queryFn: () => isOrgManager(),
     retry: false,
     staleTime: 60_000,
+    enabled: !isGuest,
   });
-  const showManagerNav = managerQuery.data === true;
+  const showManagerNav = isGuest || managerQuery.data === true;
   const queryClient = useQueryClient();
   const pendingQuery = useQuery({
     queryKey: ["my-assignments-pending"],
     queryFn: () => fetchMyPendingCount(),
     retry: false,
     staleTime: 30_000,
+    enabled: !isGuest,
   });
   const activeMembershipQuery = useQuery({
     queryKey: ["active-membership"],
     queryFn: () => getMembership(),
     retry: false,
     staleTime: 60_000,
+    enabled: !isGuest,
   });
   const activeMembership = activeMembershipQuery.data ?? null;
   const inboxQuery = useQuery({
@@ -441,19 +449,22 @@ export function AppShell({
     queryFn: () => fetchInbox(15),
     retry: false,
     staleTime: 30_000,
+    enabled: !isGuest,
   });
   const membershipsQuery = useQuery({
     queryKey: ["memberships"],
     queryFn: () => listMemberships(),
     retry: false,
     staleTime: 60_000,
+    enabled: !isGuest,
   });
   const unreadQuery = useQuery({
     queryKey: ["inbox-unread"],
     queryFn: () => fetchUnreadCount(),
     retry: false,
     staleTime: 30_000,
-    refetchInterval: 60_000,
+    refetchInterval: isGuest ? false : 60_000,
+    enabled: !isGuest,
   });
   const inbox = inboxQuery.data ?? [];
   const unread = unreadQuery.data ?? inbox.filter((n) => !n.read_at).length;
@@ -465,17 +476,20 @@ export function AppShell({
     void queryClient.invalidateQueries();
   };
   const profile = profileQuery.data;
-  const displayName = profile?.full_name?.trim() || profile?.email || "Your account";
-  const displayEmail = profile?.email ?? "";
-  const initials =
-    (profile?.full_name?.trim()
-      ? profile.full_name
-          .trim()
-          .split(/\s+/)
-          .slice(0, 2)
-          .map((part) => part[0])
-          .join("")
-      : profile?.email?.[0]) ?? "A";
+  const displayName = isGuest
+    ? "Guest"
+    : profile?.full_name?.trim() || profile?.email || "Your account";
+  const displayEmail = isGuest ? "Demo workspace · not signed in" : (profile?.email ?? "");
+  const initials = isGuest
+    ? "G"
+    : (profile?.full_name?.trim()
+        ? profile.full_name
+            .trim()
+            .split(/\s+/)
+            .slice(0, 2)
+            .map((part) => part[0])
+            .join("")
+        : profile?.email?.[0]) ?? "A";
 
   const workspaceSwitcher =
     memberships.length > 1 ? (
@@ -647,11 +661,31 @@ export function AppShell({
                   />
                 </form>
                 <div className="ml-auto flex items-center gap-2">
-                  <Button asChild variant="outline" size="sm" className={NEW_AUDIT_BUTTON_CLASS}>
-                    <Link to="/new-audit">
-                      <Plus className="size-4" /> New Audit
-                    </Link>
-                  </Button>
+                  {isGuest ? (
+                    <>
+                      <Badge className="hidden rounded-md border border-border bg-surface text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:inline-flex">
+                        Guest
+                      </Badge>
+                      <Badge className="hidden rounded-md bg-[var(--aislix-supermarket-bg)] text-[10px] font-semibold uppercase tracking-wide text-[#4F6B2E] sm:inline-flex">
+                        Demo ON
+                      </Badge>
+                      <Button asChild variant="brand" size="sm" className="rounded-lg">
+                        <Link to="/signup">Start free</Link>
+                      </Button>
+                      <Button asChild variant="outline" size="sm" className={NEW_AUDIT_BUTTON_CLASS}>
+                        <Link to="/dashboard" search={{ intent: "sample" } as never}>
+                          <Plus className="size-4" /> New Audit
+                        </Link>
+                      </Button>
+                    </>
+                  ) : (
+                    <Button asChild variant="outline" size="sm" className={NEW_AUDIT_BUTTON_CLASS}>
+                      <Link to="/new-audit">
+                        <Plus className="size-4" /> New Audit
+                      </Link>
+                    </Button>
+                  )}
+                  {!isGuest ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button
@@ -721,11 +755,12 @@ export function AppShell({
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  ) : null}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="rounded-full outline-none ring-brand/40 focus-visible:ring-2">
                         <Avatar className="size-8">
-                          {profile?.avatar_url ? (
+                          {!isGuest && profile?.avatar_url ? (
                             <AvatarImage src={profile.avatar_url} alt={displayName} />
                           ) : null}
                           <AvatarFallback className="bg-local-bg text-xs font-medium uppercase text-navy">
@@ -742,6 +777,20 @@ export function AppShell({
                         )}
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
+                      {isGuest ? (
+                        <>
+                          <DropdownMenuItem asChild>
+                            <Link to="/signup">Create free account</Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link to="/login">Sign in</Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link to="/">Back to homepage</Link>
+                          </DropdownMenuItem>
+                        </>
+                      ) : (
+                        <>
                       {memberships.length > 1 && (
                         <>
                           <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
@@ -787,6 +836,8 @@ export function AppShell({
                           <LogOut className="mr-2 size-4" /> Sign out
                         </Link>
                       </DropdownMenuItem>
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -795,7 +846,7 @@ export function AppShell({
 
             <main id="main-content" className="px-5 py-6 sm:px-8 sm:py-8">
               <div className="mx-auto max-w-7xl space-y-6">
-                {!hidePageHeader ? (
+                {!hidePageHeader && !(isGuest && !isDashboardRoute) ? (
                   <PageHeader
                     title={title}
                     {...(description ? { description } : {})}
@@ -805,8 +856,10 @@ export function AppShell({
                   />
                 ) : null}
 
-                <GlobalFilterBarShell />
-                <div className="animate-fade-in">{children}</div>
+                {!(isGuest && !isDashboardRoute) ? <GlobalFilterBarShell /> : null}
+                <div className="animate-fade-in">
+                  {isGuest && !isDashboardRoute ? <GuestNavPage pathname={pathname} /> : children}
+                </div>
               </div>
             </main>
             <SiteFooter />

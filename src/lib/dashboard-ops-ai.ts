@@ -270,6 +270,12 @@ export async function fetchOpsAiDashboard(
   filters?: OpsDashboardFilters,
   options?: { previewDemo?: boolean; userEmail?: string | null },
 ): Promise<OpsAiDashboardData> {
+  const sessionUser = await getUser();
+  if (!sessionUser) {
+    const { GUEST_OPS_AI_DASHBOARD } = await import("@/lib/guest-ops-fixtures");
+    return GUEST_OPS_AI_DASHBOARD;
+  }
+
   const activeOrgId = await requireOrgId();
   const experience = await resolveDemoExperience(activeOrgId, {
     previewDemo: options?.previewDemo,

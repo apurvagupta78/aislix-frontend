@@ -2,14 +2,15 @@ import { ScanSearch, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DEMO_SHELF_IMAGE } from "@/lib/home/homepage-data";
 import { trackLandingEvent } from "@/lib/landing-analytics";
+import { markGuestMode } from "@/lib/guest-mode";
 
-function openGuest(intent: "sample" | "upload") {
+function openGuestDashboard(intent: "sample" | "upload") {
+  markGuestMode();
   trackLandingEvent("demo_scan_started", { mode: intent === "sample" ? "sample" : "upload" });
-  const url = `/guest?intent=${intent}`;
-  window.open(url, "_blank", "noopener,noreferrer");
+  window.open(`/dashboard?intent=${intent}`, "_blank", "noopener,noreferrer");
 }
 
-/** Lightweight Try Aislix — opens the guest dashboard (real scan UX) in a new tab. */
+/** Lightweight Try Aislix — opens the real dashboard in Guest mode. */
 export function HomeTryAislix() {
   return (
     <section
@@ -27,8 +28,8 @@ export function HomeTryAislix() {
             See what Aislix can find on your shelf.
           </h2>
           <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
-            Open the guest dashboard to explore the full workspace, then run the sample audit or
-            upload your own shelf photo — no login required.
+            Open the real operations dashboard in Guest mode. Explore Demo ON data, then run the
+            sample audit or upload your own shelf photo — no login required.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button
@@ -36,7 +37,7 @@ export function HomeTryAislix() {
               size="xl"
               variant="default"
               className="rounded-xl"
-              onClick={() => openGuest("sample")}
+              onClick={() => openGuestDashboard("sample")}
             >
               <ScanSearch className="size-4" />
               Run audit
@@ -46,14 +47,14 @@ export function HomeTryAislix() {
               size="xl"
               variant="outline"
               className="rounded-xl"
-              onClick={() => openGuest("upload")}
+              onClick={() => openGuestDashboard("upload")}
             >
               <Upload className="size-4" />
               Upload shelf photo
             </Button>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
-            Opens in a new tab · Guest mode · Same dashboard experience
+            Opens /dashboard in a new tab · Guest mode · Demo ON
           </p>
         </div>
 
@@ -70,9 +71,9 @@ export function HomeTryAislix() {
           </div>
           <div className="flex flex-col items-center justify-center rounded-2xl bg-white p-6 text-center">
             <ScanSearch className="size-8 text-border" aria-hidden="true" />
-            <p className="mt-3 text-sm font-semibold text-foreground">Guest dashboard</p>
+            <p className="mt-3 text-sm font-semibold text-foreground">Real dashboard</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Click Run audit or Upload to open the full guest workspace and scan.
+              Same Operations AI Dashboard signed-in teams use — with Guest demo data.
             </p>
           </div>
         </div>

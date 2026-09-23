@@ -480,6 +480,12 @@ export async function fetchDigitalDashboardMetrics(
   filters?: DashboardMetricFilters,
   options?: { previewDemo?: boolean; userEmail?: string | null },
 ): Promise<DigitalDashboardMetrics> {
+  const user = await getUser();
+  if (!user) {
+    const { GUEST_DIGITAL_DASHBOARD } = await import("@/lib/guest-ops-fixtures");
+    return GUEST_DIGITAL_DASHBOARD;
+  }
+
   const { resolveDemoExperience } = await import("@/lib/demo-environment");
   const activeOrgId = await requireOrgId();
   const experience = await resolveDemoExperience(activeOrgId, {

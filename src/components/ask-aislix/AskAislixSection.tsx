@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Sparkles } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 import {
   askAislix,
@@ -14,6 +15,7 @@ import {
 import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
 import { requireOrgId, requireUserId } from "@/lib/db/context";
 import { fetchMembershipRole } from "@/lib/access-scope";
+import { useIsGuest } from "@/lib/use-is-guest";
 import { AskAislixAnswerPanel } from "./AskAislixAnswerPanel";
 import { AskAislixInput } from "./AskAislixInput";
 import { AskAislixLoading } from "./AskAislixLoading";
@@ -21,6 +23,42 @@ import { AskAislixSuggestions } from "./AskAislixSuggestions";
 import { HelpMeAskAislixButton } from "./HelpMeAskAislixButton";
 import { HelpMeAskAislixDialog } from "./HelpMeAskAislixDialog";
 import type { SuggestionDataAvailability } from "@/lib/ask-aislix/ask-aislix-suggestions.select";
+
+const GUEST_ASK_RESPONSE: AskAislixResponse = {
+  answer:
+    "[Demo] Across the Guest demo workspace, oral-care planogram compliance averages 84% with 3 open critical findings. Koramangala leads at 91% compliance; Whitefield needs restock on 2 low-facing SKUs. Create a free account to ask about your live audits.",
+  summary: "Guest demo · oral care compliance and findings",
+  metrics: [
+    { label: "Planogram compliance", value: "84", unit: "%", trend: "up" },
+    { label: "Open critical", value: "3", unit: "", trend: "down" },
+    { label: "Audits (demo)", value: "42", unit: "", trend: "flat" },
+  ],
+  visual: {
+    type: "bar",
+    title: "Compliance by store (demo)",
+    data: [
+      { label: "Koramangala", value: 91 },
+      { label: "Whitefield", value: 82 },
+      { label: "HSR", value: 88 },
+    ],
+  },
+  table: { columns: [], rows: [] },
+  insights: [
+    "Whitefield has the largest facing shortfall in the demo set.",
+    "Restock Oral-B Pro Expert and verify Sensodyne price tags.",
+  ],
+  actions: [{ label: "Create free account", route: "/signup", params: {} }],
+  source_context: {
+    period: "Last 30 days (demo)",
+    locations: ["Bengaluru"],
+    operating_model: "Supermarket",
+  },
+  follow_up_questions: [
+    "Which stores have the lowest planogram compliance?",
+    "What corrective actions are overdue?",
+    "Summarize brand share on the last shelf audit",
+  ],
+};
 
 export function AskAislixSection({
   previewDemo = false,
@@ -33,6 +71,7 @@ export function AskAislixSection({
   city?: string | null;
   roleHint?: string | null;
 }) {
+  const isGuest = useIsGuest();
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +88,10 @@ export function AskAislixSection({
   );
 
   useEffect(() => {
+    if (isGuest) {
+      setAccessRole("manager");
+      return;
+    }
     let cancelled = false;
     void (async () => {
       try {
@@ -63,7 +106,7 @@ export function AskAislixSection({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isGuest]);
 
   const submitQuestion = useCallback(
     async (raw: string) => {
@@ -75,6 +118,19 @@ export function AskAislixSection({
       setQuestion(q);
 
       try {
+        if (isGuest) {
+          await new Promise((r) => window.setTimeout(r, 400));
+          setResponse(GUEST_ASK_RESPONSE);
+          setMessages((prev) =>
+            [
+              ...prev,
+              { role: "user", content: q },
+              { role: "assistant", content: GUEST_ASK_RESPONSE.answer },
+            ].slice(-10),
+          );
+          return;
+        }
+
         const orgId = await requireOrgId();
         const result = await askAislix({
           data: {
@@ -120,7 +176,7 @@ export function AskAislixSection({
         setLoading(false);
       }
     },
-    [attachments, conversationId, loading, messages, previewDemo],
+    [attachments, conversationId, isGuest, loading, messages, previewDemo],
   );
 
   return (
@@ -143,8 +199,18 @@ export function AskAislixSection({
             Ask AISLIX
           </h2>
           <p className="mt-1 text-sm" style={{ color: ASK_AISLIX_SECTION.subtitle }}>
-            Your AI retail operations copilot. Ask anything about your audits, stores, inventory, findings, actions and analysis.
+            {isGuest
+              ? "Guest demo answers use showcase data. Create a free account for live Ask Aislix."
+              : "Your AI retail operations copilot. Ask anything about your audits, stores, inventory, findings, actions and analysis."}
           </p>
+          {isGuest ? (
+            <Link
+              to="/signup"
+              className="mt-2 inline-block text-sm font-medium text-[#2A6FA8] underline-offset-2 hover:underline"
+            >
+              Create free account
+            </Link>
+          ) : null}
         </div>
       </div>
 

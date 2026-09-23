@@ -8,22 +8,29 @@ export function DemoPreviewToggle({
   enabled,
   onChange,
   compact = false,
+  locked = false,
 }: {
   enabled: boolean;
   onChange: (enabled: boolean) => void;
   /** Compact header control — label only, no helper copy. */
   compact?: boolean;
+  /** Guest mode: Demo stays ON and cannot be toggled. */
+  locked?: boolean;
 }) {
   if (compact) {
     return (
       <div className="flex items-center gap-2 rounded-lg border border-[#C1E4F8] bg-[#EAF6FD] px-3 py-1.5">
-        <Label htmlFor="demo-data-toggle" className="cursor-pointer text-sm font-medium text-navy">
+        <Label
+          htmlFor="demo-data-toggle"
+          className={cn("text-sm font-medium text-navy", locked ? "cursor-default" : "cursor-pointer")}
+        >
           Demo Data
         </Label>
         <Switch
           id="demo-data-toggle"
           checked={enabled}
-          onCheckedChange={onChange}
+          disabled={locked}
+          onCheckedChange={locked ? undefined : onChange}
           aria-label="Demo Data"
         />
       </div>
@@ -42,13 +49,16 @@ export function DemoPreviewToggle({
           Demo Data
         </Label>
         <p className="text-xs text-mp-muted">
-          On: showcase demo audits. Off: your workspace data (empty until you run audits).
+          {locked
+            ? "Guest mode always uses showcase demo data."
+            : "On: showcase demo audits. Off: your workspace data (empty until you run audits)."}
         </p>
       </div>
       <Switch
         id="demo-preview-toggle"
         checked={enabled}
-        onCheckedChange={onChange}
+        disabled={locked}
+        onCheckedChange={locked ? undefined : onChange}
         aria-label="Demo Data"
       />
     </div>

@@ -1000,8 +1000,30 @@ export async function fetchDashboardFilterOptions(
   signal?: AbortSignal,
 ): Promise<DashboardFilterOptions> {
   void signal;
-  const orgId = await requireOrgId();
   const user = await getUser();
+  if (!user) {
+    return {
+      stores: [
+        { id: "demo-1", name: "More Mart — Koramangala", country: "India", city: "Bengaluru" },
+        { id: "demo-2", name: "Big Bazaar — Whitefield", country: "India", city: "Bengaluru" },
+      ],
+      countries: ["India"],
+      cities: ["Bengaluru"],
+      categories: ["Oral Care", "Beverages", "Snacks"],
+      subcategories: [
+        { category: "Oral Care", value: "Toothpaste", label: "Toothpaste" },
+        { category: "Beverages", value: "Soft drinks", label: "Soft drinks" },
+      ],
+      team_members: [
+        { user_id: "demo-user-1", name: "Demo Manager", email: "manager@demo.aislix.com" },
+        { user_id: "demo-user-2", name: "Field Rep", email: "rep@demo.aislix.com" },
+      ],
+      kri_options: [],
+      only_self: false,
+      current_user_id: null,
+    };
+  }
+  const orgId = await requireOrgId();
   const since = new Date();
   since.setDate(since.getDate() - 90);
   const { resolveEffectiveAccessScope, applyStoreScopeFilter } = await import("@/lib/access-scope");

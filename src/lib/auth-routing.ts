@@ -191,6 +191,8 @@ export function isPublicPath(path: string): boolean {
   );
 }
 
+export { isAppShellGuestPath } from "@/lib/guest-mode";
+
 export function isAdminPath(path: string): boolean {
   return path === "/admin" || path.startsWith("/admin/");
 }
