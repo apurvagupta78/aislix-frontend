@@ -948,7 +948,13 @@ export function AiDigitalDashboardShell() {
         return (
           <KpiCard
             label="Total Audits"
-            value={fmtOrEmpty(emptyRealAi, data?.executive.audits ?? ai?.auditCount)}
+            value={fmtOrEmpty(
+              emptyRealAi,
+              data?.executive.audits
+                ?? data?.synopsis?.historyCount
+                ?? (data?.completionMix ?? []).reduce((sum, row) => sum + (row.value || 0), 0)
+                || ai?.auditCount,
+            )}
             accent={accent}
             moreTo="/history"
           />

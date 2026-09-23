@@ -19,13 +19,9 @@ import {
   type DashboardMetricFilters,
 } from "@/lib/dashboard-ai-digital";
 import { resolveDemoExperience } from "@/lib/demo-environment";
+import { DEMO_SHELF_FALLBACK_IMAGES } from "@/lib/demo-shelf-images";
 
-/** Public demo shelf photos (from Demo Images) used when a scan has no stored evidence. */
-export const DEMO_SHELF_FALLBACK_IMAGES = [
-  "/demo-shelf/demo-1.jpg",
-  "/demo-shelf/demo-2.jpg",
-  "/demo-shelf/demo-3.jpg",
-] as const;
+export { DEMO_SHELF_FALLBACK_IMAGES } from "@/lib/demo-shelf-images";
 
 async function signScanEvidenceUrls(scanId: string): Promise<string[]> {
   const imageUrls: string[] = [];

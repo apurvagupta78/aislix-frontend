@@ -34,7 +34,7 @@ import {
   clampFiltersToScope,
 } from "@/lib/ask-aislix/context";
 import { resolveAskAislixQueryFilters } from "@/lib/ask-aislix/ask-aislix-filters";
-import { DEMO_SHELF_FALLBACK_IMAGES } from "@/lib/dashboard-ops-ai";
+import { demoShelfFallbackUrl } from "@/lib/demo-shelf-images";
 import {
   canUseDemoPreview,
   isDemoOrgId,
@@ -95,22 +95,39 @@ async function signImageGalleryItems(
   options?: { allowDemoFallback?: boolean },
 ): Promise<ImageGalleryItem[]> {
   const signed: ImageGalleryItem[] = [];
+  const useDemoAssets = Boolean(options?.allowDemoFallback);
   for (let i = 0; i < items.length; i += 1) {
     const item = items[i]!;
     let signedUrl: string | undefined;
-    const buckets = item.storageBucket === "scan-images"
-      ? ["scan-images", "audit-evidence"]
-      : [item.storageBucket, "scan-images", "audit-evidence"];
-    for (const bucket of [...new Set(buckets.filter(Boolean))]) {
-      const { data } = await supabase.storage.from(bucket).createSignedUrl(item.storagePath, 3600);
-      if (data?.signedUrl) {
-        signedUrl = data.signedUrl;
-        break;
+
+    // Demo seed rows use placeholder storage paths with no object — skip signing and use public assets.
+    if (useDemoAssets) {
+      signedUrl = demoShelfFallbackUrl(i);
+      signed.push({ ...item, url: signedUrl });
+      continue;
+    }
+
+    const path = String(item.storagePath ?? "").trim();
+    if (path) {
+      const buckets = item.storageBucket === "scan-images"
+        ? ["scan-images", "audit-evidence"]
+        : [item.storageBucket, "scan-images", "audit-evidence"];
+      for (const bucket of [...new Set(buckets.filter(Boolean))]) {
+        try {
+          const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+          if (!error && data?.signedUrl) {
+            signedUrl = data.signedUrl;
+            break;
+          }
+        } catch {
+          // try next bucket
+        }
       }
     }
-    // Demo seed often has placeholder paths with no Storage object — use public shelf assets.
-    if (!signedUrl && options?.allowDemoFallback) {
-      signedUrl = DEMO_SHELF_FALLBACK_IMAGES[i % DEMO_SHELF_FALLBACK_IMAGES.length];
+
+    // Last resort for any org when Storage has no object.
+    if (!signedUrl) {
+      signedUrl = demoShelfFallbackUrl(i);
     }
     signed.push({ ...item, url: signedUrl });
   }

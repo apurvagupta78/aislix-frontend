@@ -1,4 +1,7 @@
+import { useState } from "react";
 import { Link } from "@tanstack/react-router";
+
+import { demoShelfFallbackUrl } from "@/lib/demo-shelf-images";
 
 type GalleryItem = {
   url?: string;
@@ -8,6 +11,23 @@ type GalleryItem = {
   scan_id?: string;
   assignment_id?: string;
 };
+
+function GalleryImage({ src, alt, index }: { src?: string; alt: string; index: number }) {
+  const [failed, setFailed] = useState(false);
+  const resolved = !src || failed ? demoShelfFallbackUrl(index) : src;
+
+  return (
+    <img
+      src={resolved}
+      alt={alt}
+      className="aspect-[4/3] w-full object-cover"
+      loading="lazy"
+      onError={() => {
+        if (!failed) setFailed(true);
+      }}
+    />
+  );
+}
 
 export function AskAislixImageGallery({ items, title }: { items: GalleryItem[]; title?: string }) {
   if (!items.length) {
@@ -27,18 +47,11 @@ export function AskAislixImageGallery({ items, title }: { items: GalleryItem[]; 
             key={`${item.scan_id ?? "img"}-${index}`}
             className="overflow-hidden rounded-xl border border-line bg-white shadow-card"
           >
-            {item.url ? (
-              <img
-                src={item.url}
-                alt={item.caption ?? "Audit evidence"}
-                className="aspect-[4/3] w-full object-cover"
-                loading="lazy"
-              />
-            ) : (
-              <div className="flex aspect-[4/3] items-center justify-center bg-muted text-xs text-muted-foreground">
-                Image unavailable
-              </div>
-            )}
+            <GalleryImage
+              src={item.url}
+              alt={item.caption ?? "Audit evidence"}
+              index={index}
+            />
             <figcaption className="space-y-1 p-3 text-xs text-mp-muted">
               {item.caption ? <p className="font-medium text-navy">{item.caption}</p> : null}
               {item.store_name ? <p>{item.store_name}</p> : null}
