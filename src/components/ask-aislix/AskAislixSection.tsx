@@ -83,7 +83,7 @@ export function AskAislixSection({
             messages,
             conversationId,
             attachments: attachments.length ? attachments : undefined,
-            previewDemo: previewDemo || undefined,
+            previewDemo: previewDemo ? true : false,
           },
         });
 

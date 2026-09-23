@@ -486,7 +486,17 @@ export async function fetchOpsAiDashboard(
     .sort((a, b) => b.composite - a.composite);
 
   const topPerformers = performers.slice(0, 5);
-  const worstPerformers = [...performers].sort((a, b) => a.composite - b.composite).slice(0, 5);
+  const topIds = new Set(topPerformers.map((p) => p.storeId));
+  // Avoid mirroring the high list when few stores exist — show lower half only.
+  const worstPerformers =
+    performers.length <= 5
+      ? [...performers]
+          .sort((a, b) => a.composite - b.composite)
+          .slice(0, Math.max(1, Math.ceil(performers.length / 2)))
+      : [...performers]
+          .sort((a, b) => a.composite - b.composite)
+          .filter((p) => !topIds.has(p.storeId))
+          .slice(0, 5);
 
   // Planogram expected vs actual by store — use any assignment scans with product rows
   const planogramByStore: { label: string; expected: number; actual: number }[] = [];

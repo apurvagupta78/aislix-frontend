@@ -34,8 +34,10 @@ import {
   clampFiltersToScope,
 } from "@/lib/ask-aislix/context";
 import { resolveAskAislixQueryFilters } from "@/lib/ask-aislix/ask-aislix-filters";
+import { DEMO_SHELF_FALLBACK_IMAGES } from "@/lib/dashboard-ops-ai";
 import {
   canUseDemoPreview,
+  isDemoOrgId,
   prefixDemoAnswer,
   resolveDemoExperienceWithClient,
 } from "@/lib/demo-environment";
@@ -90,19 +92,25 @@ async function fetchUserEmail(
 async function signImageGalleryItems(
   supabase: SupabaseClient<Database>,
   items: ImageGalleryItem[],
+  options?: { allowDemoFallback?: boolean },
 ): Promise<ImageGalleryItem[]> {
   const signed: ImageGalleryItem[] = [];
-  for (const item of items) {
+  for (let i = 0; i < items.length; i += 1) {
+    const item = items[i]!;
     let signedUrl: string | undefined;
     const buckets = item.storageBucket === "scan-images"
       ? ["scan-images", "audit-evidence"]
       : [item.storageBucket, "scan-images", "audit-evidence"];
-    for (const bucket of [...new Set(buckets)]) {
+    for (const bucket of [...new Set(buckets.filter(Boolean))]) {
       const { data } = await supabase.storage.from(bucket).createSignedUrl(item.storagePath, 3600);
       if (data?.signedUrl) {
         signedUrl = data.signedUrl;
         break;
       }
+    }
+    // Demo seed often has placeholder paths with no Storage object — use public shelf assets.
+    if (!signedUrl && options?.allowDemoFallback) {
+      signedUrl = DEMO_SHELF_FALLBACK_IMAGES[i % DEMO_SHELF_FALLBACK_IMAGES.length];
     }
     signed.push({ ...item, url: signedUrl });
   }
@@ -380,8 +388,9 @@ export async function askAislixServer(
   const userEmail = await fetchUserEmail(supabase, userId);
   const previewDemo = Boolean(request.previewDemo && canUseDemoPreview(userEmail));
   const demoExperience = await resolveDemoExperienceWithClient(supabase, request.activeOrgId, {
-    previewDemo,
+    previewDemo: request.previewDemo === false ? false : previewDemo || undefined,
     userEmail,
+    honorPreviewOff: true,
   });
   const scope =
     demoExperience.labeledDemo && demoExperience.dataOrgId !== request.activeOrgId
@@ -443,7 +452,9 @@ export async function askAislixServer(
 
     if ((parsed.visual?.type === "image_gallery" || pendingImages.length) && pendingImages.length) {
       parsed.visual = { type: "image_gallery", title: parsed.visual?.title ?? "Audit evidence", data: [] };
-      const signed = await signImageGalleryItems(supabase, pendingImages.slice(0, 20));
+      const signed = await signImageGalleryItems(supabase, pendingImages.slice(0, 20), {
+        allowDemoFallback: Boolean(scope.labeledDemo) || isDemoOrgId(scope.orgId),
+      });
       parsed.visual.data = signed.map((img) => ({
         url: img.url,
         caption: img.caption,

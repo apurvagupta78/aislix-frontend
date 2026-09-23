@@ -542,20 +542,7 @@ async function getAuditEvidenceImages(ctx: ToolContext, args: Record<string, unk
   const pendingImages: ImageGalleryItem[] = [];
   const storeNameById = new Map(storeList.map((s) => [s.id, s.name]));
 
-  for (const row of evidence ?? []) {
-    const assignment = filtered.find((a) => a.scan_id === row.scan_id);
-    pendingImages.push({
-      evidenceId: row.id as string,
-      scanId: row.scan_id as string,
-      assignmentId: assignment?.id as string | undefined,
-      storageBucket: "scan-images",
-      storagePath: row.storage_path as string,
-      caption: `Evidence · ${row.bin_key ?? "audit"}`,
-      capturedAt: row.captured_at as string,
-      storeName: assignment?.store_id ? storeNameById.get(assignment.store_id as string) : undefined,
-    });
-  }
-
+  // Prefer real shelf photos (scan_images) before placeholder audit_evidence rows.
   for (const row of scanImages ?? []) {
     const assignment = filtered.find((a) => a.scan_id === row.scan_id);
     pendingImages.push({
@@ -566,6 +553,20 @@ async function getAuditEvidenceImages(ctx: ToolContext, args: Record<string, unk
       storagePath: row.storage_path as string,
       caption: "Shelf image",
       capturedAt: row.created_at as string,
+      storeName: assignment?.store_id ? storeNameById.get(assignment.store_id as string) : undefined,
+    });
+  }
+
+  for (const row of evidence ?? []) {
+    const assignment = filtered.find((a) => a.scan_id === row.scan_id);
+    pendingImages.push({
+      evidenceId: row.id as string,
+      scanId: row.scan_id as string,
+      assignmentId: assignment?.id as string | undefined,
+      storageBucket: "scan-images",
+      storagePath: row.storage_path as string,
+      caption: `Evidence · ${row.bin_key ?? "audit"}`,
+      capturedAt: row.captured_at as string,
       storeName: assignment?.store_id ? storeNameById.get(assignment.store_id as string) : undefined,
     });
   }
