@@ -7,6 +7,20 @@ import type {
   SuggestionRole,
 } from "./ask-aislix-suggestions.types";
 
+/** Which suggestion categories have backing data in the current dashboard scope. */
+export type SuggestionDataAvailability = {
+  hasAudits?: boolean;
+  hasFindings?: boolean;
+  hasActions?: boolean;
+  hasInventory?: boolean;
+  hasExpiry?: boolean;
+  hasEvidence?: boolean;
+  hasStores?: boolean;
+  hasTrends?: boolean;
+  hasRecurring?: boolean;
+  hasComparison?: boolean;
+};
+
 export type SuggestionSelectContext = {
   /** Dashboard role tab hint (supermarket, darkstore, fmcg, etc.). */
   roleHint?: string | null;
@@ -18,7 +32,43 @@ export type SuggestionSelectContext = {
   count?: number;
   /** Rotation seed — change on visit/refresh for varied examples. */
   rotationSeed?: number;
+  /**
+   * When set, only suggest questions whose category has backing data.
+   * Omit to keep legacy wired-tool-only filtering.
+   */
+  dataAvailability?: SuggestionDataAvailability | null;
 };
+
+function categoryHasData(
+  category: SuggestionCategory,
+  flags: SuggestionDataAvailability | null | undefined,
+): boolean {
+  if (!flags) return true;
+  switch (category) {
+    case "audit":
+      return Boolean(flags.hasAudits);
+    case "trend":
+      return Boolean(flags.hasTrends ?? flags.hasAudits);
+    case "comparison":
+      return Boolean(flags.hasComparison ?? flags.hasTrends ?? flags.hasAudits);
+    case "findings":
+      return Boolean(flags.hasFindings);
+    case "actions":
+      return Boolean(flags.hasActions);
+    case "inventory":
+      return Boolean(flags.hasInventory);
+    case "expiry":
+      return Boolean(flags.hasExpiry);
+    case "evidence":
+      return Boolean(flags.hasEvidence);
+    case "stores":
+      return Boolean(flags.hasStores ?? flags.hasAudits);
+    case "recurring":
+      return Boolean(flags.hasRecurring ?? flags.hasFindings);
+    default:
+      return Boolean(flags.hasAudits);
+  }
+}
 
 const ROLE_BUCKETS: SuggestionRole[] = [
   "supermarket",
@@ -178,7 +228,8 @@ export function selectAskAislixSuggestions(
   context: SuggestionSelectContext = {},
 ): ResolvedAskSuggestion[] {
   const count = context.count ?? 7;
-  const pool = getAvailableLibrary();
+  const wired = getAvailableLibrary();
+  const pool = wired.filter((item) => categoryHasData(item.category, context.dataAvailability));
   if (pool.length === 0) return [];
 
   const seed =

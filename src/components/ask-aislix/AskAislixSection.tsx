@@ -20,8 +20,19 @@ import { AskAislixLoading } from "./AskAislixLoading";
 import { AskAislixSuggestions } from "./AskAislixSuggestions";
 import { HelpMeAskAislixButton } from "./HelpMeAskAislixButton";
 import { HelpMeAskAislixDialog } from "./HelpMeAskAislixDialog";
+import type { SuggestionDataAvailability } from "@/lib/ask-aislix/ask-aislix-suggestions.select";
 
-export function AskAislixSection({ previewDemo = false }: { previewDemo?: boolean }) {
+export function AskAislixSection({
+  previewDemo = false,
+  dataAvailability = null,
+  city = null,
+  roleHint = null,
+}: {
+  previewDemo?: boolean;
+  dataAvailability?: SuggestionDataAvailability | null;
+  city?: string | null;
+  roleHint?: string | null;
+}) {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -166,7 +177,10 @@ export function AskAislixSection({ previewDemo = false }: { previewDemo?: boolea
         disabled={loading}
         variant="dark"
         accessRole={accessRole}
+        roleHint={roleHint}
+        city={city}
         rotationSeed={suggestionRotationSeed}
+        dataAvailability={dataAvailability}
         onSelect={(s) => {
           setQuestion(s);
           setError(null);

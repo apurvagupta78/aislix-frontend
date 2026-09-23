@@ -28,6 +28,7 @@ export function useDemoPreview(_model?: string, _filters?: Record<string, unknow
       setEnabledState(next);
       void queryClient.invalidateQueries({ queryKey: ["control-tower-dashboard"] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard-ops-ai-v6"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard-digital-metrics-v2"] });
       void queryClient.invalidateQueries({ queryKey: ["dashboard-digital-metrics"] });
     },
     [eligible, queryClient],

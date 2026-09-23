@@ -47,9 +47,44 @@ describe("selectAskAislixSuggestions", () => {
     expect(getWiredSuggestionCount()).toBeGreaterThanOrEqual(50);
   });
 
-  it("avoids duplicate categories in a single selection when possible", () => {
-    const selected = selectAskAislixSuggestions({ rotationSeed: 123, count: 7 });
-    const categories = selected.map((s) => s.category);
-    expect(new Set(categories).size).toBeGreaterThanOrEqual(4);
+  it("filters suggestions to categories with available data", () => {
+    const selected = selectAskAislixSuggestions({
+      rotationSeed: 7,
+      count: 7,
+      dataAvailability: {
+        hasAudits: true,
+        hasFindings: true,
+        hasActions: false,
+        hasInventory: false,
+        hasExpiry: false,
+        hasEvidence: false,
+        hasStores: true,
+        hasTrends: true,
+        hasRecurring: false,
+        hasComparison: true,
+      },
+    });
+    expect(selected.length).toBeGreaterThan(0);
+    expect(selected.every((s) => s.category !== "actions")).toBe(true);
+    expect(selected.every((s) => s.category !== "inventory")).toBe(true);
+  });
+
+  it("returns no chips when the workspace has no audit data", () => {
+    const selected = selectAskAislixSuggestions({
+      rotationSeed: 7,
+      dataAvailability: {
+        hasAudits: false,
+        hasFindings: false,
+        hasActions: false,
+        hasInventory: false,
+        hasExpiry: false,
+        hasEvidence: false,
+        hasStores: false,
+        hasTrends: false,
+        hasRecurring: false,
+        hasComparison: false,
+      },
+    });
+    expect(selected).toEqual([]);
   });
 });

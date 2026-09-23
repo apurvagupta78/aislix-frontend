@@ -62,6 +62,8 @@ export type AiDashboardMetrics = {
 export type DigitalLastTenRow = {
   id: string;
   auditName: string;
+  /** Template display name (same source as AI Last 10 Template column). */
+  templateName: string;
   store: string;
   assignee: string;
   date: string;
@@ -691,7 +693,8 @@ export async function fetchDigitalDashboardMetrics(
     }
   }
 
-  const lastTenRaw = rows.slice(0, 40).map((r) => {
+  const lastTenRaw = rows
+    .map((r) => {
     const storeRel = r.stores as { name?: string } | { name?: string }[] | null;
     const storeName = Array.isArray(storeRel) ? storeRel[0]?.name : storeRel?.name;
     const scanId = r.scan_id as string | null;
@@ -701,19 +704,26 @@ export async function fetchDigitalDashboardMetrics(
     if (userId && assigneeId === userId) relation = "assigned_to_me";
     else if (userId && assignerId === userId) relation = "assigned_by_me";
     const state = (r.assignment_state as string) || "";
+    const status = state || (r.status as string) || "—";
+    const isCompleted =
+      r.status === "completed" ||
+      state === "submitted" ||
+      r.approval_status === "approved";
     const reauditStatus =
       state === "reaudit_required" || r.status === "needs_correction"
         ? "Requested"
         : state === "reaudit_completed"
           ? "Completed"
           : "—";
+    const tmpl = templateNames.get(r.template_id as string) ?? "Digital audit";
     return {
       id: r.id as string,
-      auditName: templateNames.get(r.template_id as string) ?? "Digital audit",
+      auditName: tmpl,
+      templateName: tmpl,
       store: storeName ?? "—",
       assignee: names.get(r.assignee_id as string) ?? "—",
       date: (r.created_at as string) ?? "",
-      status: state || (r.status as string) || "—",
+      status,
       expected: null as number | null,
       actual: null as number | null,
       variance: null as number | null,
@@ -722,63 +732,133 @@ export async function fetchDigitalDashboardMetrics(
       reauditStatus,
       scanId,
       relation,
+      isCompleted,
     };
-  });
+  })
+    // Prefer completed audits with evidence for Last 10 / summary, then newest.
+    .sort((a, b) => {
+      if (a.isCompleted !== b.isCompleted) return a.isCompleted ? -1 : 1;
+      return (b.date || "").localeCompare(a.date || "");
+    })
+    .slice(0, 40);
 
   const lastTenScanIds = lastTenRaw.map((r) => r.scanId).filter(Boolean) as string[];
-  if (lastTenScanIds.length) {
-    const { data: lastLines } = await supabase
-      .from("digital_audit_lines")
-      .select("scan_id, expected_qty, actual_qty")
-      .in("scan_id", lastTenScanIds);
+  const lastTenAssignmentIds = lastTenRaw.map((r) => r.id);
+  if (lastTenScanIds.length || lastTenAssignmentIds.length) {
+    if (lastTenScanIds.length) {
+      const { data: existingLines } = await supabase
+        .from("digital_audit_lines")
+        .select("scan_id")
+        .in("scan_id", lastTenScanIds);
+      const have = new Set((existingLines ?? []).map((l) => l.scan_id as string));
+      const missing = lastTenScanIds.filter((id) => !have.has(id)).slice(0, 40);
+      if (missing.length) {
+        const { ensureCustomAuditReviewData } = await import("@/lib/custom-audit-review");
+        await Promise.all(missing.map((id) => ensureCustomAuditReviewData(id).catch(() => false)));
+      }
+    }
+
+    const lineRows: {
+      scan_id: string | null;
+      assignment_id: string | null;
+      expected_qty: number | null;
+      actual_qty: number | null;
+    }[] = [];
+    if (lastTenScanIds.length) {
+      const { data } = await supabase
+        .from("digital_audit_lines")
+        .select("scan_id, assignment_id, expected_qty, actual_qty")
+        .in("scan_id", lastTenScanIds);
+      lineRows.push(...((data ?? []) as typeof lineRows));
+    }
+    if (lastTenAssignmentIds.length) {
+      const { data } = await supabase
+        .from("digital_audit_lines")
+        .select("scan_id, assignment_id, expected_qty, actual_qty")
+        .in("assignment_id", lastTenAssignmentIds);
+      lineRows.push(...((data ?? []) as typeof lineRows));
+    }
+
     const byScan = new Map<string, { e: number; a: number }>();
-    for (const line of lastLines ?? []) {
+    const byAssignment = new Map<string, { e: number; a: number }>();
+    for (const line of lineRows) {
       if (line.actual_qty == null || line.expected_qty == null) continue;
-      const sid = line.scan_id as string;
-      const cur = byScan.get(sid) ?? { e: 0, a: 0 };
-      cur.e += Number(line.expected_qty);
-      cur.a += Number(line.actual_qty);
-      byScan.set(sid, cur);
+      const sid = line.scan_id;
+      const aid = line.assignment_id;
+      if (sid) {
+        const cur = byScan.get(sid) ?? { e: 0, a: 0 };
+        cur.e += Number(line.expected_qty);
+        cur.a += Number(line.actual_qty);
+        byScan.set(sid, cur);
+      }
+      if (aid) {
+        const cur = byAssignment.get(aid) ?? { e: 0, a: 0 };
+        cur.e += Number(line.expected_qty);
+        cur.a += Number(line.actual_qty);
+        byAssignment.set(aid, cur);
+      }
     }
     for (const row of lastTenRaw) {
-      if (!row.scanId) continue;
-      const agg = byScan.get(row.scanId);
+      const agg =
+        (row.scanId ? byScan.get(row.scanId) : undefined) ?? byAssignment.get(row.id);
       if (!agg) continue;
       row.expected = agg.e;
       row.actual = agg.a;
       row.variance = agg.a - agg.e;
     }
 
-    const { data: findings } = await supabase
-      .from("findings")
-      .select("id, scan_id")
-      .eq("org_id", orgId)
-      .in("scan_id", lastTenScanIds);
     const findingsByScan = new Map<string, number>();
-    for (const f of findings ?? []) {
-      const sid = f.scan_id as string;
-      if (!sid) continue;
-      findingsByScan.set(sid, (findingsByScan.get(sid) ?? 0) + 1);
+    const findingsByAssignment = new Map<string, number>();
+    if (lastTenScanIds.length) {
+      const { data: findings } = await supabase
+        .from("findings")
+        .select("id, scan_id, assignment_id")
+        .eq("org_id", orgId)
+        .in("scan_id", lastTenScanIds);
+      for (const f of findings ?? []) {
+        const sid = f.scan_id as string | null;
+        const aid = f.assignment_id as string | null;
+        if (sid) findingsByScan.set(sid, (findingsByScan.get(sid) ?? 0) + 1);
+        if (aid) findingsByAssignment.set(aid, (findingsByAssignment.get(aid) ?? 0) + 1);
+      }
     }
-    const { data: casForScans } = await supabase
-      .from("corrective_actions")
-      .select("id, scan_id")
-      .eq("org_id", orgId)
-      .in("scan_id", lastTenScanIds);
+    if (lastTenAssignmentIds.length) {
+      const { data: findings } = await supabase
+        .from("findings")
+        .select("id, scan_id, assignment_id")
+        .eq("org_id", orgId)
+        .in("assignment_id", lastTenAssignmentIds);
+      for (const f of findings ?? []) {
+        const sid = f.scan_id as string | null;
+        const aid = f.assignment_id as string | null;
+        if (sid) findingsByScan.set(sid, (findingsByScan.get(sid) ?? 0) + 1);
+        if (aid) findingsByAssignment.set(aid, (findingsByAssignment.get(aid) ?? 0) + 1);
+      }
+    }
+
     const caByScan = new Map<string, number>();
-    for (const c of casForScans ?? []) {
-      const sid = c.scan_id as string;
-      if (!sid) continue;
-      caByScan.set(sid, (caByScan.get(sid) ?? 0) + 1);
+    if (lastTenScanIds.length) {
+      const { data: casForScans } = await supabase
+        .from("corrective_actions")
+        .select("id, scan_id")
+        .eq("org_id", orgId)
+        .in("scan_id", lastTenScanIds);
+      for (const c of casForScans ?? []) {
+        const sid = c.scan_id as string;
+        if (!sid) continue;
+        caByScan.set(sid, (caByScan.get(sid) ?? 0) + 1);
+      }
     }
     for (const row of lastTenRaw) {
-      if (!row.scanId) continue;
-      row.findingsCount = findingsByScan.get(row.scanId) ?? 0;
-      row.caCount = caByScan.get(row.scanId) ?? 0;
+      row.findingsCount =
+        (row.scanId ? findingsByScan.get(row.scanId) : undefined) ??
+        findingsByAssignment.get(row.id) ??
+        0;
+      row.caCount = (row.scanId ? caByScan.get(row.scanId) : undefined) ?? 0;
     }
   }
 
-  const lastTenOut: DigitalLastTenRow[] = lastTenRaw.map(({ scanId, ...rest }) => ({
+  const lastTenOut: DigitalLastTenRow[] = lastTenRaw.map(({ scanId, isCompleted: _c, ...rest }) => ({
     ...rest,
     scanId,
   }));

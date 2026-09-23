@@ -14,6 +14,7 @@ import {
 
 import { chipStyle } from "@/components/dashboard/DashboardMetricVisuals";
 import { selectAskAislixSuggestions } from "@/lib/ask-aislix/ask-aislix-suggestions.select";
+import type { SuggestionDataAvailability } from "@/lib/ask-aislix/ask-aislix-suggestions.select";
 import type { SuggestionIcon } from "@/lib/ask-aislix/ask-aislix-suggestions.types";
 import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
 import { cn } from "@/lib/utils";
@@ -50,6 +51,7 @@ export function AskAislixSuggestions({
   accessRole,
   city,
   rotationSeed,
+  dataAvailability,
 }: {
   onSelect: (question: string) => void;
   disabled?: boolean;
@@ -58,6 +60,7 @@ export function AskAislixSuggestions({
   accessRole?: string | null;
   city?: string | null;
   rotationSeed?: number;
+  dataAvailability?: SuggestionDataAvailability | null;
 }) {
   const isDark = variant === "dark";
 
@@ -69,8 +72,9 @@ export function AskAislixSuggestions({
         city,
         count: 7,
         rotationSeed,
+        dataAvailability,
       }),
-    [roleHint, accessRole, city, rotationSeed],
+    [roleHint, accessRole, city, rotationSeed, dataAvailability],
   );
 
   if (suggestions.length === 0) return null;

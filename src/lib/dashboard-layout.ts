@@ -17,6 +17,7 @@ export type DashboardCardDef = {
 
 /** Metric cards that participate in DnD on the AI tab. */
 export const AI_METRIC_CARDS: DashboardCardDef[] = [
+  { id: "panel_last_audit", title: "Last completed audit — AI Analysis Report", kind: "metric" },
   { id: "kpi_verification", title: "Verification Coverage %", kind: "metric" },
   { id: "kpi_planogram", title: "Planogram Compliance %", kind: "metric" },
   { id: "kpi_total_audits", title: "Total Audits", kind: "metric" },
@@ -41,6 +42,7 @@ export const AI_METRIC_CARDS: DashboardCardDef[] = [
 ];
 
 export const DIGITAL_METRIC_CARDS: DashboardCardDef[] = [
+  { id: "panel_last_digital", title: "Last completed digital audit — summary", kind: "metric" },
   { id: "kpi_total", title: "Total Digital Audits", kind: "metric" },
   { id: "kpi_completed", title: "Completed", kind: "metric" },
   { id: "kpi_in_progress", title: "In Progress", kind: "metric" },
@@ -118,7 +120,9 @@ export function mergeTabLayout(
   const orderRaw = (saved?.order ?? defaults.order).filter((id) => valid.has(id));
   const hidden = (saved?.hidden ?? defaults.hidden).filter((id) => valid.has(id));
   const missing = defaults.order.filter((id) => !orderRaw.includes(id));
-  return { order: [...orderRaw, ...missing], hidden };
+  const panelFirst = missing.filter((id) => id.startsWith("panel_"));
+  const restMissing = missing.filter((id) => !id.startsWith("panel_"));
+  return { order: [...panelFirst, ...orderRaw, ...restMissing], hidden };
 }
 
 export function resolveVisibleOrder(
