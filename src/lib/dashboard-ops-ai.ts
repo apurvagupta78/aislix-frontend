@@ -725,7 +725,8 @@ export async function fetchOpsAiDashboard(
         .eq("org_id", orgId)
         .eq("status", "completed")
         .or("audit_mode.eq.ai,audit_mode.is.null")
-        .limit(80);
+        .order("created_at", { ascending: false })
+        .limit(200);
       q = applyStoreScopeFilter(q, scope) ?? q;
       if (scopedStoreId && scopedStoreId !== "all") q = q.eq("store_id", scopedStoreId);
       if (bounds?.from) q = q.gte("created_at", bounds.from.toISOString());
