@@ -628,7 +628,7 @@ export async function fetchOpsAiDashboard(
     verificationCoveragePct = pct(scansWithVerify.size, aiScanIds.length);
   }
 
-  // Prefer metrics product units; else keep facing-allocated units from base
+  // Prefer metrics product units; else allocate persisted total visible units by facing share.
   const productUnits = new Map<string, number>();
   if (aiScanIds.length) {
     const { data: resultRows } = await supabase
@@ -647,6 +647,13 @@ export async function fetchOpsAiDashboard(
     .slice(0, 8);
   if (!topProductsByUnits.length && (base.topProductsByUnits ?? []).length) {
     topProductsByUnits = base.topProductsByUnits;
+  }
+  if (!topProductsByUnits.length && (base.topProductsByFacings ?? []).length && base.totalVisibleUnits) {
+    const totalF = (base.topProductsByFacings ?? []).reduce((s, r) => s + r.value, 0) || 1;
+    topProductsByUnits = (base.topProductsByFacings ?? []).map((r) => ({
+      label: r.label,
+      value: (r.value / totalF) * (base.totalVisibleUnits as number),
+    }));
   }
 
   const topProductsByUnitsFinal = topProductsByUnits;

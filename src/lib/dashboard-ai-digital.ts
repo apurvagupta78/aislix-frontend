@@ -275,7 +275,34 @@ export async function fetchAiDashboardMetrics(
 
   const isBlankCategory = (value: string) => {
     const v = value.trim().toLowerCase();
-    return !v || v === "unknown" || v === "n/a" || v === "null";
+    return !v || v === "unknown" || v === "n/a" || v === "null" || v === "general";
+  };
+
+  /** Brand → category when detection category is missing (persisted brand labels only). */
+  const categoryFromBrand = (brand: string): string => {
+    const b = brand.trim().toLowerCase();
+    if (!b || b === "unknown") return "";
+    if (
+      ["colgate", "oral-b", "oralb", "sensodyne", "closeup", "close-up", "pepsodent", "kolynos", "odol", "doctor"].some(
+        (x) => b.includes(x),
+      )
+    ) {
+      return "Oral Care";
+    }
+    if (["lays", "lay's", "doritos", "cheetos", "kurkure"].some((x) => b.includes(x))) {
+      return "Snacks";
+    }
+    if (
+      ["dove", "nivea", "sunsilk", "pantene", "tresemme", "garnier", "loreal", "l'oreal", "head & shoulders"].some(
+        (x) => b.includes(x),
+      )
+    ) {
+      return "Personal Care";
+    }
+    if (["lipton", "canada dry", "a&w", "squirt"].some((x) => b.includes(x))) {
+      return "Beverages";
+    }
+    return "";
   };
 
   for (const row of rows) {
@@ -288,7 +315,7 @@ export async function fetchAiDashboardMetrics(
       ? rawCategory
       : !isBlankCategory(scanCat)
         ? scanCat
-        : "";
+        : categoryFromBrand(brand);
     productKeys.add(`${brand}|${name}`);
     brands.add(brand);
     variants.add(`${brand}|${name}|${variant}`);

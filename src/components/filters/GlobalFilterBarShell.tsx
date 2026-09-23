@@ -62,6 +62,9 @@ export function WorkspaceFilterBar({
 export function GlobalFilterBarShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
+  // Operations dashboard embeds filters below Ask / above Last 10 — never in AppShell top.
+  if (pathname === "/dashboard" || pathname.startsWith("/dashboard/")) return null;
+
   if (!pathShowsGlobalFilterBarInShell(pathname)) return null;
 
   return <WorkspaceFilterBar className="mb-6" />;
