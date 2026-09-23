@@ -85,7 +85,7 @@ export function CreateCustomMetricDialog({
         setPreview(computed);
       } else {
         if (question.trim().length < 3) {
-          setError("Enter a question for Luna.");
+          setError("Enter a question for AI.");
           setBusy(false);
           return;
         }
@@ -138,7 +138,7 @@ export function CreateCustomMetricDialog({
         <DialogHeader>
           <DialogTitle className="text-[#102A43]">Create custom metric</DialogTitle>
           <DialogDescription>
-            Pick audits, then choose a catalog metric or ask Luna. Max 3 per tab.
+            Pick audits, then choose a catalog metric or ask AI. Max 3 per tab.
           </DialogDescription>
         </DialogHeader>
 
@@ -179,7 +179,7 @@ export function CreateCustomMetricDialog({
                 {(
                   [
                     ["catalog", "Catalog"],
-                    ["luna", "Ask Luna"],
+                    ["luna", "Ask AI"],
                   ] as const
                 ).map(([id, label]) => (
                   <button

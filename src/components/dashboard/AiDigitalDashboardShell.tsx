@@ -858,7 +858,7 @@ export function AiDigitalDashboardShell() {
         })}
         {!visibleIds.length ? (
           <p className="rounded-xl border border-dashed border-[#D9E2E8] bg-[#EEF1F4]/60 p-4 text-sm text-[#667085] sm:col-span-2">
-            All metric cards are hidden. Use Edit layout → Add card to bring them back.
+            All metric cards are hidden. Use Customize Dashboard → Add card to bring them back.
           </p>
         ) : null}
       </div>
@@ -918,7 +918,7 @@ export function AiDigitalDashboardShell() {
               : "border-[#D9E2E8] bg-white text-[#667085]",
           )}
         >
-          {editLayout ? "Done editing layout" : "Edit layout"}
+          {editLayout ? "Done customizing" : "Customize Dashboard"}
         </button>
       </div>
 
@@ -959,7 +959,7 @@ export function AiDigitalDashboardShell() {
                 {data?.executive.openCritical ?? 0} open critical
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
+              <div className="grid items-start gap-4 lg:grid-cols-[220px_1fr]">
                 <div className="space-y-3">
                   {[
                     {
@@ -1010,7 +1010,7 @@ export function AiDigitalDashboardShell() {
                   ))}
                 </div>
 
-                <div className="rounded-xl border border-[#C1E4F8] bg-white p-4 shadow-sm">
+                <div className="self-start rounded-xl border border-[#C1E4F8] bg-white p-4 shadow-sm">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="text-sm font-semibold uppercase tracking-wide text-[#102A43]">
                       Last completed audit — AI Analysis Report
@@ -1056,7 +1056,12 @@ export function AiDigitalDashboardShell() {
                           Confidence: {fmt(data.lastReport.confidencePct, "%")}
                         </span>
                       </div>
-                      <div className="grid gap-4 md:grid-cols-[1fr_1.2fr]">
+                      <div
+                        className={cn(
+                          "grid gap-4",
+                          data.lastReport.imageUrls.length > 0 && "md:grid-cols-[1fr_1.2fr]",
+                        )}
+                      >
                         <ul className="space-y-2 text-sm text-[#557187]">
                           <li>
                             <span className="font-semibold text-[#102A43]">Good:</span>{" "}
@@ -1071,28 +1076,18 @@ export function AiDigitalDashboardShell() {
                             {data.lastReport.nextAction}
                           </li>
                         </ul>
-                        <div className="grid grid-cols-3 gap-2">
-                          {(data.lastReport.imageUrls.length
-                            ? data.lastReport.imageUrls
-                            : [null, null, null]
-                          ).map((url, i) =>
-                            url ? (
+                        {data.lastReport.imageUrls.length > 0 ? (
+                          <div className="grid grid-cols-3 gap-2">
+                            {data.lastReport.imageUrls.slice(0, 3).map((url) => (
                               <img
                                 key={url}
                                 src={url}
                                 alt=""
                                 className="h-20 w-full rounded-lg border border-[#D9E2E8] object-cover"
                               />
-                            ) : (
-                              <div
-                                key={`ph-${i}`}
-                                className="flex h-20 items-center justify-center rounded-lg border border-dashed border-[#D9E2E8] bg-[#F4F7F9] text-[10px] text-[#667085]"
-                              >
-                                Evidence
-                              </div>
-                            ),
-                          )}
-                        </div>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   ) : (
@@ -1105,7 +1100,17 @@ export function AiDigitalDashboardShell() {
 
               {renderMetricGrid(renderAiCard)}
 
-              <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
+              <div className="space-y-3">
+                <WorkspaceFilterBar
+                  footer={
+                    <CompletionChips
+                      completion={completion}
+                      onChange={setCompletion}
+                      scopeLabel={data?.scopeLabel}
+                    />
+                  }
+                />
+                <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                   <h3 className="text-sm font-semibold text-[#102A43]">Last 10 Audits</h3>
                   <ViewMore to="/history" />
@@ -1235,6 +1240,7 @@ export function AiDigitalDashboardShell() {
                     </tbody>
                   </table>
                 </div>
+              </div>
               </div>
             </>
           )}
