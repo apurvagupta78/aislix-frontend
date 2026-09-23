@@ -433,7 +433,8 @@ export async function fetchAiDashboardMetrics(
     totalFacings: metricsFacingsCount ? metricsFacingsSum : facingCount ? facingsSum : null,
     totalVisibleUnits: metricsUnitsCount ? metricsUnitsSum : null,
     avgConfidence: confCount ? confSum / confCount : null,
-    verificationCoveragePct: eligible ? pct(verified, eligible) : null,
+    // N/A until at least one field is human-verified — avoid fake 0%.
+    verificationCoveragePct: verified > 0 && eligible > 0 ? pct(verified, eligible) : null,
     aiVsVerifiedUnitVariance: verified > 0 ? unitVar : null,
     aiUnitAccuracyPct:
       verifiedUnitsSum > 0
@@ -936,6 +937,8 @@ export async function fetchDigitalDashboardMetrics(
   let caSlaPct: number | null = null;
   let caStatusMix: { label: string; value: number }[] = [];
   {
+    const CA_CLOSED = new Set(["closed", "resolved", "cancelled", "done", "complete", "completed"]);
+    const CA_IN_PROGRESS = new Set(["in_progress", "pending_verification", "assigned"]);
     let caQuery = supabase
       .from("corrective_actions")
       .select("id, status, due_at, closed_at, resolved_at")
@@ -951,17 +954,28 @@ export async function fetchDigitalDashboardMetrics(
     const { data: cas } = await caQuery;
     if (cas) {
       caTotal = cas.length;
-      caOpen = cas.filter((c) => !["closed", "resolved", "cancelled"].includes(String(c.status))).length;
-      caInProgress = cas.filter((c) => String(c.status) === "in_progress").length;
-      caClosed = cas.filter((c) => ["closed", "resolved"].includes(String(c.status))).length;
-      caOverdue = cas.filter((c) => {
-        if (["closed", "resolved", "cancelled"].includes(String(c.status))) return false;
-        return c.due_at && new Date(c.due_at as string).getTime() < now;
+      caClosed = cas.filter((c) => {
+        const st = String(c.status ?? "").toLowerCase();
+        return CA_CLOSED.has(st) || Boolean(c.closed_at || c.resolved_at);
       }).length;
-      caClosurePct = pct(caClosed, caTotal);
+      caInProgress = cas.filter((c) => CA_IN_PROGRESS.has(String(c.status ?? "").toLowerCase())).length;
+      caOpen = cas.filter((c) => {
+        const st = String(c.status ?? "").toLowerCase();
+        if (CA_CLOSED.has(st) || c.closed_at || c.resolved_at) return false;
+        return true;
+      }).length;
+      caOverdue = cas.filter((c) => {
+        const st = String(c.status ?? "").toLowerCase();
+        if (CA_CLOSED.has(st) || c.closed_at || c.resolved_at) return false;
+        if (st === "overdue") return true;
+        return Boolean(c.due_at && new Date(c.due_at as string).getTime() < now);
+      }).length;
+      // True 0% when actions exist but none closed; N/A only when there are no actions.
+      caClosurePct = caTotal > 0 ? pct(caClosed, caTotal) : null;
       const completedWithDue = cas.filter((c) => {
-        if (!["closed", "resolved"].includes(String(c.status)) || !c.due_at) return false;
-        return Boolean(c.closed_at || c.resolved_at);
+        const st = String(c.status ?? "").toLowerCase();
+        const done = CA_CLOSED.has(st) || Boolean(c.closed_at || c.resolved_at);
+        return done && Boolean(c.due_at) && Boolean(c.closed_at || c.resolved_at);
       });
       const onTimeCa = completedWithDue.filter((c) => {
         const doneAt = (c.closed_at || c.resolved_at) as string;

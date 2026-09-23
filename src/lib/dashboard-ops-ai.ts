@@ -714,7 +714,8 @@ export async function fetchOpsAiDashboard(
     (r) => r.label.toLowerCase() !== "unknown",
   );
 
-  // Verification coverage = % of audits (scans) with any human verification
+  // Verification coverage = % of audits (scans) with any human verification.
+  // N/A when no human verification exists yet — never show a fake 0%.
   let verificationCoveragePct: number | null = null;
   const aiScanIds = (
     await (async () => {
@@ -738,7 +739,8 @@ export async function fetchOpsAiDashboard(
     const scansWithVerify = new Set(
       verRows.filter((v) => v.verified_value != null).map((v) => v.scan_id),
     );
-    verificationCoveragePct = pct(scansWithVerify.size, aiScanIds.length);
+    verificationCoveragePct =
+      scansWithVerify.size > 0 ? pct(scansWithVerify.size, aiScanIds.length) : null;
   }
 
   // Prefer metrics product units; else allocate persisted total visible units by facing share.
