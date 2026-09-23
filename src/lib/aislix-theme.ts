@@ -59,9 +59,9 @@ export const AISLIX_STATUS_MIX: Record<string, string> = {
   Overdue: AISLIX.darkstoreBg,
 };
 
-/** Soft blue primary CTA — New Audit (matches Ask button Soft Blue #7DB7D6). */
+/** Soft navy primary CTA — New Audit (matches homepage navy #102A43). */
 export const NEW_AUDIT_BUTTON_CLASS =
-  "rounded-xl border border-[#7DB7D6] bg-[#7DB7D6] text-[#102A43] shadow-soft hover:bg-[#6aa9c9]";
+  "rounded-xl border border-[#102A43] bg-[#102A43] text-white shadow-soft hover:bg-[#102A43]/90";
 
 export const AISLIX_MODEL_SURFACE: Record<string, { bg: string; border: string }> = {
   all: { bg: AISLIX.customBg, border: AISLIX.customBorder },

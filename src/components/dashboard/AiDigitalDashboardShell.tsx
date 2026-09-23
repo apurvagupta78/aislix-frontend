@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   Bar,
@@ -19,7 +19,6 @@ import { AskAislixSection } from "@/components/ask-aislix/AskAislixSection";
 import { WorkspaceFilterBar } from "@/components/filters/GlobalFilterBarShell";
 import { MpDonut } from "@/components/control-tower/MpCharts";
 import { DemoPreviewToggle } from "@/components/control-tower/DemoPreviewToggle";
-import { DemoDataBadge } from "@/components/control-tower/DemoDataBadge";
 import {
   BrandShareMultiRing,
   CategoryShareDonut,
@@ -27,6 +26,12 @@ import {
   PerformanceLeaderboard,
   ProductRankingCards,
 } from "@/components/dashboard/DashboardMetricVisuals";
+import {
+  DashboardLayoutToolbar,
+  SortableSection,
+  useSectionDrag,
+  visibleSectionIds,
+} from "@/components/dashboard/DashboardLayoutControls";
 import { PageHeader } from "@/components/design-system/PageHeader";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +41,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AISLIX, NEW_AUDIT_BUTTON_CLASS } from "@/lib/aislix-theme";
+import {
+  fetchNotificationPreferences,
+  updateNotificationPreferences,
+} from "@/lib/account";
+import {
+  catalogForTab,
+  defaultDashboardLayout,
+  defaultTabLayout,
+  parseDashboardLayout,
+  type DashboardLayoutPrefs,
+  type TabLayoutState,
+} from "@/lib/dashboard-layout";
 import {
   fetchAuditAnalysisReport,
   fetchOpsAiDashboard,
@@ -49,10 +66,10 @@ import {
 } from "@/lib/dashboard-ai-digital";
 import { useOptionalGlobalFilters } from "@/lib/global-filters";
 import { assignmentStatusLabel } from "@/lib/assignment-status-ui";
-import { shouldShowDemoPreviewCta } from "@/lib/demo-environment";
 import { useDemoPreview } from "@/lib/use-demo-preview";
 import { cn } from "@/lib/utils";
 import { Route as DashboardRoute } from "@/routes/dashboard";
+import { toast } from "sonner";
 
 const CHART_COLORS = [
   AISLIX.localBorder,
@@ -229,6 +246,7 @@ export function AiDigitalDashboardShell() {
   const { tab } = DashboardRoute.useSearch();
   const global = useOptionalGlobalFilters();
   const demoPreview = useDemoPreview();
+  const queryClient = useQueryClient();
   const [completion, setCompletion] = useState<CompletionFilter>("all");
   const [tableStage, setTableStage] = useState<string>("all");
   const [tableTemplate, setTableTemplate] = useState<string>("all");
@@ -238,6 +256,10 @@ export function AiDigitalDashboardShell() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalReport, setModalReport] = useState<LastAuditReport | null>(null);
   const [modalIncomplete, setModalIncomplete] = useState(false);
+  const [editLayout, setEditLayout] = useState(true);
+  const [layoutPrefs, setLayoutPrefs] = useState<DashboardLayoutPrefs>(() => defaultDashboardLayout());
+  const [savedLayout, setSavedLayout] = useState<DashboardLayoutPrefs>(() => defaultDashboardLayout());
+  const [layoutSaving, setLayoutSaving] = useState(false);
 
   const filterKey = global?.filters
     ? {
@@ -262,6 +284,71 @@ export function AiDigitalDashboardShell() {
     });
   };
 
+  const layoutQuery = useQuery({
+    queryKey: ["dashboard-layout-prefs"],
+    queryFn: async () => {
+      const prefs = await fetchNotificationPreferences();
+      return parseDashboardLayout(prefs.dashboard_layout);
+    },
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (layoutQuery.data) {
+      setLayoutPrefs(layoutQuery.data);
+      setSavedLayout(layoutQuery.data);
+    }
+  }, [layoutQuery.data]);
+
+  const activeTabLayout: TabLayoutState =
+    tab === "ai" ? layoutPrefs.ai : layoutPrefs.digital;
+  const setActiveTabLayout = (next: TabLayoutState) => {
+    setLayoutPrefs((prev) =>
+      tab === "ai" ? { ...prev, ai: next } : { ...prev, digital: next },
+    );
+  };
+  const layoutDirty =
+    JSON.stringify(layoutPrefs.ai) !== JSON.stringify(savedLayout.ai) ||
+    JSON.stringify(layoutPrefs.digital) !== JSON.stringify(savedLayout.digital);
+
+  const sectionDrag = useSectionDrag(activeTabLayout, setActiveTabLayout);
+  const visibleIds = visibleSectionIds(tab === "digital" ? "digital" : "ai", activeTabLayout);
+  const catalog = catalogForTab(tab === "digital" ? "digital" : "ai");
+
+  const saveLayout = async () => {
+    setLayoutSaving(true);
+    try {
+      await updateNotificationPreferences({ dashboard_layout: layoutPrefs });
+      setSavedLayout(layoutPrefs);
+      void queryClient.invalidateQueries({ queryKey: ["dashboard-layout-prefs"] });
+      toast.success("Dashboard layout saved to your profile");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not save layout");
+    } finally {
+      setLayoutSaving(false);
+    }
+  };
+
+  const resetLayout = async () => {
+    const defaults = defaultDashboardLayout();
+    const next =
+      tab === "ai"
+        ? { ...layoutPrefs, ai: defaultTabLayout(catalogForTab("ai")) }
+        : { ...layoutPrefs, digital: defaultTabLayout(catalogForTab("digital")) };
+    setLayoutPrefs(next);
+    setLayoutSaving(true);
+    try {
+      await updateNotificationPreferences({ dashboard_layout: next });
+      setSavedLayout(next);
+      toast.success("Reset to Aislix default layout");
+    } catch (err) {
+      setLayoutPrefs(defaults);
+      toast.error(err instanceof Error ? err.message : "Could not reset layout");
+    } finally {
+      setLayoutSaving(false);
+    }
+  };
+
   const opsQuery = useQuery({
     queryKey: ["dashboard-ops-ai-v6", filterKey, demoPreview.previewDemo],
     queryFn: () =>
@@ -280,33 +367,69 @@ export function AiDigitalDashboardShell() {
   const data = opsQuery.data;
   const dig = digitalQuery.data;
   const ai = data?.metrics;
-  const demoBadgePreviewMode = shouldShowDemoPreviewCta(data?.previewDemo);
 
-  const filteredLastTen = useMemo(() => {
-    let rows = [...(data?.lastTen ?? [])];
-    if (tableStage !== "all") rows = rows.filter((r) => r.completionStage === tableStage);
-    if (tableTemplate !== "all") rows = rows.filter((r) => r.templateName === tableTemplate);
-    if (tableAssignee !== "all") rows = rows.filter((r) => r.assigneeName === tableAssignee);
-    if (tableStore !== "all") rows = rows.filter((r) => r.storeName === tableStore);
-    rows.sort((a, b) => {
+  const applyTableFilters = <T extends {
+    completionStage: string;
+    templateName?: string;
+    assigneeName: string;
+    storeName: string;
+    date: string;
+    scorePct: number | null;
+  }>(rows: T[]) => {
+    let next = [...rows];
+    if (tableStage !== "all") next = next.filter((r) => r.completionStage === tableStage);
+    if (tableTemplate !== "all") next = next.filter((r) => r.templateName === tableTemplate);
+    if (tableAssignee !== "all") next = next.filter((r) => r.assigneeName === tableAssignee);
+    if (tableStore !== "all") next = next.filter((r) => r.storeName === tableStore);
+    next.sort((a, b) => {
       if (sortKey === "score") return (b.scorePct ?? -1) - (a.scorePct ?? -1);
       if (sortKey === "completion") return a.completionStage.localeCompare(b.completionStage);
       return (b.date || "").localeCompare(a.date || "");
     });
-    return rows;
-  }, [data?.lastTen, tableStage, tableTemplate, tableAssignee, tableStore, sortKey]);
+    return next;
+  };
+
+  const filteredLastTen = useMemo(
+    () => applyTableFilters(data?.lastTen ?? []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data?.lastTen, tableStage, tableTemplate, tableAssignee, tableStore, sortKey],
+  );
+
+  const filteredAssigned = useMemo(
+    () => applyTableFilters(data?.myAssignedAudits ?? []),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [data?.myAssignedAudits, tableStage, tableTemplate, tableAssignee, tableStore, sortKey],
+  );
 
   const templateOptions = useMemo(
-    () => [...new Set((data?.lastTen ?? []).map((r) => r.templateName))].filter(Boolean),
-    [data?.lastTen],
+    () =>
+      [
+        ...new Set([
+          ...(data?.lastTen ?? []).map((r) => r.templateName),
+          ...(data?.myAssignedAudits ?? []).map((r) => r.templateName),
+        ]),
+      ].filter(Boolean),
+    [data?.lastTen, data?.myAssignedAudits],
   );
   const assigneeOptions = useMemo(
-    () => [...new Set((data?.lastTen ?? []).map((r) => r.assigneeName))].filter(Boolean),
-    [data?.lastTen],
+    () =>
+      [
+        ...new Set([
+          ...(data?.lastTen ?? []).map((r) => r.assigneeName),
+          ...(data?.myAssignedAudits ?? []).map((r) => r.assigneeName),
+        ]),
+      ].filter(Boolean),
+    [data?.lastTen, data?.myAssignedAudits],
   );
   const storeOptions = useMemo(
-    () => [...new Set((data?.lastTen ?? []).map((r) => r.storeName))].filter(Boolean),
-    [data?.lastTen],
+    () =>
+      [
+        ...new Set([
+          ...(data?.lastTen ?? []).map((r) => r.storeName),
+          ...(data?.myAssignedAudits ?? []).map((r) => r.storeName),
+        ]),
+      ].filter(Boolean),
+    [data?.lastTen, data?.myAssignedAudits],
   );
 
   const openAiAnalysis = async (row: LastTenAuditRow) => {
@@ -341,11 +464,6 @@ export function AiDigitalDashboardShell() {
         eyebrow="Dashboard"
         title="Operations AI Dashboard"
         description="Ask Aislix, audit intelligence, planogram compliance, and execution performance."
-        meta={
-          data?.labeledDemo ? (
-            <DemoDataBadge showCta previewMode={demoBadgePreviewMode} />
-          ) : null
-        }
         actions={
           <>
             <DemoPreviewToggle
@@ -381,60 +499,146 @@ export function AiDigitalDashboardShell() {
             </button>
           ))}
         </div>
+        <button
+          type="button"
+          onClick={() => setEditLayout((v) => !v)}
+          className={cn(
+            "rounded-lg border px-3 py-2 text-xs font-medium",
+            editLayout
+              ? "border-[#102A43] bg-[#102A43] text-white"
+              : "border-[#D9E2E8] bg-white text-[#667085]",
+          )}
+        >
+          {editLayout ? "Done editing layout" : "Edit layout"}
+        </button>
       </div>
 
+      {editLayout ? (
+        <DashboardLayoutToolbar
+          tab={tab === "digital" ? "digital" : "ai"}
+          layout={activeTabLayout}
+          dirty={layoutDirty}
+          saving={layoutSaving}
+          onChange={setActiveTabLayout}
+          onSave={() => void saveLayout()}
+          onReset={() => void resetLayout()}
+        />
+      ) : null}
+
       {tab === "ai" ? (
-        <div className="space-y-6">
-          <AskAislixSection previewDemo={demoPreview.previewDemo || Boolean(data?.labeledDemo)} />
+        <div className="flex flex-col gap-6">
+          {visibleIds.map((sectionId) => {
+            const def = catalog.find((s) => s.id === sectionId);
+            if (!def) return null;
+            const order = visibleIds.indexOf(sectionId);
+            const wrap = (body: React.ReactNode) => (
+              <SortableSection
+                key={sectionId}
+                id={sectionId}
+                title={def.title}
+                pinned={def.pinned}
+                editMode={editLayout}
+                order={order}
+                onHide={
+                  def.pinned
+                    ? undefined
+                    : () =>
+                        setActiveTabLayout({
+                          ...activeTabLayout,
+                          hidden: [...activeTabLayout.hidden, sectionId],
+                        })
+                }
+                onDragStart={sectionDrag.onDragStart}
+                onDragOver={sectionDrag.onDragOver}
+                onDrop={sectionDrag.onDrop}
+              >
+                {body}
+              </SortableSection>
+            );
 
-          <WorkspaceFilterBar
-            footer={
-              <>
-                {(
-                  [
-                    ["all", "All"],
-                    ["completed", "Completed"],
-                    ["in_progress", "In Progress"],
-                    ["not_started", "Not Started"],
-                  ] as const
-                ).map(([id, label]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => setCompletion(id)}
-                    className={cn(
-                      "rounded-full border px-3 py-1 text-xs font-medium",
-                      completion === id
-                        ? "border-[#102A43] bg-[#102A43] text-white"
-                        : id === "completed"
-                          ? "border-[#C5D0B2] bg-[#EAF1DF] text-[#102A43]"
-                          : id === "in_progress"
-                            ? "border-[#C1E4F8] bg-[#EAF6FD] text-[#102A43]"
-                            : id === "not_started"
-                              ? "border-[#ECBDCC] bg-[#FFEAF1] text-[#102A43]"
-                              : "border-[#D9E2E8] bg-white text-[#667085]",
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
-                <span className="rounded-full border border-[#C1E4F8] bg-[#EAF6FD] px-3 py-1 text-xs text-[#102A43]">
-                  {data?.scopeLabel ?? "Showing your stores"}
-                </span>
-              </>
+            if (sectionId === "ask") {
+              return wrap(
+                <AskAislixSection
+                  previewDemo={demoPreview.previewDemo || Boolean(data?.labeledDemo)}
+                />,
+              );
             }
-          />
+            if (sectionId === "filters") {
+              return wrap(
+                <WorkspaceFilterBar
+                  footer={
+                    <>
+                      {(
+                        [
+                          ["all", "All"],
+                          ["completed", "Completed"],
+                          ["in_progress", "In Progress"],
+                          ["not_started", "Not Started"],
+                        ] as const
+                      ).map(([id, label]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setCompletion(id)}
+                          className={cn(
+                            "rounded-full border px-3 py-1 text-xs font-medium",
+                            completion === id
+                              ? "border-[#102A43] bg-[#102A43] text-white"
+                              : id === "completed"
+                                ? "border-[#C5D0B2] bg-[#EAF1DF] text-[#102A43]"
+                                : id === "in_progress"
+                                  ? "border-[#C1E4F8] bg-[#EAF6FD] text-[#102A43]"
+                                  : id === "not_started"
+                                    ? "border-[#ECBDCC] bg-[#FFEAF1] text-[#102A43]"
+                                    : "border-[#D9E2E8] bg-white text-[#667085]",
+                          )}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                      <span className="rounded-full border border-[#C1E4F8] bg-[#EAF6FD] px-3 py-1 text-xs text-[#102A43]">
+                        {data?.scopeLabel ?? "Showing your stores"}
+                      </span>
+                    </>
+                  }
+                />,
+              );
+            }
+            if (opsQuery.isPending) {
+              return sectionId === "executive"
+                ? wrap(<p className="text-sm text-[#667085]">Loading AI dashboard…</p>)
+                : null;
+            }
+            if (sectionId === "executive") {
+              return wrap(
+                <div className="rounded-xl border border-[#C1E4F8] bg-[#EAF6FD]/60 px-4 py-2 text-sm text-[#102A43]">
+                  {data?.executive.audits ?? 0} audits ·{" "}
+                  {fmt(data?.executive.completionPct, "%")} complete ·{" "}
+                  {data?.executive.openCritical ?? 0} open critical
+                </div>,
+              );
+            }
+            return null;
+          })}
 
-          {opsQuery.isPending ? (
-            <p className="text-sm text-[#667085]">Loading AI dashboard…</p>
-          ) : (
-            <>
-              <div className="rounded-xl border border-[#C1E4F8] bg-[#EAF6FD]/60 px-4 py-2 text-sm text-[#102A43]">
-                {data?.executive.audits ?? 0} audits ·{" "}
-                {fmt(data?.executive.completionPct, "%")} complete ·{" "}
-                {data?.executive.openCritical ?? 0} open critical
-              </div>
-
+          {opsQuery.isPending ? null : (
+            <div className="contents">
+              {visibleIds.includes("synopsis_kpis") ? (
+                <SortableSection
+                  id="synopsis_kpis"
+                  title="Synopsis & KPIs"
+                  editMode={editLayout}
+                  order={visibleIds.indexOf("synopsis_kpis")}
+                  onHide={() =>
+                    setActiveTabLayout({
+                      ...activeTabLayout,
+                      hidden: [...activeTabLayout.hidden, "synopsis_kpis"],
+                    })
+                  }
+                  onDragStart={sectionDrag.onDragStart}
+                  onDragOver={sectionDrag.onDragOver}
+                  onDrop={sectionDrag.onDrop}
+                >
               <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
                 <div className="space-y-3">
                   {[
@@ -631,9 +835,26 @@ export function AiDigitalDashboardShell() {
                   </div>
                 </div>
               </div>
+                </SortableSection>
+              ) : null}
 
-              {/* Charts */}
-              <div className="grid gap-4 lg:grid-cols-2">
+              {/* Charts — each section independently reorderable */}
+              {visibleIds.includes("chart_planogram") ? (
+                <SortableSection
+                  id="chart_planogram"
+                  title="Planogram Expected vs Actual"
+                  editMode={editLayout}
+                  order={visibleIds.indexOf("chart_planogram")}
+                  onHide={() =>
+                    setActiveTabLayout({
+                      ...activeTabLayout,
+                      hidden: [...activeTabLayout.hidden, "chart_planogram"],
+                    })
+                  }
+                  onDragStart={sectionDrag.onDragStart}
+                  onDragOver={sectionDrag.onDragOver}
+                  onDrop={sectionDrag.onDrop}
+                >
                 <ChartCard title="Planogram Compliance — Expected vs Actual" moreTo="/history">
                   {planogramGrouped.length ? (
                     <div className="h-56">
@@ -654,7 +875,25 @@ export function AiDigitalDashboardShell() {
                     </p>
                   )}
                 </ChartCard>
+                </SortableSection>
+              ) : null}
 
+              {visibleIds.includes("chart_top_facings") ? (
+                <SortableSection
+                  id="chart_top_facings"
+                  title="Top products by facings"
+                  editMode={editLayout}
+                  order={visibleIds.indexOf("chart_top_facings")}
+                  onHide={() =>
+                    setActiveTabLayout({
+                      ...activeTabLayout,
+                      hidden: [...activeTabLayout.hidden, "chart_top_facings"],
+                    })
+                  }
+                  onDragStart={sectionDrag.onDragStart}
+                  onDragOver={sectionDrag.onDragOver}
+                  onDrop={sectionDrag.onDrop}
+                >
                 <ChartCard title="Top products by facings" moreTo="/audit-intelligence">
                   {(ai?.topProductsByFacings ?? []).length ? (
                     <div className="h-56">
@@ -682,7 +921,26 @@ export function AiDigitalDashboardShell() {
                     <p className="text-sm text-[#667085]">Data unavailable</p>
                   )}
                 </ChartCard>
+                </SortableSection>
+              ) : null}
 
+              {visibleIds.includes("charts_analytics") ? (
+                <SortableSection
+                  id="charts_analytics"
+                  title="Analytics charts & performance"
+                  editMode={editLayout}
+                  order={visibleIds.indexOf("charts_analytics")}
+                  onHide={() =>
+                    setActiveTabLayout({
+                      ...activeTabLayout,
+                      hidden: [...activeTabLayout.hidden, "charts_analytics"],
+                    })
+                  }
+                  onDragStart={sectionDrag.onDragStart}
+                  onDragOver={sectionDrag.onDragOver}
+                  onDrop={sectionDrag.onDrop}
+                >
+              <div className="grid gap-4 lg:grid-cols-2">
                 <ChartCard title="Completion mix" moreTo="/history">
                   {(data?.completionMix ?? []).some((s) => s.value > 0) ? (
                     <MpDonut
@@ -773,7 +1031,25 @@ export function AiDigitalDashboardShell() {
                   </ChartCard>
                 </div>
               </div>
+                </SortableSection>
+              ) : null}
 
+              {visibleIds.includes("table_last_ten") ? (
+                <SortableSection
+                  id="table_last_ten"
+                  title="Last 10 Audits"
+                  editMode={editLayout}
+                  order={visibleIds.indexOf("table_last_ten")}
+                  onHide={() =>
+                    setActiveTabLayout({
+                      ...activeTabLayout,
+                      hidden: [...activeTabLayout.hidden, "table_last_ten"],
+                    })
+                  }
+                  onDragStart={sectionDrag.onDragStart}
+                  onDragOver={sectionDrag.onDragOver}
+                  onDrop={sectionDrag.onDrop}
+                >
               {/* Last 10 */}
               <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -928,7 +1204,25 @@ export function AiDigitalDashboardShell() {
                   </table>
                 </div>
               </div>
+                </SortableSection>
+              ) : null}
 
+              {visibleIds.includes("table_assigned") ? (
+                <SortableSection
+                  id="table_assigned"
+                  title="Assigned Audits"
+                  editMode={editLayout}
+                  order={visibleIds.indexOf("table_assigned")}
+                  onHide={() =>
+                    setActiveTabLayout({
+                      ...activeTabLayout,
+                      hidden: [...activeTabLayout.hidden, "table_assigned"],
+                    })
+                  }
+                  onDragStart={sectionDrag.onDragStart}
+                  onDragOver={sectionDrag.onDragOver}
+                  onDrop={sectionDrag.onDrop}
+                >
               {/* Assigned audits — to me / by me */}
               <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -936,6 +1230,63 @@ export function AiDigitalDashboardShell() {
                     Assigned Audits (to me &amp; by me)
                   </h3>
                   <ViewMore to="/history" />
+                </div>
+                <div className="mb-3 flex flex-wrap gap-2">
+                  <select
+                    className="rounded-lg border border-[#D9E2E8] bg-white px-2 py-1.5 text-xs"
+                    value={tableStage}
+                    onChange={(e) => setTableStage(e.target.value)}
+                  >
+                    <option value="all">Completion stage</option>
+                    <option value="completed">Completed</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="not_started">Not Started</option>
+                  </select>
+                  <select
+                    className="rounded-lg border border-[#D9E2E8] bg-white px-2 py-1.5 text-xs"
+                    value={tableTemplate}
+                    onChange={(e) => setTableTemplate(e.target.value)}
+                  >
+                    <option value="all">Template</option>
+                    {templateOptions.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="rounded-lg border border-[#D9E2E8] bg-white px-2 py-1.5 text-xs"
+                    value={tableAssignee}
+                    onChange={(e) => setTableAssignee(e.target.value)}
+                  >
+                    <option value="all">Assignee</option>
+                    {assigneeOptions.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="rounded-lg border border-[#D9E2E8] bg-white px-2 py-1.5 text-xs"
+                    value={tableStore}
+                    onChange={(e) => setTableStore(e.target.value)}
+                  >
+                    <option value="all">Store</option>
+                    {storeOptions.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="rounded-lg border border-[#D9E2E8] bg-white px-2 py-1.5 text-xs"
+                    value={sortKey}
+                    onChange={(e) => setSortKey(e.target.value as typeof sortKey)}
+                  >
+                    <option value="date">Sort: Date</option>
+                    <option value="score">Sort: Score</option>
+                    <option value="completion">Sort: Completion</option>
+                  </select>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[1040px] text-left text-sm">
@@ -955,7 +1306,7 @@ export function AiDigitalDashboardShell() {
                       </tr>
                     </thead>
                     <tbody>
-                      {(data?.myAssignedAudits ?? []).map((row) => (
+                      {filteredAssigned.map((row) => (
                         <tr key={row.id} className="border-b border-[#EEF1F4]">
                           <td className="py-2 pr-3 font-medium text-[#102A43]">{row.auditName}</td>
                           <td className="py-2 pr-3 text-[#557187]">{row.templateName}</td>
@@ -983,7 +1334,7 @@ export function AiDigitalDashboardShell() {
                           <td className="py-2">{fmt(row.scorePct, "%")}</td>
                         </tr>
                       ))}
-                      {!(data?.myAssignedAudits ?? []).length ? (
+                      {!filteredAssigned.length ? (
                         <tr>
                           <td colSpan={11} className="py-6 text-[#667085]">
                             No assigned audits in this range
@@ -994,78 +1345,145 @@ export function AiDigitalDashboardShell() {
                   </table>
                 </div>
               </div>
-            </>
+                </SortableSection>
+              ) : null}
+            </div>
           )}
         </div>
       ) : (
-        <div className="space-y-6">
-          <WorkspaceFilterBar />
-          {digitalQuery.isPending ? (
-            <p className="text-sm text-[#667085]">Loading Digital metrics…</p>
-          ) : (
-            <>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {[
-                  ["Total Digital Audits", fmt(dig?.totalAudits), AISLIX.localBorder],
-                  ["Completed", fmt(dig?.completed), AISLIX.supermarketBorder],
-                  ["In Progress", fmt(dig?.inProgress), AISLIX.warehouseBorder],
-                  ["Completion %", fmt(dig?.completionPct, "%"), AISLIX.darkstoreBorder],
-                  ["Overdue", fmt(dig?.overdue), AISLIX.darkstoreBorder],
-                  ["Net Variance", fmt(dig?.netVariance), AISLIX.localBorder],
-                  ["Open CA", fmt(dig?.caOpen), AISLIX.supermarketBorder],
-                  ["Overdue CA", fmt(dig?.caOverdue), AISLIX.darkstoreBorder],
-                ].map(([label, value, accent]) => (
-                  <KpiCard
-                    key={label as string}
-                    label={label as string}
-                    value={value as string}
-                    accent={accent as string}
-                  />
-                ))}
-              </div>
-              <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-[#102A43]">Last 5 digital audits</h3>
-                  <Link to="/history" className="text-sm text-[#557187] hover:underline">
-                    View more
-                  </Link>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[720px] text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-[#D9E2E8] text-xs uppercase text-[#667085]">
-                        <th className="py-2 pr-3">Audit</th>
-                        <th className="py-2 pr-3">Location</th>
-                        <th className="py-2 pr-3">Assignee</th>
-                        <th className="py-2 pr-3">Date</th>
-                        <th className="py-2">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(dig?.lastFive ?? []).map((row) => (
-                        <tr key={row.id} className="border-b border-[#EEF1F4]">
-                          <td className="py-2 pr-3 font-mono text-xs">{row.id.slice(0, 8)}</td>
-                          <td className="py-2 pr-3">{row.store}</td>
-                          <td className="py-2 pr-3">{row.assignee}</td>
-                          <td className="py-2 pr-3">
-                            {row.date ? new Date(row.date).toLocaleString() : "—"}
-                          </td>
-                          <td className="py-2">{assignmentStatusLabel(row.status)}</td>
-                        </tr>
-                      ))}
-                      {!dig?.lastFive?.length ? (
-                        <tr>
-                          <td colSpan={5} className="py-6 text-[#667085]">
-                            Data unavailable
-                          </td>
-                        </tr>
-                      ) : null}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>
-          )}
+        <div className="flex flex-col gap-6">
+          {visibleIds.map((sectionId) => {
+            const def = catalog.find((s) => s.id === sectionId);
+            if (!def) return null;
+            const order = visibleIds.indexOf(sectionId);
+            if (sectionId === "filters") {
+              return (
+                <SortableSection
+                  key={sectionId}
+                  id={sectionId}
+                  title={def.title}
+                  pinned
+                  editMode={editLayout}
+                  order={order}
+                  onDragStart={sectionDrag.onDragStart}
+                  onDragOver={sectionDrag.onDragOver}
+                  onDrop={sectionDrag.onDrop}
+                >
+                  <WorkspaceFilterBar />
+                </SortableSection>
+              );
+            }
+            if (digitalQuery.isPending) {
+              return sectionId === "kpi_digital" ? (
+                <p key={sectionId} className="text-sm text-[#667085]" style={{ order }}>
+                  Loading Digital metrics…
+                </p>
+              ) : null;
+            }
+            if (sectionId === "kpi_digital") {
+              return (
+                <SortableSection
+                  key={sectionId}
+                  id={sectionId}
+                  title={def.title}
+                  editMode={editLayout}
+                  order={order}
+                  onHide={() =>
+                    setActiveTabLayout({
+                      ...activeTabLayout,
+                      hidden: [...activeTabLayout.hidden, sectionId],
+                    })
+                  }
+                  onDragStart={sectionDrag.onDragStart}
+                  onDragOver={sectionDrag.onDragOver}
+                  onDrop={sectionDrag.onDrop}
+                >
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    {[
+                      ["Total Digital Audits", fmt(dig?.totalAudits), AISLIX.localBorder],
+                      ["Completed", fmt(dig?.completed), AISLIX.supermarketBorder],
+                      ["In Progress", fmt(dig?.inProgress), AISLIX.warehouseBorder],
+                      ["Completion %", fmt(dig?.completionPct, "%"), AISLIX.darkstoreBorder],
+                      ["Overdue", fmt(dig?.overdue), AISLIX.darkstoreBorder],
+                      ["Net Variance", fmt(dig?.netVariance), AISLIX.localBorder],
+                      ["Open CA", fmt(dig?.caOpen), AISLIX.supermarketBorder],
+                      ["Overdue CA", fmt(dig?.caOverdue), AISLIX.darkstoreBorder],
+                    ].map(([label, value, accent]) => (
+                      <KpiCard
+                        key={label as string}
+                        label={label as string}
+                        value={value as string}
+                        accent={accent as string}
+                      />
+                    ))}
+                  </div>
+                </SortableSection>
+              );
+            }
+            if (sectionId === "table_last_five") {
+              return (
+                <SortableSection
+                  key={sectionId}
+                  id={sectionId}
+                  title={def.title}
+                  editMode={editLayout}
+                  order={order}
+                  onHide={() =>
+                    setActiveTabLayout({
+                      ...activeTabLayout,
+                      hidden: [...activeTabLayout.hidden, sectionId],
+                    })
+                  }
+                  onDragStart={sectionDrag.onDragStart}
+                  onDragOver={sectionDrag.onDragOver}
+                  onDrop={sectionDrag.onDrop}
+                >
+                  <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
+                    <div className="mb-3 flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-[#102A43]">Last 5 digital audits</h3>
+                      <Link to="/history" className="text-sm text-[#557187] hover:underline">
+                        View more
+                      </Link>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[720px] text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-[#D9E2E8] text-xs uppercase text-[#667085]">
+                            <th className="py-2 pr-3">Audit</th>
+                            <th className="py-2 pr-3">Location</th>
+                            <th className="py-2 pr-3">Assignee</th>
+                            <th className="py-2 pr-3">Date</th>
+                            <th className="py-2">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(dig?.lastFive ?? []).map((row) => (
+                            <tr key={row.id} className="border-b border-[#EEF1F4]">
+                              <td className="py-2 pr-3 font-mono text-xs">{row.id.slice(0, 8)}</td>
+                              <td className="py-2 pr-3">{row.store}</td>
+                              <td className="py-2 pr-3">{row.assignee}</td>
+                              <td className="py-2 pr-3">
+                                {row.date ? new Date(row.date).toLocaleString() : "—"}
+                              </td>
+                              <td className="py-2">{assignmentStatusLabel(row.status)}</td>
+                            </tr>
+                          ))}
+                          {!dig?.lastFive?.length ? (
+                            <tr>
+                              <td colSpan={5} className="py-6 text-[#667085]">
+                                Data unavailable
+                              </td>
+                            </tr>
+                          ) : null}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </SortableSection>
+              );
+            }
+            return null;
+          })}
         </div>
       )}
 

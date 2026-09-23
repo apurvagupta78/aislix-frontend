@@ -602,7 +602,7 @@ export async function fetchOpsAiDashboard(
       : experience.labeledDemo
         ? assignments
         : [];
-  const myAssignedAudits: AssignedAuditRow[] = assignedPool.slice(0, 50).map((a) => {
+  const myAssignedAudits: AssignedAuditRow[] = assignedPool.slice(0, 10).map((a) => {
           const scan = a.scan_id ? scanById.get(a.scan_id as string) : null;
           const stage = stageOf(a);
           const tmpl = a.template_id

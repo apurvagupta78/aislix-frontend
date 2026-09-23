@@ -153,9 +153,12 @@ export async function fetchAiDashboardMetrics(
     .select("id, status, planogram_compliance_percent, total_products, audit_mode, store_id, category, created_at, created_by")
     .eq("org_id", orgId)
     .eq("status", "completed")
-    .or("audit_mode.eq.ai,audit_mode.is.null")
     .order("created_at", { ascending: false })
     .limit(200);
+  // AI metrics prefer AI-mode scans; demo/showcase may only have digital — include all modes then.
+  if (!usingDemoOverride) {
+    scanQuery = scanQuery.or("audit_mode.eq.ai,audit_mode.is.null");
+  }
   if (!usingDemoOverride) {
     scanQuery = applyStoreScopeFilter(scanQuery, scope) ?? scanQuery;
   }

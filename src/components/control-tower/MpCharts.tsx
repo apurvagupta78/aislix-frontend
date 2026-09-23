@@ -25,14 +25,16 @@ export function MpRadialGauge({
   color?: string;
   size?: number;
 }) {
-  const stroke = 14;
+  const stroke = Math.max(8, Math.round(size * 0.083));
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const sweep = 0.75;
   const dash = circumference * sweep * (Math.min(Math.max(value, 0), 100) / 100);
+  const valuePx = Math.max(14, Math.round(size * 0.2));
+  const labelPx = Math.max(9, Math.round(size * 0.09));
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex w-full max-w-[140px] flex-col items-center">
       <div className="relative overflow-hidden" style={{ width: size, height: size * 0.8 }}>
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="block">
           <g transform={`rotate(135 ${size / 2} ${size / 2})`}>
@@ -58,12 +60,25 @@ export function MpRadialGauge({
             />
           </g>
         </svg>
-        <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center">
-          <p className="font-display text-[34px] font-semibold leading-none text-navy">{value}%</p>
-          <p className="mt-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-mp-muted">{label}</p>
+        <div className="absolute inset-x-0 top-[42%] -translate-y-1/2 px-1 text-center">
+          <p
+            className="font-display font-semibold leading-none text-navy"
+            style={{ fontSize: valuePx }}
+          >
+            {value}%
+          </p>
+          <p
+            className="mt-1 line-clamp-2 font-bold uppercase tracking-[0.04em] text-mp-muted"
+            style={{ fontSize: labelPx }}
+            title={label}
+          >
+            {label}
+          </p>
         </div>
       </div>
-      {sublabel ? <p className="-mt-1 text-[13px] text-mp-muted">{sublabel}</p> : null}
+      {sublabel ? (
+        <p className="mt-1 max-w-full truncate text-center text-[10px] text-[#667085]">{sublabel}</p>
+      ) : null}
     </div>
   );
 }

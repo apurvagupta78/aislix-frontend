@@ -71,6 +71,8 @@ export type NotificationPreferences = {
   monthly_reports: boolean;
   billing_notifications: boolean;
   product_updates: boolean;
+  /** Ops AI / Digital dashboard section layout (optional). */
+  dashboard_layout?: import("@/lib/dashboard-layout").DashboardLayoutPrefs;
 };
 
 export type LoginSession = {

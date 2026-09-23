@@ -99,15 +99,16 @@ export function CircularComplianceScores({
     return <p className="text-sm text-[#667085]">Data unavailable</p>;
   }
   return (
-    <div className="flex flex-wrap justify-center gap-3">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
       {rows.map((row, i) => (
-        <MpRadialGauge
-          key={row.storeName}
-          value={Math.round(row.compliancePct)}
-          label={row.storeName.length > 12 ? `${row.storeName.slice(0, 12)}…` : row.storeName}
-          color={i === 0 ? AISLIX.darkstoreBorder : PALETTE[i % PALETTE.length]}
-          size={100}
-        />
+        <div key={row.storeName} className="flex justify-center">
+          <MpRadialGauge
+            value={Math.round(row.compliancePct)}
+            label={row.storeName}
+            color={i === 0 ? AISLIX.darkstoreBorder : PALETTE[i % PALETTE.length]}
+            size={108}
+          />
+        </div>
       ))}
     </div>
   );
