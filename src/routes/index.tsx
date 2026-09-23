@@ -5,13 +5,15 @@ import { SiteFooter, SiteHeader } from "@/components/MarketingLayout";
 import { LazyOnVisible } from "@/components/LazyOnVisible";
 import { HomeHero } from "@/components/home/HomeHero";
 import { HomeRetailFormats } from "@/components/home/HomeRetailFormats";
+import { HomeTryAislix } from "@/components/home/HomeTryAislix";
+import { HomePhotoToActionFlow } from "@/components/home/HomePhotoToActionFlow";
 import { HomePlatformSection } from "@/components/home/HomePlatformSection";
 import { HomeHowItWorks } from "@/components/home/HomeHowItWorks";
 import { HomeFinalCta } from "@/components/home/HomeFinalCta";
 
-const LiveDemoSection = lazy(() =>
-  import("@/components/landing/retail-shelf-intelligence/LiveDemoSection").then((m) => ({
-    default: m.LiveDemoSection,
+const HomeLeadCapture = lazy(() =>
+  import("@/components/home/HomeLeadCapture").then((m) => ({
+    default: m.HomeLeadCapture,
   })),
 );
 const HomePricingIsland = lazy(() =>
@@ -98,26 +100,14 @@ function Landing() {
 
       <HomeHero />
       <HomeRetailFormats />
+      <HomeTryAislix />
+      <HomePhotoToActionFlow />
 
-      <section id="live-dashboard" className="scroll-mt-20">
-        <LazyOnVisible
-          fallback={
-            <div className="bg-card py-16 sm:py-20">
-              <div className="mx-auto max-w-7xl px-5 sm:px-8">
-                <p className="text-sm font-semibold text-[#2A6FA8]">Try Aislix free</p>
-                <h2 className="mt-3 text-3xl font-bold tracking-[-0.02em] text-foreground sm:text-4xl">
-                  See what Aislix can find on your shelf.
-                </h2>
-                <div className="mt-8 min-h-[22rem] rounded-3xl border border-border bg-surface" />
-              </div>
-            </div>
-          }
-        >
-          <Suspense fallback={<div className="min-h-[28rem] bg-card" aria-hidden="true" />}>
-            <LiveDemoSection showWorkspaceCta homepageIntro />
-          </Suspense>
-        </LazyOnVisible>
-      </section>
+      <LazyOnVisible fallback={<div className="min-h-[16rem]" aria-hidden="true" />}>
+        <Suspense fallback={null}>
+          <HomeLeadCapture />
+        </Suspense>
+      </LazyOnVisible>
 
       <HomePlatformSection />
       <HomeHowItWorks />

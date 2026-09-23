@@ -30,6 +30,7 @@ import { Route as CorrectiveActionsRouteImport } from './routes/corrective-actio
 import { Route as CustomAuditRouteImport } from './routes/custom-audit'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DemoRouteImport } from './routes/demo'
+import { Route as GuestRouteImport } from './routes/guest'
 import { Route as DemoScansRouteImport } from './routes/demo-scans'
 import { Route as DigitalAuditRouteImport } from './routes/digital-audit'
 import { Route as DistributorsRouteImport } from './routes/distributors'
@@ -235,6 +236,11 @@ const DashboardRoute = DashboardRouteImport.update({
 const DemoRoute = DemoRouteImport.update({
   id: '/demo',
   path: '/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuestRoute = GuestRouteImport.update({
+  id: '/guest',
+  path: '/guest',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoScansRoute = DemoScansRouteImport.update({
@@ -779,6 +785,7 @@ export interface FileRoutesByFullPath {
   '/custom-audit': typeof CustomAuditRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/demo': typeof DemoRoute
+  '/guest': typeof GuestRoute
   '/demo-scans': typeof DemoScansRoute
   '/digital-audit': typeof DigitalAuditRoute
   '/distributors': typeof DistributorsRoute
@@ -903,6 +910,7 @@ export interface FileRoutesByTo {
   '/custom-audit': typeof CustomAuditRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/demo': typeof DemoRoute
+  '/guest': typeof GuestRoute
   '/demo-scans': typeof DemoScansRoute
   '/digital-audit': typeof DigitalAuditRoute
   '/distributors': typeof DistributorsRoute
@@ -1028,6 +1036,7 @@ export interface FileRoutesById {
   '/custom-audit': typeof CustomAuditRoute
   '/dashboard': typeof DashboardRouteWithChildren
   '/demo': typeof DemoRoute
+  '/guest': typeof GuestRoute
   '/demo-scans': typeof DemoScansRoute
   '/digital-audit': typeof DigitalAuditRoute
   '/distributors': typeof DistributorsRoute
@@ -1154,6 +1163,7 @@ export interface FileRouteTypes {
     | '/custom-audit'
     | '/dashboard'
     | '/demo'
+    | '/guest'
     | '/demo-scans'
     | '/digital-audit'
     | '/distributors'
@@ -1278,6 +1288,7 @@ export interface FileRouteTypes {
     | '/custom-audit'
     | '/dashboard'
     | '/demo'
+    | '/guest'
     | '/demo-scans'
     | '/digital-audit'
     | '/distributors'
@@ -1402,6 +1413,7 @@ export interface FileRouteTypes {
     | '/custom-audit'
     | '/dashboard'
     | '/demo'
+    | '/guest'
     | '/demo-scans'
     | '/digital-audit'
     | '/distributors'
@@ -1527,6 +1539,7 @@ export interface RootRouteChildren {
   CustomAuditRoute: typeof CustomAuditRoute
   DashboardRoute: typeof DashboardRouteWithChildren
   DemoRoute: typeof DemoRoute
+  GuestRoute: typeof GuestRoute
   DemoScansRoute: typeof DemoScansRoute
   DigitalAuditRoute: typeof DigitalAuditRoute
   DistributorsRoute: typeof DistributorsRoute
@@ -1746,6 +1759,13 @@ declare module '@tanstack/react-router' {
       path: '/demo'
       fullPath: '/demo'
       preLoaderRoute: typeof DemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guest': {
+      id: '/guest'
+      path: '/guest'
+      fullPath: '/guest'
+      preLoaderRoute: typeof GuestRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo-scans': {
@@ -2641,6 +2661,7 @@ const rootRouteChildren: RootRouteChildren = {
   CustomAuditRoute: CustomAuditRoute,
   DashboardRoute: DashboardRouteWithChildren,
   DemoRoute: DemoRoute,
+  GuestRoute: GuestRoute,
   DemoScansRoute: DemoScansRoute,
   DigitalAuditRoute: DigitalAuditRoute,
   DistributorsRoute: DistributorsRoute,

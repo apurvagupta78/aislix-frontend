@@ -167,6 +167,7 @@ const PUBLIC_PATHS = new Set([
   "/platform",
   "/compare",
   "/demo",
+  "/guest",
   "/retail-intelligence",
   "/retail-shelf-intelligence",
   "/security",

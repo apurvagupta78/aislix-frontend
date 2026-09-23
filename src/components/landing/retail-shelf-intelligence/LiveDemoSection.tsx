@@ -69,10 +69,13 @@ export function LiveDemoSection({
   onResult,
   showWorkspaceCta = false,
   homepageIntro = false,
+  guestIntent,
 }: {
   onResult?: (result: LandingScanResult, imageUrl: string | null) => void;
   showWorkspaceCta?: boolean;
   homepageIntro?: boolean;
+  /** When set (guest dashboard), open sample/upload setup once on mount. */
+  guestIntent?: "sample" | "upload";
 }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [setupMode, setSetupMode] = useState<SetupMode>(null);
@@ -89,6 +92,7 @@ export function LiveDemoSection({
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const demoCardRef = useRef<HTMLDivElement>(null);
+  const guestIntentApplied = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -188,6 +192,14 @@ export function LiveDemoSection({
     scrollToDemo();
   }
 
+  useEffect(() => {
+    if (!guestIntent || guestIntentApplied.current) return;
+    guestIntentApplied.current = true;
+    if (guestIntent === "sample") beginSampleSetup();
+    else beginUploadSetup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- apply once from URL intent
+  }, [guestIntent]);
+
   function onFile(file: File) {
     if (!file.type.startsWith("image/")) {
       setError("Please upload or capture a shelf photo (JPEG or PNG).");
@@ -260,7 +272,7 @@ export function LiveDemoSection({
 
   return (
     <section
-      id={homepageIntro ? "start-scanning" : "demo"}
+      id={homepageIntro || guestIntent ? "start-scanning" : "demo"}
       className={
         homepageIntro
           ? "scroll-mt-20 bg-card py-20 lg:py-28"
