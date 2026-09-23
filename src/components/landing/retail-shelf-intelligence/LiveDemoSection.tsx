@@ -195,8 +195,11 @@ export function LiveDemoSection({
   useEffect(() => {
     if (!guestIntent || guestIntentApplied.current) return;
     guestIntentApplied.current = true;
-    if (guestIntent === "sample") beginSampleSetup();
-    else beginUploadSetup();
+    const t = window.setTimeout(() => {
+      if (guestIntent === "sample") beginSampleSetup();
+      else beginUploadSetup();
+    }, 50);
+    return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- apply once from URL intent
   }, [guestIntent]);
 
