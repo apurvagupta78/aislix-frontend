@@ -27,10 +27,10 @@ export const AISLIX = {
 
 /** Ask Aislix command-center palette — scoped to the Ask section only; do not use on KPI cards. */
 export const ASK_AISLIX_SECTION = {
-  /** Founder lock: medium grey Ask strip */
-  background: "#A9A9A9",
+  /** White Ask strip — matches dashboard cards */
+  background: "#FFFFFF",
   heading: "#102A43",
-  subtitle: "#2D3748",
+  subtitle: "#557187",
   inputBackground: "#FFFFFF",
   askButton: "#102A43",
   chipBackground: "#F4F7F9",

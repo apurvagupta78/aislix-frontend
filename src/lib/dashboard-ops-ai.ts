@@ -126,6 +126,8 @@ export type OpsAiDashboardData = {
   planogramByStore: { label: string; expected: number; actual: number }[];
   topPerformers: StorePerformer[];
   worstPerformers: StorePerformer[];
+  /** Top 5 stores with lowest planogram compliance from the Last 10 audits window (need visits). */
+  lowComplianceStores: { storeName: string; compliancePct: number }[];
   lastTen: LastTenAuditRow[];
   lastReport: LastAuditReport | null;
   deltas: {
@@ -260,6 +262,7 @@ export async function fetchOpsAiDashboard(
     planogramByStore: [],
     topPerformers: [],
     worstPerformers: [],
+    lowComplianceStores: [],
     lastTen: [],
     lastReport: null,
     deltas: {
@@ -502,6 +505,21 @@ export async function fetchOpsAiDashboard(
     };
   });
 
+  // Top 5 stores needing visits — lowest planogram compliance from Last 10 audits
+  const lowCompAgg = new Map<string, { name: string; sum: number; n: number }>();
+  for (const row of lastTen) {
+    if (row.scorePct == null || !Number.isFinite(row.scorePct)) continue;
+    const key = row.storeName;
+    const cur = lowCompAgg.get(key) ?? { name: row.storeName, sum: 0, n: 0 };
+    cur.sum += row.scorePct;
+    cur.n += 1;
+    lowCompAgg.set(key, cur);
+  }
+  const lowComplianceStores = [...lowCompAgg.values()]
+    .map((r) => ({ storeName: r.name, compliancePct: r.sum / r.n }))
+    .sort((a, b) => a.compliancePct - b.compliancePct)
+    .slice(0, 5);
+
   // Last completed report
   const lastCompleted = assignments.find((a) => stageOf(a) === "completed" && a.scan_id);
   let lastReport: LastAuditReport | null = null;
@@ -707,6 +725,7 @@ export async function fetchOpsAiDashboard(
     planogramByStore: planogramByStore.slice(0, 6),
     topPerformers,
     worstPerformers,
+    lowComplianceStores,
     lastTen,
     lastReport,
     deltas: {

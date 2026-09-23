@@ -1,4 +1,5 @@
 import { useRouterState } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { DashboardFilterBar } from "@/components/dashboard/DashboardFilterBar";
 import {
   pathShowsGlobalFilterBarInShell,
@@ -9,10 +10,13 @@ import { cn } from "@/lib/utils";
 export function WorkspaceFilterBar({
   className,
   embedded,
+  footer,
 }: {
   className?: string;
   /** When true, renders inside a parent card (no outer border/radius). */
   embedded?: boolean;
+  /** Extra controls rendered inside the filter card (e.g. completion chips). */
+  footer?: ReactNode;
 }) {
   const ctx = useOptionalGlobalFilters();
 
@@ -46,6 +50,7 @@ export function WorkspaceFilterBar({
             }
           }
         />
+        {footer ? <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">{footer}</div> : null}
       </div>
     </>
   );

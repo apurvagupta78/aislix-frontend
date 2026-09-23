@@ -115,7 +115,7 @@ export function AskAislixSection({ previewDemo = false }: { previewDemo?: boolea
   return (
     <section
       className="space-y-4 overflow-hidden rounded-xl border border-[#D9E2E8] p-4 shadow-card md:p-6"
-      style={{ backgroundColor: "#A9A9A9" }}
+      style={{ backgroundColor: "#FFFFFF" }}
     >
       <div className="flex items-start gap-3">
         <div

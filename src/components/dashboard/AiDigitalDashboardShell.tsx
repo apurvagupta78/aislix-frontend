@@ -347,51 +347,49 @@ export function AiDigitalDashboardShell() {
             </button>
           ))}
         </div>
-
-        {tab === "ai" ? (
-          <>
-            <div className="flex flex-wrap gap-1.5">
-              {(
-                [
-                  ["all", "All"],
-                  ["completed", "Completed"],
-                  ["in_progress", "In Progress"],
-                  ["not_started", "Not Started"],
-                ] as const
-              ).map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setCompletion(id)}
-                  className={cn(
-                    "rounded-full border px-3 py-1 text-xs font-medium",
-                    completion === id
-                      ? "border-[#102A43] bg-[#102A43] text-white"
-                      : id === "completed"
-                        ? "border-[#C5D0B2] bg-[#EAF1DF] text-[#102A43]"
-                        : id === "in_progress"
-                          ? "border-[#C1E4F8] bg-[#EAF6FD] text-[#102A43]"
-                          : id === "not_started"
-                            ? "border-[#ECBDCC] bg-[#FFEAF1] text-[#102A43]"
-                            : "border-[#D9E2E8] bg-white text-[#667085]",
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <span className="rounded-full border border-[#C1E4F8] bg-[#EAF6FD] px-3 py-1 text-xs text-[#102A43]">
-              {data?.scopeLabel ?? "Showing your stores"}
-            </span>
-          </>
-        ) : null}
       </div>
 
       {tab === "ai" ? (
         <div className="space-y-6">
           <AskAislixSection />
 
-          <WorkspaceFilterBar />
+          <WorkspaceFilterBar
+            footer={
+              <>
+                {(
+                  [
+                    ["all", "All"],
+                    ["completed", "Completed"],
+                    ["in_progress", "In Progress"],
+                    ["not_started", "Not Started"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => setCompletion(id)}
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-xs font-medium",
+                      completion === id
+                        ? "border-[#102A43] bg-[#102A43] text-white"
+                        : id === "completed"
+                          ? "border-[#C5D0B2] bg-[#EAF1DF] text-[#102A43]"
+                          : id === "in_progress"
+                            ? "border-[#C1E4F8] bg-[#EAF6FD] text-[#102A43]"
+                            : id === "not_started"
+                              ? "border-[#ECBDCC] bg-[#FFEAF1] text-[#102A43]"
+                              : "border-[#D9E2E8] bg-white text-[#667085]",
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+                <span className="rounded-full border border-[#C1E4F8] bg-[#EAF6FD] px-3 py-1 text-xs text-[#102A43]">
+                  {data?.scopeLabel ?? "Showing your stores"}
+                </span>
+              </>
+            }
+          />
 
           {opsQuery.isPending ? (
             <p className="text-sm text-[#667085]">Loading AI dashboard…</p>
@@ -726,12 +724,32 @@ export function AiDigitalDashboardShell() {
                     <MpRankBars
                       data={(ai?.topProductsByUnits ?? []).slice(0, 6).map((r, i) => ({
                         label: r.label,
-                        value: r.value,
+                        value: Math.round(r.value * 10) / 10,
                         color: CHART_COLORS[i % CHART_COLORS.length],
                       }))}
                     />
                   ) : (
                     <p className="text-sm text-[#667085]">Data unavailable</p>
+                  )}
+                </ChartCard>
+
+                <ChartCard
+                  title="Top 5 stores — low planogram compliance (need visits)"
+                  moreTo="/history"
+                >
+                  {(data?.lowComplianceStores ?? []).length ? (
+                    <MpRankBars
+                      data={(data?.lowComplianceStores ?? []).map((p) => ({
+                        label: p.storeName,
+                        value: Math.round(p.compliancePct * 10) / 10,
+                        color: AISLIX.darkstoreBorder,
+                      }))}
+                      unit="%"
+                    />
+                  ) : (
+                    <p className="text-sm text-[#667085]">
+                      Data unavailable — no planogram compliance on recent audits.
+                    </p>
                   )}
                 </ChartCard>
 
@@ -773,7 +791,45 @@ export function AiDigitalDashboardShell() {
                   <h3 className="text-sm font-semibold text-[#102A43]">Last 10 Audits</h3>
                   <ViewMore to="/history" />
                 </div>
-                <WorkspaceFilterBar className="mb-4" embedded />
+                <WorkspaceFilterBar
+                  className="mb-4"
+                  embedded
+                  footer={
+                    <>
+                      {(
+                        [
+                          ["all", "All"],
+                          ["completed", "Completed"],
+                          ["in_progress", "In Progress"],
+                          ["not_started", "Not Started"],
+                        ] as const
+                      ).map(([id, label]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setCompletion(id)}
+                          className={cn(
+                            "rounded-full border px-3 py-1 text-xs font-medium",
+                            completion === id
+                              ? "border-[#102A43] bg-[#102A43] text-white"
+                              : id === "completed"
+                                ? "border-[#C5D0B2] bg-[#EAF1DF] text-[#102A43]"
+                                : id === "in_progress"
+                                  ? "border-[#C1E4F8] bg-[#EAF6FD] text-[#102A43]"
+                                  : id === "not_started"
+                                    ? "border-[#ECBDCC] bg-[#FFEAF1] text-[#102A43]"
+                                    : "border-[#D9E2E8] bg-white text-[#667085]",
+                          )}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                      <span className="rounded-full border border-[#C1E4F8] bg-[#EAF6FD] px-3 py-1 text-xs text-[#102A43]">
+                        {data?.scopeLabel ?? "Showing your stores"}
+                      </span>
+                    </>
+                  }
+                />
                 <div className="mb-3 flex flex-wrap gap-2">
                   <select
                     className="rounded-lg border border-[#D9E2E8] bg-white px-2 py-1.5 text-xs"
