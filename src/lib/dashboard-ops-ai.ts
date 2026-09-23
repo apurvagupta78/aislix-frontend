@@ -19,6 +19,48 @@ import {
   type DashboardMetricFilters,
 } from "@/lib/dashboard-ai-digital";
 
+/** Public demo shelf photos (from Demo Images) used when a scan has no stored evidence. */
+export const DEMO_SHELF_FALLBACK_IMAGES = [
+  "/demo-shelf/demo-1.jpg",
+  "/demo-shelf/demo-2.jpg",
+  "/demo-shelf/demo-3.jpg",
+] as const;
+
+async function signScanEvidenceUrls(scanId: string): Promise<string[]> {
+  const imageUrls: string[] = [];
+  const [{ data: images }, { data: evidence }] = await Promise.all([
+    supabase
+      .from("scan_images")
+      .select("storage_path, storage_bucket")
+      .eq("scan_id", scanId)
+      .order("created_at", { ascending: true })
+      .limit(3),
+    supabase
+      .from("audit_evidence")
+      .select("storage_path")
+      .eq("scan_id", scanId)
+      .limit(3),
+  ]);
+
+  const rows = [
+    ...(images ?? []).map((img) => ({
+      path: img.storage_path as string | null,
+      bucket: (img.storage_bucket as string | null) || "scan-images",
+    })),
+    ...(evidence ?? []).map((img) => ({
+      path: img.storage_path as string | null,
+      bucket: "scan-images",
+    })),
+  ];
+
+  for (const row of rows) {
+    if (!row.path || imageUrls.length >= 3) continue;
+    const { data: signed } = await supabase.storage.from(row.bucket).createSignedUrl(row.path, 3600);
+    if (signed?.signedUrl) imageUrls.push(signed.signedUrl);
+  }
+  return imageUrls;
+}
+
 export type CompletionFilter = "all" | "completed" | "in_progress" | "not_started";
 
 export type OpsDashboardFilters = DashboardMetricFilters & {
@@ -469,7 +511,7 @@ export async function fetchOpsAiDashboard(
       ? templateName.get(lastCompleted.template_id as string) ?? "Completed audit"
       : "Completed audit";
 
-    const [resultRes, findingsRes, imagesRes] = await Promise.all([
+    const [resultRes, findingsRes] = await Promise.all([
       supabase
         .from("scan_results")
         .select("executive_summary, metrics")
@@ -480,28 +522,17 @@ export async function fetchOpsAiDashboard(
         .select("id", { count: "exact", head: true })
         .eq("org_id", orgId)
         .eq("scan_id", scanId),
-      supabase
-        .from("scan_images")
-        .select("storage_path, storage_bucket")
-        .eq("scan_id", scanId)
-        .order("created_at", { ascending: true })
-        .limit(3),
     ]);
 
     const result = resultRes.data;
     const findingsCount = findingsRes.count ?? 0;
-    const images = imagesRes.data;
+    let imageUrls = await signScanEvidenceUrls(scanId);
+    if (!imageUrls.length) {
+      imageUrls = [...DEMO_SHELF_FALLBACK_IMAGES];
+    }
 
     const insights = parseInsights(result?.executive_summary);
     const conf = metricNum(result?.metrics, "average_confidence");
-    const imageUrls: string[] = [];
-    for (const img of images ?? []) {
-      const path = img.storage_path as string | null;
-      const bucket = (img.storage_bucket as string | null) || "scan-images";
-      if (!path) continue;
-      const { data: signed } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
-      if (signed?.signedUrl) imageUrls.push(signed.signedUrl);
-    }
 
     const scan = scanById.get(scanId);
     lastReport = {
@@ -518,7 +549,7 @@ export async function fetchOpsAiDashboard(
           : lastCompleted.last_compliance_percent != null
             ? Number(lastCompleted.last_compliance_percent)
             : metricNum(result?.metrics, "planogram_compliance_percent"),
-      findingsCount: findingsCount ?? 0,
+      findingsCount,
       confidencePct: conf != null ? (conf <= 1 ? conf * 100 : conf) : null,
       good: insights.good,
       attention: insights.attention,
@@ -565,16 +596,10 @@ export async function fetchOpsAiDashboard(
   // Base AI metrics + fixes
   const base = await fetchAiDashboardMetrics(filters);
 
-  // Categories: exclude Unknown
+  // Categories: exclude Unknown (already excluded in base aggregation)
   const categoryShare = (base.categoryShare ?? []).filter(
     (r) => r.label.toLowerCase() !== "unknown",
   );
-  const categoriesIdentified =
-    categoryShare.length > 0
-      ? categoryShare.length
-      : base.categoriesIdentified && base.categoriesIdentified > 0
-        ? null // had only unknown → treat as unavailable downstream via empty share
-        : null;
 
   // Verification coverage = % of audits (scans) with any human verification
   let verificationCoveragePct: number | null = null;
@@ -603,7 +628,7 @@ export async function fetchOpsAiDashboard(
     verificationCoveragePct = pct(scansWithVerify.size, aiScanIds.length);
   }
 
-  // Top products by units from metrics
+  // Prefer metrics product units; else keep facing-allocated units from base
   const productUnits = new Map<string, number>();
   if (aiScanIds.length) {
     const { data: resultRows } = await supabase
@@ -616,10 +641,15 @@ export async function fetchOpsAiDashboard(
       }
     }
   }
-  const topProductsByUnits = [...productUnits.entries()]
+  let topProductsByUnits = [...productUnits.entries()]
     .map(([label, value]) => ({ label, value }))
     .sort((a, b) => b.value - a.value)
     .slice(0, 8);
+  if (!topProductsByUnits.length && (base.topProductsByUnits ?? []).length) {
+    topProductsByUnits = base.topProductsByUnits;
+  }
+
+  const topProductsByUnitsFinal = topProductsByUnits;
 
   // Planogram expected/facing from products if we have expected
   let expectedFacings: number | null = null;
@@ -640,9 +670,9 @@ export async function fetchOpsAiDashboard(
     categoriesIdentified:
       categoryShare.length > 0
         ? new Set(categoryShare.map((c) => c.label)).size
-        : categoriesIdentified,
+        : base.categoriesIdentified,
     verificationCoveragePct,
-    topProductsByUnits,
+    topProductsByUnits: topProductsByUnitsFinal,
     planogram: {
       ...base.planogram,
       expectedFacings,
@@ -745,7 +775,7 @@ export async function fetchAuditAnalysisReport(
     storeName = store?.name ?? "—";
   }
 
-  const [resultRes, findingsRes, imagesRes] = await Promise.all([
+  const [resultRes, findingsRes] = await Promise.all([
     supabase
       .from("scan_results")
       .select("executive_summary, metrics")
@@ -756,27 +786,17 @@ export async function fetchAuditAnalysisReport(
       .select("id", { count: "exact", head: true })
       .eq("org_id", orgId)
       .eq("scan_id", scanId),
-    supabase
-      .from("scan_images")
-      .select("storage_path, storage_bucket")
-      .eq("scan_id", scanId)
-      .limit(3),
   ]);
 
   const result = resultRes.data;
   const count = findingsRes.count;
-  const images = imagesRes.data;
+  let imageUrls = await signScanEvidenceUrls(scanId);
+  if (!imageUrls.length) {
+    imageUrls = [...DEMO_SHELF_FALLBACK_IMAGES];
+  }
 
   const insights = parseInsights(result?.executive_summary);
   const conf = metricNum(result?.metrics, "average_confidence");
-  const imageUrls: string[] = [];
-  for (const img of images ?? []) {
-    const path = img.storage_path as string | null;
-    const bucket = (img.storage_bucket as string | null) || "scan-images";
-    if (!path) continue;
-    const { data: signed } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
-    if (signed?.signedUrl) imageUrls.push(signed.signedUrl);
-  }
 
   return {
     scanId,

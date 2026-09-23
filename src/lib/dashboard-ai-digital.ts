@@ -246,6 +246,10 @@ export async function fetchAiDashboardMetrics(
     .select("id, scan_id, name, brand, variant, category, facings, confidence")
     .in("scan_id", scanIds.slice(0, 80));
 
+  const scanCategoryById = new Map(
+    (scans ?? []).map((s) => [s.id as string, ((s.category as string | null) ?? "").trim()]),
+  );
+
   const rows = (products ?? []) as {
     id: string;
     scan_id: string;
@@ -269,21 +273,34 @@ export async function fetchAiDashboardMetrics(
   const categoryFacings = new Map<string, number>();
   const productFacings = new Map<string, number>();
 
+  const isBlankCategory = (value: string) => {
+    const v = value.trim().toLowerCase();
+    return !v || v === "unknown" || v === "n/a" || v === "null";
+  };
+
   for (const row of rows) {
     const name = (row.name ?? "").trim() || "Unknown";
     const brand = (row.brand ?? "").trim() || "Unknown";
     const variant = (row.variant ?? "").trim();
-    const category = (row.category ?? "").trim() || "Unknown";
+    const rawCategory = (row.category ?? "").trim();
+    const scanCat = scanCategoryById.get(row.scan_id) ?? "";
+    const category = !isBlankCategory(rawCategory)
+      ? rawCategory
+      : !isBlankCategory(scanCat)
+        ? scanCat
+        : "";
     productKeys.add(`${brand}|${name}`);
     brands.add(brand);
     variants.add(`${brand}|${name}|${variant}`);
-    categories.add(category);
+    if (category) categories.add(category);
     const f = Number(row.facings) || 0;
     if (row.facings != null) {
       facingsSum += f;
       facingCount += 1;
       brandFacings.set(brand, (brandFacings.get(brand) ?? 0) + f);
-      categoryFacings.set(category, (categoryFacings.get(category) ?? 0) + f);
+      if (category) {
+        categoryFacings.set(category, (categoryFacings.get(category) ?? 0) + f);
+      }
       productFacings.set(`${brand} · ${name}`, (productFacings.get(`${brand} · ${name}`) ?? 0) + f);
     }
     if (row.confidence != null && Number.isFinite(Number(row.confidence))) {
@@ -351,9 +368,7 @@ export async function fetchAiDashboardMetrics(
     .map(Number);
   const planogramApplicable = complianceValues.length > 0;
 
-  const realCategories = new Set(
-    [...categories].filter((c) => c.toLowerCase() !== "unknown"),
-  );
+  const realCategories = categories;
 
   return {
     auditCount: scanIds.length,
@@ -375,14 +390,24 @@ export async function fetchAiDashboardMetrics(
         ? Math.max(0, 100 - (absFacingErr / verifiedFacingsSum) * 100)
         : null,
     brandShare: toShare(brandFacings),
-    categoryShare: toShare(
-      new Map(
-        [...categoryFacings.entries()].filter(([label]) => label.toLowerCase() !== "unknown"),
-      ),
-    ),
+    categoryShare: toShare(categoryFacings),
     topProductsByFacings: top(productFacings),
-    // Product-level visible units filled by ops dashboard from metrics when present.
-    topProductsByUnits: [],
+    // Prefer product-level units from metrics; else allocate scan unit totals by facing share.
+    topProductsByUnits: (() => {
+      const fromMetrics = new Map<string, number>();
+      for (const row of resultRows ?? []) {
+        // filled below in ops layer; keep base empty unless we can allocate here
+        void row;
+      }
+      if (!productFacings.size) return [];
+      const totalF = [...productFacings.values()].reduce((s, n) => s + n, 0);
+      const unitPool = metricsUnitsCount ? metricsUnitsSum : null;
+      if (unitPool == null || !(totalF > 0)) return [];
+      return [...productFacings.entries()]
+        .map(([label, f]) => ({ label, value: (f / totalF) * unitPool }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 8);
+    })(),
     planogram: {
       applicable: planogramApplicable,
       expectedFacings: null,

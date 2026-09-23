@@ -27,15 +27,15 @@ export const AISLIX = {
 
 /** Ask Aislix command-center palette — scoped to the Ask section only; do not use on KPI cards. */
 export const ASK_AISLIX_SECTION = {
-  /** Dark grey (dashboard + Control Tower Ask strip) — harmonizes with sector pastels. */
-  background: "#4A5568",
-  heading: "#FFFFFF",
-  subtitle: "#E2E8F0",
+  /** Founder lock: medium grey Ask strip */
+  background: "#A9A9A9",
+  heading: "#102A43",
+  subtitle: "#2D3748",
   inputBackground: "#FFFFFF",
-  askButton: "#2D3748",
-  chipBackground: "#5A6575",
-  chipBorder: "#718096",
-  chipText: "#FFFFFF",
+  askButton: "#102A43",
+  chipBackground: "#F4F7F9",
+  chipBorder: "#D9E2E8",
+  chipText: "#102A43",
 } as const;
 
 /** Chart series order from the design spec — never rainbow / library defaults. */

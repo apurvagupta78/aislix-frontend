@@ -16,6 +16,7 @@ import {
 import { ArrowDownRight, ArrowUpRight, Building2, ShoppingCart, Users } from "lucide-react";
 
 import { AskAislixSection } from "@/components/ask-aislix/AskAislixSection";
+import { WorkspaceFilterBar } from "@/components/filters/GlobalFilterBarShell";
 import { MpDonut, MpRankBars } from "@/components/control-tower/MpCharts";
 import { PageHeader } from "@/components/design-system/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -389,6 +390,8 @@ export function AiDigitalDashboardShell() {
       {tab === "ai" ? (
         <div className="space-y-6">
           <AskAislixSection />
+
+          <WorkspaceFilterBar />
 
           {opsQuery.isPending ? (
             <p className="text-sm text-[#667085]">Loading AI dashboard…</p>
@@ -770,6 +773,7 @@ export function AiDigitalDashboardShell() {
                   <h3 className="text-sm font-semibold text-[#102A43]">Last 10 Audits</h3>
                   <ViewMore to="/history" />
                 </div>
+                <WorkspaceFilterBar className="mb-4" embedded />
                 <div className="mb-3 flex flex-wrap gap-2">
                   <select
                     className="rounded-lg border border-[#D9E2E8] bg-white px-2 py-1.5 text-xs"
@@ -884,6 +888,7 @@ export function AiDigitalDashboardShell() {
         </div>
       ) : (
         <div className="space-y-6">
+          <WorkspaceFilterBar />
           {digitalQuery.isPending ? (
             <p className="text-sm text-[#667085]">Loading Digital metrics…</p>
           ) : (
