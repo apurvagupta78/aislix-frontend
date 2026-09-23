@@ -17,7 +17,16 @@ import { ArrowDownRight, ArrowUpRight, Building2, ShoppingCart, Users } from "lu
 
 import { AskAislixSection } from "@/components/ask-aislix/AskAislixSection";
 import { WorkspaceFilterBar } from "@/components/filters/GlobalFilterBarShell";
-import { MpDonut, MpRankBars } from "@/components/control-tower/MpCharts";
+import { MpDonut } from "@/components/control-tower/MpCharts";
+import { DemoPreviewToggle } from "@/components/control-tower/DemoPreviewToggle";
+import { DemoDataBadge } from "@/components/control-tower/DemoDataBadge";
+import {
+  BrandShareMultiRing,
+  CategoryShareDonut,
+  CircularComplianceScores,
+  PerformanceLeaderboard,
+  ProductRankingCards,
+} from "@/components/dashboard/DashboardMetricVisuals";
 import { PageHeader } from "@/components/design-system/PageHeader";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,7 +35,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { AISLIX } from "@/lib/aislix-theme";
+import { AISLIX, NEW_AUDIT_BUTTON_CLASS } from "@/lib/aislix-theme";
 import {
   fetchAuditAnalysisReport,
   fetchOpsAiDashboard,
@@ -40,6 +49,8 @@ import {
 } from "@/lib/dashboard-ai-digital";
 import { useOptionalGlobalFilters } from "@/lib/global-filters";
 import { assignmentStatusLabel } from "@/lib/assignment-status-ui";
+import { shouldShowDemoPreviewCta } from "@/lib/demo-environment";
+import { useDemoPreview } from "@/lib/use-demo-preview";
 import { cn } from "@/lib/utils";
 import { Route as DashboardRoute } from "@/routes/dashboard";
 
@@ -48,7 +59,7 @@ const CHART_COLORS = [
   AISLIX.supermarketBorder,
   AISLIX.darkstoreBorder,
   AISLIX.warehouseBorder,
-  AISLIX.localBg,
+  AISLIX.accentBorder,
 ];
 
 function fmt(value: number | null | undefined, suffix = ""): string {
@@ -217,6 +228,7 @@ export function AiDigitalDashboardShell() {
   const navigate = useNavigate({ from: DashboardRoute.fullPath });
   const { tab } = DashboardRoute.useSearch();
   const global = useOptionalGlobalFilters();
+  const demoPreview = useDemoPreview();
   const [completion, setCompletion] = useState<CompletionFilter>("all");
   const [tableStage, setTableStage] = useState<string>("all");
   const [tableTemplate, setTableTemplate] = useState<string>("all");
@@ -251,12 +263,16 @@ export function AiDigitalDashboardShell() {
   };
 
   const opsQuery = useQuery({
-    queryKey: ["dashboard-ops-ai-v6", filterKey],
-    queryFn: () => fetchOpsAiDashboard(filterKey),
+    queryKey: ["dashboard-ops-ai-v6", filterKey, demoPreview.previewDemo],
+    queryFn: () =>
+      fetchOpsAiDashboard(filterKey, {
+        previewDemo: demoPreview.previewDemo,
+        userEmail: demoPreview.userEmail,
+      }),
     staleTime: 30_000,
   });
   const digitalQuery = useQuery({
-    queryKey: ["dashboard-digital-metrics", filterKey],
+    queryKey: ["dashboard-digital-metrics", filterKey, demoPreview.previewDemo],
     queryFn: () => fetchDigitalDashboardMetrics(filterKey),
     staleTime: 30_000,
   });
@@ -264,6 +280,7 @@ export function AiDigitalDashboardShell() {
   const data = opsQuery.data;
   const dig = digitalQuery.data;
   const ai = data?.metrics;
+  const demoBadgePreviewMode = shouldShowDemoPreviewCta(data?.previewDemo);
 
   const filteredLastTen = useMemo(() => {
     let rows = [...(data?.lastTen ?? [])];
@@ -324,6 +341,23 @@ export function AiDigitalDashboardShell() {
         eyebrow="Dashboard"
         title="Operations AI Dashboard"
         description="Ask Aislix, audit intelligence, planogram compliance, and execution performance."
+        meta={
+          data?.labeledDemo ? (
+            <DemoDataBadge showCta previewMode={demoBadgePreviewMode} />
+          ) : null
+        }
+        actions={
+          <>
+            <DemoPreviewToggle
+              compact
+              enabled={demoPreview.previewDemo}
+              onChange={demoPreview.setPreviewDemo}
+            />
+            <Button variant="outline" size="sm" className={NEW_AUDIT_BUTTON_CLASS} asChild>
+              <Link to="/new-audit">New Audit</Link>
+            </Button>
+          </>
+        }
       />
 
       <div className="flex flex-wrap items-center gap-2">
@@ -351,7 +385,7 @@ export function AiDigitalDashboardShell() {
 
       {tab === "ai" ? (
         <div className="space-y-6">
-          <AskAislixSection />
+          <AskAislixSection previewDemo={demoPreview.previewDemo || Boolean(data?.labeledDemo)} />
 
           <WorkspaceFilterBar
             footer={
@@ -689,98 +723,53 @@ export function AiDigitalDashboardShell() {
                   )}
                 </ChartCard>
 
-                <ChartCard title="Brand share of facings (%)" moreTo="/audit-intelligence">
-                  {(ai?.brandShare ?? []).length ? (
-                    <MpRankBars
-                      data={(ai?.brandShare ?? []).slice(0, 6).map((r, i) => ({
-                        label: r.label,
-                        value: Math.round(r.value * 10) / 10,
-                        color: CHART_COLORS[i % CHART_COLORS.length],
-                      }))}
-                      unit="%"
-                    />
-                  ) : (
-                    <p className="text-sm text-[#667085]">Data unavailable</p>
-                  )}
+                <ChartCard title="Brand Share of Facings" moreTo="/audit-intelligence">
+                  <BrandShareMultiRing rows={ai?.brandShare ?? []} />
                 </ChartCard>
 
-                <ChartCard title="Category share of facings (%)" moreTo="/audit-intelligence">
-                  {(ai?.categoryShare ?? []).length ? (
-                    <MpRankBars
-                      data={(ai?.categoryShare ?? []).slice(0, 6).map((r, i) => ({
-                        label: r.label,
-                        value: Math.round(r.value * 10) / 10,
-                        color: CHART_COLORS[i % CHART_COLORS.length],
-                      }))}
-                      unit="%"
-                    />
-                  ) : (
-                    <p className="text-sm text-[#667085]">Data unavailable</p>
-                  )}
+                <ChartCard title="Category Share of Facings" moreTo="/audit-intelligence">
+                  <CategoryShareDonut rows={ai?.categoryShare ?? []} />
                 </ChartCard>
 
-                <ChartCard title="Top products by visible units" moreTo="/audit-intelligence">
-                  {(ai?.topProductsByUnits ?? []).length ? (
-                    <MpRankBars
-                      data={(ai?.topProductsByUnits ?? []).slice(0, 6).map((r, i) => ({
-                        label: r.label,
-                        value: Math.round(r.value * 10) / 10,
-                        color: CHART_COLORS[i % CHART_COLORS.length],
-                      }))}
-                    />
-                  ) : (
-                    <p className="text-sm text-[#667085]">Data unavailable</p>
-                  )}
+                <ChartCard title="Top Products by Visible Units" moreTo="/audit-intelligence">
+                  <ProductRankingCards rows={ai?.topProductsByUnits ?? []} />
                 </ChartCard>
 
                 <ChartCard
                   title="Top 5 stores — low planogram compliance (need visits)"
                   moreTo="/history"
                 >
-                  {(data?.lowComplianceStores ?? []).length ? (
-                    <MpRankBars
-                      data={(data?.lowComplianceStores ?? []).map((p) => ({
-                        label: p.storeName,
-                        value: Math.round(p.compliancePct * 10) / 10,
-                        color: AISLIX.darkstoreBorder,
-                      }))}
-                      unit="%"
-                    />
-                  ) : (
-                    <p className="text-sm text-[#667085]">
-                      Data unavailable — no planogram compliance on recent audits.
-                    </p>
-                  )}
+                  <CircularComplianceScores rows={data?.lowComplianceStores ?? []} />
                 </ChartCard>
 
                 <div className="grid gap-4 sm:grid-cols-2 lg:col-span-2">
-                  <ChartCard title="Top performers" moreTo="/history">
-                    {(data?.topPerformers ?? []).length ? (
-                      <MpRankBars
-                        data={(data?.topPerformers ?? []).map((p) => ({
-                          label: p.storeName,
-                          value: Math.round(p.composite),
-                          color: AISLIX.supermarketBorder,
-                        }))}
-                        unit="%"
-                      />
-                    ) : (
-                      <p className="text-sm text-[#667085]">Data unavailable</p>
-                    )}
+                  <ChartCard title="Highest Audit Performance" moreTo="/history">
+                    <PerformanceLeaderboard
+                      tone="high"
+                      rows={(data?.topPerformers ?? []).map((p) => ({
+                        storeName: p.storeName,
+                        score: p.composite,
+                        sparkline: [
+                          Math.max(0, p.composite - 12),
+                          Math.max(0, p.composite - 6),
+                          p.composite,
+                        ],
+                      }))}
+                    />
                   </ChartCard>
-                  <ChartCard title="Worst performers" moreTo="/history">
-                    {(data?.worstPerformers ?? []).length ? (
-                      <MpRankBars
-                        data={(data?.worstPerformers ?? []).map((p) => ({
-                          label: p.storeName,
-                          value: Math.round(p.composite),
-                          color: AISLIX.darkstoreBorder,
-                        }))}
-                        unit="%"
-                      />
-                    ) : (
-                      <p className="text-sm text-[#667085]">Data unavailable</p>
-                    )}
+                  <ChartCard title="Lowest Audit Performance" moreTo="/history">
+                    <PerformanceLeaderboard
+                      tone="low"
+                      rows={(data?.worstPerformers ?? []).map((p) => ({
+                        storeName: p.storeName,
+                        score: p.composite,
+                        sparkline: [
+                          Math.min(100, p.composite + 8),
+                          Math.min(100, p.composite + 3),
+                          p.composite,
+                        ],
+                      }))}
+                    />
                   </ChartCard>
                 </div>
               </div>
@@ -932,6 +921,72 @@ export function AiDigitalDashboardShell() {
                         <tr>
                           <td colSpan={9} className="py-6 text-[#667085]">
                             Data unavailable
+                          </td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Assigned audits — to me / by me */}
+              <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-[#102A43]">
+                    Assigned Audits (to me &amp; by me)
+                  </h3>
+                  <ViewMore to="/history" />
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1040px] text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-[#D9E2E8] text-xs uppercase text-[#667085]">
+                        <th className="py-2 pr-3">Audit</th>
+                        <th className="py-2 pr-3">Template</th>
+                        <th className="py-2 pr-3">Store</th>
+                        <th className="py-2 pr-3">Assignee</th>
+                        <th className="py-2 pr-3">Assigner</th>
+                        <th className="py-2 pr-3">Relation</th>
+                        <th className="py-2 pr-3">Type</th>
+                        <th className="py-2 pr-3">Status</th>
+                        <th className="py-2 pr-3">Due</th>
+                        <th className="py-2 pr-3">Date</th>
+                        <th className="py-2">Score</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(data?.myAssignedAudits ?? []).map((row) => (
+                        <tr key={row.id} className="border-b border-[#EEF1F4]">
+                          <td className="py-2 pr-3 font-medium text-[#102A43]">{row.auditName}</td>
+                          <td className="py-2 pr-3 text-[#557187]">{row.templateName}</td>
+                          <td className="py-2 pr-3">{row.storeName}</td>
+                          <td className="py-2 pr-3">{row.assigneeName}</td>
+                          <td className="py-2 pr-3">{row.assignerName}</td>
+                          <td className="py-2 pr-3">
+                            <span
+                              className={cn(
+                                "rounded-full border px-2 py-0.5 text-xs font-medium",
+                                row.relation === "assigned_to_me"
+                                  ? "border-[#C1E4F8] bg-[#EAF6FD] text-[#102A43]"
+                                  : "border-[#D9C5F2] bg-[#F0E9FF] text-[#102A43]",
+                              )}
+                            >
+                              {row.relation === "assigned_to_me" ? "Assigned to me" : "Assigned by me"}
+                            </span>
+                          </td>
+                          <td className="py-2 pr-3">{row.type}</td>
+                          <td className="py-2 pr-3">
+                            <StagePill stage={row.completionStage} />
+                          </td>
+                          <td className="py-2 pr-3">{fmtDate(row.dueAt ?? "")}</td>
+                          <td className="py-2 pr-3">{fmtDate(row.date)}</td>
+                          <td className="py-2">{fmt(row.scorePct, "%")}</td>
+                        </tr>
+                      ))}
+                      {!(data?.myAssignedAudits ?? []).length ? (
+                        <tr>
+                          <td colSpan={11} className="py-6 text-[#667085]">
+                            No assigned audits in this range
                           </td>
                         </tr>
                       ) : null}

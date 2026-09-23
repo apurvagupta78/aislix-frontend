@@ -6,7 +6,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/integrations/supabase/types";
 import { supabase } from "@/integrations/supabase/client";
-import { hasPlatformBypass } from "@/lib/subscription-limits";
 
 /** Fixed demo org id (matches supabase migration aislix_demo_org_id). */
 export const AISLIX_DEMO_ORG_ID = "d0000000-0000-4000-8000-000000000001";
@@ -40,19 +39,28 @@ export type DemoExperienceMode = {
 export type DemoExperienceOptions = {
   previewDemo?: boolean;
   userEmail?: string | null;
+  /**
+   * When true and previewDemo is false, never auto-swap to the showcase org
+   * (first-time empty workspace stays empty). Used by Dashboard Demo Data toggle.
+   */
+  honorPreviewOff?: boolean;
 };
 
 export function isDemoOrgId(orgId: string): boolean {
   return orgId === AISLIX_DEMO_ORG_ID;
 }
 
-export function canUseDemoPreview(userEmail?: string | null): boolean {
-  return hasPlatformBypass(userEmail);
+/** Demo Data toggle is available to all signed-in users on dashboard surfaces. */
+export function canUseDemoPreview(_userEmail?: string | null): boolean {
+  return true;
 }
 
+/** Default ON when preference has never been set. */
 export function readDemoPreviewPreference(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(DEMO_PREVIEW_STORAGE_KEY) === "1";
+  if (typeof window === "undefined") return true;
+  const raw = window.localStorage.getItem(DEMO_PREVIEW_STORAGE_KEY);
+  if (raw === null) return true;
+  return raw === "1";
 }
 
 export function writeDemoPreviewPreference(enabled: boolean): void {
@@ -104,6 +112,10 @@ export async function resolveDemoExperience(
     return resolveShowcaseExperience(activeOrgId, true);
   }
 
+  if (options.honorPreviewOff && options.previewDemo === false) {
+    return { labeledDemo: false, dataOrgId: activeOrgId, activeOrgId, previewDemo: false };
+  }
+
   const hasActivity = await orgHasRealAuditActivity(activeOrgId);
   if (!hasActivity) {
     return resolveShowcaseExperience(activeOrgId, false);
@@ -142,6 +154,10 @@ export async function resolveDemoExperienceWithClient(
 
   if (options.previewDemo && canUseDemoPreview(options.userEmail)) {
     return resolveShowcaseExperience(activeOrgId, true);
+  }
+
+  if (options.honorPreviewOff && options.previewDemo === false) {
+    return { labeledDemo: false, dataOrgId: activeOrgId, activeOrgId, previewDemo: false };
   }
 
   const { count } = await client

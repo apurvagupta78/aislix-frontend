@@ -12,6 +12,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 
+import { chipStyle } from "@/components/dashboard/DashboardMetricVisuals";
 import { selectAskAislixSuggestions } from "@/lib/ask-aislix/ask-aislix-suggestions.select";
 import type { SuggestionIcon } from "@/lib/ask-aislix/ask-aislix-suggestions.types";
 import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
@@ -82,26 +83,17 @@ export function AskAislixSuggestions({
         "[scrollbar-width:thin]",
       )}
     >
-      {suggestions.map((suggestion) => (
+      {suggestions.map((suggestion, index) => (
         <button
           key={suggestion.id}
           type="button"
           disabled={disabled}
           className={cn(
             "inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-1",
-            "text-[11px] font-medium leading-tight transition-colors",
+            "text-[11px] font-medium leading-tight transition-colors hover:brightness-105",
             "disabled:pointer-events-none disabled:opacity-50",
-            isDark ? "hover:brightness-110" : "border-line bg-white text-ink hover:bg-surface-muted",
           )}
-          style={
-            isDark
-              ? {
-                  backgroundColor: ASK_AISLIX_SECTION.chipBackground,
-                  borderColor: ASK_AISLIX_SECTION.chipBorder,
-                  color: ASK_AISLIX_SECTION.chipText,
-                }
-              : undefined
-          }
+          style={chipStyle(index)}
           onClick={() => onSelect(suggestion.text)}
         >
           <SuggestionIconGlyph icon={suggestion.icon} isDark={isDark} />

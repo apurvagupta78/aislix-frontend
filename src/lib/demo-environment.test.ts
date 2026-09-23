@@ -8,13 +8,10 @@ import {
 } from "@/lib/demo-environment";
 
 describe("demo preview eligibility", () => {
-  it("allows apurv@aislix.com", () => {
+  it("allows any signed-in email (and null)", () => {
     expect(canUseDemoPreview("apurv@aislix.com")).toBe(true);
-  });
-
-  it("denies other emails", () => {
-    expect(canUseDemoPreview("hello@aislix.com")).toBe(false);
-    expect(canUseDemoPreview(null)).toBe(false);
+    expect(canUseDemoPreview("hello@aislix.com")).toBe(true);
+    expect(canUseDemoPreview(null)).toBe(true);
   });
 
   it("shows preview overlay CTA only when previewDemo is true", () => {

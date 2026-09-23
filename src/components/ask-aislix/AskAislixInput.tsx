@@ -125,9 +125,12 @@ export function AskAislixInput({
             isDark
               ? {
                   backgroundColor: ASK_AISLIX_SECTION.askButton,
-                  color: ASK_AISLIX_SECTION.heading,
+                  color: ASK_AISLIX_SECTION.askButtonText,
                 }
-              : undefined
+              : {
+                  backgroundColor: ASK_AISLIX_SECTION.askButton,
+                  color: ASK_AISLIX_SECTION.askButtonText,
+                }
           }
         >
           <Send className="mr-1.5 h-3.5 w-3.5" />

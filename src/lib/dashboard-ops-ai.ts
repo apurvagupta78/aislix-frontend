@@ -4,7 +4,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { requireOrgId } from "@/lib/db/context";
+import { getUser, requireOrgId } from "@/lib/db/context";
 import {
   listScanFieldVerificationsForScans,
 } from "@/lib/ai-audit/field-verifications";
@@ -18,6 +18,7 @@ import {
   type AiDashboardMetrics,
   type DashboardMetricFilters,
 } from "@/lib/dashboard-ai-digital";
+import { resolveDemoExperience } from "@/lib/demo-environment";
 
 /** Public demo shelf photos (from Demo Images) used when a scan has no stored evidence. */
 export const DEMO_SHELF_FALLBACK_IMAGES = [
@@ -108,6 +109,22 @@ export type StorePerformer = {
   total: number;
 };
 
+export type AssignedAuditRow = {
+  id: string;
+  scanId: string | null;
+  auditName: string;
+  templateName: string;
+  storeName: string;
+  assigneeName: string;
+  assignerName: string;
+  relation: "assigned_to_me" | "assigned_by_me";
+  type: "AI" | "Digital";
+  completionStage: "completed" | "in_progress" | "not_started";
+  date: string;
+  dueAt: string | null;
+  scorePct: number | null;
+};
+
 export type OpsAiDashboardData = {
   metrics: AiDashboardMetrics;
   executive: {
@@ -126,9 +143,11 @@ export type OpsAiDashboardData = {
   planogramByStore: { label: string; expected: number; actual: number }[];
   topPerformers: StorePerformer[];
   worstPerformers: StorePerformer[];
-  /** Top 5 stores with lowest planogram compliance from the Last 10 audits window (need visits). */
+  /** Top 5 stores with lowest planogram compliance across filtered assignments (need visits). */
   lowComplianceStores: { storeName: string; compliancePct: number }[];
   lastTen: LastTenAuditRow[];
+  /** Audits assigned to the current user or assigned by them. */
+  myAssignedAudits: AssignedAuditRow[];
   lastReport: LastAuditReport | null;
   deltas: {
     verificationCoverage: number | null;
@@ -137,6 +156,8 @@ export type OpsAiDashboardData = {
     avgConfidence: number | null;
   };
   scopeLabel: string;
+  labeledDemo?: boolean;
+  previewDemo?: boolean;
 };
 
 function pct(num: number, den: number): number | null {
@@ -246,15 +267,24 @@ function productUnitsFromMetrics(metrics: unknown): Map<string, number> {
 
 export async function fetchOpsAiDashboard(
   filters?: OpsDashboardFilters,
+  options?: { previewDemo?: boolean; userEmail?: string | null },
 ): Promise<OpsAiDashboardData> {
-  const orgId = await requireOrgId();
+  const activeOrgId = await requireOrgId();
+  const experience = await resolveDemoExperience(activeOrgId, {
+    previewDemo: options?.previewDemo,
+    userEmail: options?.userEmail,
+    honorPreviewOff: true,
+  });
+  const orgId = experience.dataOrgId;
   const { resolveEffectiveAccessScope, applyStoreScopeFilter, clampStoreIdToScope } = await import(
     "@/lib/access-scope"
   );
-  const scope = await resolveEffectiveAccessScope({ orgId });
+  const scope = await resolveEffectiveAccessScope({ orgId: activeOrgId });
+  const user = await getUser();
+  const userId = user?.id ?? null;
 
   const empty: OpsAiDashboardData = {
-    metrics: await fetchAiDashboardMetrics(filters),
+    metrics: await fetchAiDashboardMetrics(filters, { orgIdOverride: orgId }),
     executive: { audits: 0, completionPct: null, openCritical: 0 },
     synopsis: { findingsOpen: 0, caOpen: 0, historyCount: 0, teamCount: 0 },
     completionMix: [],
@@ -264,6 +294,7 @@ export async function fetchOpsAiDashboard(
     worstPerformers: [],
     lowComplianceStores: [],
     lastTen: [],
+    myAssignedAudits: [],
     lastReport: null,
     deltas: {
       verificationCoverage: null,
@@ -272,9 +303,11 @@ export async function fetchOpsAiDashboard(
       avgConfidence: null,
     },
     scopeLabel: scope.isOrgAdmin ? "Showing all stores" : "Showing your stores",
+    labeledDemo: experience.labeledDemo,
+    previewDemo: experience.previewDemo,
   };
 
-  if (!scope.isOrgAdmin && !scope.hasStoreScope) return empty;
+  if (!scope.isOrgAdmin && !scope.hasStoreScope && !experience.labeledDemo) return empty;
 
   const bounds = filters
     ? resolveDashboardDateBounds({
@@ -288,14 +321,16 @@ export async function fetchOpsAiDashboard(
   let assignQ = supabase
     .from("scan_assignments")
     .select(
-      "id, status, assignment_state, approval_status, store_id, scan_id, assignee_id, due_at, created_at, template_id, audit_mode, last_compliance_percent",
+      "id, status, assignment_state, approval_status, store_id, scan_id, assignee_id, assigner_id, due_at, created_at, template_id, audit_mode, last_compliance_percent",
     )
     .eq("org_id", orgId)
     .order("created_at", { ascending: false })
     .limit(500);
-  assignQ = applyStoreScopeFilter(assignQ, scope) ?? assignQ;
+  if (!experience.labeledDemo) {
+    assignQ = applyStoreScopeFilter(assignQ, scope) ?? assignQ;
+  }
   const scopedStoreId = clampStoreIdToScope(filters?.storeId, scope);
-  if (scopedStoreId && scopedStoreId !== "all") {
+  if (scopedStoreId && scopedStoreId !== "all" && !experience.labeledDemo) {
     assignQ = assignQ.eq("store_id", scopedStoreId);
   }
   if (bounds?.from) assignQ = assignQ.gte("created_at", bounds.from.toISOString());
@@ -309,9 +344,11 @@ export async function fetchOpsAiDashboard(
   }
 
   const storeIds = [...new Set(assignments.map((a) => a.store_id).filter(Boolean))] as string[];
-  const assigneeIds = [
-    ...new Set(assignments.map((a) => a.assignee_id).filter(Boolean)),
-  ] as string[];
+  const personIds = [
+    ...new Set(
+      assignments.flatMap((a) => [a.assignee_id, a.assigner_id].filter(Boolean) as string[]),
+    ),
+  ];
   const templateIds = [
     ...new Set(assignments.map((a) => a.template_id).filter(Boolean)),
   ] as string[];
@@ -324,8 +361,8 @@ export async function fetchOpsAiDashboard(
       storeIds.length
         ? supabase.from("stores").select("id, name").in("id", storeIds)
         : Promise.resolve({ data: [] as { id: string; name: string }[] }),
-      assigneeIds.length
-        ? supabase.from("profiles").select("id, full_name, email").in("id", assigneeIds)
+      personIds.length
+        ? supabase.from("profiles").select("id, full_name, email").in("id", personIds)
         : Promise.resolve({ data: [] as { id: string; full_name: string | null; email: string | null }[] }),
       templateIds.length
         ? supabase.from("audit_templates").select("id, name").in("id", templateIds)
@@ -446,6 +483,16 @@ export async function fetchOpsAiDashboard(
   const topPerformers = performers.slice(0, 5);
   const worstPerformers = [...performers].sort((a, b) => a.composite - b.composite).slice(0, 5);
 
+  // Top 5 stores needing visits — lowest planogram compliance across all filtered assignments
+  const lowComplianceStores = [...byStore.values()]
+    .filter((a) => a.complianceN > 0)
+    .map((a) => ({
+      storeName: storeName.get(a.storeId) ?? a.storeId.slice(0, 8),
+      compliancePct: a.complianceSum / a.complianceN,
+    }))
+    .sort((a, b) => a.compliancePct - b.compliancePct)
+    .slice(0, 5);
+
   // Planogram expected vs actual by store (from detected products expected_facings)
   const planogramByStore: { label: string; expected: number; actual: number }[] = [];
   const completedScanIds = (scans ?? [])
@@ -505,20 +552,52 @@ export async function fetchOpsAiDashboard(
     };
   });
 
-  // Top 5 stores needing visits — lowest planogram compliance from Last 10 audits
-  const lowCompAgg = new Map<string, { name: string; sum: number; n: number }>();
-  for (const row of lastTen) {
-    if (row.scorePct == null || !Number.isFinite(row.scorePct)) continue;
-    const key = row.storeName;
-    const cur = lowCompAgg.get(key) ?? { name: row.storeName, sum: 0, n: 0 };
-    cur.sum += row.scorePct;
-    cur.n += 1;
-    lowCompAgg.set(key, cur);
-  }
-  const lowComplianceStores = [...lowCompAgg.values()]
-    .map((r) => ({ storeName: r.name, compliancePct: r.sum / r.n }))
-    .sort((a, b) => a.compliancePct - b.compliancePct)
-    .slice(0, 5);
+  // My assigned audits — assigned to me or by me (demo: show recent org assignments)
+  const assignedSource = userId
+    ? assignments.filter((a) => a.assignee_id === userId || a.assigner_id === userId)
+    : [];
+  const assignedPool =
+    assignedSource.length > 0
+      ? assignedSource
+      : experience.labeledDemo
+        ? assignments
+        : [];
+  const myAssignedAudits: AssignedAuditRow[] = assignedPool.slice(0, 50).map((a) => {
+          const scan = a.scan_id ? scanById.get(a.scan_id as string) : null;
+          const stage = stageOf(a);
+          const tmpl = a.template_id
+            ? templateName.get(a.template_id as string) ?? "—"
+            : "—";
+          const toMe = userId != null && a.assignee_id === userId;
+          return {
+            id: a.id as string,
+            scanId: (a.scan_id as string | null) ?? null,
+            auditName: tmpl !== "—" ? tmpl : "Audit",
+            templateName: tmpl,
+            storeName: a.store_id ? storeName.get(a.store_id as string) ?? "—" : "—",
+            assigneeName: a.assignee_id
+              ? personName.get(a.assignee_id as string) ?? "Unassigned"
+              : "Unassigned",
+            assignerName: a.assigner_id
+              ? personName.get(a.assigner_id as string) ?? "—"
+              : "—",
+            relation: toMe || (experience.labeledDemo && !userId)
+              ? ("assigned_to_me" as const)
+              : userId != null && a.assigner_id === userId
+                ? ("assigned_by_me" as const)
+                : ("assigned_to_me" as const),
+            type: String(a.audit_mode ?? "digital").toLowerCase() === "ai" ? "AI" : "Digital",
+            completionStage: stage,
+            date: (a.created_at as string) ?? "",
+            dueAt: (a.due_at as string | null) ?? null,
+            scorePct:
+              scan?.planogram_compliance_percent != null
+                ? Number(scan.planogram_compliance_percent)
+                : a.last_compliance_percent != null
+                  ? Number(a.last_compliance_percent)
+                  : null,
+          };
+        });
 
   // Last completed report
   const lastCompleted = assignments.find((a) => stageOf(a) === "completed" && a.scan_id);
@@ -612,7 +691,7 @@ export async function fetchOpsAiDashboard(
     .eq("severity", "critical");
 
   // Base AI metrics + fixes
-  const base = await fetchAiDashboardMetrics(filters);
+  const base = await fetchAiDashboardMetrics(filters, { orgIdOverride: orgId });
 
   // Categories: exclude Unknown (already excluded in base aggregation)
   const categoryShare = (base.categoryShare ?? []).filter(
@@ -727,6 +806,7 @@ export async function fetchOpsAiDashboard(
     worstPerformers,
     lowComplianceStores,
     lastTen,
+    myAssignedAudits,
     lastReport,
     deltas: {
       verificationCoverage: null,
@@ -735,6 +815,8 @@ export async function fetchOpsAiDashboard(
       avgConfidence: null,
     },
     scopeLabel: scope.isOrgAdmin ? "Showing all stores" : "Showing your stores",
+    labeledDemo: experience.labeledDemo,
+    previewDemo: experience.previewDemo,
   };
 }
 

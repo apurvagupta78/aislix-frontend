@@ -111,12 +111,15 @@ function pct(num: number, den: number): number | null {
 
 export async function fetchAiDashboardMetrics(
   filters?: DashboardMetricFilters,
+  options?: { orgIdOverride?: string },
 ): Promise<AiDashboardMetrics> {
-  const orgId = await requireOrgId();
+  const orgId = options?.orgIdOverride ?? (await requireOrgId());
   const { resolveEffectiveAccessScope, applyStoreScopeFilter, clampStoreIdToScope } = await import(
     "@/lib/access-scope"
   );
-  const scope = await resolveEffectiveAccessScope({ orgId });
+  const activeOrgId = await requireOrgId();
+  const scope = await resolveEffectiveAccessScope({ orgId: activeOrgId });
+  const usingDemoOverride = Boolean(options?.orgIdOverride && options.orgIdOverride !== activeOrgId);
   const empty: AiDashboardMetrics = {
     auditCount: 0,
     productsIdentified: null,
@@ -143,7 +146,7 @@ export async function fetchAiDashboardMetrics(
       compliancePct: null,
     },
   };
-  if (!scope.isOrgAdmin && !scope.hasStoreScope) return empty;
+  if (!usingDemoOverride && !scope.isOrgAdmin && !scope.hasStoreScope) return empty;
 
   let scanQuery = supabase
     .from("shelf_scans")
@@ -153,9 +156,11 @@ export async function fetchAiDashboardMetrics(
     .or("audit_mode.eq.ai,audit_mode.is.null")
     .order("created_at", { ascending: false })
     .limit(200);
-  scanQuery = applyStoreScopeFilter(scanQuery, scope) ?? scanQuery;
+  if (!usingDemoOverride) {
+    scanQuery = applyStoreScopeFilter(scanQuery, scope) ?? scanQuery;
+  }
   const scopedStoreId = clampStoreIdToScope(filters?.storeId, scope);
-  if (scopedStoreId && scopedStoreId !== "all") {
+  if (scopedStoreId && scopedStoreId !== "all" && !usingDemoOverride) {
     scanQuery = scanQuery.eq("store_id", scopedStoreId);
   }
   if (filters?.category && filters.category !== "all") {

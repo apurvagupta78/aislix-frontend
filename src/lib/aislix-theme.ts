@@ -32,7 +32,9 @@ export const ASK_AISLIX_SECTION = {
   heading: "#102A43",
   subtitle: "#557187",
   inputBackground: "#FFFFFF",
-  askButton: "#102A43",
+  /** Soft blue — design-system Soft Blue */
+  askButton: "#7DB7D6",
+  askButtonText: "#102A43",
   chipBackground: "#F4F7F9",
   chipBorder: "#D9E2E8",
   chipText: "#102A43",
@@ -57,9 +59,9 @@ export const AISLIX_STATUS_MIX: Record<string, string> = {
   Overdue: AISLIX.darkstoreBg,
 };
 
-/** Matches the corrective action load surface — primary CTA on Control Tower. */
+/** Soft blue primary CTA — New Audit (matches Ask button Soft Blue #7DB7D6). */
 export const NEW_AUDIT_BUTTON_CLASS =
-  "rounded-xl border border-[var(--aislix-supermarket-border)] bg-[var(--aislix-supermarket-bg)] text-[var(--aislix-primary)] shadow-soft hover:bg-[var(--aislix-supermarket-border)]/35";
+  "rounded-xl border border-[#7DB7D6] bg-[#7DB7D6] text-[#102A43] shadow-soft hover:bg-[#6aa9c9]";
 
 export const AISLIX_MODEL_SURFACE: Record<string, { bg: string; border: string }> = {
   all: { bg: AISLIX.customBg, border: AISLIX.customBorder },

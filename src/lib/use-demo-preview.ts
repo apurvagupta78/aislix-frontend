@@ -7,7 +7,8 @@ import {
   readDemoPreviewPreference,
   writeDemoPreviewPreference,
 } from "@/lib/demo-environment";
-export function useDemoPreview(_model: string, _filters: Record<string, unknown>) {
+
+export function useDemoPreview(_model?: string, _filters?: Record<string, unknown>) {
   const queryClient = useQueryClient();
   const profileQuery = useQuery({
     queryKey: ["demo-preview-profile"],
@@ -26,6 +27,8 @@ export function useDemoPreview(_model: string, _filters: Record<string, unknown>
       writeDemoPreviewPreference(next);
       setEnabledState(next);
       void queryClient.invalidateQueries({ queryKey: ["control-tower-dashboard"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard-ops-ai-v6"] });
+      void queryClient.invalidateQueries({ queryKey: ["dashboard-digital-metrics"] });
     },
     [eligible, queryClient],
   );
