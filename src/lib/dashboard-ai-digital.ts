@@ -351,12 +351,16 @@ export async function fetchAiDashboardMetrics(
     .map(Number);
   const planogramApplicable = complianceValues.length > 0;
 
+  const realCategories = new Set(
+    [...categories].filter((c) => c.toLowerCase() !== "unknown"),
+  );
+
   return {
     auditCount: scanIds.length,
     productsIdentified: productKeys.size || null,
     brandsIdentified: brands.size || null,
     variantsIdentified: variants.size || null,
-    categoriesIdentified: categories.size || null,
+    categoriesIdentified: realCategories.size || null,
     totalFacings: metricsFacingsCount ? metricsFacingsSum : facingCount ? facingsSum : null,
     totalVisibleUnits: metricsUnitsCount ? metricsUnitsSum : null,
     avgConfidence: confCount ? confSum / confCount : null,
@@ -371,9 +375,13 @@ export async function fetchAiDashboardMetrics(
         ? Math.max(0, 100 - (absFacingErr / verifiedFacingsSum) * 100)
         : null,
     brandShare: toShare(brandFacings),
-    categoryShare: toShare(categoryFacings),
+    categoryShare: toShare(
+      new Map(
+        [...categoryFacings.entries()].filter(([label]) => label.toLowerCase() !== "unknown"),
+      ),
+    ),
     topProductsByFacings: top(productFacings),
-    // Product-level visible units are not stored on detected_products; avoid facings proxy.
+    // Product-level visible units filled by ops dashboard from metrics when present.
     topProductsByUnits: [],
     planogram: {
       applicable: planogramApplicable,

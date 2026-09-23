@@ -1,15 +1,54 @@
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
-  fetchAiDashboardMetrics,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { ArrowDownRight, ArrowUpRight, Building2, ShoppingCart, Users } from "lucide-react";
+
+import { AskAislixSection } from "@/components/ask-aislix/AskAislixSection";
+import { MpDonut, MpRankBars } from "@/components/control-tower/MpCharts";
+import { PageHeader } from "@/components/design-system/PageHeader";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { AISLIX } from "@/lib/aislix-theme";
+import {
+  fetchAuditAnalysisReport,
+  fetchOpsAiDashboard,
+  type CompletionFilter,
+  type LastAuditReport,
+  type LastTenAuditRow,
+} from "@/lib/dashboard-ops-ai";
+import {
   fetchDigitalDashboardMetrics,
   type DashboardTab,
 } from "@/lib/dashboard-ai-digital";
-import { PageHeader } from "@/components/design-system/PageHeader";
-import { cn } from "@/lib/utils";
 import { useOptionalGlobalFilters } from "@/lib/global-filters";
 import { assignmentStatusLabel } from "@/lib/assignment-status-ui";
+import { cn } from "@/lib/utils";
 import { Route as DashboardRoute } from "@/routes/dashboard";
+
+const CHART_COLORS = [
+  AISLIX.localBorder,
+  AISLIX.supermarketBorder,
+  AISLIX.darkstoreBorder,
+  AISLIX.warehouseBorder,
+  AISLIX.localBg,
+];
 
 function fmt(value: number | null | undefined, suffix = ""): string {
   if (value == null || Number.isNaN(value)) return "N/A";
@@ -17,60 +56,159 @@ function fmt(value: number | null | undefined, suffix = ""): string {
   return `${Number.isInteger(value) ? value : value.toFixed(1)}${suffix}`;
 }
 
+function fmtDate(iso: string): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function StagePill({ stage }: { stage: LastTenAuditRow["completionStage"] }) {
+  const map = {
+    completed: { label: "Completed", className: "bg-[#EAF1DF] text-[#102A43] border-[#C5D0B2]" },
+    in_progress: { label: "In Progress", className: "bg-[#EAF6FD] text-[#102A43] border-[#C1E4F8]" },
+    not_started: { label: "Not Started", className: "bg-[#FFEAF1] text-[#102A43] border-[#ECBDCC]" },
+  } as const;
+  const m = map[stage];
+  return (
+    <span className={cn("rounded-full border px-2 py-0.5 text-xs font-medium", m.className)}>
+      {m.label}
+    </span>
+  );
+}
+
 function KpiCard({
   label,
   value,
   accent,
+  delta,
+  moreTo,
 }: {
   label: string;
   value: string;
   accent: string;
+  delta?: number | null;
+  moreTo?: string;
 }) {
   return (
     <div
       className="rounded-xl border border-[#D9E2E8] bg-white p-4"
       style={{ borderLeftWidth: 3, borderLeftColor: accent }}
     >
-      <p className="text-xs font-medium uppercase tracking-wide text-[#667085]">{label}</p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-[#667085]">{label}</p>
+        {delta != null && Number.isFinite(delta) ? (
+          <span
+            className={cn(
+              "inline-flex items-center text-xs font-semibold",
+              delta >= 0 ? "text-[#3d7a55]" : "text-[#9b4b63]",
+            )}
+          >
+            {delta >= 0 ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
+            {Math.abs(delta).toFixed(0)}
+          </span>
+        ) : null}
+      </div>
       <p className="mt-2 text-2xl font-semibold text-[#102A43]">{value}</p>
+      {moreTo ? (
+        <a href={moreTo} className="mt-2 inline-block text-xs text-[#557187] hover:underline">
+          View more
+        </a>
+      ) : null}
     </div>
   );
 }
 
-const ACCENTS = ["#9B86D9", "#7DB7D6", "#FFEAF1", "#79E2A8", "#8EC9E8"];
+function ViewMore({ to, label = "View more" }: { to: string; label?: string }) {
+  return (
+    <a href={to} className="text-xs font-medium text-[#557187] hover:underline">
+      {label}
+    </a>
+  );
+}
 
-function HorizontalBars({
+function ChartCard({
   title,
-  rows,
+  children,
+  moreTo,
+  className,
 }: {
   title: string;
-  rows: { label: string; value: number }[];
+  children: React.ReactNode;
+  moreTo?: string;
+  className?: string;
 }) {
-  const max = Math.max(...rows.map((r) => r.value), 1);
   return (
-    <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
-      <h3 className="text-sm font-semibold text-[#102A43]">{title}</h3>
-      {!rows.length ? (
-        <p className="mt-4 text-sm text-[#667085]">Data unavailable</p>
-      ) : (
-        <ul className="mt-4 space-y-3">
-          {rows.map((row) => (
-            <li key={row.label}>
-              <div className="mb-1 flex justify-between text-xs text-[#667085]">
-                <span className="truncate pr-2 text-[#102A43]">{row.label}</span>
-                <span>{row.value.toFixed(1)}</span>
-              </div>
-              <div className="h-2 rounded-full bg-[#EEF1F4]">
-                <div
-                  className="h-2 rounded-full bg-[#9B86D9]"
-                  style={{ width: `${Math.min(100, (row.value / max) * 100)}%` }}
-                />
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+    <div className={cn("rounded-xl border border-[#D9E2E8] bg-white p-4", className)}>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-[#102A43]">{title}</h3>
+        {moreTo ? <ViewMore to={moreTo} /> : null}
+      </div>
+      {children}
     </div>
+  );
+}
+
+function AiAnalysisModal({
+  open,
+  onOpenChange,
+  report,
+  incomplete,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  report: LastAuditReport | null;
+  incomplete: boolean;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-[#102A43]">AI Analysis</DialogTitle>
+        </DialogHeader>
+        {incomplete ? (
+          <p className="text-sm text-[#667085]">Complete audit first to generate an AI Analysis report.</p>
+        ) : report ? (
+          <div className="space-y-3 text-sm text-[#102A43]">
+            <p className="font-medium">
+              {report.auditName} · {report.storeName} · {fmtDate(report.date)}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <span className="rounded-lg bg-[#EAF1DF] px-2 py-1 text-xs">
+                Compliance {fmt(report.compliancePct, "%")}
+              </span>
+              <span className="rounded-lg bg-[#FFEAF1] px-2 py-1 text-xs">
+                Findings {report.findingsCount}
+              </span>
+              <span className="rounded-lg bg-[#EAF6FD] px-2 py-1 text-xs">
+                Confidence {fmt(report.confidencePct, "%")}
+              </span>
+            </div>
+            <ul className="list-disc space-y-1 pl-5 text-[#557187]">
+              <li>
+                <span className="font-medium text-[#102A43]">Good:</span> {report.good}
+              </li>
+              <li>
+                <span className="font-medium text-[#102A43]">Attention:</span> {report.attention}
+              </li>
+              <li>
+                <span className="font-medium text-[#102A43]">Next action:</span> {report.nextAction}
+              </li>
+            </ul>
+            {report.scanId ? (
+              <a
+                href="/history"
+                className="inline-flex rounded-lg bg-[#102A43] px-3 py-2 text-xs font-medium text-white"
+              >
+                View full report
+              </a>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-sm text-[#667085]">Data unavailable</p>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -78,6 +216,16 @@ export function AiDigitalDashboardShell() {
   const navigate = useNavigate({ from: DashboardRoute.fullPath });
   const { tab } = DashboardRoute.useSearch();
   const global = useOptionalGlobalFilters();
+  const [completion, setCompletion] = useState<CompletionFilter>("all");
+  const [tableStage, setTableStage] = useState<string>("all");
+  const [tableTemplate, setTableTemplate] = useState<string>("all");
+  const [tableAssignee, setTableAssignee] = useState<string>("all");
+  const [tableStore, setTableStore] = useState<string>("all");
+  const [sortKey, setSortKey] = useState<"date" | "score" | "completion">("date");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalReport, setModalReport] = useState<LastAuditReport | null>(null);
+  const [modalIncomplete, setModalIncomplete] = useState(false);
+
   const filterKey = global?.filters
     ? {
         storeId: global.filters.storeId,
@@ -90,8 +238,9 @@ export function AiDigitalDashboardShell() {
         country: global.filters.country,
         city: global.filters.city,
         skuId: global.filters.skuId,
+        completion,
       }
-    : undefined;
+    : { completion };
 
   const setTab = (next: DashboardTab) => {
     void navigate({
@@ -100,9 +249,9 @@ export function AiDigitalDashboardShell() {
     });
   };
 
-  const aiQuery = useQuery({
-    queryKey: ["dashboard-ai-metrics", filterKey],
-    queryFn: () => fetchAiDashboardMetrics(filterKey),
+  const opsQuery = useQuery({
+    queryKey: ["dashboard-ops-ai-v6", filterKey],
+    queryFn: () => fetchOpsAiDashboard(filterKey),
     staleTime: 30_000,
   });
   const digitalQuery = useQuery({
@@ -111,97 +260,625 @@ export function AiDigitalDashboardShell() {
     staleTime: 30_000,
   });
 
-  const ai = aiQuery.data;
+  const data = opsQuery.data;
   const dig = digitalQuery.data;
+  const ai = data?.metrics;
+
+  const filteredLastTen = useMemo(() => {
+    let rows = [...(data?.lastTen ?? [])];
+    if (tableStage !== "all") rows = rows.filter((r) => r.completionStage === tableStage);
+    if (tableTemplate !== "all") rows = rows.filter((r) => r.templateName === tableTemplate);
+    if (tableAssignee !== "all") rows = rows.filter((r) => r.assigneeName === tableAssignee);
+    if (tableStore !== "all") rows = rows.filter((r) => r.storeName === tableStore);
+    rows.sort((a, b) => {
+      if (sortKey === "score") return (b.scorePct ?? -1) - (a.scorePct ?? -1);
+      if (sortKey === "completion") return a.completionStage.localeCompare(b.completionStage);
+      return (b.date || "").localeCompare(a.date || "");
+    });
+    return rows;
+  }, [data?.lastTen, tableStage, tableTemplate, tableAssignee, tableStore, sortKey]);
+
+  const templateOptions = useMemo(
+    () => [...new Set((data?.lastTen ?? []).map((r) => r.templateName))].filter(Boolean),
+    [data?.lastTen],
+  );
+  const assigneeOptions = useMemo(
+    () => [...new Set((data?.lastTen ?? []).map((r) => r.assigneeName))].filter(Boolean),
+    [data?.lastTen],
+  );
+  const storeOptions = useMemo(
+    () => [...new Set((data?.lastTen ?? []).map((r) => r.storeName))].filter(Boolean),
+    [data?.lastTen],
+  );
+
+  const openAiAnalysis = async (row: LastTenAuditRow) => {
+    if (row.completionStage !== "completed" || !row.scanId) {
+      setModalIncomplete(true);
+      setModalReport(null);
+      setModalOpen(true);
+      return;
+    }
+    setModalIncomplete(false);
+    const report = await fetchAuditAnalysisReport(row.scanId);
+    setModalReport(report);
+    setModalOpen(true);
+  };
+
+  const confPct =
+    ai?.avgConfidence != null
+      ? ai.avgConfidence <= 1
+        ? ai.avgConfidence * 100
+        : ai.avgConfidence
+      : null;
+
+  const planogramGrouped = (data?.planogramByStore ?? []).map((r) => ({
+    label: r.label.length > 12 ? `${r.label.slice(0, 12)}…` : r.label,
+    expected: r.expected,
+    actual: r.actual,
+  }));
 
   return (
     <div className="space-y-6">
       <PageHeader
         eyebrow="Dashboard"
-        title="Operations dashboard"
-        description="AI Audits and Digital Audits — shared filters and deterministic metrics."
+        title="Operations AI Dashboard"
+        description="Ask Aislix, audit intelligence, planogram compliance, and execution performance."
       />
 
-      <div className="flex gap-2 rounded-xl border border-[#D9E2E8] bg-white p-1 w-fit">
-        {(
-          [
-            ["ai", "AI Audits"],
-            ["digital", "Digital Audits"],
-          ] as const
-        ).map(([id, label]) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={cn(
-              "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
-              tab === id ? "bg-[#102A43] text-white" : "text-[#667085] hover:bg-[#F4F7F9]",
-            )}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-2 rounded-xl border border-[#D9E2E8] bg-white p-1">
+          {(
+            [
+              ["ai", "AI Audits"],
+              ["digital", "Digital Audits"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id)}
+              className={cn(
+                "rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+                tab === id ? "bg-[#102A43] text-white" : "text-[#667085] hover:bg-[#F4F7F9]",
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === "ai" ? (
+          <>
+            <div className="flex flex-wrap gap-1.5">
+              {(
+                [
+                  ["all", "All"],
+                  ["completed", "Completed"],
+                  ["in_progress", "In Progress"],
+                  ["not_started", "Not Started"],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setCompletion(id)}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs font-medium",
+                    completion === id
+                      ? "border-[#102A43] bg-[#102A43] text-white"
+                      : id === "completed"
+                        ? "border-[#C5D0B2] bg-[#EAF1DF] text-[#102A43]"
+                        : id === "in_progress"
+                          ? "border-[#C1E4F8] bg-[#EAF6FD] text-[#102A43]"
+                          : id === "not_started"
+                            ? "border-[#ECBDCC] bg-[#FFEAF1] text-[#102A43]"
+                            : "border-[#D9E2E8] bg-white text-[#667085]",
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <span className="rounded-full border border-[#C1E4F8] bg-[#EAF6FD] px-3 py-1 text-xs text-[#102A43]">
+              {data?.scopeLabel ?? "Showing your stores"}
+            </span>
+          </>
+        ) : null}
       </div>
 
       {tab === "ai" ? (
         <div className="space-y-6">
-          {aiQuery.isPending ? (
-            <p className="text-sm text-[#667085]">Loading AI metrics…</p>
+          <AskAislixSection />
+
+          {opsQuery.isPending ? (
+            <p className="text-sm text-[#667085]">Loading AI dashboard…</p>
           ) : (
             <>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {[
-                  ["AI Audits", fmt(ai?.auditCount)],
-                  ["Products Identified", fmt(ai?.productsIdentified)],
-                  ["Brands Identified", fmt(ai?.brandsIdentified)],
-                  ["Variants Identified", fmt(ai?.variantsIdentified)],
-                  ["Categories Identified", fmt(ai?.categoriesIdentified)],
-                  ["Total Actual Facings", fmt(ai?.totalFacings)],
-                  ["Total Actual Visible Units", fmt(ai?.totalVisibleUnits)],
-                  ["Average AI Confidence", fmt(ai?.avgConfidence != null ? ai.avgConfidence * (ai.avgConfidence <= 1 ? 100 : 1) : null, "%")],
-                  ["Verification Coverage", fmt(ai?.verificationCoveragePct, "%")],
-                  ["AI vs Verified Unit Variance", fmt(ai?.aiVsVerifiedUnitVariance)],
-                  ["AI Unit Accuracy", fmt(ai?.aiUnitAccuracyPct, "%")],
-                  ["AI Facing Accuracy", fmt(ai?.aiFacingAccuracyPct, "%")],
-                ].map(([label, value], i) => (
-                  <KpiCard key={label} label={label} value={value} accent={ACCENTS[i % ACCENTS.length]!} />
-                ))}
+              <div className="rounded-xl border border-[#C1E4F8] bg-[#EAF6FD]/60 px-4 py-2 text-sm text-[#102A43]">
+                {data?.executive.audits ?? 0} audits ·{" "}
+                {fmt(data?.executive.completionPct, "%")} complete ·{" "}
+                {data?.executive.openCritical ?? 0} open critical
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-2">
-                <HorizontalBars title="Brand share of facings (%)" rows={ai?.brandShare ?? []} />
-                <HorizontalBars title="Category share of facings (%)" rows={ai?.categoryShare ?? []} />
-                <HorizontalBars title="Top products by facings" rows={ai?.topProductsByFacings ?? []} />
-                <HorizontalBars title="Top products by visible units" rows={ai?.topProductsByUnits ?? []} />
-              </div>
+              <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
+                <div className="space-y-3">
+                  {[
+                    {
+                      title: "Findings",
+                      body: `${data?.synopsis.findingsOpen ?? 0} open`,
+                      to: "/findings",
+                      bg: AISLIX.localBg,
+                      border: AISLIX.localBorder,
+                      Icon: Building2,
+                    },
+                    {
+                      title: "Corrective Actions",
+                      body: `${data?.synopsis.caOpen ?? 0} open`,
+                      to: "/corrective-actions",
+                      bg: AISLIX.supermarketBg,
+                      border: AISLIX.supermarketBorder,
+                      Icon: ShoppingCart,
+                    },
+                    {
+                      title: "History",
+                      body: `${data?.synopsis.historyCount ?? 0} audits`,
+                      to: "/history",
+                      bg: AISLIX.warehouseBg,
+                      border: AISLIX.warehouseBorder,
+                      Icon: Building2,
+                    },
+                    {
+                      title: "Team",
+                      body: `${data?.synopsis.teamCount ?? 0} members`,
+                      to: "/team",
+                      bg: AISLIX.darkstoreBg,
+                      border: AISLIX.darkstoreBorder,
+                      Icon: Users,
+                    },
+                  ].map((card) => (
+                    <div
+                      key={card.title}
+                      className="rounded-xl border p-3"
+                      style={{ background: card.bg, borderColor: card.border }}
+                    >
+                      <card.Icon className="size-4 text-[#102A43]" />
+                      <p className="mt-2 text-sm font-semibold text-[#102A43]">{card.title}</p>
+                      <p className="mt-1 text-xs text-[#557187]">{card.body}</p>
+                      <Link to={card.to} className="mt-2 inline-block text-xs text-[#557187] hover:underline">
+                        View more
+                      </Link>
+                    </div>
+                  ))}
+                </div>
 
-              {ai?.planogram.applicable ? (
-                <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
-                  <h3 className="text-sm font-semibold text-[#102A43]">Planogram section</h3>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-4">
+                  {/* Last completed — AI Analysis Report */}
+                  <div className="rounded-xl border border-[#C1E4F8] bg-white p-4 shadow-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-[#102A43]">
+                        Last completed audit — AI Analysis Report
+                      </h3>
+                      {data?.lastReport ? (
+                        <div className="flex gap-2">
+                          <Link
+                            to="/history"
+                            className="rounded-lg bg-[#7DB7D6] px-3 py-1.5 text-xs font-medium text-white"
+                          >
+                            View full report
+                          </Link>
+                          <button
+                            type="button"
+                            className="rounded-lg bg-[#FFEAF1] px-3 py-1.5 text-xs font-medium text-[#102A43]"
+                            onClick={() => {
+                              if (data.lastReport) {
+                                setModalIncomplete(false);
+                                setModalReport(data.lastReport);
+                                setModalOpen(true);
+                              }
+                            }}
+                          >
+                            Share
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                    {data?.lastReport ? (
+                      <div className="mt-3 space-y-3">
+                        <p className="text-sm text-[#557187]">
+                          Audit: {data.lastReport.auditName} | Store: {data.lastReport.storeName} |{" "}
+                          Date: {fmtDate(data.lastReport.date)}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <span className="rounded-lg bg-[#EAF1DF] px-3 py-1 text-xs font-medium text-[#102A43]">
+                            Compliance: {fmt(data.lastReport.compliancePct, "%")}
+                          </span>
+                          <span className="rounded-lg bg-[#F0E9FF] px-3 py-1 text-xs font-medium text-[#102A43]">
+                            Findings: {data.lastReport.findingsCount}
+                          </span>
+                          <span className="rounded-lg bg-[#EAF6FD] px-3 py-1 text-xs font-medium text-[#102A43]">
+                            Confidence: {fmt(data.lastReport.confidencePct, "%")}
+                          </span>
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-[1fr_1.2fr]">
+                          <ul className="space-y-2 text-sm text-[#557187]">
+                            <li>
+                              <span className="font-semibold text-[#102A43]">Good:</span>{" "}
+                              {data.lastReport.good}
+                            </li>
+                            <li>
+                              <span className="font-semibold text-[#102A43]">Attention:</span>{" "}
+                              {data.lastReport.attention}
+                            </li>
+                            <li>
+                              <span className="font-semibold text-[#102A43]">Next action:</span>{" "}
+                              {data.lastReport.nextAction}
+                            </li>
+                          </ul>
+                          <div className="grid grid-cols-3 gap-2">
+                            {(data.lastReport.imageUrls.length
+                              ? data.lastReport.imageUrls
+                              : [null, null, null]
+                            ).map((url, i) =>
+                              url ? (
+                                <img
+                                  key={url}
+                                  src={url}
+                                  alt=""
+                                  className="h-20 w-full rounded-lg object-cover border border-[#D9E2E8]"
+                                />
+                              ) : (
+                                <div
+                                  key={`ph-${i}`}
+                                  className="flex h-20 items-center justify-center rounded-lg border border-dashed border-[#D9E2E8] bg-[#F4F7F9] text-[10px] text-[#667085]"
+                                >
+                                  Evidence
+                                </div>
+                              ),
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-sm text-[#667085]">
+                        No completed audit in range — run an audit to see the AI Analysis Report.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <KpiCard
+                      label="Verification Coverage %"
+                      value={fmt(ai?.verificationCoveragePct, "%")}
+                      accent={AISLIX.localBorder}
+                      moreTo="/history"
+                    />
                     <KpiCard
                       label="Planogram Compliance %"
-                      value={fmt(ai.planogram.compliancePct, "%")}
-                      accent="#9B86D9"
+                      value={fmt(ai?.planogram.compliancePct, "%")}
+                      accent={AISLIX.supermarketBorder}
+                      moreTo="/history"
                     />
                     <KpiCard
-                      label="Actual Facings"
-                      value={fmt(ai.planogram.actualFacings)}
-                      accent="#7DB7D6"
+                      label="Total Audits"
+                      value={fmt(ai?.auditCount)}
+                      accent={AISLIX.warehouseBorder}
+                      moreTo="/history"
                     />
-                    <KpiCard label="Facing %" value={fmt(ai.planogram.facingPct, "%")} accent="#79E2A8" />
                     <KpiCard
-                      label="Facing Variance"
-                      value={fmt(ai.planogram.facingVariance)}
-                      accent="#8EC9E8"
+                      label="Avg Confidence"
+                      value={fmt(confPct, "%")}
+                      accent={AISLIX.darkstoreBorder}
+                      moreTo="/history"
+                    />
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <KpiCard
+                      label="Products Identified"
+                      value={fmt(ai?.productsIdentified)}
+                      accent={AISLIX.localBorder}
+                    />
+                    <KpiCard
+                      label="Brands Identified"
+                      value={fmt(ai?.brandsIdentified)}
+                      accent={AISLIX.supermarketBorder}
+                    />
+                    <KpiCard
+                      label="Total Facings"
+                      value={fmt(ai?.totalFacings)}
+                      accent={AISLIX.warehouseBorder}
+                    />
+                    <KpiCard
+                      label="Visible Units"
+                      value={fmt(ai?.totalVisibleUnits)}
+                      accent={AISLIX.darkstoreBorder}
                     />
                   </div>
                 </div>
-              ) : (
-                <p className="text-sm text-[#667085]">
-                  Planogram metrics: N/A (no planogram audits in the current set).
-                </p>
-              )}
+              </div>
+
+              {/* Charts */}
+              <div className="grid gap-4 lg:grid-cols-2">
+                <ChartCard title="Planogram Compliance — Expected vs Actual" moreTo="/history">
+                  {planogramGrouped.length ? (
+                    <div className="h-56">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={planogramGrouped}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#E7EDF0" />
+                          <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} />
+                          <Tooltip />
+                          <Bar dataKey="expected" fill={AISLIX.localBorder} name="Expected" />
+                          <Bar dataKey="actual" fill={AISLIX.supermarketBorder} name="Actual" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-[#667085]">
+                      Data unavailable — no planogram audits in the current set.
+                    </p>
+                  )}
+                </ChartCard>
+
+                <ChartCard title="Top products by facings" moreTo="/audit-intelligence">
+                  {(ai?.topProductsByFacings ?? []).length ? (
+                    <div className="h-56">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={(ai?.topProductsByFacings ?? []).slice(0, 6).map((r, i) => ({
+                            ...r,
+                            label: r.label.length > 16 ? `${r.label.slice(0, 16)}…` : r.label,
+                            fill: CHART_COLORS[i % CHART_COLORS.length],
+                          }))}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#E7EDF0" />
+                          <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={60} />
+                          <YAxis tick={{ fontSize: 11 }} />
+                          <Tooltip />
+                          <Bar dataKey="value" name="Facings">
+                            {(ai?.topProductsByFacings ?? []).slice(0, 6).map((_, i) => (
+                              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-[#667085]">Data unavailable</p>
+                  )}
+                </ChartCard>
+
+                <ChartCard title="Completion mix" moreTo="/history">
+                  {(data?.completionMix ?? []).some((s) => s.value > 0) ? (
+                    <MpDonut
+                      slices={(data?.completionMix ?? []).map((s) => ({
+                        label: s.label,
+                        value: s.value,
+                        color: s.color ?? AISLIX.localBorder,
+                      }))}
+                      total={data?.executive.audits ?? 0}
+                      totalLabel="Audits"
+                    />
+                  ) : (
+                    <p className="text-sm text-[#667085]">Data unavailable</p>
+                  )}
+                </ChartCard>
+
+                <ChartCard title="AI Audit Trend (audits)" moreTo="/history">
+                  {(data?.auditTrend ?? []).length ? (
+                    <div className="h-56">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={data?.auditTrend ?? []}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#E7EDF0" />
+                          <XAxis dataKey="label" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                          <Tooltip />
+                          <Line
+                            type="monotone"
+                            dataKey="value"
+                            stroke={AISLIX.primary}
+                            strokeWidth={2}
+                            dot={{ fill: AISLIX.warehouseBorder }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-[#667085]">Data unavailable</p>
+                  )}
+                </ChartCard>
+
+                <ChartCard title="Brand share of facings (%)" moreTo="/audit-intelligence">
+                  {(ai?.brandShare ?? []).length ? (
+                    <MpRankBars
+                      data={(ai?.brandShare ?? []).slice(0, 6).map((r, i) => ({
+                        label: r.label,
+                        value: Math.round(r.value * 10) / 10,
+                        color: CHART_COLORS[i % CHART_COLORS.length],
+                      }))}
+                      unit="%"
+                    />
+                  ) : (
+                    <p className="text-sm text-[#667085]">Data unavailable</p>
+                  )}
+                </ChartCard>
+
+                <ChartCard title="Category share of facings (%)" moreTo="/audit-intelligence">
+                  {(ai?.categoryShare ?? []).length ? (
+                    <MpRankBars
+                      data={(ai?.categoryShare ?? []).slice(0, 6).map((r, i) => ({
+                        label: r.label,
+                        value: Math.round(r.value * 10) / 10,
+                        color: CHART_COLORS[i % CHART_COLORS.length],
+                      }))}
+                      unit="%"
+                    />
+                  ) : (
+                    <p className="text-sm text-[#667085]">Data unavailable</p>
+                  )}
+                </ChartCard>
+
+                <ChartCard title="Top products by visible units" moreTo="/audit-intelligence">
+                  {(ai?.topProductsByUnits ?? []).length ? (
+                    <MpRankBars
+                      data={(ai?.topProductsByUnits ?? []).slice(0, 6).map((r, i) => ({
+                        label: r.label,
+                        value: r.value,
+                        color: CHART_COLORS[i % CHART_COLORS.length],
+                      }))}
+                    />
+                  ) : (
+                    <p className="text-sm text-[#667085]">Data unavailable</p>
+                  )}
+                </ChartCard>
+
+                <div className="grid gap-4 sm:grid-cols-2 lg:col-span-2">
+                  <ChartCard title="Top performers" moreTo="/history">
+                    {(data?.topPerformers ?? []).length ? (
+                      <MpRankBars
+                        data={(data?.topPerformers ?? []).map((p) => ({
+                          label: p.storeName,
+                          value: Math.round(p.composite),
+                          color: AISLIX.supermarketBorder,
+                        }))}
+                        unit="%"
+                      />
+                    ) : (
+                      <p className="text-sm text-[#667085]">Data unavailable</p>
+                    )}
+                  </ChartCard>
+                  <ChartCard title="Worst performers" moreTo="/history">
+                    {(data?.worstPerformers ?? []).length ? (
+                      <MpRankBars
+                        data={(data?.worstPerformers ?? []).map((p) => ({
+                          label: p.storeName,
+                          value: Math.round(p.composite),
+                          color: AISLIX.darkstoreBorder,
+                        }))}
+                        unit="%"
+                      />
+                    ) : (
+                      <p className="text-sm text-[#667085]">Data unavailable</p>
+                    )}
+                  </ChartCard>
+                </div>
+              </div>
+
+              {/* Last 10 */}
+              <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-[#102A43]">Last 10 Audits</h3>
+                  <ViewMore to="/history" />
+                </div>
+                <div className="mb-3 flex flex-wrap gap-2">
+                  <select
+                    className="rounded-lg border border-[#D9E2E8] bg-white px-2 py-1.5 text-xs"
+                    value={tableStage}
+                    onChange={(e) => setTableStage(e.target.value)}
+                  >
+                    <option value="all">Completion stage</option>
+                    <option value="completed">Completed</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="not_started">Not Started</option>
+                  </select>
+                  <select
+                    className="rounded-lg border border-[#D9E2E8] bg-white px-2 py-1.5 text-xs"
+                    value={tableTemplate}
+                    onChange={(e) => setTableTemplate(e.target.value)}
+                  >
+                    <option value="all">Template</option>
+                    {templateOptions.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="rounded-lg border border-[#D9E2E8] bg-white px-2 py-1.5 text-xs"
+                    value={tableAssignee}
+                    onChange={(e) => setTableAssignee(e.target.value)}
+                  >
+                    <option value="all">Assignee</option>
+                    {assigneeOptions.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="rounded-lg border border-[#D9E2E8] bg-white px-2 py-1.5 text-xs"
+                    value={tableStore}
+                    onChange={(e) => setTableStore(e.target.value)}
+                  >
+                    <option value="all">Store</option>
+                    {storeOptions.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="rounded-lg border border-[#D9E2E8] bg-white px-2 py-1.5 text-xs"
+                    value={sortKey}
+                    onChange={(e) => setSortKey(e.target.value as typeof sortKey)}
+                  >
+                    <option value="date">Sort: Date</option>
+                    <option value="score">Sort: Score</option>
+                    <option value="completion">Sort: Completion</option>
+                  </select>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[960px] text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-[#D9E2E8] text-xs uppercase text-[#667085]">
+                        <th className="py-2 pr-3">Audit</th>
+                        <th className="py-2 pr-3">Template</th>
+                        <th className="py-2 pr-3">Store</th>
+                        <th className="py-2 pr-3">Assignee</th>
+                        <th className="py-2 pr-3">Type</th>
+                        <th className="py-2 pr-3">Completion</th>
+                        <th className="py-2 pr-3">Date</th>
+                        <th className="py-2 pr-3">Score</th>
+                        <th className="py-2">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredLastTen.map((row) => (
+                        <tr key={row.id} className="border-b border-[#EEF1F4]">
+                          <td className="py-2 pr-3 font-medium text-[#102A43]">{row.auditName}</td>
+                          <td className="py-2 pr-3 text-[#557187]">{row.templateName}</td>
+                          <td className="py-2 pr-3">{row.storeName}</td>
+                          <td className="py-2 pr-3">{row.assigneeName}</td>
+                          <td className="py-2 pr-3">{row.type}</td>
+                          <td className="py-2 pr-3">
+                            <StagePill stage={row.completionStage} />
+                          </td>
+                          <td className="py-2 pr-3">{fmtDate(row.date)}</td>
+                          <td className="py-2 pr-3">{fmt(row.scorePct, "%")}</td>
+                          <td className="py-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="border-[#C1E4F8] text-[#102A43]"
+                              onClick={() => void openAiAnalysis(row)}
+                            >
+                              AI Analysis
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                      {!filteredLastTen.length ? (
+                        <tr>
+                          <td colSpan={9} className="py-6 text-[#667085]">
+                            Data unavailable
+                          </td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </>
           )}
         </div>
@@ -213,29 +890,28 @@ export function AiDigitalDashboardShell() {
             <>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {[
-                  ["Total Digital Audits", fmt(dig?.totalAudits)],
-                  ["Completed", fmt(dig?.completed)],
-                  ["In Progress", fmt(dig?.inProgress)],
-                  ["Pending Review", fmt(dig?.pendingReview)],
-                  ["Re-audit Requested", fmt(dig?.reauditRequested)],
-                  ["Overdue", fmt(dig?.overdue)],
-                  ["Completion %", fmt(dig?.completionPct, "%")],
-                  ["On-Time Completion %", fmt(dig?.onTimePct, "%")],
-                  ["Total Expected", fmt(dig?.totalExpected)],
-                  ["Total Actual", fmt(dig?.totalActual)],
-                  ["Net Variance", fmt(dig?.netVariance)],
-                  ["Absolute Variance", fmt(dig?.absoluteVariance)],
-                  ["Variance %", fmt(dig?.variancePct, "%")],
-                ].map(([label, value], i) => (
-                  <KpiCard key={label} label={label} value={value} accent={ACCENTS[i % ACCENTS.length]!} />
+                  ["Total Digital Audits", fmt(dig?.totalAudits), AISLIX.localBorder],
+                  ["Completed", fmt(dig?.completed), AISLIX.supermarketBorder],
+                  ["In Progress", fmt(dig?.inProgress), AISLIX.warehouseBorder],
+                  ["Completion %", fmt(dig?.completionPct, "%"), AISLIX.darkstoreBorder],
+                  ["Overdue", fmt(dig?.overdue), AISLIX.darkstoreBorder],
+                  ["Net Variance", fmt(dig?.netVariance), AISLIX.localBorder],
+                  ["Open CA", fmt(dig?.caOpen), AISLIX.supermarketBorder],
+                  ["Overdue CA", fmt(dig?.caOverdue), AISLIX.darkstoreBorder],
+                ].map(([label, value, accent]) => (
+                  <KpiCard
+                    key={label as string}
+                    label={label as string}
+                    value={value as string}
+                    accent={accent as string}
+                  />
                 ))}
               </div>
-
               <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
                 <div className="mb-3 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-[#102A43]">Last 5 digital audits</h3>
-                  <Link to="/history" className="text-sm text-[#0f766e] hover:underline">
-                    View all
+                  <Link to="/history" className="text-sm text-[#557187] hover:underline">
+                    View more
                   </Link>
                 </div>
                 <div className="overflow-x-auto">
@@ -245,9 +921,6 @@ export function AiDigitalDashboardShell() {
                         <th className="py-2 pr-3">Audit</th>
                         <th className="py-2 pr-3">Location</th>
                         <th className="py-2 pr-3">Assignee</th>
-                        <th className="py-2 pr-3">Expected</th>
-                        <th className="py-2 pr-3">Actual</th>
-                        <th className="py-2 pr-3">Variance</th>
                         <th className="py-2 pr-3">Date</th>
                         <th className="py-2">Status</th>
                       </tr>
@@ -258,9 +931,6 @@ export function AiDigitalDashboardShell() {
                           <td className="py-2 pr-3 font-mono text-xs">{row.id.slice(0, 8)}</td>
                           <td className="py-2 pr-3">{row.store}</td>
                           <td className="py-2 pr-3">{row.assignee}</td>
-                          <td className="py-2 pr-3">{fmt(row.expected)}</td>
-                          <td className="py-2 pr-3">{fmt(row.actual)}</td>
-                          <td className="py-2 pr-3">{fmt(row.variance)}</td>
                           <td className="py-2 pr-3">
                             {row.date ? new Date(row.date).toLocaleString() : "—"}
                           </td>
@@ -269,7 +939,7 @@ export function AiDigitalDashboardShell() {
                       ))}
                       {!dig?.lastFive?.length ? (
                         <tr>
-                          <td colSpan={8} className="py-6 text-[#667085]">
+                          <td colSpan={5} className="py-6 text-[#667085]">
                             Data unavailable
                           </td>
                         </tr>
@@ -278,78 +948,17 @@ export function AiDigitalDashboardShell() {
                   </table>
                 </div>
               </div>
-
-              {dig?.fnv.applicable ? (
-                <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
-                  <h3 className="text-sm font-semibold text-[#102A43]">FNV QC</h3>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <KpiCard label="FNV QC Audits" value={fmt(dig.fnv.audits)} accent="#9B86D9" />
-                    <KpiCard label="Units Inspected" value={fmt(dig.fnv.unitsInspected)} accent="#7DB7D6" />
-                    <KpiCard label="Sellable Rate" value={fmt(dig.fnv.sellableRate, "%")} accent="#79E2A8" />
-                    <KpiCard label="Damage Rate" value={fmt(dig.fnv.damageRate, "%")} accent="#FFEAF1" />
-                    <KpiCard
-                      label="Human Review Rate"
-                      value={fmt(dig.fnv.humanReviewRate, "%")}
-                      accent="#8EC9E8"
-                    />
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="grid gap-4 lg:grid-cols-2">
-                <HorizontalBars
-                  title="Variance Explorer — by store (absolute)"
-                  rows={dig?.varianceByStore ?? []}
-                />
-                <HorizontalBars
-                  title="Variance Explorer — by category (absolute)"
-                  rows={dig?.varianceByCategory ?? []}
-                />
-              </div>
-
-              <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
-                <h3 className="text-sm font-semibold text-[#102A43]">Audit A vs Audit B</h3>
-                <p className="mt-1 text-sm text-[#667085]">
-                  Side-by-side comparison of two completed audits (products, gaps, confidence).
-                </p>
-                <div className="mt-4 flex flex-wrap gap-3">
-                  <Link
-                    to="/history"
-                    className="rounded-lg bg-[#102A43] px-4 py-2 text-sm font-medium text-white hover:opacity-90"
-                  >
-                    Pick audits in All Audits
-                  </Link>
-                  <Link
-                    to="/compare"
-                    className="rounded-lg border border-[#D9E2E8] px-4 py-2 text-sm font-medium text-[#102A43] hover:bg-[#F4F7F9]"
-                  >
-                    Open Compare
-                  </Link>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
-                <h3 className="text-sm font-semibold text-[#102A43]">Corrective actions</h3>
-                <div className="mt-4 grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
-                  <KpiCard label="Open CA" value={fmt(dig?.caOpen)} accent="#9B86D9" />
-                  <KpiCard label="Overdue CA" value={fmt(dig?.caOverdue)} accent="#FFEAF1" />
-                  <KpiCard label="Closed CA" value={fmt(dig?.caClosed)} accent="#79E2A8" />
-                  <KpiCard
-                    label="Re-audit Improvement %"
-                    value={fmt(dig?.reauditImprovementPct, "%")}
-                    accent="#7DB7D6"
-                  />
-                  <KpiCard
-                    label="Recurring Issue Rate %"
-                    value={fmt(dig?.recurringIssueRate, "%")}
-                    accent="#8EC9E8"
-                  />
-                </div>
-              </div>
             </>
           )}
         </div>
       )}
+
+      <AiAnalysisModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        report={modalReport}
+        incomplete={modalIncomplete}
+      />
     </div>
   );
 }
