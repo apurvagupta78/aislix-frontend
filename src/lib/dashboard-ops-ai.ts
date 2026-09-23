@@ -483,26 +483,14 @@ export async function fetchOpsAiDashboard(
   const topPerformers = performers.slice(0, 5);
   const worstPerformers = [...performers].sort((a, b) => a.composite - b.composite).slice(0, 5);
 
-  // Top 5 stores needing visits — lowest planogram compliance across all filtered assignments
-  const lowComplianceStores = [...byStore.values()]
-    .filter((a) => a.complianceN > 0)
-    .map((a) => ({
-      storeName: storeName.get(a.storeId) ?? a.storeId.slice(0, 8),
-      compliancePct: a.complianceSum / a.complianceN,
-    }))
-    .sort((a, b) => a.compliancePct - b.compliancePct)
-    .slice(0, 5);
-
-  // Planogram expected vs actual by store (from detected products expected_facings)
+  // Planogram expected vs actual by store — use any assignment scans with product rows
   const planogramByStore: { label: string; expected: number; actual: number }[] = [];
-  const completedScanIds = (scans ?? [])
-    .filter((s) => s.planogram_compliance_percent != null)
-    .map((s) => s.id);
-  if (completedScanIds.length) {
+  const productScanIds = scanIdsFromAssign.slice(0, 80);
+  if (productScanIds.length) {
     const { data: products } = await supabase
       .from("detected_products")
       .select("scan_id, facings, expected_facings")
-      .in("scan_id", completedScanIds.slice(0, 80));
+      .in("scan_id", productScanIds);
     const storeExpected = new Map<string, number>();
     const storeActual = new Map<string, number>();
     for (const p of products ?? []) {
@@ -522,6 +510,58 @@ export async function fetchOpsAiDashboard(
       });
     }
     planogramByStore.sort((a, b) => b.actual - a.actual);
+
+    // Backfill store compliance from facing ratio when scan column is null
+    for (const row of planogramByStore) {
+      if (row.expected <= 0) continue;
+      const sid = [...storeName.entries()].find(([, n]) => n === row.label)?.[0];
+      if (!sid) continue;
+      const agg = byStore.get(sid);
+      if (!agg || agg.complianceN > 0) continue;
+      const ratio = Math.min(100, Math.max(0, (row.actual / row.expected) * 100));
+      agg.complianceSum += ratio;
+      agg.complianceN += 1;
+    }
+  }
+
+  // Also pull planogram % from scan_results.metrics when shelf_scans column is empty
+  if (productScanIds.length) {
+    const { data: resultRows } = await supabase
+      .from("scan_results")
+      .select("scan_id, metrics")
+      .in("scan_id", productScanIds);
+    for (const row of resultRows ?? []) {
+      const compliance = metricNum(row.metrics, "planogram_compliance_percent");
+      if (compliance == null) continue;
+      const scan = scanById.get(row.scan_id as string);
+      const sid = scan?.store_id;
+      if (!sid) continue;
+      const agg = byStore.get(sid);
+      if (!agg || agg.complianceN > 0) continue;
+      const pctVal = compliance <= 1 ? compliance * 100 : compliance;
+      agg.complianceSum += pctVal;
+      agg.complianceN += 1;
+    }
+  }
+
+  let lowComplianceStores = [...byStore.values()]
+    .filter((a) => a.complianceN > 0)
+    .map((a) => ({
+      storeName: storeName.get(a.storeId) ?? a.storeId.slice(0, 8),
+      compliancePct: a.complianceSum / a.complianceN,
+    }))
+    .sort((a, b) => a.compliancePct - b.compliancePct)
+    .slice(0, 5);
+
+  if (!lowComplianceStores.length && planogramByStore.length) {
+    lowComplianceStores = planogramByStore
+      .filter((r) => r.expected > 0)
+      .map((r) => ({
+        storeName: r.label,
+        compliancePct: Math.min(100, Math.max(0, (r.actual / r.expected) * 100)),
+      }))
+      .sort((a, b) => a.compliancePct - b.compliancePct)
+      .slice(0, 5);
   }
 
   // Last 10
