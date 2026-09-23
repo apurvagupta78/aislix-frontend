@@ -4,7 +4,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
-import { requireOrgId } from "@/lib/db/context";
+import { getUser, requireOrgId } from "@/lib/db/context";
 import {
   listScanFieldVerificationsForScans,
   operationalActual,
@@ -59,6 +59,23 @@ export type AiDashboardMetrics = {
   };
 };
 
+export type DigitalLastTenRow = {
+  id: string;
+  auditName: string;
+  store: string;
+  assignee: string;
+  date: string;
+  status: string;
+  expected: number | null;
+  actual: number | null;
+  variance: number | null;
+  findingsCount: number | null;
+  caCount: number | null;
+  reauditStatus: string;
+  scanId: string | null;
+  relation?: "assigned_to_me" | "assigned_by_me" | "other";
+};
+
 export type DigitalDashboardMetrics = {
   totalAudits: number;
   completed: number;
@@ -73,16 +90,9 @@ export type DigitalDashboardMetrics = {
   netVariance: number | null;
   absoluteVariance: number | null;
   variancePct: number | null;
-  lastFive: {
-    id: string;
-    store: string;
-    assignee: string;
-    date: string;
-    status: string;
-    expected: number | null;
-    actual: number | null;
-    variance: number | null;
-  }[];
+  /** @deprecated use lastTen */
+  lastFive: DigitalLastTenRow[];
+  lastTen: DigitalLastTenRow[];
   fnv: {
     applicable: boolean;
     audits: number;
@@ -96,12 +106,19 @@ export type DigitalDashboardMetrics = {
   };
   varianceByStore: { label: string; value: number }[];
   varianceByCategory: { label: string; value: number }[];
+  caTotal: number | null;
   caOpen: number | null;
+  caInProgress: number | null;
   caOverdue: number | null;
   caClosed: number | null;
+  caClosurePct: number | null;
+  caSlaPct: number | null;
+  caStatusMix: { label: string; value: number }[];
   potentialInventoryValueVariance: number | null;
   reauditImprovementPct: number | null;
   recurringIssueRate: number | null;
+  labeledDemo?: boolean;
+  previewDemo?: boolean;
 };
 
 function pct(num: number, den: number): number | null {
@@ -458,13 +475,23 @@ export async function fetchAiDashboardMetrics(
 
 export async function fetchDigitalDashboardMetrics(
   filters?: DashboardMetricFilters,
+  options?: { previewDemo?: boolean; userEmail?: string | null },
 ): Promise<DigitalDashboardMetrics> {
-  const orgId = await requireOrgId();
+  const { resolveDemoExperience } = await import("@/lib/demo-environment");
+  const activeOrgId = await requireOrgId();
+  const experience = await resolveDemoExperience(activeOrgId, {
+    previewDemo: options?.previewDemo,
+    userEmail: options?.userEmail,
+    honorPreviewOff: true,
+  });
+  const orgId = experience.dataOrgId;
   const now = Date.now();
+  const user = await getUser();
+  const userId = user?.id ?? null;
   const { resolveEffectiveAccessScope, applyStoreScopeFilter, clampStoreIdToScope } = await import(
     "@/lib/access-scope"
   );
-  const scope = await resolveEffectiveAccessScope({ orgId });
+  const scope = await resolveEffectiveAccessScope({ orgId: activeOrgId });
   const emptyDigital: DigitalDashboardMetrics = {
     totalAudits: 0,
     completed: 0,
@@ -480,6 +507,7 @@ export async function fetchDigitalDashboardMetrics(
     absoluteVariance: null,
     variancePct: null,
     lastFive: [],
+    lastTen: [],
     fnv: {
       applicable: false,
       audits: 0,
@@ -493,27 +521,36 @@ export async function fetchDigitalDashboardMetrics(
     },
     varianceByStore: [],
     varianceByCategory: [],
+    caTotal: null,
     caOpen: null,
+    caInProgress: null,
     caOverdue: null,
     caClosed: null,
+    caClosurePct: null,
+    caSlaPct: null,
+    caStatusMix: [],
     potentialInventoryValueVariance: null,
     reauditImprovementPct: null,
     recurringIssueRate: null,
+    labeledDemo: experience.labeledDemo,
+    previewDemo: experience.previewDemo,
   };
-  if (!scope.isOrgAdmin && !scope.hasStoreScope) return emptyDigital;
+  if (!scope.isOrgAdmin && !scope.hasStoreScope && !experience.labeledDemo) return emptyDigital;
 
   let assignmentQuery = supabase
     .from("scan_assignments")
     .select(
-      "id, status, approval_status, assignment_state, due_at, completed_at, scan_id, assignee_id, store_id, template_id, created_at, stores:store_id(name)",
+      "id, status, approval_status, assignment_state, due_at, completed_at, scan_id, assignee_id, assigner_id, store_id, template_id, created_at, stores:store_id(name)",
     )
     .eq("org_id", orgId)
     .eq("audit_mode", "digital")
     .order("created_at", { ascending: false })
-    .limit(300);
-  assignmentQuery = applyStoreScopeFilter(assignmentQuery, scope) ?? assignmentQuery;
+    .limit(400);
+  if (!experience.labeledDemo) {
+    assignmentQuery = applyStoreScopeFilter(assignmentQuery, scope) ?? assignmentQuery;
+  }
   const scopedStoreId = clampStoreIdToScope(filters?.storeId, scope);
-  if (scopedStoreId && scopedStoreId !== "all") {
+  if (scopedStoreId && scopedStoreId !== "all" && !experience.labeledDemo) {
     assignmentQuery = assignmentQuery.eq("store_id", scopedStoreId);
   }
   if (filters?.teamMemberId && filters.teamMemberId !== "all") {
@@ -524,7 +561,9 @@ export async function fetchDigitalDashboardMetrics(
   let storeIdAllow: Set<string> | null = null;
   if (needsStoreGeo) {
     let storeQ = supabase.from("stores").select("id, country, city").eq("org_id", orgId);
-    storeQ = applyStoreScopeFilter(storeQ, scope, "id") ?? storeQ;
+    if (!experience.labeledDemo) {
+      storeQ = applyStoreScopeFilter(storeQ, scope, "id") ?? storeQ;
+    }
     if (filters?.country && filters.country !== "all") storeQ = storeQ.eq("country", filters.country);
     if (filters?.city && filters.city !== "all") storeQ = storeQ.eq("city", filters.city);
     const { data: geoStores } = await storeQ;
@@ -583,14 +622,12 @@ export async function fetchDigitalDashboardMetrics(
   let variancePct: number | null = null;
 
   if (scanIds.length) {
-    const scopedScanIds = scanIds.slice(0, 100);
+    const scopedScanIds = scanIds.slice(0, 200);
     let { data: lines } = await supabase
       .from("digital_audit_lines")
       .select("expected_qty, actual_qty, scan_id")
       .in("scan_id", scopedScanIds);
 
-    // Backfill lines for universal/custom digital submits that predate materialization
-    // (or never opened Review/Results, which is the other ensure trigger).
     const scansWithLines = new Set(
       (lines ?? []).map((l) => l.scan_id as string).filter(Boolean),
     );
@@ -618,7 +655,12 @@ export async function fetchDigitalDashboardMetrics(
         (s, l) => s + Math.abs(Number(l.actual_qty) - Number(l.expected_qty)),
         0,
       );
-      variancePct = pct(totalActual - totalExpected, totalExpected);
+      variancePct =
+        totalExpected === 0
+          ? totalActual === 0
+            ? 0
+            : null
+          : pct(totalActual - totalExpected, totalExpected);
     }
   }
 
@@ -637,36 +679,58 @@ export async function fetchDigitalDashboardMetrics(
     }
   }
 
-  const lastFive = rows.slice(0, 5).map((r) => {
+  const templateIds = [...new Set(rows.map((r) => r.template_id as string).filter(Boolean))];
+  const templateNames = new Map<string, string>();
+  if (templateIds.length) {
+    const { data: templates } = await supabase
+      .from("audit_templates")
+      .select("id, name")
+      .in("id", templateIds);
+    for (const t of templates ?? []) {
+      templateNames.set(t.id as string, (t.name as string) || "Digital audit");
+    }
+  }
+
+  const lastTenRaw = rows.slice(0, 40).map((r) => {
     const storeRel = r.stores as { name?: string } | { name?: string }[] | null;
     const storeName = Array.isArray(storeRel) ? storeRel[0]?.name : storeRel?.name;
     const scanId = r.scan_id as string | null;
-    let expected: number | null = null;
-    let actual: number | null = null;
-    let variance: number | null = null;
-    if (scanId && scanIds.length) {
-      // Filled below after line aggregates when available.
-    }
+    const assigneeId = r.assignee_id as string | null;
+    const assignerId = r.assigner_id as string | null;
+    let relation: DigitalLastTenRow["relation"] = "other";
+    if (userId && assigneeId === userId) relation = "assigned_to_me";
+    else if (userId && assignerId === userId) relation = "assigned_by_me";
+    const state = (r.assignment_state as string) || "";
+    const reauditStatus =
+      state === "reaudit_required" || r.status === "needs_correction"
+        ? "Requested"
+        : state === "reaudit_completed"
+          ? "Completed"
+          : "—";
     return {
       id: r.id as string,
+      auditName: templateNames.get(r.template_id as string) ?? "Digital audit",
       store: storeName ?? "—",
       assignee: names.get(r.assignee_id as string) ?? "—",
       date: (r.created_at as string) ?? "",
-      status: (r.assignment_state as string) || (r.status as string) || "—",
-      expected,
-      actual,
-      variance,
+      status: state || (r.status as string) || "—",
+      expected: null as number | null,
+      actual: null as number | null,
+      variance: null as number | null,
+      findingsCount: null as number | null,
+      caCount: null as number | null,
+      reauditStatus,
       scanId,
+      relation,
     };
   });
 
-  // Fill lastFive expected/actual from mapped digital lines (Expected+Actual only).
-  const lastFiveScanIds = lastFive.map((r) => r.scanId).filter(Boolean) as string[];
-  if (lastFiveScanIds.length) {
+  const lastTenScanIds = lastTenRaw.map((r) => r.scanId).filter(Boolean) as string[];
+  if (lastTenScanIds.length) {
     const { data: lastLines } = await supabase
       .from("digital_audit_lines")
       .select("scan_id, expected_qty, actual_qty")
-      .in("scan_id", lastFiveScanIds);
+      .in("scan_id", lastTenScanIds);
     const byScan = new Map<string, { e: number; a: number }>();
     for (const line of lastLines ?? []) {
       if (line.actual_qty == null || line.expected_qty == null) continue;
@@ -676,7 +740,7 @@ export async function fetchDigitalDashboardMetrics(
       cur.a += Number(line.actual_qty);
       byScan.set(sid, cur);
     }
-    for (const row of lastFive) {
+    for (const row of lastTenRaw) {
       if (!row.scanId) continue;
       const agg = byScan.get(row.scanId);
       if (!agg) continue;
@@ -684,9 +748,41 @@ export async function fetchDigitalDashboardMetrics(
       row.actual = agg.a;
       row.variance = agg.a - agg.e;
     }
+
+    const { data: findings } = await supabase
+      .from("findings")
+      .select("id, scan_id")
+      .eq("org_id", orgId)
+      .in("scan_id", lastTenScanIds);
+    const findingsByScan = new Map<string, number>();
+    for (const f of findings ?? []) {
+      const sid = f.scan_id as string;
+      if (!sid) continue;
+      findingsByScan.set(sid, (findingsByScan.get(sid) ?? 0) + 1);
+    }
+    const { data: casForScans } = await supabase
+      .from("corrective_actions")
+      .select("id, scan_id")
+      .eq("org_id", orgId)
+      .in("scan_id", lastTenScanIds);
+    const caByScan = new Map<string, number>();
+    for (const c of casForScans ?? []) {
+      const sid = c.scan_id as string;
+      if (!sid) continue;
+      caByScan.set(sid, (caByScan.get(sid) ?? 0) + 1);
+    }
+    for (const row of lastTenRaw) {
+      if (!row.scanId) continue;
+      row.findingsCount = findingsByScan.get(row.scanId) ?? 0;
+      row.caCount = caByScan.get(row.scanId) ?? 0;
+    }
   }
 
-  const lastFiveOut = lastFive.map(({ scanId: _sid, ...rest }) => rest);
+  const lastTenOut: DigitalLastTenRow[] = lastTenRaw.map(({ scanId, ...rest }) => ({
+    ...rest,
+    scanId,
+  }));
+  const lastFiveOut = lastTenOut.slice(0, 5);
 
   // FNV QC subsection — dispositions from digital_audit_lines.qc_disposition
   const { data: fnvTemplates } = await supabase
@@ -722,14 +818,13 @@ export async function fetchDigitalDashboardMetrics(
 
   const rate = (n: number) => (unitsInspected > 0 ? (n / unitsInspected) * 100 : null);
 
-  // Variance Explorer — absolute variance by store / category (Expected+Actual mapped only)
   const varianceByStoreMap = new Map<string, number>();
   const varianceByCategoryMap = new Map<string, number>();
   if (scanIds.length) {
     const { data: varLines } = await supabase
       .from("digital_audit_lines")
       .select("expected_qty, actual_qty, category, scan_id")
-      .in("scan_id", scanIds.slice(0, 100));
+      .in("scan_id", scanIds.slice(0, 200));
     const scanStore = new Map<string, string>();
     for (const r of rows) {
       if (!r.scan_id) continue;
@@ -752,38 +847,62 @@ export async function fetchDigitalDashboardMetrics(
       .slice(0, 8)
       .map(([label, value]) => ({ label, value }));
 
-  // Corrective actions summary (digital-origin)
+  let caTotal: number | null = null;
   let caOpen: number | null = null;
+  let caInProgress: number | null = null;
   let caOverdue: number | null = null;
   let caClosed: number | null = null;
+  let caClosurePct: number | null = null;
+  let caSlaPct: number | null = null;
+  let caStatusMix: { label: string; value: number }[] = [];
   {
     let caQuery = supabase
       .from("corrective_actions")
-      .select("id, status, due_at")
+      .select("id, status, due_at, completed_at")
       .eq("org_id", orgId)
-      .limit(500);
-    if (!scope.isOrgAdmin) {
+      .limit(800);
+    if (!scope.isOrgAdmin && !experience.labeledDemo) {
       const ids = scope.effectiveStoreIds.map((id) => `"${id}"`).join(",");
       caQuery = caQuery.or(`store_id.in.(${ids}),store_id.is.null`);
     }
     const { data: cas } = await caQuery;
     if (cas) {
+      caTotal = cas.length;
       caOpen = cas.filter((c) => !["closed", "resolved", "cancelled"].includes(String(c.status))).length;
+      caInProgress = cas.filter((c) => String(c.status) === "in_progress").length;
       caClosed = cas.filter((c) => ["closed", "resolved"].includes(String(c.status))).length;
       caOverdue = cas.filter((c) => {
         if (["closed", "resolved", "cancelled"].includes(String(c.status))) return false;
         return c.due_at && new Date(c.due_at as string).getTime() < now;
       }).length;
+      caClosurePct = pct(caClosed, caTotal);
+      const completedWithDue = cas.filter(
+        (c) =>
+          ["closed", "resolved"].includes(String(c.status)) &&
+          c.due_at &&
+          c.completed_at,
+      );
+      const onTimeCa = completedWithDue.filter(
+        (c) =>
+          new Date(c.completed_at as string).getTime() <= new Date(c.due_at as string).getTime(),
+      ).length;
+      caSlaPct = completedWithDue.length ? pct(onTimeCa, completedWithDue.length) : null;
+      const openOnly = Math.max(0, (caOpen ?? 0) - (caInProgress ?? 0) - (caOverdue ?? 0));
+      caStatusMix = [
+        { label: "Open", value: openOnly },
+        { label: "In Progress", value: caInProgress ?? 0 },
+        { label: "Overdue", value: caOverdue ?? 0 },
+        { label: "Completed", value: caClosed ?? 0 },
+      ].filter((s) => s.value > 0);
     }
   }
 
-  // Potential inventory value variance — sum abs(variance_value_inr) when MRP mapped
   let potentialInventoryValueVariance: number | null = null;
   if (scanIds.length) {
     const { data: valueLines } = await supabase
       .from("digital_audit_lines")
       .select("variance_value_inr, expected_qty, actual_qty, mrp_inr")
-      .in("scan_id", scanIds.slice(0, 100));
+      .in("scan_id", scanIds.slice(0, 200));
     const withValue = (valueLines ?? []).filter(
       (l) =>
         l.variance_value_inr != null &&
@@ -799,7 +918,6 @@ export async function fetchDigitalDashboardMetrics(
     }
   }
 
-  // Re-audit improvement + recurring issue rate from findings
   let reauditImprovementPct: number | null = null;
   let recurringIssueRate: number | null = null;
   {
@@ -808,7 +926,9 @@ export async function fetchDigitalDashboardMetrics(
       .select("id, status, store_id, sku, finding_type, created_at")
       .eq("org_id", orgId)
       .limit(800);
-    findingsQuery = applyStoreScopeFilter(findingsQuery, scope) ?? findingsQuery;
+    if (!experience.labeledDemo) {
+      findingsQuery = applyStoreScopeFilter(findingsQuery, scope) ?? findingsQuery;
+    }
     const { data: findings } = await findingsQuery;
     if (findings?.length) {
       const groups = new Map<string, { open: number; closed: number; total: number }>();
@@ -844,6 +964,7 @@ export async function fetchDigitalDashboardMetrics(
     absoluteVariance,
     variancePct,
     lastFive: lastFiveOut,
+    lastTen: lastTenOut,
     fnv: {
       applicable: fnvRows.length > 0,
       audits: fnvRows.length,
@@ -857,12 +978,19 @@ export async function fetchDigitalDashboardMetrics(
     },
     varianceByStore: topAbs(varianceByStoreMap),
     varianceByCategory: topAbs(varianceByCategoryMap),
+    caTotal,
     caOpen,
+    caInProgress,
     caOverdue,
     caClosed,
+    caClosurePct,
+    caSlaPct,
+    caStatusMix,
     potentialInventoryValueVariance,
     reauditImprovementPct,
     recurringIssueRate,
+    labeledDemo: experience.labeledDemo,
+    previewDemo: experience.previewDemo,
   };
 }
 

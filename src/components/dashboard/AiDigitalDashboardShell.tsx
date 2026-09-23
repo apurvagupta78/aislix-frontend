@@ -17,6 +17,7 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Building2,
+  Info,
   Plus,
   ShoppingCart,
   Trash2,
@@ -80,7 +81,9 @@ import {
 import {
   fetchDigitalDashboardMetrics,
   type DashboardTab,
+  type DigitalLastTenRow,
 } from "@/lib/dashboard-ai-digital";
+import { digitalKpiTooltip } from "@/lib/dashboard-digital-kpi-catalog";
 import { useOptionalGlobalFilters } from "@/lib/global-filters";
 import { assignmentStatusLabel } from "@/lib/assignment-status-ui";
 import { useDemoPreview } from "@/lib/use-demo-preview";
@@ -105,6 +108,9 @@ const SPAN2_CARD_IDS = new Set([
   "chart_category",
   "chart_units",
   "chart_low_compliance",
+  "chart_ca_strip",
+  "chart_variance_rank",
+  "chart_compare",
 ]);
 
 type AssignmentFilter = "all" | "assigned_to_me" | "assigned_by_me";
@@ -152,6 +158,7 @@ function KpiCard({
   moreTo,
   context,
   footer,
+  formula,
 }: {
   label: string;
   value: string;
@@ -160,6 +167,7 @@ function KpiCard({
   moreTo?: string;
   context?: string;
   footer?: React.ReactNode;
+  formula?: string;
 }) {
   return (
     <div
@@ -168,24 +176,31 @@ function KpiCard({
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-xs font-medium uppercase tracking-wide text-[#667085]">{label}</p>
-        {delta != null && Number.isFinite(delta) ? (
-          <span
-            className={cn(
-              "inline-flex items-center text-xs font-semibold",
-              delta >= 0 ? "text-[#3d7a55]" : "text-[#9b4b63]",
-            )}
-          >
-            {delta >= 0 ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
-            {Math.abs(delta).toFixed(0)}
-          </span>
-        ) : null}
+        <div className="flex items-center gap-1">
+          {formula ? (
+            <span title={formula} className="text-[#667085]">
+              <Info className="size-3.5" aria-label="KPI formula" />
+            </span>
+          ) : null}
+          {delta != null && Number.isFinite(delta) ? (
+            <span
+              className={cn(
+                "inline-flex items-center text-xs font-semibold",
+                delta >= 0 ? "text-[#3d7a55]" : "text-[#9b4b63]",
+              )}
+            >
+              {delta >= 0 ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
+              {Math.abs(delta).toFixed(0)}
+            </span>
+          ) : null}
+        </div>
       </div>
       <p className="mt-2 text-2xl font-semibold text-[#102A43]">{value}</p>
       {context ? <p className="mt-1 text-xs text-[#557187]">{context}</p> : null}
       {moreTo ? (
-        <a href={moreTo} className="mt-2 inline-block text-xs text-[#557187] hover:underline">
+        <Link to={moreTo} className="mt-2 inline-block text-xs text-[#557187] hover:underline">
           View more
-        </a>
+        </Link>
       ) : null}
       {footer}
     </div>
@@ -344,6 +359,9 @@ export function AiDigitalDashboardShell() {
   const [tableAssignee, setTableAssignee] = useState<string>("all");
   const [tableStore, setTableStore] = useState<string>("all");
   const [tableRelation, setTableRelation] = useState<AssignmentFilter>("all");
+  const [digRelation, setDigRelation] = useState<AssignmentFilter>("all");
+  const [compareA, setCompareA] = useState<string>("");
+  const [compareB, setCompareB] = useState<string>("");
   const [sortKey, setSortKey] = useState<"date" | "score" | "completion">("date");
   const [modalOpen, setModalOpen] = useState(false);
   const [modalReport, setModalReport] = useState<LastAuditReport | null>(null);
@@ -507,8 +525,12 @@ export function AiDigitalDashboardShell() {
     staleTime: 30_000,
   });
   const digitalQuery = useQuery({
-    queryKey: ["dashboard-digital-metrics", filterKey, demoPreview.previewDemo],
-    queryFn: () => fetchDigitalDashboardMetrics(filterKey),
+    queryKey: ["dashboard-digital-metrics-v2", filterKey, demoPreview.previewDemo],
+    queryFn: () =>
+      fetchDigitalDashboardMetrics(filterKey, {
+        previewDemo: demoPreview.previewDemo,
+        userEmail: demoPreview.userEmail,
+      }),
     staleTime: 30_000,
   });
 
@@ -530,6 +552,23 @@ export function AiDigitalDashboardShell() {
     });
     return next.slice(0, 10);
   }, [data?.lastTen, tableRelation, tableStage, tableTemplate, tableAssignee, tableStore, sortKey]);
+
+  const filteredDigLastTen = useMemo(() => {
+    let next = [...(dig?.lastTen ?? dig?.lastFive ?? [])];
+    if (digRelation !== "all") next = next.filter((r) => r.relation === digRelation);
+    return next.slice(0, 10);
+  }, [dig?.lastTen, dig?.lastFive, digRelation]);
+
+  const digCompareOptions = useMemo(() => {
+    return (dig?.lastTen ?? dig?.lastFive ?? []).filter(
+      (r) => r.expected != null && r.actual != null,
+    );
+  }, [dig?.lastTen, dig?.lastFive]);
+
+  useEffect(() => {
+    if (!compareA && digCompareOptions[0]) setCompareA(digCompareOptions[0].id);
+    if (!compareB && digCompareOptions[1]) setCompareB(digCompareOptions[1].id);
+  }, [digCompareOptions, compareA, compareB]);
 
   const templateOptions = useMemo(
     () => [...new Set((data?.lastTen ?? []).map((r) => r.templateName))].filter(Boolean),
@@ -813,19 +852,207 @@ export function AiDigitalDashboardShell() {
     }
   };
 
+  const selectClass = "rounded-lg border border-[#D9E2E8] bg-white px-2 py-1.5 text-xs";
+
   const renderDigitalCard = (id: string, accent: string): React.ReactNode => {
+    const tip = digitalKpiTooltip(id);
     const kpis: Record<string, [string, string]> = {
       kpi_total: ["Total Digital Audits", fmt(dig?.totalAudits)],
       kpi_completed: ["Completed", fmt(dig?.completed)],
       kpi_in_progress: ["In Progress", fmt(dig?.inProgress)],
-      kpi_completion_pct: ["Completion %", fmt(dig?.completionPct, "%")],
+      kpi_pending_review: ["Pending Review", fmt(dig?.pendingReview)],
+      kpi_reaudit_requested: ["Re-audit Requested", fmt(dig?.reauditRequested)],
       kpi_overdue: ["Overdue", fmt(dig?.overdue)],
+      kpi_completion_pct: ["Completion %", fmt(dig?.completionPct, "%")],
+      kpi_ontime_pct: ["On-Time Completion %", fmt(dig?.onTimePct, "%")],
+      kpi_total_expected: ["Total Expected", fmt(dig?.totalExpected)],
+      kpi_total_actual: ["Total Actual", fmt(dig?.totalActual)],
       kpi_net_variance: ["Net Variance", fmt(dig?.netVariance)],
+      kpi_abs_variance: ["Absolute Variance", fmt(dig?.absoluteVariance)],
+      kpi_variance_pct: ["Variance %", fmt(dig?.variancePct, "%")],
       kpi_ca_open: ["Open CA", fmt(dig?.caOpen)],
+      kpi_ca_in_progress: ["CA In Progress", fmt(dig?.caInProgress)],
+      kpi_ca_completed: ["CA Completed", fmt(dig?.caClosed)],
       kpi_ca_overdue: ["Overdue CA", fmt(dig?.caOverdue)],
+      kpi_ca_closure: ["Action Closure Rate", fmt(dig?.caClosurePct, "%")],
+      kpi_ca_sla: ["SLA Compliance %", fmt(dig?.caSlaPct, "%")],
     };
     const kpi = kpis[id];
-    if (kpi) return <KpiCard label={kpi[0]} value={kpi[1]} accent={accent} />;
+    if (kpi) {
+      return (
+        <KpiCard
+          label={kpi[0]}
+          value={kpi[1]}
+          accent={accent}
+          formula={tip}
+          moreTo={id.startsWith("kpi_ca") ? "/corrective-actions" : "/history"}
+        />
+      );
+    }
+
+    if (id === "chart_ca_strip") {
+      const mix = dig?.caStatusMix ?? [];
+      const totalMix = mix.reduce((s, m) => s + m.value, 0) || 1;
+      return (
+        <ChartCard title="Corrective Actions summary" moreTo="/corrective-actions">
+          <div className="mb-3 grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            {[
+              ["Total", dig?.caTotal],
+              ["Open", dig?.caOpen],
+              ["In Progress", dig?.caInProgress],
+              ["Completed", dig?.caClosed],
+              ["Overdue", dig?.caOverdue],
+              ["Closure %", dig?.caClosurePct],
+            ].map(([label, val], i) => (
+              <div key={String(label)} className="rounded-lg border border-[#D9E2E8] bg-[#F4F7F9] px-2 py-2">
+                <p className="text-[10px] uppercase text-[#667085]">{label}</p>
+                <p className="text-sm font-semibold text-[#102A43]">
+                  {i === 5 ? fmt(val as number | null, "%") : fmt(val as number | null)}
+                </p>
+              </div>
+            ))}
+          </div>
+          {mix.length ? (
+            <div className="space-y-2">
+              <div className="flex h-3 overflow-hidden rounded-full border border-[#D9E2E8]">
+                {mix.map((s, i) => (
+                  <div
+                    key={s.label}
+                    style={{
+                      width: `${(s.value / totalMix) * 100}%`,
+                      background: CHART_COLORS[i % CHART_COLORS.length],
+                    }}
+                    title={`${s.label}: ${s.value}`}
+                  />
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-3 text-xs text-[#667085]">
+                {mix.map((s, i) => (
+                  <span key={s.label} className="inline-flex items-center gap-1.5">
+                    <span
+                      className="size-2 rounded-full"
+                      style={{ background: CHART_COLORS[i % CHART_COLORS.length] }}
+                    />
+                    {s.label} {s.value}
+                  </span>
+                ))}
+              </div>
+              <p className="text-xs text-[#557187]">SLA Compliance: {fmt(dig?.caSlaPct, "%")}</p>
+            </div>
+          ) : (
+            <p className="text-sm text-[#667085]">Data unavailable</p>
+          )}
+        </ChartCard>
+      );
+    }
+
+    if (id === "chart_variance_rank") {
+      const rows = (dig?.varianceByStore?.length ? dig.varianceByStore : dig?.varianceByCategory) ?? [];
+      return (
+        <ChartCard title="Variance ranking (absolute units)" moreTo="/intelligence/inventory-variance">
+          {rows.length ? (
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={rows} layout="vertical" margin={{ left: 8, right: 12 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#EEF1F4" />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: "#667085" }} />
+                  <YAxis
+                    type="category"
+                    dataKey="label"
+                    width={100}
+                    tick={{ fontSize: 10, fill: "#667085" }}
+                  />
+                  <Tooltip />
+                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                    {rows.map((_, i) => (
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <p className="text-sm text-[#667085]">
+              N/A — variance requires Expected + Actual mapped fields
+            </p>
+          )}
+        </ChartCard>
+      );
+    }
+
+    if (id === "chart_compare") {
+      const a = digCompareOptions.find((r) => r.id === compareA);
+      const b = digCompareOptions.find((r) => r.id === compareB);
+      const compatible = Boolean(a && b && a.expected != null && b.expected != null);
+      const chartData =
+        compatible && a && b
+          ? [
+              { label: "Expected", a: a.expected ?? 0, b: b.expected ?? 0 },
+              { label: "Actual", a: a.actual ?? 0, b: b.actual ?? 0 },
+              { label: "Variance", a: a.variance ?? 0, b: b.variance ?? 0 },
+            ]
+          : [];
+      return (
+        <ChartCard title="Audit comparison">
+          <div className="mb-3 flex flex-wrap gap-2">
+            <select
+              className={selectClass}
+              value={compareA}
+              onChange={(e) => setCompareA(e.target.value)}
+            >
+              <option value="">Audit A</option>
+              {digCompareOptions.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.auditName} · {r.store}
+                </option>
+              ))}
+            </select>
+            <select
+              className={selectClass}
+              value={compareB}
+              onChange={(e) => setCompareB(e.target.value)}
+            >
+              <option value="">Audit B</option>
+              {digCompareOptions.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.auditName} · {r.store}
+                </option>
+              ))}
+            </select>
+          </div>
+          {!digCompareOptions.length ? (
+            <p className="text-sm text-[#667085]">
+              Comparison unavailable — no audits with Expected + Actual mapped.
+            </p>
+          ) : !compatible ? (
+            <p className="text-sm text-[#667085]">
+              Comparison unavailable — these audits use different measurement structures.
+            </p>
+          ) : (
+            <>
+              <div className="mb-3 flex flex-wrap gap-2 text-xs text-[#102A43]">
+                <span className="rounded-lg bg-[#EAF6FD] px-2 py-1">
+                  A net {fmt(a?.variance)} · B net {fmt(b?.variance)}
+                </span>
+              </div>
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} layout="vertical" margin={{ left: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#EEF1F4" />
+                    <XAxis type="number" tick={{ fontSize: 11, fill: "#667085" }} />
+                    <YAxis type="category" dataKey="label" width={72} tick={{ fontSize: 11, fill: "#667085" }} />
+                    <Tooltip />
+                    <Bar dataKey="a" name="Audit A" fill={CHART_COLORS[0]} radius={[0, 4, 4, 0]} />
+                    <Bar dataKey="b" name="Audit B" fill={CHART_COLORS[1]} radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </>
+          )}
+        </ChartCard>
+      );
+    }
+
     return isCustomCardId(id) ? renderCustomCard(id, accent) : null;
   };
 
@@ -864,8 +1091,6 @@ export function AiDigitalDashboardShell() {
       </div>
     );
   };
-
-  const selectClass = "rounded-lg border border-[#D9E2E8] bg-white px-2 py-1.5 text-xs";
 
   return (
     <div className="space-y-6">
@@ -1247,53 +1472,212 @@ export function AiDigitalDashboardShell() {
         </div>
       ) : (
         <div className="flex flex-col gap-6">
-          <WorkspaceFilterBar />
+          <AskAislixSection previewDemo={demoPreview.previewDemo || Boolean(dig?.labeledDemo)} />
+
+          <WorkspaceFilterBar
+            footer={
+              <CompletionChips
+                completion={completion}
+                onChange={setCompletion}
+                scopeLabel={data?.scopeLabel}
+              />
+            }
+          />
 
           {digitalQuery.isPending ? (
             <p className="text-sm text-[#667085]">Loading Digital metrics…</p>
           ) : (
             <>
+              <div className="rounded-xl border border-[#C1E4F8] bg-[#EAF6FD]/60 px-4 py-2 text-sm text-[#102A43]">
+                {dig?.totalAudits ?? 0} digital audits · {fmt(dig?.completionPct, "%")} complete ·{" "}
+                {dig?.overdue ?? 0} overdue
+              </div>
+
+              <div className="grid items-start gap-4 lg:grid-cols-[220px_1fr]">
+                <div className="space-y-3">
+                  {[
+                    {
+                      title: "Findings",
+                      body: `${data?.synopsis.findingsOpen ?? 0} open`,
+                      to: "/findings",
+                      bg: AISLIX.localBg,
+                      border: AISLIX.localBorder,
+                      Icon: Building2,
+                    },
+                    {
+                      title: "Corrective Actions",
+                      body: `${dig?.caOpen ?? data?.synopsis.caOpen ?? 0} open`,
+                      to: "/corrective-actions",
+                      bg: AISLIX.supermarketBg,
+                      border: AISLIX.supermarketBorder,
+                      Icon: ShoppingCart,
+                    },
+                    {
+                      title: "History",
+                      body: `${dig?.totalAudits ?? 0} digital audits`,
+                      to: "/history",
+                      bg: AISLIX.warehouseBg,
+                      border: AISLIX.warehouseBorder,
+                      Icon: Building2,
+                    },
+                    {
+                      title: "Team",
+                      body: `${data?.synopsis.teamCount ?? 0} members`,
+                      to: "/team",
+                      bg: AISLIX.darkstoreBg,
+                      border: AISLIX.darkstoreBorder,
+                      Icon: Users,
+                    },
+                  ].map((card) => (
+                    <div
+                      key={card.title}
+                      className="rounded-xl border p-3"
+                      style={{ background: card.bg, borderColor: card.border }}
+                    >
+                      <card.Icon className="size-4 text-[#102A43]" />
+                      <p className="mt-2 text-sm font-semibold text-[#102A43]">{card.title}</p>
+                      <p className="mt-1 text-xs text-[#557187]">{card.body}</p>
+                      <Link to={card.to} className="mt-2 inline-block text-xs text-[#557187] hover:underline">
+                        View more
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="self-start rounded-xl border border-[#C1E4F8] bg-white p-4 shadow-sm">
+                  <h3 className="text-sm font-semibold uppercase tracking-wide text-[#102A43]">
+                    Last completed digital audit — summary
+                  </h3>
+                  {filteredDigLastTen[0] ? (
+                    <div className="mt-3 space-y-3">
+                      <p className="text-sm text-[#557187]">
+                        Audit: {filteredDigLastTen[0].auditName} | Store: {filteredDigLastTen[0].store} | Date:{" "}
+                        {fmtDate(filteredDigLastTen[0].date)}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="rounded-lg bg-[#EAF1DF] px-3 py-1 text-xs font-medium text-[#102A43]">
+                          Expected: {fmt(filteredDigLastTen[0].expected)}
+                        </span>
+                        <span className="rounded-lg bg-[#F0E9FF] px-3 py-1 text-xs font-medium text-[#102A43]">
+                          Actual: {fmt(filteredDigLastTen[0].actual)}
+                        </span>
+                        <span className="rounded-lg bg-[#EAF6FD] px-3 py-1 text-xs font-medium text-[#102A43]">
+                          Variance: {fmt(filteredDigLastTen[0].variance)}
+                        </span>
+                        <span className="rounded-lg bg-[#FFEAF1] px-3 py-1 text-xs font-medium text-[#102A43]">
+                          Status: {assignmentStatusLabel(filteredDigLastTen[0].status)}
+                        </span>
+                      </div>
+                      <ul className="space-y-1 text-sm text-[#557187]">
+                        <li>
+                          <span className="font-semibold text-[#102A43]">Findings:</span>{" "}
+                          {fmt(filteredDigLastTen[0].findingsCount)}
+                        </li>
+                        <li>
+                          <span className="font-semibold text-[#102A43]">Corrective actions:</span>{" "}
+                          {fmt(filteredDigLastTen[0].caCount)}
+                        </li>
+                        <li>
+                          <span className="font-semibold text-[#102A43]">Re-audit:</span>{" "}
+                          {filteredDigLastTen[0].reauditStatus}
+                        </li>
+                      </ul>
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm text-[#667085]">
+                      No digital audits in range — run a digital audit to see the summary.
+                    </p>
+                  )}
+                </div>
+              </div>
+
               {renderMetricGrid(renderDigitalCard)}
 
-              <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-[#102A43]">Last 5 digital audits</h3>
-                  <Link to="/history" className="text-sm text-[#557187] hover:underline">
-                    View more
-                  </Link>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[720px] text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-[#D9E2E8] text-xs uppercase text-[#667085]">
-                        <th className="py-2 pr-3">Audit</th>
-                        <th className="py-2 pr-3">Location</th>
-                        <th className="py-2 pr-3">Assignee</th>
-                        <th className="py-2 pr-3">Date</th>
-                        <th className="py-2">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(dig?.lastFive ?? []).map((row) => (
-                        <tr key={row.id} className="border-b border-[#EEF1F4]">
-                          <td className="py-2 pr-3 font-mono text-xs">{row.id.slice(0, 8)}</td>
-                          <td className="py-2 pr-3">{row.store}</td>
-                          <td className="py-2 pr-3">{row.assignee}</td>
-                          <td className="py-2 pr-3">
-                            {row.date ? new Date(row.date).toLocaleString() : "—"}
-                          </td>
-                          <td className="py-2">{assignmentStatusLabel(row.status)}</td>
-                        </tr>
+              <div className="space-y-3">
+                <WorkspaceFilterBar
+                  footer={
+                    <CompletionChips
+                      completion={completion}
+                      onChange={setCompletion}
+                      scopeLabel={data?.scopeLabel}
+                    />
+                  }
+                />
+                <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-[#102A43]">Last 10 Digital Audits</h3>
+                    <ViewMore to="/history" />
+                  </div>
+                  <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <div className="flex gap-1 rounded-lg border border-[#D9E2E8] bg-white p-0.5">
+                      {(
+                        [
+                          ["all", "All"],
+                          ["assigned_to_me", "Assigned to me"],
+                          ["assigned_by_me", "Assigned by me"],
+                        ] as const
+                      ).map(([id, label]) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setDigRelation(id)}
+                          className={cn(
+                            "rounded-md px-2.5 py-1 text-xs font-medium",
+                            digRelation === id
+                              ? "bg-[#102A43] text-white"
+                              : "text-[#667085] hover:bg-[#F4F7F9]",
+                          )}
+                        >
+                          {label}
+                        </button>
                       ))}
-                      {!dig?.lastFive?.length ? (
-                        <tr>
-                          <td colSpan={5} className="py-6 text-[#667085]">
-                            Data unavailable
-                          </td>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[1100px] text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-[#D9E2E8] text-xs uppercase text-[#667085]">
+                          <th className="py-2 pr-3">Audit</th>
+                          <th className="py-2 pr-3">Location</th>
+                          <th className="py-2 pr-3">Assignee</th>
+                          <th className="py-2 pr-3">Date</th>
+                          <th className="py-2 pr-3">Status</th>
+                          <th className="py-2 pr-3">Expected</th>
+                          <th className="py-2 pr-3">Actual</th>
+                          <th className="py-2 pr-3">Variance</th>
+                          <th className="py-2 pr-3">Findings</th>
+                          <th className="py-2 pr-3">CA</th>
+                          <th className="py-2">Re-audit</th>
                         </tr>
-                      ) : null}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {filteredDigLastTen.map((row: DigitalLastTenRow) => (
+                          <tr key={row.id} className="border-b border-[#EEF1F4]">
+                            <td className="py-2 pr-3 font-medium text-[#102A43]">{row.auditName}</td>
+                            <td className="py-2 pr-3">{row.store}</td>
+                            <td className="py-2 pr-3">{row.assignee}</td>
+                            <td className="py-2 pr-3">{fmtDate(row.date)}</td>
+                            <td className="py-2 pr-3">{assignmentStatusLabel(row.status)}</td>
+                            <td className="py-2 pr-3">{fmt(row.expected)}</td>
+                            <td className="py-2 pr-3">{fmt(row.actual)}</td>
+                            <td className="py-2 pr-3">{fmt(row.variance)}</td>
+                            <td className="py-2 pr-3">{fmt(row.findingsCount)}</td>
+                            <td className="py-2 pr-3">{fmt(row.caCount)}</td>
+                            <td className="py-2">{row.reauditStatus}</td>
+                          </tr>
+                        ))}
+                        {!filteredDigLastTen.length ? (
+                          <tr>
+                            <td colSpan={11} className="py-6 text-[#667085]">
+                              {digRelation === "all"
+                                ? "Data unavailable"
+                                : "No audits match this assignment filter"}
+                            </td>
+                          </tr>
+                        ) : null}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </>
@@ -1306,7 +1690,23 @@ export function AiDigitalDashboardShell() {
         onOpenChange={setCustomOpen}
         tab={tabKey}
         existing={customMetrics.items}
-        audits={data?.lastTen ?? []}
+        audits={
+          tabKey === "digital"
+            ? (dig?.lastTen ?? []).map((r) => ({
+                id: r.id,
+                auditName: r.auditName,
+                templateName: r.auditName,
+                storeName: r.store,
+                assigneeName: r.assignee,
+                type: "Digital",
+                completionStage: "completed" as const,
+                date: r.date,
+                scorePct: null,
+                scanId: r.scanId,
+                relation: r.relation,
+              }))
+            : (data?.lastTen ?? [])
+        }
         onSave={(metric) => void saveCustomMetric(metric)}
       />
 
