@@ -1826,7 +1826,9 @@ export function AiDigitalDashboardShell() {
                     title: "Corrective Actions",
                     body: emptyRealDigital
                       ? "N/A"
-                      : `${dig?.caOpen ?? data?.synopsis.caOpen ?? 0} open`,
+                      : dig?.caOpen != null
+                        ? `${dig.caOpen} open`
+                        : "N/A",
                     to: "/corrective-actions",
                     bg: AISLIX.supermarketBg,
                     border: AISLIX.supermarketBorder,

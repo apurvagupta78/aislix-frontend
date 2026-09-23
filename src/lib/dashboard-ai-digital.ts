@@ -938,12 +938,15 @@ export async function fetchDigitalDashboardMetrics(
   {
     let caQuery = supabase
       .from("corrective_actions")
-      .select("id, status, due_at, completed_at")
+      .select("id, status, due_at, closed_at, resolved_at")
       .eq("org_id", orgId)
       .limit(800);
     if (!scope.isOrgAdmin && !experience.labeledDemo) {
-      const ids = scope.effectiveStoreIds.map((id) => `"${id}"`).join(",");
-      caQuery = caQuery.or(`store_id.in.(${ids}),store_id.is.null`);
+      if (scope.effectiveStoreIds.length) {
+        caQuery = caQuery.or(
+          `store_id.in.(${scope.effectiveStoreIds.map((id) => `"${id}"`).join(",")}),store_id.is.null`,
+        );
+      }
     }
     const { data: cas } = await caQuery;
     if (cas) {
@@ -956,16 +959,14 @@ export async function fetchDigitalDashboardMetrics(
         return c.due_at && new Date(c.due_at as string).getTime() < now;
       }).length;
       caClosurePct = pct(caClosed, caTotal);
-      const completedWithDue = cas.filter(
-        (c) =>
-          ["closed", "resolved"].includes(String(c.status)) &&
-          c.due_at &&
-          c.completed_at,
-      );
-      const onTimeCa = completedWithDue.filter(
-        (c) =>
-          new Date(c.completed_at as string).getTime() <= new Date(c.due_at as string).getTime(),
-      ).length;
+      const completedWithDue = cas.filter((c) => {
+        if (!["closed", "resolved"].includes(String(c.status)) || !c.due_at) return false;
+        return Boolean(c.closed_at || c.resolved_at);
+      });
+      const onTimeCa = completedWithDue.filter((c) => {
+        const doneAt = (c.closed_at || c.resolved_at) as string;
+        return new Date(doneAt).getTime() <= new Date(c.due_at as string).getTime();
+      }).length;
       caSlaPct = completedWithDue.length ? pct(onTimeCa, completedWithDue.length) : null;
       const openOnly = Math.max(0, (caOpen ?? 0) - (caInProgress ?? 0) - (caOverdue ?? 0));
       caStatusMix = [
