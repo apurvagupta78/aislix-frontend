@@ -234,10 +234,10 @@ export function AskAislixSection({
         <header className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <span
-              className="flex h-11 w-11 items-center justify-center rounded-xl border bg-white shadow-[0_1px_3px_rgba(16,42,67,0.06)]"
+              className="flex h-11 w-11 items-center justify-center rounded-xl border bg-white shadow-[0_1px_2px_rgba(15,42,68,0.08)]"
               style={{
                 borderColor: ASK_AISLIX_SECTION.composerBorder,
-                color: ASK_AISLIX_SECTION.askButton,
+                color: ASK_AISLIX_SECTION.sparkle,
               }}
             >
               <Sparkles className="h-5 w-5" aria-hidden />
@@ -266,10 +266,10 @@ export function AskAislixSection({
             </div>
           </div>
           <kbd
-            className="hidden items-center gap-1 rounded-lg border bg-white px-2.5 py-1 font-sans text-[12px] font-medium shadow-[0_1px_3px_rgba(16,42,67,0.06)] md:flex"
+            className="hidden items-center gap-1 rounded-lg border bg-white px-2.5 py-1 font-sans text-[12px] font-medium shadow-[0_1px_2px_rgba(15,42,68,0.08)] md:flex"
             style={{
               borderColor: ASK_AISLIX_SECTION.bandBorder,
-              color: ASK_AISLIX_SECTION.scopeText,
+              color: ASK_AISLIX_SECTION.blueInk,
             }}
           >
             ⌘ K
@@ -311,7 +311,7 @@ export function AskAislixSection({
 
         {loading ? <AskAislixLoading /> : null}
         {error ? (
-          <p className="rounded-lg border border-[#ECBDCC] bg-[#FFEAF1] px-4 py-3 text-sm text-[#102A43]">
+          <p className="rounded-lg border border-[#f5b8cb] bg-[#fde8ef] px-4 py-3 text-sm text-[#0f2a44]">
             {error}
           </p>
         ) : null}

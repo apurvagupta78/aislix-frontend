@@ -43,7 +43,7 @@ export function AskAislixScopeSelect({
         onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
         className={cn(
           "flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 text-[13px] font-medium transition-colors",
-          "hover:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7DB7D6]/40",
+          "hover:bg-[#EAF6FD] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1E4F8]",
           "disabled:cursor-not-allowed disabled:opacity-50",
         )}
         style={{
@@ -59,7 +59,7 @@ export function AskAislixScopeSelect({
       {open ? (
         <ul
           role="listbox"
-          className="absolute bottom-full left-0 z-20 mb-2 w-48 origin-bottom-left rounded-xl border border-[#D9E2E8] bg-white p-1 shadow-card"
+          className="absolute bottom-full left-0 z-20 mb-2 w-48 origin-bottom-left rounded-xl border border-[#dde5ec] bg-white p-1 shadow-card"
         >
           {options.map((opt) => (
             <li key={opt}>
@@ -71,11 +71,11 @@ export function AskAislixScopeSelect({
                   onChange(opt);
                   setOpen(false);
                 }}
-                className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13px] text-[#102A43] transition-colors hover:bg-[#F4F7F9]"
+                className="flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-[13px] text-[#0f2a44] transition-colors hover:bg-[#eef3f7]"
               >
                 {opt}
                 {opt === value ? (
-                  <Check className="h-3.5 w-3.5 text-[#7DB7D6]" aria-hidden />
+                  <Check className="h-3.5 w-3.5 text-[#1f7ac2]" aria-hidden />
                 ) : null}
               </button>
             </li>

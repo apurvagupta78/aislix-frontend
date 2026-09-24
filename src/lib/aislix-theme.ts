@@ -25,28 +25,41 @@ export const AISLIX = {
   accentBorder: "#D9C5F2",
 } as const;
 
-/** Ask Aislix command-center palette — scoped to the Ask section only; do not use on KPI cards. */
+/**
+ * Ask Aislix palette — light blue matches Demo Data toggle (`#EAF6FD` / `#C1E4F8`).
+ * Do not reuse on KPI cards (those stay on AISLIX / AISLIX_PALETTE).
+ */
 export const ASK_AISLIX_SECTION = {
-  /** Composer shell — soft blue band (Magic Pattern redesign) */
-  background: "#EAF4F9",
-  bandBorder: "#D4E6F0",
+  /** Header band — same as Demo Data toggle chip */
+  background: "#EAF6FD",
+  bandBorder: "#C1E4F8",
   heading: "#102A43",
-  subtitle: "#667085",
+  subtitle: "#557187",
+  muted: "#667085",
   inputBackground: "#FFFFFF",
-  composerBorder: "#C5DCE8",
-  /** Soft blue — design-system Soft Blue */
-  askButton: "#7DB7D6",
-  askButtonText: "#102A43",
-  askButtonDisabled: "#D6EAF4",
-  enhanceBg: "#E8F8EF",
-  enhanceBorder: "#B8E8CF",
-  enhanceText: "#1A4D36",
-  chipBackground: "#F4F7F9",
-  chipBorder: "#D9E2E8",
+  composerBorder: "#C1E4F8",
+  /** Ask CTA */
+  askButton: "#1f7ac2",
+  askButtonHover: "#1a68a6",
+  askButtonText: "#FFFFFF",
+  askButtonDisabled: "#EAF6FD",
+  askButtonDisabledText: "rgba(16, 42, 67, 0.45)",
+  focusRing: "#C1E4F8",
+  accentSoft: "#EAF6FD",
+  accentRing: "#C1E4F8",
+  /** Enhance — soft green tint */
+  enhanceBg: "#e9efdc",
+  enhanceBorder: "#c8d4ae",
+  enhanceText: "#4d6b22",
+  chipBackground: "#EAF6FD",
+  chipBorder: "#C1E4F8",
   chipText: "#102A43",
-  scopeBg: "rgba(125, 183, 214, 0.18)",
-  scopeBorder: "#C5DCE8",
-  scopeText: "#2A5A78",
+  /** Scope chips — same Demo Data blue */
+  scopeBg: "#EAF6FD",
+  scopeBorder: "#C1E4F8",
+  scopeText: "#102A43",
+  blueInk: "#102A43",
+  sparkle: "#1f7ac2",
 } as const;
 
 /** Chart series order from the design spec — never rainbow / library defaults. */

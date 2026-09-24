@@ -110,9 +110,9 @@ export function AskAislixInput({
     >
       <div
         className={cn(
-          "rounded-2xl border bg-white shadow-[0_8px_24px_rgba(16,42,67,0.06)]",
+          "rounded-2xl border bg-white shadow-[0_1px_2px_rgba(15,42,68,0.06),0_10px_28px_-14px_rgba(31,122,194,0.35)]",
           "transition-[box-shadow,border-color] duration-200",
-          "focus-within:border-[#7DB7D6] focus-within:shadow-[0_0_0_3px_rgba(125,183,214,0.25)]",
+          "focus-within:border-[#C1E4F8] focus-within:shadow-[0_0_0_4px_#EAF6FD,0_10px_28px_-14px_rgba(31,122,194,0.35)]",
         )}
         style={{ borderColor: ASK_AISLIX_SECTION.composerBorder }}
       >
@@ -158,7 +158,7 @@ export function AskAislixInput({
           value={value}
           disabled={loading}
           placeholder="What needs attention in my stores today?"
-          className="block w-full resize-none bg-transparent px-5 pt-5 text-[16px] leading-relaxed text-[#102A43] placeholder:text-[#667085]/80 focus:outline-none disabled:opacity-60"
+          className="block w-full resize-none bg-transparent px-5 pt-5 text-[16px] leading-relaxed text-[#0f2a44] placeholder:text-[#6b7b8c]/80 focus:outline-none disabled:opacity-60"
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
@@ -168,7 +168,7 @@ export function AskAislixInput({
           }}
         />
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#EEF1F4] px-3 py-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#eef3f7] px-3 py-2.5">
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
@@ -180,8 +180,8 @@ export function AskAislixInput({
                   : "Attach file"
               }
               className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-lg border border-[#D9E2E8] bg-white text-[#667085] transition-colors",
-                "hover:border-[#C5DCE8] hover:bg-[#EAF4F9] hover:text-[#2A5A78]",
+                "flex h-8 w-8 items-center justify-center rounded-lg border border-[#dde5ec] bg-white text-[#557187] transition-colors",
+                "hover:border-[#C1E4F8] hover:bg-[#EAF6FD] hover:text-[#102A43]",
                 "disabled:cursor-not-allowed disabled:opacity-40",
               )}
               onClick={() => fileInputRef.current?.click()}
@@ -244,7 +244,7 @@ export function AskAislixInput({
               type="submit"
               disabled={!canSubmit}
               className={cn(
-                "flex h-9 items-center gap-1.5 rounded-xl px-4 text-[13.5px] font-semibold transition-[background-color,transform] duration-150",
+                "flex h-9 items-center gap-1.5 rounded-xl px-4 text-[13.5px] font-semibold shadow-[0_1px_0_rgba(255,255,255,0.25)_inset,0_4px_12px_-4px_rgba(31,122,194,0.6)] transition-[background-color,transform] duration-150",
                 "active:scale-[0.97] disabled:cursor-not-allowed disabled:shadow-none",
               )}
               style={
@@ -255,7 +255,7 @@ export function AskAislixInput({
                     }
                   : {
                       backgroundColor: ASK_AISLIX_SECTION.askButtonDisabled,
-                      color: "rgba(16, 42, 67, 0.45)",
+                      color: ASK_AISLIX_SECTION.askButtonDisabledText,
                     }
               }
             >
@@ -270,9 +270,9 @@ export function AskAislixInput({
         </div>
       </div>
 
-      <p className="mt-2.5 px-1 text-[12px] text-[#667085]">
-        Press <span className="font-medium text-[#557187]">Enter</span> to ask,{" "}
-        <span className="font-medium text-[#557187]">Shift + Enter</span> for a new line.
+      <p className="mt-2.5 px-1 text-[12px] text-[#6b7b8c]">
+        Press <span className="font-medium text-[#3d5166]">Enter</span> to ask,{" "}
+        <span className="font-medium text-[#3d5166]">Shift + Enter</span> for a new line.
       </p>
     </form>
   );

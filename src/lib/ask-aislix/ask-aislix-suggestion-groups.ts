@@ -8,8 +8,6 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-import { AISLIX_PALETTE } from "@/lib/ai-audit/kpi-palette";
-
 export type AskSuggestionUiGroupId = "Inventory" | "Compliance" | "Evidence" | "Team";
 
 export type AskSuggestionUiIcon = "repeat" | "trend" | "alert" | "image" | "box" | "map";
@@ -123,38 +121,39 @@ export type AskSuggestionUiTint = {
   ink: string;
 };
 
+/** Inventory / scopes use Demo Data toggle blue (`#EAF6FD`). Other tabs keep category tints. */
 export const ASK_SUGGESTION_UI_TINTS: Record<AskSuggestionUiGroupId, AskSuggestionUiTint> = {
   Inventory: {
-    cardBg: "rgba(125, 183, 214, 0.16)",
-    cardBorder: "#C5DCE8",
-    tabBg: "rgba(125, 183, 214, 0.22)",
-    tabBorder: "#B5D4E4",
-    tabText: "#2A5A78",
-    ink: "#2A5A78",
+    cardBg: "#EAF6FD",
+    cardBorder: "#C1E4F8",
+    tabBg: "#EAF6FD",
+    tabBorder: "#C1E4F8",
+    tabText: "#102A43",
+    ink: "#102A43",
   },
   Compliance: {
-    cardBg: "rgba(121, 226, 168, 0.18)",
-    cardBorder: "#B8E8CF",
-    tabBg: "rgba(121, 226, 168, 0.24)",
-    tabBorder: "#A5DEB9",
-    tabText: "#1A4D36",
-    ink: "#1A4D36",
+    cardBg: "#e9efdc",
+    cardBorder: "#c8d4ae",
+    tabBg: "#e9efdc",
+    tabBorder: "#c8d4ae",
+    tabText: "#4d6b22",
+    ink: "#4d6b22",
   },
   Evidence: {
-    cardBg: "rgba(142, 201, 232, 0.2)",
-    cardBorder: "#B8DCEF",
-    tabBg: "rgba(142, 201, 232, 0.28)",
-    tabBorder: "#A5D2E8",
-    tabText: "#1E5570",
-    ink: "#1E5570",
+    cardBg: "#EAF6FD",
+    cardBorder: "#C1E4F8",
+    tabBg: "#EAF6FD",
+    tabBorder: "#C1E4F8",
+    tabText: "#102A43",
+    ink: "#102A43",
   },
   Team: {
-    cardBg: AISLIX_PALETTE.pink,
-    cardBorder: "#ECBDCC",
-    tabBg: AISLIX_PALETTE.pink,
-    tabBorder: "#ECBDCC",
-    tabText: "#7A3A52",
-    ink: "#7A3A52",
+    cardBg: "#fde8ef",
+    cardBorder: "#f5b8cb",
+    tabBg: "#fde8ef",
+    tabBorder: "#f5b8cb",
+    tabText: "#b0305f",
+    ink: "#b0305f",
   },
 };
 

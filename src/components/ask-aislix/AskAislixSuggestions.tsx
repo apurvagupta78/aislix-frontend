@@ -49,7 +49,7 @@ export function AskAislixSuggestions({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3
           id="ask-suggestions-heading"
-          className="text-[15px] font-semibold text-[#102A43]"
+          className="text-[15px] font-semibold text-[#0f2a44]"
         >
           Try asking about
         </h3>
@@ -71,7 +71,7 @@ export function AskAislixSuggestions({
                 onClick={() => setActive(group)}
                 className={cn(
                   "rounded-full border px-3.5 py-1 text-[13px] font-medium transition-colors duration-150",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7DB7D6]/40",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1E4F8]",
                   "disabled:pointer-events-none disabled:opacity-50",
                   !isActive &&
                     "border-[#D9E2E8] bg-white text-[#667085] hover:text-[#102A43]",
@@ -105,8 +105,8 @@ export function AskAislixSuggestions({
                 className={cn(
                   "group flex w-full flex-col gap-3 rounded-2xl border p-4 text-left",
                   "transition-[border-color,transform,box-shadow] duration-150",
-                  "hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(16,42,67,0.08)]",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7DB7D6]/40",
+                  "hover:-translate-y-0.5 hover:shadow-[0_1px_2px_rgba(15,42,68,0.08)]",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#C1E4F8]",
                   "disabled:pointer-events-none disabled:opacity-50",
                 )}
                 style={{
@@ -116,7 +116,7 @@ export function AskAislixSuggestions({
               >
                 <span className="flex w-full items-center justify-between">
                   <span
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-white shadow-[0_1px_3px_rgba(16,42,67,0.06)]"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-white shadow-[0_1px_2px_rgba(15,42,68,0.08)]"
                     style={{ color: tint.ink }}
                   >
                     <Icon className="h-4 w-4" aria-hidden />
@@ -127,7 +127,7 @@ export function AskAislixSuggestions({
                     aria-hidden
                   />
                 </span>
-                <span className="text-[14px] font-medium leading-snug text-[#102A43]">
+                <span className="text-[14px] font-medium leading-snug text-[#0f2a44]">
                   {suggestion.text}
                 </span>
               </button>
