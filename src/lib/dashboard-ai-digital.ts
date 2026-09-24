@@ -495,7 +495,6 @@ export async function fetchDigitalDashboardMetrics(
   });
   const orgId = experience.dataOrgId;
   const now = Date.now();
-  const user = await getUser();
   const userId = user?.id ?? null;
   const { resolveEffectiveAccessScope, applyStoreScopeFilter, clampStoreIdToScope } = await import(
     "@/lib/access-scope"
