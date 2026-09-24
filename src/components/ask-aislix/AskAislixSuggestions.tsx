@@ -1,57 +1,24 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { ArrowUpRight } from "lucide-react";
+
 import {
-  AlertTriangle,
-  ArrowLeftRight,
-  Camera,
-  ClipboardList,
-  ImageIcon,
-  LineChart,
-  Package,
-  RefreshCw,
-  Store,
-  TrendingUp,
-} from "lucide-react";
-
-import { chipStyle } from "@/components/dashboard/DashboardMetricVisuals";
-import { selectAskAislixSuggestions } from "@/lib/ask-aislix/ask-aislix-suggestions.select";
-import type { SuggestionDataAvailability } from "@/lib/ask-aislix/ask-aislix-suggestions.select";
-import type { SuggestionIcon } from "@/lib/ask-aislix/ask-aislix-suggestions.types";
-import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
+  ASK_SUGGESTION_UI_GROUPS,
+  ASK_SUGGESTION_UI_ICONS,
+  ASK_SUGGESTION_UI_ITEMS,
+  ASK_SUGGESTION_UI_TINTS,
+  type AskSuggestionUiGroupId,
+} from "@/lib/ask-aislix/ask-aislix-suggestion-groups";
 import { cn } from "@/lib/utils";
-
-const ICONS: Record<SuggestionIcon, typeof Camera> = {
-  image: ImageIcon,
-  trend: LineChart,
-  inventory: Package,
-  expiry: AlertTriangle,
-  findings: AlertTriangle,
-  actions: ClipboardList,
-  comparison: ArrowLeftRight,
-  audit: ClipboardList,
-  stores: Store,
-  recurring: RefreshCw,
-};
-
-function SuggestionIconGlyph({ icon, isDark }: { icon: SuggestionIcon; isDark?: boolean }) {
-  const Icon = ICONS[icon] ?? TrendingUp;
-  return (
-    <Icon
-      className={cn("h-3 w-3 shrink-0", !isDark && "opacity-70")}
-      style={isDark ? { color: ASK_AISLIX_SECTION.subtitle } : undefined}
-      aria-hidden
-    />
-  );
-}
 
 export function AskAislixSuggestions({
   onSelect,
   disabled,
-  variant = "light",
-  roleHint,
-  accessRole,
-  city,
-  rotationSeed,
-  dataAvailability,
+  variant: _variant = "light",
+  roleHint: _roleHint,
+  accessRole: _accessRole,
+  city: _city,
+  rotationSeed: _rotationSeed,
+  dataAvailability: _dataAvailability,
 }: {
   onSelect: (question: string) => void;
   disabled?: boolean;
@@ -60,50 +27,114 @@ export function AskAislixSuggestions({
   accessRole?: string | null;
   city?: string | null;
   rotationSeed?: number;
-  dataAvailability?: SuggestionDataAvailability | null;
+  dataAvailability?: unknown;
 }) {
-  const isDark = variant === "dark";
+  void _variant;
+  void _roleHint;
+  void _accessRole;
+  void _city;
+  void _rotationSeed;
+  void _dataAvailability;
 
-  const suggestions = useMemo(
-    () =>
-      selectAskAislixSuggestions({
-        roleHint,
-        accessRole,
-        city,
-        count: 7,
-        rotationSeed,
-        dataAvailability,
-      }),
-    [roleHint, accessRole, city, rotationSeed, dataAvailability],
+  const [active, setActive] = useState<AskSuggestionUiGroupId>("Inventory");
+
+  const items = useMemo(
+    () => ASK_SUGGESTION_UI_ITEMS.filter((s) => s.category === active),
+    [active],
   );
-
-  if (suggestions.length === 0) return null;
+  const tint = ASK_SUGGESTION_UI_TINTS[active];
 
   return (
-    <div
-      className={cn(
-        "flex flex-wrap gap-1.5",
-        "max-h-[4.5rem] overflow-x-auto overflow-y-hidden pb-0.5",
-        "[scrollbar-width:thin]",
-      )}
-    >
-      {suggestions.map((suggestion, index) => (
-        <button
-          key={suggestion.id}
-          type="button"
-          disabled={disabled}
-          className={cn(
-            "inline-flex max-w-full items-center gap-1 rounded-md border px-2 py-1",
-            "text-[11px] font-medium leading-tight transition-colors hover:brightness-105",
-            "disabled:pointer-events-none disabled:opacity-50",
-          )}
-          style={chipStyle(index)}
-          onClick={() => onSelect(suggestion.text)}
+    <section aria-labelledby="ask-suggestions-heading" className="mt-1">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3
+          id="ask-suggestions-heading"
+          className="text-[15px] font-semibold text-[#102A43]"
         >
-          <SuggestionIconGlyph icon={suggestion.icon} isDark={isDark} />
-          <span className="truncate">{suggestion.text}</span>
-        </button>
-      ))}
-    </div>
+          Try asking about
+        </h3>
+        <div
+          role="tablist"
+          aria-label="Suggestion categories"
+          className="flex flex-wrap gap-1.5"
+        >
+          {ASK_SUGGESTION_UI_GROUPS.map((group) => {
+            const isActive = group === active;
+            const groupTint = ASK_SUGGESTION_UI_TINTS[group];
+            return (
+              <button
+                key={group}
+                role="tab"
+                type="button"
+                aria-selected={isActive}
+                disabled={disabled}
+                onClick={() => setActive(group)}
+                className={cn(
+                  "rounded-full border px-3.5 py-1 text-[13px] font-medium transition-colors duration-150",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7DB7D6]/40",
+                  "disabled:pointer-events-none disabled:opacity-50",
+                  !isActive &&
+                    "border-[#D9E2E8] bg-white text-[#667085] hover:text-[#102A43]",
+                )}
+                style={
+                  isActive
+                    ? {
+                        backgroundColor: groupTint.tabBg,
+                        borderColor: groupTint.tabBorder,
+                        color: groupTint.tabText,
+                      }
+                    : undefined
+                }
+              >
+                {group}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <ul role="tabpanel" className="mt-3 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+        {items.map((suggestion) => {
+          const Icon = ASK_SUGGESTION_UI_ICONS[suggestion.icon];
+          return (
+            <li key={suggestion.id} className="flex">
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => onSelect(suggestion.text)}
+                className={cn(
+                  "group flex w-full flex-col gap-3 rounded-2xl border p-4 text-left",
+                  "transition-[border-color,transform,box-shadow] duration-150",
+                  "hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(16,42,67,0.08)]",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7DB7D6]/40",
+                  "disabled:pointer-events-none disabled:opacity-50",
+                )}
+                style={{
+                  backgroundColor: tint.cardBg,
+                  borderColor: tint.cardBorder,
+                }}
+              >
+                <span className="flex w-full items-center justify-between">
+                  <span
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-white shadow-[0_1px_3px_rgba(16,42,67,0.06)]"
+                    style={{ color: tint.ink }}
+                  >
+                    <Icon className="h-4 w-4" aria-hidden />
+                  </span>
+                  <ArrowUpRight
+                    className="h-4 w-4 opacity-0 transition-opacity duration-150 group-hover:opacity-100"
+                    style={{ color: tint.ink }}
+                    aria-hidden
+                  />
+                </span>
+                <span className="text-[14px] font-medium leading-snug text-[#102A43]">
+                  {suggestion.text}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }

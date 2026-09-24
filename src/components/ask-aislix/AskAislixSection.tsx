@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
@@ -12,6 +12,7 @@ import {
   ASK_AISLIX_PARSE_ERROR_MESSAGE,
   NO_AUDIT_FOUND_MESSAGE,
 } from "@/lib/ask-aislix/ask-aislix.response";
+import { ASK_SCOPE_OPTIONS } from "@/lib/ask-aislix/ask-aislix-suggestion-groups";
 import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
 import { requireOrgId, requireUserId } from "@/lib/db/context";
 import { fetchMembershipRole } from "@/lib/access-scope";
@@ -20,8 +21,6 @@ import { AskAislixAnswerPanel } from "./AskAislixAnswerPanel";
 import { AskAislixInput } from "./AskAislixInput";
 import { AskAislixLoading } from "./AskAislixLoading";
 import { AskAislixSuggestions } from "./AskAislixSuggestions";
-import { HelpMeAskAislixButton } from "./HelpMeAskAislixButton";
-import { HelpMeAskAislixDialog } from "./HelpMeAskAislixDialog";
 import type { SuggestionDataAvailability } from "@/lib/ask-aislix/ask-aislix-suggestions.select";
 
 const GUEST_ASK_RESPONSE: AskAislixResponse = {
@@ -60,6 +59,15 @@ const GUEST_ASK_RESPONSE: AskAislixResponse = {
   ],
 };
 
+function withAskScope(question: string, store: string, period: string): string {
+  const q = question.trim();
+  if (!q) return q;
+  const defaultStore = ASK_SCOPE_OPTIONS.stores[0];
+  const defaultPeriod = ASK_SCOPE_OPTIONS.period[1];
+  if (store === defaultStore && period === defaultPeriod) return q;
+  return `${q} (Scope: ${store}, ${period})`;
+}
+
 export function AskAislixSection({
   previewDemo = false,
   dataAvailability = null,
@@ -78,14 +86,11 @@ export function AskAislixSection({
   const [response, setResponse] = useState<AskAislixResponse | null>(null);
   const [messages, setMessages] = useState<AskAislixMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | undefined>();
-  const [helpOpen, setHelpOpen] = useState(false);
   const [attachments, setAttachments] = useState<AskAislixAttachmentInput[]>([]);
   const [accessRole, setAccessRole] = useState<string | null>(null);
-
-  const suggestionRotationSeed = useMemo(
-    () => Math.floor(Date.now() / (1000 * 60 * 60 * 6)),
-    [],
-  );
+  const [storeScope, setStoreScope] = useState<string>(ASK_SCOPE_OPTIONS.stores[0]);
+  const [periodScope, setPeriodScope] = useState<string>(ASK_SCOPE_OPTIONS.period[1]);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (isGuest) {
@@ -108,14 +113,34 @@ export function AskAislixSection({
     };
   }, [isGuest]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        const target = e.target as HTMLElement | null;
+        if (
+          target &&
+          (target.tagName === "INPUT" ||
+            target.tagName === "TEXTAREA" ||
+            target.isContentEditable)
+        ) {
+          return;
+        }
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const submitQuestion = useCallback(
     async (raw: string) => {
-      const q = raw.trim();
+      const q = withAskScope(raw, storeScope, periodScope);
       if (!q || loading) return;
 
       setLoading(true);
       setError(null);
-      setQuestion(q);
+      setQuestion(raw.trim());
 
       try {
         if (isGuest) {
@@ -176,100 +201,131 @@ export function AskAislixSection({
         setLoading(false);
       }
     },
-    [attachments, conversationId, isGuest, loading, messages, previewDemo],
+    [
+      attachments,
+      conversationId,
+      isGuest,
+      loading,
+      messages,
+      periodScope,
+      previewDemo,
+      storeScope,
+    ],
   );
+
+  const showSuggestions = !loading && !response && !error;
 
   return (
     <section
-      className="space-y-4 overflow-hidden rounded-xl border border-[#D9E2E8] p-4 shadow-card md:p-6"
-      style={{ backgroundColor: "#FFFFFF" }}
+      aria-labelledby="ask-aislix-heading"
+      className="w-full overflow-hidden rounded-3xl border shadow-card"
+      style={{
+        backgroundColor: "#FFFFFF",
+        borderColor: ASK_AISLIX_SECTION.bandBorder,
+      }}
     >
-      <div className="flex items-start gap-3">
-        <div
-          className="flex h-10 w-10 items-center justify-center rounded-xl"
-          style={{ backgroundColor: ASK_AISLIX_SECTION.chipBackground }}
-        >
-          <Sparkles className="h-5 w-5" style={{ color: ASK_AISLIX_SECTION.heading }} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <h2
-            className="font-display text-xl font-semibold tracking-tight"
-            style={{ color: ASK_AISLIX_SECTION.heading }}
-          >
-            Ask AISLIX
-          </h2>
-          <p className="mt-1 text-sm" style={{ color: ASK_AISLIX_SECTION.subtitle }}>
-            {isGuest
-              ? "Guest demo answers use showcase data. Create a free account for live Ask Aislix."
-              : "Your AI retail operations copilot. Ask anything about your audits, stores, inventory, findings, actions and analysis."}
-          </p>
-          {isGuest ? (
-            <Link
-              to="/signup"
-              className="mt-2 inline-block text-sm font-medium text-[#2A6FA8] underline-offset-2 hover:underline"
+      <div
+        className="border-b px-5 pb-14 pt-5 md:px-8 md:pb-16 md:pt-6"
+        style={{
+          backgroundColor: ASK_AISLIX_SECTION.background,
+          borderColor: ASK_AISLIX_SECTION.bandBorder,
+        }}
+      >
+        <header className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <span
+              className="flex h-11 w-11 items-center justify-center rounded-xl border bg-white shadow-[0_1px_3px_rgba(16,42,67,0.06)]"
+              style={{
+                borderColor: ASK_AISLIX_SECTION.composerBorder,
+                color: ASK_AISLIX_SECTION.askButton,
+              }}
             >
-              Create free account
-            </Link>
-          ) : null}
-        </div>
+              <Sparkles className="h-5 w-5" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <h2
+                id="ask-aislix-heading"
+                className="font-display text-[22px] font-semibold tracking-tight"
+                style={{ color: ASK_AISLIX_SECTION.heading }}
+              >
+                Ask AISLIX
+              </h2>
+              <p className="mt-0.5 text-[14px]" style={{ color: ASK_AISLIX_SECTION.subtitle }}>
+                {isGuest
+                  ? "Guest demo answers use showcase data. Create a free account for live Ask Aislix."
+                  : "Your retail operations copilot for audits, stores, inventory and actions."}
+              </p>
+              {isGuest ? (
+                <Link
+                  to="/signup"
+                  className="mt-1.5 inline-block text-sm font-medium text-[#2A6FA8] underline-offset-2 hover:underline"
+                >
+                  Create free account
+                </Link>
+              ) : null}
+            </div>
+          </div>
+          <kbd
+            className="hidden items-center gap-1 rounded-lg border bg-white px-2.5 py-1 font-sans text-[12px] font-medium shadow-[0_1px_3px_rgba(16,42,67,0.06)] md:flex"
+            style={{
+              borderColor: ASK_AISLIX_SECTION.bandBorder,
+              color: ASK_AISLIX_SECTION.scopeText,
+            }}
+          >
+            ⌘ K
+          </kbd>
+        </header>
       </div>
 
-      <div className="space-y-1.5">
+      <div className="-mt-11 space-y-5 px-5 pb-5 md:px-8 md:pb-8">
         <AskAislixInput
           value={question}
           onChange={setQuestion}
           onSubmit={() => void submitQuestion(question)}
           loading={loading}
-          variant="dark"
           attachments={attachments}
           onAttachmentsChange={setAttachments}
           onAttachmentError={setError}
+          storeScope={storeScope}
+          periodScope={periodScope}
+          onStoreScopeChange={setStoreScope}
+          onPeriodScopeChange={setPeriodScope}
+          inputRef={inputRef}
         />
 
-        <HelpMeAskAislixButton variant="dark" disabled={loading} onClick={() => setHelpOpen(true)} />
+        {showSuggestions ? (
+          <AskAislixSuggestions
+            disabled={loading}
+            accessRole={accessRole}
+            roleHint={roleHint}
+            city={city}
+            dataAvailability={dataAvailability}
+            onSelect={(s) => {
+              setQuestion(s);
+              setError(null);
+              setResponse(null);
+              void submitQuestion(s);
+            }}
+          />
+        ) : null}
+
+        {loading ? <AskAislixLoading /> : null}
+        {error ? (
+          <p className="rounded-lg border border-[#ECBDCC] bg-[#FFEAF1] px-4 py-3 text-sm text-[#102A43]">
+            {error}
+          </p>
+        ) : null}
+        {response && !loading && !error ? (
+          <AskAislixAnswerPanel
+            response={response}
+            onFollowUp={(q) => {
+              setQuestion(q);
+              setError(null);
+              setResponse(null);
+            }}
+          />
+        ) : null}
       </div>
-
-      <HelpMeAskAislixDialog
-        open={helpOpen}
-        onOpenChange={setHelpOpen}
-        onUsePrompt={(q) => {
-          setQuestion(q);
-          setError(null);
-          setResponse(null);
-        }}
-      />
-
-      <AskAislixSuggestions
-        disabled={loading}
-        variant="dark"
-        accessRole={accessRole}
-        roleHint={roleHint}
-        city={city}
-        rotationSeed={suggestionRotationSeed}
-        dataAvailability={dataAvailability}
-        onSelect={(s) => {
-          setQuestion(s);
-          setError(null);
-          setResponse(null);
-        }}
-      />
-
-      {loading ? <AskAislixLoading variant="dark" /> : null}
-      {error ? (
-        <p className="rounded-lg border border-red-300/40 bg-red-500/10 px-4 py-3 text-sm text-red-100">
-          {error}
-        </p>
-      ) : null}
-      {response && !loading && !error ? (
-        <AskAislixAnswerPanel
-          response={response}
-          onFollowUp={(q) => {
-            setQuestion(q);
-            setError(null);
-            setResponse(null);
-          }}
-        />
-      ) : null}
     </section>
   );
 }

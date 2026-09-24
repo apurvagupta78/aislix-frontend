@@ -27,17 +27,26 @@ export const AISLIX = {
 
 /** Ask Aislix command-center palette — scoped to the Ask section only; do not use on KPI cards. */
 export const ASK_AISLIX_SECTION = {
-  /** White Ask strip — matches dashboard cards */
-  background: "#FFFFFF",
+  /** Composer shell — soft blue band (Magic Pattern redesign) */
+  background: "#EAF4F9",
+  bandBorder: "#D4E6F0",
   heading: "#102A43",
-  subtitle: "#557187",
+  subtitle: "#667085",
   inputBackground: "#FFFFFF",
+  composerBorder: "#C5DCE8",
   /** Soft blue — design-system Soft Blue */
   askButton: "#7DB7D6",
   askButtonText: "#102A43",
+  askButtonDisabled: "#D6EAF4",
+  enhanceBg: "#E8F8EF",
+  enhanceBorder: "#B8E8CF",
+  enhanceText: "#1A4D36",
   chipBackground: "#F4F7F9",
   chipBorder: "#D9E2E8",
   chipText: "#102A43",
+  scopeBg: "rgba(125, 183, 214, 0.18)",
+  scopeBorder: "#C5DCE8",
+  scopeText: "#2A5A78",
 } as const;
 
 /** Chart series order from the design spec — never rainbow / library defaults. */
