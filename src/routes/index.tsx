@@ -1,5 +1,5 @@
-import { lazy, Suspense } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { lazy, Suspense, useEffect } from "react";
+import { createFileRoute, useRouterState } from "@tanstack/react-router";
 
 import { SiteFooter, SiteHeader } from "@/components/MarketingLayout";
 import { LazyOnVisible } from "@/components/LazyOnVisible";
@@ -94,6 +94,17 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
+  const hash = useRouterState({ select: (s) => s.location.hash });
+
+  useEffect(() => {
+    const id = hash.replace(/^#/, "");
+    if (!id) return;
+    const t = window.setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [hash]);
+
   return (
     <div className="home-modern min-h-screen bg-background">
       <SiteHeader />

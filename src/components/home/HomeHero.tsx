@@ -38,7 +38,7 @@ export function HomeHero() {
               <ArrowRight className="size-4" />
             </Button>
             <Button asChild variant="outline" size="xl" className="w-full rounded-xl px-6 sm:w-auto">
-              <a href="#how-it-works">
+              <a href="#photo-to-action">
                 <PlayCircle className="size-4" />
                 See how it works
               </a>
