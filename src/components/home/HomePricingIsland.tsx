@@ -20,7 +20,7 @@ export function HomePricingIsland() {
   return (
     <section
       id="pricing"
-      className="scroll-mt-20 border-t border-border bg-surface py-20 lg:py-28"
+      className="scroll-mt-[5.5rem] border-t border-border bg-surface py-20 lg:py-28"
       aria-labelledby="pricing-title"
     >
       <div className="mx-auto max-w-7xl px-5 lg:px-8">

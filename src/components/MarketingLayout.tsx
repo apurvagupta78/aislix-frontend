@@ -1,15 +1,17 @@
-import { useState, type ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
+import { forwardRef, useState, type ReactNode } from "react";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Menu } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { SiteFooter } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { scrollHomeSectionIntoView } from "@/lib/home/scroll-home-section";
+import { cn } from "@/lib/utils";
 
 export { SiteFooter } from "@/components/Footer";
 
 const mobileNav = [
-  { label: "Platform", to: "/platform" as const },
+  { label: "Platform", to: "/" as const, hash: "platform" },
   { label: "Features", to: "/features" as const },
   { label: "How it works", to: "/" as const, hash: "photo-to-action" },
   { label: "Pricing", to: "/pricing" as const },
@@ -17,6 +19,39 @@ const mobileNav = [
   { label: "Contact", to: "/contact" as const },
   { label: "Security", to: "/security" as const },
 ];
+
+const HomeHashLink = forwardRef<
+  HTMLAnchorElement,
+  {
+    hash: string;
+    children: ReactNode;
+    className?: string;
+    onNavigated?: () => void;
+  }
+>(function HomeHashLink({ hash, children, className, onNavigated }, ref) {
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  return (
+    <a
+      ref={ref}
+      href={`/#${hash}`}
+      className={className}
+      onClick={(e) => {
+        e.preventDefault();
+        onNavigated?.();
+        if (pathname === "/") {
+          void navigate({ to: "/", hash, replace: true });
+          scrollHomeSectionIntoView(hash);
+          return;
+        }
+        void navigate({ to: "/", hash });
+      }}
+    >
+      {children}
+    </a>
+  );
+});
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
@@ -27,12 +62,10 @@ export function SiteHeader() {
         <Logo />
         <nav className="ml-auto flex items-center gap-1 sm:gap-2">
           <Button asChild variant="ghost" size="sm" className="hidden rounded-lg lg:inline-flex">
-            <Link to="/platform">Platform</Link>
+            <HomeHashLink hash="platform">Platform</HomeHashLink>
           </Button>
           <Button asChild variant="ghost" size="sm" className="hidden rounded-lg lg:inline-flex">
-            <Link to="/" hash="photo-to-action">
-              How it works
-            </Link>
+            <HomeHashLink hash="photo-to-action">How it works</HomeHashLink>
           </Button>
           <Button asChild variant="ghost" size="sm" className="hidden rounded-lg lg:inline-flex">
             <Link to="/pricing">Pricing</Link>
@@ -69,17 +102,29 @@ export function SiteHeader() {
                 <Logo />
               </div>
               <nav className="flex flex-col gap-1 px-3 py-4">
-                {mobileNav.map((n) => (
-                  <Link
-                    key={n.label}
-                    to={n.to}
-                    hash={"hash" in n ? n.hash : undefined}
-                    onClick={() => setOpen(false)}
-                    className="rounded-xl px-3 py-2.5 text-base text-foreground transition-colors hover:bg-muted"
-                  >
-                    {n.label}
-                  </Link>
-                ))}
+                {mobileNav.map((n) =>
+                  "hash" in n && n.hash ? (
+                    <HomeHashLink
+                      key={n.label}
+                      hash={n.hash}
+                      onNavigated={() => setOpen(false)}
+                      className={cn(
+                        "rounded-xl px-3 py-2.5 text-base text-foreground transition-colors hover:bg-muted",
+                      )}
+                    >
+                      {n.label}
+                    </HomeHashLink>
+                  ) : (
+                    <Link
+                      key={n.label}
+                      to={n.to}
+                      onClick={() => setOpen(false)}
+                      className="rounded-xl px-3 py-2.5 text-base text-foreground transition-colors hover:bg-muted"
+                    >
+                      {n.label}
+                    </Link>
+                  ),
+                )}
               </nav>
               <div className="mt-auto flex flex-col gap-2 border-t border-border px-5 py-5">
                 <Button asChild variant="outline" className="rounded-xl">
@@ -110,4 +155,3 @@ export function MarketingPage({ children }: { children: ReactNode }) {
     </div>
   );
 }
-

@@ -10,7 +10,7 @@ export function HomePlatformSection() {
   return (
     <section
       id="platform"
-      className="scroll-mt-20 bg-surface py-20 lg:py-28"
+      className="scroll-mt-[5.5rem] bg-surface py-20 lg:py-28"
       aria-labelledby="platform-title"
     >
       <div className="mx-auto max-w-7xl px-5 lg:px-8">

@@ -225,7 +225,7 @@ export function HomePhotoToActionFlow() {
   return (
     <section
       id="photo-to-action"
-      className="scroll-mt-20 border-t border-border bg-card py-20 lg:py-28"
+      className="scroll-mt-[5.5rem] border-t border-border bg-card py-20 lg:py-28"
       aria-labelledby="flow-title"
     >
       <div className="mx-auto max-w-7xl px-5 lg:px-8">

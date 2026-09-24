@@ -1,6 +1,7 @@
 import { ArrowRight, PlayCircle, ShieldCheck, Timer, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HomeShelfPreview } from "@/components/home/HomeShelfPreview";
+import { scrollHomeSectionIntoView } from "@/lib/home/scroll-home-section";
 
 const assurances = [
   { icon: ShieldCheck, label: "No card required" },
@@ -30,15 +31,20 @@ export function HomeHero() {
               variant="hero"
               size="xl"
               className="w-full rounded-xl px-6 sm:w-auto"
-              onClick={() =>
-                document.querySelector("#live-dashboard")?.scrollIntoView({ behavior: "smooth" })
-              }
+              onClick={() => scrollHomeSectionIntoView("live-dashboard")}
             >
               Start your first audit free
               <ArrowRight className="size-4" />
             </Button>
             <Button asChild variant="outline" size="xl" className="w-full rounded-xl px-6 sm:w-auto">
-              <a href="#photo-to-action">
+              <a
+                href="#photo-to-action"
+                onClick={(e) => {
+                  e.preventDefault();
+                  history.replaceState(null, "", "#photo-to-action");
+                  scrollHomeSectionIntoView("photo-to-action");
+                }}
+              >
                 <PlayCircle className="size-4" />
                 See how it works
               </a>

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { Suspense, useEffect, lazy } from "react";
 import { createFileRoute, useRouterState } from "@tanstack/react-router";
 
 import { SiteFooter, SiteHeader } from "@/components/MarketingLayout";
@@ -7,30 +7,20 @@ import { HomeHero } from "@/components/home/HomeHero";
 import { HomeRetailFormats } from "@/components/home/HomeRetailFormats";
 import { HomeTryAislix } from "@/components/home/HomeTryAislix";
 import { HomePhotoToActionFlow } from "@/components/home/HomePhotoToActionFlow";
+import { HomePlatformSection } from "@/components/home/HomePlatformSection";
+import { HomeHowItWorks } from "@/components/home/HomeHowItWorks";
+import { HomeFinalCta } from "@/components/home/HomeFinalCta";
+import { scrollHomeSectionIntoView } from "@/lib/home/scroll-home-section";
 
+/** Heavier islands — load when near viewport so first paint stays light. */
 const HomeLeadCapture = lazy(() =>
   import("@/components/home/HomeLeadCapture").then((m) => ({
     default: m.HomeLeadCapture,
   })),
 );
-const HomePlatformSection = lazy(() =>
-  import("@/components/home/HomePlatformSection").then((m) => ({
-    default: m.HomePlatformSection,
-  })),
-);
-const HomeHowItWorks = lazy(() =>
-  import("@/components/home/HomeHowItWorks").then((m) => ({
-    default: m.HomeHowItWorks,
-  })),
-);
 const HomePricingIsland = lazy(() =>
   import("@/components/home/HomePricingIsland").then((m) => ({
     default: m.HomePricingIsland,
-  })),
-);
-const HomeFinalCta = lazy(() =>
-  import("@/components/home/HomeFinalCta").then((m) => ({
-    default: m.HomeFinalCta,
   })),
 );
 
@@ -108,19 +98,15 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
-function SectionSkeleton({ minHeight = "16rem" }: { minHeight?: string }) {
-  return <div className="w-full bg-background" style={{ minHeight }} aria-hidden="true" />;
-}
-
 function Landing() {
   const hash = useRouterState({ select: (s) => s.location.hash });
 
   useEffect(() => {
     const id = hash.replace(/^#/, "");
     if (!id) return;
-    const t = window.setTimeout(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 80);
+    // Instant first jump, then settle after layout.
+    scrollHomeSectionIntoView(id, "auto");
+    const t = window.setTimeout(() => scrollHomeSectionIntoView(id, "smooth"), 120);
     return () => window.clearTimeout(t);
   }, [hash]);
 
@@ -133,41 +119,36 @@ function Landing() {
       <HomeTryAislix />
       <HomePhotoToActionFlow />
 
-      <LazyOnVisible fallback={<SectionSkeleton />}>
+      <LazyOnVisible
+        rootMargin="400px"
+        fallback={<div className="min-h-[12rem]" aria-hidden="true" />}
+      >
         <Suspense fallback={null}>
           <HomeLeadCapture />
         </Suspense>
       </LazyOnVisible>
 
-      <LazyOnVisible fallback={<SectionSkeleton minHeight="24rem" />}>
-        <Suspense fallback={<SectionSkeleton minHeight="24rem" />}>
-          <HomePlatformSection />
-        </Suspense>
-      </LazyOnVisible>
-
-      <LazyOnVisible fallback={<SectionSkeleton minHeight="20rem" />}>
-        <Suspense fallback={<SectionSkeleton minHeight="20rem" />}>
-          <HomeHowItWorks />
-        </Suspense>
-      </LazyOnVisible>
+      <HomePlatformSection />
+      <HomeHowItWorks />
 
       <LazyOnVisible
+        rootMargin="400px"
         fallback={
-          <section id="pricing" className="border-t border-border bg-surface py-20 lg:py-28">
+          <section id="pricing" className="scroll-mt-[5.5rem] border-t border-border bg-surface py-20 lg:py-28">
             <div className="mx-auto max-w-7xl px-5 lg:px-8">
               <p className="text-sm font-semibold text-[#2A6FA8]">Pricing</p>
               <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
                 Plans that scale from one local store to a national chain.
               </h2>
-              <div className="mt-10 min-h-[28rem]" />
+              <div className="mt-10 min-h-[20rem]" />
             </div>
           </section>
         }
       >
         <Suspense
           fallback={
-            <section id="pricing" className="border-t border-border bg-surface py-20">
-              <div className="mx-auto min-h-[28rem] max-w-7xl" />
+            <section id="pricing" className="scroll-mt-[5.5rem] border-t border-border bg-surface py-20">
+              <div className="mx-auto min-h-[20rem] max-w-7xl" />
             </section>
           }
         >
@@ -175,12 +156,7 @@ function Landing() {
         </Suspense>
       </LazyOnVisible>
 
-      <LazyOnVisible fallback={<SectionSkeleton minHeight="18rem" />}>
-        <Suspense fallback={<SectionSkeleton minHeight="18rem" />}>
-          <HomeFinalCta />
-        </Suspense>
-      </LazyOnVisible>
-
+      <HomeFinalCta />
       <SiteFooter />
     </div>
   );
