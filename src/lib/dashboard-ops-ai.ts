@@ -48,15 +48,46 @@ async function signScanEvidenceUrls(scanId: string): Promise<string[]> {
       path: img.storage_path as string | null,
       bucket: "scan-images",
     })),
-  ];
+  ].filter((row) => Boolean(row.path)).slice(0, 3);
 
-  for (const row of rows) {
-    if (!row.path || imageUrls.length >= 3) continue;
-    const { data: signed } = await supabase.storage.from(row.bucket).createSignedUrl(row.path, 3600);
-    if (signed?.signedUrl) imageUrls.push(signed.signedUrl);
+  const signed = await Promise.all(
+    rows.map(async (row) => {
+      const { data } = await supabase.storage.from(row.bucket).createSignedUrl(row.path!, 3600);
+      return data?.signedUrl ?? null;
+    }),
+  );
+  for (const url of signed) {
+    if (url) imageUrls.push(url);
   }
   return imageUrls;
 }
+
+const EMPTY_AI_METRICS: AiDashboardMetrics = {
+  auditCount: 0,
+  productsIdentified: null,
+  brandsIdentified: null,
+  variantsIdentified: null,
+  categoriesIdentified: null,
+  totalFacings: null,
+  totalVisibleUnits: null,
+  avgConfidence: null,
+  verificationCoveragePct: null,
+  aiVsVerifiedUnitVariance: null,
+  aiUnitAccuracyPct: null,
+  aiFacingAccuracyPct: null,
+  brandShare: [],
+  categoryShare: [],
+  topProductsByFacings: [],
+  topProductsByUnits: [],
+  planogram: {
+    applicable: false,
+    expectedFacings: null,
+    actualFacings: null,
+    facingVariance: null,
+    facingPct: null,
+    compliancePct: null,
+  },
+};
 
 export type CompletionFilter = "all" | "completed" | "in_progress" | "not_started";
 
@@ -287,11 +318,10 @@ export async function fetchOpsAiDashboard(
     "@/lib/access-scope"
   );
   const scope = await resolveEffectiveAccessScope({ orgId: activeOrgId });
-  const user = await getUser();
-  const userId = user?.id ?? null;
+  const userId = sessionUser.id;
 
   const empty: OpsAiDashboardData = {
-    metrics: await fetchAiDashboardMetrics(filters, { orgIdOverride: orgId }),
+    metrics: EMPTY_AI_METRICS,
     executive: { audits: 0, completionPct: null, openCritical: 0 },
     synopsis: { findingsOpen: 0, caOpen: 0, historyCount: 0, teamCount: 0 },
     completionMix: [],
@@ -315,6 +345,9 @@ export async function fetchOpsAiDashboard(
   };
 
   if (!scope.isOrgAdmin && !scope.hasStoreScope && !experience.labeledDemo) return empty;
+
+  // Kick off AI metrics immediately — do not block assignment/chart work on them.
+  const metricsPromise = fetchAiDashboardMetrics(filters, { orgIdOverride: orgId });
 
   const bounds = filters
     ? resolveDashboardDateBounds({
@@ -377,7 +410,7 @@ export async function fetchOpsAiDashboard(
       scanIdsFromAssign.length
         ? supabase
             .from("shelf_scans")
-            .select("id, planogram_compliance_percent, status, created_at, store_id")
+            .select("id, planogram_compliance_percent, status, created_at, store_id, audit_mode")
             .in("id", scanIdsFromAssign.slice(0, 200))
         : Promise.resolve({
             data: [] as {
@@ -386,6 +419,7 @@ export async function fetchOpsAiDashboard(
               status: string;
               created_at: string;
               store_id: string | null;
+              audit_mode: string | null;
             }[],
           }),
     ]);
@@ -504,10 +538,16 @@ export async function fetchOpsAiDashboard(
   const planogramByStore: { label: string; expected: number; actual: number }[] = [];
   const productScanIds = scanIdsFromAssign.slice(0, 80);
   if (productScanIds.length) {
-    const { data: products } = await supabase
-      .from("detected_products")
-      .select("scan_id, facings, expected_facings")
-      .in("scan_id", productScanIds);
+    const [{ data: products }, { data: resultRows }] = await Promise.all([
+      supabase
+        .from("detected_products")
+        .select("scan_id, facings, expected_facings")
+        .in("scan_id", productScanIds),
+      supabase
+        .from("scan_results")
+        .select("scan_id, metrics")
+        .in("scan_id", productScanIds),
+    ]);
     const storeExpected = new Map<string, number>();
     const storeActual = new Map<string, number>();
     for (const p of products ?? []) {
@@ -539,14 +579,8 @@ export async function fetchOpsAiDashboard(
       agg.complianceSum += ratio;
       agg.complianceN += 1;
     }
-  }
 
-  // Also pull planogram % from scan_results.metrics when shelf_scans column is empty
-  if (productScanIds.length) {
-    const { data: resultRows } = await supabase
-      .from("scan_results")
-      .select("scan_id, metrics")
-      .in("scan_id", productScanIds);
+    // Also pull planogram % from scan_results.metrics when shelf_scans column is empty
     for (const row of resultRows ?? []) {
       const compliance = metricNum(row.metrics, "planogram_compliance_percent");
       if (compliance == null) continue;
@@ -621,16 +655,54 @@ export async function fetchOpsAiDashboard(
   // Deprecated separate list — folded into lastTen + Assignment filter
   const myAssignedAudits: AssignedAuditRow[] = [];
 
-  // Last completed report
+  // Last completed report (built in parallel with synopsis + metrics)
   const lastCompleted = assignments.find((a) => stageOf(a) === "completed" && a.scan_id);
-  let lastReport: LastAuditReport | null = null;
-  if (lastCompleted?.scan_id) {
+
+  let findingsQ = supabase
+    .from("findings")
+    .select("id", { count: "exact", head: true })
+    .eq("org_id", orgId)
+    .not("status", "in", "(closed,resolved)");
+  findingsQ = applyStoreScopeFilter(findingsQ, scope) ?? findingsQ;
+
+  let caQ = supabase
+    .from("corrective_actions")
+    .select("id", { count: "exact", head: true })
+    .eq("org_id", orgId)
+    .not("status", "in", "(closed,resolved,cancelled)");
+  caQ = applyStoreScopeFilter(caQ, scope) ?? caQ;
+
+  const teamQ = supabase
+    .from("organization_members")
+    .select("id", { count: "exact", head: true })
+    .eq("org_id", orgId)
+    .eq("status", "active");
+
+  const criticalQ = supabase
+    .from("findings")
+    .select("id", { count: "exact", head: true })
+    .eq("org_id", orgId)
+    .not("status", "in", "(closed,resolved)")
+    .eq("severity", "critical");
+
+  // Prefer AI-mode assignment scans for coverage/units (avoids a second shelf_scans round-trip).
+  const aiScanIds = (scans ?? [])
+    .filter((s) => {
+      if (s.status !== "completed") return false;
+      const mode = String(s.audit_mode ?? "ai").toLowerCase();
+      return mode === "ai" || mode === "null";
+    })
+    .map((s) => s.id as string)
+    .slice(0, 200);
+
+  const buildLastReport = async (): Promise<LastAuditReport | null> => {
+    if (!lastCompleted?.scan_id) return null;
     const scanId = lastCompleted.scan_id as string;
     const tmplName = lastCompleted.template_id
       ? templateName.get(lastCompleted.template_id as string) ?? "Completed audit"
       : "Completed audit";
 
-    const [resultRes, findingsRes] = await Promise.all([
+    const [resultRes, findingsRes, imageUrlsRaw] = await Promise.all([
       supabase
         .from("scan_results")
         .select("executive_summary, metrics")
@@ -641,20 +713,16 @@ export async function fetchOpsAiDashboard(
         .select("id", { count: "exact", head: true })
         .eq("org_id", orgId)
         .eq("scan_id", scanId),
+      signScanEvidenceUrls(scanId),
     ]);
 
     const result = resultRes.data;
     const findingsCount = findingsRes.count ?? 0;
-    let imageUrls = await signScanEvidenceUrls(scanId);
-    if (!imageUrls.length) {
-      imageUrls = [...DEMO_SHELF_FALLBACK_IMAGES];
-    }
-
+    const imageUrls = imageUrlsRaw.length ? imageUrlsRaw : [...DEMO_SHELF_FALLBACK_IMAGES];
     const insights = parseInsights(result?.executive_summary);
     const conf = metricNum(result?.metrics, "average_confidence");
-
     const scan = scanById.get(scanId);
-    lastReport = {
+    return {
       scanId,
       assignmentId: lastCompleted.id as string,
       auditName: tmplName,
@@ -676,93 +744,52 @@ export async function fetchOpsAiDashboard(
       imageUrls,
       completed: true,
     };
-  }
+  };
 
-  // Synopsis counts
-  let findingsQ = supabase
-    .from("findings")
-    .select("id", { count: "exact", head: true })
-    .eq("org_id", orgId)
-    .not("status", "in", "(closed,resolved)");
-  findingsQ = applyStoreScopeFilter(findingsQ, scope) ?? findingsQ;
+  const loadVerificationAndUnits = async () => {
+    let verificationCoveragePct: number | null = null;
+    const productUnits = new Map<string, number>();
+    if (!aiScanIds.length) {
+      return { verificationCoveragePct, productUnits };
+    }
+    const [verRows, resultRows] = await Promise.all([
+      listScanFieldVerificationsForScans(aiScanIds),
+      supabase
+        .from("scan_results")
+        .select("metrics")
+        .in("scan_id", aiScanIds.slice(0, 40))
+        .then((r) => r.data ?? []),
+    ]);
+    const scansWithVerify = new Set(
+      verRows.filter((v) => v.verified_value != null).map((v) => v.scan_id),
+    );
+    verificationCoveragePct =
+      scansWithVerify.size > 0 ? pct(scansWithVerify.size, aiScanIds.length) : null;
+    for (const row of resultRows) {
+      for (const [k, v] of productUnitsFromMetrics(row.metrics)) {
+        productUnits.set(k, (productUnits.get(k) ?? 0) + v);
+      }
+    }
+    return { verificationCoveragePct, productUnits };
+  };
 
-  let caQ = supabase
-    .from("corrective_actions")
-    .select("id", { count: "exact", head: true })
-    .eq("org_id", orgId)
-    .not("status", "in", "(closed,resolved,cancelled)");
-  caQ = applyStoreScopeFilter(caQ, scope) ?? caQ;
-
-  let teamQ = supabase
-    .from("organization_members")
-    .select("id", { count: "exact", head: true })
-    .eq("org_id", orgId)
-    .eq("status", "active");
-
-  const [{ count: findingsOpen }, { count: caOpen }, { count: teamCount }] = await Promise.all([
-    findingsQ,
-    caQ,
-    teamQ,
+  const [
+    base,
+    [{ count: findingsOpen }, { count: caOpen }, { count: teamCount }, { count: criticalCount }],
+    lastReport,
+    { verificationCoveragePct, productUnits },
+  ] = await Promise.all([
+    metricsPromise,
+    Promise.all([findingsQ, caQ, teamQ, criticalQ]),
+    buildLastReport(),
+    loadVerificationAndUnits(),
   ]);
-
-  const { count: criticalCount } = await supabase
-    .from("findings")
-    .select("id", { count: "exact", head: true })
-    .eq("org_id", orgId)
-    .not("status", "in", "(closed,resolved)")
-    .eq("severity", "critical");
-
-  // Base AI metrics + fixes
-  const base = await fetchAiDashboardMetrics(filters, { orgIdOverride: orgId });
 
   // Categories: exclude Unknown (already excluded in base aggregation)
   const categoryShare = (base.categoryShare ?? []).filter(
     (r) => r.label.toLowerCase() !== "unknown",
   );
 
-  // Verification coverage = % of audits (scans) with any human verification.
-  // N/A when no human verification exists yet — never show a fake 0%.
-  let verificationCoveragePct: number | null = null;
-  const aiScanIds = (
-    await (async () => {
-      let q = supabase
-        .from("shelf_scans")
-        .select("id")
-        .eq("org_id", orgId)
-        .eq("status", "completed")
-        .or("audit_mode.eq.ai,audit_mode.is.null")
-        .order("created_at", { ascending: false })
-        .limit(200);
-      q = applyStoreScopeFilter(q, scope) ?? q;
-      if (scopedStoreId && scopedStoreId !== "all") q = q.eq("store_id", scopedStoreId);
-      if (bounds?.from) q = q.gte("created_at", bounds.from.toISOString());
-      if (bounds?.to) q = q.lt("created_at", bounds.to.toISOString());
-      const { data } = await q;
-      return (data ?? []).map((s) => s.id as string);
-    })()
-  );
-  if (aiScanIds.length) {
-    const verRows = await listScanFieldVerificationsForScans(aiScanIds);
-    const scansWithVerify = new Set(
-      verRows.filter((v) => v.verified_value != null).map((v) => v.scan_id),
-    );
-    verificationCoveragePct =
-      scansWithVerify.size > 0 ? pct(scansWithVerify.size, aiScanIds.length) : null;
-  }
-
-  // Prefer metrics product units; else allocate persisted total visible units by facing share.
-  const productUnits = new Map<string, number>();
-  if (aiScanIds.length) {
-    const { data: resultRows } = await supabase
-      .from("scan_results")
-      .select("metrics")
-      .in("scan_id", aiScanIds.slice(0, 40));
-    for (const row of resultRows ?? []) {
-      for (const [k, v] of productUnitsFromMetrics(row.metrics)) {
-        productUnits.set(k, (productUnits.get(k) ?? 0) + v);
-      }
-    }
-  }
   let topProductsByUnits = [...productUnits.entries()]
     .map(([label, value]) => ({ label, value }))
     .sort((a, b) => b.value - a.value)
@@ -800,7 +827,8 @@ export async function fetchOpsAiDashboard(
       categoryShare.length > 0
         ? new Set(categoryShare.map((c) => c.label)).size
         : base.categoriesIdentified,
-    verificationCoveragePct,
+    verificationCoveragePct:
+      verificationCoveragePct ?? base.verificationCoveragePct,
     topProductsByUnits: topProductsByUnitsFinal,
     planogram: {
       ...base.planogram,

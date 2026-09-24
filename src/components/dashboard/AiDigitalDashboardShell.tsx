@@ -619,7 +619,7 @@ export function AiDigitalDashboardShell() {
         previewDemo: demoPreview.previewDemo,
         userEmail: demoPreview.userEmail,
       }),
-    staleTime: 30_000,
+    staleTime: 60_000,
   });
   const digitalQuery = useQuery({
     queryKey: ["dashboard-digital-metrics-v2", filterKey, demoPreview.previewDemo],
@@ -628,7 +628,10 @@ export function AiDigitalDashboardShell() {
         previewDemo: demoPreview.previewDemo,
         userEmail: demoPreview.userEmail,
       }),
-    staleTime: 30_000,
+    staleTime: 60_000,
+    // Don't compete with AI dashboard on first paint — load digital when that tab is open
+    // (or after AI settles so Ask Aislix can still see digital signals quickly).
+    enabled: tabKey === "digital" || (!opsQuery.isPending && Boolean(opsQuery.data)),
   });
 
   const data = opsQuery.data;
@@ -648,8 +651,8 @@ export function AiDigitalDashboardShell() {
     !(dig?.lastFive?.length);
 
   const askDataAvailability = useMemo((): SuggestionDataAvailability | null => {
-    // While loading, keep legacy chips (null = no data filter). After load, filter tightly.
-    if (opsQuery.isPending || digitalQuery.isPending) return null;
+    // While AI ops loads, keep legacy chips (null = no data filter). Don't wait on digital.
+    if (opsQuery.isPending) return null;
     const aiCount = ai?.auditCount ?? 0;
     const digCount = dig?.totalAudits ?? 0;
     const lastTenCount = (data?.lastTen?.length ?? 0) + (dig?.lastTen?.length ?? 0);
@@ -692,7 +695,6 @@ export function AiDigitalDashboardShell() {
     };
   }, [
     opsQuery.isPending,
-    digitalQuery.isPending,
     ai?.auditCount,
     ai?.verificationCoveragePct,
     dig?.totalAudits,
@@ -1620,7 +1622,21 @@ export function AiDigitalDashboardShell() {
           />
 
           {opsQuery.isPending ? (
-            <p className="text-sm text-[#667085]">Loading AI dashboard…</p>
+            <div className="space-y-3 py-2" aria-busy="true" aria-live="polite">
+              <p className="text-sm text-[#667085]">Loading AI dashboard…</p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="h-24 animate-pulse rounded-xl border border-[#C1E4F8] bg-[#EAF6FD]/70"
+                  />
+                ))}
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="h-48 animate-pulse rounded-xl border border-[#D9E2E8] bg-[#F4F7F9]" />
+                <div className="h-48 animate-pulse rounded-xl border border-[#D9E2E8] bg-[#F4F7F9]" />
+              </div>
+            </div>
           ) : (
             <>
               {emptyRealAi ? <EmptyScopeBanner kind="ai" /> : null}

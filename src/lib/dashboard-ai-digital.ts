@@ -132,11 +132,11 @@ export async function fetchAiDashboardMetrics(
   filters?: DashboardMetricFilters,
   options?: { orgIdOverride?: string },
 ): Promise<AiDashboardMetrics> {
-  const orgId = options?.orgIdOverride ?? (await requireOrgId());
+  const activeOrgId = await requireOrgId();
+  const orgId = options?.orgIdOverride ?? activeOrgId;
   const { resolveEffectiveAccessScope, applyStoreScopeFilter, clampStoreIdToScope } = await import(
     "@/lib/access-scope"
   );
-  const activeOrgId = await requireOrgId();
   const scope = await resolveEffectiveAccessScope({ orgId: activeOrgId });
   const usingDemoOverride = Boolean(options?.orgIdOverride && options.orgIdOverride !== activeOrgId);
   const empty: AiDashboardMetrics = {
@@ -222,10 +222,16 @@ export async function fetchAiDashboardMetrics(
   const scanIds = (scans ?? []).map((s) => s.id as string);
   if (!scanIds.length) return { ...empty, auditCount: 0 };
 
-  const { data: resultRows } = await supabase
-    .from("scan_results")
-    .select("scan_id, metrics")
-    .in("scan_id", scanIds.slice(0, 80));
+  const [{ data: resultRows }, { data: products }] = await Promise.all([
+    supabase
+      .from("scan_results")
+      .select("scan_id, metrics")
+      .in("scan_id", scanIds.slice(0, 80)),
+    supabase
+      .from("detected_products")
+      .select("id, scan_id, name, brand, variant, category, facings, confidence")
+      .in("scan_id", scanIds.slice(0, 80)),
+  ]);
 
   const metricNum = (metrics: unknown, key: string): number | null => {
     if (!metrics || typeof metrics !== "object") return null;
@@ -267,11 +273,6 @@ export async function fetchAiDashboardMetrics(
       metricsUnitsCount += 1;
     }
   }
-
-  const { data: products } = await supabase
-    .from("detected_products")
-    .select("id, scan_id, name, brand, variant, category, facings, confidence")
-    .in("scan_id", scanIds.slice(0, 80));
 
   const scanCategoryById = new Map(
     (scans ?? []).map((s) => [s.id as string, ((s.category as string | null) ?? "").trim()]),
