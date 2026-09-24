@@ -4,13 +4,13 @@ import { DEMO_SHELF_IMAGE } from "@/lib/home/homepage-data";
 import { trackLandingEvent } from "@/lib/landing-analytics";
 import { markGuestMode } from "@/lib/guest-mode";
 
-function openGuestDashboard(intent: "sample" | "upload") {
+function openLiveDemo(intent: "sample" | "upload") {
   markGuestMode();
   trackLandingEvent("demo_scan_started", { mode: intent === "sample" ? "sample" : "upload" });
-  window.open(`/dashboard?intent=${intent}`, "_blank", "noopener,noreferrer");
+  window.open(`/guest?intent=${intent}`, "_blank", "noopener,noreferrer");
 }
 
-/** Lightweight Try Aislix — opens the real dashboard in Guest mode. */
+/** Try Aislix — opens the dedicated Live Demo session (sample or upload). */
 export function HomeTryAislix() {
   return (
     <section
@@ -28,8 +28,8 @@ export function HomeTryAislix() {
             See what Aislix can find on your shelf.
           </h2>
           <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
-            Open the real operations dashboard in Guest mode. Explore Demo ON data, then run the
-            sample audit or upload your own shelf photo — no login required.
+            Open the Live Demo — run the sample shelf audit or upload your own photo. No login
+            required.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button
@@ -37,7 +37,7 @@ export function HomeTryAislix() {
               size="xl"
               variant="default"
               className="rounded-xl"
-              onClick={() => openGuestDashboard("sample")}
+              onClick={() => openLiveDemo("sample")}
             >
               <ScanSearch className="size-4" />
               Run audit
@@ -47,14 +47,14 @@ export function HomeTryAislix() {
               size="xl"
               variant="outline"
               className="rounded-xl"
-              onClick={() => openGuestDashboard("upload")}
+              onClick={() => openLiveDemo("upload")}
             >
               <Upload className="size-4" />
               Upload shelf photo
             </Button>
           </div>
           <p className="mt-4 text-sm text-muted-foreground">
-            Opens /dashboard in a new tab · Guest mode · Demo ON
+            Opens Live Demo in a new tab · sample or your photo
           </p>
         </div>
 
@@ -62,18 +62,19 @@ export function HomeTryAislix() {
           <div className="overflow-hidden rounded-2xl bg-white">
             <img
               src={DEMO_SHELF_IMAGE}
-              alt="Sample grocery shelf for the Aislix guest demo"
+              alt="Sample grocery shelf for the Aislix live demo"
               className="aspect-[4/3] h-full w-full object-cover"
               width={640}
               height={480}
               loading="lazy"
+              decoding="async"
             />
           </div>
           <div className="flex flex-col items-center justify-center rounded-2xl bg-white p-6 text-center">
             <ScanSearch className="size-8 text-border" aria-hidden="true" />
-            <p className="mt-3 text-sm font-semibold text-foreground">Real dashboard</p>
+            <p className="mt-3 text-sm font-semibold text-foreground">Live demo</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Same Operations AI Dashboard signed-in teams use — with Guest demo data.
+              Same shelf scan signed-in teams use — sample photo or yours.
             </p>
           </div>
         </div>

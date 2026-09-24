@@ -7,18 +7,30 @@ import { HomeHero } from "@/components/home/HomeHero";
 import { HomeRetailFormats } from "@/components/home/HomeRetailFormats";
 import { HomeTryAislix } from "@/components/home/HomeTryAislix";
 import { HomePhotoToActionFlow } from "@/components/home/HomePhotoToActionFlow";
-import { HomePlatformSection } from "@/components/home/HomePlatformSection";
-import { HomeHowItWorks } from "@/components/home/HomeHowItWorks";
-import { HomeFinalCta } from "@/components/home/HomeFinalCta";
 
 const HomeLeadCapture = lazy(() =>
   import("@/components/home/HomeLeadCapture").then((m) => ({
     default: m.HomeLeadCapture,
   })),
 );
+const HomePlatformSection = lazy(() =>
+  import("@/components/home/HomePlatformSection").then((m) => ({
+    default: m.HomePlatformSection,
+  })),
+);
+const HomeHowItWorks = lazy(() =>
+  import("@/components/home/HomeHowItWorks").then((m) => ({
+    default: m.HomeHowItWorks,
+  })),
+);
 const HomePricingIsland = lazy(() =>
   import("@/components/home/HomePricingIsland").then((m) => ({
     default: m.HomePricingIsland,
+  })),
+);
+const HomeFinalCta = lazy(() =>
+  import("@/components/home/HomeFinalCta").then((m) => ({
+    default: m.HomeFinalCta,
   })),
 );
 
@@ -54,7 +66,10 @@ export const Route = createFileRoute("/")({
       },
       { name: "twitter:image", content: "https://aislix.com/og-image.png" },
     ],
-    links: [{ rel: "canonical", href: "https://aislix.com" }],
+    links: [
+      { rel: "canonical", href: "https://aislix.com" },
+      { rel: "preload", href: "/home-hero-shelf.jpg", as: "image" },
+    ],
     scripts: [
       {
         type: "application/ld+json",
@@ -93,6 +108,10 @@ export const Route = createFileRoute("/")({
   component: Landing,
 });
 
+function SectionSkeleton({ minHeight = "16rem" }: { minHeight?: string }) {
+  return <div className="w-full bg-background" style={{ minHeight }} aria-hidden="true" />;
+}
+
 function Landing() {
   const hash = useRouterState({ select: (s) => s.location.hash });
 
@@ -101,7 +120,7 @@ function Landing() {
     if (!id) return;
     const t = window.setTimeout(() => {
       document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 50);
+    }, 80);
     return () => window.clearTimeout(t);
   }, [hash]);
 
@@ -114,14 +133,23 @@ function Landing() {
       <HomeTryAislix />
       <HomePhotoToActionFlow />
 
-      <LazyOnVisible fallback={<div className="min-h-[16rem]" aria-hidden="true" />}>
+      <LazyOnVisible fallback={<SectionSkeleton />}>
         <Suspense fallback={null}>
           <HomeLeadCapture />
         </Suspense>
       </LazyOnVisible>
 
-      <HomePlatformSection />
-      <HomeHowItWorks />
+      <LazyOnVisible fallback={<SectionSkeleton minHeight="24rem" />}>
+        <Suspense fallback={<SectionSkeleton minHeight="24rem" />}>
+          <HomePlatformSection />
+        </Suspense>
+      </LazyOnVisible>
+
+      <LazyOnVisible fallback={<SectionSkeleton minHeight="20rem" />}>
+        <Suspense fallback={<SectionSkeleton minHeight="20rem" />}>
+          <HomeHowItWorks />
+        </Suspense>
+      </LazyOnVisible>
 
       <LazyOnVisible
         fallback={
@@ -147,7 +175,12 @@ function Landing() {
         </Suspense>
       </LazyOnVisible>
 
-      <HomeFinalCta />
+      <LazyOnVisible fallback={<SectionSkeleton minHeight="18rem" />}>
+        <Suspense fallback={<SectionSkeleton minHeight="18rem" />}>
+          <HomeFinalCta />
+        </Suspense>
+      </LazyOnVisible>
+
       <SiteFooter />
     </div>
   );

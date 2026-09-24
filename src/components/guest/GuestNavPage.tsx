@@ -42,7 +42,7 @@ export function GuestNavPage({ pathname }: { pathname: string }) {
 
       <div className="flex flex-wrap gap-2">
         <Button asChild variant="brand" className="rounded-xl">
-          <Link to="/dashboard" search={{ intent: "sample" } as never}>
+          <Link to="/guest" search={{ intent: "sample" } as never}>
             Run sample audit
           </Link>
         </Button>

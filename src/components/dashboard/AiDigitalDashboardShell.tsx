@@ -1551,7 +1551,7 @@ export function AiDigitalDashboardShell() {
             />
             <Button variant="outline" size="sm" className={NEW_AUDIT_BUTTON_CLASS} asChild>
               {isGuest ? (
-                <Link to="/dashboard" search={{ intent: "sample" } as never}>
+                <Link to="/guest" search={{ intent: "sample" } as never}>
                   New Audit
                 </Link>
               ) : (

@@ -673,7 +673,7 @@ export function AppShell({
                         <Link to="/signup">Start free</Link>
                       </Button>
                       <Button asChild variant="outline" size="sm" className={NEW_AUDIT_BUTTON_CLASS}>
-                        <Link to="/dashboard" search={{ intent: "sample" } as never}>
+                        <Link to="/guest" search={{ intent: "sample" } as never}>
                           <Plus className="size-4" /> New Audit
                         </Link>
                       </Button>

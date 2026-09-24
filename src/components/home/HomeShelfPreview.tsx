@@ -39,6 +39,8 @@ export function HomeShelfPreview() {
             className="aspect-[4/5] w-full object-cover"
             width={640}
             height={800}
+            fetchPriority="high"
+            decoding="async"
           />
           {heroAnnotations.map((a) => (
             <div
