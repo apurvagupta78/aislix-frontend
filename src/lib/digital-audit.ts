@@ -424,7 +424,13 @@ export async function loadDigitalAuditSession(scanId: string): Promise<DigitalAu
 
   const assignmentId = (scan.assignment_id as string | null) ?? null;
   const [{ data: lines }, { data: evidence }, assignmentRes] = await Promise.all([
-    supabase.from("digital_audit_lines").select("*").eq("scan_id", scanId).order("bin_key"),
+    supabase
+      .from("digital_audit_lines")
+      .select("*")
+      .eq("scan_id", scanId)
+      .order("bin_key")
+      .order("product_name")
+      .order("id"),
     supabase.from("audit_evidence").select("*").eq("scan_id", scanId),
     assignmentId
       ? supabase
