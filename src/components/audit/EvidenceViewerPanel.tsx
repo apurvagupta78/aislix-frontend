@@ -1,5 +1,10 @@
-import { MapPin, User } from "lucide-react";
-import type { AuditEvidence } from "@/lib/digital-audit";
+import { MapPin, ScanBarcode, User } from "lucide-react";
+import {
+  evidenceKeyLabel,
+  type AuditEvidence,
+  type DigitalAuditLine,
+  type EvidenceRequirement,
+} from "@/lib/digital-audit";
 import { Badge } from "@/components/ui/badge";
 
 export function EvidenceViewerPanel({
@@ -7,6 +12,8 @@ export function EvidenceViewerPanel({
   selectedBin,
   onSelectBin,
   meta,
+  lines = [],
+  requirements,
 }: {
   evidence: AuditEvidence[];
   selectedBin: string | null;
@@ -16,15 +23,22 @@ export function EvidenceViewerPanel({
     submitted_at?: string | null;
     auditor_name?: string | null;
   };
+  lines?: DigitalAuditLine[];
+  requirements?: EvidenceRequirement[];
 }) {
-  const active = evidence.find((e) => e.bin_key === selectedBin) ?? evidence[0];
+  const media = evidence.filter((e) => e.kind !== "barcode");
+  const barcodes = evidence.filter((e) => e.kind === "barcode");
+  const active =
+    media.find((e) => e.bin_key === selectedBin) ??
+    media.find((e) => e.kind === "sku" && lines.find((l) => l.id === e.target)?.bin_key === selectedBin) ??
+    media[0];
 
   return (
     <aside className="space-y-4 rounded-xl border border-border bg-card p-4 lg:sticky lg:top-4">
       <div>
         <h3 className="font-semibold">Evidence</h3>
         <p className="text-xs text-muted-foreground">
-          Original shelf photos with capture metadata. One photo per bin required.
+          Original photos and proofs with capture metadata.
         </p>
       </div>
 
@@ -46,8 +60,21 @@ export function EvidenceViewerPanel({
         </div>
       ) : null}
 
+      {requirements?.length ? (
+        <ul className="grid gap-1 text-xs">
+          {requirements.map((req) => (
+            <li key={req.id} className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground">{req.label}</span>
+              <span className={req.ok ? "text-success" : "text-warning"}>
+                {req.ok ? "Met" : `${req.done}/${req.total}`}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
       <div className="flex flex-wrap gap-2">
-        {evidence.map((e) => (
+        {media.map((e) => (
           <button
             key={e.id}
             type="button"
@@ -56,18 +83,22 @@ export function EvidenceViewerPanel({
               active?.id === e.id ? "border-brand bg-brand-soft text-brand" : "border-border"
             }`}
           >
-            {e.bin_key === "default" ? "Main shelf" : e.bin_key}
+            {evidenceKeyLabel(e, lines)}
           </button>
         ))}
       </div>
 
       {active?.signed_url ? (
         <div className="overflow-hidden rounded-xl border border-border bg-black/5">
-          <img
-            src={active.signed_url}
-            alt={`Evidence for ${active.bin_key}`}
-            className="max-h-80 w-full object-contain"
-          />
+          {active.media_type === "video" ? (
+            <video src={active.signed_url} controls className="max-h-80 w-full" />
+          ) : (
+            <img
+              src={active.signed_url}
+              alt={`Evidence: ${evidenceKeyLabel(active, lines)}`}
+              className="max-h-80 w-full object-contain"
+            />
+          )}
         </div>
       ) : (
         <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">
@@ -79,10 +110,26 @@ export function EvidenceViewerPanel({
         <dl className="grid gap-2 text-xs text-muted-foreground">
           <div className="flex items-center gap-1">
             <MapPin className="size-3" />
-            Bin: {active.bin_key}
+            {evidenceKeyLabel(active, lines)}
+            {active.lat != null && active.lng != null
+              ? ` · ${active.lat.toFixed(5)}, ${active.lng.toFixed(5)}`
+              : ""}
           </div>
           <div>Captured: {new Date(active.captured_at).toLocaleString()}</div>
         </dl>
+      ) : null}
+
+      {barcodes.length ? (
+        <div className="space-y-1 border-t border-border pt-3 text-xs">
+          <p className="font-medium">Barcode confirmations</p>
+          {barcodes.map((b) => (
+            <div key={b.id} className="flex items-center gap-1 text-muted-foreground">
+              <ScanBarcode className="size-3" />
+              {lines.find((l) => l.id === b.target)?.product_name ?? "SKU"} · {b.barcode_code ?? "—"}
+              {b.barcode_method ? ` (${b.barcode_method})` : ""}
+            </div>
+          ))}
+        </div>
       ) : null}
     </aside>
   );

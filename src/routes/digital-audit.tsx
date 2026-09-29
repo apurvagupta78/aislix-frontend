@@ -3,11 +3,16 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Camera,
+  CheckCircle2,
+  CircleDashed,
   ClipboardList,
+  Download,
   Loader2,
   MapPin,
   ScanBarcode,
+  ShieldCheck,
   Upload,
+  Video,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,8 +34,13 @@ import { ErrorState, Skeleton } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
 import {
   computeLineVariance,
-  importActualCsv,
+  downloadActualCountSheet,
+  evidenceKey,
+  importActualCountsFile,
+  lineNeedsBarcode,
+  lineNeedsSkuPhoto,
   RCA_OPTIONS,
+  recordBarcodeConfirmation,
   startOrResumeDigitalAudit,
   submitDigitalAudit,
   updateDigitalAuditLine,
@@ -38,8 +48,10 @@ import {
   validateDigitalAuditSubmit,
   lookupLineByBarcode,
   type DigitalAuditLine,
+  type EvidenceRequirement,
   type RcaCode,
 } from "@/lib/digital-audit";
+import type { EvidenceProof } from "@/lib/audit-evidence-policy";
 import { BarcodeScannerDialog } from "@/components/digital-audit/BarcodeScannerDialog";
 import {
   cacheAuditSession,
@@ -66,21 +78,35 @@ function DigitalAuditPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
+  const uploadTarget = useRef<{ key: string; video: boolean } | null>(null);
   const csvRef = useRef<HTMLInputElement>(null);
   const [activeBin, setActiveBin] = useState<string | null>(null);
   const [barcodeInput, setBarcodeInput] = useState("");
   const [scanOpen, setScanOpen] = useState(false);
+  const [scanLineId, setScanLineId] = useState<string | null>(null);
   const [offline, setOffline] = useState(!isOnline());
   const [pendingCount, setPendingCount] = useState(0);
   const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
+  const [geoPending, setGeoPending] = useState(false);
 
-  useEffect(() => {
-    if (!navigator.geolocation) return;
+  const requestLocation = () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) return;
+    setGeoPending(true);
     navigator.geolocation.getCurrentPosition(
-      (pos) => setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => setGeo(null),
+      (pos) => {
+        setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setGeoPending(false);
+      },
+      () => {
+        setGeo(null);
+        setGeoPending(false);
+      },
       { enableHighAccuracy: true, timeout: 15000 },
     );
+  };
+
+  useEffect(() => {
+    requestLocation();
   }, []);
 
   const sessionQuery = useQuery({
@@ -164,8 +190,9 @@ function DigitalAuditPage() {
   });
 
   const photoMutation = useMutation({
-    mutationFn: async (input: { binKey: string; file: File }) => {
+    mutationFn: async (input: { binKey: string; file: File; video?: boolean }) => {
       if (!isOnline()) {
+        if (input.video) throw new Error("Session video needs a connection. Upload it when back online.");
         await queuePhotoUpload({
           scanId: session!.scan_id,
           assignmentId: assignmentId!,
@@ -180,28 +207,75 @@ function DigitalAuditPage() {
         file: input.file,
         lat: geo?.lat,
         lng: geo?.lng,
+        allowVideo: input.video,
       });
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, input) => {
       const counts = await listPendingCounts();
       setPendingCount(counts.lines + counts.photos);
-      toast.success(isOnline() ? "Shelf photo saved." : "Photo queued offline.");
+      toast.success(
+        !isOnline() ? "Photo queued offline." : input.video ? "Session video saved." : "Photo saved.",
+      );
+      void queryClient.invalidateQueries({ queryKey: ["digital-audit", assignmentId] });
+    },
+    onError: (e) => toast.error(toUserMessage(e)),
+  });
+
+  const barcodeMutation = useMutation({
+    mutationFn: (input: { lineId: string; code: string; method: "camera" | "manual" }) =>
+      recordBarcodeConfirmation({
+        scanId: session!.scan_id,
+        ...input,
+        lat: geo?.lat,
+        lng: geo?.lng,
+      }),
+    onSuccess: () => {
+      toast.success("Barcode confirmed.");
       void queryClient.invalidateQueries({ queryKey: ["digital-audit", assignmentId] });
     },
     onError: (e) => toast.error(toUserMessage(e)),
   });
 
   const csvMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const text = await file.text();
-      return importActualCsv(session!.scan_id, text);
-    },
-    onSuccess: (count) => {
-      toast.success(`Updated ${count} SKU line(s) from CSV.`);
+    mutationFn: (file: File) => importActualCountsFile(session!.scan_id, file),
+    onSuccess: (result) => {
+      const notes: string[] = [];
+      if (result.unmatched.length) {
+        notes.push(
+          `${result.unmatched.length} row(s) did not match an assigned SKU: ${result.unmatched.slice(0, 3).join(", ")}${result.unmatched.length > 3 ? "…" : ""}`,
+        );
+      }
+      if (result.invalid.length) notes.push(`${result.invalid.length} row(s) had an invalid count.`);
+      if (result.blankRows) notes.push(`${result.blankRows} row(s) left blank.`);
+      if (result.remainingUncounted) {
+        notes.push(`${result.remainingUncounted} SKU(s) still need a count.`);
+      }
+      const message = `Imported counts for ${result.updated} SKU line(s).`;
+      if (notes.length) toast.warning(message, { description: notes.join(" "), duration: 8000 });
+      else toast.success(message);
       void queryClient.invalidateQueries({ queryKey: ["digital-audit", assignmentId] });
     },
-    onError: (e) => toast.error(toUserMessage(e)),
+    onError: (e) => toast.error(toUserMessage(e), { duration: 8000 }),
   });
+
+  const pickEvidence = (key: string, video = false) => {
+    uploadTarget.current = { key, video };
+    const input = fileRef.current;
+    if (!input) return;
+    input.accept = video ? "video/mp4,video/webm,video/quicktime" : "image/jpeg,image/png";
+    if (video) input.removeAttribute("capture");
+    else input.setAttribute("capture", "environment");
+    input.click();
+  };
+
+  const confirmBarcodeForLine = (line: DigitalAuditLine, code: string, method: "camera" | "manual") => {
+    const matches = lookupLineByBarcode([line], code);
+    if (!matches) {
+      toast.error(`Scanned code ${code} does not match ${line.product_name}.`);
+      return;
+    }
+    barcodeMutation.mutate({ lineId: line.id, code, method });
+  };
 
   const submitMutation = useMutation({
     mutationFn: () =>
@@ -263,22 +337,34 @@ function DigitalAuditPage() {
     );
   }
 
-  const validation = validateDigitalAuditSubmit(session);
+  const validation = validateDigitalAuditSubmit(session, { hasGps: Boolean(geo) });
+  const evidenceKeys = new Set(session.evidence.map((e) => e.bin_key));
+  const proofs = session.policy?.requiredProof ?? [];
+  const needsAfter = proofs.includes("before_after");
   const activeLines = activeBin ? (linesByBin.get(activeBin) ?? []) : [];
-  const binHasPhoto = session.evidence.some((e) => e.bin_key === activeBin);
-  const completedSkus = session?.lines.filter((l) => l.actual_qty != null).length;
-  const binsWithPhoto = session.bins.filter((bin) =>
-    session.evidence.some((e) => e.bin_key === bin),
-  ).length;
+  const binHasPhoto = activeBin ? evidenceKeys.has(activeBin) : false;
+  const binHasAfter = activeBin ? evidenceKeys.has(evidenceKey.after(activeBin)) : false;
+  const completedSkus = session.lines.filter((l) => l.actual_qty != null).length;
+  const binsWithPhoto = session.bins.filter((bin) => evidenceKeys.has(bin)).length;
+  const uploadingKey = photoMutation.isPending ? photoMutation.variables?.binKey : undefined;
+  const barcodeLine = scanLineId ? session.lines.find((l) => l.id === scanLineId) : undefined;
 
-  function handleBarcodeLookup() {
-    const line = lookupLineByBarcode(session?.lines, barcodeInput.trim());
+  function handleBarcodeFound(code: string, method: "camera" | "manual") {
+    const line = lookupLineByBarcode(session!.lines, code);
     if (!line) {
       toast.error("No matching SKU for that barcode.");
       return;
     }
     setActiveBin(line.bin_key);
-    toast.success(`Found ${line.product_name}`);
+    if (lineNeedsBarcode(session!, line) && line.barcode) {
+      barcodeMutation.mutate({ lineId: line.id, code, method });
+    } else {
+      toast.success(`Found ${line.product_name}`);
+    }
+  }
+
+  function handleBarcodeLookup() {
+    handleBarcodeFound(barcodeInput.trim(), "manual");
   }
 
   return (
@@ -297,18 +383,30 @@ function DigitalAuditPage() {
           pendingSync={pendingCount}
         />
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary">Incomplete until all SKUs + bin photos</Badge>
-          {geo ? (
-            <Badge variant="outline" className="gap-1">
-              <MapPin className="size-3" /> GPS captured
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="text-warning">
-              GPS unavailable
-            </Badge>
-          )}
-        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png"
+          capture="environment"
+          className="sr-only"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            const target = uploadTarget.current;
+            if (f && target) photoMutation.mutate({ binKey: target.key, file: f, video: target.video });
+          }}
+        />
+
+        <RequiredEvidencePanel
+          requirements={validation.requirements}
+          requireRca={session.require_rca}
+          policyLevel={session.policy?.level ?? null}
+          geo={Boolean(geo)}
+          geoPending={geoPending}
+          onRetryGps={requestLocation}
+          uploadingKey={uploadingKey}
+          onUploadProof={(proof) => pickEvidence(evidenceKey.proof(proof), proof === "live_session_video")}
+        />
 
         <section className="rounded-xl border border-border bg-card p-4">
           <h3 className="text-sm font-semibold">Barcode lookup</h3>
@@ -330,35 +428,48 @@ function DigitalAuditPage() {
 
         <BarcodeScannerDialog
           open={scanOpen}
-          onOpenChange={setScanOpen}
+          onOpenChange={(open) => {
+            setScanOpen(open);
+            if (!open) setScanLineId(null);
+          }}
           onScan={(code) => {
             setBarcodeInput(code);
-            const line = lookupLineByBarcode(session?.lines, code);
-            if (line) {
-              setActiveBin(line.bin_key);
-              toast.success(`Found ${line.product_name}`);
-            } else {
-              toast.error("No matching SKU for that barcode.");
-            }
+            if (barcodeLine) confirmBarcodeForLine(barcodeLine, code, "camera");
+            else handleBarcodeFound(code, "camera");
           }}
         />
 
         <section className="rounded-xl border border-border bg-card p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold">Import actual counts (CSV)</h3>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => csvRef.current?.click()}
-              disabled={csvMutation.isPending}
-            >
-              <Upload className="size-4" /> Upload CSV
-            </Button>
+            <h3 className="text-sm font-semibold">Import actual counts (CSV or Excel)</h3>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => downloadActualCountSheet(session)}
+              >
+                <Download className="size-4" /> Download count sheet
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => csvRef.current?.click()}
+                disabled={csvMutation.isPending}
+              >
+                {csvMutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Upload className="size-4" />
+                )}
+                Upload counts
+              </Button>
+            </div>
             <input
               ref={csvRef}
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               className="sr-only"
               onChange={(e) => {
                 const f = e.target.files?.[0];
@@ -368,14 +479,15 @@ function DigitalAuditPage() {
             />
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            CSV must include every assigned SKU. Columns: SKU, Item Code, Actual Qty, Location
-            (optional).
+            Download the count sheet, fill the <span className="font-medium">Actual Qty</span>{" "}
+            column, and upload it. Rows match by SKU, Item Code, Barcode or Product Name; blank
+            counts are skipped. Imported counts appear on each SKU below.
           </p>
         </section>
 
         <div className="flex flex-wrap gap-2">
           {session.bins.map((bin) => {
-            const hasPhoto = session.evidence.some((e) => e.bin_key === bin);
+            const hasPhoto = evidenceKeys.has(bin);
             return (
               <Button
                 key={bin}
@@ -397,36 +509,42 @@ function DigitalAuditPage() {
               <h3 className="font-semibold">
                 Shelf / bin: {activeBin === "default" ? "Main shelf" : activeBin}
               </h3>
-              <Button
-                type="button"
-                variant={binHasPhoto ? "outline" : "default"}
-                size="sm"
-                onClick={() => fileRef.current?.click()}
-                disabled={photoMutation.isPending}
-              >
-                {photoMutation.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Camera className="size-4" />
-                )}
-                {binHasPhoto ? "Replace photo" : "Add shelf photo (required)"}
-              </Button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/jpeg,image/png"
-                capture="environment"
-                className="sr-only"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  e.target.value = "";
-                  if (f) photoMutation.mutate({ binKey: activeBin, file: f });
-                }}
-              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant={binHasPhoto ? "outline" : "default"}
+                  size="sm"
+                  onClick={() => pickEvidence(activeBin)}
+                  disabled={photoMutation.isPending}
+                >
+                  {uploadingKey === activeBin ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Camera className="size-4" />
+                  )}
+                  {binHasPhoto ? "Replace shelf photo" : "Add shelf photo (required)"}
+                </Button>
+                {needsAfter ? (
+                  <Button
+                    type="button"
+                    variant={binHasAfter ? "outline" : "default"}
+                    size="sm"
+                    onClick={() => pickEvidence(evidenceKey.after(activeBin))}
+                    disabled={photoMutation.isPending}
+                  >
+                    {uploadingKey === evidenceKey.after(activeBin) ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Camera className="size-4" />
+                    )}
+                    {binHasAfter ? "Replace after photo" : "Add after photo (required)"}
+                  </Button>
+                ) : null}
+              </div>
             </div>
 
             {binHasPhoto ? (
-              <p className="text-xs text-success">Photo evidence attached for this bin.</p>
+              <p className="text-xs text-success">Shelf photo attached for this bin.</p>
             ) : (
               <p className="text-xs text-warning">Add a shelf photo before you can submit.</p>
             )}
@@ -434,9 +552,20 @@ function DigitalAuditPage() {
             <div className="space-y-4">
               {activeLines.map((line) => (
                 <LineEditor
-                  key={line.id}
+                  key={`${line.id}:${line.actual_qty ?? ""}:${line.rca_code ?? ""}:${line.rca_notes ?? ""}`}
                   line={line}
-                  saving={saveLineMutation.isPending}
+                  requireRca={session.require_rca}
+                  saving={saveLineMutation.isPending && saveLineMutation.variables?.lineId === line.id}
+                  needsPhoto={lineNeedsSkuPhoto(session, line)}
+                  hasPhoto={evidenceKeys.has(evidenceKey.sku(line.id))}
+                  photoUploading={uploadingKey === evidenceKey.sku(line.id)}
+                  onPhoto={() => pickEvidence(evidenceKey.sku(line.id))}
+                  needsBarcode={lineNeedsBarcode(session, line)}
+                  barcodeConfirmed={evidenceKeys.has(evidenceKey.barcode(line.id))}
+                  onScanBarcode={() => {
+                    setScanLineId(line.id);
+                    setScanOpen(true);
+                  }}
                   onSave={(actual, rca, notes) =>
                     saveLineMutation.mutate({
                       lineId: line.id,
@@ -453,15 +582,30 @@ function DigitalAuditPage() {
 
         {!validation.ok ? (
           <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
-            {validation.missingSkus.length > 0 && (
-              <p>Missing counts: {validation.missingSkus.length} SKU(s)</p>
-            )}
-            {validation.missingBins.length > 0 && (
-              <p>Missing bin photos: {validation.missingBins.join(", ")}</p>
-            )}
-            {validation.missingRca.length > 0 && (
-              <p>RCA required for {validation.missingRca.length} variance line(s)</p>
-            )}
+            <p className="font-medium">Before you can submit:</p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-5">
+              {validation.missingSkus.length > 0 && (
+                <li>Missing counts: {validation.missingSkus.length} SKU(s)</li>
+              )}
+              {validation.missingBins.length > 0 && (
+                <li>
+                  Missing shelf photos:{" "}
+                  {validation.missingBins.map((b) => (b === "default" ? "Main shelf" : b)).join(", ")}
+                </li>
+              )}
+              {validation.missingRca.length > 0 && (
+                <li>Reason required for {validation.missingRca.length} variance line(s)</li>
+              )}
+              {validation.missingOtherNotes.length > 0 && (
+                <li>Notes required when the reason is Other: {validation.missingOtherNotes.join(", ")}</li>
+              )}
+              {validation.unmetRequirements.map((req) => (
+                <li key={req.id}>
+                  {req.label}: {req.done}/{req.total}
+                  {req.missing.length ? ` — ${req.missing.slice(0, 3).join(", ")}${req.missing.length > 3 ? "…" : ""}` : ""}
+                </li>
+              ))}
+            </ul>
           </div>
         ) : null}
 
@@ -484,13 +628,147 @@ function DigitalAuditPage() {
   );
 }
 
+const PROOF_UPLOADS: EvidenceProof[] = ["live_session_video", "quarantine_contents", "sealed_container"];
+
+function RequiredEvidencePanel({
+  requirements,
+  requireRca,
+  policyLevel,
+  geo,
+  geoPending,
+  onRetryGps,
+  uploadingKey,
+  onUploadProof,
+}: {
+  requirements: EvidenceRequirement[];
+  requireRca: boolean;
+  policyLevel: string | null;
+  geo: boolean;
+  geoPending: boolean;
+  onRetryGps: () => void;
+  uploadingKey?: string;
+  onUploadProof: (proof: EvidenceProof) => void;
+}) {
+  const metCount = requirements.filter((r) => r.ok).length;
+  const gpsRequired = requirements.some((r) => r.id === "gps");
+  return (
+    <section className="rounded-xl border border-[#D9E2E8] bg-white p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="size-4 text-[#7DB7D6]" />
+          <h3 className="text-sm font-semibold text-[#102A43]">Required evidence</h3>
+          {policyLevel ? (
+            <Badge variant="outline" className="capitalize">
+              {policyLevel} assurance
+            </Badge>
+          ) : null}
+        </div>
+        <span className="text-xs tabular-nums text-[#667085]">
+          {metCount}/{requirements.length} complete
+        </span>
+      </div>
+      <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+        {requirements.map((req) => {
+          const proof = req.id as EvidenceProof;
+          const canUpload = PROOF_UPLOADS.includes(proof);
+          const uploading = uploadingKey === evidenceKey.proof(proof);
+          return (
+            <li
+              key={req.id}
+              className={`flex items-start gap-2 rounded-lg border p-2.5 text-xs ${
+                req.ok ? "border-[#D9E2E8] bg-white" : "border-[#FFEAF1] bg-[#FFEAF1]/50"
+              }`}
+            >
+              {req.ok ? (
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[#79E2A8]" />
+              ) : (
+                <CircleDashed className="mt-0.5 size-4 shrink-0 text-[#667085]" />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-medium text-[#102A43]">{req.label}</p>
+                  {req.total > 1 || req.id === "variance_photo" || req.id === "barcode" ? (
+                    <span className="tabular-nums text-[#667085]">
+                      {req.done}/{req.total}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-0.5 text-[#667085]">{req.hint}</p>
+                {canUpload ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={req.ok ? "ghost" : "outline"}
+                    className="mt-2 h-7 px-2 text-xs"
+                    disabled={uploading}
+                    onClick={() => onUploadProof(proof)}
+                  >
+                    {uploading ? (
+                      <Loader2 className="size-3 animate-spin" />
+                    ) : proof === "live_session_video" ? (
+                      <Video className="size-3" />
+                    ) : (
+                      <Camera className="size-3" />
+                    )}
+                    {req.ok ? "Replace" : proof === "live_session_video" ? "Upload video" : "Add photo"}
+                  </Button>
+                ) : null}
+                {req.id === "gps" && !req.ok ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="mt-2 h-7 px-2 text-xs"
+                    disabled={geoPending}
+                    onClick={onRetryGps}
+                  >
+                    {geoPending ? <Loader2 className="size-3 animate-spin" /> : <MapPin className="size-3" />}
+                    Retry location
+                  </Button>
+                ) : null}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="mt-3 flex flex-wrap gap-2 text-xs text-[#667085]">
+        <Badge variant="outline">SKU counts required for every line</Badge>
+        <Badge variant="outline">
+          {requireRca ? "Reason required for every variance" : "Variance reason optional"}
+        </Badge>
+        {!gpsRequired ? (
+          <Badge variant="outline" className="gap-1">
+            <MapPin className="size-3" /> {geo ? "GPS captured" : "GPS unavailable (optional)"}
+          </Badge>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
 function LineEditor({
   line,
+  requireRca,
   saving,
+  needsPhoto,
+  hasPhoto,
+  photoUploading,
+  onPhoto,
+  needsBarcode,
+  barcodeConfirmed,
+  onScanBarcode,
   onSave,
 }: {
   line: DigitalAuditLine;
+  requireRca: boolean;
   saving: boolean;
+  needsPhoto: boolean;
+  hasPhoto: boolean;
+  photoUploading: boolean;
+  onPhoto: () => void;
+  needsBarcode: boolean;
+  barcodeConfirmed: boolean;
+  onScanBarcode: () => void;
   onSave: (actual: number, rca: RcaCode | null, notes: string) => void;
 }) {
   const [actual, setActual] = useState(line.actual_qty?.toString() ?? "");
@@ -503,6 +781,11 @@ function LineEditor({
     line.mrp_inr,
   );
   const hasVariance = preview.variance_qty !== null && preview.variance_qty !== 0;
+  const countValid = actual !== "" && Number.isFinite(Number(actual)) && Number(actual) >= 0;
+  const dirty =
+    actual !== (line.actual_qty?.toString() ?? "") ||
+    rca !== (line.rca_code ?? "") ||
+    notes !== (line.rca_notes ?? "");
 
   return (
     <div className="rounded-lg border border-border/80 p-3">
@@ -535,7 +818,9 @@ function LineEditor({
         </div>
         {hasVariance ? (
           <div>
-            <Label className="text-xs">Reason for variance</Label>
+            <Label className="text-xs">
+              Reason for variance{requireRca ? "" : " (optional)"}
+            </Label>
             <Select value={rca} onValueChange={(v) => setRca(v as RcaCode)}>
               <SelectTrigger>
                 <SelectValue placeholder="Select reason" />
@@ -571,18 +856,71 @@ function LineEditor({
         </div>
       ) : null}
 
-      <Button
-        type="button"
-        size="sm"
-        className="mt-3"
-        variant="secondary"
-        disabled={saving || actual === "" || Number.isNaN(Number(actual))}
-        onClick={() =>
-          onSave(Number(actual), hasVariance ? (rca as RcaCode) || null : null, notes)
-        }
-      >
-        Save line
-      </Button>
+      {needsPhoto || hasPhoto || needsBarcode ? (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {needsPhoto || hasPhoto ? (
+            <Button
+              type="button"
+              size="sm"
+              variant={hasPhoto ? "ghost" : "outline"}
+              className="h-8 text-xs"
+              disabled={photoUploading}
+              onClick={onPhoto}
+            >
+              {photoUploading ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : hasPhoto ? (
+                <CheckCircle2 className="size-3.5 text-[#79E2A8]" />
+              ) : (
+                <Camera className="size-3.5" />
+              )}
+              {hasPhoto ? "SKU photo attached · Replace" : "Add SKU photo (required)"}
+            </Button>
+          ) : null}
+          {needsBarcode ? (
+            barcodeConfirmed ? (
+              <Badge variant="outline" className="gap-1 text-xs">
+                <CheckCircle2 className="size-3 text-[#79E2A8]" /> Barcode confirmed
+              </Badge>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={onScanBarcode}
+              >
+                <ScanBarcode className="size-3.5" /> Scan barcode (required)
+              </Button>
+            )
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="mt-3 flex items-center gap-3">
+        <Button
+          type="button"
+          size="sm"
+          variant="secondary"
+          disabled={saving || !countValid}
+          onClick={() =>
+            onSave(Number(actual), hasVariance ? (rca as RcaCode) || null : null, notes)
+          }
+        >
+          {saving ? <Loader2 className="size-4 animate-spin" /> : null}
+          Save line
+        </Button>
+        {line.actual_qty != null && !dirty ? (
+          <span className="flex items-center gap-1 text-xs text-[#667085]">
+            <CheckCircle2 className="size-3.5 text-[#79E2A8]" /> Saved: {line.actual_qty}
+          </span>
+        ) : dirty && line.actual_qty != null ? (
+          <span className="text-xs text-[#667085]">Unsaved change (saved: {line.actual_qty})</span>
+        ) : null}
+        {actual !== "" && !countValid ? (
+          <span className="text-xs text-destructive">Enter a count of 0 or more.</span>
+        ) : null}
+      </div>
     </div>
   );
 }

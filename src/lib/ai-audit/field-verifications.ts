@@ -72,6 +72,16 @@ export async function upsertFieldVerification(input: {
   aiValue: number | null;
   verifiedValue: number | null;
 }): Promise<void> {
+  if (!input.detectedProductId) {
+    // NULLs never conflict in the unique key, so each save would insert a duplicate row.
+    throw new Error("This row is not linked to a detected product and cannot be verified.");
+  }
+  if (
+    input.verifiedValue != null &&
+    (!Number.isFinite(input.verifiedValue) || input.verifiedValue < 0)
+  ) {
+    throw new Error("Verified value must be 0 or more.");
+  }
   const orgId = await requireOrgId();
   const userId = await requireUserId();
   const now = new Date().toISOString();

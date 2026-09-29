@@ -14,7 +14,7 @@ import {
 import { SLAIndicator } from "@/components/audit-governance/SLAIndicator";
 import { KpiCard } from "@/components/audit-governance/KpiCard";
 import { fetchAuditActivity } from "@/lib/audit-activity";
-import { loadDigitalAuditSession } from "@/lib/digital-audit";
+import { evidenceKeyLabel, loadDigitalAuditSession } from "@/lib/digital-audit";
 import { fetchFindings, findingTypeLabel, rcaLabel, syncFindingsForScan } from "@/lib/findings";
 import { fetchLifecycleActions } from "@/lib/corrective-action-lifecycle";
 import type { ScanResult } from "@/lib/scan-results";
@@ -69,7 +69,7 @@ export function AuditGovernanceTabs({ scanId, scanData, locked: lockedProp, audi
   const events = activityQuery.data ?? [];
   const digital = digitalQuery.data;
   const lines = digital?.lines ?? [];
-  const evidence = digital?.evidence ?? [];
+  const evidence = (digital?.evidence ?? []).filter((e) => e.storage_path);
   const findingsTabLabel = findingsQuery.isPending
     ? "Findings (…)"
     : findingsQuery.isError
@@ -205,7 +205,9 @@ export function AuditGovernanceTabs({ scanId, scanData, locked: lockedProp, audi
               ) : null}
               {evidence.map((ev) => (
                 <figure key={ev.id} className="overflow-hidden rounded-xl border border-border">
-                  {ev.signed_url ? (
+                  {ev.signed_url && ev.media_type === "video" ? (
+                    <video src={ev.signed_url} controls className="aspect-[4/3] w-full bg-black object-contain" />
+                  ) : ev.signed_url ? (
                     <img src={ev.signed_url} alt="Audit evidence" className="aspect-[4/3] w-full object-cover" />
                   ) : (
                     <div className="flex aspect-[4/3] items-center justify-center bg-muted text-sm text-muted-foreground">
@@ -213,7 +215,7 @@ export function AuditGovernanceTabs({ scanId, scanData, locked: lockedProp, audi
                     </div>
                   )}
                   <figcaption className="px-3 py-2 text-xs text-muted-foreground">
-                    {ev.bin_key} · {new Date(ev.captured_at).toLocaleString()}
+                    {evidenceKeyLabel(ev, lines)} · {new Date(ev.captured_at).toLocaleString()}
                   </figcaption>
                 </figure>
               ))}

@@ -14,6 +14,11 @@ import {
   type ScopeValues,
 } from "@/lib/assignments";
 import { ACCEPTED_TYPES, MAX_FILE_BYTES, validateScanFile } from "@/lib/scan-api";
+import {
+  EVIDENCE_PROOF_OPTIONS,
+  type AuditEvidencePolicy,
+  type EvidenceProof,
+} from "@/lib/audit-evidence-policy";
 
 export type AuditMode = "ai" | "digital";
 export type SubmissionStatus =
@@ -72,12 +77,22 @@ export type DigitalAuditLine = {
   planogram_item_id: string | null;
 };
 
+export type AuditEvidenceKind = "bin" | "sku" | "after" | "barcode" | "proof";
+
 export type AuditEvidence = {
   id: string;
   bin_key: string;
+  kind: AuditEvidenceKind;
+  /** Line id for sku/barcode evidence, bin for after photos, proof name for proof evidence. */
+  target: string;
   storage_path: string;
   signed_url?: string;
   captured_at: string;
+  lat?: number | null;
+  lng?: number | null;
+  media_type?: "image" | "video" | null;
+  barcode_code?: string | null;
+  barcode_method?: string | null;
 };
 
 export type DigitalAuditSession = {
@@ -89,7 +104,60 @@ export type DigitalAuditSession = {
   lines: DigitalAuditLine[];
   evidence: AuditEvidence[];
   bins: string[];
+  /** Evidence policy selected when the audit was assigned (null for legacy assignments). */
+  policy: AuditEvidencePolicy | null;
+  require_rca: boolean;
 };
+
+export const evidenceKey = {
+  sku: (lineId: string) => `sku:${lineId}`,
+  after: (bin: string) => `after:${bin}`,
+  barcode: (lineId: string) => `barcode:${lineId}`,
+  proof: (proof: EvidenceProof) => `proof:${proof}`,
+};
+
+export function parseEvidenceKey(key: string): { kind: AuditEvidenceKind; target: string } {
+  const match = /^(sku|after|barcode|proof):(.+)$/.exec(key);
+  if (!match) return { kind: "bin", target: key };
+  return { kind: match[1] as AuditEvidenceKind, target: match[2]! };
+}
+
+export function evidenceKeyLabel(
+  evidence: Pick<AuditEvidence, "kind" | "target" | "bin_key">,
+  lines: DigitalAuditLine[] = [],
+): string {
+  const lineName = (id: string) => lines.find((l) => l.id === id)?.product_name ?? "SKU";
+  switch (evidence.kind) {
+    case "sku":
+      return `SKU photo · ${lineName(evidence.target)}`;
+    case "after":
+      return `After photo · ${evidence.target === "default" ? "Main shelf" : evidence.target}`;
+    case "barcode":
+      return `Barcode · ${lineName(evidence.target)}`;
+    case "proof":
+      return (
+        EVIDENCE_PROOF_OPTIONS.find((o) => o.value === evidence.target)?.label ?? evidence.target
+      );
+    default:
+      return evidence.bin_key === "default" ? "Main shelf" : evidence.bin_key;
+  }
+}
+
+function parseEvidencePolicy(raw: unknown): AuditEvidencePolicy | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Partial<AuditEvidencePolicy>;
+  if (!Array.isArray(value.requiredProof)) return null;
+  const known = new Set(EVIDENCE_PROOF_OPTIONS.map((o) => o.value));
+  return {
+    level: value.level ?? "custom",
+    requiredProof: value.requiredProof.filter((p): p is EvidenceProof => known.has(p)),
+    captureSource: value.captureSource ?? "either",
+    minimumPhotos: Math.max(0, Number(value.minimumPhotos) || 0),
+    maximumEvidenceAgeMinutes: Number(value.maximumEvidenceAgeMinutes) || 0,
+    qualityChecks: Array.isArray(value.qualityChecks) ? value.qualityChecks : [],
+    reviewMode: value.reviewMode ?? "manager",
+  };
+}
 
 export const DEFAULT_GEOFENCE_M = 200;
 
@@ -354,19 +422,42 @@ export async function loadDigitalAuditSession(scanId: string): Promise<DigitalAu
     .maybeSingle();
   if (error || !scan) dbError(error, "Could not load this audit.");
 
-  const [{ data: lines }, { data: evidence }] = await Promise.all([
+  const assignmentId = (scan.assignment_id as string | null) ?? null;
+  const [{ data: lines }, { data: evidence }, assignmentRes] = await Promise.all([
     supabase.from("digital_audit_lines").select("*").eq("scan_id", scanId).order("bin_key"),
     supabase.from("audit_evidence").select("*").eq("scan_id", scanId),
+    assignmentId
+      ? supabase
+          .from("scan_assignments")
+          .select("evidence_policy, require_rca, template_snapshot")
+          .eq("id", assignmentId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
+
+  const assignmentRow = (assignmentRes as { data: Record<string, unknown> | null }).data;
+  const snapshot = assignmentRow?.template_snapshot as { evidence_policy?: unknown } | null;
+  const policy =
+    parseEvidencePolicy(assignmentRow?.evidence_policy) ??
+    parseEvidencePolicy(snapshot?.evidence_policy);
+  const requireRca = assignmentRow?.require_rca == null ? true : Boolean(assignmentRow.require_rca);
 
   const mappedLines = (lines ?? []).map(mapLineRow);
   const bins = [...new Set(mappedLines.map((l) => l.bin_key))];
 
   const evidenceRows = await Promise.all(
     (evidence ?? []).map(async (row) => {
-      const path = row.storage_path as string;
+      const path = (row.storage_path as string | null) ?? "";
+      const binKey = row.bin_key as string;
+      const parsed = parseEvidenceKey(binKey);
+      const device = (row.device_info ?? {}) as {
+        kind?: string;
+        code?: string;
+        method?: string;
+        media_type?: "image" | "video";
+      };
       let signedUrl: string | undefined;
-      for (const bucket of ["audit-evidence", "scan-images"] as const) {
+      for (const bucket of path ? (["audit-evidence", "scan-images"] as const) : []) {
         try {
           const signed = await Promise.race([
             supabase.storage.from(bucket).createSignedUrl(path, 3600),
@@ -380,13 +471,21 @@ export async function loadDigitalAuditSession(scanId: string): Promise<DigitalAu
           /* try next bucket */
         }
       }
-      return {
+      const evidence: AuditEvidence = {
         id: row.id as string,
-        bin_key: row.bin_key as string,
+        bin_key: binKey,
+        kind: parsed.kind,
+        target: parsed.target,
         storage_path: path,
         signed_url: signedUrl,
         captured_at: row.captured_at as string,
+        lat: row.lat == null ? null : Number(row.lat),
+        lng: row.lng == null ? null : Number(row.lng),
+        media_type: path ? (device.media_type ?? "image") : null,
+        barcode_code: parsed.kind === "barcode" ? (device.code ?? null) : null,
+        barcode_method: parsed.kind === "barcode" ? (device.method ?? null) : null,
       };
+      return evidence;
     }),
   );
 
@@ -394,7 +493,7 @@ export async function loadDigitalAuditSession(scanId: string): Promise<DigitalAu
 
   return {
     scan_id: scanId,
-    assignment_id: (scan.assignment_id as string) ?? "",
+    assignment_id: assignmentId ?? "",
     store_id: scan.store_id as string,
     store_name: store?.name ?? "Store",
     submission_status: ((scan as { submission_status?: string }).submission_status ??
@@ -402,6 +501,8 @@ export async function loadDigitalAuditSession(scanId: string): Promise<DigitalAu
     lines: mappedLines,
     evidence: evidenceRows,
     bins,
+    policy,
+    require_rca: requireRca,
   };
 }
 
@@ -472,19 +573,29 @@ export async function uploadBinEvidence(input: {
   lat?: number | null;
   lng?: number | null;
   accuracyM?: number | null;
+  /** Allow a short video (session recording proof) instead of a photo. */
+  allowVideo?: boolean;
 }): Promise<void> {
-  const invalid = validateScanFile(input.file);
-  if (invalid) throw new Error(invalid);
+  const isVideo = Boolean(input.allowVideo) && isVideoFile(input.file);
+  if (isVideo) {
+    if (input.file.size > MAX_EVIDENCE_VIDEO_BYTES) {
+      throw new Error("Session video is too large. Upload a clip under 100 MB.");
+    }
+  } else {
+    const invalid = validateScanFile(input.file);
+    if (invalid) throw new Error(invalid);
+  }
   const orgId = await requireOrgId();
   const userId = await requireUserId();
 
-  const ext = input.file.name.includes(".") ? input.file.name.split(".").pop() : "jpg";
-  const storagePath = `${orgId}/${input.scanId}/evidence/${input.binKey}-${Date.now()}.${ext}`;
+  const ext = input.file.name.includes(".") ? input.file.name.split(".").pop() : isVideo ? "mp4" : "jpg";
+  const safeKey = input.binKey.replace(/[^a-zA-Z0-9_-]+/g, "_");
+  const storagePath = `${orgId}/${input.scanId}/evidence/${safeKey}-${Date.now()}.${ext}`;
 
   const { error: uploadErr } = await supabase.storage
     .from("scan-images")
     .upload(storagePath, input.file, { contentType: input.file.type, upsert: true });
-  if (uploadErr) dbError(uploadErr, "Could not upload the shelf photo.");
+  if (uploadErr) dbError(uploadErr, isVideo ? "Could not upload the session video." : "Could not upload the photo.");
 
   const { error: upsertErr } = await supabase.from("audit_evidence").upsert(
     {
@@ -496,12 +607,20 @@ export async function uploadBinEvidence(input: {
       lng: input.lng ?? null,
       accuracy_m: input.accuracyM ?? null,
       captured_by: userId,
-      device_info: { userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null },
+      device_info: {
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+        media_type: isVideo ? "video" : "image",
+        file_modified_at: input.file.lastModified
+          ? new Date(input.file.lastModified).toISOString()
+          : null,
+      },
       captured_at: new Date().toISOString(),
     },
     { onConflict: "scan_id,bin_key" },
   );
   if (upsertErr) dbError(upsertErr, "Could not save evidence metadata.");
+
+  if (parseEvidenceKey(input.binKey).kind !== "bin") return;
 
   // FNV QC: when this assignment is an FNV template, run Astra visual disposition.
   try {
@@ -567,62 +686,521 @@ function normalizeKey(value: string | null | undefined): string {
   return (value ?? "").trim().toLowerCase();
 }
 
-/** Match CSV row to audit line by sku, item_code, or product_name+location. */
-function matchCsvRowToLine(
-  row: Record<string, string>,
-  lines: DigitalAuditLine[],
-): DigitalAuditLine | undefined {
-  const sku = normalizeKey(row["sku"] ?? row["sku id"] ?? row["skuid"]);
-  const itemCode = normalizeKey(row["item code"] ?? row["item_code"]);
-  const product = normalizeKey(row["product name"] ?? row["product_name"] ?? row["product"]);
-  const location = normalizeKey(row["location"] ?? row["bin"] ?? row["shelf"]);
+export const MAX_EVIDENCE_VIDEO_BYTES = 100 * 1024 * 1024;
 
-  return lines.find((line) => {
-    if (sku && normalizeKey(line.sku) === sku) return true;
-    if (itemCode && normalizeKey(line.item_code) === itemCode) return true;
-    if (product && normalizeKey(line.product_name) === product) {
-      if (!location) return true;
-      return normalizeKey(line.location) === location || normalizeKey(line.bin_key) === location;
+export function isVideoFile(file: File): boolean {
+  return file.type.toLowerCase().startsWith("video/") || /\.(mp4|mov|webm|m4v)$/i.test(file.name);
+}
+
+/** Record a barcode scan that confirms product identity for one audit line. */
+export async function recordBarcodeConfirmation(input: {
+  scanId: string;
+  lineId: string;
+  code: string;
+  method: "camera" | "manual";
+  lat?: number | null;
+  lng?: number | null;
+}): Promise<void> {
+  const orgId = await requireOrgId();
+  const userId = await requireUserId();
+  const { error } = await supabase.from("audit_evidence").upsert(
+    {
+      scan_id: input.scanId,
+      org_id: orgId,
+      bin_key: evidenceKey.barcode(input.lineId),
+      storage_path: "",
+      lat: input.lat ?? null,
+      lng: input.lng ?? null,
+      captured_by: userId,
+      device_info: {
+        kind: "barcode",
+        code: input.code,
+        method: input.method,
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+      },
+      captured_at: new Date().toISOString(),
+    },
+    { onConflict: "scan_id,bin_key" },
+  );
+  if (error) dbError(error, "Could not save the barcode confirmation.");
+}
+
+/* ------------------------------------------------------------------ */
+/* Actual-count import (CSV / Excel)                                   */
+/* ------------------------------------------------------------------ */
+
+const QTY_HEADERS = [
+  "actual qty",
+  "actual quantity",
+  "actual",
+  "actual count",
+  "actual units",
+  "actual stock",
+  "counted qty",
+  "counted quantity",
+  "counted",
+  "count",
+  "physical qty",
+  "physical quantity",
+  "physical count",
+  "physical stock",
+  "on hand",
+  "on hand qty",
+  "stock count",
+  "qty",
+  "quantity",
+];
+const SKU_HEADERS = ["sku", "sku id", "skuid", "sku code", "article", "article code", "article no", "material"];
+const ITEM_CODE_HEADERS = ["item code", "itemcode", "item no", "item number", "product code", "code"];
+const BARCODE_HEADERS = ["barcode", "ean", "ean code", "upc", "gtin"];
+const PRODUCT_HEADERS = [
+  "product name",
+  "product",
+  "item name",
+  "item",
+  "description",
+  "product description",
+  "name",
+];
+const LOCATION_HEADERS = ["location", "bin", "shelf", "aisle", "bay", "bin location"];
+
+function normalizeHeader(raw: string): string {
+  return raw
+    .replace(/^\uFEFF/, "")
+    .replace(/\(.*?\)/g, " ")
+    .toLowerCase()
+    .replace(/[_\-.#/]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeCode(value: string | null | undefined): string {
+  return (value ?? "").trim().toLowerCase().replace(/^'+/, "").replace(/\.0+$/, "");
+}
+
+function detectDelimiter(headerLine: string): string {
+  const counts = [",", ";", "\t"].map((d) => ({ d, n: headerLine.split(d).length }));
+  counts.sort((a, b) => b.n - a.n);
+  return counts[0]!.n > 1 ? counts[0]!.d : ",";
+}
+
+/** RFC-4180 style parser: quoted cells, escaped quotes, newlines inside quotes. */
+export function parseDelimitedText(text: string): string[][] {
+  const clean = text.replace(/^\uFEFF/, "");
+  const firstLine = clean.split(/\r?\n/, 1)[0] ?? "";
+  const delimiter = detectDelimiter(firstLine);
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let inQuotes = false;
+  for (let i = 0; i < clean.length; i++) {
+    const ch = clean[i]!;
+    if (inQuotes) {
+      if (ch === '"') {
+        if (clean[i + 1] === '"') {
+          cell += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        cell += ch;
+      }
+      continue;
     }
-    return false;
-  });
+    if (ch === '"') inQuotes = true;
+    else if (ch === delimiter) {
+      row.push(cell);
+      cell = "";
+    } else if (ch === "\n" || ch === "\r") {
+      if (ch === "\r" && clean[i + 1] === "\n") i++;
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+    } else {
+      cell += ch;
+    }
+  }
+  if (cell !== "" || row.length) {
+    row.push(cell);
+    rows.push(row);
+  }
+  return rows
+    .map((r) => r.map((c) => c.trim()))
+    .filter((r) => r.some((c) => c !== ""));
+}
+
+async function readCountFileMatrix(file: File): Promise<string[][]> {
+  const lower = file.name.toLowerCase();
+  if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
+    const XLSX = await import("xlsx");
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]!];
+    if (!sheet) throw new Error("The workbook has no sheets.");
+    const matrix = XLSX.utils.sheet_to_json<(string | number | boolean | null)[]>(sheet, {
+      header: 1,
+      defval: "",
+      raw: false,
+    });
+    return matrix
+      .map((r) => (r ?? []).map((c) => (c == null ? "" : String(c).trim())))
+      .filter((r) => r.some((c) => c !== ""));
+  }
+  return parseDelimitedText(await file.text());
+}
+
+export type ActualCountImportResult = {
+  updated: number;
+  totalRows: number;
+  blankRows: number;
+  unmatched: string[];
+  invalid: string[];
+  remainingUncounted: number;
+};
+
+function findColumn(headers: string[], aliases: string[]): number {
+  for (const alias of aliases) {
+    const idx = headers.indexOf(alias);
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
+
+function lineCodes(line: DigitalAuditLine): string[] {
+  return [line.sku, line.item_code, line.barcode].map(normalizeCode).filter(Boolean);
+}
+
+async function importActualMatrix(
+  scanId: string,
+  matrix: string[][],
+): Promise<ActualCountImportResult> {
+  if (matrix.length < 2) {
+    throw new Error("The file has no data rows. Add one row per SKU under the header row.");
+  }
+  const headers = matrix[0]!.map(normalizeHeader);
+  const qtyCol = findColumn(headers, QTY_HEADERS);
+  if (qtyCol < 0) {
+    throw new Error(
+      'No actual-count column found. Add a column named "Actual Qty" (use "Download count sheet" for the exact format).',
+    );
+  }
+  const skuCol = findColumn(headers, SKU_HEADERS);
+  const itemCol = findColumn(headers, ITEM_CODE_HEADERS);
+  const barcodeCol = findColumn(headers, BARCODE_HEADERS);
+  const productCol = findColumn(headers, PRODUCT_HEADERS);
+  const locationCol = findColumn(headers, LOCATION_HEADERS);
+  if (skuCol < 0 && itemCol < 0 && barcodeCol < 0 && productCol < 0) {
+    throw new Error(
+      "No product identifier column found. Include SKU, Item Code, Barcode or Product Name.",
+    );
+  }
+
+  const session = await loadDigitalAuditSession(scanId);
+  const used = new Set<string>();
+  const updates: Array<{ line: DigitalAuditLine; actual: number }> = [];
+  const unmatched: string[] = [];
+  const invalid: string[] = [];
+  let blankRows = 0;
+  const cell = (row: string[], col: number) => (col >= 0 ? (row[col] ?? "").trim() : "");
+
+  for (const row of matrix.slice(1)) {
+    const rawQty = cell(row, qtyCol).replace(/,/g, "");
+    const rowCodes = [cell(row, skuCol), cell(row, itemCol), cell(row, barcodeCol)]
+      .map(normalizeCode)
+      .filter(Boolean);
+    const product = cell(row, productCol).toLowerCase();
+    const location = cell(row, locationCol).toLowerCase();
+    const label = cell(row, productCol) || cell(row, skuCol) || cell(row, itemCol) || cell(row, barcodeCol) || "row";
+
+    if (rawQty === "") {
+      blankRows++;
+      continue;
+    }
+    const actual = Number(rawQty);
+    if (!Number.isFinite(actual) || actual < 0) {
+      invalid.push(`${label} ("${rawQty}")`);
+      continue;
+    }
+
+    const candidates = session.lines.filter((line) => {
+      if (used.has(line.id)) return false;
+      if (rowCodes.length && lineCodes(line).some((c) => rowCodes.includes(c))) return true;
+      return !rowCodes.length && product !== "" && line.product_name.trim().toLowerCase() === product;
+    });
+    const byProductFallback =
+      !candidates.length && rowCodes.length && product
+        ? session.lines.filter(
+            (line) => !used.has(line.id) && line.product_name.trim().toLowerCase() === product,
+          )
+        : [];
+    const pool = candidates.length ? candidates : byProductFallback;
+    const match =
+      (location
+        ? pool.find(
+            (l) =>
+              l.location.trim().toLowerCase() === location ||
+              l.bin_key.trim().toLowerCase() === location,
+          )
+        : undefined) ?? pool[0];
+    if (!match) {
+      unmatched.push(label);
+      continue;
+    }
+    used.add(match.id);
+    updates.push({ line: match, actual });
+  }
+
+  if (!updates.length) {
+    if (invalid.length) {
+      throw new Error(`Actual counts must be non-negative numbers. Check: ${invalid.slice(0, 5).join(", ")}.`);
+    }
+    if (blankRows === matrix.length - 1) {
+      throw new Error('The "Actual Qty" column is empty. Enter the counted quantity for each SKU.');
+    }
+    throw new Error(
+      `None of the rows matched this audit's SKUs (${unmatched.slice(0, 5).join(", ")}). Match by SKU, Item Code, Barcode or Product Name.`,
+    );
+  }
+
+  const BATCH = 8;
+  for (let i = 0; i < updates.length; i += BATCH) {
+    await Promise.all(
+      updates.slice(i, i + BATCH).map(({ line, actual }) =>
+        updateDigitalAuditLine({
+          lineId: line.id,
+          actual_qty: actual,
+          rca_code: line.rca_code,
+          rca_notes: line.rca_notes,
+        }),
+      ),
+    );
+  }
+
+  const countedIds = new Set(updates.map((u) => u.line.id));
+  const remainingUncounted = session.lines.filter(
+    (l) => l.actual_qty === null && !countedIds.has(l.id),
+  ).length;
+
+  return {
+    updated: updates.length,
+    totalRows: matrix.length - 1,
+    blankRows,
+    unmatched,
+    invalid,
+    remainingUncounted,
+  };
+}
+
+export async function importActualCountsFile(
+  scanId: string,
+  file: File,
+): Promise<ActualCountImportResult> {
+  return importActualMatrix(scanId, await readCountFileMatrix(file));
 }
 
 export async function importActualCsv(scanId: string, csvText: string): Promise<number> {
-  const session = await loadDigitalAuditSession(scanId);
-  const rows = parseSimpleCsv(csvText);
-  if (!rows.length) throw new Error("The CSV file is empty.");
-
-  let updated = 0;
-  for (const row of rows) {
-    const line = matchCsvRowToLine(row, session.lines);
-    if (!line) continue;
-    const qtyRaw = row["actual qty"] ?? row["actual_qty"] ?? row["qty"] ?? row["actual"];
-    const actual = Number(qtyRaw);
-    if (Number.isNaN(actual)) continue;
-    await updateDigitalAuditLine({
-      lineId: line.id,
-      actual_qty: actual,
-      rca_code: line.rca_code,
-      rca_notes: line.rca_notes,
-    });
-    updated++;
-  }
-  return updated;
+  const result = await importActualMatrix(scanId, parseDelimitedText(csvText));
+  return result.updated;
 }
 
-function parseSimpleCsv(text: string): Record<string, string>[] {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim());
-  if (lines.length < 2) return [];
-  const headers = lines[0]!.split(",").map((h) => h.trim().toLowerCase());
-  return lines.slice(1).map((line) => {
-    const cells = line.split(",").map((c) => c.trim());
-    const row: Record<string, string> = {};
-    headers.forEach((h, i) => {
-      row[h] = cells[i] ?? "";
+/** Count sheet for field teams: every assigned SKU with an Actual Qty column to fill. */
+export function downloadActualCountSheet(session: DigitalAuditSession): void {
+  const headers = ["Location", "Product Name", "SKU", "Item Code", "Barcode", "Expected Qty", "Actual Qty"];
+  const rows = session.lines.map((line) =>
+    [
+      line.location,
+      line.product_name,
+      line.sku ?? "",
+      line.item_code ?? "",
+      line.barcode ?? "",
+      line.expected_qty,
+      line.actual_qty ?? "",
+    ]
+      .map(csvEscape)
+      .join(","),
+  );
+  const safeStore = session.store_name.replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "");
+  downloadCsvFile(`count-sheet-${safeStore || "audit"}.csv`, [headers.join(","), ...rows].join("\n"));
+}
+
+/* ------------------------------------------------------------------ */
+/* Evidence requirements + submit validation                           */
+/* ------------------------------------------------------------------ */
+
+export type EvidenceRequirement = {
+  id: EvidenceProof | "minimum_photos";
+  label: string;
+  hint: string;
+  done: number;
+  total: number;
+  ok: boolean;
+  /** Missing targets (bins or product names) for inline guidance. */
+  missing: string[];
+};
+
+function lineHasVariance(line: DigitalAuditLine): boolean {
+  if (line.actual_qty === null) return false;
+  const v = computeLineVariance(line.expected_qty, line.actual_qty, line.mrp_inr);
+  return v.variance_qty !== null && v.variance_qty !== 0;
+}
+
+export function lineNeedsSkuPhoto(session: DigitalAuditSession, line: DigitalAuditLine): boolean {
+  const proofs = session.policy?.requiredProof ?? [];
+  if (proofs.includes("per_sku_photo")) return true;
+  return proofs.includes("variance_photo") && lineHasVariance(line);
+}
+
+export function lineNeedsBarcode(session: DigitalAuditSession, line: DigitalAuditLine): boolean {
+  return Boolean(session.policy?.requiredProof.includes("barcode") && line.barcode?.trim());
+}
+
+const binLabel = (bin: string) => (bin === "default" ? "Main shelf" : bin);
+
+export function evaluateEvidenceRequirements(
+  session: DigitalAuditSession,
+  opts: { hasGps: boolean },
+): EvidenceRequirement[] {
+  const keys = new Set(session.evidence.map((e) => e.bin_key));
+  const proofs = new Set<EvidenceProof>(session.policy?.requiredProof ?? []);
+  proofs.add("context_photo");
+  const labelOf = (p: EvidenceProof) =>
+    EVIDENCE_PROOF_OPTIONS.find((o) => o.value === p)?.label ?? p;
+  const out: EvidenceRequirement[] = [];
+
+  for (const proof of EVIDENCE_PROOF_OPTIONS.map((o) => o.value)) {
+    if (!proofs.has(proof)) continue;
+    switch (proof) {
+      case "context_photo": {
+        const missing = session.bins.filter((b) => !keys.has(b));
+        out.push({
+          id: proof,
+          label: labelOf(proof),
+          hint: "One shelf photo per shelf / bin.",
+          done: session.bins.length - missing.length,
+          total: session.bins.length,
+          ok: missing.length === 0,
+          missing: missing.map(binLabel),
+        });
+        break;
+      }
+      case "per_sku_photo": {
+        const missing = session.lines.filter((l) => !keys.has(evidenceKey.sku(l.id)));
+        out.push({
+          id: proof,
+          label: labelOf(proof),
+          hint: "Add a photo on every SKU line.",
+          done: session.lines.length - missing.length,
+          total: session.lines.length,
+          ok: missing.length === 0,
+          missing: missing.map((l) => l.product_name),
+        });
+        break;
+      }
+      case "variance_photo": {
+        const varianceLines = session.lines.filter(lineHasVariance);
+        const missing = varianceLines.filter((l) => !keys.has(evidenceKey.sku(l.id)));
+        out.push({
+          id: proof,
+          label: labelOf(proof),
+          hint: varianceLines.length
+            ? "Add a photo on every SKU where actual differs from expected."
+            : "No variances so far — required only when actual differs from expected.",
+          done: varianceLines.length - missing.length,
+          total: varianceLines.length,
+          ok: missing.length === 0,
+          missing: missing.map((l) => l.product_name),
+        });
+        break;
+      }
+      case "before_after": {
+        const missing = session.bins.filter((b) => !keys.has(evidenceKey.after(b)));
+        out.push({
+          id: proof,
+          label: labelOf(proof),
+          hint: "Shelf photo is the before; add an after photo per shelf / bin.",
+          done: session.bins.length - missing.length,
+          total: session.bins.length,
+          ok: missing.length === 0,
+          missing: missing.map(binLabel),
+        });
+        break;
+      }
+      case "barcode": {
+        const needLines = session.lines.filter((l) => l.barcode?.trim());
+        const missing = needLines.filter((l) => !keys.has(evidenceKey.barcode(l.id)));
+        out.push({
+          id: proof,
+          label: labelOf(proof),
+          hint: needLines.length
+            ? "Scan the barcode of each SKU that has one."
+            : "No assigned SKU has a barcode on file — nothing to scan.",
+          done: needLines.length - missing.length,
+          total: needLines.length,
+          ok: missing.length === 0,
+          missing: missing.map((l) => l.product_name),
+        });
+        break;
+      }
+      case "gps":
+        out.push({
+          id: proof,
+          label: labelOf(proof),
+          hint: opts.hasGps ? "Location captured." : "Allow location access in your browser.",
+          done: opts.hasGps ? 1 : 0,
+          total: 1,
+          ok: opts.hasGps,
+          missing: opts.hasGps ? [] : ["Location"],
+        });
+        break;
+      case "device_metadata":
+        out.push({
+          id: proof,
+          label: labelOf(proof),
+          hint: "Captured automatically with every photo and on submit.",
+          done: 1,
+          total: 1,
+          ok: true,
+          missing: [],
+        });
+        break;
+      case "live_session_video":
+      case "quarantine_contents":
+      case "sealed_container": {
+        const has = keys.has(evidenceKey.proof(proof));
+        out.push({
+          id: proof,
+          label: labelOf(proof),
+          hint:
+            proof === "live_session_video"
+              ? "Upload a short video of the audit walk."
+              : proof === "quarantine_contents"
+                ? "Photo of removed or held stock."
+                : "Photo of the sealed bag / container showing the seal ID.",
+          done: has ? 1 : 0,
+          total: 1,
+          ok: has,
+          missing: has ? [] : [labelOf(proof)],
+        });
+        break;
+      }
+    }
+  }
+
+  const minimum = session.policy?.minimumPhotos ?? 0;
+  const photoCount = session.evidence.filter((e) => e.storage_path).length;
+  if (minimum > 1) {
+    out.push({
+      id: "minimum_photos",
+      label: `Minimum ${minimum} photos`,
+      hint: "Total photos across the audit.",
+      done: Math.min(photoCount, minimum),
+      total: minimum,
+      ok: photoCount >= minimum,
+      missing: photoCount >= minimum ? [] : [`${minimum - photoCount} more photo(s)`],
     });
-    return row;
-  });
+  }
+  return out;
 }
 
 export type SubmitValidation = {
@@ -631,28 +1209,38 @@ export type SubmitValidation = {
   missingBins: string[];
   missingRca: string[];
   missingOtherNotes: string[];
+  requirements: EvidenceRequirement[];
+  unmetRequirements: EvidenceRequirement[];
 };
 
-export function validateDigitalAuditSubmit(session: DigitalAuditSession): SubmitValidation {
+export function validateDigitalAuditSubmit(
+  session: DigitalAuditSession,
+  opts: { hasGps?: boolean } = {},
+): SubmitValidation {
   const missingSkus = session.lines
     .filter((l) => l.actual_qty === null)
     .map((l) => l.product_name);
-  const evidenceBins = new Set(session.evidence.map((e) => e.bin_key));
-  const missingBins = session.bins.filter((b) => !evidenceBins.has(b));
-  const missingRca = session.lines
-    .filter((l) => {
-      if (l.actual_qty === null) return false;
-      const v = computeLineVariance(l.expected_qty, l.actual_qty, l.mrp_inr);
-      return v.variance_qty !== 0 && !l.rca_code;
-    })
-    .map((l) => l.product_name);
+  const evidenceKeys = new Set(session.evidence.map((e) => e.bin_key));
+  const missingBins = session.bins.filter((b) => !evidenceKeys.has(b));
+  const missingRca = session.require_rca
+    ? session.lines.filter((l) => lineHasVariance(l) && !l.rca_code).map((l) => l.product_name)
+    : [];
   const missingOtherNotes = session.lines.filter((l) => l.rca_code === "other" && !l.rca_notes?.trim());
+  const requirements = evaluateEvidenceRequirements(session, { hasGps: Boolean(opts.hasGps) });
+  const unmetRequirements = requirements.filter((r) => !r.ok && r.id !== "context_photo");
   return {
-    ok: missingSkus.length === 0 && missingBins.length === 0 && missingRca.length === 0 && missingOtherNotes.length === 0,
+    ok:
+      missingSkus.length === 0 &&
+      missingBins.length === 0 &&
+      missingRca.length === 0 &&
+      missingOtherNotes.length === 0 &&
+      unmetRequirements.length === 0,
     missingSkus,
     missingBins,
     missingRca,
     missingOtherNotes: missingOtherNotes.map((l) => l.product_name),
+    requirements,
+    unmetRequirements,
   };
 }
 
@@ -663,7 +1251,9 @@ export async function submitDigitalAudit(input: {
   lng?: number | null;
 }): Promise<void> {
   const session = await loadDigitalAuditSession(input.scanId);
-  const validation = validateDigitalAuditSubmit(session);
+  const validation = validateDigitalAuditSubmit(session, {
+    hasGps: input.lat != null && input.lng != null,
+  });
   if (!validation.ok) {
     const parts: string[] = [];
     if (validation.missingSkus.length) {
@@ -677,6 +1267,9 @@ export async function submitDigitalAudit(input: {
     }
     if (validation.missingOtherNotes.length) {
       parts.push("Notes are required when RCA is Other.");
+    }
+    for (const req of validation.unmetRequirements) {
+      parts.push(`${req.label}: ${req.done}/${req.total} done.`);
     }
     throw new Error(parts.join(" "));
   }

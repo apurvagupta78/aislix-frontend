@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton, ErrorState } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
 import {
+  evaluateEvidenceRequirements,
   loadDigitalAuditSession,
   RCA_OPTIONS,
   reviewDigitalAudit,
@@ -193,7 +194,14 @@ function AuditReviewPage() {
   );
   const varianceLines = session.lines.filter((l) => (l.variance_qty ?? 0) !== 0);
   const activeBin =
-    selectedBin ?? session.evidence[0]?.bin_key ?? session.bins[0] ?? null;
+    selectedBin ??
+    session.evidence.find((e) => e.kind === "bin")?.bin_key ??
+    session.bins[0] ??
+    null;
+  const geofence = metaQuery.data?.geofence_status as string | null | undefined;
+  const evidenceRequirements = evaluateEvidenceRequirements(session, {
+    hasGps: Boolean(geofence) && geofence !== "unavailable",
+  });
   const auditorName =
     (metaQuery.data?.profiles as { full_name?: string } | null)?.full_name ?? null;
 
@@ -284,6 +292,8 @@ function AuditReviewPage() {
 
           <EvidenceViewerPanel
             evidence={session.evidence}
+            lines={session.lines}
+            requirements={evidenceRequirements}
             selectedBin={activeBin}
             onSelectBin={setSelectedBin}
             meta={{
