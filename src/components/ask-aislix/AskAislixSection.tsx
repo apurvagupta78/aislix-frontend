@@ -12,7 +12,12 @@ import {
   ASK_AISLIX_PARSE_ERROR_MESSAGE,
   NO_AUDIT_FOUND_MESSAGE,
 } from "@/lib/ask-aislix/ask-aislix.response";
+import {
+  buildDemoAskResponse,
+  isInsufficientDataAnswer,
+} from "@/lib/ask-aislix/ask-aislix-demo-answers";
 import { ASK_SCOPE_OPTIONS } from "@/lib/ask-aislix/ask-aislix-suggestion-groups";
+import { prefixDemoAnswer } from "@/lib/demo-environment";
 import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
 import { requireOrgId, requireUserId } from "@/lib/db/context";
 import { fetchMembershipRole } from "@/lib/access-scope";
@@ -23,41 +28,15 @@ import { AskAislixLoading } from "./AskAislixLoading";
 import { AskAislixSuggestions } from "./AskAislixSuggestions";
 import type { SuggestionDataAvailability } from "@/lib/ask-aislix/ask-aislix-suggestions.select";
 
-const GUEST_ASK_RESPONSE: AskAislixResponse = {
-  answer:
-    "[Demo] Across the Guest demo workspace, oral-care planogram compliance averages 84% with 3 open critical findings. Koramangala leads at 91% compliance; Whitefield needs restock on 2 low-facing SKUs. Create a free account to ask about your live audits.",
-  summary: "Guest demo · oral care compliance and findings",
-  metrics: [
-    { label: "Planogram compliance", value: "84", unit: "%", trend: "up" },
-    { label: "Open critical", value: "3", unit: "", trend: "down" },
-    { label: "Audits (demo)", value: "42", unit: "", trend: "flat" },
-  ],
-  visual: {
-    type: "bar",
-    title: "Compliance by store (demo)",
-    data: [
-      { label: "Koramangala", value: 91 },
-      { label: "Whitefield", value: 82 },
-      { label: "HSR", value: 88 },
-    ],
-  },
-  table: { columns: [], rows: [] },
-  insights: [
-    "Whitefield has the largest facing shortfall in the demo set.",
-    "Restock Oral-B Pro Expert and verify Sensodyne price tags.",
-  ],
-  actions: [{ label: "Create free account", route: "/signup", params: {} }],
-  source_context: {
-    period: "Last 30 days (demo)",
-    locations: ["Bengaluru"],
-    operating_model: "Supermarket",
-  },
-  follow_up_questions: [
-    "Which stores have the lowest planogram compliance?",
-    "What corrective actions are overdue?",
-    "Summarize brand share on the last shelf audit",
-  ],
-};
+function demoShowcaseResponse(question: string, guest: boolean): AskAislixResponse {
+  const response = buildDemoAskResponse(question);
+  response.answer = prefixDemoAnswer(response.answer, true);
+  if (response.summary) response.summary = prefixDemoAnswer(response.summary, true);
+  if (guest) {
+    response.actions = [{ label: "Create free account", route: "/signup", params: {} }];
+  }
+  return response;
+}
 
 function withAskScope(question: string, store: string, period: string): string {
   const q = question.trim();
@@ -142,17 +121,21 @@ export function AskAislixSection({
       setError(null);
       setQuestion(raw.trim());
 
+      const showDemoAnswer = (guest: boolean) => {
+        const demo = demoShowcaseResponse(q, guest);
+        setError(null);
+        setResponse(demo);
+        setMessages((prev) =>
+          [...prev, { role: "user" as const, content: q }, { role: "assistant" as const, content: demo.answer }].slice(
+            -10,
+          ),
+        );
+      };
+
       try {
         if (isGuest) {
-          await new Promise((r) => window.setTimeout(r, 400));
-          setResponse(GUEST_ASK_RESPONSE);
-          setMessages((prev) =>
-            [
-              ...prev,
-              { role: "user", content: q },
-              { role: "assistant", content: GUEST_ASK_RESPONSE.answer },
-            ].slice(-10),
-          );
+          await new Promise((r) => window.setTimeout(r, 600));
+          showDemoAnswer(true);
           return;
         }
 
@@ -169,6 +152,15 @@ export function AskAislixSection({
         });
 
         setConversationId(result.conversationId);
+
+        if (
+          previewDemo &&
+          !attachments.length &&
+          (!result.ok || isInsufficientDataAnswer(result.response.answer))
+        ) {
+          showDemoAnswer(false);
+          return;
+        }
 
         if (!result.ok) {
           setResponse(null);
@@ -195,6 +187,10 @@ export function AskAislixSection({
           ].slice(-10),
         );
       } catch (err) {
+        if (previewDemo && !attachments.length) {
+          showDemoAnswer(false);
+          return;
+        }
         setError(err instanceof Error ? err.message : "Could not reach Ask Aislix.");
         setResponse(null);
       } finally {

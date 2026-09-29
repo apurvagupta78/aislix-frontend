@@ -34,6 +34,11 @@ import {
   clampFiltersToScope,
 } from "@/lib/ask-aislix/context";
 import { resolveAskAislixQueryFilters } from "@/lib/ask-aislix/ask-aislix-filters";
+import {
+  buildDemoAskResponse,
+  isInsufficientDataAnswer,
+  matchDemoAskIntent,
+} from "@/lib/ask-aislix/ask-aislix-demo-answers";
 import { demoShelfFallbackUrl } from "@/lib/demo-shelf-images";
 import {
   canUseDemoPreview,
@@ -416,6 +421,28 @@ export async function askAislixServer(
   scope.labeledDemo = demoExperience.labeledDemo;
   scope.activeOrgId = request.activeOrgId;
 
+  const demoMode = Boolean(scope.labeledDemo) || request.previewDemo === true;
+  const hasAttachments = Boolean(request.attachments?.length);
+  const demoAnswer = async (status: string): Promise<AskAislixServerResult> => {
+    const response = buildDemoAskResponse(request.question);
+    response.answer = prefixDemoAnswer(response.answer, true);
+    if (response.summary) response.summary = prefixDemoAnswer(response.summary, true);
+    await logRequest(supabase, {
+      orgId: scope.orgId,
+      userId,
+      conversationId,
+      question: request.question,
+      tools: [status],
+      status: "success",
+      latencyMs: Date.now() - started,
+    });
+    return { response, conversationId, ok: true };
+  };
+
+  if (demoMode && !hasAttachments && (matchDemoAskIntent(request.question) || !scope.labeledDemo)) {
+    return demoAnswer("demo_showcase");
+  }
+
   const queryFilters = resolveAskAislixQueryFilters();
   const toolCtx: ToolContext = {
     supabase,
@@ -462,6 +489,9 @@ export async function askAislixServer(
     const loopText = extractOutputText(result.loopResponse);
     const parsed = resolveAskAislixResponse({ raw, loopText, toolCalls: capturedTools });
     parsed.actions = sanitizeActions(parsed.actions ?? []);
+    if (demoMode && !hasAttachments && isInsufficientDataAnswer(parsed.answer)) {
+      return demoAnswer("demo_refusal_fallback");
+    }
     if (scope.labeledDemo) {
       parsed.answer = prefixDemoAnswer(parsed.answer, true);
       if (parsed.summary) parsed.summary = prefixDemoAnswer(parsed.summary, true);
@@ -508,6 +538,7 @@ export async function askAislixServer(
     });
 
     if (message.includes("rate")) throw new Error(message);
+    if (demoMode) return demoAnswer("demo_error_fallback");
 
     const userMessage = message.includes("rate")
       ? message
