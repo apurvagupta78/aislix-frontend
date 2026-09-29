@@ -31,7 +31,6 @@ import type { SuggestionDataAvailability } from "@/lib/ask-aislix/ask-aislix-sug
 function demoShowcaseResponse(question: string, guest: boolean): AskAislixResponse {
   const response = buildDemoAskResponse(question);
   response.answer = prefixDemoAnswer(response.answer, true);
-  if (response.summary) response.summary = prefixDemoAnswer(response.summary, true);
   if (guest) {
     response.actions = [{ label: "Create free account", route: "/signup", params: {} }];
   }

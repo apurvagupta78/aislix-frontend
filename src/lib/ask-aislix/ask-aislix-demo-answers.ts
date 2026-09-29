@@ -23,7 +23,7 @@ type DemoIntent = {
   /** Every group must match at least one keyword (AND of ORs). */
   match: RegExp[];
   weight?: number;
-  build: () => AskAislixResponse;
+  build: (question: string) => AskAislixResponse;
 };
 
 function response(partial: Partial<AskAislixResponse> & { answer: string }): AskAislixResponse {
@@ -462,10 +462,76 @@ const INTENTS: DemoIntent[] = [
     id: "evidence",
     match: [/(image|images|photo|photos|picture|evidence|shelf images|before|after|proof)/i],
     weight: 3,
-    build: () =>
-      response({
-        answer:
-          "Here are the latest shelf evidence images from demo audits. 91% of completed audits have verified photo evidence.",
+    build: (question) => {
+      const beforeAfter = /(before|after|corrective|fixed|resolved)/i.test(question);
+      const failed = /(fail|failed|failing|worst|lowest)/i.test(question);
+      const variant = beforeAfter
+        ? {
+            answer:
+              "Here are before/after photos for the 3 most recent corrective actions: Oral-B restock at Big Bazaar — Whitefield, Sensodyne price tag at Reliance Smart — Jayanagar, and the Snacks end-cap at More Mart — Indiranagar.",
+            title: "Before / after — corrective actions (demo)",
+            captions: [
+              "Before · Oral-B empty slot",
+              "After · Oral-B restocked",
+              "Before · Sensodyne missing tag",
+              "After · price tag fixed",
+              "Before · Snacks end-cap gap",
+              "After · end-cap refilled",
+            ],
+            stores: [
+              STORES.whitefield,
+              STORES.whitefield,
+              STORES.jayanagar,
+              STORES.jayanagar,
+              STORES.indiranagar,
+              STORES.indiranagar,
+            ],
+          }
+        : failed
+          ? {
+              answer:
+                "Here are shelf images from the 2 stores with failed audits this month — Big Bazaar — Whitefield (74% compliance) and Reliance Smart — Jayanagar (79%). Empty slots and low facings are visible in oral care and snacks.",
+              title: "Failed audit evidence (demo)",
+              captions: [
+                "Empty slot · Oral care shelf 3",
+                "Low facings · Lays Classic",
+                "Missing price tag · Sensodyne",
+                "Expired stock on display",
+                "Promo not executed · Beverages",
+                "Snacks end-cap gap",
+              ],
+              stores: [
+                STORES.whitefield,
+                STORES.whitefield,
+                STORES.jayanagar,
+                STORES.jayanagar,
+                STORES.whitefield,
+                STORES.jayanagar,
+              ],
+            }
+          : {
+              answer:
+                "Here are the latest shelf evidence images from demo audits. 91% of completed audits have verified photo evidence.",
+              title: "Latest audit evidence (demo)",
+              captions: [
+                "Oral care · Aisle 7",
+                "Beverages · Aisle 3",
+                "Snacks end-cap",
+                "Personal care bay",
+                "Oral care · re-audit",
+                "Promo display",
+              ],
+              stores: [
+                STORES.koramangala,
+                STORES.whitefield,
+                STORES.jayanagar,
+                STORES.hsr,
+                STORES.whitefield,
+                STORES.indiranagar,
+              ],
+            };
+      return response({
+        answer: variant.answer,
         metrics: [
           { label: "Evidence coverage", value: "91", unit: "%", trend: "up" },
           { label: "Photos captured", value: "126", unit: "", trend: "up" },
@@ -473,25 +539,11 @@ const INTENTS: DemoIntent[] = [
         ],
         visual: {
           type: "image_gallery",
-          title: "Latest audit evidence (demo)",
+          title: variant.title,
           data: DEMO_SHELF_FALLBACK_IMAGES.slice(0, 6).map((url, i) => ({
             url,
-            caption: [
-              "Oral care · Aisle 7",
-              "Beverages · Aisle 3",
-              "Snacks end-cap",
-              "Personal care bay",
-              "Oral care · re-audit",
-              "Promo display",
-            ][i],
-            store_name: [
-              STORES.koramangala,
-              STORES.whitefield,
-              STORES.jayanagar,
-              STORES.hsr,
-              STORES.whitefield,
-              STORES.indiranagar,
-            ][i],
+            caption: variant.captions[i],
+            store_name: variant.stores[i],
             captured_at: new Date(Date.now() - i * 86_400_000).toISOString(),
           })),
         },
@@ -504,7 +556,8 @@ const INTENTS: DemoIntent[] = [
           "Show critical findings that need attention",
           "Which stores have the lowest planogram compliance?",
         ],
-      }),
+      });
+    },
   },
   {
     id: "expiry",
@@ -764,7 +817,7 @@ export function matchDemoAskIntent(question: string): DemoIntent | null {
 /** Always returns a complete demo answer — matched intent or the "what needs attention" overview. */
 export function buildDemoAskResponse(question: string): AskAislixResponse {
   const intent = matchDemoAskIntent(question);
-  return intent ? intent.build() : overviewResponse();
+  return intent ? intent.build(question) : overviewResponse();
 }
 
 const REFUSAL_PATTERNS = [

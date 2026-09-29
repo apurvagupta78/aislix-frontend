@@ -426,7 +426,6 @@ export async function askAislixServer(
   const demoAnswer = async (status: string): Promise<AskAislixServerResult> => {
     const response = buildDemoAskResponse(request.question);
     response.answer = prefixDemoAnswer(response.answer, true);
-    if (response.summary) response.summary = prefixDemoAnswer(response.summary, true);
     await logRequest(supabase, {
       orgId: scope.orgId,
       userId,
