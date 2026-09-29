@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { datasetToDraftRows, parseAuditCsv, validateAuditDataset } from "@/lib/audit-input-dataset";
+import {
+  datasetToDraftRows,
+  digitalProductListIssue,
+  parseAuditCsv,
+  validateAuditDataset,
+} from "@/lib/audit-input-dataset";
 
 describe("audit input dataset", () => {
   it("preserves every CSV heading and quoted value", () => {
@@ -36,5 +41,11 @@ describe("audit input dataset", () => {
       category: "Bakery",
     });
     expect(validateAuditDataset(dataset)).toBeNull();
+    expect(digitalProductListIssue(dataset)).toBeNull();
+  });
+
+  it("rejects report-style files with no product or SKU column", () => {
+    const dataset = parseAuditCsv("Field,Value\nReport ID,R-1\nStatus,Done\n", "report.csv");
+    expect(digitalProductListIssue(dataset)).toMatch(/no Product Name or SKU column/);
   });
 });

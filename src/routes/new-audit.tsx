@@ -25,6 +25,7 @@ import { createAssignment as createExpiryAssignment } from "@/lib/expiry-control
 import {
   createManualAuditDataset,
   datasetToDraftRows,
+  digitalProductListIssue,
   parseAuditSpreadsheet,
   validateAuditDataset,
   type AuditInputDataset,
@@ -381,21 +382,22 @@ function NewAuditPage() {
     (locationScope.hierarchyNodeIds?.length ?? 0) > 0;
 
   const csvUploaded = dataset.source === "csv" && dataset.rows.length > 0;
+  const csvProductError = csvUploaded ? digitalProductListIssue(dataset) : null;
   const startReady = useMemo(() => {
     if (!startChoice) return false;
     if (startChoice === "template") {
       return hasTemplate && templateChoice !== "general";
     }
-    if (startChoice === "csv") return csvUploaded && !datasetError;
+    if (startChoice === "csv") return csvUploaded && !datasetError && !csvProductError;
     return true;
-  }, [startChoice, hasTemplate, templateChoice, csvUploaded, datasetError]);
+  }, [startChoice, hasTemplate, templateChoice, csvUploaded, datasetError, csvProductError]);
 
   async function handleCsvUpload(file: File) {
     try {
       const parsed = await parseAuditSpreadsheet(file);
       setDataset(parsed);
       setInputSchema(buildInputSchema(parsed));
-      const problem = validateAuditDataset(parsed);
+      const problem = validateAuditDataset(parsed) ?? digitalProductListIssue(parsed);
       setCsvError(problem);
       if (!problem) {
         toast.success(`Loaded ${parsed.rows.length} rows from ${file.name}`);
@@ -628,8 +630,8 @@ function NewAuditPage() {
         ? startChoice === "template"
           ? "Choose a template to continue."
           : startChoice === "csv"
-            ? csvUploaded && datasetError
-              ? datasetError
+            ? csvUploaded && (datasetError || csvProductError)
+              ? (datasetError ?? csvProductError)
               : "Upload your CSV or Excel file to continue."
             : "Choose how you want to start this audit."
         : null,
@@ -813,6 +815,11 @@ function NewAuditPage() {
         dataInputMode !== "template_only" &&
         dataInputMode !== "master_data" &&
         dataset.rows.length > 0;
+
+      if (auditMode === "digital" && hasInputData && dataset.source === "csv") {
+        const productIssue = digitalProductListIssue(dataset);
+        if (productIssue) throw new Error(productIssue);
+      }
 
       const assignmentRows =
         auditMode === "digital" && hasInputData && !datasetError

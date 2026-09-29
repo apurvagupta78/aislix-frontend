@@ -224,27 +224,67 @@ function findColumn(columns: AuditDataColumn[], aliases: string[]): AuditDataCol
   return columns.find((column) => aliases.includes(normalizeHeading(column.name)));
 }
 
+const PRODUCT_ALIASES = [
+  "product",
+  "product_name",
+  "item",
+  "item_name",
+  "description",
+  "item_description",
+  "product_description",
+  "sku_name",
+  "article_name",
+];
+const SKU_ALIASES = [
+  "sku",
+  "sku_id",
+  "sku_code",
+  "item_code",
+  "barcode",
+  "ean",
+  "upc",
+  "article",
+  "article_code",
+];
+const EXPECTED_QTY_ALIASES = [
+  "expected",
+  "expected_qty",
+  "expected_quantity",
+  "quantity",
+  "qty",
+  "system_qty",
+  "system_quantity",
+  "book_qty",
+  "on_hand",
+  "stock",
+];
+
+/**
+ * Digital count audits turn each CSV row into an expected product. Reject files that have
+ * no product or SKU column (e.g. exported reports) instead of creating nonsense lines.
+ */
+export function digitalProductListIssue(dataset: AuditInputDataset): string | null {
+  if (!dataset.columns.length || !dataset.rows.length) return null;
+  const hasProduct = Boolean(findColumn(dataset.columns, PRODUCT_ALIASES));
+  const hasSku = Boolean(findColumn(dataset.columns, SKU_ALIASES));
+  if (hasProduct || hasSku) return null;
+  const found = dataset.columns
+    .slice(0, 4)
+    .map((c) => c.name)
+    .join(", ");
+  return `This file has no Product Name or SKU column (found: ${found}). Upload a product list with one row per SKU — download the sample CSV for the format.`;
+}
+
 export function datasetToDraftRows(
   dataset: AuditInputDataset,
   context: { location: string; category: string },
 ): DraftRow[] {
-  const productColumn = findColumn(dataset.columns, [
-    "product",
-    "product_name",
-    "item",
-    "item_name",
-    "description",
-  ]);
-  const skuColumn = findColumn(dataset.columns, ["sku", "sku_id", "item_code", "barcode"]);
-  const quantityColumn = findColumn(dataset.columns, [
-    "expected",
-    "expected_qty",
-    "expected_quantity",
-    "quantity",
-    "qty",
-  ]);
-  const locationColumn = findColumn(dataset.columns, ["location", "shelf", "bin"]);
+  const productColumn = findColumn(dataset.columns, PRODUCT_ALIASES);
+  const skuColumn = findColumn(dataset.columns, SKU_ALIASES);
+  const quantityColumn = findColumn(dataset.columns, EXPECTED_QTY_ALIASES);
+  const locationColumn = findColumn(dataset.columns, ["location", "shelf", "bin", "aisle", "bin_location"]);
   const categoryColumn = findColumn(dataset.columns, ["category"]);
+  const brandColumn = findColumn(dataset.columns, ["brand"]);
   const firstTextColumn =
     dataset.columns.find((column) => column.type === "text") ?? dataset.columns[0];
 
@@ -257,7 +297,7 @@ export function datasetToDraftRows(
       location: value(locationColumn) || context.location,
       category: value(categoryColumn) || context.category,
       sub_category: "",
-      brand: "",
+      brand: value(brandColumn),
       product_name: value(productColumn) || value(firstTextColumn) || `Row ${index + 1}`,
       variant: "",
       expected_qty: Number.isFinite(quantity) ? quantity : 0,
