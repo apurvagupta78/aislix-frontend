@@ -581,9 +581,9 @@ function DigitalAuditPage() {
         ) : null}
 
         {!validation.ok ? (
-          <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm text-warning">
-            <p className="font-medium">Before you can submit:</p>
-            <ul className="mt-1 list-disc space-y-0.5 pl-5">
+          <div className="rounded-xl border border-[#D9E2E8] bg-white p-4 text-sm">
+            <p className="font-semibold text-[#102A43]">Before you can submit:</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-[#667085] marker:text-[#9B86D9]">
               {validation.missingSkus.length > 0 && (
                 <li>Missing counts: {validation.missingSkus.length} SKU(s)</li>
               )}
