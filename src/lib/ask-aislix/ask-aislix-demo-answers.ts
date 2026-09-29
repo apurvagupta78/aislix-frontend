@@ -202,7 +202,10 @@ const EVIDENCE_FOLLOW_UPS = [
 function evidenceTable(photos: EvidencePhoto[]): AskAislixResponse["table"] {
   return {
     columns: ["Store", "Category", "What the photo shows", "Status"],
-    rows: photos.map((p) => [STORES[p.store], CATEGORY_LABELS[p.category], p.caption.split(" · ")[1] ?? p.caption, p.status]),
+    rows: photos.map((p) => {
+      const detail = p.caption.split(" · ")[1] ?? p.caption;
+      return [STORES[p.store], CATEGORY_LABELS[p.category], detail.charAt(0).toUpperCase() + detail.slice(1), p.status];
+    }),
   };
 }
 
@@ -305,7 +308,11 @@ function buildEvidenceResponse(question: string): AskAislixResponse {
     const issues = photos.filter((p) => p.status === "Issue").length;
     return evidenceAnswer(
       `Here ${photos.length === 1 ? "is the latest shelf photo" : `are the latest ${photos.length} shelf photos`} for ${where}. ${
-        issues ? `${issues} show open issues that need action.` : "All shelves shown are compliant with the planogram."
+        issues === 1
+          ? `${photos.length === 1 ? "It shows" : "1 shows"} an open issue that needs action.`
+          : issues
+            ? `${issues} show open issues that need action.`
+            : "All shelves shown are compliant with the planogram."
       }`,
       `Evidence — ${where} (demo)`,
       photos,
