@@ -8,6 +8,7 @@ import {
   Building2,
   CheckCircle2,
   Clock,
+  Loader2,
   Download,
   MapPin,
   MoreHorizontal,
@@ -83,6 +84,7 @@ import {
   type StoreInput,
 } from "@/lib/organization";
 import { fetchAssignableMembers } from "@/lib/assignments";
+import { readDeviceLocation } from "@/lib/device-location";
 
 
 /* -------------------------------------------------------------------------- */
@@ -533,6 +535,8 @@ export function StoreFormDialog({
   const queryClient = useQueryClient();
   const [form, setForm] = useState<StoreInput>(blankStore);
   const [teamIds, setTeamIds] = useState<string[]>([]);
+  const [locating, setLocating] = useState(false);
+  const [pinAccuracyM, setPinAccuracyM] = useState<number | null>(null);
 
   const membersQuery = useQuery({
     queryKey: ["assignable-members"],
@@ -556,6 +560,7 @@ export function StoreFormDialog({
   useEffect(() => {
     if (!open) return;
     setTeamIds([]);
+    setPinAccuracyM(null);
     setForm(
       store
         ? {
@@ -603,22 +608,19 @@ export function StoreFormDialog({
     setForm((prev) => ({ ...prev, [key]: value }));
 
   function useCurrentLocation() {
-    if (!navigator.geolocation) {
-      toast.error("Geolocation is not available in this browser.");
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
+    setLocating(true);
+    readDeviceLocation()
+      .then((location) => {
         setForm((prev) => ({
           ...prev,
-          latitude: Math.round(pos.coords.latitude * 1e6) / 1e6,
-          longitude: Math.round(pos.coords.longitude * 1e6) / 1e6,
+          latitude: Math.round(location.lat * 1e6) / 1e6,
+          longitude: Math.round(location.lng * 1e6) / 1e6,
         }));
-        toast.success("Store pin set from your current location.");
-      },
-      () => toast.error("Could not read GPS. Enter coordinates manually."),
-      { enableHighAccuracy: true, timeout: 15000 },
-    );
+        setPinAccuracyM(location.accuracyM);
+        toast.success("Store pin set from this device's GPS.");
+      })
+      .catch((error: Error) => toast.error(error.message))
+      .finally(() => setLocating(false));
   }
 
   const mapPreviewUrl =
@@ -778,11 +780,19 @@ export function StoreFormDialog({
               <div>
                 <p className="text-sm font-medium">Store pin &amp; geofence</p>
                 <p className="text-xs text-muted-foreground">
-                  Used to verify auditors are at the store during Digital Audits.
+                  Used to verify auditors are at the store during Digital Audits. The pin comes only
+                  from this device's GPS — set it while standing in the store.
                 </p>
               </div>
-              <Button type="button" variant="outline" size="sm" onClick={useCurrentLocation}>
-                <MapPin className="size-4" /> Use my location
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={locating}
+                onClick={useCurrentLocation}
+              >
+                {locating ? <Loader2 className="size-4 animate-spin" /> : <MapPin className="size-4" />}
+                {form.latitude != null ? "Re-capture device GPS" : "Capture device GPS"}
               </Button>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
@@ -790,32 +800,22 @@ export function StoreFormDialog({
                 <Label htmlFor="store-lat">Latitude</Label>
                 <Input
                   id="store-lat"
-                  type="number"
-                  step="any"
+                  readOnly
+                  tabIndex={-1}
+                  className="bg-muted/40"
                   value={form.latitude ?? ""}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      latitude: e.target.value === "" ? null : Number(e.target.value),
-                    }))
-                  }
-                  placeholder="28.6139"
+                  placeholder="From device GPS"
                 />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="store-lng">Longitude</Label>
                 <Input
                   id="store-lng"
-                  type="number"
-                  step="any"
+                  readOnly
+                  tabIndex={-1}
+                  className="bg-muted/40"
                   value={form.longitude ?? ""}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      longitude: e.target.value === "" ? null : Number(e.target.value),
-                    }))
-                  }
-                  placeholder="77.2090"
+                  placeholder="From device GPS"
                 />
               </div>
               <div className="space-y-1.5">
@@ -835,6 +835,11 @@ export function StoreFormDialog({
                 />
               </div>
             </div>
+            {pinAccuracyM != null ? (
+              <p className="text-xs text-muted-foreground">
+                Device GPS accuracy ±{Math.round(pinAccuracyM)} m.
+              </p>
+            ) : null}
             {mapPreviewUrl ? (
               <iframe
                 title="Store location preview"
@@ -844,7 +849,7 @@ export function StoreFormDialog({
               />
             ) : (
               <p className="text-xs text-muted-foreground">
-                Set latitude and longitude to preview the store pin on the map.
+                Capture device GPS to preview the store pin on the map.
               </p>
             )}
           </div>
