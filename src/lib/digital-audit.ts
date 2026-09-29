@@ -1180,7 +1180,7 @@ export function evaluateEvidenceRequirements(
           label: labelOf(proof),
           hint:
             proof === "live_session_video"
-              ? "Upload a short video of the audit walk."
+              ? "Record the audit walk live on your phone, or upload a short video."
               : proof === "quarantine_contents"
                 ? "Photo of removed or held stock."
                 : "Photo of the sealed bag / container showing the seal ID.",
