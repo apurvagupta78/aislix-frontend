@@ -52,6 +52,7 @@ import {
   type RcaCode,
 } from "@/lib/digital-audit";
 import type { EvidenceProof } from "@/lib/audit-evidence-policy";
+import { readDeviceLocation, watchDeviceLocation, type DeviceLocation } from "@/lib/device-location";
 import { BarcodeScannerDialog } from "@/components/digital-audit/BarcodeScannerDialog";
 import {
   cacheAuditSession,
@@ -86,27 +87,51 @@ function DigitalAuditPage() {
   const [scanLineId, setScanLineId] = useState<string | null>(null);
   const [offline, setOffline] = useState(!isOnline());
   const [pendingCount, setPendingCount] = useState(0);
-  const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
+  const [geo, setGeo] = useState<DeviceLocation | null>(null);
+  const [geoError, setGeoError] = useState<string | null>(null);
   const [geoPending, setGeoPending] = useState(false);
+  const geoRef = useRef<DeviceLocation | null>(null);
+
+  const applyLocation = (location: DeviceLocation) => {
+    geoRef.current = location;
+    setGeo(location);
+    setGeoError(null);
+  };
 
   const requestLocation = () => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) return;
     setGeoPending(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setGeoPending(false);
-      },
-      () => {
-        setGeo(null);
-        setGeoPending(false);
-      },
-      { enableHighAccuracy: true, timeout: 15000 },
-    );
+    readDeviceLocation()
+      .then(applyLocation)
+      .catch((error: Error) => setGeoError(error.message))
+      .finally(() => setGeoPending(false));
+  };
+
+  /** Fresh device GPS fix for each capture; falls back to a watched fix under 2 minutes old. */
+  const captureLocation = async (): Promise<DeviceLocation | null> => {
+    try {
+      const location = await readDeviceLocation();
+      applyLocation(location);
+      return location;
+    } catch (error) {
+      const last = geoRef.current;
+      if (last && Date.now() - new Date(last.capturedAt).getTime() < 120_000) return last;
+      setGeoError((error as Error).message);
+      return null;
+    }
   };
 
   useEffect(() => {
-    requestLocation();
+    setGeoPending(true);
+    return watchDeviceLocation(
+      (location) => {
+        applyLocation(location);
+        setGeoPending(false);
+      },
+      (message) => {
+        setGeoError(message);
+        setGeoPending(false);
+      },
+    );
   }, []);
 
   const sessionQuery = useQuery({
@@ -137,14 +162,7 @@ function DigitalAuditPage() {
       if (!session?.scan_id) return;
       void flushOfflineQueue({
         updateLine: (input) => updateDigitalAuditLine(input),
-        uploadPhoto: (input) =>
-          uploadBinEvidence({
-            scanId: input.scanId,
-            binKey: input.binKey,
-            file: input.file,
-            lat: geo?.lat,
-            lng: geo?.lng,
-          }),
+        uploadPhoto: (input) => uploadBinEvidence(input),
       }).then(({ syncedLines, syncedPhotos }) => {
         if (syncedLines || syncedPhotos) {
           toast.success(`Synced ${syncedLines} line(s) and ${syncedPhotos} photo(s).`);
@@ -161,7 +179,7 @@ function DigitalAuditPage() {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
     };
-  }, [session?.scan_id, assignmentId, geo, queryClient]);
+  }, [session?.scan_id, assignmentId, queryClient]);
 
   useEffect(() => {
     if (session && assignmentId) void cacheAuditSession(assignmentId, session);
@@ -191,6 +209,12 @@ function DigitalAuditPage() {
 
   const photoMutation = useMutation({
     mutationFn: async (input: { binKey: string; file: File; video?: boolean }) => {
+      const location = await captureLocation();
+      const coords = {
+        lat: location?.lat ?? null,
+        lng: location?.lng ?? null,
+        accuracyM: location?.accuracyM ?? null,
+      };
       if (!isOnline()) {
         if (input.video) throw new Error("Session video needs a connection. Upload it when back online.");
         await queuePhotoUpload({
@@ -198,6 +222,7 @@ function DigitalAuditPage() {
           assignmentId: assignmentId!,
           binKey: input.binKey,
           file: input.file,
+          ...coords,
         });
         return;
       }
@@ -205,8 +230,7 @@ function DigitalAuditPage() {
         scanId: session!.scan_id,
         binKey: input.binKey,
         file: input.file,
-        lat: geo?.lat,
-        lng: geo?.lng,
+        ...coords,
         allowVideo: input.video,
       });
     },
@@ -222,13 +246,15 @@ function DigitalAuditPage() {
   });
 
   const barcodeMutation = useMutation({
-    mutationFn: (input: { lineId: string; code: string; method: "camera" | "manual" }) =>
-      recordBarcodeConfirmation({
+    mutationFn: async (input: { lineId: string; code: string; method: "camera" | "manual" }) => {
+      const location = await captureLocation();
+      await recordBarcodeConfirmation({
         scanId: session!.scan_id,
         ...input,
-        lat: geo?.lat,
-        lng: geo?.lng,
-      }),
+        lat: location?.lat ?? null,
+        lng: location?.lng ?? null,
+      });
+    },
     onSuccess: () => {
       toast.success("Barcode confirmed.");
       void queryClient.invalidateQueries({ queryKey: ["digital-audit", assignmentId] });
@@ -258,12 +284,15 @@ function DigitalAuditPage() {
     onError: (e) => toast.error(toUserMessage(e), { duration: 8000 }),
   });
 
-  const pickEvidence = (key: string, video = false) => {
+  const pickEvidence = (key: string, mode: EvidenceCaptureMode = "photo") => {
+    const video = mode !== "photo";
     uploadTarget.current = { key, video };
     const input = fileRef.current;
     if (!input) return;
-    input.accept = video ? "video/mp4,video/webm,video/quicktime" : "image/jpeg,image/png";
-    if (video) input.removeAttribute("capture");
+    // "video/*" + capture is what makes mobile browsers open the camera in video mode.
+    input.accept =
+      mode === "record" ? "video/*" : video ? "video/mp4,video/webm,video/quicktime" : "image/jpeg,image/png";
+    if (mode === "upload_video") input.removeAttribute("capture");
     else input.setAttribute("capture", "environment");
     input.click();
   };
@@ -278,13 +307,16 @@ function DigitalAuditPage() {
   };
 
   const submitMutation = useMutation({
-    mutationFn: () =>
-      submitDigitalAudit({
+    mutationFn: async () => {
+      const location = await captureLocation();
+      await submitDigitalAudit({
         scanId: session!.scan_id,
         assignmentId: assignmentId!,
-        lat: geo?.lat,
-        lng: geo?.lng,
-      }),
+        lat: location?.lat ?? null,
+        lng: location?.lng ?? null,
+        accuracyM: location?.accuracyM ?? null,
+      });
+    },
     onSuccess: () => {
       toast.success("Audit submitted for manager review.");
       void navigate({ to: "/my-scans" });
@@ -401,11 +433,12 @@ function DigitalAuditPage() {
           requirements={validation.requirements}
           requireRca={session.require_rca}
           policyLevel={session.policy?.level ?? null}
-          geo={Boolean(geo)}
+          geo={geo}
+          geoError={geoError}
           geoPending={geoPending}
           onRetryGps={requestLocation}
           uploadingKey={uploadingKey}
-          onUploadProof={(proof) => pickEvidence(evidenceKey.proof(proof), proof === "live_session_video")}
+          onCaptureProof={(proof, mode) => pickEvidence(evidenceKey.proof(proof), mode)}
         />
 
         <section className="rounded-xl border border-border bg-card p-4">
@@ -546,7 +579,7 @@ function DigitalAuditPage() {
             {binHasPhoto ? (
               <p className="text-xs text-success">Shelf photo attached for this bin.</p>
             ) : (
-              <p className="text-xs text-warning">Add a shelf photo before you can submit.</p>
+              <p className="text-xs text-[#667085]">Add a shelf photo before you can submit.</p>
             )}
 
             <div className="space-y-4">
@@ -628,26 +661,39 @@ function DigitalAuditPage() {
   );
 }
 
+type EvidenceCaptureMode = "photo" | "record" | "upload_video";
+
 const PROOF_UPLOADS: EvidenceProof[] = ["live_session_video", "quarantine_contents", "sealed_container"];
+
+function describeGps(geo: DeviceLocation | null, geoError: string | null, geoPending: boolean): string {
+  if (geo) {
+    const accuracy = geo.accuracyM != null ? ` (±${Math.round(geo.accuracyM)} m)` : "";
+    return `Device GPS captured${accuracy}`;
+  }
+  if (geoPending) return "Reading device GPS…";
+  return geoError ?? "Device GPS unavailable";
+}
 
 function RequiredEvidencePanel({
   requirements,
   requireRca,
   policyLevel,
   geo,
+  geoError,
   geoPending,
   onRetryGps,
   uploadingKey,
-  onUploadProof,
+  onCaptureProof,
 }: {
   requirements: EvidenceRequirement[];
   requireRca: boolean;
   policyLevel: string | null;
-  geo: boolean;
+  geo: DeviceLocation | null;
+  geoError: string | null;
   geoPending: boolean;
   onRetryGps: () => void;
   uploadingKey?: string;
-  onUploadProof: (proof: EvidenceProof) => void;
+  onCaptureProof: (proof: EvidenceProof, mode: EvidenceCaptureMode) => void;
 }) {
   const metCount = requirements.filter((r) => r.ok).length;
   const gpsRequired = requirements.some((r) => r.id === "gps");
@@ -676,13 +722,15 @@ function RequiredEvidencePanel({
             <li
               key={req.id}
               className={`flex items-start gap-2 rounded-lg border p-2.5 text-xs ${
-                req.ok ? "border-[#D9E2E8] bg-white" : "border-[#FFEAF1] bg-[#FFEAF1]/50"
+                req.ok
+                  ? "border-[#D9E2E8] bg-white"
+                  : "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]"
               }`}
             >
               {req.ok ? (
                 <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[#79E2A8]" />
               ) : (
-                <CircleDashed className="mt-0.5 size-4 shrink-0 text-[#667085]" />
+                <CircleDashed className="mt-0.5 size-4 shrink-0 text-[#7DB7D6]" />
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
@@ -693,24 +741,45 @@ function RequiredEvidencePanel({
                     </span>
                   ) : null}
                 </div>
-                <p className="mt-0.5 text-[#667085]">{req.hint}</p>
-                {canUpload ? (
+                <p className="mt-0.5 text-[#667085]">
+                  {req.id === "gps" ? describeGps(geo, geoError, geoPending) : req.hint}
+                </p>
+                {canUpload && proof === "live_session_video" ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={req.ok ? "ghost" : "outline"}
+                      className="h-7 px-2 text-xs"
+                      disabled={uploading}
+                      onClick={() => onCaptureProof(proof, "record")}
+                    >
+                      {uploading ? <Loader2 className="size-3 animate-spin" /> : <Video className="size-3" />}
+                      {req.ok ? "Re-record live video" : "Record live video"}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      disabled={uploading}
+                      onClick={() => onCaptureProof(proof, "upload_video")}
+                    >
+                      <Upload className="size-3" />
+                      Upload video
+                    </Button>
+                  </div>
+                ) : canUpload ? (
                   <Button
                     type="button"
                     size="sm"
                     variant={req.ok ? "ghost" : "outline"}
                     className="mt-2 h-7 px-2 text-xs"
                     disabled={uploading}
-                    onClick={() => onUploadProof(proof)}
+                    onClick={() => onCaptureProof(proof, "photo")}
                   >
-                    {uploading ? (
-                      <Loader2 className="size-3 animate-spin" />
-                    ) : proof === "live_session_video" ? (
-                      <Video className="size-3" />
-                    ) : (
-                      <Camera className="size-3" />
-                    )}
-                    {req.ok ? "Replace" : proof === "live_session_video" ? "Upload video" : "Add photo"}
+                    {uploading ? <Loader2 className="size-3 animate-spin" /> : <Camera className="size-3" />}
+                    {req.ok ? "Replace" : "Add photo"}
                   </Button>
                 ) : null}
                 {req.id === "gps" && !req.ok ? (
@@ -738,7 +807,7 @@ function RequiredEvidencePanel({
         </Badge>
         {!gpsRequired ? (
           <Badge variant="outline" className="gap-1">
-            <MapPin className="size-3" /> {geo ? "GPS captured" : "GPS unavailable (optional)"}
+            <MapPin className="size-3" /> {geo ? describeGps(geo, geoError, geoPending) : "Device GPS unavailable (optional)"}
           </Badge>
         ) : null}
       </div>
@@ -918,7 +987,7 @@ function LineEditor({
           <span className="text-xs text-[#667085]">Unsaved change (saved: {line.actual_qty})</span>
         ) : null}
         {actual !== "" && !countValid ? (
-          <span className="text-xs text-destructive">Enter a count of 0 or more.</span>
+          <span className="text-xs text-[var(--aislix-primary)]">Enter a count of 0 or more.</span>
         ) : null}
       </div>
     </div>

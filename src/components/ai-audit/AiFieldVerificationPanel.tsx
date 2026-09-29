@@ -199,7 +199,7 @@ function VerifyCell({
         min={0}
         inputMode="numeric"
         aria-invalid={invalid}
-        className={`h-8 w-20 rounded-lg ${invalid ? "border-destructive" : ""}`}
+        className={`h-8 w-20 rounded-lg ${invalid ? "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]" : ""}`}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
       />

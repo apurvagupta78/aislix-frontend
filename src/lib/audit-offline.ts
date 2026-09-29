@@ -25,6 +25,9 @@ type PendingPhoto = {
   blob: Blob;
   fileName: string;
   createdAt: string;
+  lat?: number | null;
+  lng?: number | null;
+  accuracyM?: number | null;
 };
 
 type CachedSession = {
@@ -131,6 +134,9 @@ export async function queuePhotoUpload(input: {
   assignmentId?: string;
   binKey: string;
   file: File;
+  lat?: number | null;
+  lng?: number | null;
+  accuracyM?: number | null;
 }): Promise<void> {
   const row: PendingPhoto = {
     id: `${input.scanId}-${input.binKey}-${Date.now()}`,
@@ -140,6 +146,9 @@ export async function queuePhotoUpload(input: {
     blob: input.file,
     fileName: input.file.name,
     createdAt: new Date().toISOString(),
+    lat: input.lat ?? null,
+    lng: input.lng ?? null,
+    accuracyM: input.accuracyM ?? null,
   };
   await txStore("pendingPhotos", "readwrite", (s) => s.put(row));
 }
@@ -238,7 +247,14 @@ export async function flushOfflineQueue(handlers: {
     rca_code?: RcaCode | null;
     rca_notes?: string | null;
   }) => Promise<void>;
-  uploadPhoto: (input: { scanId: string; binKey: string; file: File }) => Promise<void>;
+  uploadPhoto: (input: {
+    scanId: string;
+    binKey: string;
+    file: File;
+    lat?: number | null;
+    lng?: number | null;
+    accuracyM?: number | null;
+  }) => Promise<void>;
 }): Promise<{ syncedLines: number; syncedPhotos: number }> {
   const [lines, photos] = await Promise.all([
     txStore<PendingLine[]>("pendingLines", "readonly", (s) => s.getAll()),
@@ -261,7 +277,14 @@ export async function flushOfflineQueue(handlers: {
 
   for (const row of photos.sort((a, b) => a.createdAt.localeCompare(b.createdAt))) {
     const file = new File([row.blob], row.fileName, { type: row.blob.type || "image/jpeg" });
-    await handlers.uploadPhoto({ scanId: row.scanId, binKey: row.binKey, file });
+    await handlers.uploadPhoto({
+      scanId: row.scanId,
+      binKey: row.binKey,
+      file,
+      lat: row.lat,
+      lng: row.lng,
+      accuracyM: row.accuracyM,
+    });
     await txStore("pendingPhotos", "readwrite", (s) => s.delete(row.id));
     syncedPhotos++;
   }

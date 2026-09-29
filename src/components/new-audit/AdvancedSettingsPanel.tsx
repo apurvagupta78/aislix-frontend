@@ -33,6 +33,10 @@ type Props = {
   defaultOpen?: boolean;
 };
 
+const SELECTED_CARD =
+  "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]/60";
+const UNSELECTED_CARD = "border-[#D9E2E8] bg-white";
+
 function EvidenceSettingsBody({
   evidenceLevel,
   evidencePolicy,
@@ -54,7 +58,9 @@ function EvidenceSettingsBody({
             {(["basic", "standard", "high", "custom"] as EvidenceLevel[]).map((level) => (
               <Label
                 key={level}
-                className="flex cursor-pointer items-center gap-2 rounded-xl border p-3 capitalize"
+                className={`flex cursor-pointer items-center gap-2 rounded-xl border p-3 capitalize ${
+                  evidenceLevel === level ? SELECTED_CARD : UNSELECTED_CARD
+                }`}
               >
                 <RadioGroupItem value={level} /> {level === "high" ? "High assurance" : level}
               </Label>
@@ -67,7 +73,9 @@ function EvidenceSettingsBody({
             return (
               <Label
                 key={proof.value}
-                className="flex cursor-pointer items-start gap-3 rounded-xl border p-3"
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${
+                  checked ? SELECTED_CARD : UNSELECTED_CARD
+                }`}
               >
                 <Checkbox
                   checked={checked}

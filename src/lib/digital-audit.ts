@@ -616,6 +616,7 @@ export async function uploadBinEvidence(input: {
       device_info: {
         userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
         media_type: isVideo ? "video" : "image",
+        location_source: input.lat != null ? "device_gps" : null,
         file_modified_at: input.file.lastModified
           ? new Date(input.file.lastModified).toISOString()
           : null,
@@ -1255,6 +1256,7 @@ export async function submitDigitalAudit(input: {
   assignmentId: string;
   lat?: number | null;
   lng?: number | null;
+  accuracyM?: number | null;
 }): Promise<void> {
   const session = await loadDigitalAuditSession(input.scanId);
   const validation = validateDigitalAuditSubmit(session, {
@@ -1301,7 +1303,11 @@ export async function submitDigitalAudit(input: {
       submitted_lng: input.lng ?? null,
       geofence_status: geo,
       locked_at: now,
-      device_info: { userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null },
+      device_info: {
+        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : null,
+        location_source: input.lat != null ? "device_gps" : null,
+        location_accuracy_m: input.accuracyM ?? null,
+      },
     } as Record<string, unknown>)
     .eq("id", input.scanId);
 

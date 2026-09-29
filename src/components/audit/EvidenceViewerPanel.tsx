@@ -65,7 +65,7 @@ export function EvidenceViewerPanel({
           {requirements.map((req) => (
             <li key={req.id} className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground">{req.label}</span>
-              <span className={req.ok ? "text-success" : "text-warning"}>
+              <span className={req.ok ? "text-success" : "text-[var(--aislix-primary)]"}>
                 {req.ok ? "Met" : `${req.done}/${req.total}`}
               </span>
             </li>
