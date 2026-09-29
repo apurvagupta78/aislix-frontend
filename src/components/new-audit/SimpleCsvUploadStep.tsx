@@ -11,6 +11,24 @@ import { downloadCsvTemplateBlob } from "@/lib/audit-builder/template-csv-merge"
 import type { AuditInputDataset } from "@/lib/audit-input-dataset";
 import { cn } from "@/lib/utils";
 
+const SAMPLE_AUDIT_CSV = [
+  "SKU ID,Product Name,Category,Expected Quantity,Actual Quantity,MRP,Expiry Date",
+  "SKU-1001,Colgate Total 120g,Oral Care,24,,110,2027-03-31",
+  "SKU-1002,Sensodyne Repair 75ml,Oral Care,18,,215,2027-01-15",
+  "SKU-1003,Oral-B Pro Expert,Oral Care,12,,180,2027-06-30",
+  "SKU-2001,Lays Classic 52g,Snacks,30,,20,2026-12-10",
+  "SKU-3001,Coca-Cola 750ml,Beverages,24,,40,2026-11-30",
+].join("\n");
+
+function downloadSampleAuditCsv() {
+  const url = URL.createObjectURL(new Blob([SAMPLE_AUDIT_CSV], { type: "text/csv" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "aislix-sample-audit.csv";
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 type Props = {
   dataset: AuditInputDataset;
   inputSchema: InputSchema;
@@ -90,17 +108,19 @@ export function SimpleCsvUploadStep({
               />
             </label>
           </Button>
-          {templateDefinition ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="mt-2"
-              onClick={() => downloadCsvTemplateBlob(templateDefinition, templateName ?? "audit")}
-            >
-              <Download className="mr-1 size-3.5" /> Download sample
-            </Button>
-          ) : null}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="mt-2"
+            onClick={() =>
+              templateDefinition
+                ? downloadCsvTemplateBlob(templateDefinition, templateName ?? "audit")
+                : downloadSampleAuditCsv()
+            }
+          >
+            <Download className="mr-1 size-3.5" /> Download sample CSV
+          </Button>
         </div>
       ) : (
         <div className="rounded-xl border border-emerald-300 bg-background p-4">
@@ -149,7 +169,9 @@ export function SimpleCsvUploadStep({
                       <RoleBadge role={mapping.fieldRole} />
                     </td>
                     <td className="px-3 py-2 text-muted-foreground">
-                      {mapping.standardFieldId ?? mapping.columnName}
+                      {mapping.aislixMapping && mapping.aislixMapping !== "custom"
+                        ? mapping.aislixMapping.replace(/_/g, " ")
+                        : "Custom field"}
                     </td>
                   </tr>
                 ))}

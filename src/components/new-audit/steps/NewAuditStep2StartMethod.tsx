@@ -1,4 +1,5 @@
-import { FileSpreadsheet, LayoutTemplate, Plus } from "lucide-react";
+import type { ReactNode } from "react";
+import { LayoutTemplate } from "lucide-react";
 
 import { AiPlanogramChoice } from "@/components/new-audit/AiPlanogramChoice";
 import { NewAuditDemoSetupPanel } from "@/components/new-audit/NewAuditDemoSetupPanel";
@@ -28,6 +29,8 @@ type Props = {
   onAiPlanogramReset: () => void;
   onScanContextChange: (ctx: ScanContextState) => void;
   onOpenTemplatePicker: () => void;
+  csvUpload?: ReactNode;
+  scratchBuilder?: ReactNode;
   complete?: boolean;
   error?: string | null;
   planogramError?: string | null;
@@ -48,6 +51,8 @@ export function NewAuditStep2StartMethod({
   onAiPlanogramReset,
   onScanContextChange,
   onOpenTemplatePicker,
+  csvUpload,
+  scratchBuilder,
   complete,
   error,
   planogramError,
@@ -133,23 +138,9 @@ export function NewAuditStep2StartMethod({
         </div>
       ) : null}
 
-      {startChoice === "csv" ? (
-        <div className="mt-6 rounded-xl border border-dashed border-[var(--aislix-border)] p-6 text-center">
-          <FileSpreadsheet className="mx-auto mb-2 size-8 text-[var(--aislix-secondary)]" />
-          <p className="text-sm text-[var(--aislix-secondary)]">
-            CSV upload will be configured in a later step of this wizard.
-          </p>
-        </div>
-      ) : null}
+      {startChoice === "csv" ? <div className="mt-6">{csvUpload}</div> : null}
 
-      {startChoice === "custom" ? (
-        <div className="mt-6 rounded-xl border border-dashed border-[var(--aislix-border)] p-6 text-center">
-          <Plus className="mx-auto mb-2 size-8 text-[var(--aislix-secondary)]" />
-          <p className="text-sm text-[var(--aislix-secondary)]">
-            Scratch builder will be configured in a later step of this wizard.
-          </p>
-        </div>
-      ) : null}
+      {startChoice === "custom" ? <div className="mt-6">{scratchBuilder}</div> : null}
     </NewAuditStepSection>
   );
 }

@@ -25,9 +25,12 @@ import { createAssignment as createExpiryAssignment } from "@/lib/expiry-control
 import {
   createManualAuditDataset,
   datasetToDraftRows,
+  parseAuditSpreadsheet,
   validateAuditDataset,
   type AuditInputDataset,
 } from "@/lib/audit-input-dataset";
+import { SimpleCsvUploadStep } from "@/components/new-audit/SimpleCsvUploadStep";
+import { SimpleScratchBuilder } from "@/components/new-audit/SimpleScratchBuilder";
 import type { AuditPurpose, OperatingModel } from "@/lib/audit-builder/types";
 import type { InputSchema } from "@/lib/audit-builder/field-roles";
 import {
@@ -160,6 +163,7 @@ function NewAuditPage() {
     buildInputSchema(createManualAuditDataset()),
   );
   const [dataInputMode, setDataInputMode] = useState<AuditDataInputMode>("upload_csv");
+  const [csvError, setCsvError] = useState<string | null>(null);
   const [evidenceLevel, setEvidenceLevel] = useState<EvidenceLevel>("standard");
   const [evidencePolicy, setEvidencePolicy] = useState<AuditEvidencePolicy>(
     policyForLevel("standard"),
@@ -376,14 +380,30 @@ function NewAuditPage() {
     locationScope.storeIds.length > 0 ||
     (locationScope.hierarchyNodeIds?.length ?? 0) > 0;
 
-  /** IA phase: card selection only — CSV/scratch deep config comes in later iterations. */
+  const csvUploaded = dataset.source === "csv" && dataset.rows.length > 0;
   const startReady = useMemo(() => {
     if (!startChoice) return false;
     if (startChoice === "template") {
       return hasTemplate && templateChoice !== "general";
     }
+    if (startChoice === "csv") return csvUploaded && !datasetError;
     return true;
-  }, [startChoice, hasTemplate, templateChoice]);
+  }, [startChoice, hasTemplate, templateChoice, csvUploaded, datasetError]);
+
+  async function handleCsvUpload(file: File) {
+    try {
+      const parsed = await parseAuditSpreadsheet(file);
+      setDataset(parsed);
+      setInputSchema(buildInputSchema(parsed));
+      const problem = validateAuditDataset(parsed);
+      setCsvError(problem);
+      if (!problem) {
+        toast.success(`Loaded ${parsed.rows.length} rows from ${file.name}`);
+      }
+    } catch (error) {
+      setCsvError(toUserMessage(error));
+    }
+  }
 
   useEffect(() => {
     const stores = storesQuery.data;
@@ -607,7 +627,11 @@ function NewAuditPage() {
       method === "digital" && !startReady
         ? startChoice === "template"
           ? "Choose a template to continue."
-          : "Choose how you want to start this audit."
+          : startChoice === "csv"
+            ? csvUploaded && datasetError
+              ? datasetError
+              : "Upload your CSV or Excel file to continue."
+            : "Choose how you want to start this audit."
         : null,
     method: !method ? "Choose how the audit will be performed." : null,
     planogram:
@@ -1158,13 +1182,35 @@ function NewAuditPage() {
             demoScanContext={demoScanContext}
             onScanContextChange={setDemoScanContext}
             onOpenTemplatePicker={() => setTemplatePickerOpen(true)}
+            csvUpload={
+              <SimpleCsvUploadStep
+                dataset={dataset}
+                inputSchema={inputSchema}
+                error={csvError}
+                onUpload={handleCsvUpload}
+              />
+            }
+            scratchBuilder={
+              <SimpleScratchBuilder
+                dataset={dataset}
+                inputSchema={inputSchema}
+                onDatasetChange={setDataset}
+                onInputSchemaChange={setInputSchema}
+              />
+            }
             onStartChoiceChange={(choice) => {
               setStartChoice(choice);
               if (choice === "csv") {
-                setDataInputMode(hasTemplate ? "template_plus_csv" : "upload_csv");
+                setTemplateChoice("general");
+                setDataInputMode("upload_csv");
               } else if (choice === "custom") {
                 setTemplateChoice("general");
                 setDataInputMode("manual");
+                if (dataset.source === "csv") {
+                  const manual = createManualAuditDataset();
+                  setDataset(manual);
+                  setInputSchema(buildInputSchema(manual));
+                }
               }
             }}
           />
