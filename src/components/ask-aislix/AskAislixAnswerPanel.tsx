@@ -1,6 +1,7 @@
 import type { AskAislixResponse } from "@/lib/ask-aislix/ask-aislix.types";
 import { AskAislixActions } from "./AskAislixActions";
 import { AskAislixFollowUps } from "./AskAislixFollowUps";
+import { AskAislixImageGallery } from "./AskAislixImageGallery";
 import { AskAislixVisual } from "./AskAislixVisual";
 
 export function AskAislixAnswerPanel({
@@ -32,6 +33,13 @@ export function AskAislixAnswerPanel({
       ) : null}
 
       <AskAislixVisual visual={response.visual} />
+
+      {response.evidence?.images?.length ? (
+        <AskAislixImageGallery
+          title={response.evidence.title}
+          items={response.evidence.images as Array<Record<string, string>>}
+        />
+      ) : null}
 
       {response.table?.rows?.length ? (
         <div className="overflow-x-auto rounded-xl border border-line">

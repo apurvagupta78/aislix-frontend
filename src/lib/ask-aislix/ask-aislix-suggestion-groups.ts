@@ -84,6 +84,24 @@ export const ASK_SUGGESTION_UI_ITEMS: AskSuggestionUiItem[] = [
     text: "Show shelf images from stores with failed audits",
   },
   {
+    id: "s7b",
+    category: "Evidence",
+    icon: "image",
+    text: "Show me the evidence",
+  },
+  {
+    id: "s8b",
+    category: "Evidence",
+    icon: "map",
+    text: "Show evidence store-wise",
+  },
+  {
+    id: "s9b",
+    category: "Evidence",
+    icon: "box",
+    text: "Show evidence category-wise",
+  },
+  {
     id: "s10",
     category: "Team",
     icon: "alert",

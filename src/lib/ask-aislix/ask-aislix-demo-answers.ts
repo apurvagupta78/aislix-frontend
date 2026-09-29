@@ -5,7 +5,6 @@
  */
 
 import type { AskAislixResponse } from "@/lib/ask-aislix/ask-aislix.types";
-import { DEMO_SHELF_FALLBACK_IMAGES } from "@/lib/demo-shelf-images";
 
 const PERIOD = "Last 30 days (demo)";
 const CITIES = ["Bengaluru", "Mumbai", "Hyderabad", "Pune", "Delhi"];
@@ -17,6 +16,153 @@ const STORES = {
   jayanagar: "Reliance Smart — Jayanagar",
   indiranagar: "More Mart — Indiranagar",
 } as const;
+
+type StoreKey = keyof typeof STORES;
+type CategoryKey = "oral_care" | "beverages" | "snacks" | "biscuits" | "confectionery" | "personal_care";
+
+const CATEGORY_LABELS: Record<CategoryKey, string> = {
+  oral_care: "Oral Care",
+  beverages: "Beverages & Cereal",
+  snacks: "Snacks",
+  biscuits: "Biscuits",
+  confectionery: "Confectionery",
+  personal_care: "Personal & Baby Care",
+};
+
+type EvidencePhoto = {
+  id: string;
+  url: string;
+  store: StoreKey;
+  category: CategoryKey;
+  caption: string;
+  status: "Issue" | "Compliant";
+  daysAgo: number;
+};
+
+/** Public shelf photos shipped with the app, captioned to match what is visible in each image. */
+const EVIDENCE_LIBRARY: EvidencePhoto[] = [
+  {
+    id: "oral",
+    url: "/home-hero-shelf.jpg",
+    store: "whitefield",
+    category: "oral_care",
+    caption: "Oral care · Oral-B & Colgate gaps on shelves 2 and 5",
+    status: "Issue",
+    daysAgo: 0,
+  },
+  {
+    id: "aisle",
+    url: "/home-demo-shelf.jpg",
+    store: "koramangala",
+    category: "beverages",
+    caption: "Beverages & cereal aisle · 1 empty slot on shelf 3",
+    status: "Issue",
+    daysAgo: 1,
+  },
+  {
+    id: "snacks",
+    url: "/demo-shelf/demo-2.jpg",
+    store: "whitefield",
+    category: "snacks",
+    caption: "Snacks · Pringles & potato crackers, missing price tags",
+    status: "Issue",
+    daysAgo: 1,
+  },
+  {
+    id: "candy",
+    url: "/demo-shelf/demo-1.jpg",
+    store: "jayanagar",
+    category: "confectionery",
+    caption: "Confectionery · empty candy cartons on top shelf",
+    status: "Issue",
+    daysAgo: 2,
+  },
+  {
+    id: "chocopie",
+    url: "/demo-shelf/demo-3.jpg",
+    store: "hsr",
+    category: "biscuits",
+    caption: "Biscuits · Orion Choco Pie full facings",
+    status: "Compliant",
+    daysAgo: 2,
+  },
+  {
+    id: "dreamlite",
+    url: "/demo-shelf/demo-4.jpg",
+    store: "indiranagar",
+    category: "biscuits",
+    caption: "Biscuits · Dream Lite & Hide & Seek blocked correctly",
+    status: "Compliant",
+    daysAgo: 3,
+  },
+  {
+    id: "babycare",
+    url: "/demo-shelf/demo-5.jpg",
+    store: "koramangala",
+    category: "personal_care",
+    caption: "Personal care · Johnson's baby range & Savlon",
+    status: "Compliant",
+    daysAgo: 3,
+  },
+  {
+    id: "diapers",
+    url: "/demo-shelf/demo-6.jpg",
+    store: "jayanagar",
+    category: "personal_care",
+    caption: "Baby care · Doobidoo pants over-faced vs planogram",
+    status: "Issue",
+    daysAgo: 4,
+  },
+];
+
+const STORE_PATTERNS: Array<[StoreKey, RegExp]> = [
+  ["koramangala", /koramangala/i],
+  ["hsr", /\bhsr\b|dmart/i],
+  ["whitefield", /whitefield|big bazaar/i],
+  ["jayanagar", /jayanagar|reliance/i],
+  ["indiranagar", /indiranagar/i],
+];
+
+const CATEGORY_PATTERNS: Array<[CategoryKey, RegExp]> = [
+  ["oral_care", /oral|toothpaste|colgate|sensodyne|oral-?b|dental/i],
+  ["beverages", /beverage|drink|juice|water|cereal|coke/i],
+  ["snacks", /snack|chips|crisps|pringles|lays/i],
+  ["biscuits", /biscuit|cookie|choco ?pie/i],
+  ["confectionery", /confection|candy|gum|chocolate|sweets/i],
+  ["personal_care", /personal|baby|diaper|hygiene|johnson/i],
+];
+
+function galleryItem(photo: EvidencePhoto) {
+  return {
+    url: photo.url,
+    caption: `${photo.status === "Issue" ? "⚠ " : "✓ "}${photo.caption}`,
+    store_name: STORES[photo.store],
+    captured_at: new Date(Date.now() - photo.daysAgo * 86_400_000 - 3_600_000 * (photo.daysAgo + 2)).toISOString(),
+  };
+}
+
+function photosById(ids: string[]): EvidencePhoto[] {
+  return ids.map((id) => EVIDENCE_LIBRARY.find((p) => p.id === id)).filter((p): p is EvidencePhoto => Boolean(p));
+}
+
+/** Supporting shelf photos attached under charts for non-gallery demo answers. */
+const INTENT_EVIDENCE: Record<string, string[]> = {
+  sku_shortages: ["oral", "snacks", "candy"],
+  city_variance: ["aisle", "snacks", "oral"],
+  inventory_variance: ["snacks", "aisle", "oral"],
+  compliance_change: ["oral", "chocopie", "babycare"],
+  store_compliance: ["oral", "candy", "chocopie"],
+  recurring: ["oral", "snacks", "diapers"],
+  managers_team: ["oral", "candy", "dreamlite"],
+  corrective_actions: ["oral", "snacks", "candy"],
+  findings: ["oral", "aisle", "diapers"],
+  expiry: ["babycare", "aisle", "chocopie"],
+  stockout_risk: ["oral", "snacks", "aisle"],
+  brand_share: ["oral", "chocopie", "babycare"],
+  completion_trend: ["aisle", "dreamlite", "babycare"],
+  comparison: ["oral", "chocopie", "snacks"],
+  overview: ["oral", "snacks", "candy"],
+};
 
 type DemoIntent = {
   id: string;
@@ -38,6 +184,145 @@ function response(partial: Partial<AskAislixResponse> & { answer: string }): Ask
     follow_up_questions: [],
     ...partial,
   };
+}
+
+const EVIDENCE_METRICS: AskAislixResponse["metrics"] = [
+  { label: "Evidence coverage", value: "91", unit: "%", trend: "up" },
+  { label: "Photos captured", value: "126", unit: "", trend: "up" },
+  { label: "Photos with issues", value: "38", unit: "", trend: "down" },
+  { label: "Needs review", value: "4", unit: "audits", trend: "down" },
+];
+
+const EVIDENCE_FOLLOW_UPS = [
+  "Show evidence store-wise",
+  "Show evidence category-wise",
+  "Show oral care evidence from Whitefield",
+];
+
+function evidenceTable(photos: EvidencePhoto[]): AskAislixResponse["table"] {
+  return {
+    columns: ["Store", "Category", "What the photo shows", "Status"],
+    rows: photos.map((p) => [STORES[p.store], CATEGORY_LABELS[p.category], p.caption.split(" · ")[1] ?? p.caption, p.status]),
+  };
+}
+
+function evidenceAnswer(
+  answer: string,
+  title: string,
+  photos: EvidencePhoto[],
+  insights: string[],
+  followUps: string[] = EVIDENCE_FOLLOW_UPS,
+): AskAislixResponse {
+  return response({
+    answer,
+    metrics: EVIDENCE_METRICS,
+    visual: { type: "image_gallery", title, data: photos.map(galleryItem) },
+    table: evidenceTable(photos),
+    insights,
+    actions: [
+      { label: "View Audit History", route: "/history", params: {} },
+      { label: "View Findings", route: "/findings", params: {} },
+    ],
+    follow_up_questions: followUps,
+  });
+}
+
+function buildEvidenceResponse(question: string): AskAislixResponse {
+  const q = question.replace(/\(Scope:[^)]*\)/gi, "");
+  const store = STORE_PATTERNS.find(([, re]) => re.test(q))?.[0];
+  const category = CATEGORY_PATTERNS.find(([, re]) => re.test(q))?.[0];
+  const storeWise = /(store|outlet|location)[\s-]*(wise|by|each|per)|(by|each|per|every) (store|outlet|location)/i.test(q);
+  const categoryWise = /categor(y|ies)[\s-]*(wise|by|each|per)|(by|each|per|every) categor/i.test(q);
+
+  if (/(before|after|corrective|fixed|resolved)/i.test(q)) {
+    const photos = photosById(["oral", "chocopie", "snacks", "dreamlite", "candy", "babycare"]);
+    return evidenceAnswer(
+      "Here is before/after evidence for the 3 most recent corrective actions: Oral-B restock at Big Bazaar — Whitefield, Snacks price tags at Whitefield, and the candy top shelf at Reliance Smart — Jayanagar. Each issue photo is paired with a compliant re-audit shelf.",
+      "Before / after — corrective actions (demo)",
+      photos,
+      [
+        "2 of 3 corrective actions are verified closed by re-audit photos.",
+        "The Jayanagar candy shelf is still awaiting its re-audit photo.",
+      ],
+    );
+  }
+
+  if (/(fail|failed|failing|worst|lowest|non.?compliant|issues?)/i.test(q)) {
+    const photos = EVIDENCE_LIBRARY.filter((p) => p.status === "Issue");
+    return evidenceAnswer(
+      "Here are shelf photos with open issues, mostly from the 2 lowest-scoring stores: Big Bazaar — Whitefield (74% compliance) and Reliance Smart — Jayanagar (79%). Empty slots, missing price tags and over-facing are visible.",
+      "Shelf photos with open issues (demo)",
+      photos,
+      [
+        "Whitefield oral care has the biggest visible gaps — Oral-B and Colgate facings are below planogram.",
+        "Jayanagar issues are presentation-related: empty candy cartons and over-faced baby care.",
+      ],
+    );
+  }
+
+  if (storeWise) {
+    const photos = (Object.keys(STORES) as StoreKey[])
+      .map((key) => EVIDENCE_LIBRARY.find((p) => p.store === key && p.status === "Issue") ?? EVIDENCE_LIBRARY.find((p) => p.store === key))
+      .filter((p): p is EvidencePhoto => Boolean(p));
+    return evidenceAnswer(
+      "Here is the latest shelf evidence for each of the 5 demo stores. Big Bazaar — Whitefield and Reliance Smart — Jayanagar show open issues; DMart — HSR Layout and More Mart — Indiranagar are compliant.",
+      "Evidence by store (demo)",
+      photos,
+      [
+        "Whitefield: 2 issue photos this week (oral care, snacks).",
+        "Koramangala: 1 empty slot in the beverages aisle, otherwise compliant.",
+        "HSR Layout and Indiranagar biscuit shelves match planogram.",
+      ],
+    );
+  }
+
+  if (categoryWise) {
+    const photos = (Object.keys(CATEGORY_LABELS) as CategoryKey[])
+      .map((key) => EVIDENCE_LIBRARY.find((p) => p.category === key))
+      .filter((p): p is EvidencePhoto => Boolean(p));
+    return evidenceAnswer(
+      "Here is the latest shelf evidence for each category. Oral Care and Snacks have the most visible issues; Biscuits and Personal Care are largely compliant.",
+      "Evidence by category (demo)",
+      photos,
+      [
+        "Oral Care: facing gaps on Oral-B and Colgate at Whitefield.",
+        "Snacks: price tags missing on crackers at Whitefield.",
+        "Biscuits: full facings at HSR Layout and Indiranagar.",
+      ],
+    );
+  }
+
+  if (store || category) {
+    let photos = EVIDENCE_LIBRARY.filter(
+      (p) => (!store || p.store === store) && (!category || p.category === category),
+    );
+    if (!photos.length) {
+      photos = EVIDENCE_LIBRARY.filter((p) => (store && p.store === store) || (category && p.category === category));
+    }
+    const where = [category ? CATEGORY_LABELS[category] : null, store ? STORES[store] : null]
+      .filter(Boolean)
+      .join(" at ");
+    const issues = photos.filter((p) => p.status === "Issue").length;
+    return evidenceAnswer(
+      `Here ${photos.length === 1 ? "is the latest shelf photo" : `are the latest ${photos.length} shelf photos`} for ${where}. ${
+        issues ? `${issues} show open issues that need action.` : "All shelves shown are compliant with the planogram."
+      }`,
+      `Evidence — ${where} (demo)`,
+      photos,
+      photos.map((p) => `${STORES[p.store]}: ${p.caption.split(" · ")[1] ?? p.caption} (${p.status.toLowerCase()}).`),
+    );
+  }
+
+  return evidenceAnswer(
+    "Here is the latest shelf evidence from demo audits across 5 stores and 6 categories. 91% of completed audits have verified photo evidence; 5 of these photos show open issues.",
+    "Latest audit evidence (demo)",
+    EVIDENCE_LIBRARY,
+    [
+      "Whitefield oral care and snacks shelves need restocking and price tags.",
+      "Biscuit and personal care shelves at HSR, Indiranagar and Koramangala are compliant.",
+      "4 audits have low-confidence images and are queued for human review.",
+    ],
+  );
 }
 
 const INTENTS: DemoIntent[] = [
@@ -460,104 +745,9 @@ const INTENTS: DemoIntent[] = [
   },
   {
     id: "evidence",
-    match: [/(image|images|photo|photos|picture|evidence|shelf images|before|after|proof)/i],
-    weight: 3,
-    build: (question) => {
-      const beforeAfter = /(before|after|corrective|fixed|resolved)/i.test(question);
-      const failed = /(fail|failed|failing|worst|lowest)/i.test(question);
-      const variant = beforeAfter
-        ? {
-            answer:
-              "Here are before/after photos for the 3 most recent corrective actions: Oral-B restock at Big Bazaar — Whitefield, Sensodyne price tag at Reliance Smart — Jayanagar, and the Snacks end-cap at More Mart — Indiranagar.",
-            title: "Before / after — corrective actions (demo)",
-            captions: [
-              "Before · Oral-B empty slot",
-              "After · Oral-B restocked",
-              "Before · Sensodyne missing tag",
-              "After · price tag fixed",
-              "Before · Snacks end-cap gap",
-              "After · end-cap refilled",
-            ],
-            stores: [
-              STORES.whitefield,
-              STORES.whitefield,
-              STORES.jayanagar,
-              STORES.jayanagar,
-              STORES.indiranagar,
-              STORES.indiranagar,
-            ],
-          }
-        : failed
-          ? {
-              answer:
-                "Here are shelf images from the 2 stores with failed audits this month — Big Bazaar — Whitefield (74% compliance) and Reliance Smart — Jayanagar (79%). Empty slots and low facings are visible in oral care and snacks.",
-              title: "Failed audit evidence (demo)",
-              captions: [
-                "Empty slot · Oral care shelf 3",
-                "Low facings · Lays Classic",
-                "Missing price tag · Sensodyne",
-                "Expired stock on display",
-                "Promo not executed · Beverages",
-                "Snacks end-cap gap",
-              ],
-              stores: [
-                STORES.whitefield,
-                STORES.whitefield,
-                STORES.jayanagar,
-                STORES.jayanagar,
-                STORES.whitefield,
-                STORES.jayanagar,
-              ],
-            }
-          : {
-              answer:
-                "Here are the latest shelf evidence images from demo audits. 91% of completed audits have verified photo evidence.",
-              title: "Latest audit evidence (demo)",
-              captions: [
-                "Oral care · Aisle 7",
-                "Beverages · Aisle 3",
-                "Snacks end-cap",
-                "Personal care bay",
-                "Oral care · re-audit",
-                "Promo display",
-              ],
-              stores: [
-                STORES.koramangala,
-                STORES.whitefield,
-                STORES.jayanagar,
-                STORES.hsr,
-                STORES.whitefield,
-                STORES.indiranagar,
-              ],
-            };
-      return response({
-        answer: variant.answer,
-        metrics: [
-          { label: "Evidence coverage", value: "91", unit: "%", trend: "up" },
-          { label: "Photos captured", value: "126", unit: "", trend: "up" },
-          { label: "Needs review", value: "4", unit: "audits", trend: "down" },
-        ],
-        visual: {
-          type: "image_gallery",
-          title: variant.title,
-          data: DEMO_SHELF_FALLBACK_IMAGES.slice(0, 6).map((url, i) => ({
-            url,
-            caption: variant.captions[i],
-            store_name: variant.stores[i],
-            captured_at: new Date(Date.now() - i * 86_400_000).toISOString(),
-          })),
-        },
-        insights: [
-          "Whitefield before/after photos confirm the Oral-B restock after the corrective action.",
-          "4 audits have low-confidence images and are queued for human review.",
-        ],
-        follow_up_questions: [
-          "Which findings still need verification?",
-          "Show critical findings that need attention",
-          "Which stores have the lowest planogram compliance?",
-        ],
-      });
-    },
+    match: [/\b(images?|photos?|pictures?|pics?|evidence|before|after|proof|shelf shots?)\b|show me the shelf/i],
+    weight: 15,
+    build: buildEvidenceResponse,
   },
   {
     id: "expiry",
@@ -817,7 +1007,15 @@ export function matchDemoAskIntent(question: string): DemoIntent | null {
 /** Always returns a complete demo answer — matched intent or the "what needs attention" overview. */
 export function buildDemoAskResponse(question: string): AskAislixResponse {
   const intent = matchDemoAskIntent(question);
-  return intent ? intent.build(question) : overviewResponse();
+  const result = intent ? intent.build(question) : overviewResponse();
+  const evidenceIds = INTENT_EVIDENCE[intent?.id ?? "overview"];
+  if (result.visual?.type !== "image_gallery" && evidenceIds?.length) {
+    result.evidence = {
+      title: "Supporting shelf evidence (demo)",
+      images: photosById(evidenceIds).map(galleryItem),
+    };
+  }
+  return result;
 }
 
 const REFUSAL_PATTERNS = [

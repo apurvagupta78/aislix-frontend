@@ -132,9 +132,9 @@ export function AskAislixSection({
       };
 
       try {
-        if (isGuest) {
+        if (isGuest || (previewDemo && !attachments.length)) {
           await new Promise((r) => window.setTimeout(r, 600));
-          showDemoAnswer(true);
+          showDemoAnswer(isGuest);
           return;
         }
 

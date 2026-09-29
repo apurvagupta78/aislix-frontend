@@ -37,7 +37,6 @@ import { resolveAskAislixQueryFilters } from "@/lib/ask-aislix/ask-aislix-filter
 import {
   buildDemoAskResponse,
   isInsufficientDataAnswer,
-  matchDemoAskIntent,
 } from "@/lib/ask-aislix/ask-aislix-demo-answers";
 import { demoShelfFallbackUrl } from "@/lib/demo-shelf-images";
 import {
@@ -438,7 +437,7 @@ export async function askAislixServer(
     return { response, conversationId, ok: true };
   };
 
-  if (demoMode && !hasAttachments && (matchDemoAskIntent(request.question) || !scope.labeledDemo)) {
+  if (demoMode && !hasAttachments) {
     return demoAnswer("demo_showcase");
   }
 

@@ -57,6 +57,13 @@ export const AskAislixResponseSchema = z.object({
   actions: z.array(AskAislixActionSchema).optional().default([]),
   source_context: AskAislixSourceContextSchema.optional().default({ period: "", locations: [] }),
   follow_up_questions: z.array(z.string()).optional().default([]),
+  /** Secondary photo strip shown under the main visual (demo showcase answers). */
+  evidence: z
+    .object({
+      title: z.string().optional().default(""),
+      images: z.array(z.record(z.unknown())).optional().default([]),
+    })
+    .optional(),
 });
 
 export type AskAislixResponse = z.infer<typeof AskAislixResponseSchema>;
