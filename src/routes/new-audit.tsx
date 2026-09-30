@@ -53,6 +53,7 @@ import {
   OPERATING_MODEL_CARDS,
 } from "@/lib/audit-engine/operating-model-catalog";
 import {
+  aiAuditCategorySelections,
   submitAuthenticatedAiAuditScan,
 } from "@/lib/ai-audit/run-ai-audit-scan";
 import { buildAiPlanogramPreviewSummary } from "@/lib/new-audit/ai-vision-context";
@@ -197,6 +198,17 @@ function NewAuditPage() {
     null,
   );
   const [demoScanContext, setDemoScanContext] = useState<ScanContextState>(EMPTY_SCAN_CONTEXT);
+  const aiShelfScope = useMemo(() => {
+    if (method !== "ai") return {};
+    const selections = aiAuditCategorySelections(demoScanContext);
+    const primary = selections[0];
+    if (!primary) return {};
+    return {
+      category: primary.category_name,
+      sub_category: primary.sub_category_label || primary.sub_category_id,
+      category_selections: selections,
+    };
+  }, [method, demoScanContext]);
   const [captureFile, setCaptureFile] = useState<File | null>(null);
   const [capturePreviewUrl, setCapturePreviewUrl] = useState<string | null>(null);
   const [aiAuditLaunched, setAiAuditLaunched] = useState(false);
@@ -539,6 +551,7 @@ function NewAuditPage() {
         location,
         category,
         product_count: dataset.rows.length,
+        ...aiShelfScope,
         ...(auditName.trim() ? { audit_name: auditName.trim() } : {}),
         ...(auditDescription.trim() ? { audit_description: auditDescription.trim() } : {}),
       },
@@ -580,6 +593,7 @@ function NewAuditPage() {
     dataset.rows.length,
     location,
     category,
+    aiShelfScope,
     recurrence,
     dueConfig,
     dueAt,
@@ -979,6 +993,7 @@ function NewAuditPage() {
           location,
           category,
           product_count: assignmentRows.length,
+          ...aiShelfScope,
           ...(auditName.trim() ? { audit_name: auditName.trim() } : {}),
           ...(auditDescription.trim() ? { audit_description: auditDescription.trim() } : {}),
         },

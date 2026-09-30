@@ -29,15 +29,14 @@ export type LandingAiScanInput = {
   landingSessionId?: string;
 };
 
-function buildScanSubmitOptions(input: AuthenticatedAiScanInput) {
-  const ctx = input.scanContext;
-  const category =
-    input.category ?? ctx.planogramMeta?.category?.trim() ?? undefined;
-  const subCategory =
-    input.subCategory ?? ctx.planogramMeta?.sub_category?.trim() ?? undefined;
-  const subCategoryLabel = input.subCategoryLabel ?? subCategory;
-  const auditRole = ctx.auditRole ?? "supermarket";
-
+/** Primary category from the setup panel first, then every extra shelf type on a mixed rack. */
+export function aiAuditCategorySelections(
+  ctx: ScanContextState,
+  primary?: { category?: string; subCategory?: string; subCategoryLabel?: string },
+): CategorySelection[] {
+  const category = primary?.category ?? ctx.planogramMeta?.category?.trim() ?? undefined;
+  const subCategory = primary?.subCategory ?? ctx.planogramMeta?.sub_category?.trim() ?? undefined;
+  const subCategoryLabel = primary?.subCategoryLabel ?? subCategory;
   const primarySelection: CategorySelection[] =
     category && subCategory
       ? [
@@ -54,10 +53,26 @@ function buildScanSubmitOptions(input: AuthenticatedAiScanInput) {
     [s.sub_category_label, s.sub_category_id].some(
       (v) => v && v.toLowerCase() === (subCategory ?? "").toLowerCase(),
     );
-  const categorySelections = dedupeSelections([
+  return dedupeSelections([
     ...primarySelection,
     ...(ctx.extraCategorySelections ?? []).filter((s) => !sameAsPrimary(s)),
   ]);
+}
+
+function buildScanSubmitOptions(input: AuthenticatedAiScanInput) {
+  const ctx = input.scanContext;
+  const category =
+    input.category ?? ctx.planogramMeta?.category?.trim() ?? undefined;
+  const subCategory =
+    input.subCategory ?? ctx.planogramMeta?.sub_category?.trim() ?? undefined;
+  const subCategoryLabel = input.subCategoryLabel ?? subCategory;
+  const auditRole = ctx.auditRole ?? "supermarket";
+
+  const categorySelections = aiAuditCategorySelections(ctx, {
+    category,
+    subCategory,
+    subCategoryLabel,
+  });
 
   const auditPackage = autoPopulateAuditPackage(
     ctx.planogramRows,
