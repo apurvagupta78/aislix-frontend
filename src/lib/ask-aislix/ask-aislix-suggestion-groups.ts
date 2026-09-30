@@ -48,6 +48,12 @@ export const ASK_SUGGESTION_UI_ITEMS: AskSuggestionUiItem[] = [
     text: "Which cities have the highest inventory variance?",
   },
   {
+    id: "s3b",
+    category: "Inventory",
+    icon: "trend",
+    text: "How many times were Lays adjusted in the last 6 months at Aislix Store?",
+  },
+  {
     id: "s4",
     category: "Compliance",
     icon: "trend",
@@ -100,6 +106,12 @@ export const ASK_SUGGESTION_UI_ITEMS: AskSuggestionUiItem[] = [
     category: "Evidence",
     icon: "box",
     text: "Show evidence category-wise",
+  },
+  {
+    id: "s9c",
+    category: "Evidence",
+    icon: "image",
+    text: "Give me the stacking images at Aislix Store",
   },
   {
     id: "s10",

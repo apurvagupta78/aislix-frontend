@@ -59,16 +59,25 @@ export function AskAislixVisual({ visual }: { visual: AskAislixResponse["visual"
   }
 
   if (visual.type === "line" || visual.type === "area") {
-    const data = visual.data ?? [];
+    const data = (visual.data ?? []) as Array<{ date?: string; value?: number; unit?: string }>;
+    const unit = data.find((d) => d.unit)?.unit;
     return (
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data as object[]}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+          <LineChart data={data} margin={{ top: 16, right: 16, bottom: 0, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#D9E2E8" />
             <XAxis dataKey="date" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} />
-            <Tooltip />
-            <Line type="monotone" dataKey="value" stroke={AISLIX.primary} strokeWidth={2} dot={false} />
+            <Tooltip formatter={(v: number) => [unit ? `${v} ${unit}` : v, "Value"]} />
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke="#9B86D9"
+              strokeWidth={2}
+              dot={data.length <= 12 ? { r: 4, fill: "#9B86D9", strokeWidth: 0 } : false}
+              label={data.length <= 8 ? { position: "top", fontSize: 11, fill: "#102A43" } : false}
+              animationDuration={300}
+            />
           </LineChart>
         </ResponsiveContainer>
       </div>

@@ -332,7 +332,207 @@ function buildEvidenceResponse(question: string): AskAislixResponse {
   );
 }
 
+const DEFAULT_DEMO_STORE = "Aislix Store";
+
+function demoStoreFromQuestion(question: string): string {
+  const q = question.replace(/\(Scope:[^)]*\)/gi, "");
+  const key = STORE_PATTERNS.find(([, re]) => re.test(q))?.[0];
+  return key ? STORES[key] : DEFAULT_DEMO_STORE;
+}
+
+/** Short month labels for the last `count` months, ending with the current month. */
+function lastMonthLabels(count: number): string[] {
+  const now = new Date();
+  return Array.from({ length: count }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (count - 1 - i), 1);
+    return d.toLocaleString("en-US", { month: "short" });
+  });
+}
+
+/** Lays Classic 52g monthly stock adjustments — oldest month first. */
+const LAYS_ADJUSTMENT_MONTHS = [
+  { adjustments: 3, expected: 120, actual: 98 },
+  { adjustments: 2, expected: 120, actual: 104 },
+  { adjustments: 4, expected: 132, actual: 107 },
+  { adjustments: 2, expected: 132, actual: 118 },
+  { adjustments: 2, expected: 140, actual: 131 },
+  { adjustments: 1, expected: 140, actual: 134 },
+];
+
+function buildLaysAdjustmentResponse(question: string): AskAislixResponse {
+  const store = demoStoreFromQuestion(question);
+  const labels = lastMonthLabels(LAYS_ADJUSTMENT_MONTHS.length);
+  const rows = LAYS_ADJUSTMENT_MONTHS.map((m, i) => {
+    const variance = m.actual - m.expected;
+    return {
+      month: labels[i] ?? `M${i + 1}`,
+      ...m,
+      variance,
+      variancePct: Math.round((variance / m.expected) * 1000) / 10,
+    };
+  });
+  const totalAdjustments = rows.reduce((n, r) => n + r.adjustments, 0);
+  const totalVariance = rows.reduce((n, r) => n + r.variance, 0);
+  const worst = rows.reduce((a, b) => (b.variance < a.variance ? b : a));
+  const first = rows[0];
+  const last = rows[rows.length - 1];
+  const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0");
+
+  return response({
+    answer: `Lays Classic 52g was adjusted ${totalAdjustments} times in the last 6 months at ${store}. Variance peaked in ${worst.month} at ${signed(worst.variance)} units and has narrowed to ${signed(last?.variance ?? 0)} units in ${last?.month}.`,
+    summary: "Adjustment = stock count corrected after an audit found actual units different from expected. Variance = actual − expected units.",
+    metrics: [
+      { label: "Adjustments (6 months)", value: String(totalAdjustments), unit: "", trend: "down" },
+      { label: "Net variance", value: signed(totalVariance), unit: "units", trend: "up" },
+      { label: "Worst month", value: worst.month, unit: `${signed(worst.variance)} units`, trend: "none" },
+      { label: "Latest variance", value: String(last?.variancePct ?? 0), unit: "%", trend: "up" },
+    ],
+    visual: {
+      type: "line",
+      title: `Lays Classic 52g variance by month, units — ${store} (demo)`,
+      data: rows.map((r) => ({ date: r.month, value: r.variance, unit: "units" })),
+    },
+    table: {
+      columns: ["Month", "Adjustments", "Expected units", "Actual units", "Variance", "Variance %"],
+      rows: rows.map((r) => [r.month, r.adjustments, r.expected, r.actual, signed(r.variance), `${signed(r.variancePct)}%`]),
+    },
+    insights: [
+      `Variance improved from ${signed(first?.variance ?? 0)} units in ${first?.month} to ${signed(last?.variance ?? 0)} units in ${last?.month} as restock frequency increased.`,
+      `${worst.month} needed the most corrections (${worst.adjustments}) — it coincided with a promo week when demand outran shelf refills.`,
+      "Next action: keep the twice-weekly Lays recount until variance stays within ±3%.",
+    ],
+    actions: [
+      { label: "View Findings", route: "/findings", params: {} },
+      { label: "View Audit History", route: "/history", params: {} },
+    ],
+    source_context: { period: "Last 6 months (demo)", locations: [store], operating_model: "Supermarket" },
+    follow_up_questions: [
+      "Which SKUs repeatedly showed shortages?",
+      `Give me the stacking images at ${store}`,
+      "What was inventory variance over the last 30 days?",
+    ],
+  });
+}
+
+type StackingPhoto = {
+  url: string;
+  category: string;
+  detail: string;
+  stackHeight: string;
+  status: "Issue" | "Compliant";
+  daysAgo: number;
+};
+
+/** Captions describe what is visible in each shipped shelf photo. */
+const STACKING_PHOTOS: StackingPhoto[] = [
+  {
+    url: "/home-hero-shelf.jpg",
+    category: "Oral Care",
+    detail: "Colgate, Sensodyne & Oral-B cartons stacked 3–5 high, level and front-facing",
+    stackHeight: "Up to 5",
+    status: "Compliant",
+    daysAgo: 0,
+  },
+  {
+    url: "/demo-shelf/demo-3.jpg",
+    category: "Biscuits",
+    detail: "Orion Choco Pie top row stacked unevenly — boxes tilted and not flush",
+    stackHeight: "2",
+    status: "Issue",
+    daysAgo: 1,
+  },
+  {
+    url: "/demo-shelf/demo-4.jpg",
+    category: "Biscuits",
+    detail: "Dream Lite packs piled loosely 3 high and spilling over the rail; Hide & Seek below stacked neatly",
+    stackHeight: "3",
+    status: "Issue",
+    daysAgo: 1,
+  },
+  {
+    url: "/demo-shelf/demo-6.jpg",
+    category: "Baby Care",
+    detail: "Doobidoo baby pants stacked 2 high with top packs leaning forward",
+    stackHeight: "2",
+    status: "Issue",
+    daysAgo: 2,
+  },
+  {
+    url: "/demo-shelf/demo-1.jpg",
+    category: "Confectionery",
+    detail: "Trident gum boxes stacked 3 high in straight columns",
+    stackHeight: "3",
+    status: "Compliant",
+    daysAgo: 3,
+  },
+  {
+    url: "/demo-shelf/demo-2.jpg",
+    category: "Snacks",
+    detail: "Water Master minis tins stacked 2 high, stable",
+    stackHeight: "2",
+    status: "Compliant",
+    daysAgo: 3,
+  },
+];
+
+function buildStackingResponse(question: string): AskAislixResponse {
+  const store = demoStoreFromQuestion(question);
+  const issues = STACKING_PHOTOS.filter((p) => p.status === "Issue");
+  const compliant = STACKING_PHOTOS.length - issues.length;
+  return response({
+    answer: `Here are the latest ${STACKING_PHOTOS.length} stacking photos from ${store}. ${issues.length} show unsafe or untidy stacks — tilted Choco Pie boxes, loose Dream Lite packs and leaning Doobidoo packs — and ${compliant} are stacked correctly.`,
+    summary: "Stacking check = products stacked level, stable, front-facing and within the fixture's safe height.",
+    metrics: [
+      { label: "Stacking photos", value: String(STACKING_PHOTOS.length), unit: "", trend: "none" },
+      { label: "Unsafe / untidy stacks", value: String(issues.length), unit: "", trend: "down" },
+      { label: "Stacked correctly", value: String(compliant), unit: "", trend: "up" },
+      { label: "Stacking compliance", value: String(Math.round((compliant / STACKING_PHOTOS.length) * 100)), unit: "%", trend: "up" },
+    ],
+    visual: {
+      type: "image_gallery",
+      title: `Stacking evidence — ${store} (demo)`,
+      data: STACKING_PHOTOS.map((p) => ({
+        url: p.url,
+        caption: `${p.status === "Issue" ? "⚠ " : "✓ "}${p.category} · ${p.detail}`,
+        store_name: store,
+        captured_at: new Date(Date.now() - p.daysAgo * 86_400_000 - 3_600_000 * (p.daysAgo + 2)).toISOString(),
+      })),
+    },
+    table: {
+      columns: ["Category", "What the photo shows", "Stack height", "Status"],
+      rows: STACKING_PHOTOS.map((p) => [p.category, p.detail, p.stackHeight, p.status]),
+    },
+    insights: [
+      "All 3 stacking issues are soft or light packs (biscuit packs, diapers) — they need a shelf divider or lower stack height.",
+      "Carton products (oral care, gum, tins) stack cleanly and can stay at current heights.",
+      "Next action: restack the Choco Pie, Dream Lite and Doobidoo bays and re-audit with a photo.",
+    ],
+    actions: [
+      { label: "View Findings", route: "/findings", params: {} },
+      { label: "View Corrective Actions", route: "/corrective-actions", params: {} },
+    ],
+    source_context: { period: PERIOD, locations: [store], operating_model: "Supermarket" },
+    follow_up_questions: [
+      `How many times were Lays adjusted in the last 6 months at ${store}?`,
+      "Show before/after evidence for recent corrective actions",
+      "Show evidence category-wise",
+    ],
+  });
+}
+
 const INTENTS: DemoIntent[] = [
+  {
+    id: "lays_adjustments",
+    match: [/\blay'?s\b/i, /(adjust|correct|recount|variance|how many times)/i],
+    weight: 20,
+    build: buildLaysAdjustmentResponse,
+  },
+  {
+    id: "stacking",
+    match: [/\bstack(s|ed|ing)?\b/i],
+    weight: 20,
+    build: buildStackingResponse,
+  },
   {
     id: "sku_shortages",
     match: [/\b(sku|skus|product|products|item|items)\b/i, /(shortage|short|out of stock|oos|stock.?out|missing|repeated|repeatedly)/i],
