@@ -14,6 +14,7 @@ import {
   downloadComparisonCsv,
   downloadExceptionsCsv,
 } from "@/lib/planogram-comparison-export";
+import { capUnitsToFacings } from "@/lib/ai-audit/astra-response";
 import { planogramRowsFromResult } from "@/lib/execution-metrics";
 import type { PlanogramComparison } from "@/lib/planogram-compliance";
 import type { ScanResult } from "@/lib/scan-results";
@@ -155,7 +156,9 @@ function pickAislixObservedCards(data?: ScanResult | null): Array<{
       product: product || "Product",
       variant,
       facings: Number.isFinite(facings as number) ? (facings as number) : null,
-      units: Number.isFinite(units as number) ? (units as number) : null,
+      units: Number.isFinite(units as number)
+        ? capUnitsToFacings(units, Number.isFinite(facings as number) ? facings : null)
+        : null,
       status: String(p.match_status ?? "OBSERVED"),
       key: `matched-${String(p.sku ?? i)}`,
     });
@@ -164,18 +167,19 @@ function pickAislixObservedCards(data?: ScanResult | null): Array<{
   unplanned.forEach((raw, i) => {
     if (!raw || typeof raw !== "object") return;
     const p = raw as Record<string, unknown>;
+    const facings =
+      p.actual_facings == null || p.actual_facings === "" ? null : Number(p.actual_facings);
     cards.push({
       brand: String(p.actual_brand ?? p.brand ?? "Unknown brand").trim(),
       product: String(p.actual_product_name ?? p.product_name ?? "Product").trim(),
       variant: String(p.actual_variant ?? p.variant ?? "").trim() || undefined,
-      facings:
-        p.actual_facings == null || p.actual_facings === ""
-          ? null
-          : Number(p.actual_facings),
-      units:
+      facings,
+      units: capUnitsToFacings(
         p.actual_visible_units == null || p.actual_visible_units === ""
           ? null
           : Number(p.actual_visible_units),
+        facings,
+      ),
       status: "UNPLANNED",
       key: `unplanned-${i}`,
     });

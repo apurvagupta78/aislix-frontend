@@ -1,4 +1,4 @@
-import { useRef, useState, type RefObject } from "react";
+import { useRef, useState, type ReactNode, type RefObject } from "react";
 import { ArrowRight, Check, ClipboardList, Layers3, Package, Tag, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -93,6 +93,8 @@ export type PlanogramSetupSectionProps = {
     onChange: (next: DemoCategoryState) => void;
     categories: ShelfCategory[];
     helperText?: string;
+    /** Rendered in the same card directly below the category fields. */
+    extras?: ReactNode;
   };
 };
 
@@ -248,6 +250,9 @@ export function PlanogramSetupSection({
               }
             />
           </div>
+        ) : null}
+        {shelfCategory?.extras ? (
+          <div className="mt-5 border-t border-border pt-5">{shelfCategory.extras}</div>
         ) : null}
       </div>
 

@@ -85,17 +85,22 @@ function brandRowsWithProductUnits(
   rows: AstraShelfBrandAnalysis[],
   products: AstraShelfProduct[],
 ): BrandRow[] {
-  const byKey = new Map<string, { display: string; units: number }>();
+  const byKey = new Map<string, { display: string; units: number; facings: number; confidence: number[] }>();
   for (const p of products) {
     const key = brandKey(p.brand);
     if (!key) continue;
     const cur = byKey.get(key) ?? {
       display: UNREADABLE_TEXT.test(p.brand.trim()) ? "Brand not legible" : p.brand.trim(),
       units: 0,
+      facings: 0,
+      confidence: [],
     };
     cur.units += p.actual_visible_units || 0;
+    cur.facings += p.actual_facings || 0;
+    if (p.confidence) cur.confidence.push(p.confidence);
     byKey.set(key, cur);
   }
+  if (!rows.length) return brandRowsFromProducts(byKey);
   const hasPersistedUnits = rows.some((r) => r.visible_units > 0);
   const unitTotal = [...byKey.values()].reduce((n, v) => n + v.units, 0);
   const mapped = rows.map((r) => {
@@ -128,6 +133,35 @@ function brandRowsWithProductUnits(
       });
   }
   return mapped;
+}
+
+/** Aislix drops brand_analysis when Astra totals disagree; rebuild it from the detected product rows. */
+function brandRowsFromProducts(
+  byKey: Map<string, { display: string; units: number; facings: number; confidence: number[] }>,
+): BrandRow[] {
+  const entries = [...byKey.entries()].filter(([, v]) => v.facings > 0);
+  const facingSum = entries.reduce((n, [, v]) => n + v.facings, 0);
+  const unitSum = entries.reduce((n, [, v]) => n + v.units, 0);
+  const share = (part: number, whole: number) =>
+    whole > 0 ? Math.round((part / whole) * 1000) / 10 : 0;
+  const unitRank = new Map(
+    [...entries].sort((a, b) => b[1].units - a[1].units).map(([key], i) => [key, i + 1]),
+  );
+  return [...entries]
+    .sort((a, b) => b[1].facings - a[1].facings)
+    .map(([key, v], i) => ({
+      key,
+      brand: v.display,
+      facings: v.facings,
+      visible_units: v.units,
+      share_of_facings_percent: share(v.facings, facingSum),
+      share_of_visible_units_percent: unitSum > 0 ? share(v.units, unitSum) : null,
+      rank_by_facings: i + 1,
+      rank_by_visible_units: unitRank.get(key) ?? null,
+      confidence: v.confidence.length
+        ? v.confidence.reduce((n, c) => n + c, 0) / v.confidence.length
+        : 0,
+    }));
 }
 
 export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
@@ -452,30 +486,6 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       ) : null}
 
       <div className="grid gap-4 xl:grid-cols-2">
-        {brandDonut.length ? (
-          <AiAuditCard
-            title="Brand share of total facings"
-            description="How much shelf space each brand occupies"
-            csvDownload={{
-              onDownload: () =>
-                downloadSectionCsv(
-                  data.scan_id,
-                  "brand-facing-share",
-                  ["Brand", "Total Facings"],
-                  brandDonut.map((s) => [s.label, s.value]),
-                ),
-            }}
-          >
-            <MpDonut
-              slices={brandDonut.map((s, i) => ({
-                ...s,
-                color: i % 2 === 0 ? CHART_ACCENT.brandFacingShare : CHART_ACCENT.brandUnitShare,
-              }))}
-              total={facingsTotal || brandDonut.reduce((a, slice) => a + slice.value, 0)}
-              totalLabel="Total Facings"
-            />
-          </AiAuditCard>
-        ) : null}
         {categoryDonut.length ? (
           <AiAuditCard
             title="Category share of total facings"
@@ -510,6 +520,38 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
             </p>
           </AiAuditCard>
         )}
+        {brandDonut.length ? (
+          <AiAuditCard
+            title="Brand share of total facings"
+            description="How shelf space is split across brands"
+            csvDownload={{
+              onDownload: () =>
+                downloadSectionCsv(
+                  data.scan_id,
+                  "brand-facing-share",
+                  ["Brand", "Total Facings", "Share %"],
+                  brandRows
+                    .filter((b) => b.facings > 0)
+                    .map((b) => [b.brand, b.facings, b.share_of_facings_percent]),
+                ),
+            }}
+          >
+            <MpDonut
+              slices={brandDonut.map((s, i) => ({
+                ...s,
+                color: i % 2 === 0 ? CHART_ACCENT.brandFacingShare : CHART_ACCENT.brandUnitShare,
+              }))}
+              total={facingsTotal || brandDonut.reduce((a, slice) => a + slice.value, 0)}
+              totalLabel="Total Facings"
+            />
+          </AiAuditCard>
+        ) : (
+          <AiAuditCard title="Brand share of total facings" description="How shelf space is split across brands">
+            <p className="text-sm text-muted-foreground">
+              Data unavailable — brands were not clearly readable in this photo.
+            </p>
+          </AiAuditCard>
+        )}
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
@@ -533,7 +575,7 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
         {unitsBars.length ? (
           <AiAuditCard
             title="Top products by visible units"
-            description="Physical units fully in view, including stacked rows — can exceed facings"
+            description="Units fully in view — never more than the product's total facings"
             csvDownload={{
               onDownload: () =>
                 downloadSectionCsv(

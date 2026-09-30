@@ -348,7 +348,7 @@ function normalizePlanogramProduct(raw: unknown): AstraPlanogramProduct {
     max_facings: num(r.max_facings),
     facing_range_status: str(r.facing_range_status ?? r.facings_range_status ?? r.min_max_facing_status),
     expected_shelf_units: num(r.expected_shelf_units),
-    actual_visible_units: numOrNull(r.actual_visible_units),
+    actual_visible_units: capUnitsToFacings(numOrNull(r.actual_visible_units), numOrNull(r.actual_facings)),
     shelf_unit_variance: numOrNull(
       typeof shelfUnitVariance === "object" ? metricField(shelfUnitVariance) : shelfUnitVariance,
     ),
@@ -455,6 +455,8 @@ function derivePlanogramSummaryFromProducts(
   const calcActualUnits = metricField(calc?.total_actual_visible_units);
   const calcFacingPct = metricField(calc?.overall_facing_compliance);
   const calcPlanoPct = metricField(calc?.planogram_compliance);
+  const storedUnits = verifiedUnits ?? calcActualUnits ?? actualUnits;
+  const rowsHaveUnits = products.some((row) => row.actual_visible_units != null);
 
   return {
     total_planogram_rows: products.length || base.total_planogram_rows,
@@ -473,8 +475,7 @@ function derivePlanogramSummaryFromProducts(
     total_actual_facings:
       verifiedFacings ?? calcActualFacings ?? actualFacings ?? base.total_actual_facings,
     total_expected_shelf_units: expectedUnits || base.total_expected_shelf_units,
-    total_actual_visible_units:
-      verifiedUnits ?? calcActualUnits ?? actualUnits ?? base.total_actual_visible_units,
+    total_actual_visible_units: rowsHaveUnits ? Math.min(storedUnits, actualUnits) : storedUnits,
     overall_facing_compliance_percent:
       calcFacingPct ?? base.overall_facing_compliance_percent,
     overall_shelf_unit_compliance_percent: base.overall_shelf_unit_compliance_percent,
@@ -615,8 +616,15 @@ function normalizePlanogramBlock(
   };
 }
 
+/** A unit facing the shopper (stacked or not) is a facing, so fully visible units never exceed facings. */
+export function capUnitsToFacings<T extends number | null>(units: T, facings: number | null): T {
+  if (units == null || facings == null || facings <= 0) return units;
+  return Math.min(units, facings) as T;
+}
+
 function normalizeShelfProduct(raw: unknown): AstraShelfProduct {
   const r = (raw ?? {}) as Record<string, unknown>;
+  const facings = num(r.actual_facings ?? r.facings);
   return {
     brand: str(r.brand),
     brand_status: str(r.brand_status),
@@ -629,8 +637,8 @@ function normalizeShelfProduct(raw: unknown): AstraShelfProduct {
     subcategory: str(r.subcategory ?? r.sub_category),
     subcategory_status: str(r.subcategory_status ?? r.sub_category_status),
     shelf_position: str(r.shelf_position),
-    actual_facings: num(r.actual_facings ?? r.facings),
-    actual_visible_units: num(r.actual_visible_units ?? r.quantity),
+    actual_facings: facings,
+    actual_visible_units: capUnitsToFacings(num(r.actual_visible_units ?? r.quantity), facings),
     confidence: num(r.confidence),
     evidence_note: str(r.evidence_note),
   };
@@ -664,6 +672,13 @@ function normalizeShelfBlock(block: Record<string, unknown>): NormalizedAstraAna
   const summaryRaw = pickRecord(block.summary);
   const focus = pickRecord(block.focus_brand_analysis);
   const shelfStructure = pickRecord(block.shelf_structure);
+  const shelfProducts = products.map(normalizeShelfProduct);
+  const rawUnitSum = products.reduce<number>((n, raw) => {
+    const r = (raw ?? {}) as Record<string, unknown>;
+    return n + num(r.actual_visible_units ?? r.quantity);
+  }, 0);
+  const cappedUnitSum = shelfProducts.reduce((n, p) => n + p.actual_visible_units, 0);
+  const unitsCapped = cappedUnitSum < rawUnitSum;
 
   const brandRows = pickArray(block.brand_analysis).map((raw) => {
     const b = (raw ?? {}) as Record<string, unknown>;
@@ -674,10 +689,11 @@ function normalizeShelfBlock(block: Record<string, unknown>): NormalizedAstraAna
         : shareBlock
           ? num(shareBlock.value)
           : 0;
+    const facings = num(b.facings ?? b.actual_facings);
     return {
       brand: str(b.brand),
-      facings: num(b.facings ?? b.actual_facings),
-      visible_units: num(b.visible_units ?? b.actual_visible_units),
+      facings,
+      visible_units: capUnitsToFacings(num(b.visible_units ?? b.actual_visible_units), facings),
       share_of_facings_percent: shareValue,
       share_of_visible_units_percent: num(b.share_of_visible_units_percent),
       rank_by_facings: num(b.rank_by_facings),
@@ -706,14 +722,15 @@ function normalizeShelfBlock(block: Record<string, unknown>): NormalizedAstraAna
           notes: str(shelfStructure.notes),
         }
       : undefined,
-    products: products.map(normalizeShelfProduct),
+    products: shelfProducts,
     brand_analysis: brandRows,
     category_analysis: pickArray(block.category_analysis).map((raw) => {
       const c = (raw ?? {}) as Record<string, unknown>;
+      const facings = num(c.facings ?? c.actual_facings);
       return {
         category: str(c.category),
-        facings: num(c.facings ?? c.actual_facings),
-        visible_units: num(c.visible_units ?? c.actual_visible_units),
+        facings,
+        visible_units: capUnitsToFacings(num(c.visible_units ?? c.actual_visible_units), facings),
         share_of_facings_percent: num(c.share_of_facings_percent),
         share_of_visible_units_percent: num(c.share_of_visible_units_percent),
         confidence: num(c.confidence),
@@ -723,7 +740,10 @@ function normalizeShelfBlock(block: Record<string, unknown>): NormalizedAstraAna
       ? {
           brand: str(focus.brand),
           facings: num(focus.facings ?? focus.actual_facings),
-          visible_units: num(focus.visible_units ?? focus.actual_visible_units),
+          visible_units: capUnitsToFacings(
+            num(focus.visible_units ?? focus.actual_visible_units),
+            num(focus.facings ?? focus.actual_facings),
+          ),
           share_of_facings_percent: num(focus.share_of_facings_percent),
           share_of_visible_units_percent: num(focus.share_of_visible_units_percent),
           status: str(focus.status),
@@ -764,10 +784,11 @@ function normalizeShelfBlock(block: Record<string, unknown>): NormalizedAstraAna
         metricField(calc?.total_actual_facings) ??
         num(summaryRaw?.total_actual_facings) ??
         normalizeShelfSummary(block.summary ?? summaryRaw).visible_facings,
-      visible_units:
-        metricField(calc?.total_actual_visible_units) ??
-        num(summaryRaw?.total_actual_visible_units) ??
-        normalizeShelfSummary(block.summary ?? summaryRaw).visible_units,
+      visible_units: unitsCapped
+        ? cappedUnitSum
+        : (metricField(calc?.total_actual_visible_units) ??
+          num(summaryRaw?.total_actual_visible_units) ??
+          normalizeShelfSummary(block.summary ?? summaryRaw).visible_units),
     },
   };
 }

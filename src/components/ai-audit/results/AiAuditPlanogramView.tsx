@@ -28,6 +28,7 @@ import type {
   AstraPlanogramSubcategoryAnalysis,
   AstraUnplannedProduct,
 } from "@/lib/ai-audit/astra-response";
+import { capUnitsToFacings } from "@/lib/ai-audit/astra-response";
 import { CHART_ACCENT, KPI_CARD, summaryFillAt } from "@/lib/ai-audit/kpi-palette";
 import { metricDisplayValue, metricStatusLabel } from "@/lib/ai-audit/metric-results";
 import { downloadKeyValueCsv, downloadSectionCsv } from "@/lib/ai-audit/section-csv";
@@ -83,21 +84,23 @@ function pickAstraCvProducts(data: ScanResult): Array<{
   const products = Array.isArray(block?.products) ? block.products : [];
   return products
     .filter((p): p is Record<string, unknown> => !!p && typeof p === "object" && !Array.isArray(p))
-    .map((p) => ({
-      brand: String(p.brand ?? "").trim() || "—",
-      product: String(p.product_name ?? p.product ?? "").trim() || "—",
-      variant: String(p.variant ?? "").trim() || "—",
-      category: String(p.category ?? "").trim() || "—",
-      actual_facings:
-        p.actual_facings == null || p.actual_facings === ""
-          ? null
-          : Number(p.actual_facings),
-      actual_visible_units:
+    .map((p) => {
+      const facings =
+        p.actual_facings == null || p.actual_facings === "" ? null : Number(p.actual_facings);
+      const units =
         p.actual_visible_units == null || p.actual_visible_units === ""
           ? null
-          : Number(p.actual_visible_units),
-      confidence: p.confidence == null || p.confidence === "" ? null : Number(p.confidence),
-    }));
+          : Number(p.actual_visible_units);
+      return {
+        brand: String(p.brand ?? "").trim() || "—",
+        product: String(p.product_name ?? p.product ?? "").trim() || "—",
+        variant: String(p.variant ?? "").trim() || "—",
+        category: String(p.category ?? "").trim() || "—",
+        actual_facings: facings,
+        actual_visible_units: capUnitsToFacings(units, facings),
+        confidence: p.confidence == null || p.confidence === "" ? null : Number(p.confidence),
+      };
+    });
 }
 
 function countCell(value: number | null | undefined) {

@@ -6,7 +6,7 @@ import type { CsvPlanogramManualPanelHandle } from "@/components/planogram/CsvPl
 import type { NewPlanogramWizardHandle } from "@/components/planogram/NewPlanogramWizard";
 import type { PlanogramModeChoice } from "@/components/planogram/PlanogramModeOption";
 import { useDemoCategory } from "@/components/scan/use-demo-category";
-import { CategorySubcategoryPicker } from "@/components/scan/CategorySubcategoryPicker";
+import { ExtraCategoryRows } from "@/components/scan/ExtraCategoryRows";
 import { Button } from "@/components/ui/button";
 import type { NewAuditPlanogramChoice } from "@/lib/new-audit/planogram-setup";
 import { EMPTY_PLANOGRAM_META } from "@/lib/planogram-meta";
@@ -99,6 +99,17 @@ export function NewAuditDemoSetupPanel({
           onChange: handleCategoryChange,
           categories: demoCategory.categories,
           helperText: "These fields are included in your shelf analysis.",
+          extras:
+            planogramChoice === "without" ? (
+              <ExtraCategoryRows
+                value={scanContext.extraCategorySelections ?? []}
+                onChange={(next) =>
+                  onScanContextChange({ ...scanContext, extraCategorySelections: next })
+                }
+                categories={demoCategory.categories}
+                maxRows={MAX_EXTRA_CATEGORIES}
+              />
+            ) : undefined,
         }}
         onSyncCategoryFromContext={(ctx) => {
           const cat = ctx.planogramMeta?.category?.trim();
@@ -121,21 +132,6 @@ export function NewAuditDemoSetupPanel({
         defaultSubCategory={subCategoryLabel}
         showInlineStart={false}
       />
-
-      {planogramChoice === "without" ? (
-        <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
-          <CategorySubcategoryPicker
-            value={scanContext.extraCategorySelections ?? []}
-            onChange={(next) =>
-              onScanContextChange({ ...scanContext, extraCategorySelections: next })
-            }
-            categories={demoCategory.categories}
-            maxSelections={MAX_EXTRA_CATEGORIES}
-            label="More categories on this shelf (optional)"
-            helper="Mixed rack? Add every other category and sub-category in the photo so those products are not flagged as misplaced."
-          />
-        </div>
-      ) : null}
     </div>
   );
 }
