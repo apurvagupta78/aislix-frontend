@@ -41,6 +41,7 @@ import { EMPTY_PLANOGRAM_META, type PlanogramMeta } from "@/lib/planogram-meta";
 import { defaultAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
 import { roleRequiresPricing } from "@/lib/role-planogram-requirements";
 import type { FinancialImpact, ScanRecommendation, ScanResult } from "@/lib/scan-results";
+import type { CategorySelection } from "@/lib/category-selections";
 import { emptyRow, type PlanogramRow } from "@/lib/planogram";
 
 export type ScanFocusFilter = {
@@ -57,6 +58,8 @@ export type ScanContextState = {
   auditPackage?: PlanogramAuditPackage;
   /** Step 1 planogram metadata (name, store, validity, fixture basics). */
   planogramMeta?: PlanogramMeta;
+  /** Extra shelf types on a mixed rack, in addition to planogramMeta's primary category. */
+  extraCategorySelections?: CategorySelection[];
 };
 
 export const EMPTY_SCAN_CONTEXT: ScanContextState = {
@@ -109,6 +112,9 @@ export function loadStoredScanContext(): ScanContextState {
       auditRole: defaultAuditRoleTab(parsed.auditRole),
       auditPackage: parsed.auditPackage ?? { ...EMPTY_AUDIT_PACKAGE },
       planogramMeta: parsed.planogramMeta ?? { ...EMPTY_PLANOGRAM_META },
+      extraCategorySelections: Array.isArray(parsed.extraCategorySelections)
+        ? parsed.extraCategorySelections
+        : [],
     };
   } catch {
     return EMPTY_SCAN_CONTEXT;

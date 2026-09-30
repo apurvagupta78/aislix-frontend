@@ -277,7 +277,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { CompetitorSnapshot } from "@/lib/brand-intel";
 import { annotateCompetitorCategories, buildCompetitorSnapshot } from "@/lib/brand-intel";
 import { enrichScanResultWithAstra } from "@/lib/ai-audit/astra-display";
-import { normalizeAstraAnalysis } from "@/lib/ai-audit/astra-response";
+import { astraAnalysisFromScanResult, normalizeAstraAnalysis } from "@/lib/ai-audit/astra-response";
 import {
   formatCategorySelections,
   parseCategorySelections,
@@ -979,7 +979,7 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
     ((scan as any).sub_category as string | null | undefined);
   if (selections.length > 1) {
     // Mixed rack: show every shelf type instead of a misleading single pair.
-    scanResult.scan_category = formatCategorySelections(selections, 3);
+    scanResult.scan_category = formatCategorySelections(selections, 8);
   } else {
     if (scanCategory) scanResult.scan_category = scanCategory;
     if (subLabel) scanResult.scan_sub_category = subLabel;
@@ -1527,6 +1527,13 @@ function excelSheetName(label: string): string {
 }
 
 /** Multi-tab Excel workbook — eight-section retail report (table-first). */
+function astraVisibleUnitsTotal(result: ScanResult): number | undefined {
+  const analysis = astraAnalysisFromScanResult(result);
+  if (analysis.mode === "shelf_only") return analysis.summary.visible_units || undefined;
+  if (analysis.mode === "planogram") return analysis.summary.total_actual_visible_units || undefined;
+  return undefined;
+}
+
 export function buildFullScanReportExcel(
   result: ScanResult,
   extras?: ScanReportExcelExtras,
@@ -1633,7 +1640,8 @@ export function buildFullScanReportExcel(
     (typeof (s as { total_visible_units?: number } | undefined)?.total_visible_units === "number"
       ? (s as { total_visible_units?: number }).total_visible_units
       : undefined) ??
-    (inventoryFacingSum > 0 ? inventoryFacingSum : "N/A");
+    astraVisibleUnitsTotal(result) ??
+    "N/A";
   const verifiedFacingsTotal = facingVers.length ? sumVerified(facingVers) : "N/A";
   const verifiedUnitsTotal = unitVers.length ? sumVerified(unitVers) : "N/A";
 

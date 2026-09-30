@@ -28,6 +28,7 @@ import { useWorkspaceContext } from "@/hooks/use-customer-context";
 import { AiAuditResultsPage } from "@/components/ai-audit/AiAuditResultsPage";
 import { AiAuditSubmitPanel } from "@/components/ai-audit/AiAuditSubmitPanel";
 import { AiFieldVerificationPanel } from "@/components/ai-audit/AiFieldVerificationPanel";
+import { visibleUnitsLookupFromScan } from "@/lib/ai-audit/verification-units";
 import { ReportActionsFooter } from "@/components/scan-results/ReportActionsFooter";
 import { AstraComparisonResults } from "@/components/ai-audit/AstraComparisonResults";
 import { normalizeAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
@@ -242,6 +243,10 @@ function Results() {
   // Do not wait on digital-session isPending/isFetching — that left LIVE AI /results
   // stuck on "Loading results" when the digital probe hung (ensureFnvQc, etc.).
   const showAstraShelfResults = Boolean(display) && !isDigitalAudit;
+  const visibleUnitsFor = useMemo(
+    () => (display ? visibleUnitsLookupFromScan(display) : () => null),
+    [display],
+  );
   const imageUrl = data?.annotated_image_url ?? data?.original_image_url ?? undefined;
 
   const goToScan = (id?: string | null) => {
@@ -420,13 +425,7 @@ function Results() {
                               product: row.product,
                               facings: row.facings ?? row.quantity,
                               quantity: row.quantity,
-                              // Prefer distinct visible units when present; do not clone facings.
-                              visible_units:
-                                row.quantity != null &&
-                                row.facings != null &&
-                                row.quantity !== row.facings
-                                  ? row.quantity
-                                  : row.quantity ?? null,
+                              visible_units: visibleUnitsFor(row.brand, row.product, row.variant),
                             }))}
                             canEdit={!assignmentQuery.data?.submitted}
                           />

@@ -182,7 +182,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
       sub: `Expected ${s.total_expected_facings}`,
     },
     {
-      label: "Fully visible facings",
+      label: "Visible units",
       value: metricDisplayValue(calc.total_actual_visible_units, s.total_actual_visible_units),
       status: metricStatusLabel(calc.total_actual_visible_units?.status),
       sub: `Expected ${s.total_expected_shelf_units}`,
@@ -274,7 +274,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
     },
     {
       key: "act_u",
-      header: "Fully visible",
+      header: "Visible units",
       cell: (r: AstraPlanogramProduct) => countCell(r.actual_visible_units),
     },
     {
@@ -466,7 +466,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
               ),
           }}
         >
-          <AiVarianceBars items={topUnitVariance} unit=" fully visible facings" accent={CHART_ACCENT.actualUnits} />
+          <AiVarianceBars items={topUnitVariance} unit=" visible units" accent={CHART_ACCENT.actualUnits} />
         </AiAuditCard>
       </div>
 
@@ -708,7 +708,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
                 "Total Facings",
                 "Facing variance",
                 "Expected units",
-                "Fully visible facings",
+                "Visible units",
                 "Status",
                 "Confidence",
                 "Evidence",
@@ -749,7 +749,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
               downloadSectionCsv(
                 data.scan_id,
                 "unplanned-products",
-                ["Brand", "Product", "Variant", "Total Facings", "Fully visible facings", "Confidence"],
+                ["Brand", "Product", "Variant", "Total Facings", "Visible units", "Confidence"],
                 analysis.observed_unplanned_products.map((r) => [
                   r.brand,
                   r.product_name,
@@ -769,7 +769,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
               { key: "p", header: "Product", cell: (r) => r.product_name },
               { key: "v", header: "Variant", cell: (r) => r.variant || "—" },
               { key: "f", header: "Total Facings", cell: (r) => r.actual_facings },
-              { key: "u", header: "Fully visible facings", cell: (r) => r.actual_visible_units },
+              { key: "u", header: "Visible units", cell: (r) => r.actual_visible_units },
               { key: "c", header: "Confidence", cell: (r) => confCell(r.confidence) },
             ]}
           />

@@ -60,6 +60,76 @@ function tileTone(status: string | undefined): "active" | "healthy" | "neutral" 
   return "active";
 }
 
+const UNREADABLE_TEXT = /^(unverifiable|unknown|unidentified|not legible|illegible|unreadable|not identifiable|n\/a|none)$/i;
+const UNREADABLE_VARIANT = /not (reliably )?legible|unclear|not identifiable|unverifiable|unknown|unreadable/i;
+
+function brandKey(brand: string | undefined) {
+  return (brand ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+type BrandRow = Omit<
+  AstraShelfBrandAnalysis,
+  "visible_units" | "share_of_visible_units_percent" | "rank_by_visible_units"
+> & {
+  key: string;
+  visible_units: number | null;
+  share_of_visible_units_percent: number | null;
+  rank_by_visible_units: number | null;
+};
+
+/**
+ * Older scans persisted brand rows keyed by a lowercase canonical brand ("cocacola") with no unit
+ * totals. Show the brand as read from the product rows and sum their persisted per-product units.
+ */
+function brandRowsWithProductUnits(
+  rows: AstraShelfBrandAnalysis[],
+  products: AstraShelfProduct[],
+): BrandRow[] {
+  const byKey = new Map<string, { display: string; units: number }>();
+  for (const p of products) {
+    const key = brandKey(p.brand);
+    if (!key) continue;
+    const cur = byKey.get(key) ?? {
+      display: UNREADABLE_TEXT.test(p.brand.trim()) ? "Brand not legible" : p.brand.trim(),
+      units: 0,
+    };
+    cur.units += p.actual_visible_units || 0;
+    byKey.set(key, cur);
+  }
+  const hasPersistedUnits = rows.some((r) => r.visible_units > 0);
+  const unitTotal = [...byKey.values()].reduce((n, v) => n + v.units, 0);
+  const mapped = rows.map((r) => {
+    const key = brandKey(r.brand);
+    const fromProducts = byKey.get(key);
+    const display = UNREADABLE_TEXT.test(r.brand.trim())
+      ? "Brand not legible"
+      : (fromProducts?.display ?? r.brand);
+    const units = hasPersistedUnits ? r.visible_units : (fromProducts?.units ?? null);
+    const unitShare = hasPersistedUnits
+      ? r.share_of_visible_units_percent
+      : units != null && unitTotal > 0
+        ? Math.round((units / unitTotal) * 1000) / 10
+        : null;
+    return {
+      ...r,
+      key: key || r.brand,
+      brand: display,
+      visible_units: units,
+      share_of_visible_units_percent: unitShare,
+      rank_by_visible_units: hasPersistedUnits ? r.rank_by_visible_units || null : null,
+    };
+  });
+  if (!hasPersistedUnits) {
+    [...mapped]
+      .filter((r) => r.visible_units != null)
+      .sort((a, b) => (b.visible_units ?? 0) - (a.visible_units ?? 0))
+      .forEach((r, index) => {
+        r.rank_by_visible_units = index + 1;
+      });
+  }
+  return mapped;
+}
+
 export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
   if (ctx.analysis.mode !== "shelf_only") return null;
   const analysis = ctx.analysis;
@@ -95,17 +165,21 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
     { label: "Products", value: productsValue, tone: tileTone(productsMetric?.status), bg: KPI_CARD.detectedProducts },
     { label: "Brands", value: brandsValue, tone: tileTone(brandsMetric?.status), bg: KPI_CARD.auditPass },
     {
-      label: "Variants",
+      label: "Variants read",
       value: String(
         analysis.products.filter(
-          (p) => !/^unverifiable$/i.test((p.product_status || "").trim()),
+          (p) =>
+            !/^unverifiable$/i.test((p.product_status || "").trim()) &&
+            !/^unverifiable$/i.test((p.variant_status || "").trim()) &&
+            Boolean(p.variant?.trim()) &&
+            !UNREADABLE_VARIANT.test(p.variant),
         ).length,
       ),
       tone: "neutral" as const,
       bg: KPI_CARD.auditCompletion,
     },
     { label: "Total Facings", value: facingsValue, tone: tileTone(facingsMetric?.status), bg: KPI_CARD.openFindings },
-    { label: "Fully visible facings", value: unitsValue, tone: tileTone(unitsMetric?.status), bg: KPI_CARD.inventoryValueVariance },
+    { label: "Visible units", value: unitsValue, tone: tileTone(unitsMetric?.status), bg: KPI_CARD.inventoryValueVariance },
     {
       label: "Prices read",
       value: analysis.visible_prices.length ? String(analysis.visible_prices.length) : "N/A",
@@ -149,9 +223,11 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
     }));
   })();
 
+  const brandRows = brandRowsWithProductUnits(analysis.brand_analysis, analysis.products);
+
   const brandDonut = statusDonutSlices(
     Object.fromEntries(
-      analysis.brand_analysis
+      brandRows
         .filter((b) => b.brand && b.facings > 0)
         .map((b) => [b.brand, b.facings]),
     ),
@@ -222,7 +298,7 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       ),
     },
     { key: "facings", header: "Total Facings", cell: (r: AstraShelfProduct) => r.actual_facings },
-    { key: "units", header: "Fully visible facings", cell: (r: AstraShelfProduct) => r.actual_visible_units },
+    { key: "units", header: "Visible units", cell: (r: AstraShelfProduct) => r.actual_visible_units },
     { key: "conf", header: "Confidence", cell: (r: AstraShelfProduct) => confCell(r.confidence) },
     {
       key: "ev",
@@ -339,7 +415,7 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
               downloadKeyValueCsv(data.scan_id, "focus-brand", [
                 { label: "Brand", value: analysis.focus_brand_analysis!.brand },
                 { label: "Total Facings", value: analysis.focus_brand_analysis!.facings },
-                { label: "Fully visible facings", value: analysis.focus_brand_analysis!.visible_units },
+                { label: "Visible units", value: analysis.focus_brand_analysis!.visible_units },
                 {
                   label: "Facing share %",
                   value: analysis.focus_brand_analysis!.share_of_facings_percent,
@@ -356,7 +432,7 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
             <AiMetricStat label="Brand" value={analysis.focus_brand_analysis.brand} bg={summaryFillAt(0)} />
             <AiMetricStat label="Total Facings" value={analysis.focus_brand_analysis.facings} bg={summaryFillAt(1)} />
             <AiMetricStat
-              label="Fully visible facings"
+              label="Visible units"
               value={analysis.focus_brand_analysis.visible_units}
               bg={summaryFillAt(2)}
             />
@@ -440,7 +516,7 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
         {facingsBars.length ? (
           <AiAuditCard
             title="Top products by total facings"
-            description="Ranked horizontal bar chart"
+            description="Front-row positions each product occupies on the shelf"
             csvDownload={{
               onDownload: () =>
                 downloadSectionCsv(
@@ -456,24 +532,24 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
         ) : null}
         {unitsBars.length ? (
           <AiAuditCard
-            title="Top products by fully visible facings"
-            description="Ranked horizontal bar chart"
+            title="Top products by visible units"
+            description="Physical units fully in view, including stacked rows — can exceed facings"
             csvDownload={{
               onDownload: () =>
                 downloadSectionCsv(
                   data.scan_id,
                   "top-products-units",
-                  ["Product", "Fully visible facings"],
+                  ["Product", "Visible units"],
                   unitsBars.map((r) => [r.label, r.value]),
                 ),
             }}
           >
-            <MpRankBars data={unitsBars} unit=" fully visible facings" />
+            <MpRankBars data={unitsBars} unit=" visible units" />
           </AiAuditCard>
         ) : null}
       </div>
 
-      {analysis.brand_analysis.length ? (
+      {brandRows.length ? (
         <AiAuditCard
           title="Brand analysis"
           description="Brand facing and unit share"
@@ -485,38 +561,43 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
                 [
                   "Brand",
                   "Total Facings",
-                  "Fully visible facings",
+                  "Visible units",
                   "Facing share %",
                   "Unit share %",
                   "Rank facings",
                   "Rank units",
                   "Confidence",
                 ],
-                analysis.brand_analysis.map((b) => [
+                brandRows.map((b) => [
                   b.brand,
                   b.facings,
-                  b.visible_units,
+                  b.visible_units ?? "N/A",
                   b.share_of_facings_percent,
-                  b.share_of_visible_units_percent,
+                  b.share_of_visible_units_percent ?? "N/A",
                   b.rank_by_facings,
-                  b.rank_by_visible_units,
-                  b.confidence,
+                  b.rank_by_visible_units ?? "N/A",
+                  b.confidence || "N/A",
                 ]),
               ),
           }}
         >
           <AiAuditMetricTable
-            rows={analysis.brand_analysis}
-            rowKey={(r) => r.brand}
+            rows={brandRows}
+            rowKey={(r) => r.key}
             columns={[
-              { key: "b", header: "Brand", cell: (r: AstraShelfBrandAnalysis) => r.brand },
+              { key: "b", header: "Brand", cell: (r: BrandRow) => r.brand },
               { key: "f", header: "Total Facings", cell: (r) => r.facings },
-              { key: "u", header: "Fully visible facings", cell: (r) => r.visible_units || "—" },
+              { key: "u", header: "Visible units", cell: (r) => r.visible_units ?? "N/A" },
               { key: "fs", header: "Facing share %", cell: (r) => pctCell(r.share_of_facings_percent) },
-              { key: "us", header: "Unit share %", cell: (r) => pctCell(r.share_of_visible_units_percent) },
+              {
+                key: "us",
+                header: "Unit share %",
+                cell: (r) =>
+                  r.share_of_visible_units_percent == null ? "N/A" : pctCell(r.share_of_visible_units_percent),
+              },
               { key: "rf", header: "Rank facings", cell: (r) => r.rank_by_facings || "—" },
-              { key: "ru", header: "Rank units", cell: (r) => r.rank_by_visible_units || "—" },
-              { key: "c", header: "Confidence", cell: (r) => confCell(r.confidence) },
+              { key: "ru", header: "Rank units", cell: (r) => r.rank_by_visible_units ?? "—" },
+              { key: "c", header: "Confidence", cell: (r) => (r.confidence ? confCell(r.confidence) : "—") },
             ]}
           />
         </AiAuditCard>
@@ -531,7 +612,7 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
               downloadSectionCsv(
                 data.scan_id,
                 "category-analysis",
-                ["Category", "Total Facings", "Fully visible facings", "Facing share %", "Unit share %"],
+                ["Category", "Total Facings", "Visible units", "Facing share %", "Unit share %"],
                 categoryFromProducts.map((c) => [
                   c.category,
                   c.facings,
@@ -548,7 +629,7 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
             columns={[
               { key: "c", header: "Category", cell: (r: AstraShelfCategoryAnalysis) => r.category },
               { key: "f", header: "Total Facings", cell: (r) => r.facings },
-              { key: "u", header: "Fully visible facings", cell: (r) => r.visible_units },
+              { key: "u", header: "Visible units", cell: (r) => r.visible_units },
               { key: "fs", header: "Facing share %", cell: (r) => pctCell(r.share_of_facings_percent) },
               { key: "us", header: "Unit share %", cell: (r) => pctCell(r.share_of_visible_units_percent) },
               { key: "conf", header: "Confidence", cell: (r) => confCell(r.confidence) },
@@ -572,7 +653,7 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
                 "Category",
                 "Subcategory",
                 "Total Facings",
-                "Fully visible facings",
+                "Visible units",
                 "Confidence",
                 "Evidence",
               ],

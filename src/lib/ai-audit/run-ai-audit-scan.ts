@@ -6,7 +6,7 @@ import {
   type LandingScanContext,
   type LandingScanResult,
 } from "@/lib/landing-scan-api";
-import type { CategorySelection } from "@/lib/category-selections";
+import { dedupeSelections, type CategorySelection } from "@/lib/category-selections";
 import { buildAstraVisionExtras } from "@/lib/ai-audit/astra-analysis";
 import { adhocPlanogramPayload } from "@/lib/role-planogram-requirements";
 import type { ScanContextState } from "@/lib/scan-context";
@@ -38,7 +38,7 @@ function buildScanSubmitOptions(input: AuthenticatedAiScanInput) {
   const subCategoryLabel = input.subCategoryLabel ?? subCategory;
   const auditRole = ctx.auditRole ?? "supermarket";
 
-  const categorySelections: CategorySelection[] =
+  const primarySelection: CategorySelection[] =
     category && subCategory
       ? [
           {
@@ -49,6 +49,15 @@ function buildScanSubmitOptions(input: AuthenticatedAiScanInput) {
           },
         ]
       : [];
+  const sameAsPrimary = (s: CategorySelection) =>
+    s.category_name.toLowerCase() === (category ?? "").toLowerCase() &&
+    [s.sub_category_label, s.sub_category_id].some(
+      (v) => v && v.toLowerCase() === (subCategory ?? "").toLowerCase(),
+    );
+  const categorySelections = dedupeSelections([
+    ...primarySelection,
+    ...(ctx.extraCategorySelections ?? []).filter((s) => !sameAsPrimary(s)),
+  ]);
 
   const auditPackage = autoPopulateAuditPackage(
     ctx.planogramRows,

@@ -128,7 +128,7 @@ export function CategorySubcategoryPicker({
                 <button
                   type="button"
                   aria-label={`Remove ${selection.category_name} ${selectionLabel(selection)}`}
-                  className="-my-2 -mr-1.5 grid min-h-11 min-w-11 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:-my-1 sm:min-h-6 sm:min-w-6"
+                  className="-my-2 -mr-1.5 grid min-h-11 min-w-11 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-[var(--aislix-warehouse-bg)] hover:text-[var(--aislix-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:-my-1 sm:min-h-6 sm:min-w-6"
                   onClick={() => remove(index)}
                 >
                   <X className="size-4" />
@@ -217,7 +217,7 @@ export function CategorySubcategoryPicker({
                 )}
               </div>
 
-              {draftError && <p className="text-xs text-destructive">{draftError}</p>}
+              {draftError && <p className="text-xs text-[var(--aislix-primary)]">{draftError}</p>}
 
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -265,7 +265,7 @@ export function CategorySubcategoryPicker({
         </>
       )}
 
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-xs text-[var(--aislix-primary)]">{error}</p>}
     </div>
   );
 }

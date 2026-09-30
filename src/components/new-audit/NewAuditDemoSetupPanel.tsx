@@ -6,10 +6,14 @@ import type { CsvPlanogramManualPanelHandle } from "@/components/planogram/CsvPl
 import type { NewPlanogramWizardHandle } from "@/components/planogram/NewPlanogramWizard";
 import type { PlanogramModeChoice } from "@/components/planogram/PlanogramModeOption";
 import { useDemoCategory } from "@/components/scan/use-demo-category";
+import { CategorySubcategoryPicker } from "@/components/scan/CategorySubcategoryPicker";
 import { Button } from "@/components/ui/button";
 import type { NewAuditPlanogramChoice } from "@/lib/new-audit/planogram-setup";
 import { EMPTY_PLANOGRAM_META } from "@/lib/planogram-meta";
 import { EMPTY_SCAN_CONTEXT, type ScanContextState } from "@/lib/scan-context";
+
+/** Primary category + 7 more = up to 8 shelf types per AI audit. */
+const MAX_EXTRA_CATEGORIES = 7;
 
 function lockedPlanogramMode(choice: NewAuditPlanogramChoice): PlanogramModeChoice {
   return choice === "with_demo" ? "custom" : "none";
@@ -117,6 +121,21 @@ export function NewAuditDemoSetupPanel({
         defaultSubCategory={subCategoryLabel}
         showInlineStart={false}
       />
+
+      {planogramChoice === "without" ? (
+        <div className="rounded-2xl border border-border bg-card p-4 sm:p-5">
+          <CategorySubcategoryPicker
+            value={scanContext.extraCategorySelections ?? []}
+            onChange={(next) =>
+              onScanContextChange({ ...scanContext, extraCategorySelections: next })
+            }
+            categories={demoCategory.categories}
+            maxSelections={MAX_EXTRA_CATEGORIES}
+            label="More categories on this shelf (optional)"
+            helper="Mixed rack? Add every other category and sub-category in the photo so those products are not flagged as misplaced."
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
