@@ -7,6 +7,7 @@ import type { NewPlanogramWizardHandle } from "@/components/planogram/NewPlanogr
 import type { PlanogramModeChoice } from "@/components/planogram/PlanogramModeOption";
 import { useDemoCategory } from "@/components/scan/use-demo-category";
 import { ExtraCategoryRows } from "@/components/scan/ExtraCategoryRows";
+import { ReferenceSourcePanel } from "@/components/new-audit/ReferenceSourcePanel";
 import { Button } from "@/components/ui/button";
 import type { NewAuditPlanogramChoice } from "@/lib/new-audit/planogram-setup";
 import { EMPTY_PLANOGRAM_META } from "@/lib/planogram-meta";
@@ -73,7 +74,9 @@ export function NewAuditDemoSetupPanel({
   }
 
   function handleScanContextChange(next: ScanContextState) {
-    onScanContextChange(mergeCategoryIntoContext(next, demoCategory.state));
+    onScanContextChange(
+      mergeCategoryIntoContext({ ...next, reference: next.reference ?? scanContext.reference }, demoCategory.state),
+    );
   }
 
   return (
@@ -132,6 +135,15 @@ export function NewAuditDemoSetupPanel({
         defaultSubCategory={subCategoryLabel}
         showInlineStart={false}
       />
+
+      {planogramChoice === "reference" ? (
+        <ReferenceSourcePanel
+          value={scanContext.reference}
+          onChange={(reference) => onScanContextChange({ ...scanContext, reference })}
+          category={scanContext.planogramMeta?.category}
+          subCategory={scanContext.planogramMeta?.sub_category}
+        />
+      ) : null}
     </div>
   );
 }

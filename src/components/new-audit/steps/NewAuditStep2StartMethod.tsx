@@ -65,8 +65,8 @@ export function NewAuditStep2StartMethod({
       <NewAuditStepSection
         id="step-3-start"
         stepNumber={3}
-        title="Would you like to conduct the audit with or without a planogram?"
-        description="Compare against an expected shelf layout, or analyse without one."
+        title="What should the shelf be compared against?"
+        description="Your planogram, nothing (analyse what is visible), or your own document."
         complete={complete}
         error={planogramError}
       >
@@ -84,7 +84,9 @@ export function NewAuditStep2StartMethod({
         description={
           aiPlanogramChoice === "without"
             ? "Pick who this audit is for, category and sub-category."
-            : "Pick who this audit is for, category, sub-category, and upload your planogram."
+            : aiPlanogramChoice === "reference"
+              ? "Pick who this audit is for, category, sub-category, and upload your document or CSV."
+              : "Pick who this audit is for, category, sub-category, and upload your planogram."
         }
         complete={complete}
         error={planogramError}

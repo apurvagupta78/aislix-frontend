@@ -28,6 +28,7 @@ import {
   priceStatusLabel,
 } from "@/components/ai-audit/results/AiLocationSections";
 import { PlanogramSideBySidePanel } from "@/components/scan-results/PlanogramSideBySidePanel";
+import { ReferenceMatchSection } from "@/components/ai-audit/results/ReferenceMatchSection";
 import { MpDonut, MpRadialGauge, MpTileGrid } from "@/components/control-tower/MpCharts";
 import type { AiAuditDisplayContext } from "@/lib/ai-audit/astra-display";
 import type {
@@ -390,6 +391,10 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
             remain available below.
           </p>
         </div>
+      ) : null}
+
+      {analysis.reference_match ? (
+        <ReferenceMatchSection scanId={data.scan_id} match={analysis.reference_match} imageUrl={imageUrl} />
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[auto,1fr]">

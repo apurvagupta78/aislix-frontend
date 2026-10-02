@@ -1,5 +1,7 @@
 /** Normalized Astra payloads returned by Railway. */
 
+import { findReferenceMatch, type ReferenceMatch } from "@/lib/ai-audit/reference-match";
+
 export type AstraImageQuality = {
   status: "GOOD" | "LIMITED" | "POOR" | string;
   reason?: string;
@@ -255,6 +257,7 @@ export type NormalizedAstraAnalysis =
       /** Aggregate KPIs must not be treated as valid when true. */
       count_verification_pending?: boolean;
       location_analysis?: AstraLocationAnalysis;
+      reference_match?: ReferenceMatch;
     }
   | {
       mode: "shelf_only";
@@ -715,6 +718,7 @@ function normalizePlanogramBlock(
     },
     count_verification_pending: root ? isCountVerificationPending(root) : false,
     location_analysis: findLocationAnalysis(block, root),
+    reference_match: findReferenceMatch(block, root),
   };
 }
 

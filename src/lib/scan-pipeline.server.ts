@@ -1142,6 +1142,7 @@ type AssignmentContext = {
   planogram_version_id: string | null;
   items: Record<string, unknown>[];
   items_full: Record<string, unknown>[];
+  reference?: ReferenceBlock;
 };
 
 async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
@@ -1172,11 +1173,31 @@ async function loadScan(supabase: DB, scanId: string): Promise<ScanRow> {
   };
 }
 
+type ReferenceBlock = {
+  document: Record<string, unknown>;
+  items: Record<string, unknown>[];
+};
+
+/** Reference-document block stored on the scan (adhoc payload) or assignment (template snapshot). */
+function parseReferenceBlock(raw: unknown): ReferenceBlock | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const obj = raw as Record<string, unknown>;
+  if (obj.comparison_basis !== "reference" || !Array.isArray(obj.items)) return undefined;
+  const items = obj.items.filter(
+    (item): item is Record<string, unknown> => Boolean(item) && typeof item === "object",
+  );
+  if (!items.length) return undefined;
+  const document =
+    obj.document && typeof obj.document === "object" ? (obj.document as Record<string, unknown>) : {};
+  return { document, items };
+}
+
 function parseAdhocPlanogram(raw: unknown): {
   rows: Record<string, unknown>[];
   analysis_mode?: string;
   audit_role?: string;
   audit_package?: Record<string, unknown>;
+  reference?: ReferenceBlock;
 } {
   if (!raw) return { rows: [] };
   if (Array.isArray(raw)) return { rows: raw as Record<string, unknown>[] };
@@ -1191,6 +1212,7 @@ function parseAdhocPlanogram(raw: unknown): {
           obj.audit_package && typeof obj.audit_package === "object"
             ? (obj.audit_package as Record<string, unknown>)
             : undefined,
+        reference: parseReferenceBlock(obj.reference),
       };
     }
   }
@@ -1198,10 +1220,13 @@ function parseAdhocPlanogram(raw: unknown): {
 }
 
 const PLANOGRAM_FIELDS =
-  "id, location, aisle, category, sub_category, brand, product_name, variant, sku, expected_qty, match_key";
+  "id, location, aisle, category, sub_category, brand, product_name, variant, sku, expected_qty, expected_facings, min_facings, max_facings, expected_shelf_units, mrp_inr, avg_daily_sales, shelf_position, match_key";
 
 function planogramShape(row: Record<string, unknown>) {
-  const shaped = shapePlanogramItemForApi(row);
+  // Nullable DB columns must stay unset, not become 0 facings / ₹0.
+  const shaped = shapePlanogramItemForApi(
+    Object.fromEntries(Object.entries(row).filter(([, value]) => value !== null)),
+  );
   const s = (value: unknown) => (typeof value === "string" ? value : "");
   return {
     ...shaped,
@@ -1227,7 +1252,7 @@ async function loadAssignmentContext(
   if (!scan.assignment_id) return null;
   const { data: assignment } = await supabase
     .from("scan_assignments")
-    .select("id, store_id, scope_type, scope_values, planogram_version_id")
+    .select("id, store_id, scope_type, scope_values, planogram_version_id, template_snapshot")
     .eq("id", scan.assignment_id)
     .maybeSingle();
   if (!assignment) return null;
@@ -1305,6 +1330,9 @@ async function loadAssignmentContext(
     audit_package: auditPackage,
     items,
     items_full: itemsFull,
+    reference: parseReferenceBlock(
+      (assignment.template_snapshot as Record<string, unknown> | null)?.["reference"],
+    ),
   };
 }
 
@@ -1347,6 +1375,7 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
   // when an assignment exists (self-assign often has no planogram_version_id).
   const adhocParsed = adhocMeta;
   const adhocItems = adhocParsed.rows.map((row) => planogramShape(row));
+  const reference = adhocParsed.reference ?? assignment?.reference;
   // Every shelf type on this rack must reach the vision backend, otherwise it
   // scopes to one sub-category and reports false mismatches on mixed shelves.
   const scopeSelections = assignment
@@ -1444,6 +1473,13 @@ async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string
     vision_prompt: astraExtras.vision_prompt,
     // Landing demo cache returns inventory-only JSON — never use it for AI Audit.
     skip_reference_cache: true,
+    ...(reference && !forceShelfOnly
+      ? {
+          comparison_basis: "reference",
+          reference_items: reference.items,
+          reference_document: reference.document,
+        }
+      : {}),
     ...(astraExtras.planogram_items?.length
       ? { planogram_items: astraExtras.planogram_items }
       : {}),

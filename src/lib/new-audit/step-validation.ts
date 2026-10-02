@@ -3,6 +3,7 @@ import type { AssignmentMode, TeamScope } from "@/lib/assignment-engine";
 import type { NewAuditPlanogramChoice } from "@/lib/new-audit/planogram-setup";
 import type { CaptureMethod, StartChoice } from "@/lib/new-audit/summary";
 import type { ScanContextState } from "@/lib/scan-context";
+import { usableReferenceRows } from "@/lib/ai-audit/reference-document";
 
 /** Live Step 3 readiness for AI audits — no separate “continue” gate. */
 export function isAiStep3Ready(
@@ -14,6 +15,7 @@ export function isAiStep3Ready(
   const sub = ctx.planogramMeta?.sub_category?.trim();
   if (!category || !sub) return false;
   if (choice === "with_demo") return ctx.planogramRows.length > 0;
+  if (choice === "reference") return usableReferenceRows(ctx.reference?.rows ?? []).length > 0;
   return true;
 }
 

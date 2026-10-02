@@ -9,6 +9,7 @@ import {
 import { dedupeSelections, type CategorySelection } from "@/lib/category-selections";
 import { buildAstraVisionExtras } from "@/lib/ai-audit/astra-analysis";
 import { adhocPlanogramPayload } from "@/lib/role-planogram-requirements";
+import { referencePayloadFromContext } from "@/lib/new-audit/reference-context";
 import type { ScanContextState } from "@/lib/scan-context";
 
 export type AuthenticatedAiScanInput = {
@@ -86,7 +87,7 @@ function buildScanSubmitOptions(input: AuthenticatedAiScanInput) {
     subCategory,
     notes: input.notes,
   });
-  const planogramPayload =
+  const basePayload =
     ctx.planogramRows.length > 0
       ? adhocPlanogramPayload(ctx.planogramRows, auditRole, auditPackage, {
           analysisMode: astraExtras.analysis_mode,
@@ -96,6 +97,9 @@ function buildScanSubmitOptions(input: AuthenticatedAiScanInput) {
             analysisMode: astraExtras.analysis_mode,
           })
         : undefined;
+  const reference = referencePayloadFromContext(ctx);
+  const planogramPayload =
+    basePayload && reference && ctx.planogramRows.length > 0 ? { ...basePayload, reference } : basePayload;
 
   return {
     assignmentId: input.assignmentId,

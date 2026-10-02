@@ -7,8 +7,8 @@ import {
 } from "@/lib/demo-oral-care-planogram";
 import { toDraftRow, type DraftRow } from "@/lib/planogram";
 
-/** With planogram (homepage demo) vs audit without expected layout. */
-export type NewAuditPlanogramChoice = "with_demo" | "without";
+/** With planogram, without an expected layout, or compared to the customer's own document. */
+export type NewAuditPlanogramChoice = "with_demo" | "without" | "reference";
 
 export function demoPlanogramDraftRows(): DraftRow[] {
   return DEMO_ORAL_CARE_ROWS.map((row) => toDraftRow(row));
@@ -17,6 +17,7 @@ export function demoPlanogramDraftRows(): DraftRow[] {
 export function planogramChoiceLabel(choice: NewAuditPlanogramChoice | null): string {
   if (choice === "with_demo") return "With planogram · upload or manual setup";
   if (choice === "without") return "Without planogram";
+  if (choice === "reference") return "Compare to my document · CSV or image";
   return "Not selected";
 }
 

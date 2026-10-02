@@ -43,6 +43,7 @@ import { roleRequiresPricing } from "@/lib/role-planogram-requirements";
 import type { FinancialImpact, ScanRecommendation, ScanResult } from "@/lib/scan-results";
 import type { CategorySelection } from "@/lib/category-selections";
 import { emptyRow, type PlanogramRow } from "@/lib/planogram";
+import type { ReferenceDocumentState } from "@/lib/ai-audit/reference-document";
 
 export type ScanFocusFilter = {
   company?: string;
@@ -60,6 +61,8 @@ export type ScanContextState = {
   planogramMeta?: PlanogramMeta;
   /** Extra shelf types on a mixed rack, in addition to planogramMeta's primary category. */
   extraCategorySelections?: CategorySelection[];
+  /** Customer reference document (invoice / list / CSV) the shelf is compared against. */
+  reference?: ReferenceDocumentState;
 };
 
 export const EMPTY_SCAN_CONTEXT: ScanContextState = {

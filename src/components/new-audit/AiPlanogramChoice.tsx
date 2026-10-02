@@ -1,4 +1,4 @@
-import { AlertTriangle, ScanLine } from "lucide-react";
+import { AlertTriangle, FileText, ScanLine } from "lucide-react";
 
 import { PlanogramModeOption } from "@/components/planogram/PlanogramModeOption";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -30,7 +30,7 @@ export function AiPlanogramChoice({
         </Alert>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-3">
         <PlanogramModeOption
           label="With planogram"
           detail="Upload your planogram CSV or configure the shelf manually."
@@ -44,6 +44,12 @@ export function AiPlanogramChoice({
           selected={value === "without"}
           onClick={() => onChange("without")}
         />
+        <PlanogramModeOption
+          label="Compare to my document"
+          detail="Upload an invoice, list, or CSV. AI checks each line is on the shelf at the right price and bin."
+          selected={value === "reference"}
+          onClick={() => onChange("reference")}
+        />
       </div>
 
       {value === "without" ? (
@@ -51,6 +57,15 @@ export function AiPlanogramChoice({
           <ScanLine className="mt-0.5 size-5 shrink-0 text-[var(--aislix-secondary)]" />
           <p className="text-xs text-[var(--aislix-secondary)]">
             AI will identify products and issues from photos without a reference planogram.
+          </p>
+        </div>
+      ) : null}
+      {value === "reference" ? (
+        <div className="flex items-start gap-3 rounded-xl border border-[var(--aislix-border)] bg-[var(--aislix-surface)]/50 p-4">
+          <FileText className="mt-0.5 size-5 shrink-0 text-[var(--aislix-secondary)]" />
+          <p className="text-xs text-[var(--aislix-secondary)]">
+            Luna reads every line of your photo or PDF (invoice, purchase order, pick list, price list,
+            handwritten list). You can check and edit the lines before the shelf is scanned.
           </p>
         </div>
       ) : null}

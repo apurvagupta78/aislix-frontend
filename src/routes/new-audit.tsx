@@ -58,6 +58,10 @@ import {
 } from "@/lib/ai-audit/run-ai-audit-scan";
 import { buildAiPlanogramPreviewSummary } from "@/lib/new-audit/ai-vision-context";
 import {
+  referencePayloadFromContext,
+  withReferencePlanogramRows,
+} from "@/lib/new-audit/reference-context";
+import {
   demoPlanogramDraftRows,
   isPlanogramRelatedTemplate,
   type NewAuditPlanogramChoice,
@@ -198,6 +202,14 @@ function NewAuditPage() {
     null,
   );
   const [demoScanContext, setDemoScanContext] = useState<ScanContextState>(EMPTY_SCAN_CONTEXT);
+  /** Scan context sent to the AI audit — reference document lines become the expected products. */
+  const aiScanContext = useMemo(
+    () =>
+      aiPlanogramChoice === "reference"
+        ? withReferencePlanogramRows(demoScanContext)
+        : { ...demoScanContext, reference: undefined },
+    [aiPlanogramChoice, demoScanContext],
+  );
   const aiShelfScope = useMemo(() => {
     if (method !== "ai") return {};
     const selections = aiAuditCategorySelections(demoScanContext);
@@ -305,8 +317,8 @@ function NewAuditPage() {
   });
   const usesAiCustomPlanogram =
     method === "ai" &&
-    aiPlanogramChoice === "with_demo" &&
-    demoScanContext.planogramRows.length > 0;
+    (aiPlanogramChoice === "with_demo" || aiPlanogramChoice === "reference") &&
+    aiScanContext.planogramRows.length > 0;
   const usesTemplateDemoPlanogram =
     startChoice === "template" && templateIsPlanogram;
   const operatingModelLabel =
@@ -624,7 +636,7 @@ function NewAuditPage() {
     startReady,
     method,
     aiPlanogramChoice,
-    demoScanContext,
+    demoScanContext: aiScanContext,
     assignToSelf,
     teamScope,
     assigneeId,
@@ -655,10 +667,12 @@ function NewAuditPage() {
         ? "Select with or without a planogram to continue."
         : method === "ai" &&
             aiPlanogramChoice &&
-            !isAiStep3Ready(aiPlanogramChoice, demoScanContext)
+            !isAiStep3Ready(aiPlanogramChoice, aiScanContext)
           ? aiPlanogramChoice === "with_demo"
             ? "Complete role, category, sub-category, and planogram upload."
-            : "Complete role, category, and sub-category."
+            : aiPlanogramChoice === "reference"
+              ? "Complete category, sub-category, and upload your document or CSV."
+              : "Complete role, category, and sub-category."
           : null,
     assign: !(assignToSelf || teamScope.assigneeIds.length > 0 || assigneeId)
       ? "Choose at least one team member or assign to yourself."
@@ -853,11 +867,14 @@ function NewAuditPage() {
           sourceFilename: dataset.filename,
         });
       } else if (usesAiCustomPlanogram && primaryStoreId) {
+        const referenceMeta = aiScanContext.reference?.meta;
         planogramVersionId = await createAssignmentPlanogramVersion({
           storeId: primaryStoreId,
-          rows: demoScanContext.planogramRows.map((row) => toDraftRow(row)),
-          sourceType: "manual",
-          sourceFilename: "New Audit Planogram",
+          rows: aiScanContext.planogramRows.map((row) => toDraftRow(row)),
+          sourceType: referenceMeta?.source === "csv" ? "csv" : "manual",
+          sourceFilename: referenceMeta
+            ? referenceMeta.filename || "Reference document"
+            : "New Audit Planogram",
         });
       } else if (usesTemplateDemoPlanogram && primaryStoreId) {
         planogramVersionId = await createAssignmentPlanogramVersion({
@@ -901,10 +918,13 @@ function NewAuditPage() {
         };
       }
 
+      const reference =
+        aiPlanogramChoice === "reference" ? referencePayloadFromContext(aiScanContext) : null;
       if (usesAiCustomPlanogram) {
         templateSnapshot = {
           ...templateSnapshot,
-          planogram_mode: "custom",
+          planogram_mode: reference ? "reference" : "custom",
+          ...(reference ? { reference } : {}),
           audit_role: demoScanContext.auditRole,
           scan_category:
             demoScanContext.planogramMeta?.category ?? DEMO_ORAL_CARE_META.category,
@@ -1092,7 +1112,7 @@ function NewAuditPage() {
         files: [captureFile],
         assignmentId: created.assignmentId,
         storeId: storeId || undefined,
-        scanContext: demoScanContext,
+        scanContext: aiScanContext,
         notes: [auditDescription.trim(), instructions.trim()].filter(Boolean).join("\n\n"),
         onUploadProgress: setUploadProgress,
       });
@@ -1291,7 +1311,7 @@ function NewAuditPage() {
                 sectionId={method === "ai" ? "step-6-preview" : "step-7-preview"}
                 planogramSummary={
                   method === "ai"
-                    ? buildAiPlanogramPreviewSummary(aiPlanogramChoice, demoScanContext)
+                    ? buildAiPlanogramPreviewSummary(aiPlanogramChoice, aiScanContext)
                     : templateIsPlanogram
                       ? buildAiPlanogramPreviewSummary("with_demo", demoScanContext)
                       : undefined

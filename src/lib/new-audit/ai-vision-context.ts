@@ -3,6 +3,7 @@ import type { NewAuditPlanogramChoice } from "@/lib/new-audit/planogram-setup";
 import { getRoleProfile } from "@/lib/role-kpi-config";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import type { ScanContextState } from "@/lib/scan-context";
+import { documentTypeLabel, usableReferenceRows } from "@/lib/ai-audit/reference-document";
 
 export type AiVisionContextRow = { label: string; value: string };
 
@@ -12,6 +13,14 @@ export function buildAiPlanogramPreviewSummary(
   ctx: ScanContextState,
 ): string {
   if (choice === "without") return "Without planogram — analyse visible shelf";
+  if (choice === "reference") {
+    const count = usableReferenceRows(ctx.reference?.rows ?? []).length;
+    const doc = ctx.reference?.meta;
+    const source = doc?.source === "csv" ? "CSV" : documentTypeLabel(doc?.document_type);
+    return count > 0
+      ? `Compare to my document · ${source} · ${count} lines`
+      : "Compare to my document · awaiting upload";
+  }
   if (choice === "with_demo") {
     const count = ctx.planogramRows.length;
     const category = ctx.planogramMeta?.category?.trim();
@@ -49,11 +58,16 @@ export function buildAiVisionContextPreview(input: {
       value:
         input.aiPlanogramChoice === "without"
           ? "Shelf photo only — image analysis (no planogram)"
-          : "Compare shelf photo against uploaded planogram",
+          : input.aiPlanogramChoice === "reference"
+            ? "Compare shelf photo against your document (presence, quantity, price, location)"
+            : "Compare shelf photo against uploaded planogram",
     },
   ];
 
-  if (input.aiPlanogramChoice !== "without" && input.scanContext.planogramRows.length > 0) {
+  if (input.aiPlanogramChoice === "reference") {
+    const count = usableReferenceRows(input.scanContext.reference?.rows ?? []).length;
+    if (count > 0) rows.push({ label: "Document lines", value: `${count} lines to check on the shelf` });
+  } else if (input.aiPlanogramChoice !== "without" && input.scanContext.planogramRows.length > 0) {
     rows.push({
       label: "Expected products",
       value: `${input.scanContext.planogramRows.length} SKUs from your planogram CSV`,
