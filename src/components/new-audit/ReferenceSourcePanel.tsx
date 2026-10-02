@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 
 const DOCUMENT_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 const MAX_IMAGE_EDGE = 2400;
+const MIN_IMAGE_EDGE = 1600;
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 
 type Props = {
@@ -59,17 +60,27 @@ function isSpreadsheet(file: File): boolean {
   return name.endsWith(".csv") || name.endsWith(".xlsx") || name.endsWith(".xls") || file.type === "text/csv";
 }
 
-/** Phone photos are downsized before upload; the reader handles text well at this size. */
+/**
+ * Phone photos are downsized before upload. Small scans and screenshots are enlarged so
+ * the vision model gets enough detail on small printed digits.
+ */
 async function prepareImage(file: File): Promise<File> {
   if (!file.type.startsWith("image/")) return file;
   const bitmap = await createImageBitmap(file).catch(() => null);
   if (!bitmap) return file;
-  const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(bitmap.width, bitmap.height));
+  const longEdge = Math.max(bitmap.width, bitmap.height);
+  const scale =
+    longEdge < MIN_IMAGE_EDGE ? MIN_IMAGE_EDGE / longEdge : Math.min(1, MAX_IMAGE_EDGE / longEdge);
   if (scale === 1 && file.size <= 3 * 1024 * 1024) return file;
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  }
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.88));
   if (!blob) return file;
   return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });

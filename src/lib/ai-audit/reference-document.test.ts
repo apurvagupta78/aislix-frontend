@@ -73,6 +73,23 @@ describe("parseLunaDocument", () => {
     expect(rows[0]!.check_fields).toContain("price");
   });
 
+  it("flags lines where rate × quantity disagrees with the printed amount", () => {
+    const { rows, meta } = parseLunaDocument(
+      {
+        document_type: "price_list",
+        line_items: [
+          { brand: "Acme", product: "Lathe", quantity: 2, unit_price: 100000, line_total: 300000, confidence: 0.9 },
+          { brand: "Acme", product: "Mixer", quantity: 2, unit_price: 150000, line_total: 300000, confidence: 0.9 },
+        ],
+      },
+      null,
+    );
+    expect(rows[0]!.check_fields).toEqual(expect.arrayContaining(["price", "qty"]));
+    expect(rows[1]!.check_fields).toEqual([]);
+    expect(meta.warnings).toHaveLength(1);
+    expect(meta.warnings[0]).toMatch(/^Line 1:/);
+  });
+
   it("uses the listed price on price lists", () => {
     const { rows } = parseLunaDocument(
       { document_type: "price_list", line_items: [{ product: "Tea 250g", unit_price: 120, confidence: 0.9 }] },

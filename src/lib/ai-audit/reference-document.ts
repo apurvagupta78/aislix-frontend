@@ -197,6 +197,21 @@ export function parseLunaDocument(payload: unknown, filename: string | null): Re
     }
     if (!brand) check.add("brand");
     if (priceIsTradeRate) check.add("price");
+    const printedQty = num(line.quantity);
+    const lineTotal = num(line.line_total);
+    if (
+      unitPrice !== null &&
+      printedQty !== null &&
+      lineTotal !== null &&
+      lineTotal > 0 &&
+      Math.abs(unitPrice * printedQty - lineTotal) > lineTotal * 0.01
+    ) {
+      check.add("price");
+      check.add("qty");
+      meta.warnings.push(
+        `Line ${rows.length + 1}: rate × quantity does not match the printed amount — please check price and quantity.`,
+      );
+    }
     rows.push({
       id: rowId(),
       line_no: rows.length + 1,
