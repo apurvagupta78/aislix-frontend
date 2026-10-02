@@ -68,12 +68,12 @@ export const readReferenceDocument = createServerFn({ method: "POST" })
     });
 
     const text = String(response.output_text ?? "").trim();
-    if (!text) throw new Error("Luna returned an empty reading. Try a clearer photo of the document.");
+    if (!text) throw new Error("AI returned an empty reading. Try a clearer photo of the document.");
     let payload: unknown;
     try {
       payload = JSON.parse(text);
     } catch {
-      throw new Error("Luna's reading was cut off or malformed. Try again or upload fewer pages.");
+      throw new Error("The AI reading was cut off or malformed. Try again or upload fewer pages.");
     }
     const state = parseLunaDocument(payload, data.filename || null);
     return {

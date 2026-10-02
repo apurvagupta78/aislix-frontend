@@ -64,7 +64,7 @@ export function AiPlanogramChoice({
         <div className="flex items-start gap-3 rounded-xl border border-[var(--aislix-border)] bg-[var(--aislix-surface)]/50 p-4">
           <FileText className="mt-0.5 size-5 shrink-0 text-[var(--aislix-secondary)]" />
           <p className="text-xs text-[var(--aislix-secondary)]">
-            Luna reads every line of your photo or PDF (invoice, purchase order, pick list, price list,
+            AI reads every line of your photo or PDF (invoice, purchase order, pick list, price list,
             handwritten list). You can check and edit the lines before the shelf is scanned.
           </p>
         </div>

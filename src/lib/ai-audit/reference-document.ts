@@ -15,7 +15,7 @@ export type ReferenceRow = {
   /** Quantity expected on the shelf, in single units when the document gave cases + units per case. */
   qty: number | null;
   unit: string;
-  /** Expected shelf price (MRP, or the listed selling price on price lists). */
+  /** Expected shelf price: MRP when printed, otherwise the document's rate (flagged for the user to confirm). */
   price: number | null;
   location: string;
   raw_text: string;
@@ -182,7 +182,9 @@ export function parseLunaDocument(payload: unknown, filename: string | null): Re
     const { qty, unit } = shelfQuantity(line);
     const mrp = num(line.mrp);
     const unitPrice = num(line.unit_price);
-    const price = mrp ?? (documentType && SHELF_PRICE_DOCUMENTS.has(documentType) ? unitPrice : null);
+    const price = mrp ?? unitPrice;
+    const priceIsTradeRate =
+      mrp === null && unitPrice !== null && !(documentType && SHELF_PRICE_DOCUMENTS.has(documentType));
     const confidence = num(line.confidence);
     const unreadable = Array.isArray(line.unreadable_fields) ? line.unreadable_fields.map(text) : [];
     const check = new Set<ReferenceField>();
@@ -194,6 +196,7 @@ export function parseLunaDocument(payload: unknown, filename: string | null): Re
       for (const field of ["brand", "product", "qty", "price"] as const) check.add(field);
     }
     if (!brand) check.add("brand");
+    if (priceIsTradeRate) check.add("price");
     rows.push({
       id: rowId(),
       line_no: rows.length + 1,

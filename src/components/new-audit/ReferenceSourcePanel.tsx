@@ -50,7 +50,7 @@ const COLUMNS: Column[] = [
   { field: "pack_size", header: "Pack", width: "min-w-[80px]" },
   { field: "qty", header: "Qty", width: "w-[72px]", numeric: true },
   { field: "unit", header: "Unit", width: "min-w-[84px]" },
-  { field: "price", header: "Price ₹", width: "w-[84px]", numeric: true },
+  { field: "price", header: "Price ₹", width: "min-w-[104px]", numeric: true },
   { field: "location", header: "Location", width: "min-w-[100px]" },
 ];
 
@@ -59,7 +59,7 @@ function isSpreadsheet(file: File): boolean {
   return name.endsWith(".csv") || name.endsWith(".xlsx") || name.endsWith(".xls") || file.type === "text/csv";
 }
 
-/** Phone photos are downsized before upload; Luna reads text well at this size. */
+/** Phone photos are downsized before upload; the reader handles text well at this size. */
 async function prepareImage(file: File): Promise<File> {
   if (!file.type.startsWith("image/")) return file;
   const bitmap = await createImageBitmap(file).catch(() => null);
@@ -138,11 +138,11 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
       if (!state.rows.length) {
         onChange(state);
         throw new Error(
-          state.meta.warnings[0] ?? "Luna could not find product lines in this document. Try a clearer photo.",
+          state.meta.warnings[0] ?? "AI could not find product lines in this document. Try a clearer photo.",
         );
       }
       onChange(state);
-      toast.success(`Luna read ${state.rows.length} lines`);
+      toast.success(`AI read ${state.rows.length} lines`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not read this file.");
     } finally {
@@ -235,7 +235,7 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
           {busy === "upload"
             ? "Uploading document…"
             : busy === "read"
-              ? "Luna is reading every line of your document — this can take up to a minute."
+              ? "AI is reading every line of your document — this can take up to a minute."
               : "Reading your file…"}
         </div>
       ) : null}
@@ -280,16 +280,28 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
 
       {rows.length ? (
         <>
-          {checkCount ? (
-            <p className="text-xs text-[#667085]">
-              <span
-                className="mr-1.5 inline-block size-2.5 rounded-sm border align-middle"
-                style={{ background: ACCENT_TINT.blue, borderColor: AISLIX_PALETTE.blue }}
-              />
-              {checkCount} line{checkCount === 1 ? "" : "s"} have values Luna was not sure about — please check
-              the highlighted cells.
-            </p>
-          ) : null}
+          <p className="text-xs text-[#667085]">
+            <span
+              className="mr-1.5 inline-block size-2.5 rounded-sm border align-middle"
+              style={{ background: ACCENT_TINT.blue, borderColor: AISLIX_PALETTE.border }}
+            />
+            Every blue box is editable — click any cell to correct it.
+            {checkCount ? (
+              <>
+                {" "}
+                <span
+                  className="mx-1.5 inline-block size-2.5 rounded-sm border align-middle"
+                  style={{
+                    background: ACCENT_TINT.blue,
+                    borderColor: AISLIX_PALETTE.blue,
+                    boxShadow: `0 0 0 1px ${AISLIX_PALETTE.blue}`,
+                  }}
+                />
+                {checkCount} line{checkCount === 1 ? " has" : "s have"} values AI was not sure about (darker outline)
+                — please check them.
+              </>
+            ) : null}
+          </p>
           <div className="max-h-[420px] overflow-auto rounded-xl border border-[#D9E2E8]">
             <table className="w-full text-xs">
               <thead className="sticky top-0 z-10 bg-[#F4F7F9] text-left text-[10px] uppercase tracking-wide text-[#667085]">
@@ -314,16 +326,19 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
                         <td key={c.field} className={cn("px-1 py-1", c.width)}>
                           <input
                             aria-label={`${c.header} line ${row.line_no}`}
+                            title={flagged ? "AI was not sure about this value — please check" : `Edit ${c.header.toLowerCase()}`}
+                            placeholder={flagged ? "Check" : undefined}
                             inputMode={c.numeric ? "decimal" : undefined}
                             className={cn(
-                              "w-full rounded-md border px-1.5 py-1 text-xs text-[#102A43] outline-none focus:border-[#7DB7D6]",
+                              "w-full rounded-md border px-1.5 py-1 text-xs text-[#102A43] outline-none transition-shadow placeholder:text-[#667085] focus:bg-white focus:shadow-[0_0_0_2px_#7DB7D6]",
                               c.numeric && "tabular-nums",
+                              flagged && "font-medium",
                             )}
-                            style={
-                              flagged
-                                ? { background: ACCENT_TINT.blue, borderColor: AISLIX_PALETTE.blue }
-                                : { borderColor: "transparent" }
-                            }
+                            style={{
+                              background: ACCENT_TINT.blue,
+                              borderColor: flagged ? AISLIX_PALETTE.blue : AISLIX_PALETTE.border,
+                              boxShadow: flagged ? `0 0 0 1px ${AISLIX_PALETTE.blue}` : undefined,
+                            }}
                             value={cellValue(row, c.field)}
                             onChange={(event) => updateRow(row.id, c.field, event.target.value)}
                           />

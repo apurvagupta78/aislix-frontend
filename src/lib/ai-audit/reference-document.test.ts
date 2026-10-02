@@ -58,10 +58,19 @@ describe("parseLunaDocument", () => {
     expect(rows[0]!.check_fields).toEqual([]);
   });
 
-  it("does not use an invoice purchase rate as the shelf price and flags unsure fields", () => {
+  it("fills price from the invoice rate when no MRP is printed and flags it to confirm", () => {
     const { rows } = parseLunaDocument(INVOICE, "inv.jpg");
-    expect(rows[1]!.price).toBeNull();
+    expect(rows[1]!.price).toBe(140);
     expect(rows[1]!.check_fields).toEqual(expect.arrayContaining(["price", "brand", "qty"]));
+  });
+
+  it("reads comma-formatted rates", () => {
+    const { rows } = parseLunaDocument(
+      { document_type: "invoice", line_items: [{ product: "Lathe Machine", quantity: 2, unit_price: "1,50,000.00" }] },
+      null,
+    );
+    expect(rows[0]!.price).toBe(150000);
+    expect(rows[0]!.check_fields).toContain("price");
   });
 
   it("uses the listed price on price lists", () => {

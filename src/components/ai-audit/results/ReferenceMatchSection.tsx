@@ -198,7 +198,7 @@ export function ReferenceMatchSection({
           >
             <p className="font-display text-xl font-semibold text-[#102A43]">{verdict.label}</p>
             <p className="mt-0.5 text-xs text-[#667085]">
-              {doc.source === "csv" ? "Lines from your file" : "Read from document by Luna"} · Shelf detected by AI
+              {doc.source === "csv" ? "Lines from your file" : "Read from document by AI"} · Shelf detected by AI
               {" · "}
               {m.lines_found} of {m.lines_total} lines found on the shelf
             </p>
