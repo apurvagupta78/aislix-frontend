@@ -13,6 +13,11 @@ import {
   AiMetricStat,
   AiResultsHero,
 } from "@/components/ai-audit/results/AiAuditUi";
+import {
+  AiLocationCards,
+  LocationLabelCell,
+  ShelfPriceCell,
+} from "@/components/ai-audit/results/AiLocationSections";
 import { MpDonut, MpRankBars, MpTileGrid } from "@/components/control-tower/MpCharts";
 import type { AiAuditDisplayContext } from "@/lib/ai-audit/astra-display";
 import type {
@@ -194,6 +199,9 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
   );
   const facingsNum = Number(facingsValue);
   const facingsTotal = Number.isFinite(facingsNum) ? facingsNum : s.visible_facings;
+  const locationAnalysis = analysis.location_analysis;
+  const locationMetrics = locationAnalysis?.metrics;
+  const countOrNa = (value: number | null | undefined) => (value == null ? "N/A" : String(value));
 
   const summaryTiles = [
     { label: "Products", value: productsValue, tone: tileTone(productsMetric?.status), bg: KPI_CARD.detectedProducts },
@@ -212,13 +220,36 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       tone: "neutral" as const,
       bg: KPI_CARD.auditCompletion,
     },
-    { label: "Total Facings", value: facingsValue, tone: tileTone(facingsMetric?.status), bg: KPI_CARD.openFindings },
+    { label: "Total Facings", value: facingsValue, tone: tileTone(facingsMetric?.status), bg: KPI_CARD.evidenceCoverage },
     { label: "Visible units", value: unitsValue, tone: tileTone(unitsMetric?.status), bg: KPI_CARD.inventoryValueVariance },
     {
       label: "Prices read",
-      value: analysis.visible_prices.length ? String(analysis.visible_prices.length) : "N/A",
+      value:
+        locationMetrics?.prices_read != null
+          ? String(locationMetrics.prices_read)
+          : analysis.visible_prices.length
+            ? String(analysis.visible_prices.length)
+            : "N/A",
       tone: "neutral" as const,
       bg: KPI_CARD.criticalFindings,
+    },
+    {
+      label: "Locations read",
+      value: countOrNa(locationMetrics?.location_labels_read),
+      tone: "neutral" as const,
+      bg: KPI_CARD.slaCompliance,
+    },
+    {
+      label: "Empty locations",
+      value: countOrNa(locationMetrics?.empty_locations),
+      tone: locationMetrics?.empty_locations ? ("attention" as const) : ("neutral" as const),
+      bg: KPI_CARD.criticalFindings,
+    },
+    {
+      label: "Racks",
+      value: countOrNa(locationMetrics?.racks_detected),
+      tone: "neutral" as const,
+      bg: KPI_CARD.auditCompletion,
     },
     {
       label: "Promotions",
@@ -331,8 +362,29 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
         </div>
       ),
     },
+    ...(locationAnalysis
+      ? [
+          {
+            key: "loc",
+            header: "Location",
+            cell: (r: AstraShelfProduct) => (
+              <LocationLabelCell label={r.location_label} status={r.location_label_status} />
+            ),
+          },
+          { key: "rack", header: "Rack", cell: (r: AstraShelfProduct) => r.rack_marker ?? "—" },
+        ]
+      : []),
     { key: "facings", header: "Total Facings", cell: (r: AstraShelfProduct) => r.actual_facings },
     { key: "units", header: "Visible units", cell: (r: AstraShelfProduct) => r.actual_visible_units },
+    ...(locationMetrics?.prices_read != null
+      ? [
+          {
+            key: "price",
+            header: "Shelf price",
+            cell: (r: AstraShelfProduct) => <ShelfPriceCell price={r.visible_price} />,
+          },
+        ]
+      : []),
     { key: "conf", header: "Confidence", cell: (r: AstraShelfProduct) => confCell(r.confidence) },
     {
       key: "ev",
@@ -401,6 +453,8 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       >
         <MpTileGrid tiles={summaryTiles} />
       </AiAuditCard>
+
+      <AiLocationCards scanId={data.scan_id} locationAnalysis={locationAnalysis} />
 
       {risk ? (
         <AiAuditCard
@@ -694,8 +748,11 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
                 "Variant",
                 "Category",
                 "Subcategory",
+                "Location",
+                "Rack",
                 "Total Facings",
                 "Visible units",
+                "Shelf price",
                 "Confidence",
                 "Evidence",
               ],
@@ -705,8 +762,11 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
                 r.variant,
                 r.category,
                 r.subcategory,
+                r.location_label ?? "N/A",
+                r.rack_marker ?? "N/A",
                 r.actual_facings,
                 r.actual_visible_units,
+                r.visible_price ?? "N/A",
                 r.confidence,
                 r.evidence_note,
               ]),

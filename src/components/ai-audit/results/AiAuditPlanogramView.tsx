@@ -18,6 +18,15 @@ import {
   AiMetricStat,
   AiResultsHero,
 } from "@/components/ai-audit/results/AiAuditUi";
+import {
+  AiLocationCards,
+  LocationLabelCell,
+  LocationStatusPill,
+  PriceStatusPill,
+  ShelfPriceCell,
+  locationStatusLabel,
+  priceStatusLabel,
+} from "@/components/ai-audit/results/AiLocationSections";
 import { PlanogramSideBySidePanel } from "@/components/scan-results/PlanogramSideBySidePanel";
 import { MpDonut, MpRadialGauge, MpTileGrid } from "@/components/control-tower/MpCharts";
 import type { AiAuditDisplayContext } from "@/lib/ai-audit/astra-display";
@@ -143,6 +152,9 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
     statusCounts[key] = (statusCounts[key] ?? 0) + 1;
   }
   const donutSlices = statusDonutSlices(statusCounts);
+  const locationAnalysis = analysis.location_analysis;
+  const pricesAssessed = locationAnalysis?.metrics.prices_read != null;
+  const wrongBinCount = analysis.products.filter((r) => r.location_status === "WRONG_LOCATION").length;
 
   const funnelTiles = [
     { label: "Matched", value: String(s.products_matched), tone: "healthy" as const, bg: KPI_CARD.auditPass },
@@ -151,6 +163,16 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
     { label: "Unverifiable", value: String(s.products_not_verifiable), tone: "neutral" as const, bg: KPI_CARD.overdueActions },
     { label: "Wrong placement", value: String(s.wrong_placements), tone: "attention" as const, bg: KPI_CARD.auditCompletion },
     { label: "Price mismatches", value: String(s.price_mismatches), tone: "attention" as const, bg: KPI_CARD.evidenceCoverage },
+    ...(locationAnalysis
+      ? [
+          {
+            label: "Wrong bin",
+            value: String(wrongBinCount),
+            tone: wrongBinCount ? ("attention" as const) : ("neutral" as const),
+            bg: KPI_CARD.criticalFindings,
+          },
+        ]
+      : []),
     { label: "Exec. risks", value: String(riskCount), tone: "attention" as const, bg: KPI_CARD.slaCompliance },
     { label: "Value gap ₹", value: String(s.total_potential_visible_unit_value_gap_inr), tone: "active" as const, bg: KPI_CARD.inventoryValueVariance },
   ];
@@ -280,6 +302,54 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
       header: "Visible units",
       cell: (r: AstraPlanogramProduct) => countCell(r.actual_visible_units),
     },
+    ...(locationAnalysis
+      ? [
+          {
+            key: "loc",
+            header: "Location",
+            cell: (r: AstraPlanogramProduct) => (
+              <div className="space-y-1">
+                {r.expected_location ? (
+                  <p className="text-[11px] text-[#667085]">
+                    Expected <span className="font-mono text-[#102A43]">{r.expected_location}</span>
+                  </p>
+                ) : null}
+                {r.actual_facings != null ? (
+                  <LocationLabelCell
+                    label={r.actual_location_label}
+                    status={r.actual_location_label_status}
+                  />
+                ) : null}
+                {r.additional_location_labels.length ? (
+                  <p className="font-mono text-[10px] text-[#667085]">
+                    +{r.additional_location_labels.join(", ")}
+                  </p>
+                ) : null}
+                {r.location_status ? <LocationStatusPill status={r.location_status} /> : null}
+              </div>
+            ),
+          },
+        ]
+      : []),
+    ...(pricesAssessed
+      ? [
+          {
+            key: "price",
+            header: "Shelf price",
+            cell: (r: AstraPlanogramProduct) => (
+              <div className="space-y-1">
+                {r.expected_mrp_inr ? (
+                  <p className="text-[11px] text-[#667085]">Expected ₹{r.expected_mrp_inr}</p>
+                ) : null}
+                {r.actual_facings != null ? <ShelfPriceCell price={r.visible_price} /> : null}
+                {r.price_status ? (
+                  <PriceStatusPill status={r.price_status} difference={r.price_difference} />
+                ) : null}
+              </div>
+            ),
+          },
+        ]
+      : []),
     {
       key: "variant_st",
       header: "Variant",
@@ -379,6 +449,8 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
           </div>
         </AiAuditCard>
       </div>
+
+      <AiLocationCards scanId={data.scan_id} locationAnalysis={locationAnalysis} />
 
       {risk ? (
         <AiAuditCard
@@ -712,6 +784,12 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
                 "Facing variance",
                 "Expected units",
                 "Visible units",
+                "Expected location",
+                "Shelf location",
+                "Location status",
+                "Expected price",
+                "Shelf price",
+                "Price status",
                 "Status",
                 "Confidence",
                 "Evidence",
@@ -729,6 +807,12 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
                 r.facing_variance ?? "",
                 r.expected_shelf_units,
                 r.actual_visible_units ?? "",
+                r.expected_location || "N/A",
+                [r.actual_location_label, ...r.additional_location_labels].filter(Boolean).join(" | ") || "N/A",
+                r.location_status ? locationStatusLabel(r.location_status) : "N/A",
+                r.expected_mrp_inr || "N/A",
+                r.visible_price ?? "N/A",
+                r.price_status ? priceStatusLabel(r.price_status) : "N/A",
                 r.overall_status || r.match_status,
                 r.confidence,
                 r.evidence_note,

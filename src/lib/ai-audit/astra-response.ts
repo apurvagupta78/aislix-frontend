@@ -40,6 +40,15 @@ export type AstraPlanogramProduct = {
   expected_mrp_inr: number;
   visible_price: string | null;
   price_status: string;
+  price_difference: number | null;
+  price_source: string;
+  expected_location: string;
+  actual_location_label: string | null;
+  actual_location_label_status: string;
+  actual_rack_marker: string | null;
+  additional_location_labels: string[];
+  /** CORRECT / WRONG_LOCATION / NOT_READABLE / EXPECTED_NOT_IN_PHOTO / NO_EXPECTED; empty when not assessed. */
+  location_status: string;
   avg_daily_sales: number;
   estimated_visible_shelf_coverage_days: number | null;
   visible_unit_shortfall: number | null;
@@ -128,6 +137,36 @@ export type AstraShelfProduct = {
   actual_visible_units: number;
   confidence: number;
   evidence_note: string;
+  location_label: string | null;
+  /** READ / PARTIAL / NOT_VISIBLE; empty for scans made before location reading. */
+  location_label_status: string;
+  rack_marker: string | null;
+  visible_price: string | null;
+  price_source: string;
+};
+
+export type AstraLocationRow = {
+  label: string;
+  rack_marker: string | null;
+  label_status: string;
+  facings: number;
+  visible_units: number;
+  products: number;
+  empty: boolean;
+};
+
+/** Null metrics mean the scan predates location reading — show N/A, never 0. */
+export type AstraLocationAnalysis = {
+  available: boolean;
+  locations: AstraLocationRow[];
+  empty_locations: AstraLocationRow[];
+  metrics: {
+    location_labels_read: number | null;
+    empty_locations: number | null;
+    racks_detected: number | null;
+    products_without_location: number | null;
+    prices_read: number | null;
+  };
 };
 
 export type AstraShelfBrandAnalysis = {
@@ -215,6 +254,7 @@ export type NormalizedAstraAnalysis =
       summary: AstraPlanogramSummary;
       /** Aggregate KPIs must not be treated as valid when true. */
       count_verification_pending?: boolean;
+      location_analysis?: AstraLocationAnalysis;
     }
   | {
       mode: "shelf_only";
@@ -231,6 +271,7 @@ export type NormalizedAstraAnalysis =
       visible_promotions: AstraVisiblePromotion[];
       shelf_issues: AstraShelfIssue[];
       summary: AstraShelfSummary;
+      location_analysis?: AstraLocationAnalysis;
     }
   | { mode: "incomplete"; reason: string };
 
@@ -256,6 +297,56 @@ function pickRecord(payload: unknown): Record<string, unknown> | null {
 
 function pickArray<T>(value: unknown): T[] {
   return Array.isArray(value) ? (value as T[]) : [];
+}
+
+const PLACEHOLDER_TEXT = /^(null|none|n\/a|na|-|—|unverifiable|not visible)$/i;
+
+function strOrNull(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const s = String(value).trim();
+  return s && !PLACEHOLDER_TEXT.test(s) ? s : null;
+}
+
+function normalizeLocationRow(raw: unknown): AstraLocationRow {
+  const r = (raw ?? {}) as Record<string, unknown>;
+  const products = num(r.products);
+  return {
+    label: str(r.label),
+    rack_marker: strOrNull(r.rack_marker),
+    label_status: str(r.label_status).toUpperCase(),
+    facings: num(r.facings),
+    visible_units: num(r.visible_units),
+    products,
+    empty: r.empty === true || products === 0,
+  };
+}
+
+function normalizeLocationAnalysis(raw: unknown): AstraLocationAnalysis | undefined {
+  const r = pickRecord(raw);
+  if (!r || r.available !== true) return undefined;
+  const m = pickRecord(r.metrics) ?? {};
+  return {
+    available: true,
+    locations: pickArray(r.locations).map(normalizeLocationRow).filter((row) => row.label),
+    empty_locations: pickArray(r.empty_locations).map(normalizeLocationRow).filter((row) => row.label),
+    metrics: {
+      location_labels_read: numOrNull(m.location_labels_read),
+      empty_locations: numOrNull(m.empty_locations),
+      racks_detected: numOrNull(m.racks_detected),
+      products_without_location: numOrNull(m.products_without_location),
+      prices_read: numOrNull(m.prices_read),
+    },
+  };
+}
+
+function findLocationAnalysis(
+  block: Record<string, unknown>,
+  root?: Record<string, unknown> | null,
+): AstraLocationAnalysis | undefined {
+  const nested = root ? (pickRecord(root.metrics) ?? pickRecord(root.result)) : null;
+  return normalizeLocationAnalysis(
+    block.location_analysis ?? root?.location_analysis ?? nested?.location_analysis,
+  );
 }
 
 function imageQuality(raw: unknown): AstraImageQuality | undefined {
@@ -357,8 +448,18 @@ function normalizePlanogramProduct(raw: unknown): AstraPlanogramProduct {
     actual_shelf_position: str(r.actual_shelf_position),
     placement_status: str(r.placement_status),
     expected_mrp_inr: num(r.expected_mrp_inr),
-    visible_price: r.visible_price != null ? String(r.visible_price) : null,
-    price_status: str(r.price_status),
+    visible_price: strOrNull(r.visible_price),
+    price_status: str(r.price_status).toUpperCase(),
+    price_difference: numOrNull(r.price_difference),
+    price_source: str(r.price_source).toUpperCase(),
+    expected_location: str(r.expected_location ?? r.location),
+    actual_location_label: strOrNull(r.actual_location_label),
+    actual_location_label_status: str(r.actual_location_label_status).toUpperCase(),
+    actual_rack_marker: strOrNull(r.actual_rack_marker),
+    additional_location_labels: pickArray<unknown>(r.additional_location_labels)
+      .map((label) => strOrNull(label))
+      .filter((label): label is string => Boolean(label)),
+    location_status: str(r.location_status).toUpperCase(),
     avg_daily_sales: num(r.avg_daily_sales),
     estimated_visible_shelf_coverage_days: metricField(coverage),
     visible_unit_shortfall: numOrNull(typeof shortfall === "object" ? metricField(shortfall) : shortfall),
@@ -613,6 +714,7 @@ function normalizePlanogramBlock(
         facingCompliance ?? summary.overall_facing_compliance_percent,
     },
     count_verification_pending: root ? isCountVerificationPending(root) : false,
+    location_analysis: findLocationAnalysis(block, root),
   };
 }
 
@@ -641,6 +743,11 @@ function normalizeShelfProduct(raw: unknown): AstraShelfProduct {
     actual_visible_units: capUnitsToFacings(num(r.actual_visible_units ?? r.quantity), facings),
     confidence: num(r.confidence),
     evidence_note: str(r.evidence_note),
+    location_label: strOrNull(r.location_label),
+    location_label_status: str(r.location_label_status).toUpperCase(),
+    rack_marker: strOrNull(r.rack_marker),
+    visible_price: strOrNull(r.visible_price),
+    price_source: str(r.price_source).toUpperCase(),
   };
 }
 
@@ -659,7 +766,10 @@ function normalizeShelfSummary(raw: unknown): AstraShelfSummary {
   };
 }
 
-function normalizeShelfBlock(block: Record<string, unknown>): NormalizedAstraAnalysis | null {
+function normalizeShelfBlock(
+  block: Record<string, unknown>,
+  root?: Record<string, unknown> | null,
+): NormalizedAstraAnalysis | null {
   const products = pickArray(block.products);
   if (
     !products.length &&
@@ -679,6 +789,7 @@ function normalizeShelfBlock(block: Record<string, unknown>): NormalizedAstraAna
   }, 0);
   const cappedUnitSum = shelfProducts.reduce((n, p) => n + p.actual_visible_units, 0);
   const unitsCapped = cappedUnitSum < rawUnitSum;
+  const locationAnalysis = findLocationAnalysis(block, root);
 
   const brandRows = pickArray(block.brand_analysis).map((raw) => {
     const b = (raw ?? {}) as Record<string, unknown>;
@@ -752,8 +863,12 @@ function normalizeShelfBlock(block: Record<string, unknown>): NormalizedAstraAna
     visible_prices: pickArray(block.visible_prices),
     visible_promotions: pickArray(block.visible_promotions),
     shelf_issues: pickArray(block.shelf_issues),
+    location_analysis: locationAnalysis,
     summary: {
       ...normalizeShelfSummary(block.summary ?? summaryRaw),
+      prices_read:
+        locationAnalysis?.metrics.prices_read ??
+        normalizeShelfSummary(block.summary ?? summaryRaw).prices_read,
       products_identified: (() => {
         const fromMetric = metricField(calc?.products_identified);
         const fromSummary = normalizeShelfSummary(block.summary ?? summaryRaw).products_identified;
@@ -885,7 +1000,7 @@ export function normalizeAstraAnalysis(payload: unknown): NormalizedAstraAnalysi
 
   const shelfBlock = findShelfBlock(root);
   if (shelfBlock) {
-    const parsed = normalizeShelfBlock(shelfBlock);
+    const parsed = normalizeShelfBlock(shelfBlock, root);
     if (parsed?.products.length) return parsed;
   }
 
