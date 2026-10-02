@@ -450,7 +450,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
         </AiAuditCard>
       </div>
 
-      <AiLocationCards scanId={data.scan_id} locationAnalysis={locationAnalysis} />
+      <AiLocationCards scanId={data.scan_id} locationAnalysis={locationAnalysis} countPending={countPending} />
 
       {risk ? (
         <AiAuditCard

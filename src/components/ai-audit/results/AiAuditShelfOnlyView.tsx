@@ -454,7 +454,11 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
         <MpTileGrid tiles={summaryTiles} />
       </AiAuditCard>
 
-      <AiLocationCards scanId={data.scan_id} locationAnalysis={locationAnalysis} />
+      <AiLocationCards
+        scanId={data.scan_id}
+        locationAnalysis={locationAnalysis}
+        countPending={facingsMetric?.status === "COUNT_MISMATCH" || unitsMetric?.status === "COUNT_MISMATCH"}
+      />
 
       {risk ? (
         <AiAuditCard

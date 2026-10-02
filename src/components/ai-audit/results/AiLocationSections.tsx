@@ -109,12 +109,16 @@ export function priceStatusLabel(status: string): string {
 export function AiLocationCards({
   scanId,
   locationAnalysis,
+  countPending = false,
 }: {
   scanId: string;
   locationAnalysis: AstraLocationAnalysis | undefined;
+  /** Facings per location are aggregates — not shown as valid while counts await verification. */
+  countPending?: boolean;
 }) {
   if (!locationAnalysis?.locations.length) return null;
   const { locations, empty_locations: empty } = locationAnalysis;
+  const withoutLabel = locationAnalysis.metrics.products_without_location ?? 0;
   return (
     <div className="grid gap-4 xl:grid-cols-2">
       <AiAuditCard
@@ -130,8 +134,8 @@ export function AiLocationCards({
                 row.label,
                 row.rack_marker ?? "N/A",
                 row.products,
-                row.facings,
-                row.visible_units,
+                countPending ? "COUNT VERIFICATION PENDING" : row.facings,
+                countPending ? "COUNT VERIFICATION PENDING" : row.visible_units,
                 row.label_status || "READ",
               ]),
             ),
@@ -151,10 +155,29 @@ export function AiLocationCards({
             {
               key: "f",
               header: "Total Facings",
-              cell: (row) => (row.empty ? <AiPill tone="pink">Empty</AiPill> : row.facings),
+              cell: (row) =>
+                row.empty ? (
+                  <AiPill tone="pink">Empty</AiPill>
+                ) : countPending ? (
+                  <AiPill tone="grey">Pending</AiPill>
+                ) : (
+                  row.facings
+                ),
             },
           ]}
         />
+        {countPending || withoutLabel ? (
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            {[
+              countPending ? "Facings per location are pending count verification." : "",
+              withoutLabel
+                ? `${withoutLabel} product row${withoutLabel === 1 ? "" : "s"} without a readable location label.`
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          </p>
+        ) : null}
       </AiAuditCard>
       <AiAuditCard title="Empty labelled locations" description="Labels read with no product above them">
         {empty.length ? (
