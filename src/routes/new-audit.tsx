@@ -664,7 +664,7 @@ function NewAuditPage() {
     method: !method ? "Choose how the audit will be performed." : null,
     planogram:
       method === "ai" && !aiPlanogramChoice
-        ? "Select with or without a planogram to continue."
+        ? "Choose what the shelf should be compared against to continue."
         : method === "ai" &&
             aiPlanogramChoice &&
             !isAiStep3Ready(aiPlanogramChoice, aiScanContext)

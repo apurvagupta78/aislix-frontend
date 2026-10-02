@@ -87,6 +87,8 @@ export type PlanogramSetupSectionProps = {
   defaultLocation?: string;
   /** When set, hides planogram mode picker and locks to this mode. */
   lockedPlanogramMode?: PlanogramModeChoice;
+  /** Hides the "no planogram" capability explainer (e.g. when comparing to a document). */
+  hideNoPlanogramIntro?: boolean;
   /** Optional category + sub-category picker (shown after role). */
   shelfCategory?: {
     state: DemoCategoryState;
@@ -112,6 +114,7 @@ export function PlanogramSetupSection({
   disabled = false,
   wizardRef: wizardRefProp,
   showInlineStart = false,
+  hideNoPlanogramIntro = false,
   canStart = true,
   onStart,
   startError,
@@ -347,7 +350,7 @@ export function PlanogramSetupSection({
         </div>
       ) : null}
 
-      {effectivePlanogramMode === "none" ? (
+      {effectivePlanogramMode === "none" && !hideNoPlanogramIntro ? (
         <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/20 bg-gradient-to-br from-brand-soft/40 to-background p-5 shadow-soft sm:p-6">
           <p className="text-base font-semibold text-foreground">
             {HOMEPAGE_AUDIT_WITHOUT_PLANOGRAM.title}

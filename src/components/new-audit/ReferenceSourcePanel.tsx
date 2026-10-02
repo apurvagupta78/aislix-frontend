@@ -49,7 +49,7 @@ const COLUMNS: Column[] = [
   { field: "variant", header: "Variant", width: "min-w-[100px]" },
   { field: "pack_size", header: "Pack", width: "min-w-[80px]" },
   { field: "qty", header: "Qty", width: "w-[72px]", numeric: true },
-  { field: "unit", header: "Unit", width: "w-[72px]" },
+  { field: "unit", header: "Unit", width: "min-w-[84px]" },
   { field: "price", header: "Price ₹", width: "w-[84px]", numeric: true },
   { field: "location", header: "Location", width: "min-w-[100px]" },
 ];

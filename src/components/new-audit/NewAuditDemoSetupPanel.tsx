@@ -134,6 +134,7 @@ export function NewAuditDemoSetupPanel({
         defaultCategory={demoCategory.state.categoryName}
         defaultSubCategory={subCategoryLabel}
         showInlineStart={false}
+        hideNoPlanogramIntro={planogramChoice === "reference"}
       />
 
       {planogramChoice === "reference" ? (
