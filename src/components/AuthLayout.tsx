@@ -34,16 +34,17 @@ export function AuthLayout({
             Retail shelf intelligence
           </p>
           <p className="mt-4 max-w-md text-2xl font-semibold leading-snug tracking-tight">
-            “Aislix cut our shelf audit cycle from three days to twenty minutes across 42 stores.”
+            Turn every shelf photo into products, brands, compliance and next actions.
           </p>
-          <p className="mt-5 text-sm text-muted-foreground">
-            Meera Iyer · Head of Retail Ops, MoreMart
+          <p className="mt-5 max-w-md text-sm text-muted-foreground">
+            Snap a shelf, compare it with your planogram, and track every fix until it is verified
+            closed.
           </p>
           <div className="mt-12 grid max-w-md grid-cols-3 gap-3">
             {[
-              { l: "Audits run", v: "1.2M+" },
-              { l: "Avg. accuracy", v: "94.6%" },
-              { l: "Audit time saved", v: "90%" },
+              { l: "Products & brands read from the photo", v: "Detect" },
+              { l: "Planogram gaps and shortfalls", v: "Compare" },
+              { l: "Corrective actions until closed", v: "Act" },
             ].map((k) => (
               <div key={k.l} className="rounded-2xl border border-border bg-card p-4">
                 <p className="text-lg font-semibold tracking-tight">{k.v}</p>
