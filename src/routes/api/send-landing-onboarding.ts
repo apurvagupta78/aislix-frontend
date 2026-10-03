@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { PRODUCTION_ORIGIN, serverAppOrigin } from "@/lib/app-origin";
+import { hashForBucket, requestClientIp, withinRateLimits } from "@/lib/rate-limit.server";
 
 const BodySchema = z.object({
   email: z.string().email().max(320),
@@ -9,27 +10,10 @@ const BodySchema = z.object({
   signup_url: z.string().max(2048),
 });
 
-const WINDOW_MS = 60 * 60 * 1000;
+const WINDOW_SECONDS = 60 * 60;
 const PER_EMAIL_LIMIT = 3;
 const PER_IP_LIMIT = 20;
-const hits = new Map<string, number[]>();
-
-function allow(key: string, limit: number): boolean {
-  const now = Date.now();
-  const recent = (hits.get(key) ?? []).filter((t) => now - t < WINDOW_MS);
-  if (recent.length >= limit) {
-    hits.set(key, recent);
-    return false;
-  }
-  recent.push(now);
-  hits.set(key, recent);
-  if (hits.size > 5000) {
-    for (const [k, list] of hits) {
-      if (!list.some((t) => now - t < WINDOW_MS)) hits.delete(k);
-    }
-  }
-  return true;
-}
+const GLOBAL_DAILY_LIMIT = 500;
 
 /** Only links back into this app are emailed; anything else becomes the default signup URL. */
 function safeSignupUrl(raw: string, email: string, requestOrigin: string): string {
@@ -57,11 +41,14 @@ export const Route = createFileRoute("/api/send-landing-onboarding")({
           );
         }
         const email = parsed.email.trim().toLowerCase();
-        const ip =
-          request.headers.get("cf-connecting-ip") ??
-          request.headers.get("x-forwarded-for")?.split(",").pop()?.trim() ??
-          "unknown";
-        if (!allow(`ip:${ip}`, PER_IP_LIMIT) || !allow(`email:${email}`, PER_EMAIL_LIMIT)) {
+        const ipHash = await hashForBucket(requestClientIp(request));
+        const emailHash = await hashForBucket(email);
+        const allowed = await withinRateLimits([
+          [`onboarding:ip:${ipHash}`, PER_IP_LIMIT, WINDOW_SECONDS],
+          [`onboarding:email:${emailHash}`, PER_EMAIL_LIMIT, WINDOW_SECONDS],
+          ["onboarding:global", GLOBAL_DAILY_LIMIT, 86400],
+        ]);
+        if (!allowed) {
           return Response.json({ ok: false, error: "rate_limited" }, { status: 429 });
         }
         const signupUrl = safeSignupUrl(parsed.signup_url, email, new URL(request.url).origin);

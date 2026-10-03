@@ -306,9 +306,13 @@ export async function captureLandingLead(payload: {
 
 export async function convertLandingSession(landingSessionId: string, userId: string) {
   try {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const { data } = await supabase.auth.getSession();
+    const accessToken = data.session?.access_token;
+    if (!accessToken) return;
     await fetch(`${API}/landing/convert`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
       body: JSON.stringify({ landing_session_id: landingSessionId, user_id: userId }),
     });
   } catch {

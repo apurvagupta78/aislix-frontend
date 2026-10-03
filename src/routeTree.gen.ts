@@ -87,7 +87,6 @@ import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminOrgsRouteImport } from './routes/admin.orgs'
 import { Route as AdminScansRouteImport } from './routes/admin.scans'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
-import { Route as ApiScanRouteImport } from './routes/api/scan'
 import { Route as ApiSendLandingOnboardingRouteImport } from './routes/api/send-landing-onboarding'
 import { Route as AuditReviewScanIdRouteImport } from './routes/audit-review.$scanId'
 import { Route as AuditTemplatesTemplateIdRouteImport } from './routes/audit-templates.$templateId'
@@ -523,11 +522,6 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AdminRoute,
 } as any)
-const ApiScanRoute = ApiScanRouteImport.update({
-  id: '/api/scan',
-  path: '/api/scan',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiSendLandingOnboardingRoute =
   ApiSendLandingOnboardingRouteImport.update({
     id: '/api/send-landing-onboarding',
@@ -842,7 +836,6 @@ export interface FileRoutesByFullPath {
   '/admin/orgs': typeof AdminOrgsRoute
   '/admin/scans': typeof AdminScansRoute
   '/admin/users': typeof AdminUsersRoute
-  '/api/scan': typeof ApiScanRoute
   '/api/send-landing-onboarding': typeof ApiSendLandingOnboardingRoute
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/audit-templates/$templateId': typeof AuditTemplatesTemplateIdRouteWithChildren
@@ -967,7 +960,6 @@ export interface FileRoutesByTo {
   '/admin/orgs': typeof AdminOrgsRoute
   '/admin/scans': typeof AdminScansRoute
   '/admin/users': typeof AdminUsersRoute
-  '/api/scan': typeof ApiScanRoute
   '/api/send-landing-onboarding': typeof ApiSendLandingOnboardingRoute
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/audit-templates/$templateId': typeof AuditTemplatesTemplateIdRouteWithChildren
@@ -1093,7 +1085,6 @@ export interface FileRoutesById {
   '/admin/orgs': typeof AdminOrgsRoute
   '/admin/scans': typeof AdminScansRoute
   '/admin/users': typeof AdminUsersRoute
-  '/api/scan': typeof ApiScanRoute
   '/api/send-landing-onboarding': typeof ApiSendLandingOnboardingRoute
   '/audit-review/$scanId': typeof AuditReviewScanIdRoute
   '/audit-templates/$templateId': typeof AuditTemplatesTemplateIdRouteWithChildren
@@ -1220,7 +1211,6 @@ export interface FileRouteTypes {
     | '/admin/orgs'
     | '/admin/scans'
     | '/admin/users'
-    | '/api/scan'
     | '/api/send-landing-onboarding'
     | '/audit-review/$scanId'
     | '/audit-templates/$templateId'
@@ -1345,7 +1335,6 @@ export interface FileRouteTypes {
     | '/admin/orgs'
     | '/admin/scans'
     | '/admin/users'
-    | '/api/scan'
     | '/api/send-landing-onboarding'
     | '/audit-review/$scanId'
     | '/audit-templates/$templateId'
@@ -1470,7 +1459,6 @@ export interface FileRouteTypes {
     | '/admin/orgs'
     | '/admin/scans'
     | '/admin/users'
-    | '/api/scan'
     | '/api/send-landing-onboarding'
     | '/audit-review/$scanId'
     | '/audit-templates/$templateId'
@@ -1589,7 +1577,6 @@ export interface RootRouteChildren {
   UsersRoute: typeof UsersRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   WarehousesRoute: typeof WarehousesRoute
-  ApiScanRoute: typeof ApiScanRoute
   ApiSendLandingOnboardingRoute: typeof ApiSendLandingOnboardingRoute
   AuditReviewScanIdRoute: typeof AuditReviewScanIdRoute
   AuditAssignmentIdRoute: typeof AuditAssignmentIdRoute
@@ -2160,13 +2147,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/api/scan': {
-      id: '/api/scan'
-      path: '/api/scan'
-      fullPath: '/api/scan'
-      preLoaderRoute: typeof ApiScanRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/send-landing-onboarding': {
       id: '/api/send-landing-onboarding'
       path: '/api/send-landing-onboarding'
@@ -2711,7 +2691,6 @@ const rootRouteChildren: RootRouteChildren = {
   UsersRoute: UsersRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   WarehousesRoute: WarehousesRoute,
-  ApiScanRoute: ApiScanRoute,
   ApiSendLandingOnboardingRoute: ApiSendLandingOnboardingRoute,
   AuditReviewScanIdRoute: AuditReviewScanIdRoute,
   AuditAssignmentIdRoute: AuditAssignmentIdRoute,

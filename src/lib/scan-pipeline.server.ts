@@ -12,6 +12,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
+import { backendAuthHeaders } from "@/lib/backend-auth.server";
 import {
   GENERIC_EXPORT,
   GENERIC_SCAN,
@@ -101,13 +102,11 @@ function visionConfig() {
     );
   }
   const path = (process.env["AISLIX_AI_SCAN_PATH"] ?? "/scan").trim() || "/scan";
-  const apiKey = (process.env["AISLIX_AI_API_KEY"] ?? "").trim();
   const timeoutMs = Number(process.env["AISLIX_AI_TIMEOUT_MS"]) || 600_000;
   const base = baseUrl.replace(/\/+$/, "");
   return {
     baseUrl: base,
     url: `${base}${path.startsWith("/") ? path : `/${path}`}`,
-    apiKey,
     timeoutMs,
   };
 }
@@ -367,16 +366,13 @@ function safeVisionMessage(text: string): string {
 }
 
 async function callVisionApi(body: unknown): Promise<any> {
-  const { baseUrl, url, apiKey, timeoutMs } = visionConfig();
+  const { baseUrl, url, timeoutMs } = visionConfig();
 
   const headers: Record<string, string> = {
     "content-type": "application/json",
     accept: "application/json",
   };
-  if (apiKey) {
-    headers["authorization"] = `Bearer ${apiKey}`;
-    headers["x-api-key"] = apiKey;
-  }
+  Object.assign(headers, backendAuthHeaders());
 
   let response: Response | null = null;
   let text = "";
@@ -524,15 +520,12 @@ async function pollVisionScan(
 /* Short-request job API (submit once, poll separately)                       */
 /* -------------------------------------------------------------------------- */
 
-function visionHeaders(apiKey: string): Record<string, string> {
+function visionHeaders(): Record<string, string> {
   const headers: Record<string, string> = {
     "content-type": "application/json",
     accept: "application/json",
   };
-  if (apiKey) {
-    headers["authorization"] = `Bearer ${apiKey}`;
-    headers["x-api-key"] = apiKey;
-  }
+  Object.assign(headers, backendAuthHeaders());
   return headers;
 }
 
@@ -541,8 +534,8 @@ export type SubmitVisionResult =
 
 /** POST /scan only — returns as soon as Railway accepts the job. */
 export async function submitVisionJob(body: unknown): Promise<SubmitVisionResult> {
-  const { url, apiKey } = visionConfig();
-  const headers = visionHeaders(apiKey);
+  const { url } = visionConfig();
+  const headers = visionHeaders();
 
   let response: Response;
   try {
@@ -596,8 +589,8 @@ export async function submitVisionJobMultipart(input: {
   operating_model?: string;
   purpose?: string;
 }): Promise<SubmitVisionResult> {
-  const { url, apiKey } = visionConfig();
-  const headers = visionHeaders(apiKey);
+  const { url } = visionConfig();
+  const headers = visionHeaders();
   delete headers["content-type"];
 
   const form = new FormData();
@@ -659,8 +652,8 @@ export type PollVisionResult = { kind: "processing" } | { kind: "completed"; pay
 
 /** A single GET /scan/{id} — never loops, so the request stays short. */
 export async function pollVisionJobOnce(jobId: string): Promise<PollVisionResult> {
-  const { baseUrl, apiKey } = visionConfig();
-  const headers = visionHeaders(apiKey);
+  const { baseUrl } = visionConfig();
+  const headers = visionHeaders();
   delete headers["content-type"];
 
   let res: Response;
@@ -2535,15 +2528,12 @@ export async function backfillScanAssetsServer(
     .createSignedUrl(original.storage_path as string, 3600);
   if (!signed?.signedUrl) return done();
 
-  const { baseUrl, apiKey, timeoutMs } = visionConfig();
+  const { baseUrl, timeoutMs } = visionConfig();
   const headers: Record<string, string> = {
     "content-type": "application/json",
     accept: "application/json",
   };
-  if (apiKey) {
-    headers["authorization"] = `Bearer ${apiKey}`;
-    headers["x-api-key"] = apiKey;
-  }
+  Object.assign(headers, backendAuthHeaders());
 
   let response: Response;
   try {
@@ -2707,15 +2697,12 @@ export async function rebuildScanPdfWithVerificationsServer(
     }
   }
 
-  const { baseUrl, apiKey, timeoutMs } = visionConfig();
+  const { baseUrl, timeoutMs } = visionConfig();
   const headers: Record<string, string> = {
     "content-type": "application/json",
     accept: "application/json",
   };
-  if (apiKey) {
-    headers["authorization"] = `Bearer ${apiKey}`;
-    headers["x-api-key"] = apiKey;
-  }
+  Object.assign(headers, backendAuthHeaders());
 
   let response: Response;
   try {

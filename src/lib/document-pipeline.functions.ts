@@ -5,6 +5,7 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { backendAuthHeaders } from "@/lib/backend-auth.server";
 import type { ReferenceDocumentState, ReferenceField } from "@/lib/ai-audit/reference-document";
 import type { DocumentJobStatus } from "@/lib/document-pipeline";
 import { lunaMapColumns, lunaReadDocument } from "@/lib/reference-document-luna.server";
@@ -26,12 +27,11 @@ function backend(): { baseUrl: string; headers: Record<string, string> } | null 
     .trim()
     .replace(/\/+$/, "");
   if (!baseUrl) return null;
-  const headers: Record<string, string> = { "content-type": "application/json", accept: "application/json" };
-  const apiKey = (process.env["AISLIX_AI_API_KEY"] ?? "").trim();
-  if (apiKey) {
-    headers["authorization"] = `Bearer ${apiKey}`;
-    headers["x-api-key"] = apiKey;
-  }
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    accept: "application/json",
+    ...backendAuthHeaders(),
+  };
   return { baseUrl, headers };
 }
 

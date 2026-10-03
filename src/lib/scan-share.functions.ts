@@ -124,7 +124,7 @@ export const emailScanReport = createServerFn({ method: "POST" })
       .map((value) => String(value).trim().toLowerCase())
       .filter(Boolean)
       .slice(0, 5);
-    const recipientUserIds = (input?.recipientUserIds ?? []).map((value) => String(value));
+    const recipientUserIds = (input?.recipientUserIds ?? []).map((value) => String(value)).slice(0, 20);
     if (!recipients.length && !recipientUserIds.length) {
       throw new Error("Add at least one recipient.");
     }
@@ -155,6 +155,13 @@ export const emailScanReport = createServerFn({ method: "POST" })
       }
     }
     if (!emails.length) throw new Error("No valid recipient email addresses were found.");
+
+    const { withinRateLimits } = await import("@/lib/rate-limit.server");
+    const allowed = await withinRateLimits([
+      [`scan_report_email:user:${userId}`, 50, 86400],
+      [`scan_report_email:org:${orgId}`, 300, 86400],
+    ]);
+    if (!allowed) throw new Error("Daily report email limit reached. Try again tomorrow.");
 
     const { data: me } = await supabase
       .from("profiles")

@@ -1,4 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
+import {
+  hashForBucket,
+  requestClientIp,
+  tooManyRequests,
+  withinRateLimits,
+} from "@/lib/rate-limit.server";
 
 type PersistBody = {
   sessionToken?: string;
@@ -35,10 +41,6 @@ export const Route = createFileRoute("/api/public/share/persist")({
         const sessionToken = String(
           body.sessionToken ?? body.landing_session_id ?? "",
         ).trim();
-        const snapshot =
-          body.snapshot && typeof body.snapshot === "object" && !Array.isArray(body.snapshot)
-            ? body.snapshot
-            : null;
         const scanContext =
           body.scanContext &&
           typeof body.scanContext === "object" &&
@@ -48,15 +50,17 @@ export const Route = createFileRoute("/api/public/share/persist")({
         if (!sessionToken) {
           return Response.json({ detail: "Missing demo session." }, { status: 400 });
         }
-        if (!snapshot) {
-          return Response.json({ detail: "Missing audit snapshot." }, { status: 400 });
+
+        const ipHash = await hashForBucket(requestClientIp(request));
+        if (!(await withinRateLimits([[`share_persist:ip:${ipHash}`, 30, 3600]]))) {
+          return tooManyRequests();
         }
 
         try {
           const { persistDemoShareSession, resolvePublicShare } = await import(
             "@/lib/scan-share.server"
           );
-          const accepted = await persistDemoShareSession(sessionToken, snapshot, scanContext);
+          const accepted = await persistDemoShareSession(sessionToken, scanContext);
           if (!accepted) {
             return Response.json(
               { detail: "Demo session not found — run the audit again to share it." },
@@ -73,7 +77,9 @@ export const Route = createFileRoute("/api/public/share/persist")({
         } catch (error) {
           const detail = error instanceof Error ? error.message : "Could not save share link.";
           console.error("Demo share persist failed:", detail);
-          return Response.json({ detail }, { status: 503 });
+          const publicDetail =
+            detail === "Audit data is too large to share." ? detail : "Could not save share link.";
+          return Response.json({ detail: publicDetail }, { status: 503 });
         }
 
         const origin = new URL(request.url).origin;
