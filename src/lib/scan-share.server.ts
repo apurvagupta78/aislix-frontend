@@ -305,6 +305,7 @@ function demoSessionFromStoredRow(row: Record<string, unknown>): DemoLandingSess
       (stored.products as Array<Record<string, unknown>> | undefined),
   );
   return {
+    ...stored,
     landing_session_id: row.session_token as string,
     scan_id: String(row.scan_id ?? stored.scan_id ?? "demo"),
     status: "completed",

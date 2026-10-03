@@ -89,14 +89,15 @@ export function autoPopulateAuditPackage(
     shelf_position?: string;
     match_key?: string;
   }[],
-  existing: PlanogramAuditPackage = EMPTY_AUDIT_PACKAGE,
+  existing: Partial<PlanogramAuditPackage> = EMPTY_AUDIT_PACKAGE,
   options?: AutoPopulateAuditPackageOptions,
 ): PlanogramAuditPackage {
+  const list = <T,>(value: T[] | undefined): T[] => (Array.isArray(value) ? [...value] : []);
   const pkg: PlanogramAuditPackage = {
-    assortment_skus: [...existing.assortment_skus],
-    msl_skus: [...existing.msl_skus],
-    price_requirements: [...existing.price_requirements],
-    promotions: [...existing.promotions],
+    assortment_skus: list(existing.assortment_skus),
+    msl_skus: list(existing.msl_skus),
+    price_requirements: list(existing.price_requirements),
+    promotions: list(existing.promotions),
     scoring: { ...existing.scoring },
     primary_brand: existing.primary_brand,
     fixture_id: existing.fixture_id,
