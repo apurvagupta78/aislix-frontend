@@ -354,8 +354,9 @@ export function AuditExecutionTable({
   };
 
   const handlePhoto = async (file: File) => {
-    if (!photoTarget) return;
-    const { recordIndex, field } = photoTarget;
+    const target = photoTarget;
+    if (!target) return;
+    const { recordIndex, field } = target;
     const checks = rowEvidence.qualityChecks;
     try {
       const { url, flags } = await evidenceUpload.upload(file, {
@@ -383,7 +384,7 @@ export function AuditExecutionTable({
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not upload photo.");
     } finally {
-      setPhotoTarget(null);
+      setPhotoTarget((prev) => (prev === target ? null : prev));
     }
   };
 
@@ -459,8 +460,10 @@ export function AuditExecutionTable({
     onSubmit();
   };
 
+  const auditName = session.auditName || session.template.name;
   const description =
-    session.instructions?.trim() || session.template.description?.trim() || session.template.short_description?.trim() || "";
+    session.auditDescription || session.template.description?.trim() || session.template.short_description?.trim() || "";
+  const instructions = session.instructions?.trim() || "";
   const left = timeLeft(session.dueAt, now);
   const evidenceColumnIndex = columns.findIndex((c) => c.key === evidenceKey);
 
@@ -475,7 +478,7 @@ export function AuditExecutionTable({
       <section className="rounded-2xl border border-[#D9E2E8] bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-5 lg:flex-row">
           <div className="min-w-0 flex-1">
-            <h2 className="text-xl font-semibold text-[#102A43]">{session.template.name}</h2>
+            <h2 className="text-xl font-semibold text-[#102A43]">{auditName}</h2>
             {description ? (
               <p className={cn("mt-1 text-sm text-[#667085]", !showFullDescription && "line-clamp-2")}>
                 {description}{" "}
@@ -484,6 +487,11 @@ export function AuditExecutionTable({
                     {showFullDescription ? "Less" : "More"}
                   </button>
                 ) : null}
+              </p>
+            ) : null}
+            {instructions && instructions !== description ? (
+              <p className="mt-1 text-sm text-[#667085]">
+                <span className="font-medium text-[#102A43]">Instructions:</span> {instructions}
               </p>
             ) : null}
             <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-4">

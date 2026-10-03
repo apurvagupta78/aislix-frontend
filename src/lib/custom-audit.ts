@@ -38,6 +38,8 @@ export type CustomAuditSession = {
   assignerName?: string | null;
   assigneeName?: string | null;
   instructions?: string | null;
+  auditName?: string | null;
+  auditDescription?: string | null;
   createdAt?: string | null;
   evidencePolicy?: Partial<AuditEvidencePolicy> | null;
 };
@@ -124,6 +126,9 @@ export async function loadCustomAuditSession(
   const assignerId = assignment.assigner_id as string;
   const assigneeId = assignment.assignee_id as string;
   const names = await profileNames([assignerId, assigneeId]).catch(() => new Map<string, string>());
+  const scopeValues = (assignment.scope_values ?? {}) as Record<string, unknown>;
+  const scopeText = (key: string) =>
+    typeof scopeValues[key] === "string" ? (scopeValues[key] as string).trim() || null : null;
 
   return {
     assignmentId,
@@ -137,6 +142,8 @@ export async function loadCustomAuditSession(
     assignerName: names.get(assignerId) || null,
     assigneeName: names.get(assigneeId) || null,
     instructions: (assignment.instructions as string | null) ?? null,
+    auditName: scopeText("audit_name"),
+    auditDescription: scopeText("audit_description"),
     createdAt: (assignment.created_at as string | null) ?? null,
     evidencePolicy: (assignment.evidence_policy as Partial<AuditEvidencePolicy> | null) ?? null,
   };
