@@ -221,7 +221,8 @@ function RootComponent() {
       if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
       clearContextCache();
       router.invalidate();
-      if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+      if (event === "SIGNED_OUT") queryClient.clear();
+      else queryClient.invalidateQueries();
       if (event === "SIGNED_IN") void ensureOAuthWorkspace();
     });
     return () => data.subscription.unsubscribe();
