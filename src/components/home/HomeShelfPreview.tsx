@@ -92,7 +92,7 @@ export function HomeShelfPreview() {
           ))}
           <div className="mt-auto flex items-center gap-2 rounded-xl border border-border px-3 py-2.5">
             <AlertTriangle
-              className="size-4 shrink-0 text-[#C2410C]"
+              className="size-4 shrink-0 text-[#102A43]"
               aria-hidden="true"
             />
             <p className="text-sm font-semibold text-foreground">3 actions to review</p>

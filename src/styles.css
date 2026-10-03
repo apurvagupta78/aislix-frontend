@@ -248,13 +248,13 @@
   --border: var(--aislix-border);
   --input: var(--aislix-border);
   --ring: var(--aislix-warehouse-border);
-  --chart-1: var(--aislix-primary);
-  --chart-2: var(--aislix-secondary);
-  --chart-3: var(--aislix-warehouse-bg);
-  --chart-4: var(--aislix-local-bg);
-  --chart-5: var(--aislix-supermarket-bg);
-  --chart-6: var(--aislix-darkstore-bg);
-  --chart-7: var(--aislix-custom-bg);
+  --chart-1: #9B86D9;
+  --chart-2: #7DB7D6;
+  --chart-3: #79E2A8;
+  --chart-4: #8EC9E8;
+  --chart-5: #FFEAF1;
+  --chart-6: #EEF1F4;
+  --chart-7: #102A43;
   --sidebar: #FFFFFF;
   --sidebar-foreground: var(--aislix-secondary);
   --sidebar-primary: var(--aislix-primary);
@@ -548,4 +548,47 @@
 }
 .nav-dark .bg-surface {
   background-color: var(--aislix-surface);
+}
+
+/*
+ * Status tokens resolve to the soft palette fills (pink, green, amber, cyan), which are
+ * backgrounds only — as text they are unreadable on white. Status text is navy; the
+ * meaning comes from the soft fill and border around it. Unlayered so it wins over
+ * Tailwind's utilities layer, including hover/focus variants.
+ */
+.text-destructive,
+.text-warning,
+.text-success,
+.text-accent,
+.text-accent-green,
+.text-status-good,
+.text-status-warn,
+.text-status-danger,
+.text-status-info,
+.text-status-ai,
+.text-status-evidence,
+.text-amber-100,
+.text-amber-200,
+.text-amber-300,
+.text-amber-400,
+.text-amber-500,
+.text-emerald-200,
+.text-emerald-300,
+.text-emerald-400,
+.text-emerald-500,
+.text-red-600,
+.text-orange-500,
+.text-sky-500,
+.text-indigo-400,
+.text-rose-500,
+.text-rose-600,
+.text-rose-700,
+.text-pink-500,
+.text-pink-600,
+.text-yellow-500,
+.text-yellow-600,
+.hover\:text-destructive:hover,
+.focus\:text-destructive:focus,
+.group:hover .group-hover\:text-destructive {
+  color: var(--aislix-primary);
 }

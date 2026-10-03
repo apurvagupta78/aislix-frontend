@@ -15,9 +15,10 @@ import {
 
 import type { AskAislixResponse } from "@/lib/ask-aislix/ask-aislix.types";
 import { AISLIX } from "@/lib/aislix-theme";
+import { CHART_SERIES } from "@/lib/ai-audit/kpi-palette";
 import { AskAislixImageGallery } from "./AskAislixImageGallery";
 
-const COLORS = [AISLIX.primary, AISLIX.darkstoreBg, "#FFE8A3", "#C8E6C9", "#F5C6CB"];
+const COLORS = CHART_SERIES;
 
 export function AskAislixVisual({ visual }: { visual: AskAislixResponse["visual"] }) {
   if (!visual || visual.type === "none") return null;

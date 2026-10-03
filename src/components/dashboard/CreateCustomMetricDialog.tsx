@@ -143,7 +143,7 @@ export function CreateCustomMetricDialog({
         </DialogHeader>
 
         {!freeSlot ? (
-          <p className="text-sm text-[#9b4b63]">All 3 custom slots are used. Hide or delete one first.</p>
+          <p className="text-sm text-[#102A43]">All 3 custom slots are used. Hide or delete one first.</p>
         ) : (
           <div className="space-y-4">
             <div>
@@ -239,7 +239,7 @@ export function CreateCustomMetricDialog({
               </div>
             ) : null}
 
-            {error ? <p className="text-sm text-[#9b4b63]">{error}</p> : null}
+            {error ? <p className="text-sm text-[#102A43]">{error}</p> : null}
           </div>
         )}
 

@@ -12,7 +12,7 @@ export const toneCard: Record<HomeTone, string> = {
 export const toneText: Record<HomeTone, string> = {
   sky: "text-[#2A6FA8]",
   sage: "text-[#4F6B2E]",
-  rose: "text-[#B03A63]",
+  rose: "text-[#102A43]",
   azure: "text-[#1F6FB2]",
   mist: "text-[#35658F]",
 };

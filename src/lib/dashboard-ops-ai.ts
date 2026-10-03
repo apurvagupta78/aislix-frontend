@@ -18,7 +18,7 @@ import {
   type AiDashboardMetrics,
   type DashboardMetricFilters,
 } from "@/lib/dashboard-ai-digital";
-import { resolveDemoExperience } from "@/lib/demo-environment";
+import { isDemoOrgId, resolveDemoExperience } from "@/lib/demo-environment";
 import { DEMO_SHELF_FALLBACK_IMAGES } from "@/lib/demo-shelf-images";
 
 export { DEMO_SHELF_FALLBACK_IMAGES } from "@/lib/demo-shelf-images";
@@ -718,7 +718,8 @@ export async function fetchOpsAiDashboard(
 
     const result = resultRes.data;
     const findingsCount = findingsRes.count ?? 0;
-    const imageUrls = imageUrlsRaw.length ? imageUrlsRaw : [...DEMO_SHELF_FALLBACK_IMAGES];
+    const imageUrls =
+      imageUrlsRaw.length || !experience.labeledDemo ? imageUrlsRaw : [...DEMO_SHELF_FALLBACK_IMAGES];
     const insights = parseInsights(result?.executive_summary);
     const conf = metricNum(result?.metrics, "average_confidence");
     const scan = scanById.get(scanId);
@@ -952,7 +953,7 @@ export async function fetchAuditAnalysisReport(
   const result = resultRes.data;
   const count = findingsRes.count;
   let imageUrls = await signScanEvidenceUrls(scanId);
-  if (!imageUrls.length) {
+  if (!imageUrls.length && isDemoOrgId(orgId)) {
     imageUrls = [...DEMO_SHELF_FALLBACK_IMAGES];
   }
 

@@ -1,5 +1,5 @@
 import { Link, Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Plus, RefreshCw } from "lucide-react";
 
 import { AppShell } from "@/components/AppShell";
@@ -16,7 +16,7 @@ import { SeverityBadge } from "@/components/expiry-control/SeverityBadge";
 import { Button } from "@/components/ui/button";
 import { EmptyState, ErrorState, Skeleton } from "@/components/States";
 import { isOrgManager } from "@/lib/assignments";
-import { fetchExceptions, fetchOverviewMetrics, seedDemoScenario } from "@/lib/expiry-control";
+import { fetchExceptions, fetchOverviewMetrics } from "@/lib/expiry-control";
 import { useOptionalGlobalFilters } from "@/lib/global-filters";
 
 function useIsManager() {
@@ -54,7 +54,6 @@ function ExpiryControlMain() {
     globalFilters?.filters.storeId && globalFilters.filters.storeId !== "all"
       ? globalFilters.filters.storeId
       : undefined;
-  const qc = useQueryClient();
   const metricsQuery = useQuery({
     queryKey: ["expiry-metrics", storeId],
     queryFn: () => fetchOverviewMetrics(storeId),
@@ -67,13 +66,6 @@ function ExpiryControlMain() {
   });
 
   const managerQuery = useIsManager();
-  const seedMutation = useMutation({
-    mutationFn: seedDemoScenario,
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["expiry-metrics"] });
-      qc.invalidateQueries({ queryKey: ["expiry-exceptions"] });
-    },
-  });
 
   const m = metricsQuery.data;
 
@@ -83,20 +75,9 @@ function ExpiryControlMain() {
         <RefreshCw className="mr-1 h-4 w-4" /> Refresh
       </Button>
       {managerQuery.data ? (
-        <>
-          <Button variant="outline" size="sm" className="rounded-lg" asChild>
-            <Link to="/expiry-control/planner">Create inspection</Link>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="rounded-lg"
-            onClick={() => seedMutation.mutate()}
-            disabled={seedMutation.isPending}
-          >
-            Seed demo
-          </Button>
-        </>
+        <Button variant="outline" size="sm" className="rounded-lg" asChild>
+          <Link to="/expiry-control/planner">Create inspection</Link>
+        </Button>
       ) : (
         <Button size="sm" className="rounded-lg" asChild>
           <Link to="/expiry-control/planner">

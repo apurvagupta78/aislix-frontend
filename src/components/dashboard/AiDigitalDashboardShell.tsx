@@ -52,6 +52,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AISLIX, NEW_AUDIT_BUTTON_CLASS } from "@/lib/aislix-theme";
+import { AISLIX_PALETTE, CHART_SERIES } from "@/lib/ai-audit/kpi-palette";
 import {
   fetchNotificationPreferences,
   updateNotificationPreferences,
@@ -92,13 +93,7 @@ import { useIsGuest } from "@/lib/use-is-guest";
 import { cn } from "@/lib/utils";
 import { Route as DashboardRoute } from "@/routes/dashboard";
 
-const CHART_COLORS = [
-  AISLIX.localBorder,
-  AISLIX.supermarketBorder,
-  AISLIX.darkstoreBorder,
-  AISLIX.warehouseBorder,
-  AISLIX.accentBorder,
-];
+const CHART_COLORS = CHART_SERIES;
 
 /** Wide cards span both columns of the metric grid. */
 const SPAN2_CARD_IDS = new Set([
@@ -262,7 +257,7 @@ function KpiCard({
             <span
               className={cn(
                 "inline-flex items-center text-xs font-semibold",
-                delta >= 0 ? "text-[#3d7a55]" : "text-[#9b4b63]",
+                delta >= 0 ? "text-[#3d7a55]" : "text-[#102A43]",
               )}
             >
               {delta >= 0 ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
@@ -855,7 +850,7 @@ export function AiDigitalDashboardShell() {
             <button
               type="button"
               onClick={() => void deleteCustomMetric(metric)}
-              className="mt-2 inline-flex items-center gap-1 text-xs text-[#9b4b63] hover:underline"
+              className="mt-2 inline-flex items-center gap-1 text-xs text-[#102A43] hover:underline"
             >
               <Trash2 className="size-3" /> Delete metric
             </button>
@@ -1155,6 +1150,7 @@ export function AiDigitalDashboardShell() {
                 label: s.storeName,
                 value: s.compliancePct,
               }))}
+              colorAt={() => AISLIX_PALETTE.pink}
             />
           </ChartCard>
         );
@@ -1166,11 +1162,6 @@ export function AiDigitalDashboardShell() {
               rows={(data?.topPerformers ?? []).map((p) => ({
                 storeName: p.storeName,
                 score: p.composite,
-                sparkline: [
-                  Math.max(0, p.composite - 12),
-                  Math.max(0, p.composite - 6),
-                  p.composite,
-                ],
               }))}
             />
           </ChartCard>
@@ -1183,11 +1174,6 @@ export function AiDigitalDashboardShell() {
               rows={(data?.worstPerformers ?? []).map((p) => ({
                 storeName: p.storeName,
                 score: p.composite,
-                sparkline: [
-                  Math.min(100, p.composite + 8),
-                  Math.min(100, p.composite + 3),
-                  p.composite,
-                ],
               }))}
             />
           </ChartCard>

@@ -72,8 +72,8 @@ export function ApiAccessPanel() {
         action={
           <div className="flex gap-2">
             <Button variant="subtle" size="sm" className="rounded-xl" asChild>
-              <a href="https://docs.lovable.dev" target="_blank" rel="noreferrer">
-                <BookOpen className="size-4" /> API docs
+              <a href="mailto:support@aislix.com?subject=Aislix%20API%20documentation%20request">
+                <BookOpen className="size-4" /> Request API docs
               </a>
             </Button>
             <Button

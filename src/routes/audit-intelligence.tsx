@@ -106,13 +106,13 @@ function AuditIntelligencePage() {
 
   const trendChart = data.trends.map((t) => ({
     date: t.date.slice(5),
-    compliance: t.compliance_percent ?? 0,
+    compliance: t.compliance_percent ?? null,
   }));
 
   const storeChart = data.by_store.slice(0, 8).map((s) => ({
     name: s.store_name.length > 12 ? `${s.store_name.slice(0, 12)}…` : s.store_name,
     variance: Math.abs(s.total_variance_value_inr),
-    health: s.health_score ?? 0,
+    health: s.health_score ?? null,
   }));
 
   return (

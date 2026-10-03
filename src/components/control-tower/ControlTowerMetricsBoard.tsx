@@ -2,6 +2,7 @@ import { IndianRupee } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { AISLIX_STATUS_MIX } from "@/lib/aislix-theme";
+import { AISLIX_PALETTE } from "@/lib/ai-audit/kpi-palette";
 import { MpCard, MpCardHeader } from "@/components/design-system/MpCard";
 import type { ControlTowerDemoPayload, ControlTowerKpi } from "@/lib/control-tower";
 import { KpiInfoPopover } from "./KpiInfoPopover";
@@ -35,14 +36,14 @@ export function ControlTowerMetricsBoard({
 
   const status = data.auditStatus.map((b) => ({
     ...b,
-    color: AISLIX_STATUS_MIX[b.name] ?? "#E7EDF0",
+    color: AISLIX_STATUS_MIX[b.name] ?? AISLIX_PALETTE.grey,
   }));
   const statusTotal = status.reduce((sum, row) => sum + row.value, 0);
   const slaBars = [
-    { label: "Overdue", value: data.correctiveActionHealth.overdue, color: "#F5C6CB" },
-    { label: "Due today", value: data.correctiveActionHealth.dueToday, color: "#FFE8A3" },
-    { label: "Open", value: data.correctiveActionHealth.open, color: "#AEDEF9" },
-    { label: "Closed", value: data.correctiveActionHealth.closed, color: "#C8E6C9" },
+    { label: "Overdue", value: data.correctiveActionHealth.overdue, color: AISLIX_PALETTE.pink },
+    { label: "Due today", value: data.correctiveActionHealth.dueToday, color: AISLIX_PALETTE.purple },
+    { label: "Open", value: data.correctiveActionHealth.open, color: AISLIX_PALETTE.blue },
+    { label: "Closed", value: data.correctiveActionHealth.closed, color: AISLIX_PALETTE.green },
   ];
 
   return (

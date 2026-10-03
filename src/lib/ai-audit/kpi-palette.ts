@@ -95,6 +95,20 @@ export const CHART_ACCENT = {
   expectedReference: AISLIX_PALETTE.grey,
 } as const;
 
+/** Multi-series chart order (categorical breakdowns, legends). */
+export const CHART_SERIES = [
+  AISLIX_PALETTE.purple,
+  AISLIX_PALETTE.blue,
+  AISLIX_PALETTE.green,
+  AISLIX_PALETTE.cyan,
+  AISLIX_PALETTE.pink,
+  AISLIX_PALETTE.grey,
+] as const;
+
+export function chartSeriesAt(index: number): string {
+  return CHART_SERIES[index % CHART_SERIES.length]!;
+}
+
 /** @deprecated Prefer ACCENT_TINT + KPI_ACCENT — kept for existing card bg props */
 export const KPI_CARD = {
   auditCompletion: ACCENT_TINT.purple,

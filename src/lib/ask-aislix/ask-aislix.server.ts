@@ -129,10 +129,6 @@ async function signImageGalleryItems(
       }
     }
 
-    // Last resort for any org when Storage has no object.
-    if (!signedUrl) {
-      signedUrl = demoShelfFallbackUrl(i);
-    }
     signed.push({ ...item, url: signedUrl });
   }
   return signed;

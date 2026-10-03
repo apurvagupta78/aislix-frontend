@@ -80,8 +80,8 @@ export function TeamAssignmentPanel({
             />
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-medium">{member.name}</span>
-              <span className="block text-xs capitalize text-muted-foreground">
-                {member.role} · {member.email}
+              <span className="block truncate text-xs text-muted-foreground">
+                <span className="capitalize">{member.role}</span> · {member.email}
               </span>
             </span>
           </Label>

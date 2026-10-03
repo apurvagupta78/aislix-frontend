@@ -1,3 +1,5 @@
+import { AISLIX_PALETTE, CHART_SERIES } from "@/lib/ai-audit/kpi-palette";
+
 /**
  * Aislix chart + operating-model colors — hex from the official palette only.
  */
@@ -63,22 +65,14 @@ export const ASK_AISLIX_SECTION = {
 } as const;
 
 /** Chart series order from the design spec — never rainbow / library defaults. */
-export const AISLIX_CHART = [
-  AISLIX.primary,
-  AISLIX.secondary,
-  AISLIX.warehouseBg,
-  AISLIX.localBg,
-  AISLIX.supermarketBg,
-  AISLIX.darkstoreBg,
-  AISLIX.customBg,
-] as const;
+export const AISLIX_CHART = CHART_SERIES;
 
 export const AISLIX_STATUS_MIX: Record<string, string> = {
-  Assigned: AISLIX.secondary,
-  "In Progress": AISLIX.primary,
-  Submitted: AISLIX.warehouseBg,
-  Approved: AISLIX.supermarketBg,
-  Overdue: AISLIX.darkstoreBg,
+  Assigned: AISLIX_PALETTE.blue,
+  "In Progress": AISLIX_PALETTE.purple,
+  Submitted: AISLIX_PALETTE.cyan,
+  Approved: AISLIX_PALETTE.green,
+  Overdue: AISLIX_PALETTE.pink,
 };
 
 /** Soft navy primary CTA — New Audit (matches homepage navy #102A43). */

@@ -65,7 +65,7 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
       { kind: "leaf", label: "Findings", to: "/findings" },
       { kind: "leaf", label: "Corrective Actions", to: "/corrective-actions" },
       { kind: "leaf", label: "SLA & Escalations", to: "/escalation-settings", managerOnly: true },
-      { kind: "leaf", label: "Recurring Issues", to: "/exceptions" },
+      { kind: "leaf", label: "Exception Queue", to: "/exceptions", managerOnly: true },
     ],
   },
   {
@@ -110,10 +110,10 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
     icon: Settings,
     managerOnly: true,
     items: [
-      { kind: "leaf", label: "SLA", to: "/escalation-settings" },
-      { kind: "leaf", label: "Users & Roles", to: "/team" },
-      { kind: "leaf", label: "Notifications", to: "/settings" },
-      { kind: "leaf", label: "Settings", to: "/settings" },
+      { kind: "leaf", label: "Workspace Settings", to: "/settings", search: { tab: "company" } },
+      { kind: "leaf", label: "Notifications", to: "/settings", search: { tab: "notifications" } },
+      { kind: "leaf", label: "Security", to: "/settings", search: { tab: "security" } },
+      { kind: "leaf", label: "Billing & Plan", to: "/billing" },
     ],
   },
 ];

@@ -112,8 +112,8 @@ const TONE = {
   },
   darkstore: {
     card: "border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)]",
-    ink: "text-[#B03A63]",
-    iconBg: "bg-white text-[#B03A63]",
+    ink: "text-[#102A43]",
+    iconBg: "bg-white text-[#102A43]",
   },
   custom: {
     card: "border-[var(--aislix-custom-border)] bg-[var(--aislix-custom-bg)]",
@@ -171,7 +171,7 @@ function StepVisual({ step }: { step: (typeof STEPS)[number] }) {
         <span className="absolute left-[38%] top-[40%] rounded bg-[#7DB7D6] px-1.5 py-0.5 text-[9px] font-bold text-white">
           Coke · 3 facings
         </span>
-        <span className="absolute left-[55%] top-[22%] rounded bg-[#FFEAF1] px-1.5 py-0.5 text-[9px] font-bold text-[#B03A63]">
+        <span className="absolute left-[55%] top-[22%] rounded bg-[#FFEAF1] px-1.5 py-0.5 text-[9px] font-bold text-[#102A43]">
           Colgate · 2 facings
         </span>
       </div>
@@ -180,7 +180,7 @@ function StepVisual({ step }: { step: (typeof STEPS)[number] }) {
   if (step.n === 4) {
     const rows = [
       { icon: CheckCircle2, label: "Store Audit Completed", date: "12 Sep 2026", color: "text-[#4F6B2E]" },
-      { icon: AlertTriangle, label: "Findings Raised", date: "12 Sep 2026", color: "text-[#B7791F]" },
+      { icon: AlertTriangle, label: "Findings Raised", date: "12 Sep 2026", color: "text-[#102A43]" },
       { icon: UserRound, label: "Action Assigned", date: "13 Sep 2026", color: "text-[#9B86D9]" },
       { icon: CheckCircle2, label: "Re-audit Completed", date: "18 Sep 2026", color: "text-[#4F6B2E]" },
     ];

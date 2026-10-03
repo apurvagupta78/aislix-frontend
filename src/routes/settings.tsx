@@ -13,6 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
+import { logout } from "@/lib/api/auth";
 import { PageHeader } from "@/components/design-system/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -47,6 +48,8 @@ export const Route = createFileRoute("/settings")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>): { tab?: string } =>
+    typeof search.tab === "string" ? { tab: search.tab } : {},
   component: SettingsPage,
 });
 
@@ -61,6 +64,9 @@ const tabs = [
 ];
 
 function SettingsPage() {
+  const { tab } = Route.useSearch();
+  const navigate = useNavigate({ from: "/settings" });
+  const activeTab = tabs.some((t) => t.value === tab) ? tab! : "company";
   return (
     <AppShell title="" hidePageHeader>
       <PageHeader
@@ -68,7 +74,11 @@ function SettingsPage() {
         title="Settings"
         description="Company profile, stores, team access, notifications, security and API keys."
       />
-      <Tabs defaultValue="company" className="space-y-5">
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => void navigate({ search: { tab: value }, replace: true })}
+        className="space-y-5"
+      >
         <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-xl border border-line bg-white p-1.5 shadow-card">
           {tabs.map((tab) => (
             <TabsTrigger
@@ -127,7 +137,7 @@ const supportLinks = [
     title: "Help center",
     description: "Guides for auditing, reports and shelf metrics.",
     icon: LifeBuoy,
-    href: "https://docs.lovable.dev",
+    href: "/how-it-works",
     cta: "Open help center",
   },
   {
@@ -170,7 +180,10 @@ function SupportPanel() {
               <p className="mt-3 text-sm font-medium">{link.title}</p>
               <p className="mt-1 flex-1 text-xs text-muted-foreground">{link.description}</p>
               <Button variant="subtle" size="sm" className="mt-4 w-fit rounded-xl" asChild>
-                <a href={link.href} target="_blank" rel="noreferrer">
+                <a
+                  href={link.href}
+                  {...(link.href.startsWith("/") ? {} : { target: "_blank", rel: "noreferrer" })}
+                >
                   {link.cta}
                 </a>
               </Button>
@@ -184,7 +197,10 @@ function SupportPanel() {
           variant="subtle"
           size="sm"
           className="rounded-xl"
-          onClick={() => void navigate({ to: "/login" })}
+          onClick={async () => {
+            await logout();
+            await navigate({ to: "/login" });
+          }}
         >
           <LogOut className="size-4" /> Sign out
         </Button>
