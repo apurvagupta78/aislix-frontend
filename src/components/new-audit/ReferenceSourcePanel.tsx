@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { Download, FileSpreadsheet, FileText, Loader2, Plus, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
@@ -12,6 +11,7 @@ import {
   DocumentSaveBar,
   isSpreadsheet,
   uploadAndReadDocument,
+  useDocumentReader,
 } from "@/components/new-audit/document-ui";
 import { parseAuditSpreadsheet } from "@/lib/audit-input-dataset";
 import { AISLIX_PALETTE, ACCENT_TINT } from "@/lib/ai-audit/kpi-palette";
@@ -29,7 +29,6 @@ import {
   type ReferenceRow,
 } from "@/lib/ai-audit/reference-document";
 import { downloadSectionCsv } from "@/lib/ai-audit/section-csv";
-import { readReferenceDocument } from "@/lib/reference-document.functions";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -64,8 +63,9 @@ function cellValue(row: ReferenceRow, field: ReferenceField): string {
 
 export function ReferenceSourcePanel({ value, onChange, category, subCategory }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const readDocument = useServerFn(readReferenceDocument);
+  const reader = useDocumentReader();
   const [busy, setBusy] = useState<null | "upload" | "read" | "csv">(null);
+  const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const rows = value?.rows ?? [];
@@ -96,10 +96,11 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
         return;
       }
 
-      const state = await uploadAndReadDocument(file, readDocument, {
+      const state = await uploadAndReadDocument(file, reader, {
         category,
         subCategory,
         onStage: setBusy,
+        onProgress: setProgress,
       });
       if (!state.rows.length) {
         onChange({ ...state, saved: true });
@@ -207,7 +208,7 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
         </div>
       </div>
 
-      {busy ? <DocumentBusyBanner stage={busy} /> : null}
+      {busy ? <DocumentBusyBanner stage={busy} detail={progress} /> : null}
 
       {error ? <DocumentErrorBanner message={error} /> : null}
 

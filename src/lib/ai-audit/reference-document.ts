@@ -59,7 +59,7 @@ export type ReferenceDocumentState = {
 export const LOW_CONFIDENCE = 0.7;
 
 const CASE_UNITS = /^(case|cases|cs|ctn|ctns|carton|cartons|box|boxes|outer|outers)$/i;
-const NON_ITEM_LINE =
+export const NON_ITEM_LINE =
   /^\s*(sub\s*-?\s*total|grand\s*total|total|net\s*amount|amount|gst|cgst|sgst|igst|cess|tax|vat|round(ing)?\s*off|freight|discount|less|add)\b/i;
 const SHELF_PRICE_DOCUMENTS = new Set([
   "price_list",

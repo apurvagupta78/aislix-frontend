@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { Download, FileSpreadsheet, FileText, Loader2, Plus, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -12,6 +11,7 @@ import {
   DocumentSaveBar,
   isSpreadsheet,
   uploadAndReadDocument,
+  useDocumentReader,
 } from "@/components/new-audit/document-ui";
 import { AISLIX_PALETTE, ACCENT_TINT } from "@/lib/ai-audit/kpi-palette";
 import type { ColumnMapping } from "@/lib/audit-builder/field-roles";
@@ -28,7 +28,6 @@ import {
   type DigitalColumnRole,
   type DigitalRowEvidence,
 } from "@/lib/new-audit/digital-columns";
-import { readReferenceDocument } from "@/lib/reference-document.functions";
 import { cn } from "@/lib/utils";
 
 export type DigitalUploadValue = {
@@ -96,8 +95,9 @@ function RoleToggle({
 
 export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const readDocument = useServerFn(readReferenceDocument);
+  const reader = useDocumentReader();
   const [busy, setBusy] = useState<null | "upload" | "read" | "csv">(null);
+  const [progress, setProgress] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
 
   const { dataset, mappings, saved, rowEvidence } = value;
@@ -126,7 +126,7 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
         setBusy("csv");
         next = await parseAuditSpreadsheet(file);
       } else {
-        const state = await uploadAndReadDocument(file, readDocument, { onStage: setBusy });
+        const state = await uploadAndReadDocument(file, reader, { onStage: setBusy, onProgress: setProgress });
         if (!state.rows.length) {
           throw new Error(
             state.meta.warnings[0] ?? "AI could not find any lines in this document. Try a clearer photo.",
@@ -288,7 +288,7 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
         </div>
       </div>
 
-      {busy ? <DocumentBusyBanner stage={busy} /> : null}
+      {busy ? <DocumentBusyBanner stage={busy} detail={progress} /> : null}
       {fileError ? <DocumentErrorBanner message={fileError} /> : null}
 
       {hasData ? (
