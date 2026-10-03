@@ -19,6 +19,7 @@ import {
   timeLeft,
   validateFilledUpload,
   verifyPair,
+  withNumericPairs,
   type ExecutionRecord,
 } from "./execution-table";
 
@@ -150,6 +151,18 @@ describe("validateFilledUpload", () => {
     const added = validateFilledUpload(file, columns, records, { hasProvidedData: false });
     expect(added.newRecordIndexes).toEqual([2]);
     expect(added.updates).toEqual([{ recordIndex: 2, fieldKey: "actual_qty", value: 5 }]);
+  });
+
+  it("treats a text column paired with numbers as a number and ignores spacing in provided text", () => {
+    const { columns } = digitalSetup();
+    const textual = columns.map((c) => (c.key === "actual_qty" ? { ...c, kind: "text" as const } : c));
+    const spaced: ExecutionRecord[] = [{ index: 0, values: { item_name: "Amul  Butter   500g", qty: "24" } }];
+    const typed = withNumericPairs(textual, spaced);
+    expect(typed.find((c) => c.key === "actual_qty")?.kind).toBe("number");
+    const file = upload(["Row #", "Product", "Actual Qty"], [["1", "Amul Butter 500g", "abc"]]);
+    const result = validateFilledUpload(file, typed, spaced, { hasProvidedData: true });
+    expect(result.ignoredProvidedEdits).toEqual([]);
+    expect(result.issues[0]?.reason).toBe('"abc" is not a number');
   });
 
   it("checks dropdown, reason and date values", () => {

@@ -127,10 +127,10 @@ export function verifyPair(provided: unknown, actual: unknown): { difference: nu
     const difference = Math.round((actualNumber - providedNumber) * 100) / 100;
     return { difference, status: difference === 0 ? "match" : "mismatch" };
   }
-  const providedText = cellText(provided) ?? "";
+  const squash = (text: string) => text.replace(/\s+/g, " ").toLowerCase();
   return {
     difference: null,
-    status: actualText.toLowerCase() === providedText.toLowerCase() ? "match" : "mismatch",
+    status: squash(actualText) === squash(cellText(provided) ?? "") ? "match" : "mismatch",
   };
 }
 
@@ -248,7 +248,20 @@ function sameValue(a: unknown, b: unknown): boolean {
   const ln = numericCell(left);
   const rn = numericCell(right);
   if (ln !== null && rn !== null) return ln === rn;
-  return left.toLowerCase() === right.toLowerCase();
+  const squash = (text: string) => text.replace(/\s+/g, " ").toLowerCase();
+  return squash(left) === squash(right);
+}
+
+/**
+ * A text column paired with a provided column whose values are all numbers is checked as a number,
+ * so "abc" against an Amount is rejected even when the column was created as text.
+ */
+export function withNumericPairs(columns: ExecutionColumn[], records: ExecutionRecord[]): ExecutionColumn[] {
+  return columns.map((column) => {
+    if (column.kind !== "text" || !column.compareWithKey) return column;
+    const provided = records.map((r) => cellText(r.values[column.compareWithKey!])).filter((v): v is string => v !== null);
+    return provided.length && provided.every((v) => numericCell(v) !== null) ? { ...column, kind: "number" } : column;
+  });
 }
 
 /**

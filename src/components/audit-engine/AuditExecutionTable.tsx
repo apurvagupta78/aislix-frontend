@@ -35,6 +35,7 @@ import {
   timeLeft,
   validateFilledUpload,
   verifyPair,
+  withNumericPairs,
   type EvidenceStatus,
   type ExecutionColumn,
   type PairStatus,
@@ -220,7 +221,10 @@ export function AuditExecutionTable({
 }: Props) {
   const { definition } = session;
   const sectionKey = repeatableSectionKey(definition) ?? "records";
-  const columns = useMemo(() => buildExecutionColumns(definition, session.inputSchema), [definition, session.inputSchema]);
+  const baseColumns = useMemo(
+    () => buildExecutionColumns(definition, session.inputSchema),
+    [definition, session.inputSchema],
+  );
   const fieldByKey = useMemo(() => new Map(definition.fields.map((f) => [f.key, f])), [definition]);
   const statusField = definition.fields.find((f) => f.section === sectionKey && f.key === EVIDENCE_STATUS_KEY);
   const flagsField = definition.fields.find((f) => f.section === sectionKey && f.key === EVIDENCE_FLAGS_KEY);
@@ -258,6 +262,14 @@ export function AuditExecutionTable({
     return keys.length ? keys : [0];
   }, [responses, sectionKey]);
 
+  const columns = useMemo(
+    () =>
+      withNumericPairs(
+        baseColumns,
+        recordIndexes.map((index) => ({ index, values: responses[sectionKey]?.[index] ?? {} })),
+      ),
+    [baseColumns, recordIndexes, responses, sectionKey],
+  );
   const pairs = columns.filter((c) => c.compareWithKey);
 
   const rows = recordIndexes.map((index, position) => {
