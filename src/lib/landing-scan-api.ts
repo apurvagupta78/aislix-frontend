@@ -312,7 +312,11 @@ export async function convertLandingSession(landingSessionId: string, userId: st
     if (!accessToken) return;
     await fetch(`${API}/landing/convert`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        "x-supabase-apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? "",
+      },
       body: JSON.stringify({ landing_session_id: landingSessionId, user_id: userId }),
     });
   } catch {
