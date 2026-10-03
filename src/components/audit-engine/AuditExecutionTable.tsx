@@ -713,7 +713,7 @@ export function AuditExecutionTable({
         <p className="text-sm text-[#102A43]">
           <span className="font-semibold">{rowsComplete}</span> of {rows.length} rows complete
           {evidenceRowsMissing.length ? (
-            <span className="text-[#667085]"> · {evidenceRowsMissing.length} row{evidenceRowsMissing.length === 1 ? "" : "s"} need a photo</span>
+            <span className="text-[#667085]"> · {evidenceRowsMissing.length === 1 ? "1 row needs" : `${evidenceRowsMissing.length} rows need`} a photo</span>
           ) : null}
         </p>
         <Button onClick={submit} disabled={submitting || readOnly}>
