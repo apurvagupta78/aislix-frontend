@@ -20,7 +20,7 @@ export function NewAuditStep3AuditMode({
       id="step-2-perform"
       stepNumber={2}
       title="How will your team perform the audit?"
-      description="Digital audits start from a template, a CSV/Excel upload, or from scratch. AI audits analyse shelf photos."
+      description="Digital audits start from a CSV/Excel upload, a template, or from scratch. AI audits analyse shelf photos."
       complete={complete}
       error={error}
     >

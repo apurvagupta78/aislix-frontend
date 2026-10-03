@@ -17,7 +17,7 @@ export const CAPTURE_METHOD_OPTIONS: {
     value: "digital",
     title: "Digital Audit",
     description:
-      "Your team records results in Aislix. Start from a template, upload your CSV/Excel, or build from scratch.",
+      "Your team records results in Aislix. Upload your CSV/Excel, start from a template, or build from scratch.",
   },
   {
     value: "ai",

@@ -25,15 +25,6 @@ const OPTIONS: {
   selected: string;
 }[] = [
   {
-    value: "template",
-    title: "Select Template",
-    description: "Start with an existing Aislix audit template.",
-    action: "Choose Template",
-    icon: LayoutTemplate,
-    card: "border-sky-200 bg-sky-50/70 hover:border-sky-300",
-    selected: "border-sky-500 bg-sky-50 ring-2 ring-sky-200",
-  },
-  {
     value: "csv",
     title: "Upload CSV",
     description: "Use your own audit data or master list.",
@@ -41,6 +32,15 @@ const OPTIONS: {
     icon: FileSpreadsheet,
     card: "border-status-good/30 bg-status-good-soft hover:border-status-good/50",
     selected: "border-status-good bg-status-good-soft ring-2 ring-status-good/25",
+  },
+  {
+    value: "template",
+    title: "Select Template",
+    description: "Start with an existing Aislix audit template.",
+    action: "Choose Template",
+    icon: LayoutTemplate,
+    card: "border-sky-200 bg-sky-50/70 hover:border-sky-300",
+    selected: "border-sky-500 bg-sky-50 ring-2 ring-sky-200",
   },
   {
     value: "custom",
@@ -68,7 +68,7 @@ export function StartChoiceCards({
         <div>
           <h2 className="text-lg font-semibold">How do you want to start?</h2>
           <p className="text-sm text-muted-foreground">
-            Pick a template, upload a spreadsheet, or build your own.
+            Upload a spreadsheet, pick a template, or build your own.
           </p>
         </div>
       ) : null}
