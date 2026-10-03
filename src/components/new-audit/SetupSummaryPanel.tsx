@@ -60,7 +60,7 @@ export function SetupSummaryPanel({
     startChoice === "template"
       ? templateName ?? "Template not selected"
       : startChoice === "csv"
-        ? "Upload CSV"
+        ? "Upload your document"
         : startChoice === "custom"
           ? "Custom audit"
           : "Not selected";

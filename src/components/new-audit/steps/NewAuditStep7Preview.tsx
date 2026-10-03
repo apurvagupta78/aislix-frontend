@@ -49,7 +49,7 @@ function PreviewGroup({ title, rows }: { title: string; rows: PreviewRow[] }) {
 
 function startMethodLabel(choice: StartChoice, templateName?: string) {
   if (choice === "template") return templateName ? `Template · ${templateName}` : "Select Template";
-  if (choice === "csv") return "Upload CSV";
+  if (choice === "csv") return "Upload your document";
   if (choice === "custom") return "Start from Scratch";
   return "—";
 }

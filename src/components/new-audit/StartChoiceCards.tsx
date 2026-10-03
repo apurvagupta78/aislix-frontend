@@ -26,9 +26,9 @@ const OPTIONS: {
 }[] = [
   {
     value: "csv",
-    title: "Upload CSV",
-    description: "Use your own audit data or master list.",
-    action: "Upload CSV",
+    title: "Upload your document",
+    description: "Invoice, stock list or price list — PDF, photo, CSV or Excel.",
+    action: "Upload document",
     icon: FileSpreadsheet,
     card: "border-status-good/30 bg-status-good-soft hover:border-status-good/50",
     selected: "border-status-good bg-status-good-soft ring-2 ring-status-good/25",
@@ -68,7 +68,7 @@ export function StartChoiceCards({
         <div>
           <h2 className="text-lg font-semibold">How do you want to start?</h2>
           <p className="text-sm text-muted-foreground">
-            Upload a spreadsheet, pick a template, or build your own.
+            Upload a document, pick a template, or build your own.
           </p>
         </div>
       ) : null}
