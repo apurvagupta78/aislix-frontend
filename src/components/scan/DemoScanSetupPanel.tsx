@@ -5,6 +5,7 @@ import {
   Camera,
   Check,
   ClipboardList,
+  FileText,
   Image as ImageIcon,
   ImagePlus,
   Layers3,
@@ -32,7 +33,10 @@ import {
   NewPlanogramWizard,
   type NewPlanogramWizardHandle,
 } from "@/components/planogram/NewPlanogramWizard";
+import { ReferenceSourcePanel } from "@/components/new-audit/ReferenceSourcePanel";
 import type { MasterImportResult } from "@/lib/master-shelf-setup";
+import { usableReferenceRows } from "@/lib/ai-audit/reference-document";
+import { withReferencePlanogramRows } from "@/lib/new-audit/reference-context";
 import type { ShelfCategory } from "@/lib/categories.data";
 import {
   buildDemoOralCareScanContext,
@@ -58,7 +62,13 @@ import { defaultAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
 import type { ScanContextState } from "@/lib/scan-context";
 import { cn } from "@/lib/utils";
 
-export type DemoPlanogramMode = "demo" | "custom" | "none";
+export type DemoPlanogramMode = "demo" | "custom" | "none" | "reference";
+
+const REFERENCE_OPTION = {
+  mode: "reference" as const,
+  label: "Use a Reference Document",
+  detail: "Compare the shelf against an invoice, purchase order or order list.",
+};
 type CustomSetupPath = "choose" | "master" | "manual";
 
 const DEMO_PRODUCT_COUNT = new Set(DEMO_ORAL_CARE_ROWS.map((row) => row.sku)).size;
@@ -92,6 +102,7 @@ const HOMEPAGE_SAMPLE_OPTIONS: Array<{
     label: "Audit Without Planogram",
     detail: "Analyse the visible shelf without an expected layout.",
   },
+  REFERENCE_OPTION,
 ];
 
 const HOMEPAGE_UPLOAD_OPTIONS: Array<{
@@ -109,6 +120,7 @@ const HOMEPAGE_UPLOAD_OPTIONS: Array<{
     label: "Audit Without Planogram",
     detail: "Analyse the visible shelf without an expected layout.",
   },
+  REFERENCE_OPTION,
 ];
 
 type DemoScanSetupPanelProps = {
@@ -276,9 +288,12 @@ export function DemoScanSetupPanel({
             }
           : {}),
       });
+    } else if (next === "reference") {
+      onScanContextChange({ ...scanContext, planogramRows: [] });
     } else if (next === "none") {
       onScanContextChange({
         ...scanContext,
+        reference: undefined,
         planogramRows: [],
         auditPackage: {
           assortment_skus: [],
@@ -303,14 +318,19 @@ export function DemoScanSetupPanel({
   const showManualSetupOption =
     homepageIntro && planogramMode === "custom" && customSetupPath === "choose" && masterPhase === "upload";
   const uploadReady = mode === "upload" ? ready && hasPhoto : ready;
-  const auditBlockReason = homepageIntro
-    ? homepageCustomAuditBlockReason(
-        planogramMode,
-        scanContext.planogramRows,
-        mode === "upload",
-        hasPhoto,
-      )
-    : null;
+  const referenceBlockReason =
+    planogramMode === "reference" && !usableReferenceRows(scanContext.reference?.rows ?? []).length
+      ? "Upload a CSV or Excel reference document before starting the audit."
+      : null;
+  const auditBlockReason =
+    (homepageIntro
+      ? homepageCustomAuditBlockReason(
+          planogramMode === "reference" ? "none" : planogramMode,
+          scanContext.planogramRows,
+          mode === "upload",
+          hasPhoto,
+        )
+      : null) ?? referenceBlockReason;
   const canStart = uploadReady && !disabled && !auditBlockReason;
   /** Wizard, no-planogram, and demo cards include their own start actions on homepage. */
   const hideBottomStartButton =
@@ -349,6 +369,8 @@ export function DemoScanSetupPanel({
       next = wizardRef.current?.flush() ?? scanContext;
     } else if (planogramMode === "custom" && masterPhase === "ready") {
       next = scanContext;
+    } else if (planogramMode === "reference") {
+      next = withReferencePlanogramRows(scanContext);
     } else {
       next = { ...scanContext, planogramRows: [] };
     }
@@ -400,7 +422,7 @@ export function DemoScanSetupPanel({
         <div
           className={cn(
             "mt-5 grid gap-2",
-            mode === "sample" ? "sm:grid-cols-3" : "sm:grid-cols-2",
+            mode === "sample" ? "sm:grid-cols-2 lg:grid-cols-4" : "sm:grid-cols-3",
           )}
         >
           {(mode === "sample" ? HOMEPAGE_SAMPLE_OPTIONS : HOMEPAGE_UPLOAD_OPTIONS).map((option) => (
@@ -408,7 +430,7 @@ export function DemoScanSetupPanel({
               key={option.mode}
               label={option.label}
               detail={option.detail}
-              recommended={"recommended" in option ? option.recommended : false}
+              recommended={"recommended" in option ? Boolean(option.recommended) : false}
               selected={planogramMode === option.mode}
               disabled={disabled}
               onClick={() => setPlanogramMode(option.mode)}
@@ -446,6 +468,15 @@ export function DemoScanSetupPanel({
           >
             No planogram
           </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={planogramMode === "reference" ? "default" : "outline"}
+            disabled={disabled}
+            onClick={() => setPlanogramMode("reference")}
+          >
+            Reference document
+          </Button>
         </div>
       ) : !lockedPlanogramMode ? (
         <div className="mt-5 flex flex-wrap justify-center gap-2">
@@ -467,6 +498,15 @@ export function DemoScanSetupPanel({
             onClick={() => setPlanogramMode("none")}
           >
             No planogram
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant={planogramMode === "reference" ? "default" : "outline"}
+            disabled={disabled}
+            onClick={() => setPlanogramMode("reference")}
+          >
+            <FileText className="size-3.5" /> Reference document
           </Button>
         </div>
       ) : null}
@@ -724,6 +764,18 @@ export function DemoScanSetupPanel({
         </div>
       ) : null}
 
+      {planogramMode === "reference" ? (
+        <div className="mt-5 rounded-2xl border border-border bg-card p-4 sm:p-5">
+          <ReferenceSourcePanel
+            spreadsheetOnly
+            value={scanContext.reference}
+            onChange={(reference) => onScanContextChange({ ...scanContext, reference })}
+            category={state.categoryName || null}
+            subCategory={resolveSubCategoryLabel(state) || null}
+          />
+        </div>
+      ) : null}
+
       {showMasterSetup ? (
         <div className="mt-5 space-y-4">
           <MasterShelfSetupPanel
@@ -875,7 +927,7 @@ export function DemoScanSetupPanel({
 
       {!hideBottomStartButton ? (
         <div className="mt-6 flex flex-col items-center gap-2">
-          {homepageIntro && auditBlockReason ? (
+          {auditBlockReason ? (
             <p className="max-w-md text-center text-xs font-medium text-destructive">
               {auditBlockReason}
             </p>

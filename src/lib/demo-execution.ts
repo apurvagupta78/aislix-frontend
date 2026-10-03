@@ -299,6 +299,17 @@ export function landingToScanResult(landing: LandingScanResult): ScanResult {
 
     created_at: landing.scanned_at,
 
+    analysis_mode:
+      landing.analysis_mode ??
+      (typeof metricsAny.analysis_mode === "string" ? metricsAny.analysis_mode : undefined),
+    metrics: metricsAny,
+    ...(landing.astra_planogram_analysis
+      ? { astra_planogram_analysis: landing.astra_planogram_analysis }
+      : {}),
+    ...(landing.astra_shelf_analysis ? { astra_shelf_analysis: landing.astra_shelf_analysis } : {}),
+    ...(metricsAny.astra_cv_analysis && typeof metricsAny.astra_cv_analysis === "object"
+      ? { astra_cv_analysis: metricsAny.astra_cv_analysis as Record<string, unknown> }
+      : {}),
   };
 
 }

@@ -1,11 +1,6 @@
 import { autoPopulateAuditPackage } from "@/lib/planogram-audit-package";
 import { runScanAnalysis, submitScanImages } from "@/lib/scan-api";
 import { fetchScanResult, type ScanResult } from "@/lib/scan-results";
-import {
-  runLandingUpload,
-  type LandingScanContext,
-  type LandingScanResult,
-} from "@/lib/landing-scan-api";
 import { dedupeSelections, type CategorySelection } from "@/lib/category-selections";
 import { buildAstraVisionExtras } from "@/lib/ai-audit/astra-analysis";
 import { adhocPlanogramPayload } from "@/lib/role-planogram-requirements";
@@ -22,12 +17,6 @@ export type AuthenticatedAiScanInput = {
   subCategoryLabel?: string;
   notes?: string;
   onUploadProgress?: (percent: number) => void;
-};
-
-export type LandingAiScanInput = {
-  file: File;
-  context?: LandingScanContext;
-  landingSessionId?: string;
 };
 
 /** Primary category from the setup panel first, then every extra shelf type on a mixed rack. */
@@ -143,10 +132,4 @@ export async function runAuthenticatedAiAuditScan(
   const result = await fetchScanResult(scan_id);
   if (!result) throw new Error("Could not load audit results.");
   return result;
-}
-
-export async function runLandingAiAuditScan(
-  input: LandingAiScanInput,
-): Promise<LandingScanResult> {
-  return runLandingUpload(input.file, input.landingSessionId, input.context);
 }

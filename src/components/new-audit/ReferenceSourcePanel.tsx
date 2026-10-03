@@ -36,7 +36,11 @@ type Props = {
   onChange: (next: ReferenceDocumentState | undefined) => void;
   category?: string | null;
   subCategory?: string | null;
+  /** Guests: AI document reading needs a workspace, so only CSV / Excel is parsed in the browser. */
+  spreadsheetOnly?: boolean;
 };
+
+const SPREADSHEET_ACCEPT = ".csv,.xlsx,.xls,text/csv";
 
 type Column = {
   field: ReferenceField;
@@ -61,7 +65,13 @@ function cellValue(row: ReferenceRow, field: ReferenceField): string {
   return value === null || value === undefined ? "" : String(value);
 }
 
-export function ReferenceSourcePanel({ value, onChange, category, subCategory }: Props) {
+export function ReferenceSourcePanel({
+  value,
+  onChange,
+  category,
+  subCategory,
+  spreadsheetOnly = false,
+}: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const reader = useDocumentReader();
   const [busy, setBusy] = useState<null | "upload" | "read" | "csv">(null);
@@ -94,6 +104,12 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
         });
         toast.success(`${parsed.length} lines loaded from ${file.name}`);
         return;
+      }
+
+      if (spreadsheetOnly) {
+        throw new Error(
+          "Upload a CSV or Excel file here. Reading invoice photos and PDFs is available in your free workspace.",
+        );
       }
 
       const state = await uploadAndReadDocument(file, reader, {
@@ -175,8 +191,9 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
         <div>
           <h4 className="text-sm font-semibold text-[#102A43]">Your document</h4>
           <p className="mt-0.5 text-xs text-[#667085]">
-            Photo or PDF of an invoice, purchase order, pick list, price list or handwritten list — or a
-            CSV / Excel file.
+            {spreadsheetOnly
+              ? "CSV or Excel export of an invoice, purchase order, pick list or price list. Invoice photos and PDFs are read in your free workspace."
+              : "Photo or PDF of an invoice, purchase order, pick list, price list or handwritten list — or a CSV / Excel file."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -193,13 +210,13 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
             onClick={() => inputRef.current?.click()}
           >
             {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
-            {rows.length ? "Replace file" : "Upload document or CSV"}
+            {rows.length ? "Replace file" : spreadsheetOnly ? "Upload CSV or Excel" : "Upload document or CSV"}
           </Button>
           <input
             ref={inputRef}
             type="file"
             className="hidden"
-            accept={DOCUMENT_ACCEPT}
+            accept={spreadsheetOnly ? SPREADSHEET_ACCEPT : DOCUMENT_ACCEPT}
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file) void handleFile(file);

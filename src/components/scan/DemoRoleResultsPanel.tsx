@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { ScanResultsHeaderBar } from "@/components/scan/ScanResultsHeaderBar";
 import { AI_DISCLAIMER } from "@/components/scan/ScanProgressPanel";
 import { DemoScanResultsBody } from "@/components/scan/DemoScanResultsBody";
+import { AiAuditResultsPage } from "@/components/ai-audit/AiAuditResultsPage";
+import { buildAiAuditDisplayContext } from "@/lib/ai-audit/astra-display";
 import { GuestDemoShell } from "@/components/scan/GuestDemoShell";
 import {
   EMPTY_SCAN_CONTEXT,
@@ -76,18 +78,26 @@ export function DemoRoleResultsPanel({
 
   const imageUrl =
     data.annotated_image_url ?? data.original_image_url ?? previewImageUrl ?? landingImageUrl(landing);
+  const aiResultsReady = useMemo(() => buildAiAuditDisplayContext(data).isComplete, [data]);
 
-  const panelBody = (
-    <>
+  const resultsBody = (compact: boolean) =>
+    aiResultsReady ? (
+      <AiAuditResultsPage data={data} imageUrl={imageUrl} />
+    ) : (
       <DemoScanResultsBody
         data={data}
         rawData={baseResult}
         activeRole={activeRole}
         onRoleChange={setActiveRole}
-        compact={!fullscreen}
+        compact={compact}
         demoMode
         imageUrl={imageUrl ?? undefined}
       />
+    );
+
+  const panelBody = (
+    <>
+      {resultsBody(!fullscreen)}
 
       <ScanResultsActionsFooter
         data={data}
@@ -157,14 +167,7 @@ export function DemoRoleResultsPanel({
           onClose={() => setFullscreen(false)}
         >
           <div className="mx-auto max-w-6xl space-y-4">
-            <DemoScanResultsBody
-              data={data}
-              rawData={baseResult}
-              activeRole={activeRole}
-              onRoleChange={setActiveRole}
-              imageUrl={imageUrl ?? undefined}
-              demoMode
-            />
+            {resultsBody(false)}
             <ScanResultsActionsFooter
               data={data}
               demoMode

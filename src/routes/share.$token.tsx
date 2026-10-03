@@ -17,6 +17,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import { AiAuditResultsPage } from "@/components/ai-audit/AiAuditResultsPage";
+import { buildAiAuditDisplayContext } from "@/lib/ai-audit/astra-display";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
@@ -121,6 +122,7 @@ function DemoSharedReport({ session }: { session: LandingScanResult }) {
   const baseResult = useMemo(() => landingToScanResult(session), [session]);
   const data = useMemo(() => enrichScanResult(baseResult, scanContext), [baseResult, scanContext]);
   const [role, setRole] = useState<AuditRoleTab>(() => defaultAuditRoleTab(scanContext.auditRole));
+  const aiResultsReady = useMemo(() => buildAiAuditDisplayContext(data).isComplete, [data]);
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
@@ -139,14 +141,21 @@ function DemoSharedReport({ session }: { session: LandingScanResult }) {
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        <DemoScanResultsBody
-          data={data}
-          rawData={baseResult}
-          activeRole={role}
-          demoMode
-          compact
-          onRoleChange={setRole}
-        />
+        {aiResultsReady ? (
+          <AiAuditResultsPage
+            data={data}
+            imageUrl={data.annotated_image_url ?? data.original_image_url ?? null}
+          />
+        ) : (
+          <DemoScanResultsBody
+            data={data}
+            rawData={baseResult}
+            activeRole={role}
+            demoMode
+            compact
+            onRoleChange={setRole}
+          />
+        )}
       </main>
     </div>
   );
