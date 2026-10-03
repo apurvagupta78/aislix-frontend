@@ -1269,7 +1269,7 @@ async function loadAssignmentContext(
   if (versionId) {
     const { data: versionRow } = await supabase
       .from("planogram_versions")
-      .select("audit_package, fixture_id, store_timezone, primary_brand")
+      .select("audit_package, fixture_id, store_timezone")
       .eq("id", versionId)
       .maybeSingle();
     if (versionRow?.audit_package && typeof versionRow.audit_package === "object") {

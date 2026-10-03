@@ -30,10 +30,13 @@ export const notifyMember = createServerFn({ method: "POST" })
     return {
       org_id: orgId,
       user_id: userId,
-      type: String(input?.type ?? "announcement"),
-      title: String(input?.title ?? "Notification"),
-      body: input?.body ? String(input.body) : null,
-      payload: (input?.payload ?? {}) as Record<string, unknown>,
+      type: String(input?.type ?? "announcement").slice(0, 64),
+      title: String(input?.title ?? "Notification").slice(0, 200),
+      body: input?.body ? String(input.body).slice(0, 2000) : null,
+      payload: (JSON.stringify(input?.payload ?? {}).length <= 8000 ? input?.payload ?? {} : {}) as Record<
+        string,
+        unknown
+      >,
     };
   })
   .handler(async ({ data, context }) => {

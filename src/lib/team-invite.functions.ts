@@ -54,9 +54,9 @@ export const inviteMember = createServerFn({ method: "POST" })
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Enter a valid email address.");
     return {
       email,
-      name: String(input?.name ?? "").trim(),
+      name: String(input?.name ?? "").trim().slice(0, 200),
       role: APP_ROLE[String(input?.role ?? "member")] ?? "member",
-      store_ids: Array.isArray(input?.store_ids) ? input.store_ids.map(String) : [],
+      store_ids: Array.isArray(input?.store_ids) ? [...new Set(input.store_ids.map(String))].slice(0, 1000) : [],
       reports_to_user_id: input?.reports_to_user_id
         ? String(input.reports_to_user_id)
         : null,
@@ -96,6 +96,28 @@ export const inviteMember = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { generateInviteLink, sendInviteEmail } = await import("@/lib/team-invite.server");
+
+    if (data.store_ids.length) {
+      const { data: orgStores, error: storesError } = await supabaseAdmin
+        .from("stores")
+        .select("id")
+        .eq("org_id", orgId)
+        .in("id", data.store_ids);
+      if (storesError) throw new Error(storesError.message);
+      if ((orgStores ?? []).length !== data.store_ids.length) {
+        throw new Error("Some selected stores are not in your workspace.");
+      }
+    }
+    if (data.reports_to_user_id) {
+      const { data: manager } = await supabaseAdmin
+        .from("organization_members")
+        .select("id")
+        .eq("org_id", orgId)
+        .eq("user_id", data.reports_to_user_id)
+        .eq("status", "active")
+        .maybeSingle();
+      if (!manager) throw new Error("The selected manager is not on this workspace.");
+    }
 
     // 1) Existing account? profiles mirrors auth.users and is admin-readable.
     let invitedUserId: string | null = null;
