@@ -383,7 +383,9 @@ export function ReferenceSourcePanel({
           className="flex w-full flex-col items-center gap-2 rounded-xl border border-dashed border-[#D9E2E8] bg-[#F4F7F9] px-4 py-8 text-center text-xs text-[#667085] hover:border-[#7DB7D6]"
         >
           <Upload className="size-5 text-[#7DB7D6]" />
-          <span className="text-sm font-medium text-[#102A43]">Choose a photo, PDF or CSV</span>
+          <span className="text-sm font-medium text-[#102A43]">
+            {spreadsheetOnly ? "Choose a CSV or Excel file" : "Choose a photo, PDF or CSV"}
+          </span>
           <span>Any columns work — every column and row is kept. Product, Qty, Price and Location are matched automatically.</span>
         </button>
       ) : null}

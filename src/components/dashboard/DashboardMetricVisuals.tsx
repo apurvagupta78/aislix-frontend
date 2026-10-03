@@ -49,6 +49,7 @@ function RankBarList({
               style={{
                 width: `${Math.min(100, Math.max(0, (row.value / ceiling) * 100))}%`,
                 background: colorAt(i),
+                boxShadow: "inset 0 0 0 1px rgba(16, 42, 67, 0.18)",
               }}
             />
           </div>
