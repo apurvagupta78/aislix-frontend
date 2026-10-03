@@ -259,7 +259,9 @@ export function buildPipelineState(input: {
   const totals = [result.document.subtotal, result.document.total_amount, ...printedTotals].filter(
     (t): t is number => typeof t === "number" && t > 0,
   );
-  if (amounts.length && totals.length && !totals.some((t) => Math.abs(t - lineSum) <= Math.max(1, t * 0.01))) {
+  const totalMismatch =
+    amounts.length > 0 && totals.length > 0 && !totals.some((t) => Math.abs(t - lineSum) <= Math.max(1, t * 0.01));
+  if (totalMismatch) {
     warnings.push(
       `Line amounts add up to ${lineSum.toFixed(2)} but the document total is ${Math.max(...totals).toFixed(2)} — some lines may be missing or misread.`,
     );
@@ -276,7 +278,7 @@ export function buildPipelineState(input: {
       document_number: doc.document_number ?? lunaMeta?.document_number ?? null,
       document_date: doc.document_date ?? lunaMeta?.document_date ?? null,
       currency: doc.currency ?? lunaMeta?.currency ?? null,
-      reading_quality: unreadShare > 0.2 ? "POOR" : unreadPages.length || mathFailures ? "LIMITED" : "GOOD",
+      reading_quality: unreadShare > 0.2 ? "POOR" : unreadPages.length || mathFailures || totalMismatch ? "LIMITED" : "GOOD",
       printed_line_count: numbered.length,
       total_quantity: numbered.reduce((sum, r) => sum + (r.qty ?? 0), 0) || null,
       extra_columns: extraColumns,

@@ -160,4 +160,21 @@ describe("buildPipelineState", () => {
     expect(state.meta.warnings.join(" ")).toContain("add up to 250.00 but the document total is 500.00");
     expect(state.meta.warnings.join(" ")).not.toContain("partial table");
   });
+
+  it("marks reading quality limited when line amounts do not match the document total", () => {
+    const res = result(
+      [
+        {
+          page: 1,
+          source: "text",
+          text_chars: 300,
+          tables: [{ headers: HEADERS, rows: [["1", "Soap", "2", "50", "100"]], confidence: null }],
+        },
+      ],
+      { total_amount: 900 },
+    );
+    const pages = readPipelinePages(res);
+    const state = buildPipelineState({ result: res, pages, lunaPages: new Map(), unreadPages: [], filename: "a.pdf" });
+    expect(state.meta.reading_quality).toBe("LIMITED");
+  });
 });
