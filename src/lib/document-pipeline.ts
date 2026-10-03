@@ -280,7 +280,8 @@ export function buildPipelineState(input: {
       printed_line_count: numbered.length,
       total_quantity: numbered.reduce((sum, r) => sum + (r.qty ?? 0), 0) || null,
       extra_columns: extraColumns,
-      warnings: [...warnings, ...(lunaMeta?.warnings ?? [])],
+      // Luna sees one page at a time, so on multi-page files its notes describe a page crop, not the document.
+      warnings: [...warnings, ...(result.pages_total <= 1 ? (lunaMeta?.warnings ?? []) : [])],
     },
     rows: numbered,
   };

@@ -140,7 +140,7 @@ describe("buildPipelineState", () => {
     );
     const pages = readPipelinePages(res);
     const luna: ReferenceDocumentState = {
-      meta: emptyReferenceMeta("document", "invoice.pdf (page 2)"),
+      meta: { ...emptyReferenceMeta("document", "invoice.pdf (page 2)"), warnings: ["This looks like a partial table."] },
       rows: [{ ...at(at(pages, 0).rows, 0), id: "luna-1", product: "Shampoo", extra: { Amount: "150" } }],
     };
     const state = buildPipelineState({
@@ -158,5 +158,6 @@ describe("buildPipelineState", () => {
     expect(state.meta.reading_quality).toBe("POOR");
     expect(state.meta.warnings.join(" ")).toContain("Page 3 could not be read");
     expect(state.meta.warnings.join(" ")).toContain("add up to 250.00 but the document total is 500.00");
+    expect(state.meta.warnings.join(" ")).not.toContain("partial table");
   });
 });
