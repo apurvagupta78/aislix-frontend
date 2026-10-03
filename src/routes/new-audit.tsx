@@ -671,7 +671,9 @@ function NewAuditPage() {
           ? aiPlanogramChoice === "with_demo"
             ? "Complete role, category, sub-category, and planogram upload."
             : aiPlanogramChoice === "reference"
-              ? "Complete category, sub-category, and upload your document or CSV."
+              ? aiScanContext.reference?.saved === false
+                ? "Save your document lines to continue."
+                : "Upload your document or CSV to continue."
               : "Complete role, category, and sub-category."
           : null,
     assign: !(assignToSelf || teamScope.assigneeIds.length > 0 || assigneeId)
@@ -926,10 +928,12 @@ function NewAuditPage() {
           planogram_mode: reference ? "reference" : "custom",
           ...(reference ? { reference } : {}),
           audit_role: demoScanContext.auditRole,
-          scan_category:
-            demoScanContext.planogramMeta?.category ?? DEMO_ORAL_CARE_META.category,
-          scan_sub_category:
-            demoScanContext.planogramMeta?.sub_category ?? DEMO_ORAL_CARE_META.sub_category,
+          scan_category: reference
+            ? demoScanContext.planogramMeta?.category || null
+            : (demoScanContext.planogramMeta?.category ?? DEMO_ORAL_CARE_META.category),
+          scan_sub_category: reference
+            ? demoScanContext.planogramMeta?.sub_category || null
+            : (demoScanContext.planogramMeta?.sub_category ?? DEMO_ORAL_CARE_META.sub_category),
         };
       } else if (usesTemplateDemoPlanogram) {
         templateSnapshot = {

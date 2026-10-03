@@ -19,6 +19,8 @@ export type ReferenceRow = {
   price: number | null;
   location: string;
   raw_text: string;
+  /** Every other document / CSV column, kept as printed (header → value). */
+  extra: Record<string, string>;
   /** 0–1 reading confidence from Luna; null for CSV / manual rows. */
   confidence: number | null;
   /** Fields Luna could not read clearly — highlighted for the user to check. */
@@ -42,12 +44,16 @@ export type ReferenceDocumentMeta = {
   reading_quality: "GOOD" | "LIMITED" | "POOR" | null;
   printed_line_count: number | null;
   total_quantity: number | null;
+  /** Headers of the extra columns, in document order. */
+  extra_columns: string[];
   warnings: string[];
 };
 
 export type ReferenceDocumentState = {
   meta: ReferenceDocumentMeta;
   rows: ReferenceRow[];
+  /** False while the user has unsaved edits in the lines table. */
+  saved?: boolean;
 };
 
 export const LOW_CONFIDENCE = 0.7;
@@ -76,10 +82,20 @@ function text(value: unknown): string {
   return /^(null|none|n\/a|na|-|—)$/i.test(out) ? "" : out;
 }
 
-function num(value: unknown): number | null {
+function signedNum(value: unknown): number | null {
   if (value === null || value === undefined || value === "") return null;
-  const parsed = typeof value === "number" ? value : Number(String(value).replace(/[^\d.-]/g, ""));
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const raw = String(value).trim();
+  const negative = /^\(.*\)$/.test(raw) || /^-/.test(raw.replace(/^[^\d-]+/, ""));
+  const digits = raw.replace(/[^\d.]/g, "");
+  if (!digits || digits === ".") return null;
+  const parsed = Number(digits);
+  return Number.isFinite(parsed) ? (negative ? -parsed : parsed) : null;
+}
+
+function num(value: unknown): number | null {
+  const parsed = signedNum(value);
+  return parsed !== null && parsed >= 0 ? parsed : null;
 }
 
 function obj(value: unknown): Record<string, unknown> {
@@ -100,6 +116,19 @@ const UNREADABLE_TO_FIELD: Record<string, ReferenceField> = {
   location: "location",
 };
 
+/** Document fields without a dedicated column, shown as extra columns when any line has them. */
+const LUNA_EXTRA_FIELDS: Array<[string, string]> = [
+  ["sku_code", "SKU code"],
+  ["barcode", "Barcode"],
+  ["hsn_code", "HSN"],
+  ["unit_price", "Rate"],
+  ["free_quantity", "Free qty"],
+  ["units_per_case", "Units per case"],
+  ["discount_text", "Discount"],
+  ["line_total", "Amount"],
+  ["promo_text", "Promo"],
+];
+
 export function emptyReferenceMeta(source: ReferenceDocumentMeta["source"], filename: string | null): ReferenceDocumentMeta {
   return {
     source,
@@ -115,6 +144,7 @@ export function emptyReferenceMeta(source: ReferenceDocumentMeta["source"], file
     reading_quality: null,
     printed_line_count: null,
     total_quantity: null,
+    extra_columns: [],
     warnings: [],
   };
 }
@@ -132,6 +162,7 @@ export function emptyReferenceRow(lineNo: number): ReferenceRow {
     price: null,
     location: "",
     raw_text: "",
+    extra: {},
     confidence: null,
     check_fields: [],
   };
@@ -173,6 +204,7 @@ export function parseLunaDocument(payload: unknown, filename: string | null): Re
 
   const items = Array.isArray(root.line_items) ? root.line_items.map(obj) : [];
   const rows: ReferenceRow[] = [];
+  const extraColumns = new Set<string>();
   for (const line of items) {
     const raw = text(line.raw_text);
     const product = text(line.product);
@@ -195,7 +227,6 @@ export function parseLunaDocument(payload: unknown, filename: string | null): Re
     if (confidence !== null && confidence < LOW_CONFIDENCE) {
       for (const field of ["brand", "product", "qty", "price"] as const) check.add(field);
     }
-    if (!brand) check.add("brand");
     if (priceIsTradeRate) check.add("price");
     const printedQty = num(line.quantity);
     const lineTotal = num(line.line_total);
@@ -212,6 +243,27 @@ export function parseLunaDocument(payload: unknown, filename: string | null): Re
         `Line ${rows.length + 1}: rate × quantity does not match the printed amount — please check price and quantity.`,
       );
     }
+    const values: Record<ReferenceField, unknown> = {
+      brand,
+      product: product || raw,
+      variant: text(line.variant),
+      pack_size: text(line.pack_size),
+      qty,
+      unit,
+      price,
+      location: text(line.location),
+    };
+    for (const field of [...check]) {
+      if (values[field] === null || values[field] === "") check.delete(field);
+    }
+    const extra: Record<string, string> = {};
+    for (const [key, header] of LUNA_EXTRA_FIELDS) {
+      if (key === "unit_price" && mrp === null) continue;
+      const value = text(line[key]);
+      if (!value) continue;
+      extra[header] = value;
+      extraColumns.add(header);
+    }
     rows.push({
       id: rowId(),
       line_no: rows.length + 1,
@@ -224,71 +276,158 @@ export function parseLunaDocument(payload: unknown, filename: string | null): Re
       price,
       location: text(line.location),
       raw_text: raw,
+      extra,
       confidence: confidence === null ? null : Math.min(confidence, 1),
       check_fields: [...check],
     });
   }
+  meta.extra_columns = LUNA_EXTRA_FIELDS.map(([, header]) => header).filter((h) => extraColumns.has(h));
   return { meta, rows };
 }
 
-const CSV_ALIASES: Record<ReferenceField | "raw_text", string[]> = {
-  brand: ["brand", "brand name", "company", "manufacturer"],
-  product: ["product", "product name", "product_name", "item", "item name", "description", "sku name", "name"],
+type CsvField = ReferenceField | "raw_text";
+
+/** Exact header names per field, strongest first. */
+const CSV_ALIASES: Record<CsvField, string[]> = {
+  brand: ["brand", "brand name", "company", "manufacturer", "make"],
+  product: [
+    "product",
+    "product name",
+    "item",
+    "item name",
+    "item description",
+    "description",
+    "particulars",
+    "sku name",
+    "article",
+    "name",
+  ],
   variant: ["variant", "flavour", "flavor", "type"],
-  pack_size: ["pack", "pack size", "pack_size", "size", "weight", "uom size"],
-  qty: ["qty", "quantity", "invoice qty", "invoice_qty", "units", "expected qty", "expected_qty", "count"],
-  unit: ["unit", "uom", "quantity unit", "quantity_unit"],
-  price: ["price", "mrp", "mrp_inr", "shelf price", "selling price", "expected price", "expected_price", "rate"],
-  location: ["location", "bin", "bin code", "bin location", "shelf", "slot", "expected location", "expected_location"],
-  raw_text: ["raw_text", "raw text", "line text"],
+  pack_size: ["pack", "pack size", "size", "weight", "uom size", "net weight"],
+  qty: ["qty", "quantity", "invoice qty", "units", "expected qty", "count", "pcs", "nos"],
+  unit: ["unit", "uom", "quantity unit"],
+  price: [
+    "price",
+    "mrp",
+    "mrp inr",
+    "shelf price",
+    "selling price",
+    "expected price",
+    "unit price",
+    "rate",
+    "net rate",
+    "sp",
+    "cost",
+    "unit cost",
+    "amount",
+    "value",
+    "total",
+  ],
+  location: ["location", "bin", "bin code", "bin location", "shelf", "slot", "rack", "expected location"],
+  raw_text: ["raw text", "line text"],
 };
 
+/** Fallback when no exact alias matched: header contains one of these words. */
+const CSV_KEYWORDS: Array<[CsvField, RegExp]> = [
+  ["brand", /\bbrand\b/],
+  ["price", /\b(price|mrp|rate)\b/],
+  ["price", /\b(amount|cost|value)\b/],
+  ["qty", /\b(qty|quantity)\b/],
+  ["location", /\b(location|bin|shelf|slot|rack)\b/],
+  ["product", /\b(product|item|description|particulars|article|name)\b/],
+  ["pack_size", /\b(pack|size|weight)\b/],
+  ["variant", /\b(variant|flavou?r)\b/],
+  ["unit", /\b(unit|uom)\b/],
+];
+
 function normHeader(value: string): string {
-  return value.trim().toLowerCase().replace(/[_\s]+/g, " ");
+  return value
+    .toLowerCase()
+    .replace(/[₹$€£]/g, " ")
+    .replace(/\b(rs|inr|usd)\b\.?/g, " ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
-/** Map spreadsheet rows (header → value) to reference rows using common column names. */
+/** Assign each CSV header to at most one reference field; the rest stay as extra columns. */
+export function mapReferenceColumns(headers: string[]): {
+  columns: Partial<Record<CsvField, string>>;
+  extraColumns: string[];
+} {
+  const normalized = headers.map((h) => ({ header: h, norm: normHeader(h) }));
+  const used = new Set<string>();
+  const columns: Partial<Record<CsvField, string>> = {};
+  for (const field of Object.keys(CSV_ALIASES) as CsvField[]) {
+    for (const alias of CSV_ALIASES[field]) {
+      const hit = normalized.find((h) => !used.has(h.header) && h.norm === alias);
+      if (hit) {
+        columns[field] = hit.header;
+        used.add(hit.header);
+        break;
+      }
+    }
+  }
+  for (const [field, pattern] of CSV_KEYWORDS) {
+    if (columns[field]) continue;
+    const hit = normalized.find((h) => !used.has(h.header) && pattern.test(h.norm));
+    if (hit) {
+      columns[field] = hit.header;
+      used.add(hit.header);
+    }
+  }
+  return { columns, extraColumns: headers.filter((h) => h.trim() && !used.has(h)) };
+}
+
+function mostlyText(records: Array<Record<string, string>>, header: string): boolean {
+  const values = records.map((r) => text(r[header])).filter(Boolean);
+  if (!values.length) return false;
+  return values.filter((v) => signedNum(v) === null || /[a-z]/i.test(v)).length / values.length >= 0.5;
+}
+
+/** Map spreadsheet rows (header → value) to reference rows. Every column and row is kept. */
 export function referenceRowsFromTable(
   headers: string[],
   records: Array<Record<string, string>>,
-): { rows: ReferenceRow[]; missingColumns: string[] } {
-  const lookup = new Map(headers.map((h) => [normHeader(h), h]));
-  const column = (field: keyof typeof CSV_ALIASES): string | null => {
-    for (const alias of CSV_ALIASES[field]) {
-      const hit = lookup.get(normHeader(alias));
-      if (hit) return hit;
+): { rows: ReferenceRow[]; extraColumns: string[] } {
+  const { columns, extraColumns: unmapped } = mapReferenceColumns(headers);
+  let extraColumns = unmapped;
+  if (!columns.product && !columns.brand) {
+    const fallback = unmapped.find((h) => mostlyText(records, h));
+    if (fallback) {
+      columns.product = fallback;
+      extraColumns = unmapped.filter((h) => h !== fallback);
     }
-    return null;
-  };
-  const cols = Object.fromEntries(
-    (Object.keys(CSV_ALIASES) as Array<keyof typeof CSV_ALIASES>).map((field) => [field, column(field)]),
-  ) as Record<keyof typeof CSV_ALIASES, string | null>;
-  const missingColumns = cols.product || cols.brand ? [] : ["product"];
-  const get = (record: Record<string, string>, field: keyof typeof CSV_ALIASES) => {
-    const key = cols[field];
+  }
+  const get = (record: Record<string, string>, field: CsvField) => {
+    const key = columns[field];
     return key ? text(record[key]) : "";
   };
 
   const rows: ReferenceRow[] = [];
   for (const record of records) {
+    if (!headers.some((h) => text(record[h]))) continue;
     const product = get(record, "product");
     const brand = get(record, "brand");
-    if (!product && !brand) continue;
+    const extra: Record<string, string> = {};
+    for (const header of extraColumns) {
+      const value = text(record[header]);
+      if (value) extra[header] = value;
+    }
     rows.push({
       ...emptyReferenceRow(rows.length + 1),
       brand,
       product,
       variant: get(record, "variant"),
       pack_size: get(record, "pack_size"),
-      qty: num(get(record, "qty")),
+      qty: signedNum(get(record, "qty")),
       unit: get(record, "unit"),
-      price: num(get(record, "price")),
+      price: signedNum(get(record, "price")),
       location: get(record, "location"),
-      raw_text: get(record, "raw_text") || [brand, product, get(record, "variant")].filter(Boolean).join(" "),
-      check_fields: brand ? [] : ["brand"],
+      raw_text: get(record, "raw_text") || headers.map((h) => text(record[h])).filter(Boolean).join(" · "),
+      extra,
     });
   }
-  return { rows, missingColumns };
+  return { rows, extraColumns };
 }
 
 export const REFERENCE_CSV_HEADERS = [
@@ -305,7 +444,14 @@ export const REFERENCE_CSV_HEADERS = [
   "Confidence",
 ] as const;
 
-export function referenceRowsToCsvCells(rows: ReferenceRow[]): Array<Array<string | number | null>> {
+export function referenceCsvHeaders(extraColumns: string[]): string[] {
+  return [...REFERENCE_CSV_HEADERS.slice(0, -2), ...extraColumns, ...REFERENCE_CSV_HEADERS.slice(-2)];
+}
+
+export function referenceRowsToCsvCells(
+  rows: ReferenceRow[],
+  extraColumns: string[] = [],
+): Array<Array<string | number | null>> {
   return rows.map((row) => [
     row.line_no,
     row.brand,
@@ -316,6 +462,7 @@ export function referenceRowsToCsvCells(rows: ReferenceRow[]): Array<Array<strin
     row.unit,
     row.price,
     row.location,
+    ...extraColumns.map((header) => row.extra?.[header] ?? ""),
     row.raw_text,
     row.confidence === null ? null : Math.round(row.confidence * 100) / 100,
   ]);
@@ -375,6 +522,7 @@ export function referenceItemsForScan(
     expected_price: row.price,
     expected_location: row.location.trim() || null,
     confidence: row.confidence,
+    ...(row.extra && Object.keys(row.extra).length ? { extra_fields: row.extra } : {}),
   }));
 }
 

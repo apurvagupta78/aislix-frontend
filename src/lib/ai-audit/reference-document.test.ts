@@ -61,7 +61,24 @@ describe("parseLunaDocument", () => {
   it("fills price from the invoice rate when no MRP is printed and flags it to confirm", () => {
     const { rows } = parseLunaDocument(INVOICE, "inv.jpg");
     expect(rows[1]!.price).toBe(140);
-    expect(rows[1]!.check_fields).toEqual(expect.arrayContaining(["price", "brand", "qty"]));
+    expect(rows[1]!.check_fields).toEqual(expect.arrayContaining(["price", "qty"]));
+    expect(rows[1]!.check_fields).not.toContain("brand");
+  });
+
+  it("keeps document fields without a dedicated column as extra columns", () => {
+    const { rows, meta } = parseLunaDocument(
+      {
+        document_type: "invoice",
+        line_items: [
+          { product: "Lathe", quantity: 2, unit_price: 150000, line_total: 300000, hsn_code: "8458" },
+          { product: "Mixer", quantity: 1, unit_price: 50000, mrp: 60000 },
+        ],
+      },
+      null,
+    );
+    expect(meta.extra_columns).toEqual(["HSN", "Rate", "Amount"]);
+    expect(rows[0]!.extra).toEqual({ HSN: "8458", Amount: "300000" });
+    expect(rows[1]!.extra).toEqual({ Rate: "50000" });
   });
 
   it("reads comma-formatted rates", () => {
@@ -107,14 +124,38 @@ describe("shelfQuantity", () => {
 });
 
 describe("CSV rows", () => {
-  it("maps common headers and rejects files with no product column", () => {
+  it("maps common headers", () => {
     const ok = referenceRowsFromTable(
       ["Item Name", "Brand", "Qty", "MRP", "Bin"],
       [{ "Item Name": "Basmati Rice", Brand: "India Gate", Qty: "20", MRP: "145", Bin: "AMB-D0703" }],
     );
-    expect(ok.missingColumns).toEqual([]);
+    expect(ok.extraColumns).toEqual([]);
     expect(ok.rows[0]).toMatchObject({ product: "Basmati Rice", brand: "India Gate", qty: 20, price: 145, location: "AMB-D0703" });
-    expect(referenceRowsFromTable(["Qty"], [{ Qty: "2" }]).missingColumns).toEqual(["product"]);
+    expect(ok.rows[0]!.check_fields).toEqual([]);
+  });
+
+  it("keeps every column and row, reading Amount as price", () => {
+    const records = [
+      { Date: "09/29/2026", Description: "OPENAI  SAN FRANCISCO", Amount: "1180.87" },
+      { Date: "09/17/2026", Description: "Pay with Points Credit-SafeKey", Amount: "-676.75" },
+      { Date: "09/16/2026", Description: "", Amount: "" },
+    ];
+    const { rows, extraColumns } = referenceRowsFromTable(["Date", "Description", "Amount"], records);
+    expect(extraColumns).toEqual(["Date"]);
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toMatchObject({ product: "OPENAI  SAN FRANCISCO", price: 1180.87, extra: { Date: "09/29/2026" } });
+    expect(rows[1]!.price).toBe(-676.75);
+    expect(rows[2]!.product).toBe("");
+  });
+
+  it("matches headers with currency marks and falls back to a text column for the product", () => {
+    const priced = referenceRowsFromTable(["Particulars", "RATE Rs.", "Quantity"], [
+      { Particulars: "Mixer", "RATE Rs.": "1,50,000.00", Quantity: "2" },
+    ]);
+    expect(priced.rows[0]).toMatchObject({ product: "Mixer", price: 150000, qty: 2 });
+    const fallback = referenceRowsFromTable(["Code", "Label"], [{ Code: "1001", Label: "Tea 250g" }]);
+    expect(fallback.rows[0]!.product).toBe("Tea 250g");
+    expect(fallback.extraColumns).toEqual(["Code"]);
   });
 });
 

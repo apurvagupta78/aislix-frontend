@@ -11,11 +11,13 @@ export function isAiStep3Ready(
   ctx: ScanContextState,
 ): boolean {
   if (!choice) return false;
+  if (choice === "reference") {
+    return ctx.reference?.saved !== false && usableReferenceRows(ctx.reference?.rows ?? []).length > 0;
+  }
   const category = ctx.planogramMeta?.category?.trim();
   const sub = ctx.planogramMeta?.sub_category?.trim();
   if (!category || !sub) return false;
   if (choice === "with_demo") return ctx.planogramRows.length > 0;
-  if (choice === "reference") return usableReferenceRows(ctx.reference?.rows ?? []).length > 0;
   return true;
 }
 

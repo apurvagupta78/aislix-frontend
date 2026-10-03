@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Download, FileSpreadsheet, FileText, Loader2, Plus, Trash2, Upload } from "lucide-react";
+import { Check, Download, FileSpreadsheet, FileText, Loader2, Plus, Save, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import {
   emptyReferenceMeta,
   emptyReferenceRow,
   LOW_CONFIDENCE,
-  REFERENCE_CSV_HEADERS,
+  referenceCsvHeaders,
   referenceRowsFromTable,
   referenceRowsToCsvCells,
   usableReferenceRows,
@@ -28,6 +28,8 @@ import { cn } from "@/lib/utils";
 const DOCUMENT_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
 const MAX_IMAGE_EDGE = 2400;
 const MIN_IMAGE_EDGE = 1600;
+const CELL_INPUT =
+  "w-full rounded-md border px-1.5 py-1 text-xs text-[#102A43] outline-none transition-shadow focus:bg-white focus:shadow-[0_0_0_2px_#7DB7D6]";
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 
 type Props = {
@@ -99,8 +101,10 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
 
   const rows = value?.rows ?? [];
   const meta = value?.meta;
+  const extraColumns = meta?.extra_columns ?? [];
   const usable = usableReferenceRows(rows).length;
   const checkCount = rows.filter((row) => row.check_fields.length > 0).length;
+  const unsaved = value?.saved === false;
 
   async function handleFile(file: File) {
     setError(null);
@@ -112,12 +116,13 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
         const records = dataset.rows.map((row) =>
           Object.fromEntries(dataset.columns.map((c) => [c.name, row.values[c.id] ?? ""])),
         );
-        const { rows: parsed, missingColumns } = referenceRowsFromTable(headers, records);
-        if (missingColumns.length) {
-          throw new Error("Add a Product (or Brand) column to your file. Qty, Price and Location are optional.");
-        }
-        if (!parsed.length) throw new Error("No product lines found in this file.");
-        onChange({ meta: emptyReferenceMeta("csv", file.name), rows: parsed });
+        const { rows: parsed, extraColumns: extra } = referenceRowsFromTable(headers, records);
+        if (!parsed.length) throw new Error("No lines found in this file.");
+        onChange({
+          meta: { ...emptyReferenceMeta("csv", file.name), extra_columns: extra },
+          rows: parsed,
+          saved: true,
+        });
         toast.success(`${parsed.length} lines loaded from ${file.name}`);
         return;
       }
@@ -147,12 +152,12 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
         },
       });
       if (!state.rows.length) {
-        onChange(state);
+        onChange({ ...state, saved: true });
         throw new Error(
           state.meta.warnings[0] ?? "AI could not find product lines in this document. Try a clearer photo.",
         );
       }
-      onChange(state);
+      onChange({ ...state, saved: true });
       toast.success(`AI read ${state.rows.length} lines`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not read this file.");
@@ -165,10 +170,11 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
   function updateRow(id: string, field: ReferenceField, raw: string) {
     if (!value) return;
     const column = COLUMNS.find((c) => c.field === field);
-    const parsed = column?.numeric ? (raw.trim() === "" ? null : Number(raw)) : raw;
+    const parsed = column?.numeric ? (raw.trim() === "" ? null : Number(raw.replace(/,/g, ""))) : raw;
     if (column?.numeric && parsed !== null && !Number.isFinite(parsed as number)) return;
     onChange({
       ...value,
+      saved: false,
       rows: value.rows.map((row) =>
         row.id === id
           ? { ...row, [field]: parsed, check_fields: row.check_fields.filter((f) => f !== field) }
@@ -177,23 +183,38 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
     });
   }
 
+  function updateExtra(id: string, header: string, raw: string) {
+    if (!value) return;
+    onChange({
+      ...value,
+      saved: false,
+      rows: value.rows.map((row) => (row.id === id ? { ...row, extra: { ...row.extra, [header]: raw } } : row)),
+    });
+  }
+
   function removeRow(id: string) {
     if (!value) return;
-    onChange({ ...value, rows: value.rows.filter((row) => row.id !== id) });
+    onChange({ ...value, saved: false, rows: value.rows.filter((row) => row.id !== id) });
   }
 
   function addRow() {
     const base = value ?? { meta: emptyReferenceMeta("csv", null), rows: [] };
     const nextLine = Math.max(0, ...base.rows.map((r) => r.line_no)) + 1;
-    onChange({ ...base, rows: [...base.rows, emptyReferenceRow(nextLine)] });
+    onChange({ ...base, saved: false, rows: [...base.rows, emptyReferenceRow(nextLine)] });
+  }
+
+  function saveRows() {
+    if (!value) return;
+    onChange({ ...value, saved: true });
+    toast.success(`${usable} document line${usable === 1 ? "" : "s"} saved for this audit`);
   }
 
   function downloadCsv() {
     downloadSectionCsv(
       meta?.document_number || "reference",
       "document-lines",
-      [...REFERENCE_CSV_HEADERS],
-      referenceRowsToCsvCells(rows),
+      referenceCsvHeaders(extraColumns),
+      referenceRowsToCsvCells(rows, extraColumns),
     );
   }
 
@@ -323,6 +344,11 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
                       {c.header}
                     </th>
                   ))}
+                  {extraColumns.map((header) => (
+                    <th key={header} className="min-w-[110px] px-2 py-2 font-semibold">
+                      {header}
+                    </th>
+                  ))}
                   <th className="px-2 py-2 font-semibold">As printed</th>
                   <th className="px-2 py-2" />
                 </tr>
@@ -338,13 +364,8 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
                           <input
                             aria-label={`${c.header} line ${row.line_no}`}
                             title={flagged ? "AI was not sure about this value — please check" : `Edit ${c.header.toLowerCase()}`}
-                            placeholder={flagged ? "Check" : undefined}
                             inputMode={c.numeric ? "decimal" : undefined}
-                            className={cn(
-                              "w-full rounded-md border px-1.5 py-1 text-xs text-[#102A43] outline-none transition-shadow placeholder:text-[#667085] focus:bg-white focus:shadow-[0_0_0_2px_#7DB7D6]",
-                              c.numeric && "tabular-nums",
-                              flagged && "font-medium",
-                            )}
+                            className={cn(CELL_INPUT, c.numeric && "tabular-nums", flagged && "font-medium")}
                             style={{
                               background: ACCENT_TINT.blue,
                               borderColor: flagged ? AISLIX_PALETTE.blue : AISLIX_PALETTE.border,
@@ -356,6 +377,18 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
                         </td>
                       );
                     })}
+                    {extraColumns.map((header) => (
+                      <td key={header} className="min-w-[110px] px-1 py-1">
+                        <input
+                          aria-label={`${header} line ${row.line_no}`}
+                          title={`Edit ${header}`}
+                          className={CELL_INPUT}
+                          style={{ background: ACCENT_TINT.blue, borderColor: AISLIX_PALETTE.border }}
+                          value={row.extra?.[header] ?? ""}
+                          onChange={(event) => updateExtra(row.id, header, event.target.value)}
+                        />
+                      </td>
+                    ))}
                     <td className="max-w-[220px] px-2 py-1.5 text-[11px] text-[#667085]">
                       <span className="line-clamp-2" title={row.raw_text}>
                         {row.raw_text || "—"}
@@ -389,6 +422,24 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
               Each line is checked on the shelf: is it there, how many, at what price, in which bin.
             </p>
           </div>
+          <div
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3"
+            style={
+              unsaved
+                ? { background: ACCENT_TINT.blue, borderColor: AISLIX_PALETTE.blue }
+                : { background: "#F4F7F9", borderColor: AISLIX_PALETTE.border }
+            }
+          >
+            <p className="text-xs text-[#102A43]">
+              {unsaved
+                ? "You have unsaved changes. Save them to use these lines in the audit."
+                : `${usable} line${usable === 1 ? "" : "s"} saved for this audit.`}
+            </p>
+            <Button type="button" variant={unsaved ? "brand" : "outline"} size="sm" disabled={!unsaved} onClick={saveRows}>
+              {unsaved ? <Save className="size-3.5" /> : <Check className="size-3.5" />}
+              {unsaved ? "Save changes" : "Saved"}
+            </Button>
+          </div>
         </>
       ) : !busy ? (
         <button
@@ -398,7 +449,7 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
         >
           <Upload className="size-5 text-[#7DB7D6]" />
           <span className="text-sm font-medium text-[#102A43]">Choose a photo, PDF or CSV</span>
-          <span>Columns we look for in CSV: Product, Brand, Variant, Pack, Qty, Unit, Price, Location</span>
+          <span>Any columns work — every column and row is kept. Product, Qty, Price and Location are matched automatically.</span>
         </button>
       ) : null}
     </div>

@@ -79,12 +79,28 @@ export function NewAuditDemoSetupPanel({
     );
   }
 
+  const backButton = (
+    <Button type="button" variant="ghost" size="sm" className="-ml-2" onClick={onBack}>
+      <ChevronLeft className="size-4" />
+      Change planogram option
+    </Button>
+  );
+
+  if (planogramChoice === "reference") {
+    return (
+      <div className="space-y-4">
+        {backButton}
+        <ReferenceSourcePanel
+          value={scanContext.reference}
+          onChange={(reference) => onScanContextChange({ ...scanContext, reference })}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <Button type="button" variant="ghost" size="sm" className="-ml-2" onClick={onBack}>
-        <ChevronLeft className="size-4" />
-        Change planogram option
-      </Button>
+      {backButton}
 
       <PlanogramSetupSection
         variant="dashboard"
@@ -134,17 +150,7 @@ export function NewAuditDemoSetupPanel({
         defaultCategory={demoCategory.state.categoryName}
         defaultSubCategory={subCategoryLabel}
         showInlineStart={false}
-        hideNoPlanogramIntro={planogramChoice === "reference"}
       />
-
-      {planogramChoice === "reference" ? (
-        <ReferenceSourcePanel
-          value={scanContext.reference}
-          onChange={(reference) => onScanContextChange({ ...scanContext, reference })}
-          category={scanContext.planogramMeta?.category}
-          subCategory={scanContext.planogramMeta?.sub_category}
-        />
-      ) : null}
     </div>
   );
 }

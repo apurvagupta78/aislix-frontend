@@ -80,12 +80,12 @@ export function NewAuditStep2StartMethod({
       <NewAuditStepSection
         id="step-3-start"
         stepNumber={3}
-        title="Tell Aislix what you're auditing"
+        title={aiPlanogramChoice === "reference" ? "Upload your document" : "Tell Aislix what you're auditing"}
         description={
           aiPlanogramChoice === "without"
             ? "Pick who this audit is for, category and sub-category."
             : aiPlanogramChoice === "reference"
-              ? "Pick who this audit is for, category, sub-category, and upload your document or CSV."
+              ? "Upload an invoice, list, PDF or CSV. Review the lines, edit anything, then save."
               : "Pick who this audit is for, category, sub-category, and upload your planogram."
         }
         complete={complete}
