@@ -27,6 +27,7 @@ import { downloadLandingCsv } from "@/lib/landing-scan-api";
 import { downloadObservedProductsCsv } from "@/lib/observed-products-export";
 import type { DemoAllowance } from "@/lib/demo-allowance";
 import { slimLandingSnapshot } from "@/lib/demo-share-snapshot";
+import { shareableScanContext, type ScanContextState } from "@/lib/scan-context";
 import { signupUrl, type LandingScanResult } from "@/lib/landing-scan-api";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import {
@@ -42,6 +43,7 @@ export type ScanResultsActionsFooterProps = {
   activeRole?: AuditRoleTab;
   landingSessionId?: string;
   landingSnapshot?: LandingScanResult;
+  scanContext?: ScanContextState;
   demoAllowance?: DemoAllowance | null;
   hasWorkspace?: boolean;
   signupHref?: string;
@@ -54,6 +56,7 @@ export function ScanResultsActionsFooter({
   activeRole = "supermarket",
   landingSessionId,
   landingSnapshot,
+  scanContext,
   demoAllowance,
   hasWorkspace = false,
   signupHref,
@@ -80,6 +83,7 @@ export function ScanResultsActionsFooter({
           body: JSON.stringify({
             sessionToken,
             snapshot: slimLandingSnapshot(landingSnapshot),
+            scanContext: scanContext ? shareableScanContext(scanContext) : undefined,
           }),
         });
         const payload = (await res.json().catch(() => ({}))) as { url?: string; detail?: string };

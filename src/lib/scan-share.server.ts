@@ -333,18 +333,25 @@ function demoSessionFromStoredRow(row: Record<string, unknown>): DemoLandingSess
 const DEMO_SESSION_TOKEN = /^[A-Za-z0-9_-]{8,128}$/;
 const DEMO_SNAPSHOT_MAX_CHARS = 512 * 1024;
 const DEMO_SNAPSHOT_WINDOW_MS = 24 * 60 * 60 * 1000;
+const DEMO_SHARE_CONTEXT_MAX_CHARS = 256 * 1024;
 
 /**
  * Makes a landing demo session shareable. Only sessions recorded by the landing
  * scan route qualify; the client snapshot only fills in a result the server
- * failed to store, and never overwrites one. Returns false when the token is unknown.
+ * failed to store, and never overwrites one. The planogram context the guest
+ * audited against is stored once as `share_context` so the share renders the
+ * same KPIs. Returns false when the token is unknown.
  */
 export async function persistDemoShareSession(
   sessionToken: string,
   snapshot: Record<string, unknown>,
+  scanContext: Record<string, unknown> | null = null,
 ): Promise<boolean> {
   const token = sessionToken.trim();
   if (!DEMO_SESSION_TOKEN.test(token)) return false;
+  if (scanContext && JSON.stringify(scanContext).length > DEMO_SHARE_CONTEXT_MAX_CHARS) {
+    throw new Error("Audit data is too large to share.");
+  }
 
   const db = await admin();
   const { data: row, error } = await db
@@ -355,11 +362,24 @@ export async function persistDemoShareSession(
   if (error) throw new Error(error.message);
 
   if (!row) return Boolean(await fetchBackendLandingSession(token));
-  if (row.scan_status === "completed" && row.scan_result) return true;
   if (row.scan_status === "failed") return false;
 
   const ageMs = Date.now() - new Date(row.created_at as string).getTime();
-  if (!(ageMs >= 0 && ageMs <= DEMO_SNAPSHOT_WINDOW_MS)) return false;
+  const withinWindow = ageMs >= 0 && ageMs <= DEMO_SNAPSHOT_WINDOW_MS;
+
+  if (row.scan_status === "completed" && row.scan_result) {
+    const stored = row.scan_result as Record<string, unknown>;
+    if (scanContext && withinWindow && stored.share_context == null) {
+      const { error: contextError } = await db
+        .from("landing_demo_sessions")
+        .update({ scan_result: { ...stored, share_context: scanContext } as never })
+        .eq("session_token", token);
+      if (contextError) throw new Error(contextError.message);
+    }
+    return true;
+  }
+
+  if (!withinWindow) return false;
   if (JSON.stringify(snapshot).length > DEMO_SNAPSHOT_MAX_CHARS) {
     throw new Error("Audit data is too large to share.");
   }
@@ -374,7 +394,7 @@ export async function persistDemoShareSession(
       scan_id: scanId,
       scan_status: "completed",
       scan_error: null,
-      scan_result: snapshot as never,
+      scan_result: (scanContext ? { ...snapshot, share_context: scanContext } : snapshot) as never,
       updated_at: new Date().toISOString(),
     })
     .eq("session_token", token);

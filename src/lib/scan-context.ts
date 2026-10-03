@@ -108,20 +108,37 @@ export function loadStoredScanContext(): ScanContextState {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
     if (!raw) return EMPTY_SCAN_CONTEXT;
-    const parsed = JSON.parse(raw) as ScanContextState;
-    return {
-      focus: parsed.focus ?? {},
-      planogramRows: Array.isArray(parsed.planogramRows) ? parsed.planogramRows : [],
-      auditRole: defaultAuditRoleTab(parsed.auditRole),
-      auditPackage: parsed.auditPackage ?? { ...EMPTY_AUDIT_PACKAGE },
-      planogramMeta: parsed.planogramMeta ?? { ...EMPTY_PLANOGRAM_META },
-      extraCategorySelections: Array.isArray(parsed.extraCategorySelections)
-        ? parsed.extraCategorySelections
-        : [],
-    };
+    return normalizeScanContext(JSON.parse(raw));
   } catch {
     return EMPTY_SCAN_CONTEXT;
   }
+}
+
+export function normalizeScanContext(raw: unknown): ScanContextState {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return EMPTY_SCAN_CONTEXT;
+  const parsed = raw as Partial<ScanContextState>;
+  const isObject = (value: unknown) =>
+    Boolean(value) && typeof value === "object" && !Array.isArray(value);
+  return {
+    focus: isObject(parsed.focus) ? parsed.focus! : {},
+    planogramRows: Array.isArray(parsed.planogramRows) ? parsed.planogramRows : [],
+    auditRole: defaultAuditRoleTab(parsed.auditRole),
+    auditPackage: isObject(parsed.auditPackage)
+      ? { ...EMPTY_AUDIT_PACKAGE, ...parsed.auditPackage }
+      : { ...EMPTY_AUDIT_PACKAGE },
+    planogramMeta: isObject(parsed.planogramMeta)
+      ? { ...EMPTY_PLANOGRAM_META, ...parsed.planogramMeta }
+      : { ...EMPTY_PLANOGRAM_META },
+    extraCategorySelections: Array.isArray(parsed.extraCategorySelections)
+      ? parsed.extraCategorySelections
+      : [],
+  };
+}
+
+/** Planogram context a demo share link needs to render the same KPIs as the live demo. */
+export function shareableScanContext(ctx: ScanContextState): Record<string, unknown> {
+  const { reference: _reference, ...rest } = ctx;
+  return JSON.parse(JSON.stringify(rest)) as Record<string, unknown>;
 }
 
 export function saveStoredScanContext(ctx: ScanContextState): void {

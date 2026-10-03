@@ -6,7 +6,7 @@
  * scan carries structured Aislix/Astra analysis.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { SiteFooter } from "@/components/Footer";
 import { useServerFn } from "@tanstack/react-start";
@@ -24,7 +24,8 @@ import { DemoScanResultsBody } from "@/components/scan/DemoScanResultsBody";
 import { DEMO_PLANOGRAM_LABEL } from "@/lib/demo-oral-care-planogram";
 import { landingToScanResult } from "@/lib/demo-execution";
 import type { LandingScanResult } from "@/lib/landing-scan-api";
-import { defaultAuditRoleTab } from "@/lib/role-audit-ui";
+import { defaultAuditRoleTab, type AuditRoleTab } from "@/lib/role-audit-ui";
+import { enrichScanResult, normalizeScanContext } from "@/lib/scan-context";
 import { getPublicShare } from "@/lib/scan-share.functions";
 import { formatSharedDate, type SharedScanPayload } from "@/lib/scan-share";
 
@@ -113,8 +114,13 @@ function LinkProblem() {
 }
 
 function DemoSharedReport({ session }: { session: LandingScanResult }) {
-  const data = landingToScanResult(session);
-  const role = defaultAuditRoleTab("supermarket");
+  const scanContext = useMemo(
+    () => normalizeScanContext((session as { share_context?: unknown }).share_context),
+    [session],
+  );
+  const baseResult = useMemo(() => landingToScanResult(session), [session]);
+  const data = useMemo(() => enrichScanResult(baseResult, scanContext), [baseResult, scanContext]);
+  const [role, setRole] = useState<AuditRoleTab>(() => defaultAuditRoleTab(scanContext.auditRole));
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border">
@@ -133,7 +139,14 @@ function DemoSharedReport({ session }: { session: LandingScanResult }) {
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-        <DemoScanResultsBody data={data} rawData={data} activeRole={role} demoMode compact onRoleChange={() => {}} />
+        <DemoScanResultsBody
+          data={data}
+          rawData={baseResult}
+          activeRole={role}
+          demoMode
+          compact
+          onRoleChange={setRole}
+        />
       </main>
     </div>
   );

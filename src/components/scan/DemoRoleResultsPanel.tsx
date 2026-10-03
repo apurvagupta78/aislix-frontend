@@ -95,6 +95,7 @@ export function DemoRoleResultsPanel({
         activeRole={activeRole}
         landingSessionId={landing.landing_session_id}
         landingSnapshot={landing}
+        scanContext={scanContext}
         demoAllowance={parseDemoAllowance(landing)}
       />
 
@@ -170,6 +171,7 @@ export function DemoRoleResultsPanel({
               activeRole={activeRole}
               landingSessionId={landing.landing_session_id}
               landingSnapshot={landing}
+              scanContext={scanContext}
               demoAllowance={parseDemoAllowance(landing)}
             />
           </div>

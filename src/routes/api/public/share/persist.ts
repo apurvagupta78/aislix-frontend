@@ -4,6 +4,7 @@ type PersistBody = {
   sessionToken?: string;
   landing_session_id?: string;
   snapshot?: Record<string, unknown>;
+  scanContext?: Record<string, unknown>;
 };
 
 const MAX_BODY_BYTES = 1024 * 1024;
@@ -38,6 +39,12 @@ export const Route = createFileRoute("/api/public/share/persist")({
           body.snapshot && typeof body.snapshot === "object" && !Array.isArray(body.snapshot)
             ? body.snapshot
             : null;
+        const scanContext =
+          body.scanContext &&
+          typeof body.scanContext === "object" &&
+          !Array.isArray(body.scanContext)
+            ? body.scanContext
+            : null;
         if (!sessionToken) {
           return Response.json({ detail: "Missing demo session." }, { status: 400 });
         }
@@ -49,7 +56,7 @@ export const Route = createFileRoute("/api/public/share/persist")({
           const { persistDemoShareSession, resolvePublicShare } = await import(
             "@/lib/scan-share.server"
           );
-          const accepted = await persistDemoShareSession(sessionToken, snapshot);
+          const accepted = await persistDemoShareSession(sessionToken, snapshot, scanContext);
           if (!accepted) {
             return Response.json(
               { detail: "Demo session not found — run the audit again to share it." },
