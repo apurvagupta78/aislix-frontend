@@ -207,6 +207,7 @@ export async function uploadAndReadDocument(
     category: opts.category,
     subCategories: opts.subCategory ? [opts.subCategory] : [],
   };
+  opts.onProgress?.("Opening your document…");
   try {
     const started = await reader.start({ data: request }).catch(() => ({ available: false as const }));
     const state = started.available
@@ -220,6 +221,7 @@ export async function uploadAndReadDocument(
           if (prepared.size > MAX_UPLOAD_BYTES) {
             throw new Error("Large documents can't be read right now. Please try again in a few minutes.");
           }
+          opts.onProgress?.(null);
           return reader.readDocument({ data: request });
         })();
     return { ...state, meta: { ...state.meta, storage_path: storagePath, mime_type: prepared.type } };

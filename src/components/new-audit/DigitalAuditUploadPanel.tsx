@@ -99,6 +99,7 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
   const [busy, setBusy] = useState<null | "upload" | "read" | "csv">(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [readWarnings, setReadWarnings] = useState<string[]>([]);
 
   const { dataset, mappings, saved, rowEvidence } = value;
   const columns = dataset.columns;
@@ -120,8 +121,10 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
 
   async function handleFile(file: File) {
     setFileError(null);
+    setReadWarnings([]);
     try {
       let next: AuditInputDataset;
+      let warnings: string[] = [];
       if (isSpreadsheet(file)) {
         setBusy("csv");
         next = await parseAuditSpreadsheet(file);
@@ -133,9 +136,11 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
           );
         }
         next = referenceStateToDataset(state);
+        warnings = state.meta.warnings;
       }
       if (!next.rows.length) throw new Error("No rows found in this file.");
       emit(next, [], true);
+      setReadWarnings(warnings);
       toast.success(`${next.rows.length} rows loaded from ${file.name}`);
     } catch (e) {
       setFileError(e instanceof Error ? e.message : "Could not read this file.");
@@ -290,6 +295,13 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
 
       {busy ? <DocumentBusyBanner stage={busy} detail={progress} /> : null}
       {fileError ? <DocumentErrorBanner message={fileError} /> : null}
+      {readWarnings.length && hasData ? (
+        <ul className="list-disc space-y-0.5 pl-5 text-xs text-[#667085]">
+          {readWarnings.map((w) => (
+            <li key={w}>{w}</li>
+          ))}
+        </ul>
+      ) : null}
 
       {hasData ? (
         <>
