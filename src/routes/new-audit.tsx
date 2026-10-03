@@ -30,7 +30,11 @@ import {
 } from "@/lib/audit-input-dataset";
 import { DigitalAuditUploadPanel } from "@/components/new-audit/DigitalAuditUploadPanel";
 import { createDigitalCsvAuditTemplate } from "@/lib/audit-builder/save-custom-template";
-import { buildDigitalInputSchema, syncDigitalMappings } from "@/lib/new-audit/digital-columns";
+import {
+  buildDigitalInputSchema,
+  syncDigitalMappings,
+  type DigitalRowEvidence,
+} from "@/lib/new-audit/digital-columns";
 import { SimpleScratchBuilder } from "@/components/new-audit/SimpleScratchBuilder";
 import type { AuditPurpose, OperatingModel } from "@/lib/audit-builder/types";
 import type { InputSchema } from "@/lib/audit-builder/field-roles";
@@ -170,6 +174,7 @@ function NewAuditPage() {
   );
   const [dataInputMode, setDataInputMode] = useState<AuditDataInputMode>("upload_csv");
   const [csvSaved, setCsvSaved] = useState(true);
+  const [rowEvidence, setRowEvidence] = useState<DigitalRowEvidence>("optional");
   const [evidenceLevel, setEvidenceLevel] = useState<EvidenceLevel>("standard");
   const [evidencePolicy, setEvidencePolicy] = useState<AuditEvidencePolicy>(
     policyForLevel("standard"),
@@ -420,8 +425,9 @@ function NewAuditPage() {
       dataset,
       mappings: dataset.source === "csv" ? syncDigitalMappings(dataset, inputSchema.columnMappings) : [],
       saved: csvSaved,
+      rowEvidence,
     }),
-    [dataset, inputSchema.columnMappings, csvSaved],
+    [dataset, inputSchema.columnMappings, csvSaved, rowEvidence],
   );
 
   useEffect(() => {
@@ -857,6 +863,7 @@ function NewAuditPage() {
           inputSchema: buildDigitalInputSchema(dataset, syncDigitalMappings(dataset, inputSchema.columnMappings)),
           dataset,
           operatingModel,
+          rowEvidence,
         });
         templateForAssignment = digitalCsvTemplate;
       }
@@ -1251,6 +1258,7 @@ function NewAuditPage() {
                   setDataset(next.dataset);
                   setInputSchema(buildDigitalInputSchema(next.dataset, next.mappings));
                   setCsvSaved(next.saved);
+                  setRowEvidence(next.rowEvidence);
                 }}
               />
             }

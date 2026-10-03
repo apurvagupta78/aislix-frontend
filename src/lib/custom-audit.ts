@@ -23,6 +23,8 @@ import { syncFindingsForScan } from "@/lib/findings";
 import type { InputSchema } from "@/lib/audit-builder/field-roles";
 import type { AuditInputDataset } from "@/lib/audit-input-dataset";
 import { hydrateReferenceValuesFromDataset } from "@/lib/audit-builder/input-schema";
+import type { AuditEvidencePolicy } from "@/lib/audit-evidence-policy";
+import type { Json } from "@/integrations/supabase/types";
 
 export type CustomAuditSession = {
   assignmentId: string;
@@ -33,7 +35,21 @@ export type CustomAuditSession = {
   status: string;
   inputSchema?: InputSchema;
   inputDataset?: AuditInputDataset;
+  assignerName?: string | null;
+  assigneeName?: string | null;
+  instructions?: string | null;
+  createdAt?: string | null;
+  evidencePolicy?: Partial<AuditEvidencePolicy> | null;
 };
+
+async function profileNames(ids: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (!unique.length) return new Map();
+  const { data } = await supabase.from("profiles").select("id, full_name, email").in("id", unique);
+  return new Map(
+    (data ?? []).map((p) => [p.id as string, ((p.full_name as string | null) || (p.email as string | null) || "").trim()]),
+  );
+}
 
 export type { ResponseMap } from "@/lib/custom-audit-shared";
 export {
@@ -105,6 +121,9 @@ export async function loadCustomAuditSession(
   const inputDataset =
     (purposeConfig.input_dataset as AuditInputDataset | undefined) ??
     ((templateSnapshot?.input_dataset as AuditInputDataset | undefined) ?? undefined);
+  const assignerId = assignment.assigner_id as string;
+  const assigneeId = assignment.assignee_id as string;
+  const names = await profileNames([assignerId, assigneeId]).catch(() => new Map<string, string>());
 
   return {
     assignmentId,
@@ -115,6 +134,11 @@ export async function loadCustomAuditSession(
     status: assignment.status as string,
     inputSchema,
     inputDataset,
+    assignerName: names.get(assignerId) || null,
+    assigneeName: names.get(assigneeId) || null,
+    instructions: (assignment.instructions as string | null) ?? null,
+    createdAt: (assignment.created_at as string | null) ?? null,
+    evidencePolicy: (assignment.evidence_policy as Partial<AuditEvidencePolicy> | null) ?? null,
   };
 }
 
@@ -205,6 +229,42 @@ export async function saveCustomAuditField(input: {
       throw new Error("Custom audit responses not available. Apply audit builder migration.");
     }
     dbError(error, "Could not save field.");
+  }
+}
+
+/** Save many cells at once (e.g. an uploaded filled copy); same row shape as saveCustomAuditField. */
+export async function saveCustomAuditFields(input: {
+  assignmentId: string;
+  templateId: string;
+  templateVersion: number;
+  sectionKey: string;
+  items: Array<{ recordIndex: number; field: TemplateField; value: AuditResponseValue }>;
+}): Promise<void> {
+  if (!input.items.length) return;
+  const orgId = await requireOrgId();
+  const userId = await requireUserId();
+  const now = new Date().toISOString();
+  const rows = input.items.map((item) => ({
+    org_id: orgId,
+    assignment_id: input.assignmentId,
+    template_id: input.templateId,
+    template_version: input.templateVersion,
+    section_key: input.sectionKey,
+    record_index: item.recordIndex,
+    field_key: item.field.key,
+    field_type: item.field.type,
+    field_config: item.field.config as unknown as Json,
+    value: item.value as Json,
+    ai_suggested: null,
+    human_confirmed: false,
+    updated_by: userId,
+    updated_at: now,
+  }));
+  for (let start = 0; start < rows.length; start += 500) {
+    const { error } = await supabase
+      .from("audit_responses")
+      .upsert(rows.slice(start, start + 500), { onConflict: "assignment_id,section_key,record_index,field_key" });
+    if (error) dbError(error, "Could not save uploaded values.");
   }
 }
 

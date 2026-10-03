@@ -25,14 +25,8 @@ import { RequiredInputsSummary } from "@/components/audit-builder/RequiredInputs
 import { isFieldVisible } from "@/lib/audit-builder/rules-engine";
 import { isImageField } from "@/lib/audit-builder/field-library";
 import { resolveAuditEvidenceUrl } from "@/lib/custom-audit";
-import {
-  buildSessionImageHashSet,
-  hashFileContent,
-  isDuplicateHash,
-  shouldBlockDuplicates,
-  shouldCheckImageQuality,
-  validateImageQuality,
-} from "@/lib/audit-builder/evidence-validation";
+import { shouldBlockDuplicates, shouldCheckImageQuality } from "@/lib/audit-builder/evidence-validation";
+import { useEvidenceUpload } from "@/components/audit-builder/useEvidenceUpload";
 import { computeCompletion } from "@/lib/audit-builder/validation";
 import type { AuditResponseValue, TemplateDefinition, TemplateField } from "@/lib/audit-builder/types";
 import type { ResponseMap } from "@/lib/custom-audit";
@@ -83,11 +77,10 @@ export function AuditExecutionForm({
     recordIndex: number;
     field: TemplateField;
   } | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const evidenceUpload = useEvidenceUpload(onUploadImage);
+  const uploading = evidenceUpload.uploading;
   const [activeRecord, setActiveRecord] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  /** Maps uploaded URL → SHA-256 content hash for duplicate detection within session. */
-  const imageHashByUrlRef = useRef<Record<string, string>>({});
 
   const repeatableSection = definition.sections.find((s) => s.repeatable);
   const sectionKey = repeatableSection?.key ?? definition.sections[0]?.key ?? "default";
@@ -156,46 +149,18 @@ export function AuditExecutionForm({
     if (!uploadTarget) return;
     const { sectionKey: sec, recordIndex, field } = uploadTarget;
     setUploadError(null);
-    setUploading(true);
 
     try {
-      const checkQuality = shouldCheckImageQuality(
-        field.config,
-        definition.ai.enabled,
-        aiImageQuality,
-      );
-      if (checkQuality) {
-        const quality = await validateImageQuality(
-          file,
-          field.config.imageQualityRequirement ?? "standard",
-        );
-        if (!quality.ok) {
-          setUploadError(quality.reason);
-          toast.error(quality.reason, { duration: 6000 });
-          return;
-        }
-      }
-
-      const fileHash = await hashFileContent(file);
-      const blockDupes = shouldBlockDuplicates(
-        field.config,
-        definition.evidence.preventDuplicates,
-        aiDuplicateDetection,
-      );
-      if (blockDupes) {
-        const known = buildSessionImageHashSet(imageHashByUrlRef.current);
-        if (isDuplicateHash(fileHash, known)) {
-          const msg =
-            "Duplicate evidence detected. This image was already uploaded — it will not count toward required coverage.";
-          setUploadError(msg);
-          toast.error(msg, { duration: 6000 });
-          return;
-        }
-      }
-
-      const url = await onUploadImage(file);
-      imageHashByUrlRef.current[url] = fileHash;
-
+      const { url } = await evidenceUpload.upload(file, {
+        checkQuality: shouldCheckImageQuality(field.config, definition.ai.enabled, aiImageQuality),
+        qualityRequirement: field.config.imageQualityRequirement ?? "standard",
+        checkDuplicates: shouldBlockDuplicates(
+          field.config,
+          definition.evidence.preventDuplicates,
+          aiDuplicateDetection,
+        ),
+        onProblem: "block",
+      });
       const existing = responses[sec]?.[recordIndex]?.[field.key];
       const list = Array.isArray(existing) ? [...existing, url] : [url];
       await setValue(sec, recordIndex, field, list);
@@ -203,9 +168,8 @@ export function AuditExecutionForm({
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Could not upload image.";
       setUploadError(msg);
-      toast.error(msg);
+      toast.error(msg, { duration: 6000 });
     } finally {
-      setUploading(false);
       setUploadTarget(null);
     }
   };
@@ -579,7 +543,7 @@ export function AuditExecutionForm({
   );
 }
 
-function EvidenceImage({ stored }: { stored: string }) {
+export function EvidenceImage({ stored, className }: { stored: string; className?: string }) {
   const [src, setSrc] = useState(stored);
 
   useEffect(() => {
@@ -596,7 +560,7 @@ function EvidenceImage({ stored }: { stored: string }) {
     <img
       src={src}
       alt=""
-      className="size-16 rounded-md border border-border object-cover"
+      className={className ?? "size-16 rounded-md border border-border object-cover"}
     />
   );
 }

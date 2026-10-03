@@ -124,7 +124,7 @@ export function buildTemplateFromInputSchema(
   });
 }
 
-function resolveFieldKey(
+export function resolveFieldKey(
   mapping: ColumnMapping,
   inputSchema: InputSchema,
 ): string {

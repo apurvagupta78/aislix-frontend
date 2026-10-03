@@ -16,7 +16,11 @@ import {
   type AuditTemplate,
   type AuditTemplateInput,
 } from "@/lib/audit-templates";
-import { buildDigitalTemplateDefinition, DIGITAL_CSV_TEMPLATE_SOURCE } from "@/lib/new-audit/digital-columns";
+import {
+  buildDigitalTemplateDefinition,
+  DIGITAL_CSV_TEMPLATE_SOURCE,
+  type DigitalRowEvidence,
+} from "@/lib/new-audit/digital-columns";
 
 function buildCalculatedFields(inputSchema: InputSchema): CalculatedFieldDef[] {
   const concepts = new Set(
@@ -82,10 +86,13 @@ export async function createDigitalCsvAuditTemplate(input: {
   inputSchema: InputSchema;
   dataset: AuditInputDataset;
   operatingModel: OperatingModel;
+  rowEvidence?: DigitalRowEvidence;
 }): Promise<AuditTemplate> {
+  const rowEvidence = input.rowEvidence ?? "optional";
   const def = buildDigitalTemplateDefinition(input.inputSchema, input.dataset, {
     name: input.name.trim(),
     operatingModel: input.operatingModel,
+    rowEvidence,
   });
   const patch = definitionToPatch(def);
   patch.name = input.name.trim();
@@ -98,6 +105,7 @@ export async function createDigitalCsvAuditTemplate(input: {
     source: DIGITAL_CSV_TEMPLATE_SOURCE,
     inputSchema: input.inputSchema,
     input_dataset: input.dataset,
+    rowEvidence,
   };
   return createAuditTemplate(patch as AuditTemplateInput);
 }

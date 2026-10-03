@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { AuditExecutionForm } from "@/components/audit-builder/AuditExecutionForm";
+import { AuditExecutionTable } from "@/components/audit-engine/AuditExecutionTable";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ErrorState, Skeleton } from "@/components/States";
@@ -21,6 +22,7 @@ import {
   loadCustomAuditSession,
   mergeInputDatasetIntoResponses,
   saveCustomAuditField,
+  saveCustomAuditFields,
   submitCustomAudit,
   uploadCustomAuditImage,
   type ResponseMap,
@@ -153,6 +155,35 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
     });
   };
 
+  const readOnly = session.status !== "pending" && session.status !== "in_progress";
+  const useTable =
+    session.template.audit_mode === "digital" && session.definition.sections.some((s) => s.repeatable);
+
+  if (useTable) {
+    return (
+      <AuditExecutionTable
+        session={session}
+        responses={responses}
+        onChange={setResponses}
+        onSaveField={handleSaveField}
+        onSaveMany={(sectionKey, items) =>
+          saveCustomAuditFields({
+            assignmentId,
+            templateId: session.template.id,
+            templateVersion: session.template.version,
+            sectionKey,
+            items,
+          })
+        }
+        onUploadImage={(file) => uploadCustomAuditImage(assignmentId, file)}
+        readOnly={readOnly}
+        testMode={testMode}
+        submitting={submitMutation.isPending}
+        onSubmit={() => submitMutation.mutate()}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       {session.template.operating_model && (
@@ -176,7 +207,7 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
           onChange={setResponses}
           onSaveField={handleSaveField}
           onUploadImage={(file) => uploadCustomAuditImage(assignmentId, file)}
-          readOnly={session.status !== "pending" && session.status !== "in_progress"}
+          readOnly={readOnly}
           testMode={testMode}
         />
       </div>

@@ -1,16 +1,57 @@
 import { Info } from "lucide-react";
 
+import { EvidenceImage } from "@/components/audit-builder/AuditExecutionForm";
 import { AISLIX_PALETTE, ACCENT_TINT, type AislixAccent } from "@/lib/ai-audit/kpi-palette";
-import { numericCell, type DigitalColumnsAudit, type DigitalResultColumn } from "@/lib/new-audit/digital-columns";
+import {
+  EVIDENCE_STATUS_LABEL,
+  evidenceCheck,
+  verifyPair,
+  type EvidenceStatus,
+  type PairStatus,
+} from "@/lib/audit-engine/execution-table";
+import type { DigitalColumnsAudit, DigitalResultColumn, DigitalResultRow } from "@/lib/new-audit/digital-columns";
 import { cn } from "@/lib/utils";
 
 type Pair = { auditee: DigitalResultColumn; provided: DigitalResultColumn };
 
-function difference(row: Record<string, string | null>, pair: Pair): number | null {
-  const actual = numericCell(row[pair.auditee.key]);
-  const expected = numericCell(row[pair.provided.key]);
-  if (actual === null || expected === null) return null;
-  return Math.round((actual - expected) * 100) / 100;
+function verify(row: Record<string, string | null>, pair: Pair) {
+  return verifyPair(row[pair.provided.key], row[pair.auditee.key]);
+}
+
+const PAIR_PILL: Record<PairStatus, { label: string; background: string; border: string }> = {
+  match: { label: "Match", background: ACCENT_TINT.green, border: AISLIX_PALETTE.green },
+  mismatch: { label: "Mismatch", background: AISLIX_PALETTE.pink, border: AISLIX_PALETTE.border },
+  not_filled: { label: "Not filled", background: AISLIX_PALETTE.grey, border: AISLIX_PALETTE.border },
+};
+
+const EVIDENCE_PILL: Record<EvidenceStatus, { background: string; border: string; dashed?: boolean }> = {
+  verified: { background: ACCENT_TINT.green, border: AISLIX_PALETTE.green },
+  needs_review: { background: AISLIX_PALETTE.pink, border: AISLIX_PALETTE.border },
+  missing: { background: AISLIX_PALETTE.pink, border: AISLIX_PALETTE.secondary, dashed: true },
+  not_required: { background: AISLIX_PALETTE.grey, border: AISLIX_PALETTE.border },
+};
+
+const EVIDENCE_STATUSES = new Set<EvidenceStatus>(["verified", "needs_review", "missing", "not_required"]);
+
+function rowEvidence(row: DigitalResultRow, audit: DigitalColumnsAudit, hasMismatch: boolean) {
+  const [status, ...reasons] = row.evidence ?? [];
+  if (status && EVIDENCE_STATUSES.has(status as EvidenceStatus)) {
+    return { status: status as EvidenceStatus, reasons };
+  }
+  return evidenceCheck({ mode: audit.rowEvidence, photos: row.photos, minimumPhotos: 1, flags: [], hasMismatch });
+}
+
+function StatusPill({ label, background, border, dashed, title }: { label: string; background: string; border: string; dashed?: boolean; title?: string }) {
+  return (
+    <span
+      title={title}
+      className="inline-flex items-center gap-1 whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-medium text-[#102A43]"
+      style={{ background, border: `1px ${dashed ? "dashed" : "solid"} ${border}` }}
+    >
+      {label}
+      {title ? <Info className="size-3 text-[#667085]" /> : null}
+    </span>
+  );
 }
 
 function formatDiff(value: number): string {
@@ -59,15 +100,22 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
     const target = c.compareWithKey ? providedByKey.get(c.compareWithKey) : undefined;
     return target ? [{ auditee: c, provided: target }] : [];
   });
-  const rows = audit.rows;
+  const showEvidence = audit.rowEvidence !== "off";
+  const rows = audit.rows.map((r) => {
+    const results = pairs.map((p) => verify(r.values, p));
+    const hasMismatch = results.some((v) => v.status === "mismatch");
+    return { ...r, results, hasMismatch, check: rowEvidence(r, audit, hasMismatch) };
+  });
 
-  const rowsWithDiff = rows.filter((r) => pairs.some((p) => (difference(r.values, p) ?? 0) !== 0)).length;
+  const rowsWithDiff = rows.filter((r) => r.hasMismatch).length;
   const auditeeCells = rows.length * auditee.length;
   const filledCells = rows.reduce(
     (sum, r) => sum + auditee.filter((c) => r.values[c.key] !== null && r.values[c.key] !== undefined).length,
     0,
   );
   const fillPercent = auditeeCells ? Math.round((filledCells / auditeeCells) * 100) : null;
+  const evidenceRows = rows.filter((r) => r.check.status !== "not_required");
+  const verifiedRows = evidenceRows.filter((r) => r.check.status === "verified").length;
 
   return (
     <div className="space-y-4">
@@ -94,20 +142,34 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
               ? "Rows where the auditee's value differs from the provided value."
               : "No auditee column was paired with a provided column."
           }
-          info="Counted only for paired columns where both values are numbers."
+          info="A row counts when any paired column shows Mismatch."
           accent="pink"
         />
-        <ResultKpi
-          label="Auditee columns filled"
-          value={fillPercent === null ? "N/A" : `${fillPercent}%`}
-          context={
-            fillPercent === null
-              ? "This audit had no columns for the auditee to fill."
-              : `${filledCells} of ${auditeeCells} cells filled by the auditee.`
-          }
-          info="Share of auditee cells that have a value."
-          accent="green"
-        />
+        {showEvidence ? (
+          <ResultKpi
+            label="Evidence verified"
+            value={evidenceRows.length ? `${verifiedRows} / ${evidenceRows.length}` : "N/A"}
+            context={
+              evidenceRows.length
+                ? "Rows whose photos passed the in-app checks."
+                : "No row needed or had a photo."
+            }
+            info="Checked in the app: photo present, minimum count, quality and duplicates."
+            accent="green"
+          />
+        ) : (
+          <ResultKpi
+            label="Auditee columns filled"
+            value={fillPercent === null ? "N/A" : `${fillPercent}%`}
+            context={
+              fillPercent === null
+                ? "This audit had no columns for the auditee to fill."
+                : `${filledCells} of ${auditeeCells} cells filled by the auditee.`
+            }
+            info="Share of auditee cells that have a value."
+            accent="green"
+          />
+        )}
       </div>
 
       <div className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm">
@@ -152,8 +214,13 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
                   </th>
                 ) : null}
                 {pairs.length ? (
-                  <th colSpan={pairs.length} className="border-b border-l border-[#D9E2E8] px-3 py-2 font-semibold" style={{ background: AISLIX_PALETTE.grey }}>
+                  <th colSpan={pairs.length * 2} className="border-b border-l border-[#D9E2E8] px-3 py-2 font-semibold" style={{ background: AISLIX_PALETTE.grey }}>
                     Calculated by Aislix
+                  </th>
+                ) : null}
+                {showEvidence ? (
+                  <th colSpan={2} className="border-b border-l border-[#D9E2E8] px-3 py-2 font-semibold" style={{ background: ACCENT_TINT.green }}>
+                    Evidence
                   </th>
                 ) : null}
               </tr>
@@ -165,15 +232,24 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
                 {auditee.map((c, i) => (
                   <th key={c.key} className={cn("px-3 py-2 font-semibold", i === 0 && "border-l border-[#D9E2E8]")}>{c.label}</th>
                 ))}
-                {pairs.map((p, i) => (
+                {pairs.map((p, i) => [
                   <th
-                    key={p.auditee.key}
+                    key={`${p.auditee.key}-diff`}
                     className={cn("px-3 py-2 font-semibold", i === 0 && "border-l border-[#D9E2E8]")}
                     title={`${p.auditee.label} − ${p.provided.label}`}
                   >
                     {pairs.length === 1 ? "Difference" : `Difference (${p.auditee.label})`}
-                  </th>
-                ))}
+                  </th>,
+                  <th key={`${p.auditee.key}-status`} className="px-3 py-2 font-semibold">
+                    {pairs.length === 1 ? "Status" : `Status (${p.auditee.label})`}
+                  </th>,
+                ])}
+                {showEvidence ? (
+                  <>
+                    <th className="border-l border-[#D9E2E8] px-3 py-2 font-semibold">Photos</th>
+                    <th className="px-3 py-2 font-semibold">Evidence validation</th>
+                  </>
+                ) : null}
               </tr>
             </thead>
             <tbody>
@@ -202,21 +278,42 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
                     );
                   })}
                   {pairs.map((p, i) => {
-                    const diff = difference(row.values, p);
-                    return (
-                      <td key={p.auditee.key} className={cn("px-3 py-2 tabular-nums", i === 0 && "border-l border-[#D9E2E8]")}>
+                    const { difference: diff, status } = row.results[i]!;
+                    return [
+                      <td key={`${p.auditee.key}-diff`} className={cn("px-3 py-2 tabular-nums", i === 0 && "border-l border-[#D9E2E8]")}>
                         {diff === null ? (
                           <span className="text-[#667085]" title="Needs a number in both columns">N/A</span>
-                        ) : diff === 0 ? (
-                          <span className="text-[#102A43]">0</span>
                         ) : (
-                          <span className="inline-block rounded-md px-2 py-0.5 font-medium text-[#102A43]" style={{ background: AISLIX_PALETTE.pink }}>
-                            {formatDiff(diff)}
-                          </span>
+                          <span className="text-[#102A43]">{formatDiff(diff)}</span>
+                        )}
+                      </td>,
+                      <td key={`${p.auditee.key}-status`} className="px-3 py-2">
+                        <StatusPill {...PAIR_PILL[status]} />
+                      </td>,
+                    ];
+                  })}
+                  {showEvidence ? (
+                    <>
+                      <td className="border-l border-[#D9E2E8] px-3 py-2">
+                        {row.photos.length ? (
+                          <div className="flex gap-1">
+                            {row.photos.slice(0, 4).map((url) => (
+                              <EvidenceImage key={url} stored={url} className="size-8 rounded border border-[#D9E2E8] object-cover" />
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-[#667085]">—</span>
                         )}
                       </td>
-                    );
-                  })}
+                      <td className="px-3 py-2">
+                        <StatusPill
+                          label={EVIDENCE_STATUS_LABEL[row.check.status]}
+                          {...EVIDENCE_PILL[row.check.status]}
+                          title={row.check.reasons.length ? row.check.reasons.join("\n") : undefined}
+                        />
+                      </td>
+                    </>
+                  ) : null}
                 </tr>
               ))}
             </tbody>

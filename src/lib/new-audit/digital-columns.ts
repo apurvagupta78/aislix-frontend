@@ -1,6 +1,6 @@
 import type { AuditDataColumn, AuditDataType, AuditInputDataset } from "@/lib/audit-input-dataset";
 import type { ColumnMapping, InputSchema, TemplateFieldBinding } from "@/lib/audit-builder/field-roles";
-import type { TemplateDefinition } from "@/lib/audit-builder/types";
+import type { TemplateDefinition, TemplateField } from "@/lib/audit-builder/types";
 import { buildTemplateFromInputSchema } from "@/lib/audit-builder/input-schema";
 import { DIGITAL_CSV_TEMPLATE_SOURCE } from "@/lib/audit-templates";
 
@@ -93,30 +93,70 @@ function fieldTypeFor(role: ColumnMapping["fieldRole"], dataType: AuditDataType)
   return "short_text" as const;
 }
 
+export type DigitalRowEvidence = "required" | "on_mismatch" | "optional" | "off";
+
+function rowEvidenceFields(sectionKey: string, order: number, mode: DigitalRowEvidence): TemplateField[] {
+  if (mode === "off") return [];
+  const system = (key: string, label: string, offset: number): TemplateField => ({
+    id: `field_${key}`,
+    key,
+    type: "short_text",
+    label,
+    section: sectionKey,
+    order: order + offset,
+    required: false,
+    config: { readOnly: true },
+    fieldRole: "system",
+    system: true,
+  });
+  return [
+    {
+      id: "field_evidence_photo",
+      key: "evidence_photo",
+      type: "multiple_images",
+      label: "Evidence",
+      section: sectionKey,
+      order,
+      required: mode === "required",
+      config: { maxImages: 6, galleryAllowed: true },
+      fieldRole: "evidence",
+    },
+    system("evidence_status", "Evidence validation", 1),
+    system("evidence_flags", "Evidence flags", 2),
+  ];
+}
+
 /** Template definition for a Digital Audit upload: provided columns read-only, auditee columns editable. */
 export function buildDigitalTemplateDefinition(
   inputSchema: InputSchema,
   dataset: AuditInputDataset,
-  opts: { name: string; operatingModel: TemplateDefinition["operatingModel"] },
+  opts: {
+    name: string;
+    operatingModel: TemplateDefinition["operatingModel"];
+    rowEvidence?: DigitalRowEvidence;
+  },
 ): TemplateDefinition {
   const def = buildTemplateFromInputSchema(inputSchema, dataset, opts);
   const keyOf = new Map(
     (inputSchema.templateFieldBindings ?? []).map((b) => [b.columnId, b.templateFieldKey] as const),
   );
   const byLabel = new Map(inputSchema.columnMappings.map((m) => [m.columnName, m] as const));
+  const fields = def.fields.map((field) => {
+    const mapping = byLabel.get(field.label);
+    const key = mapping ? keyOf.get(mapping.columnId) : undefined;
+    if (!mapping || !key) return field;
+    return {
+      ...field,
+      key,
+      type: fieldTypeFor(mapping.fieldRole, mapping.dataType),
+      standardConcept: undefined,
+    };
+  });
+  const sectionKey = def.sections.find((s) => s.repeatable)?.key ?? "records";
+  const nextOrder = Math.max(-1, ...fields.map((f) => f.order)) + 1;
   return {
     ...def,
-    fields: def.fields.map((field) => {
-      const mapping = byLabel.get(field.label);
-      const key = mapping ? keyOf.get(mapping.columnId) : undefined;
-      if (!mapping || !key) return field;
-      return {
-        ...field,
-        key,
-        type: fieldTypeFor(mapping.fieldRole, mapping.dataType),
-        standardConcept: undefined,
-      };
-    }),
+    fields: [...fields, ...rowEvidenceFields(sectionKey, nextOrder, opts.rowEvidence ?? "off")],
   };
 }
 
@@ -153,12 +193,16 @@ export type DigitalResultRow = {
   index: number;
   /** field key → value; auditee keys are null when not filled. */
   values: Record<string, string | null>;
+  photos: string[];
+  /** Saved evidence check: status then reasons, e.g. ["needs_review", "Duplicate photo"]. */
+  evidence: string[] | null;
 };
 
 export type DigitalColumnsAudit = {
   filename: string | null;
   columns: DigitalResultColumn[];
   rows: DigitalResultRow[];
+  rowEvidence: DigitalRowEvidence;
 };
 
 function cellText(value: unknown): string | null {
@@ -190,18 +234,27 @@ export function buildDigitalColumnsAudit(
     if (r.section_key === sectionKey) saved.set(`${r.record_index}:${r.field_key}`, r.value);
   }
 
-  const rows = (dataset?.rows ?? []).map((row, index) => ({
-    index,
-    values: Object.fromEntries(
-      columns.map((c) => {
-        const fromFile = cellText(row.values[columnIdOf.get(c.key) ?? ""]);
-        const key = `${index}:${c.key}`;
-        if (c.role === "reference") return [c.key, fromFile];
-        return [c.key, saved.has(key) ? cellText(saved.get(key)) : fromFile];
-      }),
-    ),
-  }));
-  return { filename: dataset?.filename ?? null, columns, rows };
+  const asList = (value: unknown) => (Array.isArray(value) ? value.map(String).filter(Boolean) : []);
+  const rows = (dataset?.rows ?? []).map((row, index) => {
+    const evidence = asList(saved.get(`${index}:evidence_status`));
+    return {
+      index,
+      values: Object.fromEntries(
+        columns.map((c) => {
+          const fromFile = cellText(row.values[columnIdOf.get(c.key) ?? ""]);
+          const key = `${index}:${c.key}`;
+          if (c.role === "reference") return [c.key, fromFile];
+          return [c.key, saved.has(key) ? cellText(saved.get(key)) : fromFile];
+        }),
+      ),
+      photos: asList(saved.get(`${index}:evidence_photo`)),
+      evidence: evidence.length ? evidence : null,
+    };
+  });
+  const mode = purpose.rowEvidence;
+  const rowEvidence: DigitalRowEvidence =
+    mode === "required" || mode === "on_mismatch" || mode === "optional" ? mode : "off";
+  return { filename: dataset?.filename ?? null, columns, rows, rowEvidence };
 }
 
 /** Load a submitted Digital Audit upload's columns and values; null for any other kind of scan. */
