@@ -95,7 +95,9 @@ export const inviteMember = createServerFn({ method: "POST" })
     }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { generateInviteLink, sendInviteEmail } = await import("@/lib/team-invite.server");
+    const { generateInviteLink, sendInviteEmail, accountNeedsSetup } = await import(
+      "@/lib/team-invite.server"
+    );
 
     if (data.store_ids.length) {
       const { data: orgStores, error: storesError } = await supabaseAdmin
@@ -152,14 +154,19 @@ export const inviteMember = createServerFn({ method: "POST" })
     //    does not email it — we send our own branded invitation below.
     let mode: InviteMemberResult["mode"] = "updated";
     let actionLink: string | null = null;
+    if (invitedUserId && (await accountNeedsSetup(supabaseAdmin as never, invitedUserId))) {
+      actionLink = (await generateInviteLink(supabaseAdmin as never, data.email, orgId)).link;
+    }
     if (!invitedUserId) {
-      actionLink = await generateInviteLink(supabaseAdmin as never, data.email, orgId);
-      const { data: listed } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-      const match = listed?.users?.find(
-        (user) => (user.email ?? "").toLowerCase() === data.email,
+      const generated = await generateInviteLink(
+        supabaseAdmin as never,
+        data.email,
+        orgId,
+        data.name || null,
       );
-      if (match) {
-        invitedUserId = match.id;
+      actionLink = generated.link;
+      if (generated.userId) {
+        invitedUserId = generated.userId;
         mode = "invited";
       } else {
         const invited = await supabaseAdmin.auth.admin.inviteUserByEmail(data.email, {
@@ -204,6 +211,14 @@ export const inviteMember = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (upsertError) throw new Error(upsertError.message);
+
+    if (data.name) {
+      await supabaseAdmin
+        .from("profiles")
+        .update({ full_name: data.name })
+        .eq("id", invitedUserId!)
+        .is("full_name", null);
+    }
 
     // 4) Branded invitation email (never blocks the invite itself).
     if (!isExistingActive) {
@@ -255,7 +270,7 @@ export const resendMemberInvite = createServerFn({ method: "POST" })
 
     const { data: row, error } = await supabase
       .from("organization_members")
-      .select("id, invited_email, status")
+      .select("id, invited_email, status, role")
       .eq("org_id", membership.org_id)
       .eq("id", data.member_id)
       .maybeSingle();
@@ -266,7 +281,9 @@ export const resendMemberInvite = createServerFn({ method: "POST" })
     if (!email) throw new Error("This invite has no email address.");
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { generateInviteLink, sendInviteEmail } = await import("@/lib/team-invite.server");
+    const { generateInviteLink, sendInviteEmail, accountNeedsSetup } = await import(
+      "@/lib/team-invite.server"
+    );
 
     const orgId = membership.org_id as string;
     const { data: profile } = await supabaseAdmin
@@ -275,9 +292,13 @@ export const resendMemberInvite = createServerFn({ method: "POST" })
       .eq("email", email.toLowerCase())
       .maybeSingle();
 
-    // No account yet -> mint a fresh invite action link. Existing account ->
+    // No password yet -> fresh invite action link. Account already in use ->
     // plain accept link they open after signing in.
-    const actionLink = profile?.id ? null : await generateInviteLink(supabaseAdmin as never, email, orgId);
+    const needsSetup =
+      !profile?.id || (await accountNeedsSetup(supabaseAdmin as never, profile.id as string));
+    const actionLink = needsSetup
+      ? (await generateInviteLink(supabaseAdmin as never, email, orgId)).link
+      : null;
 
     const [{ data: org }, { data: inviter }] = await Promise.all([
       supabaseAdmin.from("organizations").select("name").eq("id", orgId).maybeSingle(),
@@ -289,7 +310,7 @@ export const resendMemberInvite = createServerFn({ method: "POST" })
       orgId,
       orgName: (org?.name as string) || "your workspace",
       inviterName: (inviter?.full_name as string) ?? null,
-      role: "member",
+      role: String(row.role ?? "member"),
       acceptUrl: actionLink,
       isNewUser: Boolean(actionLink),
       idempotencySuffix: `resend-${Date.now()}`,

@@ -598,7 +598,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
           </AiAuditCard>
           <AiAuditCard
             title="Brand analysis table"
-            description="All brand_analysis fields"
+            description="All brand analysis fields"
             csvDownload={{
               onDownload: () =>
                 downloadSectionCsv(

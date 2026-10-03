@@ -26,7 +26,10 @@ export async function generateInviteLink(
     auth: {
       admin: {
         generateLink: (args: Record<string, unknown>) => Promise<{
-          data: { properties?: { action_link?: string } | null } | null;
+          data: {
+            properties?: { action_link?: string } | null;
+            user?: { id?: string } | null;
+          } | null;
           error: { message: string } | null;
         }>;
       };
@@ -34,15 +37,36 @@ export async function generateInviteLink(
   },
   email: string,
   orgId: string,
-): Promise<string | null> {
-  const redirectTo = `${siteUrl()}/accept-invite?org=${orgId}&email=${encodeURIComponent(email)}`;
+  fullName?: string | null,
+): Promise<{ link: string | null; userId: string | null }> {
+  const redirectTo = `${siteUrl()}/accept-invite?org=${orgId}&email=${encodeURIComponent(email)}&setup=1`;
   const { data, error } = await admin.auth.admin.generateLink({
     type: "invite",
     email,
-    options: { redirectTo },
+    options: { redirectTo, ...(fullName ? { data: { full_name: fullName } } : {}) },
   });
-  if (error) return null;
-  return data?.properties?.action_link ?? null;
+  if (error) return { link: null, userId: null };
+  return {
+    link: data?.properties?.action_link ?? null,
+    userId: data?.user?.id ?? null,
+  };
+}
+
+/** True when the account exists but has never signed in (still needs a password). */
+export async function accountNeedsSetup(
+  admin: {
+    auth: {
+      admin: {
+        getUserById: (id: string) => Promise<{
+          data: { user: { last_sign_in_at?: string | null } | null } | null;
+        }>;
+      };
+    };
+  },
+  userId: string,
+): Promise<boolean> {
+  const { data } = await admin.auth.admin.getUserById(userId);
+  return Boolean(data?.user) && !data?.user?.last_sign_in_at;
 }
 
 export async function sendInviteEmail(input: {

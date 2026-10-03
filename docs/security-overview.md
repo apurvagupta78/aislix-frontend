@@ -41,6 +41,13 @@ All traffic is HTTPS. Browsers are told to use HTTPS only (HSTS, one year, inclu
   - another workspace's store list → empty;
   - another workspace's expiry metrics → zeros (no data).
 - Development-only seed functions (for example the expiry demo seeder) are not callable by customers.
+- **Plans cannot be self-upgraded.** Signed-in users can only toggle "cancel at period end" on their
+  subscription; changing the plan, period or usage counter is denied. A database trigger forces any
+  subscription row created from the browser onto the Free plan with zero usage.
+- **One first workspace per account.** First-workspace creation runs in a single database function
+  that takes a per-user lock, so parallel sign-in events or tabs cannot create duplicate workspaces.
+- **Invites**: invited teammates get an Aislix-branded email, set their own password on first visit,
+  and only see the stores assigned to them (verified end to end in the browser on 3 Oct 2026).
 
 ## 4. Analysis API (Railway)
 

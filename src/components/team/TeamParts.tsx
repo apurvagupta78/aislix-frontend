@@ -335,7 +335,7 @@ export function UserFormDialog({
           <DialogTitle>{mode === "invite" ? "Invite team member" : "Edit team member"}</DialogTitle>
           <DialogDescription>
             {mode === "invite"
-              ? "The invitation email is sent by Aislix once the account service is connected."
+              ? "We'll email them a link to join this workspace. Members and store managers only see the stores you assign."
               : "Update the member's details, role and store access."}
           </DialogDescription>
         </DialogHeader>

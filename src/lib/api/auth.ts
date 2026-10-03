@@ -258,8 +258,17 @@ export async function loginWithOAuth(
   return { redirected: false };
 }
 
+let ensureWorkspaceInFlight: Promise<void> | null = null;
+
 /** Creates the workspace for a social sign-in that has no membership yet. */
-export async function ensureOAuthWorkspace(): Promise<void> {
+export function ensureOAuthWorkspace(): Promise<void> {
+  ensureWorkspaceInFlight ??= runEnsureOAuthWorkspace().finally(() => {
+    ensureWorkspaceInFlight = null;
+  });
+  return ensureWorkspaceInFlight;
+}
+
+async function runEnsureOAuthWorkspace(): Promise<void> {
   const { data } = await supabase.auth.getUser();
   const user = data.user;
   if (!user) return;

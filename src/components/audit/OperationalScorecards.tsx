@@ -92,7 +92,7 @@ export function OperationalScorecards({ data }: { data: ExecutiveScorecards }) {
         <Card
           label="Approved"
           value={String(data.approved)}
-          hint="Assignments marked completed or approval_status approved."
+          hint="Assignments marked completed or approved."
           to="/history"
           icon={<CheckCircle2 className="size-3.5 text-accent-green" />}
         />

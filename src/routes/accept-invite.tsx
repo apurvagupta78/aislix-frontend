@@ -1,16 +1,23 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { CheckCircle2, Loader2, MailCheck } from "lucide-react";
+import { CheckCircle2, KeyRound, Loader2, MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { AuthLayout } from "@/components/AuthLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { acceptInvite } from "@/lib/team-invite.functions";
 
 export const Route = createFileRoute("/accept-invite")({
-  validateSearch: (search: Record<string, unknown>): { org?: string; email?: string } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { org?: string; email?: string; setup?: boolean } => ({
     ...(typeof search["org"] === "string" && search["org"] ? { org: search["org"] as string } : {}),
     ...(typeof search["email"] === "string" && search["email"]
       ? { email: search["email"] as string }
+      : {}),
+    ...(search["setup"] === 1 || search["setup"] === "1" || search["setup"] === true
+      ? { setup: true }
       : {}),
   }),
   head: () => ({
@@ -43,8 +50,9 @@ type State =
 
 function AcceptInvitePage() {
   const navigate = useNavigate();
-  const { email } = Route.useSearch();
+  const { email, setup } = Route.useSearch();
   const [state, setState] = useState<State>({ kind: "checking" });
+  const [passwordSaved, setPasswordSaved] = useState(!setup);
 
   useEffect(() => {
     let cancelled = false;
@@ -109,6 +117,8 @@ function AcceptInvitePage() {
             </Button>
           </div>
         </div>
+      ) : (state.kind === "done" || state.kind === "none") && !passwordSaved ? (
+        <SetPasswordForm onSaved={() => setPasswordSaved(true)} />
       ) : state.kind === "done" ? (
         <div className="space-y-4">
           <div className="flex items-start gap-3 rounded-2xl border border-border bg-surface p-4">
@@ -154,5 +164,116 @@ function AcceptInvitePage() {
         </div>
       )}
     </AuthLayout>
+  );
+}
+
+function SetPasswordForm({ onSaved }: { onSaved: () => void }) {
+  const [fullName, setFullName] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const { data } = await supabase.auth.getUser();
+      const uid = data.user?.id;
+      if (!uid) return;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", uid)
+        .maybeSingle();
+      if (!cancelled && profile?.full_name) setFullName(profile.full_name);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const tooShort = password.length > 0 && password.length < 8;
+  const mismatch = confirm.length > 0 && confirm !== password;
+
+  const save = async () => {
+    setSaving(true);
+    setError(null);
+    const name = fullName.trim();
+    const { data, error: updateError } = await supabase.auth.updateUser({
+      password,
+      ...(name ? { data: { full_name: name } } : {}),
+    });
+    if (updateError) {
+      setError(updateError.message);
+      setSaving(false);
+      return;
+    }
+    if (name && data.user?.id) {
+      await supabase.from("profiles").update({ full_name: name }).eq("id", data.user.id);
+    }
+    setSaving(false);
+    onSaved();
+  };
+
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!tooShort && !mismatch && password) void save();
+      }}
+    >
+      <div className="flex items-start gap-3 rounded-2xl border border-border bg-surface p-4">
+        <KeyRound className="mt-0.5 size-5 text-brand" />
+        <p className="text-sm text-muted-foreground">
+          You&apos;ve joined the workspace. Set a password so you can sign in again later.
+        </p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="invite-name">Your name</Label>
+        <Input
+          id="invite-name"
+          autoComplete="name"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          className="h-11 rounded-xl"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="invite-password">Password</Label>
+        <Input
+          id="invite-password"
+          type="password"
+          autoComplete="new-password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="h-11 rounded-xl"
+        />
+        {tooShort && <p className="text-xs text-destructive">Use at least 8 characters.</p>}
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="invite-confirm">Confirm password</Label>
+        <Input
+          id="invite-confirm"
+          type="password"
+          autoComplete="new-password"
+          required
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          className="h-11 rounded-xl"
+        />
+        {mismatch && <p className="text-xs text-destructive">Passwords do not match.</p>}
+      </div>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <Button
+        type="submit"
+        variant="brand"
+        className="w-full rounded-xl"
+        disabled={saving || tooShort || mismatch || !password}
+      >
+        {saving ? "Saving…" : "Save password and continue"}
+      </Button>
+    </form>
   );
 }

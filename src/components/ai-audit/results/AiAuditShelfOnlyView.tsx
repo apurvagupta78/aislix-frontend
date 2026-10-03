@@ -787,7 +787,7 @@ export function AiAuditShelfOnlyView({ data, ctx, imageUrl }: Props) {
       {analysis.visible_prices.length ? (
         <AiAuditCard
           title="Visible prices"
-          description="All visible_prices from secondary vision"
+          description="All visible prices from secondary vision"
           csvDownload={{
             onDownload: () =>
               downloadSectionCsv(

@@ -36,6 +36,7 @@ export function AskAislixInput({
   periodScope,
   onStoreScopeChange,
   onPeriodScopeChange,
+  storeOptions = ASK_SCOPE_OPTIONS.stores,
   inputRef: externalInputRef,
 }: {
   value: string;
@@ -51,6 +52,7 @@ export function AskAislixInput({
   periodScope?: string;
   onStoreScopeChange?: (value: string) => void;
   onPeriodScopeChange?: (value: string) => void;
+  storeOptions?: readonly string[];
   inputRef?: RefObject<HTMLTextAreaElement | null>;
 }) {
   void _variant;
@@ -204,7 +206,7 @@ export function AskAislixInput({
               icon={Store}
               label="Store scope"
               value={activeStore}
-              options={ASK_SCOPE_OPTIONS.stores}
+              options={storeOptions}
               onChange={setActiveStore}
               disabled={loading}
             />

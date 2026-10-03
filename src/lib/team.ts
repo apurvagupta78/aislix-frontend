@@ -265,13 +265,15 @@ async function mapMembersToUsers(rows: MemberRow[]): Promise<OrgUser[]> {
     (allMembers ?? []).map((m) => [m.user_id as string, (m.store_ids ?? []) as string[]]),
   );
 
-  // Resolve scopes via RPC when possible (batch per user — keep small).
+  // Resolve scopes via RPC when possible (batch per user — keep small). Pending
+  // invitees have no live access yet; they fall back to their assigned store_ids.
+  const activeUserIds = rows.filter((r) => r.status === "active" && r.user_id).map((r) => r.user_id);
   const scopeByUser = new Map<
     string,
     { direct: string[]; inherited: string[]; effective: string[] }
   >();
   await Promise.all(
-    userIds.map(async (uid) => {
+    activeUserIds.map(async (uid) => {
       try {
         const { resolveEffectiveAccessScope } = await import("@/lib/access-scope");
         const scope = await resolveEffectiveAccessScope({ orgId, userId: uid });
@@ -304,9 +306,10 @@ async function mapMembersToUsers(rows: MemberRow[]): Promise<OrgUser[]> {
   );
 
   const allStoreIds = Array.from(
-    new Set(
-      [...scopeByUser.values()].flatMap((s) => [...s.direct, ...s.inherited, ...s.effective]),
-    ),
+    new Set([
+      ...[...scopeByUser.values()].flatMap((s) => [...s.direct, ...s.inherited, ...s.effective]),
+      ...rows.flatMap((r) => r.store_ids ?? []),
+    ]),
   );
   const { data: stores } = allStoreIds.length
     ? await supabase.from("stores").select("id, name").in("id", allStoreIds)

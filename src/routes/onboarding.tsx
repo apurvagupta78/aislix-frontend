@@ -431,7 +431,8 @@ function OnboardingPage() {
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 A planogram lists the products, brands and expected facings for each shelf. Upload a
-                CSV now to unlock compliance scoring, or skip for now from Planogram management.
+                CSV now to unlock compliance scoring, or skip this step and add one later from
+                Planogram management.
               </p>
               <label className="flex cursor-pointer flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-surface px-6 py-8 text-center">
                 <UploadCloud className="size-5 text-muted-foreground" />

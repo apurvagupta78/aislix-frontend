@@ -273,46 +273,23 @@ export async function requireMembership(): Promise<Membership> {
 
 
 /**
- * Creates the organization for a brand-new account. The database trigger adds
- * the creator as owner and this seeds the Free subscription.
+ * Returns the account's first organization, creating it (owner membership and
+ * Free subscription included) when none exists. Concurrent callers are
+ * serialised in the database, so this never produces duplicate workspaces.
  */
 export async function createOrganizationForUser(
-  userId: string,
+  _userId: string,
   name: string,
   customerType?: string,
 ): Promise<string> {
-  const slugBase = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 40);
-  const slug = `${slugBase || "workspace"}-${Math.random().toString(36).slice(2, 7)}`;
-
-  const type = customerType?.trim() || null;
-  const { data, error } = await supabase
-    .from("organizations")
-    .insert({
-      name,
-      slug,
-      owner_id: userId,
-      ...(type ? { customer_type: type, industry: type } : {}),
-    } as never)
-    .select("id")
-    .single();
-  if (error) dbError(error, "Could not create your workspace.");
+  const { data, error } = await supabase.rpc("ensure_first_workspace" as never, {
+    p_name: name,
+    p_customer_type: customerType?.trim() || null,
+  } as never);
+  if (error || !data) dbError(error, "Could not create your workspace.");
 
   clearContextCache();
-  const orgId = data!.id as string;
-
-  const { data: plan } = await supabase
-    .from("subscription_plans")
-    .select("id")
-    .eq("code", "free")
-    .maybeSingle();
-  if (plan?.id) {
-    await supabase.from("subscriptions").insert({ org_id: orgId, plan_id: plan.id });
-  }
-  return orgId;
+  return data as unknown as string;
 }
 
 /**

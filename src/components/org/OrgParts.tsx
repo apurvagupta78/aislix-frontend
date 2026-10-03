@@ -289,6 +289,7 @@ export function StoreCard({
   onEdit,
   onArchiveToggle,
   onDelete,
+  canManage = true,
 }: {
   store: OrgStore;
   selected: boolean;
@@ -296,6 +297,7 @@ export function StoreCard({
   onEdit: (store: OrgStore) => void;
   onArchiveToggle: (store: OrgStore) => void;
   onDelete: (store: OrgStore) => void;
+  canManage?: boolean;
 }) {
   const metrics = store.metrics;
   const tone = healthTone(metrics?.shelf_health_score);
@@ -310,13 +312,20 @@ export function StoreCard({
         selected && "ring-2 ring-brand/40",
       )}
     >
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3">
-        <Checkbox
-          checked={selected}
-          onCheckedChange={(v) => onToggleSelect(store.id, v === true)}
-          aria-label={`Select ${store.name}`}
-          className="mt-1 shrink-0"
-        />
+      <div
+        className={cn(
+          "grid items-start gap-3",
+          canManage ? "grid-cols-[auto_minmax(0,1fr)_auto]" : "grid-cols-1",
+        )}
+      >
+        {canManage && (
+          <Checkbox
+            checked={selected}
+            onCheckedChange={(v) => onToggleSelect(store.id, v === true)}
+            aria-label={`Select ${store.name}`}
+            className="mt-1 shrink-0"
+          />
+        )}
         <div className="min-w-0">
           <div className="flex min-w-0 items-center gap-2">
             <h3 className="truncate font-semibold tracking-tight text-foreground">{store.name}</h3>
@@ -331,6 +340,7 @@ export function StoreCard({
             {location || "Location not set"}
           </p>
         </div>
+        {canManage && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="size-8 shrink-0 rounded-lg">
@@ -362,6 +372,7 @@ export function StoreCard({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        )}
       </div>
 
       <div className="mt-4 flex items-center gap-3">

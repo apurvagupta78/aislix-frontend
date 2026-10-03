@@ -397,8 +397,8 @@ export function InspectionWizard({ attemptId, onDone }: Props) {
             <div className="space-y-2">
               <Alert>
                 <AlertDescription>
-                  Record the inspection session — manager can watch the video later in Review Queue. Start recording
-                  before inspecting packets, or choose explicit lower-assurance fallback (requires review).
+                  Record the inspection session — a manager can watch the video later in Review Queue. Start recording
+                  before inspecting packets, or choose the explicit lower-assurance fallback (requires review).
                 </AlertDescription>
               </Alert>
               {recording ? (

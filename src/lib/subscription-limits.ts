@@ -387,7 +387,7 @@ export async function assertCanAddMasterSetup(orgId?: string): Promise<UsageSumm
   throw new LimitReachedError({
     limit: "master_setup_limit",
     usage,
-    message: `You've reached your Master Setup limit on the ${usage.plan_name} plan. Upgrade plan to add more.`,
+    message: `You've reached your Master Setup limit on the ${usage.plan_name} plan. Upgrade your plan to add more.`,
   });
 }
 
@@ -490,7 +490,7 @@ export async function mapLimitError(error: unknown, orgId?: string): Promise<unk
     return new LimitReachedError({
       limit: "master_setup_limit",
       usage,
-      message: `You've reached your Master Setup limit on the ${usage.plan_name} plan. Upgrade plan to add more.`,
+      message: `You've reached your Master Setup limit on the ${usage.plan_name} plan. Upgrade your plan to add more.`,
     });
   }
   return isStore ? storeLimitError(usage) : scanLimitError(usage);

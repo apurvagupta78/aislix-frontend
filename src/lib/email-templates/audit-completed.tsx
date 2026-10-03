@@ -70,7 +70,7 @@ const Email = ({
           <EmailLogo />
           <Heading style={heading}>Audit completed — {storeLabel}</Heading>
           <Text style={text}>
-            Audit has been completed by <strong>{assigneeName}</strong> and you can view the report
+            The audit has been completed by <strong>{assigneeName}</strong> and you can view the report
             using the link below.
           </Text>
           {message ? <Text style={quote}>{message}</Text> : null}

@@ -327,7 +327,7 @@ function AiAnalysisModal({
           <DialogTitle className="text-[#102A43]">AI Analysis</DialogTitle>
         </DialogHeader>
         {incomplete ? (
-          <p className="text-sm text-[#667085]">Complete audit first to generate an AI Analysis report.</p>
+          <p className="text-sm text-[#667085]">Complete the audit first to generate an AI Analysis report.</p>
         ) : report ? (
           <div className="space-y-3 text-sm text-[#102A43]">
             <p className="font-medium">

@@ -20,6 +20,7 @@ import { ASK_SCOPE_OPTIONS } from "@/lib/ask-aislix/ask-aislix-suggestion-groups
 import { prefixDemoAnswer } from "@/lib/demo-environment";
 import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
 import { requireOrgId, requireUserId } from "@/lib/db/context";
+import { supabase } from "@/integrations/supabase/client";
 import { fetchMembershipRole } from "@/lib/access-scope";
 import { useIsGuest } from "@/lib/use-is-guest";
 import { AskAislixAnswerPanel } from "./AskAislixAnswerPanel";
@@ -68,6 +69,7 @@ export function AskAislixSection({
   const [accessRole, setAccessRole] = useState<string | null>(null);
   const [storeScope, setStoreScope] = useState<string>(ASK_SCOPE_OPTIONS.stores[0]);
   const [periodScope, setPeriodScope] = useState<string>(ASK_SCOPE_OPTIONS.period[1]);
+  const [storeOptions, setStoreOptions] = useState<readonly string[]>(ASK_SCOPE_OPTIONS.stores);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -80,8 +82,26 @@ export function AskAislixSection({
       try {
         const orgId = await requireOrgId();
         const userId = await requireUserId();
-        const membership = await fetchMembershipRole(orgId, userId);
-        if (!cancelled) setAccessRole(membership?.role ?? null);
+        const [membership, storesResult] = await Promise.all([
+          fetchMembershipRole(orgId, userId),
+          previewDemo
+            ? Promise.resolve(null)
+            : supabase
+                .from("stores")
+                .select("name")
+                .eq("org_id", orgId)
+                .neq("status", "inactive")
+                .order("name")
+                .limit(50),
+        ]);
+        if (cancelled) return;
+        setAccessRole(membership?.role ?? null);
+        if (storesResult && !storesResult.error) {
+          const names = Array.from(
+            new Set((storesResult.data ?? []).map((s) => s.name).filter(Boolean)),
+          );
+          setStoreOptions([ASK_SCOPE_OPTIONS.stores[0], ...names]);
+        }
       } catch {
         if (!cancelled) setAccessRole(null);
       }
@@ -89,7 +109,7 @@ export function AskAislixSection({
     return () => {
       cancelled = true;
     };
-  }, [isGuest]);
+  }, [isGuest, previewDemo]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -285,6 +305,7 @@ export function AskAislixSection({
           periodScope={periodScope}
           onStoreScopeChange={setStoreScope}
           onPeriodScopeChange={setPeriodScope}
+          storeOptions={storeOptions}
           inputRef={inputRef}
         />
 

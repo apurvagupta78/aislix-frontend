@@ -800,7 +800,7 @@ export function HelpMeAskAislixDialog({
 
                 <div className="space-y-2 border-t border-line pt-4">
                   <p className="text-sm font-medium text-navy">
-                    Finally tell Aislix in your own words
+                    Finally, tell Aislix in your own words
                   </p>
                   <Textarea
                     value={state.customUserRequest}

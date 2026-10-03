@@ -104,7 +104,7 @@ function LinkProblem() {
       </span>
       <h1 className="text-xl font-semibold">This share link is no longer available</h1>
       <p className="text-sm text-muted-foreground">
-        The link may have expired, been revoked, or was copied incorrectly. Ask the sender for a
+        The link may have expired, been revoked, or been copied incorrectly. Ask the sender for a
         fresh link.
       </p>
       <Button asChild variant="brand" className="rounded-xl">

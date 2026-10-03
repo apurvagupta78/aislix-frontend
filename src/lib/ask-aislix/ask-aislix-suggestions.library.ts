@@ -168,7 +168,7 @@ export const ASK_AISLIX_SUGGESTION_LIBRARY: AskAislixSuggestionItem[] = [
   },
   {
     id: "sm_variance_trend",
-    text: "What was inventory variance trend over the last 30 days?",
+    text: "What was the inventory variance trend over the last 30 days?",
     roles: ["supermarket"],
     category: "trend",
     icon: "trend",
@@ -440,7 +440,7 @@ export const ASK_AISLIX_SUGGESTION_LIBRARY: AskAislixSuggestionItem[] = [
   },
   {
     id: "wh_variance_trend",
-    text: "What was inventory accuracy trend over 30 days?",
+    text: "What was the inventory accuracy trend over 30 days?",
     roles: ["warehouse"],
     category: "trend",
     icon: "trend",

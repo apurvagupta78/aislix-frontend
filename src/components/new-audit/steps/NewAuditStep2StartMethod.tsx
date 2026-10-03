@@ -83,10 +83,10 @@ export function NewAuditStep2StartMethod({
         title={aiPlanogramChoice === "reference" ? "Upload your document" : "Tell Aislix what you're auditing"}
         description={
           aiPlanogramChoice === "without"
-            ? "Pick who this audit is for, category and sub-category."
+            ? "Pick who this audit is for, plus the category and sub-category."
             : aiPlanogramChoice === "reference"
               ? "Upload an invoice, list, PDF or CSV. Review the lines, edit anything, then save."
-              : "Pick who this audit is for, category, sub-category, and upload your planogram."
+              : "Pick who this audit is for and the category and sub-category, then upload your planogram."
         }
         complete={complete}
         error={planogramError}

@@ -128,7 +128,7 @@ function ExpiryControlMain() {
             <KpiCard label="Expired detected" value={String(m.expired_detected)} tone="danger" />
             <KpiCard label="Near expiry" value={String(m.near_expiry)} tone="warn" />
             <KpiCard label="Unresolved dates" value={String(m.unresolved_dates)} />
-            <KpiCard label="Awaiting removal verify" value={String(m.awaiting_removal_verification)} />
+            <KpiCard label="Awaiting removal verification" value={String(m.awaiting_removal_verification)} />
             <KpiCard label="In quarantine" value={String(m.in_quarantine)} />
             <KpiCard label="Disposition pending" value={String(m.disposition_pending)} />
             <KpiCard label="Overdue inspections" value={String(m.overdue_inspections)} tone="warn" />

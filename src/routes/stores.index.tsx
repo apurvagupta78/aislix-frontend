@@ -191,7 +191,7 @@ function StoresPage() {
 
   const skeletons = useMemo(() => Array.from({ length: 6 }, (_, i) => i), []);
 
-  const headerActions = (
+  const headerActions = canDelete && (
     <Button
       variant="brand"
       size="sm"
@@ -291,7 +291,7 @@ function StoresPage() {
             </TabsList>
           </Tabs>
 
-          {stores.length > 0 && (
+          {canDelete && stores.length > 0 && (
             <label className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
               <Checkbox
                 checked={allSelected}
@@ -340,9 +340,12 @@ function StoresPage() {
                 ? "Try a different search term, or clear the filters to see every location."
                 : model
                   ? "Add a location with this store type, or open Organization & stores to manage all locations."
-                  : "Add your first store to start auditing shelves. Enterprises can bulk-upload a store list."
+                  : canDelete
+                    ? "Add your first store to start auditing shelves. Enterprises can bulk-upload a store list."
+                    : "No stores are assigned to you yet. Ask a workspace owner or admin for access."
             }
             action={
+              canDelete && (
               <Button
                 variant="brand"
                 size="sm"
@@ -354,6 +357,7 @@ function StoresPage() {
               >
                 <Plus className="size-4" /> Add store
               </Button>
+              )
             }
           />
         ) : (
@@ -365,6 +369,7 @@ function StoresPage() {
                 <StoreCard
                   key={store.id}
                   store={store}
+                  canManage={canDelete}
                   selected={selected.includes(store.id)}
                   onToggleSelect={(id, next) =>
                     setSelected((prev) => (next ? [...prev, id] : prev.filter((x) => x !== id)))
@@ -415,16 +420,18 @@ function StoresPage() {
           </>
         )}
 
-        <BulkOperationsPanel
-          selectedCount={selected.length}
-          busy={busy}
-          onExport={() => exportList.mutate()}
-          onImport={(file) => importList.mutate(file)}
-          onBulkArchive={() => bulkArchive.mutate()}
-          onAssignUsers={() =>
-            toast.info("Open a store to assign users — bulk assignment ships with the roles engine.")
-          }
-        />
+        {canDelete && (
+          <BulkOperationsPanel
+            selectedCount={selected.length}
+            busy={busy}
+            onExport={() => exportList.mutate()}
+            onImport={(file) => importList.mutate(file)}
+            onBulkArchive={() => bulkArchive.mutate()}
+            onAssignUsers={() =>
+              toast.info("Open a store to assign users — bulk assignment ships with the roles engine.")
+            }
+          />
+        )}
 
 
 

@@ -125,7 +125,7 @@ function PlannerPage() {
             <Textarea value={instructions} onChange={(e) => setInstructions(e.target.value)} />
           </div>
           <p className="text-xs text-muted-foreground">
-            Shelf-only inspections are never labeled store fully checked. Required locations: main shelf + backroom by default when configured.
+            Shelf-only inspections are never labeled &ldquo;store fully checked&rdquo;. Required locations: main shelf + backroom by default when configured.
           </p>
           <Button type="submit" disabled={!storeId || createMutation.isPending}>
             Create & open inspection

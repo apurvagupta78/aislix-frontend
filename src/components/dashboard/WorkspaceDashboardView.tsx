@@ -453,7 +453,7 @@ export function PriorityOpportunitiesSection({ data }: { data: WorkspaceDashboar
       <div className="card-surface mt-4 p-5 sm:p-6">
         {!data.priority_opportunities.length ? (
           <p className="text-sm text-muted-foreground">
-            No grouped opportunities in this period — your shelves may already be in good shape, or run more
+            No grouped opportunities in this period — your shelves may already be in good shape. Run more
             planogram-backed audits to surface category-level gaps.
           </p>
         ) : (

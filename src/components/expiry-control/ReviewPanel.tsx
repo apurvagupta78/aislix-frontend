@@ -127,7 +127,7 @@ export function ReviewPanel({ attemptId }: { attemptId: string }) {
       <p className="text-sm text-destructive">
         {attemptQuery.error instanceof Error
           ? attemptQuery.error.message
-          : "Inspection not found. It may belong to another workspace or was removed."}
+          : "Inspection not found. It may belong to another workspace or may have been removed."}
       </p>
     );
   }
