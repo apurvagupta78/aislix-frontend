@@ -14,7 +14,9 @@ import {
   definitionToPatch,
   publishAuditTemplate,
   type AuditTemplate,
+  type AuditTemplateInput,
 } from "@/lib/audit-templates";
+import { buildDigitalTemplateDefinition, DIGITAL_CSV_TEMPLATE_SOURCE } from "@/lib/new-audit/digital-columns";
 
 function buildCalculatedFields(inputSchema: InputSchema): CalculatedFieldDef[] {
   const concepts = new Set(
@@ -61,15 +63,41 @@ export async function saveCustomCsvAsTemplate(input: {
   patch.name = input.name.trim();
   patch.template_type = "custom";
   patch.visibility = "private";
-  patch.purpose_config = mergeInputSchemaIntoSnapshot(
-    (patch.purpose_config as Record<string, unknown>) ?? {},
-    input.inputSchema,
-    input.dataset,
-  );
+  patch.purpose_config = mergeInputSchemaIntoSnapshot(patch, input.inputSchema, input.dataset)
+    .purpose_config as Record<string, unknown>;
 
   const created = await createAuditTemplate(patch);
   if (input.publish) {
     await publishAuditTemplate(created.id);
   }
   return created;
+}
+
+/**
+ * Digital Audit file upload: one private template per audit so assignments, responses and
+ * scans can reference it. Hidden from template lists via purpose_config.source.
+ */
+export async function createDigitalCsvAuditTemplate(input: {
+  name: string;
+  inputSchema: InputSchema;
+  dataset: AuditInputDataset;
+  operatingModel: OperatingModel;
+}): Promise<AuditTemplate> {
+  const def = buildDigitalTemplateDefinition(input.inputSchema, input.dataset, {
+    name: input.name.trim(),
+    operatingModel: input.operatingModel,
+  });
+  const patch = definitionToPatch(def);
+  patch.name = input.name.trim();
+  patch.template_type = "custom";
+  patch.audit_mode = "digital";
+  patch.visibility = "private";
+  patch.evidence_required = false;
+  patch.purpose_config = {
+    ...((patch.purpose_config as Record<string, unknown>) ?? {}),
+    source: DIGITAL_CSV_TEMPLATE_SOURCE,
+    inputSchema: input.inputSchema,
+    input_dataset: input.dataset,
+  };
+  return createAuditTemplate(patch as AuditTemplateInput);
 }

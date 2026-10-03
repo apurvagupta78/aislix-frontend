@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -24,9 +24,17 @@ type Props = {
   scanData?: ScanResult;
   locked?: boolean;
   auditOrigin?: "digital" | "ai" | "ai_assisted";
+  /** Replaces the quantity overview + items table (e.g. Digital Audit uploads with custom columns). */
+  customItems?: ReactNode;
 };
 
-export function AuditGovernanceTabs({ scanId, scanData, locked: lockedProp, auditOrigin: originProp }: Props) {
+export function AuditGovernanceTabs({
+  scanId,
+  scanData,
+  locked: lockedProp,
+  auditOrigin: originProp,
+  customItems,
+}: Props) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -107,10 +115,10 @@ export function AuditGovernanceTabs({ scanId, scanData, locked: lockedProp, audi
         {locked ? <LockedRecordBadge /> : null}
       </div>
 
-      <Tabs defaultValue="overview" className="w-full">
+      <Tabs defaultValue={customItems ? "items" : "overview"} className="w-full">
         <TabsList className="h-auto flex-wrap justify-start gap-1 rounded-xl bg-muted/50 p-1">
           {([
-            ["overview", "Overview"],
+            ...(customItems ? [] : [["overview", "Overview"] as [string, string]]),
             ["items", "Audit items"],
             ["evidence", "Evidence"],
             ["findings", findingsTabLabel],
@@ -149,7 +157,9 @@ export function AuditGovernanceTabs({ scanId, scanData, locked: lockedProp, audi
         </TabsContent>
 
         <TabsContent value="items" className="mt-4">
-          {!lines.length ? (
+          {customItems ? (
+            customItems
+          ) : !lines.length ? (
             <p className="text-sm text-muted-foreground">
               SKU-level audit lines appear for Digital and AI-Assisted audits with quantity capture.
             </p>

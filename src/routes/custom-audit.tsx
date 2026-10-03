@@ -13,6 +13,7 @@ import type { AuditResponseValue, TemplateField } from "@/lib/audit-builder/type
 import {
   fetchCustomAuditResponses,
   loadCustomAuditSession,
+  mergeInputDatasetIntoResponses,
   saveCustomAuditField,
   submitCustomAudit,
   uploadCustomAuditImage,
@@ -48,8 +49,13 @@ function CustomAuditPage() {
   });
 
   useEffect(() => {
-    if (responsesQuery.data) setResponses(responsesQuery.data);
-  }, [responsesQuery.data]);
+    if (!responsesQuery.data) return;
+    setResponses(
+      sessionQuery.data
+        ? mergeInputDatasetIntoResponses(sessionQuery.data, responsesQuery.data)
+        : responsesQuery.data,
+    );
+  }, [responsesQuery.data, sessionQuery.data]);
 
   const submitMutation = useMutation({
     mutationFn: () =>

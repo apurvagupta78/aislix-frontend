@@ -25,12 +25,12 @@ import { createAssignment as createExpiryAssignment } from "@/lib/expiry-control
 import {
   createManualAuditDataset,
   datasetToDraftRows,
-  digitalProductListIssue,
-  parseAuditSpreadsheet,
   validateAuditDataset,
   type AuditInputDataset,
 } from "@/lib/audit-input-dataset";
-import { SimpleCsvUploadStep } from "@/components/new-audit/SimpleCsvUploadStep";
+import { DigitalAuditUploadPanel } from "@/components/new-audit/DigitalAuditUploadPanel";
+import { createDigitalCsvAuditTemplate } from "@/lib/audit-builder/save-custom-template";
+import { buildDigitalInputSchema, syncDigitalMappings } from "@/lib/new-audit/digital-columns";
 import { SimpleScratchBuilder } from "@/components/new-audit/SimpleScratchBuilder";
 import type { AuditPurpose, OperatingModel } from "@/lib/audit-builder/types";
 import type { InputSchema } from "@/lib/audit-builder/field-roles";
@@ -169,7 +169,7 @@ function NewAuditPage() {
     buildInputSchema(createManualAuditDataset()),
   );
   const [dataInputMode, setDataInputMode] = useState<AuditDataInputMode>("upload_csv");
-  const [csvError, setCsvError] = useState<string | null>(null);
+  const [csvSaved, setCsvSaved] = useState(true);
   const [evidenceLevel, setEvidenceLevel] = useState<EvidenceLevel>("standard");
   const [evidencePolicy, setEvidencePolicy] = useState<AuditEvidencePolicy>(
     policyForLevel("standard"),
@@ -406,30 +406,23 @@ function NewAuditPage() {
     (locationScope.hierarchyNodeIds?.length ?? 0) > 0;
 
   const csvUploaded = dataset.source === "csv" && dataset.rows.length > 0;
-  const csvProductError = csvUploaded ? digitalProductListIssue(dataset) : null;
   const startReady = useMemo(() => {
     if (!startChoice) return false;
     if (startChoice === "template") {
       return hasTemplate && templateChoice !== "general";
     }
-    if (startChoice === "csv") return csvUploaded && !datasetError && !csvProductError;
+    if (startChoice === "csv") return csvUploaded && csvSaved && !datasetError;
     return true;
-  }, [startChoice, hasTemplate, templateChoice, csvUploaded, datasetError, csvProductError]);
+  }, [startChoice, hasTemplate, templateChoice, csvUploaded, csvSaved, datasetError]);
 
-  async function handleCsvUpload(file: File) {
-    try {
-      const parsed = await parseAuditSpreadsheet(file);
-      setDataset(parsed);
-      setInputSchema(buildInputSchema(parsed));
-      const problem = validateAuditDataset(parsed) ?? digitalProductListIssue(parsed);
-      setCsvError(problem);
-      if (!problem) {
-        toast.success(`Loaded ${parsed.rows.length} rows from ${file.name}`);
-      }
-    } catch (error) {
-      setCsvError(toUserMessage(error));
-    }
-  }
+  const digitalUploadValue = useMemo(
+    () => ({
+      dataset,
+      mappings: dataset.source === "csv" ? syncDigitalMappings(dataset, inputSchema.columnMappings) : [],
+      saved: csvSaved,
+    }),
+    [dataset, inputSchema.columnMappings, csvSaved],
+  );
 
   useEffect(() => {
     const stores = storesQuery.data;
@@ -656,9 +649,11 @@ function NewAuditPage() {
         ? startChoice === "template"
           ? "Choose a template to continue."
           : startChoice === "csv"
-            ? csvUploaded && (datasetError || csvProductError)
-              ? (datasetError ?? csvProductError)
-              : "Upload your CSV or Excel file to continue."
+            ? !csvUploaded
+              ? "Upload your file to continue."
+              : !csvSaved
+                ? "Save your audit data to continue."
+                : datasetError
             : "Choose how you want to start this audit."
         : null,
     method: !method ? "Choose how the audit will be performed." : null,
@@ -846,13 +841,28 @@ function NewAuditPage() {
         dataInputMode !== "master_data" &&
         dataset.rows.length > 0;
 
-      if (auditMode === "digital" && hasInputData && dataset.source === "csv") {
-        const productIssue = digitalProductListIssue(dataset);
-        if (productIssue) throw new Error(productIssue);
+      const isDigitalCsvAudit =
+        auditMode === "digital" &&
+        startChoice === "csv" &&
+        !templateForAssignment &&
+        hasInputData &&
+        dataset.source === "csv";
+
+      let digitalCsvTemplate: Awaited<ReturnType<typeof createDigitalCsvAuditTemplate>> | null = null;
+      if (isDigitalCsvAudit) {
+        if (!csvSaved) throw new Error("Save your audit data to continue.");
+        if (datasetError) throw new Error(datasetError);
+        digitalCsvTemplate = await createDigitalCsvAuditTemplate({
+          name: auditName.trim() || campaignName || `Digital Audit ${new Date().toLocaleDateString()}`,
+          inputSchema: buildDigitalInputSchema(dataset, syncDigitalMappings(dataset, inputSchema.columnMappings)),
+          dataset,
+          operatingModel,
+        });
+        templateForAssignment = digitalCsvTemplate;
       }
 
       const assignmentRows =
-        auditMode === "digital" && hasInputData && !datasetError
+        auditMode === "digital" && hasInputData && !datasetError && !isDigitalCsvAudit
           ? datasetToDraftRows(dataset, { location, category })
           : [];
 
@@ -889,7 +899,12 @@ function NewAuditPage() {
 
       let templateSnapshot: Record<string, unknown>;
 
-      if (templateForAssignment && hasInputData) {
+      if (digitalCsvTemplate) {
+        templateSnapshot = {
+          ...(digitalCsvTemplate as unknown as Record<string, unknown>),
+          evidence_policy: effectivePolicy,
+        };
+      } else if (templateForAssignment && hasInputData) {
         templateSnapshot = buildMergedTemplateSnapshot({
           template: templateForAssignment,
           inputSchema,
@@ -1083,7 +1098,7 @@ function NewAuditPage() {
       }
       if (!self) {
         void navigate({ to: "/assigned-scans" });
-      } else if (selectedTemplate || systemTemplateKey) {
+      } else if (selectedTemplate || systemTemplateKey || (auditMode === "digital" && startChoice === "csv")) {
         void navigate({
           to: "/audit/$assignmentId",
           params: { assignmentId },
@@ -1229,11 +1244,14 @@ function NewAuditPage() {
             onScanContextChange={setDemoScanContext}
             onOpenTemplatePicker={() => setTemplatePickerOpen(true)}
             csvUpload={
-              <SimpleCsvUploadStep
-                dataset={dataset}
-                inputSchema={inputSchema}
-                error={csvError}
-                onUpload={handleCsvUpload}
+              <DigitalAuditUploadPanel
+                value={digitalUploadValue}
+                error={csvUploaded && csvSaved ? datasetError : null}
+                onChange={(next) => {
+                  setDataset(next.dataset);
+                  setInputSchema(buildDigitalInputSchema(next.dataset, next.mappings));
+                  setCsvSaved(next.saved);
+                }}
               />
             }
             scratchBuilder={

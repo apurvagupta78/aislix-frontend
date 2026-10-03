@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { computeCalculatedValues } from "@/lib/audit-builder/calculated-fields";
-import { isFieldReadOnlyForAuditor } from "@/lib/audit-builder/field-roles";
+import { isFieldReadOnlyForAuditor, type FieldRole } from "@/lib/audit-builder/field-roles";
+import { AISLIX_PALETTE, ACCENT_TINT } from "@/lib/ai-audit/kpi-palette";
 import {
   FIELD_ROLE_BADGE_LABELS,
   resolveFieldRole,
@@ -37,6 +38,12 @@ import type { AuditResponseValue, TemplateDefinition, TemplateField } from "@/li
 import type { ResponseMap } from "@/lib/custom-audit";
 import { RCA_OPTIONS } from "@/lib/digital-audit";
 import { ShelfStackingVisual } from "@/components/audit-builder/ShelfStackingVisual";
+
+/** Plain-language chips for the person doing the audit. */
+const EXECUTION_ROLE_CHIPS: Partial<Record<FieldRole, { label: string; tint: string; border: string }>> = {
+  reference: { label: "ALREADY PROVIDED", tint: ACCENT_TINT.blue, border: AISLIX_PALETTE.blue },
+  auditor_input: { label: "YOU FILL", tint: ACCENT_TINT.purple, border: AISLIX_PALETTE.purple },
+};
 
 type Props = {
   definition: TemplateDefinition;
@@ -228,7 +235,16 @@ export function AuditExecutionForm({
     const val = responses[sec]?.[idx]?.[field.key];
     const fieldReadOnly = readOnly || isFieldReadOnlyForAuditor(field);
     const role = resolveFieldRole(field);
-    const roleBadge = (
+    const roleChip = EXECUTION_ROLE_CHIPS[role];
+    const roleBadge = roleChip ? (
+      <Badge
+        variant="outline"
+        className="ml-2 text-[9px] text-[#102A43]"
+        style={{ background: roleChip.tint, borderColor: roleChip.border }}
+      >
+        {roleChip.label}
+      </Badge>
+    ) : (
       <Badge variant="outline" className="ml-2 text-[9px]">
         {FIELD_ROLE_BADGE_LABELS[role]}
       </Badge>

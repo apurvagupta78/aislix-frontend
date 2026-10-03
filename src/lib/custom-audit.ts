@@ -132,14 +132,23 @@ export function mergeInputDatasetIntoResponses(
     sectionKey,
   );
   const merged: ResponseMap = { ...responses };
+  // Provided values always come from the file; pre-filled auditee values only until the auditee saves one.
+  const editableKeys = new Set(
+    session.definition.fields
+      .filter((f) => f.section === sectionKey && f.fieldRole === "auditor_input")
+      .map((f) => f.key),
+  );
 
   for (const [idxStr, values] of Object.entries(hydrated[sectionKey] ?? {})) {
     const idx = Number(idxStr);
-    merged[sectionKey] = merged[sectionKey] ?? {};
-    merged[sectionKey][idx] = {
-      ...(merged[sectionKey][idx] ?? {}),
-      ...values,
-    };
+    merged[sectionKey] = { ...(merged[sectionKey] ?? {}) };
+    const saved = merged[sectionKey][idx] ?? {};
+    const next = { ...saved };
+    for (const [key, value] of Object.entries(values)) {
+      if (editableKeys.has(key) && saved[key] !== undefined && saved[key] !== null) continue;
+      next[key] = value as AuditResponseValue;
+    }
+    merged[sectionKey][idx] = next;
   }
   return merged;
 }

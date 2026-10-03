@@ -1,12 +1,19 @@
 import { useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, Download, FileSpreadsheet, FileText, Loader2, Plus, Save, Trash2, Upload } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, Loader2, Plus, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import {
+  CELL_INPUT,
+  DOCUMENT_ACCEPT,
+  DocumentBusyBanner,
+  DocumentErrorBanner,
+  DocumentSaveBar,
+  isSpreadsheet,
+  uploadAndReadDocument,
+} from "@/components/new-audit/document-ui";
 import { parseAuditSpreadsheet } from "@/lib/audit-input-dataset";
-import { requireOrgId } from "@/lib/db/context";
 import { AISLIX_PALETTE, ACCENT_TINT } from "@/lib/ai-audit/kpi-palette";
 import {
   documentTypeLabel,
@@ -22,15 +29,8 @@ import {
   type ReferenceRow,
 } from "@/lib/ai-audit/reference-document";
 import { downloadSectionCsv } from "@/lib/ai-audit/section-csv";
-import { readReferenceDocument, REFERENCE_DOCUMENT_BUCKET } from "@/lib/reference-document.functions";
+import { readReferenceDocument } from "@/lib/reference-document.functions";
 import { cn } from "@/lib/utils";
-
-const DOCUMENT_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-const MAX_IMAGE_EDGE = 2400;
-const MIN_IMAGE_EDGE = 1600;
-const CELL_INPUT =
-  "w-full rounded-md border px-1.5 py-1 text-xs text-[#102A43] outline-none transition-shadow focus:bg-white focus:shadow-[0_0_0_2px_#7DB7D6]";
-const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 
 type Props = {
   value: ReferenceDocumentState | undefined;
@@ -56,37 +56,6 @@ const COLUMNS: Column[] = [
   { field: "price", header: "Price ₹", width: "min-w-[104px]", numeric: true },
   { field: "location", header: "Location", width: "min-w-[100px]" },
 ];
-
-function isSpreadsheet(file: File): boolean {
-  const name = file.name.toLowerCase();
-  return name.endsWith(".csv") || name.endsWith(".xlsx") || name.endsWith(".xls") || file.type === "text/csv";
-}
-
-/**
- * Phone photos are downsized before upload. Small scans and screenshots are enlarged so
- * the vision model gets enough detail on small printed digits.
- */
-async function prepareImage(file: File): Promise<File> {
-  if (!file.type.startsWith("image/")) return file;
-  const bitmap = await createImageBitmap(file).catch(() => null);
-  if (!bitmap) return file;
-  const longEdge = Math.max(bitmap.width, bitmap.height);
-  const scale =
-    longEdge < MIN_IMAGE_EDGE ? MIN_IMAGE_EDGE / longEdge : Math.min(1, MAX_IMAGE_EDGE / longEdge);
-  if (scale === 1 && file.size <= 3 * 1024 * 1024) return file;
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  const ctx = canvas.getContext("2d");
-  if (ctx) {
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  }
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.88));
-  if (!blob) return file;
-  return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
-}
 
 function cellValue(row: ReferenceRow, field: ReferenceField): string {
   const value = row[field];
@@ -127,29 +96,10 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
         return;
       }
 
-      if (!DOCUMENT_TYPES.includes(file.type)) {
-        throw new Error("Upload a photo (JPG, PNG, WebP), a PDF, or a CSV / Excel file.");
-      }
-      setBusy("upload");
-      const prepared = await prepareImage(file);
-      if (prepared.size > MAX_UPLOAD_BYTES) throw new Error("File is larger than 12 MB.");
-      const orgId = await requireOrgId();
-      const ext = prepared.name.includes(".") ? prepared.name.split(".").pop() : "jpg";
-      const storagePath = `${orgId}/reference-documents/${crypto.randomUUID()}.${ext}`;
-      const { error: uploadError } = await supabase.storage
-        .from(REFERENCE_DOCUMENT_BUCKET)
-        .upload(storagePath, prepared, { contentType: prepared.type, upsert: false });
-      if (uploadError) throw new Error("Could not upload the document. Please try again.");
-
-      setBusy("read");
-      const state = await readDocument({
-        data: {
-          storagePath,
-          mimeType: prepared.type,
-          filename: file.name,
-          category,
-          subCategories: subCategory ? [subCategory] : [],
-        },
+      const state = await uploadAndReadDocument(file, readDocument, {
+        category,
+        subCategory,
+        onStage: setBusy,
       });
       if (!state.rows.length) {
         onChange({ ...state, saved: true });
@@ -248,7 +198,7 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
             ref={inputRef}
             type="file"
             className="hidden"
-            accept="image/jpeg,image/png,image/webp,application/pdf,.csv,.xlsx,.xls,text/csv"
+            accept={DOCUMENT_ACCEPT}
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file) void handleFile(file);
@@ -257,30 +207,9 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
         </div>
       </div>
 
-      {busy ? (
-        <div
-          className="flex items-center gap-3 rounded-xl border px-4 py-3 text-sm text-[#102A43]"
-          style={{ background: ACCENT_TINT.blue, borderColor: AISLIX_PALETTE.blue }}
-          role="status"
-        >
-          <Loader2 className="size-4 animate-spin" />
-          {busy === "upload"
-            ? "Uploading document…"
-            : busy === "read"
-              ? "AI is reading every line of your document — this can take up to a minute."
-              : "Reading your file…"}
-        </div>
-      ) : null}
+      {busy ? <DocumentBusyBanner stage={busy} /> : null}
 
-      {error ? (
-        <p
-          className="rounded-xl border px-4 py-3 text-sm text-[#102A43]"
-          style={{ background: AISLIX_PALETTE.pink, borderColor: "#F6CFDC" }}
-          role="alert"
-        >
-          {error}
-        </p>
-      ) : null}
+      {error ? <DocumentErrorBanner message={error} /> : null}
 
       {meta && rows.length ? (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-[#D9E2E8] bg-[#F4F7F9] px-4 py-3 text-xs text-[#667085]">
@@ -422,24 +351,12 @@ export function ReferenceSourcePanel({ value, onChange, category, subCategory }:
               Each line is checked on the shelf: is it there, how many, at what price, in which bin.
             </p>
           </div>
-          <div
-            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3"
-            style={
-              unsaved
-                ? { background: ACCENT_TINT.blue, borderColor: AISLIX_PALETTE.blue }
-                : { background: "#F4F7F9", borderColor: AISLIX_PALETTE.border }
-            }
-          >
-            <p className="text-xs text-[#102A43]">
-              {unsaved
-                ? "You have unsaved changes. Save them to use these lines in the audit."
-                : `${usable} line${usable === 1 ? "" : "s"} saved for this audit.`}
-            </p>
-            <Button type="button" variant={unsaved ? "brand" : "outline"} size="sm" disabled={!unsaved} onClick={saveRows}>
-              {unsaved ? <Save className="size-3.5" /> : <Check className="size-3.5" />}
-              {unsaved ? "Save changes" : "Saved"}
-            </Button>
-          </div>
+          <DocumentSaveBar
+            unsaved={unsaved}
+            unsavedText="You have unsaved changes. Save them to use these lines in the audit."
+            savedText={`${usable} line${usable === 1 ? "" : "s"} saved for this audit.`}
+            onSave={saveRows}
+          />
         </>
       ) : !busy ? (
         <button

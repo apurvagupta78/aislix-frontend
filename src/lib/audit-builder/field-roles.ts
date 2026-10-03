@@ -35,6 +35,8 @@ export type ColumnMapping = {
   autoSuggested?: boolean;
   /** Optional AI assist (e.g. OCR on expiry) during execution */
   aiEnabled?: boolean;
+  /** Auditee column paired with a provided column; results show Difference = this − that. */
+  compareWithColumnId?: string;
 };
 
 export type TemplateFieldBinding = {

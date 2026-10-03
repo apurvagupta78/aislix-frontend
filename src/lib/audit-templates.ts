@@ -30,6 +30,9 @@ export type { TemplateStatus };
 
 export type TemplateType = BuilderTemplateType;
 
+/** Marks templates created from a Digital Audit file upload (one per audit, hidden from template lists). */
+export const DIGITAL_CSV_TEMPLATE_SOURCE = "digital_csv_audit";
+
 export type AuditTemplate = {
   id: string;
   name: string;
@@ -284,7 +287,7 @@ export async function fetchAuditTemplates(
     const userId = await requireUserId();
     rows = rows.filter((t) => t.owner_user_id === userId && t.visibility === "private");
   }
-  return rows;
+  return rows.filter((t) => t.purpose_config?.source !== DIGITAL_CSV_TEMPLATE_SOURCE);
 }
 
 export async function fetchAuditTemplate(id: string): Promise<AuditTemplate | null> {

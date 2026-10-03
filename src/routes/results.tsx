@@ -20,6 +20,8 @@ import { isDemoOralCareContext } from "@/lib/demo-oral-care-planogram";
 import { EmptyState, ErrorState } from "@/components/States";
 import { FixRescanVerifyPanel } from "@/components/scan-results/FixRescanVerifyPanel";
 import { AuditGovernanceTabs } from "@/components/audit-governance/AuditGovernanceTabs";
+import { DigitalAuditColumnsResults } from "@/components/audit-governance/DigitalAuditColumnsResults";
+import { fetchDigitalColumnsAudit } from "@/lib/new-audit/digital-columns";
 import { ScanResultsActionsFooter } from "@/components/scan/ScanResultsActionsFooter";
 import { AI_DISCLAIMER } from "@/components/scan/ScanProgressPanel";
 import { planHasFeature } from "@/lib/plan-features";
@@ -153,6 +155,13 @@ function Results() {
     enabled: Boolean(scan) && scanStatus === "completed",
     retry: false,
   });
+  const digitalColumnsQuery = useQuery({
+    queryKey: ["digital-columns-audit", scan],
+    queryFn: () => fetchDigitalColumnsAudit(scan!),
+    enabled: Boolean(scan) && scanStatus === "completed",
+    retry: false,
+  });
+  const digitalColumnsAudit = digitalColumnsQuery.data ?? null;
   const queryClient = useQueryClient();
 
   // Viewing a scan's results acknowledges its bell notifications.
@@ -193,7 +202,8 @@ function Results() {
   const digitalEvidence = digitalQuery.data?.evidence?.length ?? 0;
   // Only treat as digital once the probe settles — never leave AI results blank while it hangs.
   const isDigitalAudit =
-    digitalQuery.isSuccess && (digitalLines > 0 || digitalEvidence > 0);
+    Boolean(digitalColumnsAudit) ||
+    (digitalQuery.isSuccess && (digitalLines > 0 || digitalEvidence > 0));
   /** Prefer Astra graphical AI audit view for all completed AI scans (incl. assigned). */
   const useSimpleAiView = true;
   // Never block the Astra results view waiting on digital-session hydration.
@@ -348,17 +358,23 @@ function Results() {
           ) : ready ? (
             <>
               <ResultsErrorBoundary scanId={data!.scan_id}>
-              {isDigitalAudit && assignmentId ? (
+              {isDigitalAudit && assignmentId && !digitalColumnsAudit ? (
                 <FixRescanVerifyPanel
                   assignmentId={assignmentId}
                   scanId={data!.scan_id}
                 />
               ) : null}
               {isDigitalAudit ? (
-                <AuditGovernanceTabs scanId={data!.scan_id} scanData={data!} />
+                <AuditGovernanceTabs
+                  scanId={data!.scan_id}
+                  scanData={data!}
+                  customItems={
+                    digitalColumnsAudit ? <DigitalAuditColumnsResults audit={digitalColumnsAudit} /> : undefined
+                  }
+                />
               ) : null}
 
-              {isDigitalAudit &&
+              {digitalColumnsAudit ? null : isDigitalAudit &&
               !scanHadPlanogram &&
               (showOptionalPricing || hasActiveScanContext(scanContext)) ? (
                 <div className="mb-4 overflow-hidden rounded-2xl border border-border bg-surface">

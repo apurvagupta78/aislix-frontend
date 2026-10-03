@@ -116,6 +116,17 @@ function inferType(values: string[]): AuditDataType {
   return "text";
 }
 
+/** Re-infer every column's type from its current values (after manual edits). */
+export function inferDatasetColumnTypes(dataset: AuditInputDataset): AuditInputDataset {
+  return {
+    ...dataset,
+    columns: dataset.columns.map((column) => ({
+      ...column,
+      type: inferType(dataset.rows.map((row) => row.values[column.id] ?? "")),
+    })),
+  };
+}
+
 function uniqueHeaderNames(headers: string[]): string[] {
   const used = new Map<string, number>();
   return headers.map((header, index) => {
