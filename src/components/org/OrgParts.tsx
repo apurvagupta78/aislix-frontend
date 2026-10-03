@@ -130,11 +130,13 @@ export function OrganizationOverview({
   /** When viewing a store-type filter (warehouse/supermarket/…), show that count instead of org-wide total. */
   scopedStoreCount,
   scopedStoreLabel,
+  canManage = true,
 }: {
   org?: Organization | undefined;
   loading?: boolean | undefined;
   scopedStoreCount?: number | null | undefined;
   scopedStoreLabel?: string | undefined;
+  canManage?: boolean;
 }) {
   const remaining = scansRemaining(org);
   const percent = usagePercent(org);
@@ -197,14 +199,16 @@ export function OrganizationOverview({
               )}
             </div>
           </div>
-          <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
-            <Button asChild variant="subtle" size="sm" className="rounded-xl">
-              <Link to="/settings">Company settings</Link>
-            </Button>
-            <Button asChild variant="brand" size="sm" className="rounded-xl">
-              <Link to="/billing">Manage plan</Link>
-            </Button>
-          </div>
+          {canManage && (
+            <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+              <Button asChild variant="subtle" size="sm" className="rounded-xl">
+                <Link to="/settings">Company settings</Link>
+              </Button>
+              <Button asChild variant="brand" size="sm" className="rounded-xl">
+                <Link to="/billing">Manage plan</Link>
+              </Button>
+            </div>
+          )}
         </div>
 
         <div className="mt-5 rounded-xl border border-border bg-surface p-4">

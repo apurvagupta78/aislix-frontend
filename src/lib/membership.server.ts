@@ -65,6 +65,13 @@ export async function activateMembershipsForUser(
     } as never)
     .in("id", ids);
 
+  // Joining an existing workspace replaces the owner setup wizard.
+  await supabaseAdmin
+    .from("profiles")
+    .update({ onboarding_completed_at: new Date().toISOString() } as never)
+    .eq("id", userId)
+    .is("onboarding_completed_at", null);
+
   const orgIds = [...new Set([...rows.values()].map((row) => row.org_id))];
   const { data: orgs } = await supabaseAdmin
     .from("organizations")

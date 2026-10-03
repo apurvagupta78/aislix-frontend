@@ -225,6 +225,7 @@ function StoresPage() {
         ) : (
           <OrganizationOverview
             org={orgQuery.data}
+            canManage={canDelete}
             loading={orgQuery.isPending || (Boolean(model) && storesQuery.isPending)}
             scopedStoreCount={model ? total : null}
             scopedStoreLabel={
@@ -435,13 +436,15 @@ function StoresPage() {
 
 
 
-        <p className="text-xs text-muted-foreground">
-          Looking for company-wide details like GSTIN and branding?{" "}
-          <Link to="/settings" className="text-brand hover:underline">
-            Open company settings
-          </Link>
-          .
-        </p>
+        {canDelete && (
+          <p className="text-xs text-muted-foreground">
+            Looking for company-wide details like GSTIN and branding?{" "}
+            <Link to="/settings" className="text-brand hover:underline">
+              Open company settings
+            </Link>
+            .
+          </p>
+        )}
       </div>
 
       <StoreFormDialog
