@@ -31,7 +31,7 @@ export function RequiredInputsSummary({ definition }: Props) {
       <div className="mt-3 flex flex-wrap gap-1.5">
         {summary.fieldLabels.map((label) => (
           <Badge key={label} variant="outline" className="text-[10px]">
-            {label} · AUDITOR INPUT
+            {label} · YOU FILL
           </Badge>
         ))}
         {summary.evidenceLabels.map((label) => (

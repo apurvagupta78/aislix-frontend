@@ -147,6 +147,7 @@ export function ScanResultHeader({
   assignmentLabel,
   auditName,
   auditDescription,
+  digitalAudit = false,
 }: {
   data?: ScanResult | undefined;
   loading?: boolean | undefined;
@@ -154,6 +155,8 @@ export function ScanResultHeader({
   assignmentLabel?: string | null | undefined;
   auditName?: string | null | undefined;
   auditDescription?: string | null | undefined;
+  /** Digital audits have no shelf score, AI processing time or AI confidence. */
+  digitalAudit?: boolean;
 }) {
   const summary = data?.summary;
   const health =
@@ -255,25 +258,29 @@ export function ScanResultHeader({
           value={formatScanDate(data?.created_at)}
           loading={loading}
         />
-        <MetaItem
-          icon={<Gauge className="size-4" />}
-          label="Shelf health score"
-          value={health}
-          loading={loading}
-          accent
-        />
-        <MetaItem
-          icon={<Timer className="size-4" />}
-          label="Processing time"
-          value={summary ? formatDuration(summary.processing_time_ms) : undefined}
-          loading={loading}
-        />
-        <MetaItem
-          icon={<Sparkles className="size-4" />}
-          label="Avg AI confidence"
-          value={summary ? formatConfidence(summary.average_confidence) : undefined}
-          loading={loading}
-        />
+        {digitalAudit ? null : (
+          <>
+            <MetaItem
+              icon={<Gauge className="size-4" />}
+              label="Shelf health score"
+              value={health}
+              loading={loading}
+              accent
+            />
+            <MetaItem
+              icon={<Timer className="size-4" />}
+              label="Processing time"
+              value={summary ? formatDuration(summary.processing_time_ms) : undefined}
+              loading={loading}
+            />
+            <MetaItem
+              icon={<Sparkles className="size-4" />}
+              label="Avg AI confidence"
+              value={summary ? formatConfidence(summary.average_confidence) : undefined}
+              loading={loading}
+            />
+          </>
+        )}
       </div>
     </div>
   );

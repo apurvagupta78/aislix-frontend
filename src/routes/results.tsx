@@ -344,6 +344,7 @@ function Results() {
               assignmentLabel={assignmentQuery.data?.assigneeLabel}
               auditName={assignmentQuery.data?.auditName}
               auditDescription={assignmentQuery.data?.auditDescription}
+              digitalAudit={isDigitalAudit}
             />
           )}
 
