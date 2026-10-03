@@ -6,17 +6,27 @@ type PersistBody = {
   snapshot?: Record<string, unknown>;
 };
 
+const MAX_BODY_BYTES = 1024 * 1024;
+
 /**
- * Persist a demo audit snapshot before copying a public /share link.
- * Writes to Supabase and mirrors to Railway so either store can serve the link.
+ * Return a public /share link for a landing demo audit. The session must have
+ * been recorded by the landing scan route; see persistDemoShareSession.
  */
 export const Route = createFileRoute("/api/public/share/persist")({
   server: {
     handlers: {
       POST: async ({ request }) => {
+        if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY_BYTES) {
+          return Response.json({ detail: "Audit data is too large to share." }, { status: 413 });
+        }
+
         let body: PersistBody;
         try {
-          body = (await request.json()) as PersistBody;
+          const text = await request.text();
+          if (text.length > MAX_BODY_BYTES) {
+            return Response.json({ detail: "Audit data is too large to share." }, { status: 413 });
+          }
+          body = JSON.parse(text) as PersistBody;
         } catch {
           return Response.json({ detail: "Expected JSON body." }, { status: 400 });
         }
@@ -35,74 +45,34 @@ export const Route = createFileRoute("/api/public/share/persist")({
           return Response.json({ detail: "Missing audit snapshot." }, { status: 400 });
         }
 
-        const origin = new URL(request.url).origin;
-        const url = `${origin}/share/${sessionToken}`;
-        let saved = false;
-        let lastError: string | null = null;
-
         try {
-          const { persistDemoShareSession } = await import("@/lib/scan-share.server");
-          await persistDemoShareSession(sessionToken, snapshot);
-          saved = true;
-        } catch (error) {
-          lastError = error instanceof Error ? error.message : "Supabase persist failed.";
-          console.error("Demo share Supabase persist failed:", lastError);
-        }
-
-        const backendUrl =
-          process.env["AISLIX_AI_API_URL"] ||
-          process.env["VITE_AISLIX_API_URL"] ||
-          "https://aislix-backend-production.up.railway.app";
-        try {
-          const res = await fetch(`${backendUrl.replace(/\/+$/, "")}/landing/share/persist`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Accept: "application/json" },
-            body: JSON.stringify({
-              session_token: sessionToken,
-              landing_session_id: sessionToken,
-              snapshot,
-            }),
-          });
-          if (res.ok) {
-            saved = true;
-            const payload = (await res.json().catch(() => ({}))) as { url?: string };
+          const { persistDemoShareSession, resolvePublicShare } = await import(
+            "@/lib/scan-share.server"
+          );
+          const accepted = await persistDemoShareSession(sessionToken, snapshot);
+          if (!accepted) {
             return Response.json(
-              { url: payload.url ?? url, token: sessionToken },
-              { headers: { "Cache-Control": "no-store" } },
+              { detail: "Demo session not found — run the audit again to share it." },
+              { status: 404 },
             );
           }
-          const detail = await res.text();
-          lastError = detail.slice(0, 300) || `Backend returned ${res.status}`;
-          console.error("Demo share backend persist failed:", lastError);
-        } catch (error) {
-          lastError = error instanceof Error ? error.message : "Backend persist failed.";
-          console.error("Demo share backend persist failed:", lastError);
-        }
-
-        if (saved) {
-          try {
-            const { resolvePublicShare } = await import("@/lib/scan-share.server");
-            const verified = await resolvePublicShare(sessionToken);
-            if (!verified.report && !verified.demoSession) {
-              return Response.json(
-                { detail: "Share link was saved but could not be verified. Try again." },
-                { status: 503 },
-              );
-            }
-          } catch {
+          const verified = await resolvePublicShare(sessionToken).catch(() => null);
+          if (!verified?.report && !verified?.demoSession) {
             return Response.json(
               { detail: "Share link was saved but could not be verified. Try again." },
               { status: 503 },
             );
           }
-          return Response.json(
-            { url, token: sessionToken },
-            { headers: { "Cache-Control": "no-store" } },
-          );
+        } catch (error) {
+          const detail = error instanceof Error ? error.message : "Could not save share link.";
+          console.error("Demo share persist failed:", detail);
+          return Response.json({ detail }, { status: 503 });
         }
+
+        const origin = new URL(request.url).origin;
         return Response.json(
-          { detail: lastError ?? "Could not save share link." },
-          { status: 503 },
+          { url: `${origin}/share/${sessionToken}`, token: sessionToken },
+          { headers: { "Cache-Control": "no-store" } },
         );
       },
     },

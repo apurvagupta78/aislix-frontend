@@ -6,7 +6,10 @@
  * Effective store IDs come from SQL `effective_store_ids` (dynamic — never duplicated).
  */
 
-import { supabase } from "@/integrations/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { supabase as browserClient } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { requireOrgId, requireUserId } from "@/lib/db/context";
 
 export type AccessRole =
@@ -35,6 +38,8 @@ export type EffectiveAccessScope = {
   hasStoreScope: boolean;
 };
 
+type ScopeClient = SupabaseClient<Database>;
+
 const ORG_ADMIN_ROLES = new Set(["owner", "admin"]);
 const MANAGER_ROLES = new Set(["owner", "admin", "manager", "store_manager"]);
 
@@ -46,6 +51,7 @@ async function rpcUuidArray(
   fn: "effective_store_ids" | "direct_store_ids" | "inherited_store_ids",
   orgId: string,
   userId: string,
+  supabase: ScopeClient,
 ): Promise<string[]> {
   const { data, error } = await supabase.rpc(fn as never, {
     p_org_id: orgId,
@@ -64,6 +70,7 @@ async function rpcUuidArray(
 export async function fetchMembershipRole(
   orgId: string,
   userId: string,
+  supabase: ScopeClient = browserClient,
 ): Promise<{ role: AccessRole; storeIds: string[]; reportsToUserId: string | null; status: string } | null> {
   const { data } = await supabase
     .from("organization_members")
@@ -87,18 +94,21 @@ export async function fetchMembershipRole(
 export async function resolveEffectiveAccessScope(opts?: {
   orgId?: string;
   userId?: string;
+  /** Server callers pass the request-scoped client; defaults to the browser session. */
+  client?: ScopeClient;
 }): Promise<EffectiveAccessScope> {
+  const client = opts?.client ?? browserClient;
   const orgId = opts?.orgId ?? (await requireOrgId());
   const userId = opts?.userId ?? (await requireUserId());
-  const membership = await fetchMembershipRole(orgId, userId);
+  const membership = await fetchMembershipRole(orgId, userId, client);
 
   const role = (membership?.role ?? "member") as AccessRole;
   const isOrgAdmin = ORG_ADMIN_ROLES.has(role);
   const isManager = MANAGER_ROLES.has(role);
 
-  let effectiveStoreIds = await rpcUuidArray("effective_store_ids", orgId, userId);
-  let directStoreIds = await rpcUuidArray("direct_store_ids", orgId, userId);
-  let inheritedStoreIds = await rpcUuidArray("inherited_store_ids", orgId, userId);
+  let effectiveStoreIds = await rpcUuidArray("effective_store_ids", orgId, userId, client);
+  let directStoreIds = await rpcUuidArray("direct_store_ids", orgId, userId, client);
+  let inheritedStoreIds = await rpcUuidArray("inherited_store_ids", orgId, userId, client);
 
   // Client fallback if RPCs returned empty but membership exists (pre-migration / error).
   if (
@@ -106,7 +116,7 @@ export async function resolveEffectiveAccessScope(opts?: {
     effectiveStoreIds.length === 0 &&
     (isOrgAdmin || (membership.storeIds?.length ?? 0) > 0)
   ) {
-    const computed = await computeEffectiveStoreIdsClient(orgId, userId, membership);
+    const computed = await computeEffectiveStoreIdsClient(orgId, userId, membership, client);
     effectiveStoreIds = computed.effective;
     directStoreIds = computed.direct;
     inheritedStoreIds = computed.inherited;
@@ -129,6 +139,7 @@ async function computeEffectiveStoreIdsClient(
   orgId: string,
   userId: string,
   membership: { role: AccessRole; storeIds: string[] },
+  supabase: ScopeClient,
 ): Promise<{ effective: string[]; direct: string[]; inherited: string[] }> {
   const { data: stores } = await supabase
     .from("stores")

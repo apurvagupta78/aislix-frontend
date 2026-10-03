@@ -12,7 +12,7 @@ export async function assertPlatformAdminEmail(
     .from("platform_access_grants")
     .select("email")
     .eq("is_active", true)
-    .ilike("email", normalized)
+    .eq("email", normalized)
     .maybeSingle();
 
   if (!grant) throw new Error("Platform admin access required.");

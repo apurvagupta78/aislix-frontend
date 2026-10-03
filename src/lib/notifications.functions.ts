@@ -52,6 +52,15 @@ export const notifyMember = createServerFn({ method: "POST" })
     }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: recipient } = await supabaseAdmin
+      .from("organization_members")
+      .select("id")
+      .eq("org_id", data.org_id)
+      .eq("user_id", data.user_id)
+      .in("status", ["active", "invited"])
+      .maybeSingle();
+    if (!recipient) throw new Error("That person is not on this workspace.");
+
     const { error: insertError } = await supabaseAdmin.from("notifications").insert({
       user_id: data.user_id,
       org_id: data.org_id,

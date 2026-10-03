@@ -89,7 +89,7 @@ export async function buildAskAccessScope(
   const isManager = MANAGER_ROLES.has(role);
 
   const { resolveEffectiveAccessScope } = await import("@/lib/access-scope");
-  const access = await resolveEffectiveAccessScope({ orgId, userId });
+  const access = await resolveEffectiveAccessScope({ orgId, userId, client: supabase });
   let allowedStoreIds = access.effectiveStoreIds;
 
   const { data: storeRows, error: storeError } = await supabase

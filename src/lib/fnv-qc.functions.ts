@@ -188,6 +188,13 @@ async function runFnvQcCore(
   }
   if (!isFnv) return { result: null, skipped: "not_fnv" };
 
+  // Evidence is downloaded with the service role, so it must live in this scan's org folder.
+  const orgId = String((scan as { org_id?: string | null }).org_id ?? "");
+  const segments = data.storagePath.split("/");
+  if (!orgId || segments[0] !== orgId || segments.some((s) => s === ".." || s === "")) {
+    throw new Error("Evidence file does not belong to this audit.");
+  }
+
   let evidence: { bytes: Buffer; contentType: string; fileName: string };
   try {
     evidence = await loadFnvEvidenceBytes(db, data.storagePath, data.storageBucket);

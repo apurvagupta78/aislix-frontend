@@ -19,7 +19,15 @@ export async function activateMembershipsForUser(
   email?: string | null,
 ): Promise<ActivateMembershipsResult> {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const normalizedEmail = (email ?? "").trim().toLowerCase();
+  let normalizedEmail = (email ?? "").trim().toLowerCase();
+  if (normalizedEmail) {
+    // Email-keyed invites only go to the confirmed owner of that address.
+    const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(userId);
+    const confirmedEmail = authUser?.user?.email_confirmed_at
+      ? (authUser.user.email ?? "").trim().toLowerCase()
+      : "";
+    normalizedEmail = confirmedEmail === normalizedEmail ? confirmedEmail : "";
+  }
 
   const rows = new Map<string, { id: string; org_id: string }>();
 
@@ -37,7 +45,7 @@ export async function activateMembershipsForUser(
     const { data: byEmail } = await supabaseAdmin
       .from("organization_members")
       .select("id, org_id")
-      .ilike("invited_email", normalizedEmail)
+      .eq("invited_email", normalizedEmail)
       .eq("status", "invited");
     for (const row of (byEmail ?? []) as Array<{ id: string; org_id: string }>) {
       rows.set(row.id, row);

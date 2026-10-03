@@ -329,35 +329,56 @@ function demoSessionFromStoredRow(row: Record<string, unknown>): DemoLandingSess
   };
 }
 
-/** Upsert a completed demo session so /share/:token can resolve it later. */
+const DEMO_SESSION_TOKEN = /^[A-Za-z0-9_-]{8,128}$/;
+const DEMO_SNAPSHOT_MAX_CHARS = 512 * 1024;
+const DEMO_SNAPSHOT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Makes a landing demo session shareable. Only sessions recorded by the landing
+ * scan route qualify; the client snapshot only fills in a result the server
+ * failed to store, and never overwrites one. Returns false when the token is unknown.
+ */
 export async function persistDemoShareSession(
   sessionToken: string,
   snapshot: Record<string, unknown>,
-): Promise<void> {
+): Promise<boolean> {
   const token = sessionToken.trim();
-  if (!token) throw new Error("Missing demo session.");
+  if (!DEMO_SESSION_TOKEN.test(token)) return false;
 
   const db = await admin();
+  const { data: row, error } = await db
+    .from("landing_demo_sessions")
+    .select("scan_status, scan_result, created_at")
+    .eq("session_token", token)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+
+  if (!row) return Boolean(await fetchBackendLandingSession(token));
+  if (row.scan_status === "completed" && row.scan_result) return true;
+  if (row.scan_status === "failed") return false;
+
+  const ageMs = Date.now() - new Date(row.created_at as string).getTime();
+  if (!(ageMs >= 0 && ageMs <= DEMO_SNAPSHOT_WINDOW_MS)) return false;
+  if (JSON.stringify(snapshot).length > DEMO_SNAPSHOT_MAX_CHARS) {
+    throw new Error("Audit data is too large to share.");
+  }
+
   const scanId =
     typeof snapshot.scan_id === "string" && snapshot.scan_id.trim()
-      ? snapshot.scan_id.trim()
+      ? snapshot.scan_id.trim().slice(0, 128)
       : "demo";
-  const now = new Date().toISOString();
-
-  const { error } = await db.from("landing_demo_sessions").upsert(
-    {
-      session_token: token,
+  const { error: updateError } = await db
+    .from("landing_demo_sessions")
+    .update({
       scan_id: scanId,
       scan_status: "completed",
       scan_error: null,
       scan_result: snapshot as never,
-      sample_id: (snapshot.sample_id as string | null | undefined) ?? null,
-      category: (snapshot.category as string | null | undefined) ?? null,
-      updated_at: now,
-    },
-    { onConflict: "session_token" },
-  );
-  if (error) throw new Error(error.message);
+      updated_at: new Date().toISOString(),
+    })
+    .eq("session_token", token);
+  if (updateError) throw new Error(updateError.message);
+  return true;
 }
 
 async function fetchBackendLandingSession(token: string): Promise<DemoLandingSession | null> {
@@ -665,7 +686,10 @@ export async function loadSharedScan(token: string): Promise<SharedScanPayload> 
 
 /** Confirms the signed-in user can share this scan, returning its org. */
 export async function requireScanAccess(
-  supabase: { from: (table: string) => any },
+  supabase: {
+    from: (table: string) => any;
+    rpc: (fn: string, args: Record<string, unknown>) => any;
+  },
   scanId: string,
 ): Promise<{ orgId: string; status: string; assigneeId: string | null }> {
   const { data, error } = await supabase
@@ -675,6 +699,10 @@ export async function requireScanAccess(
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw new Error("You do not have access to this audit.");
+
+  // Demo scans are readable by everyone under RLS; sharing requires membership.
+  const { data: isMember } = await supabase.rpc("is_org_member", { p_org_id: data.org_id });
+  if (isMember !== true) throw new Error("You do not have access to this audit.");
 
   let assigneeId: string | null = null;
   if (data.assignment_id) {

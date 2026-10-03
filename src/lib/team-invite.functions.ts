@@ -28,6 +28,15 @@ export type InviteMemberResult = {
 
 const MANAGER_ROLES = ["owner", "admin", "manager"];
 
+const ROLE_RANK: Record<string, number> = { owner: 3, admin: 2, manager: 1, member: 0 };
+
+/** Roles an inviter may grant: owners grant anything, others up to their own rank minus owner. */
+function canGrantRole(inviterRole: string, targetRole: string): boolean {
+  if (inviterRole === "owner") return true;
+  if (targetRole === "owner") return false;
+  return (ROLE_RANK[targetRole] ?? 0) <= (ROLE_RANK[inviterRole] ?? 0);
+}
+
 /** UI role -> app_role enum used by the database. */
 const APP_ROLE: Record<string, string> = {
   owner: "owner",
@@ -70,6 +79,20 @@ export const inviteMember = createServerFn({ method: "POST" })
       throw new Error("Only owners, admins and managers can invite team members.");
     }
     const orgId = membership.org_id as string;
+    const inviterRole = String(membership.role);
+    if (!canGrantRole(inviterRole, data.role)) {
+      throw new Error("You can't grant a role higher than your own.");
+    }
+    if (inviterRole === "manager" && data.store_ids.length) {
+      const { data: scope } = await supabase.rpc("effective_store_ids" as never, {
+        p_org_id: orgId,
+        p_user_id: userId,
+      } as never);
+      const allowed = new Set(((scope as string[] | null) ?? []).map(String));
+      if (data.store_ids.some((id) => !allowed.has(id))) {
+        throw new Error("You can only assign stores you manage.");
+      }
+    }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { generateInviteLink, sendInviteEmail } = await import("@/lib/team-invite.server");
@@ -79,9 +102,29 @@ export const inviteMember = createServerFn({ method: "POST" })
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("id")
-      .ilike("email", data.email)
+      .eq("email", data.email)
       .maybeSingle();
     if (profile?.id) invitedUserId = profile.id as string;
+
+    if (invitedUserId) {
+      const { data: existing } = await supabaseAdmin
+        .from("organization_members")
+        .select("role")
+        .eq("org_id", orgId)
+        .eq("user_id", invitedUserId)
+        .maybeSingle();
+      const existingRole = existing ? String(existing.role) : null;
+      if (invitedUserId === userId) {
+        throw new Error("You can't change your own role or stores here.");
+      }
+      if (
+        existingRole &&
+        inviterRole !== "owner" &&
+        (ROLE_RANK[existingRole] ?? 0) >= (ROLE_RANK[inviterRole] ?? 0)
+      ) {
+        throw new Error("You can't change a teammate with the same or a higher role.");
+      }
+    }
 
     // 2) Otherwise create the account and mint an invite action link. Supabase
     //    does not email it — we send our own branded invitation below.
@@ -207,7 +250,7 @@ export const resendMemberInvite = createServerFn({ method: "POST" })
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("id")
-      .ilike("email", email)
+      .eq("email", email.toLowerCase())
       .maybeSingle();
 
     // No account yet -> mint a fresh invite action link. Existing account ->
