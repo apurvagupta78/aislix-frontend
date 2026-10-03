@@ -4,12 +4,12 @@ import { AppShell } from "@/components/AppShell";
 import { AiDigitalDashboardShell } from "@/components/dashboard/AiDigitalDashboardShell";
 
 type DashboardSearch = {
-  tab?: "ai" | "digital";
+  tab?: "overview" | "ai" | "digital";
 };
 
 export const Route = createFileRoute("/dashboard")({
   validateSearch: (search: Record<string, unknown>): DashboardSearch => ({
-    tab: search.tab === "digital" ? ("digital" as const) : ("ai" as const),
+    tab: search.tab === "digital" || search.tab === "ai" ? search.tab : ("overview" as const),
   }),
   head: () => ({
     meta: [

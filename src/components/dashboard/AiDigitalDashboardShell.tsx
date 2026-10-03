@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/dialog";
 import { AISLIX, NEW_AUDIT_BUTTON_CLASS } from "@/lib/aislix-theme";
 import { AISLIX_PALETTE, CHART_SERIES } from "@/lib/ai-audit/kpi-palette";
+import { DashboardOverviewPanel } from "@/components/dashboard/DashboardOverviewPanel";
 import {
   fetchNotificationPreferences,
   updateNotificationPreferences,
@@ -461,7 +462,7 @@ export function AiDigitalDashboardShell() {
       }
     : { completion };
 
-  const setTab = (next: DashboardTab) => {
+  const setTab = (next: DashboardTab | "overview") => {
     void navigate({
       search: (prev) => ({ ...prev, tab: next }),
       replace: true,
@@ -626,7 +627,7 @@ export function AiDigitalDashboardShell() {
     staleTime: 60_000,
     // Don't compete with AI dashboard on first paint — load digital when that tab is open
     // (or after AI settles so Ask Aislix can still see digital signals quickly).
-    enabled: tabKey === "digital" || (!opsQuery.isPending && Boolean(opsQuery.data)),
+    enabled: tab !== "ai" || (!opsQuery.isPending && Boolean(opsQuery.data)),
   });
 
   const data = opsQuery.data;
@@ -1554,6 +1555,7 @@ export function AiDigitalDashboardShell() {
         <div className="flex gap-2 rounded-xl border border-[#D9E2E8] bg-white p-1">
           {(
             [
+              ["overview", "Overview"],
               ["ai", "AI Audits"],
               ["digital", "Digital Audits"],
             ] as const
@@ -1571,21 +1573,42 @@ export function AiDigitalDashboardShell() {
             </button>
           ))}
         </div>
-        <button
-          type="button"
-          onClick={() => setEditLayout((v) => !v)}
-          className={cn(
-            "rounded-lg border px-3 py-2 text-xs font-medium",
-            editLayout
-              ? "border-[#102A43] bg-[#102A43] text-white"
-              : "border-[#D9E2E8] bg-white text-[#667085]",
-          )}
-        >
-          {editLayout ? "Done customizing" : "Customize Dashboard"}
-        </button>
+        {tab !== "overview" ? (
+          <button
+            type="button"
+            onClick={() => setEditLayout((v) => !v)}
+            className={cn(
+              "rounded-lg border px-3 py-2 text-xs font-medium",
+              editLayout
+                ? "border-[#102A43] bg-[#102A43] text-white"
+                : "border-[#D9E2E8] bg-white text-[#667085]",
+            )}
+          >
+            {editLayout ? "Done customizing" : "Customize Dashboard"}
+          </button>
+        ) : null}
       </div>
 
-      {editLayout ? (
+      {tab === "overview" ? (
+        <div className="flex flex-col gap-6">
+          <AskAislixSection
+            previewDemo={demoPreview.previewDemo || Boolean(data?.labeledDemo)}
+            dataAvailability={askDataAvailability}
+            city={global?.filters?.city ?? null}
+          />
+          <DashboardOverviewPanel
+            ai={data}
+            digital={dig}
+            aiLoading={opsQuery.isPending}
+            digitalLoading={digitalQuery.isPending}
+            emptyAi={emptyRealAi}
+            emptyDigital={emptyRealDigital}
+            onOpenTab={setTab}
+          />
+        </div>
+      ) : null}
+
+      {editLayout && tab !== "overview" ? (
         <DashboardLayoutToolbar
           tab={tabKey}
           layout={activeTabLayout}
@@ -1599,7 +1622,7 @@ export function AiDigitalDashboardShell() {
         />
       ) : null}
 
-      {tabKey === "ai" ? (
+      {tab === "overview" ? null : tabKey === "ai" ? (
         <div className="flex flex-col gap-6">
           <AskAislixSection
             previewDemo={demoPreview.previewDemo || Boolean(data?.labeledDemo)}
