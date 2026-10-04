@@ -14,7 +14,7 @@ import { toast } from "sonner";
 
 import { TablePager, usePager } from "@/components/design-system/TablePager";
 import { EvidenceImage } from "@/components/audit-builder/AuditExecutionForm";
-import { useEvidenceUpload } from "@/components/audit-builder/useEvidenceUpload";
+import { uploadOptionsForPolicy, useEvidenceUpload } from "@/components/audit-builder/useEvidenceUpload";
 import { ExpiryStatusPill, formatIsoDate } from "@/components/audit-engine/ExpiryStatusPill";
 import { SubmitBlockersPanel, type SubmitProblem } from "@/components/audit-engine/SubmitBlockersPanel";
 import { useAuditEvidenceCapture } from "@/components/audit-engine/useAuditEvidenceCapture";
@@ -72,6 +72,7 @@ import {
   type RowExpiry,
 } from "@/lib/audit-engine/expiry-evidence";
 import { readExpiryDateFromPhoto } from "@/lib/audit-engine/expiry-read-client";
+import { photoRulesFromPolicy } from "@/lib/audit-engine/photo-rules";
 import {
   BARCODE_SCAN_KEY,
   ROW_VARIANCE_KEY,
@@ -98,6 +99,8 @@ import { RCA_OPTIONS } from "@/lib/digital-audit";
 import { cn } from "@/lib/utils";
 
 type SaveItem = { recordIndex: number; field: TemplateField; value: AuditResponseValue };
+
+const BARCODE_KEY = /(barcode|ean|upc|gtin)/i;
 
 type Props = {
   session: CustomAuditSession;
@@ -365,7 +368,17 @@ export function AuditExecutionTable({
     () => shelfSlots(session.inputDataset, gridColumns.shelfColumnId),
     [session.inputDataset, gridColumns.shelfColumnId],
   );
-  const showBarcodeColumn = requiredProof.includes("barcode") && Boolean(gridColumns.barcodeColumnId);
+  const showBarcodeColumn = requiredProof.includes("barcode");
+  const templateBarcodeColumn = showBarcodeColumn
+    ? (columns.find((c) => c.editable && c.field.type === "barcode_scanner") ??
+      columns.find((c) => c.editable && BARCODE_KEY.test(c.key)))
+    : undefined;
+  const referenceBarcodeColumn = showBarcodeColumn
+    ? columns.find((c) => !c.editable && BARCODE_KEY.test(c.key))
+    : undefined;
+  const expectedBarcodeOf = (row: { index: number; values: Record<string, AuditResponseValue | undefined> }) =>
+    rowExpectedBarcode(session.inputDataset, gridColumns.barcodeColumnId, row.index) ??
+    (referenceBarcodeColumn ? cellText(row.values[referenceBarcodeColumn.key]) || null : null);
   const showVarianceColumns = requireRca && pairs.length > 0;
   const requirements = evaluateGridEvidence({
     policy: session.evidencePolicy,
@@ -399,9 +412,7 @@ export function AuditExecutionTable({
     const photoNeeded = rowEvidence.mode === "required" || (rowEvidence.mode === "on_mismatch" && r.hasMismatch);
     const reasonNeeded = requireRca && r.hasMismatch;
     const reason = cellText(r.values[VARIANCE_REASON_KEY]);
-    const barcodeNeeded =
-      requiredProof.includes("barcode") &&
-      Boolean(rowExpectedBarcode(session.inputDataset, gridColumns.barcodeColumnId, r.index));
+    const barcodeNeeded = showBarcodeColumn;
     return {
       index: r.index,
       position: r.position,
@@ -427,6 +438,7 @@ export function AuditExecutionTable({
     photoRule: rowEvidence.mode === "required" ? "every_row" : rowEvidence.mode === "on_mismatch" ? "on_difference" : "none",
     requiredPhotoFieldKey: rowEvidence.mode === "required" && rowEvidence.field?.required ? rowEvidence.field.key : null,
     columnLabels: new Map(columns.map((c) => [c.key, c.label])),
+    minimumPhotos: rowEvidence.minimumPhotos,
   });
   const leftSummary = remainingSummary(readiness.remaining);
   const evidenceCounts = {
@@ -436,7 +448,7 @@ export function AuditExecutionTable({
   };
   const reviewCount = readiness.reviewRowPositions.length;
   const reviewNotice = reviewCount
-    ? `Photos on ${reviewCount === 1 ? "1 row are" : `${reviewCount} rows are`} flagged for review (for example a duplicate or unclear photo, or fewer photos than asked for). This doesn't stop you submitting — a reviewer will check ${reviewCount === 1 ? "it" : "them"}.`
+    ? `Photos on ${reviewCount === 1 ? "1 row are" : `${reviewCount} rows are`} flagged for review (for example a photo that looks almost the same as another one). This doesn't stop you submitting — a reviewer will check ${reviewCount === 1 ? "it" : "them"}.`
     : null;
 
   // Persist each row's evidence result so the results page shows the same validation.
@@ -484,16 +496,19 @@ export function AuditExecutionTable({
     const target = photoTarget;
     if (!target) return;
     const { recordIndex, field } = target;
-    const checks = rowEvidence.qualityChecks;
     try {
-      const { url, flags } = await evidenceUpload.upload(file, {
-        checkQuality:
-          Boolean(field.config.imageQualityCheck) || checks.some((c) => c === "blur" || c === "dark" || c === "glare"),
-        qualityRequirement: field.config.imageQualityRequirement ?? "standard",
-        checkDuplicates:
-          checks.includes("duplicate_hash") || Boolean(definition.evidence.preventDuplicates || field.config.duplicateDetection),
-        onProblem: "flag",
-      });
+      const { url, flags } = await evidenceUpload.upload(
+        file,
+        uploadOptionsForPolicy(
+          { ...session.evidencePolicy, qualityChecks: rowEvidence.qualityChecks },
+          evidenceCapture.device?.openedAt ?? null,
+          {
+            forceQuality: Boolean(field.config.imageQualityCheck),
+            forceDuplicates: Boolean(definition.evidence.preventDuplicates || field.config.duplicateDetection),
+            qualityRequirement: field.config.imageQualityRequirement ?? "standard",
+          },
+        ),
+      );
       const current = photoList(responses[sectionKey]?.[recordIndex]?.[field.key]);
       await setValue(sectionKey, recordIndex, field, [...current, url]);
       if (flags.length) {
@@ -544,8 +559,7 @@ export function AuditExecutionTable({
     setValue,
     onUploadImage,
     onUploadVideo,
-    requiredProof,
-    qualityChecks: rowEvidence.qualityChecks,
+    policy: session.evidencePolicy,
     storeLocation: session.storeLocation,
     readOnly,
     canCapture,
@@ -581,7 +595,12 @@ export function AuditExecutionTable({
     if (!row) return;
     const key = target.kind === "date" ? EXPIRY_SCAN_PHOTO_KEY : EXPIRY_REMOVAL_PHOTO_KEY;
     try {
-      const { url } = await evidenceUpload.upload(file, { checkQuality: false, checkDuplicates: false, onProblem: "flag" });
+      const { url } = await evidenceUpload.upload(file, {
+        checkQuality: false,
+        checkDuplicates: false,
+        onProblem: "flag",
+        rules: photoRulesFromPolicy(session.evidencePolicy, evidenceCapture.device?.openedAt ?? null),
+      });
       await setValue(sectionKey, row.index, expiryField(key, "multiple_images"), [...listValue(row.values[key]), url]);
       if (target.kind === "removal") {
         toast.success("Removal photo added.");
@@ -617,8 +636,9 @@ export function AuditExecutionTable({
 
   const varianceField = evidenceField(sectionKey, ROW_VARIANCE_KEY, "yes_no");
   const varianceSignature = rows.map((r) => `${r.index}:${r.hasMismatch ? 1 : 0}`).join(";");
+  const persistVariance = requireRca || rowEvidence.mode === "on_mismatch";
   useEffect(() => {
-    if (!requireRca || !canCapture) return;
+    if (!persistVariance || !canCapture) return;
     const timer = window.setTimeout(() => {
       const items: SaveItem[] = rows
         .filter((r) => (r.values[ROW_VARIANCE_KEY] === true) !== r.hasMismatch)
@@ -633,13 +653,17 @@ export function AuditExecutionTable({
     }, 800);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [varianceSignature, requireRca, canCapture]);
+  }, [varianceSignature, persistVariance, canCapture]);
 
   const barcodeField = evidenceField(sectionKey, BARCODE_SCAN_KEY, "short_text");
   const saveBarcodeRef = useRef<(code: string) => void>(() => undefined);
+  const saveBarcode = async (recordIndex: number, code: string | null) => {
+    await setValue(sectionKey, recordIndex, barcodeField, code);
+    if (code && templateBarcodeColumn) await setValue(sectionKey, recordIndex, templateBarcodeColumn.field, code);
+  };
   saveBarcodeRef.current = (code: string) => {
     if (scanRow === null) return;
-    void setValue(sectionKey, scanRow, barcodeField, code);
+    void saveBarcode(scanRow, code);
     toast.success(`Barcode ${code} saved for row ${(rows.find((r) => r.index === scanRow)?.position ?? scanRow) + 1}.`);
   };
   const onBarcodeScanned = useCallback((code: string) => saveBarcodeRef.current(code), []);
@@ -1066,11 +1090,11 @@ export function AuditExecutionTable({
                   {showBarcodeColumn ? (
                     <td className="border-b border-[#D9E2E8] px-2 py-1.5">
                       <BarcodeCell
-                        expected={rowExpectedBarcode(session.inputDataset, gridColumns.barcodeColumnId, row.index)}
+                        expected={expectedBarcodeOf(row)}
                         scanned={cellText(row.values[BARCODE_SCAN_KEY])}
                         disabled={readOnly}
                         onScan={() => setScanRow(row.index)}
-                        onCommit={(code) => void setValue(sectionKey, row.index, barcodeField, code)}
+                        onCommit={(code) => void saveBarcode(row.index, code)}
                       />
                     </td>
                   ) : null}
@@ -1407,8 +1431,7 @@ function BarcodeCell({
 }) {
   const [draft, setDraft] = useState(scanned ?? "");
   useEffect(() => setDraft(scanned ?? ""), [scanned]);
-  if (!expected) return <span className="text-[#667085]" title="No barcode in the file for this row">N/A</span>;
-  const match = scanned ? barcodeMatches(expected, scanned) : null;
+  const match = scanned && expected ? barcodeMatches(expected, scanned) : null;
   return (
     <div className="flex items-center gap-1.5">
       <input

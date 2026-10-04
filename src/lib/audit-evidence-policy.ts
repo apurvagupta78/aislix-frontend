@@ -59,7 +59,7 @@ export const EVIDENCE_PROOF_OPTIONS: Array<{
   {
     value: "barcode",
     label: "Barcode scan",
-    description: "Confirm product identity where available.",
+    description: "Scan the barcode on every product row to confirm it's the right item.",
   },
   {
     value: "expiry_date",
@@ -160,6 +160,49 @@ export function policyNeedsShelfColumn(policy: Pick<AuditEvidencePolicy, "requir
 export function policyUsesShelfColumn(policy: Pick<AuditEvidencePolicy, "requiredProof">): boolean {
   return policyNeedsShelfColumn(policy) || policy.requiredProof.includes("before_after");
 }
+
+/** Minimum Evidences: photos needed for every photo requirement (at least 1). */
+export function policyMinimumPhotos(policy: Partial<Pick<AuditEvidencePolicy, "minimumPhotos">> | null | undefined): number {
+  const n = Math.round(Number(policy?.minimumPhotos));
+  return Number.isFinite(n) && n > 1 ? n : 1;
+}
+
+export type QualityCheck = AuditEvidencePolicy["qualityChecks"][number];
+
+export const QUALITY_CHECK_OPTIONS: Array<{ value: QualityCheck; label: string; description: string }> = [
+  { value: "blur", label: "Blurry photos", description: "Rejected — the auditee retakes it." },
+  { value: "dark", label: "Dark photos", description: "Rejected — the auditee retakes it." },
+  { value: "glare", label: "Glare / washed out", description: "Rejected — the auditee retakes it." },
+  { value: "duplicate_hash", label: "Same photo twice", description: "Rejected — every photo must be new." },
+  { value: "similarity_review", label: "Very similar photos", description: "Allowed, but flagged for the reviewer." },
+];
+
+/** 0 = no limit. */
+export const PHOTO_AGE_OPTIONS = [0, 5, 15, 30, 60, 120, 240];
+
+export function photoAgeLabel(minutes: number): string {
+  if (!minutes) return "No limit";
+  if (minutes < 60) return `${minutes} minutes`;
+  const hours = minutes / 60;
+  return `${hours} hour${hours === 1 ? "" : "s"}`;
+}
+
+export type ReviewMode = AuditEvidencePolicy["reviewMode"];
+
+export const REVIEW_MODE_OPTIONS: Array<{ value: ReviewMode; label: string; description: string }> = [
+  { value: "manager", label: "Manager review", description: "Any manager approves, flags or rejects the submitted audit." },
+  {
+    value: "independent",
+    label: "Independent reviewer",
+    description: "Only the person you choose can approve it. They're notified when it's submitted.",
+  },
+  {
+    value: "supervisor_receipt",
+    label: "Supervisor receipt",
+    description: "A manager only confirms they received it — no approve or reject step.",
+  },
+  { value: "none", label: "No additional review", description: "Approved automatically when the auditee submits." },
+];
 
 export const DEFAULT_NEAR_EXPIRY_DAYS = 7;
 

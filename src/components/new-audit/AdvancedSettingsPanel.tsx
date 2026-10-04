@@ -10,6 +10,10 @@ import {
 } from "@/components/ui/select";
 import {
   EVIDENCE_PROOF_OPTIONS,
+  PHOTO_AGE_OPTIONS,
+  QUALITY_CHECK_OPTIONS,
+  REVIEW_MODE_OPTIONS,
+  photoAgeLabel,
   policyNearExpiryDays,
   policyNeedsBarcodeColumn,
   policyNeedsShelfColumn,
@@ -39,8 +43,7 @@ type Props = {
   onReviewerChange?: (userId: string) => void;
 };
 
-const SELECTED_CARD =
-  "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]/60";
+const SELECTED_CARD = "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]/60";
 const UNSELECTED_CARD = "border-[#D9E2E8] bg-white";
 const NONE = "__none__";
 const NEAR_EXPIRY_OPTIONS = [0, 3, 7, 14, 30];
@@ -102,8 +105,12 @@ export function AdvancedSettingsPanel({
   onReviewerChange,
 }: Props) {
   const fileColumns = dataset?.columns ?? [];
-  const showShelfPicker = Boolean(onShelfColumnChange) && fileColumns.length > 0 && policyUsesShelfColumn(evidencePolicy);
-  const showBarcodePicker = Boolean(onBarcodeColumnChange) && fileColumns.length > 0 && policyNeedsBarcodeColumn(evidencePolicy);
+  const showShelfPicker =
+    Boolean(onShelfColumnChange) && fileColumns.length > 0 && policyUsesShelfColumn(evidencePolicy);
+  const showBarcodePicker =
+    Boolean(onBarcodeColumnChange) &&
+    fileColumns.length > 0 &&
+    policyNeedsBarcodeColumn(evidencePolicy);
   const shelfCount = distinctShelves(dataset, shelfColumnId ?? null).length;
   const barcodeCount = barcodeColumnId
     ? (dataset?.rows ?? []).filter((r) => (r.values[barcodeColumnId] ?? "").trim()).length
@@ -174,11 +181,14 @@ export function AdvancedSettingsPanel({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-[#667085]">Products this close to their date are flagged “Near expiry”.</p>
+            <p className="text-xs text-[#667085]">
+              Products this close to their date are flagged “Near expiry”.
+            </p>
           </div>
           <p className="self-center text-xs text-[#667085]">
-            The auditee photographs the expiry date on every product and AI reads it. Anything past today’s date is
-            marked EXPIRED and must be removed from the shelf, with a photo, before the audit can be submitted.
+            The auditee photographs the expiry date on every product and AI reads it. Anything past
+            today’s date is marked EXPIRED and must be removed from the shelf, with a photo, before
+            the audit can be submitted.
           </p>
         </div>
       ) : null}
@@ -204,14 +214,14 @@ export function AdvancedSettingsPanel({
           {showBarcodePicker ? (
             <ColumnPicker
               label="Barcode column"
-              required
+              required={false}
               columns={fileColumns}
               value={barcodeColumnId}
               onChange={onBarcodeColumnChange!}
               hint={
                 barcodeColumnId
-                  ? `${barcodeCount} row${barcodeCount === 1 ? "" : "s"} with a barcode — the auditee scans each one.`
-                  : "Which column holds the product barcode (EAN / UPC)?"
+                  ? `${barcodeCount} row${barcodeCount === 1 ? "" : "s"} with a barcode — each scan is checked against it.`
+                  : "Optional — pick the barcode (EAN / UPC) column to check each scan against it. Every row is scanned either way."
               }
             />
           ) : null}
@@ -236,6 +246,10 @@ export function AdvancedSettingsPanel({
               ))}
             </SelectContent>
           </Select>
+          <p className="text-xs text-[#667085]">
+            Photos needed for every photo requirement above (each shelf, row, before / after…).
+            Fewer blocks Submit.
+          </p>
         </div>
         <div className="space-y-1.5">
           <Label>Review requirement</Label>
@@ -251,19 +265,26 @@ export function AdvancedSettingsPanel({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="manager">Manager review</SelectItem>
-              <SelectItem value="independent">Independent reviewer</SelectItem>
-              <SelectItem value="supervisor_receipt">Supervisor receipt</SelectItem>
-              <SelectItem value="none">No additional review</SelectItem>
+              {REVIEW_MODE_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
+          <p className="text-xs text-[#667085]">
+            {REVIEW_MODE_OPTIONS.find((o) => o.value === evidencePolicy.reviewMode)?.description}
+          </p>
         </div>
         {evidencePolicy.reviewMode === "independent" && onReviewerChange ? (
           <div className="space-y-1.5">
             <Label>
               Reviewer<span className="text-[#667085]"> *</span>
             </Label>
-            <Select value={reviewerId || NONE} onValueChange={(v) => onReviewerChange(v === NONE ? "" : v)}>
+            <Select
+              value={reviewerId || NONE}
+              onValueChange={(v) => onReviewerChange(v === NONE ? "" : v)}
+            >
               <SelectTrigger aria-label="Reviewer">
                 <SelectValue placeholder="Choose a reviewer" />
               </SelectTrigger>
@@ -276,15 +297,104 @@ export function AdvancedSettingsPanel({
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-[#667085]">
+              Managers only. Must be someone other than the auditee.
+            </p>
           </div>
         ) : null}
       </div>
+
+      <div className="space-y-3 rounded-xl border border-[#D9E2E8] bg-[#F4F7F9] p-4">
+        <div>
+          <p className="text-sm font-semibold text-[#102A43]">Photo rules</p>
+          <p className="text-xs text-[#667085]">
+            Checked on the auditee&apos;s phone when each photo is added.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Label className="flex cursor-pointer items-start gap-3">
+            <Checkbox
+              checked={evidencePolicy.captureSource === "in_app_only"}
+              onCheckedChange={(v) =>
+                onEvidencePolicyChange({ captureSource: v === true ? "in_app_only" : "either" })
+              }
+            />
+            <span>
+              <span className="block text-sm font-medium">Only photos taken during the audit</span>
+              <span className="block text-xs font-normal text-[#667085]">
+                Old photos from the gallery are rejected — photos must be taken after the audit was
+                opened.
+              </span>
+            </span>
+          </Label>
+          <div className="space-y-1.5">
+            <Label>Photo age limit</Label>
+            <Select
+              value={String(
+                PHOTO_AGE_OPTIONS.includes(evidencePolicy.maximumEvidenceAgeMinutes)
+                  ? evidencePolicy.maximumEvidenceAgeMinutes
+                  : 0,
+              )}
+              onValueChange={(v) =>
+                onEvidencePolicyChange({ maximumEvidenceAgeMinutes: Number(v) })
+              }
+            >
+              <SelectTrigger aria-label="Photo age limit">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PHOTO_AGE_OPTIONS.map((m) => (
+                  <SelectItem key={m} value={String(m)}>
+                    {photoAgeLabel(m)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-[#667085]">
+              Photos taken longer ago than this are rejected.
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-2 md:grid-cols-2">
+          {QUALITY_CHECK_OPTIONS.map((check) => {
+            const checked = evidencePolicy.qualityChecks.includes(check.value);
+            return (
+              <Label
+                key={check.value}
+                className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${checked ? SELECTED_CARD : UNSELECTED_CARD}`}
+              >
+                <Checkbox
+                  checked={checked}
+                  onCheckedChange={(v) =>
+                    onEvidencePolicyChange({
+                      qualityChecks:
+                        v === true
+                          ? [...new Set([...evidencePolicy.qualityChecks, check.value])]
+                          : evidencePolicy.qualityChecks.filter((c) => c !== check.value),
+                    })
+                  }
+                />
+                <span>
+                  <span className="block text-sm font-medium">{check.label}</span>
+                  <span className="block text-xs font-normal text-[#667085]">
+                    {check.description}
+                  </span>
+                </span>
+              </Label>
+            );
+          })}
+        </div>
+      </div>
+
       <Label className="flex items-start gap-3 rounded-xl border border-brand/30 bg-brand-soft/30 p-4">
         <Checkbox checked={requireRca} onCheckedChange={(v) => onRequireRcaChange(v === true)} />
         <span>
-          <span className="block text-sm font-semibold">Require explanation for every variance</span>
+          <span className="block text-sm font-semibold">
+            Require explanation for every variance
+          </span>
           <span className="block text-xs font-normal text-muted-foreground">
-            Auditors must pick a reason wherever their value differs from the provided one before submitting.
+            Auditors must pick a reason wherever their value differs from the provided one before
+            submitting.
           </span>
         </span>
       </Label>

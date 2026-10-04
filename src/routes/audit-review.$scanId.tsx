@@ -93,9 +93,29 @@ function AuditReviewPage() {
     enabled: accessQuery.data === true,
   });
 
+  const reviewerId = sessionQuery.data?.reviewer_id ?? null;
+  const reviewerQuery = useQuery({
+    queryKey: ["audit-reviewer", reviewerId],
+    enabled: Boolean(reviewerId),
+    queryFn: async () => {
+      const [{ data: auth }, { data: profile }] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase.from("profiles").select("full_name, email").eq("id", reviewerId!).maybeSingle(),
+      ]);
+      return {
+        isMe: auth.user?.id === reviewerId,
+        name: (
+          (profile?.full_name as string | null) ||
+          (profile?.email as string | null) ||
+          "the chosen reviewer"
+        ).trim(),
+      };
+    },
+  });
+
   const reviewMutation = useMutation({
     mutationFn: (input: {
-      action: "approved" | "rejected" | "flagged";
+      action: "approved" | "rejected" | "flagged" | "received";
       rejectMode?: "reopen_same" | "new_assignment";
     }) =>
       reviewDigitalAudit({
@@ -109,16 +129,19 @@ function AuditReviewPage() {
       toast.success(
         vars.action === "approved"
           ? "Audit approved."
-          : vars.action === "flagged"
-            ? "Audit flagged."
-            : "Audit rejected.",
+          : vars.action === "received"
+            ? "Receipt confirmed."
+            : vars.action === "flagged"
+              ? "Audit flagged."
+              : "Audit rejected.",
       );
       void queryClient.invalidateQueries({ queryKey: ["org-assignments"] });
+      void queryClient.invalidateQueries({ queryKey: ["audit-review", scanId] });
     },
     onError: (e) => toast.error(toUserMessage(e)),
   });
 
-  if (accessQuery.isPending || sessionQuery.isPending) {
+  if (accessQuery.isPending || sessionQuery.isPending || (reviewerId && reviewerQuery.isPending)) {
     return (
       <AppShell title="Review audit">
         <p className="mb-3 text-sm text-muted-foreground">Loading audit review…</p>
@@ -138,21 +161,22 @@ function AuditReviewPage() {
     );
   }
 
-  if (!accessQuery.data) {
+  const reviewMode = sessionQuery.data?.policy?.reviewMode ?? "manager";
+  const isChosenReviewer = reviewMode === "independent" && reviewerQuery.data?.isMe === true;
+  if (!accessQuery.data && !isChosenReviewer) {
     return (
       <AppShell title="Review audit">
         <ErrorState title="Access denied" description="Only managers can review audits." />
       </AppShell>
     );
   }
+  const lockedToReviewer = reviewMode === "independent" && Boolean(reviewerId) && !isChosenReviewer;
+  const receiptOnly = reviewMode === "supervisor_receipt";
 
   if (sessionQuery.isError || !sessionQuery.data) {
     return (
       <AppShell title="Review audit">
-        <ErrorState
-          title="Audit not found"
-          description={toUserMessage(sessionQuery.error)}
-        />
+        <ErrorState title="Audit not found" description={toUserMessage(sessionQuery.error)} />
         <Button asChild variant="outline" className="mt-4">
           <Link to="/results" search={{ scan: scanId }}>
             Open audit results instead
@@ -188,10 +212,7 @@ function AuditReviewPage() {
       ? session.lines
       : session.lines.filter((l) => l.category === categoryFilter);
 
-  const totalVarianceValue = session.lines.reduce(
-    (s, l) => s + (l.variance_value_inr ?? 0),
-    0,
-  );
+  const totalVarianceValue = session.lines.reduce((s, l) => s + (l.variance_value_inr ?? 0), 0);
   const varianceLines = session.lines.filter((l) => (l.variance_qty ?? 0) !== 0);
   const activeBin =
     selectedBin ??
@@ -306,98 +327,139 @@ function AuditReviewPage() {
 
         <aside className="space-y-4 rounded-xl border border-border bg-card p-4 lg:sticky lg:top-4 lg:self-start">
           <h3 className="font-semibold">Review actions</h3>
-          <p className="text-xs text-muted-foreground">
-            Approving verifies the audit record. Open exceptions and corrective actions remain
-            separate until verified.
-          </p>
-          <Textarea
-            placeholder="Comment (optional)"
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            rows={3}
-          />
-          <Button
-            className="w-full"
-            onClick={() => reviewMutation.mutate({ action: "approved" })}
-            disabled={reviewMutation.isPending}
-          >
-            {reviewMutation.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Check className="size-4" />
-            )}
-            Approve
-          </Button>
-          <Button
-            className="w-full"
-            variant="outline"
-            onClick={() => reviewMutation.mutate({ action: "flagged" })}
-            disabled={reviewMutation.isPending}
-          >
-            <Flag className="size-4" /> Flag variance
-          </Button>
-          <div className="space-y-2 border-t border-border pt-3">
-            <p className="text-xs font-medium text-muted-foreground">Reject audit</p>
-            <Select
-              value={rejectMode}
-              onValueChange={(v) => setRejectMode(v as typeof rejectMode)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="reopen_same">Reopen same assignment</SelectItem>
-                <SelectItem value="new_assignment">Require new assignment</SelectItem>
-              </SelectContent>
-            </Select>
+          {lockedToReviewer ? (
+            <p className="rounded-lg border border-[#D9E2E8] bg-[#EEF1F4] p-3 text-xs text-[#102A43]">
+              This audit needs an independent reviewer. Only{" "}
+              <strong>{reviewerQuery.data?.name}</strong> can approve, flag or reject it.
+            </p>
+          ) : receiptOnly ? (
+            <p className="text-xs text-muted-foreground">
+              This audit only needs a supervisor to confirm it was received — there is no approve or
+              reject step.
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {isChosenReviewer ? "You're the independent reviewer for this audit. " : ""}
+              Approving verifies the audit record. Open exceptions and corrective actions remain
+              separate until verified.
+            </p>
+          )}
+          {lockedToReviewer ? null : (
+            <Textarea
+              placeholder="Comment (optional)"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              rows={3}
+            />
+          )}
+          {receiptOnly ? (
             <Button
               className="w-full"
-              variant="destructive"
-              onClick={() =>
-                reviewMutation.mutate({ action: "rejected", rejectMode })
-              }
+              onClick={() => reviewMutation.mutate({ action: "received" })}
               disabled={reviewMutation.isPending}
             >
-              <X className="size-4" /> Reject
+              {reviewMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Check className="size-4" />
+              )}
+              Confirm receipt
             </Button>
-          </div>
-          <div className="space-y-2 border-t border-border pt-3">
-            <p className="text-xs font-medium text-muted-foreground">Request re-audit</p>
-            <p className="text-xs text-muted-foreground">The original audit stays locked. A new assignment is created.</p>
-            <Textarea
-              placeholder="Reason (required)"
-              value={reauditReason}
-              onChange={(e) => setReauditReason(e.target.value)}
-              rows={2}
-            />
-            <Select value={reauditAssignee} onValueChange={setReauditAssignee}>
-              <SelectTrigger><SelectValue placeholder="Assign auditor" /></SelectTrigger>
-              <SelectContent>
-                {(membersQuery.data ?? []).map((m) => (
-                  <SelectItem key={m.user_id} value={m.user_id}>{m.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              className="w-full"
-              variant="outline"
-              disabled={!reauditReason.trim() || !reauditAssignee}
-              onClick={() => {
-                const member = (membersQuery.data ?? []).find((m) => m.user_id === reauditAssignee);
-                void requestReaudit({
-                  scanId,
-                  assignmentId: session.assignment_id,
-                  reason: reauditReason,
-                  assigneeId: reauditAssignee,
-                  assigneeName: member?.name ?? "Auditor",
-                })
-                  .then(() => toast.success("Re-audit requested. Original audit is unchanged."))
-                  .catch((e) => toast.error(toUserMessage(e)));
-              }}
-            >
-              Request re-audit
-            </Button>
-          </div>
+          ) : null}
+          {lockedToReviewer || receiptOnly ? null : (
+            <>
+              <Button
+                className="w-full"
+                onClick={() => reviewMutation.mutate({ action: "approved" })}
+                disabled={reviewMutation.isPending}
+              >
+                {reviewMutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Check className="size-4" />
+                )}
+                Approve
+              </Button>
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={() => reviewMutation.mutate({ action: "flagged" })}
+                disabled={reviewMutation.isPending}
+              >
+                <Flag className="size-4" /> Flag variance
+              </Button>
+              <div className="space-y-2 border-t border-border pt-3">
+                <p className="text-xs font-medium text-muted-foreground">Reject audit</p>
+                <Select
+                  value={rejectMode}
+                  onValueChange={(v) => setRejectMode(v as typeof rejectMode)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="reopen_same">Reopen same assignment</SelectItem>
+                    <SelectItem value="new_assignment">Require new assignment</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  className="w-full"
+                  variant="destructive"
+                  onClick={() => reviewMutation.mutate({ action: "rejected", rejectMode })}
+                  disabled={reviewMutation.isPending}
+                >
+                  <X className="size-4" /> Reject
+                </Button>
+              </div>
+            </>
+          )}
+          {accessQuery.data ? (
+            <div className="space-y-2 border-t border-border pt-3">
+              <p className="text-xs font-medium text-muted-foreground">Request re-audit</p>
+              <p className="text-xs text-muted-foreground">
+                The original audit stays locked. A new assignment is created.
+              </p>
+              <Textarea
+                placeholder="Reason (required)"
+                value={reauditReason}
+                onChange={(e) => setReauditReason(e.target.value)}
+                rows={2}
+              />
+              <Select value={reauditAssignee} onValueChange={setReauditAssignee}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Assign auditor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(membersQuery.data ?? []).map((m) => (
+                    <SelectItem key={m.user_id} value={m.user_id}>
+                      {m.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                className="w-full"
+                variant="outline"
+                disabled={!reauditReason.trim() || !reauditAssignee}
+                onClick={() => {
+                  const member = (membersQuery.data ?? []).find(
+                    (m) => m.user_id === reauditAssignee,
+                  );
+                  void requestReaudit({
+                    scanId,
+                    assignmentId: session.assignment_id,
+                    reason: reauditReason,
+                    assigneeId: reauditAssignee,
+                    assigneeName: member?.name ?? "Auditor",
+                  })
+                    .then(() => toast.success("Re-audit requested. Original audit is unchanged."))
+                    .catch((e) => toast.error(toUserMessage(e)));
+                }}
+              >
+                Request re-audit
+              </Button>
+            </div>
+          ) : null}
         </aside>
       </div>
       <div className="mt-6">
@@ -431,9 +493,7 @@ function VarianceRow({
       <td className="p-3 tabular-nums">{line.expected_qty}</td>
       <td className="p-3 tabular-nums">{line.system_qty ?? "—"}</td>
       <td className="p-3 tabular-nums">{line.actual_qty ?? "—"}</td>
-      <td
-        className={`p-3 tabular-nums ${variance !== 0 ? "font-medium text-warning" : ""}`}
-      >
+      <td className={`p-3 tabular-nums ${variance !== 0 ? "font-medium text-warning" : ""}`}>
         {line.variance_qty ?? "—"}
         {line.variance_pct != null ? ` (${line.variance_pct.toFixed(0)}%)` : ""}
       </td>

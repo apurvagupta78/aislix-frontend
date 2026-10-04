@@ -108,6 +108,8 @@ export type DigitalAuditSession = {
   /** Evidence policy selected when the audit was assigned (null for legacy assignments). */
   policy: AuditEvidencePolicy | null;
   require_rca: boolean;
+  /** Chosen reviewer for Independent reviewer audits. */
+  reviewer_id?: string | null;
 };
 
 export const evidenceKey = {
@@ -426,7 +428,7 @@ export async function loadDigitalAuditSession(scanId: string): Promise<DigitalAu
     assignmentId
       ? supabase
           .from("scan_assignments")
-          .select("evidence_policy, require_rca, template_snapshot")
+          .select("evidence_policy, require_rca, template_snapshot, reviewer_id")
           .eq("id", assignmentId)
           .maybeSingle()
       : Promise.resolve({ data: null }),
@@ -500,6 +502,7 @@ export async function loadDigitalAuditSession(scanId: string): Promise<DigitalAu
     bins,
     policy,
     require_rca: requireRca,
+    reviewer_id: (assignmentRow?.reviewer_id as string | null) ?? null,
   };
 }
 
@@ -1435,14 +1438,15 @@ export async function computeAndPersistDigitalComparison(scanId: string): Promis
 export async function reviewDigitalAudit(input: {
   scanId: string;
   assignmentId: string;
-  action: "approved" | "rejected" | "flagged";
+  /** "received" = Supervisor receipt: acknowledged, then finalised like an approval. */
+  action: "approved" | "rejected" | "flagged" | "received";
   rejectMode?: "reopen_same" | "new_assignment";
   comment?: string;
 }): Promise<void> {
   const userId = await requireUserId();
   const orgId = await requireOrgId();
 
-  await supabase.from("audit_approvals").insert({
+  const { error: approvalErr } = await supabase.from("audit_approvals").insert({
     scan_id: input.scanId,
     assignment_id: input.assignmentId,
     org_id: orgId,
@@ -1450,9 +1454,10 @@ export async function reviewDigitalAudit(input: {
     action: input.action,
     reject_mode: input.rejectMode ?? null,
     comment: input.comment?.trim() || null,
-  });
+  } as never);
+  if (approvalErr) dbError(approvalErr, "Could not record the review.");
 
-  if (input.action === "approved") {
+  if (input.action === "approved" || input.action === "received") {
     try {
       const { enrichDigitalLinesWithAiSuggestions } = await import("@/lib/ai-assisted-audit");
       await enrichDigitalLinesWithAiSuggestions(input.scanId);
@@ -1467,8 +1472,11 @@ export async function reviewDigitalAudit(input: {
       await syncFindingsForScan(input.scanId);
       await recordActivity({
         scanId: input.scanId,
-        eventType: "audit_approved",
-        summary: "Manager approved the audit and synced findings",
+        eventType: input.action === "received" ? "audit_received" : "audit_approved",
+        summary:
+          input.action === "received"
+            ? "Supervisor confirmed receipt of the audit and synced findings"
+            : "Manager approved the audit and synced findings",
       });
     } catch (e) {
       console.error("[digital-audit] finding sync after approval failed", e);

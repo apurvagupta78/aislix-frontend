@@ -60,7 +60,13 @@ function rowEvidence(row: DigitalResultRow, audit: DigitalColumnsAudit, hasMisma
   if (status && EVIDENCE_STATUSES.has(status as EvidenceStatus)) {
     return { status: status as EvidenceStatus, reasons };
   }
-  return evidenceCheck({ mode: audit.rowEvidence, photos: row.photos, minimumPhotos: 1, flags: [], hasMismatch });
+  return evidenceCheck({
+    mode: audit.rowEvidence,
+    photos: row.photos,
+    minimumPhotos: audit.evidence?.minimumPhotos ?? 1,
+    flags: [],
+    hasMismatch,
+  });
 }
 
 function StatusPill({ label, background, border, dashed, title }: { label: string; background: string; border: string; dashed?: boolean; title?: string }) {
@@ -188,7 +194,7 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
   const evidence = audit.evidence;
   const requirements = evidence
     ? evaluateGridEvidence({
-        policy: { requiredProof: evidence.requiredProof },
+        policy: { requiredProof: evidence.requiredProof, minimumPhotos: evidence.minimumPhotos },
         requireRca: evidence.requireRca,
         dataset: evidence.dataset,
         columns: evidence.columns,
@@ -215,7 +221,7 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
         })),
       })
     : [];
-  const showBarcode = Boolean(evidence?.requiredProof.includes("barcode") && evidence.columns.barcodeColumnId);
+  const showBarcode = Boolean(evidence?.requiredProof.includes("barcode"));
   const showReason = Boolean(evidence?.requireRca && pairs.length);
   const showExpiry = rows.some((r) => r.expiry);
   const auditDay = auditDayOf(evidence?.deviceInfo);
@@ -434,15 +440,15 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
                   ) : null}
                   {showBarcode ? (
                     <td className="border-l border-[#D9E2E8] px-3 py-2">
-                      {!row.barcodeExpected ? (
-                        <span className="text-[#667085]">N/A</span>
-                      ) : row.barcodeScanned ? (
+                      {row.barcodeScanned ? (
                         <span className="inline-flex items-center gap-1.5">
                           <span className="font-mono text-xs text-[#102A43]">{row.barcodeScanned}</span>
-                          <StatusPill
-                            {...(barcodeMatches(row.barcodeExpected, row.barcodeScanned) ? PAIR_PILL.match : PAIR_PILL.mismatch)}
-                            title={`Expected ${row.barcodeExpected}`}
-                          />
+                          {row.barcodeExpected ? (
+                            <StatusPill
+                              {...(barcodeMatches(row.barcodeExpected, row.barcodeScanned) ? PAIR_PILL.match : PAIR_PILL.mismatch)}
+                              title={`Expected ${row.barcodeExpected}`}
+                            />
+                          ) : null}
                         </span>
                       ) : (
                         <StatusPill label="Not scanned" {...EVIDENCE_PILL.missing} />

@@ -521,9 +521,7 @@ function NewAuditPage() {
   const evidenceColumnError =
     evidenceDataset && policyNeedsShelfColumn(effectivePolicy) && !activeShelfColumnId
       ? "Choose the shelf / location column for Evidence per shelf."
-      : evidenceDataset && policyNeedsBarcodeColumn(effectivePolicy) && !activeBarcodeColumnId
-        ? "Choose the barcode column for Barcode scan."
-        : null;
+      : null;
 
   useEffect(() => {
     const stores = storesQuery.data;
@@ -1432,16 +1430,24 @@ function NewAuditPage() {
                   requireRca={requireRca}
                   onEvidenceLevelChange={selectEvidenceLevel}
                   onToggleProof={toggleProof}
-                  onEvidencePolicyChange={(patch) =>
-                    setEvidencePolicy((current) => ({ ...current, ...patch }))
-                  }
+                  onEvidencePolicyChange={(patch) => {
+                    const photoRules =
+                      "captureSource" in patch || "maximumEvidenceAgeMinutes" in patch || "qualityChecks" in patch;
+                    if (photoRules) setEvidenceLevel("custom");
+                    setEvidencePolicy((current) => ({ ...current, ...patch, ...(photoRules ? { level: "custom" } : {}) }));
+                  }}
                   onRequireRcaChange={setRequireRca}
                   dataset={evidenceDataset}
                   shelfColumnId={activeShelfColumnId ?? shelfColumnId}
                   barcodeColumnId={activeBarcodeColumnId ?? barcodeColumnId}
                   onShelfColumnChange={setShelfColumnId}
                   onBarcodeColumnChange={setBarcodeColumnId}
-                  members={(membersQuery.data ?? []).map((m) => ({ user_id: m.user_id, name: m.name }))}
+                  members={[
+                    ...(userId ? [{ user_id: userId, name: "Me" }] : []),
+                    ...(membersQuery.data ?? [])
+                      .filter((m) => m.status === "active" && ["owner", "admin", "manager"].includes(m.role.toLowerCase()))
+                      .map((m) => ({ user_id: m.user_id, name: m.name })),
+                  ]}
                   reviewerId={reviewerId}
                   onReviewerChange={setReviewerId}
                 />

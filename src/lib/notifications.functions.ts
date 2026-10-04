@@ -33,10 +33,9 @@ export const notifyMember = createServerFn({ method: "POST" })
       type: String(input?.type ?? "announcement").slice(0, 64),
       title: String(input?.title ?? "Notification").slice(0, 200),
       body: input?.body ? String(input.body).slice(0, 2000) : null,
-      payload: (JSON.stringify(input?.payload ?? {}).length <= 8000 ? input?.payload ?? {} : {}) as Record<
-        string,
-        unknown
-      >,
+      payload: (JSON.stringify(input?.payload ?? {}).length <= 8000
+        ? (input?.payload ?? {})
+        : {}) as Record<string, unknown>,
     };
   })
   .handler(async ({ data, context }) => {
@@ -74,6 +73,94 @@ export const notifyMember = createServerFn({ method: "POST" })
     });
     if (insertError) throw new Error(insertError.message);
     return { ok: true };
+  });
+
+/**
+ * Tell the right people a submitted audit is waiting for them, following the assignment's
+ * review requirement: the chosen reviewer (Independent reviewer) or every manager
+ * (Manager review / Supervisor receipt). Nobody is notified when no review is needed.
+ */
+export const notifyAuditSubmitted = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { org_id: string; assignment_id: string; scan_id: string }) => ({
+    org_id: String(input?.org_id ?? "").trim(),
+    assignment_id: String(input?.assignment_id ?? "").trim(),
+    scan_id: String(input?.scan_id ?? "").trim(),
+  }))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    if (!data.org_id || !data.assignment_id || !data.scan_id)
+      throw new Error("Missing audit details.");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: assignment } = await supabaseAdmin
+      .from("scan_assignments")
+      .select("assignee_id, reviewer_id, evidence_policy, template_snapshot, stores(name)")
+      .eq("id", data.assignment_id)
+      .eq("org_id", data.org_id)
+      .maybeSingle();
+    if (!assignment) throw new Error("Assignment not found.");
+
+    if (assignment.assignee_id !== userId) {
+      const { data: me } = await supabase
+        .from("organization_members")
+        .select("role")
+        .eq("org_id", data.org_id)
+        .eq("user_id", userId)
+        .eq("status", "active")
+        .maybeSingle();
+      if (!me || !MANAGER_ROLES.includes(String(me.role).toLowerCase()))
+        throw new Error("Forbidden");
+    }
+
+    const policy = (assignment.evidence_policy ?? {}) as { reviewMode?: string };
+    const mode = policy.reviewMode ?? "manager";
+    if (mode === "none") return { ok: true, count: 0 };
+
+    let recipients: string[];
+    if (mode === "independent" && assignment.reviewer_id) {
+      recipients = [assignment.reviewer_id as string];
+    } else {
+      const { data: managers } = await supabaseAdmin
+        .from("organization_members")
+        .select("user_id")
+        .eq("org_id", data.org_id)
+        .eq("status", "active")
+        .in("role", MANAGER_ROLES as never);
+      recipients = (managers ?? []).map((m) => m.user_id as string);
+    }
+    recipients = [...new Set(recipients)].filter((id) => id && id !== assignment.assignee_id);
+    if (!recipients.length) return { ok: true, count: 0 };
+
+    const auditName =
+      String((assignment.template_snapshot as { name?: string } | null)?.name ?? "").trim() ||
+      "Audit";
+    const storeName = String((assignment.stores as { name?: string } | null)?.name ?? "").trim();
+    const where = storeName ? ` at ${storeName}` : "";
+    const receipt = mode === "supervisor_receipt";
+    const { error } = await supabaseAdmin.from("notifications").insert(
+      recipients.map((user_id) => ({
+        user_id,
+        org_id: data.org_id,
+        type: receipt ? "audit_receipt_requested" : "audit_review_requested",
+        title: receipt
+          ? `Confirm you received: ${auditName}${where}`
+          : `Review needed: ${auditName}${where}`,
+        body:
+          mode === "independent"
+            ? "You're the reviewer for this audit. Only you can approve it."
+            : receipt
+              ? "A supervisor needs to confirm this audit was received."
+              : "A submitted audit is waiting for a manager to approve, flag or reject it.",
+        payload: {
+          scan_id: data.scan_id,
+          assignment_id: data.assignment_id,
+          review_mode: mode,
+        } as never,
+      })),
+    );
+    if (error) throw new Error(error.message);
+    return { ok: true, count: recipients.length };
   });
 
 /** Notify all managers — callable by assignee after digital audit submit. */

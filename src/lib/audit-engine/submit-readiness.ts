@@ -165,6 +165,8 @@ export function computeSubmitReadiness(input: {
   requiredPhotoFieldKey?: string | null;
   /** Column headers as shown in the table, keyed by field key. */
   columnLabels?: Map<string, string>;
+  /** Photos each row needs (Minimum Evidences). */
+  minimumPhotos?: number;
 }): SubmitReadiness {
   const { definition, sectionKey, completion, rows, requirements } = input;
   const positionByIndex = new Map(rows.map((r) => [r.index, r.position]));
@@ -242,14 +244,16 @@ export function computeSubmitReadiness(input: {
   }
   if (photoMissing.length) {
     const where = formatRows(photoMissing.map((r) => r.position + 1));
+    const minPhotos = Math.max(1, input.minimumPhotos ?? 1);
+    const count = minPhotos > 1 ? `at least ${minPhotos} photos` : "a photo";
     blockers.push({
       id: "photos",
       kind: "photos",
-      title: plural(photoMissing.length, "Add a photo", "Add photos"),
+      title: plural(photoMissing.length, minPhotos > 1 ? "Add more photos" : "Add a photo", "Add photos"),
       detail:
         input.photoRule === "on_difference"
-          ? `When your value is different from the provided one, that row needs a photo. Missing on ${where}.`
-          : `Every row needs a photo in the Evidence column. Missing on ${where}.`,
+          ? `When your value is different from the provided one, that row needs ${count}. Missing on ${where}.`
+          : `Every row needs ${count} in the Evidence column. Missing on ${where}.`,
       rowIndexes: photoMissing.map((r) => r.index),
     });
   }
@@ -362,7 +366,7 @@ type ServerCompletion = {
   missingRcaCount: number;
   missingEvidenceCount: number;
   missingExpiryCoverageRecords: number;
-  issues: { type: string; label?: string; count?: number }[];
+  issues: { type: string; label?: string; count?: number; minimum?: number }[];
 };
 
 /** Plain-English lines for the server-side completion check. */
@@ -370,6 +374,8 @@ export function describeServerIssues(result: ServerCompletion): string[] {
   const out: string[] = [];
   for (const issue of result.issues) {
     const n = Math.max(1, Number(issue.count) || 1);
+    const min = Math.max(1, Number(issue.minimum) || 1);
+    const photo = min > 1 ? `at least ${min} photos` : "a photo";
     switch (issue.type) {
       case "missing_assignment":
         out.push("We couldn't find this audit. It may have been removed or reassigned — refresh the page.");
@@ -378,14 +384,21 @@ export function describeServerIssues(result: ServerCompletion): string[] {
         out.push("This audit is assigned to someone else, so it can't be submitted from your account.");
         break;
       case "row_photo":
-        out.push(`${n} ${plural(n, "row still needs", "rows still need")} a photo.`);
+        out.push(`${n} ${plural(n, "row still needs", "rows still need")} ${photo}.`);
         break;
       case "shelf_photo":
-        out.push(`${n} ${plural(n, "shelf still needs", "shelves still need")} a photo.`);
+        out.push(`${n} ${plural(n, "shelf still needs", "shelves still need")} ${photo}.`);
         break;
       case "before_after":
-        out.push(`${n} ${plural(n, "shelf still needs", "shelves still need")} a before and after photo.`);
+        out.push(`${n} ${plural(n, "shelf still needs", "shelves still need")} ${photo} before and after.`);
         break;
+      case "context_photo":
+      case "quarantine_contents":
+      case "sealed_container": {
+        const label = issue.label ? friendlyLabel(issue.label) : "Evidence photo";
+        out.push(min > 1 ? `${label} needs at least ${min} photos.` : `${label} is still missing.`);
+        break;
+      }
       case "barcode":
         out.push(`${n} ${plural(n, "row still needs", "rows still need")} a barcode scan.`);
         break;

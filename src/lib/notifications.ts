@@ -111,5 +111,9 @@ export function notificationHref(notification: InboxNotification): string {
     return typeof findingId === "string" ? `/findings/${encodeURIComponent(findingId)}` : "/findings";
   }
   if (notification.type === "reaudit_requested") return "/my-scans";
+  if (notification.type === "audit_review_requested" || notification.type === "audit_receipt_requested") {
+    const scanId = notification.payload["scan_id"];
+    return typeof scanId === "string" ? `/audit-review/${encodeURIComponent(scanId)}` : "/assigned-scans";
+  }
   return "/dashboard";
 }

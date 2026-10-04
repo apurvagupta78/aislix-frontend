@@ -254,6 +254,7 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
           onUploadImage={(file) => uploadCustomAuditImage(assignmentId, file)}
           readOnly={readOnly}
           testMode={testMode}
+          evidencePolicy={session.evidencePolicy}
         />
       </div>
       {requirements.length ? (
@@ -306,8 +307,7 @@ function FormAuditEvidence({
     setValue,
     onUploadImage: (file) => uploadCustomAuditImage(assignmentId, file),
     onUploadVideo: (file) => uploadCustomAuditVideo(assignmentId, file),
-    requiredProof: session.evidencePolicy?.requiredProof ?? [],
-    qualityChecks: session.evidencePolicy?.qualityChecks ?? [],
+    policy: session.evidencePolicy,
     storeLocation: session.storeLocation,
     readOnly,
     canCapture,

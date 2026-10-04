@@ -1,5 +1,6 @@
 import {
   EVIDENCE_PROOF_OPTIONS,
+  policyMinimumPhotos,
   policyNearExpiryDays,
   type AuditEvidencePolicy,
   type EvidenceProof,
@@ -258,22 +259,29 @@ export function evaluateGridEvidence(input: {
   const proofs = new Set<EvidenceProof>(input.policy?.requiredProof ?? []);
   const audit = auditEvidenceValues(input.responses);
   const slots = shelfSlots(input.dataset, input.columns.shelfColumnId);
+  const minPhotos = policyMinimumPhotos(input.policy);
+  const photoCount = minPhotos > 1 ? `at least ${minPhotos} photos` : "a photo";
   const out: GridRequirement[] = [];
   const single = (proof: EvidenceProof, hint: string, has: boolean) =>
     out.push({ id: proof, label: labelOf(proof), hint, done: has ? 1 : 0, total: 1, ok: has, missing: has ? [] : [labelOf(proof)] });
+  const enoughPhotos = (value: unknown) => listValue(value).length >= minPhotos;
 
   for (const proof of EVIDENCE_PROOF_OPTIONS.map((o) => o.value)) {
     if (!proofs.has(proof)) continue;
     switch (proof) {
       case "context_photo":
-        single(proof, "One photo showing the whole area you audited.", listValue(audit.context_photo).length > 0);
+        single(
+          proof,
+          minPhotos > 1 ? `${minPhotos} photos showing the whole area you audited.` : "One photo showing the whole area you audited.",
+          enoughPhotos(audit.context_photo),
+        );
         break;
       case "shelf_photo":
       case "before_after": {
         const keys: ShelfPhotoKey[] = proof === "shelf_photo" ? ["shelf_photo"] : ["shelf_photo", "after_photo"];
         const missing = slots.filter((slot) => {
           const values = shelfEvidenceValues(input.responses, slot);
-          return keys.some((k) => listValue(values[k]).length === 0);
+          return keys.some((k) => !enoughPhotos(values[k]));
         });
         const perShelf = slots.length > 1 || slots[0]?.name;
         out.push({
@@ -282,11 +290,11 @@ export function evaluateGridEvidence(input: {
           hint:
             proof === "shelf_photo"
               ? perShelf
-                ? "Add one photo for every shelf listed below."
-                : "Add a photo of the shelf you audited."
+                ? `Add ${photoCount} for every shelf listed below.`
+                : `Add ${photoCount} of the shelf you audited.`
               : perShelf
-                ? "For every shelf: a photo before you fix anything and one after."
-                : "A photo before you fix anything and one after.",
+                ? `For every shelf: ${photoCount} before you fix anything and ${photoCount} after.`
+                : `${photoCount.charAt(0).toUpperCase()}${photoCount.slice(1)} before you fix anything and ${photoCount} after.`,
           done: slots.length - missing.length,
           total: slots.length,
           ok: missing.length === 0,
@@ -303,9 +311,9 @@ export function evaluateGridEvidence(input: {
           label: labelOf(proof),
           hint:
             proof === "per_sku_photo"
-              ? "Add a photo in the Evidence column on every row."
+              ? `Add ${photoCount} in the Evidence column on every row.`
               : needed.length
-                ? "Add a photo on every row where your value differs from the provided one."
+                ? `Add ${photoCount} on every row where your value differs from the provided one.`
                 : "No differences so far — only needed when your value differs from the provided one.",
           done: needed.length - missing.length,
           total: needed.length,
@@ -315,18 +323,13 @@ export function evaluateGridEvidence(input: {
         break;
       }
       case "barcode": {
-        const needed = input.rows.filter((r) => rowExpectedBarcode(input.dataset, input.columns.barcodeColumnId, r.index));
-        const missing = needed.filter((r) => !String(r.values[BARCODE_SCAN_KEY] ?? "").trim());
+        const missing = input.rows.filter((r) => !String(r.values[BARCODE_SCAN_KEY] ?? "").trim());
         out.push({
           id: proof,
           label: labelOf(proof),
-          hint: !input.columns.barcodeColumnId
-            ? "No barcode column was chosen for this audit — nothing to scan."
-            : needed.length
-              ? "Scan the barcode on every row that has one."
-              : "No row has a barcode in the file — nothing to scan.",
-          done: needed.length - missing.length,
-          total: needed.length,
+          hint: input.rows.length ? "Scan the barcode on every product row." : "No product rows yet — nothing to scan.",
+          done: input.rows.length - missing.length,
+          total: input.rows.length,
           ok: missing.length === 0,
           missing: missing.map(rowLabel),
         });
@@ -379,10 +382,20 @@ export function evaluateGridEvidence(input: {
         single(proof, "Record the audit walk on your phone, or upload a short video.", listValue(audit.session_video).length > 0);
         break;
       case "quarantine_contents":
-        single(proof, "Photo of removed or held stock.", listValue(audit.quarantine_contents).length > 0);
+        single(
+          proof,
+          minPhotos > 1 ? `${minPhotos} photos of removed or held stock.` : "Photo of removed or held stock.",
+          enoughPhotos(audit.quarantine_contents),
+        );
         break;
       case "sealed_container":
-        single(proof, "Photo of the sealed bag / container showing the seal ID.", listValue(audit.sealed_container).length > 0);
+        single(
+          proof,
+          minPhotos > 1
+            ? `${minPhotos} photos of the sealed bag / container showing the seal ID.`
+            : "Photo of the sealed bag / container showing the seal ID.",
+          enoughPhotos(audit.sealed_container),
+        );
         break;
     }
   }

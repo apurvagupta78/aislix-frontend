@@ -7,6 +7,7 @@ import {
   OBSOLETE_SHELF_SCAN_SUBMIT_COLUMNS,
   buildCustomAuditShelfScanInsert,
   countEvidencePhotosInResponses,
+  isAutoApproved,
   type ResponseMap,
 } from "@/lib/custom-audit";
 
@@ -56,6 +57,16 @@ describe("buildCustomAuditShelfScanInsert", () => {
     });
 
     expect(row.submission_status).toBe("approved");
+  });
+
+  it("follows the assignment's review requirement over the template workflow", () => {
+    expect(buildCustomAuditShelfScanInsert({ ...SAMPLE_SUBMIT_INPUT, reviewMode: "none" }).submission_status).toBe("approved");
+    expect(
+      buildCustomAuditShelfScanInsert({ ...SAMPLE_SUBMIT_INPUT, workflowSubmission: "direct", reviewMode: "independent" })
+        .submission_status,
+    ).toBe("pending_review");
+    expect(isAutoApproved(null, "manager_approval")).toBe(false);
+    expect(isAutoApproved("supervisor_receipt", "direct")).toBe(false);
   });
 
   it("never inserts photo_count below the live shelf_scans check constraint", () => {

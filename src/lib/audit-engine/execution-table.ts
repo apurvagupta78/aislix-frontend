@@ -401,10 +401,10 @@ export function evidenceCheck(input: {
       ? { status: "missing", reasons: [input.mode === "on_mismatch" ? "Photo needed for this mismatch" : "No photo yet"] }
       : { status: "not_required", reasons: [] };
   }
-  const reasons = [...new Set(input.flags)];
-  if (input.photos.length < input.minimumPhotos) {
-    reasons.push(`${input.photos.length} of ${input.minimumPhotos} photos`);
+  if (needed && input.photos.length < input.minimumPhotos) {
+    return { status: "missing", reasons: [`${input.photos.length} of ${input.minimumPhotos} photos`] };
   }
+  const reasons = [...new Set(input.flags)];
   return { status: reasons.length ? "needs_review" : "verified", reasons };
 }
 

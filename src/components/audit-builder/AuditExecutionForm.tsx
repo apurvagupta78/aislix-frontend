@@ -26,7 +26,9 @@ import { isFieldVisible } from "@/lib/audit-builder/rules-engine";
 import { isImageField } from "@/lib/audit-builder/field-library";
 import { resolveAuditEvidenceUrl } from "@/lib/custom-audit";
 import { shouldBlockDuplicates, shouldCheckImageQuality } from "@/lib/audit-builder/evidence-validation";
-import { useEvidenceUpload } from "@/components/audit-builder/useEvidenceUpload";
+import { uploadOptionsForPolicy, useEvidenceUpload } from "@/components/audit-builder/useEvidenceUpload";
+import { DEVICE_METADATA_KEY, auditEvidenceValues, parseDeviceMetadata } from "@/lib/audit-engine/grid-evidence";
+import type { AuditEvidencePolicy } from "@/lib/audit-evidence-policy";
 import { computeCompletion } from "@/lib/audit-builder/validation";
 import type { AuditResponseValue, TemplateDefinition, TemplateField } from "@/lib/audit-builder/types";
 import type { ResponseMap } from "@/lib/custom-audit";
@@ -56,6 +58,7 @@ type Props = {
   readOnly?: boolean;
   testMode?: boolean;
   previewMode?: boolean;
+  evidencePolicy?: Partial<AuditEvidencePolicy> | null;
 };
 
 export function AuditExecutionForm({
@@ -70,6 +73,7 @@ export function AuditExecutionForm({
   readOnly,
   testMode,
   previewMode,
+  evidencePolicy,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<{
@@ -150,17 +154,20 @@ export function AuditExecutionForm({
     const { sectionKey: sec, recordIndex, field } = uploadTarget;
     setUploadError(null);
 
+    const forceQuality = shouldCheckImageQuality(field.config, definition.ai.enabled, aiImageQuality);
+    const forceDuplicates = shouldBlockDuplicates(field.config, definition.evidence.preventDuplicates, aiDuplicateDetection);
+    const qualityRequirement = field.config.imageQualityRequirement ?? "standard";
     try {
-      const { url } = await evidenceUpload.upload(file, {
-        checkQuality: shouldCheckImageQuality(field.config, definition.ai.enabled, aiImageQuality),
-        qualityRequirement: field.config.imageQualityRequirement ?? "standard",
-        checkDuplicates: shouldBlockDuplicates(
-          field.config,
-          definition.evidence.preventDuplicates,
-          aiDuplicateDetection,
-        ),
-        onProblem: "block",
-      });
+      const { url } = await evidenceUpload.upload(
+        file,
+        evidencePolicy
+          ? uploadOptionsForPolicy(
+              evidencePolicy,
+              parseDeviceMetadata(auditEvidenceValues(responses)[DEVICE_METADATA_KEY])?.openedAt ?? null,
+              { forceQuality, forceDuplicates, qualityRequirement },
+            )
+          : { checkQuality: forceQuality, qualityRequirement, checkDuplicates: forceDuplicates, onProblem: "block" },
+      );
       const existing = responses[sec]?.[recordIndex]?.[field.key];
       const list = Array.isArray(existing) ? [...existing, url] : [url];
       await setValue(sec, recordIndex, field, list);

@@ -216,6 +216,17 @@ describe("server-side messages", () => {
         ],
       }),
     ).toEqual(["2 rows with a difference still need a reason.", "Contextual shelf photo is still missing."]);
+    expect(
+      describeServerIssues({
+        missingRcaCount: 0,
+        missingEvidenceCount: 4,
+        missingExpiryCoverageRecords: 0,
+        issues: [
+          { type: "context_photo", label: "Contextual shelf photo", count: 1, minimum: 3 },
+          { type: "row_photo", label: "Row photos", count: 3, minimum: 2 },
+        ],
+      }),
+    ).toEqual(["Contextual shelf photo needs at least 3 photos.", "3 rows still need at least 2 photos."]);
   });
 
   it("keeps the title and items on AuditSubmitError", () => {

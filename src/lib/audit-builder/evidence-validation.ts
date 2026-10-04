@@ -71,9 +71,12 @@ function laplacianVariance(data: ImageData): number {
   return sumSq / count - mean * mean;
 }
 
+export type ImageQualityChecks = { blur: boolean; dark: boolean; glare: boolean };
+
 export async function validateImageQuality(
   file: File,
   requirement: "standard" | "high" = "standard",
+  checks: ImageQualityChecks = { blur: true, dark: true, glare: true },
 ): Promise<ImageQualityResult> {
   if (!file.type.startsWith("image/")) {
     return { ok: false, reason: "File must be an image (JPEG, PNG, or WebP)." };
@@ -114,22 +117,21 @@ export async function validateImageQuality(
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
   const luminance = sampleLuminance(imageData);
-  if (luminance < 35) {
+  if (checks.dark && luminance < 35) {
     return {
       ok: false,
       reason: "Evidence quality insufficient — image is too dark. Please retake with better lighting.",
     };
   }
-  if (luminance > 245) {
+  if (checks.glare && luminance > 245) {
     return {
       ok: false,
       reason: "Evidence quality insufficient — too much glare. Adjust angle or lighting and retake.",
     };
   }
 
-  const variance = laplacianVariance(imageData);
   const blurThreshold = requirement === "high" ? 80 : 45;
-  if (variance < blurThreshold) {
+  if (checks.blur && laplacianVariance(imageData) < blurThreshold) {
     return {
       ok: false,
       reason: "Evidence quality insufficient — image appears blurry. Hold steady and capture a sharper photo.",

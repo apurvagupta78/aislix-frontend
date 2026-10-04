@@ -34,7 +34,7 @@ import { AuditSubmitError, describeMissingCells } from "@/lib/audit-engine/submi
 import type { InputSchema } from "@/lib/audit-builder/field-roles";
 import { readStoredDataset, type AuditInputDataset } from "@/lib/audit-input-dataset";
 import { hydrateReferenceValuesFromDataset } from "@/lib/audit-builder/input-schema";
-import type { AuditEvidencePolicy } from "@/lib/audit-evidence-policy";
+import type { AuditEvidencePolicy, ReviewMode } from "@/lib/audit-evidence-policy";
 import type { Json } from "@/integrations/supabase/types";
 
 export type CustomAuditSession = {
@@ -325,6 +325,15 @@ export function countEvidencePhotosInResponses(
   return count;
 }
 
+/** The assignment's review requirement wins; templates without one fall back to their workflow. */
+export function isAutoApproved(
+  reviewMode: ReviewMode | null | undefined,
+  workflowSubmission: "direct" | "manager_approval" | "regional_approval" | undefined,
+): boolean {
+  if (reviewMode) return reviewMode === "none";
+  return workflowSubmission === "direct";
+}
+
 /** Build a shelf_scans insert row for custom/universal audit submission (live schema). */
 export function buildCustomAuditShelfScanInsert(input: {
   orgId: string;
@@ -335,11 +344,12 @@ export function buildCustomAuditShelfScanInsert(input: {
   templateVersion: number;
   templateSnapshot: Record<string, unknown>;
   workflowSubmission?: "direct" | "manager_approval" | "regional_approval";
+  reviewMode?: ReviewMode | null;
   evidencePhotoCount?: number;
   deviceInfo?: Record<string, unknown>;
 }): Record<string, unknown> {
   const submittedAt = new Date().toISOString();
-  const directApproval = input.workflowSubmission === "direct";
+  const directApproval = isAutoApproved(input.reviewMode, input.workflowSubmission);
   return {
     org_id: input.orgId,
     store_id: input.storeId ?? null,
@@ -421,7 +431,8 @@ export async function submitCustomAudit(input: {
       .eq("id", assignmentId)
       .single();
 
-    const directApproval = session.definition.workflow.submission === "direct";
+    const reviewMode = session.evidencePolicy?.reviewMode ?? null;
+    const directApproval = isAutoApproved(reviewMode, session.definition.workflow.submission);
     const evidencePhotoCount = countEvidencePhotosInResponses(session.definition, responses);
     const scanInsert = buildCustomAuditShelfScanInsert({
       orgId,
@@ -432,6 +443,7 @@ export async function submitCustomAudit(input: {
       templateVersion: session.template.version,
       templateSnapshot: session.template as unknown as Record<string, unknown>,
       workflowSubmission: session.definition.workflow.submission,
+      reviewMode,
       evidencePhotoCount,
       deviceInfo: buildSubmitDeviceInfo(responses),
     });
@@ -524,6 +536,15 @@ export async function submitCustomAudit(input: {
       await syncFindingsForScan(scanId);
     } catch {
       /* findings sync is best-effort */
+    }
+
+    if (!directApproval) {
+      try {
+        const { notifyAuditSubmitted } = await import("@/lib/notifications.functions");
+        await notifyAuditSubmitted({ data: { org_id: orgId, assignment_id: assignmentId, scan_id: scanId } });
+      } catch (e) {
+        console.error("[custom-audit] reviewer notification failed", e);
+      }
     }
   }
 

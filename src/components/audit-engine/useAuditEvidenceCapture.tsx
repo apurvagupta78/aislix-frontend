@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { useEvidenceUpload } from "@/components/audit-builder/useEvidenceUpload";
+import { uploadOptionsForPolicy, useEvidenceUpload } from "@/components/audit-builder/useEvidenceUpload";
 import { AuditEvidencePanel, targetId, type EvidenceTarget } from "@/components/audit-engine/AuditEvidencePanel";
 import type { AuditResponseValue, TemplateField } from "@/lib/audit-builder/types";
 import { encodeEvidenceFlag } from "@/lib/audit-engine/execution-table";
@@ -41,13 +41,13 @@ export function useAuditEvidenceCapture(input: {
   setValue: SetValue;
   onUploadImage: (file: File) => Promise<string>;
   onUploadVideo?: (file: File) => Promise<string>;
-  requiredProof: AuditEvidencePolicy["requiredProof"];
-  qualityChecks: AuditEvidencePolicy["qualityChecks"];
+  policy: Partial<AuditEvidencePolicy> | null | undefined;
   storeLocation?: StoreLocation | null;
   readOnly: boolean;
   canCapture: boolean;
 }) {
-  const { responses, setValue, requiredProof, qualityChecks, canCapture } = input;
+  const { responses, setValue, canCapture } = input;
+  const requiredProof = input.policy?.requiredProof ?? [];
   const evidenceUpload = useEvidenceUpload(input.onUploadImage);
   const [target, setTarget] = useState<EvidenceTarget | null>(null);
   const [videoBusy, setVideoBusy] = useState(false);
@@ -68,12 +68,7 @@ export function useAuditEvidenceCapture(input: {
     const current = target;
     if (!current) return;
     try {
-      const { url, flags } = await evidenceUpload.upload(file, {
-        checkQuality: qualityChecks.some((c) => c === "blur" || c === "dark" || c === "glare"),
-        qualityRequirement: "standard",
-        checkDuplicates: qualityChecks.includes("duplicate_hash"),
-        onProblem: "flag",
-      });
+      const { url, flags } = await evidenceUpload.upload(file, uploadOptionsForPolicy(input.policy, device?.openedAt ?? null));
       const record = responses[current.section]?.[current.recordIndex] ?? {};
       if (current.section === SHELF_EVIDENCE_SECTION) {
         await setValue(current.section, current.recordIndex, evidenceField(current.section, "shelf", "short_text"), current.shelfName ?? "");

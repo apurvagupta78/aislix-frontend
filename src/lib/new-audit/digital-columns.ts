@@ -24,7 +24,7 @@ import {
   type ExpiryStatus,
   type RowExpiry,
 } from "@/lib/audit-engine/expiry-evidence";
-import { policyNearExpiryDays } from "@/lib/audit-evidence-policy";
+import { policyMinimumPhotos, policyNearExpiryDays } from "@/lib/audit-evidence-policy";
 
 export { DIGITAL_CSV_TEMPLATE_SOURCE };
 
@@ -229,6 +229,8 @@ export type DigitalResultRow = {
 /** Everything the auditee captured for the evidence the manager required. */
 export type DigitalAuditEvidence = {
   requiredProof: EvidenceProof[];
+  /** Minimum Evidences: photos needed for every photo requirement. */
+  minimumPhotos?: number;
   requireRca: boolean;
   dataset: AuditInputDataset | null;
   columns: GridEvidenceColumns;
@@ -343,6 +345,7 @@ export function buildDigitalColumnsAudit(
     rowEvidence,
     evidence: {
       requiredProof: Array.isArray(policy?.requiredProof) ? policy.requiredProof : [],
+      minimumPhotos: policyMinimumPhotos(policy),
       requireRca: Boolean(extra?.requireRca),
       dataset: dataset ?? null,
       columns: evidenceColumns,

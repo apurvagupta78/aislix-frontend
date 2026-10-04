@@ -205,9 +205,18 @@ describe("evidenceCheck", () => {
     expect(evidenceCheck({ ...base, mode: "required", photos: ["a"], flags: ["Photo too dark"] }).status).toBe(
       "needs_review",
     );
-    expect(evidenceCheck({ ...base, mode: "optional", photos: ["a"], minimumPhotos: 2 }).reasons).toEqual([
-      "1 of 2 photos",
-    ]);
+  });
+
+  it("treats fewer photos than the minimum as missing when a photo is needed", () => {
+    expect(evidenceCheck({ ...base, mode: "required", photos: ["a"], minimumPhotos: 2 })).toEqual({
+      status: "missing",
+      reasons: ["1 of 2 photos"],
+    });
+    expect(evidenceCheck({ ...base, mode: "on_mismatch", hasMismatch: true, photos: ["a"], minimumPhotos: 3 }).status).toBe(
+      "missing",
+    );
+    expect(evidenceCheck({ ...base, mode: "optional", photos: ["a"], minimumPhotos: 2 })).toEqual({ status: "verified", reasons: [] });
+    expect(evidenceCheck({ ...base, mode: "required", photos: ["a", "b"], minimumPhotos: 2 }).status).toBe("verified");
   });
 
   it("keeps flags only for photos still attached", () => {

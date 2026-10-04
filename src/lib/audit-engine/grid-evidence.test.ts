@@ -74,20 +74,48 @@ describe("grid evidence", () => {
     expect(result.get("before_after")).toMatchObject({ ok: false, done: 1, total: 2, missing: ["B2"] });
   });
 
-  it("checks barcode scans only on rows that have a barcode", () => {
+  it("needs a barcode scan on every product row, with or without a barcode column", () => {
     const scanned = rows.map((r) => (r.index === 0 ? { ...r, values: { barcode_scan: "8901" } } : r));
+    for (const barcodeColumnId of ["c3", null]) {
+      const result = byId(
+        evaluateGridEvidence({
+          policy: { requiredProof: ["barcode"] },
+          requireRca: false,
+          dataset: barcodeColumnId ? dataset : null,
+          columns: { shelfColumnId: null, barcodeColumnId },
+          rows: scanned,
+          responses: {},
+        }),
+      );
+      expect(result.get("barcode")).toMatchObject({ ok: false, done: 1, total: 3, missing: ["Row 2", "Row 3"] });
+    }
+    expect(barcodeMatches("8901 ", "8901")).toBe(true);
+  });
+
+  it("applies Minimum Evidences to every photo requirement", () => {
+    const responses = {
+      [AUDIT_EVIDENCE_SECTION]: { 0: { context_photo: ["p1"], quarantine_contents: ["q1", "q2"], sealed_container: ["s1"] } },
+      [SHELF_EVIDENCE_SECTION]: { 0: { shelf: "", shelf_photo: ["a", "b"], after_photo: ["c"] } },
+    };
     const result = byId(
       evaluateGridEvidence({
-        policy: { requiredProof: ["barcode"] },
+        policy: {
+          requiredProof: ["context_photo", "shelf_photo", "before_after", "quarantine_contents", "sealed_container"],
+          minimumPhotos: 2,
+        },
         requireRca: false,
-        dataset,
-        columns: { shelfColumnId: null, barcodeColumnId: "c3" },
-        rows: scanned,
-        responses: {},
+        dataset: null,
+        columns: { shelfColumnId: null, barcodeColumnId: null },
+        rows: [],
+        responses,
       }),
     );
-    expect(result.get("barcode")).toMatchObject({ ok: false, done: 1, total: 2, missing: ["Row 3"] });
-    expect(barcodeMatches("8901 ", "8901")).toBe(true);
+    expect(result.get("context_photo")?.ok).toBe(false);
+    expect(result.get("context_photo")?.hint).toContain("2 photos");
+    expect(result.get("quarantine_contents")?.ok).toBe(true);
+    expect(result.get("sealed_container")?.ok).toBe(false);
+    expect(result.get("shelf_photo")?.ok).toBe(true);
+    expect(result.get("before_after")?.ok).toBe(false);
   });
 
   it("requires audit-wide uploads, GPS and a reason (plus note for Other) on differences", () => {
