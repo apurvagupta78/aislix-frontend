@@ -52,8 +52,9 @@ export function AiAnalysisQuestionCard({
         <div>
           <h4 className="text-sm font-semibold text-[#102A43]">What should AI analyse?</h4>
           <p className="mt-0.5 text-xs text-[#667085]">
-            Astra identifies and counts the products in your shelf photos. Aislix matches them to{" "}
-            {rows ? "your document" : "the shelf"}. Luna then answers what you tick and ask here.
+            {rows
+              ? "Astra identifies and counts the products in your shelf photos. Aislix matches them to your document. Luna then answers what you tick and ask here."
+              : "Astra identifies and counts the products in your shelf photos. Aislix totals facings and brand share. Luna then answers what you tick and ask here."}
           </p>
         </div>
       </div>
