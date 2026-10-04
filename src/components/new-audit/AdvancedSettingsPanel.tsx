@@ -164,7 +164,7 @@ export function AdvancedSettingsPanel({
               onChange={onShelfColumnChange!}
               hint={
                 shelfColumnId
-                  ? `${shelfCount} shelf${shelfCount === 1 ? "" : "s"} found — the auditee adds a photo for each.`
+                  ? `${shelfCount} ${shelfCount === 1 ? "shelf" : "shelves"} found — the auditee adds a photo for each.`
                   : policyNeedsShelfColumn(evidencePolicy)
                     ? "Which column names the shelf, aisle or location of each row?"
                     : "Optional — pick one to take before/after photos per shelf instead of once."

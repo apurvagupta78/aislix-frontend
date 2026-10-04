@@ -194,5 +194,9 @@ export function toApiError(error: unknown, path?: string): ApiError {
 /** Message safe to show in toasts, inline alerts and error states. */
 export function toUserMessage(error: unknown): string {
   if (error === null || error === undefined) return "Something went wrong. Please try again.";
-  return toApiError(error).message;
+  const message = toApiError(error).message;
+  if (/row-level security|permission denied for/i.test(message)) {
+    return "You don't have permission to do this. Ask an owner, admin or manager in your organization.";
+  }
+  return message;
 }
