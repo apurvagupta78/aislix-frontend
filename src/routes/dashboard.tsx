@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Outlet, createFileRoute, useRouterState } from "@tanstack/react-router";
 
 import { AppShell } from "@/components/AppShell";
 import { AiDigitalDashboardShell } from "@/components/dashboard/AiDigitalDashboardShell";
@@ -23,7 +23,12 @@ export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
 });
 
+/** Nested /dashboard/kpis, /dashboard/audit-execution, … need an Outlet or the overview stays stuck. */
 function DashboardPage() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isIndex = pathname === "/dashboard" || pathname === "/dashboard/";
+  if (!isIndex) return <Outlet />;
+
   return (
     <AppShell title="" hidePageHeader>
       <AiDigitalDashboardShell />
