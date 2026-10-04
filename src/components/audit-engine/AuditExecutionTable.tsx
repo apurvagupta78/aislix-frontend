@@ -15,8 +15,9 @@ import { toast } from "sonner";
 import { TablePager, usePager } from "@/components/design-system/TablePager";
 import { EvidenceImage } from "@/components/audit-builder/AuditExecutionForm";
 import { useEvidenceUpload } from "@/components/audit-builder/useEvidenceUpload";
-import { AuditEvidencePanel, targetId, type EvidenceTarget } from "@/components/audit-engine/AuditEvidencePanel";
+import { ExpiryStatusPill, formatIsoDate } from "@/components/audit-engine/ExpiryStatusPill";
 import { SubmitBlockersPanel, type SubmitProblem } from "@/components/audit-engine/SubmitBlockersPanel";
+import { useAuditEvidenceCapture } from "@/components/audit-engine/useAuditEvidenceCapture";
 import { BarcodeScannerDialog } from "@/components/digital-audit/BarcodeScannerDialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,27 +57,34 @@ import {
   type UploadValidation,
 } from "@/lib/audit-engine/execution-table";
 import {
-  AUDIT_EVIDENCE_SECTION,
+  EXPIRY_REMOVAL_PHOTO_KEY,
+  EXPIRY_REMOVED_KEY,
+  EXPIRY_SCAN_DATE_KEY,
+  EXPIRY_SCAN_ITEM_KEY,
+  EXPIRY_SCAN_PHOTO_KEY,
+  EXPIRY_SCAN_READ_KEY,
+  EXPIRY_SCAN_STATUS_KEY,
+  classifyExpiry,
+  localIsoDate,
+  rowExpiryState,
+  type ExpiryReading,
+  type RowExpiry,
+} from "@/lib/audit-engine/expiry-evidence";
+import { readExpiryDateFromPhoto } from "@/lib/audit-engine/expiry-read-client";
+import {
   BARCODE_SCAN_KEY,
-  DEVICE_METADATA_KEY,
-  EVIDENCE_FLAG_LIST_KEY,
-  GPS_KEY,
   ROW_VARIANCE_KEY,
-  SHELF_EVIDENCE_SECTION,
   VARIANCE_NOTE_KEY,
   VARIANCE_REASON_KEY,
-  auditEvidenceValues,
   barcodeMatches,
-  collectDeviceMetadata,
   evaluateGridEvidence,
   evidenceField,
   gridEvidenceColumns,
   listValue,
-  parseDeviceMetadata,
-  parseGps,
   rowExpectedBarcode,
   shelfSlots,
 } from "@/lib/audit-engine/grid-evidence";
+import { policyNearExpiryDays } from "@/lib/audit-evidence-policy";
 import {
   computeSubmitReadiness,
   remainingSummary,
@@ -85,7 +93,7 @@ import {
 } from "@/lib/audit-engine/submit-readiness";
 import { parseAuditSpreadsheet } from "@/lib/audit-input-dataset";
 import type { CustomAuditSession, ResponseMap } from "@/lib/custom-audit";
-import { isVideoFile, RCA_OPTIONS } from "@/lib/digital-audit";
+import { RCA_OPTIONS } from "@/lib/digital-audit";
 import { cn } from "@/lib/utils";
 
 type SaveItem = { recordIndex: number; field: TemplateField; value: AuditResponseValue };
@@ -349,6 +357,9 @@ export function AuditExecutionTable({
   );
   const requiredProof = session.evidencePolicy?.requiredProof ?? [];
   const requireRca = Boolean(session.requireRca);
+  const needsExpiry = requiredProof.includes("expiry_date");
+  const nearExpiryDays = policyNearExpiryDays(session.evidencePolicy);
+  const today = localIsoDate(new Date(now));
   const slots = useMemo(
     () => shelfSlots(session.inputDataset, gridColumns.shelfColumnId),
     [session.inputDataset, gridColumns.shelfColumnId],
@@ -368,10 +379,11 @@ export function AuditExecutionTable({
       rowEvidenceStatus: r.evidence.status,
     })),
     responses,
+    today,
   });
-  const auditValues = auditEvidenceValues(responses);
-  const gps = parseGps(auditValues[GPS_KEY]);
-  const device = parseDeviceMetadata(auditValues[DEVICE_METADATA_KEY]);
+  const expiryByRow = new Map(
+    needsExpiry ? rows.map((r) => [r.index, rowExpiryState(r.values, today, nearExpiryDays)] as const) : [],
+  );
 
   const nonRepeatable = headerSections.map((s) => ({
     sectionKey: s.key,
@@ -399,6 +411,10 @@ export function AuditExecutionTable({
       reasonMissing: reasonNeeded && (!reason || (reason === "other" && !cellText(r.values[VARIANCE_NOTE_KEY]))),
       barcodeNeeded,
       barcodeMissing: barcodeNeeded && !cellText(r.values[BARCODE_SCAN_KEY]),
+      expiryNeeded: needsExpiry,
+      expiryMissing: Boolean(expiryByRow.get(r.index)?.dateMissing),
+      removalNeeded: expiryByRow.get(r.index)?.status === "expired",
+      removalMissing: Boolean(expiryByRow.get(r.index)?.removalMissing),
     };
   });
   const readiness = computeSubmitReadiness({
@@ -503,14 +519,10 @@ export function AuditExecutionTable({
     void setValue(sectionKey, recordIndex, field, current.filter((u) => u !== url));
   };
 
-  const [evidenceTarget, setEvidenceTarget] = useState<EvidenceTarget | null>(null);
-  const [videoBusy, setVideoBusy] = useState(false);
-  const [gpsError, setGpsError] = useState<string | null>(null);
-  const [locating, setLocating] = useState(false);
   const [scanRow, setScanRow] = useState<number | null>(null);
-  const evidencePhotoRef = useRef<HTMLInputElement>(null);
-  const videoRecordRef = useRef<HTMLInputElement>(null);
-  const videoUploadRef = useRef<HTMLInputElement>(null);
+  const [expiryTarget, setExpiryTarget] = useState<{ recordIndex: number; kind: "date" | "removal" } | null>(null);
+  const [readingRow, setReadingRow] = useState<number | null>(null);
+  const expiryInputRef = useRef<HTMLInputElement>(null);
   const evidencePanelRef = useRef<HTMLDivElement>(null);
   const headerSectionsRef = useRef<HTMLDivElement>(null);
   const blockersRef = useRef<HTMLElement>(null);
@@ -526,129 +538,81 @@ export function AuditExecutionTable({
   }, [submitProblem]);
   const canCapture = !readOnly && !testMode;
 
-  const saveAuditEvidence = (key: string, type: TemplateField["type"], value: AuditResponseValue) =>
-    setValue(AUDIT_EVIDENCE_SECTION, 0, evidenceField(AUDIT_EVIDENCE_SECTION, key, type), value);
+  const evidenceCapture = useAuditEvidenceCapture({
+    responses,
+    setValue,
+    onUploadImage,
+    onUploadVideo,
+    requiredProof,
+    qualityChecks: rowEvidence.qualityChecks,
+    storeLocation: session.storeLocation,
+    readOnly,
+    canCapture,
+  });
 
-  const handleEvidencePhoto = async (file: File) => {
-    const target = evidenceTarget;
+  const expiryField = (key: string, type: TemplateField["type"]) => evidenceField(sectionKey, key, type);
+  const templateExpiryColumn = needsExpiry
+    ? columns.find((c) => c.editable && (c.field.type === "expiry_date" || c.field.standardConcept === "expiry_date"))
+    : undefined;
+  const itemLabelOf = (row: (typeof rows)[number]) => {
+    const text = columns
+      .filter((c) => c.kind !== "image" && c.kind !== "number" && c.role !== "calculated")
+      .map((c) => cellText(row.values[c.key]))
+      .filter(Boolean)
+      .slice(0, 2)
+      .join(" · ");
+    return text || `Row ${row.position + 1}`;
+  };
+
+  const saveExpiryDate = async (row: (typeof rows)[number], date: string | null, reading?: ExpiryReading) => {
+    const status = date ? classifyExpiry(date, localIsoDate(), nearExpiryDays) : null;
+    await setValue(sectionKey, row.index, expiryField(EXPIRY_SCAN_DATE_KEY, "date"), date);
+    await setValue(sectionKey, row.index, expiryField(EXPIRY_SCAN_STATUS_KEY, "short_text"), status);
+    await setValue(sectionKey, row.index, expiryField(EXPIRY_SCAN_ITEM_KEY, "short_text"), itemLabelOf(row));
+    if (reading) await setValue(sectionKey, row.index, expiryField(EXPIRY_SCAN_READ_KEY, "short_text"), JSON.stringify(reading));
+    if (date && templateExpiryColumn) await setValue(sectionKey, row.index, templateExpiryColumn.field, date);
+  };
+
+  const handleExpiryPhoto = async (file: File) => {
+    const target = expiryTarget;
     if (!target) return;
-    const checks = rowEvidence.qualityChecks;
+    const row = rows.find((r) => r.index === target.recordIndex);
+    if (!row) return;
+    const key = target.kind === "date" ? EXPIRY_SCAN_PHOTO_KEY : EXPIRY_REMOVAL_PHOTO_KEY;
     try {
-      const { url, flags } = await evidenceUpload.upload(file, {
-        checkQuality: checks.some((c) => c === "blur" || c === "dark" || c === "glare"),
-        qualityRequirement: "standard",
-        checkDuplicates: checks.includes("duplicate_hash"),
-        onProblem: "flag",
-      });
-      const record = responses[target.section]?.[target.recordIndex] ?? {};
-      if (target.section === SHELF_EVIDENCE_SECTION) {
-        await setValue(target.section, target.recordIndex, evidenceField(target.section, "shelf", "short_text"), target.shelfName ?? "");
+      const { url } = await evidenceUpload.upload(file, { checkQuality: false, checkDuplicates: false, onProblem: "flag" });
+      await setValue(sectionKey, row.index, expiryField(key, "multiple_images"), [...listValue(row.values[key]), url]);
+      if (target.kind === "removal") {
+        toast.success("Removal photo added.");
+        return;
       }
-      await setValue(
-        target.section,
-        target.recordIndex,
-        evidenceField(target.section, target.key, "multiple_images"),
-        [...listValue(record[target.key]), url],
-      );
-      if (flags.length) {
-        await setValue(
-          target.section,
-          target.recordIndex,
-          evidenceField(target.section, EVIDENCE_FLAG_LIST_KEY, "short_text"),
-          [...listValue(record[EVIDENCE_FLAG_LIST_KEY]), ...flags.map((f) => encodeEvidenceFlag(url, f))],
+      setReadingRow(row.index);
+      try {
+        const reading = await readExpiryDateFromPhoto(file, itemLabelOf(row));
+        if (reading.date) {
+          await saveExpiryDate(row, reading.date, reading);
+          const status = classifyExpiry(reading.date, localIsoDate(), nearExpiryDays);
+          const message = `AI read ${formatIsoDate(reading.date)} for row ${row.position + 1} — check it's right.`;
+          if (status === "expired") toast.error(`${message} This product is EXPIRED: remove it from the shelf.`, { duration: 8000 });
+          else toast.success(message);
+        } else {
+          await setValue(sectionKey, row.index, expiryField(EXPIRY_SCAN_READ_KEY, "short_text"), JSON.stringify(reading));
+          toast.warning(`AI couldn't read a date on row ${row.position + 1}. Type the date from the pack, or retake the photo closer.`, { duration: 7000 });
+        }
+      } catch (e) {
+        toast.warning(
+          `${e instanceof Error ? e.message : "AI couldn't read the date."} Type the date from the pack for row ${row.position + 1}.`,
+          { duration: 7000 },
         );
-        toast.warning(`Photo added but needs review: ${flags[0]}`, { duration: 6000 });
-      } else {
-        toast.success("Photo added.");
+      } finally {
+        setReadingRow(null);
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not upload photo.");
     } finally {
-      setEvidenceTarget((prev) => (prev === target ? null : prev));
+      setExpiryTarget((prev) => (prev === target ? null : prev));
     }
   };
-
-  const removeEvidence = (target: EvidenceTarget, ref: string) => {
-    const record = responses[target.section]?.[target.recordIndex] ?? {};
-    void setValue(
-      target.section,
-      target.recordIndex,
-      evidenceField(target.section, target.key, "multiple_images"),
-      listValue(record[target.key]).filter((r) => r !== ref),
-    );
-  };
-
-  const handleVideo = async (file: File) => {
-    if (!onUploadVideo) return;
-    if (!isVideoFile(file)) {
-      toast.error("Choose a video file (MP4, MOV or WebM).");
-      return;
-    }
-    setVideoBusy(true);
-    try {
-      const ref = await onUploadVideo(file);
-      await saveAuditEvidence("session_video", "multiple_images", [...listValue(auditValues.session_video), ref]);
-      toast.success("Session video added.");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not upload the video.");
-    } finally {
-      setVideoBusy(false);
-    }
-  };
-
-  const requestGps = () => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setGpsError("This browser can't share your location.");
-      return;
-    }
-    setLocating(true);
-    setGpsError(null);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLocating(false);
-        void saveAuditEvidence(
-          GPS_KEY,
-          "short_text",
-          JSON.stringify({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-            accuracyM: pos.coords.accuracy ?? null,
-            capturedAt: new Date(pos.timestamp || Date.now()).toISOString(),
-          }),
-        );
-      },
-      (err) => {
-        setLocating(false);
-        setGpsError(
-          err.code === err.PERMISSION_DENIED
-            ? "Location permission was denied. Allow location for this site in your browser, then try again."
-            : "Could not get your location. Move near a window and try again.",
-        );
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
-    );
-  };
-
-  const needsGps = requiredProof.includes("gps");
-  const hasGps = Boolean(gps);
-  const hasDevice = Boolean(device);
-  const autoCapture = useRef({ gps: false, device: false });
-  useEffect(() => {
-    if (!canCapture) return;
-    // Wait for saved responses to load so a reopened audit keeps its first values.
-    const timer = window.setTimeout(() => {
-      if (!hasDevice && !autoCapture.current.device) {
-        autoCapture.current.device = true;
-        void saveAuditEvidence(DEVICE_METADATA_KEY, "short_text", JSON.stringify(collectDeviceMetadata()));
-      }
-      if (needsGps && !hasGps && !autoCapture.current.gps) {
-        autoCapture.current.gps = true;
-        requestGps();
-      }
-    }, 1500);
-    return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canCapture, hasDevice, hasGps, needsGps]);
 
   const varianceField = evidenceField(sectionKey, ROW_VARIANCE_KEY, "yes_no");
   const varianceSignature = rows.map((r) => `${r.index}:${r.hasMismatch ? 1 : 0}`).join(";");
@@ -943,30 +907,7 @@ export function AuditExecutionTable({
 
       {requirements.length ? (
         <div ref={evidencePanelRef} className="scroll-mt-24">
-          <AuditEvidencePanel
-            requirements={requirements}
-            slots={slots}
-            responses={responses}
-            readOnly={readOnly}
-            busyTarget={
-              videoBusy
-                ? targetId({ section: AUDIT_EVIDENCE_SECTION, recordIndex: 0, key: "session_video" })
-                : evidenceUpload.uploading && evidenceTarget
-                  ? targetId(evidenceTarget)
-                  : null
-            }
-            gps={gps}
-            gpsError={gpsError}
-            locating={locating}
-            device={device}
-            onRetryGps={requestGps}
-            onAddPhoto={(target) => {
-              setEvidenceTarget(target);
-              evidencePhotoRef.current?.click();
-            }}
-            onAddVideo={(mode) => (mode === "record" ? videoRecordRef : videoUploadRef).current?.click()}
-            onRemove={removeEvidence}
-          />
+          {evidenceCapture.renderPanel(requirements, slots)}
         </div>
       ) : null}
 
@@ -1060,6 +1001,15 @@ export function AuditExecutionTable({
                   <Chip role="fill" />
                 </th>
               ) : null}
+              {needsExpiry ? (
+                <th className="border-b border-[#D9E2E8] px-3 py-2 align-top font-semibold">
+                  <span className="block whitespace-nowrap">Expiry date</span>
+                  <Chip role="fill" />
+                  <span className="block text-[10px] font-normal text-[#667085]">
+                    Photo · AI reads it · near expiry ≤ {nearExpiryDays} day{nearExpiryDays === 1 ? "" : "s"}
+                  </span>
+                </th>
+              ) : null}
               {showVarianceColumns ? (
                 <>
                   <th className="border-b border-[#D9E2E8] px-3 py-2 align-top font-semibold">
@@ -1120,6 +1070,33 @@ export function AuditExecutionTable({
                         disabled={readOnly}
                         onScan={() => setScanRow(row.index)}
                         onCommit={(code) => void setValue(sectionKey, row.index, barcodeField, code)}
+                      />
+                    </td>
+                  ) : null}
+                  {needsExpiry ? (
+                    <td className="border-b border-[#D9E2E8] px-2 py-1.5">
+                      <ExpiryCell
+                        rowNumber={row.position + 1}
+                        state={expiryByRow.get(row.index)!}
+                        today={today}
+                        disabled={readOnly}
+                        reading={readingRow === row.index}
+                        uploading={evidenceUpload.uploading && expiryTarget?.recordIndex === row.index}
+                        onAddPhoto={(kind) => {
+                          setExpiryTarget({ recordIndex: row.index, kind });
+                          expiryInputRef.current?.click();
+                        }}
+                        onRemovePhoto={(kind, url) => {
+                          const key = kind === "date" ? EXPIRY_SCAN_PHOTO_KEY : EXPIRY_REMOVAL_PHOTO_KEY;
+                          void setValue(
+                            sectionKey,
+                            row.index,
+                            expiryField(key, "multiple_images"),
+                            listValue(row.values[key]).filter((u) => u !== url),
+                          );
+                        }}
+                        onDate={(date) => void saveExpiryDate(row, date)}
+                        onRemoved={(removed) => void setValue(sectionKey, row.index, expiryField(EXPIRY_REMOVED_KEY, "yes_no"), removed)}
                       />
                     </td>
                   ) : null}
@@ -1213,39 +1190,17 @@ export function AuditExecutionTable({
           e.target.value = "";
         }}
       />
+      {evidenceCapture.hiddenInputs}
       <input
-        ref={evidencePhotoRef}
+        ref={expiryInputRef}
         type="file"
         accept="image/*"
         capture="environment"
         className="hidden"
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) void handleEvidencePhoto(file);
-          else setEvidenceTarget(null);
-          e.target.value = "";
-        }}
-      />
-      <input
-        ref={videoRecordRef}
-        type="file"
-        accept="video/*"
-        capture="environment"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) void handleVideo(file);
-          e.target.value = "";
-        }}
-      />
-      <input
-        ref={videoUploadRef}
-        type="file"
-        accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm,.m4v"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) void handleVideo(file);
+          if (file) void handleExpiryPhoto(file);
+          else setExpiryTarget(null);
           e.target.value = "";
         }}
       />
@@ -1488,6 +1443,132 @@ function BarcodeCell({
           title={match ? undefined : `Expected ${expected}`}
         />
       )}
+    </div>
+  );
+}
+
+function ExpiryThumbs({ urls, disabled, onRemove }: { urls: string[]; disabled: boolean; onRemove: (url: string) => void }) {
+  return (
+    <>
+      {urls.map((url) => (
+        <span key={url} className="group relative shrink-0">
+          <EvidenceImage stored={url} className="size-8 rounded border border-[#D9E2E8] object-cover" />
+          {!disabled ? (
+            <button
+              type="button"
+              aria-label="Remove photo"
+              className="absolute -right-1 -top-1 hidden rounded-full border border-[#D9E2E8] bg-white p-px text-[#667085] group-hover:block"
+              onClick={() => onRemove(url)}
+            >
+              <X className="size-2.5" />
+            </button>
+          ) : null}
+        </span>
+      ))}
+    </>
+  );
+}
+
+function ExpiryCell({
+  rowNumber,
+  state,
+  today,
+  disabled,
+  reading,
+  uploading,
+  onAddPhoto,
+  onRemovePhoto,
+  onDate,
+  onRemoved,
+}: {
+  rowNumber: number;
+  state: RowExpiry;
+  today: string;
+  disabled: boolean;
+  reading: boolean;
+  uploading: boolean;
+  onAddPhoto: (kind: "date" | "removal") => void;
+  onRemovePhoto: (kind: "date" | "removal", url: string) => void;
+  onDate: (date: string | null) => void;
+  onRemoved: (removed: boolean) => void;
+}) {
+  const [draft, setDraft] = useState(state.date ?? "");
+  useEffect(() => setDraft(state.date ?? ""), [state.date]);
+  const aiDate = state.reading?.date ?? null;
+  const corrected = Boolean(aiDate && state.date && aiDate !== state.date);
+  const provenance = !state.reading
+    ? null
+    : !aiDate
+      ? "AI couldn't read a date — type it"
+      : corrected
+        ? `Corrected by auditee (AI read ${formatIsoDate(aiDate)})`
+        : `AI read ${state.reading.rawText || formatIsoDate(aiDate)}`;
+  const camera = (kind: "date" | "removal", label: string) =>
+    !disabled ? (
+      <button
+        type="button"
+        aria-label={`${label} for row ${rowNumber}`}
+        title={label}
+        disabled={uploading || reading}
+        className="inline-flex h-8 shrink-0 items-center gap-1 rounded border border-dashed border-[#9B86D9] px-2 text-[11px] text-[#667085] hover:bg-[#F3EFFB] disabled:opacity-60"
+        onClick={() => onAddPhoto(kind)}
+      >
+        {uploading ? <Loader2 className="size-3.5 animate-spin" /> : <Camera className="size-3.5" />}
+        {kind === "date" && !state.photos.length ? "Scan date" : null}
+      </button>
+    ) : null;
+
+  return (
+    <div className="min-w-[15rem] space-y-1">
+      <div className="flex items-center gap-1.5">
+        <ExpiryThumbs urls={state.photos} disabled={disabled} onRemove={(url) => onRemovePhoto("date", url)} />
+        {camera("date", state.photos.length ? "Retake expiry photo" : "Photograph the expiry date")}
+        <input
+          type="date"
+          aria-label={`Expiry date row ${rowNumber}`}
+          disabled={disabled || reading}
+          className={cn(CELL_CLASS, "w-36 min-w-[8.5rem]")}
+          style={{ borderColor: state.date ? AISLIX_PALETTE.border : AISLIX_PALETTE.purple }}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => {
+            const next = draft || null;
+            if (next !== state.date) onDate(next);
+          }}
+        />
+      </div>
+      {reading ? (
+        <p className="inline-flex items-center gap-1 text-[11px] text-[#667085]">
+          <Loader2 className="size-3 animate-spin" /> AI is reading the date…
+        </p>
+      ) : (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {state.status && state.date ? <ExpiryStatusPill status={state.status} date={state.date} today={today} /> : null}
+          {provenance ? <span className="text-[10px] text-[#667085]">{provenance}</span> : null}
+          {!state.photos.length && state.date ? <span className="text-[10px] text-[#102A43]">Photo of the date needed</span> : null}
+        </div>
+      )}
+      {state.status === "expired" ? (
+        <div className="flex flex-wrap items-center gap-1.5 rounded-md px-1.5 py-1" style={{ background: AISLIX_PALETTE.pink }}>
+          <label className="inline-flex items-center gap-1 text-[11px] font-medium text-[#102A43]">
+            <input
+              type="checkbox"
+              className="size-3.5 accent-[#102A43]"
+              disabled={disabled}
+              checked={state.removed}
+              onChange={(e) => onRemoved(e.target.checked)}
+            />
+            Removed from shelf
+          </label>
+          <ExpiryThumbs urls={state.removalPhotos} disabled={disabled} onRemove={(url) => onRemovePhoto("removal", url)} />
+          {camera("removal", "Add a photo of the removed product")}
+          {state.removalMissing ? (
+            <span className="text-[10px] text-[#102A43]">
+              {!state.removed ? "Tick when removed" : "Add a removal photo"}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

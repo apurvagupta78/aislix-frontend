@@ -437,22 +437,23 @@ function NewAuditPage() {
     const firstStoreId = locationScope.storeIds[0];
     if (firstStoreId && storeId !== firstStoreId) setStoreId(firstStoreId);
   }, [locationScope.storeIds, storeId]);
-  const effectivePolicy = useMemo(
-    () =>
-      mergeTemplateMinimum(
-        evidencePolicy,
-        selectedTemplate?.evidence_config || systemTemplateDefinition?.evidence
-          ? {
-              requiredProof:
-                selectedTemplate?.evidence_required ||
-                systemTemplateDefinition?.evidence?.photoRequired
-                  ? ["context_photo" as EvidenceProof]
-                  : [],
-            }
-          : null,
-      ),
-    [evidencePolicy, selectedTemplate, systemTemplateDefinition],
-  );
+  const isExpiryTemplate =
+    startChoice === "template" &&
+    templateUsesLines &&
+    (selectedTemplate?.audit_purpose === "expiry" ||
+      selectedTemplate?.template_type === "expiry_audit" ||
+      systemTemplateSpec?.purpose === "expiry");
+  const effectivePolicy = useMemo(() => {
+    const photo =
+      selectedTemplate?.evidence_required || systemTemplateDefinition?.evidence?.photoRequired
+        ? ["context_photo" as EvidenceProof]
+        : [];
+    const minimum: EvidenceProof[] = [
+      ...(selectedTemplate?.evidence_config || systemTemplateDefinition?.evidence ? photo : []),
+      ...(isExpiryTemplate ? ["expiry_date" as EvidenceProof] : []),
+    ];
+    return mergeTemplateMinimum(evidencePolicy, minimum.length ? { requiredProof: minimum } : null);
+  }, [evidencePolicy, selectedTemplate, systemTemplateDefinition, isExpiryTemplate]);
   const datasetError = validateAuditDataset(dataset, { manualColumnLimit: 10 });
   const auditMode = mapCaptureMethodToAuditMode(method);
   const dataDefinitionError = validateDataDefinition({

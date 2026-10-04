@@ -17,9 +17,15 @@ export type ReadinessRow = {
   reasonMissing: boolean;
   barcodeNeeded: boolean;
   barcodeMissing: boolean;
+  /** Expiry dates: a photo of the date and a confirmed date. */
+  expiryNeeded?: boolean;
+  expiryMissing?: boolean;
+  /** Expired product: removed from the shelf, with a photo. */
+  removalNeeded?: boolean;
+  removalMissing?: boolean;
 };
 
-export type SubmitBlockerKind = "cells" | "header" | "photos" | "explanations" | "barcodes" | "evidence";
+export type SubmitBlockerKind = "cells" | "header" | "photos" | "explanations" | "barcodes" | "expiry" | "evidence";
 
 export type SubmitBlocker = {
   id: string;
@@ -34,7 +40,7 @@ export type SubmitReadiness = {
   percent: number;
   done: number;
   total: number;
-  remaining: { cells: number; photos: number; explanations: number; barcodes: number; evidence: number };
+  remaining: { cells: number; photos: number; explanations: number; barcodes: number; expiry: number; evidence: number };
   rowsComplete: number;
   rowsTotal: number;
   incompleteRows: Set<number>;
@@ -49,6 +55,8 @@ const ROW_LEVEL_REQUIREMENTS = new Set<GridRequirementId>([
   "per_sku_photo",
   "variance_photo",
   "barcode",
+  "expiry_date",
+  "expired_removal",
   "variance_explanation",
   "device_metadata",
 ]);
@@ -184,16 +192,23 @@ export function computeSubmitReadiness(input: {
   const reasonMissing = reasonRows.filter((r) => r.reasonMissing);
   const barcodeRows = rows.filter((r) => r.barcodeNeeded || r.barcodeMissing);
   const barcodeMissing = barcodeRows.filter((r) => r.barcodeMissing);
+  const expiryRows = rows.filter((r) => r.expiryNeeded || r.expiryMissing);
+  const expiryMissing = expiryRows.filter((r) => r.expiryMissing);
+  const removalRows = rows.filter((r) => r.removalNeeded || r.removalMissing);
+  const removalMissing = removalRows.filter((r) => r.removalMissing);
   const auditLevel = requirements.filter((r) => !ROW_LEVEL_REQUIREMENTS.has(r.id) && r.total > 0);
   const evidenceTotal = auditLevel.reduce((sum, r) => sum + r.total, 0);
   const evidenceDone = auditLevel.reduce((sum, r) => sum + Math.min(r.done, r.total), 0);
 
-  const total = cellsTotal + photoRows.length + reasonRows.length + barcodeRows.length + evidenceTotal;
+  const total =
+    cellsTotal + photoRows.length + reasonRows.length + barcodeRows.length + expiryRows.length + removalRows.length + evidenceTotal;
   const done =
     cellsDone +
     (photoRows.length - photoMissing.length) +
     (reasonRows.length - reasonMissing.length) +
     (barcodeRows.length - barcodeMissing.length) +
+    (expiryRows.length - expiryMissing.length) +
+    (removalRows.length - removalMissing.length) +
     evidenceDone;
 
   const blockers: SubmitBlocker[] = [];
@@ -256,6 +271,24 @@ export function computeSubmitReadiness(input: {
       rowIndexes: barcodeMissing.map((r) => r.index),
     });
   }
+  if (removalMissing.length) {
+    blockers.push({
+      id: "expired_removal",
+      kind: "expiry",
+      title: plural(removalMissing.length, "Remove the expired product", "Remove the expired products"),
+      detail: `Take it off the shelf, tick “Removed” and add a photo in the Expiry date column. Expired on ${formatRows(removalMissing.map((r) => r.position + 1))}.`,
+      rowIndexes: removalMissing.map((r) => r.index),
+    });
+  }
+  if (expiryMissing.length) {
+    blockers.push({
+      id: "expiry",
+      kind: "expiry",
+      title: plural(expiryMissing.length, "Scan the expiry date", "Scan the expiry dates"),
+      detail: `Take a photo of the expiry date and check the date AI read. Missing on ${formatRows(expiryMissing.map((r) => r.position + 1))}.`,
+      rowIndexes: expiryMissing.map((r) => r.index),
+    });
+  }
   for (const req of auditLevel.filter((r) => !r.ok)) {
     const still = req.total > 1 && req.missing.length ? ` Still needed for: ${req.missing.join(", ")}.` : "";
     blockers.push({
@@ -270,7 +303,15 @@ export function computeSubmitReadiness(input: {
   const missingCellRows = new Set(missingCells.filter((m) => m.sectionKey === sectionKey).map((m) => m.recordIndex));
   const incompleteRows = new Set(
     rows
-      .filter((r) => missingCellRows.has(r.index) || r.photoMissing || r.reasonMissing || r.barcodeMissing)
+      .filter(
+        (r) =>
+          missingCellRows.has(r.index) ||
+          r.photoMissing ||
+          r.reasonMissing ||
+          r.barcodeMissing ||
+          r.expiryMissing ||
+          r.removalMissing,
+      )
       .map((r) => r.index),
   );
 
@@ -287,6 +328,7 @@ export function computeSubmitReadiness(input: {
       photos: photoMissing.length,
       explanations: reasonMissing.length,
       barcodes: barcodeMissing.length,
+      expiry: expiryMissing.length + removalMissing.length,
       evidence: evidenceTotal - evidenceDone,
     },
     rowsComplete: rows.length - incompleteRows.size,
@@ -305,6 +347,7 @@ export function remainingSummary(remaining: SubmitReadiness["remaining"]): strin
     remaining.photos ? `${remaining.photos} ${plural(remaining.photos, "photo", "photos")}` : null,
     remaining.explanations ? `${remaining.explanations} ${plural(remaining.explanations, "reason", "reasons")}` : null,
     remaining.barcodes ? `${remaining.barcodes} ${plural(remaining.barcodes, "barcode", "barcodes")}` : null,
+    remaining.expiry ? `${remaining.expiry} expiry ${plural(remaining.expiry, "check", "checks")}` : null,
     remaining.evidence ? `${remaining.evidence} evidence ${plural(remaining.evidence, "item", "items")}` : null,
   ].filter(Boolean) as string[];
   if (!parts.length) return null;
@@ -348,6 +391,12 @@ export function describeServerIssues(result: ServerCompletion): string[] {
         break;
       case "variance_explanation":
         out.push(`${n} ${plural(n, "row with a difference still needs", "rows with a difference still need")} a reason.`);
+        break;
+      case "expiry_date":
+        out.push(`${n} ${plural(n, "product still needs", "products still need")} a photo of its expiry date and a confirmed date.`);
+        break;
+      case "expired_removal":
+        out.push(`${n} expired ${plural(n, "product still needs", "products still need")} to be marked removed, with a photo.`);
         break;
       default:
         if (issue.label) out.push(`${friendlyLabel(issue.label)} is still missing.`);

@@ -204,10 +204,7 @@ function MyScansPage() {
       if (assignment.audit_mode === "ai" || assignment.audit_mode === "ai_assisted") {
         void navigate({ to: "/scan", search: { assignmentId: assignment.id } });
       } else if (assignment.template_id) {
-        void navigate({
-          to: "/custom-audit",
-          search: { assignmentId: assignment.id, test: false },
-        });
+        void navigate({ to: "/audit/$assignmentId", params: { assignmentId: assignment.id } });
       } else if (assignment.audit_mode === "digital") {
         void navigate({ to: "/digital-audit", search: { assignmentId: assignment.id } });
       } else {

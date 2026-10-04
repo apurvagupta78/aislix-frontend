@@ -17,6 +17,14 @@ import {
   type GridEvidenceColumns,
 } from "@/lib/audit-engine/grid-evidence";
 import type { ResponseMap } from "@/lib/custom-audit-shared";
+import {
+  EXPIRY_SCAN_STATUS_KEY,
+  localIsoDate,
+  rowExpiryState,
+  type ExpiryStatus,
+  type RowExpiry,
+} from "@/lib/audit-engine/expiry-evidence";
+import { policyNearExpiryDays } from "@/lib/audit-evidence-policy";
 
 export { DIGITAL_CSV_TEMPLATE_SOURCE };
 
@@ -214,6 +222,8 @@ export type DigitalResultRow = {
   barcodeScanned?: string | null;
   varianceReason?: string | null;
   varianceNote?: string | null;
+  /** Expiry dates evidence; set only when the policy required it. */
+  expiry?: RowExpiry | null;
 };
 
 /** Everything the auditee captured for the evidence the manager required. */
@@ -235,6 +245,13 @@ export type DigitalColumnsAudit = {
   rowEvidence: DigitalRowEvidence;
   evidence?: DigitalAuditEvidence;
 };
+
+/** Expiry is judged against the day the audit was submitted, so results don't change as time passes. */
+export function auditDayOf(deviceInfo: Record<string, unknown> | null | undefined): string {
+  const submitted = deviceInfo?.submittedAt;
+  const at = typeof submitted === "string" ? new Date(submitted) : null;
+  return localIsoDate(at && !Number.isNaN(at.getTime()) ? at : new Date());
+}
 
 function cellText(value: unknown): string | null {
   if (value === null || value === undefined) return null;
@@ -270,6 +287,25 @@ export function buildDigitalColumnsAudit(
     if (r.section_key === sectionKey) saved.set(`${r.record_index}:${r.field_key}`, r.value);
   }
 
+  const responseMap: ResponseMap = {};
+  for (const r of responses) {
+    const section = (responseMap[r.section_key] ??= {});
+    const record = (section[r.record_index] ??= {});
+    record[r.field_key] = r.value as AuditResponseValue;
+  }
+  const policy = extra?.evidencePolicy ?? (snapshot?.evidence_policy as Partial<AuditEvidencePolicy> | undefined) ?? null;
+  const needsExpiry = Array.isArray(policy?.requiredProof) && policy.requiredProof.includes("expiry_date");
+  const today = auditDayOf(extra?.deviceInfo);
+  const nearDays = policyNearExpiryDays(policy);
+  const expiryOf = (index: number): RowExpiry | null => {
+    if (!needsExpiry) return null;
+    const values = responseMap[sectionKey]?.[index] ?? {};
+    const state = rowExpiryState(values, today, nearDays);
+    const raw = values[EXPIRY_SCAN_STATUS_KEY];
+    const savedStatus = raw === "expired" || raw === "near_expiry" || raw === "ok" ? (raw as ExpiryStatus) : null;
+    return savedStatus && state.status !== "expired" ? { ...state, status: savedStatus } : state;
+  };
+
   const asList = (value: unknown) => (Array.isArray(value) ? value.map(String).filter(Boolean) : []);
   const evidenceColumns = gridEvidenceColumns(purpose);
   const rows = (dataset?.rows ?? []).map((row, index) => {
@@ -293,18 +329,12 @@ export function buildDigitalColumnsAudit(
       ),
       photos: asList(saved.get(`${index}:evidence_photo`)),
       evidence: evidence.length ? evidence : null,
+      expiry: expiryOf(index),
     };
   });
   const mode = purpose.rowEvidence;
   const rowEvidence: DigitalRowEvidence =
     mode === "required" || mode === "on_mismatch" || mode === "optional" ? mode : "off";
-  const responseMap: ResponseMap = {};
-  for (const r of responses) {
-    const section = (responseMap[r.section_key] ??= {});
-    const record = (section[r.record_index] ??= {});
-    record[r.field_key] = r.value as AuditResponseValue;
-  }
-  const policy = extra?.evidencePolicy ?? (snapshot?.evidence_policy as Partial<AuditEvidencePolicy> | undefined) ?? null;
   const columnName = (id: string | null) => (id ? dataset?.columns.find((c) => c.id === id)?.name ?? null : null);
   return {
     filename: dataset?.filename ?? null,

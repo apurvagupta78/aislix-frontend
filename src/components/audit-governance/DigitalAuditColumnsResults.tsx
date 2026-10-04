@@ -9,7 +9,20 @@ import {
   type EvidenceStatus,
   type PairStatus,
 } from "@/lib/audit-engine/execution-table";
-import type { DigitalColumnsAudit, DigitalResultColumn, DigitalResultRow } from "@/lib/new-audit/digital-columns";
+import {
+  auditDayOf,
+  type DigitalColumnsAudit,
+  type DigitalResultColumn,
+  type DigitalResultRow,
+} from "@/lib/new-audit/digital-columns";
+import {
+  EXPIRY_REMOVAL_PHOTO_KEY,
+  EXPIRY_REMOVED_KEY,
+  EXPIRY_SCAN_DATE_KEY,
+  EXPIRY_SCAN_PHOTO_KEY,
+  type RowExpiry,
+} from "@/lib/audit-engine/expiry-evidence";
+import { ExpiryStatusPill, formatIsoDate } from "@/components/audit-engine/ExpiryStatusPill";
 import {
   BARCODE_SCAN_KEY,
   VARIANCE_NOTE_KEY,
@@ -60,6 +73,52 @@ function StatusPill({ label, background, border, dashed, title }: { label: strin
       {label}
       {title ? <Info className="size-3 text-[#667085]" /> : null}
     </span>
+  );
+}
+
+function ExpiryResult({ expiry, today }: { expiry: RowExpiry | null; today: string }) {
+  if (!expiry || (!expiry.date && !expiry.photos.length)) {
+    return <StatusPill label="Not scanned" {...EVIDENCE_PILL.missing} />;
+  }
+  const reading = expiry.reading;
+  const corrected = Boolean(reading?.date && expiry.date && reading.date !== expiry.date);
+  return (
+    <div className="space-y-1">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {expiry.photos.slice(0, 2).map((ref) => (
+          <EvidenceImage key={ref} stored={ref} className="size-8 rounded border border-[#D9E2E8] object-cover" />
+        ))}
+        {expiry.date ? (
+          <>
+            <span className="tabular-nums text-[#102A43]">{formatIsoDate(expiry.date)}</span>
+            {expiry.status ? <ExpiryStatusPill status={expiry.status} date={expiry.date} today={today} /> : null}
+          </>
+        ) : (
+          <StatusPill label="No date" {...EVIDENCE_PILL.missing} />
+        )}
+      </div>
+      {expiry.date ? (
+        <p className="text-[11px] text-[#667085]">
+          {corrected
+            ? `Corrected by auditor (AI read ${formatIsoDate(reading!.date!)})`
+            : reading?.date
+              ? "AI read · confirmed by auditor"
+              : "Entered by auditor"}
+        </p>
+      ) : null}
+      {expiry.status === "expired" ? (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {expiry.removed && expiry.removalPhotos.length ? (
+            <StatusPill label="Removed from shelf" {...EVIDENCE_PILL.verified} />
+          ) : (
+            <StatusPill label="Removal not confirmed" {...EVIDENCE_PILL.missing} />
+          )}
+          {expiry.removalPhotos.slice(0, 2).map((ref) => (
+            <EvidenceImage key={ref} stored={ref} className="size-8 rounded border border-[#D9E2E8] object-cover" />
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -134,6 +193,7 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
         dataset: evidence.dataset,
         columns: evidence.columns,
         responses: evidence.responses,
+        today: auditDayOf(evidence.deviceInfo),
         rows: rows.map((r, position) => ({
           index: r.index,
           position,
@@ -143,13 +203,23 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
             [BARCODE_SCAN_KEY]: r.barcodeScanned ?? null,
             [VARIANCE_REASON_KEY]: r.varianceReason ?? null,
             [VARIANCE_NOTE_KEY]: r.varianceNote ?? null,
+            ...(r.expiry
+              ? {
+                  [EXPIRY_SCAN_PHOTO_KEY]: r.expiry.photos,
+                  [EXPIRY_SCAN_DATE_KEY]: r.expiry.date,
+                  [EXPIRY_REMOVED_KEY]: r.expiry.removed,
+                  [EXPIRY_REMOVAL_PHOTO_KEY]: r.expiry.removalPhotos,
+                }
+              : {}),
           },
         })),
       })
     : [];
   const showBarcode = Boolean(evidence?.requiredProof.includes("barcode") && evidence.columns.barcodeColumnId);
   const showReason = Boolean(evidence?.requireRca && pairs.length);
-  const extraColumns = (showBarcode ? 1 : 0) + (showReason ? 1 : 0);
+  const showExpiry = rows.some((r) => r.expiry);
+  const auditDay = auditDayOf(evidence?.deviceInfo);
+  const extraColumns = (showBarcode ? 1 : 0) + (showReason ? 1 : 0) + (showExpiry ? 1 : 0);
 
   return (
     <div className="space-y-4">
@@ -295,6 +365,9 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
                 {showReason ? (
                   <th className={cn("px-3 py-2 font-semibold", !showBarcode && "border-l border-[#D9E2E8]")}>Reason for difference</th>
                 ) : null}
+                {showExpiry ? (
+                  <th className={cn("px-3 py-2 font-semibold", !showBarcode && !showReason && "border-l border-[#D9E2E8]")}>Expiry date</th>
+                ) : null}
               </tr>
             </thead>
             <tbody>
@@ -390,6 +463,11 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
                       ) : (
                         <span className="text-[#667085]">—</span>
                       )}
+                    </td>
+                  ) : null}
+                  {showExpiry ? (
+                    <td className={cn("px-3 py-2 text-xs", !showBarcode && !showReason && "border-l border-[#D9E2E8]")}>
+                      <ExpiryResult expiry={row.expiry ?? null} today={auditDay} />
                     </td>
                   ) : null}
                 </tr>

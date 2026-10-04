@@ -5,12 +5,15 @@ import { UniversalAuditExecutor } from "@/components/audit-engine/UniversalAudit
 import { ErrorState } from "@/components/States";
 
 export const Route = createFileRoute("/audit/$assignmentId")({
+  validateSearch: (search: Record<string, unknown>): { test?: boolean } =>
+    search.test === true || search.test === "true" ? { test: true } : {},
   head: () => ({ meta: [{ title: "Audit — Aislix" }] }),
   component: UniversalAuditRoute,
 });
 
 function UniversalAuditRoute() {
   const { assignmentId } = Route.useParams();
+  const { test } = Route.useSearch();
 
   if (!assignmentId) {
     return (
@@ -22,7 +25,7 @@ function UniversalAuditRoute() {
 
   return (
     <AppShell title="Audit Execution">
-      <UniversalAuditExecutor assignmentId={assignmentId} />
+      <UniversalAuditExecutor assignmentId={assignmentId} testMode={test === true} />
     </AppShell>
   );
 }

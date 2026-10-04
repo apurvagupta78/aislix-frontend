@@ -24,6 +24,7 @@ const GO_TO_LABEL: Record<SubmitBlocker["kind"], string> = {
   photos: "Show rows",
   explanations: "Show rows",
   barcodes: "Show rows",
+  expiry: "Show rows",
   evidence: "Show evidence",
 };
 

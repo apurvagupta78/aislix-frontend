@@ -5,6 +5,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { dbError, requireOrgId, requireUserId } from "@/lib/db/context";
+import { haversineMeters } from "@/lib/geo/distance";
 import { downloadCsvFile } from "@/lib/kpi-details-csv";
 import {
   filterScopeItems,
@@ -156,6 +157,7 @@ function parseEvidencePolicy(raw: unknown): AuditEvidencePolicy | null {
     maximumEvidenceAgeMinutes: Number(value.maximumEvidenceAgeMinutes) || 0,
     qualityChecks: Array.isArray(value.qualityChecks) ? value.qualityChecks : [],
     reviewMode: value.reviewMode ?? "manager",
+    ...(value.nearExpiryDays !== undefined ? { nearExpiryDays: Number(value.nearExpiryDays) } : {}),
   };
 }
 
@@ -187,17 +189,6 @@ export function computeLineVariance(
   const variance_value_inr =
     mrp != null && !Number.isNaN(mrp) ? Math.round(variance_qty * mrp * 100) / 100 : null;
   return { variance_qty, variance_pct, variance_value_inr };
-}
-
-function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371000;
-  const toRad = (d: number) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
 }
 
 export function geofenceStatus(

@@ -54,6 +54,8 @@ export type CustomAuditSession = {
   createdAt?: string | null;
   evidencePolicy?: Partial<AuditEvidencePolicy> | null;
   requireRca?: boolean;
+  /** Assigned store's coordinates and geofence, for the GPS "at the store" check. */
+  storeLocation?: { lat: number | null; lng: number | null; radiusM: number | null } | null;
 };
 
 async function profileNames(ids: string[]): Promise<Map<string, string>> {
@@ -91,7 +93,7 @@ export async function loadCustomAuditSession(
   const orgId = await requireOrgId();
   const { data: assignment, error } = await supabase
     .from("scan_assignments")
-    .select("*, stores(name)")
+    .select("*, stores(name, latitude, longitude, geofence_radius_m)")
     .eq("org_id", orgId)
     .eq("id", assignmentId)
     .maybeSingle();
@@ -129,7 +131,12 @@ export async function loadCustomAuditSession(
 
   if (!template) return null;
 
-  const storeRow = assignment.stores as { name?: string } | null;
+  const storeRow = assignment.stores as {
+    name?: string;
+    latitude?: number | null;
+    longitude?: number | null;
+    geofence_radius_m?: number | null;
+  } | null;
   const purposeConfig = (template.purpose_config ?? {}) as Record<string, unknown>;
   const inputSchema = purposeConfig.inputSchema as InputSchema | undefined;
   const inputDataset = readStoredDataset(purposeConfig.input_dataset ?? templateSnapshot?.input_dataset);
@@ -157,6 +164,13 @@ export async function loadCustomAuditSession(
     createdAt: (assignment.created_at as string | null) ?? null,
     evidencePolicy: (assignment.evidence_policy as Partial<AuditEvidencePolicy> | null) ?? null,
     requireRca: (assignment as { require_rca?: boolean | null }).require_rca === true,
+    storeLocation: storeRow
+      ? {
+          lat: storeRow.latitude ?? null,
+          lng: storeRow.longitude ?? null,
+          radiusM: storeRow.geofence_radius_m ?? null,
+        }
+      : null,
   };
 }
 

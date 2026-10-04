@@ -1,8 +1,11 @@
 import {
   EVIDENCE_PROOF_OPTIONS,
+  policyNearExpiryDays,
   type AuditEvidencePolicy,
   type EvidenceProof,
 } from "@/lib/audit-evidence-policy";
+import { localIsoDate, rowExpiryState } from "@/lib/audit-engine/expiry-evidence";
+import { haversineMeters } from "@/lib/geo/distance";
 import type { AuditInputDataset } from "@/lib/audit-input-dataset";
 import type { AuditResponseValue, TemplateField } from "@/lib/audit-builder/types";
 import type { ResponseMap } from "@/lib/custom-audit-shared";
@@ -102,18 +105,59 @@ export function shelfEvidenceValues(responses: ResponseMap, slot: ShelfSlot): Re
   return byName ?? section[slot.index] ?? {};
 }
 
-export type GpsFix = { lat: number; lng: number; accuracyM: number | null; capturedAt: string };
+export type StoreCheck = "at_store" | "near_store" | "outside" | "store_location_missing";
+
+export type GpsFix = {
+  lat: number;
+  lng: number;
+  accuracyM: number | null;
+  capturedAt: string;
+  address?: string | null;
+  storeCheck?: StoreCheck | null;
+  storeDistanceM?: number | null;
+  storeRadiusM?: number | null;
+};
+
+const STORE_CHECKS = new Set<StoreCheck>(["at_store", "near_store", "outside", "store_location_missing"]);
+
+export type StoreLocation = { lat: number | null; lng: number | null; radiusM: number | null };
+
+/**
+ * Is the auditee at the assigned store? Within the store radius = at the store; within the radius
+ * plus the phone's reported GPS accuracy (capped at 150 m) = near the store; otherwise outside.
+ */
+export function storeCheckFor(
+  fix: { lat: number; lng: number; accuracyM: number | null },
+  store: StoreLocation | null | undefined,
+): { storeCheck: StoreCheck; storeDistanceM: number | null; storeRadiusM: number | null } {
+  if (!store || store.lat == null || store.lng == null) {
+    return { storeCheck: "store_location_missing", storeDistanceM: null, storeRadiusM: null };
+  }
+  const radius = store.radiusM && store.radiusM > 0 ? store.radiusM : 200;
+  const distance = Math.round(haversineMeters(store.lat, store.lng, fix.lat, fix.lng));
+  const slack = Math.min(150, Math.max(0, fix.accuracyM ?? 0));
+  return {
+    storeCheck: distance <= radius ? "at_store" : distance <= radius + slack ? "near_store" : "outside",
+    storeDistanceM: distance,
+    storeRadiusM: radius,
+  };
+}
 
 export function parseGps(value: unknown): GpsFix | null {
   if (typeof value !== "string" || !value) return null;
   try {
     const parsed = JSON.parse(value) as Partial<GpsFix>;
     if (typeof parsed.lat !== "number" || typeof parsed.lng !== "number") return null;
+    const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
     return {
       lat: parsed.lat,
       lng: parsed.lng,
-      accuracyM: typeof parsed.accuracyM === "number" ? parsed.accuracyM : null,
+      accuracyM: num(parsed.accuracyM),
       capturedAt: String(parsed.capturedAt ?? ""),
+      address: typeof parsed.address === "string" && parsed.address.trim() ? parsed.address : null,
+      storeCheck: parsed.storeCheck && STORE_CHECKS.has(parsed.storeCheck) ? parsed.storeCheck : null,
+      storeDistanceM: num(parsed.storeDistanceM),
+      storeRadiusM: num(parsed.storeRadiusM),
     };
   } catch {
     return null;
@@ -171,7 +215,7 @@ export type GridEvidenceRow = {
   rowEvidenceStatus: "verified" | "needs_review" | "missing" | "not_required";
 };
 
-export type GridRequirementId = EvidenceProof | "variance_explanation";
+export type GridRequirementId = EvidenceProof | "variance_explanation" | "expired_removal";
 
 export type GridRequirement = {
   id: GridRequirementId;
@@ -208,6 +252,8 @@ export function evaluateGridEvidence(input: {
   columns: GridEvidenceColumns;
   rows: GridEvidenceRow[];
   responses: ResponseMap;
+  /** Store-local date used to judge expiry; defaults to the device's today. */
+  today?: string;
 }): GridRequirement[] {
   const proofs = new Set<EvidenceProof>(input.policy?.requiredProof ?? []);
   const audit = auditEvidenceValues(input.responses);
@@ -286,8 +332,37 @@ export function evaluateGridEvidence(input: {
         });
         break;
       }
+      case "expiry_date": {
+        const today = input.today ?? localIsoDate();
+        const nearDays = policyNearExpiryDays(input.policy);
+        const states = input.rows.map((r) => ({ row: r, state: rowExpiryState(r.values, today, nearDays) }));
+        const missing = states.filter((s) => s.state.dateMissing);
+        out.push({
+          id: proof,
+          label: labelOf(proof),
+          hint: "Photograph the expiry date on every product in the Expiry date column. AI reads it — check the date.",
+          done: states.length - missing.length,
+          total: states.length,
+          ok: missing.length === 0,
+          missing: missing.map((s) => rowLabel(s.row)),
+        });
+        const expired = states.filter((s) => s.state.status === "expired");
+        if (expired.length) {
+          const notRemoved = expired.filter((s) => s.state.removalMissing);
+          out.push({
+            id: "expired_removal",
+            label: "Expired items removed",
+            hint: "Take every expired product off the shelf, tick Removed and add a photo.",
+            done: expired.length - notRemoved.length,
+            total: expired.length,
+            ok: notRemoved.length === 0,
+            missing: notRemoved.map((s) => rowLabel(s.row)),
+          });
+        }
+        break;
+      }
       case "gps":
-        single(proof, "Allow location access so the audit location is recorded.", parseGps(audit[GPS_KEY]) !== null);
+        single(proof, "Your location is recorded automatically — allow location access if asked.", parseGps(audit[GPS_KEY]) !== null);
         break;
       case "device_metadata":
         out.push({

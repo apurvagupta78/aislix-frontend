@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { MapPin, Smartphone } from "lucide-react";
 
 import { EvidenceImage } from "@/components/audit-builder/AuditExecutionForm";
-import { EvidenceVideo } from "@/components/audit-engine/AuditEvidencePanel";
+import { EvidenceVideo, GpsSummary } from "@/components/audit-engine/AuditEvidencePanel";
 import { AISLIX_PALETTE, ACCENT_TINT } from "@/lib/ai-audit/kpi-palette";
 import {
   auditEvidenceValues,
@@ -157,19 +157,23 @@ export function DigitalAuditEvidenceSummary({
               return (
                 <Item key={r.id} requirement={r}>
                   {gps ? (
-                    <p className="flex items-center gap-1.5 text-xs text-[#102A43]">
-                      <MapPin className="size-3.5 text-[#667085]" />
-                      <a
-                        className="underline-offset-2 hover:underline"
-                        href={`https://www.google.com/maps?q=${gps.lat},${gps.lng}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {gps.lat.toFixed(5)}, {gps.lng.toFixed(5)}
-                      </a>
-                      {gps.accuracyM != null ? <span className="text-[#667085]">±{Math.round(gps.accuracyM)} m</span> : null}
-                      <span className="text-[#667085]">· read from device</span>
-                    </p>
+                    <div className="flex items-start gap-1.5 text-xs text-[#102A43]">
+                      <MapPin className="mt-0.5 size-3.5 shrink-0 text-[#667085]" />
+                      <div className="min-w-0">
+                        <GpsSummary gps={gps} />
+                        <p className="mt-1 text-[#667085]">
+                          Read from device ·{" "}
+                          <a
+                            className="underline underline-offset-2"
+                            href={`https://www.google.com/maps?q=${gps.lat},${gps.lng}`}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Open map
+                          </a>
+                        </p>
+                      </div>
+                    </div>
                   ) : (
                     <span className="text-xs text-[#667085]">Location not captured</span>
                   )}
@@ -196,7 +200,11 @@ export function DigitalAuditEvidenceSummary({
                       ? `Scans are in the table below${evidence.barcodeColumnName ? ` (checked against “${evidence.barcodeColumnName}”)` : ""}.`
                       : r.id === "variance_explanation"
                         ? "Reasons are in the table below."
-                        : "Row photos are in the table below."}
+                        : r.id === "expiry_date"
+                          ? "Expiry photos, dates and status are in the table below."
+                          : r.id === "expired_removal"
+                            ? "Removal confirmations and photos are in the table below."
+                            : "Row photos are in the table below."}
                   </p>
                 </Item>
               );

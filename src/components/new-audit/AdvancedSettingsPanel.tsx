@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import {
   EVIDENCE_PROOF_OPTIONS,
+  policyNearExpiryDays,
   policyNeedsBarcodeColumn,
   policyNeedsShelfColumn,
   policyUsesShelfColumn,
@@ -42,6 +43,7 @@ const SELECTED_CARD =
   "border-[var(--aislix-warehouse-border)] bg-[var(--aislix-warehouse-bg)]/60";
 const UNSELECTED_CARD = "border-[#D9E2E8] bg-white";
 const NONE = "__none__";
+const NEAR_EXPIRY_OPTIONS = [0, 3, 7, 14, 30];
 
 function ColumnPicker({
   label,
@@ -153,6 +155,34 @@ export function AdvancedSettingsPanel({
         })}
       </div>
 
+      {evidencePolicy.requiredProof.includes("expiry_date") ? (
+        <div className="grid gap-4 rounded-xl border border-[#D9E2E8] bg-[#F4F7F9] p-4 md:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label>Near expiry warning</Label>
+            <Select
+              value={String(policyNearExpiryDays(evidencePolicy))}
+              onValueChange={(v) => onEvidencePolicyChange({ nearExpiryDays: Number(v) })}
+            >
+              <SelectTrigger aria-label="Near expiry warning">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {NEAR_EXPIRY_OPTIONS.map((n) => (
+                  <SelectItem key={n} value={String(n)}>
+                    {n === 0 ? "Only expired items" : `${n} day${n === 1 ? "" : "s"} or less left`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-[#667085]">Products this close to their date are flagged “Near expiry”.</p>
+          </div>
+          <p className="self-center text-xs text-[#667085]">
+            The auditee photographs the expiry date on every product and AI reads it. Anything past today’s date is
+            marked EXPIRED and must be removed from the shelf, with a photo, before the audit can be submitted.
+          </p>
+        </div>
+      ) : null}
+
       {showShelfPicker || showBarcodePicker ? (
         <div className="grid gap-4 rounded-xl border border-[#D9E2E8] bg-[#F4F7F9] p-4 md:grid-cols-2">
           {showShelfPicker ? (
@@ -190,7 +220,7 @@ export function AdvancedSettingsPanel({
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="space-y-1.5">
-          <Label>Minimum photos</Label>
+          <Label>Minimum Evidences</Label>
           <Select
             value={String(evidencePolicy.minimumPhotos)}
             onValueChange={(v) => onEvidencePolicyChange({ minimumPhotos: Number(v) })}

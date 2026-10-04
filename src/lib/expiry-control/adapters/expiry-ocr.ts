@@ -53,7 +53,36 @@ export class ManualExpiryOcrAdapter implements ExpiryOcrAdapter {
   }
 }
 
-let activeAdapter: ExpiryOcrAdapter = new SimulatedExpiryOcrAdapter();
+/** AI reads the printed date; the auditor still confirms it before it is recorded. */
+export class AiExpiryOcrAdapter implements ExpiryOcrAdapter {
+  readonly name = "ai";
+
+  async readDate(input: ExpiryOcrInput): Promise<ExpiryOcrResult> {
+    const { readExpiryDateFromPhoto } = await import("@/lib/audit-engine/expiry-read-client");
+    try {
+      const reading = await readExpiryDateFromPhoto(input.imageBlob);
+      return {
+        rawText: reading.rawText,
+        suggestedDate: reading.date,
+        dateType: reading.kind === "derived_from_mfg" ? "expiry" : reading.kind === "unknown" ? input.dateTypeHint ?? "expiry" : reading.kind,
+        confidence: reading.confidence,
+        simulated: false,
+        label: reading.date ? "AI reading — confirm the date" : "AI couldn't read the date — type it",
+      };
+    } catch {
+      return {
+        rawText: "",
+        suggestedDate: null,
+        dateType: input.dateTypeHint ?? "unknown",
+        confidence: null,
+        simulated: false,
+        label: "AI reading unavailable — type the date",
+      };
+    }
+  }
+}
+
+let activeAdapter: ExpiryOcrAdapter = new AiExpiryOcrAdapter();
 
 export function getExpiryOcrAdapter(): ExpiryOcrAdapter {
   return activeAdapter;

@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { AuditExecutionForm } from "@/components/audit-builder/AuditExecutionForm";
 import { AuditExecutionTable } from "@/components/audit-engine/AuditExecutionTable";
 import { SubmitBlockersPanel, type SubmitProblem } from "@/components/audit-engine/SubmitBlockersPanel";
+import { useAuditEvidenceCapture } from "@/components/audit-engine/useAuditEvidenceCapture";
+import { evaluateGridEvidence, shelfSlots, type GridRequirement } from "@/lib/audit-engine/grid-evidence";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ErrorState, Skeleton } from "@/components/States";
@@ -28,6 +30,7 @@ import {
   submitCustomAudit,
   uploadCustomAuditImage,
   uploadCustomAuditVideo,
+  type CustomAuditSession,
   type ResponseMap,
 } from "@/lib/custom-audit";
 
@@ -75,7 +78,9 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
       hasFieldDefinitions: (session.template.field_definitions?.length ?? 0) > 0,
     };
     const route = resolveAuditExecutionRoute(ctx);
-    if (route !== "universal" && route !== "custom") {
+    // Template-based expiry audits run here (Expiry dates evidence); the expiry wizard is only for
+    // inspections created in Expiry Control, which never reach this screen.
+    if (route !== "universal" && route !== "custom" && route !== "expiry") {
       navigate({ to: auditExecutionPath(assignmentId, route) as "/" });
     }
   }, [assignmentId, navigate, session, testMode]);
@@ -189,6 +194,41 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
     );
   }
 
+  const setValue = async (sectionKey: string, recordIndex: number, field: TemplateField, value: AuditResponseValue) => {
+    setResponses((prev) => ({
+      ...prev,
+      [sectionKey]: {
+        ...(prev[sectionKey] ?? {}),
+        [recordIndex]: { ...(prev[sectionKey]?.[recordIndex] ?? {}), [field.key]: value },
+      },
+    }));
+    if (readOnly) return;
+    try {
+      await handleSaveField(sectionKey, recordIndex, field, value);
+    } catch (e) {
+      toast.error(toUserMessage(e));
+    }
+  };
+  const requirements = evaluateGridEvidence({
+    policy: session.evidencePolicy,
+    requireRca: false,
+    dataset: null,
+    columns: { shelfColumnId: null, barcodeColumnId: null },
+    rows: [],
+    responses,
+  }).filter((r) => r.total > 0);
+  const unmet = requirements.filter((r) => !r.ok && r.id !== "device_metadata");
+  const submitForm = () => {
+    if (unmet.length && !testMode) {
+      setSubmitProblem({
+        title: "Add the required evidence before submitting.",
+        items: unmet.map((r) => `${r.label}: ${r.hint}`),
+      });
+      return;
+    }
+    submitMutation.mutate();
+  };
+
   return (
     <div className="space-y-4">
       {session.template.operating_model && (
@@ -216,17 +256,66 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
           testMode={testMode}
         />
       </div>
+      {requirements.length ? (
+        <div className="mx-auto max-w-lg">
+          <FormAuditEvidence
+            session={session}
+            requirements={requirements}
+            responses={responses}
+            setValue={setValue}
+            assignmentId={assignmentId}
+            readOnly={readOnly}
+            canCapture={!readOnly && !testMode}
+          />
+        </div>
+      ) : null}
       {submitProblem ? (
         <div className="mx-auto max-w-lg">
           <SubmitBlockersPanel blockers={[]} problem={submitProblem} onDismissProblem={() => setSubmitProblem(null)} />
         </div>
       ) : null}
       <div className="flex justify-end gap-2">
-        <Button onClick={() => submitMutation.mutate()} disabled={submitMutation.isPending}>
+        <Button onClick={submitForm} disabled={submitMutation.isPending}>
           {submitMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {testMode ? "Validate test audit" : "Submit audit"}
         </Button>
       </div>
     </div>
+  );
+}
+
+function FormAuditEvidence({
+  session,
+  requirements,
+  responses,
+  setValue,
+  assignmentId,
+  readOnly,
+  canCapture,
+}: {
+  session: CustomAuditSession;
+  requirements: GridRequirement[];
+  responses: ResponseMap;
+  setValue: (sectionKey: string, recordIndex: number, field: TemplateField, value: AuditResponseValue) => Promise<void>;
+  assignmentId: string;
+  readOnly: boolean;
+  canCapture: boolean;
+}) {
+  const capture = useAuditEvidenceCapture({
+    responses,
+    setValue,
+    onUploadImage: (file) => uploadCustomAuditImage(assignmentId, file),
+    onUploadVideo: (file) => uploadCustomAuditVideo(assignmentId, file),
+    requiredProof: session.evidencePolicy?.requiredProof ?? [],
+    qualityChecks: session.evidencePolicy?.qualityChecks ?? [],
+    storeLocation: session.storeLocation,
+    readOnly,
+    canCapture,
+  });
+  return (
+    <>
+      {capture.renderPanel(requirements, shelfSlots(null, null))}
+      {capture.hiddenInputs}
+    </>
   );
 }

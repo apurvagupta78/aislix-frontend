@@ -7,6 +7,7 @@ export type EvidenceProof =
   | "variance_photo"
   | "before_after"
   | "barcode"
+  | "expiry_date"
   | "gps"
   | "device_metadata"
   | "live_session_video"
@@ -18,6 +19,8 @@ export type AuditEvidencePolicy = {
   requiredProof: EvidenceProof[];
   captureSource: "in_app_only" | "import_allowed" | "either";
   minimumPhotos: number;
+  /** Expiry dates: a product expiring within this many days is flagged "Near expiry". */
+  nearExpiryDays?: number;
   maximumEvidenceAgeMinutes: number;
   qualityChecks: Array<"blur" | "dark" | "glare" | "duplicate_hash" | "similarity_review">;
   reviewMode: "none" | "manager" | "independent" | "supervisor_receipt";
@@ -58,7 +61,16 @@ export const EVIDENCE_PROOF_OPTIONS: Array<{
     label: "Barcode scan",
     description: "Confirm product identity where available.",
   },
-  { value: "gps", label: "GPS location", description: "Capture availability and accuracy." },
+  {
+    value: "expiry_date",
+    label: "Expiry dates",
+    description: "Photo of the expiry date on every product. AI reads it; expired items must be removed.",
+  },
+  {
+    value: "gps",
+    label: "GPS location",
+    description: "Recorded automatically with the address and a check that the auditee is at the store.",
+  },
   {
     value: "device_metadata",
     label: "Time and device metadata",
@@ -147,6 +159,13 @@ export function policyNeedsShelfColumn(policy: Pick<AuditEvidencePolicy, "requir
 /** Before and after is taken per shelf when a shelf column is set, otherwise once for the audit. */
 export function policyUsesShelfColumn(policy: Pick<AuditEvidencePolicy, "requiredProof">): boolean {
   return policyNeedsShelfColumn(policy) || policy.requiredProof.includes("before_after");
+}
+
+export const DEFAULT_NEAR_EXPIRY_DAYS = 7;
+
+export function policyNearExpiryDays(policy: Partial<Pick<AuditEvidencePolicy, "nearExpiryDays">> | null | undefined): number {
+  const days = Number(policy?.nearExpiryDays);
+  return Number.isFinite(days) && days >= 0 ? Math.round(days) : DEFAULT_NEAR_EXPIRY_DAYS;
 }
 
 export function policyNeedsBarcodeColumn(policy: Pick<AuditEvidencePolicy, "requiredProof">): boolean {

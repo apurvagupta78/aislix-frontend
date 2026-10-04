@@ -15,7 +15,9 @@ import {
   type GridRequirement,
   type ShelfPhotoKey,
   type ShelfSlot,
+  type StoreCheck,
 } from "@/lib/audit-engine/grid-evidence";
+import { formatDistance } from "@/lib/geo/distance";
 import type { ResponseMap } from "@/lib/custom-audit-shared";
 import { resolveAuditEvidenceUrl } from "@/lib/custom-audit";
 
@@ -140,7 +142,58 @@ function Block({ requirement, children }: { requirement: GridRequirement; childr
   );
 }
 
-const ROW_LEVEL = new Set(["per_sku_photo", "variance_photo", "barcode", "variance_explanation"]);
+const ROW_LEVEL = new Set(["per_sku_photo", "variance_photo", "barcode", "expiry_date", "expired_removal", "variance_explanation"]);
+
+const ROW_LEVEL_HINT: Record<string, string> = {
+  barcode: "Use Scan in the Barcode column of the table.",
+  expiry_date: "Use Scan date in the Expiry date column of the table.",
+  expired_removal: "In the Expiry date column: tick Removed from shelf and add a photo.",
+  variance_explanation: "Pick a reason in the table on every row marked Mismatch.",
+};
+
+const STORE_CHECK_STYLE: Record<StoreCheck, { label: (gps: GpsFix) => string; background: string; border: string }> = {
+  at_store: {
+    label: (g) => `At the store${g.storeDistanceM != null ? ` · ${formatDistance(g.storeDistanceM)} away` : ""}`,
+    background: ACCENT_TINT.green,
+    border: `1px solid ${AISLIX_PALETTE.green}`,
+  },
+  near_store: {
+    label: (g) => `Near the store${g.storeDistanceM != null ? ` · ${formatDistance(g.storeDistanceM)} away` : ""}`,
+    background: ACCENT_TINT.blue,
+    border: `1px solid ${AISLIX_PALETTE.blue}`,
+  },
+  outside: {
+    label: (g) => `Outside the store area${g.storeDistanceM != null ? ` · ${formatDistance(g.storeDistanceM)} away` : ""}`,
+    background: AISLIX_PALETTE.pink,
+    border: `1px solid ${AISLIX_PALETTE.secondary}`,
+  },
+  store_location_missing: {
+    label: () => "Store location not set — can't check distance",
+    background: AISLIX_PALETTE.grey,
+    border: `1px solid ${AISLIX_PALETTE.border}`,
+  },
+};
+
+export function GpsSummary({ gps }: { gps: GpsFix }) {
+  const check = gps.storeCheck ? STORE_CHECK_STYLE[gps.storeCheck] : null;
+  return (
+    <span className="min-w-0 space-y-1">
+      <span className="block tabular-nums">
+        {gps.lat.toFixed(5)}, {gps.lng.toFixed(5)}
+        {gps.accuracyM != null ? ` · ±${Math.round(gps.accuracyM)} m` : ""}
+      </span>
+      {gps.address ? <span className="block text-[#667085]">{gps.address}</span> : null}
+      {check ? (
+        <span
+          className="inline-block whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-medium text-[#102A43]"
+          style={{ background: check.background, border: check.border }}
+        >
+          {check.label(gps)}
+        </span>
+      ) : null}
+    </span>
+  );
+}
 
 export function AuditEvidencePanel({
   requirements,
@@ -273,13 +326,10 @@ export function AuditEvidencePanel({
             case "gps":
               return (
                 <Block key={requirement.id} requirement={requirement}>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-[#102A43]">
-                    <MapPin className="size-3.5 text-[#667085]" />
+                  <div className="flex flex-wrap items-start gap-2 text-xs text-[#102A43]">
+                    <MapPin className="mt-0.5 size-3.5 shrink-0 text-[#667085]" />
                     {gps ? (
-                      <span>
-                        {gps.lat.toFixed(5)}, {gps.lng.toFixed(5)}
-                        {gps.accuracyM != null ? ` · ±${Math.round(gps.accuracyM)} m` : ""}
-                      </span>
+                      <GpsSummary gps={gps} />
                     ) : (
                       <span className="text-[#667085]">{gpsError ?? (locating ? "Getting your location…" : "Location not captured yet.")}</span>
                     )}
@@ -306,11 +356,7 @@ export function AuditEvidencePanel({
               return ROW_LEVEL.has(requirement.id) ? (
                 <Block key={requirement.id} requirement={requirement}>
                   <p className="text-xs text-[#667085]">
-                    {requirement.id === "barcode"
-                      ? "Use Scan in the Barcode column of the table."
-                      : requirement.id === "variance_explanation"
-                        ? "Pick a reason in the table on every row marked Mismatch."
-                        : "Add photos in the Evidence column of the table."}
+                    {ROW_LEVEL_HINT[requirement.id] ?? "Add photos in the Evidence column of the table."}
                   </p>
                 </Block>
               ) : null;
