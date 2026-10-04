@@ -92,7 +92,7 @@ export function buildAiVisionContextPreview(input: {
   rows.push({
     label: "Vision payload (at scan time)",
     value:
-      "Shelf image URLs, customer_type (audit role), planogram_items (expected SKUs, facings, prices), audit_package (KPI targets), category selections, and store context — sent as JSON to the Aislix vision API. Astra then generates detections, compliance scores, and role-specific summaries from that context plus the photo.",
+      "Shelf image URLs, customer_type (audit role), planogram_items (expected SKUs, facings, prices), audit_package (KPI targets), category selections, and store context — sent as JSON to the Aislix vision API. The AI then generates detections, compliance scores, and role-specific summaries from that context plus the photo.",
   });
 
   if (input.auditName.trim()) {

@@ -5,6 +5,7 @@
  */
 
 import type { ReferenceRow } from "@/lib/ai-audit/reference-document";
+import { hideModelNames } from "@/lib/ai-display-text";
 
 export type AiAnalysisCheck =
   | "presence"
@@ -128,6 +129,8 @@ function text(value: unknown, max = 1200): string {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
+const prose = (value: unknown, max?: number) => hideModelNames(text(value, max));
+
 function lineNumbers(value: unknown): number[] {
   if (!Array.isArray(value)) return [];
   return [
@@ -156,14 +159,14 @@ export function parseLunaAnalysis(
       return {
         check: (allowedChecks.has(check) ? check : "question") as LunaFinding["check"],
         status: FINDING_STATUS.has(status) ? status : "needs_review",
-        title: text(f.title, 160),
-        note: text(f.note, 800),
+        title: prose(f.title, 160),
+        note: prose(f.note, 800),
         rows: lineNumbers(f.rows),
       };
     })
     .filter((f) => f.title || f.note)
     .slice(0, 30);
-  const answer = text(obj.answer, 2000);
+  const answer = prose(obj.answer, 2000);
   const failed = obj.status === "failed";
   if (!failed && !answer && !findings.length) return null;
   const checks = request
@@ -176,13 +179,13 @@ export function parseLunaAnalysis(
     answer,
     findings,
     needs_review: (Array.isArray(obj.needs_review) ? obj.needs_review : [])
-      .map((n) => text(n, 300))
+      .map((n) => prose(n, 300))
       .filter(Boolean)
       .slice(0, 10),
     checks,
     question: request ? request.question : text(obj.question, 500),
     model: meta?.model ?? (typeof obj.model === "string" ? obj.model : null),
     generated_at: meta?.generatedAt ?? (typeof obj.generated_at === "string" ? obj.generated_at : new Date().toISOString()),
-    ...(failed ? { error: text(obj.error, 300) || "Luna analysis could not be completed." } : {}),
+    ...(failed ? { error: prose(obj.error, 300) || "AI analysis could not be completed." } : {}),
   };
 }

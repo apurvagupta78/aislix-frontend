@@ -962,7 +962,7 @@ function shelfCvIncompleteReason(root: Record<string, unknown>): string | null {
     str(pickRecord(root.astra_shelf_analysis)?.reference_cache) ||
     str(pickRecord(nested?.astra_shelf_analysis)?.reference_cache);
   if (refCache) {
-    return `This scan used the landing demo reference cache (${refCache}) instead of a live Astra CV analysis. Re-run the scan — AI Audit now skips that cache.`;
+    return `This scan used the landing demo reference cache (${refCache}) instead of a live AI shelf analysis. Re-run the scan — AI Audit now skips that cache.`;
   }
   return null;
 }
@@ -989,7 +989,7 @@ function isCountVerificationPending(root: Record<string, unknown>): boolean {
 /** Extract Astra analysis from a vision API payload or stored metrics. */
 export function normalizeAstraAnalysis(payload: unknown): NormalizedAstraAnalysis {
   const root = pickRecord(payload);
-  if (!root) return { mode: "incomplete", reason: "No Astra payload found." };
+  if (!root) return { mode: "incomplete", reason: "No AI analysis was found for this scan." };
 
   const cvIncomplete = shelfCvIncompleteReason(root);
   if (cvIncomplete) {
@@ -1014,7 +1014,7 @@ export function normalizeAstraAnalysis(payload: unknown): NormalizedAstraAnalysi
     if (parsed) return parsed;
   }
 
-  return { mode: "incomplete", reason: "Structured Astra JSON was not returned for this scan." };
+  return { mode: "incomplete", reason: "The structured AI analysis was not returned for this scan." };
 }
 
 export function astraAnalysisFromScanResult(result: {

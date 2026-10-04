@@ -50,7 +50,7 @@ export class ResultsErrorBoundary extends Component<Props, State> {
             <h2 className="text-base font-semibold tracking-tight">Couldn&apos;t render this audit</h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
               The audit data loaded, but the results renderer crashed. Open the debug inspector to see
-              the raw Astra / Digital payload, then we can rebuild this view safely.
+              the raw AI / Digital payload, then we can rebuild this view safely.
             </p>
             {import.meta.env.DEV && this.state.error?.message ? (
               <p className="mx-auto mt-2 max-w-lg rounded-lg bg-muted/50 px-3 py-2 font-mono text-[11px] text-destructive">

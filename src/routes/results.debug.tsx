@@ -22,7 +22,7 @@ export const Route = createFileRoute("/results/debug")({
 
 const KIND_LABEL: Record<AuditResultKind, { label: string; icon: typeof Bot; className: string }> = {
   ai: {
-    label: "AI Audit (Astra)",
+    label: "AI Audit",
     icon: Bot,
     className: "bg-status-ai-soft text-status-ai-strong border-status-ai/25",
   },
@@ -125,7 +125,7 @@ function ResultsDebugPage() {
       title="Scan debug inspector"
       description={
         scan
-          ? `Raw payload for ${scan} — use this to see what Astra or Digital Audit stored before rebuilding /results.`
+          ? `Raw payload for ${scan} — use this to see what AI Audit or Digital Audit stored before rebuilding /results.`
           : "Pass ?scan=UUID to inspect an audit."
       }
       actions={
@@ -171,7 +171,7 @@ function ResultsDebugPage() {
               {payload.analysis_mode ? (
                 <Badge variant="secondary">analysis_mode: {payload.analysis_mode}</Badge>
               ) : null}
-              <Badge variant="secondary">Astra UI mode: {payload.astra_mode}</Badge>
+              <Badge variant="secondary">AI UI mode: {payload.astra_mode}</Badge>
             </div>
             <p className="mt-3 text-sm text-muted-foreground">
               {payload.result_kind === "ai" ? (
@@ -217,11 +217,11 @@ function ResultsDebugPage() {
           </div>
 
           <div className="rounded-xl border border-brand/20 bg-brand-soft/20 px-4 py-3 text-xs text-muted-foreground">
-            Next step: once the Astra / Digital payload looks correct here, we rebuild{" "}
+            Next step: once the AI / Digital payload looks correct here, we rebuild{" "}
             <Link to="/results" search={{ scan }} className="font-medium text-brand hover:underline">
               /results
             </Link>{" "}
-            as two separate views — AI (Astra comparison + shelf intel) vs Digital (variance table).
+            as two separate views — AI (planogram comparison + shelf intel) vs Digital (variance table).
           </div>
         </div>
       ) : null}

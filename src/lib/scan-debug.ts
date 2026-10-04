@@ -174,9 +174,9 @@ export async function fetchScanDebugPayload(scanId: string): Promise<ScanDebugPa
     },
     {
       id: "metrics_keys",
-      label: "scan_results.metrics (Astra + intel subset)",
+      label: "scan_results.metrics (AI + intel subset)",
       data: pickMetricsKeys(metrics),
-      note: "Full metrics object can be large; this shows the Astra-related keys.",
+      note: "Full metrics object can be large; this shows the AI-related keys.",
     },
     {
       id: "full_metrics",
@@ -185,9 +185,9 @@ export async function fetchScanDebugPayload(scanId: string): Promise<ScanDebugPa
     },
     {
       id: "astra_normalized",
-      label: "Normalized Astra analysis (frontend)",
+      label: "Normalized AI analysis (frontend)",
       data: astraFromResult,
-      note: "How the frontend interprets Astra payloads today.",
+      note: "How the frontend interprets AI payloads today.",
     },
     {
       id: "detected_products",

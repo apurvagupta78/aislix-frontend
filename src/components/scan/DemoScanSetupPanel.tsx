@@ -419,7 +419,7 @@ export function DemoScanSetupPanel({
       ) : (
         <p className="mx-auto mb-5 max-w-lg text-center text-sm text-muted-foreground">
           {mode === "sample"
-            ? "A sample stock list and question are pre-filled. Astra counts the sample shelf, then Luna answers against the list."
+            ? "A sample stock list and question are pre-filled. AI counts the sample shelf, then answers against the list."
             : "Pick shelf category, upload your stock list, invoice or planogram (CSV / Excel), add a shelf photo, then start the audit."}
         </p>
       )}

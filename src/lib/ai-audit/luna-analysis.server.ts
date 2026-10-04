@@ -37,7 +37,7 @@ export async function runLunaAnalysis(
   evidence: LunaAnalysisEvidence,
 ): Promise<LunaAnalysis> {
   const apiKey = (process.env.OPENAI_API_KEY ?? "").trim();
-  if (!apiKey) return failed(request, "Luna analysis is not configured.");
+  if (!apiKey) return failed(request, "it is not set up yet.");
   try {
     const OpenAI = (await import("openai")).default;
     const client = new OpenAI({ apiKey, timeout: LUNA_TIMEOUT_MS, maxRetries: 1 });
@@ -55,11 +55,11 @@ export async function runLunaAnalysis(
       max_output_tokens: 4096,
     });
     const raw = String(response.output_text ?? "").trim();
-    if (!raw) return failed(request, "Luna returned an empty answer.");
+    if (!raw) return failed(request, "the AI returned an empty answer.");
     const parsed = parseLunaAnalysis(JSON.parse(raw), request, { model, generatedAt: new Date().toISOString() });
-    return parsed ?? failed(request, "Luna's answer could not be read.");
+    return parsed ?? failed(request, "the AI answer could not be read.");
   } catch (error) {
     console.error("[luna-analysis] failed:", error);
-    return failed(request, "Luna analysis could not be completed. The shelf results above are unaffected.");
+    return failed(request, "it could not be completed.");
   }
 }

@@ -211,8 +211,8 @@ export function buildAiAuditDisplayContext(result: ScanResult): AiAuditDisplayCo
       intendedViewKind,
       extras,
       intendedViewKind === "planogram"
-        ? "This planogram scan did not return structured Astra planogram comparison data. Please re-run the scan."
-        : "This shelf-only scan did not return structured Astra shelf analysis data. Please re-run the scan.",
+        ? "This planogram scan did not return structured AI planogram comparison data. Please re-run the scan."
+        : "This shelf-only scan did not return structured AI shelf analysis data. Please re-run the scan.",
     );
   }
 

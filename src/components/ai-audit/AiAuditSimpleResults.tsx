@@ -30,7 +30,7 @@ export function AiAuditSimpleResults({ data, imageUrl }: Props) {
           ) : null}
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
-          This is the simplified AI results view — Astra comparison and detected products only. KPI
+          This is the simplified AI results view — AI comparison and detected products only. KPI
           charts and competitor panels are temporarily disabled while we rebuild the full results
           page.
         </p>

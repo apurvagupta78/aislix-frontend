@@ -38,7 +38,7 @@ export function LunaAnalysisCard({ analysis, className }: Props) {
 
   return (
     <section
-      aria-label="Luna analysis"
+      aria-label="AI analysis"
       className={cn("space-y-4 rounded-2xl border bg-white p-5 shadow-sm", className)}
       style={{ borderColor: AISLIX_PALETTE.border, borderLeft: `4px solid ${AISLIX_PALETTE.purple}` }}
     >
@@ -46,10 +46,10 @@ export function LunaAnalysisCard({ analysis, className }: Props) {
         <div className="flex items-start gap-2">
           <Sparkles className="mt-0.5 size-4 shrink-0" style={{ color: AISLIX_PALETTE.purple }} />
           <div>
-            <h3 className="text-sm font-semibold text-[#102A43]">Luna analysis</h3>
+            <h3 className="text-sm font-semibold text-[#102A43]">AI analysis</h3>
             <p className="mt-0.5 text-xs text-[#667085]">
-              Your request, answered from Astra&apos;s counts and Aislix&apos;s document match. Luna does not
-              recount.
+              Your request, answered from the AI shelf counts and Aislix&apos;s document match. Nothing is
+              recounted here.
             </p>
           </div>
         </div>
@@ -57,7 +57,7 @@ export function LunaAnalysisCard({ analysis, className }: Props) {
           className="rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#102A43]"
           style={{ background: ACCENT_TINT.purple, borderColor: AISLIX_PALETTE.purple }}
         >
-          AI analysis · Luna
+          AI analysis
         </span>
       </div>
 
@@ -82,7 +82,7 @@ export function LunaAnalysisCard({ analysis, className }: Props) {
           className="rounded-xl border px-4 py-3 text-sm text-[#102A43]"
           style={{ background: AISLIX_PALETTE.grey, borderColor: AISLIX_PALETTE.border }}
         >
-          Luna analysis unavailable — {analysis.error ?? "it could not be completed."} The shelf counts and
+          AI analysis unavailable — {analysis.error ?? "it could not be completed."} The shelf counts and
           document comparison below are complete.
         </p>
       ) : (

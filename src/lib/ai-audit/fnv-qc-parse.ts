@@ -2,6 +2,8 @@
  * Parse Astra FNV QC JSON into a typed disposition result.
  */
 
+import { hideModelNames } from "@/lib/ai-display-text";
+
 export type FnvDisposition = "SELLABLE" | "DAMAGED" | "HUMAN_REVIEW";
 
 export type FnvQcResult = {
@@ -45,6 +47,6 @@ export function parseFnvQcPayload(raw: unknown): FnvQcResult {
     disposition,
     defect_types: disposition === "DAMAGED" ? defect_types : disposition === "SELLABLE" ? [] : defect_types,
     confidence: conf != null && Number.isFinite(conf) ? conf : null,
-    notes: obj.notes != null ? String(obj.notes) : null,
+    notes: obj.notes != null ? hideModelNames(String(obj.notes)) : null,
   };
 }

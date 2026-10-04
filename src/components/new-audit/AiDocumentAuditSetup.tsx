@@ -76,7 +76,7 @@ export function AiDocumentAuditSetup({
         <span className="inline-flex items-center gap-1.5">
           <Camera className="size-4 text-[#9B86D9]" />
           <span>
-            <strong className="font-semibold text-[#102A43]">3. Shelf photos</strong> — Astra counts, Luna explains
+            <strong className="font-semibold text-[#102A43]">3. Shelf photos</strong> — AI counts and explains
           </span>
         </span>
       </div>

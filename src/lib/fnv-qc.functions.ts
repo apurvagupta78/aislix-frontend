@@ -8,6 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { buildAstraVisionExtras } from "@/lib/ai-audit/astra-analysis";
 import { parseFnvQcPayload, type FnvQcResult } from "@/lib/ai-audit/fnv-qc-parse";
+import { hideModelNames } from "@/lib/ai-display-text";
 
 export type RunFnvQcInput = {
   scanId: string;
@@ -335,10 +336,11 @@ async function runFnvQcCore(
         audit_origin: "digital",
         confirmation_state: "ai_suggested",
         title: `FNV QC damaged — ${result.product ?? line.product_name ?? "product"}`,
-        description:
+        description: hideModelNames(
           result.defect_types.length > 0
             ? `Defects: ${result.defect_types.join(", ")}. ${result.notes ?? ""}`.trim()
-            : (result.notes ?? "Astra marked this unit DAMAGED."),
+            : (result.notes ?? "AI marked this unit DAMAGED."),
+        ),
         product_name: result.product ?? line.product_name ?? null,
         category: result.category ?? line.category ?? null,
       } as never);

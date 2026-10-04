@@ -2,6 +2,7 @@ import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { AiAuditCard } from "@/components/ai-audit/results/AiAuditUi";
+import { hideModelNames } from "@/lib/ai-display-text";
 
 type Props = {
   scanId: string;
@@ -18,10 +19,10 @@ export function AiAuditIncompleteState({ scanId, reason, modeLabel }: Props) {
             <AlertTriangle className="size-10 text-amber-600" />
           </div>
           <div className="max-w-lg space-y-2">
-            <p className="text-sm font-medium text-foreground">{reason}</p>
+            <p className="text-sm font-medium text-foreground">{hideModelNames(reason)}</p>
             <p className="text-xs text-muted-foreground">
-              Aislix requires the full structured Astra JSON response. Legacy inventory-only payloads
-              cannot render the complete metrics dashboard.
+              Aislix needs the full structured AI analysis to show this dashboard. Older scans that only
+              stored a product list cannot show the complete metrics.
             </p>
           </div>
           <div className="flex flex-wrap justify-center gap-2">

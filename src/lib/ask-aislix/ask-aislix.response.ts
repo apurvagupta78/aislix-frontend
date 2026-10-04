@@ -3,6 +3,7 @@ import {
   AskAislixResponseSchema,
   type AskAislixResponse,
 } from "@/lib/ask-aislix/ask-aislix.types";
+import { hideModelNames } from "@/lib/ai-display-text";
 
 export const NO_AUDIT_FOUND_MESSAGE =
   "No audit found. Please create an audit to generate the answer";
@@ -167,7 +168,12 @@ export function normalizeAskAislixResponse(response: AskAislixResponse): AskAisl
   if (isNoAuditDataResponse(response)) {
     return emptyAskResponse(NO_AUDIT_FOUND_MESSAGE);
   }
-  return response;
+  return {
+    ...response,
+    answer: hideModelNames(response.answer),
+    summary: hideModelNames(response.summary),
+    follow_up_questions: response.follow_up_questions.map(hideModelNames),
+  };
 }
 
 export function parseAskAislixResponse(raw: string): AskAislixResponse {
@@ -190,7 +196,7 @@ export function parseAskAislixResponse(raw: string): AskAislixResponse {
   }
 
   if (!trimmed.startsWith("{") && trimmed.length > 0) {
-    return emptyAskResponse(trimmed.slice(0, 4000));
+    return emptyAskResponse(hideModelNames(trimmed.slice(0, 4000)));
   }
 
   return emptyAskResponse(ASK_AISLIX_PARSE_ERROR_MESSAGE);

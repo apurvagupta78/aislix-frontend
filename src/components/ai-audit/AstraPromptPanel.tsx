@@ -27,7 +27,7 @@ export function AstraPromptPanel({ input, className, defaultOpen = false }: Prop
           <Sparkles className="size-4 text-[var(--aislix-primary)]" />
           <div>
             <p className="text-sm font-semibold text-[var(--aislix-primary)]">
-              Astra vision prompt
+              AI vision prompt
             </p>
             <p className="text-[11px] text-[var(--aislix-secondary)]">
               Sent with your shelf photo when the audit runs

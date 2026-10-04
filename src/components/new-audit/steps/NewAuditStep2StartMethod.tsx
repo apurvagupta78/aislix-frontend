@@ -80,7 +80,7 @@ export function NewAuditStep2StartMethod({
         title={shelfOnly ? "Tell Aislix what you're auditing" : "Upload your document"}
         description={
           shelfOnly
-            ? "No document — Astra analyses whatever is visible. Pick the category, then tell AI what to look at."
+            ? "No document — AI analyses whatever is visible. Pick the category, then tell AI what to look at."
             : "An invoice, stock list, price list, PDF, photo or CSV becomes an editable CSV. AI audits the shelf against it — like a Digital Audit, but the AI does the checking."
         }
         complete={complete}

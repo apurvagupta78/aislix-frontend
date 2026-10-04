@@ -22,7 +22,7 @@ export function AiAuditResultsPage({ data, imageUrl }: Props) {
     return (
       <AiAuditIncompleteState
         scanId={data.scan_id}
-        reason={ctx.incompleteReason ?? "Structured Astra analysis is not available for this scan."}
+        reason={ctx.incompleteReason ?? "The structured AI analysis is not available for this scan."}
         modeLabel={modeLabel}
       />
     );

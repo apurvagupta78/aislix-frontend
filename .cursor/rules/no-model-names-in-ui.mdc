@@ -1,0 +1,23 @@
+---
+description: Never show AI model names (Astra, Luna, GPT, OpenAI, etc.) anywhere on the Aislix website
+alwaysApply: true
+---
+
+# No model names in the UI
+
+Aislix never discloses which AI models it uses. Customers only ever see **"AI"**.
+
+## Hard rule
+
+- No visible text on aislix.com may name a model or provider: **Astra, Luna, Terra, GPT / gpt-*, ChatGPT, OpenAI, Gemini, Claude, Anthropic**, or any future internal model codename.
+- Use neutral wording instead: "AI analysis", "AI counts the shelf", "the AI answer", "AI marked this unit DAMAGED".
+- Applies to headings, badges, descriptions, empty / error / incomplete states, toasts, tooltips, aria-labels, emails, exports and debug pages reachable on the site.
+- Example — wrong: "Luna analysis · Your request, answered from Astra's counts. Luna does not recount." Right: "AI analysis · Your request, answered from the AI shelf counts and Aislix's document match."
+
+## Model-written text
+
+AI answers can still mention model names because the internal prompts use them. Any model-written prose shown to users (analysis answers, findings notes, Ask Aislix replies, QC notes, incomplete-scan reasons) must pass through `hideModelNames()` from `src/lib/ai-display-text.ts`. Do not apply it to product names or other label reads (e.g. a "LUNA" bar).
+
+## Allowed
+
+Internal code identifiers, file names, comments, env vars, DB keys (`luna_analysis`, `astra_cv_analysis`) and prompt bodies (see the Astra prompt lock) may keep the internal names — they are never rendered.

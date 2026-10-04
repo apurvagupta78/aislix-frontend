@@ -63,7 +63,7 @@ export function AstraComparisonResults({ result, className }: Props) {
   return (
     <div className={cn("space-y-3 rounded-xl border border-[var(--aislix-border)] bg-[var(--aislix-surface)]/40 p-4", className)}>
       <div>
-        <p className="text-sm font-semibold text-[var(--aislix-primary)]">Astra planogram comparison</p>
+        <p className="text-sm font-semibold text-[var(--aislix-primary)]">AI planogram comparison</p>
         <p className="text-xs text-muted-foreground">
           {analysis.operating_model ? `Operating model · ${analysis.operating_model}` : ""}
         </p>
