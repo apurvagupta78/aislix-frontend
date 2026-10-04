@@ -51,6 +51,43 @@ export function buildTemplateFieldBindings(
   return bindings;
 }
 
+/** Columns the manager added on top of a template become extra fields in its line section. */
+export function extraFieldsForUnboundColumns(
+  def: TemplateDefinition,
+  inputSchema: InputSchema,
+  bound: TemplateFieldBinding[],
+  sectionKey: string,
+): { fields: TemplateField[]; bindings: TemplateFieldBinding[] } {
+  const boundIds = new Set(bound.map((b) => b.columnId));
+  const usedKeys = new Set(def.fields.map((f) => f.key));
+  let order = Math.max(0, ...def.fields.filter((f) => f.section === sectionKey).map((f) => f.order));
+  const fields: TemplateField[] = [];
+  const bindings: TemplateFieldBinding[] = [];
+  for (const mapping of inputSchema.columnMappings) {
+    if (boundIds.has(mapping.columnId)) continue;
+    const base = normalizeLabel(mapping.columnName).replace(/^_+|_+$/g, "") || "custom_column";
+    let key = base;
+    for (let n = 2; usedKeys.has(key); n += 1) key = `${base}_${n}`;
+    usedKeys.add(key);
+    order += 1;
+    const reference = mapping.fieldRole === "reference";
+    const numeric = mapping.dataType === "number" || mapping.dataType === "integer";
+    fields.push({
+      id: `field_custom_${key}`,
+      key,
+      type: !reference && numeric ? "number" : "short_text",
+      label: mapping.columnName.trim(),
+      section: sectionKey,
+      order,
+      required: !reference && mapping.required,
+      config: reference ? { readOnly: true } : {},
+      fieldRole: reference ? "reference" : "auditor_input",
+    });
+    bindings.push({ columnId: mapping.columnId, templateFieldKey: key });
+  }
+  return { fields, bindings };
+}
+
 /** Mark template fields supplied by manager CSV as read-only reference. */
 export function applyReferenceRolesFromCsv(
   template: AuditTemplate,
@@ -90,12 +127,17 @@ export function buildMergedTemplateSnapshot(input: {
     (dataset.rows.length > 0 || inputSchema.columnMappings.length > 0);
 
   if (hasDataset) {
+    const bound = buildTemplateFieldBindings(def, inputSchema);
+    const extra = extraFieldsForUnboundColumns(def, inputSchema, bound, sectionKey);
     const enrichedSchema: InputSchema = {
       ...inputSchema,
       sectionKey,
-      templateFieldBindings: buildTemplateFieldBindings(def, inputSchema),
+      templateFieldBindings: [...bound, ...extra.bindings],
     };
-    const withReference = applyReferenceRolesFromCsv(template, enrichedSchema);
+    const base = extra.fields.length
+      ? { ...template, field_definitions: [...template.field_definitions, ...extra.fields] }
+      : template;
+    const withReference = applyReferenceRolesFromCsv(base, enrichedSchema);
     snapshot = {
       ...withReference,
       field_definitions: withReference.field_definitions,

@@ -1,7 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import { Camera, Copy, Download, Info, Loader2, Plus, ScanBarcode, Upload, X } from "lucide-react";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type ReactNode,
+  type SetStateAction,
+} from "react";
+import { Camera, Copy, Download, Info, Loader2, Plus, ScanBarcode, Search, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
+import { TablePager, usePager } from "@/components/design-system/TablePager";
 import { EvidenceImage } from "@/components/audit-builder/AuditExecutionForm";
 import { useEvidenceUpload } from "@/components/audit-builder/useEvidenceUpload";
 import { AuditEvidencePanel, targetId, type EvidenceTarget } from "@/components/audit-engine/AuditEvidencePanel";
@@ -284,6 +295,9 @@ export function AuditExecutionTable({
     return () => window.clearInterval(timer);
   }, []);
 
+  const [rowQuery, setRowQuery] = useState("");
+  const deferredRowQuery = useDeferredValue(rowQuery.trim().toLowerCase());
+  const [needsAttentionOnly, setNeedsAttentionOnly] = useState(false);
   const [memoryFlags, setMemoryFlags] = useState<Record<string, string[]>>({});
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [photoTarget, setPhotoTarget] = useState<{ recordIndex: number; field: TemplateField } | null>(null);
@@ -671,6 +685,9 @@ export function AuditExecutionTable({
   const addRow = () => {
     const next = Math.max(-1, ...recordIndexes) + 1;
     onChange((prev) => ({ ...prev, [sectionKey]: { ...(prev[sectionKey] ?? {}), [next]: {} } }));
+    setRowQuery("");
+    setNeedsAttentionOnly(false);
+    pager.setPage(Math.floor(recordIndexes.length / pager.pageSize));
   };
 
   const displayId = auditDisplayId(session.assignmentId);
@@ -748,16 +765,30 @@ export function AuditExecutionTable({
     }
     const first = rows.find((r) => blocker.rowIndexes.includes(r.index));
     if (!first) return;
-    const tr = document.getElementById(`audit-row-${first.index}`);
-    tr?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setRowQuery("");
+    setNeedsAttentionOnly(false);
+    pager.setPage(Math.floor(first.position / pager.pageSize));
     setHighlightRows(new Set(blocker.rowIndexes));
     window.setTimeout(() => {
-      const target = tr?.querySelector<HTMLElement>(
-        blocker.kind === "explanations" ? "select:not([disabled])" : "input:not([disabled]):not([type=file]), select:not([disabled])",
-      );
-      target?.focus({ preventScroll: true });
-    }, 350);
+      const tr = document.getElementById(`audit-row-${first.index}`);
+      tr?.scrollIntoView({ behavior: "smooth", block: "center" });
+      window.setTimeout(() => {
+        const target = tr?.querySelector<HTMLElement>(
+          blocker.kind === "explanations" ? "select:not([disabled])" : "input:not([disabled]):not([type=file]), select:not([disabled])",
+        );
+        target?.focus({ preventScroll: true });
+      }, 350);
+    }, 60);
   };
+
+  const visibleRows = rows.filter(
+    (row) =>
+      (!needsAttentionOnly || readiness.incompleteRows.has(row.index)) &&
+      (!deferredRowQuery ||
+        columns.some((c) => (cellText(row.values[c.key]) ?? "").toLowerCase().includes(deferredRowQuery))),
+  );
+  const pager = usePager(visibleRows.length);
+  const pageRows = visibleRows.slice(pager.start, pager.end);
 
   const auditName = session.auditName || session.template.name;
   const description =
@@ -949,6 +980,36 @@ export function AuditExecutionTable({
           {pairs.length || rowEvidence.mode !== "off" ? <Chip role="verification" /> : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {rows.length > 1 ? (
+            <>
+              <label className="relative">
+                <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-[#98A2B3]" />
+                <input
+                  type="search"
+                  aria-label="Search rows"
+                  placeholder="Search rows"
+                  className="h-8 w-44 rounded-md border border-[#D9E2E8] bg-white pl-7 pr-2 text-xs text-[#102A43] outline-none focus:border-[#7DB7D6]"
+                  value={rowQuery}
+                  onChange={(e) => {
+                    setRowQuery(e.target.value);
+                    pager.setPage(0);
+                  }}
+                />
+              </label>
+              <label className="inline-flex items-center gap-1.5 text-xs text-[#102A43]">
+                <input
+                  type="checkbox"
+                  className="size-3.5 accent-[#102A43]"
+                  checked={needsAttentionOnly}
+                  onChange={(e) => {
+                    setNeedsAttentionOnly(e.target.checked);
+                    pager.setPage(0);
+                  }}
+                />
+                Rows that need something
+              </label>
+            </>
+          ) : null}
           {!hasProvidedData && !readOnly ? (
             <Button type="button" variant="ghost" size="sm" onClick={addRow}>
               <Plus className="size-3.5" /> Add row
@@ -1014,7 +1075,7 @@ export function AuditExecutionTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => {
+            {pageRows.map((row) => {
               const incomplete = readiness.incompleteRows.has(row.index);
               const highlighted = highlightRows.has(row.index);
               return (
@@ -1113,7 +1174,15 @@ export function AuditExecutionTable({
             })}
           </tbody>
         </table>
+        {!visibleRows.length ? (
+          <p className="px-4 py-6 text-center text-xs text-[#667085]">
+            {needsAttentionOnly && !deferredRowQuery ? "Every row has what it needs." : "No rows match your search."}
+          </p>
+        ) : null}
       </div>
+      {rows.length > 10 || visibleRows.length !== rows.length ? (
+        <TablePager pager={pager} noun="rows" className="rounded-xl border border-[#D9E2E8] bg-white" />
+      ) : null}
       <p className="text-[11px] text-[#667085]">
         Difference = your value − provided value, shown when both are numbers. Download the CSV to fill it offline, then
         upload it back — values are checked here before anything is saved. Photos are added on screen. A purple bar on

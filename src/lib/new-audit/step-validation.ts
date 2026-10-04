@@ -140,6 +140,22 @@ export function validateNewAuditSteps(input: StepValidationInput): StepValidatio
   };
 }
 
+/**
+ * Ticks shown in the step bar and section headers. Steps that pass only because of a default
+ * (method = digital, schedule = assign now) stay unticked until the user touches them or has
+ * completed the steps around them. Submit readiness still uses the raw validation result.
+ */
+export function displayStepStatus(
+  status: StepValidationResult,
+  touched: { method: boolean; schedule: boolean },
+): StepValidationResult {
+  return {
+    ...status,
+    2: status[2] && (touched.method || status[3]),
+    5: status[5] && (touched.schedule || (status[3] && status[4])),
+  };
+}
+
 export function scrollToNewAuditStep(anchor: string) {
   document.getElementById(anchor)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }

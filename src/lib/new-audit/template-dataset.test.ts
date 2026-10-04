@@ -68,7 +68,45 @@ describe("template lines table", () => {
     expect(templateHasLines(inventory)).toBe(true);
   });
 
-  it("fills template columns from a file by header name and reports unknown columns", () => {
+  it("saves columns added on top of a template as extra line fields", () => {
+    const { dataset, mappings } = buildTemplateDataset(inventory, "Inventory");
+    const custom = { id: "custom-1", name: "Shelf Zone", type: "text" as const };
+    const withCustom = {
+      ...dataset,
+      columns: [...dataset.columns, custom],
+      rows: [{ id: "r1", values: { [custom.id]: "Aisle 4" } }],
+    };
+    const customMappings = [
+      ...mappings,
+      { ...mappings[0]!, columnId: custom.id, columnName: custom.name, fieldRole: "reference" as const },
+    ];
+    const template = {
+      id: "t1",
+      name: "Inventory",
+      sections: inventory.sections,
+      field_definitions: inventory.fields,
+      rules: inventory.rules,
+      workflow_settings: inventory.workflow,
+      scoring_config: inventory.scoring,
+      ai_config: inventory.ai,
+      evidence_config: inventory.evidence,
+      purpose_config: {},
+    } as unknown as AuditTemplate;
+    const snapshot = buildMergedTemplateSnapshot({
+      template,
+      inputSchema: buildDigitalInputSchema(withCustom, customMappings),
+      dataset: withCustom,
+      dataInputMode: "template_plus_csv",
+    });
+    const fields = snapshot.field_definitions as { key: string; label: string; fieldRole: string }[];
+    const added = fields.find((f) => f.label === "Shelf Zone");
+    expect(added?.fieldRole).toBe("reference");
+    const schema = (snapshot.purpose_config as { inputSchema: { templateFieldBindings: { columnId: string; templateFieldKey: string }[] } })
+      .inputSchema;
+    expect(schema.templateFieldBindings.find((b) => b.columnId === custom.id)?.templateFieldKey).toBe(added?.key);
+  });
+
+  it("fills template columns from a file by header name and keeps unknown columns as extra columns", () => {
     const { dataset } = buildTemplateDataset(inventory, "Inventory");
     const file = {
       source: "csv" as const,
@@ -85,9 +123,11 @@ describe("template lines table", () => {
     };
     const filled = fillTemplateDataset(dataset, file);
     expect(filled.matched).toEqual(["SKU", "Expected Qty"]);
-    expect(filled.skipped).toEqual(["Supplier"]);
+    expect(filled.added).toEqual(["Supplier"]);
+    expect(filled.dataset.columns.at(-1)?.name).toBe("Supplier");
     expect(filled.dataset.rows).toHaveLength(1);
     const sku = dataset.columns.find((c) => c.name === "SKU")!.id;
     expect(filled.dataset.rows[0]!.values[sku]).toBe("SKU-1");
+    expect(filled.dataset.rows[0]!.values.c).toBe("Acme");
   });
 });

@@ -82,7 +82,7 @@ import {
 import { DEMO_ORAL_CARE_META } from "@/lib/demo-oral-care-planogram";
 import { EMPTY_SCAN_CONTEXT, type ScanContextState } from "@/lib/scan-context";
 import { TemplateChecklistPreview } from "@/components/new-audit/TemplateChecklistPreview";
-import { buildTemplateDataset, templateHasLines } from "@/lib/new-audit/template-dataset";
+import { buildTemplateDataset, isTemplateColumn, templateHasLines } from "@/lib/new-audit/template-dataset";
 import { recordRecentTemplate } from "@/lib/new-audit/recent-templates";
 import { NewAuditStepNav } from "@/components/new-audit/NewAuditStepNav";
 import { NewAuditStep1Details } from "@/components/new-audit/steps/NewAuditStep1Details";
@@ -98,6 +98,7 @@ import { NewAuditStep7Capture } from "@/components/new-audit/steps/NewAuditStep7
 import {
   isAiStep3Ready,
   scrollToNewAuditStep,
+  displayStepStatus,
   validateNewAuditSteps,
 } from "@/lib/new-audit/step-validation";
 import {
@@ -168,6 +169,7 @@ function NewAuditPage() {
     return "inventory";
   });
   const [method, setMethod] = useState<CaptureMethod>("digital");
+  const [methodTouched, setMethodTouched] = useState(false);
   const [templateChoice, setTemplateChoice] = useState<TemplateChoice>(() => {
     if (initialSystemKey) return `system:${initialSystemKey}`;
     if (initialTemplateId) return initialTemplateId;
@@ -196,6 +198,7 @@ function NewAuditPage() {
   const [instructions, setInstructions] = useState("");
   const [assignToSelf, setAssignToSelf] = useState(false);
   const [assignmentMode, setAssignmentMode] = useState<AssignmentMode>("assign_now");
+  const [scheduleTouched, setScheduleTouched] = useState(false);
   const [locationScope, setLocationScope] = useState<LocationScope>({ storeIds: [], stores: [] });
   const [teamScope, setTeamScope] = useState<TeamScope>({ assigneeIds: [] });
   const [distributionStrategy, setDistributionStrategy] =
@@ -363,6 +366,7 @@ function NewAuditPage() {
     if (hydration.operatingModel) setOperatingModel(hydration.operatingModel);
     if (hydration.auditPurpose) setAuditPurpose(hydration.auditPurpose);
     setMethod(hydration.method);
+    setMethodTouched(true);
     if (hydration.inputSchema) setInputSchema(hydration.inputSchema);
     if (hydration.dataset) {
       setDataset(hydration.dataset);
@@ -739,6 +743,13 @@ function NewAuditPage() {
     captureReady: captureFiles.length > 0,
     aiAnalysisReady: method !== "ai" || aiAnalysisReady(aiAnalysisRequest),
   });
+  const shownSteps = displayStepStatus(stepStatus, { method: methodTouched, schedule: scheduleTouched });
+  function touchSchedule<T>(set: (value: T) => void) {
+    return (value: T) => {
+      setScheduleTouched(true);
+      set(value);
+    };
+  }
 
   const stepErrors = {
     name: !auditName.trim() ? "Audit name is required." : null,
@@ -844,6 +855,7 @@ function NewAuditPage() {
 
   function handleMethodChange(next: CaptureMethod) {
     setMethod(next);
+    setMethodTouched(true);
     if (next !== "ai") {
       setAiPlanogramChoice(null);
       setDemoScanContext(EMPTY_SCAN_CONTEXT);
@@ -1024,7 +1036,14 @@ function NewAuditPage() {
           ...(digitalCsvTemplate as unknown as Record<string, unknown>),
           evidence_policy: effectivePolicy,
         };
-      } else if (templateForAssignment && hasInputData) {
+      } else if (
+        templateForAssignment &&
+        (hasInputData ||
+          (startChoice === "template" &&
+            templateUsesLines &&
+            dataset.source === "csv" &&
+            dataset.columns.some((c) => !isTemplateColumn(c.id))))
+      ) {
         templateSnapshot = buildMergedTemplateSnapshot({
           template: templateForAssignment,
           inputSchema,
@@ -1331,7 +1350,7 @@ function NewAuditPage() {
         />
 
         <NewAuditStepNav
-          stepStatus={stepStatus}
+          stepStatus={shownSteps}
           method={method}
           assignToSelf={assignToSelf}
           assignmentMode={assignmentMode}
@@ -1350,7 +1369,7 @@ function NewAuditPage() {
           <NewAuditStep3AuditMode
             method={method}
             onMethodChange={handleMethodChange}
-            complete={stepStatus[2]}
+            complete={shownSteps[2]}
             error={stepErrors.method}
           />
 
@@ -1481,12 +1500,12 @@ function NewAuditPage() {
                 dueConfig={dueConfig}
                 recurrence={recurrence}
                 instructions={instructions}
-                onAssignmentModeChange={setAssignmentMode}
-                onPublishAtChange={setPublishAt}
-                onDueConfigChange={setDueConfig}
-                onRecurrenceChange={setRecurrence}
+                onAssignmentModeChange={touchSchedule(setAssignmentMode)}
+                onPublishAtChange={touchSchedule(setPublishAt)}
+                onDueConfigChange={touchSchedule(setDueConfig)}
+                onRecurrenceChange={touchSchedule(setRecurrence)}
                 onInstructionsChange={setInstructions}
-                complete={stepStatus[5]}
+                complete={shownSteps[5]}
                 error={stepErrors.schedule}
               />
 

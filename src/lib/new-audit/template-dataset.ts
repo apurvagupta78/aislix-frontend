@@ -57,6 +57,13 @@ function normalize(value: string): string {
 }
 
 /** True when the template repeats per line (SKU, shelf, unit…) rather than being a one-off checklist. */
+const TEMPLATE_COLUMN_PREFIX = "tpl-";
+
+/** Columns that come from the template keep their name; columns the manager added can be edited. */
+export function isTemplateColumn(columnId: string): boolean {
+  return columnId.startsWith(TEMPLATE_COLUMN_PREFIX);
+}
+
 export function templateHasLines(def: TemplateDefinition): boolean {
   return def.sections.some((s) => s.repeatable);
 }
@@ -103,7 +110,7 @@ export function buildTemplateDataset(
 ): { dataset: AuditInputDataset; mappings: ColumnMapping[] } {
   const fields = templateLineFields(def);
   const columns: AuditDataColumn[] = fields.map((f) => ({
-    id: crypto.randomUUID(),
+    id: `${TEMPLATE_COLUMN_PREFIX}${crypto.randomUUID()}`,
     name: f.label.trim(),
     type: dataTypeFor(f),
   }));
@@ -125,35 +132,40 @@ export function buildTemplateDataset(
 
 /**
  * Copy rows from an uploaded file into the template columns, matching headers by name.
- * File columns the template doesn't have are reported back instead of silently dropped.
+ * File columns the template doesn't have are kept as extra columns after the template ones.
  */
 export function fillTemplateDataset(
   template: AuditInputDataset,
   file: AuditInputDataset,
-): { dataset: AuditInputDataset; matched: string[]; skipped: string[] } {
+): { dataset: AuditInputDataset; matched: string[]; added: string[] } {
   const byName = new Map(template.columns.map((c) => [normalize(c.name), c]));
-  const pairs: { from: string; to: string }[] = [];
+  const sourceFor = new Map<string, string>();
   const matched: string[] = [];
-  const skipped: string[] = [];
+  const extra: AuditDataColumn[] = [];
   for (const column of file.columns) {
-    const target = byName.get(normalize(column.name));
-    if (target && !pairs.some((p) => p.to === target.id)) {
-      pairs.push({ from: column.id, to: target.id });
+    const name = normalize(column.name);
+    const target = byName.get(name);
+    if (target && !sourceFor.has(target.id)) {
+      sourceFor.set(target.id, column.id);
       matched.push(target.name);
-    } else {
-      skipped.push(column.name);
+    } else if (name && !byName.has(name)) {
+      const added = { id: column.id, name: column.name.trim(), type: column.type };
+      byName.set(name, added);
+      extra.push(added);
+      sourceFor.set(added.id, column.id);
     }
   }
+  const columns = [...template.columns, ...extra];
   const rows = file.rows
     .map((row) => ({
       id: crypto.randomUUID(),
       values: Object.fromEntries(
-        template.columns.map((c) => {
-          const pair = pairs.find((p) => p.to === c.id);
-          return [c.id, pair ? (row.values[pair.from] ?? "").trim() : ""];
+        columns.map((c) => {
+          const from = sourceFor.get(c.id);
+          return [c.id, from ? (row.values[from] ?? "").trim() : ""];
         }),
       ),
     }))
     .filter((row) => Object.values(row.values).some((v) => v));
-  return { dataset: { ...template, rows }, matched, skipped };
+  return { dataset: { ...template, columns, rows }, matched, added: extra.map((c) => c.name) };
 }
