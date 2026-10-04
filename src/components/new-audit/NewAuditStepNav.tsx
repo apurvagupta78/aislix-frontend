@@ -45,10 +45,10 @@ export function NewAuditStepNav({
                 type="button"
                 onClick={() => scrollToNewAuditStep(step.anchor)}
                 className={cn(
-                  "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                  "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
                   complete
-                    ? "bg-[var(--aislix-supermarket-bg)] text-[var(--aislix-primary)]"
-                    : "text-[var(--aislix-secondary)] hover:bg-[var(--aislix-surface)]",
+                    ? "border-[#102A43] bg-[#102A43] text-white hover:bg-[#1B3B58]"
+                    : "border-[#102A43]/30 bg-white text-[#102A43] hover:border-[#102A43] hover:bg-[#F4F7F9]",
                 )}
               >
                 <span className="mr-1 opacity-70">{step.id}</span>

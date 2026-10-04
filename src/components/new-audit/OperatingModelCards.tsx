@@ -26,14 +26,14 @@ type Props = {
 
 export function OperatingModelCards({ value, onChange, error }: Props) {
   return (
-    <section className="space-y-4">
+    <section className="space-y-3">
       <div>
         <h2 className="text-lg font-semibold">What are you auditing?</h2>
         <p className="text-sm text-muted-foreground">
           Choose the type of operation you want to audit.
         </p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
         {OPERATING_MODEL_CARDS.map((card) => {
           const meta = MODEL_META[card.id];
           const Icon = meta.icon;
@@ -47,6 +47,7 @@ export function OperatingModelCards({ value, onChange, error }: Props) {
               selected={value === card.id}
               onClick={() => onChange(card.id)}
               className={operatingModelClasses(card.id)}
+              compact
             />
           );
         })}

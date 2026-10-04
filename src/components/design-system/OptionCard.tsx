@@ -14,6 +14,8 @@ type Props = {
   onClick?: () => void;
   className?: string;
   disabled?: boolean;
+  /** Smaller card: icon beside the title, tighter padding, two-line description. */
+  compact?: boolean;
 };
 
 /**
@@ -30,7 +32,38 @@ export function OptionCard({
   onClick,
   className,
   disabled,
+  compact = false,
 }: Props) {
+  if (compact) {
+    return (
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onClick}
+        aria-pressed={selected}
+        className={cn(
+          "play-card relative flex flex-col rounded-xl px-3 py-2.5 text-left transition-all",
+          toneClasses(tone, selected),
+          disabled && "cursor-not-allowed opacity-60",
+          className,
+        )}
+      >
+        <span className="flex items-center gap-2 pr-5">
+          {Icon ? <Icon className="size-4 shrink-0 text-foreground/85" aria-hidden /> : null}
+          <span className="text-sm font-semibold leading-snug text-foreground">{title}</span>
+        </span>
+        {selected ? (
+          <span className="absolute right-2 top-2 flex size-5 items-center justify-center rounded-full bg-brand text-brand-foreground shadow-sm">
+            <Check className="size-3" />
+          </span>
+        ) : null}
+        {description ? (
+          <span className="mt-1 line-clamp-2 text-[11px] leading-snug text-muted-foreground">{description}</span>
+        ) : null}
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"

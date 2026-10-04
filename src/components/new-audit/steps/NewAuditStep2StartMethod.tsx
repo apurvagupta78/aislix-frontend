@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
-import { LayoutTemplate } from "lucide-react";
 
 import { AiDocumentAuditSetup } from "@/components/new-audit/AiDocumentAuditSetup";
 import { OperatingModelCards } from "@/components/new-audit/OperatingModelCards";
 import { NewAuditStepSection } from "@/components/new-audit/NewAuditStepSection";
 import { StartChoiceCards } from "@/components/new-audit/StartChoiceCards";
-import { Button } from "@/components/ui/button";
+import { TemplateChoiceGrid } from "@/components/new-audit/TemplateChoiceGrid";
 import type { AiAnalysisCheck } from "@/lib/ai-audit/ai-analysis";
 import type { OperatingModel } from "@/lib/audit-builder/types";
+import type { AuditTemplate } from "@/lib/audit-templates";
 import {
   demoPlanogramSummary,
   type NewAuditPlanogramChoice,
@@ -31,7 +31,12 @@ type Props = {
   aiQuestion: string;
   onAiChecksChange: (checks: AiAnalysisCheck[]) => void;
   onAiQuestionChange: (question: string) => void;
-  onOpenTemplatePicker: () => void;
+  templateChoice: string;
+  /** Organisation + personal templates for the chosen operating model. */
+  savedTemplates: AuditTemplate[];
+  onTemplateSelect: (choice: string, meta: { name: string; systemKey?: string }) => void;
+  /** Fields / lines editor for the selected template. */
+  templateSetup?: ReactNode;
   csvUpload?: ReactNode;
   scratchBuilder?: ReactNode;
   /** Evidence requirements, shown under the audit data for Digital Audits. */
@@ -59,7 +64,10 @@ export function NewAuditStep2StartMethod({
   aiQuestion,
   onAiChecksChange,
   onAiQuestionChange,
-  onOpenTemplatePicker,
+  templateChoice,
+  savedTemplates,
+  onTemplateSelect,
+  templateSetup,
   csvUpload,
   scratchBuilder,
   evidenceSettings,
@@ -109,13 +117,7 @@ export function NewAuditStep2StartMethod({
       complete={complete}
       error={error}
     >
-      <StartChoiceCards
-        hideHeader
-        value={startChoice}
-        onChange={onStartChoiceChange}
-        selectedTemplateName={selectedTemplateName}
-        onOpenTemplatePicker={onOpenTemplatePicker}
-      />
+      <StartChoiceCards hideHeader value={startChoice} onChange={onStartChoiceChange} />
 
       {startChoice === "template" ? (
         <div className="mt-6 space-y-6 border-t border-[var(--aislix-border)] pt-6">
@@ -124,17 +126,21 @@ export function NewAuditStep2StartMethod({
             onChange={onOperatingModelChange}
             error={operatingModelError}
           />
-          <div className="flex flex-wrap items-center gap-3">
-            <Button type="button" variant="brand" onClick={onOpenTemplatePicker}>
-              <LayoutTemplate className="size-4" />
-              {selectedTemplateName ? "Change template" : "Select template"}
-            </Button>
-            {selectedTemplateName ? (
-              <span className="text-sm text-[var(--aislix-secondary)]">{selectedTemplateName}</span>
-            ) : null}
+          <div id="step-3-templates" className="scroll-mt-24">
+            <TemplateChoiceGrid
+              operatingModel={operatingModel}
+              templateChoice={templateChoice}
+              savedTemplates={savedTemplates}
+              onSelect={onTemplateSelect}
+            />
           </div>
-          {templateIsPlanogram ? (
-            <p className="text-sm text-[var(--aislix-secondary)]">{demoPlanogramSummary()}</p>
+          {selectedTemplateName && templateSetup ? (
+            <div id="step-3-template-fields" className="scroll-mt-24 space-y-3">
+              {templateSetup}
+              {templateIsPlanogram ? (
+                <p className="text-sm text-[var(--aislix-secondary)]">{demoPlanogramSummary()}</p>
+              ) : null}
+            </div>
           ) : null}
         </div>
       ) : null}

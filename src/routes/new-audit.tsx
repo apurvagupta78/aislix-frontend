@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { CheckCircle2 } from "lucide-react";
@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/design-system";
 import { Button } from "@/components/ui/button";
 import { fetchStores } from "@/lib/account";
 import { createScanAssignment, fetchAssignableMembers } from "@/lib/assignments";
-import { fetchAuditTemplate, fetchAuditTemplates } from "@/lib/audit-templates";
+import { fetchAuditTemplate, fetchAuditTemplates, templateToDefinition } from "@/lib/audit-templates";
 import { hydrateFromSavedTemplate } from "@/lib/audit-builder/load-saved-template-audit";
 import {
   EVIDENCE_PROOF_OPTIONS,
@@ -81,7 +81,8 @@ import {
 } from "@/lib/new-audit/planogram-setup";
 import { DEMO_ORAL_CARE_META } from "@/lib/demo-oral-care-planogram";
 import { EMPTY_SCAN_CONTEXT, type ScanContextState } from "@/lib/scan-context";
-import { SimpleTemplatePicker } from "@/components/new-audit/SimpleTemplatePicker";
+import { TemplateChecklistPreview } from "@/components/new-audit/TemplateChecklistPreview";
+import { buildTemplateDataset, templateHasLines } from "@/lib/new-audit/template-dataset";
 import { recordRecentTemplate } from "@/lib/new-audit/recent-templates";
 import { NewAuditStepNav } from "@/components/new-audit/NewAuditStepNav";
 import { NewAuditStep1Details } from "@/components/new-audit/steps/NewAuditStep1Details";
@@ -211,7 +212,8 @@ function NewAuditPage() {
     timezone: "Asia/Kolkata",
   });
   const [templateHydrated, setTemplateHydrated] = useState(false);
-  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  /** Template the lines table was last built from, so edits survive re-renders. */
+  const templateDatasetFor = useRef<string | null>(null);
   const [aiPlanogramChoice, setAiPlanogramChoice] = useState<NewAuditPlanogramChoice | null>(
     null,
   );
@@ -292,9 +294,11 @@ function NewAuditPage() {
 
   useEffect(() => {
     if (initialSystemKey || initialTemplateId) return;
+    if (method === "digital" && startChoice === "template") return;
     const recommended = getRecommendedTemplates(operatingModel, auditPurpose);
     const first = recommended[0];
     if (first) setTemplateChoice(`system:${first.key}`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [operatingModel, auditPurpose, initialSystemKey, initialTemplateId]);
 
   const systemTemplateKey = templateChoice.startsWith("system:")
@@ -360,7 +364,10 @@ function NewAuditPage() {
     if (hydration.auditPurpose) setAuditPurpose(hydration.auditPurpose);
     setMethod(hydration.method);
     if (hydration.inputSchema) setInputSchema(hydration.inputSchema);
-    if (hydration.dataset) setDataset(hydration.dataset);
+    if (hydration.dataset) {
+      setDataset(hydration.dataset);
+      templateDatasetFor.current = template.id;
+    }
     if (hydration.dataInputMode) setDataInputMode(hydration.dataInputMode);
     if (template.instructions) setInstructions(template.instructions);
     setTemplateHydrated(true);
@@ -384,6 +391,38 @@ function NewAuditPage() {
     else if (startChoice === "custom") setDataInputMode("manual");
     else if (startChoice === "template") setDataInputMode(defaultDataInputMode(hasTemplate));
   }, [startChoice, hasTemplate]);
+
+  const activeTemplateDefinition = useMemo(
+    () => systemTemplateDefinition ?? (selectedTemplate ? templateToDefinition(selectedTemplate) : null),
+    [systemTemplateDefinition, selectedTemplate],
+  );
+  const templateUsesLines = activeTemplateDefinition ? templateHasLines(activeTemplateDefinition) : false;
+  const savedTemplatesForModel = useMemo(
+    () =>
+      [...filteredPublishedTemplates, ...myTemplates].filter(
+        (t, i, arr) =>
+          arr.findIndex((x) => x.id === t.id) === i &&
+          (!t.operating_model || t.operating_model === operatingModel),
+      ),
+    [filteredPublishedTemplates, myTemplates, operatingModel],
+  );
+
+  useEffect(() => {
+    if (method !== "digital" || startChoice !== "template" || !hasTemplate || !activeTemplateDefinition) return;
+    if (templateDatasetFor.current === templateChoice) return;
+    templateDatasetFor.current = templateChoice;
+    if (!templateHasLines(activeTemplateDefinition)) {
+      setDataset({ source: "manual", filename: null, columns: [], rows: [] });
+      setInputSchema(buildInputSchema({ source: "manual", filename: null, columns: [], rows: [] }));
+      setCsvSaved(true);
+      return;
+    }
+    const built = buildTemplateDataset(activeTemplateDefinition, activeTemplateName ?? "Template");
+    setDataset(built.dataset);
+    setInputSchema(buildDigitalInputSchema(built.dataset, built.mappings));
+    setCsvSaved(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [method, startChoice, hasTemplate, templateChoice, activeTemplateDefinition]);
 
   useEffect(() => {
     if (selectedTemplate?.audit_purpose) setAuditPurpose(selectedTemplate.audit_purpose);
@@ -429,11 +468,23 @@ function NewAuditPage() {
   const startReady = useMemo(() => {
     if (!startChoice) return false;
     if (startChoice === "template") {
-      return hasTemplate && templateChoice !== "general";
+      if (!hasTemplate || templateChoice === "general") return false;
+      if (method !== "digital" || !templateUsesLines) return true;
+      return csvSaved && (dataset.rows.length === 0 || !datasetError);
     }
     if (startChoice === "csv") return csvUploaded && csvSaved && !datasetError;
     return true;
-  }, [startChoice, hasTemplate, templateChoice, csvUploaded, csvSaved, datasetError]);
+  }, [
+    startChoice,
+    hasTemplate,
+    templateChoice,
+    method,
+    templateUsesLines,
+    dataset.rows.length,
+    csvUploaded,
+    csvSaved,
+    datasetError,
+  ]);
 
   const digitalUploadValue = useMemo(
     () => ({
@@ -694,7 +745,11 @@ function NewAuditPage() {
     start:
       method === "digital" && !startReady
         ? startChoice === "template"
-          ? "Choose a template to continue."
+          ? !hasTemplate || templateChoice === "general"
+            ? "Choose a template to continue."
+            : !csvSaved
+              ? "Save your template lines to continue."
+              : datasetError
           : startChoice === "csv"
             ? !csvUploaded
               ? "Upload your file to continue."
@@ -828,6 +883,7 @@ function NewAuditPage() {
   ) {
     setTemplateChoice(choice);
     setStartChoice("template");
+    window.setTimeout(() => scrollToNewAuditStep("step-3-template-fields"), 150);
     if (userId && meta?.name) {
       recordRecentTemplate(userId, {
         id: choice.startsWith("system:") ? choice : choice,
@@ -1316,7 +1372,27 @@ function NewAuditPage() {
             onAiQuestionChange={setAiQuestion}
             demoScanContext={demoScanContext}
             onScanContextChange={setDemoScanContext}
-            onOpenTemplatePicker={() => setTemplatePickerOpen(true)}
+            templateChoice={templateChoice}
+            savedTemplates={savedTemplatesForModel}
+            onTemplateSelect={handleTemplateSelect}
+            templateSetup={
+              method === "digital" && activeTemplateDefinition && activeTemplateName ? (
+                templateUsesLines ? (
+                  <DigitalAuditUploadPanel
+                    templateName={activeTemplateName}
+                    value={digitalUploadValue}
+                    error={csvSaved && dataset.rows.length ? datasetError : null}
+                    onChange={(next) => {
+                      setDataset(next.dataset);
+                      setInputSchema(buildDigitalInputSchema(next.dataset, next.mappings));
+                      setCsvSaved(next.saved);
+                    }}
+                  />
+                ) : (
+                  <TemplateChecklistPreview definition={activeTemplateDefinition} templateName={activeTemplateName} />
+                )
+              ) : null
+            }
             csvUpload={
               <DigitalAuditUploadPanel
                 value={digitalUploadValue}
@@ -1362,6 +1438,16 @@ function NewAuditPage() {
             }
             onStartChoiceChange={(choice) => {
               setStartChoice(choice);
+              if (choice !== "template" && templateDatasetFor.current) {
+                templateDatasetFor.current = null;
+                const manual = createManualAuditDataset();
+                setDataset(manual);
+                setInputSchema(buildInputSchema(manual));
+                setCsvSaved(true);
+              }
+              if (choice === "template" && !initialTemplateId && !initialSystemKey && startChoice !== "template") {
+                setTemplateChoice("general");
+              }
               if (choice === "csv") {
                 setTemplateChoice("general");
                 setDataInputMode("upload_csv");
@@ -1454,18 +1540,6 @@ function NewAuditPage() {
             </>
           ) : null}
         </div>
-
-        <SimpleTemplatePicker
-          open={templatePickerOpen}
-          onOpenChange={setTemplatePickerOpen}
-          operatingModel={operatingModel}
-          auditPurpose={auditPurpose}
-          templateChoice={templateChoice}
-          userId={userId}
-          publishedTemplates={filteredPublishedTemplates}
-          myTemplates={myTemplates}
-          onSelect={handleTemplateSelect}
-        />
 
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--aislix-border)] bg-white/95 px-4 py-3 backdrop-blur md:px-6">
           <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">

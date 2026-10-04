@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Download, FileSpreadsheet, FileText, Loader2, Plus, Trash2, Upload, X } from "lucide-react";
+import { Download, FileSpreadsheet, FileText, LayoutTemplate, Loader2, Plus, Trash2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import {
 } from "@/lib/audit-input-dataset";
 import { referenceStateToDataset } from "@/lib/new-audit/document-dataset";
 import { syncDigitalMappings, type DigitalColumnRole } from "@/lib/new-audit/digital-columns";
+import { fillTemplateDataset } from "@/lib/new-audit/template-dataset";
 import { cn } from "@/lib/utils";
 
 export type DigitalUploadValue = {
@@ -36,7 +37,13 @@ type Props = {
   value: DigitalUploadValue;
   onChange: (next: DigitalUploadValue) => void;
   error?: string | null;
+  /** Columns come from a chosen template: names are locked and files fill those columns. */
+  templateName?: string;
 };
+
+function rowHasValue(row: AuditInputDataset["rows"][number]): boolean {
+  return Object.values(row.values).some((v) => (v ?? "").trim());
+}
 
 const ROLE_STYLE: Record<DigitalColumnRole, { label: string; tint: string; border: string }> = {
   reference: { label: "Already provided", tint: ACCENT_TINT.blue, border: AISLIX_PALETTE.blue },
@@ -81,7 +88,8 @@ function RoleToggle({
   );
 }
 
-export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
+export function DigitalAuditUploadPanel({ value, onChange, error, templateName }: Props) {
+  const isTemplate = Boolean(templateName);
   const inputRef = useRef<HTMLInputElement>(null);
   const reader = useDocumentReader();
   const [busy, setBusy] = useState<null | "upload" | "read" | "csv">(null);
@@ -92,7 +100,7 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
   const { dataset, mappings, saved } = value;
   const columns = dataset.columns;
   const rows = dataset.rows;
-  const hasData = dataset.source === "csv" && columns.length > 0;
+  const hasData = isTemplate ? columns.length > 0 : dataset.source === "csv" && columns.length > 0;
   const byId = new Map(mappings.map((m) => [m.columnId, m]));
   const providedColumns = columns.filter((c) => roleOf(byId.get(c.id)) === "reference");
   const auditeeCount = columns.length - providedColumns.length;
@@ -126,6 +134,22 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
         warnings = state.meta.warnings;
       }
       if (!next.rows.length) throw new Error("No rows found in this file.");
+      if (isTemplate) {
+        const filled = fillTemplateDataset(dataset, next);
+        if (!filled.matched.length || !filled.dataset.rows.length) {
+          throw new Error(
+            `None of the file's columns match this template. Use these column names: ${columns.map((c) => c.name).join(", ")}.`,
+          );
+        }
+        emit(filled.dataset, mappings, true);
+        setReadWarnings(
+          filled.skipped.length
+            ? [...warnings, `Not in this template, so not used: ${filled.skipped.join(", ")}.`]
+            : warnings,
+        );
+        toast.success(`${filled.dataset.rows.length} lines filled from ${file.name}`);
+        return;
+      }
       emit(next, [], true);
       setReadWarnings(warnings);
       toast.success(`${next.rows.length} rows loaded from ${file.name}`);
@@ -224,13 +248,15 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
   }
 
   function save() {
-    const typed = inferDatasetColumnTypes(dataset);
+    const filled = { ...dataset, rows: rows.filter(rowHasValue) };
+    const typed = isTemplate ? filled : inferDatasetColumnTypes(filled);
     const typedMappings = mappings.map((m) => ({
       ...m,
       dataType: typed.columns.find((c) => c.id === m.columnId)?.type ?? m.dataType,
     }));
     onChange({ dataset: typed, mappings: syncDigitalMappings(typed, typedMappings), saved: true });
-    toast.success(`${rows.length} row${rows.length === 1 ? "" : "s"} saved for this audit`);
+    const count = typed.rows.length;
+    toast.success(`${count} ${isTemplate ? "line" : "row"}${count === 1 ? "" : "s"} saved for this audit`);
   }
 
   function downloadCsv() {
@@ -246,13 +272,17 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
     <div className="space-y-4 rounded-2xl border border-[#D9E2E8] bg-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h4 className="text-sm font-semibold text-[#102A43]">Your audit data</h4>
+          <h4 className="text-sm font-semibold text-[#102A43]">
+            {isTemplate ? "Template fields and lines" : "Your audit data"}
+          </h4>
           <p className="mt-0.5 text-xs text-[#667085]">
-            Photo or PDF of an invoice, stock list or price list — or a CSV / Excel file.
+            {isTemplate
+              ? `Every column comes from “${templateName}”. Mark who fills each one, then add the lines the auditee should check — type them, or fill them from a photo, PDF, CSV or Excel file.`
+              : "Photo or PDF of an invoice, stock list or price list — or a CSV / Excel file."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {hasData ? (
+          {hasData && (isTemplate || rows.length) ? (
             <Button type="button" variant="outline" size="sm" onClick={downloadCsv}>
               <Download className="size-3.5" /> Download CSV
             </Button>
@@ -265,7 +295,7 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
             onClick={() => inputRef.current?.click()}
           >
             {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
-            {hasData ? "Replace file" : "Upload file"}
+            {isTemplate ? "Fill from file" : hasData ? "Replace file" : "Upload file"}
           </Button>
           <input
             ref={inputRef}
@@ -294,12 +324,19 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
         <>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-[#D9E2E8] bg-[#F4F7F9] px-4 py-3 text-xs text-[#667085]">
             <span className="inline-flex items-center gap-1.5 font-semibold text-[#102A43]">
-              {isSheetFile ? <FileSpreadsheet className="size-4" /> : <FileText className="size-4" />}
-              {isSheetFile ? "CSV / Excel" : "Document"}
+              {isTemplate ? (
+                <LayoutTemplate className="size-4" />
+              ) : isSheetFile ? (
+                <FileSpreadsheet className="size-4" />
+              ) : (
+                <FileText className="size-4" />
+              )}
+              {isTemplate ? "Template" : isSheetFile ? "CSV / Excel" : "Document"}
             </span>
             {dataset.filename ? <span>{dataset.filename}</span> : null}
             <span>
-              {rows.length} row{rows.length === 1 ? "" : "s"}
+              {rows.length} {isTemplate ? "line" : "row"}
+              {rows.length === 1 ? "" : "s"}
             </span>
             <span>
               {columns.length} column{columns.length === 1 ? "" : "s"} · {providedColumns.length} provided ·{" "}
@@ -346,24 +383,30 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
                     const role = roleOf(mapping);
                     return (
                       <th key={column.id} className="min-w-[150px] px-1.5 py-2 align-top font-semibold">
-                        <div className="flex items-center gap-1">
-                          <input
-                            aria-label={`Column name ${column.name}`}
-                            title="Rename column"
-                            className="w-full min-w-0 rounded border border-transparent bg-transparent px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#102A43] outline-none hover:border-[#D9E2E8] focus:border-[#7DB7D6] focus:bg-white"
-                            value={column.name}
-                            onChange={(event) => renameColumn(column.id, event.target.value)}
-                          />
-                          <button
-                            type="button"
-                            aria-label={`Remove column ${column.name}`}
-                            title="Remove column"
-                            className="shrink-0 rounded p-0.5 text-[#667085] hover:bg-white hover:text-[#102A43]"
-                            onClick={() => removeColumn(column.id)}
-                          >
-                            <X className="size-3" />
-                          </button>
-                        </div>
+                        {isTemplate ? (
+                          <p className="px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#102A43]">
+                            {column.name}
+                          </p>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <input
+                              aria-label={`Column name ${column.name}`}
+                              title="Rename column"
+                              className="w-full min-w-0 rounded border border-transparent bg-transparent px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#102A43] outline-none hover:border-[#D9E2E8] focus:border-[#7DB7D6] focus:bg-white"
+                              value={column.name}
+                              onChange={(event) => renameColumn(column.id, event.target.value)}
+                            />
+                            <button
+                              type="button"
+                              aria-label={`Remove column ${column.name}`}
+                              title="Remove column"
+                              className="shrink-0 rounded p-0.5 text-[#667085] hover:bg-white hover:text-[#102A43]"
+                              onClick={() => removeColumn(column.id)}
+                            >
+                              <X className="size-3" />
+                            </button>
+                          </div>
+                        )}
                         <div className="mt-1.5">
                           <RoleToggle role={role} columnName={column.name} onChange={(r) => setRole(column.id, r)} />
                         </div>
@@ -389,6 +432,15 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
                 </tr>
               </thead>
               <tbody>
+                {!rows.length ? (
+                  <tr className="border-t border-[#D9E2E8]">
+                    <td colSpan={columns.length + 2} className="px-4 py-6 text-center text-xs text-[#667085]">
+                      <span className="block text-sm font-medium text-[#102A43]">No lines yet</span>
+                      Add the products or items to check, or leave this empty and the auditee adds lines during the
+                      audit.
+                    </td>
+                  </tr>
+                ) : null}
                 {rows.map((row, index) => (
                   <tr key={row.id} className="border-t border-[#D9E2E8] align-top">
                     <td className="px-2 py-1.5 tabular-nums text-[#667085]">{index + 1}</td>
@@ -432,9 +484,11 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
             <Button type="button" variant="ghost" size="sm" onClick={addRow}>
               <Plus className="size-3.5" /> Add line
             </Button>
-            <Button type="button" variant="ghost" size="sm" onClick={addColumn}>
-              <Plus className="size-3.5" /> Add column
-            </Button>
+            {!isTemplate ? (
+              <Button type="button" variant="ghost" size="sm" onClick={addColumn}>
+                <Plus className="size-3.5" /> Add column
+              </Button>
+            ) : null}
             <p className="ml-auto text-[11px] text-[#667085]">
               Pair an auditee column with a provided one to see the difference on the results page.
             </p>
@@ -445,7 +499,11 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
           <DocumentSaveBar
             unsaved={!saved}
             unsavedText="You have unsaved changes. Save them to use this data in the audit."
-            savedText={`${rows.length} row${rows.length === 1 ? "" : "s"} saved for this audit.`}
+            savedText={
+              isTemplate && !rows.length
+                ? "No lines added — the auditee adds lines during the audit."
+                : `${rows.length} ${isTemplate ? "line" : "row"}${rows.length === 1 ? "" : "s"} saved for this audit.`
+            }
             onSave={save}
           />
         </>

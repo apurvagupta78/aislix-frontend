@@ -2,6 +2,7 @@ import { Outlet, createFileRoute, useRouterState } from "@tanstack/react-router"
 
 import { AppShell } from "@/components/AppShell";
 import { AiDigitalDashboardShell } from "@/components/dashboard/AiDigitalDashboardShell";
+import { GlobalFilterProvider } from "@/lib/global-filters";
 
 type DashboardSearch = {
   tab?: "overview" | "ai" | "digital";
@@ -23,11 +24,20 @@ export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
 });
 
-/** Nested /dashboard/kpis, /dashboard/audit-execution, … need an Outlet or the overview stays stuck. */
+/**
+ * Nested /dashboard/kpis, /dashboard/audit-execution, … need an Outlet or the overview stays stuck.
+ * Child pages read filters before their AppShell mounts, so the provider wraps the Outlet.
+ */
 function DashboardPage() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isIndex = pathname === "/dashboard" || pathname === "/dashboard/";
-  if (!isIndex) return <Outlet />;
+  if (!isIndex) {
+    return (
+      <GlobalFilterProvider>
+        <Outlet />
+      </GlobalFilterProvider>
+    );
+  }
 
   return (
     <AppShell title="" hidePageHeader>

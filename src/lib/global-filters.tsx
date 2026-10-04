@@ -40,7 +40,14 @@ function loadStoredFilters(): DashboardFilterState {
   }
 }
 
+/** Reuses an outer provider so layout routes and AppShell share one filter state. */
 export function GlobalFilterProvider({ children }: { children: ReactNode }) {
+  const parent = useContext(GlobalFilterContext);
+  if (parent) return <>{children}</>;
+  return <GlobalFilterRoot>{children}</GlobalFilterRoot>;
+}
+
+function GlobalFilterRoot({ children }: { children: ReactNode }) {
   const [filters, setFiltersState] = useState<DashboardFilterState>(loadStoredFilters);
   const [options, setOptions] = useState<DashboardFilterOptions | null>(null);
   const [optionsLoading, setOptionsLoading] = useState(true);
