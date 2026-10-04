@@ -30,6 +30,7 @@ import {
   parseGps,
 } from "@/lib/audit-engine/grid-evidence";
 import { syncFindingsForScan } from "@/lib/findings";
+import { AuditSubmitError, describeMissingCells } from "@/lib/audit-engine/submit-readiness";
 import type { InputSchema } from "@/lib/audit-builder/field-roles";
 import type { AuditInputDataset } from "@/lib/audit-input-dataset";
 import { hydrateReferenceValuesFromDataset } from "@/lib/audit-builder/input-schema";
@@ -371,13 +372,23 @@ export async function submitCustomAudit(input: {
   const completion = computeCompletion(session.definition, records);
 
   if (!completion.complete) {
-    const labels = completion.missing.map((m) => m.label).join(", ");
-    throw new Error(`Audit incomplete (${completion.percent}%). Missing: ${labels}`);
+    throw new AuditSubmitError(
+      "This audit isn't finished yet.",
+      describeMissingCells(session.definition, completion.missing, records),
+    );
   }
 
+  const repeatableKey = session.definition.sections.find((s) => s.repeatable)?.key ?? null;
+  const rowOrder = records.filter((r) => r.sectionKey === repeatableKey).map((r) => r.recordIndex);
+  const valueProblems: string[] = [];
   for (const rec of records) {
     const errs = validateRecord(session.definition, rec);
-    if (errs.length) throw new Error(errs.join("; "));
+    if (!errs.length) continue;
+    const where = rec.sectionKey === repeatableKey ? `Row ${rowOrder.indexOf(rec.recordIndex) + 1}: ` : "";
+    valueProblems.push(...errs.map((e) => `${where}${e}.`));
+  }
+  if (valueProblems.length) {
+    throw new AuditSubmitError("Some values need fixing before you can submit.", valueProblems);
   }
 
   let scanId: string | null = null;

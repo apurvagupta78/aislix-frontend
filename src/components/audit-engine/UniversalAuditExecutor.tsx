@@ -6,12 +6,14 @@ import { toast } from "sonner";
 
 import { AuditExecutionForm } from "@/components/audit-builder/AuditExecutionForm";
 import { AuditExecutionTable } from "@/components/audit-engine/AuditExecutionTable";
+import { SubmitBlockersPanel, type SubmitProblem } from "@/components/audit-engine/SubmitBlockersPanel";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ErrorState, Skeleton } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
 import type { AuditResponseValue, TemplateField } from "@/lib/audit-builder/types";
 import { validateAuditCompletion } from "@/lib/audit-engine/completion";
+import { AuditSubmitError, describeServerIssues } from "@/lib/audit-engine/submit-readiness";
 import {
   auditExecutionPath,
   resolveAuditExecutionRoute,
@@ -38,6 +40,7 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [responses, setResponses] = useState<ResponseMap>({});
+  const [submitProblem, setSubmitProblem] = useState<SubmitProblem | null>(null);
 
   const sessionQuery = useQuery({
     queryKey: ["custom-audit-session", assignmentId],
@@ -81,20 +84,7 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
     mutationFn: async () => {
       const completion = await validateAuditCompletion(assignmentId);
       if (!completion.ok && !testMode) {
-        const parts: string[] = [];
-        const labelled = completion.issues.filter((i) => i.label);
-        if (labelled.length) {
-          parts.push(...labelled.map((i) => (i.count ? `${i.label}: ${i.count} missing` : `${i.label} missing`)));
-        } else {
-          if (completion.missingRcaCount) parts.push(`${completion.missingRcaCount} explanation(s) missing`);
-          if (completion.missingEvidenceCount) {
-            parts.push(`${completion.missingEvidenceCount} required evidence item(s) missing`);
-          }
-        }
-        if (completion.missingExpiryCoverageRecords) {
-          parts.push(`${completion.missingExpiryCoverageRecords} expiry coverage gap(s)`);
-        }
-        throw new Error(parts.join("; ") || "Audit completion requirements not met.");
+        throw new AuditSubmitError("This audit isn't finished yet.", describeServerIssues(completion));
       }
       // Prefer latest persisted responses so submit matches what the auditor saved,
       // then overlay in-memory edits (deep-merge by section/record).
@@ -128,7 +118,13 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
       if (scanId) navigate({ to: "/results", search: { scan: scanId } });
       else navigate({ to: "/my-scans" });
     },
-    onError: (e) => toast.error(toUserMessage(e)),
+    onMutate: () => setSubmitProblem(null),
+    onError: (e) =>
+      setSubmitProblem(
+        e instanceof AuditSubmitError
+          ? { title: e.title, items: e.items }
+          : { title: "We couldn't submit this audit.", items: [toUserMessage(e)] },
+      ),
   });
 
   if (sessionQuery.isLoading) return <Skeleton className="h-64 w-full" />;
@@ -187,6 +183,8 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
         testMode={testMode}
         submitting={submitMutation.isPending}
         onSubmit={() => submitMutation.mutate()}
+        submitProblem={submitProblem}
+        onDismissSubmitProblem={() => setSubmitProblem(null)}
       />
     );
   }
@@ -218,6 +216,11 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
           testMode={testMode}
         />
       </div>
+      {submitProblem ? (
+        <div className="mx-auto max-w-lg">
+          <SubmitBlockersPanel blockers={[]} problem={submitProblem} onDismissProblem={() => setSubmitProblem(null)} />
+        </div>
+      ) : null}
       <div className="flex justify-end gap-2">
         <Button onClick={() => submitMutation.mutate()} disabled={submitMutation.isPending}>
           {submitMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

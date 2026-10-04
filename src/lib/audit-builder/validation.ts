@@ -186,6 +186,8 @@ export function computeCompletion(
     percent,
     complete: missing.length === 0,
     missing,
+    totalRequired,
+    filledRequired,
   };
 }
 

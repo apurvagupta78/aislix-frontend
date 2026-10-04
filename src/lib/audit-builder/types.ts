@@ -510,4 +510,7 @@ export type CompletionResult = {
   percent: number;
   complete: boolean;
   missing: CompletionItem[];
+  /** Required cells counted, and how many of them are filled. */
+  totalRequired?: number;
+  filledRequired?: number;
 };

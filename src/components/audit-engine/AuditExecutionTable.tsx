@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { EvidenceImage } from "@/components/audit-builder/AuditExecutionForm";
 import { useEvidenceUpload } from "@/components/audit-builder/useEvidenceUpload";
 import { AuditEvidencePanel, targetId, type EvidenceTarget } from "@/components/audit-engine/AuditEvidencePanel";
+import { SubmitBlockersPanel, type SubmitProblem } from "@/components/audit-engine/SubmitBlockersPanel";
 import { BarcodeScannerDialog } from "@/components/digital-audit/BarcodeScannerDialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -65,6 +66,12 @@ import {
   rowExpectedBarcode,
   shelfSlots,
 } from "@/lib/audit-engine/grid-evidence";
+import {
+  computeSubmitReadiness,
+  remainingSummary,
+  type ReadinessRow,
+  type SubmitBlocker,
+} from "@/lib/audit-engine/submit-readiness";
 import { parseAuditSpreadsheet } from "@/lib/audit-input-dataset";
 import type { CustomAuditSession, ResponseMap } from "@/lib/custom-audit";
 import { isVideoFile, RCA_OPTIONS } from "@/lib/digital-audit";
@@ -84,6 +91,8 @@ type Props = {
   testMode?: boolean;
   submitting: boolean;
   onSubmit: () => void;
+  submitProblem?: SubmitProblem | null;
+  onDismissSubmitProblem?: () => void;
 };
 
 const ROLE_CHIP: Record<ExecutionColumn["role"] | "verification", { label: string; tint: string; border: string }> = {
@@ -244,6 +253,8 @@ export function AuditExecutionTable({
   testMode,
   submitting,
   onSubmit,
+  submitProblem = null,
+  onDismissSubmitProblem,
 }: Props) {
   const { definition } = session;
   const sectionKey = repeatableSectionKey(definition) ?? "records";
@@ -344,7 +355,6 @@ export function AuditExecutionTable({
     })),
     responses,
   });
-  const unmetRequirements = requirements.filter((r) => !r.ok);
   const auditValues = auditEvidenceValues(responses);
   const gps = parseGps(auditValues[GPS_KEY]);
   const device = parseDeviceMetadata(auditValues[DEVICE_METADATA_KEY]);
@@ -358,16 +368,44 @@ export function AuditExecutionTable({
     ...rows.map((r) => ({ sectionKey, recordIndex: r.index, values: responses[sectionKey]?.[r.index] ?? {} })),
     ...nonRepeatable,
   ]);
-  const missingByRow = new Set(
-    completion.missing.filter((m) => m.sectionKey === sectionKey).map((m) => m.recordIndex),
-  );
-  const rowsComplete = rows.filter((r) => !missingByRow.has(r.index) && r.evidence.status !== "missing").length;
-  const evidenceRowsMissing = rows.filter((r) => r.evidence.status === "missing");
+  const readinessRows: ReadinessRow[] = rows.map((r) => {
+    const photoNeeded = rowEvidence.mode === "required" || (rowEvidence.mode === "on_mismatch" && r.hasMismatch);
+    const reasonNeeded = requireRca && r.hasMismatch;
+    const reason = cellText(r.values[VARIANCE_REASON_KEY]);
+    const barcodeNeeded =
+      requiredProof.includes("barcode") &&
+      Boolean(rowExpectedBarcode(session.inputDataset, gridColumns.barcodeColumnId, r.index));
+    return {
+      index: r.index,
+      position: r.position,
+      photoNeeded,
+      photoMissing: r.evidence.status === "missing",
+      photoNeedsReview: r.evidence.status === "needs_review",
+      reasonNeeded,
+      reasonMissing: reasonNeeded && (!reason || (reason === "other" && !cellText(r.values[VARIANCE_NOTE_KEY]))),
+      barcodeNeeded,
+      barcodeMissing: barcodeNeeded && !cellText(r.values[BARCODE_SCAN_KEY]),
+    };
+  });
+  const readiness = computeSubmitReadiness({
+    definition,
+    sectionKey,
+    completion,
+    rows: readinessRows,
+    requirements,
+    photoRule: rowEvidence.mode === "required" ? "every_row" : rowEvidence.mode === "on_mismatch" ? "on_difference" : "none",
+    requiredPhotoFieldKey: rowEvidence.mode === "required" && rowEvidence.field?.required ? rowEvidence.field.key : null,
+  });
+  const leftSummary = remainingSummary(readiness.remaining);
   const evidenceCounts = {
     verified: rows.filter((r) => r.evidence.status === "verified").length,
     needs_review: rows.filter((r) => r.evidence.status === "needs_review").length,
-    missing: evidenceRowsMissing.length,
+    missing: rows.filter((r) => r.evidence.status === "missing").length,
   };
+  const reviewCount = readiness.reviewRowPositions.length;
+  const reviewNotice = reviewCount
+    ? `Photos on ${reviewCount === 1 ? "1 row are" : `${reviewCount} rows are`} flagged for review (for example a duplicate or unclear photo, or fewer photos than asked for). This doesn't stop you submitting — a reviewer will check ${reviewCount === 1 ? "it" : "them"}.`
+    : null;
 
   // Persist each row's evidence result so the results page shows the same validation.
   const statusSignature = rows
@@ -459,6 +497,18 @@ export function AuditExecutionTable({
   const videoRecordRef = useRef<HTMLInputElement>(null);
   const videoUploadRef = useRef<HTMLInputElement>(null);
   const evidencePanelRef = useRef<HTMLDivElement>(null);
+  const headerSectionsRef = useRef<HTMLDivElement>(null);
+  const blockersRef = useRef<HTMLElement>(null);
+  const [showBlockers, setShowBlockers] = useState(false);
+  const [highlightRows, setHighlightRows] = useState<Set<number>>(() => new Set());
+  useEffect(() => {
+    if (!highlightRows.size) return;
+    const timer = window.setTimeout(() => setHighlightRows(new Set()), 2500);
+    return () => window.clearTimeout(timer);
+  }, [highlightRows]);
+  useEffect(() => {
+    if (submitProblem) blockersRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [submitProblem]);
   const canCapture = !readOnly && !testMode;
 
   const saveAuditEvidence = (key: string, type: TemplateField["type"], value: AuditResponseValue) =>
@@ -676,18 +726,36 @@ export function AuditExecutionTable({
   };
 
   const submit = () => {
-    if (evidenceRowsMissing.length && !testMode) {
-      const list = evidenceRowsMissing.slice(0, 5).map((r) => r.position + 1).join(", ");
-      toast.error(`Add a photo for row${evidenceRowsMissing.length === 1 ? "" : "s"} ${list}${evidenceRowsMissing.length > 5 ? "…" : ""} before submitting.`);
+    onDismissSubmitProblem?.();
+    if (!readiness.ready && !testMode) {
+      setShowBlockers(true);
+      window.requestAnimationFrame(() => blockersRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }));
       return;
     }
-    if (unmetRequirements.length && !testMode) {
-      const labels = unmetRequirements.map((r) => r.label);
-      toast.error(`Before submitting, complete: ${labels.slice(0, 3).join(", ")}${labels.length > 3 ? ` +${labels.length - 3} more` : ""}.`);
+    setShowBlockers(false);
+    onSubmit();
+  };
+
+  const goToBlocker = (blocker: SubmitBlocker) => {
+    if (blocker.kind === "evidence") {
       evidencePanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
-    onSubmit();
+    if (blocker.kind === "header") {
+      headerSectionsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    const first = rows.find((r) => blocker.rowIndexes.includes(r.index));
+    if (!first) return;
+    const tr = document.getElementById(`audit-row-${first.index}`);
+    tr?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightRows(new Set(blocker.rowIndexes));
+    window.setTimeout(() => {
+      const target = tr?.querySelector<HTMLElement>(
+        blocker.kind === "explanations" ? "select:not([disabled])" : "input:not([disabled]):not([type=file]), select:not([disabled])",
+      );
+      target?.focus({ preventScroll: true });
+    }, 350);
   };
 
   const auditName = session.auditName || session.template.name;
@@ -766,15 +834,24 @@ export function AuditExecutionTable({
             </div>
           </div>
           <div className="lg:w-72 lg:border-l lg:border-[#D9E2E8] lg:pl-5">
-            <p className="text-xs font-medium text-[#667085]">Audit Completion</p>
-            <p className="mt-1 text-3xl font-semibold tabular-nums text-[#102A43]">{completion.percent}%</p>
+            <p className="inline-flex items-center gap-1 text-xs font-medium text-[#667085]">
+              Audit Completion
+              <span
+                title="Share of everything required to submit: required cells, row photos, reasons for differences, barcodes and audit evidence."
+                aria-label="Counts required cells, row photos, reasons for differences, barcodes and audit evidence."
+              >
+                <Info className="size-3" />
+              </span>
+            </p>
+            <p className="mt-1 text-3xl font-semibold tabular-nums text-[#102A43]">{readiness.percent}%</p>
             <div className="mt-2 h-2 overflow-hidden rounded-full" style={{ background: AISLIX_PALETTE.grey }}>
-              <div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${completion.percent}%`, background: AISLIX_PALETTE.purple }} />
+              <div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${readiness.percent}%`, background: AISLIX_PALETTE.purple }} />
             </div>
             <p className="mt-1.5 text-xs text-[#667085]">
-              {completion.missing.length
-                ? `${completion.missing.length} required cell${completion.missing.length === 1 ? "" : "s"} remaining`
-                : "All required cells filled"}
+              {leftSummary ?? "Everything required is done — ready to submit"}
+            </p>
+            <p className="mt-0.5 text-xs text-[#667085]">
+              {readiness.done} of {readiness.total} required item{readiness.total === 1 ? "" : "s"} done
             </p>
             {rowEvidence.mode !== "off" ? (
               <div className="mt-4">
@@ -790,6 +867,7 @@ export function AuditExecutionTable({
         </div>
       </section>
 
+      <div ref={headerSectionsRef} className="scroll-mt-24 space-y-4 empty:hidden">
       {headerSections.map((section) => {
         const fields = definition.fields
           .filter((f) => f.section === section.key && !f.system)
@@ -829,6 +907,7 @@ export function AuditExecutionTable({
           </section>
         );
       })}
+      </div>
 
       {requirements.length ? (
         <div ref={evidencePanelRef} className="scroll-mt-24">
@@ -935,12 +1014,22 @@ export function AuditExecutionTable({
           </thead>
           <tbody>
             {rows.map((row) => {
-              const incomplete = missingByRow.has(row.index) || row.evidence.status === "missing";
+              const incomplete = readiness.incompleteRows.has(row.index);
+              const highlighted = highlightRows.has(row.index);
               return (
-                <tr key={row.index} className="align-middle">
+                <tr
+                  key={row.index}
+                  id={`audit-row-${row.index}`}
+                  className="scroll-mt-24 align-middle transition-colors duration-300"
+                  style={highlighted ? { background: ACCENT_TINT.pink } : undefined}
+                >
                   <td
                     className="sticky left-0 z-10 border-b border-[#D9E2E8] bg-white px-3 py-1.5 tabular-nums text-[#667085]"
-                    style={incomplete ? { boxShadow: `inset 3px 0 0 ${AISLIX_PALETTE.purple}` } : undefined}
+                    style={{
+                      ...(incomplete ? { boxShadow: `inset 3px 0 0 ${AISLIX_PALETTE.purple}` } : {}),
+                      ...(highlighted ? { background: AISLIX_PALETTE.pink } : {}),
+                    }}
+                    title={incomplete ? "This row still needs something before you can submit" : undefined}
                   >
                     {row.position + 1}
                   </td>
@@ -1026,8 +1115,20 @@ export function AuditExecutionTable({
       </div>
       <p className="text-[11px] text-[#667085]">
         Difference = your value − provided value, shown when both are numbers. Download the CSV to fill it offline, then
-        upload it back — values are checked here before anything is saved. Photos are added on screen.
+        upload it back — values are checked here before anything is saved. Photos are added on screen. A purple bar on
+        the row number means that row still needs something.
       </p>
+
+      {showBlockers || submitProblem ? (
+        <SubmitBlockersPanel
+          ref={blockersRef}
+          blockers={testMode ? [] : readiness.blockers}
+          problem={submitProblem}
+          notice={reviewNotice}
+          onGoTo={goToBlocker}
+          onDismissProblem={onDismissSubmitProblem}
+        />
+      ) : null}
 
       <input
         ref={photoInputRef}
@@ -1082,16 +1183,8 @@ export function AuditExecutionTable({
 
       <div className="sticky bottom-0 z-30 -mx-1 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#D9E2E8] bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(16,42,67,0.06)]">
         <p className="text-sm text-[#102A43]">
-          <span className="font-semibold">{rowsComplete}</span> of {rows.length} rows complete
-          {evidenceRowsMissing.length ? (
-            <span className="text-[#667085]"> · {evidenceRowsMissing.length === 1 ? "1 row needs" : `${evidenceRowsMissing.length} rows need`} a photo</span>
-          ) : null}
-          {unmetRequirements.length ? (
-            <span className="text-[#667085]">
-              {" "}
-              · {unmetRequirements.length} evidence item{unmetRequirements.length === 1 ? "" : "s"} left
-            </span>
-          ) : null}
+          <span className="font-semibold">{readiness.rowsComplete}</span> of {readiness.rowsTotal} rows complete
+          <span className="text-[#667085]"> · {leftSummary ?? "ready to submit"}</span>
         </p>
         <Button onClick={submit} disabled={submitting || readOnly}>
           {submitting ? <Loader2 className="mr-2 size-4 animate-spin" /> : null}
