@@ -59,15 +59,20 @@ function rowHasValue(row: AuditInputDataset["rows"][number]): boolean {
   return Object.values(row.values).some((v) => (v ?? "").trim());
 }
 
-const ROLE_STYLE: Record<DigitalColumnRole, { label: string; hint: string; tint: string; border: string }> = {
+const ROLE_STYLE: Record<
+  DigitalColumnRole,
+  { label: string; short: string; hint: string; tint: string; border: string }
+> = {
   reference: {
     label: "Already provided",
+    short: "Provided",
     hint: "the auditee sees it but can't change it",
     tint: ACCENT_TINT.blue,
     border: AISLIX_PALETTE.blue,
   },
   auditor_input: {
     label: "Auditee fills",
+    short: "Auditee fills",
     hint: "entered during the audit",
     tint: ACCENT_TINT.purple,
     border: AISLIX_PALETTE.purple,
@@ -104,13 +109,14 @@ function RoleToggle({
             role="radio"
             aria-checked={active}
             onClick={() => onChange(r)}
+            title={ROLE_STYLE[r].label}
             className={cn(
-              "whitespace-nowrap rounded px-2 py-1 text-[11px] font-medium transition-colors",
-              active ? "bg-white text-[#102A43]" : "text-[#667085] hover:text-[#102A43]",
+              "min-w-0 truncate rounded px-1.5 py-1 text-[11px] font-medium transition-colors",
+              active ? "text-[#102A43]" : "text-[#667085] hover:text-[#102A43]",
             )}
             style={active ? { boxShadow: `inset 0 0 0 1px ${ROLE_STYLE[r].border}`, background: ROLE_STYLE[r].tint } : undefined}
           >
-            {ROLE_STYLE[r].label}
+            {ROLE_STYLE[r].short}
           </button>
         );
       })}
@@ -502,7 +508,7 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName }
                 </Button>
               </div>
             </header>
-            <div className="grid max-h-[360px] gap-2 overflow-y-auto p-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <div className="grid max-h-[360px] gap-2 overflow-y-auto p-3 sm:grid-cols-2 lg:grid-cols-3">
               {columns.map((column) => {
                 const fromTemplate = isTemplate && isTemplateColumn(column.id);
                 return (
