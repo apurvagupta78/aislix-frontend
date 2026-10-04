@@ -503,14 +503,15 @@ export function computeUniversalDashboardFromRows(input: UniversalComputeInput):
       ? Math.round(((actionsWithDue.length - overdueActions) / actionsWithDue.length) * 1000) / 10
       : null;
 
+  const noData = { available: false, unavailableReason: NOT_WIRED_YET } as const;
   const liveById: Record<string, ControlTowerKpi> = {
     audit_completion: liveKpi(
       "audit_completion",
       "Audit Completion %",
-      pct == null ? "—" : `${pct}%`,
+      pct == null ? "N/A" : `${pct}%`,
       pct == null ? "No assignments in this period" : `${completed} / ${activeAssignments.length} assignments`,
       completionTone(pct),
-      pct == null ? {} : { progressPct: Math.min(100, pct) },
+      pct == null ? noData : { progressPct: Math.min(100, pct) },
     ),
     value_variance: liveKpi(
       "value_variance",
@@ -553,7 +554,7 @@ export function computeUniversalDashboardFromRows(input: UniversalComputeInput):
       "N/A",
       "Use Expiry Control for unit-level evidence coverage",
       "neutral",
-      { available: false, unavailableReason: "Data unavailable" },
+      noData,
     ),
     audit_pass: liveKpi(
       "audit_pass",
@@ -561,6 +562,7 @@ export function computeUniversalDashboardFromRows(input: UniversalComputeInput):
       auditPassPct == null ? "N/A" : `${auditPassPct}%`,
       auditPassPct == null ? "Data unavailable" : `${closedFindings} closed / ${input.findings.length} findings`,
       completionTone(auditPassPct),
+      auditPassPct == null ? noData : undefined,
     ),
     sla_compliance: liveKpi(
       "sla_compliance",
@@ -568,6 +570,7 @@ export function computeUniversalDashboardFromRows(input: UniversalComputeInput):
       slaPct == null ? "N/A" : `${slaPct}%`,
       slaPct == null ? "Data unavailable" : `${overdueActions} overdue of ${actionsWithDue.length} with due dates`,
       completionTone(slaPct),
+      slaPct == null ? noData : undefined,
     ),
     recurring_rate: liveKpi(
       "recurring_rate",
@@ -576,7 +579,8 @@ export function computeUniversalDashboardFromRows(input: UniversalComputeInput):
       recurringRate == null
         ? "Data unavailable"
         : `${recurringGroups} recurring issue groups`,
-      recurringRate != null && recurringRate > 20 ? "warn" : "good",
+      recurringRate == null ? "neutral" : recurringRate > 20 ? "warn" : "good",
+      recurringRate == null ? noData : undefined,
     ),
   };
 

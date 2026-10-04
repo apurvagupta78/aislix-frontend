@@ -247,12 +247,37 @@ describe("universal dashboard compute helpers", () => {
     expect(byId.open_actions?.value).toBe("1");
     expect(byId.overdue_actions?.value).toBe("1");
     expect(byId.evidence_coverage?.value).toBe("N/A");
-    expect(byId.evidence_coverage?.detail).toBe(NOT_WIRED_YET);
-    expect(byId.sla_compliance?.available).toBe(false);
+    expect(byId.evidence_coverage?.available).toBe(false);
+    expect(byId.evidence_coverage?.unavailableReason).toBe(NOT_WIRED_YET);
+    expect(byId.evidence_coverage?.detail).toBe("Use Expiry Control for unit-level evidence coverage");
+    expect(byId.sla_compliance?.available).toBe(true);
+    expect(byId.sla_compliance?.value).toBe("50%");
+    expect(byId.sla_compliance?.detail).toBe("1 overdue of 2 with due dates");
     expect(payload.contextualKpis.every((k) => k.value === "N/A")).toBe(true);
     expect(payload.auditSpecificKpis.every((k) => !k.available)).toBe(true);
     expect(payload.correctiveActionHealth.open).toBe(1);
-    expect(payload.sla.available).toBe(false);
+    expect(payload.sla.available).toBe(true);
+    expect(payload.sla.compliancePct).toBe(50);
+    expect(payload.sla.overdue).toBe(1);
     expect(payload.evidenceCoverage.available).toBe(false);
+  });
+
+  it("marks KPIs with no underlying data as unavailable instead of clickable N/A cards", () => {
+    const payload = computeUniversalDashboardFromRows({
+      model: "all",
+      assignments: [],
+      findings: [],
+      actions: [],
+      now: new Date("2026-09-17T12:00:00.000Z").getTime(),
+    });
+    const byId = Object.fromEntries(payload.universalKpis.map((k) => [k.id, k]));
+    for (const id of ["audit_completion", "audit_pass", "sla_compliance", "recurring_rate"]) {
+      expect(byId[id]?.value, id).toBe("N/A");
+      expect(byId[id]?.available, id).toBe(false);
+      expect(byId[id]?.unavailableReason, id).toBe(NOT_WIRED_YET);
+    }
+    expect(byId.open_findings?.value).toBe("0");
+    expect(byId.open_findings?.available).toBe(true);
+    expect(payload.sla.available).toBe(false);
   });
 });

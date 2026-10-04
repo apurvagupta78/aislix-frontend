@@ -30,7 +30,10 @@ export function ControlTowerMetricsBoard({
   const critical = byId(data.universalKpis, "critical_findings");
   const openActions = byId(data.universalKpis, "open_actions");
   const overdue = byId(data.universalKpis, "overdue_actions");
-  const pending = data.universalKpis.filter((k) => !k.available);
+  const shownAbove = new Set(
+    [completion, variance, openFindings, critical, openActions, overdue].map((k) => k?.id),
+  );
+  const pending = data.universalKpis.filter((k) => !k.available && !shownAbove.has(k.id));
 
   const pct = completion ? parsePct(completion.value) : 0;
 
@@ -56,17 +59,24 @@ export function ControlTowerMetricsBoard({
               description={completion.detail}
               action={<KpiInfoPopover kpi={completion} />}
             />
-            <button
-              type="button"
-              onClick={() => completion.available && onDrill(completion)}
-              className="grid w-full gap-6 p-5 text-left sm:grid-cols-[auto,1fr] sm:items-center"
-            >
-              <MpRadialGauge value={pct} label="Complete" sublabel={completion.detail} />
-              <div>
-                <p className="font-display text-4xl font-semibold tracking-tight text-navy">{completion.value}</p>
-                <p className="mt-2 text-sm text-mp-muted">{completion.detail}</p>
+            {completion.available ? (
+              <button
+                type="button"
+                onClick={() => onDrill(completion)}
+                className="grid w-full gap-6 p-5 text-left sm:grid-cols-[auto,1fr] sm:items-center"
+              >
+                <MpRadialGauge value={pct} label="Complete" sublabel={completion.detail} />
+                <div>
+                  <p className="font-display text-4xl font-semibold tracking-tight text-navy">{completion.value}</p>
+                  <p className="mt-2 text-sm text-mp-muted">{completion.detail}</p>
+                </div>
+              </button>
+            ) : (
+              <div className="m-5 rounded-lg px-4 py-6 text-center" style={{ background: AISLIX_PALETTE.grey }}>
+                <p className="text-sm font-semibold text-navy">Data unavailable</p>
+                <p className="mt-1 text-xs text-mp-muted">{completion.detail}</p>
               </div>
-            </button>
+            )}
           </MpCard>
         ) : null}
 
