@@ -153,6 +153,30 @@ describe("computeSubmitReadiness", () => {
     expect(remainingSummary(r.remaining)).toBeNull();
   });
 
+  it("merges fields missing on the same rows and uses the table's column headers", () => {
+    const completion: CompletionResult = {
+      percent: 0,
+      complete: false,
+      missing: [
+        missingAmount(0),
+        { sectionKey: "records", recordIndex: 0, fieldKey: "photo", label: "Photo" },
+      ],
+      totalRequired: 2,
+      filledRequired: 0,
+    };
+    const r = computeSubmitReadiness({
+      definition,
+      sectionKey: "records",
+      completion,
+      rows: [row(0)],
+      requirements: [],
+      photoRule: "none",
+      columnLabels: new Map([["actual_amount", "Actual Qty"]]),
+    });
+    expect(r.blockers).toHaveLength(1);
+    expect(r.blockers[0]).toMatchObject({ title: "Fill in “Actual Qty” and “Photo”", detail: "Row 1 is still empty." });
+  });
+
   it("lists header fields separately from row cells", () => {
     const completion: CompletionResult = {
       percent: 50,

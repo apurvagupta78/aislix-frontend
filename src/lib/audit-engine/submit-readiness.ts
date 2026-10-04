@@ -90,8 +90,14 @@ export function groupMissingCells(
   missing: CompletionItem[],
   repeatableSectionKey: string | null,
   positionOf: (recordIndex: number) => number,
+  columnLabels?: Map<string, string>,
 ): { rows: CellGroup[]; header: CellGroup[] } {
-  const labelOf = new Map(definition.fields.map((f) => [`${f.section}:${f.key}`, f.label]));
+  const labelOf = new Map(
+    definition.fields.map((f) => [
+      `${f.section}:${f.key}`,
+      (f.section === repeatableSectionKey ? columnLabels?.get(f.key) : undefined) ?? f.label,
+    ]),
+  );
   const rows = new Map<string, CellGroup>();
   const header = new Map<string, CellGroup>();
   for (const item of missing) {
@@ -144,6 +150,8 @@ export function computeSubmitReadiness(input: {
    * one empty photo is not counted twice.
    */
   requiredPhotoFieldKey?: string | null;
+  /** Column headers as shown in the table, keyed by field key. */
+  columnLabels?: Map<string, string>;
 }): SubmitReadiness {
   const { definition, sectionKey, completion, rows, requirements } = input;
   const positionByIndex = new Map(rows.map((r) => [r.index, r.position]));
@@ -152,7 +160,7 @@ export function computeSubmitReadiness(input: {
   const missingCells = completion.missing.filter(
     (m) => !(photoKey && m.sectionKey === sectionKey && m.fieldKey === photoKey),
   );
-  const cellGroups = groupMissingCells(definition, missingCells, sectionKey, positionOf);
+  const cellGroups = groupMissingCells(definition, missingCells, sectionKey, positionOf, input.columnLabels);
 
   const photoCells = photoKey ? rows.length : 0;
   const photoCellsMissing = completion.missing.length - missingCells.length;
@@ -193,17 +201,23 @@ export function computeSubmitReadiness(input: {
       rowIndexes: [],
     });
   }
+  const sameRows = new Map<string, CellGroup[]>();
   for (const g of cellGroups.rows) {
-    const n = g.numbers.length;
+    const key = [...g.indexes].sort((a, b) => a - b).join(",");
+    sameRows.set(key, [...(sameRows.get(key) ?? []), g]);
+  }
+  for (const groups of sameRows.values()) {
+    const { numbers, indexes } = groups[0]!;
+    const n = numbers.length;
     blockers.push({
-      id: `cells:${g.fieldKey}`,
+      id: `cells:${groups.map((g) => g.fieldKey).join("+")}`,
       kind: "cells",
-      title: `Enter “${g.label}”`,
+      title: groups.length === 1 ? `Enter “${groups[0]!.label}”` : `Fill in ${joinList(groups.map((g) => `“${g.label}”`))}`,
       detail:
         n === 1
-          ? `${capitalize(formatRows(g.numbers))} is still empty.`
-          : `${n} rows are still empty: ${formatRows(g.numbers)}.`,
-      rowIndexes: g.indexes,
+          ? `${capitalize(formatRows(numbers))} is still empty.`
+          : `${n} rows are still empty: ${formatRows(numbers)}.`,
+      rowIndexes: indexes,
     });
   }
   if (photoMissing.length) {
@@ -289,8 +303,11 @@ export function remainingSummary(remaining: SubmitReadiness["remaining"]): strin
     remaining.evidence ? `${remaining.evidence} evidence ${plural(remaining.evidence, "item", "items")}` : null,
   ].filter(Boolean) as string[];
   if (!parts.length) return null;
-  const list = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
-  return `${list} left`;
+  return `${joinList(parts)} left`;
+}
+
+function joinList(items: string[]): string {
+  return items.length <= 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 }
 
 type ServerCompletion = {

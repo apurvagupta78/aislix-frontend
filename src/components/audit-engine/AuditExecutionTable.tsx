@@ -395,6 +395,7 @@ export function AuditExecutionTable({
     requirements,
     photoRule: rowEvidence.mode === "required" ? "every_row" : rowEvidence.mode === "on_mismatch" ? "on_difference" : "none",
     requiredPhotoFieldKey: rowEvidence.mode === "required" && rowEvidence.field?.required ? rowEvidence.field.key : null,
+    columnLabels: new Map(columns.map((c) => [c.key, c.label])),
   });
   const leftSummary = remainingSummary(readiness.remaining);
   const evidenceCounts = {
