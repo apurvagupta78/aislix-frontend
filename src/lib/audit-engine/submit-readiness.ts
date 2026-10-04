@@ -53,13 +53,18 @@ const ROW_LEVEL_REQUIREMENTS = new Set<GridRequirementId>([
   "device_metadata",
 ]);
 
-/** "ACTUAL AMOUNT" → "Actual amount"; mixed-case labels are kept as written. */
+/**
+ * "ACTUAL AMOUNT" → "Actual amount"; short all-caps words are treated as
+ * abbreviations ("SKU CODE" → "SKU code"). Mixed-case labels are kept as written.
+ */
 export function friendlyLabel(label: string): string {
   const trimmed = label.replace(/_/g, " ").replace(/\s+/g, " ").trim();
   if (!trimmed) return "this field";
   if (/[a-z]/.test(trimmed) || !/[A-Z]/.test(trimmed)) return trimmed;
-  const lower = trimmed.toLowerCase();
-  return lower.charAt(0).toUpperCase() + lower.slice(1);
+  const words = trimmed.split(" ").map((w) => (w.length <= 3 ? w : w.toLowerCase()));
+  const first = words[0]!;
+  words[0] = first.charAt(0).toUpperCase() + first.slice(1);
+  return words.join(" ");
 }
 
 /** 1-based row numbers → "row 4" / "rows 22–26" / "rows 3, 5, 9–12 and 4 more". */

@@ -61,6 +61,8 @@ describe("formatRows / friendlyLabel", () => {
   it("turns spreadsheet headers into readable labels", () => {
     expect(friendlyLabel("ACTUAL AMOUNT")).toBe("Actual amount");
     expect(friendlyLabel("Shelf ID")).toBe("Shelf ID");
+    expect(friendlyLabel("SKU")).toBe("SKU");
+    expect(friendlyLabel("SKU CODE")).toBe("SKU code");
     expect(friendlyLabel("actual_amount")).toBe("actual amount");
   });
 });
