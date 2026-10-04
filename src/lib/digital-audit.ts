@@ -1078,11 +1078,14 @@ export function evaluateEvidenceRequirements(
   for (const proof of EVIDENCE_PROOF_OPTIONS.map((o) => o.value)) {
     if (!proofs.has(proof)) continue;
     switch (proof) {
+      case "shelf_photo":
+        // Bins are the shelves here, so this is the per-bin photo check below.
+        break;
       case "context_photo": {
         const missing = session.bins.filter((b) => !keys.has(b));
         out.push({
           id: proof,
-          label: labelOf(proof),
+          label: labelOf(proofs.has("shelf_photo") ? "shelf_photo" : proof),
           hint: "One shelf photo per shelf / bin.",
           done: session.bins.length - missing.length,
           total: session.bins.length,

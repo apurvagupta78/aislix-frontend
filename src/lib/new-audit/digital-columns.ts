@@ -1,8 +1,17 @@
 import type { AuditDataColumn, AuditDataType, AuditInputDataset } from "@/lib/audit-input-dataset";
 import type { ColumnMapping, InputSchema, TemplateFieldBinding } from "@/lib/audit-builder/field-roles";
-import type { TemplateDefinition, TemplateField } from "@/lib/audit-builder/types";
+import type { AuditResponseValue, TemplateDefinition, TemplateField } from "@/lib/audit-builder/types";
 import { buildTemplateFromInputSchema } from "@/lib/audit-builder/input-schema";
 import { DIGITAL_CSV_TEMPLATE_SOURCE } from "@/lib/audit-templates";
+import type { AuditEvidencePolicy, EvidenceProof } from "@/lib/audit-evidence-policy";
+import {
+  BARCODE_SCAN_KEY,
+  VARIANCE_NOTE_KEY,
+  VARIANCE_REASON_KEY,
+  gridEvidenceColumns,
+  type GridEvidenceColumns,
+} from "@/lib/audit-engine/grid-evidence";
+import type { ResponseMap } from "@/lib/custom-audit-shared";
 
 export { DIGITAL_CSV_TEMPLATE_SOURCE };
 
@@ -196,6 +205,22 @@ export type DigitalResultRow = {
   photos: string[];
   /** Saved evidence check: status then reasons, e.g. ["needs_review", "Duplicate photo"]. */
   evidence: string[] | null;
+  barcodeExpected?: string | null;
+  barcodeScanned?: string | null;
+  varianceReason?: string | null;
+  varianceNote?: string | null;
+};
+
+/** Everything the auditee captured for the evidence the manager required. */
+export type DigitalAuditEvidence = {
+  requiredProof: EvidenceProof[];
+  requireRca: boolean;
+  dataset: AuditInputDataset | null;
+  columns: GridEvidenceColumns;
+  shelfColumnName: string | null;
+  barcodeColumnName: string | null;
+  responses: ResponseMap;
+  deviceInfo: Record<string, unknown> | null;
 };
 
 export type DigitalColumnsAudit = {
@@ -203,6 +228,7 @@ export type DigitalColumnsAudit = {
   columns: DigitalResultColumn[];
   rows: DigitalResultRow[];
   rowEvidence: DigitalRowEvidence;
+  evidence?: DigitalAuditEvidence;
 };
 
 function cellText(value: unknown): string | null {
@@ -219,6 +245,11 @@ function cellText(value: unknown): string | null {
 export function buildDigitalColumnsAudit(
   snapshot: Record<string, unknown> | null | undefined,
   responses: Array<{ section_key: string; record_index: number; field_key: string; value: unknown }>,
+  extra?: {
+    evidencePolicy?: Partial<AuditEvidencePolicy> | null;
+    requireRca?: boolean;
+    deviceInfo?: Record<string, unknown> | null;
+  },
 ): DigitalColumnsAudit | null {
   const columns = digitalResultColumns(snapshot);
   if (!columns) return null;
@@ -235,9 +266,17 @@ export function buildDigitalColumnsAudit(
   }
 
   const asList = (value: unknown) => (Array.isArray(value) ? value.map(String).filter(Boolean) : []);
+  const evidenceColumns = gridEvidenceColumns(purpose);
   const rows = (dataset?.rows ?? []).map((row, index) => {
     const evidence = asList(saved.get(`${index}:evidence_status`));
+    const barcodeExpected = evidenceColumns.barcodeColumnId
+      ? cellText(row.values[evidenceColumns.barcodeColumnId])
+      : null;
     return {
+      barcodeExpected,
+      barcodeScanned: cellText(saved.get(`${index}:${BARCODE_SCAN_KEY}`)),
+      varianceReason: cellText(saved.get(`${index}:${VARIANCE_REASON_KEY}`)),
+      varianceNote: cellText(saved.get(`${index}:${VARIANCE_NOTE_KEY}`)),
       index,
       values: Object.fromEntries(
         columns.map((c) => {
@@ -254,7 +293,30 @@ export function buildDigitalColumnsAudit(
   const mode = purpose.rowEvidence;
   const rowEvidence: DigitalRowEvidence =
     mode === "required" || mode === "on_mismatch" || mode === "optional" ? mode : "off";
-  return { filename: dataset?.filename ?? null, columns, rows, rowEvidence };
+  const responseMap: ResponseMap = {};
+  for (const r of responses) {
+    const section = (responseMap[r.section_key] ??= {});
+    const record = (section[r.record_index] ??= {});
+    record[r.field_key] = r.value as AuditResponseValue;
+  }
+  const policy = extra?.evidencePolicy ?? (snapshot?.evidence_policy as Partial<AuditEvidencePolicy> | undefined) ?? null;
+  const columnName = (id: string | null) => (id ? dataset?.columns.find((c) => c.id === id)?.name ?? null : null);
+  return {
+    filename: dataset?.filename ?? null,
+    columns,
+    rows,
+    rowEvidence,
+    evidence: {
+      requiredProof: Array.isArray(policy?.requiredProof) ? policy.requiredProof : [],
+      requireRca: Boolean(extra?.requireRca),
+      dataset: dataset ?? null,
+      columns: evidenceColumns,
+      shelfColumnName: columnName(evidenceColumns.shelfColumnId),
+      barcodeColumnName: columnName(evidenceColumns.barcodeColumnId),
+      responses: responseMap,
+      deviceInfo: extra?.deviceInfo ?? null,
+    },
+  };
 }
 
 /** Load a submitted Digital Audit upload's columns and values; null for any other kind of scan. */
@@ -262,17 +324,25 @@ export async function fetchDigitalColumnsAudit(scanId: string): Promise<DigitalC
   const { supabase } = await import("@/integrations/supabase/client");
   const { data: scan, error } = await supabase
     .from("shelf_scans")
-    .select("template_snapshot")
+    .select("template_snapshot, assignment_id, device_info")
     .eq("id", scanId)
     .maybeSingle();
   if (error || !scan) return null;
   const snapshot = scan.template_snapshot as Record<string, unknown> | null;
   if (!digitalResultColumns(snapshot)) return null;
-  const { data: responses } = await supabase
-    .from("audit_responses")
-    .select("section_key, record_index, field_key, value")
-    .eq("scan_id", scanId);
-  return buildDigitalColumnsAudit(snapshot, responses ?? []);
+  const assignmentId = (scan as { assignment_id?: string | null }).assignment_id;
+  const [{ data: responses }, assignment] = await Promise.all([
+    supabase.from("audit_responses").select("section_key, record_index, field_key, value").eq("scan_id", scanId),
+    assignmentId
+      ? supabase.from("scan_assignments").select("evidence_policy, require_rca").eq("id", assignmentId).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  const assignmentRow = assignment.data as { evidence_policy?: unknown; require_rca?: boolean | null } | null;
+  return buildDigitalColumnsAudit(snapshot, responses ?? [], {
+    evidencePolicy: (assignmentRow?.evidence_policy as Partial<AuditEvidencePolicy> | null) ?? null,
+    requireRca: assignmentRow?.require_rca === true,
+    deviceInfo: ((scan as { device_info?: unknown }).device_info as Record<string, unknown> | null) ?? null,
+  });
 }
 
 /** Numeric value of a cell, or null when it is empty / not a number (₹, commas and spaces allowed). */

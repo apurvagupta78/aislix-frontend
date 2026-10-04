@@ -66,8 +66,8 @@ export function NewAuditStep7Preview({
   scheduleSummary,
   evidenceSummary,
   showEvidence = true,
-  stepNumber = 7,
-  sectionId = "step-7-preview",
+  stepNumber = 6,
+  sectionId = "step-6-preview",
   assignToSelf,
   complete,
 }: Props) {
@@ -124,7 +124,7 @@ export function NewAuditStep7Preview({
         <PreviewGroup title="Step 4 · Who" rows={[{ label: "Assigned to", value: assigneeDisplay }]} />
         <PreviewGroup title="Step 5 · When" rows={[{ label: "Schedule", value: scheduleSummary }]} />
         {showEvidence && evidenceSummary ? (
-          <PreviewGroup title="Step 6 · Evidence" rows={[{ label: "Level", value: evidenceSummary }]} />
+          <PreviewGroup title="Step 3 · Evidence" rows={[{ label: "Required", value: evidenceSummary }]} />
         ) : null}
       </div>
     </NewAuditStepSection>

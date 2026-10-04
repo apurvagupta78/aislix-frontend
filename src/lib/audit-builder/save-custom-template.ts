@@ -87,6 +87,8 @@ export async function createDigitalCsvAuditTemplate(input: {
   dataset: AuditInputDataset;
   operatingModel: OperatingModel;
   rowEvidence?: DigitalRowEvidence;
+  shelfColumnId?: string | null;
+  barcodeColumnId?: string | null;
 }): Promise<AuditTemplate> {
   const rowEvidence = input.rowEvidence ?? "optional";
   const def = buildDigitalTemplateDefinition(input.inputSchema, input.dataset, {
@@ -106,6 +108,8 @@ export async function createDigitalCsvAuditTemplate(input: {
     inputSchema: input.inputSchema,
     input_dataset: input.dataset,
     rowEvidence,
+    ...(input.shelfColumnId ? { shelfColumnId: input.shelfColumnId } : {}),
+    ...(input.barcodeColumnId ? { barcodeColumnId: input.barcodeColumnId } : {}),
   };
   return createAuditTemplate(patch as AuditTemplateInput);
 }

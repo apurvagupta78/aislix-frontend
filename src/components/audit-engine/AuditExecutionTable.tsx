@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
-import { Camera, Copy, Download, Info, Loader2, Plus, Upload, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { Camera, Copy, Download, Info, Loader2, Plus, ScanBarcode, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { EvidenceImage } from "@/components/audit-builder/AuditExecutionForm";
 import { useEvidenceUpload } from "@/components/audit-builder/useEvidenceUpload";
+import { AuditEvidencePanel, targetId, type EvidenceTarget } from "@/components/audit-engine/AuditEvidencePanel";
+import { BarcodeScannerDialog } from "@/components/digital-audit/BarcodeScannerDialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -41,9 +43,31 @@ import {
   type PairStatus,
   type UploadValidation,
 } from "@/lib/audit-engine/execution-table";
+import {
+  AUDIT_EVIDENCE_SECTION,
+  BARCODE_SCAN_KEY,
+  DEVICE_METADATA_KEY,
+  EVIDENCE_FLAG_LIST_KEY,
+  GPS_KEY,
+  ROW_VARIANCE_KEY,
+  SHELF_EVIDENCE_SECTION,
+  VARIANCE_NOTE_KEY,
+  VARIANCE_REASON_KEY,
+  auditEvidenceValues,
+  barcodeMatches,
+  collectDeviceMetadata,
+  evaluateGridEvidence,
+  evidenceField,
+  gridEvidenceColumns,
+  listValue,
+  parseDeviceMetadata,
+  parseGps,
+  rowExpectedBarcode,
+  shelfSlots,
+} from "@/lib/audit-engine/grid-evidence";
 import { parseAuditSpreadsheet } from "@/lib/audit-input-dataset";
 import type { CustomAuditSession, ResponseMap } from "@/lib/custom-audit";
-import { RCA_OPTIONS } from "@/lib/digital-audit";
+import { isVideoFile, RCA_OPTIONS } from "@/lib/digital-audit";
 import { cn } from "@/lib/utils";
 
 type SaveItem = { recordIndex: number; field: TemplateField; value: AuditResponseValue };
@@ -55,6 +79,7 @@ type Props = {
   onSaveField: (sectionKey: string, recordIndex: number, field: TemplateField, value: AuditResponseValue) => Promise<void>;
   onSaveMany: (sectionKey: string, items: SaveItem[]) => Promise<void>;
   onUploadImage: (file: File) => Promise<string>;
+  onUploadVideo?: (file: File) => Promise<string>;
   readOnly: boolean;
   testMode?: boolean;
   submitting: boolean;
@@ -214,6 +239,7 @@ export function AuditExecutionTable({
   onSaveField,
   onSaveMany,
   onUploadImage,
+  onUploadVideo,
   readOnly,
   testMode,
   submitting,
@@ -289,8 +315,39 @@ export function AuditExecutionTable({
       flags,
       hasMismatch,
     });
-    return { index, position, values, pairResults, photos, evidence };
+    return { index, position, values, pairResults, photos, evidence, hasMismatch };
   });
+
+  const gridColumns = useMemo(
+    () => gridEvidenceColumns(session.template.purpose_config as Record<string, unknown> | null),
+    [session.template.purpose_config],
+  );
+  const requiredProof = session.evidencePolicy?.requiredProof ?? [];
+  const requireRca = Boolean(session.requireRca);
+  const slots = useMemo(
+    () => shelfSlots(session.inputDataset, gridColumns.shelfColumnId),
+    [session.inputDataset, gridColumns.shelfColumnId],
+  );
+  const showBarcodeColumn = requiredProof.includes("barcode") && Boolean(gridColumns.barcodeColumnId);
+  const showVarianceColumns = requireRca && pairs.length > 0;
+  const requirements = evaluateGridEvidence({
+    policy: session.evidencePolicy,
+    requireRca,
+    dataset: session.inputDataset,
+    columns: gridColumns,
+    rows: rows.map((r) => ({
+      index: r.index,
+      position: r.position,
+      values: r.values,
+      hasMismatch: r.hasMismatch,
+      rowEvidenceStatus: r.evidence.status,
+    })),
+    responses,
+  });
+  const unmetRequirements = requirements.filter((r) => !r.ok);
+  const auditValues = auditEvidenceValues(responses);
+  const gps = parseGps(auditValues[GPS_KEY]);
+  const device = parseDeviceMetadata(auditValues[DEVICE_METADATA_KEY]);
 
   const nonRepeatable = headerSections.map((s) => ({
     sectionKey: s.key,
@@ -393,6 +450,173 @@ export function AuditExecutionTable({
     void setValue(sectionKey, recordIndex, field, current.filter((u) => u !== url));
   };
 
+  const [evidenceTarget, setEvidenceTarget] = useState<EvidenceTarget | null>(null);
+  const [videoBusy, setVideoBusy] = useState(false);
+  const [gpsError, setGpsError] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [scanRow, setScanRow] = useState<number | null>(null);
+  const evidencePhotoRef = useRef<HTMLInputElement>(null);
+  const videoRecordRef = useRef<HTMLInputElement>(null);
+  const videoUploadRef = useRef<HTMLInputElement>(null);
+  const evidencePanelRef = useRef<HTMLDivElement>(null);
+  const canCapture = !readOnly && !testMode;
+
+  const saveAuditEvidence = (key: string, type: TemplateField["type"], value: AuditResponseValue) =>
+    setValue(AUDIT_EVIDENCE_SECTION, 0, evidenceField(AUDIT_EVIDENCE_SECTION, key, type), value);
+
+  const handleEvidencePhoto = async (file: File) => {
+    const target = evidenceTarget;
+    if (!target) return;
+    const checks = rowEvidence.qualityChecks;
+    try {
+      const { url, flags } = await evidenceUpload.upload(file, {
+        checkQuality: checks.some((c) => c === "blur" || c === "dark" || c === "glare"),
+        qualityRequirement: "standard",
+        checkDuplicates: checks.includes("duplicate_hash"),
+        onProblem: "flag",
+      });
+      const record = responses[target.section]?.[target.recordIndex] ?? {};
+      if (target.section === SHELF_EVIDENCE_SECTION) {
+        await setValue(target.section, target.recordIndex, evidenceField(target.section, "shelf", "short_text"), target.shelfName ?? "");
+      }
+      await setValue(
+        target.section,
+        target.recordIndex,
+        evidenceField(target.section, target.key, "multiple_images"),
+        [...listValue(record[target.key]), url],
+      );
+      if (flags.length) {
+        await setValue(
+          target.section,
+          target.recordIndex,
+          evidenceField(target.section, EVIDENCE_FLAG_LIST_KEY, "short_text"),
+          [...listValue(record[EVIDENCE_FLAG_LIST_KEY]), ...flags.map((f) => encodeEvidenceFlag(url, f))],
+        );
+        toast.warning(`Photo added but needs review: ${flags[0]}`, { duration: 6000 });
+      } else {
+        toast.success("Photo added.");
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not upload photo.");
+    } finally {
+      setEvidenceTarget((prev) => (prev === target ? null : prev));
+    }
+  };
+
+  const removeEvidence = (target: EvidenceTarget, ref: string) => {
+    const record = responses[target.section]?.[target.recordIndex] ?? {};
+    void setValue(
+      target.section,
+      target.recordIndex,
+      evidenceField(target.section, target.key, "multiple_images"),
+      listValue(record[target.key]).filter((r) => r !== ref),
+    );
+  };
+
+  const handleVideo = async (file: File) => {
+    if (!onUploadVideo) return;
+    if (!isVideoFile(file)) {
+      toast.error("Choose a video file (MP4, MOV or WebM).");
+      return;
+    }
+    setVideoBusy(true);
+    try {
+      const ref = await onUploadVideo(file);
+      await saveAuditEvidence("session_video", "multiple_images", [...listValue(auditValues.session_video), ref]);
+      toast.success("Session video added.");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not upload the video.");
+    } finally {
+      setVideoBusy(false);
+    }
+  };
+
+  const requestGps = () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setGpsError("This browser can't share your location.");
+      return;
+    }
+    setLocating(true);
+    setGpsError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocating(false);
+        void saveAuditEvidence(
+          GPS_KEY,
+          "short_text",
+          JSON.stringify({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracyM: pos.coords.accuracy ?? null,
+            capturedAt: new Date(pos.timestamp || Date.now()).toISOString(),
+          }),
+        );
+      },
+      (err) => {
+        setLocating(false);
+        setGpsError(
+          err.code === err.PERMISSION_DENIED
+            ? "Location permission was denied. Allow location for this site in your browser, then try again."
+            : "Could not get your location. Move near a window and try again.",
+        );
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 },
+    );
+  };
+
+  const needsGps = requiredProof.includes("gps");
+  const hasGps = Boolean(gps);
+  const hasDevice = Boolean(device);
+  const autoCapture = useRef({ gps: false, device: false });
+  useEffect(() => {
+    if (!canCapture) return;
+    // Wait for saved responses to load so a reopened audit keeps its first values.
+    const timer = window.setTimeout(() => {
+      if (!hasDevice && !autoCapture.current.device) {
+        autoCapture.current.device = true;
+        void saveAuditEvidence(DEVICE_METADATA_KEY, "short_text", JSON.stringify(collectDeviceMetadata()));
+      }
+      if (needsGps && !hasGps && !autoCapture.current.gps) {
+        autoCapture.current.gps = true;
+        requestGps();
+      }
+    }, 1500);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canCapture, hasDevice, hasGps, needsGps]);
+
+  const varianceField = evidenceField(sectionKey, ROW_VARIANCE_KEY, "yes_no");
+  const varianceSignature = rows.map((r) => `${r.index}:${r.hasMismatch ? 1 : 0}`).join(";");
+  useEffect(() => {
+    if (!requireRca || !canCapture) return;
+    const timer = window.setTimeout(() => {
+      const items: SaveItem[] = rows
+        .filter((r) => (r.values[ROW_VARIANCE_KEY] === true) !== r.hasMismatch)
+        .map((r) => ({ recordIndex: r.index, field: varianceField, value: r.hasMismatch }));
+      if (!items.length) return;
+      onChange((prev) => {
+        const section = { ...(prev[sectionKey] ?? {}) };
+        for (const item of items) section[item.recordIndex] = { ...(section[item.recordIndex] ?? {}), [ROW_VARIANCE_KEY]: item.value };
+        return { ...prev, [sectionKey]: section };
+      });
+      void onSaveMany(sectionKey, items).catch(() => undefined);
+    }, 800);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [varianceSignature, requireRca, canCapture]);
+
+  const barcodeField = evidenceField(sectionKey, BARCODE_SCAN_KEY, "short_text");
+  const saveBarcodeRef = useRef<(code: string) => void>(() => undefined);
+  saveBarcodeRef.current = (code: string) => {
+    if (scanRow === null) return;
+    void setValue(sectionKey, scanRow, barcodeField, code);
+    toast.success(`Barcode ${code} saved for row ${(rows.find((r) => r.index === scanRow)?.position ?? scanRow) + 1}.`);
+  };
+  const onBarcodeScanned = useCallback((code: string) => saveBarcodeRef.current(code), []);
+  const onScannerOpenChange = useCallback((open: boolean) => {
+    if (!open) setScanRow(null);
+  }, []);
+
   const addRow = () => {
     const next = Math.max(-1, ...recordIndexes) + 1;
     onChange((prev) => ({ ...prev, [sectionKey]: { ...(prev[sectionKey] ?? {}), [next]: {} } }));
@@ -455,6 +679,12 @@ export function AuditExecutionTable({
     if (evidenceRowsMissing.length && !testMode) {
       const list = evidenceRowsMissing.slice(0, 5).map((r) => r.position + 1).join(", ");
       toast.error(`Add a photo for row${evidenceRowsMissing.length === 1 ? "" : "s"} ${list}${evidenceRowsMissing.length > 5 ? "…" : ""} before submitting.`);
+      return;
+    }
+    if (unmetRequirements.length && !testMode) {
+      const labels = unmetRequirements.map((r) => r.label);
+      toast.error(`Before submitting, complete: ${labels.slice(0, 3).join(", ")}${labels.length > 3 ? ` +${labels.length - 3} more` : ""}.`);
+      evidencePanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
     onSubmit();
@@ -600,6 +830,35 @@ export function AuditExecutionTable({
         );
       })}
 
+      {requirements.length ? (
+        <div ref={evidencePanelRef} className="scroll-mt-24">
+          <AuditEvidencePanel
+            requirements={requirements}
+            slots={slots}
+            responses={responses}
+            readOnly={readOnly}
+            busyTarget={
+              videoBusy
+                ? targetId({ section: AUDIT_EVIDENCE_SECTION, recordIndex: 0, key: "session_video" })
+                : evidenceUpload.uploading && evidenceTarget
+                  ? targetId(evidenceTarget)
+                  : null
+            }
+            gps={gps}
+            gpsError={gpsError}
+            locating={locating}
+            device={device}
+            onRetryGps={requestGps}
+            onAddPhoto={(target) => {
+              setEvidenceTarget(target);
+              evidencePhotoRef.current?.click();
+            }}
+            onAddVideo={(mode) => (mode === "record" ? videoRecordRef : videoUploadRef).current?.click()}
+            onRemove={removeEvidence}
+          />
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 text-xs text-[#667085]">
           <span className="font-medium text-[#102A43]">
@@ -654,6 +913,24 @@ export function AuditExecutionTable({
                   showEvidenceValidation={i === evidenceColumnIndex && rowEvidence.mode !== "off"}
                 />
               ))}
+              {showBarcodeColumn ? (
+                <th className="border-b border-[#D9E2E8] px-3 py-2 align-top font-semibold">
+                  <span className="block whitespace-nowrap">Barcode scan</span>
+                  <Chip role="fill" />
+                </th>
+              ) : null}
+              {showVarianceColumns ? (
+                <>
+                  <th className="border-b border-[#D9E2E8] px-3 py-2 align-top font-semibold">
+                    <span className="block whitespace-nowrap">Reason for difference</span>
+                    <Chip role="fill" />
+                  </th>
+                  <th className="border-b border-[#D9E2E8] px-3 py-2 align-top font-semibold">
+                    <span className="block whitespace-nowrap">Note</span>
+                    <Chip role="fill" />
+                  </th>
+                </>
+              ) : null}
             </tr>
           </thead>
           <tbody>
@@ -684,6 +961,63 @@ export function AuditExecutionTable({
                       onRemovePhoto={(url) => removePhoto(row.index, c.field, url)}
                     />
                   ))}
+                  {showBarcodeColumn ? (
+                    <td className="border-b border-[#D9E2E8] px-2 py-1.5">
+                      <BarcodeCell
+                        expected={rowExpectedBarcode(session.inputDataset, gridColumns.barcodeColumnId, row.index)}
+                        scanned={cellText(row.values[BARCODE_SCAN_KEY])}
+                        disabled={readOnly}
+                        onScan={() => setScanRow(row.index)}
+                        onCommit={(code) => void setValue(sectionKey, row.index, barcodeField, code)}
+                      />
+                    </td>
+                  ) : null}
+                  {showVarianceColumns ? (
+                    row.hasMismatch ? (
+                      <>
+                        <td className="border-b border-[#D9E2E8] px-2 py-1.5">
+                          <select
+                            aria-label={`Reason for difference row ${row.position + 1}`}
+                            disabled={readOnly}
+                            className={CELL_CLASS}
+                            style={{ borderColor: cellText(row.values[VARIANCE_REASON_KEY]) ? AISLIX_PALETTE.border : AISLIX_PALETTE.purple }}
+                            value={cellText(row.values[VARIANCE_REASON_KEY]) ?? ""}
+                            onChange={(e) =>
+                              void setValue(sectionKey, row.index, evidenceField(sectionKey, VARIANCE_REASON_KEY, "rca"), e.target.value || null)
+                            }
+                          >
+                            <option value="">Required</option>
+                            {RCA_OPTIONS.map((o) => (
+                              <option key={o.code} value={o.code}>
+                                {o.label}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="border-b border-[#D9E2E8] px-2 py-1.5">
+                          <CellEditor
+                            column={{
+                              key: VARIANCE_NOTE_KEY,
+                              label: `Note row ${row.position + 1}`,
+                              field: evidenceField(sectionKey, VARIANCE_NOTE_KEY, "notes"),
+                              kind: "long_text",
+                              editable: true,
+                              role: "fill",
+                              required: cellText(row.values[VARIANCE_REASON_KEY]) === "other",
+                            }}
+                            value={row.values[VARIANCE_NOTE_KEY]}
+                            disabled={readOnly}
+                            onCommit={(v) => void setValue(sectionKey, row.index, evidenceField(sectionKey, VARIANCE_NOTE_KEY, "notes"), v)}
+                          />
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="border-b border-[#D9E2E8] px-3 py-1.5 text-[#667085]">—</td>
+                        <td className="border-b border-[#D9E2E8] px-3 py-1.5 text-[#667085]">—</td>
+                      </>
+                    )
+                  ) : null}
                 </tr>
               );
             })}
@@ -708,12 +1042,55 @@ export function AuditExecutionTable({
           e.target.value = "";
         }}
       />
+      <input
+        ref={evidencePhotoRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void handleEvidencePhoto(file);
+          else setEvidenceTarget(null);
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={videoRecordRef}
+        type="file"
+        accept="video/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void handleVideo(file);
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={videoUploadRef}
+        type="file"
+        accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm,.m4v"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void handleVideo(file);
+          e.target.value = "";
+        }}
+      />
+      <BarcodeScannerDialog open={scanRow !== null} onOpenChange={onScannerOpenChange} onScan={onBarcodeScanned} />
 
       <div className="sticky bottom-0 z-30 -mx-1 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#D9E2E8] bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(16,42,67,0.06)]">
         <p className="text-sm text-[#102A43]">
           <span className="font-semibold">{rowsComplete}</span> of {rows.length} rows complete
           {evidenceRowsMissing.length ? (
             <span className="text-[#667085]"> · {evidenceRowsMissing.length === 1 ? "1 row needs" : `${evidenceRowsMissing.length} rows need`} a photo</span>
+          ) : null}
+          {unmetRequirements.length ? (
+            <span className="text-[#667085]">
+              {" "}
+              · {unmetRequirements.length} evidence item{unmetRequirements.length === 1 ? "" : "s"} left
+            </span>
           ) : null}
         </p>
         <Button onClick={submit} disabled={submitting || readOnly}>
@@ -893,6 +1270,62 @@ function RowCells({
         </td>
       ) : null}
     </>
+  );
+}
+
+function BarcodeCell({
+  expected,
+  scanned,
+  disabled,
+  onScan,
+  onCommit,
+}: {
+  expected: string | null;
+  scanned: string | null;
+  disabled: boolean;
+  onScan: () => void;
+  onCommit: (code: string | null) => void;
+}) {
+  const [draft, setDraft] = useState(scanned ?? "");
+  useEffect(() => setDraft(scanned ?? ""), [scanned]);
+  if (!expected) return <span className="text-[#667085]" title="No barcode in the file for this row">N/A</span>;
+  const match = scanned ? barcodeMatches(expected, scanned) : null;
+  return (
+    <div className="flex items-center gap-1.5">
+      <input
+        aria-label="Scanned barcode"
+        disabled={disabled}
+        placeholder="Scan or type"
+        className={cn(CELL_CLASS, "w-36 min-w-[8rem] font-mono")}
+        style={{ borderColor: scanned ? AISLIX_PALETTE.border : AISLIX_PALETTE.purple }}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => {
+          const next = draft.trim() || null;
+          if (next !== (scanned ?? null)) onCommit(next);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+      />
+      {!disabled ? (
+        <button
+          type="button"
+          aria-label="Scan barcode with camera"
+          title="Scan with camera"
+          className="inline-flex size-8 shrink-0 items-center justify-center rounded border border-dashed border-[#9B86D9] text-[#667085] hover:bg-[#F3EFFB]"
+          onClick={onScan}
+        >
+          <ScanBarcode className="size-3.5" />
+        </button>
+      ) : null}
+      {match === null ? null : (
+        <Pill
+          {...(match ? PAIR_PILL.match : PAIR_PILL.mismatch)}
+          title={match ? undefined : `Expected ${expected}`}
+        />
+      )}
+    </div>
   );
 }
 

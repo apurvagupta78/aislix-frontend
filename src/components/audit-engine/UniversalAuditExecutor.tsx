@@ -25,6 +25,7 @@ import {
   saveCustomAuditFields,
   submitCustomAudit,
   uploadCustomAuditImage,
+  uploadCustomAuditVideo,
   type ResponseMap,
 } from "@/lib/custom-audit";
 
@@ -81,12 +82,17 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
       const completion = await validateAuditCompletion(assignmentId);
       if (!completion.ok && !testMode) {
         const parts: string[] = [];
-        if (completion.missingRcaCount) parts.push(`${completion.missingRcaCount} RCA(s) missing`);
+        const labelled = completion.issues.filter((i) => i.label);
+        if (labelled.length) {
+          parts.push(...labelled.map((i) => (i.count ? `${i.label}: ${i.count} missing` : `${i.label} missing`)));
+        } else {
+          if (completion.missingRcaCount) parts.push(`${completion.missingRcaCount} explanation(s) missing`);
+          if (completion.missingEvidenceCount) {
+            parts.push(`${completion.missingEvidenceCount} required evidence item(s) missing`);
+          }
+        }
         if (completion.missingExpiryCoverageRecords) {
           parts.push(`${completion.missingExpiryCoverageRecords} expiry coverage gap(s)`);
-        }
-        if (completion.missingEvidenceCount) {
-          parts.push(`${completion.missingEvidenceCount} required photo(s) missing`);
         }
         throw new Error(parts.join("; ") || "Audit completion requirements not met.");
       }
@@ -176,6 +182,7 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
           })
         }
         onUploadImage={(file) => uploadCustomAuditImage(assignmentId, file)}
+        onUploadVideo={(file) => uploadCustomAuditVideo(assignmentId, file)}
         readOnly={readOnly}
         testMode={testMode}
         submitting={submitMutation.isPending}

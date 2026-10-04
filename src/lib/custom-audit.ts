@@ -17,8 +17,18 @@ import {
   AUDIT_EVIDENCE_REF_PREFIX,
   buildRecordContexts,
   isAuditEvidenceRef,
+  isScanImagesRef,
+  SCAN_IMAGES_BUCKET,
+  SCAN_IMAGES_REF_PREFIX,
   type ResponseMap,
 } from "@/lib/custom-audit-shared";
+import {
+  AUDIT_EVIDENCE_SECTION,
+  DEVICE_METADATA_KEY,
+  GPS_KEY,
+  parseDeviceMetadata,
+  parseGps,
+} from "@/lib/audit-engine/grid-evidence";
 import { syncFindingsForScan } from "@/lib/findings";
 import type { InputSchema } from "@/lib/audit-builder/field-roles";
 import type { AuditInputDataset } from "@/lib/audit-input-dataset";
@@ -42,6 +52,7 @@ export type CustomAuditSession = {
   auditDescription?: string | null;
   createdAt?: string | null;
   evidencePolicy?: Partial<AuditEvidencePolicy> | null;
+  requireRca?: boolean;
 };
 
 async function profileNames(ids: string[]): Promise<Map<string, string>> {
@@ -146,6 +157,7 @@ export async function loadCustomAuditSession(
     auditDescription: scopeText("audit_description"),
     createdAt: (assignment.created_at as string | null) ?? null,
     evidencePolicy: (assignment.evidence_policy as Partial<AuditEvidencePolicy> | null) ?? null,
+    requireRca: (assignment as { require_rca?: boolean | null }).require_rca === true,
   };
 }
 
@@ -311,6 +323,7 @@ export function buildCustomAuditShelfScanInsert(input: {
   templateSnapshot: Record<string, unknown>;
   workflowSubmission?: "direct" | "manager_approval" | "regional_approval";
   evidencePhotoCount?: number;
+  deviceInfo?: Record<string, unknown>;
 }): Record<string, unknown> {
   const submittedAt = new Date().toISOString();
   const directApproval = input.workflowSubmission === "direct";
@@ -328,7 +341,20 @@ export function buildCustomAuditShelfScanInsert(input: {
     template_snapshot: input.templateSnapshot,
     photo_count: Math.max(MIN_SHELF_SCAN_PHOTO_COUNT, input.evidencePhotoCount ?? 0),
     category_selections: {},
-    device_info: {},
+    device_info: input.deviceInfo ?? {},
+  };
+}
+
+/** Device, time and location details captured during the audit, stamped with the submit time. */
+export function buildSubmitDeviceInfo(responses: ResponseMap): Record<string, unknown> {
+  const audit = responses[AUDIT_EVIDENCE_SECTION]?.[0] ?? {};
+  const device = parseDeviceMetadata(audit[DEVICE_METADATA_KEY]);
+  const gps = parseGps(audit[GPS_KEY]);
+  return {
+    ...(device ?? {}),
+    submittedAt: new Date().toISOString(),
+    ...(typeof navigator !== "undefined" && !device ? { userAgent: navigator.userAgent } : {}),
+    ...(gps ? { gps } : {}),
   };
 }
 
@@ -384,6 +410,7 @@ export async function submitCustomAudit(input: {
       templateSnapshot: session.template as unknown as Record<string, unknown>,
       workflowSubmission: session.definition.workflow.submission,
       evidencePhotoCount,
+      deviceInfo: buildSubmitDeviceInfo(responses),
     });
 
     const { data: scan, error: scanErr } = await supabase
@@ -487,6 +514,12 @@ export async function submitCustomAudit(input: {
 }
 
 export async function resolveAuditEvidenceUrl(stored: string): Promise<string> {
+  if (isScanImagesRef(stored)) {
+    const { data } = await supabase.storage
+      .from(SCAN_IMAGES_BUCKET)
+      .createSignedUrl(stored.slice(SCAN_IMAGES_REF_PREFIX.length), 3600);
+    return data?.signedUrl ?? stored;
+  }
   if (!isAuditEvidenceRef(stored)) return stored;
   const path = stored.slice(AUDIT_EVIDENCE_REF_PREFIX.length);
   const { data, error } = await supabase.storage
@@ -509,4 +542,22 @@ export async function uploadCustomAuditImage(
   });
   if (error) dbError(error, "Could not upload image.");
   return `${AUDIT_EVIDENCE_REF_PREFIX}${path}`;
+}
+
+export const MAX_CUSTOM_AUDIT_VIDEO_BYTES = 100 * 1024 * 1024;
+
+export async function uploadCustomAuditVideo(assignmentId: string, file: File): Promise<string> {
+  if (file.size > MAX_CUSTOM_AUDIT_VIDEO_BYTES) {
+    throw new Error("Session video is too large. Upload a clip under 100 MB.");
+  }
+  const orgId = await requireOrgId();
+  const ext = (file.name.split(".").pop() ?? "mp4").toLowerCase();
+  const contentType = file.type || (ext === "mov" ? "video/quicktime" : ext === "webm" ? "video/webm" : "video/mp4");
+  const path = `${orgId}/custom-audit/${assignmentId}/video-${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from(SCAN_IMAGES_BUCKET).upload(path, file, {
+    upsert: false,
+    contentType,
+  });
+  if (error) dbError(error, "Could not upload the session video.");
+  return `${SCAN_IMAGES_REF_PREFIX}${path}`;
 }

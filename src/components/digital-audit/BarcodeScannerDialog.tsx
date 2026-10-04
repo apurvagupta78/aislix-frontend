@@ -127,13 +127,12 @@ export function BarcodeScannerDialog({ open, onOpenChange, onScan }: BarcodeScan
           <p className="text-sm text-destructive">{error}</p>
         ) : (
           <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-black">
+            <video ref={videoRef} className="h-full w-full object-cover" playsInline muted />
             {starting ? (
-              <div className="flex h-full items-center justify-center">
+              <div className="absolute inset-0 flex items-center justify-center">
                 <Loader2 className="size-8 animate-spin text-white" />
               </div>
-            ) : (
-              <video ref={videoRef} className="h-full w-full object-cover" playsInline muted />
-            )}
+            ) : null}
           </div>
         )}
 

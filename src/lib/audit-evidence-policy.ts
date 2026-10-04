@@ -2,6 +2,7 @@ export type EvidenceLevel = "basic" | "standard" | "high" | "custom";
 
 export type EvidenceProof =
   | "context_photo"
+  | "shelf_photo"
   | "per_sku_photo"
   | "variance_photo"
   | "before_after"
@@ -30,12 +31,17 @@ export const EVIDENCE_PROOF_OPTIONS: Array<{
   {
     value: "context_photo",
     label: "Contextual shelf photo",
-    description: "Shows the inspected area and scope.",
+    description: "One overall photo of the inspected area and scope.",
+  },
+  {
+    value: "shelf_photo",
+    label: "Evidence per shelf",
+    description: "One photo for every shelf / location in the audit.",
   },
   {
     value: "per_sku_photo",
-    label: "Per-SKU photo",
-    description: "At least one clear image for every SKU.",
+    label: "Per-row (SKU) photo",
+    description: "At least one clear photo on every row.",
   },
   {
     value: "variance_photo",
@@ -98,6 +104,7 @@ export const EVIDENCE_PRESETS: Record<Exclude<EvidenceLevel, "custom">, AuditEvi
     level: "high",
     requiredProof: [
       "context_photo",
+      "shelf_photo",
       "per_sku_photo",
       "variance_photo",
       "barcode",
@@ -121,6 +128,29 @@ export function policyForLevel(level: EvidenceLevel): AuditEvidencePolicy {
     requiredProof: [...preset.requiredProof],
     qualityChecks: [...preset.qualityChecks],
   };
+}
+
+export type RowPhotoMode = "required" | "on_mismatch" | "optional";
+
+/** Row photo rule for spreadsheet audits, derived from the selected proofs. */
+export function rowEvidenceFromPolicy(policy: Pick<AuditEvidencePolicy, "requiredProof">): RowPhotoMode {
+  if (policy.requiredProof.includes("per_sku_photo")) return "required";
+  if (policy.requiredProof.includes("variance_photo")) return "on_mismatch";
+  return "optional";
+}
+
+/** Evidence per shelf needs the file column that names each shelf. */
+export function policyNeedsShelfColumn(policy: Pick<AuditEvidencePolicy, "requiredProof">): boolean {
+  return policy.requiredProof.includes("shelf_photo");
+}
+
+/** Before and after is taken per shelf when a shelf column is set, otherwise once for the audit. */
+export function policyUsesShelfColumn(policy: Pick<AuditEvidencePolicy, "requiredProof">): boolean {
+  return policyNeedsShelfColumn(policy) || policy.requiredProof.includes("before_after");
+}
+
+export function policyNeedsBarcodeColumn(policy: Pick<AuditEvidencePolicy, "requiredProof">): boolean {
+  return policy.requiredProof.includes("barcode");
 }
 
 export function mergeTemplateMinimum(

@@ -3,6 +3,8 @@ import { dbError } from "@/lib/db/context";
 
 export type AuditCompletionIssue = {
   type: string;
+  /** Plain-language requirement name, e.g. "Evidence per shelf". */
+  label?: string;
   count?: number;
   section?: string;
   recordIndex?: number;

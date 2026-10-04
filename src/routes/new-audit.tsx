@@ -11,8 +11,13 @@ import { createScanAssignment, fetchAssignableMembers } from "@/lib/assignments"
 import { fetchAuditTemplate, fetchAuditTemplates } from "@/lib/audit-templates";
 import { hydrateFromSavedTemplate } from "@/lib/audit-builder/load-saved-template-audit";
 import {
+  EVIDENCE_PROOF_OPTIONS,
   mergeTemplateMinimum,
   policyForLevel,
+  policyNeedsBarcodeColumn,
+  policyNeedsShelfColumn,
+  policyUsesShelfColumn,
+  rowEvidenceFromPolicy,
   type AuditEvidencePolicy,
   type EvidenceLevel,
   type EvidenceProof,
@@ -30,11 +35,9 @@ import {
 } from "@/lib/audit-input-dataset";
 import { DigitalAuditUploadPanel } from "@/components/new-audit/DigitalAuditUploadPanel";
 import { createDigitalCsvAuditTemplate } from "@/lib/audit-builder/save-custom-template";
-import {
-  buildDigitalInputSchema,
-  syncDigitalMappings,
-  type DigitalRowEvidence,
-} from "@/lib/new-audit/digital-columns";
+import { buildDigitalInputSchema, syncDigitalMappings } from "@/lib/new-audit/digital-columns";
+import { AdvancedSettingsPanel } from "@/components/new-audit/AdvancedSettingsPanel";
+import { suggestBarcodeColumn, suggestShelfColumn } from "@/lib/audit-engine/grid-evidence";
 import { SimpleScratchBuilder } from "@/components/new-audit/SimpleScratchBuilder";
 import type { AuditPurpose, OperatingModel } from "@/lib/audit-builder/types";
 import type { InputSchema } from "@/lib/audit-builder/field-roles";
@@ -80,7 +83,6 @@ import { NewAuditStep2StartMethod } from "@/components/new-audit/steps/NewAuditS
 import { NewAuditStep3AuditMode } from "@/components/new-audit/steps/NewAuditStep3AuditMode";
 import { NewAuditStep4Assignment } from "@/components/new-audit/steps/NewAuditStep4Assignment";
 import { NewAuditStep5Scheduling } from "@/components/new-audit/steps/NewAuditStep5Scheduling";
-import { NewAuditStep6Evidence } from "@/components/new-audit/steps/NewAuditStep6Evidence";
 import {
   NewAuditStep7Preview,
   formatScheduleSummary,
@@ -174,7 +176,8 @@ function NewAuditPage() {
   );
   const [dataInputMode, setDataInputMode] = useState<AuditDataInputMode>("upload_csv");
   const [csvSaved, setCsvSaved] = useState(true);
-  const [rowEvidence, setRowEvidence] = useState<DigitalRowEvidence>("optional");
+  const [shelfColumnId, setShelfColumnId] = useState<string | null>(null);
+  const [barcodeColumnId, setBarcodeColumnId] = useState<string | null>(null);
   const [evidenceLevel, setEvidenceLevel] = useState<EvidenceLevel>("standard");
   const [evidencePolicy, setEvidencePolicy] = useState<AuditEvidencePolicy>(
     policyForLevel("standard"),
@@ -425,10 +428,34 @@ function NewAuditPage() {
       dataset,
       mappings: dataset.source === "csv" ? syncDigitalMappings(dataset, inputSchema.columnMappings) : [],
       saved: csvSaved,
-      rowEvidence,
     }),
-    [dataset, inputSchema.columnMappings, csvSaved, rowEvidence],
+    [dataset, inputSchema.columnMappings, csvSaved],
   );
+
+  const evidenceDataset = startChoice === "csv" && dataset.source === "csv" && dataset.columns.length ? dataset : null;
+  const hasColumn = (id: string | null) => Boolean(id && evidenceDataset?.columns.some((c) => c.id === id));
+  const activeShelfColumnId =
+    hasColumn(shelfColumnId) && policyUsesShelfColumn(effectivePolicy) ? shelfColumnId : null;
+  const activeBarcodeColumnId =
+    hasColumn(barcodeColumnId) && policyNeedsBarcodeColumn(effectivePolicy) ? barcodeColumnId : null;
+
+  useEffect(() => {
+    if (!evidenceDataset) return;
+    if (policyUsesShelfColumn(effectivePolicy) && !hasColumn(shelfColumnId)) {
+      setShelfColumnId(suggestShelfColumn(evidenceDataset));
+    }
+    if (policyNeedsBarcodeColumn(effectivePolicy) && !hasColumn(barcodeColumnId)) {
+      setBarcodeColumnId(suggestBarcodeColumn(evidenceDataset));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evidenceDataset?.columns, effectivePolicy.requiredProof]);
+
+  const evidenceColumnError =
+    evidenceDataset && policyNeedsShelfColumn(effectivePolicy) && !activeShelfColumnId
+      ? "Choose the shelf / location column for Evidence per shelf."
+      : evidenceDataset && policyNeedsBarcodeColumn(effectivePolicy) && !activeBarcodeColumnId
+        ? "Choose the barcode column for Barcode scan."
+        : null;
 
   useEffect(() => {
     const stores = storesQuery.data;
@@ -644,6 +671,7 @@ function NewAuditPage() {
     evidenceLevel,
     evidencePolicy: effectivePolicy,
     reviewerId,
+    evidenceError: evidenceColumnError,
     hasBlockingConflicts: hasBlockingConflicts(assignmentPreview?.conflicts ?? []),
     captureReady: Boolean(captureFile),
   });
@@ -687,9 +715,11 @@ function NewAuditPage() {
           ? "Resolve scheduling conflicts before submitting."
           : null,
     evidence:
-      effectivePolicy.reviewMode === "independent" && !reviewerId
-        ? "An independent reviewer is required for this evidence level."
-        : null,
+      method !== "digital"
+        ? null
+        : effectivePolicy.reviewMode === "independent" && !reviewerId
+          ? "Choose the independent reviewer for this audit."
+          : evidenceColumnError,
   };
 
   const assigneeSummary = assignToSelf
@@ -701,10 +731,22 @@ function NewAuditPage() {
         )
         .join(", ") || "—";
 
-  const evidenceSummary =
+  const evidenceLevelLabel =
     evidenceLevel === "high"
       ? "High assurance"
       : evidenceLevel.charAt(0).toUpperCase() + evidenceLevel.slice(1);
+  const columnName = (id: string | null) => evidenceDataset?.columns.find((c) => c.id === id)?.name;
+  const evidenceSummary = [
+    evidenceLevelLabel,
+    ...EVIDENCE_PROOF_OPTIONS.filter((o) => effectivePolicy.requiredProof.includes(o.value)).map((o) =>
+      o.value === "shelf_photo" && activeShelfColumnId
+        ? `${o.label} (by ${columnName(activeShelfColumnId)})`
+        : o.value === "barcode" && activeBarcodeColumnId
+          ? `${o.label} (${columnName(activeBarcodeColumnId)})`
+          : o.label,
+    ),
+    ...(requireRca ? ["Explanation for every variance"] : []),
+  ].join(" · ");
 
   function selectEvidenceLevel(level: EvidenceLevel) {
     setEvidenceLevel(level);
@@ -863,7 +905,9 @@ function NewAuditPage() {
           inputSchema: buildDigitalInputSchema(dataset, syncDigitalMappings(dataset, inputSchema.columnMappings)),
           dataset,
           operatingModel,
-          rowEvidence,
+          rowEvidence: rowEvidenceFromPolicy(effectivePolicy),
+          shelfColumnId: activeShelfColumnId,
+          barcodeColumnId: activeBarcodeColumnId,
         });
         templateForAssignment = digitalCsvTemplate;
       }
@@ -1163,7 +1207,7 @@ function NewAuditPage() {
   /** Immediate self-run needs photo capture; schedule/recurring still creates an assignment. */
   const isAiSelfImmediate =
     method === "ai" && assignToSelf && assignmentMode === "assign_now";
-  const previewReady = method === "ai" ? stepStatus[6] : stepStatus[7];
+  const previewReady = stepStatus[6];
   const canSubmit = previewReady && Boolean(assignmentPlan) && !isAiSelfImmediate;
   const canRunAiAudit =
     isAiSelfImmediate && Boolean(captureFile) && stepStatus[6] && !aiAuditLaunched;
@@ -1258,10 +1302,33 @@ function NewAuditPage() {
                   setDataset(next.dataset);
                   setInputSchema(buildDigitalInputSchema(next.dataset, next.mappings));
                   setCsvSaved(next.saved);
-                  setRowEvidence(next.rowEvidence);
                 }}
               />
             }
+            evidenceSettings={
+              method === "digital" ? (
+                <AdvancedSettingsPanel
+                  evidenceLevel={evidenceLevel}
+                  evidencePolicy={effectivePolicy}
+                  requireRca={requireRca}
+                  onEvidenceLevelChange={selectEvidenceLevel}
+                  onToggleProof={toggleProof}
+                  onEvidencePolicyChange={(patch) =>
+                    setEvidencePolicy((current) => ({ ...current, ...patch }))
+                  }
+                  onRequireRcaChange={setRequireRca}
+                  dataset={evidenceDataset}
+                  shelfColumnId={activeShelfColumnId ?? shelfColumnId}
+                  barcodeColumnId={activeBarcodeColumnId ?? barcodeColumnId}
+                  onShelfColumnChange={setShelfColumnId}
+                  onBarcodeColumnChange={setBarcodeColumnId}
+                  members={(membersQuery.data ?? []).map((m) => ({ user_id: m.user_id, name: m.name }))}
+                  reviewerId={reviewerId}
+                  onReviewerChange={setReviewerId}
+                />
+              ) : undefined
+            }
+            evidenceError={method === "digital" ? stepErrors.evidence : null}
             scratchBuilder={
               <SimpleScratchBuilder
                 dataset={dataset}
@@ -1314,22 +1381,6 @@ function NewAuditPage() {
                 error={stepErrors.schedule}
               />
 
-              {method !== "ai" ? (
-                <NewAuditStep6Evidence
-                  evidenceLevel={evidenceLevel}
-                  evidencePolicy={effectivePolicy}
-                  requireRca={requireRca}
-                  onEvidenceLevelChange={selectEvidenceLevel}
-                  onToggleProof={toggleProof}
-                  onEvidencePolicyChange={(patch) =>
-                    setEvidencePolicy((current) => ({ ...current, ...patch }))
-                  }
-                  onRequireRcaChange={setRequireRca}
-                  complete={stepStatus[6]}
-                  error={stepErrors.evidence}
-                />
-              ) : null}
-
               <NewAuditStep7Preview
                 auditName={auditName}
                 auditDescription={auditDescription}
@@ -1337,8 +1388,8 @@ function NewAuditPage() {
                 templateName={activeTemplateName}
                 operatingModelLabel={operatingModelLabel}
                 method={method}
-                stepNumber={method === "ai" ? 6 : 7}
-                sectionId={method === "ai" ? "step-6-preview" : "step-7-preview"}
+                stepNumber={6}
+                sectionId="step-6-preview"
                 planogramSummary={
                   method === "ai"
                     ? buildAiPlanogramPreviewSummary(aiPlanogramChoice, aiScanContext)
@@ -1351,7 +1402,7 @@ function NewAuditPage() {
                 evidenceSummary={evidenceSummary}
                 showEvidence={method !== "ai"}
                 assignToSelf={assignToSelf}
-                complete={method === "ai" ? stepStatus[6] : stepStatus[7]}
+                complete={stepStatus[6]}
               />
 
               {isAiSelfImmediate ? (

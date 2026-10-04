@@ -10,6 +10,15 @@ import {
   type PairStatus,
 } from "@/lib/audit-engine/execution-table";
 import type { DigitalColumnsAudit, DigitalResultColumn, DigitalResultRow } from "@/lib/new-audit/digital-columns";
+import {
+  BARCODE_SCAN_KEY,
+  VARIANCE_NOTE_KEY,
+  VARIANCE_REASON_KEY,
+  barcodeMatches,
+  evaluateGridEvidence,
+} from "@/lib/audit-engine/grid-evidence";
+import { RCA_OPTIONS } from "@/lib/digital-audit";
+import { DigitalAuditEvidenceSummary } from "@/components/audit-governance/DigitalAuditEvidenceSummary";
 import { cn } from "@/lib/utils";
 
 type Pair = { auditee: DigitalResultColumn; provided: DigitalResultColumn };
@@ -117,6 +126,31 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
   const evidenceRows = rows.filter((r) => r.check.status !== "not_required");
   const verifiedRows = evidenceRows.filter((r) => r.check.status === "verified").length;
 
+  const evidence = audit.evidence;
+  const requirements = evidence
+    ? evaluateGridEvidence({
+        policy: { requiredProof: evidence.requiredProof },
+        requireRca: evidence.requireRca,
+        dataset: evidence.dataset,
+        columns: evidence.columns,
+        responses: evidence.responses,
+        rows: rows.map((r, position) => ({
+          index: r.index,
+          position,
+          hasMismatch: r.hasMismatch,
+          rowEvidenceStatus: r.check.status,
+          values: {
+            [BARCODE_SCAN_KEY]: r.barcodeScanned ?? null,
+            [VARIANCE_REASON_KEY]: r.varianceReason ?? null,
+            [VARIANCE_NOTE_KEY]: r.varianceNote ?? null,
+          },
+        })),
+      })
+    : [];
+  const showBarcode = Boolean(evidence?.requiredProof.includes("barcode") && evidence.columns.barcodeColumnId);
+  const showReason = Boolean(evidence?.requireRca && pairs.length);
+  const extraColumns = (showBarcode ? 1 : 0) + (showReason ? 1 : 0);
+
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -172,6 +206,8 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
         )}
       </div>
 
+      {evidence ? <DigitalAuditEvidenceSummary evidence={evidence} requirements={requirements} /> : null}
+
       <div className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -223,6 +259,11 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
                     Evidence
                   </th>
                 ) : null}
+                {extraColumns ? (
+                  <th colSpan={extraColumns} className="border-b border-l border-[#D9E2E8] px-3 py-2 font-semibold" style={{ background: ACCENT_TINT.purple }}>
+                    Captured by auditor
+                  </th>
+                ) : null}
               </tr>
               <tr className="bg-[#F4F7F9] text-left text-[10px] uppercase tracking-wide text-[#667085]">
                 <th className="px-3 py-2 font-semibold">#</th>
@@ -249,6 +290,10 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
                     <th className="border-l border-[#D9E2E8] px-3 py-2 font-semibold">Photos</th>
                     <th className="px-3 py-2 font-semibold">Evidence validation</th>
                   </>
+                ) : null}
+                {showBarcode ? <th className="border-l border-[#D9E2E8] px-3 py-2 font-semibold">Barcode scan</th> : null}
+                {showReason ? (
+                  <th className={cn("px-3 py-2 font-semibold", !showBarcode && "border-l border-[#D9E2E8]")}>Reason for difference</th>
                 ) : null}
               </tr>
             </thead>
@@ -313,6 +358,39 @@ export function DigitalAuditColumnsResults({ audit }: { audit: DigitalColumnsAud
                         />
                       </td>
                     </>
+                  ) : null}
+                  {showBarcode ? (
+                    <td className="border-l border-[#D9E2E8] px-3 py-2">
+                      {!row.barcodeExpected ? (
+                        <span className="text-[#667085]">N/A</span>
+                      ) : row.barcodeScanned ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="font-mono text-xs text-[#102A43]">{row.barcodeScanned}</span>
+                          <StatusPill
+                            {...(barcodeMatches(row.barcodeExpected, row.barcodeScanned) ? PAIR_PILL.match : PAIR_PILL.mismatch)}
+                            title={`Expected ${row.barcodeExpected}`}
+                          />
+                        </span>
+                      ) : (
+                        <StatusPill label="Not scanned" {...EVIDENCE_PILL.missing} />
+                      )}
+                    </td>
+                  ) : null}
+                  {showReason ? (
+                    <td className={cn("px-3 py-2 text-xs text-[#102A43]", !showBarcode && "border-l border-[#D9E2E8]")}>
+                      {row.hasMismatch ? (
+                        row.varianceReason ? (
+                          <span>
+                            {RCA_OPTIONS.find((o) => o.code === row.varianceReason)?.label ?? row.varianceReason}
+                            {row.varianceNote ? <span className="block text-[#667085]">{row.varianceNote}</span> : null}
+                          </span>
+                        ) : (
+                          <StatusPill label="No reason given" {...EVIDENCE_PILL.missing} />
+                        )
+                      ) : (
+                        <span className="text-[#667085]">—</span>
+                      )}
+                    </td>
                   ) : null}
                 </tr>
               ))}

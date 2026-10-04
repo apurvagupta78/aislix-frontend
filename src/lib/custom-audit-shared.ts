@@ -16,6 +16,14 @@ export function isAuditEvidenceRef(value: string): boolean {
   return value.startsWith(AUDIT_EVIDENCE_REF_PREFIX);
 }
 
+/** Session videos live in scan-images (audit-evidence accepts images only). */
+export const SCAN_IMAGES_BUCKET = "scan-images";
+export const SCAN_IMAGES_REF_PREFIX = "scan-images://";
+
+export function isScanImagesRef(value: string): boolean {
+  return value.startsWith(SCAN_IMAGES_REF_PREFIX);
+}
+
 export function buildRecordContexts(
   definition: TemplateDefinition,
   responses: ResponseMap,

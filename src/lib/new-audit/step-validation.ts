@@ -35,8 +35,7 @@ export const DIGITAL_AUDIT_STEPS: NewAuditNavStep[] = [
   { id: 3, label: "Start", anchor: "step-3-start" },
   { id: 4, label: "Who", anchor: "step-4-who" },
   { id: 5, label: "When", anchor: "step-5-when" },
-  { id: 6, label: "Evidence", anchor: "step-6-evidence" },
-  { id: 7, label: "Preview", anchor: "step-7-preview" },
+  { id: 6, label: "Preview", anchor: "step-6-preview" },
 ];
 
 export const AI_AUDIT_STEPS: NewAuditNavStep[] = [
@@ -78,6 +77,8 @@ export type StepValidationInput = {
   evidenceLevel: EvidenceLevel;
   evidencePolicy: AuditEvidencePolicy;
   reviewerId: string;
+  /** Evidence setup problem shown under Step 3 (e.g. a required column not chosen). */
+  evidenceError?: string | null;
   hasBlockingConflicts: boolean;
   captureReady?: boolean;
 };
@@ -87,9 +88,13 @@ export type StepValidationResult = Record<NewAuditStepId, boolean>;
 export function validateNewAuditSteps(input: StepValidationInput): StepValidationResult {
   const step1 = input.auditName.trim().length > 0;
   const step2 = input.method === "digital" || input.method === "ai";
+  const evidenceReady =
+    Boolean(input.evidenceLevel) &&
+    (input.evidencePolicy.reviewMode !== "independent" || Boolean(input.reviewerId)) &&
+    !input.evidenceError;
   const step3 =
     input.method === "digital"
-      ? input.startReady
+      ? input.startReady && evidenceReady
       : input.method === "ai"
         ? isAiStep3Ready(input.aiPlanogramChoice, input.demoScanContext)
         : false;
@@ -119,10 +124,7 @@ export function validateNewAuditSteps(input: StepValidationInput): StepValidatio
     };
   }
 
-  const step6 =
-    Boolean(input.evidenceLevel) &&
-    (input.evidencePolicy.reviewMode !== "independent" || Boolean(input.reviewerId));
-  const step7 = step1 && step2 && step3 && step4 && step5 && step6;
+  const step6 = step1 && step2 && step3 && step4 && step5;
 
   return {
     1: step1,
@@ -131,7 +133,7 @@ export function validateNewAuditSteps(input: StepValidationInput): StepValidatio
     4: step4,
     5: step5,
     6: step6,
-    7: step7,
+    7: false,
     8: false,
   };
 }

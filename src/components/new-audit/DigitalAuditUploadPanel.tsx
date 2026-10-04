@@ -23,25 +23,13 @@ import {
   type AuditInputDataset,
 } from "@/lib/audit-input-dataset";
 import { referenceStateToDataset } from "@/lib/new-audit/document-dataset";
-import {
-  syncDigitalMappings,
-  type DigitalColumnRole,
-  type DigitalRowEvidence,
-} from "@/lib/new-audit/digital-columns";
+import { syncDigitalMappings, type DigitalColumnRole } from "@/lib/new-audit/digital-columns";
 import { cn } from "@/lib/utils";
 
 export type DigitalUploadValue = {
   dataset: AuditInputDataset;
   mappings: ColumnMapping[];
   saved: boolean;
-  rowEvidence: DigitalRowEvidence;
-};
-
-const ROW_EVIDENCE_LABELS: Record<DigitalRowEvidence, string> = {
-  required: "Required",
-  on_mismatch: "Required on mismatches",
-  optional: "Optional",
-  off: "Off",
 };
 
 type Props = {
@@ -101,7 +89,7 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
   const [fileError, setFileError] = useState<string | null>(null);
   const [readWarnings, setReadWarnings] = useState<string[]>([]);
 
-  const { dataset, mappings, saved, rowEvidence } = value;
+  const { dataset, mappings, saved } = value;
   const columns = dataset.columns;
   const rows = dataset.rows;
   const hasData = dataset.source === "csv" && columns.length > 0;
@@ -115,7 +103,6 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
       dataset: nextDataset,
       mappings: syncDigitalMappings(nextDataset, nextMappings),
       saved: nextSaved,
-      rowEvidence,
     });
   }
 
@@ -242,7 +229,7 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
       ...m,
       dataType: typed.columns.find((c) => c.id === m.columnId)?.type ?? m.dataType,
     }));
-    onChange({ dataset: typed, mappings: syncDigitalMappings(typed, typedMappings), saved: true, rowEvidence });
+    onChange({ dataset: typed, mappings: syncDigitalMappings(typed, typedMappings), saved: true });
     toast.success(`${rows.length} row${rows.length === 1 ? "" : "s"} saved for this audit`);
   }
 
@@ -334,23 +321,6 @@ export function DigitalAuditUploadPanel({ value, onChange, error }: Props) {
                   {ROLE_STYLE[r].label}
                 </button>
               ))}
-              <label className="ml-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[#102A43]">
-                Photo evidence per row:
-                <select
-                  aria-label="Photo evidence per row"
-                  className="rounded-md border border-[#D9E2E8] bg-white px-1.5 py-1 text-xs font-normal text-[#102A43]"
-                  value={rowEvidence}
-                  onChange={(event) =>
-                    onChange({ ...value, rowEvidence: event.target.value as DigitalRowEvidence })
-                  }
-                >
-                  {(Object.keys(ROW_EVIDENCE_LABELS) as DigitalRowEvidence[]).map((mode) => (
-                    <option key={mode} value={mode}>
-                      {ROW_EVIDENCE_LABELS[mode]}
-                    </option>
-                  ))}
-                </select>
-              </label>
             </div>
             <p className="text-xs text-[#667085]">
               <span
