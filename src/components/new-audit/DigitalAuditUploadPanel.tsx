@@ -124,7 +124,7 @@ function RoleToggle({
   );
 }
 
-function ColumnCard({
+function ColumnHeader({
   column,
   mapping,
   locked,
@@ -147,14 +147,11 @@ function ColumnCard({
 }) {
   const role = roleOf(mapping);
   return (
-    <div
-      className="space-y-2 rounded-lg border border-[#D9E2E8] bg-white p-2.5"
-      style={{ borderLeft: `3px solid ${ROLE_STYLE[role].border}` }}
-    >
-      <div className="flex min-w-0 items-center gap-1.5">
+    <div className="space-y-1.5">
+      <div className="flex min-w-0 items-center gap-1">
         {locked ? (
           <>
-            <p className="min-w-0 flex-1 truncate text-xs font-semibold text-[#102A43]" title={column.name}>
+            <p className="min-w-0 flex-1 truncate px-1 py-0.5 text-xs font-semibold text-[#102A43]" title={column.name}>
               {column.name}
             </p>
             <Lock className="size-3 shrink-0 text-[#98A2B3]" aria-label="From the template" />
@@ -164,7 +161,7 @@ function ColumnCard({
             <input
               aria-label={`Column name ${column.name}`}
               title="Rename column"
-              className="min-w-0 flex-1 rounded border border-[#D9E2E8] bg-white px-1.5 py-0.5 text-xs font-semibold text-[#102A43] outline-none focus:border-[#7DB7D6]"
+              className="min-w-0 flex-1 rounded border border-transparent bg-transparent px-1 py-0.5 text-xs font-semibold text-[#102A43] outline-none hover:border-[#D9E2E8] focus:border-[#7DB7D6] focus:bg-white"
               value={column.name}
               onChange={(event) => onRename(event.target.value)}
             />
@@ -177,7 +174,7 @@ function ColumnCard({
               type="button"
               aria-label={`Remove column ${column.name}`}
               title="Remove column"
-              className="shrink-0 rounded p-0.5 text-[#667085] hover:bg-[#F4F7F9] hover:text-[#102A43]"
+              className="shrink-0 rounded p-0.5 text-[#667085] hover:bg-white hover:text-[#102A43]"
               onClick={onRemove}
             >
               <X className="size-3.5" />
@@ -480,73 +477,37 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName }
             </span>
           </div>
 
-          <section className="rounded-xl border border-[#D9E2E8]">
-            <header className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D9E2E8] px-3 py-2.5">
-              <div>
-                <p className="text-xs font-semibold text-[#102A43]">
-                  <span className="mr-1.5 inline-flex size-5 items-center justify-center rounded-full bg-[#102A43] text-[10px] text-white">
-                    1
-                  </span>
-                  Columns — who fills what
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[11px] text-[#667085]">Set all:</span>
-                {ROLES.map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setAllRoles(r)}
-                    className="rounded-md border px-2 py-1 text-[11px] font-medium text-[#102A43] hover:brightness-95"
-                    style={{ background: ROLE_STYLE[r].tint, borderColor: ROLE_STYLE[r].border }}
-                  >
-                    {ROLE_STYLE[r].label}
-                  </button>
-                ))}
-                <Button type="button" variant="outline" size="sm" className="ml-1 h-7" onClick={addColumn}>
-                  <Plus className="size-3.5" /> Add column
-                </Button>
-              </div>
-            </header>
-            <div className="grid max-h-[360px] gap-2 overflow-y-auto p-3 sm:grid-cols-2 lg:grid-cols-3">
-              {columns.map((column) => {
-                const fromTemplate = isTemplate && isTemplateColumn(column.id);
-                return (
-                  <ColumnCard
-                    key={column.id}
-                    column={column}
-                    mapping={byId.get(column.id)}
-                    locked={fromTemplate}
-                    added={isTemplate && !fromTemplate}
-                    providedColumns={providedColumns.filter((p) => p.id !== column.id)}
-                    onRename={(name) => renameColumn(column.id, name)}
-                    onRemove={() => removeColumn(column.id)}
-                    onRole={(r) => setRole(column.id, r)}
-                    onCompare={(otherId) => setCompareWith(column.id, otherId)}
-                  />
-                );
-              })}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-[#102A43]">Set all columns:</span>
+              {ROLES.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setAllRoles(r)}
+                  className="rounded-md border px-2.5 py-1 text-xs font-medium text-[#102A43] hover:brightness-95"
+                  style={{ background: ROLE_STYLE[r].tint, borderColor: ROLE_STYLE[r].border }}
+                >
+                  {ROLE_STYLE[r].label}
+                </button>
+              ))}
             </div>
-            <footer className="flex flex-wrap gap-x-4 gap-y-1 border-t border-[#D9E2E8] px-3 py-2 text-[11px] text-[#667085]">
+            <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-[#667085]">
               {ROLES.map((r) => (
                 <span key={r} className="inline-flex items-center gap-1.5">
                   <span
                     className="inline-block size-2.5 rounded-sm border"
                     style={{ background: ROLE_STYLE[r].tint, borderColor: ROLE_STYLE[r].border }}
                   />
-                  <span className="font-medium text-[#102A43]">{ROLE_STYLE[r].label}</span> — {ROLE_STYLE[r].hint}
+                  {ROLE_STYLE[r].label} — {ROLE_STYLE[r].hint}
                 </span>
               ))}
-              <span>Compare an auditee column with a provided one to see the difference in results.</span>
-            </footer>
-          </section>
+            </p>
+          </div>
 
           <section className="min-w-0 rounded-xl border border-[#D9E2E8]">
-            <header className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D9E2E8] px-3 py-2.5">
+            <header className="flex flex-wrap items-center justify-between gap-2 border-b border-[#D9E2E8] px-3 py-2">
               <p className="text-xs font-semibold text-[#102A43]">
-                <span className="mr-1.5 inline-flex size-5 items-center justify-center rounded-full bg-[#102A43] text-[10px] text-white">
-                  2
-                </span>
                 {isTemplate ? "Lines to check" : "Rows"}
                 <span className="ml-1.5 font-normal text-[#667085]">({rows.length.toLocaleString()})</span>
               </p>
@@ -567,36 +528,42 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName }
                     />
                   </label>
                 ) : null}
+                <Button type="button" variant="outline" size="sm" className="h-7" onClick={addColumn}>
+                  <Plus className="size-3.5" /> Add column
+                </Button>
                 <Button type="button" variant="outline" size="sm" className="h-7" onClick={addRow}>
                   <Plus className="size-3.5" /> Add {noun}
                 </Button>
               </div>
             </header>
 
-            {rows.length ? (
-              <>
-                <div className="max-h-[560px] overflow-auto">
-                  <table className="w-full text-xs">
-                    <thead className="sticky top-0 z-10 bg-[#F4F7F9] text-left text-[11px] text-[#667085]">
-                      <tr>
-                        <th className="w-10 px-2 py-2 font-semibold">#</th>
-                        {columns.map((column) => {
-                          const role = roleOf(byId.get(column.id));
-                          return (
-                            <th key={column.id} className="min-w-[140px] px-1.5 py-2 font-semibold text-[#102A43]">
-                              <span className="inline-flex max-w-[220px] items-center gap-1.5" title={`${column.name} · ${ROLE_STYLE[role].label}`}>
-                                <span
-                                  className="inline-block size-2 shrink-0 rounded-full"
-                                  style={{ background: ROLE_STYLE[role].border }}
-                                />
-                                <span className="truncate">{column.name}</span>
-                              </span>
-                            </th>
-                          );
-                        })}
-                        <th className="w-9 px-1 py-2" />
-                      </tr>
-                    </thead>
+            <div className="max-h-[600px] overflow-auto">
+              <table className="w-full text-xs">
+                <thead className="sticky top-0 z-10 bg-[#F4F7F9] text-left">
+                  <tr>
+                    <th className="w-10 px-2 py-2 align-top text-[11px] font-semibold text-[#667085]">#</th>
+                    {columns.map((column) => {
+                      const fromTemplate = isTemplate && isTemplateColumn(column.id);
+                      return (
+                        <th key={column.id} className="min-w-[180px] px-1.5 py-2 align-top font-normal">
+                          <ColumnHeader
+                            column={column}
+                            mapping={byId.get(column.id)}
+                            locked={fromTemplate}
+                            added={isTemplate && !fromTemplate}
+                            providedColumns={providedColumns.filter((p) => p.id !== column.id)}
+                            onRename={(name) => renameColumn(column.id, name)}
+                            onRemove={() => removeColumn(column.id)}
+                            onRole={(r) => setRole(column.id, r)}
+                            onCompare={(otherId) => setCompareWith(column.id, otherId)}
+                          />
+                        </th>
+                      );
+                    })}
+                    <th className="w-9 px-1 py-2" />
+                  </tr>
+                </thead>
+                {rows.length ? (
                     <tbody>
                       {pageIndexes.map((index) => {
                         const row = rows[index]!;
@@ -637,17 +604,18 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName }
                         );
                       })}
                     </tbody>
-                  </table>
-                  {visibleIndexes && !visibleIndexes.length ? (
-                    <p className="px-4 py-6 text-center text-xs text-[#667085]">
-                      No {noun}s match “{query.trim()}”.
-                    </p>
-                  ) : null}
-                </div>
-                <TablePager pager={pager} noun={`${noun}s`} className="border-t border-[#D9E2E8]" />
-              </>
+                ) : null}
+              </table>
+            </div>
+            {rows.length && visibleIndexes && !visibleIndexes.length ? (
+              <p className="border-t border-[#D9E2E8] px-4 py-6 text-center text-xs text-[#667085]">
+                No {noun}s match “{query.trim()}”.
+              </p>
+            ) : null}
+            {rows.length ? (
+              <TablePager pager={pager} noun={`${noun}s`} className="border-t border-[#D9E2E8]" />
             ) : (
-              <div className="px-4 py-8 text-center text-xs text-[#667085]">
+              <div className="border-t border-[#D9E2E8] px-4 py-6 text-center text-xs text-[#667085]">
                 <p className="text-sm font-medium text-[#102A43]">No {noun}s yet</p>
                 <p className="mx-auto mt-1 max-w-md">
                   {isTemplate
@@ -657,6 +625,9 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName }
               </div>
             )}
           </section>
+          <p className="text-[11px] text-[#667085]">
+            Compare an auditee column with a provided one to see the difference on the results page.
+          </p>
 
           {error ? <DocumentErrorBanner message={error} /> : null}
 
