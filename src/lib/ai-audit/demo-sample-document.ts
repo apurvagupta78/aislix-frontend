@@ -34,7 +34,13 @@ export function demoSampleDocument(): ReferenceDocumentState {
     unit: "pcs",
     price: entry.price,
     location: [...entry.shelves].join(" / "),
-    raw_text: `${entry.brand} ${entry.product} ${entry.variant}`.trim(),
+    raw_text: [
+      entry.product.toLowerCase().startsWith(entry.brand.toLowerCase()) ? "" : entry.brand,
+      entry.product,
+      entry.variant,
+    ]
+      .filter(Boolean)
+      .join(" "),
   }));
   return {
     meta: { ...emptyReferenceMeta("csv", "sample-stock-list.csv"), document_type: "stock_list" },

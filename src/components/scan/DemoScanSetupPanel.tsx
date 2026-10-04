@@ -419,8 +419,8 @@ export function DemoScanSetupPanel({
       ) : (
         <p className="mx-auto mb-5 max-w-lg text-center text-sm text-muted-foreground">
           {mode === "sample"
-            ? "Pick shelf category and role, then audit the sample photo. A pre-built demo planogram loads automatically."
-            : "Pick shelf category, optionally upload your planogram CSV, add a shelf photo, then start the audit."}
+            ? "A sample stock list and question are pre-filled. Astra counts the sample shelf, then Luna answers against the list."
+            : "Pick shelf category, upload your stock list, invoice or planogram (CSV / Excel), add a shelf photo, then start the audit."}
         </p>
       )}
 
@@ -466,6 +466,16 @@ export function DemoScanSetupPanel({
           <Button
             type="button"
             size="sm"
+            variant={planogramMode === "reference" ? "default" : "outline"}
+            className={planogramMode === "reference" ? "bg-brand" : ""}
+            disabled={disabled}
+            onClick={() => setPlanogramMode("reference")}
+          >
+            <FileText className="size-3.5" /> Your document
+          </Button>
+          <Button
+            type="button"
+            size="sm"
             variant={planogramMode === "demo" ? "default" : "outline"}
             className={planogramMode === "demo" ? "bg-brand" : ""}
             disabled={disabled}
@@ -490,20 +500,21 @@ export function DemoScanSetupPanel({
             disabled={disabled}
             onClick={() => setPlanogramMode("none")}
           >
-            No planogram
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={planogramMode === "reference" ? "default" : "outline"}
-            disabled={disabled}
-            onClick={() => setPlanogramMode("reference")}
-          >
-            Reference document
+            No document
           </Button>
         </div>
       ) : !lockedPlanogramMode ? (
         <div className="mt-5 flex flex-wrap justify-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant={planogramMode === "reference" ? "default" : "outline"}
+            className={planogramMode === "reference" ? "bg-brand" : ""}
+            disabled={disabled}
+            onClick={() => setPlanogramMode("reference")}
+          >
+            <FileText className="size-3.5" /> Your document
+          </Button>
           <Button
             type="button"
             size="sm"
@@ -521,16 +532,7 @@ export function DemoScanSetupPanel({
             disabled={disabled}
             onClick={() => setPlanogramMode("none")}
           >
-            No planogram
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={planogramMode === "reference" ? "default" : "outline"}
-            disabled={disabled}
-            onClick={() => setPlanogramMode("reference")}
-          >
-            <FileText className="size-3.5" /> Reference document
+            No document
           </Button>
         </div>
       ) : null}
