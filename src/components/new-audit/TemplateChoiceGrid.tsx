@@ -62,40 +62,42 @@ function TemplateTile({
           <span className="mt-1 line-clamp-2 block text-xs text-[var(--aislix-secondary)]">{description}</span>
         ) : null}
       </button>
-      <div className="mt-auto flex items-center gap-1.5 pt-3">
+      <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-3">
         {tags.map((tag) => (
           <span
             key={tag}
-            className="truncate rounded-full border border-[var(--aislix-border)] px-2 py-0.5 text-[10px] font-semibold text-[var(--aislix-secondary)]"
+            className="whitespace-nowrap rounded-full border border-[var(--aislix-border)] px-2 py-0.5 text-[10px] font-semibold text-[var(--aislix-secondary)]"
           >
             {tag}
           </span>
         ))}
-        <button
-          type="button"
-          onClick={onPreview}
-          className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-[var(--aislix-secondary)] hover:text-[var(--aislix-primary)]"
-        >
-          <Eye className="size-3" /> Preview
-        </button>
-        <button
-          type="button"
-          onClick={onUse}
-          className={cn(
-            "rounded-md px-2.5 py-1 text-xs font-semibold",
-            selected
-              ? "bg-[var(--aislix-primary)] text-white"
-              : "border border-[var(--aislix-border)] text-[var(--aislix-primary)] hover:bg-[#F4F7F9]",
-          )}
-        >
-          {selected ? "Selected" : "Use"}
-        </button>
+        <span className="ml-auto inline-flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onPreview}
+            className="inline-flex items-center gap-1 text-xs font-medium text-[var(--aislix-secondary)] hover:text-[var(--aislix-primary)]"
+          >
+            <Eye className="size-3" /> Preview
+          </button>
+          <button
+            type="button"
+            onClick={onUse}
+            className={cn(
+              "rounded-md px-2.5 py-1 text-xs font-semibold",
+              selected
+                ? "bg-[var(--aislix-primary)] text-white"
+                : "border border-[var(--aislix-border)] text-[var(--aislix-primary)] hover:bg-[#F4F7F9]",
+            )}
+          >
+            {selected ? "Selected" : "Use"}
+          </button>
+        </span>
       </div>
     </div>
   );
 }
 
-/** Every template for the chosen operating model, grouped by purpose, picked in place. */
+/** Every template for the chosen operating model, picked in place. */
 export function TemplateChoiceGrid({ operatingModel, templateChoice, savedTemplates, onSelect }: Props) {
   const [search, setSearch] = useState("");
   const [previewSpec, setPreviewSpec] = useState<SystemTemplateSpec | null>(null);
