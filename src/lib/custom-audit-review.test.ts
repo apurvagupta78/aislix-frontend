@@ -105,6 +105,25 @@ describe("custom audit review materialization", () => {
     expect(drafts[0]).toMatchObject({ sku: "SKU-1", expected_qty: 12, actual_qty: 9 });
   });
 
+  it("leaves variance empty when the line has no expected value (expiry checks)", () => {
+    const expiryDefinition = {
+      ...INVENTORY_DEFINITION,
+      fields: INVENTORY_DEFINITION.fields.filter((f) => f.key !== "expected_qty"),
+    } as TemplateDefinition;
+    const [draft] = buildDigitalAuditLineDraftsFromResponses(expiryDefinition, {
+      records: { 0: { store: "Main Store", sku: "MILK-500", actual_qty: 6 } },
+    });
+    const row = buildDigitalAuditLineRow(draft!, {
+      scanId: "scan-1",
+      assignmentId: "asn-1",
+      orgId: "org-1",
+      storeId: "store-1",
+      userId: "user-1",
+    });
+    expect(row.actual_qty).toBe(6);
+    expect(row.variance_qty).toBeNull();
+  });
+
   it("gives every evidence photo its own bin key when rows share a store", () => {
     const withImages = {
       ...INVENTORY_DEFINITION,

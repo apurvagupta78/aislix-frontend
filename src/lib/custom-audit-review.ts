@@ -45,6 +45,8 @@ export type CustomAuditLineDraft = {
   mrp_inr: number | null;
   rca_code: RcaCode | null;
   rca_notes: string | null;
+  /** False when the line has no expected value at all (e.g. expiry checks) — no variance then. */
+  expectedMapped?: boolean;
 };
 
 export type CustomAuditReviewContext = {
@@ -129,7 +131,11 @@ function applyFieldToDraft(
     key === "expected_qty" ||
     key === "expected_quantity"
   ) {
-    draft.expected_qty = asNumber(value) ?? draft.expected_qty;
+    const expected = asNumber(value);
+    if (expected !== null) {
+      draft.expected_qty = expected;
+      draft.expectedMapped = true;
+    }
     return;
   }
   if (
@@ -251,6 +257,7 @@ export function buildDigitalAuditLineDraftsFromResponses(
       mrp_inr: null,
       rca_code: null,
       rca_notes: null,
+      expectedMapped: false,
     };
 
     for (const field of definition.fields) {
@@ -276,7 +283,9 @@ export function buildDigitalAuditLineRow(
   draft: CustomAuditLineDraft,
   ctx: CustomAuditReviewContext,
 ): Record<string, unknown> {
-  const variance = computeLineVariance(draft.expected_qty, draft.actual_qty, draft.mrp_inr);
+  const variance = computeLineVariance(draft.expected_qty, draft.actual_qty, draft.mrp_inr, {
+    expectedMapped: draft.expectedMapped !== false,
+  });
   return {
     scan_id: ctx.scanId,
     assignment_id: ctx.assignmentId,
