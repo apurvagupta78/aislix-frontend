@@ -594,6 +594,8 @@ export function dominantScopeFromRows(
   };
 }
 
+const PLANOGRAM_INSERT_BATCH = 1000;
+
 /** Creates a draft planogram version for one assignment and inserts its rows. */
 export async function createAssignmentPlanogramVersion(input: {
   storeId: string;
@@ -625,27 +627,30 @@ export async function createAssignmentPlanogramVersion(input: {
   if (error) dbError(error, "Could not save this assignment's planogram.");
 
   const versionId = version!.id as string;
-  const { error: itemsError } = await supabase.from("planogram_items").insert(
-    input.rows.map((row) => ({
-      version_id: versionId,
-      org_id: orgId,
-      store_id: input.storeId,
-      location: row.location,
-      aisle: row.location || null,
-      category: row.category,
-      sub_category: row.sub_category,
-      brand: row.brand,
-      product_name: row.product_name,
-      variant: row.variant || null,
-      sku: row.sku || null,
-      expected_qty: row.expected_qty,
-      mrp_inr: row.mrp_inr ?? null,
-      avg_daily_sales: row.avg_daily_sales ?? null,
-      shelf_position: row.shelf_position || null,
-      match_key: row.match_key || null,
-    })),
-  );
-  if (itemsError) dbError(itemsError, "Could not save the assignment's expected products.");
+  const items = input.rows.map((row) => ({
+    version_id: versionId,
+    org_id: orgId,
+    store_id: input.storeId,
+    location: row.location,
+    aisle: row.location || null,
+    category: row.category,
+    sub_category: row.sub_category,
+    brand: row.brand,
+    product_name: row.product_name,
+    variant: row.variant || null,
+    sku: row.sku || null,
+    expected_qty: row.expected_qty,
+    mrp_inr: row.mrp_inr ?? null,
+    avg_daily_sales: row.avg_daily_sales ?? null,
+    shelf_position: row.shelf_position || null,
+    match_key: row.match_key || null,
+  }));
+  for (let start = 0; start < items.length; start += PLANOGRAM_INSERT_BATCH) {
+    const { error: itemsError } = await supabase
+      .from("planogram_items")
+      .insert(items.slice(start, start + PLANOGRAM_INSERT_BATCH));
+    if (itemsError) dbError(itemsError, "Could not save the assignment's expected products.");
+  }
 
   return versionId;
 }

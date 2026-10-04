@@ -1,4 +1,4 @@
-import type { AuditInputDataset } from "@/lib/audit-input-dataset";
+import { readStoredDataset, type AuditInputDataset } from "@/lib/audit-input-dataset";
 import type { AuditTemplate } from "@/lib/audit-templates";
 import type { AuditDataInputMode } from "./audit-data-modes";
 import type { InputSchema } from "./field-roles";
@@ -12,8 +12,7 @@ export function extractSavedInputSchema(template: AuditTemplate): InputSchema | 
 }
 
 export function extractSavedInputDataset(template: AuditTemplate): AuditInputDataset | null {
-  const dataset = template.purpose_config?.input_dataset as AuditInputDataset | undefined;
-  return dataset ?? null;
+  return readStoredDataset(template.purpose_config?.input_dataset) ?? null;
 }
 
 export function templateHasSavedCsvConfig(template: AuditTemplate): boolean {

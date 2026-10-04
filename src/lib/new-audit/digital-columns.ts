@@ -1,4 +1,9 @@
-import type { AuditDataColumn, AuditDataType, AuditInputDataset } from "@/lib/audit-input-dataset";
+import {
+  readStoredDataset,
+  type AuditDataColumn,
+  type AuditDataType,
+  type AuditInputDataset,
+} from "@/lib/audit-input-dataset";
 import type { ColumnMapping, InputSchema, TemplateFieldBinding } from "@/lib/audit-builder/field-roles";
 import type { AuditResponseValue, TemplateDefinition, TemplateField } from "@/lib/audit-builder/types";
 import { buildTemplateFromInputSchema } from "@/lib/audit-builder/input-schema";
@@ -255,7 +260,7 @@ export function buildDigitalColumnsAudit(
   if (!columns) return null;
   const purpose = snapshot!.purpose_config as Record<string, unknown>;
   const schema = purpose.inputSchema as InputSchema;
-  const dataset = purpose.input_dataset as AuditInputDataset | undefined;
+  const dataset = readStoredDataset(purpose.input_dataset);
   const sectionKey = schema.sectionKey ?? "records";
   const columnIdOf = new Map(
     (schema.templateFieldBindings ?? []).map((b) => [b.templateFieldKey, b.columnId] as const),

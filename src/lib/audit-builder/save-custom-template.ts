@@ -2,7 +2,7 @@
  * Persist CSV column configuration as a reusable customer audit template.
  */
 
-import type { AuditInputDataset } from "@/lib/audit-input-dataset";
+import { packDatasetForStorage, type AuditInputDataset } from "@/lib/audit-input-dataset";
 import type { CalculatedFieldDef, OperatingModel } from "./types";
 import type { InputSchema } from "./field-roles";
 import {
@@ -106,7 +106,7 @@ export async function createDigitalCsvAuditTemplate(input: {
     ...((patch.purpose_config as Record<string, unknown>) ?? {}),
     source: DIGITAL_CSV_TEMPLATE_SOURCE,
     inputSchema: input.inputSchema,
-    input_dataset: input.dataset,
+    input_dataset: packDatasetForStorage(input.dataset),
     rowEvidence,
     ...(input.shelfColumnId ? { shelfColumnId: input.shelfColumnId } : {}),
     ...(input.barcodeColumnId ? { barcodeColumnId: input.barcodeColumnId } : {}),

@@ -32,7 +32,7 @@ import {
 import { syncFindingsForScan } from "@/lib/findings";
 import { AuditSubmitError, describeMissingCells } from "@/lib/audit-engine/submit-readiness";
 import type { InputSchema } from "@/lib/audit-builder/field-roles";
-import type { AuditInputDataset } from "@/lib/audit-input-dataset";
+import { readStoredDataset, type AuditInputDataset } from "@/lib/audit-input-dataset";
 import { hydrateReferenceValuesFromDataset } from "@/lib/audit-builder/input-schema";
 import type { AuditEvidencePolicy } from "@/lib/audit-evidence-policy";
 import type { Json } from "@/integrations/supabase/types";
@@ -132,9 +132,7 @@ export async function loadCustomAuditSession(
   const storeRow = assignment.stores as { name?: string } | null;
   const purposeConfig = (template.purpose_config ?? {}) as Record<string, unknown>;
   const inputSchema = purposeConfig.inputSchema as InputSchema | undefined;
-  const inputDataset =
-    (purposeConfig.input_dataset as AuditInputDataset | undefined) ??
-    ((templateSnapshot?.input_dataset as AuditInputDataset | undefined) ?? undefined);
+  const inputDataset = readStoredDataset(purposeConfig.input_dataset ?? templateSnapshot?.input_dataset);
   const assignerId = assignment.assigner_id as string;
   const assigneeId = assignment.assignee_id as string;
   const names = await profileNames([assignerId, assigneeId]).catch(() => new Map<string, string>());

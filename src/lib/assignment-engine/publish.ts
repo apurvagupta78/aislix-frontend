@@ -10,7 +10,7 @@ import type { AssignmentPlan, AssignmentMode, ScheduleStatus } from "./types";
 import { computeDueAt, computeNextOccurrence, zonedDateTimeToUtc } from "./recurrence";
 import { filterDatasetForStore } from "@/lib/audit-builder/template-csv-merge";
 import type { InputSchema } from "@/lib/audit-builder/field-roles";
-import type { AuditInputDataset } from "@/lib/audit-input-dataset";
+import { packDatasetForStorage, readStoredDataset } from "@/lib/audit-input-dataset";
 
 export type PublishResult = {
   campaignId?: string;
@@ -37,13 +37,11 @@ function snapshotForStore(
 
   const purposeConfig = (snap.purpose_config ?? {}) as Record<string, unknown>;
   const inputSchema = purposeConfig.inputSchema as InputSchema | undefined;
-  const inputDataset = (purposeConfig.input_dataset ?? snap.input_dataset) as
-    | AuditInputDataset
-    | undefined;
+  const inputDataset = readStoredDataset(purposeConfig.input_dataset ?? snap.input_dataset);
 
   if (inputDataset && inputSchema) {
     const filtered = filterDatasetForStore(inputDataset, inputSchema, storeId, storeName);
-    const nextDataset = { ...filtered, store_id: storeId };
+    const nextDataset = { ...packDatasetForStorage(filtered), store_id: storeId };
     snap.input_dataset = nextDataset;
     snap.purpose_config = {
       ...purposeConfig,

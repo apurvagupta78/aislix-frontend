@@ -1,4 +1,4 @@
-import type { AuditInputDataset } from "@/lib/audit-input-dataset";
+import { packDatasetForStorage, type AuditInputDataset } from "@/lib/audit-input-dataset";
 import type { AuditSubjectType, StandardFieldConcept, TemplateDefinition, TemplateField } from "./types";
 import {
   defaultAuditorFills,
@@ -182,7 +182,7 @@ export function mergeInputSchemaIntoSnapshot(
     purpose_config: {
       ...((snapshot.purpose_config as Record<string, unknown>) ?? {}),
       inputSchema,
-      input_dataset: dataset,
+      input_dataset: packDatasetForStorage(dataset),
     },
   };
 }

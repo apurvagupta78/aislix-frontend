@@ -22,6 +22,40 @@ export type AuditInputDataset = {
   inputSchema?: InputSchema;
 };
 
+/**
+ * Stored form of a dataset: each row is a plain array of cell values in column order.
+ * Keyed rows repeat every column id on every row, which turns a 5 MB file into ~35 MB of JSON.
+ */
+export type StoredAuditInputDataset = Omit<AuditInputDataset, "rows"> & {
+  rows: AuditDataRow[];
+  packed_rows?: string[][];
+};
+
+export function packDatasetForStorage(dataset: AuditInputDataset): StoredAuditInputDataset {
+  const { rows, ...rest } = dataset;
+  return {
+    ...rest,
+    rows: [],
+    packed_rows: rows.map((row) => dataset.columns.map((c) => row.values[c.id] ?? "")),
+  };
+}
+
+/** Reads a dataset saved in either the packed or the older keyed-rows form. */
+export function readStoredDataset(raw: unknown): AuditInputDataset | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const stored = raw as StoredAuditInputDataset;
+  if (!Array.isArray(stored.columns)) return undefined;
+  if (!Array.isArray(stored.packed_rows)) return { ...stored, rows: stored.rows ?? [] };
+  const { packed_rows, ...rest } = stored;
+  return {
+    ...rest,
+    rows: packed_rows.map((cells, index) => ({
+      id: `row-${index}`,
+      values: Object.fromEntries(stored.columns.map((c, i) => [c.id, cells[i] ?? ""])),
+    })),
+  };
+}
+
 export const AUDIT_DATA_TYPES: Array<{ value: AuditDataType; label: string }> = [
   { value: "text", label: "Text / String" },
   { value: "integer", label: "Integer" },
