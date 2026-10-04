@@ -1,12 +1,12 @@
 import type { ReactNode } from "react";
 import { LayoutTemplate } from "lucide-react";
 
-import { AiPlanogramChoice } from "@/components/new-audit/AiPlanogramChoice";
-import { NewAuditDemoSetupPanel } from "@/components/new-audit/NewAuditDemoSetupPanel";
+import { AiDocumentAuditSetup } from "@/components/new-audit/AiDocumentAuditSetup";
 import { OperatingModelCards } from "@/components/new-audit/OperatingModelCards";
 import { NewAuditStepSection } from "@/components/new-audit/NewAuditStepSection";
 import { StartChoiceCards } from "@/components/new-audit/StartChoiceCards";
 import { Button } from "@/components/ui/button";
+import type { AiAnalysisCheck } from "@/lib/ai-audit/ai-analysis";
 import type { OperatingModel } from "@/lib/audit-builder/types";
 import {
   demoPlanogramSummary,
@@ -26,8 +26,11 @@ type Props = {
   onStartChoiceChange: (choice: StartChoice) => void;
   onOperatingModelChange: (model: OperatingModel) => void;
   onAiPlanogramChange: (choice: NewAuditPlanogramChoice) => void;
-  onAiPlanogramReset: () => void;
   onScanContextChange: (ctx: ScanContextState) => void;
+  aiChecks: AiAnalysisCheck[];
+  aiQuestion: string;
+  onAiChecksChange: (checks: AiAnalysisCheck[]) => void;
+  onAiQuestionChange: (question: string) => void;
   onOpenTemplatePicker: () => void;
   csvUpload?: ReactNode;
   scratchBuilder?: ReactNode;
@@ -51,8 +54,11 @@ export function NewAuditStep2StartMethod({
   onStartChoiceChange,
   onOperatingModelChange,
   onAiPlanogramChange,
-  onAiPlanogramReset,
   onScanContextChange,
+  aiChecks,
+  aiQuestion,
+  onAiChecksChange,
+  onAiQuestionChange,
   onOpenTemplatePicker,
   csvUpload,
   scratchBuilder,
@@ -65,42 +71,30 @@ export function NewAuditStep2StartMethod({
 }: Props) {
   const isAi = method === "ai";
 
-  if (isAi && !aiPlanogramChoice) {
+  if (isAi) {
+    const shelfOnly = aiPlanogramChoice === "without";
     return (
       <NewAuditStepSection
         id="step-3-start"
         stepNumber={3}
-        title="What should the shelf be compared against?"
-        description="Your planogram, nothing (analyse what is visible), or your own document."
-        complete={complete}
-        error={planogramError}
-      >
-        <AiPlanogramChoice value={aiPlanogramChoice} onChange={onAiPlanogramChange} />
-      </NewAuditStepSection>
-    );
-  }
-
-  if (isAi && aiPlanogramChoice) {
-    return (
-      <NewAuditStepSection
-        id="step-3-start"
-        stepNumber={3}
-        title={aiPlanogramChoice === "reference" ? "Upload your document" : "Tell Aislix what you're auditing"}
+        title={shelfOnly ? "Tell Aislix what you're auditing" : "Upload your document"}
         description={
-          aiPlanogramChoice === "without"
-            ? "Pick who this audit is for, plus the category and sub-category."
-            : aiPlanogramChoice === "reference"
-              ? "Upload an invoice, list, PDF or CSV. Review the lines, edit anything, then save."
-              : "Pick who this audit is for and the category and sub-category, then upload your planogram."
+          shelfOnly
+            ? "No document — Astra analyses whatever is visible. Pick the category, then tell AI what to look at."
+            : "An invoice, stock list, price list, PDF, photo or CSV becomes an editable CSV. AI audits the shelf against it — like a Digital Audit, but the AI does the checking."
         }
         complete={complete}
         error={planogramError}
       >
-        <NewAuditDemoSetupPanel
-          planogramChoice={aiPlanogramChoice}
+        <AiDocumentAuditSetup
+          choice={aiPlanogramChoice ?? "reference"}
           scanContext={demoScanContext}
           onScanContextChange={onScanContextChange}
-          onBack={onAiPlanogramReset}
+          onChoiceChange={onAiPlanogramChange}
+          checks={aiChecks}
+          question={aiQuestion}
+          onChecksChange={onAiChecksChange}
+          onQuestionChange={onAiQuestionChange}
         />
       </NewAuditStepSection>
     );

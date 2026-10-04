@@ -81,6 +81,8 @@ export type StepValidationInput = {
   evidenceError?: string | null;
   hasBlockingConflicts: boolean;
   captureReady?: boolean;
+  /** AI audits: at least one check ticked or a question asked. */
+  aiAnalysisReady?: boolean;
 };
 
 export type StepValidationResult = Record<NewAuditStepId, boolean>;
@@ -96,7 +98,7 @@ export function validateNewAuditSteps(input: StepValidationInput): StepValidatio
     input.method === "digital"
       ? input.startReady && evidenceReady
       : input.method === "ai"
-        ? isAiStep3Ready(input.aiPlanogramChoice, input.demoScanContext)
+        ? isAiStep3Ready(input.aiPlanogramChoice, input.demoScanContext) && input.aiAnalysisReady !== false
         : false;
   const step4 =
     input.assignToSelf ||

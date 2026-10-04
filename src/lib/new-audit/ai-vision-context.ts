@@ -12,14 +12,14 @@ export function buildAiPlanogramPreviewSummary(
   choice: NewAuditPlanogramChoice | null,
   ctx: ScanContextState,
 ): string {
-  if (choice === "without") return "Without planogram — analyse visible shelf";
+  if (choice === "without") return "No document — analyse the visible shelf";
   if (choice === "reference") {
     const count = usableReferenceRows(ctx.reference?.rows ?? []).length;
     const doc = ctx.reference?.meta;
     const source = doc?.source === "csv" ? "CSV" : documentTypeLabel(doc?.document_type);
     return count > 0
-      ? `Compare to my document · ${source} · ${count} lines`
-      : "Compare to my document · awaiting upload";
+      ? `Your document · ${source} · ${count} lines`
+      : "Your document · awaiting upload";
   }
   if (choice === "with_demo") {
     const count = ctx.planogramRows.length;

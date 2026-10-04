@@ -33,9 +33,12 @@ import {
   NewPlanogramWizard,
   type NewPlanogramWizardHandle,
 } from "@/components/planogram/NewPlanogramWizard";
+import { AiAnalysisQuestionCard } from "@/components/new-audit/AiAnalysisQuestionCard";
 import { ReferenceSourcePanel } from "@/components/new-audit/ReferenceSourcePanel";
 import type { MasterImportResult } from "@/lib/master-shelf-setup";
-import { usableReferenceRows } from "@/lib/ai-audit/reference-document";
+import { aiAnalysisReady, defaultAiChecks } from "@/lib/ai-audit/ai-analysis";
+import { buildDemoSampleDocumentContext } from "@/lib/ai-audit/demo-sample-document";
+import { usableReferenceRows, type ReferenceRow } from "@/lib/ai-audit/reference-document";
 import { withReferencePlanogramRows } from "@/lib/new-audit/reference-context";
 import type { ShelfCategory } from "@/lib/categories.data";
 import {
@@ -66,8 +69,9 @@ export type DemoPlanogramMode = "demo" | "custom" | "none" | "reference";
 
 const REFERENCE_OPTION = {
   mode: "reference" as const,
-  label: "Use a Reference Document",
-  detail: "Compare the shelf against an invoice, purchase order or order list.",
+  label: "Use My Document",
+  detail: "Stock list, invoice or price list (CSV / Excel). AI audits the shelf against it.",
+  recommended: true,
 };
 type CustomSetupPath = "choose" | "master" | "manual";
 
@@ -86,11 +90,11 @@ const HOMEPAGE_SAMPLE_OPTIONS: Array<{
   detail: string;
   recommended?: boolean;
 }> = [
+  REFERENCE_OPTION,
   {
     mode: "demo",
-    label: "Use Demo Setup",
-    detail: "Recommended for the free demo.",
-    recommended: true,
+    label: "Use Demo Planogram",
+    detail: "A pre-built oral care planogram for the sample shelf.",
   },
   {
     mode: "custom",
@@ -99,17 +103,18 @@ const HOMEPAGE_SAMPLE_OPTIONS: Array<{
   },
   {
     mode: "none",
-    label: "Audit Without Planogram",
-    detail: "Analyse the visible shelf without an expected layout.",
+    label: "No Document",
+    detail: "Analyse the visible shelf without an expected list.",
   },
-  REFERENCE_OPTION,
 ];
 
 const HOMEPAGE_UPLOAD_OPTIONS: Array<{
   mode: DemoPlanogramMode;
   label: string;
   detail: string;
+  recommended?: boolean;
 }> = [
+  REFERENCE_OPTION,
   {
     mode: "custom",
     label: "Use My Planogram",
@@ -117,10 +122,9 @@ const HOMEPAGE_UPLOAD_OPTIONS: Array<{
   },
   {
     mode: "none",
-    label: "Audit Without Planogram",
-    detail: "Analyse the visible shelf without an expected layout.",
+    label: "No Document",
+    detail: "Analyse the visible shelf without an expected list.",
   },
-  REFERENCE_OPTION,
 ];
 
 type DemoScanSetupPanelProps = {
@@ -216,9 +220,7 @@ export function DemoScanSetupPanel({
   const [customSetupPath, setCustomSetupPath] = useState<CustomSetupPath>("choose");
   const [masterPhase, setMasterPhase] = useState<MasterSetupPhase>("upload");
   const [masterImport, setMasterImport] = useState<MasterImportResult | null>(null);
-  const [internalMode, setInternalMode] = useState<DemoPlanogramMode>(
-    lockedPlanogramMode ?? (mode === "sample" ? "demo" : "none"),
-  );
+  const [internalMode, setInternalMode] = useState<DemoPlanogramMode>(lockedPlanogramMode ?? "reference");
   const planogramMode = lockedPlanogramMode ?? planogramModeProp ?? internalMode;
   const startCtaLabel = primaryCtaLabel ?? HOMEPAGE_START_AUDIT_CTA;
   const auditRole = defaultAuditRoleTab(scanContext.auditRole);
@@ -289,7 +291,11 @@ export function DemoScanSetupPanel({
           : {}),
       });
     } else if (next === "reference") {
-      onScanContextChange({ ...scanContext, planogramRows: [] });
+      onScanContextChange(
+        mode === "sample" && !scanContext.reference
+          ? buildDemoSampleDocumentContext(defaultAuditRoleTab(scanContext.auditRole))
+          : { ...scanContext, planogramRows: [] },
+      );
     } else if (next === "none") {
       onScanContextChange({
         ...scanContext,
@@ -318,10 +324,13 @@ export function DemoScanSetupPanel({
   const showManualSetupOption =
     homepageIntro && planogramMode === "custom" && customSetupPath === "choose" && masterPhase === "upload";
   const uploadReady = mode === "upload" ? ready && hasPhoto : ready;
+  const asksLuna = planogramMode === "reference" || planogramMode === "none";
   const referenceBlockReason =
     planogramMode === "reference" && !usableReferenceRows(scanContext.reference?.rows ?? []).length
-      ? "Upload a CSV or Excel reference document before starting the audit."
-      : null;
+      ? "Upload a CSV or Excel document before starting the audit."
+      : asksLuna && scanContext.aiAnalysis && !aiAnalysisReady(scanContext.aiAnalysis)
+        ? "Tick at least one thing for AI to analyse, or ask a question."
+        : null;
   const auditBlockReason =
     (homepageIntro
       ? homepageCustomAuditBlockReason(
@@ -374,8 +383,23 @@ export function DemoScanSetupPanel({
     } else {
       next = { ...scanContext, planogramRows: [] };
     }
+    if (!asksLuna) next = { ...next, aiAnalysis: undefined };
     onScanContextChange(next);
     onStart(next);
+  }
+
+  function aiAnalysisCard(rows: ReferenceRow[] | null) {
+    const analysis = scanContext.aiAnalysis ?? { checks: defaultAiChecks(rows), question: "" };
+    return (
+      <AiAnalysisQuestionCard
+        rows={rows}
+        checks={analysis.checks}
+        question={analysis.question}
+        disabled={disabled || (rows !== null && !usableReferenceRows(rows).length)}
+        onChecksChange={(checks) => onScanContextChange({ ...scanContext, aiAnalysis: { ...analysis, checks } })}
+        onQuestionChange={(question) => onScanContextChange({ ...scanContext, aiAnalysis: { ...analysis, question } })}
+      />
+    );
   }
 
   return (
@@ -674,6 +698,8 @@ export function DemoScanSetupPanel({
         </div>
       ) : null}
 
+      {planogramMode === "none" ? <div className="mt-5">{aiAnalysisCard(null)}</div> : null}
+
       {homepageIntro && planogramMode === "none" ? (
         <div className="mt-5 overflow-hidden rounded-2xl border-2 border-brand/20 bg-gradient-to-br from-brand-soft/40 to-background p-5 shadow-soft sm:p-6">
           <p className="text-base font-semibold text-foreground">
@@ -765,14 +791,30 @@ export function DemoScanSetupPanel({
       ) : null}
 
       {planogramMode === "reference" ? (
-        <div className="mt-5 rounded-2xl border border-border bg-card p-4 sm:p-5">
+        <div className="mt-5 space-y-4 rounded-2xl border border-border bg-card p-4 sm:p-5">
           <ReferenceSourcePanel
             spreadsheetOnly
             value={scanContext.reference}
-            onChange={(reference) => onScanContextChange({ ...scanContext, reference })}
+            onChange={(reference) => {
+              const hadLines = usableReferenceRows(scanContext.reference?.rows ?? []).length > 0;
+              const gotLines = Boolean(reference && usableReferenceRows(reference.rows).length);
+              onScanContextChange({
+                ...scanContext,
+                reference,
+                ...(!hadLines && gotLines && reference
+                  ? {
+                      aiAnalysis: {
+                        checks: defaultAiChecks(reference.rows),
+                        question: scanContext.aiAnalysis?.question ?? "",
+                      },
+                    }
+                  : {}),
+              });
+            }}
             category={state.categoryName || null}
             subCategory={resolveSubCategoryLabel(state) || null}
           />
+          {aiAnalysisCard(scanContext.reference?.rows ?? [])}
         </div>
       ) : null}
 

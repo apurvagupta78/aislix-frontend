@@ -26,6 +26,10 @@ import {
   shapePlanogramItemForApi,
 } from "@/lib/ai-audit/astra-analysis";
 import { normalizeAstraAnalysis } from "@/lib/ai-audit/astra-response";
+import { parseAiAnalysisRequest, type AiAnalysisRequest } from "@/lib/ai-audit/ai-analysis";
+import { runLunaAnalysis } from "@/lib/ai-audit/luna-analysis.server";
+import { buildLunaEvidence } from "@/lib/ai-audit/luna-evidence";
+import { findReferenceMatch } from "@/lib/ai-audit/reference-match";
 import {
   dedupeSelections,
   parseCategorySelections,
@@ -1329,6 +1333,23 @@ async function loadAssignmentContext(
   };
 }
 
+/** User checks + question for Luna: on the scan's adhoc payload, else on the assignment snapshot. */
+async function loadAiAnalysisRequest(supabase: DB, scan: ScanRow): Promise<AiAnalysisRequest | null> {
+  const adhoc = scan.adhoc_planogram;
+  if (adhoc && typeof adhoc === "object" && !Array.isArray(adhoc)) {
+    const fromScan = parseAiAnalysisRequest((adhoc as Record<string, unknown>).ai_analysis);
+    if (fromScan) return fromScan;
+  }
+  if (!scan.assignment_id) return null;
+  const { data } = await supabase
+    .from("scan_assignments")
+    .select("template_snapshot")
+    .eq("id", scan.assignment_id)
+    .maybeSingle();
+  const snapshot = (data?.template_snapshot ?? null) as Record<string, unknown> | null;
+  return parseAiAnalysisRequest(snapshot?.["ai_analysis"]);
+}
+
 /** Signs every uploaded original image and builds the Railway request body. */
 async function buildVisionRequest(supabase: DB, scan: ScanRow, startedAt: string) {
   const { data: images, error: imagesError } = await supabase
@@ -2069,6 +2090,24 @@ async function persistScanPayload(
 
   const totalProducts = products.reduce((total, p) => total + p.facings, 0);
 
+  const aiAnalysisRequest = await loadAiAnalysisRequest(supabase, scan);
+  const lunaAnalysis = aiAnalysisRequest
+    ? await runLunaAnalysis(
+        aiAnalysisRequest,
+        buildLunaEvidence({
+          referenceMatch: findReferenceMatch(
+            (metricsSource && typeof metricsSource === "object" ? metricsSource : {}) as Record<string, unknown>,
+            payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null,
+          ),
+          products,
+          brandShare: shares,
+          totalFacings: totalProducts,
+          countPending: metricsSource?.scan_complete === false,
+          photoCount: num(metricsSource?.multi_photo?.photo_count),
+        }),
+      )
+    : null;
+
   const metrics = {
     total_products: totalProducts,
     // Trust the vision backend's SKU count; the local fallback dedupes on
@@ -2180,6 +2219,7 @@ async function persistScanPayload(
     ...(metricsSource?.luna_secondary_analysis
       ? { luna_secondary_analysis: metricsSource.luna_secondary_analysis }
       : {}),
+    ...(lunaAnalysis ? { luna_analysis: lunaAnalysis } : {}),
     ...(typeof metricsSource?.scan_complete === "boolean" ? { scan_complete: metricsSource.scan_complete } : {}),
     ...(metricsSource?.audit_scope ? { audit_scope: metricsSource.audit_scope } : {}),
     ...(Array.isArray(metricsSource?.adjacent_category_findings)

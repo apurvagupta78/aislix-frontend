@@ -1,6 +1,7 @@
 import { AiAuditIncompleteState } from "@/components/ai-audit/results/AiAuditIncompleteState";
 import { AiAuditPlanogramView } from "@/components/ai-audit/results/AiAuditPlanogramView";
 import { AiAuditShelfOnlyView } from "@/components/ai-audit/results/AiAuditShelfOnlyView";
+import { LunaAnalysisCard, lunaAnalysisFromMetrics } from "@/components/ai-audit/results/LunaAnalysisCard";
 import { buildAiAuditDisplayContext } from "@/lib/ai-audit/astra-display";
 import type { ScanResult } from "@/lib/scan-results";
 
@@ -27,9 +28,21 @@ export function AiAuditResultsPage({ data, imageUrl }: Props) {
     );
   }
 
+  const luna = <LunaAnalysisCard analysis={lunaAnalysisFromMetrics(data.metrics)} className="mb-4" />;
+
   if (ctx.viewKind === "planogram") {
-    return <AiAuditPlanogramView data={data} ctx={ctx} imageUrl={imageUrl} />;
+    return (
+      <>
+        {luna}
+        <AiAuditPlanogramView data={data} ctx={ctx} imageUrl={imageUrl} />
+      </>
+    );
   }
 
-  return <AiAuditShelfOnlyView data={data} ctx={ctx} imageUrl={imageUrl} />;
+  return (
+    <>
+      {luna}
+      <AiAuditShelfOnlyView data={data} ctx={ctx} imageUrl={imageUrl} />
+    </>
+  );
 }

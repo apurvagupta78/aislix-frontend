@@ -2,7 +2,9 @@
  * Anonymous landing-demo scan client. Talks only to the public /landing/*
  * endpoints — never to the authenticated scan pipeline.
  */
+import { aiAnalysisReady } from "@/lib/ai-audit/ai-analysis";
 import { buildAstraVisionExtras } from "@/lib/ai-audit/astra-analysis";
+import { referencePayloadFromContext } from "@/lib/new-audit/reference-context";
 import type { ScanContextState } from "@/lib/scan-context";
 import { captureUtmParams, readStoredUtm } from "@/lib/utm";
 import {
@@ -152,7 +154,7 @@ async function postScan(form: FormData, _fallback: string): Promise<LandingScanR
   // Same-origin proxy: keeps the demo working from any origin, records the
   // anonymous attempt, and allows the slow vision scan up to two minutes.
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 120_000);
+  const timeout = setTimeout(() => controller.abort(), 180_000);
   let res: Response;
   try {
     res = await fetch("/api/public/landing/scan", {
@@ -211,6 +213,15 @@ function appendContext(form: FormData, context?: LandingScanContext) {
   form.append("vision_prompt", extras.vision_prompt);
   if (extras.planogram_items?.length) {
     form.append("planogram_items", JSON.stringify(extras.planogram_items));
+  }
+  const reference = referencePayloadFromContext(ctx);
+  if (reference?.items.length) {
+    form.append("comparison_basis", "reference");
+    form.append("reference_items", JSON.stringify(reference.items));
+    form.append("reference_document", JSON.stringify(reference.document));
+  }
+  if (ctx.aiAnalysis && aiAnalysisReady(ctx.aiAnalysis)) {
+    form.append("ai_analysis", JSON.stringify(ctx.aiAnalysis));
   }
 }
 

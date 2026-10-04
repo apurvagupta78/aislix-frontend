@@ -14,6 +14,8 @@ type Props = {
   operatingModelLabel?: string;
   method: CaptureMethod;
   planogramSummary?: string;
+  /** AI audits: what Luna was asked to analyse. */
+  aiAnalysisSummary?: string;
   assigneeSummary: string;
   scheduleSummary: string;
   evidenceSummary?: string;
@@ -62,6 +64,7 @@ export function NewAuditStep7Preview({
   operatingModelLabel,
   method,
   planogramSummary,
+  aiAnalysisSummary,
   assigneeSummary,
   scheduleSummary,
   evidenceSummary,
@@ -111,7 +114,10 @@ export function NewAuditStep7Preview({
           title="Step 3 · Start"
           rows={
             method === "ai"
-              ? [{ label: "Planogram", value: planogramSummary ?? "—" }]
+              ? [
+                  { label: "Audit against", value: planogramSummary ?? "—" },
+                  { label: "AI analyses", value: aiAnalysisSummary ?? "—" },
+                ]
               : [
                   { label: "Method", value: startMethodLabel(startChoice, templateName) },
                   ...(operatingModelLabel && startChoice === "template"

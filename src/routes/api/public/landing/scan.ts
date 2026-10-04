@@ -1,6 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type { Json } from "@/integrations/supabase/types";
 import { GENERIC_SCAN, parseApiDetail } from "@/lib/api-errors";
+import { parseAiAnalysisRequest, type AiAnalysisRequest } from "@/lib/ai-audit/ai-analysis";
+import { runLunaAnalysis } from "@/lib/ai-audit/luna-analysis.server";
+import { buildLunaEvidence, shelfProductsFromRows } from "@/lib/ai-audit/luna-evidence";
+import { findReferenceMatch } from "@/lib/ai-audit/reference-match";
 import {
   hashForBucket,
   requestClientIp,
@@ -20,12 +24,53 @@ const ASTRA_FIELDS = [
   "operating_model",
   "vision_prompt",
   "planogram_items",
+  "comparison_basis",
+  "reference_items",
+  "reference_document",
 ] as const;
 const UTM_FIELDS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"] as const;
 const LONG_FIELD_CAPS: Record<string, number> = {
   vision_prompt: MAX_VISION_PROMPT_CHARS,
   planogram_items: MAX_PLANOGRAM_CHARS,
+  reference_items: MAX_PLANOGRAM_CHARS,
+  reference_document: 20_000,
+  ai_analysis: 4_000,
 };
+
+function aiAnalysisFromForm(form: FormData): AiAnalysisRequest | null {
+  const raw = longTextField(form, "ai_analysis");
+  if (!raw) return null;
+  try {
+    return parseAiAnalysisRequest(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+/** Luna answers the visitor's checks / question from the finished demo scan. Never throws. */
+async function attachLunaAnalysis(payload: Record<string, unknown>, request: AiAnalysisRequest) {
+  const metrics =
+    payload.metrics && typeof payload.metrics === "object" && !Array.isArray(payload.metrics)
+      ? (payload.metrics as Record<string, unknown>)
+      : {};
+  const products = shelfProductsFromRows(payload.inventory);
+  const brandShare = (Array.isArray(payload.brand_share) ? payload.brand_share : [])
+    .filter((b): b is Record<string, unknown> => Boolean(b) && typeof b === "object")
+    .map((b) => ({ brand: String(b.brand ?? "Unknown"), share: Number(b.share ?? b.percent ?? 0) || 0 }));
+  const multiPhoto = metrics.multi_photo as Record<string, unknown> | undefined;
+  const analysis = await runLunaAnalysis(
+    request,
+    buildLunaEvidence({
+      referenceMatch: findReferenceMatch(metrics, payload),
+      products,
+      brandShare,
+      totalFacings: products.reduce((sum, p) => sum + p.facings, 0),
+      countPending: metrics.scan_complete === false,
+      photoCount: typeof multiPhoto?.photo_count === "number" ? multiPhoto.photo_count : 1,
+    }),
+  );
+  payload.metrics = { ...metrics, luna_analysis: analysis };
+}
 
 function longTextField(form: FormData, field: string): string | null {
   const value = form.get(field);
@@ -128,6 +173,11 @@ export const Route = createFileRoute("/api/public/landing/scan")({
             payload = bodyText ? JSON.parse(bodyText) : null;
           } catch {
             payload = null;
+          }
+
+          const aiRequest = aiAnalysisFromForm(incoming);
+          if (upstream.ok && aiRequest && payload && typeof payload === "object" && !Array.isArray(payload)) {
+            await attachLunaAnalysis(payload as Record<string, unknown>, aiRequest);
           }
 
           if (upstream.ok || upstream.status === 422) {

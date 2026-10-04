@@ -25,6 +25,7 @@ type Props = {
   scanContext: ScanContextState;
   onScanContextChange: (ctx: ScanContextState) => void;
   onBack: () => void;
+  backLabel?: string;
 };
 
 export function NewAuditDemoSetupPanel({
@@ -32,6 +33,7 @@ export function NewAuditDemoSetupPanel({
   scanContext,
   onScanContextChange,
   onBack,
+  backLabel = "Change planogram option",
 }: Props) {
   const demoCategory = useDemoCategory({ enabled: true });
   const wizardRef = useRef<NewPlanogramWizardHandle | CsvPlanogramManualPanelHandle>(null);
@@ -82,7 +84,7 @@ export function NewAuditDemoSetupPanel({
   const backButton = (
     <Button type="button" variant="ghost" size="sm" className="-ml-2" onClick={onBack}>
       <ChevronLeft className="size-4" />
-      Change planogram option
+      {backLabel}
     </Button>
   );
 

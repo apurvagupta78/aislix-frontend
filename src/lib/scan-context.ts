@@ -44,6 +44,7 @@ import type { FinancialImpact, ScanRecommendation, ScanResult } from "@/lib/scan
 import type { CategorySelection } from "@/lib/category-selections";
 import { emptyRow, type PlanogramRow } from "@/lib/planogram";
 import type { ReferenceDocumentState } from "@/lib/ai-audit/reference-document";
+import type { AiAnalysisRequest } from "@/lib/ai-audit/ai-analysis";
 
 export type ScanFocusFilter = {
   company?: string;
@@ -63,6 +64,8 @@ export type ScanContextState = {
   extraCategorySelections?: CategorySelection[];
   /** Customer reference document (invoice / list / CSV) the shelf is compared against. */
   reference?: ReferenceDocumentState;
+  /** What Luna should analyse after Astra + Aislix (homepage demo). */
+  aiAnalysis?: Pick<AiAnalysisRequest, "checks" | "question">;
 };
 
 export const EMPTY_SCAN_CONTEXT: ScanContextState = {

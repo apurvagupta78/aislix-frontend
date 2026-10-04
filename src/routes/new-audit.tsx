@@ -63,6 +63,12 @@ import {
   aiAuditCategorySelections,
   submitAuthenticatedAiAuditScan,
 } from "@/lib/ai-audit/run-ai-audit-scan";
+import {
+  aiAnalysisReady,
+  aiAnalysisSummary,
+  buildAiAnalysisRequest,
+  type AiAnalysisCheck,
+} from "@/lib/ai-audit/ai-analysis";
 import { buildAiPlanogramPreviewSummary } from "@/lib/new-audit/ai-vision-context";
 import {
   referencePayloadFromContext,
@@ -229,8 +235,14 @@ function NewAuditPage() {
       category_selections: selections,
     };
   }, [method, demoScanContext]);
-  const [captureFile, setCaptureFile] = useState<File | null>(null);
-  const [capturePreviewUrl, setCapturePreviewUrl] = useState<string | null>(null);
+  const [aiChecks, setAiChecks] = useState<AiAnalysisCheck[]>([]);
+  const [aiQuestion, setAiQuestion] = useState("");
+  const aiReferenceRows = aiPlanogramChoice === "reference" ? (demoScanContext.reference?.rows ?? []) : null;
+  const aiAnalysisRequest = useMemo(
+    () => buildAiAnalysisRequest(aiChecks, aiQuestion, aiReferenceRows),
+    [aiChecks, aiQuestion, aiReferenceRows],
+  );
+  const [captureFiles, setCaptureFiles] = useState<File[]>([]);
   const [aiAuditLaunched, setAiAuditLaunched] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
@@ -673,7 +685,8 @@ function NewAuditPage() {
     reviewerId,
     evidenceError: evidenceColumnError,
     hasBlockingConflicts: hasBlockingConflicts(assignmentPreview?.conflicts ?? []),
-    captureReady: Boolean(captureFile),
+    captureReady: captureFiles.length > 0,
+    aiAnalysisReady: method !== "ai" || aiAnalysisReady(aiAnalysisRequest),
   });
 
   const stepErrors = {
@@ -693,7 +706,7 @@ function NewAuditPage() {
     method: !method ? "Choose how the audit will be performed." : null,
     planogram:
       method === "ai" && !aiPlanogramChoice
-        ? "Choose what the shelf should be compared against to continue."
+        ? "Upload your document to continue."
         : method === "ai" &&
             aiPlanogramChoice &&
             !isAiStep3Ready(aiPlanogramChoice, aiScanContext)
@@ -704,7 +717,9 @@ function NewAuditPage() {
                 ? "Save your document lines to continue."
                 : "Upload your document or CSV to continue."
               : "Complete role, category, and sub-category."
-          : null,
+          : method === "ai" && !aiAnalysisReady(aiAnalysisRequest)
+            ? "Tick at least one thing for AI to analyse, or ask a question."
+            : null,
     assign: !(assignToSelf || teamScope.assigneeIds.length > 0 || assigneeId)
       ? "Choose at least one team member or assign to yourself."
       : null,
@@ -777,36 +792,34 @@ function NewAuditPage() {
     if (next !== "ai") {
       setAiPlanogramChoice(null);
       setDemoScanContext(EMPTY_SCAN_CONTEXT);
-      setCaptureFile(null);
-      setCapturePreviewUrl(null);
+      setAiChecks([]);
+      setAiQuestion("");
+      setCaptureFiles([]);
       setAiAuditLaunched(false);
     } else {
+      setAiPlanogramChoice((current) => current ?? "reference");
       scrollToNewAuditStep("step-3-start");
     }
   }
 
-  function handleCaptureChange(file: File | null, previewUrl: string | null) {
-    setCaptureFile(file);
-    setCapturePreviewUrl(previewUrl);
+  function handleCaptureChange(files: File[]) {
+    setCaptureFiles(files);
     setAiAuditLaunched(false);
   }
 
   useEffect(() => {
+    if (method === "ai" && !aiPlanogramChoice) setAiPlanogramChoice("reference");
+  }, [method, aiPlanogramChoice]);
+
+  useEffect(() => {
     if (!assignToSelf) {
-      setCaptureFile(null);
-      setCapturePreviewUrl(null);
+      setCaptureFiles([]);
       setAiAuditLaunched(false);
     }
   }, [assignToSelf]);
 
   function handleAiPlanogramChange(choice: NewAuditPlanogramChoice) {
     setAiPlanogramChoice(choice);
-    setDemoScanContext(EMPTY_SCAN_CONTEXT);
-  }
-
-  function handleAiPlanogramReset() {
-    setAiPlanogramChoice(null);
-    setDemoScanContext(EMPTY_SCAN_CONTEXT);
   }
 
   function handleTemplateSelect(
@@ -1016,6 +1029,9 @@ function NewAuditPage() {
           audit_role: demoScanContext.auditRole,
         };
       }
+      if (method === "ai" && aiAnalysisReady(aiAnalysisRequest)) {
+        templateSnapshot = { ...templateSnapshot, ai_analysis: aiAnalysisRequest };
+      }
 
       const useUniversalEngine =
         storeIds.length > 1 ||
@@ -1175,11 +1191,11 @@ function NewAuditPage() {
 
   const aiSelfAuditMutation = useMutation({
     mutationFn: async () => {
-      if (!captureFile) throw new Error("Add a shelf photo before running the AI audit.");
+      if (!captureFiles.length) throw new Error("Add a shelf photo before running the AI audit.");
       setUploadProgress(0);
       const created = await createMutation.mutateAsync({ skipNavigation: true });
       const uploaded = await submitAuthenticatedAiAuditScan({
-        files: [captureFile],
+        files: captureFiles,
         assignmentId: created.assignmentId,
         storeId: storeId || undefined,
         scanContext: aiScanContext,
@@ -1191,7 +1207,11 @@ function NewAuditPage() {
     onSuccess: ({ scanId }) => {
       setAiAuditLaunched(true);
       setUploadProgress(100);
-      toast.success("Photo uploaded — starting analysis…");
+      toast.success(
+        captureFiles.length > 1
+          ? `${captureFiles.length} photos uploaded — starting analysis…`
+          : "Photo uploaded — starting analysis…",
+      );
       void navigate({ to: "/processing", search: { scan: scanId } });
     },
     onError: (error) => {
@@ -1210,7 +1230,7 @@ function NewAuditPage() {
   const previewReady = stepStatus[6];
   const canSubmit = previewReady && Boolean(assignmentPlan) && !isAiSelfImmediate;
   const canRunAiAudit =
-    isAiSelfImmediate && Boolean(captureFile) && stepStatus[6] && !aiAuditLaunched;
+    isAiSelfImmediate && captureFiles.length > 0 && stepStatus[6] && !aiAuditLaunched;
   const footerBusy = createMutation.isPending || aiSelfAuditMutation.isPending;
 
   function handleSubmit() {
@@ -1290,7 +1310,10 @@ function NewAuditPage() {
             planogramError={method === "ai" ? stepErrors.planogram : null}
             onOperatingModelChange={handleOperatingModelChange}
             onAiPlanogramChange={handleAiPlanogramChange}
-            onAiPlanogramReset={handleAiPlanogramReset}
+            aiChecks={aiChecks}
+            aiQuestion={aiQuestion}
+            onAiChecksChange={setAiChecks}
+            onAiQuestionChange={setAiQuestion}
             demoScanContext={demoScanContext}
             onScanContextChange={setDemoScanContext}
             onOpenTemplatePicker={() => setTemplatePickerOpen(true)}
@@ -1397,6 +1420,7 @@ function NewAuditPage() {
                       ? buildAiPlanogramPreviewSummary("with_demo", demoScanContext)
                       : undefined
                 }
+                aiAnalysisSummary={method === "ai" ? aiAnalysisSummary(aiAnalysisRequest) : undefined}
                 assigneeSummary={assigneeSummary}
                 scheduleSummary={formatScheduleSummary(assignmentMode, publishAt)}
                 evidenceSummary={evidenceSummary}
@@ -1408,8 +1432,7 @@ function NewAuditPage() {
               {isAiSelfImmediate ? (
                 <>
                   <NewAuditStep7Capture
-                    captureFile={captureFile}
-                    capturePreviewUrl={capturePreviewUrl}
+                    captureFiles={captureFiles}
                     onCaptureChange={handleCaptureChange}
                     disabled={footerBusy || aiAuditLaunched}
                     complete={stepStatus[7] || aiAuditLaunched}
