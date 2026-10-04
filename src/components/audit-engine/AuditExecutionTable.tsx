@@ -66,6 +66,7 @@ import {
   EXPIRY_SCAN_STATUS_KEY,
   classifyExpiry,
   localIsoDate,
+  normalizeExpiryDate,
   rowExpiryState,
   type ExpiryReading,
   type RowExpiry,
@@ -1530,7 +1531,12 @@ function ExpiryCell({
           className={cn(CELL_CLASS, "w-36 min-w-[8.5rem]")}
           style={{ borderColor: state.date ? AISLIX_PALETTE.border : AISLIX_PALETTE.purple }}
           value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => {
+            const next = e.target.value;
+            setDraft(next);
+            // Phone date pickers may never blur; save as soon as a complete date is picked.
+            if (normalizeExpiryDate(next) && next !== state.date) onDate(next);
+          }}
           onBlur={() => {
             const next = draft || null;
             if (next !== state.date) onDate(next);

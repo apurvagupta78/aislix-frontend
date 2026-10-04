@@ -199,7 +199,7 @@ export function createFieldFromLibrary(
   };
 }
 
-function defaultFormula(type: FieldType): string | undefined {
+export function defaultFormula(type: FieldType): string | undefined {
   if (type === "qty_variance") return "actual_qty - expected_qty";
   if (type === "qty_variance_pct") return "((actual_qty - expected_qty) / expected_qty) * 100";
   if (type === "expiry_days_remaining") return "expiry_date - audit_date";

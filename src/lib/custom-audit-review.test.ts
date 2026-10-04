@@ -5,6 +5,7 @@ import type { ResponseMap } from "@/lib/custom-audit";
 import {
   buildDigitalAuditLineDraftsFromResponses,
   buildDigitalAuditLineRow,
+  collectCustomAuditEvidenceDrafts,
 } from "@/lib/custom-audit-review";
 import { computeLineVariance } from "@/lib/digital-audit";
 
@@ -102,5 +103,24 @@ describe("custom audit review materialization", () => {
     });
     expect(drafts).toHaveLength(1);
     expect(drafts[0]).toMatchObject({ sku: "SKU-1", expected_qty: 12, actual_qty: 9 });
+  });
+
+  it("gives every evidence photo its own bin key when rows share a store", () => {
+    const withImages = {
+      ...INVENTORY_DEFINITION,
+      fields: [
+        ...INVENTORY_DEFINITION.fields,
+        { key: "images", section: "records", type: "multiple_images", label: "Images", required: true, config: {} },
+      ],
+    } as TemplateDefinition;
+    const entries = collectCustomAuditEvidenceDrafts(withImages, {
+      records: {
+        0: { store: "Main Store", sku: "A", images: ["a.jpg"] },
+        1: { store: "Main Store", sku: "B", images: ["b1.jpg", "b2.jpg"] },
+        2: { store: "Main Store", sku: "C", images: ["c.jpg"] },
+      },
+    });
+    expect(entries).toHaveLength(4);
+    expect(new Set(entries.map((e) => e.bin_key)).size).toBe(4);
   });
 });

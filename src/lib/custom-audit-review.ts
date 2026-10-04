@@ -308,6 +308,14 @@ export function collectCustomAuditEvidenceDrafts(
 ): CustomAuditEvidenceDraft[] {
   const lineDrafts = buildDigitalAuditLineDraftsFromResponses(definition, responses);
   const entries: CustomAuditEvidenceDraft[] = [];
+  // audit_evidence is upserted on (scan_id, bin_key): rows sharing a store/shelf must not share a key.
+  const usedKeys = new Set<string>();
+  const uniqueKey = (key: string, recordIndex: string) => {
+    let next = usedKeys.has(key) ? `${key}-r${recordIndex}` : key;
+    for (let n = 2; usedKeys.has(next); n++) next = `${key}-r${recordIndex}-${n}`;
+    usedKeys.add(next);
+    return next;
+  };
   for (const field of definition.fields) {
     if (!isImageField(field.type)) continue;
     const sectionData = responses[field.section] ?? {};
@@ -319,7 +327,7 @@ export function collectCustomAuditEvidenceDrafts(
       const baseBin = line?.bin_key ?? `record-${idxStr}`;
       const paths = normalizeImagePaths(recordValues[field.key]);
       paths.forEach((stored, imageIndex) => {
-        const binKey = paths.length > 1 ? `${baseBin}-${imageIndex}` : baseBin;
+        const binKey = uniqueKey(paths.length > 1 ? `${baseBin}-${imageIndex}` : baseBin, idxStr);
         entries.push({
           bin_key: binKey,
           storage_path: stripAuditEvidenceRef(stored),

@@ -2,11 +2,13 @@
  * Calculated field evaluation for custom audit templates.
  */
 
+import { defaultFormula } from "./field-library";
 import type { FieldValues, TemplateDefinition } from "./types";
 
 function parseDate(val: unknown): Date | null {
   if (!val) return null;
-  const d = new Date(String(val));
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(val));
+  const d = iso ? new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3])) : new Date(String(val));
   return isNaN(d.getTime()) ? null : d;
 }
 
@@ -22,7 +24,7 @@ export function computeCalculatedValues(
 
   for (const field of definition.fields) {
     if (!field.calculated) continue;
-    result[field.key] = evaluateFormula(field.formula ?? field.key, values);
+    result[field.key] = evaluateFormula(field.formula ?? defaultFormula(field.type) ?? field.key, values);
   }
 
   for (const calc of definition.calculatedFields) {
