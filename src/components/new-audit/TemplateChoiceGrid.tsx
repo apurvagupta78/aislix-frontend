@@ -30,14 +30,14 @@ function systemKeyOf(t: AuditTemplate): string | undefined {
 function TemplateTile({
   name,
   description,
-  tag,
+  tags,
   selected,
   onUse,
   onPreview,
 }: {
   name: string;
   description: string;
-  tag?: string;
+  tags: string[];
   selected: boolean;
   onUse: () => void;
   onPreview: () => void;
@@ -62,12 +62,15 @@ function TemplateTile({
           <span className="mt-1 line-clamp-2 block text-xs text-[var(--aislix-secondary)]">{description}</span>
         ) : null}
       </button>
-      <div className="mt-2 flex items-center gap-2 pt-1">
-        {tag ? (
-          <span className="rounded-full border border-[var(--aislix-border)] px-2 py-0.5 text-[10px] font-semibold text-[var(--aislix-secondary)]">
+      <div className="mt-auto flex items-center gap-1.5 pt-3">
+        {tags.map((tag) => (
+          <span
+            key={tag}
+            className="truncate rounded-full border border-[var(--aislix-border)] px-2 py-0.5 text-[10px] font-semibold text-[var(--aislix-secondary)]"
+          >
             {tag}
           </span>
-        ) : null}
+        ))}
         <button
           type="button"
           onClick={onPreview}
@@ -100,17 +103,17 @@ export function TemplateChoiceGrid({ operatingModel, templateChoice, savedTempla
   const term = search.trim().toLowerCase();
 
   const systemSpecs = useMemo(() => getBrowseAllTemplates(operatingModel), [operatingModel]);
-  const groups = useMemo(() => {
-    const matching = systemSpecs.filter(
-      (s) => !term || s.name.toLowerCase().includes(term) || s.shortDescription.toLowerCase().includes(term),
-    );
-    const byPurpose = new Map<string, SystemTemplateSpec[]>();
-    for (const spec of matching) {
-      const label = PURPOSE_SECTION_LABELS[spec.purpose] ?? spec.category;
-      byPurpose.set(label, [...(byPurpose.get(label) ?? []), spec]);
-    }
-    return [...byPurpose.entries()];
-  }, [systemSpecs, term]);
+  const specs = useMemo(
+    () =>
+      systemSpecs.filter(
+        (s) =>
+          !term ||
+          s.name.toLowerCase().includes(term) ||
+          s.shortDescription.toLowerCase().includes(term) ||
+          (PURPOSE_SECTION_LABELS[s.purpose] ?? s.category).toLowerCase().includes(term),
+      ),
+    [systemSpecs, term],
+  );
 
   const saved = useMemo(() => {
     const systemKeys = new Set(systemSpecs.map((s) => s.key));
@@ -124,7 +127,7 @@ export function TemplateChoiceGrid({ operatingModel, templateChoice, savedTempla
     });
   }, [savedTemplates, systemSpecs, term]);
 
-  const total = groups.reduce((n, [, specs]) => n + specs.length, 0) + saved.length;
+  const total = specs.length + saved.length;
 
   return (
     <section className="space-y-4">
@@ -163,7 +166,7 @@ export function TemplateChoiceGrid({ operatingModel, templateChoice, savedTempla
                 key={t.id}
                 name={t.name}
                 description={t.short_description ?? t.description ?? ""}
-                tag={t.visibility === "private" ? "My template" : "Organisation"}
+                tags={[t.visibility === "private" ? "My template" : "Organisation"]}
                 selected={templateChoice === t.id}
                 onUse={() => onSelect(t.id, { name: t.name })}
                 onPreview={() => {
@@ -178,16 +181,20 @@ export function TemplateChoiceGrid({ operatingModel, templateChoice, savedTempla
         </div>
       ) : null}
 
-      {groups.map(([label, specs]) => (
-        <div key={label} className="space-y-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--aislix-secondary)]">{label}</h3>
+      {specs.length ? (
+        <div className="space-y-2">
+          {saved.length ? (
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--aislix-secondary)]">
+              Aislix templates
+            </h3>
+          ) : null}
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {specs.map((spec) => (
               <TemplateTile
                 key={spec.key}
                 name={spec.name}
                 description={spec.shortDescription}
-                tag={spec.recommended ? "Recommended" : undefined}
+                tags={[PURPOSE_SECTION_LABELS[spec.purpose] ?? spec.category, ...(spec.recommended ? ["Recommended"] : [])]}
                 selected={templateChoice === `system:${spec.key}`}
                 onUse={() => onSelect(`system:${spec.key}`, { name: spec.name, systemKey: spec.key })}
                 onPreview={() => setPreviewSpec(spec)}
@@ -195,7 +202,7 @@ export function TemplateChoiceGrid({ operatingModel, templateChoice, savedTempla
             ))}
           </div>
         </div>
-      ))}
+      ) : null}
 
       <TemplatePreviewSheet
         spec={previewSpec}
