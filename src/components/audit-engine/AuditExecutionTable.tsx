@@ -108,6 +108,7 @@ type Props = {
   onChange: Dispatch<SetStateAction<ResponseMap>>;
   onSaveField: (sectionKey: string, recordIndex: number, field: TemplateField, value: AuditResponseValue) => Promise<void>;
   onSaveMany: (sectionKey: string, items: SaveItem[]) => Promise<void>;
+  onRemoveRow?: (sectionKey: string, recordIndex: number) => Promise<void>;
   onUploadImage: (file: File) => Promise<string>;
   onUploadVideo?: (file: File) => Promise<string>;
   readOnly: boolean;
@@ -270,6 +271,7 @@ export function AuditExecutionTable({
   onChange,
   onSaveField,
   onSaveMany,
+  onRemoveRow,
   onUploadImage,
   onUploadVideo,
   readOnly,
@@ -676,10 +678,36 @@ export function AuditExecutionTable({
 
   const addRow = () => {
     const next = Math.max(-1, ...recordIndexes) + 1;
-    onChange((prev) => ({ ...prev, [sectionKey]: { ...(prev[sectionKey] ?? {}), [next]: {} } }));
+    onChange((prev) => {
+      const existing = prev[sectionKey] ?? {};
+      const shown = Object.fromEntries(recordIndexes.map((index) => [index, existing[index] ?? {}]));
+      return { ...prev, [sectionKey]: { ...shown, ...existing, [next]: {} } };
+    });
     setRowQuery("");
     setNeedsAttentionOnly(false);
     pager.setPage(Math.floor(recordIndexes.length / pager.pageSize));
+  };
+
+  const providedRowCount = session.inputDataset?.rows.length ?? 0;
+  const [removingRow, setRemovingRow] = useState<number | null>(null);
+  const canRemoveRow = (index: number) =>
+    Boolean(onRemoveRow) && !readOnly && index >= providedRowCount && recordIndexes.length > 1;
+  const removeRow = async (index: number) => {
+    if (!onRemoveRow) return;
+    setRemovingRow(index);
+    try {
+      await onRemoveRow(sectionKey, index);
+      onChange((prev) => {
+        const section = { ...(prev[sectionKey] ?? {}) };
+        delete section[index];
+        return { ...prev, [sectionKey]: section };
+      });
+      setHighlightRows(new Set());
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not remove this row.");
+    } finally {
+      setRemovingRow(null);
+    }
   };
 
   const displayId = auditDisplayId(session.assignmentId);
@@ -1071,7 +1099,21 @@ export function AuditExecutionTable({
                     }}
                     title={incomplete ? "This row still needs something before you can submit" : undefined}
                   >
-                    {row.position + 1}
+                    <span className="inline-flex items-center gap-1">
+                      {row.position + 1}
+                      {canRemoveRow(row.index) ? (
+                        <button
+                          type="button"
+                          className="rounded p-0.5 text-[#667085] hover:bg-[#FFEAF1] hover:text-[#102A43] disabled:opacity-50"
+                          aria-label={`Remove row ${row.position + 1}`}
+                          title="Remove this row"
+                          disabled={removingRow !== null}
+                          onClick={() => void removeRow(row.index)}
+                        >
+                          {removingRow === row.index ? <Loader2 className="size-3 animate-spin" /> : <X className="size-3" />}
+                        </button>
+                      ) : null}
+                    </span>
                   </td>
                   {columns.map((c, i) => (
                     <RowCells

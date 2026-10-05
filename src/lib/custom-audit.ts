@@ -300,6 +300,20 @@ export async function saveCustomAuditFields(input: {
   }
 }
 
+/** Remove a row the auditee added; rows provided by the manager are refused by the server. */
+export async function removeCustomAuditRow(input: {
+  assignmentId: string;
+  sectionKey: string;
+  recordIndex: number;
+}): Promise<void> {
+  const { error } = await supabase.rpc("remove_audit_row" as never, {
+    p_assignment_id: input.assignmentId,
+    p_section_key: input.sectionKey,
+    p_record_index: input.recordIndex,
+  } as never);
+  if (error) dbError(error, "Could not remove this row.");
+}
+
 /** Obsolete shelf_scans columns — must never appear on custom audit submit payloads. */
 export const OBSOLETE_SHELF_SCAN_SUBMIT_COLUMNS = ["collection_method", "user_id"] as const;
 

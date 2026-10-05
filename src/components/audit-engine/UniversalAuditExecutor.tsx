@@ -25,6 +25,7 @@ import {
   fetchCustomAuditResponses,
   loadCustomAuditSession,
   mergeInputDatasetIntoResponses,
+  removeCustomAuditRow,
   saveCustomAuditField,
   saveCustomAuditFields,
   submitCustomAudit,
@@ -182,6 +183,7 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
             items,
           })
         }
+        onRemoveRow={(sectionKey, recordIndex) => removeCustomAuditRow({ assignmentId, sectionKey, recordIndex })}
         onUploadImage={(file) => uploadCustomAuditImage(assignmentId, file)}
         onUploadVideo={(file) => uploadCustomAuditVideo(assignmentId, file)}
         readOnly={readOnly}
