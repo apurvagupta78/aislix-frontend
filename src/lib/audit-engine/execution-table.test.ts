@@ -86,6 +86,14 @@ describe("buildExecutionColumns", () => {
     const { columns } = digitalSetup("off");
     expect(columns.some((c) => c.kind === "image")).toBe(false);
   });
+
+  it("lets the auditee fill provided columns when the manager gave no rows", () => {
+    const { definition, inputSchema } = digitalSetup();
+    const columns = buildExecutionColumns(definition, inputSchema, { nothingProvided: true });
+    expect(columns.find((c) => c.key === "item_name")).toMatchObject({ editable: true, role: "fill" });
+    expect(columns.find((c) => c.key === "qty")).toMatchObject({ editable: true, role: "fill" });
+    expect(columns.find((c) => c.key === "actual_qty")?.compareWithKey).toBe("qty");
+  });
 });
 
 describe("verifyPair", () => {

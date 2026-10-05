@@ -229,7 +229,7 @@ export function parseAuditCsv(text: string, filename: string): AuditInputDataset
 
 export function validateAuditDataset(
   dataset: AuditInputDataset,
-  options: { manualColumnLimit?: number } = {},
+  options: { manualColumnLimit?: number; rowsOptional?: boolean } = {},
 ): string | null {
   if (!dataset.columns.length) return "Add at least one column.";
   if (dataset.source === "manual" && dataset.columns.length > (options.manualColumnLimit ?? 10)) {
@@ -238,7 +238,7 @@ export function validateAuditDataset(
   const names = dataset.columns.map((column) => column.name.trim().toLowerCase());
   if (names.some((name) => !name)) return "Every column needs a name.";
   if (new Set(names).size !== names.length) return "Column names must be unique.";
-  if (!dataset.rows.length) return "Add at least one data row.";
+  if (!dataset.rows.length) return options.rowsOptional ? null : "Add at least one data row.";
 
   for (const row of dataset.rows) {
     for (const column of dataset.columns) {

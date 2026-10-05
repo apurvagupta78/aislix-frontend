@@ -38,7 +38,6 @@ import { createDigitalCsvAuditTemplate } from "@/lib/audit-builder/save-custom-t
 import { buildDigitalInputSchema, syncDigitalMappings } from "@/lib/new-audit/digital-columns";
 import { AdvancedSettingsPanel } from "@/components/new-audit/AdvancedSettingsPanel";
 import { suggestBarcodeColumn, suggestShelfColumn } from "@/lib/audit-engine/grid-evidence";
-import { SimpleScratchBuilder } from "@/components/new-audit/SimpleScratchBuilder";
 import type { AuditPurpose, OperatingModel } from "@/lib/audit-builder/types";
 import type { InputSchema } from "@/lib/audit-builder/field-roles";
 import {
@@ -454,7 +453,11 @@ function NewAuditPage() {
     ];
     return mergeTemplateMinimum(evidencePolicy, minimum.length ? { requiredProof: minimum } : null);
   }, [evidencePolicy, selectedTemplate, systemTemplateDefinition, isExpiryTemplate]);
-  const datasetError = validateAuditDataset(dataset, { manualColumnLimit: 10 });
+  const isScratch = method === "digital" && startChoice === "custom";
+  const datasetError = validateAuditDataset(
+    dataset,
+    isScratch ? { manualColumnLimit: Number.POSITIVE_INFINITY, rowsOptional: true } : { manualColumnLimit: 10 },
+  );
   const auditMode = mapCaptureMethodToAuditMode(method);
   const dataDefinitionError = validateDataDefinition({
     mode: dataInputMode,
@@ -463,6 +466,7 @@ function NewAuditPage() {
     hasTemplate,
     inputSchema,
     rowCount: dataset.rows.length,
+    rowsOptional: isScratch,
   });
 
   const hasLocations =
@@ -478,9 +482,11 @@ function NewAuditPage() {
       return csvSaved && (dataset.rows.length === 0 || !datasetError);
     }
     if (startChoice === "csv") return csvUploaded && csvSaved && !datasetError;
+    if (isScratch) return csvSaved && !datasetError;
     return true;
   }, [
     startChoice,
+    isScratch,
     hasTemplate,
     templateChoice,
     method,
@@ -494,13 +500,15 @@ function NewAuditPage() {
   const digitalUploadValue = useMemo(
     () => ({
       dataset,
-      mappings: dataset.source === "csv" ? syncDigitalMappings(dataset, inputSchema.columnMappings) : [],
+      mappings:
+        dataset.source === "csv" || isScratch ? syncDigitalMappings(dataset, inputSchema.columnMappings) : [],
       saved: csvSaved,
     }),
-    [dataset, inputSchema.columnMappings, csvSaved],
+    [dataset, inputSchema.columnMappings, csvSaved, isScratch],
   );
 
-  const evidenceDataset = startChoice === "csv" && dataset.source === "csv" && dataset.columns.length ? dataset : null;
+  const evidenceDataset =
+    ((startChoice === "csv" && dataset.source === "csv") || isScratch) && dataset.columns.length ? dataset : null;
   const hasColumn = (id: string | null) => Boolean(id && evidenceDataset?.columns.some((c) => c.id === id));
   const activeShelfColumnId =
     hasColumn(shelfColumnId) && policyUsesShelfColumn(effectivePolicy) ? shelfColumnId : null;
@@ -766,7 +774,11 @@ function NewAuditPage() {
               : !csvSaved
                 ? "Save your audit data to continue."
                 : datasetError
-            : "Choose how you want to start this audit."
+            : startChoice === "custom"
+              ? !csvSaved
+                ? "Save your audit to continue."
+                : datasetError
+              : "Choose how you want to start this audit."
         : null,
     method: !method ? "Choose how the audit will be performed." : null,
     planogram:
@@ -971,10 +983,9 @@ function NewAuditPage() {
 
       const isDigitalCsvAudit =
         auditMode === "digital" &&
-        startChoice === "csv" &&
         !templateForAssignment &&
-        hasInputData &&
-        dataset.source === "csv";
+        ((startChoice === "csv" && hasInputData && dataset.source === "csv") ||
+          (isScratch && dataset.columns.length > 0));
 
       let digitalCsvTemplate: Awaited<ReturnType<typeof createDigitalCsvAuditTemplate>> | null = null;
       if (isDigitalCsvAudit) {
@@ -1239,7 +1250,11 @@ function NewAuditPage() {
       }
       if (!self) {
         void navigate({ to: "/assigned-scans" });
-      } else if (selectedTemplate || systemTemplateKey || (auditMode === "digital" && startChoice === "csv")) {
+      } else if (
+        selectedTemplate ||
+        systemTemplateKey ||
+        (auditMode === "digital" && (startChoice === "csv" || startChoice === "custom"))
+      ) {
         void navigate({
           to: "/audit/$assignmentId",
           params: { assignmentId },
@@ -1455,11 +1470,15 @@ function NewAuditPage() {
             }
             evidenceError={method === "digital" ? stepErrors.evidence : null}
             scratchBuilder={
-              <SimpleScratchBuilder
-                dataset={dataset}
-                inputSchema={inputSchema}
-                onDatasetChange={setDataset}
-                onInputSchemaChange={setInputSchema}
+              <DigitalAuditUploadPanel
+                scratch
+                value={digitalUploadValue}
+                error={csvSaved && dataset.columns.length ? datasetError : null}
+                onChange={(next) => {
+                  setDataset(next.dataset);
+                  setInputSchema(buildDigitalInputSchema(next.dataset, next.mappings));
+                  setCsvSaved(next.saved);
+                }}
               />
             }
             onStartChoiceChange={(choice) => {
@@ -1480,10 +1499,11 @@ function NewAuditPage() {
               } else if (choice === "custom") {
                 setTemplateChoice("general");
                 setDataInputMode("manual");
-                if (dataset.source === "csv") {
-                  const manual = createManualAuditDataset();
-                  setDataset(manual);
-                  setInputSchema(buildInputSchema(manual));
+                if (startChoice !== "custom") {
+                  const empty: AuditInputDataset = { source: "manual", filename: null, columns: [], rows: [] };
+                  setDataset(empty);
+                  setInputSchema(buildDigitalInputSchema(empty, []));
+                  setCsvSaved(true);
                 }
               }
             }}

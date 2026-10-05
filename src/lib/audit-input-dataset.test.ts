@@ -80,6 +80,14 @@ describe("audit input dataset", () => {
     expect(digitalProductListIssue(dataset)).toBeNull();
   });
 
+  it("allows no rows only when rows are optional (Start from Scratch)", () => {
+    const columns = [{ id: "c1", name: "SKU", type: "text" as const }];
+    const empty = { source: "manual" as const, filename: null, columns, rows: [] };
+    expect(validateAuditDataset(empty)).toBe("Add at least one data row.");
+    expect(validateAuditDataset(empty, { rowsOptional: true })).toBeNull();
+    expect(validateAuditDataset({ ...empty, columns: [] }, { rowsOptional: true })).toBe("Add at least one column.");
+  });
+
   it("rejects report-style files with no product or SKU column", () => {
     const dataset = parseAuditCsv("Field,Value\nReport ID,R-1\nStatus,Done\n", "report.csv");
     expect(digitalProductListIssue(dataset)).toMatch(/no Product Name or SKU column/);

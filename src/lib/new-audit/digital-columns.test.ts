@@ -85,6 +85,26 @@ describe("buildDigitalColumnsAudit", () => {
     expect(audit?.rows[1]?.values).toMatchObject({ actual_amount: null, remarks: "Partial refund" });
   });
 
+  it("lists the rows the auditee added when the manager gave none", () => {
+    const empty: AuditInputDataset = { ...dataset, source: "manual", filename: null, rows: [] };
+    const mappings = syncDigitalMappings(empty).map((m) =>
+      m.columnId === "d" ? { ...m, fieldRole: "reference" as const } : m,
+    );
+    const inputSchema = buildDigitalInputSchema(empty, mappings);
+    const snapshot = {
+      purpose_config: { source: DIGITAL_CSV_TEMPLATE_SOURCE, inputSchema, input_dataset: empty },
+    };
+    const audit = buildDigitalColumnsAudit(snapshot, [
+      { section_key: "records", record_index: 0, field_key: "item_name", value: "Soap" },
+      { section_key: "records", record_index: 0, field_key: "actual_amount", value: "12" },
+      { section_key: "records", record_index: 1, field_key: "item_name", value: "Salt" },
+      { section_key: "audit_evidence", record_index: 0, field_key: "context_photo", value: ["a.jpg"] },
+    ]);
+    expect(audit?.rows.map((r) => r.index)).toEqual([0, 1]);
+    expect(audit?.rows[0]?.values).toMatchObject({ item_name: "Soap", actual_amount: "12" });
+    expect(audit?.rows[1]?.values).toMatchObject({ item_name: "Salt", actual_amount: null });
+  });
+
   it("returns null for scans that are not Digital Audit uploads", () => {
     expect(buildDigitalColumnsAudit({ purpose_config: {} }, [])).toBeNull();
     expect(buildDigitalColumnsAudit(null, [])).toBeNull();

@@ -1,7 +1,7 @@
 import type { AuditEvidencePolicy } from "@/lib/audit-evidence-policy";
 import type { AuditInputDataset } from "@/lib/audit-input-dataset";
 import { isImageField } from "@/lib/audit-builder/field-library";
-import { isFieldReadOnlyForAuditor, type InputSchema } from "@/lib/audit-builder/field-roles";
+import { inferRoleFromField, isFieldReadOnlyForAuditor, type InputSchema } from "@/lib/audit-builder/field-roles";
 import { resolveFieldKey } from "@/lib/audit-builder/input-schema";
 import type { AuditResponseValue, TemplateDefinition, TemplateField } from "@/lib/audit-builder/types";
 import { RCA_OPTIONS } from "@/lib/digital-audit";
@@ -71,6 +71,8 @@ export function repeatableSectionKey(definition: TemplateDefinition): string | n
 export function buildExecutionColumns(
   definition: TemplateDefinition,
   inputSchema?: InputSchema | null,
+  /** The manager gave no rows: the auditee adds every row, so "provided" columns are theirs to fill too. */
+  opts: { nothingProvided?: boolean } = {},
 ): ExecutionColumn[] {
   const sectionKey = repeatableSectionKey(definition);
   if (!sectionKey) return [];
@@ -89,7 +91,12 @@ export function buildExecutionColumns(
     .sort((a, b) => a.order - b.order)
     .map((field) => {
       const kind = cellKind(field);
-      const editable = kind !== "calculated" && !isFieldReadOnlyForAuditor(field);
+      const unlocked =
+        opts.nothingProvided === true &&
+        (field.fieldRole ?? inferRoleFromField(field)) === "reference" &&
+        !field.calculated &&
+        !field.system;
+      const editable = kind !== "calculated" && (unlocked || !isFieldReadOnlyForAuditor(field));
       const role: ExecutionColumn["role"] =
         kind === "calculated" ? "calculated" : kind === "image" ? "evidence" : editable ? "fill" : "provided";
       const target = editable ? compareWith.get(field.key) : undefined;

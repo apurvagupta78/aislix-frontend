@@ -71,6 +71,8 @@ export function validateDataDefinition(input: {
   hasTemplate: boolean;
   inputSchema: InputSchema;
   rowCount: number;
+  /** Start from Scratch: the auditee may add every row during the audit. */
+  rowsOptional?: boolean;
 }): string | null {
   if (input.method === "ai") return null;
 
@@ -90,7 +92,7 @@ export function validateDataDefinition(input: {
   if (!input.inputSchema.columnMappings.length) {
     return "Configure at least one column before continuing.";
   }
-  if (!input.hasTemplate && input.rowCount === 0) {
+  if (!input.hasTemplate && !input.rowsOptional && input.rowCount === 0) {
     return "Add at least one data row.";
   }
   return null;

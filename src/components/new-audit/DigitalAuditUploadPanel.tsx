@@ -53,7 +53,22 @@ type Props = {
   error?: string | null;
   /** Columns come from a chosen template: template column names are locked and files fill those columns. */
   templateName?: string;
+  /** Start from Scratch: no file — the manager adds their own columns and rows. */
+  scratch?: boolean;
 };
+
+const QUICK_COLUMNS: { label: string; role: DigitalColumnRole }[] = [
+  { label: "SKU", role: "reference" },
+  { label: "Product Name", role: "reference" },
+  { label: "Barcode", role: "reference" },
+  { label: "Quantity", role: "auditor_input" },
+  { label: "Expiry", role: "auditor_input" },
+  { label: "Price", role: "auditor_input" },
+  { label: "QC Status", role: "auditor_input" },
+  { label: "Temperature", role: "auditor_input" },
+  { label: "Score", role: "auditor_input" },
+  { label: "Remarks", role: "auditor_input" },
+];
 
 function rowHasValue(row: AuditInputDataset["rows"][number]): boolean {
   return Object.values(row.values).some((v) => (v ?? "").trim());
@@ -202,7 +217,7 @@ function ColumnHeader({
   );
 }
 
-export function DigitalAuditUploadPanel({ value, onChange, error, templateName }: Props) {
+export function DigitalAuditUploadPanel({ value, onChange, error, templateName, scratch = false }: Props) {
   const isTemplate = Boolean(templateName);
   const inputRef = useRef<HTMLInputElement>(null);
   const reader = useDocumentReader();
@@ -216,7 +231,8 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName }
   const { dataset, mappings, saved } = value;
   const columns = dataset.columns;
   const rows = dataset.rows;
-  const hasData = isTemplate ? columns.length > 0 : dataset.source === "csv" && columns.length > 0;
+  const hasData = scratch || (isTemplate ? columns.length > 0 : dataset.source === "csv" && columns.length > 0);
+  const rowsOptional = isTemplate || scratch;
   const byId = new Map(mappings.map((m) => [m.columnId, m]));
   const providedColumns = columns.filter((c) => roleOf(byId.get(c.id)) === "reference");
   const auditeeCount = columns.length - providedColumns.length;
@@ -337,10 +353,10 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName }
     );
   }
 
-  function addColumn() {
+  function addColumn(base = "New column", role: DigitalColumnRole = "auditor_input") {
     const existing = new Set(columns.map((c) => c.name.trim().toLowerCase()));
-    let name = "New column";
-    for (let n = 2; existing.has(name.toLowerCase()); n += 1) name = `New column ${n}`;
+    let name = base;
+    for (let n = 2; existing.has(name.toLowerCase()); n += 1) name = `${base} ${n}`;
     const column = { id: crypto.randomUUID(), name, type: "text" as const };
     emit(
       {
@@ -354,10 +370,10 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName }
           columnId: column.id,
           columnName: name,
           dataType: "text",
-          fieldRole: "auditor_input",
+          fieldRole: role,
           aislixMapping: "custom",
-          auditorFills: true,
-          required: true,
+          auditorFills: role === "auditor_input",
+          required: role === "auditor_input",
           evidenceRequired: false,
         },
       ],
@@ -392,7 +408,11 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName }
       dataType: typed.columns.find((c) => c.id === m.columnId)?.type ?? m.dataType,
     }));
     onChange({ dataset: typed, mappings: syncDigitalMappings(typed, typedMappings), saved: true });
-    toast.success(`${plural(typed.rows.length)} saved for this audit`);
+    toast.success(
+      typed.rows.length
+        ? `${plural(typed.rows.length)} saved for this audit`
+        : `Columns saved — the auditee adds ${noun}s during the audit`,
+    );
   }
 
   function downloadCsv() {
@@ -409,12 +429,14 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName }
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h4 className="text-sm font-semibold text-[#102A43]">
-            {isTemplate ? "Template fields and lines" : "Your audit data"}
+            {isTemplate ? "Template fields and lines" : scratch ? "Create your audit" : "Your audit data"}
           </h4>
           <p className="mt-0.5 max-w-2xl text-xs text-[#667085]">
             {isTemplate
               ? `Columns start from “${templateName}” — add your own if you need more. Then list the lines to check, or fill them from a photo, PDF, CSV or Excel file.`
-              : "Photo or PDF of an invoice, stock list or price list — or a CSV / Excel file."}
+              : scratch
+                ? "No file needed — add your own columns and rows, then mark each column as already provided or for the auditee to fill."
+                : "Photo or PDF of an invoice, stock list or price list — or a CSV / Excel file."}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -423,28 +445,52 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName }
               <Download className="size-3.5" /> Download CSV
             </Button>
           ) : null}
-          <Button
-            type="button"
-            variant={hasData ? "outline" : "brand"}
-            size="sm"
-            disabled={busy !== null}
-            onClick={() => inputRef.current?.click()}
-          >
-            {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
-            {isTemplate ? "Fill from file" : hasData ? "Replace file" : "Upload file"}
-          </Button>
-          <input
-            ref={inputRef}
-            type="file"
-            className="hidden"
-            accept={DOCUMENT_ACCEPT}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (file) void handleFile(file);
-            }}
-          />
+          {scratch ? null : (
+            <>
+              <Button
+                type="button"
+                variant={hasData ? "outline" : "brand"}
+                size="sm"
+                disabled={busy !== null}
+                onClick={() => inputRef.current?.click()}
+              >
+                {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Upload className="size-3.5" />}
+                {isTemplate ? "Fill from file" : hasData ? "Replace file" : "Upload file"}
+              </Button>
+              <input
+                ref={inputRef}
+                type="file"
+                className="hidden"
+                accept={DOCUMENT_ACCEPT}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) void handleFile(file);
+                }}
+              />
+            </>
+          )}
         </div>
       </div>
+
+      {scratch ? (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-[#102A43]">Quick add a column</p>
+          <div className="flex flex-wrap gap-2">
+            {QUICK_COLUMNS.map((q) => (
+              <button
+                key={q.label}
+                type="button"
+                onClick={() => addColumn(q.label, q.role)}
+                title={`${q.label} — ${ROLE_STYLE[q.role].label}`}
+                className="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium text-[#102A43] hover:brightness-95"
+                style={{ background: ROLE_STYLE[q.role].tint, borderColor: ROLE_STYLE[q.role].border }}
+              >
+                <Plus className="size-3" /> {q.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {busy ? <DocumentBusyBanner stage={busy} detail={progress} /> : null}
       {fileError ? <DocumentErrorBanner message={fileError} /> : null}
@@ -462,12 +508,14 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName }
             <span className="inline-flex items-center gap-1.5 font-semibold text-[#102A43]">
               {isTemplate ? (
                 <LayoutTemplate className="size-4" />
+              ) : scratch ? (
+                <Plus className="size-4" />
               ) : isSheetFile ? (
                 <FileSpreadsheet className="size-4" />
               ) : (
                 <FileText className="size-4" />
               )}
-              {isTemplate ? "Template" : isSheetFile ? "CSV / Excel" : "Document"}
+              {isTemplate ? "Template" : scratch ? "From scratch" : isSheetFile ? "CSV / Excel" : "Document"}
             </span>
             {dataset.filename ? <span className="min-w-0 truncate">{dataset.filename}</span> : null}
             <span>{plural(rows.length)}</span>
@@ -528,10 +576,17 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName }
                     />
                   </label>
                 ) : null}
-                <Button type="button" variant="outline" size="sm" className="h-7" onClick={addColumn}>
+                <Button type="button" variant="outline" size="sm" className="h-7" onClick={() => addColumn()}>
                   <Plus className="size-3.5" /> Add column
                 </Button>
-                <Button type="button" variant="outline" size="sm" className="h-7" onClick={addRow}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7"
+                  disabled={!columns.length}
+                  onClick={addRow}
+                >
                   <Plus className="size-3.5" /> Add {noun}
                 </Button>
               </div>
@@ -614,13 +669,20 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName }
             ) : null}
             {rows.length ? (
               <TablePager pager={pager} noun={`${noun}s`} className="border-t border-[#D9E2E8]" />
+            ) : !columns.length ? (
+              <div className="border-t border-[#D9E2E8] px-4 py-6 text-center text-xs text-[#667085]">
+                <p className="text-sm font-medium text-[#102A43]">No columns yet</p>
+                <p className="mx-auto mt-1 max-w-md">Tap a quick-add field above, or use Add column.</p>
+              </div>
             ) : (
               <div className="border-t border-[#D9E2E8] px-4 py-6 text-center text-xs text-[#667085]">
                 <p className="text-sm font-medium text-[#102A43]">No {noun}s yet</p>
                 <p className="mx-auto mt-1 max-w-md">
                   {isTemplate
                     ? "Add the products or items to check, fill them from a file, or leave this empty and the auditee adds lines during the audit."
-                    : "Add a row to start."}
+                    : scratch
+                      ? "Add the products or items to check, or leave this empty and the auditee adds rows during the audit."
+                      : "Add a row to start."}
                 </p>
               </div>
             )}
@@ -635,8 +697,8 @@ export function DigitalAuditUploadPanel({ value, onChange, error, templateName }
             unsaved={!saved}
             unsavedText="You have unsaved changes. Save them to use this data in the audit."
             savedText={
-              isTemplate && !rows.length
-                ? "No lines added — the auditee adds lines during the audit."
+              rowsOptional && !rows.length
+                ? `No ${noun}s added — the auditee adds ${noun}s during the audit.`
                 : `${plural(rows.length)} saved for this audit.`
             }
             onSave={save}

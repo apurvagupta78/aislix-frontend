@@ -310,7 +310,20 @@ export function buildDigitalColumnsAudit(
 
   const asList = (value: unknown) => (Array.isArray(value) ? value.map(String).filter(Boolean) : []);
   const evidenceColumns = gridEvidenceColumns(purpose);
-  const rows = (dataset?.rows ?? []).map((row, index) => {
+  const fileRows = dataset?.rows ?? [];
+  const addedIndexes = [
+    ...new Set(
+      responses
+        .filter((r) => r.section_key === sectionKey && r.record_index >= fileRows.length)
+        .map((r) => r.record_index),
+    ),
+  ].sort((a, b) => a - b);
+  const sources: Array<{ index: number; values: Record<string, string> | null }> = [
+    ...fileRows.map((row, index) => ({ index, values: row.values })),
+    ...addedIndexes.map((index) => ({ index, values: null })),
+  ];
+  const rows = sources.map(({ index, values: fileValues }) => {
+    const row = { values: fileValues ?? {} };
     const evidence = asList(saved.get(`${index}:evidence_status`));
     const barcodeExpected = evidenceColumns.barcodeColumnId
       ? cellText(row.values[evidenceColumns.barcodeColumnId])
@@ -325,7 +338,7 @@ export function buildDigitalColumnsAudit(
         columns.map((c) => {
           const fromFile = cellText(row.values[columnIdOf.get(c.key) ?? ""]);
           const key = `${index}:${c.key}`;
-          if (c.role === "reference") return [c.key, fromFile];
+          if (c.role === "reference" && fileValues) return [c.key, fromFile];
           return [c.key, saved.has(key) ? cellText(saved.get(key)) : fromFile];
         }),
       ),

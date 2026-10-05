@@ -282,8 +282,11 @@ export function AuditExecutionTable({
   const { definition } = session;
   const sectionKey = repeatableSectionKey(definition) ?? "records";
   const baseColumns = useMemo(
-    () => buildExecutionColumns(definition, session.inputSchema),
-    [definition, session.inputSchema],
+    () =>
+      buildExecutionColumns(definition, session.inputSchema, {
+        nothingProvided: !session.inputDataset?.rows.length,
+      }),
+    [definition, session.inputSchema, session.inputDataset],
   );
   const fieldByKey = useMemo(() => new Map(definition.fields.map((f) => [f.key, f])), [definition]);
   const statusField = definition.fields.find((f) => f.section === sectionKey && f.key === EVIDENCE_STATUS_KEY);
