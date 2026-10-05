@@ -1,4 +1,5 @@
 import type { AssignableMember } from "@/lib/assignments";
+import { canCoverStore, isScopedMember, type StoreCoverage } from "./store-coverage";
 import type { DistributionEntry, DistributionStrategy, LocationScope, TeamScope } from "./types";
 
 export function distributeAssignments(input: {
@@ -80,23 +81,66 @@ export function buildManualMappingFromDistribution(
 /**
  * Who audits each store: the equal split by default, with per-store choices on top.
  * Choices for people who are no longer selected fall back to the split.
+ * With coverage, each store goes to the least-loaded selected person who covers it
+ * (people tagged to the store before people with no store scope).
  */
 export function storeAssigneeMapping(
   storeIds: string[],
   assignees: AssignableMember[],
   overrides: Record<string, string> = {},
+  coverage?: StoreCoverage,
 ): Record<string, string> {
-  const defaults = buildManualMappingFromDistribution(
-    distributeAssignments({ storeIds, assignees, strategy: "equal" }),
-  );
   const selected = new Set(assignees.map((a) => a.user_id));
   const mapping: Record<string, string> = {};
+
+  if (!coverage) {
+    const defaults = buildManualMappingFromDistribution(
+      distributeAssignments({ storeIds, assignees, strategy: "equal" }),
+    );
+    for (const storeId of storeIds) {
+      const chosen = overrides[storeId];
+      const assigneeId = chosen && selected.has(chosen) ? chosen : defaults[storeId];
+      if (assigneeId) mapping[storeId] = assigneeId;
+    }
+    return mapping;
+  }
+
+  const load = new Map(assignees.map((a) => [a.user_id, 0]));
+  const pending: string[] = [];
   for (const storeId of storeIds) {
     const chosen = overrides[storeId];
-    const assigneeId = chosen && selected.has(chosen) ? chosen : defaults[storeId];
-    if (assigneeId) mapping[storeId] = assigneeId;
+    if (chosen && selected.has(chosen)) {
+      mapping[storeId] = chosen;
+      load.set(chosen, (load.get(chosen) ?? 0) + 1);
+    } else {
+      pending.push(storeId);
+    }
+  }
+  for (const storeId of pending) {
+    const tagged = assignees.filter(
+      (a) => isScopedMember(coverage, a.user_id) && canCoverStore(coverage, a.user_id, storeId),
+    );
+    const open = assignees.filter((a) => !isScopedMember(coverage, a.user_id));
+    const pool = tagged.length ? tagged : open.length ? open : assignees;
+    let best: AssignableMember | undefined;
+    for (const a of pool) {
+      if (!best || (load.get(a.user_id) ?? 0) < (load.get(best.user_id) ?? 0)) best = a;
+    }
+    if (!best) continue;
+    mapping[storeId] = best.user_id;
+    load.set(best.user_id, (load.get(best.user_id) ?? 0) + 1);
   }
   return mapping;
+}
+
+/** Stores none of the selected people cover. */
+export function uncoveredStores(
+  storeIds: string[],
+  assignees: AssignableMember[],
+  coverage?: StoreCoverage,
+): string[] {
+  if (!coverage || !assignees.length) return [];
+  return storeIds.filter((storeId) => !assignees.some((a) => canCoverStore(coverage, a.user_id, storeId)));
 }
 
 export function summarizeLocationScope(scope: LocationScope): {

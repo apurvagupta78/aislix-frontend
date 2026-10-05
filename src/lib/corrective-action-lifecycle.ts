@@ -6,12 +6,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { dbError, requireOrgId, requireUserId } from "@/lib/db/context";
 import type { Finding, FindingSeverity } from "@/lib/findings";
 import { notifyMember } from "@/lib/notifications.functions";
+import { requiresRootCause } from "@/lib/corrective-action-catalog";
 
 export type LifecycleActionStatus =
   | "open"
   | "assigned"
   | "in_progress"
   | "pending_verification"
+  | "verified"
   | "resolved"
   | "rejected"
   | "overdue"
@@ -44,13 +46,29 @@ export type LifecycleAction = {
   rejection_reason: string | null;
   closed_at: string | null;
   sku: string | null;
+  code: string | null;
+  source: "ai" | "digital";
+  action_type: string | null;
+  root_cause: string | null;
+  preventive_action: string | null;
+  evidence_required: string[];
+  verification_method: string | null;
+  verification_status: string | null;
+  before_score: number | null;
+  after_score: number | null;
+  verification_scan_id: string | null;
+  escalation_level: number;
+  escalated_at: string | null;
+  submitted_at: string | null;
+  store_name: string | null;
 };
 
 export const LIFECYCLE_STATUSES: { value: LifecycleActionStatus; label: string }[] = [
   { value: "open", label: "Open" },
   { value: "assigned", label: "Assigned" },
   { value: "in_progress", label: "In progress" },
-  { value: "pending_verification", label: "Pending verification" },
+  { value: "pending_verification", label: "Submitted" },
+  { value: "verified", label: "Verified" },
   { value: "resolved", label: "Resolved" },
   { value: "rejected", label: "Rejected" },
   { value: "overdue", label: "Overdue" },
@@ -66,7 +84,7 @@ export function actionPriorityClass(priority: string): string {
 
 export function slaRemainingLabel(dueAt: string | null, status: string): string {
   if (!dueAt) return "No SLA";
-  if (["resolved", "closed"].includes(status)) return "Complete";
+  if (["resolved", "closed", "verified"].includes(status)) return "Complete";
   const ms = new Date(dueAt).getTime() - Date.now();
   const hours = Math.abs(ms) / 36e5;
   const text = hours >= 24 ? `${(hours / 24).toFixed(1)} days` : `${Math.round(hours)} hours`;
@@ -137,7 +155,7 @@ export async function fetchLifecycleActions(input: {
   status?: string;
 } = {}): Promise<LifecycleAction[]> {
   const orgId = await requireOrgId();
-  let query = supabase.from("corrective_actions").select("*").eq("org_id", orgId).order("created_at", { ascending: false }).limit(400);
+  let query = supabase.from("corrective_actions").select("*").eq("org_id", orgId).order("created_at", { ascending: false }).limit(1000);
   if (input.findingId) query = query.eq("finding_id", input.findingId);
   if (input.scanId) query = query.eq("scan_id", input.scanId);
   if (input.storeId && input.storeId !== "all") query = query.eq("store_id", input.storeId);
@@ -151,18 +169,173 @@ export async function fetchLifecycleActions(input: {
   const userIds = [
     ...new Set(rows.flatMap((r) => [r.assigned_to, r.created_by, r.verified_by]).filter(Boolean)),
   ] as string[];
-  const { data: profiles } = userIds.length
-    ? await supabase.from("profiles").select("id, full_name, email").in("id", userIds)
-    : { data: [] as { id: string; full_name: string | null; email: string | null }[] };
+  const storeIds = [...new Set(rows.map((r) => r.store_id).filter(Boolean))] as string[];
+  const [{ data: profiles }, { data: stores }] = await Promise.all([
+    userIds.length
+      ? supabase.from("profiles").select("id, full_name, email").in("id", userIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string | null; email: string | null }[] }),
+    storeIds.length
+      ? supabase.from("stores").select("id, name").in("id", storeIds)
+      : Promise.resolve({ data: [] as { id: string; name: string }[] }),
+  ]);
   const names = new Map(
     (profiles ?? []).map((p) => [p.id, p.full_name?.trim() || p.email || "Team member"]),
   );
-  return rows.map((row) => mapAction(row, names));
+  const storeNames = new Map((stores ?? []).map((s) => [s.id, s.name]));
+  return rows.map((row) => mapAction(row, names, storeNames));
 }
 
 export async function fetchLifecycleAction(id: string): Promise<LifecycleAction | null> {
-  const rows = await fetchLifecycleActions();
-  return rows.find((r) => r.id === id) ?? null;
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase
+    .from("corrective_actions")
+    .select("*")
+    .eq("org_id", orgId)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) dbError(error, "Could not load this corrective action.");
+  if (!data) return null;
+  const row = data as Record<string, unknown>;
+  const userIds = [row.assigned_to, row.created_by, row.verified_by].filter(Boolean) as string[];
+  const [{ data: profiles }, { data: store }] = await Promise.all([
+    userIds.length
+      ? supabase.from("profiles").select("id, full_name, email").in("id", userIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string | null; email: string | null }[] }),
+    row.store_id
+      ? supabase.from("stores").select("id, name").eq("id", row.store_id as string).maybeSingle()
+      : Promise.resolve({ data: null as { id: string; name: string } | null }),
+  ]);
+  const names = new Map(
+    (profiles ?? []).map((p) => [p.id, p.full_name?.trim() || p.email || "Team member"]),
+  );
+  const storeNames = new Map(store ? [[store.id, store.name]] : []);
+  return mapAction(row, names, storeNames);
+}
+
+/** Marks overdue actions and escalates them (owner's manager, then admins). Safe to call often. */
+export async function runActionEscalations(): Promise<void> {
+  const orgId = await requireOrgId();
+  await supabase.rpc("process_corrective_action_escalations", { p_org_id: orgId });
+}
+
+export async function saveActionPlan(input: {
+  actionId: string;
+  rootCause: string;
+  preventiveAction: string;
+}): Promise<void> {
+  await patchAction(
+    input.actionId,
+    {
+      root_cause: input.rootCause.trim() || null,
+      preventive_action: input.preventiveAction.trim() || null,
+    },
+    "root_cause_recorded",
+    "Root cause and preventive action recorded",
+  );
+}
+
+export async function reassignAction(input: { actionId: string; assigneeId: string }): Promise<void> {
+  const orgId = await requireOrgId();
+  await patchAction(
+    input.actionId,
+    { assigned_to: input.assigneeId, escalation_level: 0, escalated_at: null },
+    "action_reassigned",
+    "Corrective action reassigned",
+  );
+  try {
+    await notifyMember({
+      data: {
+        org_id: orgId,
+        user_id: input.assigneeId,
+        type: "action_assigned",
+        title: "Corrective action assigned",
+        body: "A corrective action was assigned to you.",
+        payload: { action_id: input.actionId },
+      },
+    });
+  } catch {
+    /* delivery is best-effort */
+  }
+}
+
+/** Upload after photos as a fresh AI audit of the same shelf; the database compares before vs after. */
+export async function startAiRecheck(input: {
+  action: LifecycleAction;
+  files: File[];
+  onUploadProgress?: (percent: number) => void;
+}): Promise<string> {
+  const { action } = input;
+  if (requiresRootCause(action.priority) && (!action.root_cause?.trim() || !action.preventive_action?.trim())) {
+    throw new Error("Add the root cause and preventive action first.");
+  }
+  if (!action.scan_id) throw new Error("This action has no original AI audit to compare against.");
+  const { data: original, error } = await supabase
+    .from("shelf_scans")
+    .select("store_id, category, sub_category, sub_category_label, category_selections, adhoc_planogram, shelf_label")
+    .eq("id", action.scan_id)
+    .maybeSingle();
+  if (error) dbError(error, "Could not load the original audit.");
+  if (!original) throw new Error("The original audit was not found.");
+
+  const { submitScanImages } = await import("@/lib/scan-api");
+  const planogram = original.adhoc_planogram as Record<string, unknown> | null;
+  const response = await submitScanImages(input.files, {
+    storeId: (original.store_id as string | null) ?? action.store_id ?? undefined,
+    shelfLabel: (original.shelf_label as string | null) ?? undefined,
+    category: (original.category as string | null) ?? undefined,
+    subCategory: (original.sub_category as string | null) ?? undefined,
+    subCategoryLabel: (original.sub_category_label as string | null) ?? undefined,
+    categorySelections: (original.category_selections as never) ?? undefined,
+    planogramPayload: planogram && !Array.isArray(planogram) ? planogram : undefined,
+    planogramItems: Array.isArray(planogram) ? (planogram as never) : undefined,
+    notes: `AI re-check for ${action.code ?? "corrective action"}`,
+    parentScanId: action.scan_id,
+    onUploadProgress: input.onUploadProgress,
+  });
+
+  const { error: startError } = await supabase.rpc("start_action_verification", {
+    p_action_id: action.id,
+    p_scan_id: response.scan_id,
+  });
+  if (startError) dbError(startError, "Could not start the AI re-check.");
+  return response.scan_id;
+}
+
+export type RecheckResult = {
+  status:
+    | "passed"
+    | "failed"
+    | "pending"
+    | "needs_review"
+    | "scan_failed"
+    | "no_scan"
+    | "not_found"
+    | "forbidden";
+  before?: number | null;
+  after?: number | null;
+};
+
+export async function runAiRecheck(actionId: string, scanId: string): Promise<RecheckResult> {
+  const { runScanAnalysis } = await import("@/lib/scan-api");
+  await runScanAnalysis(scanId);
+  return evaluateAiRecheck(actionId);
+}
+
+export async function evaluateAiRecheck(actionId: string): Promise<RecheckResult> {
+  const { data, error } = await supabase.rpc("evaluate_action_verification", { p_action_id: actionId });
+  if (error) dbError(error, "Could not check the AI re-check result.");
+  return (data ?? { status: "pending" }) as RecheckResult;
+}
+
+export async function closeVerifiedAction(input: { actionId: string; findingId?: string | null }): Promise<void> {
+  const now = new Date().toISOString();
+  await patchAction(input.actionId, { status: "closed", closed_at: now }, "action_closed", "Corrective action closed");
+  if (input.findingId) {
+    await supabase
+      .from("findings")
+      .update({ status: "closed", closed_at: now, updated_at: now })
+      .eq("id", input.findingId);
+  }
 }
 
 export async function createActionFromFinding(input: {
@@ -184,29 +357,47 @@ export async function createActionFromFinding(input: {
     input.description?.trim() ||
     `Investigate and reconcile ${Math.abs(input.finding.variance_units ?? 0)}-unit variance.`;
 
-  const { data, error } = await supabase
+  // Every finding already gets an action automatically; assigning updates that one.
+  const { data: existing } = await supabase
     .from("corrective_actions")
-    .insert({
-      org_id: orgId,
-      finding_id: input.finding.id,
-      scan_id: input.finding.scan_id,
-      store_id: input.finding.store_id,
-      comparison_id: null,
-      issue_type: input.finding.finding_type,
-      suggestion: title,
-      title,
-      description,
-      status: "assigned",
-      priority: input.finding.severity,
-      assigned_to: input.assignedTo,
-      created_by: userId,
-      sla_hours: hours,
-      due_at: dueAt,
-      start_at: new Date().toISOString(),
-      sku: input.finding.sku,
-    })
     .select("id")
-    .single();
+    .eq("finding_id", input.finding.id)
+    .maybeSingle();
+  const fields = {
+    title,
+    description,
+    status: "assigned",
+    priority: input.finding.severity,
+    assigned_to: input.assignedTo,
+    sla_hours: hours,
+    due_at: dueAt,
+    escalation_level: 0,
+    escalated_at: null,
+  };
+  const { data, error } = existing
+    ? await supabase
+        .from("corrective_actions")
+        .update({ ...fields, updated_at: new Date().toISOString() })
+        .eq("id", existing.id)
+        .select("id")
+        .single()
+    : await supabase
+        .from("corrective_actions")
+        .insert({
+          ...fields,
+          org_id: orgId,
+          finding_id: input.finding.id,
+          scan_id: input.finding.scan_id,
+          store_id: input.finding.store_id,
+          comparison_id: null,
+          issue_type: input.finding.finding_type,
+          suggestion: title,
+          created_by: userId,
+          start_at: new Date().toISOString(),
+          sku: input.finding.sku,
+        })
+        .select("id")
+        .single();
   if (error) dbError(error, "Could not create corrective action.");
 
   await supabase
@@ -270,8 +461,18 @@ export async function submitResolution(input: {
   notes: string;
   qty?: number | null;
   storagePath?: string | null;
+  priority?: string;
+  rootCause?: string | null;
+  preventiveAction?: string | null;
 }): Promise<void> {
   if (!input.notes.trim()) throw new Error("Resolution notes are required.");
+  if (
+    input.priority &&
+    requiresRootCause(input.priority) &&
+    (!input.rootCause?.trim() || !input.preventiveAction?.trim())
+  ) {
+    throw new Error("Add the root cause and preventive action first.");
+  }
   const userId = await requireUserId();
   const orgId = await requireOrgId();
   const now = new Date().toISOString();
@@ -381,7 +582,16 @@ async function patchAction(
   }
 }
 
-function mapAction(row: Record<string, unknown>, names: Map<string, string>): LifecycleAction {
+function numOrNull(value: unknown): number | null {
+  return value == null ? null : Number(value);
+}
+
+function mapAction(
+  row: Record<string, unknown>,
+  names: Map<string, string>,
+  storeNames: Map<string, string> = new Map(),
+): LifecycleAction {
+  const evidence = Array.isArray(row.evidence_required) ? (row.evidence_required as unknown[]) : [];
   return {
     id: String(row.id),
     finding_id: (row.finding_id as string) ?? null,
@@ -409,5 +619,20 @@ function mapAction(row: Record<string, unknown>, names: Map<string, string>): Li
     rejection_reason: (row.rejection_reason as string) ?? null,
     closed_at: (row.closed_at as string) ?? null,
     sku: (row.sku as string) ?? null,
+    code: (row.code as string) ?? null,
+    source: row.source === "digital" ? "digital" : "ai",
+    action_type: (row.action_type as string) ?? null,
+    root_cause: (row.root_cause as string) ?? null,
+    preventive_action: (row.preventive_action as string) ?? null,
+    evidence_required: evidence.filter((e): e is string => typeof e === "string"),
+    verification_method: (row.verification_method as string) ?? null,
+    verification_status: (row.verification_status as string) ?? null,
+    before_score: numOrNull(row.before_score),
+    after_score: numOrNull(row.after_score),
+    verification_scan_id: (row.verification_scan_id as string) ?? null,
+    escalation_level: Number(row.escalation_level ?? 0),
+    escalated_at: (row.escalated_at as string) ?? null,
+    submitted_at: (row.submitted_at as string) ?? null,
+    store_name: row.store_id ? (storeNames.get(row.store_id as string) ?? null) : null,
   };
 }

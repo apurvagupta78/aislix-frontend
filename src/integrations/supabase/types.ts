@@ -1009,6 +1009,20 @@ export type Database = {
       }
       corrective_actions: {
         Row: {
+          action_type: string | null
+          after_score: number | null
+          before_score: number | null
+          code: string | null
+          escalated_at: string | null
+          escalation_level: number
+          evidence_required: Json
+          preventive_action: string | null
+          root_cause: string | null
+          source: string | null
+          submitted_at: string | null
+          verification_method: string | null
+          verification_scan_id: string | null
+          verification_status: string | null
           assigned_to: string | null
           closed_at: string | null
           comparison_id: string | null
@@ -1041,6 +1055,20 @@ export type Database = {
           verified_by: string | null
         }
         Insert: {
+          action_type?: string | null
+          after_score?: number | null
+          before_score?: number | null
+          code?: string | null
+          escalated_at?: string | null
+          escalation_level?: number
+          evidence_required?: Json
+          preventive_action?: string | null
+          root_cause?: string | null
+          source?: string | null
+          submitted_at?: string | null
+          verification_method?: string | null
+          verification_scan_id?: string | null
+          verification_status?: string | null
           assigned_to?: string | null
           closed_at?: string | null
           comparison_id?: string | null
@@ -1073,6 +1101,20 @@ export type Database = {
           verified_by?: string | null
         }
         Update: {
+          action_type?: string | null
+          after_score?: number | null
+          before_score?: number | null
+          code?: string | null
+          escalated_at?: string | null
+          escalation_level?: number
+          evidence_required?: Json
+          preventive_action?: string | null
+          root_cause?: string | null
+          source?: string | null
+          submitted_at?: string | null
+          verification_method?: string | null
+          verification_scan_id?: string | null
+          verification_status?: string | null
           assigned_to?: string | null
           closed_at?: string | null
           comparison_id?: string | null
@@ -5131,6 +5173,32 @@ export type Database = {
         Returns: string
       }
       mark_overdue_corrective_actions: { Args: never; Returns: number }
+      member_store_coverage: {
+        Args: { p_org_id: string }
+        Returns: {
+          role: string
+          scoped: boolean
+          store_ids: string[]
+          user_id: string
+        }[]
+      }
+      process_corrective_action_escalations: {
+        Args: { p_org_id?: string }
+        Returns: Json
+      }
+      start_action_verification: {
+        Args: { p_action_id: string; p_scan_id: string }
+        Returns: undefined
+      }
+      evaluate_action_verification: {
+        Args: { p_action_id: string }
+        Returns: Json
+      }
+      sync_ai_findings_for_scan: { Args: { p_scan_id: string }; Returns: number }
+      sync_checklist_findings: {
+        Args: { p_assignment_id: string }
+        Returns: number
+      }
       notify_org_role: {
         Args: {
           p_body: string

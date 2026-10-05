@@ -1,6 +1,7 @@
 export * from "./types";
 export * from "./recurrence";
 export * from "./distribution";
+export * from "./store-coverage";
 export * from "./conflicts";
 export * from "./preview";
 export * from "./publish";

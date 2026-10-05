@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Users } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,9 @@ type Props = {
   teamScope: TeamScope;
   onTeamChange: (scope: TeamScope) => void;
   singleAssignee?: boolean;
+  /** Short tag shown next to a person, e.g. which stores they cover. */
+  memberNote?: (member: AssignableMember) => string | null;
+  footer?: ReactNode;
 };
 
 export function TeamAssignmentPanel({
@@ -18,6 +22,8 @@ export function TeamAssignmentPanel({
   teamScope,
   onTeamChange,
   singleAssignee,
+  memberNote,
+  footer,
 }: Props) {
   const toggleMember = (member: AssignableMember) => {
     if (singleAssignee) {
@@ -79,14 +85,25 @@ export function TeamAssignmentPanel({
               onCheckedChange={() => toggleMember(member)}
             />
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-medium">{member.name}</span>
+              <span className="flex items-center gap-2 text-sm font-medium">
+                {member.name}
+                {memberNote?.(member) ? (
+                  <span className="rounded-full border border-[#D9E2E8] bg-[#EEF6FA] px-1.5 py-px text-[10px] font-semibold text-[#102A43]">
+                    {memberNote(member)}
+                  </span>
+                ) : null}
+              </span>
               <span className="block truncate text-xs text-muted-foreground">
                 <span className="capitalize">{member.role}</span> · {member.email}
               </span>
             </span>
           </Label>
         ))}
+        {!members.length ? (
+          <p className="px-2 py-3 text-sm text-muted-foreground">Nobody covers the chosen stores.</p>
+        ) : null}
       </div>
+      {footer}
     </div>
   );
 }

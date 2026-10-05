@@ -15,6 +15,7 @@ import {
 } from "@/lib/db/context";
 import { notifyMember } from "@/lib/notifications.functions";
 import type { AuditEvidencePolicy } from "@/lib/audit-evidence-policy";
+import type { StoreCoverage } from "@/lib/assignment-engine/store-coverage";
 
 export type ScopeType = "category" | "sub_category" | "location" | "planogram";
 
@@ -191,6 +192,18 @@ export async function fetchAssignableMembers(): Promise<AssignableMember[]> {
       email,
     };
   });
+}
+
+/** Which stores each member covers (own stores, managed stores and their team's stores). */
+export async function fetchMemberStoreCoverage(): Promise<StoreCoverage> {
+  const orgId = await requireOrgId();
+  const { data, error } = await supabase.rpc("member_store_coverage", { p_org_id: orgId });
+  if (error) dbError(error, "Could not load which stores each person covers.");
+  const coverage: StoreCoverage = {};
+  for (const row of data ?? []) {
+    coverage[row.user_id] = { scoped: Boolean(row.scoped), storeIds: row.store_ids ?? [] };
+  }
+  return coverage;
 }
 
 const ITEM_SELECT =

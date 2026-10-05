@@ -7,7 +7,11 @@ import { AppShell } from "@/components/AppShell";
 import { PageHeader } from "@/components/design-system";
 import { Button } from "@/components/ui/button";
 import { fetchStores } from "@/lib/account";
-import { createScanAssignment, fetchAssignableMembers } from "@/lib/assignments";
+import {
+  createScanAssignment,
+  fetchAssignableMembers,
+  fetchMemberStoreCoverage,
+} from "@/lib/assignments";
 import { fetchAuditTemplate, fetchAuditTemplates, templateToDefinition } from "@/lib/audit-templates";
 import { hydrateFromSavedTemplate } from "@/lib/audit-builder/load-saved-template-audit";
 import {
@@ -273,6 +277,11 @@ function NewAuditPage() {
   const membersQuery = useQuery({
     queryKey: ["assignable-members", "new-audit"],
     queryFn: fetchAssignableMembers,
+  });
+  const coverageQuery = useQuery({
+    queryKey: ["member-store-coverage"],
+    queryFn: fetchMemberStoreCoverage,
+    retry: false,
   });
   const templatesQuery = useQuery({
     queryKey: ["audit-templates", "new-audit", "all"],
@@ -622,8 +631,13 @@ function NewAuditPage() {
     [teamScope, membersQuery.data],
   );
   const storeAssignees = useMemo(
-    () => storeAssigneeMapping(locationScope.storeIds, selectedAssignees, storeAssigneeOverrides),
-    [locationScope.storeIds, selectedAssignees, storeAssigneeOverrides],
+    () => storeAssigneeMapping(
+        locationScope.storeIds,
+        selectedAssignees,
+        storeAssigneeOverrides,
+        coverageQuery.data,
+      ),
+    [locationScope.storeIds, selectedAssignees, storeAssigneeOverrides, coverageQuery.data],
   );
   const distributionStrategy: DistributionStrategy = assignToSelf ? "equal" : "manual";
   const teamScopeForPlan = useMemo<TeamScope>(
@@ -1566,6 +1580,7 @@ function NewAuditPage() {
                 onAssignToSelfChange={setAssignToSelf}
                 stores={locationScope.stores ?? []}
                 storeAssignees={storeAssignees}
+                coverage={coverageQuery.data}
                 onStoreAssigneeChange={(id, userId) =>
                   setStoreAssigneeOverrides((current) => ({ ...current, [id]: userId }))
                 }
