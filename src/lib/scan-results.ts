@@ -199,6 +199,8 @@ export type ScanResult = {
   /** Aislix calc layer over Astra CV (preferred for shelf-only UI). */
   aislix_shelf_analysis?: Record<string, unknown>;
   aislix_planogram_analysis?: Record<string, unknown>;
+  /** Customer document lines saved with the scan (every column as uploaded, incl. extra_fields). */
+  reference_items?: Array<Record<string, unknown>>;
   /** Full metrics blob from scan_results — used to recover Astra blocks. */
   metrics?: Record<string, unknown>;
   /** Prices, promotions, and shelf issues returned at the top level of Astra JSON. */
@@ -1001,6 +1003,12 @@ export async function fetchScanResult(scanId: string, signal?: AbortSignal): Pro
       intel.astra_analysis = normalizeAstraAnalysis({ astra_analysis: intel.astra_analysis });
     }
     scanResult.retail_intelligence = intel as ScanResult["retail_intelligence"];
+  }
+  const referenceItems = ((scan as any).adhoc_planogram?.reference?.items ?? null) as unknown;
+  if (Array.isArray(referenceItems) && referenceItems.length) {
+    scanResult.reference_items = referenceItems.filter(
+      (item): item is Record<string, unknown> => !!item && typeof item === "object" && !Array.isArray(item),
+    );
   }
   if (adhocParsed.analysis_mode) scanResult.analysis_mode = adhocParsed.analysis_mode;
   else if (metricsAnalysisMode) scanResult.analysis_mode = metricsAnalysisMode;

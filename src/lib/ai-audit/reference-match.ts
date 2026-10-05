@@ -97,6 +97,8 @@ export type ReferenceMatch = {
     reading_quality?: string | null;
     storage_path?: string | null;
     mime_type?: string | null;
+    /** Extra document / CSV column headers, in document order. */
+    extra_columns: string[];
   };
   count_pending: boolean;
   verdict: ReferenceVerdict | null;
@@ -211,6 +213,9 @@ export function normalizeReferenceMatch(raw: unknown): ReferenceMatch | undefine
       reading_quality: strOrNull(doc.reading_quality),
       storage_path: strOrNull(doc.storage_path),
       mime_type: strOrNull(doc.mime_type),
+      extra_columns: Array.isArray(doc.extra_columns)
+        ? doc.extra_columns.map((h) => String(h ?? "").trim()).filter(Boolean)
+        : [],
     },
     count_pending: r.count_pending === true,
     verdict: VERDICTS.has(verdict) ? verdict : null,

@@ -240,6 +240,11 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
       actual: row.actual_facings,
     }));
 
+  const catHasCompliance = analysis.category_analysis.some((c) => c.compliance_percent != null);
+  const catHasStatus = analysis.category_analysis.some((c) => Boolean(c.status));
+  const subHasCompliance = analysis.subcategory_analysis.some((c) => c.compliance_percent != null);
+  const subHasStatus = analysis.subcategory_analysis.some((c) => Boolean(c.status));
+
   const comparison = planogramComparisonFromResult(data, null);
   const astraCvProducts = pickAstraCvProducts(data);
 
@@ -394,7 +399,12 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
       ) : null}
 
       {analysis.reference_match ? (
-        <ReferenceMatchSection scanId={data.scan_id} match={analysis.reference_match} imageUrl={imageUrl} />
+        <ReferenceMatchSection
+          scanId={data.scan_id}
+          match={analysis.reference_match}
+          imageUrl={imageUrl}
+          documentItems={data.reference_items}
+        />
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[auto,1fr]">
@@ -645,7 +655,11 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
       {analysis.category_analysis.length ? (
         <AiAuditCard
           title="Category analysis"
-          description="Category facings, share, and compliance"
+          description={
+            catHasCompliance
+              ? "Category facings, share, and compliance"
+              : "Expected vs counted facings and share per category"
+          }
           csvDownload={{
             onDownload: () =>
               downloadSectionCsv(
@@ -681,8 +695,12 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
               { key: "af", header: "Total Facings", cell: (r) => countCell(r.actual_facings) },
               { key: "es", header: "Exp share %", cell: (r) => pctCell(r.expected_share_percent) },
               { key: "as", header: "Act share %", cell: (r) => pctCell(r.actual_share_percent) },
-              { key: "cp", header: "Compliance %", cell: (r) => pctCell(r.compliance_percent) },
-              { key: "st", header: "Status", cell: (r) => statusBadge(r.status) },
+              ...(catHasCompliance
+                ? [{ key: "cp", header: "Compliance %", cell: (r: AstraPlanogramCategoryAnalysis) => pctCell(r.compliance_percent) }]
+                : []),
+              ...(catHasStatus
+                ? [{ key: "st", header: "Status", cell: (r: AstraPlanogramCategoryAnalysis) => statusBadge(r.status) }]
+                : []),
             ]}
           />
         </AiAuditCard>
@@ -719,8 +737,12 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
               },
               { key: "ef", header: "Exp facings", cell: (r) => r.expected_facings },
               { key: "af", header: "Total Facings", cell: (r) => countCell(r.actual_facings) },
-              { key: "cp", header: "Compliance %", cell: (r) => pctCell(r.compliance_percent) },
-              { key: "st", header: "Status", cell: (r) => statusBadge(r.status) },
+              ...(subHasCompliance
+                ? [{ key: "cp", header: "Compliance %", cell: (r: AstraPlanogramSubcategoryAnalysis) => pctCell(r.compliance_percent) }]
+                : []),
+              ...(subHasStatus
+                ? [{ key: "st", header: "Status", cell: (r: AstraPlanogramSubcategoryAnalysis) => statusBadge(r.status) }]
+                : []),
             ]}
           />
         </AiAuditCard>

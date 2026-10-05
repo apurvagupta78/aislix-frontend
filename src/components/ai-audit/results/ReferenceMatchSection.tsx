@@ -73,6 +73,51 @@ function qtyCell(line: ReferenceMatchLine, countPending: boolean) {
   return line.shelf_units;
 }
 
+type DocumentItem = Record<string, unknown>;
+type DocumentColumn = { key: string; header: string; value: (item: DocumentItem) => string };
+
+function cellText(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  return String(value).trim();
+}
+
+function itemExtra(item: DocumentItem): Record<string, unknown> {
+  const extra = item.extra_fields;
+  return extra && typeof extra === "object" && !Array.isArray(extra) ? (extra as Record<string, unknown>) : {};
+}
+
+/** The uploaded lines as a table: standard columns, then every extra column as printed. Empty columns are hidden. */
+function documentColumns(items: DocumentItem[], extraColumns: string[]): DocumentColumn[] {
+  const extraHeaders = extraColumns.length
+    ? extraColumns
+    : [...new Set(items.flatMap((item) => Object.keys(itemExtra(item))))];
+  const columns: DocumentColumn[] = [
+    { key: "brand", header: "Brand", value: (i) => cellText(i.brand) },
+    { key: "product", header: "Product", value: (i) => cellText(i.product_name) },
+    { key: "variant", header: "Variant", value: (i) => cellText(i.variant) },
+    {
+      key: "qty",
+      header: "Qty",
+      value: (i) => [cellText(i.invoice_qty), cellText(i.quantity_unit)].filter(Boolean).join(" "),
+    },
+    {
+      key: "price",
+      header: "Price",
+      value: (i) => (cellText(i.expected_price) ? `₹${cellText(i.expected_price)}` : ""),
+    },
+    { key: "location", header: "Location", value: (i) => cellText(i.expected_location) },
+    { key: "promo", header: "Promo", value: (i) => cellText(i.expected_promo) },
+    ...extraHeaders
+      .filter((header) => !/^(promo|offer|scheme|deal)/i.test(header))
+      .map((header) => ({
+        key: `extra:${header}`,
+        header,
+        value: (i: DocumentItem) => cellText(itemExtra(i)[header]),
+      })),
+  ];
+  return columns.filter((column) => items.some((item) => column.value(item)));
+}
+
 function useDocumentUrl(path: string | null | undefined): string | null {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
@@ -124,15 +169,20 @@ export function ReferenceMatchSection({
   scanId,
   match,
   imageUrl,
+  documentItems = [],
 }: {
   scanId: string;
   match: ReferenceMatch;
   imageUrl: string | null | undefined;
+  /** Document lines saved with the scan — shown as the uploaded table. */
+  documentItems?: DocumentItem[];
 }) {
   const [showExtra, setShowExtra] = useState(false);
   const { metrics: m, document: doc, count_pending: countPending } = match;
   const documentUrl = useDocumentUrl(doc.storage_path);
   const isPdf = (doc.mime_type ?? "").includes("pdf");
+  const docColumns = documentColumns(documentItems, doc.extra_columns);
+  const showDocumentTable = docColumns.length > 0 && (!documentUrl || isPdf);
   const verdict = match.verdict ? VERDICT[match.verdict] : null;
   const docLabel = doc.source === "csv" ? "CSV / Excel" : documentTypeLabel(doc.document_type);
   const showPromo = match.lines.some((line) => line.expected_promo || line.shelf_promotion);
@@ -299,7 +349,54 @@ export function ReferenceMatchSection({
         </p>
       </AiAuditCard>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      {showDocumentTable ? (
+        <AiAuditCard
+          title="Your document"
+          description={`${doc.filename ?? docLabel} · ${documentItems.length} line${documentItems.length === 1 ? "" : "s"} as uploaded`}
+          csvDownload={{
+            onDownload: () =>
+              downloadSectionCsv(
+                scanId,
+                "your-document",
+                ["Line", ...docColumns.map((c) => c.header)],
+                documentItems.map((item, i) => [
+                  cellText(item.line_no) || i + 1,
+                  ...docColumns.map((c) => c.value(item)),
+                ]),
+              ),
+          }}
+        >
+          <AiAuditMetricTable
+            rows={documentItems}
+            rowKey={(item) => `${cellText(item.line_no)}-${cellText(item.product_name)}`}
+            columns={[
+              {
+                key: "line",
+                header: "Line",
+                cell: (item: DocumentItem) => cellText(item.line_no) || "—",
+              },
+              ...docColumns.map((column) => ({
+                key: column.key,
+                header: column.header,
+                cell: (item: DocumentItem) => column.value(item) || "—",
+              })),
+            ]}
+          />
+          {documentUrl && isPdf ? (
+            <a
+              href={documentUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 inline-block text-xs font-semibold text-[#102A43] underline"
+            >
+              Open PDF
+            </a>
+          ) : null}
+        </AiAuditCard>
+      ) : null}
+
+      <div className={cn("grid gap-4", !showDocumentTable && "lg:grid-cols-2")}>
+        {showDocumentTable ? null : (
         <AiAuditCard title="Your document" description={doc.filename ?? docLabel}>
           {documentUrl && !isPdf ? (
             <img
@@ -320,6 +417,7 @@ export function ReferenceMatchSection({
             </div>
           )}
         </AiAuditCard>
+        )}
         <AiAuditCard title="Shelf scanned" description="Photo the AI checked">
           {imageUrl ? (
             <img

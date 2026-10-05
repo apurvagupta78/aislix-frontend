@@ -314,7 +314,19 @@ const CSV_ALIASES: Record<CsvField, string[]> = {
   ],
   variant: ["variant", "flavour", "flavor", "type"],
   pack_size: ["pack", "pack size", "size", "weight", "uom size", "net weight"],
-  qty: ["qty", "quantity", "invoice qty", "units", "expected qty", "count", "pcs", "nos"],
+  qty: [
+    "qty",
+    "quantity",
+    "invoice qty",
+    "units",
+    "expected qty",
+    "expected shelf units",
+    "shelf units",
+    "expected units",
+    "count",
+    "pcs",
+    "nos",
+  ],
   unit: ["unit", "uom", "quantity unit"],
   price: [
     "price",
@@ -491,26 +503,76 @@ function variantWithPack(row: ReferenceRow): string {
   return [row.variant.trim(), row.pack_size.trim()].filter(Boolean).join(" ");
 }
 
+/** Planogram columns a document / CSV may carry as extra columns (Aislix planogram template and common variants). */
+const PLANOGRAM_EXTRA: Record<
+  "category" | "sub_category" | "facings" | "min_facings" | "max_facings" | "shelf_position" | "sku" | "avg_daily_sales",
+  string[]
+> = {
+  category: ["category", "category name"],
+  sub_category: ["sub category", "subcategory", "sub category name"],
+  facings: ["expected facings", "facings", "planned facings", "planogram facings", "target facings"],
+  min_facings: ["min facings", "minimum facings"],
+  max_facings: ["max facings", "maximum facings"],
+  shelf_position: ["shelf position", "position", "shelf level"],
+  sku: ["product id", "sku", "sku id", "sku code"],
+  avg_daily_sales: ["avg daily sales", "average daily sales", "daily sales"],
+};
+
+function extraText(row: Pick<ReferenceRow, "extra">, key: keyof typeof PLANOGRAM_EXTRA): string {
+  const aliases = PLANOGRAM_EXTRA[key];
+  for (const [header, value] of Object.entries(row.extra ?? {})) {
+    if (aliases.includes(normHeader(header)) && text(value)) return text(value);
+  }
+  return "";
+}
+
+function extraNumber(row: Pick<ReferenceRow, "extra">, key: keyof typeof PLANOGRAM_EXTRA): number | undefined {
+  return num(extraText(row, key)) ?? undefined;
+}
+
+/** The document's own category / sub-category (most common value across lines), when it has those columns. */
+export function referenceDocumentScope(rows: ReferenceRow[]): { category: string | null; subCategory: string | null } {
+  const mostCommon = (key: "category" | "sub_category") => {
+    const counts = new Map<string, number>();
+    for (const row of usableReferenceRows(rows)) {
+      const value = extraText(row, key);
+      if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  };
+  return { category: mostCommon("category"), subCategory: mostCommon("sub_category") };
+}
+
 /**
- * Expected products for Astra + the planogram matcher. Presence is the target (1 facing);
- * document quantity / price / bin travel separately as reference items.
+ * Expected products for Astra + the planogram matcher. A planogram document's own facings,
+ * min / max, shelf units, category and position are the targets; other documents only
+ * expect presence (1 facing). Document quantity / price / bin also travel as reference items.
  */
 export function referenceRowsToPlanogramRows(
   rows: ReferenceRow[],
   scope: { category?: string | null; subCategory?: string | null },
 ): PlanogramRow[] {
-  return usableReferenceRows(rows).map((row) => ({
-    ...emptyRow(),
-    location: row.location.trim() || "—",
-    category: scope.category?.trim() || "",
-    sub_category: scope.subCategory?.trim() || "",
-    brand: row.brand.trim(),
-    product_name: productName(row),
-    variant: variantWithPack(row),
-    expected_qty: 1,
-    expected_facings: 1,
-    mrp_inr: row.price ?? undefined,
-  }));
+  return usableReferenceRows(rows).map((row) => {
+    const facings = extraNumber(row, "facings");
+    return {
+      ...emptyRow(),
+      location: row.location.trim() || "—",
+      category: extraText(row, "category") || scope.category?.trim() || "",
+      sub_category: extraText(row, "sub_category") || scope.subCategory?.trim() || "",
+      brand: row.brand.trim(),
+      product_name: productName(row),
+      variant: variantWithPack(row),
+      expected_qty: facings ?? 1,
+      expected_facings: facings ?? 1,
+      min_facings: extraNumber(row, "min_facings"),
+      max_facings: extraNumber(row, "max_facings"),
+      expected_shelf_units: facings !== undefined ? (row.qty ?? undefined) : undefined,
+      mrp_inr: row.price ?? undefined,
+      avg_daily_sales: extraNumber(row, "avg_daily_sales"),
+      sku: extraText(row, "sku"),
+      shelf_position: extraText(row, "shelf_position"),
+    };
+  });
 }
 
 export const PROMO_COLUMN = "Promo";
@@ -536,8 +598,8 @@ export function referenceItemsForScan(
     product_name: productName(row),
     variant: variantWithPack(row) || null,
     pack_size: row.pack_size.trim() || null,
-    category: scope.category?.trim() || null,
-    sub_category: scope.subCategory?.trim() || null,
+    category: extraText(row, "category") || scope.category?.trim() || null,
+    sub_category: extraText(row, "sub_category") || scope.subCategory?.trim() || null,
     invoice_qty: row.qty,
     quantity_unit: row.unit.trim() || null,
     expected_price: row.price,

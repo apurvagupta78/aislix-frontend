@@ -71,6 +71,7 @@ import {
 import { buildAiPlanogramPreviewSummary } from "@/lib/new-audit/ai-vision-context";
 import {
   referencePayloadFromContext,
+  referenceScope,
   withReferencePlanogramRows,
 } from "@/lib/new-audit/reference-context";
 import {
@@ -80,6 +81,7 @@ import {
 } from "@/lib/new-audit/planogram-setup";
 import { DEMO_ORAL_CARE_META } from "@/lib/demo-oral-care-planogram";
 import { EMPTY_SCAN_CONTEXT, type ScanContextState } from "@/lib/scan-context";
+import { EMPTY_PLANOGRAM_META } from "@/lib/planogram-meta";
 import { TemplateChecklistPreview } from "@/components/new-audit/TemplateChecklistPreview";
 import { buildTemplateDataset, isTemplateColumn, templateHasLines } from "@/lib/new-audit/template-dataset";
 import { recordRecentTemplate } from "@/lib/new-audit/recent-templates";
@@ -126,6 +128,12 @@ import {
   type TeamScope,
 } from "@/lib/assignment-engine";
 import { fetchOrgAssignments } from "@/lib/assignments";
+
+/** No preset category: document audits take it from the document, shelf audits from the picker. */
+const NEW_AUDIT_SCAN_CONTEXT: ScanContextState = {
+  ...EMPTY_SCAN_CONTEXT,
+  planogramMeta: { ...EMPTY_PLANOGRAM_META, category: "" },
+};
 
 export const Route = createFileRoute("/new-audit")({
   head: () => ({ meta: [{ title: "New Audit — Aislix" }] }),
@@ -219,7 +227,7 @@ function NewAuditPage() {
   const [aiPlanogramChoice, setAiPlanogramChoice] = useState<NewAuditPlanogramChoice | null>(
     null,
   );
-  const [demoScanContext, setDemoScanContext] = useState<ScanContextState>(EMPTY_SCAN_CONTEXT);
+  const [demoScanContext, setDemoScanContext] = useState<ScanContextState>(NEW_AUDIT_SCAN_CONTEXT);
   /** Scan context sent to the AI audit — reference document lines become the expected products. */
   const aiScanContext = useMemo(
     () =>
@@ -871,7 +879,7 @@ function NewAuditPage() {
     setMethodTouched(true);
     if (next !== "ai") {
       setAiPlanogramChoice(null);
-      setDemoScanContext(EMPTY_SCAN_CONTEXT);
+      setDemoScanContext(NEW_AUDIT_SCAN_CONTEXT);
       setAiChecks([]);
       setAiQuestion("");
       setCaptureFiles([]);
@@ -1095,10 +1103,10 @@ function NewAuditPage() {
           ...(reference ? { reference } : {}),
           audit_role: demoScanContext.auditRole,
           scan_category: reference
-            ? demoScanContext.planogramMeta?.category || null
+            ? referenceScope(aiScanContext).category
             : (demoScanContext.planogramMeta?.category ?? DEMO_ORAL_CARE_META.category),
           scan_sub_category: reference
-            ? demoScanContext.planogramMeta?.sub_category || null
+            ? referenceScope(aiScanContext).subCategory
             : (demoScanContext.planogramMeta?.sub_category ?? DEMO_ORAL_CARE_META.sub_category),
         };
       } else if (usesTemplateDemoPlanogram) {
