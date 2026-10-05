@@ -46,14 +46,19 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
   const [responses, setResponses] = useState<ResponseMap>({});
   const [submitProblem, setSubmitProblem] = useState<SubmitProblem | null>(null);
 
+  // No background refetch: it would replace the auditee's local table and drop rows not saved yet.
   const sessionQuery = useQuery({
     queryKey: ["custom-audit-session", assignmentId],
     queryFn: () => loadCustomAuditSession(assignmentId),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const responsesQuery = useQuery({
     queryKey: ["custom-audit-responses", assignmentId],
     queryFn: () => fetchCustomAuditResponses(assignmentId),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   useEffect(() => {
