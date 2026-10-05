@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/select";
 import { EmptyState, ErrorState } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
-import { accentAt } from "@/lib/ai-audit/kpi-palette";
+import type { AislixAccent } from "@/lib/ai-audit/kpi-palette";
 import {
   ACTION_SOURCES,
   ACTION_STAGES,
@@ -86,6 +86,9 @@ function CorrectiveActionsLayout() {
 }
 
 const PAGE_SIZE = 50;
+
+/** Semantic accents, with no same accent next to each other across or down the 4-column grid. */
+const KPI_ACCENTS: AislixAccent[] = ["purple", "blue", "pink", "green", "cyan", "pink", "green", "grey"];
 
 function FilterSelect({
   value,
@@ -337,7 +340,7 @@ function CorrectiveActionsMain() {
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {kpiCards.map((card, i) => (
-              <CaKpiCard key={card.label} {...card} accent={i === 7 ? "grey" : accentAt(i)} />
+              <CaKpiCard key={card.label} {...card} accent={KPI_ACCENTS[i] ?? "grey"} />
             ))}
           </div>
 

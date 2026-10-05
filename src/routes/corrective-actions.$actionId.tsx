@@ -379,12 +379,23 @@ function ActionDetailPage() {
         <div className="grid gap-4 lg:grid-cols-2">
           <Section title="What was found" description="The finding that raised this action." accent={AISLIX_PALETTE.blue}>
             {finding ? (
-              <dl className="grid grid-cols-2 gap-4">
-                <Fact label="Product" value={finding.product_name || finding.sku || "—"} />
-                <Fact label="Finding" value={hideModelNames(finding.title)} />
-                <Fact label="Expected" value={<span className="tabular-nums">{finding.expected_value ?? "—"}</span>} />
-                <Fact label="Found" value={<span className="tabular-nums">{finding.actual_value ?? "—"}</span>} />
-              </dl>
+              <>
+                <dl className="grid grid-cols-2 gap-4">
+                  <Fact label="Finding" value={hideModelNames(finding.title)} />
+                  {finding.product_name || finding.sku ? (
+                    <Fact label="Product" value={finding.product_name || finding.sku} />
+                  ) : null}
+                  {finding.expected_value != null ? (
+                    <Fact label="Expected" value={<span className="tabular-nums">{finding.expected_value}</span>} />
+                  ) : null}
+                  {finding.actual_value != null ? (
+                    <Fact label="Found" value={<span className="tabular-nums">{finding.actual_value}</span>} />
+                  ) : null}
+                </dl>
+                {finding.description ? (
+                  <p className="mt-3 text-sm text-navy">{hideModelNames(finding.description)}</p>
+                ) : null}
+              </>
             ) : (
               <p className="text-sm text-mp-muted">{hideModelNames(action.description ?? action.suggestion)}</p>
             )}
