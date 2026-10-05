@@ -831,10 +831,12 @@ function NewAuditPage() {
       : "Assign to myself and start now"
     : storeCount > 1 || selectedAssignees.length > 1
       ? selectedAssignees
-          .map((m) => {
-            const stores = locationScope.storeIds.filter((id) => storeAssignees[id] === m.user_id).length;
-            return `${m.name} · ${stores} ${stores === 1 ? "store" : "stores"}`;
-          })
+          .map((m) => ({
+            name: m.name,
+            stores: locationScope.storeIds.filter((id) => storeAssignees[id] === m.user_id).length,
+          }))
+          .filter((m) => m.stores > 0)
+          .map((m) => `${m.name} · ${m.stores} ${m.stores === 1 ? "store" : "stores"}`)
           .join("\n") || "—"
       : teamScope.assigneeIds
           .map(
