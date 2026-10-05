@@ -366,8 +366,12 @@ type ServerCompletion = {
   missingRcaCount: number;
   missingEvidenceCount: number;
   missingExpiryCoverageRecords: number;
-  issues: { type: string; label?: string; count?: number; minimum?: number }[];
+  issues: { type: string; label?: string; count?: number; minimum?: number; distanceM?: number }[];
 };
+
+function formatMeters(m: number): string {
+  return m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
+}
 
 /** Plain-English lines for the server-side completion check. */
 export function describeServerIssues(result: ServerCompletion): string[] {
@@ -411,6 +415,22 @@ export function describeServerIssues(result: ServerCompletion): string[] {
       case "expired_removal":
         out.push(`${n} expired ${plural(n, "product still needs", "products still need")} to be marked removed, with a photo.`);
         break;
+      case "photo_unchecked":
+        out.push(`${n} ${plural(n, "photo hasn't", "photos haven't")} been checked by Aislix yet. Try submitting again in a moment.`);
+        break;
+      case "photo_refused":
+        out.push(`${n} ${plural(n, "photo breaks", "photos break")} the audit's photo rules. Remove ${plural(n, "it", "them")} and take a new photo.`);
+        break;
+      case "barcode_mismatch":
+        out.push(`${n} scanned ${plural(n, "barcode doesn't", "barcodes don't")} match the expected barcode. Check the product and scan again.`);
+        break;
+      case "outside_store": {
+        const distance = Number(issue.distanceM);
+        out.push(
+          `Your saved location is outside the store area${Number.isFinite(distance) && distance > 0 ? ` (${formatMeters(distance)} away)` : ""}. Go to the store and tap Update location.`,
+        );
+        break;
+      }
       default:
         if (issue.label) out.push(`${friendlyLabel(issue.label)} is still missing.`);
     }

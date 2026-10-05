@@ -141,4 +141,46 @@ describe("grid evidence", () => {
     expect(result.get("device_metadata")?.ok).toBe(true);
     expect(result.get("variance_explanation")).toMatchObject({ ok: false, missing: ["Row 3"] });
   });
+
+  it("blocks a location outside the store only when the manager turned it on", () => {
+    const responses = {
+      [AUDIT_EVIDENCE_SECTION]: {
+        0: { gps: JSON.stringify({ lat: 1, lng: 2, accuracyM: 5, capturedAt: "x", storeCheck: "outside", storeDistanceM: 900 }) },
+      },
+    };
+    const run = (blockOutsideStore: boolean) =>
+      byId(
+        evaluateGridEvidence({
+          policy: { requiredProof: ["gps"], blockOutsideStore },
+          requireRca: false,
+          dataset: null,
+          columns: { shelfColumnId: null, barcodeColumnId: null },
+          rows: [],
+          responses,
+        }),
+      ).get("gps");
+    expect(run(false)?.ok).toBe(true);
+    expect(run(true)).toMatchObject({ ok: false, missing: ["Outside the store area"] });
+  });
+
+  it("blocks scanned barcodes that don't match the expected one only when turned on", () => {
+    const scanned: GridEvidenceRow[] = [
+      { ...rows[0]!, values: { barcode_scan: "8901" }, barcodeExpected: "8901" },
+      { ...rows[1]!, values: { barcode_scan: "1234" }, barcodeExpected: null },
+      { ...rows[2]!, values: { barcode_scan: "9999" }, barcodeExpected: "8903" },
+    ];
+    const run = (blockBarcodeMismatch: boolean) =>
+      byId(
+        evaluateGridEvidence({
+          policy: { requiredProof: ["barcode"], blockBarcodeMismatch },
+          requireRca: false,
+          dataset,
+          columns: { shelfColumnId: null, barcodeColumnId: "c3" },
+          rows: scanned,
+          responses: {},
+        }),
+      ).get("barcode");
+    expect(run(false)).toMatchObject({ ok: true, done: 3 });
+    expect(run(true)).toMatchObject({ ok: false, done: 2, missing: ["Row 3 (doesn't match)"] });
+  });
 });

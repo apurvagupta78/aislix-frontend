@@ -58,8 +58,11 @@ export function uploadOptionsForPolicy(
   };
 }
 
+/** Stores the photo and returns its ref, plus any server review flags. Throws when the server refuses it. */
+export type UploadImage = (file: File) => Promise<string | { url: string; flags?: string[] }>;
+
 /** Upload one evidence photo with in-app quality and duplicate checks for this session. */
-export function useEvidenceUpload(onUploadImage: (file: File) => Promise<string>) {
+export function useEvidenceUpload(onUploadImage: UploadImage) {
   const hashByUrlRef = useRef<Record<string, string>>({});
   const similarByUrlRef = useRef<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
@@ -93,7 +96,11 @@ export function useEvidenceUpload(onUploadImage: (file: File) => Promise<string>
       ) {
         flags.push(SIMILAR_PHOTO_FLAG);
       }
-      const url = await onUploadImage(file);
+      const uploaded = await onUploadImage(file);
+      const url = typeof uploaded === "string" ? uploaded : uploaded.url;
+      if (typeof uploaded !== "string") {
+        for (const f of uploaded.flags ?? []) if (!flags.includes(f)) flags.push(f);
+      }
       hashByUrlRef.current[url] = fileHash;
       if (visualHash) similarByUrlRef.current[url] = visualHash;
       return { url, flags };

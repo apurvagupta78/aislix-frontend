@@ -193,6 +193,41 @@ export function AdvancedSettingsPanel({
         </div>
       ) : null}
 
+      {evidencePolicy.requiredProof.includes("gps") || evidencePolicy.requiredProof.includes("barcode") ? (
+        <div className="grid gap-4 rounded-xl border border-[#D9E2E8] bg-[#F4F7F9] p-4 md:grid-cols-2">
+          {evidencePolicy.requiredProof.includes("gps") ? (
+            <Label className="flex cursor-pointer items-start gap-3">
+              <Checkbox
+                checked={evidencePolicy.blockOutsideStore === true}
+                onCheckedChange={(v) => onEvidencePolicyChange({ blockOutsideStore: v === true })}
+              />
+              <span>
+                <span className="block text-sm font-medium">Block submit outside the store</span>
+                <span className="block text-xs font-normal text-[#667085]">
+                  The auditee can&apos;t submit while their location is outside the store area. Stores
+                  without a location set are not checked.
+                </span>
+              </span>
+            </Label>
+          ) : null}
+          {evidencePolicy.requiredProof.includes("barcode") ? (
+            <Label className="flex cursor-pointer items-start gap-3">
+              <Checkbox
+                checked={evidencePolicy.blockBarcodeMismatch === true}
+                onCheckedChange={(v) => onEvidencePolicyChange({ blockBarcodeMismatch: v === true })}
+              />
+              <span>
+                <span className="block text-sm font-medium">Block submit when a barcode doesn&apos;t match</span>
+                <span className="block text-xs font-normal text-[#667085]">
+                  Every scanned barcode must match the one in your file. Rows without an expected
+                  barcode are not checked.
+                </span>
+              </span>
+            </Label>
+          ) : null}
+        </div>
+      ) : null}
+
       {showShelfPicker || showBarcodePicker ? (
         <div className="grid gap-4 rounded-xl border border-[#D9E2E8] bg-[#F4F7F9] p-4 md:grid-cols-2">
           {showShelfPicker ? (
@@ -308,7 +343,8 @@ export function AdvancedSettingsPanel({
         <div>
           <p className="text-sm font-semibold text-[#102A43]">Photo rules</p>
           <p className="text-xs text-[#667085]">
-            Checked on the auditee&apos;s phone when each photo is added.
+            Checked on the auditee&apos;s phone when each photo is added, then checked again on the
+            Aislix server before the audit can be submitted.
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">

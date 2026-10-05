@@ -29,6 +29,7 @@ import {
   parseDeviceMetadata,
   parseGps,
 } from "@/lib/audit-engine/grid-evidence";
+import { verifyEvidencePhoto } from "@/lib/audit-engine/evidence-photo.functions";
 import { syncFindingsForScan } from "@/lib/findings";
 import { AuditSubmitError, describeMissingCells } from "@/lib/audit-engine/submit-readiness";
 import type { InputSchema } from "@/lib/audit-builder/field-roles";
@@ -600,6 +601,26 @@ export async function uploadCustomAuditImage(
   });
   if (error) dbError(error, "Could not upload image.");
   return `${AUDIT_EVIDENCE_REF_PREFIX}${path}`;
+}
+
+/**
+ * Upload, then have the server re-check the photo against the audit's photo rules and every
+ * earlier photo in the organisation. A refused photo throws; if the check itself can't run now,
+ * the photo is kept and checked again before submit.
+ */
+export async function uploadVerifiedAuditImage(
+  assignmentId: string,
+  file: File,
+): Promise<{ url: string; flags: string[] }> {
+  const url = await uploadCustomAuditImage(assignmentId, file);
+  let result: Awaited<ReturnType<typeof verifyEvidencePhoto>>;
+  try {
+    result = await verifyEvidencePhoto({ data: { assignmentId, ref: url } });
+  } catch {
+    return { url, flags: [] };
+  }
+  if (result.blocking) throw new Error(result.message ?? "This photo doesn't meet the audit's photo rules.");
+  return { url, flags: result.flags };
 }
 
 export const MAX_CUSTOM_AUDIT_VIDEO_BYTES = 100 * 1024 * 1024;

@@ -11,6 +11,9 @@ export type AuditCompletionIssue = {
   required?: number;
   verified?: number;
   missingPhotos?: number;
+  /** outside_store: metres from the store, and the store's radius. */
+  distanceM?: number;
+  radiusM?: number;
 };
 
 export type AuditCompletionResult = {

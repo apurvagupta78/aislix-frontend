@@ -227,6 +227,22 @@ describe("server-side messages", () => {
         ],
       }),
     ).toEqual(["Contextual shelf photo needs at least 3 photos.", "3 rows still need at least 2 photos."]);
+    expect(
+      describeServerIssues({
+        missingRcaCount: 0,
+        missingEvidenceCount: 4,
+        missingExpiryCoverageRecords: 0,
+        issues: [
+          { type: "photo_refused", count: 1 },
+          { type: "barcode_mismatch", count: 2 },
+          { type: "outside_store", count: 1, distanceM: 1600 },
+        ],
+      }),
+    ).toEqual([
+      "1 photo breaks the audit's photo rules. Remove it and take a new photo.",
+      "2 scanned barcodes don't match the expected barcode. Check the product and scan again.",
+      "Your saved location is outside the store area (1.6 km away). Go to the store and tap Update location.",
+    ]);
   });
 
   it("keeps the title and items on AuditSubmitError", () => {

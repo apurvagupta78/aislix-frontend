@@ -15,6 +15,7 @@ import { ErrorState, Skeleton } from "@/components/States";
 import { toUserMessage } from "@/lib/api/errors";
 import type { AuditResponseValue, TemplateField } from "@/lib/audit-builder/types";
 import { validateAuditCompletion } from "@/lib/audit-engine/completion";
+import { verifyPendingEvidencePhotos } from "@/lib/audit-engine/evidence-photo.functions";
 import { AuditSubmitError, describeServerIssues } from "@/lib/audit-engine/submit-readiness";
 import {
   auditExecutionPath,
@@ -29,8 +30,8 @@ import {
   saveCustomAuditField,
   saveCustomAuditFields,
   submitCustomAudit,
-  uploadCustomAuditImage,
   uploadCustomAuditVideo,
+  uploadVerifiedAuditImage,
   type CustomAuditSession,
   type ResponseMap,
 } from "@/lib/custom-audit";
@@ -93,9 +94,18 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
 
   const submitMutation = useMutation({
     mutationFn: async () => {
+      const sweep = testMode
+        ? null
+        : await verifyPendingEvidencePhotos({ data: { assignmentId } }).catch(() => null);
       const completion = await validateAuditCompletion(assignmentId);
       if (!completion.ok && !testMode) {
-        throw new AuditSubmitError("This audit isn't finished yet.", describeServerIssues(completion));
+        const refusedReasons = [...new Set((sweep?.refused ?? []).map((r) => r.message).filter(Boolean))].map(
+          (reason) => `Refused photo: ${reason}`,
+        );
+        throw new AuditSubmitError("This audit isn't finished yet.", [
+          ...describeServerIssues(completion),
+          ...refusedReasons,
+        ]);
       }
       // Prefer latest persisted responses so submit matches what the auditor saved,
       // then overlay in-memory edits (deep-merge by section/record).
@@ -189,7 +199,7 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
           })
         }
         onRemoveRow={(sectionKey, recordIndex) => removeCustomAuditRow({ assignmentId, sectionKey, recordIndex })}
-        onUploadImage={(file) => uploadCustomAuditImage(assignmentId, file)}
+        onUploadImage={(file) => uploadVerifiedAuditImage(assignmentId, file)}
         onUploadVideo={(file) => uploadCustomAuditVideo(assignmentId, file)}
         readOnly={readOnly}
         testMode={testMode}
@@ -258,7 +268,7 @@ export function UniversalAuditExecutor({ assignmentId, testMode = false }: Unive
           responses={responses}
           onChange={setResponses}
           onSaveField={handleSaveField}
-          onUploadImage={(file) => uploadCustomAuditImage(assignmentId, file)}
+          onUploadImage={(file) => uploadVerifiedAuditImage(assignmentId, file)}
           readOnly={readOnly}
           testMode={testMode}
           evidencePolicy={session.evidencePolicy}
@@ -312,7 +322,7 @@ function FormAuditEvidence({
   const capture = useAuditEvidenceCapture({
     responses,
     setValue,
-    onUploadImage: (file) => uploadCustomAuditImage(assignmentId, file),
+    onUploadImage: (file) => uploadVerifiedAuditImage(assignmentId, file),
     onUploadVideo: (file) => uploadCustomAuditVideo(assignmentId, file),
     policy: session.evidencePolicy,
     storeLocation: session.storeLocation,

@@ -160,6 +160,8 @@ function parseEvidencePolicy(raw: unknown): AuditEvidencePolicy | null {
     qualityChecks: Array.isArray(value.qualityChecks) ? value.qualityChecks : [],
     reviewMode: value.reviewMode ?? "manager",
     ...(value.nearExpiryDays !== undefined ? { nearExpiryDays: Number(value.nearExpiryDays) } : {}),
+    ...(value.blockOutsideStore ? { blockOutsideStore: true } : {}),
+    ...(value.blockBarcodeMismatch ? { blockBarcodeMismatch: true } : {}),
   };
 }
 

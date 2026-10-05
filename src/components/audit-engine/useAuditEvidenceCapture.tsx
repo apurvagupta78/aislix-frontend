@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { uploadOptionsForPolicy, useEvidenceUpload } from "@/components/audit-builder/useEvidenceUpload";
+import { uploadOptionsForPolicy, useEvidenceUpload, type UploadImage } from "@/components/audit-builder/useEvidenceUpload";
 import { AuditEvidencePanel, targetId, type EvidenceTarget } from "@/components/audit-engine/AuditEvidencePanel";
 import type { AuditResponseValue, TemplateField } from "@/lib/audit-builder/types";
 import { encodeEvidenceFlag } from "@/lib/audit-engine/execution-table";
@@ -39,7 +39,7 @@ type SetValue = (section: string, recordIndex: number, field: TemplateField, val
 export function useAuditEvidenceCapture(input: {
   responses: ResponseMap;
   setValue: SetValue;
-  onUploadImage: (file: File) => Promise<string>;
+  onUploadImage: UploadImage;
   onUploadVideo?: (file: File) => Promise<string>;
   policy: Partial<AuditEvidencePolicy> | null | undefined;
   storeLocation?: StoreLocation | null;

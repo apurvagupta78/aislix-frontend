@@ -24,6 +24,10 @@ export type AuditEvidencePolicy = {
   maximumEvidenceAgeMinutes: number;
   qualityChecks: Array<"blur" | "dark" | "glare" | "duplicate_hash" | "similarity_review">;
   reviewMode: "none" | "manager" | "independent" | "supervisor_receipt";
+  /** GPS: refuse submit while the saved location is outside the store area. */
+  blockOutsideStore?: boolean;
+  /** Barcode scan: refuse submit while a scanned barcode differs from the expected one. */
+  blockBarcodeMismatch?: boolean;
 };
 
 export const EVIDENCE_PROOF_OPTIONS: Array<{
@@ -173,8 +177,8 @@ export const QUALITY_CHECK_OPTIONS: Array<{ value: QualityCheck; label: string; 
   { value: "blur", label: "Blurry photos", description: "Rejected — the auditee retakes it." },
   { value: "dark", label: "Dark photos", description: "Rejected — the auditee retakes it." },
   { value: "glare", label: "Glare / washed out", description: "Rejected — the auditee retakes it." },
-  { value: "duplicate_hash", label: "Same photo twice", description: "Rejected — every photo must be new." },
-  { value: "similarity_review", label: "Very similar photos", description: "Allowed, but flagged for the reviewer." },
+  { value: "duplicate_hash", label: "Same photo twice", description: "Rejected — every photo must be new, across all your audits." },
+  { value: "similarity_review", label: "Very similar photos", description: "Allowed, but flagged for the reviewer — across all your audits." },
 ];
 
 /** 0 = no limit. */

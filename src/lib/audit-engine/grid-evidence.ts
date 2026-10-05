@@ -214,6 +214,8 @@ export type GridEvidenceRow = {
   values: Record<string, AuditResponseValue | undefined>;
   hasMismatch: boolean;
   rowEvidenceStatus: "verified" | "needs_review" | "missing" | "not_required";
+  /** Barcode the row should have (from the manager's file), when known. */
+  barcodeExpected?: string | null;
 };
 
 export type GridRequirementId = EvidenceProof | "variance_explanation" | "expired_removal";
@@ -323,15 +325,24 @@ export function evaluateGridEvidence(input: {
         break;
       }
       case "barcode": {
-        const missing = input.rows.filter((r) => !String(r.values[BARCODE_SCAN_KEY] ?? "").trim());
+        const scanned = (r: GridEvidenceRow) => String(r.values[BARCODE_SCAN_KEY] ?? "").trim();
+        const unscanned = input.rows.filter((r) => !scanned(r));
+        const mismatched = input.policy?.blockBarcodeMismatch
+          ? input.rows.filter((r) => scanned(r) && r.barcodeExpected && !barcodeMatches(r.barcodeExpected, scanned(r)))
+          : [];
+        const bad = unscanned.length + mismatched.length;
         out.push({
           id: proof,
           label: labelOf(proof),
-          hint: input.rows.length ? "Scan the barcode on every product row." : "No product rows yet — nothing to scan.",
-          done: input.rows.length - missing.length,
+          hint: !input.rows.length
+            ? "No product rows yet — nothing to scan."
+            : input.policy?.blockBarcodeMismatch
+              ? "Scan the barcode on every product row. It must match the expected barcode."
+              : "Scan the barcode on every product row.",
+          done: input.rows.length - bad,
           total: input.rows.length,
-          ok: missing.length === 0,
-          missing: missing.map(rowLabel),
+          ok: bad === 0,
+          missing: [...unscanned.map(rowLabel), ...mismatched.map((r) => `${rowLabel(r)} (doesn't match)`)],
         });
         break;
       }
@@ -364,9 +375,24 @@ export function evaluateGridEvidence(input: {
         }
         break;
       }
-      case "gps":
-        single(proof, "Your location is recorded automatically — allow location access if asked.", parseGps(audit[GPS_KEY]) !== null);
+      case "gps": {
+        const fix = parseGps(audit[GPS_KEY]);
+        const outside = Boolean(input.policy?.blockOutsideStore) && fix?.storeCheck === "outside";
+        if (outside) {
+          out.push({
+            id: proof,
+            label: labelOf(proof),
+            hint: "You must be at the store to submit. Go to the store, then tap Update location.",
+            done: 0,
+            total: 1,
+            ok: false,
+            missing: ["Outside the store area"],
+          });
+        } else {
+          single(proof, "Your location is recorded automatically — allow location access if asked.", fix !== null);
+        }
         break;
+      }
       case "device_metadata":
         out.push({
           id: proof,

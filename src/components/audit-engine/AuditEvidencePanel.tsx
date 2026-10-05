@@ -333,9 +333,10 @@ export function AuditEvidencePanel({
                     ) : (
                       <span className="text-[#667085]">{gpsError ?? (locating ? "Getting your location…" : "Location not captured yet.")}</span>
                     )}
-                    {!readOnly && !gps ? (
+                    {!readOnly && (!gps || gps.storeCheck === "outside" || gps.storeCheck === "near_store") ? (
                       <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" disabled={locating} onClick={onRetryGps}>
-                        {locating ? <Loader2 className="size-3.5 animate-spin" /> : <MapPin className="size-3.5" />} Allow location
+                        {locating ? <Loader2 className="size-3.5 animate-spin" /> : <MapPin className="size-3.5" />}{" "}
+                        {gps ? "Update location" : "Allow location"}
                       </Button>
                     ) : null}
                   </div>

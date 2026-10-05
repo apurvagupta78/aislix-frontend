@@ -14,7 +14,7 @@ import { toast } from "sonner";
 
 import { TablePager, usePager } from "@/components/design-system/TablePager";
 import { EvidenceImage } from "@/components/audit-builder/AuditExecutionForm";
-import { uploadOptionsForPolicy, useEvidenceUpload } from "@/components/audit-builder/useEvidenceUpload";
+import { uploadOptionsForPolicy, useEvidenceUpload, type UploadImage } from "@/components/audit-builder/useEvidenceUpload";
 import { ExpiryStatusPill, formatIsoDate } from "@/components/audit-engine/ExpiryStatusPill";
 import { SubmitBlockersPanel, type SubmitProblem } from "@/components/audit-engine/SubmitBlockersPanel";
 import { useAuditEvidenceCapture } from "@/components/audit-engine/useAuditEvidenceCapture";
@@ -109,7 +109,7 @@ type Props = {
   onSaveField: (sectionKey: string, recordIndex: number, field: TemplateField, value: AuditResponseValue) => Promise<void>;
   onSaveMany: (sectionKey: string, items: SaveItem[]) => Promise<void>;
   onRemoveRow?: (sectionKey: string, recordIndex: number) => Promise<void>;
-  onUploadImage: (file: File) => Promise<string>;
+  onUploadImage: UploadImage;
   onUploadVideo?: (file: File) => Promise<string>;
   readOnly: boolean;
   testMode?: boolean;
@@ -396,6 +396,7 @@ export function AuditExecutionTable({
       values: r.values,
       hasMismatch: r.hasMismatch,
       rowEvidenceStatus: r.evidence.status,
+      barcodeExpected: showBarcodeColumn ? expectedBarcodeOf(r) : null,
     })),
     responses,
     today,

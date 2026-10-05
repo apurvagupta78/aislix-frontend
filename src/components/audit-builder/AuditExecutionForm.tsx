@@ -26,7 +26,7 @@ import { isFieldVisible } from "@/lib/audit-builder/rules-engine";
 import { isImageField } from "@/lib/audit-builder/field-library";
 import { resolveAuditEvidenceUrl } from "@/lib/custom-audit";
 import { shouldBlockDuplicates, shouldCheckImageQuality } from "@/lib/audit-builder/evidence-validation";
-import { uploadOptionsForPolicy, useEvidenceUpload } from "@/components/audit-builder/useEvidenceUpload";
+import { uploadOptionsForPolicy, useEvidenceUpload, type UploadImage } from "@/components/audit-builder/useEvidenceUpload";
 import { DEVICE_METADATA_KEY, auditEvidenceValues, parseDeviceMetadata } from "@/lib/audit-engine/grid-evidence";
 import type { AuditEvidencePolicy } from "@/lib/audit-evidence-policy";
 import { computeCompletion } from "@/lib/audit-builder/validation";
@@ -54,7 +54,7 @@ type Props = {
     field: TemplateField,
     value: AuditResponseValue,
   ) => Promise<void>;
-  onUploadImage: (file: File) => Promise<string>;
+  onUploadImage: UploadImage;
   readOnly?: boolean;
   testMode?: boolean;
   previewMode?: boolean;
