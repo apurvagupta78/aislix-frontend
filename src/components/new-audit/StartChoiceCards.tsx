@@ -66,9 +66,9 @@ export function StartChoiceCards({
     <section className="space-y-4">
       {!hideHeader ? (
         <div>
-          <h2 className="text-lg font-semibold">How do you want to start?</h2>
+          <h2 className="text-lg font-semibold">What should Aislix work with?</h2>
           <p className="text-sm text-muted-foreground">
-            Upload a document, pick a template, or build your own.
+            Upload documents, templates, evidence, images, or other reference material to set up your audit.
           </p>
         </div>
       ) : null}

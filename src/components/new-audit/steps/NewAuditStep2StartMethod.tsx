@@ -48,6 +48,10 @@ type Props = {
   operatingModelError?: string | null;
 };
 
+const STEP_3_TITLE = "What should Aislix work with?";
+const STEP_3_DESCRIPTION =
+  "Upload documents, templates, evidence, images, or other reference material to set up your audit.";
+
 export function NewAuditStep2StartMethod({
   method,
   startChoice,
@@ -80,17 +84,12 @@ export function NewAuditStep2StartMethod({
   const isAi = method === "ai";
 
   if (isAi) {
-    const shelfOnly = aiPlanogramChoice === "without";
     return (
       <NewAuditStepSection
         id="step-3-start"
         stepNumber={3}
-        title={shelfOnly ? "Tell Aislix what you're auditing" : "Upload your document"}
-        description={
-          shelfOnly
-            ? "No document — AI analyses whatever is visible. Pick the category, then tell AI what to look at."
-            : "An invoice, stock list, price list, PDF, photo or CSV becomes an editable CSV. AI audits the shelf against it — like a Digital Audit, but the AI does the checking."
-        }
+        title={STEP_3_TITLE}
+        description={STEP_3_DESCRIPTION}
         complete={complete}
         error={planogramError}
       >
@@ -112,8 +111,8 @@ export function NewAuditStep2StartMethod({
     <NewAuditStepSection
       id="step-3-start"
       stepNumber={3}
-      title="How do you want to start?"
-      description="Pick one starting method for this audit."
+      title={STEP_3_TITLE}
+      description={STEP_3_DESCRIPTION}
       complete={complete}
       error={error}
     >
