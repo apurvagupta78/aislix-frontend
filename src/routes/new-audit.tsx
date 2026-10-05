@@ -792,7 +792,9 @@ function NewAuditPage() {
             : aiPlanogramChoice === "reference"
               ? aiScanContext.reference?.saved === false
                 ? "Save your document lines to continue."
-                : "Upload your document or CSV to continue."
+                : aiScanContext.reference?.meta?.source === "manual"
+                  ? "Type at least one product to continue."
+                  : "Upload your document or CSV to continue."
               : "Complete role, category, and sub-category."
           : method === "ai" && !aiAnalysisReady(aiAnalysisRequest)
             ? "Tick at least one thing for AI to analyse, or ask a question."
