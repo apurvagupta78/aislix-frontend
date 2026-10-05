@@ -3,7 +3,7 @@ import type { Json } from "@/integrations/supabase/types";
 import { GENERIC_SCAN, parseApiDetail } from "@/lib/api-errors";
 import { parseAiAnalysisRequest, type AiAnalysisRequest } from "@/lib/ai-audit/ai-analysis";
 import { runLunaAnalysis } from "@/lib/ai-audit/luna-analysis.server";
-import { buildLunaEvidence, shelfProductsFromRows } from "@/lib/ai-audit/luna-evidence";
+import { buildLunaEvidence, shelfProductsFromRows, shelfPromotionsFromAstra } from "@/lib/ai-audit/luna-evidence";
 import { findReferenceMatch } from "@/lib/ai-audit/reference-match";
 import {
   hashForBucket,
@@ -67,6 +67,7 @@ async function attachLunaAnalysis(payload: Record<string, unknown>, request: AiA
       totalFacings: products.reduce((sum, p) => sum + p.facings, 0),
       countPending: metrics.scan_complete === false,
       photoCount: typeof multiPhoto?.photo_count === "number" ? multiPhoto.photo_count : 1,
+      promotions: shelfPromotionsFromAstra(metrics.astra_cv_analysis ?? payload.astra_cv_analysis),
     }),
   );
   payload.metrics = { ...metrics, luna_analysis: analysis };

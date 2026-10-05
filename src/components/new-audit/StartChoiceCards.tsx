@@ -68,7 +68,7 @@ export function StartChoiceCards({
         <div>
           <h2 className="text-lg font-semibold">What should Aislix work with?</h2>
           <p className="text-sm text-muted-foreground">
-            Upload documents, templates, evidence, images, or other reference material to set up your audit.
+            Upload planogram, documents, templates, evidence, images, or other reference material to set up your audit.
           </p>
         </div>
       ) : null}

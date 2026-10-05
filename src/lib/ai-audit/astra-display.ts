@@ -9,6 +9,7 @@ import {
   type NormalizedAstraAnalysis,
 } from "@/lib/ai-audit/astra-response";
 import { operatingModelLabel } from "@/lib/ai-audit/astra-analysis";
+import { shelfPromotionsFromAstra } from "@/lib/ai-audit/luna-evidence";
 import {
   pickCalculatedMetrics,
   pickExecutionRisk,
@@ -108,6 +109,17 @@ function extractExtras(
       merged.visible_promotions = pickArray(block.visible_promotions);
     }
     if (pickArray(block.shelf_issues).length) merged.shelf_issues = pickArray(block.shelf_issues);
+  }
+
+  const readOffers = shelfPromotionsFromAstra(metrics?.astra_cv_analysis ?? result.astra_cv_analysis);
+  if (readOffers.length) {
+    merged.visible_promotions = readOffers.map((p) => ({
+      product_or_brand: p.product ?? undefined,
+      promotion_text: p.promotion,
+      promotion_type: p.promotion_type ?? undefined,
+      promo_price: p.promo_price,
+      location_label: p.location,
+    }));
   }
 
   if (analysis.mode === "planogram" || analysis.mode === "shelf_only") {

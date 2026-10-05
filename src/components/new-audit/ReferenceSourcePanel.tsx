@@ -38,6 +38,8 @@ type Props = {
   subCategory?: string | null;
   /** Guests: AI document reading needs a workspace, so only CSV / Excel is parsed in the browser. */
   spreadsheetOnly?: boolean;
+  /** "manual": the user types the product list (no upload); edits apply immediately. */
+  mode?: "upload" | "manual";
 };
 
 const SPREADSHEET_ACCEPT = ".csv,.xlsx,.xls,text/csv";
@@ -71,7 +73,9 @@ export function ReferenceSourcePanel({
   category,
   subCategory,
   spreadsheetOnly = false,
+  mode = "upload",
 }: Props) {
+  const manual = mode === "manual";
   const inputRef = useRef<HTMLInputElement>(null);
   const reader = useDocumentReader();
   const [busy, setBusy] = useState<null | "upload" | "read" | "csv">(null);
@@ -141,7 +145,7 @@ export function ReferenceSourcePanel({
     if (column?.numeric && parsed !== null && !Number.isFinite(parsed as number)) return;
     onChange({
       ...value,
-      saved: false,
+      saved: manual,
       rows: value.rows.map((row) =>
         row.id === id
           ? { ...row, [field]: parsed, check_fields: row.check_fields.filter((f) => f !== field) }
@@ -154,20 +158,20 @@ export function ReferenceSourcePanel({
     if (!value) return;
     onChange({
       ...value,
-      saved: false,
+      saved: manual,
       rows: value.rows.map((row) => (row.id === id ? { ...row, extra: { ...row.extra, [header]: raw } } : row)),
     });
   }
 
   function removeRow(id: string) {
     if (!value) return;
-    onChange({ ...value, saved: false, rows: value.rows.filter((row) => row.id !== id) });
+    onChange({ ...value, saved: manual, rows: value.rows.filter((row) => row.id !== id) });
   }
 
   function addRow() {
-    const base = value ?? { meta: emptyReferenceMeta("csv", null), rows: [] };
+    const base = value ?? { meta: emptyReferenceMeta(manual ? "manual" : "csv", null), rows: [] };
     const nextLine = Math.max(0, ...base.rows.map((r) => r.line_no)) + 1;
-    onChange({ ...base, saved: false, rows: [...base.rows, emptyReferenceRow(nextLine)] });
+    onChange({ ...base, saved: manual, rows: [...base.rows, emptyReferenceRow(nextLine)] });
   }
 
   function saveRows() {
@@ -189,14 +193,16 @@ export function ReferenceSourcePanel({
     <div className="space-y-4 rounded-2xl border border-[#D9E2E8] bg-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h4 className="text-sm font-semibold text-[#102A43]">Your document</h4>
+          <h4 className="text-sm font-semibold text-[#102A43]">{manual ? "Your product list" : "Your document"}</h4>
           <p className="mt-0.5 text-xs text-[#667085]">
-            {spreadsheetOnly
-              ? "CSV or Excel export of an invoice, purchase order, pick list or price list. Invoice photos and PDFs are read in your free workspace."
-              : "Photo or PDF of an invoice, purchase order, pick list, price list or handwritten list — or a CSV / Excel file."}
+            {manual
+              ? "Type the products that should be on the shelf. Only Product or Brand is needed — fill Qty, Price, Location or Promo to have AI check those too."
+              : spreadsheetOnly
+                ? "CSV or Excel export of an invoice, purchase order, pick list or price list. Invoice photos and PDFs are read in your free workspace."
+                : "Photo or PDF of an invoice, purchase order, pick list, price list or handwritten list — or a CSV / Excel file."}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className={cn("flex flex-wrap gap-2", manual && "hidden")}>
           {rows.length ? (
             <Button type="button" variant="outline" size="sm" onClick={downloadCsv}>
               <Download className="size-3.5" /> Download CSV
@@ -229,7 +235,7 @@ export function ReferenceSourcePanel({
 
       {error ? <DocumentErrorBanner message={error} /> : null}
 
-      {meta && rows.length ? (
+      {meta && rows.length && !manual ? (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-[#D9E2E8] bg-[#F4F7F9] px-4 py-3 text-xs text-[#667085]">
           <span className="inline-flex items-center gap-1.5 font-semibold text-[#102A43]">
             {meta.source === "csv" ? <FileSpreadsheet className="size-4" /> : <FileText className="size-4" />}
@@ -257,7 +263,7 @@ export function ReferenceSourcePanel({
         </ul>
       ) : null}
 
-      {rows.length ? (
+      {rows.length || manual ? (
         <>
           <p className="text-xs text-[#667085]">
             <span
@@ -296,7 +302,7 @@ export function ReferenceSourcePanel({
                       {header}
                     </th>
                   ))}
-                  <th className="px-2 py-2 font-semibold">As printed</th>
+                  {manual ? null : <th className="px-2 py-2 font-semibold">As printed</th>}
                   <th className="px-2 py-2" />
                 </tr>
               </thead>
@@ -336,14 +342,16 @@ export function ReferenceSourcePanel({
                         />
                       </td>
                     ))}
-                    <td className="max-w-[220px] px-2 py-1.5 text-[11px] text-[#667085]">
-                      <span className="line-clamp-2" title={row.raw_text}>
-                        {row.raw_text || "—"}
-                      </span>
-                      {row.confidence != null && row.confidence < LOW_CONFIDENCE ? (
-                        <span className="text-[10px]">Read confidence {Math.round(row.confidence * 100)}%</span>
-                      ) : null}
-                    </td>
+                    {manual ? null : (
+                      <td className="max-w-[220px] px-2 py-1.5 text-[11px] text-[#667085]">
+                        <span className="line-clamp-2" title={row.raw_text}>
+                          {row.raw_text || "—"}
+                        </span>
+                        {row.confidence != null && row.confidence < LOW_CONFIDENCE ? (
+                          <span className="text-[10px]">Read confidence {Math.round(row.confidence * 100)}%</span>
+                        ) : null}
+                      </td>
+                    )}
                     <td className="px-1 py-1">
                       <Button
                         type="button"
@@ -366,15 +374,19 @@ export function ReferenceSourcePanel({
               <Plus className="size-3.5" /> Add line
             </Button>
             <p className="text-[11px] text-[#667085]">
-              Each line is checked on the shelf: is it there, how many, at what price, in which bin.
+              {manual
+                ? `${usable} product${usable === 1 ? "" : "s"} listed · each is checked on the shelf: is it there, how many, at what price, where, and any offer.`
+                : "Each line is checked on the shelf: is it there, how many, at what price, in which bin."}
             </p>
           </div>
-          <DocumentSaveBar
-            unsaved={unsaved}
-            unsavedText="You have unsaved changes. Save them to use these lines in the audit."
-            savedText={`${usable} line${usable === 1 ? "" : "s"} saved for this audit.`}
-            onSave={saveRows}
-          />
+          {manual ? null : (
+            <DocumentSaveBar
+              unsaved={unsaved}
+              unsavedText="You have unsaved changes. Save them to use these lines in the audit."
+              savedText={`${usable} line${usable === 1 ? "" : "s"} saved for this audit.`}
+              onSave={saveRows}
+            />
+          )}
         </>
       ) : !busy ? (
         <button

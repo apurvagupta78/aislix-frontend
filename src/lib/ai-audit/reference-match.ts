@@ -37,6 +37,13 @@ export type ReferenceMatchLine = {
   visible_price: string | number | null;
   price_status: string | null;
   price_difference: number | null;
+  /** Promotion the document lists for this line (Promo / Offer / Scheme column). */
+  expected_promo: string | null;
+  /** Offer Astra read on the shelf for this line; null when none was readable. */
+  shelf_promotion: string | null;
+  shelf_promo_price: string | number | null;
+  /** PROMO_SEEN / PROMO_NOT_SEEN / UNEXPECTED_PROMO / NO_EXPECTED / NOT_ON_SHELF; null before promo reading. */
+  promo_status: string | null;
 };
 
 export type ReferenceExtraProduct = {
@@ -47,6 +54,8 @@ export type ReferenceExtraProduct = {
   shelf_units: number | null;
   shelf_location_label: string | null;
   visible_price: string | number | null;
+  shelf_promotion: string | null;
+  shelf_promo_price: string | number | null;
 };
 
 export type ReferenceMatchMetrics = {
@@ -70,6 +79,11 @@ export type ReferenceMatchMetrics = {
   location_match_percent: number | null;
   locations_on_document: number;
   not_on_document: number;
+  /** Null for scans made before promotion reading. */
+  promo_lines_expected: number | null;
+  promo_lines_seen: number | null;
+  promo_lines_not_seen: number | null;
+  shelf_promotions_read: number | null;
 };
 
 export type ReferenceMatch = {
@@ -158,6 +172,10 @@ function normalizeLine(raw: unknown, index: number): ReferenceMatchLine {
     visible_price: priceValue(r.visible_price),
     price_status: strOrNull(r.price_status)?.toUpperCase() ?? null,
     price_difference: numOrNull(r.price_difference),
+    expected_promo: strOrNull(r.expected_promo),
+    shelf_promotion: strOrNull(r.shelf_promotion),
+    shelf_promo_price: priceValue(r.shelf_promo_price),
+    promo_status: strOrNull(r.promo_status)?.toUpperCase() ?? null,
   };
 }
 
@@ -171,6 +189,8 @@ function normalizeExtra(raw: unknown): ReferenceExtraProduct {
     shelf_units: numOrNull(r.shelf_units),
     shelf_location_label: strOrNull(r.shelf_location_label),
     visible_price: priceValue(r.visible_price),
+    shelf_promotion: strOrNull(r.shelf_promotion),
+    shelf_promo_price: priceValue(r.shelf_promo_price),
   };
 }
 
@@ -215,6 +235,10 @@ export function normalizeReferenceMatch(raw: unknown): ReferenceMatch | undefine
       location_match_percent: numOrNull(m.location_match_percent),
       locations_on_document: int(m.locations_on_document),
       not_on_document: int(m.not_on_document),
+      promo_lines_expected: numOrNull(m.promo_lines_expected),
+      promo_lines_seen: numOrNull(m.promo_lines_seen),
+      promo_lines_not_seen: numOrNull(m.promo_lines_not_seen),
+      shelf_promotions_read: numOrNull(m.shelf_promotions_read),
     },
     lines: (Array.isArray(r.lines) ? r.lines : []).map(normalizeLine),
     not_on_document: (Array.isArray(r.not_on_document) ? r.not_on_document : []).map(normalizeExtra),

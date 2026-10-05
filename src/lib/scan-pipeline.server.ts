@@ -28,7 +28,7 @@ import {
 import { normalizeAstraAnalysis } from "@/lib/ai-audit/astra-response";
 import { parseAiAnalysisRequest, type AiAnalysisRequest } from "@/lib/ai-audit/ai-analysis";
 import { runLunaAnalysis } from "@/lib/ai-audit/luna-analysis.server";
-import { buildLunaEvidence } from "@/lib/ai-audit/luna-evidence";
+import { buildLunaEvidence, shelfPromotionsFromAstra } from "@/lib/ai-audit/luna-evidence";
 import { findReferenceMatch } from "@/lib/ai-audit/reference-match";
 import {
   dedupeSelections,
@@ -2104,6 +2104,7 @@ async function persistScanPayload(
           totalFacings: totalProducts,
           countPending: metricsSource?.scan_complete === false,
           photoCount: num(metricsSource?.multi_photo?.photo_count),
+          promotions: shelfPromotionsFromAstra(metricsSource?.astra_cv_analysis ?? payload?.astra_cv_analysis),
         }),
       )
     : null;

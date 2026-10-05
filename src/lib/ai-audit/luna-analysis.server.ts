@@ -47,6 +47,7 @@ export async function runLunaAnalysis(
       documentLines: evidence.documentLines.slice(0, MAX_LINES),
       notOnDocument: evidence.notOnDocument.slice(0, MAX_PRODUCTS),
       shelfProducts: evidence.shelfProducts.slice(0, MAX_PRODUCTS),
+      promotions: evidence.promotions.slice(0, MAX_PRODUCTS),
     });
     const response = await client.responses.create({
       model,

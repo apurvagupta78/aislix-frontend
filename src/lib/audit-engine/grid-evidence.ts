@@ -405,7 +405,7 @@ export function evaluateGridEvidence(input: {
         });
         break;
       case "live_session_video":
-        single(proof, "Record the audit walk on your phone, or upload a short video.", listValue(audit.session_video).length > 0);
+        single(proof, "Record the audit walk live in Aislix — date, time and GPS are stamped on the video.", listValue(audit.session_video).length > 0);
         break;
       case "quarantine_contents":
         single(

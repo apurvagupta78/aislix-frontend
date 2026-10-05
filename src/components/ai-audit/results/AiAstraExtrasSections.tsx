@@ -62,15 +62,41 @@ export function AiAstraPricesSection({ extras }: { extras: AstraOutputExtras }) 
   );
 }
 
+const PROMOTION_TYPE_LABEL: Record<string, string> = {
+  PRICE_OFF: "Price off",
+  MULTI_BUY: "Multi-buy",
+  FREE_GIFT: "Free gift",
+  EXTRA_QUANTITY: "Extra quantity",
+  BUNDLE: "Bundle",
+  OTHER: "Offer",
+};
+
 export function AiAstraPromotionsSection({ extras }: { extras: AstraOutputExtras }) {
   if (!extras.visible_promotions.length) return null;
   return (
-    <AiAuditCard title="Visible promotions" description="Promotional messaging detected on shelf">
-      <ul className="space-y-2">
+    <AiAuditCard title="Visible promotions" description="Offer tags and promo prices read from the shelf by AI">
+      <ul className="grid gap-2 sm:grid-cols-2">
         {extras.visible_promotions.map((row, i) => (
-          <li key={`promo-${i}`} className="rounded-lg border border-border/70 px-3 py-2 text-sm">
-            <p className="font-medium">{row.product_or_brand ?? "Promotion"}</p>
-            <p className="mt-1 text-muted-foreground">{row.promotion_text ?? "—"}</p>
+          <li key={`promo-${i}`} className="rounded-lg border border-[#D9E2E8] px-3 py-2 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-medium text-[#102A43]">
+                {row.product_or_brand ??
+                  ([row.brand, row.product_name].filter(Boolean).join(" ") || "Section offer")}
+              </p>
+              {row.promotion_type && PROMOTION_TYPE_LABEL[row.promotion_type.toUpperCase()] ? (
+                <span className="rounded-md border border-[#9B86D9] bg-[#F0E9FF] px-2 py-0.5 text-[10px] font-semibold text-[#102A43]">
+                  {PROMOTION_TYPE_LABEL[row.promotion_type.toUpperCase()]}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-1 text-[#102A43]">“{row.promotion_text ?? "—"}”</p>
+            {row.promo_price != null || row.location_label ? (
+              <p className="mt-1 text-[11px] text-[#667085]">
+                {[row.promo_price != null ? `Promo price ${row.promo_price}` : null, row.location_label ? `Location ${row.location_label}` : null]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            ) : null}
             {row.confidence != null ? (
               <p className="mt-1 text-[11px] tabular-nums text-muted-foreground">
                 Confidence{" "}

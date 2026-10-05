@@ -50,7 +50,7 @@ type Props = {
 
 const STEP_3_TITLE = "What should Aislix work with?";
 const STEP_3_DESCRIPTION =
-  "Upload documents, templates, evidence, images, or other reference material to set up your audit.";
+  "Upload planogram, documents, templates, evidence, images, or other reference material to set up your audit.";
 
 export function NewAuditStep2StartMethod({
   method,

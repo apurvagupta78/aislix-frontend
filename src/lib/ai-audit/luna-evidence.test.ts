@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildLunaEvidence, shelfProductsFromRows } from "@/lib/ai-audit/luna-evidence";
+import { buildLunaEvidence, shelfProductsFromRows, shelfPromotionsFromAstra } from "@/lib/ai-audit/luna-evidence";
 import { buildDemoSampleDocumentContext, demoSampleDocument } from "@/lib/ai-audit/demo-sample-document";
 import { usableReferenceRows } from "@/lib/ai-audit/reference-document";
 import { aiAnalysisReady } from "@/lib/ai-audit/ai-analysis";
@@ -41,6 +41,36 @@ describe("buildLunaEvidence", () => {
     expect(evidence.shelfProducts).toEqual([{ product: "Colgate MaxFresh", facings: 4 }]);
     expect(evidence.metrics).not.toHaveProperty("lines_total");
     expect(evidence.countPending).toBe(false);
+    expect(evidence.promotions).toEqual([]);
+  });
+
+  it("passes the offers read on the shelf to the analysis", () => {
+    const promotions = shelfPromotionsFromAstra({
+      products: [
+        { brand: "Colgate", product: "MaxFresh", promotion_text: "Buy 2 Get 1", promotion_type: "multi_buy", promo_price: null, location_label: "A-01" },
+        { brand: "Pepsodent", product: "Germicheck", promotion_text: null, promotion_type: "NONE" },
+        { brand: "Close-Up", product: "Red Hot", promotion_text: "null" },
+      ],
+      visible_promotions: [
+        { brand: "Colgate", product_name: "MaxFresh", promotion_text: "Buy 2 Get 1" },
+        { promotion_text: "20% OFF", promotion_type: "PRICE_OFF", promo_price: "99" },
+      ],
+    });
+    expect(promotions).toEqual([
+      { product: "Colgate MaxFresh", promotion: "Buy 2 Get 1", promotion_type: "MULTI_BUY", promo_price: null, location: "A-01" },
+      { product: null, promotion: "20% OFF", promotion_type: "PRICE_OFF", promo_price: "99", location: null },
+    ]);
+    const evidence = buildLunaEvidence({
+      referenceMatch: undefined,
+      products: [],
+      brandShare: [],
+      totalFacings: 0,
+      countPending: false,
+      photoCount: 1,
+      promotions,
+    });
+    expect(evidence.promotions[1]).toEqual({ promotion: "20% OFF", promotion_type: "PRICE_OFF", promo_price: "99" });
+    expect(shelfPromotionsFromAstra(null)).toEqual([]);
   });
 });
 

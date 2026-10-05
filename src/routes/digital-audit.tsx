@@ -54,6 +54,7 @@ import {
 import type { EvidenceProof } from "@/lib/audit-evidence-policy";
 import { readDeviceLocation, watchDeviceLocation, type DeviceLocation } from "@/lib/device-location";
 import { BarcodeScannerDialog } from "@/components/digital-audit/BarcodeScannerDialog";
+import { LiveVideoRecorder } from "@/components/audit-engine/LiveVideoRecorder";
 import {
   cacheAuditSession,
   flushOfflineQueue,
@@ -80,6 +81,7 @@ function DigitalAuditPage() {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const uploadTarget = useRef<{ key: string; video: boolean } | null>(null);
+  const [liveRecordKey, setLiveRecordKey] = useState<string | null>(null);
   const csvRef = useRef<HTMLInputElement>(null);
   const [activeBin, setActiveBin] = useState<string | null>(null);
   const [barcodeInput, setBarcodeInput] = useState("");
@@ -287,11 +289,13 @@ function DigitalAuditPage() {
   const pickEvidence = (key: string, mode: EvidenceCaptureMode = "photo") => {
     const video = mode !== "photo";
     uploadTarget.current = { key, video };
+    if (mode === "record") {
+      setLiveRecordKey(key);
+      return;
+    }
     const input = fileRef.current;
     if (!input) return;
-    // "video/*" + capture is what makes mobile browsers open the camera in video mode.
-    input.accept =
-      mode === "record" ? "video/*" : video ? "video/mp4,video/webm,video/quicktime" : "image/jpeg,image/png";
+    input.accept = video ? "video/mp4,video/webm,video/quicktime" : "image/jpeg,image/png";
     if (mode === "upload_video") input.removeAttribute("capture");
     else input.setAttribute("capture", "environment");
     input.click();
@@ -426,6 +430,17 @@ function DigitalAuditPage() {
             e.target.value = "";
             const target = uploadTarget.current;
             if (f && target) photoMutation.mutate({ binKey: target.key, file: f, video: target.video });
+          }}
+        />
+
+        <LiveVideoRecorder
+          open={liveRecordKey !== null}
+          onOpenChange={(open) => {
+            if (!open) setLiveRecordKey(null);
+          }}
+          storeName={session.store_name}
+          onRecorded={({ file }) => {
+            if (liveRecordKey) photoMutation.mutate({ binKey: liveRecordKey, file, video: true });
           }}
         />
 

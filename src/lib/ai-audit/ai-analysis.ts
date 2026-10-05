@@ -14,6 +14,7 @@ export type AiAnalysisCheck =
   | "location"
   | "facings"
   | "brand_share"
+  | "promotion"
   | "expiry";
 
 export type AiAnalysisCheckOption = {
@@ -31,6 +32,7 @@ export const AI_ANALYSIS_CHECKS: AiAnalysisCheckOption[] = [
   { value: "location", label: "Right location", hint: "Shelf / bin vs the document location", needs: "location" },
   { value: "facings", label: "Facings", hint: "How many faces each product has" },
   { value: "brand_share", label: "Brand share", hint: "Which brands own the shelf" },
+  { value: "promotion", label: "Promotion", hint: "Offer tags, deals and promo prices on the shelf" },
   { value: "expiry", label: "Expiry / damage", hint: "Only what is readable in the photo" },
 ];
 

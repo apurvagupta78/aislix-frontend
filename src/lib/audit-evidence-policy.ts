@@ -83,7 +83,7 @@ export const EVIDENCE_PROOF_OPTIONS: Array<{
   {
     value: "live_session_video",
     label: "Session video",
-    description: "Record the audit for later manager review.",
+    description: "Recorded live in Aislix with the date, time and GPS location stamped on every frame.",
   },
   {
     value: "quarantine_contents",

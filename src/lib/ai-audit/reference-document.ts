@@ -30,7 +30,8 @@ export type ReferenceRow = {
 export type ReferenceField = "brand" | "product" | "variant" | "pack_size" | "qty" | "unit" | "price" | "location";
 
 export type ReferenceDocumentMeta = {
-  source: "document" | "csv";
+  /** "manual": a product list typed in Aislix (AI Audit · Start from scratch). */
+  source: "document" | "csv" | "manual";
   filename: string | null;
   /** Original file in the org's scan-images folder (document uploads only). */
   storage_path: string | null;
@@ -165,6 +166,15 @@ export function emptyReferenceRow(lineNo: number): ReferenceRow {
     extra: {},
     confidence: null,
     check_fields: [],
+  };
+}
+
+/** Empty typed product list: the user fills in what should be on the shelf (with a Promo column). */
+export function blankProductList(lines = 3): ReferenceDocumentState {
+  return {
+    meta: { ...emptyReferenceMeta("manual", null), document_type: "product_list", extra_columns: [PROMO_COLUMN] },
+    rows: Array.from({ length: lines }, (_, i) => emptyReferenceRow(i + 1)),
+    saved: true,
   };
 }
 
@@ -503,6 +513,17 @@ export function referenceRowsToPlanogramRows(
   }));
 }
 
+export const PROMO_COLUMN = "Promo";
+const PROMO_HEADER = /promo|offer|scheme|deal/i;
+
+/** The line's promotion from a Promo / Offer / Scheme column, if the document has one. */
+export function referencePromo(row: Pick<ReferenceRow, "extra">): string | null {
+  for (const [header, value] of Object.entries(row.extra ?? {})) {
+    if (PROMO_HEADER.test(header) && text(value)) return text(value);
+  }
+  return null;
+}
+
 /** Per-line document expectations sent to the backend reference comparison. */
 export function referenceItemsForScan(
   rows: ReferenceRow[],
@@ -521,6 +542,7 @@ export function referenceItemsForScan(
     quantity_unit: row.unit.trim() || null,
     expected_price: row.price,
     expected_location: row.location.trim() || null,
+    expected_promo: referencePromo(row),
     confidence: row.confidence,
     ...(row.extra && Object.keys(row.extra).length ? { extra_fields: row.extra } : {}),
   }));

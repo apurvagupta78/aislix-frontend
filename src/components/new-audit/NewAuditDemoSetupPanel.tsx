@@ -24,7 +24,8 @@ type Props = {
   planogramChoice: NewAuditPlanogramChoice;
   scanContext: ScanContextState;
   onScanContextChange: (ctx: ScanContextState) => void;
-  onBack: () => void;
+  /** Omit when the parent already offers the other options (no back button is shown). */
+  onBack?: () => void;
   backLabel?: string;
 };
 
@@ -81,12 +82,12 @@ export function NewAuditDemoSetupPanel({
     );
   }
 
-  const backButton = (
+  const backButton = onBack ? (
     <Button type="button" variant="ghost" size="sm" className="-ml-2" onClick={onBack}>
       <ChevronLeft className="size-4" />
       {backLabel}
     </Button>
-  );
+  ) : null;
 
   if (planogramChoice === "reference") {
     return (

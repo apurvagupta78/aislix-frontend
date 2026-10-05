@@ -2,7 +2,8 @@ import type { ReactNode } from "react";
 import { MapPin, Smartphone } from "lucide-react";
 
 import { EvidenceImage } from "@/components/audit-builder/AuditExecutionForm";
-import { EvidenceVideo, GpsSummary } from "@/components/audit-engine/AuditEvidencePanel";
+import { EvidenceVideo, GpsSummary, SessionVideoProof } from "@/components/audit-engine/AuditEvidencePanel";
+import { SESSION_VIDEO_META_KEY, parseSessionVideoMeta } from "@/lib/audit-engine/session-video";
 import { AISLIX_PALETTE, ACCENT_TINT } from "@/lib/ai-audit/kpi-palette";
 import {
   auditEvidenceValues,
@@ -139,12 +140,16 @@ export function DigitalAuditEvidenceSummary({
             }
             case "live_session_video": {
               const videos = listValue(audit.session_video);
+              const videoMeta = parseSessionVideoMeta(audit[SESSION_VIDEO_META_KEY]);
               return (
                 <Item key={r.id} requirement={r}>
                   {videos.length ? (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-3">
                       {videos.map((v) => (
-                        <EvidenceVideo key={v} stored={v} className="h-32 w-56 rounded-md border border-[#D9E2E8] bg-black" />
+                        <div key={v} className="space-y-1.5">
+                          <EvidenceVideo stored={v} className="h-32 w-56 rounded-md border border-[#D9E2E8] bg-black" />
+                          <SessionVideoProof meta={videoMeta.find((m) => m.ref === v)} />
+                        </div>
                       ))}
                     </div>
                   ) : (

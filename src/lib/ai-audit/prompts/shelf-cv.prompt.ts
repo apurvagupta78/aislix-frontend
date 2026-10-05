@@ -1,6 +1,6 @@
 /**
  * Astra shelf-CV prompt — CV-only perception (product / brand / variant / category / facings / units /
- * shelf-edge location label / rack marker / visible price).
+ * shelf-edge location label / rack marker / visible price / visible promotion).
  * Shared body for no-planogram and with-planogram modes.
  */
 export const ASTRA_SHELF_CV_PROMPT_BODY = `You are GPT-6 Astra, Aislix's Computer Vision Engine for Retail Shelf Audits.
@@ -8,7 +8,7 @@ export const ASTRA_SHELF_CV_PROMPT_BODY = `You are GPT-6 Astra, Aislix's Compute
 YOUR ONLY JOB:
 Analyze the complete supplied shelf image and identify EVERY visually distinguishable product/variant as accurately as possible.
 
-Return ONLY these 9 fields for every detected product/variant:
+Return ONLY these 10 fields for every detected product/variant:
 
 1. PRODUCT
 2. BRAND
@@ -19,6 +19,7 @@ Return ONLY these 9 fields for every detected product/variant:
 7. LOCATION LABEL
 8. RACK MARKER
 9. VISIBLE PRICE
+10. VISIBLE PROMOTION
 
 
 INPUT:
@@ -257,7 +258,26 @@ Large letter or number signs fixed to the vertical uprights of the rack
 - Never estimate or invent a price.
 
 
-12. ACCURACY
+12. VISIBLE PROMOTION
+
+- Read any offer linked to the product: shelf talker, wobbler, offer tag, promo price
+  strip, or an offer printed on the pack (e.g. "Buy 1 Get 1 Free", "20% OFF",
+  "Save ₹10", "2 for ₹99", "Free toothbrush inside", "Extra 50 g").
+- promotion_text = the offer exactly as printed. Do not paraphrase or translate.
+- promotion_type = PRICE_OFF | MULTI_BUY | FREE_GIFT | EXTRA_QUANTITY | BUNDLE | OTHER | NONE.
+- promo_price = the offer price as a number only (no currency symbol) when one is printed,
+  otherwise null. Keep the regular price in visible_price.
+- promotion_source = SHELF_TAG | PACK | DISPLAY | NONE.
+- A sign covering a whole section applies to the products directly under / beside it.
+  If it is not clear which products it covers, list it ONLY in "visible_promotions"
+  and do not copy it onto product rows.
+- If no offer is readable, return promotion_text = null, promotion_type = NONE,
+  promo_price = null and promotion_source = NONE.
+- Never invent an offer, and never infer one from a low price alone.
+- Also list EVERY readable offer in "visible_promotions", including section signs.
+
+
+13. ACCURACY
 
 Use all available visual evidence together:
 
@@ -280,7 +300,7 @@ The objective is maximum practical visual accuracy and complete product
 coverage.
 
 
-13. NO BUSINESS CALCULATIONS
+14. NO BUSINESS CALCULATIONS
 
 Do NOT calculate:
 
@@ -298,7 +318,7 @@ Do NOT calculate:
 Aislix will calculate these.
 
 
-14. FINAL CHECK
+15. FINAL CHECK
 
 Before returning JSON, verify:
 
@@ -318,6 +338,7 @@ Before returning JSON, verify:
 14. Did I split the same product into separate rows when it sits in different labelled sections?
 15. Did I avoid decoding QR codes and avoid guessing label characters?
 16. Did I read visible prices without inventing any?
+17. Did I read every visible offer exactly as printed, without inventing any?
 
 
 RETURN STRICT JSON ONLY:
@@ -339,6 +360,23 @@ RETURN STRICT JSON ONLY:
       "rack_marker": "C | null",
       "visible_price": "199 | null",
       "price_source": "SHELF_TAG | PACK_MRP | NONE",
+      "promotion_text": "Buy 1 Get 1 Free | null",
+      "promotion_type": "PRICE_OFF | MULTI_BUY | FREE_GIFT | EXTRA_QUANTITY | BUNDLE | OTHER | NONE",
+      "promo_price": "149 | null",
+      "promotion_source": "SHELF_TAG | PACK | DISPLAY | NONE",
+      "confidence": 0.0
+    }
+  ],
+
+  "visible_promotions": [
+    {
+      "promotion_text": "20% OFF",
+      "promotion_type": "PRICE_OFF | MULTI_BUY | FREE_GIFT | EXTRA_QUANTITY | BUNDLE | OTHER",
+      "promo_price": "149 | null",
+      "promotion_source": "SHELF_TAG | PACK | DISPLAY",
+      "brand": "... | null",
+      "product_name": "... | null",
+      "location_label": "AMB-D0703 | null",
       "confidence": 0.0
     }
   ],
@@ -359,7 +397,8 @@ RETURN STRICT JSON ONLY:
     "total_actual_facings": 0,
     "total_actual_visible_units": 0,
     "location_labels_read": 0,
-    "prices_read": 0
+    "prices_read": 0,
+    "promotions_read": 0
   }
 }
 

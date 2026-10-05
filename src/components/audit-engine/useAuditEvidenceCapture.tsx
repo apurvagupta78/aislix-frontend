@@ -3,6 +3,13 @@ import { toast } from "sonner";
 
 import { uploadOptionsForPolicy, useEvidenceUpload, type UploadImage } from "@/components/audit-builder/useEvidenceUpload";
 import { AuditEvidencePanel, targetId, type EvidenceTarget } from "@/components/audit-engine/AuditEvidencePanel";
+import { LiveVideoRecorder, type LiveVideoResult } from "@/components/audit-engine/LiveVideoRecorder";
+import {
+  SESSION_VIDEO_META_KEY,
+  parseSessionVideoMeta,
+  upsertSessionVideoMeta,
+  type SessionVideoMeta,
+} from "@/lib/audit-engine/session-video";
 import type { AuditResponseValue, TemplateField } from "@/lib/audit-builder/types";
 import { encodeEvidenceFlag } from "@/lib/audit-engine/execution-table";
 import {
@@ -43,6 +50,7 @@ export function useAuditEvidenceCapture(input: {
   onUploadVideo?: (file: File) => Promise<string>;
   policy: Partial<AuditEvidencePolicy> | null | undefined;
   storeLocation?: StoreLocation | null;
+  storeName?: string | null;
   readOnly: boolean;
   canCapture: boolean;
 }) {
@@ -51,15 +59,17 @@ export function useAuditEvidenceCapture(input: {
   const evidenceUpload = useEvidenceUpload(input.onUploadImage);
   const [target, setTarget] = useState<EvidenceTarget | null>(null);
   const [videoBusy, setVideoBusy] = useState(false);
+  const [recorderOpen, setRecorderOpen] = useState(false);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
-  const videoRecordRef = useRef<HTMLInputElement>(null);
   const videoUploadRef = useRef<HTMLInputElement>(null);
 
   const auditValues = auditEvidenceValues(responses);
   const gps = parseGps(auditValues[GPS_KEY]);
   const device = parseDeviceMetadata(auditValues[DEVICE_METADATA_KEY]);
+  const videoMeta = parseSessionVideoMeta(auditValues[SESSION_VIDEO_META_KEY]);
+  const allowVideoUpload = input.policy?.captureSource !== "in_app_only";
 
   const saveAuditEvidence = (key: string, type: TemplateField["type"], value: AuditResponseValue) =>
     setValue(AUDIT_EVIDENCE_SECTION, 0, evidenceField(AUDIT_EVIDENCE_SECTION, key, type), value);
@@ -107,9 +117,9 @@ export function useAuditEvidenceCapture(input: {
     );
   };
 
-  const handleVideo = async (file: File) => {
+  const handleVideo = async (file: File, live?: LiveVideoResult["meta"]) => {
     if (!input.onUploadVideo) return;
-    if (!isVideoFile(file)) {
+    if (!live && !isVideoFile(file)) {
       toast.error("Choose a video file (MP4, MOV or WebM).");
       return;
     }
@@ -117,7 +127,23 @@ export function useAuditEvidenceCapture(input: {
     try {
       const ref = await input.onUploadVideo(file);
       await saveAuditEvidence("session_video", "multiple_images", [...listValue(auditValues.session_video), ref]);
-      toast.success("Session video added.");
+      const entry: SessionVideoMeta = live
+        ? { ...live, ref, receivedAt: new Date().toISOString() }
+        : {
+            ref,
+            live: false,
+            startedAt: null,
+            endedAt: null,
+            durationS: null,
+            timezone: null,
+            gpsStart: null,
+            gpsEnd: null,
+            storeCheck: null,
+            storeDistanceM: null,
+            receivedAt: new Date().toISOString(),
+          };
+      await saveAuditEvidence(SESSION_VIDEO_META_KEY, "short_text", JSON.stringify(upsertSessionVideoMeta(videoMeta, entry)));
+      toast.success(live ? "Live session video saved." : "Video added — marked as uploaded, not recorded live.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not upload the video.");
     } finally {
@@ -186,18 +212,27 @@ export function useAuditEvidenceCapture(input: {
       gpsError={gpsError}
       locating={locating}
       device={device}
+      videoMeta={videoMeta}
+      allowVideoUpload={allowVideoUpload}
       onRetryGps={() => void requestGps()}
       onAddPhoto={(t) => {
         setTarget(t);
         photoRef.current?.click();
       }}
-      onAddVideo={(mode) => (mode === "record" ? videoRecordRef : videoUploadRef).current?.click()}
+      onAddVideo={(mode) => (mode === "record" ? setRecorderOpen(true) : videoUploadRef.current?.click())}
       onRemove={removeEvidence}
     />
   );
 
   const hiddenInputs = (
     <>
+      <LiveVideoRecorder
+        open={recorderOpen}
+        onOpenChange={setRecorderOpen}
+        storeName={input.storeName}
+        storeLocation={input.storeLocation}
+        onRecorded={({ file, meta }) => void handleVideo(file, meta)}
+      />
       <input
         ref={photoRef}
         type="file"
@@ -208,18 +243,6 @@ export function useAuditEvidenceCapture(input: {
           const file = e.target.files?.[0];
           if (file) void handlePhoto(file);
           else setTarget(null);
-          e.target.value = "";
-        }}
-      />
-      <input
-        ref={videoRecordRef}
-        type="file"
-        accept="video/*"
-        capture="environment"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) void handleVideo(file);
           e.target.value = "";
         }}
       />

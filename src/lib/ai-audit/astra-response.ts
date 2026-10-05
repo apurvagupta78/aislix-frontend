@@ -145,6 +145,10 @@ export type AstraShelfProduct = {
   rack_marker: string | null;
   visible_price: string | null;
   price_source: string;
+  /** Offer read on the shelf / pack; null when none was readable (or the scan predates promo reading). */
+  promotion_text: string | null;
+  promotion_type: string;
+  promo_price: string | null;
 };
 
 export type AstraLocationRow = {
@@ -219,6 +223,8 @@ export type AstraVisiblePromotion = {
   product_or_brand?: string;
   promotion_text?: string;
   promotion_type?: string;
+  promo_price?: string | number | null;
+  location_label?: string | null;
   confidence?: number;
 };
 
@@ -752,6 +758,9 @@ function normalizeShelfProduct(raw: unknown): AstraShelfProduct {
     rack_marker: strOrNull(r.rack_marker),
     visible_price: strOrNull(r.visible_price),
     price_source: str(r.price_source).toUpperCase(),
+    promotion_text: strOrNull(r.promotion_text),
+    promotion_type: str(r.promotion_type).toUpperCase(),
+    promo_price: strOrNull(r.promo_price),
   };
 }
 

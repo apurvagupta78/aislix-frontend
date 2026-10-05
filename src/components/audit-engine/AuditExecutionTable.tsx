@@ -567,6 +567,7 @@ export function AuditExecutionTable({
     onUploadVideo,
     policy: session.evidencePolicy,
     storeLocation: session.storeLocation,
+    storeName: session.storeName,
     readOnly,
     canCapture,
   });

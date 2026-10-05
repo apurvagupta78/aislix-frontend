@@ -43,6 +43,28 @@ function priceText(value: string | number | null): string | null {
   return typeof value === "number" ? `₹${value}` : formatShelfPrice(value);
 }
 
+const PROMO_STATUS: Record<string, { label: string; tone: "green" | "pink" | "grey" | "blue" }> = {
+  PROMO_SEEN: { label: "Offer seen", tone: "green" },
+  PROMO_NOT_SEEN: { label: "Offer not seen", tone: "pink" },
+  UNEXPECTED_PROMO: { label: "Offer not on document", tone: "blue" },
+  NO_EXPECTED: { label: "No promo on document", tone: "grey" },
+  NOT_ON_SHELF: { label: "Not on shelf", tone: "grey" },
+};
+
+function promoCell(line: ReferenceMatchLine) {
+  const status = line.promo_status ? PROMO_STATUS[line.promo_status] : null;
+  return (
+    <div className="max-w-[200px] space-y-1">
+      <p className="text-[11px] text-[#667085]">
+        Doc {line.expected_promo ? `“${line.expected_promo}”` : "—"} · Shelf{" "}
+        {line.shelf_promotion ? `“${line.shelf_promotion}”` : "—"}
+        {line.shelf_promo_price != null ? ` (${priceText(line.shelf_promo_price)})` : ""}
+      </p>
+      {status ? <AiPill tone={status.tone}>{status.label}</AiPill> : <AiPill tone="grey">N/A</AiPill>}
+    </div>
+  );
+}
+
 function qtyCell(line: ReferenceMatchLine, countPending: boolean) {
   if (line.presence_status === "MISSING") return "0";
   if (line.presence_status === "UNCLEAR") return <AiPill tone="grey">N/A</AiPill>;
@@ -113,6 +135,7 @@ export function ReferenceMatchSection({
   const isPdf = (doc.mime_type ?? "").includes("pdf");
   const verdict = match.verdict ? VERDICT[match.verdict] : null;
   const docLabel = doc.source === "csv" ? "CSV / Excel" : documentTypeLabel(doc.document_type);
+  const showPromo = match.lines.some((line) => line.expected_promo || line.shelf_promotion);
   const compared = [
     `${docLabel}${doc.document_number ? ` ${doc.document_number}` : ""}`,
     doc.supplier_name,
@@ -146,6 +169,9 @@ export function ReferenceMatchSection({
         "Expected location",
         "Shelf location",
         "Location status",
+        "Document promo",
+        "Shelf promo",
+        "Promo status",
       ],
       [
         ...match.lines.map((line) => [
@@ -163,6 +189,9 @@ export function ReferenceMatchSection({
           line.expected_location,
           line.shelf_location_label,
           line.location_status ?? "N/A",
+          line.expected_promo,
+          line.shelf_promotion,
+          line.promo_status ? (PROMO_STATUS[line.promo_status]?.label ?? line.promo_status) : "N/A",
         ]),
         ...match.not_on_document.map((row) => [
           "",
@@ -178,6 +207,9 @@ export function ReferenceMatchSection({
           "",
           "",
           row.shelf_location_label,
+          "",
+          "",
+          row.shelf_promotion,
           "",
         ]),
       ],
@@ -198,7 +230,12 @@ export function ReferenceMatchSection({
           >
             <p className="font-display text-xl font-semibold text-[#102A43]">{verdict.label}</p>
             <p className="mt-0.5 text-xs text-[#667085]">
-              {doc.source === "csv" ? "Lines from your file" : "Read from document by AI"} · Shelf detected by AI
+              {doc.source === "csv"
+                ? "Lines from your file"
+                : doc.source === "manual"
+                  ? "Product list typed in Aislix"
+                  : "Read from document by AI"}{" "}
+              · Shelf detected by AI
               {" · "}
               {m.lines_found} of {m.lines_total} lines found on the shelf
             </p>
@@ -382,6 +419,9 @@ export function ReferenceMatchSection({
                 </div>
               ),
             },
+            ...(showPromo
+              ? [{ key: "promo", header: "Promotion", className: "min-w-[150px]", cell: promoCell }]
+              : []),
           ]}
         />
 

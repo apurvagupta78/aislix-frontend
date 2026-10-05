@@ -326,6 +326,7 @@ function FormAuditEvidence({
     onUploadVideo: (file) => uploadCustomAuditVideo(assignmentId, file),
     policy: session.evidencePolicy,
     storeLocation: session.storeLocation,
+    storeName: session.storeName,
     readOnly,
     canCapture,
   });

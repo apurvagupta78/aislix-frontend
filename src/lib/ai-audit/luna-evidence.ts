@@ -44,6 +44,56 @@ export function shelfProductsFromRows(rows: unknown): ShelfProduct[] {
     .filter((p) => p.name);
 }
 
+const NO_PROMO = /^(null|none|n\/a|na|-|no|no offer|no promotion)$/i;
+
+function promoText(value: unknown): string | null {
+  const s = typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
+  return s && !NO_PROMO.test(s) ? s : null;
+}
+
+export type ShelfPromotion = {
+  product: string | null;
+  promotion: string;
+  promotion_type: string | null;
+  promo_price: string | null;
+  location: string | null;
+};
+
+/**
+ * Offers Astra read on the shelf: per-product `promotion_text` plus `visible_promotions`
+ * (section signs). Accepts the raw / merged Astra payload (`astra_cv_analysis`).
+ */
+export function shelfPromotionsFromAstra(astra: unknown): ShelfPromotion[] {
+  if (!astra || typeof astra !== "object") return [];
+  const root = astra as Record<string, unknown>;
+  const out: ShelfPromotion[] = [];
+  const seen = new Set<string>();
+  const add = (row: Record<string, unknown>, nameKeys: string[]) => {
+    const promotion = promoText(row.promotion_text);
+    if (!promotion) return;
+    const product =
+      [rowText(row, "brand"), rowText(row, ...nameKeys), rowText(row, "variant")].filter(Boolean).join(" ") || null;
+    const key = `${(product ?? "").toLowerCase()}|${promotion.toLowerCase()}|${row.photo_index ?? ""}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    const type = rowText(row, "promotion_type")?.toUpperCase() ?? null;
+    out.push({
+      product,
+      promotion,
+      promotion_type: type && type !== "NONE" ? type : null,
+      promo_price: promoText(row.promo_price),
+      location: rowText(row, "location_label"),
+    });
+  };
+  for (const row of Array.isArray(root.products) ? root.products : []) {
+    if (row && typeof row === "object") add(row as Record<string, unknown>, ["product", "product_name"]);
+  }
+  for (const row of Array.isArray(root.visible_promotions) ? root.visible_promotions : []) {
+    if (row && typeof row === "object") add(row as Record<string, unknown>, ["product_name", "product", "product_or_brand"]);
+  }
+  return out;
+}
+
 function compact<T extends Record<string, unknown>>(row: T): Partial<T> {
   return Object.fromEntries(
     Object.entries(row).filter(([, v]) => v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && !v.length)),
@@ -58,6 +108,7 @@ export function buildLunaEvidence(input: {
   totalFacings: number;
   countPending: boolean;
   photoCount: number | null;
+  promotions?: ShelfPromotion[];
 }): LunaAnalysisEvidence {
   const match = input.referenceMatch;
   return {
@@ -79,6 +130,10 @@ export function buildLunaEvidence(input: {
         visible_price: line.visible_price,
         price_status: line.price_status,
         price_difference: line.price_difference,
+        expected_promo: line.expected_promo,
+        shelf_promotion: line.shelf_promotion,
+        shelf_promo_price: line.shelf_promo_price,
+        promo_status: line.promo_status,
       }),
     ),
     notOnDocument: (match?.not_on_document ?? []).map((p) =>
@@ -88,6 +143,8 @@ export function buildLunaEvidence(input: {
         shelf_units: p.shelf_units,
         shelf_location: p.shelf_location_label,
         visible_price: p.visible_price,
+        shelf_promotion: p.shelf_promotion,
+        shelf_promo_price: p.shelf_promo_price,
       }),
     ),
     shelfProducts: input.products.map((p) =>
@@ -99,6 +156,7 @@ export function buildLunaEvidence(input: {
         confidence: p.confidence,
       }),
     ),
+    promotions: (input.promotions ?? []).map((p) => compact(p)),
     metrics: compact({
       total_facings: input.totalFacings,
       brand_share_percent: input.brandShare.slice(0, 12).map((b) => ({ brand: b.brand, share: b.share })),
@@ -121,6 +179,9 @@ export function buildLunaEvidence(input: {
             location_lines_wrong: match.metrics.location_lines_wrong,
             location_match_percent: match.metrics.location_match_percent,
             products_not_on_document: match.metrics.not_on_document,
+            promo_lines_expected: match.metrics.promo_lines_expected,
+            promo_lines_seen: match.metrics.promo_lines_seen,
+            promo_lines_not_seen: match.metrics.promo_lines_not_seen,
           }
         : {}),
     }),

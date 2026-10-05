@@ -17,6 +17,7 @@ import {
   type ShelfSlot,
   type StoreCheck,
 } from "@/lib/audit-engine/grid-evidence";
+import { formatGpsPoint, formatVideoDuration, type SessionVideoMeta } from "@/lib/audit-engine/session-video";
 import { formatDistance } from "@/lib/geo/distance";
 import type { ResponseMap } from "@/lib/custom-audit-shared";
 import { resolveAuditEvidenceUrl } from "@/lib/custom-audit";
@@ -40,6 +41,9 @@ type Props = {
   gpsError: string | null;
   locating: boolean;
   device: DeviceMetadata | null;
+  videoMeta?: SessionVideoMeta[];
+  /** False when the audit only accepts in-app capture. */
+  allowVideoUpload?: boolean;
   onRetryGps: () => void;
   onAddPhoto: (target: EvidenceTarget) => void;
   onAddVideo: (mode: "record" | "upload") => void;
@@ -174,6 +178,70 @@ const STORE_CHECK_STYLE: Record<StoreCheck, { label: (gps: GpsFix) => string; ba
   },
 };
 
+/** Live / uploaded label for a session video, with recording time and GPS when recorded live. */
+export function SessionVideoProof({ meta }: { meta: SessionVideoMeta | undefined }) {
+  if (!meta?.live) {
+    return (
+      <span
+        className="inline-block rounded-md px-2 py-0.5 text-[11px] font-medium text-[#102A43]"
+        style={{ background: AISLIX_PALETTE.grey, border: `1px solid ${AISLIX_PALETTE.border}` }}
+      >
+        {meta ? "Uploaded — not recorded live" : "Recorded before live stamping"}
+      </span>
+    );
+  }
+  const started = meta.startedAt ? new Date(meta.startedAt) : null;
+  const ended = meta.endedAt ? new Date(meta.endedAt) : null;
+  const where = meta.gpsStart ?? meta.gpsEnd;
+  const check = meta.storeCheck ? STORE_CHECK_STYLE[meta.storeCheck] : null;
+  return (
+    <span className="block max-w-[260px] space-y-1 text-[11px] text-[#102A43]">
+      <span
+        className="inline-block rounded-md px-2 py-0.5 font-medium"
+        style={{ background: ACCENT_TINT.green, border: `1px solid ${AISLIX_PALETTE.green}` }}
+      >
+        Recorded live in Aislix
+      </span>
+      {started ? (
+        <span className="block text-[#667085]">
+          {started.toLocaleString()}
+          {ended ? ` – ${ended.toLocaleTimeString()}` : ""}
+          {meta.durationS != null ? ` · ${formatVideoDuration(meta.durationS)}` : ""}
+          {meta.timezone ? ` · ${meta.timezone}` : ""}
+        </span>
+      ) : null}
+      <span className="block text-[#667085]">
+        {where ? (
+          <a
+            className="underline underline-offset-2"
+            href={`https://www.google.com/maps?q=${where.lat},${where.lng}`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            GPS {formatGpsPoint(where)}
+          </a>
+        ) : (
+          "GPS unavailable while recording"
+        )}
+      </span>
+      {check && where ? (
+        <span
+          className="inline-block whitespace-nowrap rounded-md px-2 py-0.5 font-medium"
+          style={{ background: check.background, border: check.border }}
+        >
+          {check.label({
+            lat: where.lat,
+            lng: where.lng,
+            accuracyM: where.accuracyM,
+            capturedAt: where.at,
+            storeDistanceM: meta.storeDistanceM,
+          })}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 export function GpsSummary({ gps }: { gps: GpsFix }) {
   const check = gps.storeCheck ? STORE_CHECK_STYLE[gps.storeCheck] : null;
   return (
@@ -205,6 +273,8 @@ export function AuditEvidencePanel({
   gpsError,
   locating,
   device,
+  videoMeta = [],
+  allowVideoUpload = true,
   onRetryGps,
   onAddPhoto,
   onAddVideo,
@@ -307,17 +377,30 @@ export function AuditEvidencePanel({
               const busy = busyTarget === targetId(target);
               return (
                 <Block key={requirement.id} requirement={requirement}>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Thumbs video refs={listValue(audit.session_video)} readOnly={readOnly} onRemove={(ref) => onRemove(target, ref)} />
+                  <div className="space-y-2">
+                    {listValue(audit.session_video).map((ref) => (
+                      <div key={ref} className="flex flex-wrap items-start gap-2">
+                        <Thumbs video refs={[ref]} readOnly={readOnly} onRemove={(r) => onRemove(target, r)} />
+                        <SessionVideoProof meta={videoMeta.find((m) => m.ref === ref)} />
+                      </div>
+                    ))}
                     {!readOnly ? (
-                      <>
+                      <div className="flex flex-wrap items-center gap-2">
                         <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" disabled={busy} onClick={() => onAddVideo("record")}>
-                          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Video className="size-3.5" />} Record
+                          {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Video className="size-3.5" />} Record live
                         </Button>
-                        <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" disabled={busy} onClick={() => onAddVideo("upload")}>
-                          <Upload className="size-3.5" /> Upload video
-                        </Button>
-                      </>
+                        {allowVideoUpload ? (
+                          <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-xs" disabled={busy} onClick={() => onAddVideo("upload")}>
+                            <Upload className="size-3.5" /> Upload video
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    {!readOnly ? (
+                      <p className="text-[11px] text-[#667085]">
+                        Live recordings show the date, time and GPS on every frame.
+                        {allowVideoUpload ? " Uploaded videos are marked as not recorded live." : ""}
+                      </p>
                     ) : null}
                   </div>
                 </Block>
