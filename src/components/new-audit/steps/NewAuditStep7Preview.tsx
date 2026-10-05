@@ -16,6 +16,8 @@ type Props = {
   planogramSummary?: string;
   /** AI audits: what Luna was asked to analyse. */
   aiAnalysisSummary?: string;
+  /** Chosen stores — one audit is created for each. */
+  storeNames?: string[];
   assigneeSummary: string;
   scheduleSummary: string;
   evidenceSummary?: string;
@@ -65,12 +67,13 @@ export function NewAuditStep7Preview({
   method,
   planogramSummary,
   aiAnalysisSummary,
+  storeNames = [],
   assigneeSummary,
   scheduleSummary,
   evidenceSummary,
   showEvidence = true,
-  stepNumber = 6,
-  sectionId = "step-6-preview",
+  stepNumber = 7,
+  sectionId = "step-7-preview",
   assignToSelf,
   complete,
 }: Props) {
@@ -127,8 +130,20 @@ export function NewAuditStep7Preview({
                 ]
           }
         />
-        <PreviewGroup title="Step 4 · Who" rows={[{ label: "Assigned to", value: assigneeDisplay }]} />
-        <PreviewGroup title="Step 5 · When" rows={[{ label: "Schedule", value: scheduleSummary }]} />
+        <PreviewGroup
+          title="Step 4 · Where"
+          rows={[
+            {
+              label: storeNames.length === 1 ? "Store" : "Stores",
+              value: storeNames.length ? storeNames.join(", ") : "—",
+            },
+            ...(storeNames.length > 1
+              ? [{ label: "Audits created", value: `${storeNames.length} · one per store` }]
+              : []),
+          ]}
+        />
+        <PreviewGroup title="Step 5 · Who" rows={[{ label: "Assigned to", value: assigneeDisplay }]} />
+        <PreviewGroup title="Step 6 · When" rows={[{ label: "Schedule", value: scheduleSummary }]} />
         {showEvidence && evidenceSummary ? (
           <PreviewGroup title="Step 3 · Evidence" rows={[{ label: "Required", value: evidenceSummary }]} />
         ) : null}

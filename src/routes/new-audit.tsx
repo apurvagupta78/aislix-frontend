@@ -90,6 +90,8 @@ import { NewAuditStep1Details } from "@/components/new-audit/steps/NewAuditStep1
 import { NewAuditStep2StartMethod } from "@/components/new-audit/steps/NewAuditStep2StartMethod";
 import { NewAuditStep3AuditMode } from "@/components/new-audit/steps/NewAuditStep3AuditMode";
 import { NewAuditStep4Assignment } from "@/components/new-audit/steps/NewAuditStep4Assignment";
+import { NewAuditStep4Stores } from "@/components/new-audit/steps/NewAuditStep4Stores";
+import { storeSelection } from "@/lib/new-audit/store-selection";
 import { NewAuditStep5Scheduling } from "@/components/new-audit/steps/NewAuditStep5Scheduling";
 import {
   NewAuditStep7Preview,
@@ -119,6 +121,7 @@ import {
   resolveAssignmentDueAt,
   resolveSelectedAssignees,
   saveAssignmentDraft,
+  storeAssigneeMapping,
   type AssignmentMode,
   type AssignmentPlan,
   type DistributionStrategy,
@@ -182,7 +185,6 @@ function NewAuditPage() {
     if (initialTemplateId) return initialTemplateId;
     return "general";
   });
-  const [storeId, setStoreId] = useState("");
   const [location, setLocation] = useState("Main shelf");
   const [category, setCategory] = useState("");
   const [sku, setSku] = useState("");
@@ -207,9 +209,10 @@ function NewAuditPage() {
   const [assignmentMode, setAssignmentMode] = useState<AssignmentMode>("assign_now");
   const [scheduleTouched, setScheduleTouched] = useState(false);
   const [locationScope, setLocationScope] = useState<LocationScope>({ storeIds: [], stores: [] });
+  const storeId = locationScope.storeIds[0] ?? "";
   const [teamScope, setTeamScope] = useState<TeamScope>({ assigneeIds: [] });
-  const [distributionStrategy, setDistributionStrategy] =
-    useState<DistributionStrategy>("equal");
+  /** Per-store person picked in Who; stores without a pick follow the equal split. */
+  const [storeAssigneeOverrides, setStoreAssigneeOverrides] = useState<Record<string, string>>({});
   const [campaignName, setCampaignName] = useState("");
   const [publishAt, setPublishAt] = useState("");
   const [dueConfig, setDueConfig] = useState<DueConfig>({});
@@ -440,10 +443,6 @@ function NewAuditPage() {
     if (systemTemplateSpec?.purpose) setAuditPurpose(systemTemplateSpec.purpose);
   }, [selectedTemplate?.id, systemTemplateSpec?.key]);
 
-  useEffect(() => {
-    const firstStoreId = locationScope.storeIds[0];
-    if (firstStoreId && storeId !== firstStoreId) setStoreId(firstStoreId);
-  }, [locationScope.storeIds, storeId]);
   const isExpiryTemplate =
     startChoice === "template" &&
     templateUsesLines &&
@@ -539,30 +538,14 @@ function NewAuditPage() {
       ? "Choose the shelf / location column for Evidence per shelf."
       : null;
 
+  const singleStorePreselected = useRef(false);
   useEffect(() => {
-    const stores = storesQuery.data;
-    if (!stores?.length || locationScope.storeIds.length > 0) return;
-    const store = stores[0];
-    setLocationScope({
-      storeIds: [store.id],
-      stores: [{ id: store.id, name: store.name, city: store.city, country: store.country }],
-    });
-    setStoreId(store.id);
+    const stores = storesQuery.data ?? [];
+    const only = stores.length === 1 ? stores[0] : undefined;
+    if (singleStorePreselected.current || !only) return;
+    singleStorePreselected.current = true;
+    if (!locationScope.storeIds.length) setLocationScope(storeSelection(stores, [only.id]));
   }, [storesQuery.data, locationScope.storeIds.length]);
-
-  useEffect(() => {
-    if (storeId && !locationScope.storeIds.includes(storeId)) {
-      const store = storesQuery.data?.find((s) => s.id === storeId);
-      if (store) {
-        setLocationScope({
-          storeIds: [store.id],
-          stores: [
-            { id: store.id, name: store.name, city: store.city, country: store.country },
-          ],
-        });
-      }
-    }
-  }, [storeId, storesQuery.data, locationScope.storeIds]);
 
   useEffect(() => {
     if (assignToSelf && assigneeId) return;
@@ -614,9 +597,8 @@ function NewAuditPage() {
       setTeamScope((prev) => ({
         ...prev,
         assigneeIds: [...new Set(Object.values(manualMapping))],
-        manualMapping,
       }));
-      setDistributionStrategy("manual");
+      setStoreAssigneeOverrides(manualMapping);
     })();
 
     return () => {
@@ -635,19 +617,32 @@ function NewAuditPage() {
     enabled: true,
   });
 
+  const selectedAssignees = useMemo(
+    () => resolveSelectedAssignees(teamScope, membersQuery.data ?? []),
+    [teamScope, membersQuery.data],
+  );
+  const storeAssignees = useMemo(
+    () => storeAssigneeMapping(locationScope.storeIds, selectedAssignees, storeAssigneeOverrides),
+    [locationScope.storeIds, selectedAssignees, storeAssigneeOverrides],
+  );
+  const distributionStrategy: DistributionStrategy = assignToSelf ? "equal" : "manual";
+  const teamScopeForPlan = useMemo<TeamScope>(
+    () => (assignToSelf ? teamScope : { ...teamScope, manualMapping: storeAssignees }),
+    [assignToSelf, teamScope, storeAssignees],
+  );
+
   const assignmentPlan = useMemo((): AssignmentPlan | null => {
-    const storeIds =
-      locationScope.storeIds.length > 0 ? locationScope.storeIds : storeId ? [storeId] : [];
+    const storeIds = locationScope.storeIds;
     const assignees = assignToSelf
       ? [{ user_id: "self", name: "Me", role: "member", email: "", status: "active" }]
-      : resolveSelectedAssignees(teamScope, membersQuery.data ?? []);
+      : selectedAssignees;
     if (!storeIds.length || !assignees.length) return null;
 
     const distribution = distributeAssignments({
       storeIds,
       assignees,
       strategy: distributionStrategy,
-      manualMapping: teamScope.manualMapping,
+      manualMapping: teamScopeForPlan.manualMapping,
       storeNames: Object.fromEntries(
         (locationScope.stores ?? []).map((s) => [s.id, s.name]),
       ),
@@ -675,8 +670,8 @@ function NewAuditPage() {
         ...(auditName.trim() ? { audit_name: auditName.trim() } : {}),
         ...(auditDescription.trim() ? { audit_description: auditDescription.trim() } : {}),
       },
-      locationScope: { ...locationScope, storeIds },
-      teamScope,
+      locationScope,
+      teamScope: teamScopeForPlan,
       distributionStrategy,
       distribution,
       recurrence: assignmentMode === "recurring" ? recurrence : undefined,
@@ -698,11 +693,10 @@ function NewAuditPage() {
     };
   }, [
     locationScope,
-    storeId,
     assignToSelf,
-    teamScope,
-    membersQuery.data,
+    selectedAssignees,
     distributionStrategy,
+    teamScopeForPlan,
     assignmentMode,
     operatingModel,
     auditPurpose,
@@ -745,6 +739,7 @@ function NewAuditPage() {
     method,
     aiPlanogramChoice,
     demoScanContext: aiScanContext,
+    locationCount: hasLocations ? Math.max(1, locationScope.storeIds.length) : 0,
     assignToSelf,
     teamScope,
     assigneeId,
@@ -807,6 +802,11 @@ function NewAuditPage() {
           : method === "ai" && !aiAnalysisReady(aiAnalysisRequest)
             ? "Tick at least one thing for AI to analyse, or ask a question."
             : null,
+    where: !hasLocations
+      ? storesQuery.data && !storesQuery.data.length && operatingModel !== "fmcg_distributor"
+        ? "Add a store before creating an audit."
+        : "Choose at least one store."
+      : null,
     assign: !(assignToSelf || teamScope.assigneeIds.length > 0 || assigneeId)
       ? "Choose at least one team member or assign to yourself."
       : null,
@@ -824,14 +824,24 @@ function NewAuditPage() {
           : evidenceColumnError,
   };
 
+  const storeCount = locationScope.storeIds.length;
   const assigneeSummary = assignToSelf
-    ? "Assign to myself and start now"
-    : teamScope.assigneeIds
-        .map(
-          (id) =>
-            membersQuery.data?.find((m) => m.user_id === id)?.name ?? "Team member",
-        )
-        .join(", ") || "—";
+    ? storeCount > 1
+      ? `Me · all ${storeCount} stores`
+      : "Assign to myself and start now"
+    : storeCount > 1 || selectedAssignees.length > 1
+      ? selectedAssignees
+          .map((m) => {
+            const stores = locationScope.storeIds.filter((id) => storeAssignees[id] === m.user_id).length;
+            return `${m.name} · ${stores} ${stores === 1 ? "store" : "stores"}`;
+          })
+          .join("\n") || "—"
+      : teamScope.assigneeIds
+          .map(
+            (id) =>
+              membersQuery.data?.find((m) => m.user_id === id)?.name ?? "Team member",
+          )
+          .join(", ") || "—";
 
   const evidenceLevelLabel =
     evidenceLevel === "high"
@@ -956,20 +966,27 @@ function NewAuditPage() {
       });
 
       if (templateChoice === "expiry") {
-        const attemptId = await createExpiryAssignment({
-          storeId,
-          title: `Expiry inspection — ${sku || category || location}`,
-          auditorId: assignee.id,
-          reviewerId: reviewerId || undefined,
-          dueAt: resolvedDueAt || undefined,
-          sku: sku || undefined,
-          assuranceLevel: effectivePolicy.level === "high" ? "high" : "standard",
-          instructions: instructions || undefined,
-        });
+        if (!locationScope.storeIds.length) throw new Error("Choose at least one store.");
+        const attemptIds: string[] = [];
+        for (const expiryStoreId of locationScope.storeIds) {
+          attemptIds.push(
+            await createExpiryAssignment({
+              storeId: expiryStoreId,
+              title: `Expiry inspection — ${sku || category || location}`,
+              auditorId: assignToSelf ? assignee.id : (storeAssignees[expiryStoreId] ?? assignee.id),
+              reviewerId: reviewerId || undefined,
+              dueAt: resolvedDueAt || undefined,
+              sku: sku || undefined,
+              assuranceLevel: effectivePolicy.level === "high" ? "high" : "standard",
+              instructions: instructions || undefined,
+            }),
+          );
+        }
         return {
-          assignmentId: attemptId,
+          assignmentId: attemptIds[0]!,
           self: assignToSelf,
           expiry: true,
+          bulk: attemptIds.length,
           mode: assignmentMode,
           skipNavigation: options?.skipNavigation,
         };
@@ -1018,9 +1035,9 @@ function NewAuditPage() {
           ? datasetToDraftRows(dataset, { location, category })
           : [];
 
-      const storeIds =
-        locationScope.storeIds.length > 0 ? locationScope.storeIds : storeId ? [storeId] : [];
-      const primaryStoreId = storeIds[0] ?? storeId;
+      const storeIds = locationScope.storeIds;
+      const primaryStoreId = storeIds[0];
+      if (!primaryStoreId) throw new Error("Choose at least one store.");
 
       let planogramVersionId: string | null = null;
       if (assignmentRows.length && primaryStoreId) {
@@ -1158,8 +1175,9 @@ function NewAuditPage() {
                     status: "active",
                   },
                 ]
-              : resolveSelectedAssignees(teamScope, membersQuery.data ?? []),
+              : selectedAssignees,
             strategy: distributionStrategy,
+            manualMapping: teamScopeForPlan.manualMapping,
           }),
         };
         const result = await publishAssignmentPlan(plan);
@@ -1183,7 +1201,7 @@ function NewAuditPage() {
       }
 
       const assignmentId = await createScanAssignment({
-        storeId: storeIds[0] ?? storeId,
+        storeId: primaryStoreId,
         scopeType:
           assignmentRows.length || templateChoice === "planogram"
             ? "planogram"
@@ -1326,10 +1344,10 @@ function NewAuditPage() {
   /** Immediate self-run needs photo capture; schedule/recurring still creates an assignment. */
   const isAiSelfImmediate =
     method === "ai" && assignToSelf && assignmentMode === "assign_now";
-  const previewReady = stepStatus[6];
+  const previewReady = stepStatus[7];
   const canSubmit = previewReady && Boolean(assignmentPlan) && !isAiSelfImmediate;
   const canRunAiAudit =
-    isAiSelfImmediate && captureFiles.length > 0 && stepStatus[6] && !aiAuditLaunched;
+    isAiSelfImmediate && captureFiles.length > 0 && stepStatus[7] && !aiAuditLaunched;
   const footerBusy = createMutation.isPending || aiSelfAuditMutation.isPending;
 
   function handleSubmit() {
@@ -1339,6 +1357,7 @@ function NewAuditPage() {
           stepErrors.method ??
           stepErrors.start ??
           stepErrors.planogram ??
+          stepErrors.where ??
           stepErrors.assign ??
           stepErrors.schedule ??
           stepErrors.evidence ??
@@ -1521,13 +1540,34 @@ function NewAuditPage() {
 
           {showAssignmentSteps ? (
             <>
+              <NewAuditStep4Stores
+                operatingModel={operatingModel}
+                stores={storesQuery.data ?? []}
+                loading={storesQuery.isLoading}
+                loadFailed={storesQuery.isError}
+                value={locationScope}
+                onChange={setLocationScope}
+                note={
+                  isAiSelfImmediate && storeCount > 1
+                    ? `Your photo below is for ${locationScope.stores?.[0]?.name ?? "the first store"}. The other ${storeCount - 1} ${storeCount === 2 ? "audit goes" : "audits go"} to your audit list.`
+                    : null
+                }
+                complete={stepStatus[4]}
+                error={stepErrors.where}
+              />
+
               <NewAuditStep4Assignment
                 members={membersQuery.data ?? []}
                 teamScope={teamScope}
                 assignToSelf={assignToSelf}
                 onTeamChange={setTeamScope}
                 onAssignToSelfChange={setAssignToSelf}
-                complete={stepStatus[4]}
+                stores={locationScope.stores ?? []}
+                storeAssignees={storeAssignees}
+                onStoreAssigneeChange={(id, userId) =>
+                  setStoreAssigneeOverrides((current) => ({ ...current, [id]: userId }))
+                }
+                complete={stepStatus[5]}
                 error={stepErrors.assign}
               />
 
@@ -1542,7 +1582,7 @@ function NewAuditPage() {
                 onDueConfigChange={touchSchedule(setDueConfig)}
                 onRecurrenceChange={touchSchedule(setRecurrence)}
                 onInstructionsChange={setInstructions}
-                complete={shownSteps[5]}
+                complete={shownSteps[6]}
                 error={stepErrors.schedule}
               />
 
@@ -1553,8 +1593,7 @@ function NewAuditPage() {
                 templateName={activeTemplateName}
                 operatingModelLabel={operatingModelLabel}
                 method={method}
-                stepNumber={6}
-                sectionId="step-6-preview"
+                storeNames={(locationScope.stores ?? []).map((s) => s.name)}
                 planogramSummary={
                   method === "ai"
                     ? buildAiPlanogramPreviewSummary(aiPlanogramChoice, aiScanContext)
@@ -1568,7 +1607,7 @@ function NewAuditPage() {
                 evidenceSummary={evidenceSummary}
                 showEvidence={method !== "ai"}
                 assignToSelf={assignToSelf}
-                complete={stepStatus[6]}
+                complete={stepStatus[7]}
               />
 
               {isAiSelfImmediate ? (
@@ -1577,7 +1616,7 @@ function NewAuditPage() {
                     captureFiles={captureFiles}
                     onCaptureChange={handleCaptureChange}
                     disabled={footerBusy || aiAuditLaunched}
-                    complete={stepStatus[7] || aiAuditLaunched}
+                    complete={stepStatus[8] || aiAuditLaunched}
                     uploading={aiSelfAuditMutation.isPending}
                     uploadProgress={uploadProgress}
                   />

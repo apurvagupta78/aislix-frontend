@@ -77,6 +77,28 @@ export function buildManualMappingFromDistribution(
   return map;
 }
 
+/**
+ * Who audits each store: the equal split by default, with per-store choices on top.
+ * Choices for people who are no longer selected fall back to the split.
+ */
+export function storeAssigneeMapping(
+  storeIds: string[],
+  assignees: AssignableMember[],
+  overrides: Record<string, string> = {},
+): Record<string, string> {
+  const defaults = buildManualMappingFromDistribution(
+    distributeAssignments({ storeIds, assignees, strategy: "equal" }),
+  );
+  const selected = new Set(assignees.map((a) => a.user_id));
+  const mapping: Record<string, string> = {};
+  for (const storeId of storeIds) {
+    const chosen = overrides[storeId];
+    const assigneeId = chosen && selected.has(chosen) ? chosen : defaults[storeId];
+    if (assigneeId) mapping[storeId] = assigneeId;
+  }
+  return mapping;
+}
+
 export function summarizeLocationScope(scope: LocationScope): {
   cities: string[];
   countries: string[];

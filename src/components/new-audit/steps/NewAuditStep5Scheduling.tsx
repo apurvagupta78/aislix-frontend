@@ -39,8 +39,8 @@ export function NewAuditStep5Scheduling({
 }: Props) {
   return (
     <NewAuditStepSection
-      id="step-5-when"
-      stepNumber={5}
+      id="step-6-when"
+      stepNumber={6}
       title="When?"
       description="Assign immediately or schedule for later."
       complete={complete}

@@ -53,8 +53,8 @@ export function NewAuditStep7Capture({
 
   return (
     <NewAuditStepSection
-      id="step-7-capture"
-      stepNumber={7}
+      id="step-8-capture"
+      stepNumber={8}
       title="Capture shelf photos"
       description={`Add 1–${MAX_SCAN_IMAGES} photos of the shelf — one per section, without overlapping. AI counts them together against your document.`}
       complete={complete}

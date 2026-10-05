@@ -33,19 +33,15 @@ export const DIGITAL_AUDIT_STEPS: NewAuditNavStep[] = [
   { id: 1, label: "Details", anchor: "step-1-details" },
   { id: 2, label: "Perform", anchor: "step-2-perform" },
   { id: 3, label: "Start", anchor: "step-3-start" },
-  { id: 4, label: "Who", anchor: "step-4-who" },
-  { id: 5, label: "When", anchor: "step-5-when" },
-  { id: 6, label: "Preview", anchor: "step-6-preview" },
+  { id: 4, label: "Where", anchor: "step-4-where" },
+  { id: 5, label: "Who", anchor: "step-5-who" },
+  { id: 6, label: "When", anchor: "step-6-when" },
+  { id: 7, label: "Preview", anchor: "step-7-preview" },
 ];
 
 export const AI_AUDIT_STEPS: NewAuditNavStep[] = [
-  { id: 1, label: "Details", anchor: "step-1-details" },
-  { id: 2, label: "Perform", anchor: "step-2-perform" },
-  { id: 3, label: "Start", anchor: "step-3-start" },
-  { id: 4, label: "Who", anchor: "step-4-who" },
-  { id: 5, label: "When", anchor: "step-5-when" },
-  { id: 6, label: "Preview", anchor: "step-6-preview" },
-  { id: 7, label: "Capture", anchor: "step-7-capture" },
+  ...DIGITAL_AUDIT_STEPS,
+  { id: 8, label: "Capture", anchor: "step-8-capture" },
 ];
 
 /** @deprecated use getNewAuditNavSteps */
@@ -59,7 +55,7 @@ export function getNewAuditNavSteps(
   if (method !== "ai") return DIGITAL_AUDIT_STEPS;
   const needsImmediateCapture = assignToSelf && assignmentMode === "assign_now";
   if (needsImmediateCapture) return AI_AUDIT_STEPS;
-  return AI_AUDIT_STEPS.filter((step) => step.id <= 6);
+  return DIGITAL_AUDIT_STEPS;
 }
 
 export type StepValidationInput = {
@@ -69,6 +65,8 @@ export type StepValidationInput = {
   method: CaptureMethod;
   aiPlanogramChoice: NewAuditPlanogramChoice | null;
   demoScanContext: ScanContextState;
+  /** Stores (or hierarchy nodes) the audit goes to — one audit is created per store. */
+  locationCount: number;
   assignToSelf: boolean;
   teamScope: TeamScope;
   assigneeId: string;
@@ -100,33 +98,20 @@ export function validateNewAuditSteps(input: StepValidationInput): StepValidatio
       : input.method === "ai"
         ? isAiStep3Ready(input.aiPlanogramChoice, input.demoScanContext) && input.aiAnalysisReady !== false
         : false;
-  const step4 =
+  const step4 = input.locationCount > 0;
+  const step5 =
     input.assignToSelf ||
     input.teamScope.assigneeIds.length > 0 ||
     Boolean(input.assigneeId);
 
-  const step5 =
+  const step6 =
     (input.assignmentMode !== "schedule_once" || Boolean(input.publishAt)) &&
     !input.hasBlockingConflicts;
 
-  if (input.method === "ai") {
-    const step6 = step1 && step2 && step3 && step4 && step5;
-    const needsImmediateCapture =
-      input.assignToSelf && input.assignmentMode === "assign_now";
-    const step7 = step6 && needsImmediateCapture && Boolean(input.captureReady);
-    return {
-      1: step1,
-      2: step2,
-      3: step3,
-      4: step4,
-      5: step5,
-      6: step6,
-      7: step7,
-      8: false,
-    };
-  }
-
-  const step6 = step1 && step2 && step3 && step4 && step5;
+  const step7 = step1 && step2 && step3 && step4 && step5 && step6;
+  const needsImmediateCapture =
+    input.method === "ai" && input.assignToSelf && input.assignmentMode === "assign_now";
+  const step8 = step7 && needsImmediateCapture && Boolean(input.captureReady);
 
   return {
     1: step1,
@@ -135,8 +120,8 @@ export function validateNewAuditSteps(input: StepValidationInput): StepValidatio
     4: step4,
     5: step5,
     6: step6,
-    7: false,
-    8: false,
+    7: step7,
+    8: step8,
   };
 }
 
@@ -152,7 +137,7 @@ export function displayStepStatus(
   return {
     ...status,
     2: status[2] && (touched.method || status[3]),
-    5: status[5] && (touched.schedule || (status[3] && status[4])),
+    6: status[6] && (touched.schedule || (status[3] && status[4] && status[5])),
   };
 }
 
