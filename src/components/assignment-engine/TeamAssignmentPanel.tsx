@@ -15,6 +15,7 @@ type Props = {
   /** Short tag shown next to a person, e.g. which stores they cover. */
   memberNote?: (member: AssignableMember) => string | null;
   footer?: ReactNode;
+  emptyText?: string;
 };
 
 export function TeamAssignmentPanel({
@@ -24,6 +25,7 @@ export function TeamAssignmentPanel({
   singleAssignee,
   memberNote,
   footer,
+  emptyText,
 }: Props) {
   const toggleMember = (member: AssignableMember) => {
     if (singleAssignee) {
@@ -99,8 +101,8 @@ export function TeamAssignmentPanel({
             </span>
           </Label>
         ))}
-        {!members.length ? (
-          <p className="px-2 py-3 text-sm text-muted-foreground">Nobody covers the chosen stores.</p>
+        {!members.length && emptyText ? (
+          <p className="px-2 py-3 text-sm text-muted-foreground">{emptyText}</p>
         ) : null}
       </div>
       {footer}

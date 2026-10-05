@@ -94,6 +94,7 @@ export function NewAuditStep4Assignment({
           onTeamChange={onTeamChange}
           singleAssignee={assignToSelf}
           memberNote={memberNote}
+          emptyText={filtering && members.length ? "Nobody on your team covers the chosen stores." : undefined}
           footer={
             coverage && storeIds.length && (hiddenCount > 0 || showEveryone) ? (
               <button
