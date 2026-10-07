@@ -1820,7 +1820,7 @@ export function AiDigitalDashboardShell() {
                       {filteredLastTen.map((row) => (
                         <tr key={row.id} className="border-b border-[#EEF1F4]">
                           <td className="py-2 pr-3 font-medium text-[#102A43]">{row.auditName}</td>
-                          <td className="py-2 pr-3 text-[#557187]">{row.templateName}</td>
+                          <td className="py-2 pr-3 text-[#557187]">{row.templateName || "—"}</td>
                           <td className="py-2 pr-3">{row.storeName}</td>
                           <td className="py-2 pr-3">{row.assigneeName}</td>
                           <td className="py-2 pr-3">{row.type}</td>

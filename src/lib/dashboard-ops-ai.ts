@@ -410,7 +410,7 @@ export async function fetchOpsAiDashboard(
       scanIdsFromAssign.length
         ? supabase
             .from("shelf_scans")
-            .select("id, planogram_compliance_percent, status, created_at, store_id, audit_mode")
+            .select("id, planogram_compliance_percent, status, created_at, store_id, audit_mode, category")
             .in("id", scanIdsFromAssign.slice(0, 200))
         : Promise.resolve({
             data: [] as {
@@ -420,6 +420,7 @@ export async function fetchOpsAiDashboard(
               created_at: string;
               store_id: string | null;
               audit_mode: string | null;
+              category: string | null;
             }[],
           }),
     ]);
@@ -622,6 +623,13 @@ export async function fetchOpsAiDashboard(
     const tmpl = a.template_id
       ? templateName.get(a.template_id as string) ?? "—"
       : "—";
+    const scanCategory = ((scan?.category as string | null) ?? "").trim();
+    const untemplatedName =
+      String(a.audit_mode ?? "").toLowerCase() === "ai"
+        ? scanCategory
+          ? `Shelf audit · ${scanCategory}`
+          : "Shelf audit"
+        : "Audit";
     const assigneeId = (a.assignee_id as string | null) ?? null;
     const assignerId = (a.assigner_id as string | null) ?? null;
     let relation: LastTenAuditRow["relation"] = "other";
@@ -630,8 +638,8 @@ export async function fetchOpsAiDashboard(
     return {
       id: a.id as string,
       scanId: (a.scan_id as string | null) ?? null,
-      auditName: tmpl !== "—" ? tmpl : "Audit",
-      templateName: tmpl,
+      auditName: tmpl !== "—" ? tmpl : untemplatedName,
+      templateName: tmpl !== "—" ? tmpl : "",
       storeName: a.store_id ? storeName.get(a.store_id as string) ?? "—" : "—",
       assigneeName: assigneeId
         ? personName.get(assigneeId) ?? "Unassigned"
