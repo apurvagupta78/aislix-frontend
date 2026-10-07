@@ -13,7 +13,7 @@ import { AskAislixScopeSelect } from "@/components/ask-aislix/AskAislixScopeSele
 import type { AskAislixAttachmentInput } from "@/lib/ask-aislix/ask-aislix.types";
 import { ASK_AISLIX_MAX_ATTACHMENTS } from "@/lib/ask-aislix/ask-aislix.attachments";
 import { readAskAislixAttachments } from "@/lib/ask-aislix/ask-aislix.attachments-io";
-import { ASK_SCOPE_OPTIONS } from "@/lib/ask-aislix/ask-aislix-suggestion-groups";
+import { ASK_DEFAULT_PERIOD, ASK_SCOPE_OPTIONS } from "@/lib/ask-aislix/ask-aislix-suggestion-groups";
 import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
 import { cn } from "@/lib/utils";
 
@@ -61,7 +61,7 @@ export function AskAislixInput({
   const textareaRef = externalInputRef ?? localTextareaRef;
   const [enhancing, setEnhancing] = useState(false);
   const [store, setStore] = useState<string>(ASK_SCOPE_OPTIONS.stores[0]);
-  const [period, setPeriod] = useState<string>(ASK_SCOPE_OPTIONS.period[1]);
+  const [period, setPeriod] = useState<string>(ASK_DEFAULT_PERIOD);
 
   const activeStore = storeScope ?? store;
   const activePeriod = periodScope ?? period;

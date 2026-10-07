@@ -189,5 +189,18 @@ export const ASK_SUGGESTION_UI_TINTS: Record<AskSuggestionUiGroupId, AskSuggesti
 
 export const ASK_SCOPE_OPTIONS = {
   stores: ["All stores", "North region", "South region", "Dark stores", "Warehouses"],
-  period: ["Last 7 days", "Last 30 days", "This quarter", "Year to date"],
+  period: ["Last 7 days", "Last 30 days", "Last 90 days", "This quarter", "Year to date"],
 } as const;
+
+export type AskPeriodKey = "7d" | "30d" | "90d" | "quarter" | "ytd";
+
+/** Must match the server's default window so the chip always describes the data used. */
+export const ASK_DEFAULT_PERIOD = "Last 90 days";
+
+export const ASK_PERIOD_KEYS: Record<(typeof ASK_SCOPE_OPTIONS.period)[number], AskPeriodKey> = {
+  "Last 7 days": "7d",
+  "Last 30 days": "30d",
+  "Last 90 days": "90d",
+  "This quarter": "quarter",
+  "Year to date": "ytd",
+};

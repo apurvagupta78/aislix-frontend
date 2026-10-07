@@ -420,7 +420,7 @@ export async function askAislixServer(
   scope.labeledDemo = demoExperience.labeledDemo;
   scope.activeOrgId = request.activeOrgId;
 
-  const queryFilters = resolveAskAislixQueryFilters();
+  const queryFilters = resolveAskAislixQueryFilters(request.period, request.question);
   const toolCtx: ToolContext = {
     supabase,
     scope,

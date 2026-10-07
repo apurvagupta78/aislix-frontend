@@ -13,7 +13,11 @@ import {
   NO_AUDIT_FOUND_MESSAGE,
 } from "@/lib/ask-aislix/ask-aislix.response";
 import { buildDemoAskResponse } from "@/lib/ask-aislix/ask-aislix-demo-answers";
-import { ASK_SCOPE_OPTIONS } from "@/lib/ask-aislix/ask-aislix-suggestion-groups";
+import {
+  ASK_DEFAULT_PERIOD,
+  ASK_PERIOD_KEYS,
+  ASK_SCOPE_OPTIONS,
+} from "@/lib/ask-aislix/ask-aislix-suggestion-groups";
 import { AISLIX_DEMO_ORG_ID, prefixDemoAnswer } from "@/lib/demo-environment";
 import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
 import { requireOrgId, requireUserId } from "@/lib/db/context";
@@ -37,8 +41,7 @@ function withAskScope(question: string, store: string, period: string): string {
   const q = question.trim();
   if (!q) return q;
   const defaultStore = ASK_SCOPE_OPTIONS.stores[0];
-  const defaultPeriod = ASK_SCOPE_OPTIONS.period[1];
-  if (store === defaultStore && period === defaultPeriod) return q;
+  if (store === defaultStore && period === ASK_DEFAULT_PERIOD) return q;
   return `${q} (Scope: ${store}, ${period})`;
 }
 
@@ -63,7 +66,7 @@ export function AskAislixSection({
   const [attachments, setAttachments] = useState<AskAislixAttachmentInput[]>([]);
   const [accessRole, setAccessRole] = useState<string | null>(null);
   const [storeScope, setStoreScope] = useState<string>(ASK_SCOPE_OPTIONS.stores[0]);
-  const [periodScope, setPeriodScope] = useState<string>(ASK_SCOPE_OPTIONS.period[1]);
+  const [periodScope, setPeriodScope] = useState<string>(ASK_DEFAULT_PERIOD);
   const [storeOptions, setStoreOptions] = useState<readonly string[]>(ASK_SCOPE_OPTIONS.stores);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -156,6 +159,7 @@ export function AskAislixSection({
             conversationId,
             attachments: attachments.length ? attachments : undefined,
             previewDemo: previewDemo ? true : false,
+            period: ASK_PERIOD_KEYS[periodScope as keyof typeof ASK_PERIOD_KEYS],
           },
         });
 

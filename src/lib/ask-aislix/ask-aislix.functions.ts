@@ -23,6 +23,7 @@ const AskInputSchema = z.object({
   conversationId: z.string().uuid().optional(),
   attachments: z.array(AttachmentSchema).max(5).optional(),
   previewDemo: z.boolean().optional(),
+  period: z.enum(["7d", "30d", "90d", "quarter", "ytd"]).optional(),
 });
 
 export const askAislix = createServerFn({ method: "POST" })
@@ -37,6 +38,7 @@ export const askAislix = createServerFn({ method: "POST" })
       conversationId: data.conversationId,
       attachments: data.attachments,
       previewDemo: data.previewDemo,
+      period: data.period,
     });
   });
 

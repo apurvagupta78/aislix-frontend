@@ -10,8 +10,14 @@ export type AuditScopeSummaries = {
   conductedSample: string[];
 };
 
-export function buildFilterContextJson(scope: AskAislixAccessScope): string {
-  const filters = clampFiltersToScope(resolveAskAislixQueryFilters(), scope);
+export function buildFilterContextJson(
+  scope: AskAislixAccessScope,
+  request?: Pick<AskAislixRequest, "period" | "question">,
+): string {
+  const filters = clampFiltersToScope(
+    resolveAskAislixQueryFilters(request?.period, request?.question),
+    scope,
+  );
   const bounds = resolveDashboardDateBounds(filters);
   return JSON.stringify({
     period: filters.datePreset,
@@ -51,7 +57,7 @@ export function buildTrustedContextBlock(
   summaries: AuditScopeSummaries,
   storeNames: string[],
 ): string {
-  const queryScope = buildFilterContextJson(scope);
+  const queryScope = buildFilterContextJson(scope, request);
 
   return [
     "CURRENT AISLIX CONTEXT",

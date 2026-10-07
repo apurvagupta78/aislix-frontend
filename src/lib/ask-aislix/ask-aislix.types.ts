@@ -88,6 +88,8 @@ export type AskAislixRequest = {
   attachments?: AskAislixAttachmentInput[];
   /** Owner preview toggle — server validates against allowlisted email. */
   previewDemo?: boolean;
+  /** Time-period chip; defaults to the last 90 days. */
+  period?: "7d" | "30d" | "90d" | "quarter" | "ytd";
 };
 
 export type AskAislixAccessScope = {
