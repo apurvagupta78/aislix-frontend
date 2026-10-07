@@ -7,6 +7,8 @@ import type { SegmentId } from "@/lib/segments/segment-config";
 
 export type ScheduleFrequency = "daily" | "weekly";
 
+/** Off until a timer calls /api/cron/report-schedules in production; otherwise schedules would never send. */
+export const REPORT_SCHEDULES_LIVE = false;
 export const DEFAULT_SCHEDULE_TIMEZONE = "Asia/Kolkata";
 export const MAX_SCHEDULES_PER_PERSON = 20;
 export const WEEKDAY_LABELS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];

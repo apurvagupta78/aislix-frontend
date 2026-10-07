@@ -8,6 +8,7 @@ import { DemoPreviewToggle } from "@/components/control-tower/DemoPreviewToggle"
 import { SegmentKpiCard } from "@/components/dashboard/SegmentHomePanel";
 import { ReportsLibrary } from "@/components/reports/ReportsLibrary";
 import { ScheduleReportDialog } from "@/components/reports/ScheduleReportDialog";
+import { REPORT_SCHEDULES_LIVE } from "@/lib/reports/report-schedule";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -301,9 +302,11 @@ function ReportView({
           <Button variant="subtle" size="sm" className="rounded-xl" disabled={!ready} onClick={whatsapp}>
             <MessageCircle className="size-4" /> WhatsApp
           </Button>
-          <Button variant="subtle" size="sm" className="rounded-xl" disabled={!ready} onClick={() => setScheduleOpen(true)}>
-            <CalendarClock className="size-4" /> Schedule
-          </Button>
+          {REPORT_SCHEDULES_LIVE ? (
+            <Button variant="subtle" size="sm" className="rounded-xl" disabled={!ready} onClick={() => setScheduleOpen(true)}>
+              <CalendarClock className="size-4" /> Schedule
+            </Button>
+          ) : null}
           <Button variant="brand" size="sm" className="rounded-xl" disabled={!ready} onClick={() => setEmailOpen(true)}>
             <Mail className="size-4" /> Email
           </Button>
@@ -339,13 +342,15 @@ function ReportView({
           request={{ kind, days, segment, storeId, previewDemo }}
         />
       ) : null}
-      <ScheduleReportDialog
-        open={scheduleOpen}
-        onOpenChange={setScheduleOpen}
-        request={{ kind, days, segment, storeId, previewDemo }}
-        storeName={storeName}
-        storeNames={Object.fromEntries(storeOptions.map((s) => [s.store_id, s.store_name]))}
-      />
+      {REPORT_SCHEDULES_LIVE ? (
+        <ScheduleReportDialog
+          open={scheduleOpen}
+          onOpenChange={setScheduleOpen}
+          request={{ kind, days, segment, storeId, previewDemo }}
+          storeName={storeName}
+          storeNames={Object.fromEntries(storeOptions.map((s) => [s.store_id, s.store_name]))}
+        />
+      ) : null}
     </section>
   );
 }
