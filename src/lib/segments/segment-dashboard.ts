@@ -13,6 +13,8 @@ type Num = number | null;
 export type SegmentDashboardTotals = {
   audits: number;
   stores: number;
+  /** Audits where the AI read the shelf — counts below only come from these. */
+  shelf_read_audits: number;
   avg_osa: Num;
   avg_sos: Num;
   avg_health: Num;

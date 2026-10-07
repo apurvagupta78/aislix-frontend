@@ -39,10 +39,15 @@ scans AS (
     s.share_of_shelf_percent::numeric AS sos,
     s.shelf_health_score::numeric AS health,
     s.planogram_compliance_percent::numeric AS planogram,
-    COALESCE(aislix_jsonb_num(r.metrics -> 'shelf_gap_count'), s.out_of_stock_count::numeric) AS gaps,
-    s.low_stock_count::numeric AS low_stock,
-    s.misplaced_count::numeric AS misplaced,
-    aislix_jsonb_num(r.metrics -> 'total_facings') AS facings,
+    sr_read.shelf_read,
+    CASE WHEN sr_read.shelf_read THEN
+      COALESCE(aislix_jsonb_num(r.metrics -> 'shelf_gap_count'), s.out_of_stock_count::numeric)
+    END AS gaps,
+    CASE WHEN sr_read.shelf_read THEN s.low_stock_count::numeric END AS low_stock,
+    CASE WHEN sr_read.shelf_read THEN s.misplaced_count::numeric END AS misplaced,
+    CASE WHEN sr_read.shelf_read THEN
+      COALESCE(aislix_jsonb_num(r.metrics -> 'total_facings'), aislix_jsonb_num(r.metrics -> 'total_actual_facings'))
+    END AS facings,
     aislix_jsonb_num(r.metrics -> 'financial_impact' -> 'at_risk_sku_count') AS at_risk_skus,
     CASE WHEN r.metrics -> 'financial_impact' ->> 'estimate_status' = 'estimated' THEN
       COALESCE(
@@ -62,6 +67,14 @@ scans AS (
     ORDER BY sr.created_at DESC
     LIMIT 1
   ) r ON true
+  -- Count columns default to 0; only trust them when the AI actually read the shelf.
+  CROSS JOIN LATERAL (
+    SELECT (
+      s.osa_percent IS NOT NULL
+      OR COALESCE(s.total_products, 0) > 0
+      OR COALESCE(r.metrics ? 'shelf_gap_count', false)
+    ) AS shelf_read
+  ) sr_read
   WHERE s.org_id = p_org_id
     AND s.audit_mode = 'ai'
     AND s.status = 'completed'
@@ -75,6 +88,7 @@ totals AS (
   SELECT jsonb_build_object(
     'audits', count(*),
     'stores', count(DISTINCT store_id),
+    'shelf_read_audits', count(*) FILTER (WHERE shelf_read),
     'avg_osa', round(avg(osa), 1),
     'avg_sos', round(avg(sos), 1),
     'avg_health', round(avg(health), 1),

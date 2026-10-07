@@ -342,7 +342,8 @@ function BrandsCard({ config, data }: { config: SegmentConfig; data: SegmentDash
             </ResponsiveContainer>
           </div>
           <p className="mt-2 text-xs text-[#667085]">
-            Average share across {data?.brand_audits ?? 0} audits where the AI read brands.
+            Average share across {data?.brand_audits ?? 0} {data?.brand_audits === 1 ? "audit" : "audits"} where
+            the AI read brands.
           </p>
         </>
       )}

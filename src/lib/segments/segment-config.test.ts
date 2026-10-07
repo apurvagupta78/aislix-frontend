@@ -18,6 +18,7 @@ function dashboard(overrides: Partial<SegmentDashboard["totals"]> = {}): Segment
     totals: {
       audits: 12,
       stores: 3,
+      shelf_read_audits: 12,
       avg_osa: 91.5,
       avg_sos: null,
       avg_health: 78,
@@ -71,6 +72,17 @@ describe("segment config", () => {
     }
   });
 
+  it("never reports zero problems when the AI did not read the shelf", () => {
+    const unread = dashboard({ shelf_read_audits: 0, gaps: null, low_stock: null, misplaced: null, facings: null });
+    expect(segmentHeadline(SEGMENT_CONFIG.distributor, unread)).toBe(
+      "12 AI audits across 3 outlets. Shelf counts are not available for these audits.",
+    );
+    const kpis = buildSegmentKpis(SEGMENT_CONFIG.distributor, unread);
+    const gaps = kpis.find((k) => k.id === "gaps")!;
+    expect(gaps.value).toBe("N/A");
+    expect(gaps.context).toBe("Data unavailable for these audits");
+  });
+
   it("keeps value at risk unavailable unless audits were priced", () => {
     const [, , , value] = buildSegmentKpis(SEGMENT_CONFIG.fmcg, dashboard());
     expect(value!.id).toBe("value_gap");
@@ -91,6 +103,9 @@ describe("segment config", () => {
       "12 AI audits across 3 outlets found 14 empty gaps and 30 low-stock lines.",
     );
     expect(segmentHeadline(SEGMENT_CONFIG.local, dashboard({ audits: 0 }))).toBeNull();
+    expect(segmentHeadline(SEGMENT_CONFIG.supermarket, dashboard({ audits: 1, stores: 1 }))).toBe(
+      "1 AI audit across 1 store found 14 empty gaps and 30 low-stock lines.",
+    );
     for (const id of SEGMENT_IDS) {
       const c = SEGMENT_CONFIG[id];
       const kpis = buildSegmentKpis(c, dashboard());

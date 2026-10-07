@@ -171,6 +171,10 @@ function diff(cur: number | null, prev: number | null): number | null {
   return cur - prev;
 }
 
+function plural(n: number, one: string, many = `${one}s`): string {
+  return `${formatCount(n)} ${n === 1 ? one : many}`;
+}
+
 /** Build KPI cards for a segment. Accents cycle so neighbours never share a colour. */
 export function buildSegmentKpis(config: SegmentConfig, data: SegmentDashboard | null): SegmentKpiView[] {
   const t = data?.totals;
@@ -178,6 +182,7 @@ export function buildSegmentKpis(config: SegmentConfig, data: SegmentDashboard |
   const a = data?.actions;
   const audits = num(t?.audits) ?? 0;
   const noAudits = audits === 0;
+  const missing = noAudits ? "No AI audits in this period" : "Data unavailable for these audits";
   const nouns = config.storeNoun;
 
   return config.kpis.map((id, index) => {
@@ -190,7 +195,7 @@ export function buildSegmentKpis(config: SegmentConfig, data: SegmentDashboard |
           ...base,
           label: "Shelf availability",
           value: formatPct(v),
-          context: v == null ? "No availability read yet" : `Average across ${formatCount(audits)} AI audits`,
+          context: v == null ? missing : `Average across ${plural(audits, "AI audit")}`,
           delta: diff(v, num(p?.avg_osa)),
           unavailable: v == null,
         };
@@ -201,7 +206,7 @@ export function buildSegmentKpis(config: SegmentConfig, data: SegmentDashboard |
           ...base,
           label: "Shelf health",
           value: v == null ? NOT_AVAILABLE : `${Math.round(v)}/100`,
-          context: v == null ? "No shelf health score yet" : "AI score for stock, order and gaps",
+          context: v == null ? missing : "AI score for stock, order and gaps",
           delta: diff(v, num(p?.avg_health)),
           unavailable: v == null,
         };
@@ -213,7 +218,7 @@ export function buildSegmentKpis(config: SegmentConfig, data: SegmentDashboard |
           ...base,
           label: "Planogram compliance",
           value: formatPct(v),
-          context: v == null ? "Upload a planogram to compare" : `${formatCount(n)} audits matched to a planogram`,
+          context: v == null ? "Upload a planogram to compare" : `${plural(n, "audit")} matched to a planogram`,
           unavailable: v == null,
         };
       }
@@ -223,7 +228,7 @@ export function buildSegmentKpis(config: SegmentConfig, data: SegmentDashboard |
           ...base,
           label: "Empty shelf gaps",
           value: formatCount(v),
-          context: v == null ? "No AI audits in this period" : "Empty spaces the AI found",
+          context: v == null ? missing : "Empty spaces the AI found",
           delta: diff(v, num(p?.gaps)),
           lowerIsBetter: true,
           unavailable: v == null,
@@ -235,7 +240,7 @@ export function buildSegmentKpis(config: SegmentConfig, data: SegmentDashboard |
           ...base,
           label: "Low-stock lines",
           value: formatCount(v),
-          context: v == null ? "No AI audits in this period" : "Products running low on the shelf",
+          context: v == null ? missing : "Products running low on the shelf",
           delta: diff(v, num(p?.low_stock)),
           lowerIsBetter: true,
           unavailable: v == null,
@@ -247,7 +252,7 @@ export function buildSegmentKpis(config: SegmentConfig, data: SegmentDashboard |
           ...base,
           label: "Misplaced items",
           value: formatCount(v),
-          context: v == null ? "No AI audits in this period" : "Products in the wrong place",
+          context: v == null ? missing : "Products in the wrong place",
           delta: diff(v, num(p?.misplaced)),
           lowerIsBetter: true,
           unavailable: v == null,
@@ -259,7 +264,7 @@ export function buildSegmentKpis(config: SegmentConfig, data: SegmentDashboard |
           ...base,
           label: "Facings counted",
           value: formatCount(v),
-          context: v == null ? "No facings counted yet" : "Product fronts the AI counted",
+          context: v == null ? missing : "Product fronts the AI counted",
           unavailable: v == null,
         };
       }
@@ -269,7 +274,7 @@ export function buildSegmentKpis(config: SegmentConfig, data: SegmentDashboard |
           ...base,
           label: `${capitalize(nouns.many)} audited`,
           value: noAudits ? NOT_AVAILABLE : formatCount(v),
-          context: noAudits ? "No AI audits in this period" : `${formatCount(audits)} AI audits in this period`,
+          context: noAudits ? missing : `${plural(audits, "AI audit")} in this period`,
           delta: diff(noAudits ? null : v, num(p?.stores)),
           unavailable: noAudits,
         };
@@ -301,7 +306,7 @@ export function buildSegmentKpis(config: SegmentConfig, data: SegmentDashboard |
           ...base,
           label: "Potential value at risk",
           value: formatInr(v),
-          context: v == null ? "Add a price list to estimate value" : `From ${formatCount(priced)} priced audits`,
+          context: v == null ? "Add a price list to estimate value" : `From ${plural(priced, "priced audit")}`,
           lowerIsBetter: true,
           unavailable: v == null,
         };
@@ -323,7 +328,7 @@ export function buildSegmentKpis(config: SegmentConfig, data: SegmentDashboard |
           ...base,
           label: "Overdue fixes",
           value: formatCount(v),
-          context: v == null ? "Data unavailable" : `${formatCount(num(a?.open) ?? 0)} fixes open in total`,
+          context: v == null ? "Data unavailable" : `${plural(num(a?.open) ?? 0, "fix", "fixes")} open in total`,
           lowerIsBetter: true,
           unavailable: v == null,
         };
@@ -345,7 +350,10 @@ export function segmentHeadline(config: SegmentConfig, data: SegmentDashboard | 
   if (gaps != null && gaps > 0) parts.push(`${formatCount(gaps)} empty gaps`);
   if (low != null && low > 0) parts.push(`${formatCount(low)} low-stock lines`);
   if (misplaced != null && misplaced > 0) parts.push(`${formatCount(misplaced)} misplaced items`);
-  const where = `${formatCount(audits)} AI audits across ${formatCount(stores)} ${stores === 1 ? config.storeNoun.one : config.storeNoun.many}`;
+  const where = `${plural(audits, "AI audit")} across ${plural(stores, config.storeNoun.one, config.storeNoun.many)}`;
+  if (gaps == null && low == null && misplaced == null) {
+    return `${where}. Shelf counts are not available for these audits.`;
+  }
   if (!parts.length) return `${where} found no gaps, low stock or misplaced items.`;
   return `${where} found ${joinList(parts)}.`;
 }
