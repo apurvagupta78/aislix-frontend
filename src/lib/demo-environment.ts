@@ -1,5 +1,5 @@
 /**
- * Shared demo environment — isolated showcase org for new users with no real audit activity.
+ * Shared demo environment — isolated showcase org, shown only when Demo Data is on.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -39,10 +39,7 @@ export type DemoExperienceMode = {
 export type DemoExperienceOptions = {
   previewDemo?: boolean;
   userEmail?: string | null;
-  /**
-   * When true and previewDemo is false, never auto-swap to the showcase org
-   * (first-time empty workspace stays empty). Used by Dashboard Demo Data toggle.
-   */
+  /** @deprecated The toggle is always honoured; kept so existing callers compile. */
   honorPreviewOff?: boolean;
 };
 
@@ -55,12 +52,10 @@ export function canUseDemoPreview(_userEmail?: string | null): boolean {
   return true;
 }
 
-/** Default ON when preference has never been set. */
+/** Default OFF: a new workspace sees its own data until the user turns Demo Data on. */
 export function readDemoPreviewPreference(): boolean {
-  if (typeof window === "undefined") return true;
-  const raw = window.localStorage.getItem(DEMO_PREVIEW_STORAGE_KEY);
-  if (raw === null) return true;
-  return raw === "1";
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(DEMO_PREVIEW_STORAGE_KEY) === "1";
 }
 
 export function writeDemoPreviewPreference(enabled: boolean): void {
@@ -82,20 +77,22 @@ export async function fetchOrgIsDemo(orgId: string): Promise<boolean> {
   return Boolean(data?.is_demo);
 }
 
-export async function orgHasRealAuditActivity(orgId: string): Promise<boolean> {
-  const { count, error } = await supabase
-    .from("scan_assignments")
-    .select("id", { count: "exact", head: true })
-    .eq("org_id", orgId)
-    .in("status", ["completed", "in_progress"]);
-
-  if (error) {
-    const { data } = await supabase.rpc("org_has_real_audit_activity" as never, {
-      p_org_id: orgId,
-    } as never);
-    return Boolean(data);
+/**
+ * The Demo Data toggle is the only way to see showcase numbers. With it off, a workspace
+ * always sees its own data — an empty workspace shows N/A, never borrowed demo figures.
+ */
+export function decideDemoExperience(
+  activeOrgId: string,
+  isDemoOrg: boolean,
+  options: DemoExperienceOptions = {},
+): DemoExperienceMode {
+  if (isDemoOrg || isDemoOrgId(activeOrgId)) {
+    return { labeledDemo: true, dataOrgId: activeOrgId, activeOrgId, previewDemo: false };
   }
-  return (count ?? 0) > 0;
+  if (options.previewDemo === true && canUseDemoPreview(options.userEmail)) {
+    return resolveShowcaseExperience(activeOrgId, true);
+  }
+  return { labeledDemo: false, dataOrgId: activeOrgId, activeOrgId, previewDemo: false };
 }
 
 /** Resolve whether to show demo-labeled data from the showcase org. */
@@ -103,25 +100,8 @@ export async function resolveDemoExperience(
   activeOrgId: string,
   options: DemoExperienceOptions = {},
 ): Promise<DemoExperienceMode> {
-  const isDemoOrg = (await fetchOrgIsDemo(activeOrgId)) || isDemoOrgId(activeOrgId);
-  if (isDemoOrg) {
-    return { labeledDemo: true, dataOrgId: activeOrgId, activeOrgId, previewDemo: false };
-  }
-
-  if (options.previewDemo && canUseDemoPreview(options.userEmail)) {
-    return resolveShowcaseExperience(activeOrgId, true);
-  }
-
-  if (options.honorPreviewOff && options.previewDemo === false) {
-    return { labeledDemo: false, dataOrgId: activeOrgId, activeOrgId, previewDemo: false };
-  }
-
-  const hasActivity = await orgHasRealAuditActivity(activeOrgId);
-  if (!hasActivity) {
-    return resolveShowcaseExperience(activeOrgId, false);
-  }
-
-  return { labeledDemo: false, dataOrgId: activeOrgId, activeOrgId, previewDemo: false };
+  const isDemoOrg = isDemoOrgId(activeOrgId) || (await fetchOrgIsDemo(activeOrgId));
+  return decideDemoExperience(activeOrgId, isDemoOrg, options);
 }
 
 /** Use preview overlay CTA when demo data comes from the owner preview toggle, not the demo workspace. */
@@ -147,28 +127,5 @@ export async function resolveDemoExperienceWithClient(
     .select("is_demo")
     .eq("id", activeOrgId)
     .maybeSingle();
-  const isDemoOrg = Boolean(org?.is_demo) || isDemoOrgId(activeOrgId);
-  if (isDemoOrg) {
-    return { labeledDemo: true, dataOrgId: activeOrgId, activeOrgId, previewDemo: false };
-  }
-
-  if (options.previewDemo && canUseDemoPreview(options.userEmail)) {
-    return resolveShowcaseExperience(activeOrgId, true);
-  }
-
-  if (options.honorPreviewOff && options.previewDemo === false) {
-    return { labeledDemo: false, dataOrgId: activeOrgId, activeOrgId, previewDemo: false };
-  }
-
-  const { count } = await client
-    .from("scan_assignments")
-    .select("id", { count: "exact", head: true })
-    .eq("org_id", activeOrgId)
-    .in("status", ["completed", "in_progress"]);
-
-  if ((count ?? 0) === 0) {
-    return resolveShowcaseExperience(activeOrgId, false);
-  }
-
-  return { labeledDemo: false, dataOrgId: activeOrgId, activeOrgId, previewDemo: false };
+  return decideDemoExperience(activeOrgId, Boolean(org?.is_demo), options);
 }

@@ -26,7 +26,7 @@ function subscribeDemoPreference(onChange: () => void): () => void {
 
 /** SSR has no localStorage; hydrate with the same default, then re-render with the stored value. */
 function serverDemoPreference(): boolean {
-  return true;
+  return false;
 }
 
 export function useDemoPreview(_model?: string, _filters?: Record<string, unknown>) {
