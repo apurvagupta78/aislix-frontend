@@ -940,8 +940,16 @@ export async function fetchDigitalDashboardMetrics(
   let caSlaPct: number | null = null;
   let caStatusMix: { label: string; value: number }[] = [];
   {
-    const CA_CLOSED = new Set(["closed", "resolved", "cancelled", "done", "complete", "completed"]);
+    const CA_CLOSED = new Set(["closed", "resolved", "verified", "cancelled", "done", "complete", "completed"]);
     const CA_IN_PROGRESS = new Set(["in_progress", "pending_verification", "assigned"]);
+    const CA_OPEN_STATUSES = new Set([...CA_IN_PROGRESS, "open", "overdue"]);
+    /** Status wins; closure dates only decide rows with an unrecognised status. */
+    const isDone = (c: { status: string | null; closed_at: string | null; resolved_at: string | null }) => {
+      const st = String(c.status ?? "").toLowerCase();
+      if (CA_CLOSED.has(st)) return true;
+      if (CA_OPEN_STATUSES.has(st)) return false;
+      return Boolean(c.closed_at || c.resolved_at);
+    };
     let caQuery = supabase
       .from("corrective_actions")
       .select("id, status, due_at, closed_at, resolved_at")
@@ -957,38 +965,33 @@ export async function fetchDigitalDashboardMetrics(
     const { data: cas } = await caQuery;
     if (cas) {
       caTotal = cas.length;
-      caClosed = cas.filter((c) => {
-        const st = String(c.status ?? "").toLowerCase();
-        return CA_CLOSED.has(st) || Boolean(c.closed_at || c.resolved_at);
-      }).length;
-      caInProgress = cas.filter((c) => CA_IN_PROGRESS.has(String(c.status ?? "").toLowerCase())).length;
-      caOpen = cas.filter((c) => {
-        const st = String(c.status ?? "").toLowerCase();
-        if (CA_CLOSED.has(st) || c.closed_at || c.resolved_at) return false;
-        return true;
-      }).length;
-      caOverdue = cas.filter((c) => {
-        const st = String(c.status ?? "").toLowerCase();
-        if (CA_CLOSED.has(st) || c.closed_at || c.resolved_at) return false;
-        if (st === "overdue") return true;
-        return Boolean(c.due_at && new Date(c.due_at as string).getTime() < now);
-      }).length;
+      const isOverdue = (c: (typeof cas)[number]) =>
+        !isDone(c) &&
+        (String(c.status ?? "").toLowerCase() === "overdue" ||
+          Boolean(c.due_at && new Date(c.due_at as string).getTime() < now));
+      caClosed = cas.filter(isDone).length;
+      caInProgress = cas.filter(
+        (c) => !isDone(c) && CA_IN_PROGRESS.has(String(c.status ?? "").toLowerCase()),
+      ).length;
+      caOpen = cas.filter((c) => !isDone(c)).length;
+      caOverdue = cas.filter(isOverdue).length;
+      const inProgressOnTime = cas.filter(
+        (c) => !isOverdue(c) && !isDone(c) && CA_IN_PROGRESS.has(String(c.status ?? "").toLowerCase()),
+      ).length;
       // True 0% when actions exist but none closed; N/A only when there are no actions.
       caClosurePct = caTotal > 0 ? pct(caClosed, caTotal) : null;
-      const completedWithDue = cas.filter((c) => {
-        const st = String(c.status ?? "").toLowerCase();
-        const done = CA_CLOSED.has(st) || Boolean(c.closed_at || c.resolved_at);
-        return done && Boolean(c.due_at) && Boolean(c.closed_at || c.resolved_at);
-      });
+      const completedWithDue = cas.filter(
+        (c) => isDone(c) && Boolean(c.due_at) && Boolean(c.closed_at || c.resolved_at),
+      );
       const onTimeCa = completedWithDue.filter((c) => {
         const doneAt = (c.closed_at || c.resolved_at) as string;
         return new Date(doneAt).getTime() <= new Date(c.due_at as string).getTime();
       }).length;
       caSlaPct = completedWithDue.length ? pct(onTimeCa, completedWithDue.length) : null;
-      const openOnly = Math.max(0, (caOpen ?? 0) - (caInProgress ?? 0) - (caOverdue ?? 0));
+      const openOnly = Math.max(0, caOpen - inProgressOnTime - caOverdue);
       caStatusMix = [
         { label: "Open", value: openOnly },
-        { label: "In Progress", value: caInProgress ?? 0 },
+        { label: "In Progress", value: inProgressOnTime },
         { label: "Overdue", value: caOverdue ?? 0 },
         { label: "Completed", value: caClosed ?? 0 },
       ].filter((s) => s.value > 0);
