@@ -2307,6 +2307,14 @@ async function persistScanPayload(
     .eq("id", scan.id);
   if (completeError) throw new PipelineError(completeError.message, 500);
 
+  if (scan.assignment_id) {
+    await supabase
+      .from("scan_assignments")
+      .update({ scan_id: scan.id, updated_at: completedAt } as never)
+      .eq("id", scan.assignment_id)
+      .not("status", "in", "(completed,cancelled)");
+  }
+
   await refreshAnalytics(supabase, { org_id: scan.org_id, store_id: scan.store_id });
 
   return {

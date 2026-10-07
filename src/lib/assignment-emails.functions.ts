@@ -117,7 +117,7 @@ export const submitAiAudit = createServerFn({ method: "POST" })
       const { data: assignment } = await supabase
         .from("scan_assignments")
         .select(
-          "id, assigner_id, assignee_id, store_id, scope_values, last_compliance_percent, status, org_id",
+          "id, assigner_id, assignee_id, store_id, scope_values, last_compliance_percent, status, org_id, planogram_version_id",
         )
         .eq("id", assignmentId)
         .maybeSingle();
@@ -169,7 +169,11 @@ export const submitAiAudit = createServerFn({ method: "POST" })
       storeName = (store as { name?: string | null } | null)?.name ?? storeName;
 
       const openIssues = await countOpenActionsForAssignment(supabase, assignmentId);
-      const passed = (compliance ?? 0) >= 100 && openIssues === 0;
+      // Without a planogram there is no compliance target to miss.
+      const planogramGated =
+        compliance != null ||
+        Boolean((assignment as { planogram_version_id?: string | null }).planogram_version_id);
+      const passed = openIssues === 0 && (!planogramGated || (compliance ?? 0) >= 100);
       const nextStatus = passed ? "completed" : "needs_correction";
 
       const nextScope = {
@@ -210,14 +214,14 @@ export const submitAiAudit = createServerFn({ method: "POST" })
 
     // Assignor notify + email (skip self-assign)
     if (assignmentId && assignerId && assignerId !== assigneeId) {
-      const percentLabel = compliance === null ? "—" : `${Math.round(compliance)}`;
+      const complianceLabel = compliance === null ? "" : ` (${Math.round(compliance)}% compliance)`;
       try {
         await supabase.from("notifications").insert({
           user_id: assignerId,
           org_id: (scan as { org_id: string }).org_id,
           type: "scan_completed",
           title: "Assigned audit submitted",
-          body: `${assigneeName} submitted ${storeName} · ${location} (${percentLabel}% compliance)${data.notes ? ` — ${data.notes.slice(0, 120)}` : ""}`,
+          body: `${assigneeName} submitted ${storeName} · ${location}${complianceLabel}${data.notes ? ` — ${data.notes.slice(0, 120)}` : ""}`,
           payload: {
             assignment_id: assignmentId,
             scan_id: data.scanId,
