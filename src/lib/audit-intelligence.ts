@@ -80,7 +80,9 @@ export async function fetchAuditIntelligence(options?: {
     )
     .eq("org_id", orgId)
     .gte("created_at", sinceIso)
-    .in("submission_status", ["approved", "pending_review", "flagged"]);
+    .or(
+      "submission_status.in.(approved,pending_review,flagged),and(submission_status.is.null,status.eq.completed)",
+    );
 
   if (options?.storeId) scanQuery = scanQuery.eq("store_id", options.storeId);
 

@@ -112,6 +112,17 @@ const statusTone: Record<string, string> = {
   paused: "bg-muted text-muted-foreground hover:bg-muted",
 };
 
+function contactSalesForBilling(topic: string) {
+  toast.info("Online payment is being set up. Email sales@aislix.com and we'll update your workspace the same day.", {
+    action: {
+      label: "Email sales",
+      onClick: () => {
+        window.location.href = `mailto:sales@aislix.com?subject=${encodeURIComponent(`Aislix billing — ${topic}`)}`;
+      },
+    },
+  });
+}
+
 function invoiceMpTone(status: Invoice["status"]): MpBadgeTone {
   if (status === "paid") return "healthy";
   if (status === "due" || status === "failed") return "attention";
@@ -184,7 +195,7 @@ function Billing() {
     onSettled: () => setPendingPlanId(null),
     onSuccess: (session) => {
       if (session.checkout_url) window.location.assign(session.checkout_url);
-      else toast.error("Checkout is not available yet. Payments go live with Cashfree shortly.");
+      else contactSalesForBilling("Plan change");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -230,7 +241,7 @@ function Billing() {
     mutationFn: startPaymentMethodUpdate,
     onSuccess: (res) => {
       if (res.redirect_url) window.location.assign(res.redirect_url);
-      else toast.error("Payment method management is not available yet.");
+      else contactSalesForBilling("Payment method");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -325,7 +336,11 @@ function Billing() {
                   )}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {currentPlan ? planAuditLimitLabel(currentPlan) : "Plan details sync from your subscription."}
+                  {usage?.scans_included && usage.quota_period !== "rolling_24h"
+                    ? `${formatNumber(usage.scans_included)} AI audits / month`
+                    : currentPlan
+                      ? planAuditLimitLabel(currentPlan)
+                      : "Plan details sync from your subscription."}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -610,7 +625,7 @@ function Billing() {
                 size="sm"
                 className="mt-4 w-full rounded-xl"
                 disabled={!a.available}
-                onClick={() => toast.info("Add-on purchases go live with Cashfree checkout.")}
+                onClick={() => contactSalesForBilling(`Add-on: ${a.name}`)}
               >
                 Add to plan
               </Button>

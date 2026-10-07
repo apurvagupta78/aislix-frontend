@@ -692,7 +692,12 @@ export async function fetchStoreTeam(
 
 /** Appends a store to the store scope of the given members (deduped). */
 export async function grantStoreAccess(storeId: string, userIds: string[]): Promise<void> {
-  if (!userIds.length) return;
+  await grantStoresAccess([storeId], userIds);
+}
+
+/** Appends stores to the store scope of the given members (deduped). */
+export async function grantStoresAccess(storeIds: string[], userIds: string[]): Promise<void> {
+  if (!userIds.length || !storeIds.length) return;
   const orgId = await requireOrgId();
   const { data, error } = await supabase
     .from("organization_members")
@@ -703,8 +708,8 @@ export async function grantStoreAccess(storeId: string, userIds: string[]): Prom
 
   for (const row of data ?? []) {
     const current = (row.store_ids ?? []) as string[];
-    if (current.includes(storeId)) continue;
-    const merged = Array.from(new Set([...current, storeId]));
+    if (storeIds.every((id) => current.includes(id))) continue;
+    const merged = Array.from(new Set([...current, ...storeIds]));
     const { error: updateError } = await supabase
       .from("organization_members")
       .update({ store_ids: merged })

@@ -24,12 +24,22 @@ import {
   exportStoreList,
   fetchOrganization,
   fetchStoreList,
+  grantStoresAccess,
   importStoresCsv,
   storeFilterLabels,
   type OrgStore,
   type StoreFilter,
 } from "@/lib/organization";
+import { fetchAssignableMembers } from "@/lib/assignments";
 import { getMembership } from "@/lib/db/context";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const PAGE_SIZE = 12;
 const filters: StoreFilter[] = ["all", "active", "archived", "healthy", "alerts"];
@@ -87,6 +97,7 @@ function StoresPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<OrgStore | null>(null);
   const [deleting, setDeleting] = useState<OrgStore | null>(null);
+  const [assignOpen, setAssignOpen] = useState(false);
 
   const orgQuery = useQuery({
     queryKey: ["organization"],
@@ -433,9 +444,7 @@ function StoresPage() {
             onExport={() => exportList.mutate()}
             onImport={(file) => importList.mutate(file)}
             onBulkArchive={() => bulkArchive.mutate()}
-            onAssignUsers={() =>
-              toast.info("Open a store to assign users — bulk assignment ships with the roles engine.")
-            }
+            onAssignUsers={() => setAssignOpen(true)}
           />
         )}
 
@@ -468,6 +477,119 @@ function StoresPage() {
           })
         }
       />
+      <AssignStoresDialog
+        open={assignOpen}
+        storeIds={selected}
+        onOpenChange={setAssignOpen}
+        onDone={() => setSelected([])}
+      />
     </AppShell>
+  );
+}
+
+const ALL_STORE_ROLES = new Set(["owner", "admin"]);
+
+function AssignStoresDialog({
+  open,
+  storeIds,
+  onOpenChange,
+  onDone,
+}: {
+  open: boolean;
+  storeIds: string[];
+  onOpenChange: (open: boolean) => void;
+  onDone: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [picked, setPicked] = useState<string[]>([]);
+  const membersQuery = useQuery({
+    queryKey: ["assignable-members"],
+    queryFn: fetchAssignableMembers,
+    enabled: open,
+    retry: false,
+  });
+  const members = membersQuery.data ?? [];
+
+  const assign = useMutation({
+    mutationFn: () => grantStoresAccess(storeIds, picked),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["stores"] });
+      void queryClient.invalidateQueries({ queryKey: ["store-team"] });
+      toast.success(
+        `${picked.length} ${picked.length === 1 ? "person" : "people"} can now access ${storeIds.length} ${storeIds.length === 1 ? "store" : "stores"}`,
+      );
+      setPicked([]);
+      onOpenChange(false);
+      onDone();
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof Error ? error.message : "Could not update store access."),
+  });
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) setPicked([]);
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Assign users to stores</DialogTitle>
+          <DialogDescription>
+            Give the people you pick access to the {storeIds.length} selected{" "}
+            {storeIds.length === 1 ? "store" : "stores"}. Their existing store access is kept.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="max-h-72 space-y-1 overflow-y-auto">
+          {membersQuery.isPending ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">Loading your team…</p>
+          ) : members.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              No other team members yet. Invite people from the Team page first.
+            </p>
+          ) : (
+            members.map((m) => {
+              const allStores = ALL_STORE_ROLES.has(m.role.toLowerCase());
+              const checked = allStores || picked.includes(m.user_id);
+              return (
+                <label
+                  key={m.user_id}
+                  className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm hover:bg-muted/40"
+                >
+                  <Checkbox
+                    checked={checked}
+                    disabled={allStores || assign.isPending}
+                    onCheckedChange={(v) =>
+                      setPicked((prev) =>
+                        v === true ? [...prev, m.user_id] : prev.filter((id) => id !== m.user_id),
+                      )
+                    }
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{m.name}</span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {allStores ? "Owner / admin — already sees every store" : m.email}
+                    </span>
+                  </span>
+                </label>
+              );
+            })
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={assign.isPending}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => assign.mutate()}
+            disabled={picked.length === 0 || storeIds.length === 0 || assign.isPending}
+          >
+            {assign.isPending ? "Assigning…" : "Assign"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

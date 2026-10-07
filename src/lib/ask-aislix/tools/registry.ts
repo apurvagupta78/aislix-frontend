@@ -327,6 +327,9 @@ async function getInventoryVariance(ctx: ToolContext, args: Record<string, unkno
   const limit = Math.min(Number(args.limit ?? 10), 20);
   const storeQuery = String(args.store_query ?? "").trim();
 
+  const filters = clampFiltersToScope(ctx.filters, ctx.scope);
+  let storeIds = storeIdsForQuery(ctx.scope, filters);
+
   if (storeQuery) {
     const { data: stores } = await ctx.supabase
       .from("stores")
@@ -335,28 +338,60 @@ async function getInventoryVariance(ctx: ToolContext, args: Record<string, unkno
       .eq("status", "active");
     const match = resolveStoreQuery(ctx.scope, (stores ?? []) as { id: string; name: string; city: string | null; country: string | null }[], storeQuery);
     if (!match) return { available: false, reason: ACCESS_DENIED_MESSAGE };
+    storeIds = [match.id];
   }
+  if (!storeIds.length) return { available: true, data: { stores: [], lines_counted: 0 } };
 
-  const data = await fetchScopedControlTowerDataset({
-    supabase: ctx.supabase,
-    scope: ctx.scope,
-    filters: ctx.filters,
-  });
+  const bounds = resolveDashboardDateBounds(filters);
+  let query = ctx.supabase
+    .from("digital_audit_lines")
+    .select("store_id, variance_qty, variance_value_inr, expected_qty, actual_qty, stores:store_id (name)")
+    .eq("org_id", ctx.scope.orgId)
+    .in("store_id", storeIds)
+    .limit(5000);
+  if (bounds.from) query = query.gte("created_at", bounds.from.toISOString());
+  if (bounds.to) query = query.lt("created_at", bounds.to.toISOString());
+  const { data: lines, error } = await query;
+  if (error) return { available: false, reason: "Inventory variance could not be loaded." };
 
-  const byStore = new Map<string, { store: string; variance_inr: number; findings: number }>();
-  for (const row of data.riskLocationsFull) {
-    const key = row.location;
-    const existing = byStore.get(key) ?? { store: key, variance_inr: 0, findings: 0 };
-    existing.variance_inr += row.varianceInr ?? 0;
-    existing.findings += 1;
-    byStore.set(key, existing);
+  const byStore = new Map<
+    string,
+    { store: string; expected_units: number; counted_units: number; net_variance_units: number; variance_value_inr: number | null; skus_with_variance: number }
+  >();
+  for (const line of lines ?? []) {
+    const storeId = line.store_id as string;
+    const name = (line.stores as { name?: string } | null)?.name ?? "Store";
+    const row = byStore.get(storeId) ?? {
+      store: name,
+      expected_units: 0,
+      counted_units: 0,
+      net_variance_units: 0,
+      variance_value_inr: null,
+      skus_with_variance: 0,
+    };
+    const varianceQty = Number(line.variance_qty) || 0;
+    row.expected_units += Number(line.expected_qty) || 0;
+    row.counted_units += Number(line.actual_qty) || 0;
+    row.net_variance_units += varianceQty;
+    if (line.variance_value_inr != null) {
+      row.variance_value_inr = (row.variance_value_inr ?? 0) + Number(line.variance_value_inr);
+    }
+    if (varianceQty !== 0) row.skus_with_variance += 1;
+    byStore.set(storeId, row);
   }
 
   const ranked = [...byStore.values()]
-    .sort((a, b) => b.variance_inr - a.variance_inr)
+    .sort((a, b) => Math.abs(b.net_variance_units) - Math.abs(a.net_variance_units))
     .slice(0, limit);
 
-  return { available: true, data: { stores: ranked } };
+  return {
+    available: true,
+    data: {
+      stores: ranked,
+      lines_counted: lines?.length ?? 0,
+      value_note: "variance_value_inr is null when no price list is loaded; report it as N/A, not ₹0.",
+    },
+  };
 }
 
 async function getFindings(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {

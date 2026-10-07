@@ -31,6 +31,13 @@ export function useSeatUsage() {
     remaining: usage ? remainingSeats(usage) : null,
     label: usage ? seatUsageLabel(usage) : "",
     seatLimitLabel: usage?.seat_limit_label ?? "",
-    upgradeMessage: "Upgrade to the Growth plan or higher to invite team members.",
+    upgradeMessage: seatUpgradeMessage(usage),
   };
+}
+
+function seatUpgradeMessage(usage: UsageSummary | undefined): string {
+  if (!usage || usage.seats_included === null || usage.seats_included <= 1) {
+    return "Upgrade to the Growth plan or higher to invite team members.";
+  }
+  return `All ${usage.seats_included} users on your ${usage.plan_name} plan are in use. Upgrade to invite more people.`;
 }

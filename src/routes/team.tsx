@@ -319,10 +319,7 @@ function TeamPage() {
         {seats.usage && !seats.canInvite ? (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-muted/30 p-4">
             <div className="space-y-1">
-              <p className="text-sm font-medium">
-                Need to add team members? Upgrade to the Growth plan or higher to invite additional
-                users.
-              </p>
+              <p className="text-sm font-medium">{seats.upgradeMessage}</p>
               <p className="text-xs text-muted-foreground">
                 Growth includes up to 3 users · Professional up to 5 · Enterprise unlimited
               </p>

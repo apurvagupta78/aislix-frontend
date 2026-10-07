@@ -51,7 +51,7 @@ export const ASK_SUGGESTION_UI_ITEMS: AskSuggestionUiItem[] = [
     id: "s3b",
     category: "Inventory",
     icon: "trend",
-    text: "How many times were Lays adjusted in the last 6 months at Aislix Store?",
+    text: "Which products were adjusted most often in the last 6 months?",
   },
   {
     id: "s4",
@@ -111,7 +111,7 @@ export const ASK_SUGGESTION_UI_ITEMS: AskSuggestionUiItem[] = [
     id: "s9c",
     category: "Evidence",
     icon: "image",
-    text: "Give me the stacking images at Aislix Store",
+    text: "Give me the stacking images from my latest audits",
   },
   {
     id: "s10",

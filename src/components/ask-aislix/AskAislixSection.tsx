@@ -12,12 +12,9 @@ import {
   ASK_AISLIX_PARSE_ERROR_MESSAGE,
   NO_AUDIT_FOUND_MESSAGE,
 } from "@/lib/ask-aislix/ask-aislix.response";
-import {
-  buildDemoAskResponse,
-  isInsufficientDataAnswer,
-} from "@/lib/ask-aislix/ask-aislix-demo-answers";
+import { buildDemoAskResponse } from "@/lib/ask-aislix/ask-aislix-demo-answers";
 import { ASK_SCOPE_OPTIONS } from "@/lib/ask-aislix/ask-aislix-suggestion-groups";
-import { prefixDemoAnswer } from "@/lib/demo-environment";
+import { AISLIX_DEMO_ORG_ID, prefixDemoAnswer } from "@/lib/demo-environment";
 import { ASK_AISLIX_SECTION } from "@/lib/aislix-theme";
 import { requireOrgId, requireUserId } from "@/lib/db/context";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,12 +26,10 @@ import { AskAislixLoading } from "./AskAislixLoading";
 import { AskAislixSuggestions } from "./AskAislixSuggestions";
 import type { SuggestionDataAvailability } from "@/lib/ask-aislix/ask-aislix-suggestions.select";
 
-function demoShowcaseResponse(question: string, guest: boolean): AskAislixResponse {
+function demoShowcaseResponse(question: string): AskAislixResponse {
   const response = buildDemoAskResponse(question);
   response.answer = prefixDemoAnswer(response.answer, true);
-  if (guest) {
-    response.actions = [{ label: "Create free account", route: "/signup", params: {} }];
-  }
+  response.actions = [{ label: "Create free account", route: "/signup", params: {} }];
   return response;
 }
 
@@ -84,15 +79,13 @@ export function AskAislixSection({
         const userId = await requireUserId();
         const [membership, storesResult] = await Promise.all([
           fetchMembershipRole(orgId, userId),
-          previewDemo
-            ? Promise.resolve(null)
-            : supabase
-                .from("stores")
-                .select("name")
-                .eq("org_id", orgId)
-                .neq("status", "inactive")
-                .order("name")
-                .limit(50),
+          supabase
+            .from("stores")
+            .select("name")
+            .eq("org_id", previewDemo ? AISLIX_DEMO_ORG_ID : orgId)
+            .neq("status", "inactive")
+            .order("name")
+            .limit(50),
         ]);
         if (cancelled) return;
         setAccessRole(membership?.role ?? null);
@@ -140,21 +133,17 @@ export function AskAislixSection({
       setError(null);
       setQuestion(raw.trim());
 
-      const showDemoAnswer = (guest: boolean) => {
-        const demo = demoShowcaseResponse(q, guest);
-        setError(null);
-        setResponse(demo);
-        setMessages((prev) =>
-          [...prev, { role: "user" as const, content: q }, { role: "assistant" as const, content: demo.answer }].slice(
-            -10,
-          ),
-        );
-      };
-
       try {
-        if (isGuest || (previewDemo && !attachments.length)) {
+        if (isGuest) {
           await new Promise((r) => window.setTimeout(r, 600));
-          showDemoAnswer(isGuest);
+          const demo = demoShowcaseResponse(q);
+          setError(null);
+          setResponse(demo);
+          setMessages((prev) =>
+            [...prev, { role: "user" as const, content: q }, { role: "assistant" as const, content: demo.answer }].slice(
+              -10,
+            ),
+          );
           return;
         }
 
@@ -171,15 +160,6 @@ export function AskAislixSection({
         });
 
         setConversationId(result.conversationId);
-
-        if (
-          previewDemo &&
-          !attachments.length &&
-          (!result.ok || isInsufficientDataAnswer(result.response.answer))
-        ) {
-          showDemoAnswer(false);
-          return;
-        }
 
         if (!result.ok) {
           setResponse(null);
@@ -206,10 +186,6 @@ export function AskAislixSection({
           ].slice(-10),
         );
       } catch (err) {
-        if (previewDemo && !attachments.length) {
-          showDemoAnswer(false);
-          return;
-        }
         setError(err instanceof Error ? err.message : "Could not reach Ask Aislix.");
         setResponse(null);
       } finally {

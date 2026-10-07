@@ -97,13 +97,23 @@ export async function fetchScopedControlTowerDataset(input: {
     actionsQuery = actionsQuery.in("store_id", storeIds);
   }
 
-  const [{ data: assignmentRows }, { data: findingsRows }, { data: actionsRows }, { data: templates }] =
-    await Promise.all([
-      assignmentQuery,
-      findingsQuery,
-      actionsQuery,
-      supabase.from("audit_templates").select("id, name, operating_model").eq("org_id", scope.orgId),
-    ]);
+  const [
+    { data: assignmentRows },
+    { data: findingsRows },
+    { data: actionsRows },
+    { data: templates },
+    { data: storeRows },
+  ] = await Promise.all([
+    assignmentQuery,
+    findingsQuery,
+    actionsQuery,
+    supabase.from("audit_templates").select("id, name, operating_model").eq("org_id", scope.orgId),
+    supabase.from("stores").select("id, name").eq("org_id", scope.orgId).in("id", storeIds),
+  ]);
+
+  const storeNames: Record<string, string> = Object.fromEntries(
+    (storeRows ?? []).map((s) => [s.id as string, (s.name as string) || "Store"]),
+  );
 
   const templateById = new Map(
     (templates ?? []).map((t) => [
@@ -166,11 +176,13 @@ export async function fetchScopedControlTowerDataset(input: {
   const storeAllow = new Set(storeIds);
   const assignmentIds = new Set(assignments.map((a) => a.id));
 
-  const findings = ((findingsRows ?? []) as Finding[]).filter((f) => {
-    if (f.store_id && !storeAllow.has(f.store_id)) return false;
-    if (!scope.isOrgAdmin && f.assignment_id && !assignmentIds.has(f.assignment_id)) return false;
-    return true;
-  });
+  const findings = ((findingsRows ?? []) as Finding[])
+    .filter((f) => {
+      if (f.store_id && !storeAllow.has(f.store_id)) return false;
+      if (!scope.isOrgAdmin && f.assignment_id && !assignmentIds.has(f.assignment_id)) return false;
+      return true;
+    })
+    .map((f) => ({ ...f, store_name: (f.store_id && storeNames[f.store_id]) || f.store_name || "Store" }));
 
   const actions = ((actionsRows ?? []) as LifecycleAction[]).filter((a) => {
     if (a.store_id && !storeAllow.has(a.store_id)) return false;
@@ -182,6 +194,7 @@ export async function fetchScopedControlTowerDataset(input: {
     assignments,
     findings,
     actions,
+    storeNames,
     bounds,
   });
 }

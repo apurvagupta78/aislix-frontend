@@ -1,0 +1,31 @@
+---
+description: Aislix Android app must always match aislix.com
+alwaysApply: true
+---
+
+# Android app = aislix.com (always in sync)
+
+Whatever ships to aislix.com must reach the Aislix Android app automatically. Never build anything that needs a separate app release for normal product changes.
+
+## How it works
+
+- The app (`com.aislix.app`) is a Trusted Web Activity: it opens aislix.com full screen. Every Lovable publish is live in the app on next open.
+- Signing key, build tools and project live outside the repo in `C:\Users\Apaar\AislixAndroid` (passwords in `SIGNING-KEY-SECRETS.txt`; never print, commit or upload them).
+
+## Never break these (or the app shows an address bar or stops working)
+
+- `public/.well-known/assetlinks.json` — keep every existing SHA-256 fingerprint; only add new ones (for example the Play App Signing key).
+- `public/manifest.json` — keep `start_url` `/dashboard?source=app`, `scope` `/`, `display` `standalone`, the icons.
+- `public/sw.js` — pages and data must stay network-first so a deploy is never served stale inside the app.
+- `public/downloads/aislix-android.apk` and the `/app` page.
+- Everything must stay on the aislix.com domain; no feature may depend on another domain opening inside the app.
+
+## When a new APK/AAB build IS required
+
+Only for: app name, icon, splash colours, start URL, package, permissions (camera/location/notifications), shortcuts, or Play Store version bumps. Then follow `docs/PILOT_AND_VC_READINESS.md` section 1, raise `appVersionCode`, update `APP_VERSION` in `src/routes/app.tsx`, and replace the APK.
+
+## Building features
+
+- Test UI at phone width; the app is a phone browser without an address bar (no back button UI — keep in-page navigation).
+- File inputs, camera capture, geolocation, downloads and `window.open` must work inside the app; prefer same-page fallbacks over pop-ups.
+- After every frontend deploy, the app is updated too — tell the user it's live on both web and app.
