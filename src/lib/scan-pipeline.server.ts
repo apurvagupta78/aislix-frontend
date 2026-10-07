@@ -2282,6 +2282,7 @@ async function persistScanPayload(
       .from("scan_images")
       .select("id", { count: "exact", head: true })
       .eq("scan_id", scan.id)
+      .eq("kind", "original")
       .then(({ count }) => (typeof count === "number" ? count : null)));
 
   // --- Complete the scan ---------------------------------------------------
@@ -2321,6 +2322,9 @@ async function persistScanPayload(
   };
 }
 
+/** A submitted job the backend has not finished after this long is resubmitted. */
+const PIPELINE_RESUBMIT_AFTER_MS = 15 * 60_000;
+
 export type StartPipelineResult =
   | { status: "processing"; scan_id: string; job_id: string | null; started_at: string }
   | ({ status: "completed"; job_id: null; started_at: string } & PipelineResult);
@@ -2335,6 +2339,43 @@ export async function startScanPipelineServer(
   scanId: string,
 ): Promise<StartPipelineResult> {
   const scan = await loadScan(supabase, scanId);
+
+  // Reopened or resumed scans must not submit a second backend job.
+  const { data: state } = await supabase
+    .from("shelf_scans")
+    .select(
+      "status, pipeline_submitted_at, pipeline_job_id, total_products, out_of_stock_count, low_stock_count, misplaced_count, shelf_health_score",
+    )
+    .eq("id", scan.id)
+    .maybeSingle();
+  const current = (state ?? {}) as Record<string, unknown>;
+  if (current["status"] === "completed") {
+    return {
+      status: "completed",
+      scan_id: scan.id,
+      job_id: null,
+      started_at: new Date().toISOString(),
+      total_products: Number(current["total_products"]) || 0,
+      out_of_stock_count: Number(current["out_of_stock_count"]) || 0,
+      low_stock_count: Number(current["low_stock_count"]) || 0,
+      misplaced_count: Number(current["misplaced_count"]) || 0,
+      shelf_health_score: (current["shelf_health_score"] as number | null) ?? null,
+    };
+  }
+  const submittedAt = current["pipeline_submitted_at"] as string | null | undefined;
+  if (
+    current["status"] === "processing" &&
+    submittedAt &&
+    Date.now() - Date.parse(submittedAt) < PIPELINE_RESUBMIT_AFTER_MS
+  ) {
+    return {
+      status: "processing",
+      scan_id: scan.id,
+      job_id: (current["pipeline_job_id"] as string | null) ?? scan.id,
+      started_at: submittedAt,
+    };
+  }
+
   const startedAt = new Date().toISOString();
   await supabase
     .from("shelf_scans")
@@ -2349,6 +2390,13 @@ export async function startScanPipelineServer(
       const result = await persistScanPayload(supabase, scan, submitted.payload, startedAt);
       return { ...result, job_id: null, started_at: startedAt };
     }
+    await supabase
+      .from("shelf_scans")
+      .update({
+        pipeline_submitted_at: new Date().toISOString(),
+        pipeline_job_id: submitted.jobId,
+      } as never)
+      .eq("id", scan.id);
     return {
       status: "processing",
       scan_id: scan.id,

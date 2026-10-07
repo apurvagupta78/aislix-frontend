@@ -115,7 +115,7 @@ function Processing() {
                   timingMessage={
                     done
                       ? "Opening your audit results…"
-                      : "This may take a few minutes for larger or more complex images. Please keep this page open."
+                      : "This may take a few minutes for larger or more complex images. You can leave this page — the audit finishes the next time you have Aislix open."
                   }
                 />
               </div>

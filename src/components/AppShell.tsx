@@ -67,6 +67,7 @@ import { APP_NAV_SECTIONS, type NavItemConfig, type NavLeafConfig, type NavSecti
 import { useIsGuest } from "@/lib/use-is-guest";
 import { GuestNavPage } from "@/components/guest/GuestNavPage";
 import { InstallAppBanner } from "@/components/pwa/InstallAppBanner";
+import { useResumeStrandedScans } from "@/lib/scan-resume";
 
 type LucideIcon = typeof Bell;
 type NavLeaf = NavLeafConfig & { icon?: LucideIcon };
@@ -401,6 +402,7 @@ export function AppShell({
   const [menuOpen, setMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useSidebarCollapsed();
   const isGuest = useIsGuest();
+  useResumeStrandedScans(!isGuest);
   const isDashboardRoute = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
 
   const sectionLabel =

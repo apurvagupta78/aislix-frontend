@@ -284,7 +284,33 @@ function reportLearnedCatalogIssue(result: ScanAnalysisResult): ScanAnalysisResu
   return result;
 }
 
+/**
+ * Runs (or resumes) the analysis for a scan. One run per scan across all open
+ * tabs: a second caller waits for the first, which then reports "completed".
+ */
 export async function runScanAnalysis(scanId: string): Promise<ScanAnalysisResult> {
+  const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
+  if (!locks) return runScanAnalysisUnlocked(scanId);
+  return locks.request(scanLockName(scanId), () => runScanAnalysisUnlocked(scanId));
+}
+
+/**
+ * Background variant used to finish scans whose processing page was closed.
+ * Skips (returns null) when another tab is already running this scan.
+ */
+export async function resumeScanAnalysis(scanId: string): Promise<ScanAnalysisResult | null> {
+  const locks = typeof navigator !== "undefined" ? navigator.locks : undefined;
+  if (!locks) return runScanAnalysisUnlocked(scanId);
+  return locks.request(scanLockName(scanId), { ifAvailable: true }, (lock) =>
+    lock ? runScanAnalysisUnlocked(scanId) : null,
+  );
+}
+
+function scanLockName(scanId: string): string {
+  return `aislix:scan-analysis:${scanId}`;
+}
+
+async function runScanAnalysisUnlocked(scanId: string): Promise<ScanAnalysisResult> {
   const { startScanPipeline, pollScanPipeline } = await import("@/lib/scan-pipeline.functions");
   try {
     const started = (await startScanPipeline({ data: { scanId } })) as any;
