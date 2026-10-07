@@ -197,7 +197,7 @@ function SegmentSwitcher({
   );
 }
 
-function SegmentKpiCard({ kpi }: { kpi: SegmentKpiView }) {
+export function SegmentKpiCard({ kpi }: { kpi: SegmentKpiView }) {
   const accent = accentHex(kpi.accent);
   const good = kpi.delta != null && (kpi.lowerIsBetter ? kpi.delta < 0 : kpi.delta > 0);
   return (

@@ -24,12 +24,25 @@ import {
 } from "@/lib/scan-results";
 
 import { toUserMessage } from "@/lib/api/errors";
-import { ReportsLibrary } from "@/components/reports/ReportsLibrary";
+import { ReportCenter, type ReportCenterSearch, type ReportCenterTab } from "@/components/reports/ReportCenter";
+import { REPORT_DAYS, REPORT_KINDS, type ReportDays } from "@/lib/reports/report-document";
+
+type ReportSearch = ReportCenterSearch & { scan?: string };
+
+const REPORT_TABS: ReportCenterTab[] = [...REPORT_KINDS, "audit"];
 
 export const Route = createFileRoute("/report")({
-  validateSearch: (search: Record<string, unknown>): { scan?: string } => {
+  validateSearch: (search: Record<string, unknown>): ReportSearch => {
+    const out: ReportSearch = {};
     const scan = search["scan"];
-    return typeof scan === "string" && scan.length > 0 ? { scan } : {};
+    if (typeof scan === "string" && scan.length > 0) out.scan = scan;
+    const type = search["type"];
+    if (typeof type === "string" && (REPORT_TABS as string[]).includes(type)) out.type = type as ReportCenterTab;
+    const days = Number(search["days"]);
+    if ((REPORT_DAYS as readonly number[]).includes(days)) out.days = days as ReportDays;
+    const store = search["store"];
+    if (typeof store === "string" && /^[0-9a-f-]{36}$/i.test(store)) out.store = store;
+    return out;
   },
   head: () => ({
     meta: [
@@ -48,7 +61,7 @@ export const Route = createFileRoute("/report")({
 });
 
 function ReportViewer() {
-  const { scan: scanParam } = Route.useSearch();
+  const { scan: scanParam, type, days, store } = Route.useSearch();
   const navigate = useNavigate();
 
   // Recent completed audits power the picker and the "latest scan" fallback so
@@ -106,10 +119,13 @@ function ReportViewer() {
   if (!scanParam) {
     return (
       <AppShell
-        title="Audit reports"
-        description="Every print-ready shelf audit report generated for your workspace"
+        title="Reports"
+        description="Reports built from your AI audits — save as PDF or Excel, or share by link, WhatsApp and email"
       >
-        <ReportsLibrary />
+        <ReportCenter
+          search={{ type, days, store }}
+          onSearch={(patch) => navigate({ to: "/report", search: patch, replace: true })}
+        />
       </AppShell>
     );
   }

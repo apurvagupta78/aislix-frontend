@@ -116,49 +116,76 @@ export function resolveSegmentPeriod(
   };
 }
 
-export async function fetchSegmentDashboard(
-  filters: PeriodFilters | null | undefined,
+export type SegmentScope =
+  | { signedIn: false }
+  | {
+      signedIn: true;
+      activeOrgId: string;
+      dataOrgId: string;
+      labeledDemo: boolean;
+      /** null = every store the caller can read. */
+      storeIds: string[] | null;
+      outOfScope: boolean;
+    };
+
+/** Which org's data to read (Demo Data toggle) and which stores the signed-in member may see. */
+export async function resolveSegmentScope(
+  storeId: string | null | undefined,
   options: { previewDemo?: boolean; userEmail?: string | null },
-): Promise<SegmentDashboardResult> {
-  const period = resolveSegmentPeriod(filters);
+): Promise<SegmentScope> {
   const user = await getUser();
-  if (!user) return { data: null, labeledDemo: true, periodLabel: period.label, outOfScope: false };
+  if (!user) return { signedIn: false };
 
   const activeOrgId = await requireOrgId();
   const experience = await resolveDemoExperience(activeOrgId, {
     previewDemo: options.previewDemo,
     userEmail: options.userEmail,
-    honorPreviewOff: true,
   });
+  const base = {
+    signedIn: true as const,
+    activeOrgId,
+    dataOrgId: experience.dataOrgId,
+    labeledDemo: experience.labeledDemo,
+  };
 
-  let storeIds: string[] | null = null;
-  if (!experience.labeledDemo) {
-    const { resolveEffectiveAccessScope, clampStoreIdToScope, OUT_OF_SCOPE_STORE } = await import(
-      "@/lib/access-scope"
-    );
-    const scope = await resolveEffectiveAccessScope({ orgId: activeOrgId });
-    if (!scope.isOrgAdmin && !scope.hasStoreScope) {
-      return { data: null, labeledDemo: false, periodLabel: period.label, outOfScope: true };
-    }
-    const picked = clampStoreIdToScope(filters?.storeId, scope);
-    if (picked === OUT_OF_SCOPE_STORE) {
-      return { data: null, labeledDemo: false, periodLabel: period.label, outOfScope: true };
-    }
-    if (picked && picked !== "all") storeIds = [picked];
-    else if (!scope.isOrgAdmin) storeIds = scope.effectiveStoreIds;
+  if (experience.labeledDemo) {
+    return { ...base, storeIds: storeId && storeId !== "all" ? [storeId] : null, outOfScope: false };
+  }
+
+  const { resolveEffectiveAccessScope, clampStoreIdToScope, OUT_OF_SCOPE_STORE } = await import(
+    "@/lib/access-scope"
+  );
+  const scope = await resolveEffectiveAccessScope({ orgId: activeOrgId });
+  if (!scope.isOrgAdmin && !scope.hasStoreScope) return { ...base, storeIds: null, outOfScope: true };
+  const picked = clampStoreIdToScope(storeId ?? undefined, scope);
+  if (picked === OUT_OF_SCOPE_STORE) return { ...base, storeIds: null, outOfScope: true };
+  if (picked && picked !== "all") return { ...base, storeIds: [picked], outOfScope: false };
+  return { ...base, storeIds: scope.isOrgAdmin ? null : scope.effectiveStoreIds, outOfScope: false };
+}
+
+export async function fetchSegmentDashboard(
+  filters: PeriodFilters | null | undefined,
+  options: { previewDemo?: boolean; userEmail?: string | null },
+): Promise<SegmentDashboardResult> {
+  const period = resolveSegmentPeriod(filters);
+  const scope = await resolveSegmentScope(filters?.storeId, options);
+  if (!scope.signedIn) return { data: null, labeledDemo: true, periodLabel: period.label, outOfScope: false };
+  if (scope.outOfScope) {
+    return { data: null, labeledDemo: scope.labeledDemo, periodLabel: period.label, outOfScope: true };
   }
 
   const { data, error } = await supabase.rpc("segment_dashboard" as never, {
-    p_org_id: experience.dataOrgId,
+    p_org_id: scope.dataOrgId,
     p_from: period.from.toISOString(),
     p_to: period.to.toISOString(),
-    p_store_ids: storeIds,
+    // The dashboard store filter lists the member's own stores, which never exist in the demo org.
+    p_store_ids: scope.labeledDemo ? null : scope.storeIds,
   } as never);
   if (error) throw new Error(error.message);
 
   return {
     data: (data as unknown as SegmentDashboard | null) ?? null,
-    labeledDemo: experience.labeledDemo,
+    labeledDemo: scope.labeledDemo,
     periodLabel: period.label,
     outOfScope: false,
   };

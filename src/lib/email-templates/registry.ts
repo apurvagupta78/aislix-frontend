@@ -22,6 +22,7 @@ import { template as scanReportTemplate } from './scan-report'
 import { template as auditCompletedTemplate } from './audit-completed'
 import { template as auditAssignedTemplate } from './audit-assigned'
 import { template as landingOnboardingTemplate } from './landing-onboarding'
+import { template as reportSummaryTemplate } from './report-summary'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'team-invite': teamInviteTemplate,
@@ -29,5 +30,6 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'audit-completed': auditCompletedTemplate,
   'audit-assigned': auditAssignedTemplate,
   'landing-onboarding': landingOnboardingTemplate,
+  'report-summary': reportSummaryTemplate,
 }
 
