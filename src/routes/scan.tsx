@@ -44,6 +44,9 @@ import { getAssignmentScanContext } from "@/lib/assignment-context.functions";
 import { startAssignment } from "@/lib/assignments";
 
 import { MAX_SCAN_IMAGES, formatBytes, submitScanImages, validateScanFile } from "@/lib/scan-api";
+import { GuidedSweepCamera, type GuidedSweepResult } from "@/components/guided-capture/GuidedSweepCamera";
+import type { SweepCaptureMeta } from "@/lib/guided-capture";
+import { defaultAuditRoleTab } from "@/lib/role-audit-ui";
 import { isOnline, queueAiScanUpload } from "@/lib/audit-offline";
 import { PlanogramBuilder } from "@/components/planogram/PlanogramBuilder";
 import { Badge } from "@/components/ui/badge";
@@ -135,6 +138,8 @@ function ScanPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [limitDialog, setLimitDialog] = useState<LimitDialogState>(null);
+  const [sweepOpen, setSweepOpen] = useState(false);
+  const [captureMeta, setCaptureMeta] = useState<SweepCaptureMeta | null>(null);
 
   const [storeId, setStoreId] = useState("");
   const [planogramMode, setPlanogramMode] = useState<PlanogramModeChoice>("none");
@@ -386,6 +391,10 @@ function ScanPage() {
     if (guardSetup()) fileInput.current?.click();
   }, [guardSetup]);
 
+  const openSweep = useCallback(() => {
+    if (guardSetup()) setSweepOpen(true);
+  }, [guardSetup]);
+
   const acceptFiles = useCallback((incoming: FileList | File[] | null | undefined) => {
     const files = Array.from(incoming ?? []);
     if (!files.length) return;
@@ -416,11 +425,22 @@ function ScanPage() {
     });
   }, []);
 
+  const acceptSweep = useCallback(
+    (result: GuidedSweepResult) => {
+      acceptFiles(result.files);
+      setCaptureMeta(result.meta);
+      trackEvent("guided_sweep_used", { photos: result.files.length, gaps: result.meta.tracking_gaps });
+    },
+    [acceptFiles],
+  );
+
   const removeItem = useCallback((id: string) => {
     setItems((current) => {
       const target = current.find((item) => item.id === id);
       if (target) URL.revokeObjectURL(target.url);
-      return current.filter((item) => item.id !== id);
+      const next = current.filter((item) => item.id !== id);
+      if (!next.length) setCaptureMeta(null);
+      return next;
     });
   }, []);
 
@@ -430,6 +450,7 @@ function ScanPage() {
       for (const item of current) URL.revokeObjectURL(item.url);
       return [];
     });
+    setCaptureMeta(null);
     setFileError(null);
     setErrorMessage(null);
     setUploadProgress(0);
@@ -491,6 +512,7 @@ function ScanPage() {
                 };
               })()),
         ...(verifyScanId ? { parentScanId: verifyScanId } : {}),
+        ...(captureMeta ? { captureMeta } : {}),
       };
 
       const files = items.map((item) => item.file);
@@ -555,6 +577,7 @@ function ScanPage() {
     assignment,
     assignmentSubLabel,
     verifyScanId,
+    captureMeta,
   ]);
 
 
@@ -599,6 +622,13 @@ function ScanPage() {
           acceptFiles(e.target.files);
           e.currentTarget.value = "";
         }}
+      />
+      <GuidedSweepCamera
+        open={sweepOpen}
+        onOpenChange={setSweepOpen}
+        role={defaultAuditRoleTab(scanContext.auditRole)}
+        maxPhotos={MAX_SCAN_IMAGES - items.length}
+        onComplete={acceptSweep}
       />
 
       {loadingAssignment ? (
@@ -959,8 +989,8 @@ function ScanPage() {
                 <div>
                   <h2 className="text-sm font-semibold tracking-tight">Step 2 · Shelf images</h2>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Capture with the camera or upload up to {MAX_SCAN_IMAGES} photos of the same
-                    bay for wider coverage (merged automatically).
+                    Use the guided sweep, or add up to {MAX_SCAN_IMAGES} photos of different parts of
+                    the same bay. Photos are added together, so avoid overlapping them.
                   </p>
                 </div>
               </div>
@@ -976,6 +1006,29 @@ function ScanPage() {
 
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={openSweep}
+                  disabled={busy || items.length >= MAX_SCAN_IMAGES}
+                  className="group flex flex-col items-start gap-3 rounded-2xl border border-brand/40 bg-brand-soft/40 p-5 text-left transition-all hover:border-brand/60 hover:shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60 sm:col-span-2"
+                >
+                  <span className="flex w-full items-center justify-between gap-2">
+                    <span className="grid size-11 place-items-center rounded-xl bg-gradient-brand text-brand-foreground transition-transform group-hover:scale-105">
+                      <ScanLine className="size-5" />
+                    </span>
+                    <Badge variant="secondary" className="rounded-full">
+                      Recommended
+                    </Badge>
+                  </span>
+                  <span>
+                    <span className="block text-sm font-semibold">Guided sweep</span>
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      Move the phone slowly along the shelf. Aislix guides you and keeps the sharpest
+                      photos, side by side, for the most accurate result.
+                    </span>
+                  </span>
+                </button>
+
                 <button
                   type="button"
                   onClick={openCamera}

@@ -17,6 +17,7 @@ export type AuthenticatedAiScanInput = {
   subCategoryLabel?: string;
   notes?: string;
   onUploadProgress?: (percent: number) => void;
+  captureMeta?: Record<string, unknown> | null;
 };
 
 /** Primary category from the setup panel first, then every extra shelf type on a mixed rack. */
@@ -101,6 +102,7 @@ function buildScanSubmitOptions(input: AuthenticatedAiScanInput) {
     auditRole,
     planogramPayload,
     onUploadProgress: input.onUploadProgress,
+    captureMeta: input.captureMeta ?? null,
   };
 }
 

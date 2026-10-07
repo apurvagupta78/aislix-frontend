@@ -263,6 +263,7 @@ export async function startAiRecheck(input: {
   action: LifecycleAction;
   files: File[];
   onUploadProgress?: (percent: number) => void;
+  captureMeta?: Record<string, unknown> | null;
 }): Promise<string> {
   const { action } = input;
   if (requiresRootCause(action.priority) && (!action.root_cause?.trim() || !action.preventive_action?.trim())) {
@@ -291,6 +292,7 @@ export async function startAiRecheck(input: {
     notes: `AI re-check for ${action.code ?? "corrective action"}`,
     parentScanId: action.scan_id,
     onUploadProgress: input.onUploadProgress,
+    captureMeta: input.captureMeta ?? null,
   });
 
   const { error: startError } = await supabase.rpc("start_action_verification", {

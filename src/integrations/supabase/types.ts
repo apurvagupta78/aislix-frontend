@@ -4602,6 +4602,7 @@ export type Database = {
           adhoc_planogram: Json | null
           assignment_id: string | null
           audit_mode: string
+          capture_meta: Json | null
           category: string | null
           category_selections: Json
           created_at: string
@@ -4649,6 +4650,7 @@ export type Database = {
           adhoc_planogram?: Json | null
           assignment_id?: string | null
           audit_mode?: string
+          capture_meta?: Json | null
           category?: string | null
           category_selections?: Json
           created_at?: string
@@ -4696,6 +4698,7 @@ export type Database = {
           adhoc_planogram?: Json | null
           assignment_id?: string | null
           audit_mode?: string
+          capture_meta?: Json | null
           category?: string | null
           category_selections?: Json
           created_at?: string

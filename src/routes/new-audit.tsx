@@ -102,6 +102,7 @@ import {
   formatScheduleSummary,
 } from "@/components/new-audit/steps/NewAuditStep7Preview";
 import { NewAuditStep7Capture } from "@/components/new-audit/steps/NewAuditStep7Capture";
+import type { SweepCaptureMeta } from "@/lib/guided-capture";
 import {
   isAiStep3Ready,
   scrollToNewAuditStep,
@@ -262,6 +263,7 @@ function NewAuditPage() {
     [aiChecks, aiQuestion, aiReferenceRows],
   );
   const [captureFiles, setCaptureFiles] = useState<File[]>([]);
+  const [captureMeta, setCaptureMeta] = useState<SweepCaptureMeta | null>(null);
   const [aiAuditLaunched, setAiAuditLaunched] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
@@ -916,8 +918,10 @@ function NewAuditPage() {
     }
   }
 
-  function handleCaptureChange(files: File[]) {
+  function handleCaptureChange(files: File[], meta?: SweepCaptureMeta | null) {
     setCaptureFiles(files);
+    if (meta !== undefined) setCaptureMeta(meta);
+    else if (!files.length) setCaptureMeta(null);
     setAiAuditLaunched(false);
   }
 
@@ -1334,6 +1338,7 @@ function NewAuditPage() {
         scanContext: aiScanContext,
         notes: [auditDescription.trim(), instructions.trim()].filter(Boolean).join("\n\n"),
         onUploadProgress: setUploadProgress,
+        captureMeta,
       });
       return { assignmentId: created.assignmentId, scanId: uploaded.scan_id };
     },
@@ -1632,6 +1637,7 @@ function NewAuditPage() {
                   <NewAuditStep7Capture
                     captureFiles={captureFiles}
                     onCaptureChange={handleCaptureChange}
+                    role={aiScanContext.auditRole}
                     disabled={footerBusy || aiAuditLaunched}
                     complete={stepStatus[8] || aiAuditLaunched}
                     uploading={aiSelfAuditMutation.isPending}

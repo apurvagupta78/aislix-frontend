@@ -128,6 +128,8 @@ export async function submitScanImages(
     auditRole?: string;
     /** Follow-up scan linked to a prior audit (fix → rescan → verify). */
     parentScanId?: string;
+    /** How the photos were captured (guided sweep details). */
+    captureMeta?: Record<string, unknown> | null;
   } = {},
 ): Promise<ScanResponse> {
   if (!files.length) throw new Error("Add at least one shelf image to audit.");
@@ -181,6 +183,7 @@ export async function submitScanImages(
           : null,
       parent_scan_id: options.parentScanId ?? null,
       photo_count: files.length,
+      ...(options.captureMeta ? { capture_meta: options.captureMeta as unknown as Json } : {}),
 
       processing_started_at: new Date().toISOString(),
     })

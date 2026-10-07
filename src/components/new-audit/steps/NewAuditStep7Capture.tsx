@@ -1,15 +1,20 @@
-import { useEffect, useMemo, useRef } from "react";
-import { Camera, ImagePlus, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Camera, ImagePlus, ScanLine, X } from "lucide-react";
 import { toast } from "sonner";
 
+import { GuidedSweepCamera } from "@/components/guided-capture/GuidedSweepCamera";
 import { NewAuditStepSection } from "@/components/new-audit/NewAuditStepSection";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import type { SweepCaptureMeta } from "@/lib/guided-capture";
+import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import { MAX_SCAN_IMAGES, validateScanFile } from "@/lib/scan-api";
 
 type Props = {
   captureFiles: File[];
-  onCaptureChange: (files: File[]) => void;
+  /** `meta` is set after a guided sweep; plain uploads leave it undefined. */
+  onCaptureChange: (files: File[], meta?: SweepCaptureMeta | null) => void;
+  role?: AuditRoleTab | null;
   disabled?: boolean;
   complete?: boolean;
   error?: string | null;
@@ -21,12 +26,14 @@ type Props = {
 export function NewAuditStep7Capture({
   captureFiles,
   onCaptureChange,
+  role,
   disabled,
   complete,
   error,
   uploadProgress = null,
   uploading = false,
 }: Props) {
+  const [sweepOpen, setSweepOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const previews = useMemo(() => captureFiles.map((file) => URL.createObjectURL(file)), [captureFiles]);
@@ -71,6 +78,15 @@ export function NewAuditStep7Capture({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="brand"
+              size="sm"
+              disabled={disabled || full}
+              onClick={() => setSweepOpen(true)}
+            >
+              <ScanLine className="size-4" /> Guided sweep
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -151,6 +167,13 @@ export function NewAuditStep7Capture({
           }}
         />
       </div>
+      <GuidedSweepCamera
+        open={sweepOpen}
+        onOpenChange={setSweepOpen}
+        role={role}
+        maxPhotos={MAX_SCAN_IMAGES - captureFiles.length}
+        onComplete={(result) => onCaptureChange([...captureFiles, ...result.files], result.meta)}
+      />
       {uploading ? (
         <div className="mt-4 space-y-2 rounded-xl border border-[var(--aislix-border)] bg-[var(--aislix-surface)]/60 px-4 py-3">
           <div className="flex items-center justify-between text-[13px] text-[var(--aislix-secondary)]">

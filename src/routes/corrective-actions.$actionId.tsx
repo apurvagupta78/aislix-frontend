@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Bot, Camera, Check, CheckCircle2, Loader2, ShieldAlert, UserRound } from "lucide-react";
+import { ArrowLeft, Bot, Camera, Check, CheckCircle2, Loader2, ScanLine, ShieldAlert, UserRound } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/AppShell";
@@ -9,6 +9,7 @@ import { BeforeAfterEvidence } from "@/components/audit-governance/BeforeAfterEv
 import { CA_PINK_BAR } from "@/components/corrective-actions/CaCharts";
 import { PriorityPill, SourcePill, StagePill } from "@/components/corrective-actions/CaParts";
 import { MpCard } from "@/components/design-system/MpCard";
+import { GuidedSweepCamera } from "@/components/guided-capture/GuidedSweepCamera";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +52,7 @@ import {
   type RecheckResult,
 } from "@/lib/corrective-action-lifecycle";
 import { fetchFinding } from "@/lib/findings";
+import type { SweepCaptureMeta } from "@/lib/guided-capture";
 import { fetchResolutionEvidence, resolutionPhotoUrl, uploadResolutionPhoto } from "@/lib/reaudit";
 import { cn } from "@/lib/utils";
 
@@ -160,6 +162,8 @@ function ActionDetailPage() {
   const [qty, setQty] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [recheckFiles, setRecheckFiles] = useState<File[]>([]);
+  const [recheckMeta, setRecheckMeta] = useState<SweepCaptureMeta | null>(null);
+  const [sweepOpen, setSweepOpen] = useState(false);
   const [uploadPct, setUploadPct] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [rootCause, setRootCause] = useState("");
@@ -251,7 +255,12 @@ function ActionDetailPage() {
       if (!action) throw new Error("Action not loaded.");
       if (!recheckFiles.length) throw new Error("Add at least one after photo.");
       setRecheck({ status: "pending" });
-      const scanId = await startAiRecheck({ action, files: recheckFiles, onUploadProgress: setUploadPct });
+      const scanId = await startAiRecheck({
+        action,
+        files: recheckFiles,
+        onUploadProgress: setUploadPct,
+        captureMeta: recheckMeta,
+      });
       setUploadPct(null);
       invalidate();
       return runAiRecheck(actionId, scanId);
@@ -259,6 +268,7 @@ function ActionDetailPage() {
     onSuccess: (result) => {
       setRecheck(result);
       setRecheckFiles([]);
+      setRecheckMeta(null);
       if (result.status === "passed") toast.success("AI re-check passed.");
       else if (result.status === "failed") toast.error("AI re-check still found the issue.");
       invalidate();
@@ -522,14 +532,31 @@ function ActionDetailPage() {
                 Take a photo of the same shelf after the fix. AI audits it again and closes the loop if the issue is gone.
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="bg-white"
+                  disabled={recheckMutation.isPending}
+                  onClick={() => setSweepOpen(true)}
+                >
+                  <ScanLine className="size-4" /> Guided sweep
+                </Button>
                 <Input
                   type="file"
                   accept="image/*"
                   multiple
                   className="max-w-xs bg-white"
-                  onChange={(e) => setRecheckFiles(Array.from(e.target.files ?? []))}
+                  onChange={(e) => {
+                    setRecheckFiles(Array.from(e.target.files ?? []));
+                    setRecheckMeta(null);
+                  }}
                   disabled={recheckMutation.isPending}
                 />
+                {recheckMeta && recheckFiles.length ? (
+                  <span className="text-[12px] text-mp-muted">
+                    {recheckFiles.length} sweep photo{recheckFiles.length === 1 ? "" : "s"} ready
+                  </span>
+                ) : null}
                 <Button
                   disabled={recheckMutation.isPending || !recheckFiles.length || (needsPlan && !planDone)}
                   onClick={() => recheckMutation.mutate()}
@@ -542,6 +569,15 @@ function ActionDetailPage() {
                     : "Run AI re-check"}
                 </Button>
               </div>
+              <GuidedSweepCamera
+                open={sweepOpen}
+                onOpenChange={setSweepOpen}
+                maxPhotos={8}
+                onComplete={(result) => {
+                  setRecheckFiles(result.files);
+                  setRecheckMeta(result.meta);
+                }}
+              />
             </div>
           ) : null}
 
