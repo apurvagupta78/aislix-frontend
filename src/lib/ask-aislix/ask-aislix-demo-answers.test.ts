@@ -26,7 +26,7 @@ describe("demo Ask Aislix intents", () => {
 
   it("uses a named demo store when the question mentions one", () => {
     const r = buildDemoAskResponse("Show stacking photos at Whitefield");
-    expect(r.answer).toContain("Big Bazaar — Whitefield");
+    expect(r.answer).toContain("DailyBasket — Whitefield");
   });
 
   it("keeps existing intents unchanged", () => {

@@ -10,11 +10,11 @@ const PERIOD = "Last 30 days (demo)";
 const CITIES = ["Bengaluru", "Mumbai", "Hyderabad", "Pune", "Delhi"];
 
 const STORES = {
-  koramangala: "More Mart — Koramangala",
-  hsr: "DMart — HSR Layout",
-  whitefield: "Big Bazaar — Whitefield",
-  jayanagar: "Reliance Smart — Jayanagar",
-  indiranagar: "More Mart — Indiranagar",
+  koramangala: "FreshMart — Koramangala",
+  hsr: "ValueMart — HSR Layout",
+  whitefield: "DailyBasket — Whitefield",
+  jayanagar: "CityGrocer — Jayanagar",
+  indiranagar: "FreshMart — Indiranagar",
 } as const;
 
 type StoreKey = keyof typeof STORES;
@@ -240,7 +240,7 @@ function buildEvidenceResponse(question: string): AskAislixResponse {
   if (/(before|after|corrective|fixed|resolved)/i.test(q)) {
     const photos = photosById(["oral", "chocopie", "snacks", "dreamlite", "candy", "babycare"]);
     return evidenceAnswer(
-      "Here is before/after evidence for the 3 most recent corrective actions: Oral-B restock at Big Bazaar — Whitefield, Snacks price tags at Whitefield, and the candy top shelf at Reliance Smart — Jayanagar. Each issue photo is paired with a compliant re-audit shelf.",
+      "Here is before/after evidence for the 3 most recent corrective actions: Oral-B restock at DailyBasket — Whitefield, Snacks price tags at Whitefield, and the candy top shelf at CityGrocer — Jayanagar. Each issue photo is paired with a compliant re-audit shelf.",
       "Before / after — corrective actions (demo)",
       photos,
       [
@@ -253,7 +253,7 @@ function buildEvidenceResponse(question: string): AskAislixResponse {
   if (/(fail|failed|failing|worst|lowest|non.?compliant|issues?)/i.test(q)) {
     const photos = EVIDENCE_LIBRARY.filter((p) => p.status === "Issue");
     return evidenceAnswer(
-      "Here are shelf photos with open issues, mostly from the 2 lowest-scoring stores: Big Bazaar — Whitefield (74% compliance) and Reliance Smart — Jayanagar (79%). Empty slots, missing price tags and over-facing are visible.",
+      "Here are shelf photos with open issues, mostly from the 2 lowest-scoring stores: DailyBasket — Whitefield (74% compliance) and CityGrocer — Jayanagar (79%). Empty slots, missing price tags and over-facing are visible.",
       "Shelf photos with open issues (demo)",
       photos,
       [
@@ -268,7 +268,7 @@ function buildEvidenceResponse(question: string): AskAislixResponse {
       .map((key) => EVIDENCE_LIBRARY.find((p) => p.store === key && p.status === "Issue") ?? EVIDENCE_LIBRARY.find((p) => p.store === key))
       .filter((p): p is EvidencePhoto => Boolean(p));
     return evidenceAnswer(
-      "Here is the latest shelf evidence for each of the 5 demo stores. Big Bazaar — Whitefield and Reliance Smart — Jayanagar show open issues; DMart — HSR Layout and More Mart — Indiranagar are compliant.",
+      "Here is the latest shelf evidence for each of the 5 demo stores. DailyBasket — Whitefield and CityGrocer — Jayanagar show open issues; ValueMart — HSR Layout and FreshMart — Indiranagar are compliant.",
       "Evidence by store (demo)",
       photos,
       [
@@ -540,7 +540,7 @@ const INTENTS: DemoIntent[] = [
     build: () =>
       response({
         answer:
-          "5 SKUs showed repeated shortages across 42 demo audits. Oral-B Pro Expert is the most frequent — short in 7 audits across 3 stores, mostly at Big Bazaar — Whitefield.",
+          "5 SKUs showed repeated shortages across 42 demo audits. Oral-B Pro Expert is the most frequent — short in 7 audits across 3 stores, mostly at DailyBasket — Whitefield.",
         summary: "Repeated shortages = SKU found below expected facings in 3+ audits in the period.",
         metrics: [
           { label: "SKUs with repeat shortages", value: "5", unit: "", trend: "up" },
@@ -570,7 +570,7 @@ const INTENTS: DemoIntent[] = [
           ],
         },
         insights: [
-          "Big Bazaar — Whitefield accounts for 9 of 23 shortage events — replenishment timing is the likely cause.",
+          "DailyBasket — Whitefield accounts for 9 of 23 shortage events — replenishment timing is the likely cause.",
           "Oral-B Pro Expert shortages cluster on weekends, suggesting shelf refill lags peak demand.",
           "Next action: raise a restock corrective action for Oral-B and Lays at Whitefield and re-audit in 7 days.",
         ],
@@ -622,7 +622,7 @@ const INTENTS: DemoIntent[] = [
         },
         insights: [
           "Mumbai's gap is concentrated in Snacks and Beverages — high-velocity categories.",
-          "Bengaluru variance is driven by Big Bazaar — Whitefield (−14 units).",
+          "Bengaluru variance is driven by DailyBasket — Whitefield (−14 units).",
           "Next action: schedule a recount in the top 2 Mumbai stores this week.",
         ],
         source_context: { period: PERIOD, locations: CITIES, operating_model: "Supermarket" },
@@ -669,7 +669,7 @@ const INTENTS: DemoIntent[] = [
         },
         insights: [
           "Snacks is the worst category at −11 units; Oral Care at −6 units.",
-          "Big Bazaar — Whitefield alone contributes 37% of the net gap.",
+          "DailyBasket — Whitefield alone contributes 37% of the net gap.",
           "Next action: focus recounts on Snacks at Whitefield.",
         ],
         follow_up_questions: [
@@ -731,7 +731,7 @@ const INTENTS: DemoIntent[] = [
     build: () =>
       response({
         answer:
-          "Big Bazaar — Whitefield has the lowest planogram compliance at 74%, followed by Reliance Smart — Jayanagar at 79%. More Mart — Koramangala leads at 91%.",
+          "DailyBasket — Whitefield has the lowest planogram compliance at 74%, followed by CityGrocer — Jayanagar at 79%. FreshMart — Koramangala leads at 91%.",
         metrics: [
           { label: "Network compliance", value: "84", unit: "%", trend: "up" },
           { label: "Below 80% target", value: "2", unit: "stores", trend: "down" },
@@ -776,7 +776,7 @@ const INTENTS: DemoIntent[] = [
     build: () =>
       response({
         answer:
-          "Big Bazaar — Whitefield has the most recurring issues: 5 findings repeated in 2+ consecutive audits. The top repeat issue across stores is low facings on Oral-B Pro Expert.",
+          "DailyBasket — Whitefield has the most recurring issues: 5 findings repeated in 2+ consecutive audits. The top repeat issue across stores is low facings on Oral-B Pro Expert.",
         metrics: [
           { label: "Recurring issue rate", value: "18", unit: "%", trend: "down" },
           { label: "Repeat findings", value: "11", unit: "", trend: "flat" },
@@ -869,7 +869,7 @@ const INTENTS: DemoIntent[] = [
     build: () =>
       response({
         answer:
-          "3 of 22 corrective actions are overdue, and 9 are still open. The oldest overdue action is the Oral-B restock at Big Bazaar — Whitefield, 6 days past due.",
+          "3 of 22 corrective actions are overdue, and 9 are still open. The oldest overdue action is the Oral-B restock at DailyBasket — Whitefield, 6 days past due.",
         metrics: [
           { label: "Open actions", value: "9", unit: "", trend: "flat" },
           { label: "Overdue", value: "3", unit: "", trend: "down" },
@@ -913,7 +913,7 @@ const INTENTS: DemoIntent[] = [
     build: () =>
       response({
         answer:
-          "There are 14 open findings, including 3 critical. Big Bazaar — Whitefield has the most (5 open, 2 critical).",
+          "There are 14 open findings, including 3 critical. DailyBasket — Whitefield has the most (5 open, 2 critical).",
         metrics: [
           { label: "Open findings", value: "14", unit: "", trend: "down" },
           { label: "Critical", value: "3", unit: "", trend: "down" },
@@ -963,7 +963,7 @@ const INTENTS: DemoIntent[] = [
     build: () =>
       response({
         answer:
-          "18 units are nearing expiry within 7 days across 3 stores. Reliance Smart — Jayanagar has the highest expiry risk (8 units, mostly dairy and bakery).",
+          "18 units are nearing expiry within 7 days across 3 stores. CityGrocer — Jayanagar has the highest expiry risk (8 units, mostly dairy and bakery).",
         metrics: [
           { label: "Units nearing expiry", value: "18", unit: "", trend: "down" },
           { label: "Sellable rate (F&V)", value: "87.5", unit: "%", trend: "up" },
@@ -1003,7 +1003,7 @@ const INTENTS: DemoIntent[] = [
     build: () =>
       response({
         answer:
-          "Stockout risk is highest at Big Bazaar — Whitefield: 4 SKUs are below 2 facings, led by Oral-B Pro Expert and Lays Classic 52g.",
+          "Stockout risk is highest at DailyBasket — Whitefield: 4 SKUs are below 2 facings, led by Oral-B Pro Expert and Lays Classic 52g.",
         metrics: [
           { label: "At-risk SKUs", value: "9", unit: "", trend: "up" },
           { label: "Potential OOS SKUs", value: "4", unit: "", trend: "up" },
@@ -1155,7 +1155,7 @@ const INTENTS: DemoIntent[] = [
 function overviewResponse(): AskAislixResponse {
   return response({
     answer:
-      "3 things need attention today: Big Bazaar — Whitefield is at 74% compliance with 5 open findings, 3 corrective actions are overdue, and Oral-B Pro Expert keeps running short in 3 stores.",
+      "3 things need attention today: DailyBasket — Whitefield is at 74% compliance with 5 open findings, 3 corrective actions are overdue, and Oral-B Pro Expert keeps running short in 3 stores.",
     summary: "42 audits · 84% planogram compliance · 14 open findings (3 critical) · 9 open corrective actions",
     metrics: [
       { label: "Planogram compliance", value: "84", unit: "%", trend: "up" },

@@ -41,28 +41,28 @@ export const GUEST_KPI_CARDS = [
 export const GUEST_RECENT_AUDITS = [
   {
     name: "Oral care · Aisle 7",
-    store: "More Mart — Koramangala",
+    store: "FreshMart — Koramangala",
     status: "Completed",
     score: "91%",
     date: "Today",
   },
   {
     name: "Beverages · Aisle 3",
-    store: "Big Bazaar — Whitefield",
+    store: "DailyBasket — Whitefield",
     status: "In progress",
     score: "—",
     date: "Today",
   },
   {
     name: "Snacks end-cap",
-    store: "Reliance Smart — Jayanagar",
+    store: "CityGrocer — Jayanagar",
     status: "Needs action",
     score: "76%",
     date: "Yesterday",
   },
   {
     name: "Personal care bay",
-    store: "DMart — HSR Layout",
+    store: "ValueMart — HSR Layout",
     status: "Completed",
     score: "88%",
     date: "2 days ago",

@@ -1004,8 +1004,8 @@ export async function fetchDashboardFilterOptions(
   if (!user) {
     return {
       stores: [
-        { id: "demo-1", name: "More Mart — Koramangala", country: "India", city: "Bengaluru" },
-        { id: "demo-2", name: "Big Bazaar — Whitefield", country: "India", city: "Bengaluru" },
+        { id: "demo-1", name: "FreshMart — Koramangala", country: "India", city: "Bengaluru" },
+        { id: "demo-2", name: "DailyBasket — Whitefield", country: "India", city: "Bengaluru" },
       ],
       countries: ["India"],
       cities: ["Bengaluru"],

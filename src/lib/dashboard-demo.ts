@@ -65,27 +65,27 @@ export const DEMO_DASHBOARD: DashboardResponse = {
       id: "demo-act-1",
       kind: "scan_completed",
       title: "Audit completed — Aisle 3 · Beverages",
-      description: "More Mart — Koramangala · 187 products detected",
+      description: "FreshMart — Koramangala · 187 products detected",
       created_at: isoAgo(2 * 60 * 60 * 1000),
     },
     {
       id: "demo-act-2",
       kind: "pdf_downloaded",
       title: "Audit report downloaded — Aisle 1 · Snacks",
-      description: "More Mart — Indiranagar",
+      description: "FreshMart — Indiranagar",
       created_at: isoAgo(6 * 60 * 60 * 1000),
     },
     {
       id: "demo-act-3",
       kind: "scan_completed",
       title: "Audit completed — Aisle 5 · Personal Care",
-      description: "Big Bazaar — Whitefield · 98 products detected",
+      description: "DailyBasket — Whitefield · 98 products detected",
       created_at: isoAgo(DAY),
     },
     {
       id: "demo-act-4",
       kind: "store_added",
-      title: "Store added — DMart · HSR Layout",
+      title: "Store added — ValueMart · HSR Layout",
       created_at: isoAgo(2 * DAY),
     },
     {
@@ -151,7 +151,7 @@ export const DEMO_NOTIFICATIONS: NotificationsResponse = {
       id: "demo-n-1",
       kind: "low_stock",
       severity: "critical",
-      title: "Low stock — Lipton Yellow Label at More Mart Koramangala",
+      title: "Low stock — Lipton Yellow Label at FreshMart Koramangala",
       message: "2 facings left on Aisle 3 · replenish today.",
       created_at: isoAgo(90 * 60 * 1000),
     },
@@ -160,7 +160,7 @@ export const DEMO_NOTIFICATIONS: NotificationsResponse = {
       kind: "low_stock",
       severity: "warning",
       title: "3 out-of-stock facings detected — Beverages aisle",
-      message: "Big Bazaar — Whitefield · last audit 4 hours ago.",
+      message: "DailyBasket — Whitefield · last audit 4 hours ago.",
       created_at: isoAgo(4 * 60 * 60 * 1000),
     },
     {
@@ -187,7 +187,7 @@ export const DEMO_RECENT_SCANS: RecentScansResponse = {
   items: [
     {
       scan_id: "DEMO-8241",
-      store: "More Mart — Koramangala",
+      store: "FreshMart — Koramangala",
       created_at: isoAgo(2 * 60 * 60 * 1000),
       shelf_health_score: 91,
       average_confidence: 95.2,
@@ -196,7 +196,7 @@ export const DEMO_RECENT_SCANS: RecentScansResponse = {
     },
     {
       scan_id: "DEMO-8237",
-      store: "More Mart — Indiranagar",
+      store: "FreshMart — Indiranagar",
       created_at: isoAgo(8 * 60 * 60 * 1000),
       shelf_health_score: 84,
       average_confidence: 93.8,
@@ -205,7 +205,7 @@ export const DEMO_RECENT_SCANS: RecentScansResponse = {
     },
     {
       scan_id: "DEMO-8229",
-      store: "Big Bazaar — Whitefield",
+      store: "DailyBasket — Whitefield",
       created_at: isoAgo(DAY),
       shelf_health_score: 76,
       average_confidence: 92.1,
@@ -214,7 +214,7 @@ export const DEMO_RECENT_SCANS: RecentScansResponse = {
     },
     {
       scan_id: "DEMO-8216",
-      store: "DMart — HSR Layout",
+      store: "ValueMart — HSR Layout",
       created_at: isoAgo(2 * DAY),
       shelf_health_score: 88,
       average_confidence: 94.4,
@@ -223,7 +223,7 @@ export const DEMO_RECENT_SCANS: RecentScansResponse = {
     },
     {
       scan_id: "DEMO-8204",
-      store: "More Mart — Koramangala",
+      store: "FreshMart — Koramangala",
       created_at: isoAgo(3 * DAY),
       shelf_health_score: 92,
       average_confidence: 96.0,
@@ -232,7 +232,7 @@ export const DEMO_RECENT_SCANS: RecentScansResponse = {
     },
     {
       scan_id: "DEMO-8198",
-      store: "Reliance Smart — Jayanagar",
+      store: "CityGrocer — Jayanagar",
       created_at: isoAgo(4 * DAY),
       shelf_health_score: 81,
       average_confidence: 91.7,
@@ -244,11 +244,11 @@ export const DEMO_RECENT_SCANS: RecentScansResponse = {
   page: 1,
   page_size: 8,
   stores: [
-    "More Mart — Koramangala",
-    "More Mart — Indiranagar",
-    "Big Bazaar — Whitefield",
-    "DMart — HSR Layout",
-    "Reliance Smart — Jayanagar",
+    "FreshMart — Koramangala",
+    "FreshMart — Indiranagar",
+    "DailyBasket — Whitefield",
+    "ValueMart — HSR Layout",
+    "CityGrocer — Jayanagar",
   ],
 };
 
@@ -366,7 +366,7 @@ export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
   issue_rows: [
     {
       id: "demo-i1",
-      store_name: "More Mart — Koramangala",
+      store_name: "FreshMart — Koramangala",
       issue: "3 products need availability review",
       priority: "high",
       status: "Open",
@@ -374,7 +374,7 @@ export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
     },
     {
       id: "demo-i2",
-      store_name: "Big Bazaar — Whitefield",
+      store_name: "DailyBasket — Whitefield",
       issue: "Planogram placement mismatch on Aisle 5",
       priority: "medium",
       status: "Open",
@@ -396,7 +396,7 @@ export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
         date_label: p.label,
         date_iso: isoAgo(DAY * (14 - i)),
         scan_id: `DEMO-${8240 + i}`,
-        store_name: i % 2 === 0 ? "More Mart — Koramangala" : "Big Bazaar — Whitefield",
+        store_name: i % 2 === 0 ? "FreshMart — Koramangala" : "DailyBasket — Whitefield",
         role_label: "Supermarket",
         values: {
           osa: 85 + (i % 5),
@@ -495,7 +495,7 @@ export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
   stores: [
     {
       store_id: "demo-1",
-      store_name: "More Mart — Koramangala",
+      store_name: "FreshMart — Koramangala",
       audits: 12,
       osa: 93,
       planogram: 88,
@@ -504,7 +504,7 @@ export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
     },
     {
       store_id: "demo-2",
-      store_name: "Big Bazaar — Whitefield",
+      store_name: "DailyBasket — Whitefield",
       audits: 9,
       osa: 86,
       planogram: 79,
@@ -531,7 +531,7 @@ export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
       store: [
         {
           id: "demo-1",
-          name: "More Mart — Koramangala",
+          name: "FreshMart — Koramangala",
           performance_score: 90,
           previous_score: 85,
           change: 5,
@@ -544,7 +544,7 @@ export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
         },
         {
           id: "demo-2",
-          name: "Big Bazaar — Whitefield",
+          name: "DailyBasket — Whitefield",
           performance_score: 82,
           previous_score: 84,
           change: -2,
@@ -883,7 +883,7 @@ export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
       date_label: p.label,
       date_iso: isoAgo(DAY * (8 - i)),
       scan_id: `DEMO-${8240 + i}`,
-      store_name: i % 2 === 0 ? "More Mart — Koramangala" : "Big Bazaar — Whitefield",
+      store_name: i % 2 === 0 ? "FreshMart — Koramangala" : "DailyBasket — Whitefield",
       actual_share: 55 + i,
       target_share: 65,
     })),
@@ -891,7 +891,7 @@ export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
       {
         scan_id: "DEMO-8241",
         date_iso: isoAgo(DAY),
-        store_name: "More Mart — Koramangala",
+        store_name: "FreshMart — Koramangala",
         brand: "Colgate",
         share: 61,
         is_primary: true,
@@ -899,7 +899,7 @@ export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
       {
         scan_id: "DEMO-8241",
         date_iso: isoAgo(DAY),
-        store_name: "More Mart — Koramangala",
+        store_name: "FreshMart — Koramangala",
         brand: "Pepsodent",
         share: 21,
         is_primary: false,
@@ -928,7 +928,7 @@ export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
       date_label: p.label,
       date_iso: isoAgo(DAY * (6 - i)),
       scan_id: `DEMO-${8235 + i}`,
-      store_name: i % 2 === 0 ? "More Mart — Koramangala" : "Big Bazaar — Whitefield",
+      store_name: i % 2 === 0 ? "FreshMart — Koramangala" : "DailyBasket — Whitefield",
       daily_exposure_inr: 8200 + i * 800,
     })),
     has_trend: true,
@@ -936,7 +936,7 @@ export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
       {
         scan_id: "DEMO-8241",
         date_iso: isoAgo(DAY),
-        store_name: "More Mart — Koramangala",
+        store_name: "FreshMart — Koramangala",
         issue: "SKU OOS",
         brand: "Colgate",
         product: "Max Fresh 150g",
@@ -955,8 +955,8 @@ export const DEMO_WORKSPACE_DASHBOARD: WorkspaceDashboardData = {
   has_completed_audits: true,
   filter_options: {
     stores: [
-      { id: "demo-1", name: "More Mart — Koramangala", country: "India", city: "Bengaluru" },
-      { id: "demo-2", name: "Big Bazaar — Whitefield", country: "India", city: "Bengaluru" },
+      { id: "demo-1", name: "FreshMart — Koramangala", country: "India", city: "Bengaluru" },
+      { id: "demo-2", name: "DailyBasket — Whitefield", country: "India", city: "Bengaluru" },
     ],
     countries: ["India"],
     cities: ["Bengaluru", "Mumbai"],
@@ -990,21 +990,21 @@ export const DEMO_WORKSPACE_MANAGEMENT: WorkspaceManagementData = {
       {
         id: "demo-plano-1",
         name: "Oral Care · G01",
-        store_name: "More Mart — Koramangala",
+        store_name: "FreshMart — Koramangala",
         category: "Toothpaste",
         status: "Active",
       },
       {
         id: "demo-plano-2",
         name: "Beverages · Aisle 3",
-        store_name: "Big Bazaar — Whitefield",
+        store_name: "DailyBasket — Whitefield",
         category: "Soft drinks",
         status: "Active",
       },
       {
         id: "demo-plano-3",
         name: "Snacks end-cap",
-        store_name: "Reliance Smart — Jayanagar",
+        store_name: "CityGrocer — Jayanagar",
         category: "Chips",
         status: "Draft",
       },
@@ -1015,7 +1015,7 @@ export const DEMO_WORKSPACE_MANAGEMENT: WorkspaceManagementData = {
     recent: [
       {
         id: "demo-1",
-        name: "More Mart — Koramangala",
+        name: "FreshMart — Koramangala",
         city: "Bengaluru",
         country: "India",
         audit_count: 12,
@@ -1023,7 +1023,7 @@ export const DEMO_WORKSPACE_MANAGEMENT: WorkspaceManagementData = {
       },
       {
         id: "demo-2",
-        name: "Big Bazaar — Whitefield",
+        name: "DailyBasket — Whitefield",
         city: "Bengaluru",
         country: "India",
         audit_count: 9,
@@ -1031,7 +1031,7 @@ export const DEMO_WORKSPACE_MANAGEMENT: WorkspaceManagementData = {
       },
       {
         id: "demo-3",
-        name: "Reliance Smart — Jayanagar",
+        name: "CityGrocer — Jayanagar",
         city: "Bengaluru",
         country: "India",
         audit_count: 7,
@@ -1054,7 +1054,7 @@ export const DEMO_WORKSPACE_MANAGEMENT: WorkspaceManagementData = {
     recent: [
       {
         id: "demo-asn-1",
-        store_name: "More Mart — Koramangala",
+        store_name: "FreshMart — Koramangala",
         category: "Personal Care",
         assigned_to: "Field Rep",
         date: isoAgo(DAY),
@@ -1063,7 +1063,7 @@ export const DEMO_WORKSPACE_MANAGEMENT: WorkspaceManagementData = {
       },
       {
         id: "demo-asn-2",
-        store_name: "Big Bazaar — Whitefield",
+        store_name: "DailyBasket — Whitefield",
         category: "Beverages",
         assigned_to: "Store Lead",
         date: isoAgo(DAY * 2),
