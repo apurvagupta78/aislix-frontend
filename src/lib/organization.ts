@@ -820,6 +820,11 @@ function storeDupKey(name: string, city: string | null | undefined): string {
   return `${name.trim().toLowerCase()}::${(city ?? "").trim().toLowerCase()}`;
 }
 
+function storeCodeKey(code: string | null | undefined): string | null {
+  const key = (code ?? "").trim().toLowerCase();
+  return key || null;
+}
+
 export async function importStoresCsv(file: File): Promise<{
   created: number;
   failed: number;
@@ -836,10 +841,13 @@ export async function importStoresCsv(file: File): Promise<{
 
   const { data: existingStores } = await supabase
     .from("stores")
-    .select("name, city")
+    .select("name, city, code")
     .eq("org_id", orgId);
   const existingKeys = new Set(
     (existingStores ?? []).map((s) => storeDupKey(String(s.name ?? ""), s.city)),
+  );
+  const existingCodes = new Set(
+    (existingStores ?? []).map((s) => storeCodeKey(s.code)).filter((c): c is string => c !== null),
   );
   const fileKeys = new Set<string>();
 
@@ -850,11 +858,13 @@ export async function importStoresCsv(file: File): Promise<{
   for (const row of rows) {
     const { name, city } = row;
     const dup = storeDupKey(name, city);
-    if (existingKeys.has(dup) || fileKeys.has(dup)) {
+    const code = storeCodeKey(row.code);
+    if (existingKeys.has(dup) || fileKeys.has(dup) || (code && existingCodes.has(code))) {
       skippedDuplicates += 1;
       continue;
     }
     fileKeys.add(dup);
+    if (code) existingCodes.add(code);
 
     if (remaining !== null && remaining <= 0) {
       // Plan store limit reached — surface the same limit modal as single adds.
