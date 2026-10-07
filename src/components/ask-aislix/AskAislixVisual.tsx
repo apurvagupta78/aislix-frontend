@@ -20,6 +20,33 @@ import { AskAislixImageGallery } from "./AskAislixImageGallery";
 
 const COLORS = CHART_SERIES;
 
+const LABEL_KEYS = ["label", "name", "store", "date", "category", "product", "sku", "brand", "x"];
+const VALUE_KEYS = ["value", "count", "total", "y"];
+
+type ChartPoint = { name: string; value: number; unit?: string };
+
+/** Model-written chart rows use varying keys; keep only rows with a real number to plot. */
+function toChartPoints(rows: unknown[] | undefined): ChartPoint[] {
+  const points: ChartPoint[] = [];
+  for (const raw of rows ?? []) {
+    if (!raw || typeof raw !== "object") continue;
+    const row = raw as Record<string, unknown>;
+    const labelKey =
+      LABEL_KEYS.find((k) => typeof row[k] === "string" && row[k]) ??
+      Object.keys(row).find((k) => typeof row[k] === "string" && k !== "unit");
+    const valueKey =
+      VALUE_KEYS.find((k) => Number.isFinite(Number(row[k])) && row[k] !== null && row[k] !== "") ??
+      Object.keys(row).find((k) => typeof row[k] === "number" && Number.isFinite(row[k]));
+    if (!labelKey || !valueKey) continue;
+    points.push({
+      name: String(row[labelKey]),
+      value: Number(row[valueKey]),
+      unit: typeof row.unit === "string" ? row.unit : undefined,
+    });
+  }
+  return points.some((p) => p.value !== 0) ? points : [];
+}
+
 export function AskAislixVisual({ visual }: { visual: AskAislixResponse["visual"] }) {
   if (!visual || visual.type === "none") return null;
 
@@ -42,12 +69,31 @@ export function AskAislixVisual({ visual }: { visual: AskAislixResponse["visual"
     );
   }
 
-  if (visual.type === "bar" || visual.type === "ranking") {
-    const data = (visual.data ?? []) as Array<{ label?: string; name?: string; value?: number }>;
+  if (visual.type === "ranking") {
+    const data = toChartPoints(visual.data);
+    if (!data.length) return null;
+    return (
+      <div className="w-full" style={{ height: Math.max(120, data.length * 36 + 40) }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} layout="vertical" margin={{ top: 8, right: 24, bottom: 0, left: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#D9E2E8" />
+            <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+            <YAxis type="category" dataKey="name" width={160} tick={{ fontSize: 11 }} />
+            <Tooltip />
+            <Bar dataKey="value" fill={AISLIX.primary} radius={[0, 4, 4, 0]} animationDuration={300} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+
+  if (visual.type === "bar") {
+    const data = toChartPoints(visual.data);
+    if (!data.length) return null;
     return (
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data.map((d) => ({ name: d.label ?? d.name, value: d.value ?? 0 }))}>
+          <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="name" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} />
@@ -60,14 +106,15 @@ export function AskAislixVisual({ visual }: { visual: AskAislixResponse["visual"
   }
 
   if (visual.type === "line" || visual.type === "area") {
-    const data = (visual.data ?? []) as Array<{ date?: string; value?: number; unit?: string }>;
+    const data = toChartPoints(visual.data);
+    if (!data.length) return null;
     const unit = data.find((d) => d.unit)?.unit;
     return (
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 16, right: 16, bottom: 0, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#D9E2E8" />
-            <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+            <XAxis dataKey="name" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} />
             <Tooltip formatter={(v: number) => [unit ? `${v} ${unit}` : v, "Value"]} />
             <Line
@@ -86,12 +133,13 @@ export function AskAislixVisual({ visual }: { visual: AskAislixResponse["visual"
   }
 
   if (visual.type === "donut") {
-    const data = (visual.data ?? []) as Array<{ name?: string; label?: string; value?: number }>;
+    const data = toChartPoints(visual.data);
+    if (!data.length) return null;
     return (
       <div className="mx-auto h-64 w-full max-w-sm">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Pie data={data.map((d) => ({ name: d.name ?? d.label, value: d.value ?? 0 }))} dataKey="value" innerRadius={50} outerRadius={80}>
+            <Pie data={data} dataKey="value" innerRadius={50} outerRadius={80}>
               {data.map((_, i) => (
                 <Cell key={i} fill={COLORS[i % COLORS.length]} />
               ))}
