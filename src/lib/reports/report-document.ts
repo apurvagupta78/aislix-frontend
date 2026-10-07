@@ -405,7 +405,7 @@ export function buildExecReport(
         "Last audit",
       ],
       rows: stores.map((s) => [
-        s.city ? `${s.store_name} · ${s.city}` : s.store_name,
+        storeLabel(s.store_name, s.city),
         count(s.audits),
         pct(s.avg_osa),
         count(s.gaps),
@@ -502,7 +502,7 @@ export function buildRestockReport(
       rows: stores.map((s) => {
         const mine = lines.filter((l) => l.scan_id === s.scan_id);
         return [
-          s.city ? `${s.store_name} · ${s.city}` : s.store_name,
+          storeLabel(s.store_name, s.city),
           reportDate(s.audited_at, true),
           s.captured_by,
           count(s.gaps),
@@ -517,7 +517,7 @@ export function buildRestockReport(
     const mine = lines.filter((l) => l.scan_id === s.scan_id);
     if (!mine.length) continue;
     tables.push({
-      title: s.city ? `${s.store_name} · ${s.city}` : s.store_name,
+      title: storeLabel(s.store_name, s.city),
       columns: ["Product", "Action", "Facings seen", "Category", "AI certainty"],
       rows: mine.map((l) => [
         restockProductLabel(l),
@@ -626,7 +626,7 @@ export function buildFieldReport(
       title: `Coverage by ${nouns.one}`,
       columns: [nouns.one[0]!.toUpperCase() + nouns.one.slice(1), "Planned", "Missed", "Visits", "With GPS", "At store", "Last visit"],
       rows: (data?.stores ?? []).map((s) => [
-        s.city ? `${s.store_name} · ${s.city}` : s.store_name,
+        storeLabel(s.store_name, s.city),
         count(s.planned),
         count(s.planned_missed),
         count(s.visits),
@@ -746,6 +746,12 @@ export function buildClaimReport(
         path: v.original_path,
       })),
   };
+}
+
+/** "Store · City", unless the store name already carries the city. */
+export function storeLabel(name: string, city: string | null | undefined): string {
+  const c = city?.trim();
+  return c && !name.toLowerCase().includes(c.toLowerCase()) ? `${name} · ${c}` : name;
 }
 
 function capitalize(s: string): string {
