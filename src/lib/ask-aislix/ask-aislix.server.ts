@@ -216,10 +216,8 @@ function extractOutputText(response: Response): string {
 function buildCompactFinalizeInput(
   initialInput: ResponseInput,
   loopOutput: Response["output"],
+  capturedTools: CapturedToolCall[],
 ): ResponseInput {
-  const toolItems = loopOutput.filter(
-    (item) => item.type === "function_call" || item.type === "function_call_output",
-  );
   const lastMessage = [...loopOutput].reverse().find((item) => item.type === "message");
   const recentUser = [...initialInput].reverse().find((item) => {
     if (typeof item === "string") return true;
@@ -227,7 +225,14 @@ function buildCompactFinalizeInput(
   });
   const items: ResponseInput = [];
   if (recentUser) items.push(recentUser);
-  items.push(...toolItems);
+  if (capturedTools.length) {
+    items.push({
+      role: "user",
+      content: `Aislix tool results for this question (authoritative):\n${JSON.stringify(
+        capturedTools.map((t) => ({ tool: t.name, args: t.args, result: t.result })),
+      )}`,
+    });
+  }
   if (lastMessage) items.push(lastMessage);
   return items;
 }
@@ -251,7 +256,7 @@ async function runToolLoop(
   pendingImages: ImageGalleryItem[],
   visionAssets: VisionAsset[],
   capturedTools: CapturedToolCall[],
-): Promise<Response> {
+): Promise<{ response: Response; transcript: ResponseInput }> {
   let input: ResponseInput = [...initialInput];
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -264,7 +269,7 @@ async function runToolLoop(
     });
 
     const calls = extractFunctionCalls(response);
-    if (!calls.length) return response;
+    if (!calls.length) return { response, transcript: [...input, ...response.output] };
 
     input = [...input, ...response.output];
     for (const call of calls) {
@@ -291,12 +296,16 @@ async function runToolLoop(
     }
   }
 
-  return client.responses.create({
+  const response = await client.responses.create({
     model,
     instructions,
     input,
     tools: RESPONSE_TOOLS,
   });
+  return {
+    response,
+    transcript: [...input, ...response.output.filter((item) => item.type === "message")],
+  };
 }
 
 async function finalizeStructuredResponse(
@@ -336,7 +345,7 @@ async function runPipeline(
   visionAssets: VisionAsset[],
   capturedTools: CapturedToolCall[],
 ): Promise<{ response: Response; loopResponse: Response; usage?: Response["usage"] }> {
-  const loopResponse = await runToolLoop(
+  const { response: loopResponse, transcript } = await runToolLoop(
     client,
     model,
     instructions,
@@ -347,18 +356,17 @@ async function runPipeline(
     visionAssets,
     capturedTools,
   );
-  const fullFinalInput: ResponseInput = [...initialInput, ...loopResponse.output];
   let finalResponse = await finalizeStructuredResponse(
     client,
     model,
     instructions,
-    fullFinalInput,
+    transcript,
     visionAssets,
   );
 
   const fullRaw = extractOutputText(finalResponse).trim();
   if (!fullRaw || fullRaw === "{}") {
-    const compactInput = buildCompactFinalizeInput(initialInput, loopResponse.output);
+    const compactInput = buildCompactFinalizeInput(initialInput, loopResponse.output, capturedTools);
     finalResponse = await finalizeStructuredResponse(
       client,
       model,
