@@ -72,8 +72,9 @@ export function SegmentHomePanel({ filters, previewDemo, userEmail }: Props) {
       filters?.dateTo ?? "",
       filters?.storeId ?? "all",
       previewDemo,
+      segmentId,
     ],
-    queryFn: () => fetchSegmentDashboard(filters, { previewDemo, userEmail }),
+    queryFn: () => fetchSegmentDashboard(filters, { previewDemo, userEmail, segment: segmentId }),
     staleTime: 60_000,
   });
 

@@ -7,7 +7,11 @@ import {
   SEGMENT_IDS,
   segmentHeadline,
 } from "@/lib/segments/segment-config";
-import { resolveSegmentPeriod, type SegmentDashboard } from "@/lib/segments/segment-dashboard";
+import {
+  resolveSegmentPeriod,
+  segmentStoreIds,
+  type SegmentDashboard,
+} from "@/lib/segments/segment-dashboard";
 
 const MODEL_NAMES = /astra|luna|terra|gpt|openai|gemini|claude|anthropic/i;
 
@@ -135,5 +139,31 @@ describe("segment period", () => {
   it("uses the selected range when the filter has one", () => {
     const p = resolveSegmentPeriod({ datePreset: "custom", dateFrom: "2026-09-01", dateTo: "2026-09-30" }, now);
     expect(p.label).toBe("Selected 30 days");
+  });
+});
+
+describe("segment store scope", () => {
+  const stores = [
+    { id: "s1", store_type: "supermarket" },
+    { id: "d1", store_type: "dark_store" },
+    { id: "l1", store_type: "local store" },
+    { id: "o1", store_type: "outlet" },
+    { id: "w1", store_type: "Warehouse" },
+  ];
+
+  it("narrows a mixed workspace to the segment's stores", () => {
+    expect(segmentStoreIds("darkstore", stores, null)).toEqual(["d1"]);
+    expect(segmentStoreIds("local", stores, null)).toEqual(["l1"]);
+    expect(segmentStoreIds("distributor", stores, null)).toEqual(["o1", "w1"]);
+  });
+
+  it("keeps every store for brands and single-format workspaces", () => {
+    expect(segmentStoreIds("fmcg", stores, null)).toBeNull();
+    expect(segmentStoreIds("darkstore", [{ id: "x", store_type: null }], null)).toBeNull();
+  });
+
+  it("never widens past the member's store access", () => {
+    expect(segmentStoreIds("supermarket", stores, ["d1", "l1"])).toEqual(["d1", "l1"]);
+    expect(segmentStoreIds("darkstore", stores, ["d1", "l1"])).toEqual(["d1"]);
   });
 });
