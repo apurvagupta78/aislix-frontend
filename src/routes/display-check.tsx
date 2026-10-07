@@ -379,6 +379,11 @@ function CheckResult({ row }: { row: CheckRow & { photoUrl: string | null } }) {
               <span>{row.summary}</span>
             </p>
           ) : null}
+          {row.status === "unclear" && row.items.length ? (
+            <p className="rounded-xl bg-[#EEF1F4] px-3 py-2 text-sm text-[#667085]">
+              The photo is too unclear for a verdict, so no fixes were opened. Retake it closer and in better light.
+            </p>
+          ) : null}
           {row.items.length ? (
             <div className="overflow-x-auto rounded-xl border border-[#D9E2E8]">
               <table className="w-full min-w-[520px] text-sm">

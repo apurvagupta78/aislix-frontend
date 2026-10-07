@@ -22,7 +22,8 @@ export function buildDisplayCheckPrompt(input: { expectedBrand?: string | null; 
     input.expectedBrand
       ? "- expected_brand_present: true only if at least one display clearly shows the expected brand; false if it is clearly absent; null if the photo is too unclear to tell."
       : "- expected_brand_present: null (no brand was expected).",
-    "- image_quality: poor if the photo is blurred, too dark, or too far away to judge displays; otherwise good.",
+    "- image_quality: poor if the photo is blurred, too dark, or too far away to judge displays or read their brands; otherwise good. If your summary says the photo is blurred or unclear, image_quality must be poor.",
+    "- Branded fixtures count as displays: a chiller, cooler or rack with a brand logo on it is a display even when it is full of stock.",
     "",
     "Reply with JSON only:",
     '{"items": [{"type": string, "brand": string | null, "condition": "good" | "damaged" | "missing", "placement": string, "visible": boolean, "notes": string, "confidence": number}], "expected_brand_present": boolean | null, "image_quality": "good" | "poor", "summary": "one or two plain sentences for a store manager"}',

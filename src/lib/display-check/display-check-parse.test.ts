@@ -51,6 +51,9 @@ describe("parseDisplayCheckPayload", () => {
 
   it("asks for a retake instead of raising a fix when the photo is unclear", () => {
     expect(parseDisplayCheckPayload({ items: [], image_quality: "poor" }, null).status).toBe("unclear");
+    const blurred = parseDisplayCheckPayload({ items: [item({ condition: "damaged" })], image_quality: "poor" }, null);
+    expect(blurred.status).toBe("unclear");
+    expect(displayCheckIssues(blurred, null)).toEqual([]);
     const r = parseDisplayCheckPayload({ items: [], expected_brand_present: null, image_quality: "poor" }, "Dove");
     expect(r.status).toBe("unclear");
     expect(displayCheckIssues(r, "Dove")).toEqual([]);

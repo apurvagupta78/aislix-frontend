@@ -103,14 +103,16 @@ export function decideDisplayStatus(input: {
   imageQuality: "good" | "poor";
 }): DisplayCheckStatus {
   const { items, expectedBrand } = input;
+  // A poor photo never gives a verdict or opens fixes; the auditor retakes it.
+  if (input.imageQuality === "poor") return "unclear";
   if (expectedBrand) {
     const seen = items.some((i) => brandMatches(i.brand, expectedBrand) && i.condition !== "missing");
     if (!seen && input.expectedBrandPresent !== true) {
-      return input.imageQuality === "poor" || input.expectedBrandPresent === null ? "unclear" : "missing";
+      return input.expectedBrandPresent === null ? "unclear" : "missing";
     }
   }
   if (items.some((i) => i.condition !== "good")) return "needs_fix";
-  if (!items.length) return input.imageQuality === "poor" ? "unclear" : "none_found";
+  if (!items.length) return "none_found";
   return "good";
 }
 
@@ -194,6 +196,7 @@ export function displayCheckIssues(
       severity: "high",
     });
   }
+  if (result.status === "unclear") return issues;
   for (const item of result.items) {
     if (item.condition === "good") continue;
     const what = `${item.brand ? `${item.brand} ` : ""}${DISPLAY_TYPE_LABEL[item.type].toLowerCase()}`;
