@@ -32,6 +32,7 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as DemoScansRouteImport } from './routes/demo-scans'
 import { Route as DigitalAuditRouteImport } from './routes/digital-audit'
+import { Route as DisplayCheckRouteImport } from './routes/display-check'
 import { Route as DistributorsRouteImport } from './routes/distributors'
 import { Route as EscalationSettingsRouteImport } from './routes/escalation-settings'
 import { Route as ExceptionsRouteImport } from './routes/exceptions'
@@ -246,6 +247,11 @@ const DemoScansRoute = DemoScansRouteImport.update({
 const DigitalAuditRoute = DigitalAuditRouteImport.update({
   id: '/digital-audit',
   path: '/digital-audit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DisplayCheckRoute = DisplayCheckRouteImport.update({
+  id: '/display-check',
+  path: '/display-check',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DistributorsRoute = DistributorsRouteImport.update({
@@ -787,6 +793,7 @@ export interface FileRoutesByFullPath {
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
   '/digital-audit': typeof DigitalAuditRoute
+  '/display-check': typeof DisplayCheckRoute
   '/distributors': typeof DistributorsRoute
   '/escalation-settings': typeof EscalationSettingsRoute
   '/exceptions': typeof ExceptionsRouteWithChildren
@@ -912,6 +919,7 @@ export interface FileRoutesByTo {
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
   '/digital-audit': typeof DigitalAuditRoute
+  '/display-check': typeof DisplayCheckRoute
   '/distributors': typeof DistributorsRoute
   '/escalation-settings': typeof EscalationSettingsRoute
   '/exceptions': typeof ExceptionsRouteWithChildren
@@ -1038,6 +1046,7 @@ export interface FileRoutesById {
   '/demo': typeof DemoRoute
   '/demo-scans': typeof DemoScansRoute
   '/digital-audit': typeof DigitalAuditRoute
+  '/display-check': typeof DisplayCheckRoute
   '/distributors': typeof DistributorsRoute
   '/escalation-settings': typeof EscalationSettingsRoute
   '/exceptions': typeof ExceptionsRouteWithChildren
@@ -1165,6 +1174,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/demo-scans'
     | '/digital-audit'
+    | '/display-check'
     | '/distributors'
     | '/escalation-settings'
     | '/exceptions'
@@ -1290,6 +1300,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/demo-scans'
     | '/digital-audit'
+    | '/display-check'
     | '/distributors'
     | '/escalation-settings'
     | '/exceptions'
@@ -1415,6 +1426,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/demo-scans'
     | '/digital-audit'
+    | '/display-check'
     | '/distributors'
     | '/escalation-settings'
     | '/exceptions'
@@ -1541,6 +1553,7 @@ export interface RootRouteChildren {
   DemoRoute: typeof DemoRoute
   DemoScansRoute: typeof DemoScansRoute
   DigitalAuditRoute: typeof DigitalAuditRoute
+  DisplayCheckRoute: typeof DisplayCheckRoute
   DistributorsRoute: typeof DistributorsRoute
   EscalationSettingsRoute: typeof EscalationSettingsRoute
   ExceptionsRoute: typeof ExceptionsRouteWithChildren
@@ -1773,6 +1786,13 @@ declare module '@tanstack/react-router' {
       path: '/digital-audit'
       fullPath: '/digital-audit'
       preLoaderRoute: typeof DigitalAuditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/display-check': {
+      id: '/display-check'
+      path: '/display-check'
+      fullPath: '/display-check'
+      preLoaderRoute: typeof DisplayCheckRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/distributors': {
@@ -2663,6 +2683,7 @@ const rootRouteChildren: RootRouteChildren = {
   DemoRoute: DemoRoute,
   DemoScansRoute: DemoScansRoute,
   DigitalAuditRoute: DigitalAuditRoute,
+  DisplayCheckRoute: DisplayCheckRoute,
   DistributorsRoute: DistributorsRoute,
   EscalationSettingsRoute: EscalationSettingsRoute,
   ExceptionsRoute: ExceptionsRouteWithChildren,
