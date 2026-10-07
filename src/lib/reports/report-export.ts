@@ -152,11 +152,37 @@ ${t.note ? `<p class="note">${esc(t.note)}</p>` : ""}</section>`,
 
 /** Opens the print view; the browser's "Save as PDF" turns it into the PDF report. */
 export function openPrintableReport(doc: ReportDocument): boolean {
+  const html = buildReportPrintHtml(doc);
   const win = window.open("", "_blank");
-  if (!win) return false;
-  win.opener = null;
+  if (win) {
+    win.opener = null;
+    writeAndPrint(win, html);
+    return true;
+  }
+  return printInFrame(html);
+}
+
+/** Pop-ups are often blocked in installed apps and phone browsers, so print from a hidden frame instead. */
+function printInFrame(html: string): boolean {
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
+  document.body.appendChild(frame);
+  const win = frame.contentWindow;
+  if (!win) {
+    frame.remove();
+    return false;
+  }
+  const cleanup = () => setTimeout(() => frame.remove(), 1000);
+  win.addEventListener("afterprint", cleanup, { once: true });
+  setTimeout(() => frame.isConnected && frame.remove(), 120_000);
+  writeAndPrint(win, html);
+  return true;
+}
+
+function writeAndPrint(win: Window, html: string): void {
   win.document.open();
-  win.document.write(buildReportPrintHtml(doc));
+  win.document.write(html);
   win.document.close();
   const print = () => {
     win.focus();
@@ -165,7 +191,7 @@ export function openPrintableReport(doc: ReportDocument): boolean {
   const images = Array.from(win.document.images);
   if (!images.length) {
     setTimeout(print, 150);
-    return true;
+    return;
   }
   let pending = images.length;
   const done = () => {
@@ -185,5 +211,4 @@ export function openPrintableReport(doc: ReportDocument): boolean {
       print();
     }
   }, 8000);
-  return true;
 }

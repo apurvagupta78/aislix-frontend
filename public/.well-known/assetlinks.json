@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.aislix.app",
+      "sha256_cert_fingerprints": [
+        "55:50:05:FB:20:8D:1C:9A:47:88:6B:80:14:CE:23:CC:BB:EF:23:F8:B3:86:19:10:F1:ED:D1:F0:4A:07:2B:99"
+      ]
+    }
+  }
+]

@@ -14,6 +14,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as ActionsRouteImport } from './routes/actions'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AppRouteImport } from './routes/app'
 import { Route as AssignScanRouteImport } from './routes/assign-scan'
 import { Route as AssignedScansRouteImport } from './routes/assigned-scans'
 import { Route as AssignmentGridRouteImport } from './routes/assignment-grid'
@@ -41,6 +42,7 @@ import { Route as FeaturesRouteImport } from './routes/features'
 import { Route as FindingsRouteImport } from './routes/findings'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as GuestRouteImport } from './routes/guest'
+import { Route as GuideRouteImport } from './routes/guide'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as InventoryRouteImport } from './routes/inventory'
@@ -158,6 +160,11 @@ const ActionsRoute = ActionsRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssignScanRoute = AssignScanRouteImport.update({
@@ -293,6 +300,11 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
 const GuestRoute = GuestRouteImport.update({
   id: '/guest',
   path: '/guest',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GuideRoute = GuideRouteImport.update({
+  id: '/guide',
+  path: '/guide',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoryRoute = HistoryRouteImport.update({
@@ -781,6 +793,7 @@ export interface FileRoutesByFullPath {
   '/accept-invite': typeof AcceptInviteRoute
   '/actions': typeof ActionsRoute
   '/admin': typeof AdminRouteWithChildren
+  '/app': typeof AppRoute
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
   '/assignment-grid': typeof AssignmentGridRoute
@@ -808,6 +821,7 @@ export interface FileRoutesByFullPath {
   '/findings': typeof FindingsRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/guest': typeof GuestRoute
+  '/guide': typeof GuideRoute
   '/history': typeof HistoryRoute
   '/how-it-works': typeof HowItWorksRoute
   '/inventory': typeof InventoryRoute
@@ -908,6 +922,7 @@ export interface FileRoutesByTo {
   '/accept-invite': typeof AcceptInviteRoute
   '/actions': typeof ActionsRoute
   '/admin': typeof AdminRouteWithChildren
+  '/app': typeof AppRoute
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
   '/assignment-grid': typeof AssignmentGridRoute
@@ -935,6 +950,7 @@ export interface FileRoutesByTo {
   '/findings': typeof FindingsRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/guest': typeof GuestRoute
+  '/guide': typeof GuideRoute
   '/history': typeof HistoryRoute
   '/how-it-works': typeof HowItWorksRoute
   '/inventory': typeof InventoryRoute
@@ -1036,6 +1052,7 @@ export interface FileRoutesById {
   '/accept-invite': typeof AcceptInviteRoute
   '/actions': typeof ActionsRoute
   '/admin': typeof AdminRouteWithChildren
+  '/app': typeof AppRoute
   '/assign-scan': typeof AssignScanRoute
   '/assigned-scans': typeof AssignedScansRoute
   '/assignment-grid': typeof AssignmentGridRoute
@@ -1063,6 +1080,7 @@ export interface FileRoutesById {
   '/findings': typeof FindingsRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/guest': typeof GuestRoute
+  '/guide': typeof GuideRoute
   '/history': typeof HistoryRoute
   '/how-it-works': typeof HowItWorksRoute
   '/inventory': typeof InventoryRoute
@@ -1165,6 +1183,7 @@ export interface FileRouteTypes {
     | '/accept-invite'
     | '/actions'
     | '/admin'
+    | '/app'
     | '/assign-scan'
     | '/assigned-scans'
     | '/assignment-grid'
@@ -1192,6 +1211,7 @@ export interface FileRouteTypes {
     | '/findings'
     | '/forgot-password'
     | '/guest'
+    | '/guide'
     | '/history'
     | '/how-it-works'
     | '/inventory'
@@ -1292,6 +1312,7 @@ export interface FileRouteTypes {
     | '/accept-invite'
     | '/actions'
     | '/admin'
+    | '/app'
     | '/assign-scan'
     | '/assigned-scans'
     | '/assignment-grid'
@@ -1319,6 +1340,7 @@ export interface FileRouteTypes {
     | '/findings'
     | '/forgot-password'
     | '/guest'
+    | '/guide'
     | '/history'
     | '/how-it-works'
     | '/inventory'
@@ -1419,6 +1441,7 @@ export interface FileRouteTypes {
     | '/accept-invite'
     | '/actions'
     | '/admin'
+    | '/app'
     | '/assign-scan'
     | '/assigned-scans'
     | '/assignment-grid'
@@ -1446,6 +1469,7 @@ export interface FileRouteTypes {
     | '/findings'
     | '/forgot-password'
     | '/guest'
+    | '/guide'
     | '/history'
     | '/how-it-works'
     | '/inventory'
@@ -1547,6 +1571,7 @@ export interface RootRouteChildren {
   AcceptInviteRoute: typeof AcceptInviteRoute
   ActionsRoute: typeof ActionsRoute
   AdminRoute: typeof AdminRouteWithChildren
+  AppRoute: typeof AppRoute
   AssignScanRoute: typeof AssignScanRoute
   AssignedScansRoute: typeof AssignedScansRoute
   AssignmentGridRoute: typeof AssignmentGridRoute
@@ -1574,6 +1599,7 @@ export interface RootRouteChildren {
   FindingsRoute: typeof FindingsRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   GuestRoute: typeof GuestRoute
+  GuideRoute: typeof GuideRoute
   HistoryRoute: typeof HistoryRoute
   HowItWorksRoute: typeof HowItWorksRoute
   InventoryRoute: typeof InventoryRoute
@@ -1673,6 +1699,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assign-scan': {
@@ -1862,6 +1895,13 @@ declare module '@tanstack/react-router' {
       path: '/guest'
       fullPath: '/guest'
       preLoaderRoute: typeof GuestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guide': {
+      id: '/guide'
+      path: '/guide'
+      fullPath: '/guide'
+      preLoaderRoute: typeof GuideRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/history': {
@@ -2685,6 +2725,7 @@ const rootRouteChildren: RootRouteChildren = {
   AcceptInviteRoute: AcceptInviteRoute,
   ActionsRoute: ActionsRoute,
   AdminRoute: AdminRouteWithChildren,
+  AppRoute: AppRoute,
   AssignScanRoute: AssignScanRoute,
   AssignedScansRoute: AssignedScansRoute,
   AssignmentGridRoute: AssignmentGridRoute,
@@ -2712,6 +2753,7 @@ const rootRouteChildren: RootRouteChildren = {
   FindingsRoute: FindingsRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   GuestRoute: GuestRoute,
+  GuideRoute: GuideRoute,
   HistoryRoute: HistoryRoute,
   HowItWorksRoute: HowItWorksRoute,
   InventoryRoute: InventoryRoute,

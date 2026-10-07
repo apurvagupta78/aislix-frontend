@@ -219,7 +219,7 @@ function ReportView({
     if (!openPrintableReport(doc)) toast.error("Allow pop-ups for aislix.com to save the PDF.");
   };
 
-  const ready = Boolean(doc) && !report.isFetching;
+  const ready = Boolean(doc);
 
   return (
     <section
