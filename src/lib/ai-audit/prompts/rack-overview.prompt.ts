@@ -20,7 +20,7 @@ export function buildRackOverviewPrompt(input: { rackCode?: string | null }): st
     "- Judge only how full each bin looks. Do not count units and do not name products you cannot read.",
     "- Include every shelf you can see, even partly. Use not_visible rather than guessing.",
     "- shelf: the shelf letter if you can read it on the upright tag, otherwise null.",
-    "- rack_code: the rack code if it is printed on a rack sign or can be read from the bin labels, otherwise null.",
+    "- rack_code: the rack part only, for example D07 from the bin label AMB-D07G2, read from a rack sign or the bin labels. Never return only the zone (AMB, CHL). null if you cannot read it.",
     "- image_quality: poor if the photo is blurred, too dark, or too far away to judge the bins; otherwise good. If your summary says the photo is blurred or unclear, image_quality must be poor.",
     "",
     "Reply with JSON only:",

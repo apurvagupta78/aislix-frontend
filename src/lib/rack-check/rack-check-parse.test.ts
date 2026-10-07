@@ -52,6 +52,11 @@ describe("parseRackCheckPayload", () => {
     expect(parseRackCheckPayload("not json").status).toBe("none_found");
   });
 
+  it("drops a rack code that is only a zone", () => {
+    expect(parseRackCheckPayload({ rack_code: "AMB", shelves: [] }).rackCodeRead).toBeNull();
+    expect(parseRackCheckPayload({ rack_code: "K02", shelves: [] }).rackCodeRead).toBe("K02");
+  });
+
   it("treats unknown statuses as not visible instead of guessing", () => {
     const r = parseRackCheckPayload({ shelves: [{ bins: [bin("half"), bin("full")] }], image_quality: "good" });
     expect(r.shelves[0]?.bins.map((b) => b.status)).toEqual(["not_visible", "stocked"]);

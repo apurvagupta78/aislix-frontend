@@ -49,6 +49,12 @@ export function normalizeCode(value: unknown): string | null {
   return code;
 }
 
+/** A rack read from the photo must include a number (D07, F02); a bare zone such as AMB is not a rack. */
+function rackCodeFromPhoto(value: unknown): string | null {
+  const code = normalizeCode(value);
+  return code && /\d/.test(code) ? code : null;
+}
+
 function shelfLetter(value: unknown): string | null {
   const s = str(value, 4).toUpperCase();
   return /^[A-Z]$/.test(s) ? s : null;
@@ -102,7 +108,7 @@ export function parseRackCheckPayload(payload: unknown): RackCheckResult {
   const imageQuality = str(root.image_quality, 10).toLowerCase() === "poor" ? "poor" : "good";
   return {
     status: decideRackStatus(counts, imageQuality),
-    rackCodeRead: normalizeCode(root.rack_code),
+    rackCodeRead: rackCodeFromPhoto(root.rack_code),
     shelves,
     counts,
     imageQuality,
