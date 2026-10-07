@@ -54,6 +54,7 @@ import {
 import { AISLIX, NEW_AUDIT_BUTTON_CLASS } from "@/lib/aislix-theme";
 import { AISLIX_PALETTE, CHART_SERIES } from "@/lib/ai-audit/kpi-palette";
 import { DashboardOverviewPanel } from "@/components/dashboard/DashboardOverviewPanel";
+import { SegmentHomePanel } from "@/components/dashboard/SegmentHomePanel";
 import {
   fetchNotificationPreferences,
   updateNotificationPreferences,
@@ -1595,6 +1596,11 @@ export function AiDigitalDashboardShell() {
             previewDemo={demoPreview.previewDemo || Boolean(data?.labeledDemo)}
             dataAvailability={askDataAvailability}
             city={global?.filters?.city ?? null}
+          />
+          <SegmentHomePanel
+            filters={global?.filters ?? null}
+            previewDemo={demoPreview.previewDemo}
+            userEmail={demoPreview.userEmail}
           />
           <DashboardOverviewPanel
             ai={data}
