@@ -110,28 +110,15 @@ export const emailReport = createServerFn({ method: "POST" })
 
     const { serverAppOrigin } = await import("@/lib/app-origin");
     const url = reportUrl(serverAppOrigin(), { kind: data.kind, days: data.days, storeId: data.storeId });
-    const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
-
-    let sent = 0;
-    let skipped = 0;
+    const { sendReportSummaryEmails } = await import("@/lib/reports/report-email.server");
     const stamp = new Date().toISOString().slice(0, 16);
-    for (const email of data.recipients) {
-      const result = await sendTemplateEmail("report-summary", email, {
-        idempotencyKey: `report-${userId}-${data.kind}-${data.days}-${data.storeId ?? "all"}-${stamp}-${email}`,
-        templateData: {
-          senderName,
-          title: doc.title,
-          subtitle: doc.subtitle,
-          question: doc.question,
-          headline: doc.empty ? doc.emptyMessage : doc.headline,
-          kpis: doc.empty ? [] : doc.kpis.map((k) => ({ label: k.label, value: k.value, context: k.context })),
-          labeledDemo: doc.labeledDemo,
-          message: data.message,
-          reportUrl: url,
-        },
-      });
-      if (result.sent) sent += 1;
-      else skipped += 1;
-    }
-    return { sent, skipped };
+    return sendReportSummaryEmails({
+      doc,
+      recipients: data.recipients,
+      senderName,
+      message: data.message,
+      reportUrl: url,
+      scheduled: false,
+      idempotencyPrefix: `report-${userId}-${data.kind}-${data.days}-${data.storeId ?? "all"}-${stamp}`,
+    });
   });

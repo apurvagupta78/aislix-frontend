@@ -116,6 +116,7 @@ import { Route as ResultsDebugRouteImport } from './routes/results.debug'
 import { Route as ShareTokenRouteImport } from './routes/share.$token'
 import { Route as StoresIndexRouteImport } from './routes/stores.index'
 import { Route as StoresStoreIdRouteImport } from './routes/stores.$storeId'
+import { Route as ApiCronReportSchedulesRouteImport } from './routes/api/cron/report-schedules'
 import { Route as ApiPlanogramCsvTemplateRouteImport } from './routes/api/planogram.csv-template'
 import { Route as ApiPlanogramNormalizeRowRouteImport } from './routes/api/planogram.normalize-row'
 import { Route as ApiPlanogramParseCsvRouteImport } from './routes/api/planogram.parse-csv'
@@ -674,6 +675,11 @@ const StoresStoreIdRoute = StoresStoreIdRouteImport.update({
   path: '/stores/$storeId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronReportSchedulesRoute = ApiCronReportSchedulesRouteImport.update({
+  id: '/api/cron/report-schedules',
+  path: '/api/cron/report-schedules',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPlanogramCsvTemplateRoute = ApiPlanogramCsvTemplateRouteImport.update({
   id: '/api/planogram/csv-template',
   path: '/api/planogram/csv-template',
@@ -865,6 +871,7 @@ export interface FileRoutesByFullPath {
   '/share/$token': typeof ShareTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
+  '/api/cron/report-schedules': typeof ApiCronReportSchedulesRoute
   '/api/planogram/csv-template': typeof ApiPlanogramCsvTemplateRoute
   '/api/planogram/normalize-row': typeof ApiPlanogramNormalizeRowRoute
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
@@ -989,6 +996,7 @@ export interface FileRoutesByTo {
   '/share/$token': typeof ShareTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores': typeof StoresIndexRoute
+  '/api/cron/report-schedules': typeof ApiCronReportSchedulesRoute
   '/api/planogram/csv-template': typeof ApiPlanogramCsvTemplateRoute
   '/api/planogram/normalize-row': typeof ApiPlanogramNormalizeRowRoute
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
@@ -1114,6 +1122,7 @@ export interface FileRoutesById {
   '/share/$token': typeof ShareTokenRoute
   '/stores/$storeId': typeof StoresStoreIdRoute
   '/stores/': typeof StoresIndexRoute
+  '/api/cron/report-schedules': typeof ApiCronReportSchedulesRoute
   '/api/planogram/csv-template': typeof ApiPlanogramCsvTemplateRoute
   '/api/planogram/normalize-row': typeof ApiPlanogramNormalizeRowRoute
   '/api/planogram/parse-csv': typeof ApiPlanogramParseCsvRoute
@@ -1240,6 +1249,7 @@ export interface FileRouteTypes {
     | '/share/$token'
     | '/stores/$storeId'
     | '/stores/'
+    | '/api/cron/report-schedules'
     | '/api/planogram/csv-template'
     | '/api/planogram/normalize-row'
     | '/api/planogram/parse-csv'
@@ -1364,6 +1374,7 @@ export interface FileRouteTypes {
     | '/share/$token'
     | '/stores/$storeId'
     | '/stores'
+    | '/api/cron/report-schedules'
     | '/api/planogram/csv-template'
     | '/api/planogram/normalize-row'
     | '/api/planogram/parse-csv'
@@ -1488,6 +1499,7 @@ export interface FileRouteTypes {
     | '/share/$token'
     | '/stores/$storeId'
     | '/stores/'
+    | '/api/cron/report-schedules'
     | '/api/planogram/csv-template'
     | '/api/planogram/normalize-row'
     | '/api/planogram/parse-csv'
@@ -1587,6 +1599,7 @@ export interface RootRouteChildren {
   ShareTokenRoute: typeof ShareTokenRoute
   StoresStoreIdRoute: typeof StoresStoreIdRoute
   StoresIndexRoute: typeof StoresIndexRoute
+  ApiCronReportSchedulesRoute: typeof ApiCronReportSchedulesRoute
   ApiPlanogramCsvTemplateRoute: typeof ApiPlanogramCsvTemplateRoute
   ApiPlanogramNormalizeRowRoute: typeof ApiPlanogramNormalizeRowRoute
   ApiPlanogramParseCsvRoute: typeof ApiPlanogramParseCsvRoute
@@ -2350,6 +2363,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof StoresStoreIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/report-schedules': {
+      id: '/api/cron/report-schedules'
+      path: '/api/cron/report-schedules'
+      fullPath: '/api/cron/report-schedules'
+      preLoaderRoute: typeof ApiCronReportSchedulesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/planogram/csv-template': {
       id: '/api/planogram/csv-template'
       path: '/api/planogram/csv-template'
@@ -2701,6 +2721,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShareTokenRoute: ShareTokenRoute,
   StoresStoreIdRoute: StoresStoreIdRoute,
   StoresIndexRoute: StoresIndexRoute,
+  ApiCronReportSchedulesRoute: ApiCronReportSchedulesRoute,
   ApiPlanogramCsvTemplateRoute: ApiPlanogramCsvTemplateRoute,
   ApiPlanogramNormalizeRowRoute: ApiPlanogramNormalizeRowRoute,
   ApiPlanogramParseCsvRoute: ApiPlanogramParseCsvRoute,

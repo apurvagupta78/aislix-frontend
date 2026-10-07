@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { FileSpreadsheet, Link2, Mail, MessageCircle, Printer, Sparkles } from "lucide-react";
+import { CalendarClock, FileSpreadsheet, Link2, Mail, MessageCircle, Printer, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 
 import { DemoPreviewToggle } from "@/components/control-tower/DemoPreviewToggle";
 import { SegmentKpiCard } from "@/components/dashboard/SegmentHomePanel";
 import { ReportsLibrary } from "@/components/reports/ReportsLibrary";
+import { ScheduleReportDialog } from "@/components/reports/ScheduleReportDialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -146,6 +147,7 @@ function ReportView({
   const info = REPORT_KIND_INFO[kind];
   const period = useMemo(() => reportPeriod(days), [days]);
   const [emailOpen, setEmailOpen] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
   const scope = useQuery({
     queryKey: ["report-scope", previewDemo, userEmail],
@@ -299,6 +301,9 @@ function ReportView({
           <Button variant="subtle" size="sm" className="rounded-xl" disabled={!ready} onClick={whatsapp}>
             <MessageCircle className="size-4" /> WhatsApp
           </Button>
+          <Button variant="subtle" size="sm" className="rounded-xl" disabled={!ready} onClick={() => setScheduleOpen(true)}>
+            <CalendarClock className="size-4" /> Schedule
+          </Button>
           <Button variant="brand" size="sm" className="rounded-xl" disabled={!ready} onClick={() => setEmailOpen(true)}>
             <Mail className="size-4" /> Email
           </Button>
@@ -334,6 +339,13 @@ function ReportView({
           request={{ kind, days, segment, storeId, previewDemo }}
         />
       ) : null}
+      <ScheduleReportDialog
+        open={scheduleOpen}
+        onOpenChange={setScheduleOpen}
+        request={{ kind, days, segment, storeId, previewDemo }}
+        storeName={storeName}
+        storeNames={Object.fromEntries(storeOptions.map((s) => [s.store_id, s.store_name]))}
+      />
     </section>
   );
 }
