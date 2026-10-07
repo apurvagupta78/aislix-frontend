@@ -217,7 +217,9 @@ function SegmentKpiCard({ kpi }: { kpi: SegmentKpiView }) {
               title="Change vs the previous period of the same length"
             >
               {kpi.delta > 0 ? <ArrowUpRight className="size-3.5" /> : <ArrowDownRight className="size-3.5" />}
-              {Math.abs(kpi.delta) >= 10 ? Math.abs(kpi.delta).toFixed(0) : Math.abs(kpi.delta).toFixed(1)}
+              {Number.isInteger(kpi.delta) || Math.abs(kpi.delta) >= 10
+                ? Math.abs(kpi.delta).toFixed(0)
+                : Math.abs(kpi.delta).toFixed(1)}
             </span>
           ) : null}
           <span title={kpi.context} className="text-[#667085]">

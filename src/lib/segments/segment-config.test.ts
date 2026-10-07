@@ -98,6 +98,12 @@ describe("segment config", () => {
     expect(gaps!.lowerIsBetter).toBe(true);
   });
 
+  it("shows no change when the previous period had no audits", () => {
+    const d = dashboard();
+    d.previous = { audits: 0, stores: 0 };
+    for (const k of buildSegmentKpis(SEGMENT_CONFIG.distributor, d)) expect(k.delta).toBeNull();
+  });
+
   it("writes a plain headline and no model names", () => {
     expect(segmentHeadline(SEGMENT_CONFIG.distributor, dashboard())).toBe(
       "12 AI audits across 3 outlets found 14 empty gaps and 30 low-stock lines.",

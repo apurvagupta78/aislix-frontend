@@ -178,7 +178,7 @@ function plural(n: number, one: string, many = `${one}s`): string {
 /** Build KPI cards for a segment. Accents cycle so neighbours never share a colour. */
 export function buildSegmentKpis(config: SegmentConfig, data: SegmentDashboard | null): SegmentKpiView[] {
   const t = data?.totals;
-  const p = data?.previous;
+  const p = (num(data?.previous?.audits) ?? 0) > 0 ? data?.previous : undefined;
   const a = data?.actions;
   const audits = num(t?.audits) ?? 0;
   const noAudits = audits === 0;
