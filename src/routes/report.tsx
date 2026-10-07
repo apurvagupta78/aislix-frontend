@@ -46,10 +46,10 @@ export const Route = createFileRoute("/report")({
   },
   head: () => ({
     meta: [
-      { title: "PDF Audit Report — Aislix" },
+      { title: "Reports — Aislix" },
       {
         name: "description",
-        content: "Preview, download and share the PDF shelf audit report generated from your audit.",
+        content: "Reports built from your AI shelf audits: store trends, executive summary, field coverage and claim proof.",
       },
       { property: "og:title", content: "Shelf audit PDF report — Aislix" },
       { property: "og:description", content: "A shareable, print-ready retail shelf audit." },

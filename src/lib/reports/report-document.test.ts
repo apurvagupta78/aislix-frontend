@@ -11,7 +11,8 @@ import {
   type FieldCoverage,
   type ReportDocument,
 } from "@/lib/reports/report-document";
-import { buildReportPrintHtml } from "@/lib/reports/report-export";
+import * as XLSX from "xlsx";
+import { buildReportPrintHtml, buildReportWorkbook } from "@/lib/reports/report-export";
 import type { SegmentDashboard } from "@/lib/segments/segment-dashboard";
 
 const meta = { from: "2026-09-07T00:00:00Z", to: "2026-10-07T00:00:00Z", labeledDemo: false };
@@ -128,6 +129,19 @@ describe("report documents", () => {
     expect(second).toContain("No photo");
     expect(second![4]).toBe("N/A");
     expect(doc.photos).toHaveLength(1);
+  });
+
+  it("exports a summary sheet plus one sheet per table", () => {
+    const doc = buildClaimReport(
+      "fmcg",
+      { from: meta.from, to: meta.to, totals: { audits: 1, stores: 1, with_photo: 1, gps_audits: 0, on_site: 0, off_site: 0 }, audits: [visit({ category: "" })] },
+      meta,
+    );
+    expect(doc.tables[0]!.rows[0]![3]).toBe("N/A");
+    const wb = XLSX.read(new Uint8Array(buildReportWorkbook(doc)), { type: "array" });
+    expect(wb.SheetNames).toEqual(["Summary", "Visit evidence"]);
+    const rows = XLSX.utils.sheet_to_json<string[]>(wb.Sheets["Visit evidence"]!, { header: 1 });
+    expect(rows[1]![0]).toBe("Gate Store (G1)");
   });
 
   it("labels each location status", () => {

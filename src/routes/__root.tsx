@@ -18,6 +18,7 @@ import { clearContextCache } from "@/lib/db/context";
 import { ensureOAuthWorkspace } from "@/lib/api/auth";
 import { AuthGate } from "@/components/AuthGate";
 import { initAnalytics, trackPageView } from "@/lib/analytics";
+import { registerAppServiceWorker } from "@/lib/pwa";
 
 
 function NotFoundComponent() {
@@ -102,6 +103,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:site_name", content: "Aislix" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@aislix" },
+      { name: "theme-color", content: "#102A43" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: "Aislix" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
     ],
     links: [
       {
@@ -114,6 +120,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/favicon.png?v=3", type: "image/png", sizes: "64x64" },
       { rel: "shortcut icon", href: "/favicon.ico?v=3" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png?v=3", sizes: "180x180" },
+      { rel: "manifest", href: "/manifest.json" },
 
     ],
     scripts: [
@@ -207,6 +214,10 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+
+  useEffect(() => {
+    registerAppServiceWorker();
+  }, []);
 
   useEffect(() => {
     initAnalytics();

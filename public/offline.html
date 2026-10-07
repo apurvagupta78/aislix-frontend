@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#102A43" />
+    <title>Offline — Aislix</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f4f7f9;
+        color: #102a43;
+        font-family: Inter, Arial, sans-serif;
+      }
+      main {
+        max-width: 360px;
+        margin: 24px;
+        padding: 28px 24px;
+        background: #fff;
+        border: 1px solid #d9e2e8;
+        border-radius: 16px;
+        text-align: center;
+      }
+      img {
+        width: 56px;
+        height: 56px;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 16px 0 8px;
+      }
+      p {
+        font-size: 14px;
+        line-height: 1.5;
+        color: #667085;
+        margin: 0 0 20px;
+      }
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 18px;
+        background: #102a43;
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icon-192.png" alt="Aislix" />
+      <h1>You are offline</h1>
+      <p>Aislix needs an internet connection to run AI audits and load your reports. Check your connection and try again.</p>
+      <button type="button" onclick="location.reload()">Try again</button>
+    </main>
+  </body>
+</html>

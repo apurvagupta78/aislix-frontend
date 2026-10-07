@@ -537,7 +537,7 @@ export function buildClaimReport(
     v.store_code ? `${v.store_name} (${v.store_code})` : v.store_name,
     reportDate(v.created_at, true),
     v.captured_by,
-    v.category ?? NA,
+    v.category?.trim() || NA,
     v.shelf_read ? pct(v.osa) : NA,
     v.shelf_read ? count(v.gaps) : NA,
     (v.top_brands ?? [])

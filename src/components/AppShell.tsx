@@ -66,6 +66,7 @@ import { PageHeader } from "@/components/design-system";
 import { APP_NAV_SECTIONS, type NavItemConfig, type NavLeafConfig, type NavSectionConfig } from "@/lib/navigation/app-nav";
 import { useIsGuest } from "@/lib/use-is-guest";
 import { GuestNavPage } from "@/components/guest/GuestNavPage";
+import { InstallAppBanner } from "@/components/pwa/InstallAppBanner";
 
 type LucideIcon = typeof Bell;
 type NavLeaf = NavLeafConfig & { icon?: LucideIcon };
@@ -865,6 +866,7 @@ export function AppShell({
             <SiteFooter />
           </div>
         </div>
+        {isGuest ? null : <InstallAppBanner />}
       </TooltipProvider>
     </GlobalFilterProvider>
   );
