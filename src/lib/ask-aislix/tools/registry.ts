@@ -13,8 +13,6 @@ import {
 import { clampFiltersToScope, resolveStoreQuery, storeIdsForQuery } from "@/lib/ask-aislix/context";
 import { fetchScopedControlTowerDataset } from "@/lib/ask-aislix/dataset";
 import {
-  countOpenActions,
-  countOverdueActions,
   completionPct,
   UNWIRED_UNIVERSAL_KPI_IDS,
 } from "@/lib/kpi-engine/compute-universal";
@@ -306,21 +304,18 @@ async function getOverdueAudits(ctx: ToolContext, args: Record<string, unknown>)
     scope: ctx.scope,
     filters: ctx.filters,
   });
-  const overdue = data.auditExecutionFull
-    .filter((a) => {
-      if (!a.dueDate) return false;
-      const due = new Date(a.dueDate).getTime();
-      return due < now && a.status !== "Completed" && a.status !== "Approved";
-    })
-    .slice(0, limit)
-    .map((a) => ({
-      assignment_id: a.id,
-      store: a.location,
-      status: a.status,
-      due_date: a.dueDate,
-      assignee: a.assignedTo,
-    }));
-  return { available: true, data: { count: overdue.length, items: overdue } };
+  const overdue = data.auditExecutionFull.filter((a) => {
+    const due = new Date(a.dueDate).getTime();
+    return Number.isFinite(due) && due < now && a.stage !== "Completed";
+  });
+  const items = overdue.slice(0, limit).map((a) => ({
+    assignment_id: a.auditId,
+    store: a.location,
+    status: a.status,
+    due_date: a.dueDate,
+    assignee: a.assignedTo,
+  }));
+  return { available: true, data: { count: overdue.length, items } };
 }
 
 async function getInventoryVariance(ctx: ToolContext, args: Record<string, unknown>): Promise<ToolResult> {
@@ -428,18 +423,15 @@ async function getCorrectiveActions(ctx: ToolContext, args: Record<string, unkno
     scope: ctx.scope,
     filters: ctx.filters,
   });
-  const now = Date.now();
-  const open = data.correctiveActionsFull.filter((a) => a.status !== "Closed");
-  const overdue = countOverdueActions(
-    open.map((a) => ({ status: a.status, due_date: a.dueDate ?? null })),
-    now,
+  const open = data.correctiveActionsFull.filter(
+    (a) => !["closed", "verified", "resolved", "rejected"].includes(a.status.toLowerCase()),
   );
 
   return {
     available: true,
     data: {
-      open_count: countOpenActions(open.map((a) => ({ status: a.status }))),
-      overdue_count: overdue,
+      open_count: data.correctiveActionHealth.open,
+      overdue_count: data.correctiveActionHealth.overdue,
       buckets: data.correctiveActionHealth,
       items: open.slice(0, limit),
     },
