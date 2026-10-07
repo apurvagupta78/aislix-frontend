@@ -8,6 +8,7 @@ import { getUser, requireOrgId } from "@/lib/db/context";
 import { resolveDemoExperience } from "@/lib/demo-environment";
 import { resolveDashboardDateBounds, type DashboardFilterState } from "@/lib/dashboard-filters";
 import type { AuditRoleTab as SegmentId } from "@/lib/role-audit-ui";
+import { narrowToSegment } from "@/lib/segments/segment-stores";
 
 type Num = number | null;
 
@@ -164,37 +165,6 @@ export async function resolveSegmentScope(
   return { ...base, storeIds: scope.isOrgAdmin ? null : scope.effectiveStoreIds, outOfScope: false };
 }
 
-/** Store types each segment reads. null = every store (a brand audits all retailers). */
-const SEGMENT_STORE_TYPES: Record<SegmentId, string[] | null> = {
-  supermarket: ["supermarket", "hypermarket", "modern_trade"],
-  darkstore: ["dark_store", "darkstore", "quick_commerce"],
-  fmcg: null,
-  distributor: ["outlet", "warehouse", "distributor", "wholesale"],
-  local: ["local_store", "kirana", "general_store"],
-};
-
-export function normalizeStoreType(value: string | null | undefined): string {
-  return (value ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
-}
-
-/**
- * Narrow to the selected segment's stores when the workspace has any of that type.
- * A single-format workspace (or one without store types) keeps every store in scope.
- */
-export function segmentStoreIds(
-  segment: SegmentId | null | undefined,
-  stores: { id: string; store_type: string | null }[],
-  scopeIds: string[] | null,
-): string[] | null {
-  const types = segment ? SEGMENT_STORE_TYPES[segment] : null;
-  if (!types) return scopeIds;
-  const allowed = new Set(scopeIds ?? stores.map((s) => s.id));
-  const matching = stores
-    .filter((s) => allowed.has(s.id) && types.includes(normalizeStoreType(s.store_type)))
-    .map((s) => s.id);
-  return matching.length ? matching : scopeIds;
-}
-
 export async function fetchSegmentDashboard(
   filters: PeriodFilters | null | undefined,
   options: { previewDemo?: boolean; userEmail?: string | null; segment?: SegmentId | null },
@@ -207,18 +177,12 @@ export async function fetchSegmentDashboard(
   }
 
   // The dashboard store filter lists the member's own stores, which never exist in the demo org.
-  let storeIds = scope.labeledDemo ? null : scope.storeIds;
-  if (options.segment && SEGMENT_STORE_TYPES[options.segment]) {
-    const { data: stores } = await supabase
-      .from("stores")
-      .select("id, store_type")
-      .eq("org_id", scope.dataOrgId);
-    storeIds = segmentStoreIds(
-      options.segment,
-      (stores ?? []) as { id: string; store_type: string | null }[],
-      storeIds,
-    );
-  }
+  const storeIds = await narrowToSegment(
+    supabase as never,
+    scope.dataOrgId,
+    options.segment,
+    scope.labeledDemo ? null : scope.storeIds,
+  );
 
   const { data, error } = await supabase.rpc("segment_dashboard" as never, {
     p_org_id: scope.dataOrgId,

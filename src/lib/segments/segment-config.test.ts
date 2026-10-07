@@ -7,11 +7,8 @@ import {
   SEGMENT_IDS,
   segmentHeadline,
 } from "@/lib/segments/segment-config";
-import {
-  resolveSegmentPeriod,
-  segmentStoreIds,
-  type SegmentDashboard,
-} from "@/lib/segments/segment-dashboard";
+import { resolveSegmentPeriod, type SegmentDashboard } from "@/lib/segments/segment-dashboard";
+import { segmentStoreIds } from "@/lib/segments/segment-stores";
 
 const MODEL_NAMES = /astra|luna|terra|gpt|openai|gemini|claude|anthropic/i;
 

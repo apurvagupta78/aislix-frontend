@@ -44,6 +44,7 @@ import { downloadReportExcel, openPrintableReport } from "@/lib/reports/report-e
 import { emailReport } from "@/lib/reports/report-email.functions";
 import { normalizeSegmentId, readStoredSegment, type SegmentId } from "@/lib/segments/segment-config";
 import { resolveSegmentScope } from "@/lib/segments/segment-dashboard";
+import { narrowToSegment } from "@/lib/segments/segment-stores";
 import { useDemoPreview } from "@/lib/use-demo-preview";
 import { cn } from "@/lib/utils";
 
@@ -59,6 +60,7 @@ const TAB_ORDER: ReportCenterTab[] = [...REPORT_KINDS, "audit"];
 const TAB_LABEL: Record<ReportCenterTab, string> = {
   store: REPORT_KIND_INFO.store.label,
   exec: REPORT_KIND_INFO.exec.label,
+  restock: REPORT_KIND_INFO.restock.label,
   field: REPORT_KIND_INFO.field.label,
   claim: REPORT_KIND_INFO.claim.label,
   audit: "Single audit reports",
@@ -153,13 +155,13 @@ function ReportView({
   const scopeData = scope.data?.signedIn ? scope.data : null;
 
   const stores = useQuery({
-    queryKey: ["report-stores", scopeData?.dataOrgId, scopeData?.storeIds, days],
-    queryFn: () =>
+    queryKey: ["report-stores", scopeData?.dataOrgId, scopeData?.storeIds, days, segment],
+    queryFn: async () =>
       fetchReportStores(supabase as never, {
         dataOrgId: scopeData!.dataOrgId,
         from: period.from,
         to: period.to,
-        storeIds: scopeData!.storeIds,
+        storeIds: await narrowToSegment(supabase as never, scopeData!.dataOrgId, segment, scopeData!.storeIds),
       }),
     enabled: Boolean(scopeData && !scopeData.outOfScope),
     staleTime: 60_000,
@@ -183,7 +185,7 @@ function ReportView({
         labeledDemo: s.labeledDemo,
         from: period.from,
         to: period.to,
-        storeIds: s.storeIds,
+        storeIds: storeId ? s.storeIds : await narrowToSegment(supabase as never, s.dataOrgId, segment, s.storeIds),
         storeName,
       });
       return kind === "claim" ? signReportPhotos(supabase as never, doc) : doc;
@@ -248,7 +250,7 @@ function ReportView({
               ))}
             </SelectContent>
           </Select>
-          {kind === "store" || kind === "claim" ? (
+          {kind === "store" || kind === "claim" || kind === "restock" ? (
             <Select
               value={storeId ?? "all"}
               onValueChange={(v) => onSearch({ store: v === "all" ? undefined : v })}
@@ -258,7 +260,7 @@ function ReportView({
                 <SelectValue placeholder={storeOptions.length ? "Choose a store" : "No audited stores"} />
               </SelectTrigger>
               <SelectContent>
-                {kind === "claim" ? <SelectItem value="all">All stores</SelectItem> : null}
+                {kind === "claim" || kind === "restock" ? <SelectItem value="all">All stores</SelectItem> : null}
                 {storeOptions.map((s) => (
                   <SelectItem key={s.store_id} value={s.store_id}>
                     {s.city ? `${s.store_name} · ${s.city}` : s.store_name}

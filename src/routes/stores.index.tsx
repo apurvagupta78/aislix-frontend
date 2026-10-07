@@ -181,7 +181,12 @@ function StoresPage() {
       const parts = [`${data.created} created`];
       if (data.skippedDuplicates > 0) parts.push(`${data.skippedDuplicates} duplicates skipped`);
       if (data.failed > 0) parts.push(`${data.failed} failed`);
-      toast.success(parts.join(" · "));
+      const detail = data.issues
+        .slice(0, 3)
+        .map((i) => `Row ${i.line}: ${i.reason}`)
+        .join(" · ");
+      if (data.created === 0 && data.failed > 0) toast.error(parts.join(" · "), { description: detail });
+      else toast.success(parts.join(" · "), detail ? { description: detail } : undefined);
     },
     onError: (error: unknown) =>
       toast.error(error instanceof Error ? error.message : "Bulk import is not available yet."),

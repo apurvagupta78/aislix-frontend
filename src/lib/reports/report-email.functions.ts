@@ -87,6 +87,7 @@ export const emailReport = createServerFn({ method: "POST" })
     }
 
     const { fetchReportDocument, reportPeriod, reportUrl } = await import("@/lib/reports/report-data");
+    const { narrowToSegment } = await import("@/lib/segments/segment-stores");
     const period = reportPeriod(data.days);
     const doc = await fetchReportDocument(supabase as never, {
       kind: data.kind,
@@ -95,7 +96,9 @@ export const emailReport = createServerFn({ method: "POST" })
       labeledDemo: experience.labeledDemo,
       from: period.from,
       to: period.to,
-      storeIds: data.storeId ? [data.storeId] : null,
+      storeIds: data.storeId
+        ? [data.storeId]
+        : await narrowToSegment(supabase as never, experience.dataOrgId, data.segment, null),
       storeName,
     });
 

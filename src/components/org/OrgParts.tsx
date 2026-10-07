@@ -84,6 +84,7 @@ import {
   type StoreInput,
 } from "@/lib/organization";
 import { fetchAssignableMembers } from "@/lib/assignments";
+import { storeCsvTemplate } from "@/lib/store-import";
 import { readDeviceLocation } from "@/lib/device-location";
 
 
@@ -1009,6 +1010,8 @@ export function DeleteStoreDialog({
 /* Bulk operations                                                            */
 /* -------------------------------------------------------------------------- */
 
+const STORE_TEMPLATE_DATA_URL = `data:text/csv;charset=utf-8,${encodeURIComponent(storeCsvTemplate())}`;
+
 export function BulkOperationsPanel({
   selectedCount,
   onExport,
@@ -1084,9 +1087,19 @@ export function BulkOperationsPanel({
       </div>
       <p className="mt-3 flex items-start gap-2 text-xs text-muted-foreground">
         <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
-        CSV columns: name, store_code, address, city, state, country, manager_name, contact_number,
-        store_type (warehouse, supermarket, distributor, local_store, …). Duplicates by name + city
-        are skipped.
+        <span>
+          CSV columns: name, store_code, store_type (supermarket, dark_store, local_store, outlet,
+          warehouse, distributor), address, city, state, pincode, country, latitude, longitude,
+          contact_name, contact_number. Latitude and longitude let Aislix confirm visits happened at
+          the store. Duplicates by name + city are skipped.{" "}
+          <a
+            href={STORE_TEMPLATE_DATA_URL}
+            download="aislix-store-list-template.csv"
+            className="font-medium text-foreground underline underline-offset-2"
+          >
+            Download template
+          </a>
+        </span>
       </p>
     </div>
   );

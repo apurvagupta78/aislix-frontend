@@ -10,16 +10,19 @@ import {
   buildClaimReport,
   buildExecReport,
   buildFieldReport,
+  buildRestockReport,
   buildStoreReport,
   type ClaimPack,
   type FieldCoverage,
   type ReportDays,
   type ReportDocument,
   type ReportKind,
+  type RestockList,
 } from "@/lib/reports/report-document";
 
 const DAY_MS = 86_400_000;
 export const CLAIM_PACK_LIMIT = 200;
+export const RESTOCK_LIMIT = 400;
 
 export function reportPeriod(days: ReportDays, now: Date = new Date()): { from: string; to: string } {
   return { from: new Date(now.getTime() - days * DAY_MS).toISOString(), to: now.toISOString() };
@@ -53,6 +56,12 @@ export async function fetchReportDocument(client: SupabaseClient, q: ReportQuery
     }
     case "exec":
       return buildExecReport(q.segment, await rpc<SegmentDashboard>(client, "segment_dashboard", args), meta);
+    case "restock":
+      return buildRestockReport(
+        q.segment,
+        await rpc<RestockList>(client, "restock_list", { ...args, p_limit: RESTOCK_LIMIT }),
+        { ...meta, storeName: q.storeName },
+      );
     case "field":
       return buildFieldReport(q.segment, await rpc<FieldCoverage>(client, "field_team_coverage", args), meta);
     case "claim":

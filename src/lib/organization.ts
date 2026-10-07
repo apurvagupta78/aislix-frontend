@@ -13,6 +13,12 @@ import {
   requireOrgId,
   requireUserId,
 } from "@/lib/db/context";
+import {
+  parseStoreCsv,
+  STORE_CSV_HEADERS,
+  toCsv,
+  type StoreImportIssue,
+} from "@/lib/store-import";
 
 // ---------- types ----------
 
@@ -810,41 +816,6 @@ export async function removeStoreMember(id: string, memberId: string): Promise<v
 
 // ---------- bulk operations ----------
 
-function parseCsv(text: string): Record<string, string>[] {
-  const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
-  if (lines.length === 0) return [];
-  const headers = lines[0]!.split(",").map((h) => h.trim());
-  return lines.slice(1).map((line) => {
-    const cells = line.split(",").map((c) => c.trim());
-    const row: Record<string, string> = {};
-    headers.forEach((header, index) => {
-      row[header] = cells[index] ?? "";
-    });
-    return row;
-  });
-}
-
-const STORE_TYPE_ALIASES: Record<string, string> = {
-  warehouse: "warehouse",
-  supermarket: "supermarket",
-  distributor: "fmcg_distributor",
-  fmcg_distributor: "fmcg_distributor",
-  fmcg: "fmcg_distributor",
-  local_store: "local_store",
-  local: "local_store",
-  "local store": "local_store",
-  dark_store: "dark_store",
-  darkstore: "dark_store",
-  "dark store": "dark_store",
-};
-
-function normalizeStoreType(raw: string | undefined): string | null {
-  if (!raw?.trim()) return null;
-  const key = raw.trim().toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
-  const compact = key.replace(/\s+/g, "_");
-  return STORE_TYPE_ALIASES[key] ?? STORE_TYPE_ALIASES[compact] ?? compact;
-}
-
 function storeDupKey(name: string, city: string | null | undefined): string {
   return `${name.trim().toLowerCase()}::${(city ?? "").trim().toLowerCase()}`;
 }
@@ -853,10 +824,11 @@ export async function importStoresCsv(file: File): Promise<{
   created: number;
   failed: number;
   skippedDuplicates: number;
+  issues: StoreImportIssue[];
 }> {
   const orgId = await requireOrgId();
   const text = await file.text();
-  const rows = parseCsv(text);
+  const { rows, issues } = parseStoreCsv(text);
 
   const { assertCanAddStore } = await import("@/lib/subscription-limits");
   let allowance = await assertCanAddStore();
@@ -872,16 +844,11 @@ export async function importStoresCsv(file: File): Promise<{
   const fileKeys = new Set<string>();
 
   let created = 0;
-  let failed = 0;
+  let failed = issues.length;
   let skippedDuplicates = 0;
 
   for (const row of rows) {
-    const name = row["name"] || row["Name"];
-    if (!name) {
-      failed += 1;
-      continue;
-    }
-    const city = row["city"] || row["City"] || null;
+    const { name, city } = row;
     const dup = storeDupKey(name, city);
     if (existingKeys.has(dup) || fileKeys.has(dup)) {
       skippedDuplicates += 1;
@@ -895,47 +862,69 @@ export async function importStoresCsv(file: File): Promise<{
       remaining = allowance.stores_remaining;
     }
 
-    const storeType = normalizeStoreType(
-      row["store_type"] || row["Store Type"] || row["type"] || row["Type"],
-    );
-
     const { error } = await supabase.from("stores").insert({
       org_id: orgId,
       name,
-      code: row["store_code"] || row["code"] || null,
-      address_line1: row["address"] || null,
+      code: row.code,
+      address_line1: row.address_line1,
       city,
-      state: row["state"] || null,
-      country: row["country"] || null,
-      contact_name: row["manager_name"] || null,
-      contact_phone: row["contact_number"] || null,
-      store_type: storeType ?? "local_store",
+      state: row.state,
+      pincode: row.pincode,
+      country: row.country,
+      latitude: row.latitude,
+      longitude: row.longitude,
+      contact_name: row.contact_name,
+      contact_phone: row.contact_phone,
+      store_type: row.store_type ?? "local_store",
     });
-    if (error) failed += 1;
-    else {
+    if (error) {
+      failed += 1;
+      issues.push({ line: row.line, reason: error.message });
+    } else {
       created += 1;
       existingKeys.add(dup);
       if (remaining !== null) remaining -= 1;
     }
   }
 
-  return { created, failed, skippedDuplicates };
+  return { created, failed, skippedDuplicates, issues };
 }
 
 export async function exportStoreList(
   filter?: StoreFilter,
 ): Promise<{ download_url?: string; status?: string }> {
+  const orgId = await requireOrgId();
   const { items } = await fetchStoreList(compact({ filter, page: 1, page_size: 1000 }));
-  const headers = ["name", "store_code", "address", "city", "state", "country", "status"];
-  const lines = [headers.join(",")];
-  for (const store of items) {
-    lines.push(
-      headers
-        .map((key) => String((store as unknown as Record<string, unknown>)[key] ?? ""))
-        .join(","),
-    );
-  }
-  const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+  const ids = items.map((s) => s.id);
+  const { data: raw, error } = ids.length
+    ? await supabase
+        .from("stores")
+        .select(
+          "id, name, code, store_type, address_line1, city, state, pincode, country, latitude, longitude, contact_name, contact_phone",
+        )
+        .eq("org_id", orgId)
+        .in("id", ids)
+    : { data: [], error: null };
+  if (error) dbError(error, "Could not export the store list.");
+  const byId = new Map((raw ?? []).map((s) => [s.id, s]));
+  const rows = ids
+    .map((id) => byId.get(id))
+    .filter((s): s is NonNullable<typeof s> => Boolean(s))
+    .map((s) => [
+      s.name,
+      s.code,
+      s.store_type,
+      s.address_line1,
+      s.city,
+      s.state,
+      s.pincode,
+      s.country,
+      s.latitude,
+      s.longitude,
+      s.contact_name,
+      s.contact_phone,
+    ]);
+  const blob = new Blob([toCsv(STORE_CSV_HEADERS, rows)], { type: "text/csv" });
   const download_url = URL.createObjectURL(blob);
   return { download_url, status: "ready" };
 }

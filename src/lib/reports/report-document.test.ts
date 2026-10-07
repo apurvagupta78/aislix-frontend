@@ -4,12 +4,15 @@ import {
   buildClaimReport,
   buildExecReport,
   buildFieldReport,
+  buildRestockReport,
   buildStoreReport,
   locationLabel,
   reportShareText,
+  restockCertainty,
   type ClaimPack,
   type FieldCoverage,
   type ReportDocument,
+  type RestockList,
 } from "@/lib/reports/report-document";
 import * as XLSX from "xlsx";
 import { buildReportPrintHtml, buildReportWorkbook } from "@/lib/reports/report-export";
@@ -183,5 +186,53 @@ describe("report documents", () => {
       buildFieldReport("distributor", emptyCoverage, meta),
     ];
     for (const doc of docs) expect(allText(doc)).not.toMatch(/astra|luna|terra|gpt|openai|gemini|claude|anthropic/i);
+  });
+});
+
+describe("restock list", () => {
+  const restock: RestockList = {
+    from: meta.from,
+    to: meta.to,
+    totals: { stores: 1, gaps: 5, out_of_stock: 1, low_stock: 1, misplaced: 1, lines: 3 },
+    stores: [
+      {
+        store_id: "s1",
+        store_name: "Sharma Kirana",
+        store_type: "local_store",
+        city: "Pune",
+        scan_id: "scan-1",
+        audited_at: "2026-10-01T05:00:00Z",
+        captured_by: "Asha",
+        category: "Snacks",
+        gaps: 5,
+        low_stock: 1,
+        misplaced: 1,
+        lines: 3,
+      },
+    ],
+    lines: [
+      { store_id: "s1", store_name: "Sharma Kirana", scan_id: "scan-1", name: "Classic Salted", brand: "Lays", variant: "52g", sku: null, facings: 0, expected_facings: null, status: "out_of_stock", confidence: 0.92, category: "Snacks" },
+      { store_id: "s1", store_name: "Sharma Kirana", scan_id: "scan-1", name: "Biscuits", brand: null, variant: "Not legible; blue pack read by Astra on the C shelf", sku: null, facings: 1, expected_facings: null, status: "low_stock", confidence: 0.3, category: null },
+      { store_id: "s1", store_name: "Sharma Kirana", scan_id: "scan-1", name: "Maggi Noodles", brand: "Maggi", variant: null, sku: null, facings: 2, expected_facings: null, status: "misplaced", confidence: 0.6, category: "Noodles" },
+    ],
+  };
+
+  it("lists actions per store with an honest certainty", () => {
+    const doc = buildRestockReport("local", restock, meta);
+    expect(doc.kpis.map((k) => k.value)).toEqual(["1", "5", "2", "1"]);
+    const store = doc.tables[1]!;
+    expect(store.rows[0]).toEqual(["Lays Classic Salted · 52g", "Restock — empty", "0", "Snacks", "Sure"]);
+    expect(store.rows[1]![0]).toBe("Biscuits");
+    expect(store.rows[1]![4]).toBe("Check on shelf");
+    expect(store.rows[2]).toEqual(["Maggi Noodles", "Put back in its place", "2", "Noodles", "Likely"]);
+    expect(store.note).toMatch(/5 empty gaps/);
+    expect(allText(doc)).not.toMatch(/astra/i);
+  });
+
+  it("shows N/A, not zeros, when nothing was audited", () => {
+    const doc = buildRestockReport("supermarket", null, meta);
+    expect(doc.empty).toBe(true);
+    expect(doc.kpis.every((k) => k.value === "N/A")).toBe(true);
+    expect(restockCertainty(null)).toBe("Check on shelf");
   });
 });

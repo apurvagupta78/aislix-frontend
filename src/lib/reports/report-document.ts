@@ -4,6 +4,7 @@
  */
 
 import { accentAt } from "@/lib/ai-audit/kpi-palette";
+import { hideModelNames } from "@/lib/ai-display-text";
 import {
   buildSegmentKpis,
   formatInr,
@@ -14,9 +15,9 @@ import {
 } from "@/lib/segments/segment-config";
 import type { SegmentDashboard } from "@/lib/segments/segment-dashboard";
 
-export type ReportKind = "store" | "exec" | "field" | "claim";
+export type ReportKind = "store" | "exec" | "restock" | "field" | "claim";
 
-export const REPORT_KINDS: ReportKind[] = ["store", "exec", "field", "claim"];
+export const REPORT_KINDS: ReportKind[] = ["store", "exec", "restock", "field", "claim"];
 
 export const REPORT_DAYS = [7, 30, 90] as const;
 export type ReportDays = (typeof REPORT_DAYS)[number];
@@ -39,6 +40,11 @@ export const REPORT_KIND_INFO: Record<ReportKind, ReportKindInfo> = {
     question: "How are all my stores doing, and where should I act first?",
     needsStore: false,
   },
+  restock: {
+    label: "Restock list",
+    question: "What should be refilled or put back, store by store, from the latest AI audit?",
+    needsStore: false,
+  },
   field: {
     label: "Field team coverage",
     question: "Did the team visit every planned outlet, with location proof?",
@@ -56,8 +62,8 @@ export const DEFAULT_REPORT_FOR_SEGMENT: Record<SegmentId, ReportKind> = {
   supermarket: "exec",
   fmcg: "claim",
   distributor: "field",
-  darkstore: "store",
-  local: "store",
+  darkstore: "restock",
+  local: "restock",
 };
 
 export type ReportKpi = SegmentKpiView;
@@ -175,6 +181,51 @@ export type ClaimVisit = {
   gaps: Num;
   products: Num;
   top_brands: Array<{ brand: string; share: Num }> | null;
+};
+
+export type RestockStore = {
+  store_id: string | null;
+  store_name: string;
+  store_type: string | null;
+  city: string | null;
+  scan_id: string;
+  audited_at: string;
+  captured_by: string;
+  category: string | null;
+  gaps: Num;
+  low_stock: Num;
+  misplaced: Num;
+  lines: number;
+};
+
+export type RestockLine = {
+  store_id: string | null;
+  store_name: string;
+  scan_id: string;
+  name: string;
+  brand: string | null;
+  variant: string | null;
+  sku: string | null;
+  facings: Num;
+  expected_facings: Num;
+  status: "out_of_stock" | "low_stock" | "misplaced";
+  confidence: Num;
+  category: string | null;
+};
+
+export type RestockList = {
+  from: string;
+  to: string;
+  totals: {
+    stores: number;
+    gaps: Num;
+    out_of_stock: number;
+    low_stock: number;
+    misplaced: number;
+    lines: number;
+  };
+  stores: RestockStore[];
+  lines: RestockLine[];
 };
 
 export type ClaimPack = {
@@ -389,6 +440,113 @@ export function buildExecReport(
     empty: audits === 0,
     emptyMessage: `No completed AI audits in this period.`,
     kpis: buildSegmentKpis(config, data),
+    tables,
+    photos: [],
+  };
+}
+
+const RESTOCK_ACTION: Record<RestockLine["status"], string> = {
+  out_of_stock: "Restock — empty",
+  low_stock: "Refill",
+  misplaced: "Put back in its place",
+};
+
+/** How sure the AI was about the product read. Low reads are flagged for a quick check, never dropped. */
+export function restockCertainty(confidence: Num): string {
+  const c = n(confidence);
+  if (c == null) return "Check on shelf";
+  const v = c > 1 ? c / 100 : c;
+  if (v >= 0.75) return "Sure";
+  if (v >= 0.5) return "Likely";
+  return "Check on shelf";
+}
+
+export function restockProductLabel(line: Pick<RestockLine, "name" | "brand" | "variant">): string {
+  const name = hideModelNames(line.name.trim());
+  const brand = line.brand?.trim() ? hideModelNames(line.brand.trim()) : null;
+  const base = brand && !name.toLowerCase().startsWith(brand.toLowerCase()) ? `${brand} ${name}` : name;
+  const variant = line.variant?.trim() ? hideModelNames(line.variant.trim()) : null;
+  return variant && variant.length <= 24 && !base.toLowerCase().includes(variant.toLowerCase())
+    ? `${base} · ${variant}`
+    : base;
+}
+
+export function buildRestockReport(
+  segment: SegmentId,
+  data: RestockList | null,
+  meta: { from: string; to: string; labeledDemo: boolean; storeName?: string | null },
+): ReportDocument {
+  const nouns = SEGMENT_CONFIG[segment].storeNoun;
+  const t = data?.totals;
+  const storesN = n(t?.stores) ?? 0;
+  const stores = data?.stores ?? [];
+  const lines = data?.lines ?? [];
+  const refill = (n(t?.out_of_stock) ?? 0) + (n(t?.low_stock) ?? 0);
+  const kpis: ReportKpi[] = [
+    kpi(
+      0,
+      `${capitalize(nouns.many)} audited`,
+      storesN ? count(storesN) : NA,
+      storesN ? "Latest AI audit of each" : "No completed AI audits in this period",
+      !storesN,
+    ),
+    kpi(1, "Empty shelf gaps", storesN ? count(t?.gaps) : NA, "Empty spaces the AI found", !storesN),
+    kpi(2, "Products to refill", storesN ? count(refill) : NA, "Read as low or out of stock", !storesN),
+    kpi(3, "Products to put back", storesN ? count(t?.misplaced) : NA, "Sitting in the wrong place", !storesN),
+  ];
+
+  const tables: ReportTable[] = [
+    {
+      title: `${capitalize(nouns.many)} to visit first`,
+      columns: [capitalize(nouns.one), "Audited", "By", "Empty gaps", "To refill", "To put back"],
+      rows: stores.map((s) => {
+        const mine = lines.filter((l) => l.scan_id === s.scan_id);
+        return [
+          s.city ? `${s.store_name} · ${s.city}` : s.store_name,
+          reportDate(s.audited_at, true),
+          s.captured_by,
+          count(s.gaps),
+          count(mine.filter((l) => l.status !== "misplaced").length),
+          count(mine.filter((l) => l.status === "misplaced").length),
+        ];
+      }),
+    },
+  ];
+
+  for (const s of stores) {
+    const mine = lines.filter((l) => l.scan_id === s.scan_id);
+    if (!mine.length) continue;
+    tables.push({
+      title: s.city ? `${s.store_name} · ${s.city}` : s.store_name,
+      columns: ["Product", "Action", "Facings seen", "Category", "AI certainty"],
+      rows: mine.map((l) => [
+        restockProductLabel(l),
+        RESTOCK_ACTION[l.status],
+        count(l.facings),
+        l.category?.trim() || NA,
+        restockCertainty(l.confidence),
+      ]),
+      note:
+        (n(s.gaps) ?? 0) > 0
+          ? `${plural(n(s.gaps) ?? 0, "empty gap")} on this shelf as well — the AI saw the space but cannot name what is missing.`
+          : undefined,
+    });
+  }
+
+  const shown = lines.length;
+  const total = n(t?.lines) ?? 0;
+  if (total > shown && tables.length > 1) {
+    tables[tables.length - 1]!.note = `Showing ${count(shown)} of ${count(total)} products. Pick one ${nouns.one} to see its full list.`;
+  }
+
+  return {
+    ...baseDoc("restock", meta.from, meta.to, meta.storeName ?? `All ${nouns.many}`, meta.labeledDemo),
+    headline: storesN
+      ? `${plural(storesN, nouns.one, nouns.many)}: ${plural(n(t?.gaps) ?? 0, "empty gap")}, ${plural(refill, "product")} to refill and ${plural(n(t?.misplaced) ?? 0, "product")} to put back.`
+      : null,
+    empty: storesN === 0,
+    emptyMessage: "No completed AI audits in this period.",
+    kpis,
     tables,
     photos: [],
   };
