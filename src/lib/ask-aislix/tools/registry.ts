@@ -426,6 +426,12 @@ async function getCorrectiveActions(ctx: ToolContext, args: Record<string, unkno
   const open = data.correctiveActionsFull.filter(
     (a) => !["closed", "verified", "resolved", "rejected"].includes(a.status.toLowerCase()),
   );
+  const isOverdue = (a: { due: string }) => a.due.startsWith("Overdue");
+  const overdueByStore: Record<string, number> = {};
+  for (const a of open) {
+    if (isOverdue(a)) overdueByStore[a.location] = (overdueByStore[a.location] ?? 0) + 1;
+  }
+  const items = [...open.filter(isOverdue), ...open.filter((a) => !isOverdue(a))];
 
   return {
     available: true,
@@ -433,7 +439,10 @@ async function getCorrectiveActions(ctx: ToolContext, args: Record<string, unkno
       open_count: data.correctiveActionHealth.open,
       overdue_count: data.correctiveActionHealth.overdue,
       buckets: data.correctiveActionHealth,
-      items: open.slice(0, limit),
+      overdue_by_store: Object.entries(overdueByStore)
+        .sort((a, b) => b[1] - a[1])
+        .map(([store, overdue]) => ({ store, overdue })),
+      items: items.slice(0, limit),
     },
   };
 }
