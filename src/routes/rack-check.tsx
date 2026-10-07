@@ -10,29 +10,29 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgId } from "@/lib/db/context";
-import {
-  DISPLAY_PLACEMENT_LABEL,
-  DISPLAY_STATUS_LABEL,
-  DISPLAY_TYPES,
-  DISPLAY_TYPE_LABEL,
-  type DisplayCheckStatus,
-  type DisplayItem,
-} from "@/lib/display-check/display-check-parse";
-import { DISPLAY_CHECK_FOLDER, runDisplayCheck } from "@/lib/display-check/display-check.functions";
 import { photoExtension, shrinkPhoto } from "@/lib/photo/shrink-photo";
+import {
+  BIN_STATUSES,
+  BIN_STATUS_LABEL,
+  RACK_STATUS_LABEL,
+  type BinStatus,
+  type RackCheckStatus,
+  type RackShelf,
+} from "@/lib/rack-check/rack-check-parse";
+import { RACK_CHECK_FOLDER, runRackCheck } from "@/lib/rack-check/rack-check.functions";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/display-check")({
+export const Route = createFileRoute("/rack-check")({
   head: () => ({
     meta: [
-      { title: "Display check — Aislix" },
+      { title: "Rack check — Aislix" },
       {
         name: "description",
-        content: "Photograph a store display. AI checks which displays are there, whose brand, their condition and placement.",
+        content: "Photograph a whole rack. AI marks every bin as empty, low, stocked or messy, and empty bins open a refill fix.",
       },
     ],
   }),
-  component: DisplayCheckPage,
+  component: RackCheckPage,
 });
 
 type StoreOption = { id: string; name: string; city: string | null };
@@ -41,50 +41,52 @@ type CheckRow = {
   id: string;
   store_id: string;
   storage_path: string;
-  expected_brand: string | null;
-  status: DisplayCheckStatus;
-  items: DisplayItem[];
+  rack_code: string | null;
+  rack_code_read: string | null;
+  status: RackCheckStatus;
+  shelves: RackShelf[];
+  bins_total: number;
+  bins_empty: number;
+  bins_low: number;
+  bins_stocked: number;
+  bins_messy: number;
+  bins_not_visible: number;
   summary: string | null;
-  image_quality: string | null;
   issues_raised: number;
   created_at: string;
   stores: { name: string | null; city: string | null } | null;
 };
 
-const ANY_TYPE = "any";
-
-const STATUS_STYLE: Record<DisplayCheckStatus, string> = {
+const STATUS_STYLE: Record<RackCheckStatus, string> = {
   good: "border-[#79E2A8] bg-[#79E2A8]/15 text-[#102A43]",
-  needs_fix: "border-[#F6CFDC] bg-[#FFEAF1] text-[#102A43]",
-  missing: "border-[#F6CFDC] bg-[#FFEAF1] text-[#102A43]",
+  attention: "border-[#8EC9E8] bg-[#8EC9E8]/15 text-[#102A43]",
+  needs_refill: "border-[#F6CFDC] bg-[#FFEAF1] text-[#102A43]",
   none_found: "border-[#D9E2E8] bg-[#EEF1F4] text-[#667085]",
   unclear: "border-[#D9E2E8] bg-[#EEF1F4] text-[#667085]",
 };
 
-const CONDITION_LABEL: Record<DisplayItem["condition"], string> = {
-  good: "Good",
-  damaged: "Damaged",
-  missing: "Empty / missing",
+const BIN_STYLE: Record<BinStatus, string> = {
+  stocked: "border-[#79E2A8] bg-[#79E2A8]/20",
+  low: "border-[#8EC9E8] bg-[#8EC9E8]/25",
+  empty: "border-[#F6CFDC] bg-[#FFEAF1]",
+  messy: "border-[#9B86D9] bg-[#9B86D9]/15",
+  not_visible: "border-[#D9E2E8] bg-[#EEF1F4]",
 };
 
-function certainty(c: number | null): string {
-  if (c == null) return "Check on site";
-  if (c >= 0.75) return "Sure";
-  if (c >= 0.5) return "Likely";
-  return "Check on site";
+function rackLabel(row: Pick<CheckRow, "rack_code" | "rack_code_read">): string | null {
+  return row.rack_code ?? row.rack_code_read;
 }
 
-function DisplayCheckPage() {
+function RackCheckPage() {
   const queryClient = useQueryClient();
   const [storeId, setStoreId] = useState<string>("");
-  const [brand, setBrand] = useState("");
-  const [displayType, setDisplayType] = useState<string>(ANY_TYPE);
+  const [rackCode, setRackCode] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const stores = useQuery({
-    queryKey: ["display-check-stores"],
+    queryKey: ["rack-check-stores"],
     queryFn: async (): Promise<StoreOption[]> => {
       const orgId = await requireOrgId();
       const { data, error } = await supabase
@@ -99,13 +101,13 @@ function DisplayCheckPage() {
   });
 
   const checks = useQuery({
-    queryKey: ["display-checks"],
+    queryKey: ["rack-checks"],
     queryFn: async () => {
       const orgId = await requireOrgId();
       const { data, error } = await supabase
-        .from("display_checks" as never)
+        .from("rack_checks" as never)
         .select(
-          "id, store_id, storage_path, expected_brand, status, items, summary, image_quality, issues_raised, created_at, stores(name, city)",
+          "id, store_id, storage_path, rack_code, rack_code_read, status, shelves, bins_total, bins_empty, bins_low, bins_stocked, bins_messy, bins_not_visible, summary, issues_raised, created_at, stores(name, city)",
         )
         .eq("org_id", orgId)
         .order("created_at", { ascending: false })
@@ -125,37 +127,33 @@ function DisplayCheckPage() {
 
   const run = useMutation({
     mutationFn: async () => {
-      if (!file) throw new Error("Add a photo of the display.");
+      if (!file) throw new Error("Add a photo of the whole rack.");
       if (!storeId) throw new Error("Pick a store.");
       const orgId = await requireOrgId();
       const photo = await shrinkPhoto(file);
-      const path = `${orgId}/${DISPLAY_CHECK_FOLDER}/${crypto.randomUUID()}.${photoExtension(photo)}`;
+      const path = `${orgId}/${RACK_CHECK_FOLDER}/${crypto.randomUUID()}.${photoExtension(photo)}`;
       const { error } = await supabase.storage
         .from("audit-evidence")
         .upload(path, photo, { upsert: false, contentType: photo.type || "image/jpeg" });
       if (error) throw new Error("Could not upload the photo. Try again.");
-      return runDisplayCheck({
-        data: {
-          activeOrgId: orgId,
-          storeId,
-          storagePath: path,
-          expectedBrand: brand.trim() || null,
-          expectedDisplay: displayType === ANY_TYPE ? null : DISPLAY_TYPE_LABEL[displayType as DisplayItem["type"]],
-        },
+      return runRackCheck({
+        data: { activeOrgId: orgId, storeId, storagePath: path, rackCode: rackCode.trim() || null },
       });
     },
     onSuccess: async (out) => {
-      toast.success(
-        out.issuesRaised
-          ? `Checked. ${out.issuesRaised} fix${out.issuesRaised === 1 ? "" : "es"} opened.`
-          : `Checked: ${DISPLAY_STATUS_LABEL[out.result.status]}`,
-      );
+      const opened = out.issuesRaised
+        ? `${out.issuesRaised} fix${out.issuesRaised === 1 ? "" : "es"} opened.`
+        : `Checked: ${RACK_STATUS_LABEL[out.result.status]}.`;
+      const already = out.issuesAlreadyOpen
+        ? ` ${out.issuesAlreadyOpen} bin${out.issuesAlreadyOpen === 1 ? " already has" : "s already have"} an open fix.`
+        : "";
+      toast.success(`${opened}${already}`);
       setFile(null);
       if (fileInput.current) fileInput.current.value = "";
-      await queryClient.invalidateQueries({ queryKey: ["display-checks"] });
+      await queryClient.invalidateQueries({ queryKey: ["rack-checks"] });
       setSelectedId(out.id);
     },
-    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "The display check failed."),
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "The rack check failed."),
   });
 
   const rows = checks.data ?? [];
@@ -163,8 +161,8 @@ function DisplayCheckPage() {
 
   return (
     <AppShell
-      title="Display check"
-      description="Photograph a display or POSM. AI checks which displays are there, whose brand, their condition and placement."
+      title="Rack check"
+      description="Photograph a whole rack. AI marks every bin as empty, low, stocked or messy, and empty bins open a refill fix."
     >
       <div className="grid gap-4 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
         <section
@@ -172,9 +170,9 @@ function DisplayCheckPage() {
           className="h-fit rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm sm:p-5"
         >
           <h2 id="new-check" className="text-base font-semibold text-[#102A43]">
-            New display check
+            New rack check
           </h2>
-          <p className="mt-1 text-sm text-[#667085]">Is the display there, is it ours, and is it in good shape?</p>
+          <p className="mt-1 text-sm text-[#667085]">Which bins are empty, running low or messy right now?</p>
 
           <div className="mt-4 space-y-3">
             <Select value={storeId} onValueChange={setStoreId} disabled={!stores.data?.length}>
@@ -194,25 +192,12 @@ function DisplayCheckPage() {
               </SelectContent>
             </Select>
             <Input
-              value={brand}
-              maxLength={80}
-              onChange={(e) => setBrand(e.target.value)}
-              placeholder="Expected brand (optional), e.g. Dove"
-              aria-label="Expected brand"
+              value={rackCode}
+              maxLength={24}
+              onChange={(e) => setRackCode(e.target.value)}
+              placeholder="Rack code (optional), e.g. D07"
+              aria-label="Rack code"
             />
-            <Select value={displayType} onValueChange={setDisplayType}>
-              <SelectTrigger className="h-10 rounded-xl" aria-label="Expected display type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ANY_TYPE}>Any display type</SelectItem>
-                {DISPLAY_TYPES.filter((t) => t !== "other").map((t) => (
-                  <SelectItem key={t} value={t}>
-                    {DISPLAY_TYPE_LABEL[t]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <label
               className={cn(
                 "flex cursor-pointer items-center gap-3 rounded-xl border border-dashed px-3 py-3 text-sm transition-colors duration-150",
@@ -220,7 +205,7 @@ function DisplayCheckPage() {
               )}
             >
               <Camera className="size-4 shrink-0" aria-hidden />
-              <span className="min-w-0 truncate">{file ? file.name : "Take or choose a photo of the display"}</span>
+              <span className="min-w-0 truncate">{file ? file.name : "Take or choose a photo of the whole rack"}</span>
               <input
                 ref={fileInput}
                 type="file"
@@ -238,14 +223,14 @@ function DisplayCheckPage() {
             >
               {run.isPending ? (
                 <>
-                  <Loader2 className="size-4 animate-spin" /> Checking display…
+                  <Loader2 className="size-4 animate-spin" /> Checking rack…
                 </>
               ) : (
-                "Check display"
+                "Check rack"
               )}
             </Button>
             <p className="text-xs text-[#667085]">
-              Damaged, empty or missing displays open a fix in{" "}
+              Stand back so the whole rack is in frame, with the normal 1x lens. Empty and messy bins open a fix in{" "}
               <Link to="/corrective-actions" className="underline">
                 Corrective Actions
               </Link>
@@ -258,12 +243,9 @@ function DisplayCheckPage() {
           {checks.isPending ? (
             <div className="h-48 animate-pulse rounded-2xl border border-[#D9E2E8] bg-[#F4F7F9]" aria-busy="true" />
           ) : checks.isError ? (
-            <Notice title="Display checks unavailable" body="Refresh the page to try again." />
+            <Notice title="Rack checks unavailable" body="Refresh the page to try again." />
           ) : !selected ? (
-            <Notice
-              title="No display checks yet"
-              body="Pick a store, take a photo of a display and run your first check."
-            />
+            <Notice title="No rack checks yet" body="Pick a store, photograph a whole rack and run your first check." />
           ) : (
             <CheckResult row={selected} />
           )}
@@ -290,7 +272,7 @@ function DisplayCheckPage() {
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium text-[#102A43]">
                           {r.stores?.name ?? "Store"}
-                          {r.expected_brand ? ` · ${r.expected_brand}` : ""}
+                          {rackLabel(r) ? ` · Rack ${rackLabel(r)}` : ""}
                         </span>
                         <span className="block text-xs text-[#667085]">
                           {new Date(r.created_at).toLocaleString(undefined, {
@@ -299,7 +281,7 @@ function DisplayCheckPage() {
                             hour: "numeric",
                             minute: "2-digit",
                           })}{" "}
-                          · {r.items.length} display{r.items.length === 1 ? "" : "s"}
+                          · {r.bins_total} bin{r.bins_total === 1 ? "" : "s"}
                         </span>
                       </span>
                       <StatusPill status={r.status} />
@@ -315,22 +297,34 @@ function DisplayCheckPage() {
   );
 }
 
-function StatusPill({ status }: { status: DisplayCheckStatus }) {
+function StatusPill({ status }: { status: RackCheckStatus }) {
   return (
     <span className={cn("shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-semibold", STATUS_STYLE[status])}>
-      {DISPLAY_STATUS_LABEL[status]}
+      {RACK_STATUS_LABEL[status]}
     </span>
   );
 }
 
+function CountTile({ label, value, accent, hint }: { label: string; value: number; accent: string; hint?: string }) {
+  return (
+    <div className="rounded-xl border border-[#D9E2E8] border-l-4 bg-white px-3 py-2" style={{ borderLeftColor: accent }}>
+      <p className="text-xs text-[#667085]">{label}</p>
+      <p className="text-xl font-semibold tabular-nums text-[#102A43]">{value}</p>
+      {hint ? <p className="text-[11px] text-[#667085]">{hint}</p> : null}
+    </div>
+  );
+}
+
 function CheckResult({ row }: { row: CheckRow & { photoUrl: string | null } }) {
+  const rack = rackLabel(row);
+  const verdict = row.status !== "unclear" && row.status !== "none_found";
   return (
     <div id="check-result" className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <h2 className="text-base font-semibold text-[#102A43]">
             {row.stores?.name ?? "Store"}
-            {row.expected_brand ? ` · ${row.expected_brand}` : ""}
+            {rack ? ` · Rack ${rack}` : ""}
           </h2>
           <p className="mt-0.5 text-xs text-[#667085]">
             {new Date(row.created_at).toLocaleString()}
@@ -340,12 +334,27 @@ function CheckResult({ row }: { row: CheckRow & { photoUrl: string | null } }) {
         <StatusPill status={row.status} />
       </div>
 
+      {verdict ? (
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <CountTile
+            label="Bins checked"
+            value={row.bins_total - row.bins_not_visible}
+            accent="#7DB7D6"
+            hint={row.bins_not_visible ? `${row.bins_not_visible} not visible` : undefined}
+          />
+          <CountTile label="Empty" value={row.bins_empty} accent="#F6CFDC" />
+          <CountTile label="Low" value={row.bins_low} accent="#8EC9E8" />
+          <CountTile label="Messy" value={row.bins_messy} accent="#9B86D9" />
+          <CountTile label="Stocked" value={row.bins_stocked} accent="#79E2A8" />
+        </div>
+      ) : null}
+
       <div className="mt-4 grid gap-4 md:grid-cols-[200px_minmax(0,1fr)]">
         {row.photoUrl ? (
           <a href={row.photoUrl} target="_blank" rel="noopener noreferrer" className="block">
             <img
               src={row.photoUrl}
-              alt="Display photo"
+              alt="Rack photo"
               className="aspect-[3/4] w-full rounded-xl border border-[#D9E2E8] object-cover"
             />
           </a>
@@ -361,61 +370,57 @@ function CheckResult({ row }: { row: CheckRow & { photoUrl: string | null } }) {
               <span>{row.summary}</span>
             </p>
           ) : null}
-          {row.status === "unclear" && row.items.length ? (
+          {row.status === "unclear" ? (
             <p className="rounded-xl bg-[#EEF1F4] px-3 py-2 text-sm text-[#667085]">
-              The photo is too unclear for a verdict, so no fixes were opened. Retake it closer and in better light.
+              The photo is too unclear for a verdict, so no fixes were opened. Retake it from straight in front, in better
+              light, with the whole rack in frame.
             </p>
           ) : null}
-          {row.items.length ? (
-            <div className="overflow-x-auto rounded-xl border border-[#D9E2E8]">
-              <table className="w-full min-w-[520px] text-sm">
-                <thead className="bg-[#F4F7F9] text-left text-xs text-[#667085]">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">Display</th>
-                    <th className="px-3 py-2 font-medium">Brand</th>
-                    <th className="px-3 py-2 font-medium">Condition</th>
-                    <th className="px-3 py-2 font-medium">Placement</th>
-                    <th className="px-3 py-2 font-medium">AI certainty</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {row.items.map((item, i) => (
-                    <tr key={i} className="border-t border-[#EEF1F4] align-top">
-                      <td className="px-3 py-2 text-[#102A43]">
-                        {DISPLAY_TYPE_LABEL[item.type] ?? "Display"}
-                        {item.notes ? <span className="block text-xs text-[#667085]">{item.notes}</span> : null}
-                      </td>
-                      <td className="px-3 py-2 text-[#102A43]">{item.brand ?? "Not readable"}</td>
-                      <td className="px-3 py-2">
-                        <span
-                          className={cn(
-                            "rounded-full px-2 py-0.5 text-xs font-medium",
-                            item.condition === "good" ? "bg-[#79E2A8]/20 text-[#102A43]" : "bg-[#FFEAF1] text-[#102A43]",
-                          )}
-                        >
-                          {CONDITION_LABEL[item.condition] ?? item.condition}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-[#667085]">
-                        {DISPLAY_PLACEMENT_LABEL[item.placement] ?? "Placement unclear"}
-                        {item.visible === false ? <span className="block text-xs">Blocked from view</span> : null}
-                      </td>
-                      <td className="px-3 py-2 text-[#667085]">{certainty(item.confidence)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="rounded-xl bg-[#EEF1F4] px-3 py-3 text-sm text-[#667085]">
-              {row.status === "unclear"
-                ? "The photo is too unclear to judge displays. Retake it closer and in better light."
-                : "No displays were found in this photo."}
-            </p>
-          )}
-          <p className="text-xs text-[#667085]">AI detected · Status decided by Aislix</p>
+          {row.shelves.length ? (
+            <BinGrid shelves={row.shelves} />
+          ) : row.status !== "unclear" ? (
+            <p className="rounded-xl bg-[#EEF1F4] px-3 py-3 text-sm text-[#667085]">No rack bins were found in this photo.</p>
+          ) : null}
+          <p className="text-xs text-[#667085]">AI detected · Counts calculated by Aislix</p>
         </div>
       </div>
+    </div>
+  );
+}
+
+function BinGrid({ shelves }: { shelves: RackShelf[] }) {
+  return (
+    <div className="space-y-2">
+      <div className="space-y-1.5" role="table" aria-label="Bin status by shelf, top to bottom">
+        {shelves.map((shelf, si) => (
+          <div key={si} role="row" className="flex items-stretch gap-1.5">
+            <span role="rowheader" className="flex w-14 shrink-0 items-center text-xs font-medium text-[#667085]">
+              {shelf.shelf ? `Shelf ${shelf.shelf}` : `Row ${si + 1}`}
+            </span>
+            <div className="grid min-w-0 flex-1 gap-1.5" style={{ gridTemplateColumns: `repeat(${shelf.bins.length}, minmax(0, 1fr))` }}>
+              {shelf.bins.map((bin, bi) => (
+                <div
+                  key={bi}
+                  role="cell"
+                  title={[bin.code ?? `Bin ${bi + 1}`, BIN_STATUS_LABEL[bin.status], bin.note].filter(Boolean).join(" · ")}
+                  className={cn("min-w-0 rounded-lg border px-2 py-1.5", BIN_STYLE[bin.status])}
+                >
+                  <span className="block truncate text-[11px] font-medium text-[#102A43]">{bin.code ?? `Bin ${bi + 1}`}</span>
+                  <span className="block truncate text-[11px] text-[#667085]">{BIN_STATUS_LABEL[bin.status]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+      <ul className="flex flex-wrap gap-3 pt-1 text-[11px] text-[#667085]" aria-label="Legend">
+        {BIN_STATUSES.map((s) => (
+          <li key={s} className="flex items-center gap-1.5">
+            <span className={cn("size-3 rounded border", BIN_STYLE[s])} aria-hidden />
+            {BIN_STATUS_LABEL[s]}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

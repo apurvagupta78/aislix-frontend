@@ -58,6 +58,7 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as ProcessingRouteImport } from './routes/processing'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as RackCheckRouteImport } from './routes/rack-check'
 import { Route as RecurringIssuesRouteImport } from './routes/recurring-issues'
 import { Route as RefundsRouteImport } from './routes/refunds'
 import { Route as ReportRouteImport } from './routes/report'
@@ -377,6 +378,11 @@ const ProcessingRoute = ProcessingRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RackCheckRoute = RackCheckRouteImport.update({
+  id: '/rack-check',
+  path: '/rack-check',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RecurringIssuesRoute = RecurringIssuesRouteImport.update({
@@ -819,6 +825,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/processing': typeof ProcessingRoute
   '/profile': typeof ProfileRoute
+  '/rack-check': typeof RackCheckRoute
   '/recurring-issues': typeof RecurringIssuesRoute
   '/refunds': typeof RefundsRoute
   '/report': typeof ReportRoute
@@ -945,6 +952,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/processing': typeof ProcessingRoute
   '/profile': typeof ProfileRoute
+  '/rack-check': typeof RackCheckRoute
   '/recurring-issues': typeof RecurringIssuesRoute
   '/refunds': typeof RefundsRoute
   '/report': typeof ReportRoute
@@ -1072,6 +1080,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/processing': typeof ProcessingRoute
   '/profile': typeof ProfileRoute
+  '/rack-check': typeof RackCheckRoute
   '/recurring-issues': typeof RecurringIssuesRoute
   '/refunds': typeof RefundsRoute
   '/report': typeof ReportRoute
@@ -1200,6 +1209,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/processing'
     | '/profile'
+    | '/rack-check'
     | '/recurring-issues'
     | '/refunds'
     | '/report'
@@ -1326,6 +1336,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/processing'
     | '/profile'
+    | '/rack-check'
     | '/recurring-issues'
     | '/refunds'
     | '/report'
@@ -1452,6 +1463,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/processing'
     | '/profile'
+    | '/rack-check'
     | '/recurring-issues'
     | '/refunds'
     | '/report'
@@ -1579,6 +1591,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   ProcessingRoute: typeof ProcessingRoute
   ProfileRoute: typeof ProfileRoute
+  RackCheckRoute: typeof RackCheckRoute
   RecurringIssuesRoute: typeof RecurringIssuesRoute
   RefundsRoute: typeof RefundsRoute
   ReportRoute: typeof ReportRoute
@@ -1968,6 +1981,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rack-check': {
+      id: '/rack-check'
+      path: '/rack-check'
+      fullPath: '/rack-check'
+      preLoaderRoute: typeof RackCheckRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/recurring-issues': {
@@ -2709,6 +2729,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   ProcessingRoute: ProcessingRoute,
   ProfileRoute: ProfileRoute,
+  RackCheckRoute: RackCheckRoute,
   RecurringIssuesRoute: RecurringIssuesRoute,
   RefundsRoute: RefundsRoute,
   ReportRoute: ReportRoute,
