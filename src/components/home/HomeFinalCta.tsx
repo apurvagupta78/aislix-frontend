@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 
 export function HomeFinalCta() {
   return (
-    <section className="border-t border-border bg-white px-5 py-16 lg:px-8 lg:py-20" aria-labelledby="cta-title">
-      <div className="mx-auto grid max-w-7xl items-center gap-8 lg:grid-cols-[1.4fr_1fr]">
+    <section className="border-t border-border bg-white py-16 lg:py-20" aria-labelledby="cta-title">
+      <div className="mx-auto grid max-w-7xl items-center gap-8 px-5 sm:px-8 lg:grid-cols-[1.4fr_1fr]">
         <div>
           <p className="text-sm font-medium text-muted-foreground">Start with one shelf</p>
           <h2

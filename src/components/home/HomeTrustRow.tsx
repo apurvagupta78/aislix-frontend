@@ -3,7 +3,7 @@ import { Building2, PackageSearch, ShoppingCart, Store, Warehouse } from "lucide
 const audiences = [
   {
     modelClass: "border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)]",
-    label: "Local Stores",
+    label: "Local stores",
     Icon: Store,
     body: "Turn everyday store visits into measurable shelf execution.",
   },
@@ -15,7 +15,7 @@ const audiences = [
   },
   {
     modelClass: "border-[var(--aislix-darkstore-border)] bg-[var(--aislix-darkstore-bg)]",
-    label: "Dark Stores",
+    label: "Dark stores",
     Icon: Building2,
     body: "Know what is available and whether products are in the right location.",
   },

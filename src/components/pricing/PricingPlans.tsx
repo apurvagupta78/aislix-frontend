@@ -26,7 +26,7 @@ import {
   type PlanId,
 } from "@/lib/plan-entitlements";
 
-const SALES_CTA = "Talk to Sales";
+const SALES_CTA = "Talk to sales";
 const CARD_FEATURES = 6;
 
 export function CycleToggle({

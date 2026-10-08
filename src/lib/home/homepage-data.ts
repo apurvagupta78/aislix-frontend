@@ -59,7 +59,7 @@ export const heroInsights = [
 export const retailFormats = [
   {
     icon: Store,
-    title: "Local Stores",
+    title: "Local stores",
     body: "Turn everyday store visits into measurable shelf execution.",
     tone: "sky" as HomeTone,
   },
@@ -71,7 +71,7 @@ export const retailFormats = [
   },
   {
     icon: Boxes,
-    title: "Dark Stores",
+    title: "Dark stores",
     body: "Know what is available and whether products are in the right location.",
     tone: "rose" as HomeTone,
   },
@@ -103,7 +103,7 @@ export const platformFeatures: PlatformFeature[] = [
   {
     id: "audit",
     icon: ScanSearch,
-    title: "One Photo. Full Shelf Audit.",
+    title: "One photo. Full shelf audit.",
     body: "Upload a shelf photo and let Aislix identify products, brands, facings and visible shelf conditions.",
     tone: "sky",
     metric: { label: "Products identified", value: "16" },
@@ -116,7 +116,7 @@ export const platformFeatures: PlatformFeature[] = [
   {
     id: "availability",
     icon: CircleCheck,
-    title: "Know What's Actually Available.",
+    title: "Know what's actually available.",
     body: "Measure on-shelf availability and identify products that are missing or need attention.",
     tone: "sage",
     metric: { label: "On-shelf availability", value: "94%" },
@@ -129,7 +129,7 @@ export const platformFeatures: PlatformFeature[] = [
   {
     id: "execution",
     icon: LayoutGrid,
-    title: "Measure Shelf Execution.",
+    title: "Measure shelf execution.",
     body: "Compare actual shelf placement and facings against the expected planogram when one is configured.",
     tone: "mist",
     metric: { label: "Planogram compliance", value: "85%" },
@@ -142,7 +142,7 @@ export const platformFeatures: PlatformFeature[] = [
   {
     id: "pricing",
     icon: Tag,
-    title: "Check Prices & Promotions.",
+    title: "Check prices & promotions.",
     body: "Detect visible price and promotional issues and highlight where shelf execution does not match the configured requirements.",
     tone: "rose",
     metric: { label: "Price issues", value: "1" },
@@ -155,7 +155,7 @@ export const platformFeatures: PlatformFeature[] = [
   {
     id: "presence",
     icon: BarChart3,
-    title: "Measure Your Shelf Presence.",
+    title: "Measure your shelf presence.",
     body: "For FMCG brands, measure facings and Share of Shelf against relevant competitors and planned allocation.",
     tone: "azure",
     metric: { label: "Colgate Share of Shelf", value: "47%" },
@@ -168,7 +168,7 @@ export const platformFeatures: PlatformFeature[] = [
   {
     id: "actions",
     icon: Wrench,
-    title: "Turn Issues Into Actions.",
+    title: "Turn issues into actions.",
     body: "See what needs to be fixed, review the evidence, re-audit the shelf and track whether the issue was resolved.",
     tone: "sky",
     metric: { label: "Open actions", value: "3" },

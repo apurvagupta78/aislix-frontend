@@ -34,7 +34,7 @@ const STEPS = [
   },
   {
     n: 3,
-    title: "AI Analysis",
+    title: "AI analysis",
     body: "Aislix detects products, checks planograms, finds issues and creates an audit.",
     tone: "warehouse" as const,
     icon: null,
@@ -179,10 +179,10 @@ function StepVisual({ step }: { step: (typeof STEPS)[number] }) {
   }
   if (step.n === 4) {
     const rows = [
-      { icon: CheckCircle2, label: "Store Audit Completed", date: "12 Sep 2026", color: "text-[#4F6B2E]" },
-      { icon: AlertTriangle, label: "Findings Raised", date: "12 Sep 2026", color: "text-[#04203F]" },
-      { icon: UserRound, label: "Action Assigned", date: "13 Sep 2026", color: "text-[#9B86D9]" },
-      { icon: CheckCircle2, label: "Re-audit Completed", date: "18 Sep 2026", color: "text-[#4F6B2E]" },
+      { icon: CheckCircle2, label: "Store audit completed", date: "12 Sep 2026", color: "text-[#4F6B2E]" },
+      { icon: AlertTriangle, label: "Findings raised", date: "12 Sep 2026", color: "text-[#04203F]" },
+      { icon: UserRound, label: "Action assigned", date: "13 Sep 2026", color: "text-[#9B86D9]" },
+      { icon: CheckCircle2, label: "Re-audit completed", date: "18 Sep 2026", color: "text-[#4F6B2E]" },
     ];
     return (
       <ul className="mt-4 space-y-2 rounded-xl border border-border bg-white p-3">
@@ -202,7 +202,7 @@ function StepVisual({ step }: { step: (typeof STEPS)[number] }) {
     <div className="mt-4 rounded-xl border border-[var(--aislix-supermarket-border)] bg-white p-3">
       <div className="flex items-center gap-2 text-[#4F6B2E]">
         <CheckCircle2 className="size-4" aria-hidden="true" />
-        <p className="text-xs font-medium">Issue Resolved</p>
+        <p className="text-xs font-medium">Issue resolved</p>
       </div>
       <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
         Planogram compliance improved from 62% to 92%.

@@ -76,7 +76,7 @@ export function HomeLeadCapture() {
   return (
     <section id="lead" className="home-section scroll-mt-20 border-b border-border bg-card">
       <div className="mx-auto max-w-5xl px-5 sm:px-8">
-        <div className="rounded-xl border border-[var(--aislix-local-border)] bg-[var(--aislix-local-bg)] p-6 sm:p-10">
+        <div className="rounded-xl border border-border bg-white p-6 sm:p-10">
           {done ? (
             <div className="text-center">
               <span className="mx-auto grid size-11 place-items-center rounded-full bg-secondary text-primary">
@@ -88,7 +88,7 @@ export function HomeLeadCapture() {
               <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
                 {emailSent
                   ? `We sent onboarding instructions to ${email}. You can also create your account directly below.`
-                  : "Your details are saved. Create your free Aislix workspace to unlock 3 shelf audits."}
+                  : "Your details are saved. Create your free Aislix workspace to run your first shelf audit."}
               </p>
               <Button
                 size="xl"
@@ -104,11 +104,8 @@ export function HomeLeadCapture() {
           ) : (
             <form onSubmit={submit}>
               <div className="text-center">
-                <p className="text-xs font-medium text-primary">
-                  START FREE
-                </p>
-                <h2 className="mt-3 text-2xl font-semibold text-foreground sm:text-3xl">
-                  Start Turning Shelf Visits Into Retail Intelligence.
+                <h2 className="text-2xl font-semibold text-foreground sm:text-3xl">
+                  Start turning shelf visits into retail intelligence.
                 </h2>
                 <p className="mt-3 text-sm text-muted-foreground">
                   Create your free Aislix workspace and start analysing shelves. No credit card
@@ -167,7 +164,7 @@ export function HomeLeadCapture() {
               <div className="mt-7 flex flex-col items-center gap-3">
                 <Button type="submit" size="xl" className="w-full" disabled={saving}>
                   {saving ? <Loader2 className="size-4 animate-spin" /> : null}
-                  Create My Free Workspace <ArrowRight className="size-4" />
+                  Create my free workspace <ArrowRight className="size-4" />
                 </Button>
                 <p className="text-xs text-muted-foreground">
                   No credit card required. Your workspace keeps your audits, results and shelf history

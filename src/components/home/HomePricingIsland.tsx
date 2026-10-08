@@ -60,7 +60,7 @@ export function HomePricingIsland() {
           </Button>
           <Button asChild variant="ghost" className="rounded-xl">
             <Link to="/contact" search={{ subject: "Sales enquiry" }}>
-              Talk to Sales
+              Talk to sales
             </Link>
           </Button>
         </div>

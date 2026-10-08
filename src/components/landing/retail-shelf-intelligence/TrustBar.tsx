@@ -2,10 +2,10 @@ import { Building2, PackageSearch, ShoppingCart, Store, Truck } from "lucide-rea
 
 const ITEMS = [
   { label: "Supermarkets", Icon: ShoppingCart },
-  { label: "Dark Stores", Icon: Building2 },
+  { label: "Dark stores", Icon: Building2 },
   { label: "FMCG Brands", Icon: PackageSearch },
   { label: "Distributors", Icon: Truck },
-  { label: "Local Stores", Icon: Store },
+  { label: "Local stores", Icon: Store },
 ];
 
 export function TrustBar() {
