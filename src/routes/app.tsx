@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useInstallPrompt } from "@/lib/pwa";
 
 const APK_URL = "/downloads/aislix-android.apk";
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.0.1";
 /** SHA-256 of the Aislix Android signing certificate, so people can check the download is ours. */
 const SIGNING_SHA256 =
   "55:50:05:FB:20:8D:1C:9A:47:88:6B:80:14:CE:23:CC:BB:EF:23:F8:B3:86:19:10:F1:ED:D1:F0:4A:07:2B:99";

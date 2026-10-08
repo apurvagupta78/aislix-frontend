@@ -5,7 +5,7 @@ Status on 7 Oct 2026. Covers the Android app, the 5-minute VC demo, measured acc
 ## 1. Android app (shareable, not on the Play Store yet)
 
 - Download page: https://aislix.com/app (Android APK + iPhone "Add to Home Screen" steps).
-- Package `com.aislix.app`, version 1.0.0, Android 5.0 and newer. The app opens aislix.com full screen.
+- Package `com.aislix.app`, version 1.0.1 (new line-A logo icon), Android 5.0 and newer. The app opens aislix.com full screen.
 - Google confirms the app-to-site link (`/.well-known/assetlinks.json`, `"linked": true`), so there is no browser address bar inside the app.
 - Website changes reach the app immediately. A new APK is only needed to change the app name, icon, start page or permissions.
 
