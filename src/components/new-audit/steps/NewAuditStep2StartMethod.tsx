@@ -48,8 +48,8 @@ type Props = {
   operatingModelError?: string | null;
 };
 
-const STEP_3_TITLE = "What should Aislix work with?";
-const STEP_3_DESCRIPTION =
+export const STEP_3_TITLE = "What should Aislix work with?";
+export const STEP_3_DESCRIPTION =
   "Upload planogram, documents, templates, evidence, images, or other reference material to set up your audit.";
 
 export function NewAuditStep2StartMethod({

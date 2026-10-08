@@ -21,6 +21,27 @@ export function isAiStep3Ready(
   return true;
 }
 
+/** What is still missing in AI audit Step 3, or null when ready. */
+export function aiStep3Error(
+  choice: NewAuditPlanogramChoice | null,
+  ctx: ScanContextState,
+  analysisReady: boolean,
+): string | null {
+  if (!choice) return "Upload your document to continue.";
+  if (!isAiStep3Ready(choice, ctx)) {
+    if (choice === "with_demo") return "Complete role, category, sub-category, and planogram upload.";
+    if (choice === "reference") {
+      if (ctx.reference?.saved === false) return "Save your document lines to continue.";
+      return ctx.reference?.meta?.source === "manual"
+        ? "Type at least one product to continue."
+        : "Upload your document or CSV to continue.";
+    }
+    return "Complete role, category, and sub-category.";
+  }
+  if (!analysisReady) return "Tick at least one thing for AI to analyse, or ask a question.";
+  return null;
+}
+
 export type NewAuditStepId = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 export type NewAuditNavStep = {

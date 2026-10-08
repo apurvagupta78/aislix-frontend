@@ -403,6 +403,8 @@ export function AppShell({
   const isGuest = useIsGuest();
   useResumeStrandedScans(!isGuest);
   const isDashboardRoute = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
+  const isGuestAuditRoute = pathname === "/guest";
+  const guestReadOnly = isGuest && !isDashboardRoute && !isGuestAuditRoute;
 
   const sectionLabel =
     SECTIONS.find((section) =>
@@ -815,7 +817,7 @@ export function AppShell({
 
             <main id="main-content" className="px-5 py-6 sm:px-8 sm:py-8">
               <div className="mx-auto max-w-7xl space-y-6">
-                {!hidePageHeader && !(isGuest && !isDashboardRoute) ? (
+                {!hidePageHeader && !guestReadOnly ? (
                   <PageHeader
                     title={title}
                     {...(description ? { description } : {})}
@@ -825,9 +827,9 @@ export function AppShell({
                   />
                 ) : null}
 
-                {!(isGuest && !isDashboardRoute) ? <GlobalFilterBarShell /> : null}
+                {!guestReadOnly && !isGuestAuditRoute ? <GlobalFilterBarShell /> : null}
                 <div className="animate-fade-in">
-                  {isGuest && !isDashboardRoute ? <GuestNavPage pathname={pathname} /> : children}
+                  {guestReadOnly ? <GuestNavPage pathname={pathname} /> : children}
                 </div>
               </div>
             </main>

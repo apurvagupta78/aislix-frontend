@@ -104,7 +104,7 @@ import {
 import { NewAuditStep7Capture } from "@/components/new-audit/steps/NewAuditStep7Capture";
 import type { SweepCaptureMeta } from "@/lib/guided-capture";
 import {
-  isAiStep3Ready,
+  aiStep3Error,
   scrollToNewAuditStep,
   displayStepStatus,
   validateNewAuditSteps,
@@ -801,23 +801,9 @@ function NewAuditPage() {
         : null,
     method: !method ? "Choose how the audit will be performed." : null,
     planogram:
-      method === "ai" && !aiPlanogramChoice
-        ? "Upload your document to continue."
-        : method === "ai" &&
-            aiPlanogramChoice &&
-            !isAiStep3Ready(aiPlanogramChoice, aiScanContext)
-          ? aiPlanogramChoice === "with_demo"
-            ? "Complete role, category, sub-category, and planogram upload."
-            : aiPlanogramChoice === "reference"
-              ? aiScanContext.reference?.saved === false
-                ? "Save your document lines to continue."
-                : aiScanContext.reference?.meta?.source === "manual"
-                  ? "Type at least one product to continue."
-                  : "Upload your document or CSV to continue."
-              : "Complete role, category, and sub-category."
-          : method === "ai" && !aiAnalysisReady(aiAnalysisRequest)
-            ? "Tick at least one thing for AI to analyse, or ask a question."
-            : null,
+      method === "ai"
+        ? aiStep3Error(aiPlanogramChoice, aiScanContext, aiAnalysisReady(aiAnalysisRequest))
+        : null,
     where: !hasLocations
       ? storesQuery.data && !storesQuery.data.length && operatingModel !== "fmcg_distributor"
         ? "Add a store before creating an audit."

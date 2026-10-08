@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Camera, Check, FileSpreadsheet, ListPlus, ScanSearch } from "lucide-react";
 
 import { AiAnalysisQuestionCard } from "@/components/new-audit/AiAnalysisQuestionCard";
@@ -23,6 +23,8 @@ type Props = {
   question: string;
   onChecksChange: (checks: AiAnalysisCheck[]) => void;
   onQuestionChange: (question: string) => void;
+  /** Extra action shown above the document panel when "Upload document" is selected. */
+  uploadAction?: ReactNode;
 };
 
 type SourceMode = "upload" | "scratch" | "without";
@@ -71,6 +73,7 @@ export function AiDocumentAuditSetup({
   question,
   onChecksChange,
   onQuestionChange,
+  uploadAction,
 }: Props) {
   const [mode, setMode] = useState<SourceMode>(() => initialMode(choice, scanContext.reference));
   const stash = useRef<Partial<Record<"upload" | "scratch", ReferenceDocumentState | undefined>>>({});
@@ -161,6 +164,8 @@ export function AiDocumentAuditSetup({
               </span>
             </span>
           </div>
+
+          {mode === "upload" && uploadAction ? uploadAction : null}
 
           <ReferenceSourcePanel
             key={mode}

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Camera, ImagePlus, ScanLine, X } from "lucide-react";
+import { Camera, ImagePlus, ScanLine, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { GuidedSweepCamera } from "@/components/guided-capture/GuidedSweepCamera";
@@ -9,6 +9,13 @@ import { Progress } from "@/components/ui/progress";
 import type { SweepCaptureMeta } from "@/lib/guided-capture";
 import type { AuditRoleTab } from "@/lib/role-audit-ui";
 import { MAX_SCAN_IMAGES, validateScanFile } from "@/lib/scan-api";
+
+type SamplePhoto = {
+  imageUrl: string;
+  active: boolean;
+  onUse: () => void;
+  onClear: () => void;
+};
 
 type Props = {
   captureFiles: File[];
@@ -21,6 +28,10 @@ type Props = {
   /** 0–100 while uploading to the server; null when idle. */
   uploadProgress?: number | null;
   uploading?: boolean;
+  stepNumber?: number;
+  maxPhotos?: number;
+  /** Offers a ready-made shelf photo instead of an upload. */
+  sample?: SamplePhoto;
 };
 
 export function NewAuditStep7Capture({
@@ -32,20 +43,25 @@ export function NewAuditStep7Capture({
   error,
   uploadProgress = null,
   uploading = false,
+  stepNumber = 8,
+  maxPhotos = MAX_SCAN_IMAGES,
+  sample,
 }: Props) {
   const [sweepOpen, setSweepOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const previews = useMemo(() => captureFiles.map((file) => URL.createObjectURL(file)), [captureFiles]);
   useEffect(() => () => previews.forEach((url) => URL.revokeObjectURL(url)), [previews]);
-  const full = captureFiles.length >= MAX_SCAN_IMAGES;
+  const usingSample = Boolean(sample?.active);
+  const full = captureFiles.length >= maxPhotos;
+  const single = maxPhotos === 1;
 
   function addFiles(list: FileList | null) {
     if (!list?.length) return;
-    const next = [...captureFiles];
+    const next = single ? [] : [...captureFiles];
     for (const file of Array.from(list)) {
-      if (next.length >= MAX_SCAN_IMAGES) {
-        toast.error(`Up to ${MAX_SCAN_IMAGES} shelf photos per audit.`);
+      if (next.length >= maxPhotos) {
+        toast.error(single ? "One shelf photo per audit." : `Up to ${maxPhotos} shelf photos per audit.`);
         break;
       }
       const problem = validateScanFile(file);
@@ -55,26 +71,37 @@ export function NewAuditStep7Capture({
       }
       next.push(file);
     }
+    if (next.length && usingSample) sample?.onClear();
     onCaptureChange(next);
   }
+
+  const addDisabled = disabled || (full && !single);
 
   return (
     <NewAuditStepSection
       id="step-8-capture"
-      stepNumber={8}
-      title="Capture shelf photos"
-      description={`Add 1–${MAX_SCAN_IMAGES} photos of the shelf — one per section, without overlapping. AI counts them together against your document.`}
+      stepNumber={stepNumber}
+      title={single ? "Capture shelf photo" : "Capture shelf photos"}
+      description={
+        single
+          ? "Add one clear photo of the shelf. AI counts it against your document."
+          : `Add 1–${maxPhotos} photos of the shelf — one per section, without overlapping. AI counts them together against your document.`
+      }
       complete={complete}
       error={error}
     >
       <div className="overflow-hidden rounded-xl border border-[var(--aislix-border)] bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--aislix-border)] px-5 py-4">
           <div>
-            <p className="font-display text-[15px] font-semibold text-[var(--aislix-primary)]">Your shelf photos</p>
+            <p className="font-display text-[15px] font-semibold text-[var(--aislix-primary)]">
+              {single ? "Your shelf photo" : "Your shelf photos"}
+            </p>
             <p className="mt-1 text-[13px] text-[var(--aislix-secondary)]">
-              {captureFiles.length
-                ? `${captureFiles.length} of ${MAX_SCAN_IMAGES} added`
-                : "Upload from your device or take photos with your phone camera"}
+              {usingSample
+                ? "Sample shelf photo selected"
+                : captureFiles.length
+                  ? `${captureFiles.length} of ${maxPhotos} added`
+                  : "Upload from your device or take photos with your phone camera"}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -82,7 +109,7 @@ export function NewAuditStep7Capture({
               type="button"
               variant="brand"
               size="sm"
-              disabled={disabled || full}
+              disabled={addDisabled}
               onClick={() => setSweepOpen(true)}
             >
               <ScanLine className="size-4" /> Guided sweep
@@ -91,24 +118,57 @@ export function NewAuditStep7Capture({
               type="button"
               variant="outline"
               size="sm"
-              disabled={disabled || full}
+              disabled={addDisabled}
               onClick={() => fileRef.current?.click()}
             >
-              <ImagePlus className="size-4" /> Upload photos
+              <ImagePlus className="size-4" /> {single ? "Upload photo" : "Upload photos"}
             </Button>
             <Button
               type="button"
               variant="outline"
               size="sm"
-              disabled={disabled || full}
+              disabled={addDisabled}
               onClick={() => cameraRef.current?.click()}
             >
               <Camera className="size-4" /> Take photo
             </Button>
+            {sample && !usingSample ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={disabled}
+                onClick={() => {
+                  onCaptureChange([]);
+                  sample.onUse();
+                }}
+              >
+                <Sparkles className="size-4" /> Use sample shelf photo
+              </Button>
+            ) : null}
           </div>
         </div>
         <div className="p-5">
-          {captureFiles.length ? (
+          {usingSample && sample ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <figure className="relative overflow-hidden rounded-lg border border-[var(--aislix-border)] bg-[var(--aislix-surface)]">
+                <img src={sample.imageUrl} alt="Sample shelf photo" className="h-32 w-full object-contain" />
+                <figcaption className="truncate border-t border-[var(--aislix-border)] px-2 py-1 text-[11px] text-[var(--aislix-secondary)]">
+                  Sample shelf
+                </figcaption>
+                {!disabled ? (
+                  <button
+                    type="button"
+                    aria-label="Remove sample shelf photo"
+                    className="absolute right-1.5 top-1.5 rounded-full border border-[var(--aislix-border)] bg-white p-1 text-[var(--aislix-secondary)] hover:text-[var(--aislix-primary)]"
+                    onClick={sample.onClear}
+                  >
+                    <X className="size-3" />
+                  </button>
+                ) : null}
+              </figure>
+            </div>
+          ) : captureFiles.length ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {captureFiles.map((file, index) => (
                 <figure
@@ -137,9 +197,9 @@ export function NewAuditStep7Capture({
               type="button"
               disabled={disabled}
               onClick={() => fileRef.current?.click()}
-              className="flex h-36 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--aislix-border)] bg-[var(--aislix-surface)] text-xs text-[var(--aislix-secondary)] hover:border-[#7DB7D6]"
+              className="flex h-36 w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--aislix-border)] bg-[var(--aislix-surface)] text-xs text-[var(--aislix-secondary)] hover:border-[#9FB3C8]"
             >
-              <ImagePlus className="size-5 text-[#7DB7D6]" />
+              <ImagePlus className="size-5 text-[#04203F]" />
               No photos yet — JPEG or PNG, max 10 MB each
             </button>
           )}
@@ -147,7 +207,7 @@ export function NewAuditStep7Capture({
         <input
           ref={fileRef}
           type="file"
-          multiple
+          multiple={!single}
           accept="image/jpeg,image/png"
           className="sr-only"
           onChange={(e) => {
@@ -171,8 +231,11 @@ export function NewAuditStep7Capture({
         open={sweepOpen}
         onOpenChange={setSweepOpen}
         role={role}
-        maxPhotos={MAX_SCAN_IMAGES - captureFiles.length}
-        onComplete={(result) => onCaptureChange([...captureFiles, ...result.files], result.meta)}
+        maxPhotos={single ? 1 : maxPhotos - captureFiles.length}
+        onComplete={(result) => {
+          if (usingSample) sample?.onClear();
+          onCaptureChange(single ? result.files.slice(0, 1) : [...captureFiles, ...result.files], result.meta);
+        }}
       />
       {uploading ? (
         <div className="mt-4 space-y-2 rounded-xl border border-[var(--aislix-border)] bg-[var(--aislix-surface)]/60 px-4 py-3">
