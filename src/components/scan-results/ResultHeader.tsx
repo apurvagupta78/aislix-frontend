@@ -117,18 +117,18 @@ function MetaItem({
   accent?: boolean | undefined;
 }) {
   return (
-    <div className="flex items-start gap-2.5">
+    <div className="flex min-w-0 items-start gap-2.5">
       <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
         {icon}
       </span>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-xs font-medium text-muted-foreground">{label}</p>
         {loading ? (
           <Skeleton className="mt-1.5 h-4 w-24" />
         ) : (
           <p
             className={cn(
-              "truncate text-sm font-semibold text-foreground",
+              "text-sm font-semibold text-foreground [overflow-wrap:anywhere]",
               accent && "text-accent-green",
             )}
           >
