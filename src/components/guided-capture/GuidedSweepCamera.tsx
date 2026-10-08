@@ -281,16 +281,19 @@ export function GuidedSweepCamera({ open, onOpenChange, role, maxPhotos, onCompl
 
   const warnings = result ? sweepWarnings(result.meta) : [];
   const photosTaken = update?.tiles ?? 0;
+  const capturing = phase === "sweeping" || phase === "finishing";
+  // Mid-sweep, a stray tap outside or Escape must not end the capture; the Close button still does.
+  const keepOpenWhileCapturing = (event: Event) => {
+    if (capturing) event.preventDefault();
+  };
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next && (phase === "sweeping" || phase === "finishing")) return;
-        onOpenChange(next);
-      }}
-    >
-      <DialogContent className="max-w-2xl">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="max-w-2xl"
+        onInteractOutside={keepOpenWhileCapturing}
+        onEscapeKeyDown={keepOpenWhileCapturing}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-[#04203F]">
             <ScanLine className="size-4" /> Guided sweep
