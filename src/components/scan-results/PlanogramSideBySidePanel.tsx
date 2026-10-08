@@ -192,10 +192,12 @@ function ExpectedPositionCard({
   position,
   selected,
   onSelect,
+  facingTargets,
 }: {
   position: PositionComparisonRow;
   selected: boolean;
   onSelect: () => void;
+  facingTargets: boolean;
 }) {
   return (
     <button
@@ -219,8 +221,9 @@ function ExpectedPositionCard({
         </Badge>
       </div>
       <p className="mt-1 text-[10px] text-muted-foreground">
-        Expected: {position.shelf_label} · {position.expected_facings} facing
-        {position.expected_facings === 1 ? "" : "s"}
+        {facingTargets
+          ? `Expected: ${position.shelf_label} · ${position.expected_facings} facing${position.expected_facings === 1 ? "" : "s"}`
+          : "Expected: on the shelf"}
       </p>
       {position.status === "moved" && position.observed_location ? (
         <p className="mt-0.5 text-[10px] text-muted-foreground">
@@ -236,10 +239,12 @@ function ExpectedShelfGrid({
   positions,
   selectedId,
   onSelect,
+  facingTargets,
 }: {
   positions: PositionComparisonRow[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  facingTargets: boolean;
 }) {
   const shelves = useMemo(() => {
     const grouped = new Map<string, PositionComparisonRow[]>();
@@ -273,6 +278,7 @@ function ExpectedShelfGrid({
                 position={cell}
                 selected={selectedId === cell.position_id}
                 onSelect={() => onSelect(cell.position_id)}
+                facingTargets={facingTargets}
               />
             ))}
           </div>
@@ -287,11 +293,14 @@ export function PlanogramSideBySidePanel({
   comparison,
   imageUrl,
   loading,
+  facingTargets = true,
 }: {
   data?: ScanResult | null;
   comparison?: PlanogramComparison | null;
   imageUrl?: string | null;
   loading?: boolean;
+  /** False for invoices / stock lists: lines expect presence, not a facing count. */
+  facingTargets?: boolean;
 }) {
   const [selectedPositionId, setSelectedPositionId] = useState<string | null>(null);
   const rows = useMemo(() => planogramRowsFromResult(data), [data]);
@@ -402,6 +411,7 @@ export function PlanogramSideBySidePanel({
               positions={positions}
               selectedId={selectedPositionId}
               onSelect={(id) => setSelectedPositionId((prev) => (prev === id ? null : id))}
+              facingTargets={facingTargets}
             />
             {observedCards.length ? (
               <div className="mt-4 border-t border-border/60 pt-3">

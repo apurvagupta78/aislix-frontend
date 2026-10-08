@@ -16,6 +16,13 @@ import {
 
 export type DashboardTab = "ai" | "digital";
 
+/** The name the user typed in New audit (stored on the assignment scope). */
+export function scopeAuditName(scopeValues: unknown): string | null {
+  if (!scopeValues || typeof scopeValues !== "object") return null;
+  const name = (scopeValues as Record<string, unknown>).audit_name;
+  return typeof name === "string" && name.trim() ? name.trim() : null;
+}
+
 export type DashboardMetricFilters = Partial<
   Pick<
     DashboardFilterState,
@@ -546,7 +553,7 @@ export async function fetchDigitalDashboardMetrics(
   let assignmentQuery = supabase
     .from("scan_assignments")
     .select(
-      "id, status, approval_status, assignment_state, due_at, completed_at, scan_id, assignee_id, assigner_id, store_id, template_id, created_at, stores:store_id(name)",
+      "id, status, approval_status, assignment_state, due_at, completed_at, scan_id, assignee_id, assigner_id, store_id, template_id, created_at, scope_values, stores:store_id(name)",
     )
     .eq("org_id", orgId)
     .eq("audit_mode", "digital")
@@ -719,7 +726,8 @@ export async function fetchDigitalDashboardMetrics(
         : state === "reaudit_completed"
           ? "Completed"
           : "—";
-    const tmpl = templateNames.get(r.template_id as string) ?? "Digital audit";
+    const tmpl =
+      scopeAuditName(r.scope_values) ?? templateNames.get(r.template_id as string) ?? "Digital audit";
     return {
       id: r.id as string,
       auditName: tmpl,

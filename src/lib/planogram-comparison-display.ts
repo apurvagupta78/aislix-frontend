@@ -156,8 +156,22 @@ function resolveMatch(result: ScanResult, rows: PlanogramRow[]): PlanogramMatchR
   return comparePlanogramToInventory(inventory, rows);
 }
 
-function lineForRow(match: PlanogramMatchResult | null, row: PlanogramRow): PlanogramMatchLine | undefined {
-  return match?.lines.find((l) => l.expected.shelf_position === row.shelf_position);
+function lineForRow(
+  match: PlanogramMatchResult | null,
+  row: PlanogramRow,
+  index: number,
+  rowCount: number,
+): PlanogramMatchLine | undefined {
+  if (!match) return undefined;
+  const same = match.lines.find((l) => l.expected === row);
+  if (same) return same;
+  // Document lines have no shelf position, so an empty position must never pair rows.
+  const position = String(row.shelf_position ?? "").trim();
+  if (position) {
+    const byPosition = match.lines.find((l) => String(l.expected.shelf_position ?? "").trim() === position);
+    if (byPosition) return byPosition;
+  }
+  return match.lines.length === rowCount ? match.lines[index] : undefined;
 }
 
 function comparisonLineForRow(
@@ -180,8 +194,8 @@ export function buildPositionComparisons(
   const rows = planogramRowsFromResult(result);
   const match = resolveMatch(result, rows);
 
-  return rows.map((row) => {
-    const matchLine = lineForRow(match, row);
+  return rows.map((row, index) => {
+    const matchLine = lineForRow(match, row, index, rows.length);
     const compLine = comparisonLineForRow(comparison, row);
     const mapped = matchLine
       ? mapLineToDisplayStatus(matchLine)
@@ -294,17 +308,17 @@ export function planogramComparisonMeta(result: ScanResult) {
 }
 
 export const STATUS_PILL: Record<PositionDisplayStatus, string> = {
-  match: "bg-emerald-500/12 text-emerald-800 dark:text-emerald-300",
-  moved: "bg-amber-500/12 text-amber-900 dark:text-amber-200",
-  low_facings: "bg-amber-500/12 text-amber-900 dark:text-amber-200",
-  missing: "bg-destructive/10 text-destructive",
-  review: "bg-muted text-muted-foreground",
+  match: "bg-[#79E2A8]/25 text-[#04203F]",
+  moved: "bg-[#9B86D9]/15 text-[#04203F]",
+  low_facings: "bg-[#9B86D9]/15 text-[#04203F]",
+  missing: "bg-[#FFEAF1] text-[#04203F]",
+  review: "bg-[#EEF1F4] text-[#667085]",
 };
 
 export const STATUS_ACCENT: Record<PositionDisplayStatus, string> = {
-  match: "border-l-emerald-500/70",
-  moved: "border-l-amber-500/70",
-  low_facings: "border-l-amber-500/70",
-  missing: "border-l-destructive/70",
-  review: "border-l-muted-foreground/50",
+  match: "border-l-[#79E2A8]",
+  moved: "border-l-[#9B86D9]",
+  low_facings: "border-l-[#9B86D9]",
+  missing: "border-l-[#ECBDCC]",
+  review: "border-l-[#D9E2E8]",
 };

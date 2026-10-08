@@ -42,6 +42,7 @@ import { capUnitsToFacings } from "@/lib/ai-audit/astra-response";
 import { CHART_ACCENT, KPI_CARD, summaryFillAt } from "@/lib/ai-audit/kpi-palette";
 import { metricDisplayValue, metricStatusLabel } from "@/lib/ai-audit/metric-results";
 import { downloadKeyValueCsv, downloadSectionCsv } from "@/lib/ai-audit/section-csv";
+import { referenceExpectsFacings } from "@/lib/ai-audit/reference-match";
 import { planogramComparisonFromResult } from "@/lib/planogram-display";
 import type { ScanResult } from "@/lib/scan-results";
 
@@ -128,6 +129,11 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
   const analysis = ctx.analysis;
   const s = analysis.summary;
   const calc = ctx.calculatedMetrics;
+  const documentMode = Boolean(analysis.reference_match);
+  const facingTargets = referenceExpectsFacings(
+    analysis.reference_match,
+    analysis.products.map((row) => row.expected_facings),
+  );
   const planoMetric = calc.planogram_compliance;
   const facingMetric = calc.overall_facing_compliance;
   const countPending =
@@ -178,10 +184,10 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
     { label: "Value gap ₹", value: String(s.total_potential_visible_unit_value_gap_inr), tone: "active" as const, bg: KPI_CARD.inventoryValueVariance },
   ];
 
-  const summaryStats = [
-    { label: "Total rows", value: s.total_planogram_rows || analysis.products.length },
+  const allSummaryStats = [
+    { label: documentMode ? "Document lines" : "Total rows", value: s.total_planogram_rows || analysis.products.length },
     {
-      label: "Planogram compliance",
+      label: documentMode ? "Compliance" : "Planogram compliance",
       value: metricDisplayValue(planoMetric, pctCell(s.overall_planogram_compliance_percent)),
       status: metricStatusLabel(planoMetric?.status),
     },
@@ -189,8 +195,9 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
       label: "Facing compliance",
       value: metricDisplayValue(facingMetric, pctCell(s.overall_facing_compliance_percent)),
       status: metricStatusLabel(facingMetric?.status),
+      facingTarget: true,
     },
-    { label: "Unit compliance", value: pctCell(s.overall_shelf_unit_compliance_percent) },
+    { label: "Unit compliance", value: pctCell(s.overall_shelf_unit_compliance_percent), facingTarget: true },
     {
       label: "Products identified",
       value: metricDisplayValue(calc.products_identified, analysis.products.length),
@@ -205,19 +212,20 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
       label: "Total Facings",
       value: metricDisplayValue(calc.total_actual_facings, s.total_actual_facings),
       status: metricStatusLabel(calc.total_actual_facings?.status),
-      sub: `Expected ${s.total_expected_facings}`,
+      sub: facingTargets ? `Expected ${s.total_expected_facings}` : undefined,
     },
     {
       label: "Visible units",
       value: metricDisplayValue(calc.total_actual_visible_units, s.total_actual_visible_units),
       status: metricStatusLabel(calc.total_actual_visible_units?.status),
-      sub: `Expected ${s.total_expected_shelf_units}`,
+      sub: facingTargets ? `Expected ${s.total_expected_shelf_units}` : undefined,
     },
-    { label: "Below exp facings", value: s.products_below_expected_facings },
-    { label: "Below min facings", value: s.products_below_minimum_facings },
-    { label: "Above max facings", value: s.products_above_maximum_facings },
-    { label: "Below exp units", value: s.products_below_expected_units },
+    { label: "Below exp facings", value: s.products_below_expected_facings, facingTarget: true },
+    { label: "Below min facings", value: s.products_below_minimum_facings, facingTarget: true },
+    { label: "Above max facings", value: s.products_above_maximum_facings, facingTarget: true },
+    { label: "Below exp units", value: s.products_below_expected_units, facingTarget: true },
   ];
+  const summaryStats = allSummaryStats.filter((stat) => facingTargets || !("facingTarget" in stat));
 
   const topVariance = [...analysis.products]
     .filter((row) => row.facing_variance != null)
@@ -282,27 +290,33 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
       header: "Status",
       cell: (r: AstraPlanogramProduct) => statusBadge(r.overall_status || r.match_status),
     },
-    { key: "exp_f", header: "Expected", cell: (r: AstraPlanogramProduct) => r.expected_facings },
+    ...(facingTargets
+      ? [{ key: "exp_f", header: "Expected", cell: (r: AstraPlanogramProduct) => r.expected_facings }]
+      : []),
     {
       key: "act_f",
       header: "Total Facings",
       cell: (r: AstraPlanogramProduct) => countCell(r.actual_facings),
     },
-    {
-      key: "f_var",
-      header: "Facing Δ",
-      cell: (r: AstraPlanogramProduct) => varianceCell(r.facing_variance),
-    },
-    {
-      key: "f_pct",
-      header: "Facing %",
-      cell: (r: AstraPlanogramProduct) => pctCell(r.facing_compliance_percent),
-    },
-    {
-      key: "exp_u",
-      header: "Exp units",
-      cell: (r: AstraPlanogramProduct) => r.expected_shelf_units || "—",
-    },
+    ...(facingTargets
+      ? [
+          {
+            key: "f_var",
+            header: "Facing Δ",
+            cell: (r: AstraPlanogramProduct) => varianceCell(r.facing_variance),
+          },
+          {
+            key: "f_pct",
+            header: "Facing %",
+            cell: (r: AstraPlanogramProduct) => pctCell(r.facing_compliance_percent),
+          },
+          {
+            key: "exp_u",
+            header: "Exp units",
+            cell: (r: AstraPlanogramProduct) => r.expected_shelf_units || "—",
+          },
+        ]
+      : []),
     {
       key: "act_u",
       header: "Visible units",
@@ -379,7 +393,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
   return (
     <div className="space-y-4">
       <AiResultsHero
-        modeLabel="Planogram comparison"
+        modeLabel={documentMode ? "Document comparison" : "Planogram comparison"}
         operatingModel={ctx.extras.operating_model_label ?? ctx.extras.operating_model}
       />
       <AiExecutiveSummary text={data.executive_summary} scanId={data.scan_id} />
@@ -409,8 +423,10 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
 
       <div className="grid gap-4 lg:grid-cols-[auto,1fr]">
         <AiAuditCard
-          title="Planogram compliance"
-          description="How closely the shelf matches the plan"
+          title={documentMode ? "Compliance" : "Planogram compliance"}
+          description={
+            documentMode ? "How closely the shelf matches your document" : "How closely the shelf matches the plan"
+          }
           csvDownload={{
             onDownload: () =>
               downloadKeyValueCsv(data.scan_id, "planogram-compliance", [
@@ -441,7 +457,7 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
         </AiAuditCard>
         <AiAuditCard
           title="Summary KPIs"
-          description="What was found versus the plan"
+          description={documentMode ? "What was found versus your document" : "What was found versus the plan"}
           csvDownload={{
             onDownload: () =>
               downloadKeyValueCsv(data.scan_id, "summary-kpis", [
@@ -527,56 +543,88 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
             <MpDonut slices={donutSlices} total={analysis.products.length} totalLabel="Rows" />
           </AiAuditCard>
         ) : null}
-        <AiAuditCard
-          title="Largest facing variance"
-          description="Top rows by absolute facing delta"
-          className="xl:col-span-1"
-          csvDownload={{
-            onDownload: () =>
-              downloadSectionCsv(
-                data.scan_id,
-                "facing-variance",
-                ["Product", "Facing variance"],
-                topVariance.map((r) => [r.label, r.variance]),
-              ),
-          }}
-        >
-          <AiVarianceBars items={topVariance} unit=" total facings" accent={CHART_ACCENT.actualFacings} />
-        </AiAuditCard>
-        <AiAuditCard
-          title="Largest unit variance"
-          description="Top rows by absolute unit delta"
-          csvDownload={{
-            onDownload: () =>
-              downloadSectionCsv(
-                data.scan_id,
-                "unit-variance",
-                ["Product", "Unit variance"],
-                topUnitVariance.map((r) => [r.label, r.variance]),
-              ),
-          }}
-        >
-          <AiVarianceBars items={topUnitVariance} unit=" visible units" accent={CHART_ACCENT.actualUnits} />
-        </AiAuditCard>
+        {facingTargets ? (
+          <>
+            <AiAuditCard
+              title="Largest facing variance"
+              description="Top rows by absolute facing delta"
+              className="xl:col-span-1"
+              csvDownload={{
+                onDownload: () =>
+                  downloadSectionCsv(
+                    data.scan_id,
+                    "facing-variance",
+                    ["Product", "Facing variance"],
+                    topVariance.map((r) => [r.label, r.variance]),
+                  ),
+              }}
+            >
+              <AiVarianceBars items={topVariance} unit=" total facings" accent={CHART_ACCENT.actualFacings} />
+            </AiAuditCard>
+            <AiAuditCard
+              title="Largest unit variance"
+              description="Top rows by absolute unit delta"
+              csvDownload={{
+                onDownload: () =>
+                  downloadSectionCsv(
+                    data.scan_id,
+                    "unit-variance",
+                    ["Product", "Unit variance"],
+                    topUnitVariance.map((r) => [r.label, r.variance]),
+                  ),
+              }}
+            >
+              <AiVarianceBars items={topUnitVariance} unit=" visible units" accent={CHART_ACCENT.actualUnits} />
+            </AiAuditCard>
+          </>
+        ) : null}
       </div>
 
-      <AiAuditCard
-        title="Expected vs actual facings"
-        description="Side-by-side comparison for top variance SKUs"
-        csvDownload={{
-          onDownload: () =>
-            downloadSectionCsv(
-              data.scan_id,
-              "expected-vs-actual-facings",
-              ["Product", "Expected", "Actual"],
-              facingCompare.map((r) => [r.label, r.expected, r.actual]),
-            ),
-        }}
-      >
-        <AiGroupedComparisonBars items={facingCompare} unit="" accent={CHART_ACCENT.rankByFacings} />
-      </AiAuditCard>
+      {facingTargets ? (
+        <AiAuditCard
+          title="Expected vs actual facings"
+          description="Side-by-side comparison for top variance SKUs"
+          csvDownload={{
+            onDownload: () =>
+              downloadSectionCsv(
+                data.scan_id,
+                "expected-vs-actual-facings",
+                ["Product", "Expected", "Actual"],
+                facingCompare.map((r) => [r.label, r.expected, r.actual]),
+              ),
+          }}
+        >
+          <AiGroupedComparisonBars items={facingCompare} unit="" accent={CHART_ACCENT.rankByFacings} />
+        </AiAuditCard>
+      ) : null}
 
-      {analysis.brand_analysis.length ? (
+      {analysis.brand_analysis.length && !facingTargets ? (
+        <AiAuditCard
+          title="Brands on the shelf"
+          description="Facings and share of shelf the AI counted per brand"
+          csvDownload={{
+            onDownload: () =>
+              downloadSectionCsv(
+                data.scan_id,
+                "brand-analysis",
+                ["Brand", "Total Facings", "Share %"],
+                analysis.brand_analysis.map((b) => [b.brand, b.actual_facings, b.actual_share_percent]),
+              ),
+          }}
+        >
+          <AiAuditMetricTable
+            rows={analysis.brand_analysis}
+            rowKey={(r) => r.brand}
+            columns={[
+              { key: "b", header: "Brand", cell: (r: AstraPlanogramBrandAnalysis) => r.brand },
+              { key: "af", header: "Total Facings", cell: (r) => countCell(r.actual_facings) },
+              { key: "as", header: "Share %", cell: (r) => pctCell(r.actual_share_percent) },
+            ]}
+          />
+        </AiAuditCard>
+      ) : null}
+
+      {analysis.brand_analysis.length && facingTargets ? (
         <div className="grid gap-4 xl:grid-cols-2">
           <AiAuditCard
             title="Brand share vs plan"
@@ -691,10 +739,20 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
             rowKey={(r) => r.category}
             columns={[
               { key: "c", header: "Category", cell: (r: AstraPlanogramCategoryAnalysis) => r.category },
-              { key: "ef", header: "Exp facings", cell: (r) => r.expected_facings },
+              ...(facingTargets
+                ? [{ key: "ef", header: "Exp facings", cell: (r: AstraPlanogramCategoryAnalysis) => r.expected_facings }]
+                : []),
               { key: "af", header: "Total Facings", cell: (r) => countCell(r.actual_facings) },
-              { key: "es", header: "Exp share %", cell: (r) => pctCell(r.expected_share_percent) },
-              { key: "as", header: "Act share %", cell: (r) => pctCell(r.actual_share_percent) },
+              ...(facingTargets
+                ? [
+                    {
+                      key: "es",
+                      header: "Exp share %",
+                      cell: (r: AstraPlanogramCategoryAnalysis) => pctCell(r.expected_share_percent),
+                    },
+                  ]
+                : []),
+              { key: "as", header: facingTargets ? "Act share %" : "Share %", cell: (r) => pctCell(r.actual_share_percent) },
               ...(catHasCompliance
                 ? [{ key: "cp", header: "Compliance %", cell: (r: AstraPlanogramCategoryAnalysis) => pctCell(r.compliance_percent) }]
                 : []),
@@ -735,7 +793,9 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
                 header: "Subcategory",
                 cell: (r: AstraPlanogramSubcategoryAnalysis) => r.subcategory,
               },
-              { key: "ef", header: "Exp facings", cell: (r) => r.expected_facings },
+              ...(facingTargets
+                ? [{ key: "ef", header: "Exp facings", cell: (r: AstraPlanogramSubcategoryAnalysis) => r.expected_facings }]
+                : []),
               { key: "af", header: "Total Facings", cell: (r) => countCell(r.actual_facings) },
               ...(subHasCompliance
                 ? [{ key: "cp", header: "Compliance %", cell: (r: AstraPlanogramSubcategoryAnalysis) => pctCell(r.compliance_percent) }]
@@ -792,7 +852,11 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
 
       <AiAuditCard
         title="Product comparison"
-        description="Planogram expected vs shelf actuals — AI names shown as Actual by AI"
+        description={
+          documentMode
+            ? "Your document vs shelf actuals — AI names shown as Actual by AI"
+            : "Planogram expected vs shelf actuals — AI names shown as Actual by AI"
+        }
         csvDownload={{
           onDownload: () =>
             downloadSectionCsv(
@@ -856,8 +920,8 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
 
       {analysis.observed_unplanned_products.length ? (
         <AiAuditCard
-          title="Unplanned products on shelf"
-          description="Products not in the planogram"
+          title={documentMode ? "Products not on your document" : "Unplanned products on shelf"}
+          description={documentMode ? "On the shelf but not listed in your document" : "Products not in the planogram"}
           csvDownload={{
             onDownload: () =>
               downloadSectionCsv(
@@ -891,7 +955,12 @@ export function AiAuditPlanogramView({ data, ctx, imageUrl }: Props) {
       ) : null}
 
       {comparison || data.planogram?.requested ? (
-        <PlanogramSideBySidePanel data={data} comparison={comparison} imageUrl={imageUrl} />
+        <PlanogramSideBySidePanel
+          data={data}
+          comparison={comparison}
+          imageUrl={imageUrl}
+          facingTargets={facingTargets}
+        />
       ) : (
         <AiEvidencePanel imageUrl={imageUrl} />
       )}

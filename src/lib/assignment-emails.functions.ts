@@ -176,11 +176,7 @@ export const submitAiAudit = createServerFn({ method: "POST" })
       const passed = openIssues === 0 && (!planogramGated || (compliance ?? 0) >= 100);
       const nextStatus = passed ? "completed" : "needs_correction";
 
-      const nextScope = {
-        ...scope,
-        ...(data.notes ? { submission_notes: data.notes } : {}),
-      };
-
+      // scope_values is locked once execution starts (DB trigger), so notes go to the activity log.
       const { data: updatedAsn, error: asnUpdateErr } = await supabase
         .from("scan_assignments")
         .update({
@@ -190,7 +186,6 @@ export const submitAiAudit = createServerFn({ method: "POST" })
           updated_at: now,
           approval_status: "pending_review",
           assignment_state: "submitted",
-          scope_values: nextScope,
           last_compliance_percent: compliance,
         } as never)
         .eq("id", assignmentId)
@@ -202,6 +197,18 @@ export const submitAiAudit = createServerFn({ method: "POST" })
       if (!updatedAsn) {
         throw new Error("Could not update assignment after submit (permission denied).");
       }
+    }
+
+    if (data.notes) {
+      const { error: noteErr } = await supabase.from("audit_activity_events").insert({
+        org_id: (scan as { org_id: string }).org_id,
+        scan_id: data.scanId,
+        actor_id: userId,
+        event_type: "audit_submitted",
+        summary: `Submitted with notes: ${data.notes.slice(0, 500)}`,
+        payload: { assignment_id: assignmentId, submission_notes: data.notes },
+      } as never);
+      if (noteErr) console.error("[submitAiAudit] notes not recorded", noteErr.message);
     }
 
     await supabase

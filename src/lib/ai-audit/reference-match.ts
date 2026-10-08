@@ -107,6 +107,20 @@ export type ReferenceMatch = {
   not_on_document: ReferenceExtraProduct[];
 };
 
+/**
+ * Invoices, stock lists and price lists only expect each line to be present (1 facing), so
+ * facing targets, facing % and expected share exist only for planograms or a facings column.
+ */
+export function referenceExpectsFacings(
+  match: ReferenceMatch | null | undefined,
+  expectedFacings: Array<number | null | undefined> = [],
+): boolean {
+  if (!match) return true;
+  if ((match.document.document_type ?? "").trim().toLowerCase() === "planogram") return true;
+  if (match.document.extra_columns.some((header) => /facing/i.test(header))) return true;
+  return expectedFacings.some((value) => Number(value) > 1);
+}
+
 function rec(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
 }

@@ -15,6 +15,7 @@ import {
 import { AISLIX } from "@/lib/aislix-theme";
 import {
   fetchAiDashboardMetrics,
+  scopeAuditName,
   type AiDashboardMetrics,
   type DashboardMetricFilters,
 } from "@/lib/dashboard-ai-digital";
@@ -361,7 +362,7 @@ export async function fetchOpsAiDashboard(
   let assignQ = supabase
     .from("scan_assignments")
     .select(
-      "id, status, assignment_state, approval_status, store_id, scan_id, assignee_id, assigner_id, due_at, created_at, template_id, audit_mode, last_compliance_percent",
+      "id, status, assignment_state, approval_status, store_id, scan_id, assignee_id, assigner_id, due_at, created_at, template_id, audit_mode, last_compliance_percent, scope_values",
     )
     .eq("org_id", orgId)
     .order("created_at", { ascending: false })
@@ -635,11 +636,12 @@ export async function fetchOpsAiDashboard(
     let relation: LastTenAuditRow["relation"] = "other";
     if (userId && assigneeId === userId) relation = "assigned_to_me";
     else if (userId && assignerId === userId) relation = "assigned_by_me";
+    const ownName = scopeAuditName(a.scope_values);
     return {
       id: a.id as string,
       scanId: (a.scan_id as string | null) ?? null,
-      auditName: tmpl !== "—" ? tmpl : untemplatedName,
-      templateName: tmpl !== "—" ? tmpl : "",
+      auditName: ownName ?? (tmpl !== "—" ? tmpl : untemplatedName),
+      templateName: ownName ?? (tmpl !== "—" ? tmpl : ""),
       storeName: a.store_id ? storeName.get(a.store_id as string) ?? "—" : "—",
       assigneeName: assigneeId
         ? personName.get(assigneeId) ?? "Unassigned"
@@ -897,7 +899,7 @@ export async function fetchAuditAnalysisReport(
   const { data: assignment } = await supabase
     .from("scan_assignments")
     .select(
-      "id, store_id, status, assignment_state, approval_status, created_at, template_id, last_compliance_percent",
+      "id, store_id, status, assignment_state, approval_status, created_at, template_id, last_compliance_percent, scope_values",
     )
     .eq("scan_id", scanId)
     .eq("org_id", orgId)
@@ -907,8 +909,8 @@ export async function fetchAuditAnalysisReport(
     ? stageOf(assignment) === "completed"
     : scan.status === "completed";
 
-  let templateLabel = "Audit";
-  if (assignment?.template_id) {
+  let templateLabel = scopeAuditName(assignment?.scope_values) ?? "Audit";
+  if (templateLabel === "Audit" && assignment?.template_id) {
     const { data: tmpl } = await supabase
       .from("audit_templates")
       .select("name")
