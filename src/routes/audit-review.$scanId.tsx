@@ -34,7 +34,7 @@ import { syncFindingsForScan } from "@/lib/findings";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/audit-review/$scanId")({
-  head: () => ({ meta: [{ title: "Review Digital Audit — Aislix" }] }),
+  head: () => ({ meta: [{ title: "Review digital audit — Aislix" }] }),
   component: AuditReviewPage,
 });
 
@@ -228,7 +228,7 @@ function AuditReviewPage() {
 
   return (
     <AppShell
-      title="Review & Approval"
+      title="Review & approval"
       description={`${session.store_name} · ${session.lines.length} SKUs · Digital Audit`}
     >
       <div className="mb-4">
@@ -286,7 +286,7 @@ function AuditReviewPage() {
 
           <div className="overflow-x-auto rounded-xl border border-border">
             <table className="w-full min-w-[720px] text-left text-sm">
-              <thead className="border-b border-border bg-muted/40 text-xs uppercase text-muted-foreground">
+              <thead className="border-b border-border text-xs text-muted-foreground">
                 <tr>
                   <th className="p-3">SKU / Product</th>
                   <th className="p-3">Location</th>

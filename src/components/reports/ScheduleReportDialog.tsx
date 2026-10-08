@@ -201,7 +201,7 @@ export function ScheduleReportDialog({
         </DialogFooter>
 
         <div className="border-t border-[#D9E2E8] pt-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#667085]">Your scheduled reports</p>
+          <p className="text-xs font-medium text-[#667085]">Your scheduled reports</p>
           {schedules.isPending ? (
             <p className="mt-2 text-sm text-[#667085]">Loading…</p>
           ) : schedules.isError ? (
@@ -220,7 +220,7 @@ export function ScheduleReportDialog({
                         <CalendarClock className="size-3.5 shrink-0 text-[#667085]" aria-hidden />
                         {REPORT_KIND_INFO[s.kind]?.label ?? "Report"} · {where}
                         {s.preview_demo ? (
-                          <span className="rounded-full bg-[#EEF1F4] px-1.5 text-[10px] font-semibold uppercase text-[#667085]">
+                          <span className="rounded-full bg-[#EEF1F4] px-1.5 text-xs font-medium text-[#667085]">
                             Demo
                           </span>
                         ) : null}

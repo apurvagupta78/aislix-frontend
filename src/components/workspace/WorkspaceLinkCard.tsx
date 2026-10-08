@@ -26,7 +26,7 @@ export function WorkspaceLinkCard({
             {icon}
           </span>
           {badge ? (
-            <span className="rounded-full bg-muted px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
+            <span className="rounded-full bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
               {badge}
             </span>
           ) : null}

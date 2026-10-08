@@ -44,8 +44,8 @@ function KpiCard({
   description: string;
 }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-card px-3.5 py-3 shadow-sm">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+    <div className="rounded-xl border border-border/60 bg-card px-3.5 py-3">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className="mt-1 text-xl font-semibold tabular-nums tracking-tight text-brand">{value}</p>
       <p className="mt-0.5 text-[11px] text-muted-foreground">{description}</p>
     </div>
@@ -153,7 +153,7 @@ export function CommercialImpactSection({
     <section className="mt-8">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             Commercial impact
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -196,7 +196,7 @@ export function CommercialImpactSection({
         />
       </div>
 
-      <div className="mt-4 rounded-2xl border border-border/60 bg-card shadow-sm">
+      <div className="mt-4 rounded-2xl border border-border/60 bg-card">
         <div className="space-y-2 border-b border-border/40 p-3 sm:p-4">
           <DashboardCompactFilterToolbar
             filters={filters}
@@ -233,7 +233,7 @@ export function CommercialImpactSection({
 
         <div className="grid gap-4 p-4 lg:grid-cols-2">
           <div className="rounded-xl border border-border/60 bg-muted/10 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               Estimated exposure by issue
             </p>
             {issueChartData.length ? (
@@ -257,7 +257,7 @@ export function CommercialImpactSection({
           </div>
 
           <div className="rounded-xl border border-border/60 bg-muted/10 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               Products with highest estimated exposure
             </p>
             <div className="mt-3">
@@ -270,7 +270,7 @@ export function CommercialImpactSection({
           </div>
 
           <div className="rounded-xl border border-border/60 bg-muted/10 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               Exposure run-rate
             </p>
             <div className="mt-3">
@@ -283,7 +283,7 @@ export function CommercialImpactSection({
           </div>
 
           <div className="rounded-xl border border-border/60 bg-muted/10 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               Estimated exposure over time
             </p>
             {commercial.has_trend ? (

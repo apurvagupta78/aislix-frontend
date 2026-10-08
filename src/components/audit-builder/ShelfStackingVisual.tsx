@@ -43,7 +43,7 @@ function ShelfGrid({
 }) {
   return (
     <div>
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</p>
+      <p className="mb-2 text-xs font-medium text-muted-foreground">{title}</p>
       <div
         className="grid gap-1"
         style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}

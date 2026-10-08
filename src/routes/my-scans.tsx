@@ -259,7 +259,7 @@ function MyScansPage() {
 
   return (
     <AppShell
-      title="My Work"
+      title="My work"
       description="Digital and AI audit assignments — today, upcoming, overdue and returned for correction."
     >
       {query.isLoading ? (
@@ -296,7 +296,7 @@ function MyScansPage() {
               {visible.map((assignment) => (
                 <article
                   key={assignment.id}
-                  className="rounded-2xl border border-border bg-card p-5 shadow-sm"
+                  className="rounded-2xl border border-border bg-card p-5"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>

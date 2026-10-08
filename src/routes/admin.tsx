@@ -48,7 +48,7 @@ export const Route = createFileRoute("/admin")({
 
   head: () => ({
 
-    meta: [{ title: "Platform Admin — Aislix" }, { name: "robots", content: "noindex, nofollow" }],
+    meta: [{ title: "Platform admin — Aislix" }, { name: "robots", content: "noindex, nofollow" }],
 
   }),
 

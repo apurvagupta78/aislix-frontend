@@ -57,7 +57,7 @@ function PlannerPage() {
   });
 
   return (
-    <AppShell title="Inspection Planner" description="Assign expiry inspections with policy snapshots and required locations.">
+    <AppShell title="Inspection planner" description="Assign expiry inspections with policy snapshots and required locations.">
       <div className="grid gap-8 lg:grid-cols-2">
         <form
           className="space-y-3 rounded-2xl border p-4"

@@ -33,7 +33,7 @@ export function FieldCard({
         dragOver ? "border-brand border-dashed bg-brand/5" : ""
       } ${
         selected
-          ? "border-brand ring-1 ring-brand/30 shadow-sm"
+          ? "border-brand ring-1 ring-brand/30"
           : "border-border hover:border-brand/40"
       }`}
     >

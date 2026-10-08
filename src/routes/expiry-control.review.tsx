@@ -20,7 +20,7 @@ function ReviewPage() {
   const selected = attemptId ?? queueQuery.data?.[0]?.id;
 
   return (
-    <AppShell title="Review Queue" description="Verify evidence, reconciliation, and removal — no self-approval.">
+    <AppShell title="Review queue" description="Verify evidence, reconciliation, and removal — no self-approval.">
       {queueQuery.isLoading && <Skeleton className="h-48" />}
       {!selected && !queueQuery.isLoading && (
         <EmptyState title="No inspections awaiting review" description="Submitted inspections appear here." />

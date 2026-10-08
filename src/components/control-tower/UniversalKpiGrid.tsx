@@ -80,7 +80,7 @@ export function UniversalKpiGrid({
             <div className="flex items-start justify-between gap-2">
               <p
                 className={cn(
-                  "text-xs font-semibold uppercase tracking-wide",
+                  "text-xs font-medium",
                   surface.inverted ? "text-white/75" : "text-mp-muted",
                 )}
               >

@@ -6,7 +6,7 @@ import { EmptyState, Skeleton } from "@/components/States";
 import { fetchPolicies } from "@/lib/expiry-control";
 
 export const Route = createFileRoute("/expiry-control/policies")({
-  head: () => ({ meta: [{ title: "Expiry Policies — Aislix" }] }),
+  head: () => ({ meta: [{ title: "Expiry policies — Aislix" }] }),
   component: PoliciesPage,
 });
 
@@ -15,7 +15,7 @@ function PoliciesPage() {
 
   return (
     <AppShell
-      title="Expiry Policies"
+      title="Expiry policies"
       description="Versioned policies — near-expiry thresholds, evidence requirements, and quarantine SLAs."
     >
       {query.isLoading && <Skeleton className="h-48" />}

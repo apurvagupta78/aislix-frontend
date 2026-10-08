@@ -36,7 +36,7 @@ import { fetchAuditorPerformance } from "@/lib/auditor-performance";
 import { isOrgManager } from "@/lib/assignments";
 
 export const Route = createFileRoute("/audit-intelligence")({
-  head: () => ({ meta: [{ title: "Audit Intelligence — Aislix" }] }),
+  head: () => ({ meta: [{ title: "Audit intelligence — Aislix" }] }),
   component: AuditIntelligencePage,
 });
 
@@ -63,7 +63,7 @@ function AuditIntelligencePage() {
   if (accessQuery.isLoading) {
     return (
       <AppShell title="" hidePageHeader>
-        <PageHeader eyebrow="Intelligence" title="Audit Intelligence" />
+        <PageHeader eyebrow="Intelligence" title="Audit intelligence" />
         <Skeleton className="mt-6 h-48 w-full" />
       </AppShell>
     );
@@ -72,7 +72,7 @@ function AuditIntelligencePage() {
   if (!accessQuery.data) {
     return (
       <AppShell title="" hidePageHeader>
-        <PageHeader eyebrow="Intelligence" title="Audit Intelligence" />
+        <PageHeader eyebrow="Intelligence" title="Audit intelligence" />
         <ErrorState title="Manager access required" description="Only managers can view audit intelligence." />
       </AppShell>
     );
@@ -81,7 +81,7 @@ function AuditIntelligencePage() {
   if (intelQuery.isError) {
     return (
       <AppShell title="" hidePageHeader>
-        <PageHeader eyebrow="Intelligence" title="Audit Intelligence" />
+        <PageHeader eyebrow="Intelligence" title="Audit intelligence" />
         <ErrorState title="Could not load" description={toUserMessage(intelQuery.error)} />
       </AppShell>
     );
@@ -93,7 +93,7 @@ function AuditIntelligencePage() {
       <AppShell title="" hidePageHeader>
         <PageHeader
           eyebrow="Intelligence"
-          title="Audit Intelligence"
+          title="Audit intelligence"
           description="Variance, health scores and auditor performance."
         />
         <EmptyState
@@ -120,7 +120,7 @@ function AuditIntelligencePage() {
       <div className="space-y-6">
         <PageHeader
           eyebrow="Intelligence"
-          title="Audit Intelligence"
+          title="Audit intelligence"
           description="Variance by store and SKU, health scores, trends and auditor performance."
           meta={
             <MpBadge tone="healthy" dot>
@@ -159,7 +159,7 @@ function AuditIntelligencePage() {
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">
-          <section className="overflow-hidden rounded-xl border border-line bg-white p-4 shadow-card sm:p-5">
+          <section className="overflow-hidden rounded-xl border border-line bg-white p-4 sm:p-5">
             <h3 className="font-display text-[15px] font-semibold text-navy">Compliance trend</h3>
             <div className="mt-4 h-56">
               <ResponsiveContainer width="100%" height="100%">
@@ -174,7 +174,7 @@ function AuditIntelligencePage() {
             </div>
           </section>
 
-          <section className="overflow-hidden rounded-xl border border-line bg-white p-4 shadow-card sm:p-5">
+          <section className="overflow-hidden rounded-xl border border-line bg-white p-4 sm:p-5">
             <h3 className="font-display text-[15px] font-semibold text-navy">Variance by store (₹)</h3>
             <div className="mt-4 h-56">
               <ResponsiveContainer width="100%" height="100%">

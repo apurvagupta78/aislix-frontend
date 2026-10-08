@@ -122,8 +122,8 @@ export const FINDING_STATUSES: { value: FindingStatus; label: string }[] = [
 ];
 
 export const AUDIT_ORIGIN_LABEL: Record<AuditOrigin, string> = {
-  digital: "Digital Audit",
-  ai: "AI Audit",
+  digital: "Digital audit",
+  ai: "AI audit",
   ai_assisted: "AI-Assisted Audit",
 };
 

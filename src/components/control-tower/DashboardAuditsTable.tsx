@@ -169,6 +169,6 @@ export function DashboardAuditsTable({
   if (embedded) return content;
 
   return (
-    <section className="overflow-hidden rounded-xl border border-line bg-white shadow-card">{content}</section>
+    <section className="overflow-hidden rounded-xl border border-line bg-white">{content}</section>
   );
 }

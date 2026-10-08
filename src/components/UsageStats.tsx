@@ -64,7 +64,7 @@ export function StatCard({
   className?: string;
 }) {
   return (
-    <div className={cn("overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card transition-shadow group", className)}>
+    <div className={cn("overflow-hidden rounded-xl border border-line bg-white p-5 group", className)}>
       <div className="flex items-center justify-between gap-3">
         {icon && (
           <span
@@ -79,7 +79,7 @@ export function StatCard({
         {hint && <span className="text-[11px] text-mp-muted">{hint}</span>}
       </div>
       <p className="mt-4 font-display text-2xl font-semibold tracking-tight text-navy">{value}</p>
-      <p className="mt-1 text-[11px] font-medium uppercase tracking-[0.06em] text-mp-muted">{label}</p>
+      <p className="mt-1 text-xs font-medium text-mp-muted">{label}</p>
     </div>
   );
 }
@@ -100,7 +100,7 @@ export function RingCard({
   footer?: string | undefined;
 }) {
   return (
-    <div className="group flex items-center gap-4 overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card transition-shadow">
+    <div className="group flex items-center gap-4 overflow-hidden rounded-xl border border-line bg-white p-5">
       <ProgressRing value={ringValue} label={ringLabel} sublabel={ringSublabel} tone={tone} />
       <div className="min-w-0">
         <p className="text-sm font-medium text-navy">{label}</p>

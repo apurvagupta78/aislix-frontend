@@ -30,7 +30,7 @@ export const Route = createFileRoute("/sku-intelligence")({
     if (typeof search.sku === "string" && search.sku.trim()) return { sku: search.sku.trim() };
     return {};
   },
-  head: () => ({ meta: [{ title: "SKU & Shelf Intelligence — Aislix" }] }),
+  head: () => ({ meta: [{ title: "SKU & shelf intelligence — Aislix" }] }),
   component: SkuIntelligencePage,
 });
 
@@ -40,7 +40,7 @@ function SkuIntelligencePage() {
       <div className="space-y-6">
         <PageHeader
           eyebrow="Intelligence"
-          title="SKUs & Shelf Intelligence"
+          title="SKUs & shelf intelligence"
           description="Cross-store variance, shortages, and recurrence — drill down to store, shelf, audit and evidence."
         />
         <SkuIntelligenceMain />
@@ -147,7 +147,7 @@ function SkuIntelligenceMain() {
           )}
         </div>
 
-        <aside className="overflow-hidden rounded-xl border border-line bg-white p-4 shadow-card lg:sticky lg:top-4 lg:self-start">
+        <aside className="overflow-hidden rounded-xl border border-line bg-white p-4 lg:sticky lg:top-4 lg:self-start">
           {selected ? (
             <>
               <h3 className="font-display text-[15px] font-semibold text-navy">{selected.product_name}</h3>

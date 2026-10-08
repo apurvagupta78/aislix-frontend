@@ -58,7 +58,7 @@ import { cn } from "@/lib/utils";
 type Option = { value: string; label: string };
 
 const CONTROL =
-  "h-9 shrink-0 rounded-lg border border-border bg-surface px-2.5 text-xs font-normal text-foreground shadow-soft hover:bg-[var(--aislix-local-bg)] focus:ring-2 focus:ring-ring/60 data-[state=open]:bg-[var(--aislix-warehouse-bg)]";
+  "h-9 shrink-0 rounded-lg border border-border bg-surface px-2.5 text-xs font-normal text-foreground hover:bg-[var(--aislix-local-bg)] focus:ring-2 focus:ring-ring/60 data-[state=open]:bg-[var(--aislix-warehouse-bg)]";
 
 function CatalogFields({
   filters,

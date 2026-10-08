@@ -135,8 +135,8 @@ function SectionKpiCardView({
 }) {
   const isMuted = value === "Not enough data" || value === "—";
   return (
-    <div className="rounded-xl border border-border/60 bg-card px-3.5 py-3 shadow-sm">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+    <div className="rounded-xl border border-border/60 bg-card px-3.5 py-3">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p
         className={cn(
           "mt-1 text-xl font-semibold tabular-nums tracking-tight",
@@ -257,7 +257,7 @@ function AuditCardMobile({ row, onOpen }: { row: RecentAuditRow; onOpen: () => v
     <button
       type="button"
       onClick={onOpen}
-      className="group w-full rounded-xl border border-border/60 bg-card p-3.5 text-left shadow-sm transition-colors hover:border-brand/20 hover:bg-brand-soft/20"
+      className="group w-full rounded-xl border border-border/60 bg-card p-3.5 text-left transition-colors hover:border-brand/20 hover:bg-brand-soft/20"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -271,33 +271,33 @@ function AuditCardMobile({ row, onOpen }: { row: RecentAuditRow; onOpen: () => v
       </div>
       <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-[11px]">
         <div>
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Role</p>
+          <p className="text-xs text-muted-foreground">Role</p>
           <p className="mt-0.5 text-foreground">{row.role}</p>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Category</p>
+          <p className="text-xs text-muted-foreground">Category</p>
           <p className="mt-0.5 truncate text-foreground">{row.category ?? "—"}</p>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">OSA</p>
+          <p className="text-xs text-muted-foreground">OSA</p>
           <div className="mt-1">
             <KpiChip value={formatKpiPercent(row.osa)} muted={row.osa === null} />
           </div>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Planogram</p>
+          <p className="text-xs text-muted-foreground">Planogram</p>
           <div className="mt-1">
             <KpiChip value={formatKpiPercent(row.planogram)} muted={row.planogram === null} />
           </div>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Issues</p>
+          <p className="text-xs text-muted-foreground">Issues</p>
           <div className="mt-1">
             <IssueChip count={row.issues} />
           </div>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Assigned to</p>
+          <p className="text-xs text-muted-foreground">Assigned to</p>
           <p className="mt-0.5 truncate text-muted-foreground">{row.assigned_to ?? "Unassigned"}</p>
         </div>
       </div>
@@ -363,7 +363,7 @@ export function RecentAuditsSection({
     <section className="mt-8">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             Recent audits
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -388,7 +388,7 @@ export function RecentAuditsSection({
         ))}
       </div>
 
-      <div className="mt-4 rounded-2xl border border-border/60 bg-card shadow-sm">
+      <div className="mt-4 rounded-2xl border border-border/60 bg-card">
         <div className="space-y-2 border-b border-border/40 p-3 sm:p-4">
           <DashboardCompactFilterToolbar
             filters={filters}
@@ -496,7 +496,7 @@ export function RecentAuditsSection({
             <div className="hidden overflow-x-auto lg:block">
               <table className="w-full min-w-[1040px] text-left text-xs">
                 <thead>
-                  <tr className="border-b border-border/60 text-[10px] font-medium uppercase tracking-wide">
+                  <tr className="border-b border-border/60 text-xs font-medium">
                     <th className="px-5 pb-2.5 pt-3 pr-3">
                       <SortHeader label="Date" sortKey="date" activeKey={sortKey} direction={sortDir} onSort={handleSort} />
                     </th>

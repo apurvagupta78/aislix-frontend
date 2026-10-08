@@ -438,7 +438,7 @@ export function AuditExecutionForm({
         />
       ) : null}
 
-      <div className="sticky top-0 z-10 rounded-xl border border-border bg-card p-4 shadow-sm">
+      <div className="sticky top-0 z-10 rounded-xl border border-border bg-card p-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h2 className="text-lg font-semibold">{templateName}</h2>

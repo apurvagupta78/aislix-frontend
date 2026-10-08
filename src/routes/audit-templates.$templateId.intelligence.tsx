@@ -24,7 +24,7 @@ import { KPI_CATALOG, exportKpiCsv, resolveKpisForTemplate } from "@/lib/kpi-eng
 import type { KpiDefinition } from "@/lib/kpi-engine/definitions";
 
 export const Route = createFileRoute("/audit-templates/$templateId/intelligence")({
-  head: () => ({ meta: [{ title: "Template Intelligence — Aislix" }] }),
+  head: () => ({ meta: [{ title: "Template intelligence — Aislix" }] }),
   component: TemplateIntelligencePage,
 });
 
@@ -88,7 +88,7 @@ function TemplateIntelligencePage() {
 
   if (templateQuery.isLoading) {
     return (
-      <AppShell title="Template Intelligence">
+      <AppShell title="Template intelligence">
         <Skeleton className="h-48 w-full" />
       </AppShell>
     );
@@ -96,7 +96,7 @@ function TemplateIntelligencePage() {
 
   if (templateQuery.error || !templateQuery.data) {
     return (
-      <AppShell title="Template Intelligence">
+      <AppShell title="Template intelligence">
         <ErrorState title="Template not found" description="Could not load this template." />
       </AppShell>
     );

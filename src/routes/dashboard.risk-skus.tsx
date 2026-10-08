@@ -31,7 +31,7 @@ function RiskSkusPage() {
 
   return (
     <ControlTowerDataTable
-      title="SKU Risk Ranking"
+      title="SKU risk ranking"
       description="SKUs ranked by open findings."
       columns={[
         { key: "sku", label: "SKU" },

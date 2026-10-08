@@ -59,7 +59,7 @@ function CommandSectionHeader({
 }) {
   return (
     <div className="mb-4">
-      <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+      <p className="text-xs font-medium text-muted-foreground">
         {eyebrow}
       </p>
       <div className="mt-1 flex items-start gap-2">
@@ -96,7 +96,7 @@ function TrendSummaryChip({
 }) {
   return (
     <div className="rounded-lg border border-border/60 bg-muted/15 px-3 py-2.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className={cn("mt-1 text-base font-semibold tabular-nums", noData && "text-muted-foreground")}>
         {value}
       </p>
@@ -158,7 +158,7 @@ function TrendTooltip({
 
   return (
     <div style={tooltipStyle} className="min-w-[180px] px-3 py-2.5">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <p className="text-xs font-medium text-muted-foreground">
         {label} · {store}
       </p>
       <p className="text-[10px] text-muted-foreground">{role}</p>
@@ -172,7 +172,7 @@ function TrendTooltip({
           const chip = KPI_TREND_CHIP_LABELS[kpiId];
           return (
             <div key={kpiId}>
-              <p className="text-[10px] font-semibold uppercase text-muted-foreground">{chip}</p>
+              <p className="text-xs font-medium text-muted-foreground">{chip}</p>
               <p className="text-sm font-semibold tabular-nums">
                 {mode === "vs_target"
                   ? `${Number(raw) >= 0 ? "+" : ""}${raw} pts`
@@ -286,7 +286,7 @@ export function PerformanceOverTimeSection({
         info="Each point represents actual audit data in the selected view. KPI totals use the underlying audit numerator and denominator where available."
       />
 
-      <div className="rounded-xl border border-border/60 bg-white p-4 shadow-sm sm:p-5">
+      <div className="rounded-xl border border-border/60 bg-white p-4 sm:p-5">
         {auditVolumeLabel ? (
           <p className="mb-3 text-xs text-muted-foreground">{auditVolumeLabel}</p>
         ) : (
@@ -399,7 +399,7 @@ export function PerformanceOverTimeSection({
                 onClick={() => setChartMode("performance")}
                 className={cn(
                   "rounded-md px-2.5 py-1 font-medium transition-colors",
-                  chartMode === "performance" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground",
+                  chartMode === "performance" ? "bg-white text-foreground" : "text-muted-foreground",
                 )}
               >
                 Performance
@@ -410,7 +410,7 @@ export function PerformanceOverTimeSection({
                 disabled={!hasTargets}
                 className={cn(
                   "rounded-md px-2.5 py-1 font-medium transition-colors",
-                  chartMode === "vs_target" ? "bg-white text-foreground shadow-sm" : "text-muted-foreground",
+                  chartMode === "vs_target" ? "bg-white text-foreground" : "text-muted-foreground",
                   !hasTargets && "cursor-not-allowed opacity-40",
                 )}
               >
@@ -493,7 +493,7 @@ export function PerformanceOverTimeSection({
 
         {showOpenIssues && trend.open_issues_points.length > 0 && (
           <div className="mt-4 border-t border-border/60 pt-4">
-            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">
               {OPEN_ISSUES_TREND_LABEL}
             </p>
             <div className="h-36">

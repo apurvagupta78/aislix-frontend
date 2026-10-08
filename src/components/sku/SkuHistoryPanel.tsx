@@ -48,7 +48,7 @@ export function SkuHistoryPanel({ sku }: { sku: string }) {
   return (
     <div className="space-y-4">
       <div>
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Potential inventory value variance
         </p>
         <p className="text-2xl font-semibold tabular-nums">

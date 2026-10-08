@@ -29,7 +29,7 @@ export function ActionRequiredQueue({ items }: { items: ActionRequiredItem[] }) 
   return (
     <section className="space-y-3">
       <div>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        <h2 className="text-sm font-medium text-muted-foreground">
           Action required
         </h2>
         <p className="text-xs text-muted-foreground">
@@ -38,7 +38,7 @@ export function ActionRequiredQueue({ items }: { items: ActionRequiredItem[] }) 
       </div>
       <div className="overflow-x-auto rounded-xl border border-border">
         <table className="w-full min-w-[900px] text-left text-sm">
-          <thead className="border-b border-border bg-muted/40 text-xs uppercase text-muted-foreground">
+          <thead className="border-b border-border text-xs text-muted-foreground">
             <tr>
               <th className="p-3">Severity</th>
               <th className="p-3">Location / SKU</th>

@@ -18,12 +18,12 @@ import { cn } from "@/lib/utils";
 import type { ControlTowerKpi, KpiTone } from "@/lib/control-tower";
 import { KpiInfoPopover } from "./KpiInfoPopover";
 
-const TONE_ACCENT: Record<KpiTone, string> = {
-  brand: "border-l-[var(--aislix-primary)]",
-  good: "border-l-[var(--aislix-supermarket-border)]",
-  warn: "border-l-[var(--aislix-darkstore-border)]",
-  bad: "border-l-[var(--aislix-darkstore-border)]",
-  neutral: "border-l-[var(--aislix-warehouse-border)]",
+const TONE_DOT: Record<KpiTone, string> = {
+  brand: "bg-[#04203F]",
+  good: "bg-[#79E2A8]",
+  warn: "bg-[#ECBDCC]",
+  bad: "bg-[#ECBDCC]",
+  neutral: "bg-[#D9E2E8]",
 };
 
 function iconFor(label: string) {
@@ -56,8 +56,7 @@ export function KpiCardVisual({
   const firstTrend = kpi.trend?.[0];
   const lastTrend = kpi.trend?.at(-1);
   const trendUp = firstTrend !== undefined && lastTrend !== undefined && lastTrend > firstTrend;
-  const Icon = iconFor(kpi.label);
-  const isSample = kpi.source?.includes("demo") || kpi.source?.includes("Illustrative");
+    const isSample = kpi.source?.includes("demo") || kpi.source?.includes("Illustrative");
 
   return (
     <button
@@ -65,26 +64,23 @@ export function KpiCardVisual({
       disabled={!kpi.available}
       onClick={() => kpi.available && onDrill?.(kpi)}
       className={cn(
-        "kpi-tile group flex min-h-[178px] flex-col border-l-4 bg-white p-5 text-left",
-        TONE_ACCENT[kpi.tone],
+        "kpi-tile group flex min-h-[150px] flex-col bg-white p-5 text-left",
         !kpi.available && "cursor-not-allowed opacity-60",
       )}
     >
       <div className="relative flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-1">
-          <p className="text-[0.7rem] font-bold uppercase tracking-wide text-[var(--aislix-secondary)]">
+        <div className="flex min-w-0 items-start gap-1.5">
+          <span aria-hidden className={cn("mt-1.5 size-1.5 shrink-0 rounded-full", TONE_DOT[kpi.tone])} />
+          <p className="text-sm text-[var(--aislix-secondary)]">
             {kpi.label}
           </p>
           <span className="text-[var(--aislix-secondary)]">
             <KpiInfoPopover kpi={kpi} scopeLabel={scopeLabel} periodLabel={periodLabel} />
           </span>
         </div>
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-[var(--aislix-border)] bg-[var(--aislix-surface)]">
-          <Icon className="size-5 text-[var(--aislix-primary)]" />
-        </span>
       </div>
 
-      <p className="relative mt-4 text-4xl font-extrabold tracking-tight text-[var(--aislix-primary)]">{kpi.value}</p>
+      <p className="relative mt-4 text-3xl font-semibold tabular-nums text-[var(--aislix-primary)]">{kpi.value}</p>
       <p className="relative mt-1 line-clamp-2 text-xs font-medium text-[var(--aislix-secondary)]">{kpi.detail}</p>
 
       {kpi.trendLabel ? (
@@ -130,7 +126,7 @@ export function KpiCardVisual({
           <span />
         )}
         {isSample ? (
-          <span className="rounded-full bg-[var(--aislix-custom-bg)] px-2 py-0.5 text-[9px] font-bold uppercase text-[var(--aislix-secondary)]">
+          <span className="rounded-full bg-[var(--aislix-custom-bg)] px-2 py-0.5 text-xs font-medium text-[var(--aislix-secondary)]">
             Sample
           </span>
         ) : null}

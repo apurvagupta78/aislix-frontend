@@ -67,7 +67,7 @@ export function TemplatePreview({ templateName, definition, viewMode: initialVie
       </div>
       <div className="flex justify-center bg-muted/30 p-6">
         <div
-          className={`rounded-xl border border-border bg-background shadow-sm ${
+          className={`rounded-xl border border-border bg-background ${
             view === "mobile" ? "w-full max-w-sm" : "w-full max-w-2xl"
           }`}
         >
@@ -89,7 +89,7 @@ export function TemplatePreview({ templateName, definition, viewMode: initialVie
 
                 return (
                   <section key={section.key}>
-                    <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    <h4 className="mb-2 text-xs font-medium text-muted-foreground">
                       {section.title}
                       {section.repeatable ? " (per SKU)" : ""}
                     </h4>

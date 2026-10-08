@@ -19,7 +19,7 @@ type Props = {
 function InfoSection({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-muted-foreground">
+      <p className="text-xs font-medium text-muted-foreground">
         {label}
       </p>
       <p className="mt-0.5 text-sm leading-snug">{value}</p>

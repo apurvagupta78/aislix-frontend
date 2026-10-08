@@ -13,7 +13,7 @@ import { fetchOrgAssignments, isOrgManager } from "@/lib/assignments";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/audit-calendar")({
-  head: () => ({ meta: [{ title: "Audit Calendar — Aislix" }] }),
+  head: () => ({ meta: [{ title: "Audit calendar — Aislix" }] }),
   component: AuditCalendarPage,
 });
 
@@ -114,7 +114,7 @@ function AuditCalendarPage() {
     <AppShell title="" hidePageHeader>
       <div className="play-canvas space-y-5">
         <PageHeader
-          title="Audit Calendar"
+          title="Audit calendar"
           description="See what's scheduled, assigned, due today, or overdue."
           actions={
             <Button variant="outline" size="sm" className="rounded-xl" asChild>

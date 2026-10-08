@@ -166,7 +166,7 @@ export function AuditGovernanceTabs({
           ) : (
             <div className="overflow-x-auto rounded-2xl border border-border">
               <table className="w-full min-w-[64rem] text-sm">
-                <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="text-left text-xs text-muted-foreground">
                   <tr>
                     {["SKU", "Product", "Expected", "Actual", "Variance", "Variance %", "Value impact", "RCA"].map((h) => (
                       <th key={h} className="px-3 py-2 font-medium">{h}</th>
@@ -247,7 +247,7 @@ export function AuditGovernanceTabs({
           ) : (
             <div className="overflow-x-auto rounded-2xl border border-border">
               <table className="w-full min-w-[56rem] text-sm">
-                <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="text-left text-xs text-muted-foreground">
                   <tr>
                     {["Type", "Severity", "SKU", "Variance", "RCA", "Status", "Assigned", "Due"].map((h) => (
                       <th key={h} className="px-3 py-2 font-medium">{h}</th>
@@ -289,7 +289,7 @@ export function AuditGovernanceTabs({
           ) : (
             <div className="overflow-x-auto rounded-2xl border border-border">
               <table className="w-full min-w-[52rem] text-sm">
-                <thead className="bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="text-left text-xs text-muted-foreground">
                   <tr>
                     {["Action", "Priority", "Owner", "Due", "SLA", "Status"].map((h) => (
                       <th key={h} className="px-3 py-2 font-medium">{h}</th>

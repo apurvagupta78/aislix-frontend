@@ -101,7 +101,7 @@ function FindingDetailPage() {
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-2">
             <section className="rounded-2xl border border-border bg-card p-5">
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">What happened?</p>
+              <p className="text-xs font-medium text-muted-foreground">What happened?</p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <FindingSeverityBadge severity={finding.severity} />
                 <Badge variant="outline">{findingTypeLabel(finding.finding_type)}</Badge>
@@ -137,7 +137,7 @@ function FindingDetailPage() {
             </section>
 
             <section className="rounded-2xl border border-border bg-card p-5">
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Why? (RCA)</p>
+              <p className="text-xs font-medium text-muted-foreground">Why? (RCA)</p>
               <p className="mt-2 text-sm">Current: {rcaLabel(finding.rca_code)}{finding.rca_notes ? ` — ${finding.rca_notes}` : ""}</p>
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <div>
@@ -169,7 +169,7 @@ function FindingDetailPage() {
             </section>
 
             <section className="rounded-2xl border border-border bg-card p-5">
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Corrective actions</p>
+              <p className="text-xs font-medium text-muted-foreground">Corrective actions</p>
               {(actionsQuery.data ?? []).length === 0 ? (
                 <p className="mt-2 text-sm text-muted-foreground">No corrective action yet.</p>
               ) : (
@@ -197,7 +197,7 @@ function FindingDetailPage() {
             </section>
           ) : managerQuery.data ? (
             <section className="h-fit rounded-2xl border border-border bg-card p-5">
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Corrective action</p>
+              <p className="text-xs font-medium text-muted-foreground">Corrective action</p>
               <p className="mt-2 text-sm text-muted-foreground">
                 Assign an owner, set SLA and escalation for this finding.
               </p>

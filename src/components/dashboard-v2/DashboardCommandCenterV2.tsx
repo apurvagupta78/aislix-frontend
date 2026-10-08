@@ -124,7 +124,7 @@ function SectionHeading({
   return (
     <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-brand">
+        <p className="text-xs font-medium text-brand">
           {eyebrow}
         </p>
         <h2 className="mt-1 text-xl font-semibold tracking-tight">{title}</h2>
@@ -173,7 +173,7 @@ function ExecutivePulse() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {DASHBOARD_SAMPLE.kpis.map((kpi) => (
           <div key={kpi.label} className="card-surface p-4">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               {kpi.label}
             </p>
             <p
@@ -288,7 +288,7 @@ function ActionRequired() {
       />
       <div className="overflow-x-auto rounded-2xl border bg-card">
         <table className="w-full min-w-[980px] text-left text-sm">
-          <thead className="border-b bg-muted/40 text-[0.65rem] uppercase tracking-wider text-muted-foreground">
+          <thead className="border-b text-xs text-muted-foreground">
             <tr>
               <th className="p-3">Severity</th>
               <th>Store</th>
@@ -798,7 +798,7 @@ function StoreNetwork() {
         >
           <div className="overflow-x-auto">
             <table className="w-full min-w-[880px] text-left text-xs">
-              <thead className="border-b text-[0.62rem] uppercase tracking-wide text-muted-foreground">
+              <thead className="border-b text-[0.62rem] text-muted-foreground">
                 <tr>
                   <th className="pb-2">Store / ID</th>
                   <th>Country / City</th>

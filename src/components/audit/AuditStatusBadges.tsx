@@ -21,12 +21,12 @@ export function CollectionMethodBadge({
   const m = mode ?? "ai";
   const config: Record<string, { label: string; icon: typeof Bot; className: string }> = {
     digital: {
-      label: "Digital Audit",
+      label: "Digital audit",
       icon: ClipboardList,
       className: "bg-[var(--aislix-warehouse-bg)] text-[var(--aislix-primary)] border-[var(--aislix-warehouse-border)]",
     },
     ai: {
-      label: "AI Audit",
+      label: "AI audit",
       icon: Bot,
       className: "bg-status-ai-soft text-status-ai-strong border-status-ai/25",
     },

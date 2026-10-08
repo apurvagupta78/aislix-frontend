@@ -249,7 +249,7 @@ function CorrectiveActionsMain() {
     <div className="space-y-4">
       <PageHeader
         eyebrow="Exceptions"
-        title="Corrective Actions"
+        title="Corrective actions"
         description="Every fix from AI and Digital audits — detect, assign, fix, verify, close."
         meta={
           <>

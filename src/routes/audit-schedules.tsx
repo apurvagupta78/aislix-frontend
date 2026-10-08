@@ -29,7 +29,7 @@ import { fetchAssignableMembers, isOrgManager } from "@/lib/assignments";
 import { fetchPlanogramStores } from "@/lib/planogram";
 
 export const Route = createFileRoute("/audit-schedules")({
-  head: () => ({ meta: [{ title: "Recurring Audits — Aislix" }] }),
+  head: () => ({ meta: [{ title: "Recurring audits — Aislix" }] }),
   component: AuditSchedulesPage,
 });
 
@@ -129,7 +129,7 @@ function AuditSchedulesPage() {
 
   if (accessQuery.isPending) {
     return (
-      <AppShell title="Recurring Audits">
+      <AppShell title="Recurring audits">
         <Skeleton className="h-40 w-full" />
       </AppShell>
     );
@@ -137,7 +137,7 @@ function AuditSchedulesPage() {
 
   if (accessQuery.data !== true) {
     return (
-      <AppShell title="Recurring Audits">
+      <AppShell title="Recurring audits">
         <ErrorState title="Manager access required" description="Only managers can manage recurring audits." />
       </AppShell>
     );
@@ -147,7 +147,7 @@ function AuditSchedulesPage() {
 
   return (
     <AppShell
-      title="Recurring Audits"
+      title="Recurring audits"
       description="Recurring audits generate assignments server-side (pg_cron or schedule-runner Edge Function). Use Run now for a manual idempotent trigger."
     >
       <div className="mx-auto max-w-3xl space-y-6">

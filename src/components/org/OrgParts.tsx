@@ -107,7 +107,7 @@ export function OrgStat({
 }) {
   return (
     <div className="card-surface p-4">
-      <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
       {loading ? (
         <Skeleton className="mt-2 h-7 w-24" />
       ) : (
@@ -279,7 +279,7 @@ const toneClasses: Record<string, string> = {
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0 rounded-xl border border-border bg-surface px-3 py-2">
-      <p className="truncate text-[0.68rem] font-medium uppercase tracking-wider text-muted-foreground">
+      <p className="truncate text-[0.68rem] font-medium text-muted-foreground">
         {label}
       </p>
       <p className="mt-0.5 truncate text-sm font-semibold text-foreground">{value}</p>
@@ -463,7 +463,7 @@ function StoreTeamStrip({ storeId }: { storeId: string }) {
 
   return (
     <div className="mt-4 border-t border-border pt-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="text-xs font-medium text-muted-foreground">
         Team with access
       </p>
       {items.length === 0 ? (

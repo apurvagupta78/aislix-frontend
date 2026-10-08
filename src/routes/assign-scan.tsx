@@ -73,7 +73,7 @@ export const Route = createFileRoute("/assign-scan")({
 
   head: () => ({
     meta: [
-      { title: "Assignments & Schedules — Aislix" },
+      { title: "Assignments & schedules — Aislix" },
       {
         name: "description",
         content:
@@ -91,7 +91,7 @@ export const Route = createFileRoute("/assign-scan")({
   component: AssignScanPage,
 });
 
-const card = "rounded-2xl border border-border bg-card p-5 shadow-sm";
+const card = "rounded-2xl border border-border bg-card p-5";
 
 function AssignScanPage() {
   const navigate = useNavigate();
@@ -416,7 +416,7 @@ function AssignScanPage() {
 
   if (accessQuery.isPending) {
     return (
-      <AppShell title="Assignments & Schedules" description="Delegate audits to your team.">
+      <AppShell title="Assignments & schedules" description="Delegate audits to your team.">
         <Skeleton className="h-40 w-full" />
       </AppShell>
     );
@@ -424,7 +424,7 @@ function AssignScanPage() {
 
   if (accessQuery.data !== true) {
     return (
-      <AppShell title="Assignments & Schedules" description="Delegate audits to your team.">
+      <AppShell title="Assignments & schedules" description="Delegate audits to your team.">
         <EmptyState
           title="Manager access required"
           description="Only owners, admins and managers can assign audits. Ask your workspace owner for access."
@@ -435,7 +435,7 @@ function AssignScanPage() {
 
   return (
     <AppShell
-      title="Assign Audit"
+      title="Assign audit"
       description="Select scope, assignee, due date and collection method — digital or AI-assisted."
     >
       <div className="max-w-3xl space-y-6">
@@ -483,8 +483,8 @@ function AssignScanPage() {
                 className="mt-3"
               >
                 <TabsList className="rounded-xl">
-                  <TabsTrigger value="digital">Digital Audit</TabsTrigger>
-                  <TabsTrigger value="ai">AI Audit</TabsTrigger>
+                  <TabsTrigger value="digital">Digital audit</TabsTrigger>
+                  <TabsTrigger value="ai">AI audit</TabsTrigger>
                 </TabsList>
               </Tabs>
               <p className="mt-2 text-xs text-muted-foreground">

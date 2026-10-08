@@ -37,12 +37,12 @@ export function actionTypeLabel(value: string | null | undefined): string {
 export type ActionSource = "ai" | "digital";
 
 export const ACTION_SOURCES: { value: ActionSource; label: string }[] = [
-  { value: "ai", label: "AI Audit" },
-  { value: "digital", label: "Digital Audit" },
+  { value: "ai", label: "AI audit" },
+  { value: "digital", label: "Digital audit" },
 ];
 
 export function actionSourceLabel(value: string | null | undefined): string {
-  return value === "digital" ? "Digital Audit" : "AI Audit";
+  return value === "digital" ? "Digital audit" : "AI audit";
 }
 
 /** The five stages people see. Raw statuses (assigned, rejected, resolved…) collapse into these. */

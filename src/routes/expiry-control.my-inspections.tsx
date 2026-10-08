@@ -15,7 +15,7 @@ function MyInspectionsPage() {
   const query = useQuery({ queryKey: ["expiry-my"], queryFn: fetchMyInspections, retry: false });
 
   return (
-    <AppShell title="My Inspections" description="Assigned expiry inspections — mobile-first execution.">
+    <AppShell title="My inspections" description="Assigned expiry inspections — mobile-first execution.">
       {query.isLoading && <Skeleton className="h-48" />}
       {query.isError && <ErrorState description="Could not load inspections." />}
       {query.data?.length === 0 && (

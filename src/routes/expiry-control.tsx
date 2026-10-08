@@ -24,7 +24,7 @@ function useIsManager() {
 }
 
 export const Route = createFileRoute("/expiry-control")({
-  head: () => ({ meta: [{ title: "Expiry Control — Aislix" }] }),
+  head: () => ({ meta: [{ title: "Expiry control — Aislix" }] }),
   component: ExpiryControlLayout,
 });
 
@@ -92,7 +92,7 @@ function ExpiryControlMain() {
     <div className="space-y-6">
       <PageHeader
         eyebrow="Operations"
-        title="Expiry Control"
+        title="Expiry control"
         description="Point-in-time expiry inspections — not a guarantee of store-wide clearance."
         actions={headerActions}
       />

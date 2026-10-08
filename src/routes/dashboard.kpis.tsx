@@ -35,7 +35,7 @@ function KpisPage() {
 
   return (
     <ControlTowerDataTable
-      title="Control Tower KPIs"
+      title="Control tower KPIs"
       description="Full KPI snapshot for the selected scope."
       columns={[
         { key: "label", label: "KPI" },

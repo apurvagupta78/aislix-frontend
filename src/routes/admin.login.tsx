@@ -16,7 +16,7 @@ import { toUserMessage } from "@/lib/api/errors";
 export const Route = createFileRoute("/admin/login")({
   head: () => ({
     meta: [
-      { title: "Platform Admin — Aislix" },
+      { title: "Platform admin — Aislix" },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),

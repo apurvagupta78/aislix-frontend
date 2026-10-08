@@ -30,7 +30,7 @@ export function DashboardRoleSelector({
   return (
     <section className="mb-5 space-y-3" aria-label="View as role">
       <div>
-        <p className="text-[0.6rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        <p className="text-xs font-medium text-muted-foreground">
           View as
         </p>
         <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
@@ -52,7 +52,7 @@ export function DashboardRoleSelector({
                 className={cn(
                   "min-w-[148px] max-w-[180px] shrink-0 rounded-xl border px-3 py-2.5 text-left transition-all sm:min-w-0 sm:flex-1 sm:basis-[calc(20%-0.5rem)]",
                   selected
-                    ? "border-brand bg-brand text-brand-foreground shadow-sm"
+                    ? "border-brand bg-brand text-brand-foreground"
                     : "border-border/60 bg-white text-foreground shadow-none hover:border-brand/25 hover:bg-muted/20",
                 )}
               >

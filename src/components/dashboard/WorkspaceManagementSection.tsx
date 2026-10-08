@@ -75,7 +75,7 @@ function CardShell({
   children: ReactNode;
 }) {
   return (
-    <article className="group flex h-full min-h-[280px] flex-col rounded-2xl border border-border/60 bg-card p-4 shadow-sm transition-colors hover:border-brand/25 hover:bg-brand-soft/10">
+    <article className="group flex h-full min-h-[280px] flex-col rounded-2xl border border-border/60 bg-card p-4 transition-colors hover:border-brand/25 hover:bg-brand-soft/10">
       <div className="flex items-start gap-2.5">
         <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-soft/50 text-brand">
           <Icon className="size-4" strokeWidth={1.75} />
@@ -270,7 +270,7 @@ export function WorkspaceManagementSection({ data }: { data: WorkspaceManagement
   return (
     <section className="mt-8">
       <div className="mb-4">
-        <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        <p className="text-xs font-medium text-muted-foreground">
           Workspace
         </p>
         <p className="mt-1 text-sm text-muted-foreground">

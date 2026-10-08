@@ -452,12 +452,12 @@ export function HelpMeAskAislixDialog({
                       className={cn(
                         "rounded-xl border p-4 text-left transition",
                         selected
-                          ? "border-primary bg-white shadow-card"
+                          ? "border-primary bg-white"
                           : "border-line bg-canvas hover:border-primary/30",
                       )}
                     >
                       <div className="flex items-start gap-3">
-                        <span className="grid size-9 place-items-center rounded-lg bg-white text-navy shadow-sm">
+                        <span className="grid size-9 place-items-center rounded-lg bg-white text-navy">
                           <Icon className="h-4 w-4" />
                         </span>
                         <div>

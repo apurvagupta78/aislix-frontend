@@ -180,7 +180,7 @@ function Pill({ label, background, border, dashed, title }: { label: string; bac
 function DetailItem({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="min-w-0">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-[#667085]">{label}</p>
+      <p className="text-xs font-medium text-[#667085]">{label}</p>
       <div className="mt-0.5 truncate text-sm text-[#04203F]">{children}</div>
     </div>
   );
@@ -827,7 +827,7 @@ export function AuditExecutionTable({
         </div>
       ) : null}
 
-      <section className="rounded-2xl border border-[#D9E2E8] bg-white p-5 shadow-sm">
+      <section className="rounded-2xl border border-[#D9E2E8] bg-white p-5">
         <div className="flex flex-col gap-5 lg:flex-row">
           <div className="min-w-0 flex-1">
             <h2 className="text-xl font-semibold text-[#04203F]">{auditName}</h2>
@@ -932,7 +932,7 @@ export function AuditExecutionTable({
           null,
         );
         return (
-          <section key={section.key} className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm">
+          <section key={section.key} className="rounded-2xl border border-[#D9E2E8] bg-white p-4">
             <h3 className="text-sm font-semibold text-[#04203F]">{section.title}</h3>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {sectionColumns
@@ -1040,7 +1040,7 @@ export function AuditExecutionTable({
         </div>
       </div>
 
-      <div className="max-h-[70vh] overflow-auto rounded-2xl border border-[#D9E2E8] bg-white shadow-sm">
+      <div className="max-h-[70vh] overflow-auto rounded-2xl border border-[#D9E2E8] bg-white">
         <table className="w-full border-separate border-spacing-0 text-xs">
           <thead className="sticky top-0 z-20 bg-[#F4F7F9] text-left text-[11px] text-[#04203F]">
             <tr>

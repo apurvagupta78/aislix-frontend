@@ -66,7 +66,7 @@ export function OperationalScorecards({ data }: { data: ExecutiveScorecards }) {
     <section className="space-y-3">
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+          <h2 className="text-sm font-medium text-muted-foreground">
             Operational scorecards
           </h2>
           <p className="text-xs text-muted-foreground">

@@ -16,7 +16,7 @@ import { buildRecordContexts, type ResponseMap } from "@/lib/custom-audit";
 import { isOrgManager } from "@/lib/assignments";
 
 export const Route = createFileRoute("/audit-templates/$templateId/test")({
-  head: () => ({ meta: [{ title: "Test Audit Template — Aislix" }] }),
+  head: () => ({ meta: [{ title: "Test audit template — Aislix" }] }),
   component: TemplateTestPage,
 });
 
@@ -32,7 +32,7 @@ function TemplateTestPage() {
 
   if (templateQuery.isLoading) {
     return (
-      <AppShell title="Test Audit">
+      <AppShell title="Test audit">
         <Skeleton className="h-96 w-full" />
       </AppShell>
     );
@@ -41,7 +41,7 @@ function TemplateTestPage() {
   const template = templateQuery.data;
   if (!template) {
     return (
-      <AppShell title="Test Audit">
+      <AppShell title="Test audit">
         <ErrorState description={toUserMessage(templateQuery.error ?? "Template not found")} />
       </AppShell>
     );

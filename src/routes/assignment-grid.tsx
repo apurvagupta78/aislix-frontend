@@ -37,7 +37,7 @@ import {
 } from "@/lib/assignment-engine";
 
 export const Route = createFileRoute("/assignment-grid")({
-  head: () => ({ meta: [{ title: "Assignment Grid — Aislix" }] }),
+  head: () => ({ meta: [{ title: "Assignment grid — Aislix" }] }),
   component: AssignmentGridPage,
 });
 
@@ -147,7 +147,7 @@ function AssignmentGridPage() {
     <AppShell title="" hidePageHeader>
       <div className="play-canvas space-y-5">
         <PageHeader
-          title="Assignment Grid"
+          title="Assignment grid"
           description="Reassign, reschedule, and update status in bulk."
           actions={
             <>

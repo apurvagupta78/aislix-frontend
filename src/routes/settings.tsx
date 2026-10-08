@@ -33,7 +33,7 @@ import { AssignmentReminderSettingsPanel } from "@/components/settings/Assignmen
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
-      { title: "Workspace Settings — Aislix" },
+      { title: "Workspace settings — Aislix" },
       {
         name: "description",
         content:
@@ -79,7 +79,7 @@ function SettingsPage() {
         onValueChange={(value) => void navigate({ search: { tab: value }, replace: true })}
         className="space-y-5"
       >
-        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-xl border border-line bg-white p-1.5 shadow-card">
+        <TabsList className="h-auto w-full flex-wrap justify-start gap-1 rounded-xl border border-line bg-white p-1.5">
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.value}

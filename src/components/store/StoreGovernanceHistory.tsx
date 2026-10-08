@@ -52,7 +52,7 @@ export function StoreGovernanceHistory({
           <>
             <div className="mb-4 flex flex-wrap items-center gap-3">
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Store health score</p>
+                <p className="text-xs text-muted-foreground">Store health score</p>
                 <p className={`text-3xl font-semibold tabular-nums ${health.className}`}>
                   {formatScore(healthScore)} <span className="text-base font-medium">/ 100</span>
                 </p>
@@ -114,7 +114,7 @@ export function StoreGovernanceHistory({
         <Panel title="Audit history" description="Chronological audits with findings and open actions.">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[40rem] text-sm">
-              <thead className="text-left text-xs uppercase text-muted-foreground">
+              <thead className="text-left text-xs text-muted-foreground">
                 <tr>
                   {["Date", "Health", "Findings", "Open actions", "Planogram", "Audit"].map((h) => (
                     <th key={h} className="px-2 py-1 font-medium">{h}</th>

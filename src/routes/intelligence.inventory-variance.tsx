@@ -12,7 +12,7 @@ function fmt(value: number | null | undefined, suffix = ""): string {
 }
 
 export const Route = createFileRoute("/intelligence/inventory-variance")({
-  head: () => ({ meta: [{ title: "Inventory & Variance — Aislix" }] }),
+  head: () => ({ meta: [{ title: "Inventory & variance — Aislix" }] }),
   component: InventoryVariancePage,
 });
 
@@ -70,7 +70,7 @@ function InventoryVariancePage() {
       <div className="space-y-6">
         <PageHeader
           eyebrow="Intelligence"
-          title="Inventory & Variance"
+          title="Inventory & variance"
           description="Expected vs actual aggregates from digital audits with Expected+Actual mapping."
         />
         {query.isPending ? (
@@ -79,14 +79,14 @@ function InventoryVariancePage() {
           <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {kpis.map(([label, value], i) => {
-              const accents = ["#9B86D9", "#7DB7D6", "#FFEAF1", "#79E2A8", "#8EC9E8"];
+              const accents = ["#9B86D9", "#7DB7D6", "#ECBDCC", "#79E2A8", "#8EC9E8"];
               return (
                 <div
                   key={label}
                   className="rounded-xl border border-[#D9E2E8] bg-white p-4"
-                  style={{ borderLeftWidth: 3, borderLeftColor: accents[i % accents.length] }}
                 >
-                  <p className="text-xs font-medium uppercase tracking-wide text-[#667085]">
+                  <p className="flex items-center gap-1.5 text-sm text-[#667085]">
+                    <span aria-hidden className="size-1.5 shrink-0 rounded-full" style={{ background: accents[i % accents.length] }} />
                     {label}
                   </p>
                   <p className="mt-2 text-2xl font-semibold text-[#04203F]">{value}</p>

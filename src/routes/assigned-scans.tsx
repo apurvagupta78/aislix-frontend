@@ -93,7 +93,7 @@ function compliance(value: number | null) {
 /** "Test store · A-1-Z · Personal Care · Shampoo" */
 function scopeLine(row: Assignment): string {
   const parts = [
-    row.audit_mode === "digital" ? "Digital Audit" : "AI Audit",
+    row.audit_mode === "digital" ? "Digital audit" : "AI audit",
     row.store_name,
   ];
   if (row.location) parts.push(row.location);
@@ -383,7 +383,7 @@ function TeamScansTab() {
   return (
     <div className="overflow-x-auto rounded-2xl border border-border bg-card">
       <table className="w-full text-sm">
-        <thead className="bg-surface text-xs uppercase tracking-wide text-muted-foreground">
+        <thead className="text-xs text-muted-foreground">
           <tr>
             <th className="px-4 py-3 text-left font-medium">Assignment ID</th>
             <th className="px-4 py-3 text-left font-medium">Audit date</th>

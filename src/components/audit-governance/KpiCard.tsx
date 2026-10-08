@@ -58,7 +58,7 @@ export function KpiCard({
       type={onClick ? "button" : undefined}
       onClick={onClick}
       className={cn(
-        "rounded-lg border p-4 text-left shadow-card",
+        "rounded-lg border p-4 text-left",
         t.surface,
         onClick && "transition-colors",
         className,
@@ -71,7 +71,7 @@ export function KpiCard({
           </span>
         ) : null}
         <div className="min-w-0">
-          <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-mp-muted">{label}</p>
+          <p className="text-xs font-medium text-mp-muted">{label}</p>
           <p className={cn("mt-1 font-display text-[15px] font-semibold tabular-nums leading-none", t.value)}>
             {value}
           </p>

@@ -62,7 +62,7 @@ export function AskAislixVisual({ visual }: { visual: AskAislixResponse["visual"
   if (visual.type === "kpi" && visual.data?.[0]) {
     const row = visual.data[0] as { label?: string; value?: string };
     return (
-      <div className="rounded-xl border border-line bg-white p-5 shadow-card">
+      <div className="rounded-xl border border-line bg-white p-5">
         <p className="text-sm text-mp-muted">{row.label ?? visual.title}</p>
         <p className="mt-2 font-display text-3xl font-semibold text-navy">{row.value ?? "—"}</p>
       </div>

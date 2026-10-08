@@ -49,14 +49,14 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
     label: "Audits",
     icon: ClipboardCheck,
     items: [
-      { kind: "leaf", label: "My Work", to: "/my-scans" },
-      { kind: "leaf", label: "All Audits", to: "/history" },
-      { kind: "leaf", label: "Display Check", to: "/display-check" },
-      { kind: "leaf", label: "Rack Check", to: "/rack-check" },
+      { kind: "leaf", label: "My work", to: "/my-scans" },
+      { kind: "leaf", label: "All audits", to: "/history" },
+      { kind: "leaf", label: "Display check", to: "/display-check" },
+      { kind: "leaf", label: "Rack check", to: "/rack-check" },
       { kind: "leaf", label: "Assignments", to: "/assigned-scans" },
-      { kind: "leaf", label: "Audit Calendar", to: "/audit-calendar" },
-      { kind: "leaf", label: "Recurring Schedules", to: "/audit-schedules" },
-      { kind: "leaf", label: "Audit Templates", to: "/audit-templates", managerOnly: true },
+      { kind: "leaf", label: "Audit calendar", to: "/audit-calendar" },
+      { kind: "leaf", label: "Recurring schedules", to: "/audit-schedules" },
+      { kind: "leaf", label: "Audit templates", to: "/audit-templates", managerOnly: true },
     ],
   },
   {
@@ -65,9 +65,9 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
     icon: AlertTriangle,
     items: [
       { kind: "leaf", label: "Findings", to: "/findings" },
-      { kind: "leaf", label: "Corrective Actions", to: "/corrective-actions" },
-      { kind: "leaf", label: "SLA & Escalations", to: "/escalation-settings", managerOnly: true },
-      { kind: "leaf", label: "Exception Queue", to: "/exceptions", managerOnly: true },
+      { kind: "leaf", label: "Corrective actions", to: "/corrective-actions" },
+      { kind: "leaf", label: "SLA & escalations", to: "/escalation-settings", managerOnly: true },
+      { kind: "leaf", label: "Exception queue", to: "/exceptions", managerOnly: true },
     ],
   },
   {
@@ -75,8 +75,8 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
     label: "Intelligence",
     icon: BarChart3,
     items: [
-      { kind: "leaf", label: "Inventory & Variance", to: "/intelligence/inventory-variance" },
-      { kind: "leaf", label: "Expiry Control", to: "/expiry-control" },
+      { kind: "leaf", label: "Inventory & variance", to: "/intelligence/inventory-variance" },
+      { kind: "leaf", label: "Expiry control", to: "/expiry-control" },
       { kind: "leaf", label: "Analytics", to: "/audit-intelligence", managerOnly: true },
     ],
   },
@@ -85,12 +85,12 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
     label: "Operations",
     icon: Store,
     items: [
-      { kind: "leaf", label: "Stores / Outlets", to: "/stores" },
+      { kind: "leaf", label: "Stores / outlets", to: "/stores" },
       { kind: "leaf", label: "Supermarkets", to: "/stores", search: { model: "supermarket" } },
       { kind: "leaf", label: "Warehouses", to: "/operations/warehouses" },
       { kind: "leaf", label: "Distributors", to: "/operations/distributors" },
       { kind: "leaf", label: "SKUs", to: "/sku-intelligence" },
-      { kind: "leaf", label: "Master Data", to: "/store-master", managerOnly: true },
+      { kind: "leaf", label: "Master data", to: "/store-master", managerOnly: true },
     ],
   },
   {
@@ -112,10 +112,10 @@ export const APP_NAV_SECTIONS: NavSectionConfig[] = [
     icon: Settings,
     managerOnly: true,
     items: [
-      { kind: "leaf", label: "Workspace Settings", to: "/settings", search: { tab: "company" } },
+      { kind: "leaf", label: "Workspace settings", to: "/settings", search: { tab: "company" } },
       { kind: "leaf", label: "Notifications", to: "/settings", search: { tab: "notifications" } },
       { kind: "leaf", label: "Security", to: "/settings", search: { tab: "security" } },
-      { kind: "leaf", label: "Billing & Plan", to: "/billing" },
+      { kind: "leaf", label: "Billing & plan", to: "/billing" },
     ],
   },
 ];

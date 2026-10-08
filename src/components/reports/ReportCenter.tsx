@@ -224,7 +224,7 @@ function ReportView({
   return (
     <section
       aria-labelledby="report-title"
-      className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm sm:p-5"
+      className="rounded-2xl border border-[#D9E2E8] bg-white p-4 sm:p-5"
     >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
@@ -233,7 +233,7 @@ function ReportView({
               {info.label}
             </h2>
             {doc?.labeledDemo ? (
-              <span className="rounded-full border border-[#D9E2E8] bg-[#EEF1F4] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#667085]">
+              <span className="rounded-full border border-[#D9E2E8] bg-[#EEF1F4] px-2 py-0.5 text-xs font-medium text-[#667085]">
                 Demo data
               </span>
             ) : null}
@@ -436,7 +436,7 @@ function PhotoGrid({ doc }: { doc: ReportDocument }) {
     <div className="rounded-xl border border-[#D9E2E8] p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-[#04203F]">Shelf photos</h3>
-        <span className="text-[10px] font-medium uppercase tracking-wide text-[#667085]">Read from image</span>
+        <span className="text-xs font-medium text-[#667085]">Read from image</span>
       </div>
       {withUrl.length ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

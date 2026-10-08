@@ -31,7 +31,7 @@ const SETUP = [
     icon: Store,
     title: "Create your workspace and add stores",
     body: "Sign up, then follow the four setup steps. Add more stores one by one or import a CSV list in Organization & Stores.",
-    link: { to: "/stores" as const, label: "Organization & Stores" },
+    link: { to: "/stores" as const, label: "Organization & stores" },
   },
   {
     icon: Users,
@@ -43,13 +43,13 @@ const SETUP = [
     icon: Camera,
     title: "Run your first AI audit",
     body: "Tap New Audit, pick the store and take shelf photos. Results are ready in about a minute.",
-    link: { to: "/new-audit" as const, label: "New Audit" },
+    link: { to: "/new-audit" as const, label: "New audit" },
   },
   {
     icon: ClipboardCheck,
     title: "Fix what the AI found",
     body: "Empty shelves, wrong placements, empty bins and damaged displays become fixes with an owner and a due date. Close a fix with an after photo.",
-    link: { to: "/corrective-actions" as const, label: "Corrective Actions" },
+    link: { to: "/corrective-actions" as const, label: "Corrective actions" },
   },
   {
     icon: FileText,
@@ -78,7 +78,7 @@ const ROUTINES = [
       "Empty bins open a refill fix straight away; messy bins open a tidy fix.",
       "Re-check the same rack after refilling to close the fix.",
     ],
-    page: { to: "/rack-check" as const, label: "Rack Check" },
+    page: { to: "/rack-check" as const, label: "Rack check" },
   },
   {
     segment: "FMCG brand",
@@ -88,7 +88,7 @@ const ROUTINES = [
       "Use Display Check with your brand name to confirm the display is there and in good shape.",
       "Download the Claim proof pack for display and visibility payments.",
     ],
-    page: { to: "/display-check" as const, label: "Display Check" },
+    page: { to: "/display-check" as const, label: "Display check" },
     report: "claim",
   },
   {
@@ -133,7 +133,7 @@ function GuidePage() {
 
         <ol className="mt-8 grid gap-3 sm:grid-cols-2">
           {SETUP.map((step, i) => (
-            <li key={step.title} className="rounded-2xl border border-[#D9E2E8] bg-white p-5 shadow-sm">
+            <li key={step.title} className="rounded-2xl border border-[#D9E2E8] bg-white p-5">
               <div className="flex items-center gap-3">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#EEF1F4] text-sm font-semibold text-[#04203F]">
                   {i + 1}
@@ -152,7 +152,7 @@ function GuidePage() {
         <h2 className="mt-12 text-2xl font-semibold text-[#04203F]">Your daily routine</h2>
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           {ROUTINES.map((r) => (
-            <article key={r.segment} className="rounded-2xl border border-[#D9E2E8] bg-white p-5 shadow-sm">
+            <article key={r.segment} className="rounded-2xl border border-[#D9E2E8] bg-white p-5">
               <h3 className="text-base font-semibold text-[#04203F]">{r.segment}</h3>
               <p className="text-xs text-[#667085]">{r.who}</p>
               <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-sm text-[#04203F]">

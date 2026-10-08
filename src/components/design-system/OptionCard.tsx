@@ -55,7 +55,7 @@ export function OptionCard({
           <span className="text-sm font-semibold leading-snug text-foreground">{title}</span>
         </span>
         {selected ? (
-          <span className="absolute right-2 top-2 flex size-5 items-center justify-center rounded-full bg-brand text-brand-foreground shadow-sm">
+          <span className="absolute right-2 top-2 flex size-5 items-center justify-center rounded-full bg-brand text-brand-foreground">
             <Check className="size-3" />
           </span>
         ) : null}
@@ -79,7 +79,7 @@ export function OptionCard({
       )}
     >
       {selected ? (
-        <span className="absolute right-3 top-3 flex size-6 items-center justify-center rounded-full bg-brand text-brand-foreground shadow-sm">
+        <span className="absolute right-3 top-3 flex size-6 items-center justify-center rounded-full bg-brand text-brand-foreground">
           <Check className="size-3.5" />
         </span>
       ) : null}

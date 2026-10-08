@@ -64,7 +64,7 @@ export const Route = createFileRoute("/store-master")({
   component: StoreMasterPage,
 });
 
-const card = "overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card";
+const card = "overflow-hidden rounded-xl border border-line bg-white p-5";
 
 function formatDate(value: string | null): string {
   if (!value) return "—";
@@ -351,7 +351,7 @@ function StoreMasterPage() {
                   ) : (
                     <div className="overflow-x-auto rounded-xl border border-border">
                       <table className="w-full text-sm">
-                        <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                        <thead className="text-left text-xs text-muted-foreground">
                           <tr>
                             <th className="px-3 py-2">Planogram</th>
                             <th className="px-3 py-2">Location · Category</th>

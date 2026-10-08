@@ -83,7 +83,7 @@ export function DigitalAuditEvidenceSummary({
   let shelfShown = false;
 
   return (
-    <div className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-[#D9E2E8] bg-white p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-[#04203F]">Evidence captured</h3>

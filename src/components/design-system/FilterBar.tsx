@@ -12,7 +12,7 @@ type FilterBarProps = {
 /** Shared filter surface — search, selects, and toggles in one row. */
 export function FilterBar({ children, className }: FilterBarProps) {
   return (
-    <div className={cn("space-y-3 rounded-xl border border-line bg-white p-4 shadow-card", className)}>
+    <div className={cn("space-y-3 rounded-xl border border-line bg-white p-4", className)}>
       {children}
     </div>
   );

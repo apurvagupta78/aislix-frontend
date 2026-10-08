@@ -31,7 +31,7 @@ function AuditExecutionPage() {
 
   return (
     <ControlTowerDataTable
-      title="Audit Execution"
+      title="Audit execution"
       description="Full assignment and audit status for the selected Control Tower scope."
       columns={[
         { key: "date", label: "Date" },

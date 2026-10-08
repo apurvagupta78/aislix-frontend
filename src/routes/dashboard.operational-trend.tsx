@@ -35,7 +35,7 @@ function OperationalTrendPage() {
 
   return (
     <ControlTowerDataTable
-      title="Operational Trend"
+      title="Operational trend"
       description="Daily completed audits vs findings for the selected period."
       columns={columns}
       rows={data.operationalTrend as Record<string, unknown>[]}

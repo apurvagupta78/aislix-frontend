@@ -135,7 +135,7 @@ export function ControlTowerShell({ search }: { search: ControlTowerSearch }) {
       ) : null}
       <AskAislixSection previewDemo={demoPreview.previewDemo || data.labeledDemo} />
 
-      <section className="overflow-hidden rounded-xl border border-line bg-white shadow-card">
+      <section className="overflow-hidden rounded-xl border border-line bg-white">
         <WorkspaceFilterBar embedded />
 
         <div className="border-t border-line px-4 py-4 md:px-5">

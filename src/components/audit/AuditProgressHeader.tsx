@@ -25,7 +25,7 @@ export function AuditProgressHeader({
     <div className="sticky top-0 z-10 -mx-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur sm:-mx-0 sm:rounded-xl sm:border sm:px-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             Executing audit
           </p>
           <p className="font-semibold">{storeName}</p>

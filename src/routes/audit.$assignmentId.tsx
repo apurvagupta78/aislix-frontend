@@ -24,7 +24,7 @@ function UniversalAuditRoute() {
   }
 
   return (
-    <AppShell title="Audit Execution">
+    <AppShell title="Audit execution">
       <UniversalAuditExecutor assignmentId={assignmentId} testMode={test === true} />
     </AppShell>
   );

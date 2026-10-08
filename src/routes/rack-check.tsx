@@ -307,8 +307,11 @@ function StatusPill({ status }: { status: RackCheckStatus }) {
 
 function CountTile({ label, value, accent, hint }: { label: string; value: number; accent: string; hint?: string }) {
   return (
-    <div className="rounded-xl border border-[#D9E2E8] border-l-4 bg-white px-3 py-2" style={{ borderLeftColor: accent }}>
-      <p className="text-xs text-[#667085]">{label}</p>
+    <div className="rounded-xl border border-[#D9E2E8] bg-white px-3 py-2">
+      <p className="flex items-center gap-1.5 text-xs text-[#667085]">
+        <span aria-hidden className="size-1.5 shrink-0 rounded-full" style={{ background: accent }} />
+        {label}
+      </p>
       <p className="text-xl font-semibold tabular-nums text-[#04203F]">{value}</p>
       {hint ? <p className="text-[11px] text-[#667085]">{hint}</p> : null}
     </div>

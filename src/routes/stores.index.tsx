@@ -69,7 +69,7 @@ export const Route = createFileRoute("/stores/")({
   },
   head: () => ({
     meta: [
-      { title: "Organization & Stores — Aislix" },
+      { title: "Organization & stores — Aislix" },
       {
         name: "description",
         content:
@@ -256,7 +256,7 @@ function StoresPage() {
           />
         )}
 
-        <div className="overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card">
+        <div className="overflow-hidden rounded-xl border border-line bg-white p-5">
           <form
             className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]"
             onSubmit={(event) => {

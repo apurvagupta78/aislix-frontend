@@ -245,7 +245,7 @@ function Detail({
 }) {
   return (
     <div className="min-w-0 rounded-xl border border-border bg-surface p-4">
-      <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+      <p className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
         <span className="text-muted-foreground">{icon}</span>
         {label}
       </p>

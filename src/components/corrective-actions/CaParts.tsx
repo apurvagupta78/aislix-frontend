@@ -34,12 +34,12 @@ export function CaKpiCard({
   const bar = accent === "pink" ? CA_PINK_BAR : accent === "grey" ? AISLIX_PALETTE.border : AISLIX_PALETTE[accent];
   return (
     <div
-      className="relative overflow-hidden rounded-xl border bg-white p-4 shadow-card"
+      className="relative overflow-hidden rounded-xl border bg-white p-4"
       style={{ borderColor: AISLIX_PALETTE.border, background: `linear-gradient(180deg, ${ACCENT_TINT[accent]} 0%, #FFFFFF 55%)` }}
     >
       <span className="absolute inset-y-0 left-0 w-1" style={{ background: bar }} aria-hidden />
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-mp-muted">{label}</p>
+        <p className="text-xs font-medium text-mp-muted">{label}</p>
         <span title={info} aria-label={info} className="text-mp-muted">
           <Info className="size-3.5" />
         </span>
@@ -113,7 +113,7 @@ export function CaTable({ rows }: { rows: LifecycleAction[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[60rem] text-sm">
-        <thead className="text-[11px] uppercase tracking-wide text-mp-muted" style={{ background: AISLIX_PALETTE.page }}>
+        <thead className="text-xs text-mp-muted" style={{ background: AISLIX_PALETTE.page }}>
           <tr>
             <th className="px-4 py-2.5 text-left font-medium">Action</th>
             <th className="px-3 py-2.5 text-left font-medium">Type</th>
@@ -179,7 +179,7 @@ export function CaBoard({ rows }: { rows: LifecycleAction[] }) {
             style={{ borderColor: AISLIX_PALETTE.border, background: AISLIX_PALETTE.page }}
           >
             <div className="flex items-center justify-between px-3 py-2.5">
-              <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-navy">
+              <span className="inline-flex items-center gap-2 text-xs font-medium text-navy">
                 <span className="size-2 rounded-full" style={{ background: STAGE_COLORS[stage.value] }} />
                 {stage.label}
               </span>
@@ -194,7 +194,7 @@ export function CaBoard({ rows }: { rows: LifecycleAction[] }) {
                     key={row.id}
                     to="/corrective-actions/$actionId"
                     params={{ actionId: row.id }}
-                    className="block rounded-lg border bg-white p-3 shadow-card transition-shadow"
+                    className="block rounded-lg border bg-white p-3"
                     style={{
                       borderColor: AISLIX_PALETTE.border,
                       boxShadow: isActionLate(row) ? `inset 3px 0 0 ${CA_PINK_BAR}` : undefined,

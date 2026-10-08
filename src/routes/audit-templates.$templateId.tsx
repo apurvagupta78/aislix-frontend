@@ -58,7 +58,7 @@ import {
 import { isOrgManager } from "@/lib/assignments";
 
 export const Route = createFileRoute("/audit-templates/$templateId")({
-  head: () => ({ meta: [{ title: "Audit Template Builder — Aislix" }] }),
+  head: () => ({ meta: [{ title: "Audit template builder — Aislix" }] }),
   component: TemplateBuilderPage,
 });
 
@@ -271,7 +271,7 @@ function TemplateBuilderPage() {
 
   if (managerQuery.isLoading || templateQuery.isLoading) {
     return (
-      <AppShell title="Template Builder">
+      <AppShell title="Template builder">
         <Skeleton className="h-96 w-full" />
       </AppShell>
     );
@@ -279,7 +279,7 @@ function TemplateBuilderPage() {
 
   if (!managerQuery.data) {
     return (
-      <AppShell title="Template Builder">
+      <AppShell title="Template builder">
         <ErrorState description="Manager access required to edit audit templates." />
       </AppShell>
     );
@@ -287,7 +287,7 @@ function TemplateBuilderPage() {
 
   if (templateQuery.isError || !draft || !definition) {
     return (
-      <AppShell title="Template Builder">
+      <AppShell title="Template builder">
         <ErrorState description={toUserMessage(templateQuery.error ?? "Template not found")} />
       </AppShell>
     );

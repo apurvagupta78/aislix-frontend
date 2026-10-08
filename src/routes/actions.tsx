@@ -66,7 +66,7 @@ function ActionsWorkspace() {
         {tab === "expiry" ? (
           <>
             <WorkspaceLinkCard
-              title="Expiry Control"
+              title="Expiry control"
               description="Expiry overview, inspections and action-required queue."
               to="/expiry-control"
               icon={<PackageSearch className="size-4" />}

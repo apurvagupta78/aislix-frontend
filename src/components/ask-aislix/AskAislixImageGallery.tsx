@@ -48,7 +48,7 @@ export function AskAislixImageGallery({ items, title }: { items: GalleryItem[]; 
         {items.map((item, index) => (
           <figure
             key={`${item.scan_id ?? "img"}-${index}`}
-            className="overflow-hidden rounded-xl border border-line bg-white shadow-card"
+            className="overflow-hidden rounded-xl border border-line bg-white"
           >
             <GalleryImage src={item.url} alt={item.caption ?? "Audit evidence"} />
             <figcaption className="space-y-1 p-3 text-xs text-mp-muted">

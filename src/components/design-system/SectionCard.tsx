@@ -24,7 +24,7 @@ export function SectionCard({
   padded = true,
 }: Props) {
   return (
-    <section className={cn("overflow-hidden rounded-xl border border-line bg-white shadow-card", className)}>
+    <section className={cn("overflow-hidden rounded-xl border border-line bg-white", className)}>
       {title || description || action ? (
         <div
           className={cn(

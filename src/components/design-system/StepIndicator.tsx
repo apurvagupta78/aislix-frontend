@@ -34,7 +34,7 @@ export function StepIndicator({ steps, currentIndex, completedThrough }: Props) 
                     done
                       ? "border-status-good bg-status-good-soft text-status-good-strong"
                       : active
-                        ? "border-brand bg-brand text-brand-foreground shadow-soft"
+                        ? "border-brand bg-brand text-brand-foreground"
                         : "border-border bg-card text-muted-foreground",
                   )}
                 >

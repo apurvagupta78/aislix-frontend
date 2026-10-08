@@ -48,8 +48,8 @@ function KpiCard({
 }) {
   const muted = value === "Not enough data" || value === "Not assessable";
   return (
-    <div className="rounded-xl border border-border/60 bg-card px-3.5 py-3 shadow-sm">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+    <div className="rounded-xl border border-border/60 bg-card px-3.5 py-3">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p
         className={cn(
           "mt-1 text-xl font-semibold tabular-nums tracking-tight",
@@ -323,7 +323,7 @@ export function BrandAnalysisSection({
     <section className="mt-8">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             Brand analysis
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -362,7 +362,7 @@ export function BrandAnalysisSection({
         </div>
       ) : null}
 
-      <div className="mt-4 rounded-2xl border border-border/60 bg-card shadow-sm">
+      <div className="mt-4 rounded-2xl border border-border/60 bg-card">
         <div className="space-y-2 border-b border-border/40 p-3 sm:p-4">
           <DashboardCompactFilterToolbar
             filters={filters}
@@ -407,7 +407,7 @@ export function BrandAnalysisSection({
         ) : (
           <div className="grid min-w-0 gap-4 p-4 lg:grid-cols-2">
             <div className="min-w-0 overflow-hidden rounded-xl border border-border/60 bg-muted/10 p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs font-medium text-muted-foreground">
                 Share of shelf
               </p>
               {brand.share_segments.length ? (
@@ -420,7 +420,7 @@ export function BrandAnalysisSection({
             </div>
 
             <div className="min-w-0 overflow-hidden rounded-xl border border-border/60 bg-muted/10 p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs font-medium text-muted-foreground">
                 Brand mix on the shelf
               </p>
               <div className="mt-3">
@@ -433,7 +433,7 @@ export function BrandAnalysisSection({
             </div>
 
             <div className="min-w-0 overflow-hidden rounded-xl border border-border/60 bg-muted/10 p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs font-medium text-muted-foreground">
                 Brands by shelf presence
               </p>
               <div className="mt-3">
@@ -446,7 +446,7 @@ export function BrandAnalysisSection({
             </div>
 
             <div className="min-w-0 overflow-hidden rounded-xl border border-border/60 bg-muted/10 p-4">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs font-medium text-muted-foreground">
                 Your brand&apos;s shelf share over time
               </p>
               <ShelfShareTrendCard trendData={trendData} />

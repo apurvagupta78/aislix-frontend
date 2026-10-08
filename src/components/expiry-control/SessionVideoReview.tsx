@@ -72,7 +72,7 @@ export function SessionVideoReview({ evidence }: Props) {
       ) : null}
       {markers.length > 0 ? (
         <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Packet timeline</p>
+          <p className="text-xs font-medium text-muted-foreground">Packet timeline</p>
           <div className="flex flex-wrap gap-2">
             {markers.map((m) => (
               <Button key={`${m.packetOrdinal}-${m.offsetMs}`} size="sm" variant="outline" onClick={() => seekTo(m.offsetMs)}>

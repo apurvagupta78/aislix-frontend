@@ -32,7 +32,7 @@ export function FieldDashboardPanel() {
       />
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="card-surface p-4">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">Assigned audits</p>
+          <p className="text-xs text-muted-foreground">Assigned audits</p>
           {assignments.isPending ? (
             <Skeleton className="mt-2 h-8 w-12" />
           ) : (
@@ -40,7 +40,7 @@ export function FieldDashboardPanel() {
           )}
         </div>
         <div className="card-surface p-4">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">Open actions</p>
+          <p className="text-xs text-muted-foreground">Open actions</p>
           {actions.isPending ? (
             <Skeleton className="mt-2 h-8 w-12" />
           ) : (
@@ -50,7 +50,7 @@ export function FieldDashboardPanel() {
           )}
         </div>
         <div className="card-surface p-4">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">Overdue</p>
+          <p className="text-xs text-muted-foreground">Overdue</p>
           {actions.isPending ? (
             <Skeleton className="mt-2 h-8 w-12" />
           ) : (

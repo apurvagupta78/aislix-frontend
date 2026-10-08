@@ -73,8 +73,8 @@ function SummaryCard({
   row: PerformanceRankRow | null;
 }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-card px-3.5 py-3 shadow-sm">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+    <div className="rounded-xl border border-border/60 bg-card px-3.5 py-3">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
       {row ? (
         <>
           <p className="mt-1 truncate text-sm font-semibold text-foreground">{row.name}</p>
@@ -100,8 +100,8 @@ function LeaderboardPanel({
   rows: PerformanceRankRow[];
 }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-card p-3.5 shadow-sm">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{title}</p>
+    <div className="rounded-xl border border-border/60 bg-card p-3.5">
+      <p className="text-xs font-medium text-muted-foreground">{title}</p>
       {!rows.length ? (
         <p className="mt-2 text-xs text-muted-foreground">Not enough data</p>
       ) : (
@@ -349,14 +349,14 @@ export function StoreTeamPerformanceSection({
     return (
       <section className="mt-8">
         <div className="mb-4">
-          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             Store & team performance
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
             Compare execution across stores, locations, categories and team members.
           </p>
         </div>
-        <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-sm">
+        <div className="rounded-2xl border border-border/60 bg-card p-6">
           <EmptyState
             title="Not enough data"
             description="Complete more audits to compare performance."
@@ -370,7 +370,7 @@ export function StoreTeamPerformanceSection({
     <section className="mt-8">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             Store & team performance
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -394,7 +394,7 @@ export function StoreTeamPerformanceSection({
         ))}
       </div>
 
-      <div className="mt-4 rounded-2xl border border-border/60 bg-card shadow-sm">
+      <div className="mt-4 rounded-2xl border border-border/60 bg-card">
         <div className="space-y-2 border-b border-border/40 p-3 sm:p-4">
           <DashboardCompactFilterToolbar
             filters={filters}
@@ -502,7 +502,7 @@ export function StoreTeamPerformanceSection({
 
         <div className="grid gap-4 p-4 lg:grid-cols-[1fr_minmax(0,220px)_minmax(0,220px)]">
           <div>
-            <p className="mb-3 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <p className="mb-3 text-xs font-medium text-muted-foreground">
               {DIMENSION_OPTIONS.find((o) => o.value === rankBy)?.label} performance
             </p>
             <PerformanceBarChart

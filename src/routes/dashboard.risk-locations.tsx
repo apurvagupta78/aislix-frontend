@@ -32,7 +32,7 @@ function RiskLocationsPage() {
 
   return (
     <ControlTowerDataTable
-      title="Location Risk Ranking"
+      title="Location risk ranking"
       description="Locations ranked by open high/critical findings."
       columns={[
         { key: "name", label: "Location" },

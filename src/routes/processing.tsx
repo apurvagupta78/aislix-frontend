@@ -94,7 +94,7 @@ function Processing() {
             <>
               <div className="relative mx-auto grid size-28 place-items-center">
                 <div className="absolute inset-0 animate-pulse rounded-full bg-brand-soft" />
-                <div className="relative grid size-20 place-items-center rounded-full bg-gradient-brand shadow-card">
+                <div className="relative grid size-20 place-items-center rounded-full bg-gradient-brand">
                   <Loader2 className="size-8 animate-spin text-brand-foreground" />
                 </div>
               </div>

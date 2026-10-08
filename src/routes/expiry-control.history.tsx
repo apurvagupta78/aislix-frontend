@@ -7,7 +7,7 @@ import { EmptyState, Skeleton } from "@/components/States";
 import { fetchHistory, INSPECTION_STATUS_LABEL, REMOVAL_STATUS_LABEL } from "@/lib/expiry-control";
 
 export const Route = createFileRoute("/expiry-control/history")({
-  head: () => ({ meta: [{ title: "Expiry History — Aislix" }] }),
+  head: () => ({ meta: [{ title: "Expiry history — Aislix" }] }),
   component: HistoryPage,
 });
 
@@ -15,12 +15,12 @@ function HistoryPage() {
   const query = useQuery({ queryKey: ["expiry-history"], queryFn: fetchHistory, retry: false });
 
   return (
-    <AppShell title="Expiry History" description="Historical inspections with immutable policy snapshots.">
+    <AppShell title="Expiry history" description="Historical inspections with immutable policy snapshots.">
       {query.isLoading && <Skeleton className="h-48" />}
       {query.data?.length === 0 && <EmptyState title="No history yet" />}
       <div className="overflow-x-auto rounded-2xl border">
         <table className="w-full min-w-[640px] text-sm">
-          <thead className="border-b bg-muted/40 text-left text-xs uppercase text-muted-foreground">
+          <thead className="border-b text-left text-xs text-muted-foreground">
             <tr>
               <th className="p-3">SKU</th>
               <th className="p-3">Inspection</th>

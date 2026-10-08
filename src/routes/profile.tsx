@@ -185,7 +185,7 @@ function ProfilePage() {
                   type="button"
                   onClick={() => fileRef.current?.click()}
                   aria-label="Upload profile photo"
-                  className="absolute -bottom-1 -right-1 grid size-9 place-items-center rounded-full bg-brand text-brand-foreground shadow-card transition-transform"
+                  className="absolute -bottom-1 -right-1 grid size-9 place-items-center rounded-full bg-brand text-brand-foreground transition-transform"
                 >
                   {avatar.isPending ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -362,7 +362,7 @@ function AppearanceCard() {
               aria-pressed={active}
               className={`flex flex-col items-center gap-2 rounded-2xl border px-2 py-4 text-xs font-medium transition-all ${
                 active
-                  ? "border-brand bg-brand-soft text-brand shadow-card"
+                  ? "border-brand bg-brand-soft text-brand"
                   : "border-border text-muted-foreground hover:border-brand/40 hover:text-foreground"
               }`}
             >

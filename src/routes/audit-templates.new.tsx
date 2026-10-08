@@ -12,7 +12,7 @@ import { isOrgManager } from "@/lib/assignments";
 import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/audit-templates/new")({
-  head: () => ({ meta: [{ title: "New Audit Template — Aislix" }] }),
+  head: () => ({ meta: [{ title: "New audit template — Aislix" }] }),
   component: NewTemplatePage,
 });
 
@@ -49,7 +49,7 @@ function NewTemplatePage() {
   }, [managerQuery.data, createMutation.isPending, createMutation.isSuccess]);
 
   return (
-    <AppShell title="Create Audit Template">
+    <AppShell title="Create audit template">
       <div className="flex flex-col items-center justify-center gap-3 py-24">
         <Loader2 className="size-8 animate-spin text-brand" />
         <Skeleton className="h-4 w-48" />

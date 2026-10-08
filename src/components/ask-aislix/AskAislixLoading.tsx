@@ -15,7 +15,7 @@ export function AskAislixLoading({
   return (
     <div
       className={cn(
-        "flex items-center gap-3 rounded-xl border px-4 py-5 shadow-card",
+        "flex items-center gap-3 rounded-xl border px-4 py-5",
         isDark ? "" : "border-line bg-white",
       )}
       style={

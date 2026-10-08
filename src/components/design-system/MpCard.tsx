@@ -12,7 +12,7 @@ export function MpCard({
   as?: "div" | "section" | "article";
 }) {
   return (
-    <Tag className={cn("rounded-xl border border-line bg-white shadow-card", className)}>{children}</Tag>
+    <Tag className={cn("rounded-xl border border-line bg-white", className)}>{children}</Tag>
   );
 }
 

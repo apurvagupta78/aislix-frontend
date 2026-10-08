@@ -11,7 +11,7 @@ import { fetchAuditTemplate, templateToDefinition } from "@/lib/audit-templates"
 import { isOrgManager } from "@/lib/assignments";
 
 export const Route = createFileRoute("/audit-templates/$templateId/preview")({
-  head: () => ({ meta: [{ title: "Preview Audit Template — Aislix" }] }),
+  head: () => ({ meta: [{ title: "Preview audit template — Aislix" }] }),
   component: TemplatePreviewPage,
 });
 

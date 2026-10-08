@@ -51,7 +51,7 @@ function AdminDemoSeedPage() {
 
   return (
     <AdminPage
-      title="Demo Evidence Backfill"
+      title="Demo evidence backfill"
       description="Attach shelf photos to the Aislix Demo Showcase audits, oldest audit first."
     >
       <Card className="card-surface max-w-2xl">

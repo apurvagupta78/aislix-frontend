@@ -11,7 +11,7 @@ import { fetchAuditTemplate, fetchTemplateVersions } from "@/lib/audit-templates
 import { isOrgManager } from "@/lib/assignments";
 
 export const Route = createFileRoute("/audit-templates/$templateId/versions")({
-  head: () => ({ meta: [{ title: "Template Version History — Aislix" }] }),
+  head: () => ({ meta: [{ title: "Template version history — Aislix" }] }),
   component: TemplateVersionsPage,
 });
 
@@ -31,7 +31,7 @@ function TemplateVersionsPage() {
 
   if (templateQuery.isLoading || versionsQuery.isLoading) {
     return (
-      <AppShell title="Version History">
+      <AppShell title="Version history">
         <Skeleton className="h-64 w-full" />
       </AppShell>
     );
@@ -40,7 +40,7 @@ function TemplateVersionsPage() {
   const template = templateQuery.data;
   if (!template) {
     return (
-      <AppShell title="Version History">
+      <AppShell title="Version history">
         <ErrorState description="Template not found." />
       </AppShell>
     );
@@ -48,7 +48,7 @@ function TemplateVersionsPage() {
 
   return (
     <AppShell
-      title="Version History"
+      title="Version history"
       actions={
         <Button asChild variant="outline" size="sm">
           <Link to="/audit-templates/$templateId" params={{ templateId }}>

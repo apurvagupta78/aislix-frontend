@@ -22,7 +22,7 @@ export const Route = createFileRoute("/results/debug")({
 
 const KIND_LABEL: Record<AuditResultKind, { label: string; icon: typeof Bot; className: string }> = {
   ai: {
-    label: "AI Audit",
+    label: "AI audit",
     icon: Bot,
     className: "bg-status-ai-soft text-status-ai-strong border-status-ai/25",
   },
@@ -176,7 +176,7 @@ function ResultsDebugPage() {
             <p className="mt-3 text-sm text-muted-foreground">
               {payload.result_kind === "ai" ? (
                 <>
-                  This is an <strong>AI Audit</strong>. The meaningful payload is in{" "}
+                  This is an <strong>AI audit</strong>. The meaningful payload is in{" "}
                   <code className="text-xs">metrics.astra_*</code>,{" "}
                   <code className="text-xs">adhoc_planogram.expected_products</code>, and{" "}
                   <code className="text-xs">detected_products</code>. The full /results page tries to
@@ -184,7 +184,7 @@ function ResultsDebugPage() {
                 </>
               ) : payload.result_kind === "digital" ? (
                 <>
-                  This is a <strong>Digital Audit</strong>. Variance lives in{" "}
+                  This is a <strong>Digital audit</strong>. Variance lives in{" "}
                   <code className="text-xs">digital_audit_session.lines</code> — expected vs actual qty,
                   RCA, and value impact.
                 </>

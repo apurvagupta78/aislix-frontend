@@ -338,7 +338,7 @@ export function AuditEvidencePanel({
 
   let shelfRendered = false;
   return (
-    <section className="rounded-2xl border border-[#D9E2E8] bg-white p-4 shadow-sm">
+    <section className="rounded-2xl border border-[#D9E2E8] bg-white p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold text-[#04203F]">Evidence checklist</h3>

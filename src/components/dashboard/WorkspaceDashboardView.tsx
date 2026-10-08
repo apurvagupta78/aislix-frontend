@@ -42,7 +42,7 @@ export function CommandSectionHeader({
 }) {
   return (
     <div className="mb-4">
-      <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+      <p className="text-xs font-medium text-muted-foreground">
         {eyebrow}
       </p>
       {description ? <p className="mt-1 text-sm text-muted-foreground">{description}</p> : null}
@@ -94,9 +94,9 @@ function RetailKpiCard({
   scanId?: string | null;
 }) {
   const body = (
-    <div className="flex h-full flex-col rounded-xl border border-border/60 bg-white p-4 shadow-sm transition-shadow">
+    <div className="flex h-full flex-col rounded-xl border border-border/60 bg-white p-4">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        <p className="text-xs font-medium text-muted-foreground">
           {title}
         </p>
         {tooltip ? (
@@ -234,9 +234,9 @@ export function WhatNeedsAttentionSection({
         description={roleCopy.attentionDescription}
       />
       {showIssueBar ? (
-        <div className="mb-4 rounded-xl border border-border/60 bg-white p-3 shadow-sm">
+        <div className="mb-4 rounded-xl border border-border/60 bg-white p-3">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               Open issues
             </p>
             <div className="flex gap-3 text-[10px] text-muted-foreground">
@@ -255,7 +255,7 @@ export function WhatNeedsAttentionSection({
         </div>
       ) : null}
       {!cards.length ? (
-        <div className="rounded-xl border border-border/60 bg-white p-6 shadow-sm">
+        <div className="rounded-xl border border-border/60 bg-white p-6">
           <p className="text-sm text-muted-foreground">No open issues in this view.</p>
         </div>
       ) : (
@@ -271,8 +271,8 @@ export function WhatNeedsAttentionSection({
                   : "text-muted-foreground";
 
             const body = (
-              <div className="flex h-full flex-col rounded-xl border border-border/60 bg-white p-4 shadow-sm transition-shadow">
-                <p className="text-[0.6rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              <div className="flex h-full flex-col rounded-xl border border-border/60 bg-white p-4">
+                <p className="text-xs font-medium text-muted-foreground">
                   {card.area_label}
                 </p>
                 <p
@@ -393,7 +393,7 @@ export function TrackImprovementSection({ data }: { data: WorkspaceDashboardData
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {data.improvement.map((m) => (
               <div key={m.key} className="rounded-xl border border-border/70 bg-muted/20 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   {m.label}
                 </p>
                 <p className="mt-2 text-lg font-semibold tabular-nums">
@@ -460,7 +460,7 @@ export function PriorityOpportunitiesSection({ data }: { data: WorkspaceDashboar
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {data.priority_opportunities.map((row) => (
               <div key={row.category} className="rounded-xl border border-border/70 bg-muted/20 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground">
                   {row.label}
                 </p>
                 <p className="mt-2 text-2xl font-semibold tabular-nums">{row.count}</p>

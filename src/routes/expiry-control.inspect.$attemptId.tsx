@@ -14,7 +14,7 @@ function InspectPage() {
 
   return (
     <AppShell
-      title="Expiry Inspection"
+      title="Expiry inspection"
       description="Guided packet inspection with mandatory reconciliation."
       actions={
         <Button variant="outline" size="sm" asChild>

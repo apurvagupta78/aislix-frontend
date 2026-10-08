@@ -36,7 +36,7 @@ export const Route = createFileRoute("/exceptions")({
 function ExceptionsPage() {
   return (
     <AppShell
-      title="Exceptions & Corrective Actions"
+      title="Exceptions & corrective actions"
       description="Prioritized issues with impact, owner, evidence links and lifecycle state."
     >
       <ExceptionsMain />
@@ -121,7 +121,7 @@ function ExceptionsMain() {
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full min-w-[960px] text-left text-sm">
-            <thead className="border-b border-border bg-muted/40 text-xs uppercase text-muted-foreground">
+            <thead className="border-b border-border text-xs text-muted-foreground">
               <tr>
                 <th className="p-3">Severity</th>
                 <th className="p-3">Exception</th>

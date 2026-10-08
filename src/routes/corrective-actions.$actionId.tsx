@@ -57,7 +57,7 @@ import { fetchResolutionEvidence, resolutionPhotoUrl, uploadResolutionPhoto } fr
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/corrective-actions/$actionId")({
-  head: () => ({ meta: [{ title: "Corrective Action — Aislix" }] }),
+  head: () => ({ meta: [{ title: "Corrective action — Aislix" }] }),
   component: ActionDetailPage,
 });
 
@@ -138,7 +138,7 @@ function Section({
 function Fact({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
-      <dt className="text-[11px] font-semibold uppercase tracking-wide text-mp-muted">{label}</dt>
+      <dt className="text-xs font-medium text-mp-muted">{label}</dt>
       <dd className="mt-1 text-sm text-navy">{value}</dd>
     </div>
   );

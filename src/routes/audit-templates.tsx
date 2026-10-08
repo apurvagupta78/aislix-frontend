@@ -73,7 +73,7 @@ import {
 } from "@/lib/audit-engine/template-factory";
 
 export const Route = createFileRoute("/audit-templates")({
-  head: () => ({ meta: [{ title: "Audit Templates — Aislix" }] }),
+  head: () => ({ meta: [{ title: "Audit templates — Aislix" }] }),
   component: AuditTemplatesPage,
 });
 
@@ -375,7 +375,7 @@ function AuditTemplatesPage() {
     <AppShell title="" hidePageHeader>
       <div className="play-canvas space-y-5">
         <PageHeader
-          title="Audit Templates"
+          title="Audit templates"
           description="Browse ready-made audits or manage your team's template library."
           actions={
             <>

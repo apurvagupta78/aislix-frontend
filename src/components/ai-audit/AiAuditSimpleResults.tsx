@@ -23,7 +23,7 @@ export function AiAuditSimpleResults({ data, imageUrl }: Props) {
     <div className="space-y-4">
       <div className="rounded-xl border border-brand/20 bg-brand-soft/20 px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
-          <Badge className="rounded-full bg-status-ai-soft text-status-ai-strong">AI Audit</Badge>
+          <Badge className="rounded-full bg-status-ai-soft text-status-ai-strong">AI audit</Badge>
           <Badge variant="outline">{modeLabel}</Badge>
           {data.analysis_mode ? (
             <Badge variant="secondary">analysis_mode: {data.analysis_mode}</Badge>

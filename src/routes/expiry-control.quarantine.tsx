@@ -42,7 +42,7 @@ function QuarantinePage() {
 
   return (
     <AppShell
-      title="Quarantine & Disposition"
+      title="Quarantine & disposition"
       description="Confirm receipt, report mismatches, and track return/disposal. No return-to-shelf for expired stock."
     >
       {query.isLoading && <Skeleton className="h-48" />}

@@ -67,7 +67,7 @@ export function AuditExecutiveSection() {
     <section id="executive-overview" className="mt-8 space-y-8 border-t border-border pt-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-xs font-medium text-muted-foreground">
             Retail Audit & Shelf Intelligence
           </p>
           <h2 className="text-xl font-semibold tracking-tight">Executive Overview</h2>

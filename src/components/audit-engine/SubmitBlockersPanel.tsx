@@ -38,7 +38,7 @@ export const SubmitBlockersPanel = forwardRef<HTMLElement, Props>(function Submi
       <section
         ref={ref}
         role="status"
-        className="flex scroll-mt-24 items-center gap-3 rounded-2xl border bg-white px-5 py-4 shadow-sm"
+        className="flex scroll-mt-24 items-center gap-3 rounded-2xl border bg-white px-5 py-4"
         style={{ borderColor: AISLIX_PALETTE.border, boxShadow: `inset 4px 0 0 ${AISLIX_PALETTE.green}` }}
       >
         <CheckCircle2 className="size-5 shrink-0" style={{ color: AISLIX_PALETTE.green }} />
@@ -60,7 +60,7 @@ export const SubmitBlockersPanel = forwardRef<HTMLElement, Props>(function Submi
       ref={ref}
       role="alert"
       aria-live="polite"
-      className="scroll-mt-24 overflow-hidden rounded-2xl border bg-white shadow-sm"
+      className="scroll-mt-24 overflow-hidden rounded-2xl border bg-white"
       style={{ borderColor: AISLIX_PALETTE.border }}
     >
       <div className="flex items-start gap-3 px-5 py-4" style={{ background: AISLIX_PALETTE.pink }}>

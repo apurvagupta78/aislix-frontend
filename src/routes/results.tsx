@@ -87,7 +87,7 @@ export const Route = createFileRoute("/results")({
   },
   head: () => ({
     meta: [
-      { title: "Shelf Execution Report — Aislix" },
+      { title: "Shelf execution report — Aislix" },
       {
         name: "description",
         content:

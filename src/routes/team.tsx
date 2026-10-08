@@ -90,7 +90,7 @@ export const Route = createFileRoute("/team")({
   },
   head: () => ({
     meta: [
-      { title: "Team & User Management — Aislix" },
+      { title: "Team & user management — Aislix" },
       {
         name: "description",
         content:

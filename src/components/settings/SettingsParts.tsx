@@ -21,7 +21,7 @@ export function SettingsCard({
   className?: string;
 }) {
   return (
-    <section className={cn("overflow-hidden rounded-xl border border-line bg-white shadow-card", className)}>
+    <section className={cn("overflow-hidden rounded-xl border border-line bg-white", className)}>
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-5 py-4 sm:px-6">
         <div className="flex items-start gap-3">
           {Icon && (

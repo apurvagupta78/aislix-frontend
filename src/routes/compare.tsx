@@ -150,7 +150,7 @@ function Delta({
 function ScanHeading({ result, side }: { result: ScanResult; side: string }) {
   return (
     <div className="min-w-0">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+      <p className="text-xs font-medium text-muted-foreground">
         {side}
       </p>
       <p className="mt-1 truncate text-sm font-semibold">{result.store ?? "Unknown store"}</p>
@@ -232,7 +232,7 @@ function ComparePage() {
                 <div className="mt-4 overflow-x-auto">
                   <table className="w-full min-w-[520px] text-sm">
                     <thead>
-                      <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
+                      <tr className="border-b border-border text-xs text-muted-foreground">
                         <th className="py-2 text-left font-medium">Brand</th>
                         <th className="py-2 text-left font-medium">Product</th>
                         <th className="py-2 text-right font-medium">Before</th>
@@ -270,7 +270,7 @@ function ComparePage() {
             <div className="mt-5 overflow-x-auto">
               <table className="w-full min-w-[560px] text-sm">
                 <thead>
-                  <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
+                  <tr className="border-b border-border text-xs text-muted-foreground">
                     <th className="py-2 text-left font-medium">Metric</th>
                     <th className="py-2 text-right font-medium">Baseline</th>
                     <th className="py-2 text-right font-medium">Comparison</th>

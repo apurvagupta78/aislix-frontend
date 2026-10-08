@@ -189,7 +189,7 @@ export function DashboardCommandCenter({
           <p className="mt-0.5 text-xs text-muted-foreground">Repeated problems detected across stores and SKUs</p>
           <div className="mt-3 overflow-x-auto">
             <table className="w-full min-w-[36rem] text-sm">
-              <thead className="text-left text-xs uppercase text-muted-foreground">
+              <thead className="text-left text-xs text-muted-foreground">
                 <tr>
                   {["Issue", "Frequency", "Store", "SKU", "Last seen", "Impact"].map((h) => (
                     <th key={h} className="px-2 py-1 font-medium">{h}</th>

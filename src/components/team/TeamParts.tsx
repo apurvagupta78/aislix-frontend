@@ -161,7 +161,7 @@ export function RolePermissionsGrid() {
                 );
               })}
             </ul>
-            <p className="mt-4 text-[11px] uppercase tracking-wide text-muted-foreground">
+            <p className="mt-4 text-xs text-muted-foreground">
               {roleScope[role] === "organization" ? "All stores" : "Assigned stores only"}
             </p>
           </div>
@@ -528,7 +528,7 @@ export function MembersTable({
       {/* Desktop */}
       <div className="hidden overflow-x-auto rounded-2xl border border-border lg:block">
         <table className="w-full text-sm">
-          <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+          <thead className="text-left text-xs text-muted-foreground">
             <tr>
               <th className="w-10 px-4 py-3">
                 <Checkbox
@@ -1235,7 +1235,7 @@ export function MyTeamSection({
       <p className="max-w-2xl text-sm text-[#667085]">
         People who report directly to you. Their store access contributes to your inherited scope.
       </p>
-      <div className="rounded-2xl border border-[#D9E2E8] bg-white p-5 shadow-sm">
+      <div className="rounded-2xl border border-[#D9E2E8] bg-white p-5">
         {loading ? (
           <div className="space-y-3" aria-busy="true">
             <Skeleton className="h-5 w-40" />

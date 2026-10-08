@@ -18,9 +18,9 @@ export const Route = createFileRoute("/custom-audit")({
       });
     }
   },
-  head: () => ({ meta: [{ title: "Custom Audit — Aislix" }] }),
+  head: () => ({ meta: [{ title: "Custom audit — Aislix" }] }),
   component: () => (
-    <AppShell title="Custom Audit">
+    <AppShell title="Custom audit">
       <ErrorState description="Open this page from My Work with a custom template assignment." />
     </AppShell>
   ),

@@ -67,7 +67,7 @@ export function FindingsActionsSection({ filters }: { filters: DashboardFilterSt
     <section className="mt-8 space-y-4">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Findings & actions</p>
+          <p className="text-xs font-medium text-muted-foreground">Findings & actions</p>
           <h2 className="text-lg font-semibold">Audit → Finding → Action → Closure</h2>
         </div>
         <Link to="/findings" className="text-sm text-brand hover:underline">View findings</Link>
@@ -120,7 +120,7 @@ export function FindingsActionsSection({ filters }: { filters: DashboardFilterSt
       {openActions.length ? (
         <div className="overflow-x-auto rounded-2xl border border-border">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-left text-xs uppercase text-muted-foreground">
+            <thead className="text-left text-xs text-muted-foreground">
               <tr>
                 {["Action", "Priority", "Due", "SLA", "Days open", "Status"].map((h) => (
                   <th key={h} className="px-3 py-2">{h}</th>
@@ -153,7 +153,7 @@ export function FindingsActionsSection({ filters }: { filters: DashboardFilterSt
 function Card({ label, value, extra }: { label: string; value: string; extra: string }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
-      <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
       <p className="mt-1 text-xs text-muted-foreground">{extra}</p>
     </div>

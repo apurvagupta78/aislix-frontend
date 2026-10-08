@@ -328,7 +328,7 @@ function HistoryPage() {
     <AppShell title="" hidePageHeader>
       <div className="play-canvas space-y-5">
         <PageHeader
-          title="Audit History"
+          title="Audit history"
           description="Past audits with scores, findings, and exports."
         />
 
@@ -423,8 +423,8 @@ function HistoryPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All modes</SelectItem>
-                <SelectItem value="digital">Digital Audit</SelectItem>
-                <SelectItem value="ai">AI Audit</SelectItem>
+                <SelectItem value="digital">Digital audit</SelectItem>
+                <SelectItem value="ai">AI audit</SelectItem>
               </SelectContent>
             </Select>
           </FilterRow>

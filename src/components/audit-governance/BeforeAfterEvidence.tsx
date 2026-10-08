@@ -30,7 +30,7 @@ export function BeforeAfterEvidence({
   return (
     <div className={cn("grid gap-4 sm:grid-cols-2", className)}>
       <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="mb-2 text-xs font-medium text-muted-foreground">
           What was found?
         </p>
         <p className="mb-2 text-sm font-medium">{beforeLabel}</p>
@@ -42,7 +42,7 @@ export function BeforeAfterEvidence({
         {beforeCaption ? <p className="mt-2 text-xs text-muted-foreground">{beforeCaption}</p> : null}
       </div>
       <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="mb-2 text-xs font-medium text-muted-foreground">
           What was fixed?
         </p>
         <p className="mb-2 text-sm font-medium">{afterLabel}</p>

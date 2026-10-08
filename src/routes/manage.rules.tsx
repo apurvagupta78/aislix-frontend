@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/States";
 
 export const Route = createFileRoute("/manage/rules")({
-  head: () => ({ meta: [{ title: "Audit Rules — Aislix" }] }),
+  head: () => ({ meta: [{ title: "Audit rules — Aislix" }] }),
   component: ManageRulesPage,
 });
 

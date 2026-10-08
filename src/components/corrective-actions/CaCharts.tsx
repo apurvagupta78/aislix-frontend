@@ -237,8 +237,8 @@ export function AgingChart({ buckets }: { buckets: AgingBucket[] }) {
 export function SourceDonut({ ai, digital }: { ai: number; digital: number }) {
   const total = ai + digital;
   const data = [
-    { name: "AI Audit", value: ai, color: AISLIX_PALETTE.blue },
-    { name: "Digital Audit", value: digital, color: AISLIX_PALETTE.purple },
+    { name: "AI audit", value: ai, color: AISLIX_PALETTE.blue },
+    { name: "Digital audit", value: digital, color: AISLIX_PALETTE.purple },
   ];
   return (
     <ChartCard title="Where actions come from" question="How much comes from AI vs Digital audits?">
@@ -287,7 +287,7 @@ export function OwnerWorkloadTable({ rows }: { rows: OwnerLoad[] }) {
       ) : (
         <div className="max-h-[260px] overflow-y-auto">
           <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-white text-[11px] uppercase tracking-wide text-mp-muted">
+            <thead className="sticky top-0 bg-white text-xs text-mp-muted">
               <tr>
                 <th className="py-2 text-left font-medium">Owner</th>
                 <th className="py-2 text-left font-medium">Load</th>

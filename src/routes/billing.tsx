@@ -86,7 +86,7 @@ import {
 export const Route = createFileRoute("/billing")({
   head: () => ({
     meta: [
-      { title: "Subscription & Billing — Aislix" },
+      { title: "Subscription & billing — Aislix" },
       {
         name: "description",
         content:
@@ -143,7 +143,7 @@ function Section({
   className?: string;
 }) {
   return (
-    <section className={`overflow-hidden rounded-xl border border-line bg-white shadow-card ${className}`}>
+    <section className={`overflow-hidden rounded-xl border border-line bg-white ${className}`}>
       <div className="flex flex-col gap-3 border-b border-line px-5 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-6">
         <div className="min-w-0">
           <h2 className="font-display text-[15px] font-semibold leading-tight text-navy">{title}</h2>
@@ -312,7 +312,7 @@ function Billing() {
         />
       ) : (
         <div className="grid gap-4 lg:grid-cols-3">
-          <div className="overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card sm:p-6 lg:col-span-2">
+          <div className="overflow-hidden rounded-xl border border-line bg-white p-5 sm:p-6 lg:col-span-2">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -451,7 +451,7 @@ function Billing() {
           </div>
 
           <div className="space-y-4">
-            <div className="overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card sm:p-6">
+            <div className="overflow-hidden rounded-xl border border-line bg-white p-5 sm:p-6">
               <h2 className="font-display text-sm font-semibold tracking-tight text-navy">Payment method</h2>
               {overview.payment_method ? (
                 <div className="mt-4 flex items-center gap-3 rounded-xl border border-border bg-surface p-4">
@@ -493,7 +493,7 @@ function Billing() {
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card sm:p-6">
+            <div className="overflow-hidden rounded-xl border border-line bg-white p-5 sm:p-6">
               <h2 className="inline-flex items-center gap-2 font-display text-sm font-semibold tracking-tight text-navy">
                 <Tag className="size-4 text-brand" /> Promo code
               </h2>
@@ -608,7 +608,7 @@ function Billing() {
       >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {addOns.map((a) => (
-            <div key={a.id} className="overflow-hidden rounded-xl border border-line bg-white p-5 shadow-card transition-shadow">
+            <div key={a.id} className="overflow-hidden rounded-xl border border-line bg-white p-5">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="text-sm font-semibold">{a.name}</h3>
                 <Badge variant="secondary" className="rounded-full text-[0.65rem]">

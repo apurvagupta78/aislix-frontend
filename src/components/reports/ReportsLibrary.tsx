@@ -97,9 +97,9 @@ export function ReportsLibrary() {
     assignee !== "all" || assignmentStatus !== "all" || Boolean(dateFrom) || Boolean(dateTo);
 
   const FilterBar = (
-    <div className="mb-4 grid gap-3 rounded-2xl border border-border bg-card p-4 shadow-card sm:grid-cols-2 lg:grid-cols-4">
+    <div className="mb-4 grid gap-3 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-4">
       <div className="space-y-1.5">
-        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <label className="text-xs font-medium text-muted-foreground">
           Assignee
         </label>
         <Select value={assignee} onValueChange={setAssignee}>
@@ -117,7 +117,7 @@ export function ReportsLibrary() {
         </Select>
       </div>
       <div className="space-y-1.5">
-        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <label className="text-xs font-medium text-muted-foreground">
           Assignment status
         </label>
         <Select value={assignmentStatus} onValueChange={setAssignmentStatus}>
@@ -134,7 +134,7 @@ export function ReportsLibrary() {
         </Select>
       </div>
       <div className="space-y-1.5">
-        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <label className="text-xs font-medium text-muted-foreground">
           From
         </label>
         <Input
@@ -145,7 +145,7 @@ export function ReportsLibrary() {
         />
       </div>
       <div className="space-y-1.5">
-        <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <label className="text-xs font-medium text-muted-foreground">
           To
         </label>
         <Input
@@ -285,32 +285,32 @@ export function ReportsLibrary() {
     <>
       {FilterBar}
       {/* Desktop table */}
-      <div className="hidden overflow-hidden rounded-2xl border border-border bg-card shadow-card lg:block">
+      <div className="hidden overflow-hidden rounded-2xl border border-border bg-card lg:block">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="min-w-[180px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <TableHead className="min-w-[180px] text-left text-xs font-medium text-muted-foreground">
                 Audit
               </TableHead>
-              <TableHead className="min-w-[140px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <TableHead className="min-w-[140px] text-left text-xs font-medium text-muted-foreground">
                 Store
               </TableHead>
-              <TableHead className="min-w-[160px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <TableHead className="min-w-[160px] text-left text-xs font-medium text-muted-foreground">
                 Location
               </TableHead>
-              <TableHead className="min-w-[140px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <TableHead className="min-w-[140px] text-left text-xs font-medium text-muted-foreground">
                 Category
               </TableHead>
-              <TableHead className="min-w-[140px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <TableHead className="min-w-[140px] text-left text-xs font-medium text-muted-foreground">
                 Assignee
               </TableHead>
-              <TableHead className="min-w-[150px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <TableHead className="min-w-[150px] text-left text-xs font-medium text-muted-foreground">
                 Assignment
               </TableHead>
-              <TableHead className="min-w-[120px] text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <TableHead className="min-w-[120px] text-right text-xs font-medium text-muted-foreground">
                 Compliance
               </TableHead>
-              <TableHead className="w-[140px] text-left text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <TableHead className="w-[140px] text-left text-xs font-medium text-muted-foreground">
                 Actions
               </TableHead>
             </TableRow>
@@ -379,7 +379,7 @@ export function ReportsLibrary() {
         {items.map((item) => (
           <li
             key={item.scan_id}
-            className="rounded-2xl border border-border bg-card p-4 shadow-card"
+            className="rounded-2xl border border-border bg-card p-4"
           >
             <Link
               to="/results"
@@ -391,25 +391,25 @@ export function ReportsLibrary() {
             <p className="text-xs text-muted-foreground">{formatScanTime(item.created_at)}</p>
             <dl className="mt-3 space-y-1.5 text-sm">
               <div className="flex items-center justify-between gap-3">
-                <dt className="text-xs uppercase tracking-wide text-muted-foreground">Store</dt>
+                <dt className="text-xs text-muted-foreground">Store</dt>
                 <dd className="min-w-0 truncate">{item.store || "—"}</dd>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <dt className="text-xs uppercase tracking-wide text-muted-foreground">Location</dt>
+                <dt className="text-xs text-muted-foreground">Location</dt>
                 <dd className="min-w-0 truncate" title={item.location || undefined}>
                   {item.location || "—"}
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <dt className="text-xs uppercase tracking-wide text-muted-foreground">Category</dt>
+                <dt className="text-xs text-muted-foreground">Category</dt>
                 <dd className="min-w-0 truncate">{item.category || "—"}</dd>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <dt className="text-xs uppercase tracking-wide text-muted-foreground">Assignee</dt>
+                <dt className="text-xs text-muted-foreground">Assignee</dt>
                 <dd className="min-w-0 truncate">{item.assignee_name ?? "—"}</dd>
               </div>
               <div className="flex items-center justify-between gap-3">
-                <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                <dt className="text-xs text-muted-foreground">
                   Compliance
                 </dt>
                 <dd className={`font-medium ${complianceTone(item.planogram_compliance)}`}>
