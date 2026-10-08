@@ -4,7 +4,7 @@ import { Check, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { requireOrgId } from "@/lib/db/context";
-import { AISLIX_PALETTE, ACCENT_TINT } from "@/lib/ai-audit/kpi-palette";
+import { AISLIX_PALETTE } from "@/lib/ai-audit/kpi-palette";
 import type { ReferenceDocumentState } from "@/lib/ai-audit/reference-document";
 import {
   buildPipelineState,
@@ -250,7 +250,7 @@ export function DocumentErrorBanner({ message }: { message: string }) {
   return (
     <p
       className="rounded-xl border px-4 py-3 text-sm text-[#04203F]"
-      style={{ background: AISLIX_PALETTE.pink, borderColor: "#F6CFDC" }}
+      style={{ background: "#FFFFFF", borderColor: "#ECBDCC" }}
       role="alert"
     >
       {message}
@@ -274,7 +274,7 @@ export function DocumentSaveBar({
       className="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3"
       style={
         unsaved
-          ? { background: ACCENT_TINT.blue, borderColor: AISLIX_PALETTE.blue }
+          ? { background: "#FFFFFF", borderColor: AISLIX_PALETTE.blue }
           : { background: "#F4F7F9", borderColor: AISLIX_PALETTE.border }
       }
     >

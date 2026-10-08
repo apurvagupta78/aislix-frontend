@@ -8,7 +8,6 @@ import {
   type AiAnalysisCheck,
 } from "@/lib/ai-audit/ai-analysis";
 import type { ReferenceRow } from "@/lib/ai-audit/reference-document";
-import { AISLIX_PALETTE, ACCENT_TINT } from "@/lib/ai-audit/kpi-palette";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -45,10 +44,10 @@ export function AiAnalysisQuestionCard({
   return (
     <div
       id="step-3-ai-question"
-      className={cn("space-y-4 rounded-2xl border border-[#D9E2E8] bg-white p-4", disabled && "opacity-60")}
+      className={cn("space-y-4 rounded-xl border border-[#D9E2E8] bg-white p-4", disabled && "opacity-60")}
     >
       <div className="flex items-start gap-2">
-        <Sparkles className="mt-0.5 size-4 shrink-0" style={{ color: AISLIX_PALETTE.purple }} />
+        <Sparkles className="mt-0.5 size-4 shrink-0 text-[#04203F]" />
         <div>
           <h4 className="text-sm font-semibold text-[#04203F]">What should AI analyse?</h4>
           <p className="mt-0.5 text-xs text-[#667085]">
@@ -67,17 +66,17 @@ export function AiAnalysisQuestionCard({
             <label
               key={option.value}
               className={cn(
-                "flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 transition-colors",
-                !enabled && "cursor-not-allowed",
+                "flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 transition-colors",
+                checked
+                  ? "border-[#04203F] bg-[#F4F7F9]"
+                  : enabled
+                    ? "border-[#D9E2E8] bg-white hover:border-[#9FB3C8]"
+                    : "cursor-not-allowed border-[#D9E2E8] bg-white",
               )}
-              style={{
-                borderColor: checked ? AISLIX_PALETTE.purple : AISLIX_PALETTE.border,
-                background: checked ? ACCENT_TINT.purple : enabled ? "#FFFFFF" : ACCENT_TINT.grey,
-              }}
             >
               <input
                 type="checkbox"
-                className="mt-0.5 size-4 accent-[#9B86D9]"
+                className="mt-0.5 size-4 accent-[#04203F]"
                 checked={checked}
                 disabled={!enabled}
                 onChange={(event) => toggle(option.value, event.target.checked)}

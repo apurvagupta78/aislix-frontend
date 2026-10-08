@@ -392,9 +392,9 @@ export function ReferenceSourcePanel({
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="flex w-full flex-col items-center gap-2 rounded-xl border border-dashed border-[#D9E2E8] bg-[#F4F7F9] px-4 py-8 text-center text-xs text-[#667085] hover:border-[#7DB7D6]"
+          className="flex w-full flex-col items-center gap-2 rounded-xl border border-dashed border-[#D9E2E8] bg-[#F4F7F9] px-4 py-8 text-center text-xs text-[#667085] hover:border-[#9FB3C8]"
         >
-          <Upload className="size-5 text-[#7DB7D6]" />
+          <Upload className="size-5 text-[#04203F]" />
           <span className="text-sm font-medium text-[#04203F]">
             {spreadsheetOnly ? "Choose a CSV or Excel file" : "Choose a photo, PDF or CSV"}
           </span>
