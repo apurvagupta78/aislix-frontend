@@ -274,6 +274,29 @@ async function scopeMeta(
   return { count, location: location || null };
 }
 
+/** Assignee notification line: audit name and store first so tasks are distinguishable in the list. */
+export function assignmentNotificationBody(input: {
+  auditMode: AuditMode;
+  scopeType: ScopeType;
+  scopeValues: ScopeValues;
+  storeName?: string | null;
+}): string {
+  const kind = input.auditMode === "digital" ? "Digital audit" : "AI audit";
+  const auditName = input.scopeValues.audit_name?.trim();
+  const where = input.storeName?.trim();
+  if (auditName || where) {
+    return [auditName ? `${kind}: ${auditName}` : kind, where, input.scopeValues.location?.trim()]
+      .filter(Boolean)
+      .join(" · ");
+  }
+  if (input.scopeType === "planogram") {
+    return `${[input.scopeValues.location, `${input.scopeValues.product_count ?? 0} products`]
+      .filter(Boolean)
+      .join(" · ")} · ${input.auditMode === "digital" ? "digital audit" : "planogram audit"}`;
+  }
+  return `You have a new ${input.auditMode === "digital" ? "digital audit" : "AI audit"} task: ${scopeSummary(input.scopeType, input.scopeValues)}.`;
+}
+
 export async function createScanAssignment(input: {
   storeId: string;
   scopeType: ScopeType;
@@ -352,18 +375,23 @@ export async function createScanAssignment(input: {
   const assignmentId = data!.id as string;
 
   try {
+    const { data: store } = await supabase
+      .from("stores")
+      .select("name")
+      .eq("id", input.storeId)
+      .maybeSingle();
     await notifyMember({
       data: {
         org_id: orgId,
         user_id: input.assigneeId,
         type: "scan_assigned",
         title: auditMode === "digital" ? "New Digital Audit Assigned" : "New AI Audit Assigned",
-        body:
-          input.scopeType === "planogram"
-            ? `${[input.scopeValues.location, `${input.scopeValues.product_count ?? 0} products`]
-                .filter(Boolean)
-                .join(" · ")} · ${auditMode === "digital" ? "digital audit" : "planogram audit"}`
-            : `You have a new ${auditMode === "digital" ? "digital audit" : "AI audit"} task: ${scopeSummary(input.scopeType, input.scopeValues)}.`,
+        body: assignmentNotificationBody({
+          auditMode,
+          scopeType: input.scopeType,
+          scopeValues: input.scopeValues,
+          storeName: (store?.name as string | null | undefined) ?? null,
+        }),
         payload: { assignment_id: assignmentId, store_id: input.storeId },
       },
     });
