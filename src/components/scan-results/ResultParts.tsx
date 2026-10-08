@@ -360,7 +360,7 @@ export function ComplianceAlertCard({
   return (
     <section
       role="alert"
-      className="card-surface overflow-hidden border-l-4 border-l-destructive p-5 sm:p-6"
+      className="card-surface overflow-hidden !border-[#ECBDCC] p-5 sm:p-6"
     >
       <div className="flex items-start gap-4">
         <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-destructive/10 text-destructive">

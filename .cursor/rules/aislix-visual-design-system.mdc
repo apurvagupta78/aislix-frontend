@@ -54,7 +54,7 @@ No arbitrary chart colors. No neon. No traffic-light red/orange overload.
 - Navy `#04203F` is the only action colour (primary buttons, selected border, focus ring).
 - Palette colours appear **only** in charts, small pills/badges (soft tint OK), and status dots (`size-1.5`). Never as the background of anything wider than a pill.
 - Status on a card = a coloured dot next to the label; alerts = white + coloured border (pink `#ECBDCC` for risk), never a filled pastel box.
-- No gradients, glows, grid textures, or accent top/left bars.
+- No gradients, glows, grid textures, or accent top/left bars on cards and KPIs (a thin status edge on table/list rows is fine).
 - No raw Tailwind hues (`amber-*`, `emerald-*`, `rose-*`, `red-*`, `sky-*`) — map to the locked palette.
 - **One exception: Ask Aislix** is the single highlighted surface — soft blue panel `#EEF6FA`, border `#B9DAEA`, navy sparkle tile, white composer and chips (`ASK_AISLIX_SECTION` in `src/lib/aislix-theme.ts`).
 - Homepage tiles follow the same rules: white card, navy icon on `#F4F7F9` tile, palette dot. Bounding boxes on shelf photos may use palette colours.

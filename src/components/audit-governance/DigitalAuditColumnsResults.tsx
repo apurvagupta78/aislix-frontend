@@ -148,11 +148,13 @@ function ResultKpi({
 }) {
   const unavailable = value === "N/A";
   return (
-    <div
-      className="rounded-2xl border border-[#D9E2E8] bg-white p-4"
-      style={{ borderLeft: `4px solid ${unavailable ? AISLIX_PALETTE.grey : AISLIX_PALETTE[accent]}` }}
-    >
+    <div className="rounded-xl border border-[#D9E2E8] bg-white p-4">
       <p className="flex items-center gap-1.5 text-xs font-medium text-[#04203F]">
+        <span
+          className="size-1.5 shrink-0 rounded-full"
+          style={{ background: unavailable ? AISLIX_PALETTE.border : AISLIX_PALETTE[accent] }}
+          aria-hidden
+        />
         {label}
         <span title={info} aria-label={info}>
           <Info className="size-3.5 text-[#667085]" />

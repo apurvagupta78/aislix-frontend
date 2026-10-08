@@ -20,10 +20,12 @@ export function GuestDashboardPreview() {
         {GUEST_KPI_CARDS.map((kpi, i) => (
           <div
             key={kpi.label}
-            className="rounded-xl border border-border bg-card p-4"
-            style={{ borderTopWidth: 3, borderTopColor: kpi.accent }}
+            className="rounded-xl border border-border bg-white p-4"
           >
-            <p className="text-xs font-medium text-muted-foreground">{kpi.label}</p>
+            <p className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <span className="size-1.5 shrink-0 rounded-full" style={{ background: kpi.accent }} aria-hidden />
+              {kpi.label}
+            </p>
             <p className="mt-1 text-2xl font-bold tracking-tight text-foreground">{kpi.value}</p>
             <p className="mt-1 text-[11px] leading-snug text-muted-foreground">{kpi.detail}</p>
             <span className="sr-only">Card {i + 1}</span>

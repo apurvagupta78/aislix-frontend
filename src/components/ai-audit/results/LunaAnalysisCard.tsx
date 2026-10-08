@@ -39,8 +39,8 @@ export function LunaAnalysisCard({ analysis, className }: Props) {
   return (
     <section
       aria-label="AI analysis"
-      className={cn("space-y-4 rounded-2xl border bg-white p-5", className)}
-      style={{ borderColor: AISLIX_PALETTE.border, borderLeft: `4px solid ${AISLIX_PALETTE.purple}` }}
+      className={cn("space-y-4 rounded-xl border bg-white p-5", className)}
+      style={{ borderColor: AISLIX_PALETTE.border }}
     >
       <div className="flex items-start gap-2">
         <Sparkles className="mt-0.5 size-4 shrink-0" style={{ color: AISLIX_PALETTE.purple }} />
